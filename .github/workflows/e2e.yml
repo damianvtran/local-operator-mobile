@@ -46,6 +46,7 @@ on:
           - s15-proof
           - core-audit-only
           - u08-geometry-proof
+          - u08-fragment-verification
           - account-routing-ios-proof
           - account-routing-android-proof
       proof_stage:
@@ -110,6 +111,7 @@ jobs:
             # Keep the original proof arms literal for existing source contracts.
             core-audit-only) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             u08-geometry-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            u08-fragment-verification) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             account-routing-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in preflight|setup|full) ;; *) exit 1 ;; esac ;;
             # The Android proof has NO stage: one bounded run, so any stage argument is
             # an operator mistake rather than a request to run part of it. This mirrors
@@ -1470,8 +1472,8 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
   u08-geometry-proof:
-    name: Diagnostic only — reproduce one original U-08 geometry failure
-    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'u08-geometry-proof'
+    name: Bounded U-08 geometry proof / corrected fragment verification
+    if: github.event_name == 'workflow_dispatch' && (inputs.proof_mode == 'u08-geometry-proof' || inputs.proof_mode == 'u08-fragment-verification')
     needs: harness
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -1486,21 +1488,32 @@ jobs:
           cache: pnpm
       - name: Install locked web dependencies
         run: pnpm install --frozen-lockfile
+      - name: Preflight selected instrument before exporting
+        env:
+          PROOF_MODE: ${{ inputs.proof_mode }}
+        run: |
+          mode_args=()
+          if [[ "$PROOF_MODE" == u08-fragment-verification ]]; then mode_args+=(--verify-fragments); fi
+          node tools/audit/u08-geometry-proof.ts --preflight-only "${mode_args[@]}"
       - name: Export unchanged application for canonical re-drive
         run: pnpm export:web
       # No core/matrix/native sweep. The canonical audit driver owns DPR/media/
       # env() insets/readiness/fixture pinning; a local approximation cannot prove it.
       - name: Reproduce one original failure and record pair geometry
         timeout-minutes: 5
-        run: timeout --signal=TERM --kill-after=10s 290s node tools/audit/u08-geometry-proof.ts --web-dir dist --out "${{ runner.temp }}/u08-geometry"
+        env:
+          PROOF_MODE: ${{ inputs.proof_mode }}
+        run: |
+          mode_args=()
+          if [[ "$PROOF_MODE" == u08-fragment-verification ]]; then mode_args+=(--verify-fragments); fi
+          timeout --signal=TERM --kill-after=10s 290s node tools/audit/u08-geometry-proof.ts --web-dir dist --out "${{ runner.temp }}/u08-geometry" "${mode_args[@]}"
       - name: Keep bounded diagnosis (not audit PASS)
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: u08-geometry-proof-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/u08-geometry/geometry.json
-            ${{ runner.temp }}/u08-geometry/settled.png
-            ${{ runner.temp }}/u08-geometry/NOT-REPRODUCED.json
+            ${{ runner.temp }}/u08-geometry/*.json
+            ${{ runner.temp }}/u08-geometry/*.png
           if-no-files-found: error
           retention-days: 7

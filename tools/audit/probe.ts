@@ -15,31 +15,66 @@ import type { AuditAxNode } from "./checks.ts";
  * reviewer can read the rule; a probe that decides is a probe nobody can audit.
  */
 
+/** Shared by canonical U-08 extraction and diagnostic telemetry. Text belongs
+ * inside the owner's overflow viewport; the ancestor helper intentionally starts
+ * above the owner because it also serves element border/layout boxes. */
+/** Fragments are an optimization only after proving there is no other paint.
+ * Generated boxes have no AuditNode; background-only children are not necessarily
+ * meaningful U-08 nodes either. Do not certify arbitrary subtrees from a media
+ * selector: any element descendant stays conservative, including unproven paint.
+ * Unreadable generated styles also retain the envelope rather than lose a real
+ * collision. Empty quoted pseudo content can still paint a background/border. */
+export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => {
+ try {
+  if (!ownText.length || interactiveNode || !style.display || style.display.includes('list-item')
+      || !['none','normal'].includes(style.content)
+      || !['rgba(0, 0, 0, 0)','transparent'].includes(style.backgroundColor)
+      || !['backgroundImage','borderImageSource','boxShadow','textShadow','textDecorationLine',
+           'filter','backdropFilter','maskImage','textEmphasisStyle'].every(key => style[key] === 'none')
+      || !['Top','Right','Bottom','Left'].every(side => px(style['border'+side+'Width']) === 0)
+      || px(style.outlineWidth) !== 0 || px(style.columnRuleWidth) !== 0
+      || (style.webkitTextStrokeWidth && px(style.webkitTextStrokeWidth) !== 0)
+      || (style.webkitBoxReflect && style.webkitBoxReflect !== 'none')
+      || el.closest('svg') || el.matches('img,canvas,video,audio,iframe,object,embed')
+      || el.querySelectorAll('*').length !== 0) return false;
+  const generated=['::before','::after','::marker'].map(pseudo => getComputedStyle(el,pseudo));
+  return generated.every(s => s && typeof s.content === 'string' && ['none','normal'].includes(s.content));
+ } catch {
+  // This is lack of a paint proof, not measured empty text. Omit fragments so
+  // the policy preserves the full box even on unsupported/unreadable pseudos.
+  return false;
+ }
+}`;
+
+export const OWN_TEXT_GEOMETRY_SOURCE = String.raw`(el,clip) => {
+ const box=r=>({x:r.left,y:r.top,w:r.right-r.left,h:r.bottom-r.top});
+ const style=getComputedStyle(el),self=el.getBoundingClientRect();
+ const applies=style.display!=='inline'&&style.display!=='contents';
+ const selfX=applies&&style.overflowX!=='visible',selfY=applies&&style.overflowY!=='visible';
+ const fragments=[];
+ for(const text of el.childNodes){
+  if(text.nodeType!==3||!text.textContent.trim())continue;
+  const range=document.createRange();range.selectNodeContents(text);
+  for(const r of range.getClientRects()){
+   const owned={left:selfX?Math.max(r.left,self.left):r.left,top:selfY?Math.max(r.top,self.top):r.top,right:selfX?Math.min(r.right,self.right):r.right,bottom:selfY?Math.min(r.bottom,self.bottom):r.bottom};
+   const clipped=owned.right>owned.left&&owned.bottom>owned.top?clip(el,owned):null;
+   fragments.push({rect:box(r),clipped:clipped?box(clipped):null});
+  }
+ }
+ return {textFragments:fragments,selfClipping:{display:style.display,overflowX:style.overflowX,overflowY:style.overflowY,textOverflow:style.textOverflow,appliesX:selfX,appliesY:selfY,rect:box(self)}};
+}`;
+
 export const U08_GEOMETRY_SOURCE = String.raw`(indices, all, nodes, clip) => {
  const box = r => ({x:r.left,y:r.top,w:r.right-r.left,h:r.bottom-r.top});
  return indices.map(index => {
   const el = all[index], node = nodes.find(n => n.index === index);
   if (!el || !node) throw new Error('Diagnostic node missing');
-  const style=getComputedStyle(el),self=el.getBoundingClientRect();
-  // The ancestor helper excludes el for its own BCR. Descendant text must also
-  // respect an applicable owner overflow box BEFORE that unchanged ancestor walk.
-  const applies=style.display!=='inline'&&style.display!=='contents';
-  const selfX=applies&&style.overflowX!=='visible',selfY=applies&&style.overflowY!=='visible';
-  const clipText=r=>{
-   const owned={left:selfX?Math.max(r.left,self.left):r.left,top:selfY?Math.max(r.top,self.top):r.top,right:selfX?Math.min(r.right,self.right):r.right,bottom:selfY?Math.min(r.bottom,self.bottom):r.bottom};
-   return owned.right>owned.left&&owned.bottom>owned.top?clip(el,owned):null;
-  };
-  const fragments = [];
-  for (const text of el.childNodes) {
-   if (text.nodeType !== 3 || !text.textContent.trim()) continue;
-   const range = document.createRange(); range.selectNodeContents(text);
-   for (const r of range.getClientRects()) { const c = clipText(r); fragments.push({rect:box(r),clipped:c ? box(c) : null}); }
-  }
+  const {textFragments:fragments,selfClipping}=(${OWN_TEXT_GEOMETRY_SOURCE})(el,clip);
   const control = el.closest('button,[role="button"]');
   return {index, ownText:node.ownText, path:node.path, rect:node.rect, visibleRect:node.visibleRect, ancestors:node.ancestors,
    ownInk:node.ownInk,ariaHidden:node.ariaHidden,interactive:node.interactive,clippedAway:node.clippedAway,escapedClip:node.escapedClip,
    pressable:control ? {index:all.indexOf(control),testId:control.getAttribute('data-testid'),label:control.getAttribute('aria-label'),rect:box(control.getBoundingClientRect())} : null,
-   selfClipping:{display:style.display,overflowX:style.overflowX,overflowY:style.overflowY,textOverflow:style.textOverflow,appliesX:selfX,appliesY:selfY,rect:box(self)},
+   selfClipping,
    font:getComputedStyle(el).font, lineHeight:getComputedStyle(el).lineHeight, position:getComputedStyle(el).position,
    clientRects:[...el.getClientRects()].map(r => ({rect:box(r),clipped:(c => c ? box(c) : null)(clip(el,r))})), textFragments:fragments,
    clippingAncestors:node.ancestors.map(i => all[i]).filter(a => a && /(hidden|clip|auto|scroll)/.test(getComputedStyle(a).overflowX+' '+getComputedStyle(a).overflowY)).map(a => ({index:all.indexOf(a),tag:a.tagName,testId:a.getAttribute('data-testid'),rect:box(a.getBoundingClientRect()),overflow:getComputedStyle(a).overflow}))};
@@ -148,6 +183,8 @@ const probeWithGeometry = (extra = "") => `
   // overflow-x: auto), while the node that overflows the viewport is the text inside
   // it. The rubric allows the overflow there and nowhere else, so the answer has to
   // come from the chain.
+  const ownTextGeometry = ${OWN_TEXT_GEOMETRY_SOURCE};
+  const ownTextOnly = ${PURE_OWN_TEXT_SOURCE};
   const insideHorizontalScroller = (el) => {
     let node = el.parentElement;
     while (node && node.nodeType === 1) {
@@ -281,8 +318,14 @@ const probeWithGeometry = (extra = "") => `
       .join(' ')
       .trim();
     const interactiveNode = isInteractive(el);
+    // Pure own text uses line fragments, never the envelope spanning wrapped
+    // lines. Controls and mixed/non-text paint retain the conservative old box:
+    // shrinking those to text would erase borders, backgrounds and hit areas.
+    const pureOwnText = ownTextOnly(el,style,ownText,interactiveNode,px);
+    const u08PaintFragments = pureOwnText ? ownTextGeometry(el,clipIntersection).textFragments.flatMap(f => f.clipped ? [f.clipped] : []) : undefined;
     nodes.push({
       index,
+      u08PaintFragments,
       tag: el.tagName.toLowerCase(),
       path: (() => {
         const parts = [];
@@ -594,6 +637,7 @@ const probeWithGeometry = (extra = "") => `
       const root = document.querySelector('#root') || document.body;
       return { root: getComputedStyle(root).backgroundColor, body: getComputedStyle(document.body).backgroundColor };
     })(),
+    u08GeometryVersion: 1,
     nodeCount: nodes.length,
     nodes,
     tables,
@@ -602,7 +646,8 @@ const probeWithGeometry = (extra = "") => `
 })();
 `;
 
-/** The ordinary extraction string remains byte-identical. Diagnostics reuse its
+/** This corrected extraction intentionally differs from the historical instrument.
+ * The historical hash guard must refuse it. Diagnostics reuse its
  * private containing-block-aware clipIntersection, never a second clip model. */
 export const EXTRACT_PROBE = probeWithGeometry();
 export function u08GeometryProbe(indices: readonly number[]): string {

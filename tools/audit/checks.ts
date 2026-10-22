@@ -1,3 +1,4 @@
+import { type PaintRect, paintOverlap } from "./paint-fragments.ts";
 /**
  * The mechanical half of the audit rubric, as executable checks.
  *
@@ -1227,6 +1228,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 			measured: `suppressed: ${reason}${layoutNote}`,
 			detail: `${a.path} ∩ ${b.path}`,
 		});
+		state.onU08Decision?.(a.index, b.index, "EXCEPTION", reason);
 	};
 	for (let i = 0; i < meaningful.length; i += 1) {
 		for (let j = i + 1; j < meaningful.length; j += 1) {
@@ -1326,28 +1328,30 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				);
 				continue;
 			}
+			const precise = paintOverlap(a, b);
 			const overlapW =
 				Math.min(paintedA.x + paintedA.w, paintedB.x + paintedB.w) -
 				Math.max(paintedA.x, paintedB.x);
 			const overlapH =
 				Math.min(paintedA.y + paintedA.h, paintedB.y + paintedB.h) -
 				Math.max(paintedA.y, paintedB.y);
-			if (overlapW <= 1 || overlapH <= 1) {
+			if (
+				precise.fragmentMode ? !precise.contact : overlapW <= 1 || overlapH <= 1
+			) {
 				suppress(a, b, U08_SUPPRESSION.DISJOINT, layoutNote);
 				continue;
 			}
-			const area = overlapW * overlapH;
-			const smaller = Math.min(
-				paintedA.w * paintedA.h,
-				paintedB.w * paintedB.h,
-			);
+			const area = precise.fragmentMode ? precise.area : overlapW * overlapH;
+			const smaller = precise.fragmentMode
+				? precise.smaller
+				: Math.min(paintedA.w * paintedA.h, paintedB.w * paintedB.h);
 			const pct = smaller > 0 ? area / smaller : 0;
 			if (pct < 0.25) {
 				suppress(
 					a,
 					b,
 					U08_SUPPRESSION.BELOW_THRESHOLD,
-					`${layoutNote}, painted ${overlapW}x${overlapH}pt, ${round(pct * 100, 0)}% of the smaller painted box`,
+					`${layoutNote}, ${precise.fragmentMode ? `${round(area, 2)}pt² fragment union` : `painted ${overlapW}x${overlapH}pt`}, ${round(pct * 100, 0)}% of the smaller painted ${precise.fragmentMode ? "union" : "box"}`,
 				);
 				continue;
 			}
@@ -1361,10 +1365,11 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				// is the escape the every-ancestor walk swallowed, and `SUB_RULE_TEXT` reads it
 				// (with the escaping node's position) to tell this branch — and each of its
 				// shapes — apart from a plain overlap.
-				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${overlapW}x${overlapH}pt overlap (${round(pct * 100, 0)}% of the smaller painted box)`,
+				measured: `${escaped === null ? "" : `painted over a clipping ancestor (${escaped.position}): `}${precise.fragmentMode ? `fragment union ${round(area, 2)}pt² overlap` : `${overlapW}x${overlapH}pt overlap`} (${round(pct * 100, 0)}% of the smaller painted ${precise.fragmentMode ? "union" : "box"})`,
 				detail: `${a.path} ∩ ${b.path}${offscreenNote(a, state)}`,
 			});
 			state.onU08Failure?.(a.index, b.index);
+			state.onU08Decision?.(a.index, b.index, "FAIL", "");
 		}
 	}
 	if (failures.length === 0 && suppressed.length === 0) {
@@ -2598,6 +2603,8 @@ export interface SummaryMeasure {
 }
 
 export interface AuditNode {
+	/** Missing => legacy/non-text envelope. [] => observed no own-text paint. */
+	u08PaintFragments?: PaintRect[];
 	index: number;
 	tag: string;
 	path: string;
@@ -2750,7 +2757,15 @@ export interface AuditNode {
  * because a field was absent would pass an overflow check it should fail.
  */
 export interface AuditState {
-	/** Diagnostic observer AFTER an unchanged U-08 failure; never affects policy. */
+	u08GeometryVersion?: number;
+	/** Observes existing layout candidates even when precise paint is disjoint. */
+	onU08Decision?: (
+		a: number,
+		b: number,
+		verdict: "FAIL" | "EXCEPTION",
+		reason: string,
+	) => void;
+	/** Diagnostic observer AFTER a U-08 failure; never affects policy. */
 	onU08Failure?: (a: number, b: number) => void;
 	nodes: AuditNode[];
 	platform: string;
