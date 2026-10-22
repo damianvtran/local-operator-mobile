@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import {
+	CONNECT_COMPUTER,
 	draftExistsFor,
 	GREETING,
 	HOME_TIP_ROTATE_MS,
@@ -16,6 +17,7 @@ import {
 	suggestionSlotFor,
 	tipAt,
 } from "@/features/home/home-copy";
+import type { Translator } from "@/i18n/keys.gen";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { BrandMark } from "@/ui/components/brand-mark";
@@ -56,6 +58,8 @@ import { buttonClasses, cx } from "@/ui/variants";
  * review round 3, D2), so a rotation never moves anything below it.
  */
 export type HomeSplashProps = {
+	/** The parent subscribes once; the splash shares that render's locale. */
+	t: Translator;
 	draft: string;
 	/** The suggestions' slot is the connect action when nothing is connected. */
 	connected: boolean;
@@ -162,6 +166,7 @@ const tipReserveDp = (scale: number, largeText: boolean): number =>
 		: TIP_LINE_PX;
 
 export const HomeSplash = ({
+	t,
 	draft,
 	connected,
 	onPick,
@@ -228,7 +233,7 @@ export const HomeSplash = ({
 					className="text-body text-ink-muted"
 					testID={SURFACE.homeStarting}
 				>
-					{STARTING}
+					{t(STARTING)}
 				</Text>
 			</View>
 		);
@@ -260,7 +265,7 @@ export const HomeSplash = ({
 						className="text-center text-title text-ink"
 						testID={SURFACE.homeGreeting}
 					>
-						{GREETING}
+						{t(GREETING)}
 					</Text>
 					{slot.kind === "suggestions" ? (
 						<View className="w-full gap-3" testID={SURFACE.homeSuggestions}>
@@ -278,7 +283,7 @@ export const HomeSplash = ({
 						 *  state is the only control. It survives a held draft (it replaces
 						 *  nothing); only the suggestions hide — see `suggestionSlotFor`. */
 						<SuggestionRow
-							label="Connect a computer"
+							label={t(CONNECT_COMPUTER)}
 							onPress={onConnect}
 							testID={CONTROL.homeConnect}
 						/>

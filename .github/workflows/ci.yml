@@ -161,11 +161,19 @@ jobs:
 
       # Ordered cheapest-and-most-likely-to-fail first, so a red run says what
       # is wrong in the first screen of output rather than after a test suite.
+      # A schema-only generator cannot prove ICU placeholder parity or prevent
+      # literal regressions in completed slots. This gate requires the pinned
+      # parser/compiler; missing dependencies fail rather than downgrade scope.
+      - name: Home i18n (generated schema, ICU AST, six-slot copy guard)
+        run: pnpm i18n:check
+
       - name: Typecheck (tsc --noEmit)
         run: pnpm typecheck
 
       - name: Unit tests (vitest, Node environment)
-        run: pnpm test
+        # Named case/file results make the new dependency-backed controls
+        # observable without paying for a second targeted/full suite run.
+        run: pnpm test --reporter=github-actions --reporter=verbose
 
       # LINT RUNS AFTER THE APP'S OWN GATES, and the ordering is deliberate: on a
       # tree where `tools/**` is still unformatted (the audit harness arrived
