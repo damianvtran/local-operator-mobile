@@ -497,7 +497,8 @@ export function createViewerPager(deps: {
 				// Within a pixel of the goal: the button's scroll has landed.
 				if (Math.abs(offsetX - goal) <= 1) {
 					pending = null;
-					return follow(offsetX, w);
+					follow(offsetX, w);
+					return;
 				}
 				const lo = Math.min(pending.from, goal) - 1;
 				const hi = Math.max(pending.from, goal) + 1;
