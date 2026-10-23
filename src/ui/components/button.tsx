@@ -31,6 +31,8 @@ export type ButtonProps = {
 	leadingIcon?: (props: { color: string; size: number }) => ReactNode;
 	loading?: boolean;
 	disabled?: boolean;
+	/** Short visual labels may need a more descriptive screen-reader name. */
+	accessibilityLabel?: string;
 	accessibilityHint?: string;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
@@ -53,6 +55,7 @@ export const Button = ({
 	leadingIcon,
 	loading = false,
 	disabled = false,
+	accessibilityLabel,
 	accessibilityHint,
 	testID,
 }: ButtonProps) => {
@@ -69,7 +72,7 @@ export const Button = ({
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityLabel={label}
+			accessibilityLabel={accessibilityLabel ?? label}
 			accessibilityHint={accessibilityHint}
 			accessibilityState={state({ disabled, busy: loading })}
 			/* `sm` is the one size under the floor, and the floor is now REAL geometry

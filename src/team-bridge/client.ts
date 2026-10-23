@@ -49,7 +49,9 @@ import {
 	pushDeviceSchema,
 	type ReadState,
 	readStateSchema,
+	type Settings,
 	type Status,
+	settingsSchema,
 	statusSchema,
 } from "@/team-bridge/contract";
 
@@ -377,6 +379,31 @@ export function createHubClient(deps: HubClientDeps) {
 		status(signal?: AbortSignal): Promise<Status> {
 			return request("GET", "/status", (v) => statusSchema.parse(v), {
 				signal,
+			});
+		},
+
+		/** `GET /settings`: the caller's endpoint and consent provenance in one organization. */
+		settings(tenantId: string, signal?: AbortSignal): Promise<Settings> {
+			return request("GET", "/settings", (v) => settingsSchema.parse(v), {
+				query: { tenant_id: tenantId },
+				signal,
+			});
+		},
+
+		/**
+		 * Opt out (`PUT /settings {state: "disabled", tenant_id}`), sent ALONE.
+		 * Pausing and opting out are the hub's always-allowed changes, but only when
+		 * the body carries no rename or other field (an ineligible organization
+		 * refuses a combined request). The only caller is the default-on notice's
+		 * "Turn off"; Enable is deliberately not expressible here, because turning on
+		 * needs a consent echo and enrolment belongs to the desktop runtime. The call
+		 * goes out with the signed-in person's own Radient bearer, like every read.
+		 */
+		turnOff(tenantId: string): Promise<void> {
+			// A 2xx confirms the mutation even if its optional response body is unreadable.
+			// Claiming failure after the hub applied it would misrepresent the setting.
+			return request("PUT", "/settings", null, {
+				body: { state: "disabled", tenant_id: tenantId },
 			});
 		},
 
