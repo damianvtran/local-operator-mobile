@@ -245,10 +245,14 @@ export type Directory = z.infer<typeof directorySchema>;
 /**
  * `GET /v1/messaging/status` (`responses.BridgeStatusResponse`).
  *
- * The phone reads only what its gate needs: the contract version, whether any
+ * The phone reads what its gate needs: the contract version, whether any
  * organization is eligible, and the per-org rows (name, eligibility, the
- * caller's endpoint). The served consent and screening texts are a desktop
- * concern (enrolment happens on the computer) and are deliberately not read.
+ * caller's endpoint). It also reads the served `consent` {version, text}, for ONE
+ * reason: the default-on notice (`./model` `defaultOnNotice`) must show the text
+ * the member was enrolled under, verbatim, and the hub serves it only here. The
+ * phone never renders that text as an Enable dialog and never echoes it back:
+ * enrolment is the desktop runtime's (`POST /v1/messaging/enrollment`). The
+ * screening and guidance texts stay a desktop concern and are not read.
  */
 export const statusTenantSchema = z.looseObject({
 	tenant_id: id,
@@ -261,6 +265,18 @@ export const statusTenantSchema = z.looseObject({
 });
 export type StatusTenant = z.infer<typeof statusTenantSchema>;
 
+/**
+ * The served consent pair (`responses.BridgeConsent`). `.catch(undefined)` on the
+ * field below makes a malformed consent block mean "no notice", never a failed
+ * gate: the notice is additive and must not take Team Bridge down with it.
+ */
+export const statusConsentSchema = z.looseObject({
+	version: z.string().min(1),
+	text: z.string().min(1),
+	accepted_versions: z.array(z.string()).optional(),
+});
+export type StatusConsent = z.infer<typeof statusConsentSchema>;
+
 export const statusSchema = z.looseObject({
 	/*
 	 * A decimal STRING on the wire (`bridge.APIVersion = "1"`). Accepting a number
@@ -269,8 +285,38 @@ export const statusSchema = z.looseObject({
 	api_version: z.union([z.string(), z.number()]),
 	available: z.boolean(),
 	tenants: z.array(statusTenantSchema),
+	/** Eligible callers only; absent otherwise ("absent means absent"). */
+	consent: statusConsentSchema.optional().catch(undefined),
 });
 export type Status = z.infer<typeof statusSchema>;
+
+/**
+ * `GET`/`PUT /v1/messaging/settings` (`responses.BridgeSettingsResponse`).
+ *
+ * Every field is optional and `consented_via` is a plain string. The hub's enum
+ * is `dialog | settings | default_on` today and has grown before, so an unknown
+ * provenance must parse (and simply never match `default_on`) rather than fail
+ * the read. The same tolerance lets a successful PUT whose body this build
+ * cannot fully read still count as a success: the write is what matters there.
+ */
+export const settingsSchema = z.looseObject({
+	endpoint: z
+		.looseObject({
+			id: z.string().optional(),
+			state: z.string().optional(),
+			consent: z
+				.looseObject({
+					version: z.string().optional(),
+					consented_via: z.string().optional(),
+					current: z.boolean().optional(),
+				})
+				.nullable()
+				.optional(),
+		})
+		.nullable()
+		.optional(),
+});
+export type Settings = z.infer<typeof settingsSchema>;
 
 /** `PUT /v1/messaging/push/devices` (agent-server, this release's push slice). */
 export const pushDeviceSchema = z.looseObject({

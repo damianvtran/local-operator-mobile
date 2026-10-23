@@ -25,6 +25,7 @@ import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
+import { DefaultOnNoticeBanner } from "./default-on-notice-banner";
 import { BridgeBack, BridgeGate } from "./gate";
 
 export function BridgeRow({
@@ -181,6 +182,7 @@ function ListContent() {
 					onPress={() => setSwitching(true)}
 				/>
 			</View>
+			<DefaultOnNoticeBanner tenantId={tenantId} />
 			<ScrollView
 				testID={SURFACE.teamBridgeSections}
 				contentContainerClassName="pb-8"
