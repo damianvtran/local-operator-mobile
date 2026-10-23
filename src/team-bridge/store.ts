@@ -249,7 +249,12 @@ export function createTeamBridgeStore(deps: {
 		if (error.kind === "plan") {
 			generation += 1;
 			inFlight.clear();
-			store.setState({ gate: "plan_required", gateError: error });
+			store.setState({
+				gate: "plan_required",
+				gateError: error,
+				defaultOnNoticeBusy: false,
+				defaultOnNoticeError: null,
+			});
 			return true;
 		}
 		return false;
@@ -375,11 +380,14 @@ export function createTeamBridgeStore(deps: {
 						served: store.getState().servedConsent,
 					});
 					if (notice && store.getState().selectedTenantId === tenantId) {
-						store.setState({ defaultOnNotice: notice });
+						store.setState({
+							defaultOnNotice: notice,
+							defaultOnNoticeBusy: false,
+							defaultOnNoticeError: null,
+						});
 					}
-				} catch (error) {
-					if (!owned()) return;
-					gateFailure(error);
+				} catch {
+					// Status owns the tab gate; this additive read must never close it.
 				}
 			});
 		},
@@ -406,6 +414,7 @@ export function createTeamBridgeStore(deps: {
 		 */
 		async turnOffDefaultOn(): Promise<void> {
 			const notice = store.getState().defaultOnNotice;
+			const accountId = store.getState().selfAccountId;
 			const client = deps.hub();
 			if (!notice || !client || store.getState().defaultOnNoticeBusy) return;
 			store.setState({ defaultOnNoticeBusy: true, defaultOnNoticeError: null });
@@ -413,7 +422,8 @@ export function createTeamBridgeStore(deps: {
 			try {
 				await client.turnOff(notice.tenantId);
 			} catch (error) {
-				if (epoch !== generation) return;
+				if (epoch !== generation || store.getState().defaultOnNotice !== notice)
+					return;
 				const hubError = isHubError(error)
 					? error
 					: new HubError({
@@ -427,13 +437,34 @@ export function createTeamBridgeStore(deps: {
 				return;
 			}
 			if (epoch !== generation) return;
-			store.setState({ defaultOnNoticeBusy: false });
-			await actions.dismissDefaultOnNotice();
+			// A PUT belongs to the account/org captured before dispatch, not whichever
+			// notice happens to be visible when it completes after an org switch.
+			if (store.getState().defaultOnNotice === notice) {
+				store.setState({
+					defaultOnNotice: null,
+					defaultOnNoticeBusy: false,
+					defaultOnNoticeError: null,
+				});
+			}
+			if (accountId) {
+				try {
+					await deps.dismissals?.set(accountId, notice.tenantId);
+				} catch {
+					/* A persistence failure must not undo a confirmed opt-out. */
+				}
+			}
 		},
 
 		selectOrganization(tenantId: string) {
 			if (!store.getState().organizations.some((o) => o.tenantId === tenantId))
 				return;
+			if (store.getState().selectedTenantId !== tenantId) {
+				store.setState({
+					defaultOnNotice: null,
+					defaultOnNoticeBusy: false,
+					defaultOnNoticeError: null,
+				});
+			}
 			store.setState({ selectedTenantId: tenantId });
 			deps.rememberOrg?.(tenantId);
 		},

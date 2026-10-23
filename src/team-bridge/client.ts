@@ -399,8 +399,10 @@ export function createHubClient(deps: HubClientDeps) {
 		 * needs a consent echo and enrolment belongs to the desktop runtime. The call
 		 * goes out with the signed-in person's own Radient bearer, like every read.
 		 */
-		turnOff(tenantId: string): Promise<Settings> {
-			return request("PUT", "/settings", (v) => settingsSchema.parse(v), {
+		turnOff(tenantId: string): Promise<void> {
+			// A 2xx confirms the mutation even if its optional response body is unreadable.
+			// Claiming failure after the hub applied it would misrepresent the setting.
+			return request("PUT", "/settings", null, {
 				body: { state: "disabled", tenant_id: tenantId },
 			});
 		},

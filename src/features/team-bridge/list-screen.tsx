@@ -182,7 +182,6 @@ function ListContent() {
 					onPress={() => setSwitching(true)}
 				/>
 			</View>
-			<DefaultOnNoticeBanner tenantId={tenantId} />
 			<ScrollView
 				testID={SURFACE.teamBridgeSections}
 				contentContainerClassName="pb-8"
@@ -196,6 +195,7 @@ function ListContent() {
 					/>
 				}
 			>
+				<DefaultOnNoticeBanner tenantId={tenantId} />
 				{!tenantId && (
 					<Text className="px-4 py-6 text-body text-ink-muted">
 						No organizations are available.

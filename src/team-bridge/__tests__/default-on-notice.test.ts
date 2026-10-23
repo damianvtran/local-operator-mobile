@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -18,7 +19,14 @@ import {
 	type NoticeDismissals,
 } from "@/team-bridge/store";
 
-import { CONSENT_V2, SELF, settings, status, TENANT } from "./fixtures";
+import {
+	CONSENT_V2,
+	OTHER_TENANT,
+	SELF,
+	settings,
+	status,
+	TENANT,
+} from "./fixtures";
 
 /**
  * `Button` pulls in `uniwind` (native CSS variables), which Node cannot load, and
@@ -28,10 +36,15 @@ import { CONSENT_V2, SELF, settings, status, TENANT } from "./fixtures";
  * the "no Enable control, exactly three buttons" assertions read real markup.
  */
 vi.mock("@/ui/components/button", () => ({
-	Button: (props: { label: string; testID?: string; disabled?: boolean }) =>
+	Button: (props: {
+		label: string;
+		accessibilityLabel?: string;
+		testID?: string;
+		disabled?: boolean;
+	}) =>
 		h("div", {
 			role: "button",
-			"aria-label": props.label,
+			"aria-label": props.accessibilityLabel ?? props.label,
 			"data-testid": props.testID,
 			"aria-disabled": props.disabled ? "true" : undefined,
 		}),
@@ -56,7 +69,7 @@ function hubWith(over: Partial<HubClient> = {}): HubClient {
 	return {
 		status: vi.fn(async () => status({ consent: CONSENT_V2 })),
 		settings: vi.fn(async () => settings("default_on")),
-		turnOff: vi.fn(async () => settings("default_on", { state: "disabled" })),
+		turnOff: vi.fn(async () => undefined),
 		accountUnread: vi.fn(async () => ({ total: 0, organizations: [] })),
 		...over,
 	} as unknown as HubClient;
@@ -169,16 +182,20 @@ describe("default-on notice store", () => {
 		expect(store.getState().defaultOnNotice).toBeNull();
 	});
 
-	it("stays quiet when the settings read fails", async () => {
-		const { store } = await mount(
-			hubWith({
-				settings: vi.fn(async () => {
-					throw new HubError({ kind: "server", message: "x", status: 500 });
-				}),
-			} as never),
-		);
-		expect(store.getState().defaultOnNotice).toBeNull();
-	});
+	it.each(["server", "plan", "sign_in"] as const)(
+		"stays quiet without changing the gate when settings fails with %s",
+		async (kind) => {
+			const { store } = await mount(
+				hubWith({
+					settings: vi.fn(async () => {
+						throw new HubError({ kind, message: "x", status: 500 });
+					}),
+				} as never),
+			);
+			expect(store.getState().defaultOnNotice).toBeNull();
+			expect(store.getState().gate).toBe("open");
+		},
+	);
 
 	it("never shows without a dismissal store (cannot promise once)", async () => {
 		// null, not undefined: undefined would trigger mount()'s default parameter and supply a store.
@@ -203,40 +220,171 @@ describe("default-on notice store", () => {
 		expect([...dismissals.rows]).toEqual([`${SELF}|${TENANT}`]);
 	});
 
-	it("Turn off sends state disabled alone, then dismisses for good", async () => {
-		const fetchImpl = vi.fn(
-			async (_url: string | URL | Request, _init?: RequestInit) =>
-				new Response(
-					JSON.stringify({
-						msg: "ok",
-						result: settings("default_on", { state: "disabled" }),
-					}),
-					{
+	it.each([JSON.stringify({ msg: "ok", result: null }), "not JSON"])(
+		"Turn off uses its bearer and dismisses on 2xx regardless of body %s",
+		async (body) => {
+			const fetchImpl = vi.fn(
+				async (_url: string | URL | Request, _init?: RequestInit) =>
+					new Response(body, {
 						status: 200,
 						headers: { "content-type": "application/json" },
-					},
-				),
+					}),
+			);
+			const real = createHubClient({
+				accessToken: async () => "tok",
+				fetchImpl: fetchImpl as never,
+				baseUrl: "https://hub.example",
+			});
+			const dismissals = memoryDismissals();
+			const made = await mount(
+				{ ...hubWith(), turnOff: real.turnOff } as HubClient,
+				dismissals,
+			);
+			await made.actions.turnOffDefaultOn();
+			const [url, init] = fetchImpl.mock.calls[0] ?? [];
+			expect(String(url)).toBe("https://hub.example/v1/messaging/settings");
+			expect(init?.method).toBe("PUT");
+			expect(new Headers(init?.headers).get("authorization")).toBe(
+				"Bearer tok",
+			);
+			expect(JSON.parse(String(init?.body))).toEqual({
+				state: "disabled",
+				tenant_id: TENANT,
+			});
+			expect(made.store.getState().defaultOnNotice).toBeNull();
+			expect(dismissals.rows.size).toBe(1);
+			expect(made.store.getState().defaultOnNoticeBusy).toBe(false);
+		},
+	);
+
+	it.each(["ineligible", "missing consent"])(
+		"does not show for %s through the store",
+		async (reason) => {
+			const { store } = await mount(
+				hubWith({
+					status: vi.fn(async () =>
+						status({
+							consent: CONSENT_V2,
+							tenants: status().tenants.map((t) => ({
+								...t,
+								eligible: reason !== "ineligible",
+							})),
+						}),
+					),
+					settings: vi.fn(async () =>
+						reason === "missing consent"
+							? { endpoint: { state: "active" } }
+							: settings("default_on"),
+					),
+				}),
+			);
+			expect(store.getState().defaultOnNotice).toBeNull();
+		},
+	);
+
+	it("guards a double tap while the PUT is pending", async () => {
+		let finish!: () => void;
+		const turnOff = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					finish = resolve;
+				}),
 		);
-		const real = createHubClient({
-			accessToken: async () => "tok",
-			fetchImpl: fetchImpl as never,
-			baseUrl: "https://hub.example",
-		});
+		const made = await mount(hubWith({ turnOff }));
+		const pending = made.actions.turnOffDefaultOn();
+		await made.actions.turnOffDefaultOn();
+		expect(turnOff).toHaveBeenCalledTimes(1);
+		expect(made.store.getState().defaultOnNoticeBusy).toBe(true);
+		finish();
+		await pending;
+		expect(made.store.getState().defaultOnNoticeBusy).toBe(false);
+	});
+
+	it.each([false, true])(
+		"keeps the other org notice untouched when a pending PUT fails=%s",
+		async (fails) => {
+			let finish!: () => void;
+			let refuse!: (error: unknown) => void;
+			const turnOff = vi.fn(
+				() =>
+					new Promise<void>((resolve, reject) => {
+						finish = resolve;
+						refuse = reject;
+					}),
+			);
+			const dismissals = memoryDismissals();
+			const made = await mount(
+				hubWith({
+					turnOff,
+					status: vi.fn(async () =>
+						status({
+							consent: CONSENT_V2,
+							tenants: [
+								...status().tenants,
+								...status().tenants.map((t) => ({
+									...t,
+									tenant_id: OTHER_TENANT,
+								})),
+							],
+						}),
+					),
+				}),
+				dismissals,
+			);
+			const pending = made.actions.turnOffDefaultOn();
+			made.actions.selectOrganization(OTHER_TENANT);
+			await made.actions.loadDefaultOnNotice(OTHER_TENANT);
+			const otherNotice = made.store.getState().defaultOnNotice;
+			expect(otherNotice?.tenantId).toBe(OTHER_TENANT);
+			expect(made.store.getState().defaultOnNoticeBusy).toBe(false);
+			if (fails) refuse(new HubError({ kind: "server", message: "x" }));
+			else finish();
+			await pending;
+			expect(made.store.getState().defaultOnNotice).toBe(otherNotice);
+			expect(made.store.getState().defaultOnNoticeError).toBeNull();
+			expect([...dismissals.rows]).toEqual(fails ? [] : [`${SELF}|${TENANT}`]);
+		},
+	);
+
+	it("does not revive or persist a notice after sign-out mid-flight", async () => {
+		let finish!: () => void;
 		const dismissals = memoryDismissals();
 		const made = await mount(
-			{ ...hubWith(), turnOff: real.turnOff } as HubClient,
+			hubWith({
+				turnOff: () =>
+					new Promise<void>((resolve) => {
+						finish = resolve;
+					}),
+			}),
 			dismissals,
 		);
-		await made.actions.turnOffDefaultOn();
-		const [url, init] = fetchImpl.mock.calls[0] ?? [];
-		expect(String(url)).toBe("https://hub.example/v1/messaging/settings");
-		expect(init?.method).toBe("PUT");
-		expect(JSON.parse(String(init?.body))).toEqual({
-			state: "disabled",
-			tenant_id: TENANT,
-		});
+		const pending = made.actions.turnOffDefaultOn();
+		made.actions.reset();
+		finish();
+		await pending;
 		expect(made.store.getState().defaultOnNotice).toBeNull();
-		expect(dismissals.rows.size).toBe(1);
+		expect(made.store.getState().defaultOnNoticeBusy).toBe(false);
+		expect(dismissals.rows.size).toBe(0);
+	});
+
+	it("clears busy when a plan gate retires a pending PUT", async () => {
+		let finish!: () => void;
+		const hub = hubWith({
+			turnOff: () =>
+				new Promise<void>((resolve) => {
+					finish = resolve;
+				}),
+		});
+		const made = await mount(hub);
+		const pending = made.actions.turnOffDefaultOn();
+		vi.mocked(hub.status).mockRejectedValueOnce(
+			new HubError({ kind: "plan", message: "x" }),
+		);
+		await made.actions.checkStatus();
+		finish();
+		await pending;
+		expect(made.store.getState().gate).toBe("plan_required");
+		expect(made.store.getState().defaultOnNoticeBusy).toBe(false);
 	});
 
 	it("a hub error on Turn off keeps the notice, shows an error, and does not dismiss", async () => {
@@ -278,6 +426,39 @@ const rendered = (opts: { failed?: boolean; expanded?: boolean } = {}) =>
 		}),
 	);
 
+const RAW_TEXT = /<Text\b[^>]*>\s*\p{L}[^<{]*<\/Text>/u;
+const RAW_TEXT_EXPRESSION =
+	/<Text\b[^>]*>\s*\{\s*(?:"[^"]*"|'[^']*'|`[^`$]*`)\s*\}\s*<\/Text>/;
+const LITERAL_LABEL =
+	/\b(?:label|accessibilityLabel|accessibilityHint|placeholder|title)\s*=\s*(?:"[^"]+"|'[^']+'|\{\s*(?:["'][^"']+["']|`[^`$]*`)\s*\})/;
+const ENABLE_CONTROL = /enable|turn on|opt in/i;
+const ENABLE = /\benable\b/i;
+const DIALOG = /role="(dialog|alertdialog)"/;
+const MODAL = /aria-modal/;
+const COPY_PREFIX = /^mobile\.team_bridge\.default_on\./;
+const STATUS_REGION = /role="status"[^>]*>([\s\S]*?)<\/div>/;
+
+// Feature-scoped lexical guard, not a TSX parser or native accessibility audit.
+const componentSource = readFileSync(
+	new URL("../../features/team-bridge/default-on-notice.tsx", import.meta.url),
+	"utf8",
+);
+function assertFeatureCopy(input: string) {
+	const source = input.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+	if (RAW_TEXT.test(source) || RAW_TEXT_EXPRESSION.test(source))
+		throw new Error("raw JSX copy");
+	if (LITERAL_LABEL.test(source)) throw new Error("literal accessible copy");
+	for (const match of source.matchAll(
+		/["'](mobile\.team_bridge\.default_on\.[a-z_]+)["']/g,
+	)) {
+		if (
+			match[1] === undefined ||
+			!Object.hasOwn(DEFAULT_ON_NOTICE_COPY, match[1])
+		)
+			throw new Error("missing source key");
+	}
+}
+
 describe("default-on notice view", () => {
 	const html = rendered();
 	it("names the state, offers Turn off / Read / Dismiss", () => {
@@ -289,15 +470,15 @@ describe("default-on notice view", () => {
 		}
 	});
 	it("renders no Enable control and no dialog/modal semantics", () => {
-		expect(html).not.toMatch(/\benable\b/i);
-		expect(html).not.toMatch(/role="(dialog|alertdialog)"/);
-		expect(html).not.toMatch(/aria-modal/);
+		expect(html).not.toMatch(ENABLE);
+		expect(html).not.toMatch(DIALOG);
+		expect(html).not.toMatch(MODAL);
 		const buttons = [
 			...html.matchAll(/role="button"[^>]*aria-label="([^"]*)"/g),
 		].map((m) => m[1]);
-		expect(
-			buttons.some((label) => /enable|turn on|opt in/i.test(label ?? "")),
-		).toBe(false);
+		expect(buttons.some((label) => ENABLE_CONTROL.test(label ?? ""))).toBe(
+			false,
+		);
 		expect(buttons).toHaveLength(3);
 	});
 	it("holds the consent text back until Read what this means", () => {
@@ -313,17 +494,48 @@ describe("default-on notice view", () => {
 		expect(open).toContain(
 			defaultOnNoticeCopy("mobile.team_bridge.default_on.hide"),
 		);
-		expect(open).not.toMatch(/role="(dialog|alertdialog)"/);
+		expect(open).not.toMatch(DIALOG);
 	});
 	it("shows an error and keeps every control when Turn off failed", () => {
 		const failed = rendered({ failed: true });
 		expect(failed).toContain('data-testid="team-bridge-notice-error"');
 		expect(failed).toContain('data-testid="team-bridge-notice-turn-off"');
 	});
-	it("copy table has translator context for every key and no key is a bare literal", () => {
+	it("copy table owns namespaced keys with translator context", () => {
 		for (const [key, row] of Object.entries(DEFAULT_ON_NOTICE_COPY)) {
-			expect(key).toMatch(/^mobile\.team_bridge\.default_on\./);
+			expect(key).toMatch(COPY_PREFIX);
 			expect(row.context.length).toBeGreaterThan(20);
 		}
+	});
+	it("keeps opt-out controls before expanded text and outside its status region", () => {
+		const open = rendered({ expanded: true, failed: true });
+		expect(
+			open.indexOf('data-testid="team-bridge-notice-turn-off"'),
+		).toBeLessThan(open.indexOf('data-testid="team-bridge-notice-text"'));
+		const statusRegion = open.match(STATUS_REGION)?.[1];
+		expect(statusRegion).toBeDefined();
+		expect(statusRegion).not.toContain("team-bridge-notice-text");
+		expect(statusRegion).not.toContain("team-bridge-notice-error");
+		expect(open).toContain('aria-label="Dismiss Team Bridge notice"');
+	});
+
+	it("routes rendered copy through the source table", () => {
+		expect(() => assertFeatureCopy(componentSource)).not.toThrow();
+	});
+	it.each([
+		"<Text>Untracked text</Text>",
+		'<Text>{"Untracked text"}</Text>',
+		"<Text>{'Untracked text'}</Text>",
+		"<Text>{`Untracked text`}</Text>",
+		'<Button label="Untracked label" />',
+		'<Button accessibilityLabel={"Untracked label"} />',
+		"<Button accessibilityHint={`Untracked hint`} />",
+	])("rejects raw-copy counterfactual %s", (raw) => {
+		const changed = componentSource.replace(
+			'{copy("mobile.team_bridge.default_on.title")}',
+			raw,
+		);
+		expect(changed).not.toBe(componentSource);
+		expect(() => assertFeatureCopy(changed)).toThrow();
 	});
 });

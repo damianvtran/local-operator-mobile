@@ -47,24 +47,6 @@ export function DefaultOnNoticeView({
 					<Text className="text-body text-ink-muted">
 						{copy("mobile.team_bridge.default_on.body")}
 					</Text>
-					{expanded && (
-						<Text
-							className="text-body-sm text-ink"
-							selectable
-							testID={SURFACE.teamBridgeNoticeText}
-						>
-							{notice.text}
-						</Text>
-					)}
-					{failed && (
-						<Text
-							className="text-body-sm text-danger"
-							accessibilityRole={ROLE.alert}
-							testID={SURFACE.teamBridgeNoticeError}
-						>
-							{copy("mobile.team_bridge.default_on.turn_off_error")}
-						</Text>
-					)}
 				</View>
 				<View className="mt-3 flex-row flex-wrap items-center gap-2">
 					<Button
@@ -87,6 +69,9 @@ export function DefaultOnNoticeView({
 					<Button
 						label={copy("mobile.team_bridge.default_on.dismiss")}
 						variant="quiet"
+						accessibilityLabel={copy(
+							"mobile.team_bridge.default_on.dismiss_label",
+						)}
 						accessibilityHint={copy(
 							"mobile.team_bridge.default_on.dismiss_hint",
 						)}
@@ -94,6 +79,27 @@ export function DefaultOnNoticeView({
 						testID={CONTROL.teamBridgeNoticeDismiss}
 						onPress={onDismiss}
 					/>
+				</View>
+				{/* Controls precede unbounded served text so opting out stays reachable. */}
+				<View className="mt-3 gap-3">
+					{expanded && (
+						<Text
+							className="text-body-sm text-ink"
+							selectable
+							testID={SURFACE.teamBridgeNoticeText}
+						>
+							{notice.text}
+						</Text>
+					)}
+					{failed && (
+						<Text
+							className="text-body-sm text-danger"
+							accessibilityRole={ROLE.alert}
+							testID={SURFACE.teamBridgeNoticeError}
+						>
+							{copy("mobile.team_bridge.default_on.turn_off_error")}
+						</Text>
+					)}
 				</View>
 			</Card>
 		</View>

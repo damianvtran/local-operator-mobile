@@ -296,8 +296,8 @@ export type Status = z.infer<typeof statusSchema>;
  * Every field is optional and `consented_via` is a plain string. The hub's enum
  * is `dialog | settings | default_on` today and has grown before, so an unknown
  * provenance must parse (and simply never match `default_on`) rather than fail
- * the read. The same tolerance lets a successful PUT whose body this build
- * cannot fully read still count as a success: the write is what matters there.
+ * the read. The opt-out PUT does not parse this schema: its 2xx alone confirms
+ * the mutation, independently of the optional response body.
  */
 export const settingsSchema = z.looseObject({
 	endpoint: z

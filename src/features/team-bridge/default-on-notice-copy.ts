@@ -48,6 +48,12 @@ export const DEFAULT_ON_NOTICE_COPY = {
 			"Button. Closes the banner for good on this device, leaving Team Bridge on. Not “OK”, which would read as acceptance.",
 		role: "button",
 	},
+	"mobile.team_bridge.default_on.dismiss_label": {
+		source: "Dismiss Team Bridge notice",
+		context:
+			"Screen-reader name for the short Dismiss button; identifies the notice being closed, not the Team Bridge setting.",
+		role: "label",
+	},
 	"mobile.team_bridge.default_on.dismiss_hint": {
 		source: "Keeps Team Bridge on and does not show this notice again",
 		context:
@@ -59,7 +65,7 @@ export const DEFAULT_ON_NOTICE_COPY = {
 			"Team Bridge was not turned off. Check the connection and try again.",
 		context:
 			"Shown under the buttons when the turn-off request failed; the setting is unchanged, so never say it is off.",
-		role: "status",
+		role: "alert",
 	},
 } as const;
 
