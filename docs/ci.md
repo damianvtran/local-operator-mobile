@@ -32,6 +32,32 @@ in the annotation.
 
 ## Corrected U-08 fragment verification (remote CI only)
 
+Control readiness uses the unique TurnBar's rendered caret (`▸` condensed,
+`▾` expanded), which comes from its actual open state. Missing `aria-expanded`
+is recorded as absent, not interpreted as false; when present it must agree.
+The web adapter does not forward the app's native `accessibilityState.expanded`:
+[run39698089334](https://github.com/damianvtran/local-operator-mobile/actions/runs/39698089334)
+failed on that unsupported attribute assumption before any geometry verdict.
+Missing/ambiguous controls, missing/wrong carets and contradictory ARIA still
+refuse verification. A nonempty client-rect list alone is not readable paint:
+the target and glyph require positive-area boxes, and computed display,
+visibility and opacity are inspected through every ancestor. Hidden/transparent,
+unreadable or unknown styles, collapsed target/glyph boxes and zero accumulated
+opacity refuse. The failed property, ancestor depth, measured value and bounded
+style trace accompany the control diagnostics; missing ARIA still stays null.
+This is a control-readability gate, not raster/occlusion or geometry clearance. The separate pre-existing web ARIA omission is not repaired
+by this harness change; native app semantics are unchanged.
+
+Each ready cell and completed geometry record is persisted separately, so later
+failure preserves partial progress without claiming complete verification.
+On error, before page teardown, `failure.json` records phase, cell/theme/state/path,
+expected/observed control data, readiness, environment and completed cell keys;
+`failure.png` captures the live page when available within a1.5-second bound.
+Unavailable/invalid/over-budget screenshots are explicitly reported, not passed.
+The existing5MiB aggregate cap reserves space for context and the outer
+`NOT-REPRODUCED.json` receipt. Partial/failure artifacts are not geometry PASS
+and never replace complete four-cell plus genuine-collision coverage.
+
 ```sh
 gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=u08-fragment-verification
 ```
