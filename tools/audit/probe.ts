@@ -22,29 +22,101 @@ import type { AuditAxNode } from "./checks.ts";
  * Generated boxes have no AuditNode; background-only children are not necessarily
  * meaningful U-08 nodes either. Do not certify arbitrary subtrees from a media
  * selector: any element descendant stays conservative, including unproven paint.
- * Unreadable generated styles also retain the envelope rather than lose a real
- * collision. Empty quoted pseudo content can still paint a background/border. */
-export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => {
- try {
-  if (!ownText.length || interactiveNode || !style.display || style.display.includes('list-item')
-      || !['none','normal'].includes(style.content)
-      || !['rgba(0, 0, 0, 0)','transparent'].includes(style.backgroundColor)
-      || !['backgroundImage','borderImageSource','boxShadow','textShadow','textDecorationLine',
-           'filter','backdropFilter','maskImage','textEmphasisStyle'].every(key => style[key] === 'none')
-      || !['Top','Right','Bottom','Left'].every(side => px(style['border'+side+'Width']) === 0)
-      || px(style.outlineWidth) !== 0 || px(style.columnRuleWidth) !== 0
-      || (style.webkitTextStrokeWidth && px(style.webkitTextStrokeWidth) !== 0)
-      || (style.webkitBoxReflect && style.webkitBoxReflect !== 'none')
-      || el.closest('svg') || el.matches('img,canvas,video,audio,iframe,object,embed')
-      || el.querySelectorAll('*').length !== 0) return false;
-  const generated=['::before','::after','::marker'].map(pseudo => getComputedStyle(el,pseudo));
-  return generated.every(s => s && typeof s.content === 'string' && ['none','normal'].includes(s.content));
- } catch {
-  // This is lack of a paint proof, not measured empty text. Omit fragments so
-  // the policy preserves the full box even on unsupported/unreadable pseudos.
-  return false;
- }
-}`;
+ * Unreadable generated styles also return no decision rather than lose a real
+ * collision. A generated box exists whenever `content` is not `none`/`normal` —
+ * even the empty string — and that box can paint a background and a border, so it
+ * keeps the node conservative.
+ *
+ * WHY THIS IS A LIST AND NOT A CHAIN OF `&&`: when the four session nodes came
+ * back certified-conservative with no fragment measurement, the verification
+ * could only say "missing measurement" — the reason a node was NOT pure lived
+ * nowhere. The fix for that is a recorded reason, never a looser rule: two review
+ * rounds each caught a real false negative from a permissive gate (a
+ * pseudo-element's paint, a background-only child element), and the conditions
+ * below are what keep those excluded. So the conditions are declared ONCE, each
+ * with a name, an expected value and an observation, and BOTH consumers read
+ * that one list: `pure` is `every(ok)` and `blockedBy` is the first probe that
+ * said no, with what it observed and what it expected. A second implementation
+ * of the rule would drift from the gate, and the drift would be invisible until
+ * a node was certified from a condition the report never showed. */
+export const PURE_OWN_TEXT_VERDICT_SOURCE = String.raw`(() => {
+ // Built once per page: the probes close over the shared context object, never
+ // over one node, so a few hundred frames do not rebuild the rule per node.
+ const probes = [
+  ['own-text', 'non-empty', (c) => c.ownText.length, (v) => v > 0],
+  ['interactive', false, (c) => Boolean(c.interactiveNode), (v) => v === false],
+  ['display', 'set', (c) => c.display, (v) => v.length > 0],
+  ['display-not-list-item', 'not list-item', (c) => c.display, (v) => !v.includes('list-item')],
+  ['content', 'none|normal', (c) => c.s.content, (v) => ['none','normal'].includes(v)],
+  ['background-color', 'rgba(0, 0, 0, 0)|transparent', (c) => c.s.backgroundColor, (v) => ['rgba(0, 0, 0, 0)','transparent'].includes(v)],
+ ];
+ for (const condition of [
+  ['background-image', 'none', (c) => c.s.backgroundImage, (v) => v === 'none'],
+  ['border-image-source', 'none', (c) => c.s.borderImageSource, (v) => v === 'none'],
+  ['box-shadow', 'none', (c) => c.s.boxShadow, (v) => v === 'none'],
+  ['text-shadow', 'none', (c) => c.s.textShadow, (v) => v === 'none'],
+  ['text-decoration-line', 'none', (c) => c.s.textDecorationLine, (v) => v === 'none'],
+  ['filter', 'none', (c) => c.s.filter, (v) => v === 'none'],
+  ['backdrop-filter', 'none', (c) => c.s.backdropFilter, (v) => v === 'none'],
+  ['mask-image', 'none', (c) => c.s.maskImage, (v) => v === 'none'],
+  ['text-emphasis-style', 'none', (c) => c.s.textEmphasisStyle, (v) => v === 'none'],
+  ['border-top-width', 0, (c) => c.px(c.s.borderTopWidth), (v) => v === 0],
+  ['border-right-width', 0, (c) => c.px(c.s.borderRightWidth), (v) => v === 0],
+  ['border-bottom-width', 0, (c) => c.px(c.s.borderBottomWidth), (v) => v === 0],
+  ['border-left-width', 0, (c) => c.px(c.s.borderLeftWidth), (v) => v === 0],
+ ]) probes.push(condition);
+ probes.push(
+  ['outline-width', 0, (c) => c.px(c.s.outlineWidth), (v) => v === 0],
+  ['column-rule-width', 0, (c) => c.px(c.s.columnRuleWidth), (v) => v === 0],
+  ['-webkit-text-stroke-width', 0, (c) => c.s.webkitTextStrokeWidth, (v, c) => !v || c.px(v) === 0],
+  ['-webkit-box-reflect', 'none', (c) => c.s.webkitBoxReflect, (v) => !v || v === 'none'],
+  ['svg-ancestor', false, (c) => Boolean(c.el.closest('svg')), (v) => v === false],
+  ['replaced-content', false, (c) => Boolean(c.el.matches('img,canvas,video,audio,iframe,object,embed')), (v) => v === false],
+  ['element-descendants', 0, (c) => c.el.querySelectorAll('*').length, (v) => v === 0],
+ );
+ for (const pseudo of ['::before','::after','::marker'])
+  probes.push([pseudo + '-content', 'none|normal', (c) => getComputedStyle(c.el, pseudo).content,
+   (v) => typeof v === 'string' && ['none','normal'].includes(v), 'generated']);
+ return (el, style, ownText, interactiveNode, px, collect) => {
+  const rows = [];
+  // Generated and descendant reads can throw on an element the browser will not
+  // resolve a pseudo for. That is a lack of a paint proof, not observed empty
+  // text, so it is recorded as 'unreadable' and the node stays conservative.
+  const attempt = (read) => {
+   try { return {value: read(), read: true}; } catch (error) { return {value: 'unreadable', read: false}; }
+  };
+  // Artifact bytes are bounded: a value is truncated, never a condition name, so
+  // every row stays identifiable in the failure receipt.
+  const compact = (value) => value === undefined ? null
+   : typeof value === 'string' && value.length > 48 ? value.slice(0, 45) + '...' : value;
+  const s = style || {};
+  const context = {el: el, s: s, ownText: ownText, interactiveNode: interactiveNode, px: px,
+   display: typeof s.display === 'string' ? s.display : ''};
+  for (const probe of probes) {
+   const read = attempt(() => probe[2](context));
+   const verdict = read.read ? attempt(() => probe[3](read.value, context)) : {value: false};
+   const ok = read.read && verdict.value === true;
+   rows.push({name: probe[0], expected: probe[1], observed: compact(read.value), ok: ok});
+   // The hot path asks only "is it pure": once a probe fails, later probes cannot
+   // change that answer, and the two expensive ones (descendant census, generated
+   // styles) are then skipped exactly as the old chain skipped them. Generated
+   // styles are the exception: they were always read as one group (all three
+   // pseudos, then a conjunction), so the group is finished even when its first
+   // member fails — a classifier that stops reading is a different classifier, and
+   // the pseudo-read assertions pin that. A recorded verdict asks for the whole
+   // map, and only own-text candidates do that — a handful per frame, so the
+   // census is affordable there.
+   if (!ok && !collect && probe[4] !== 'generated') break;
+  }
+  const blocked = rows.find((row) => row.ok === false) || null;
+  return {pure: rows.every((row) => row.ok), blockedBy: blocked ? blocked.name : null,
+   expected: blocked ? blocked.expected : null, observed: blocked ? blocked.observed : null,
+   conditions: rows};
+ };
+})()`;
+/** The boolean the canonical probe and the policy have always consumed. It is the
+ * SAME evaluator with the whole-map recording off, never a parallel rule. */
+export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => (${PURE_OWN_TEXT_VERDICT_SOURCE})(el,style,ownText,interactiveNode,px,false).pure`;
 
 export const OWN_TEXT_GEOMETRY_SOURCE = String.raw`(el,clip) => {
  const box=r=>({x:r.left,y:r.top,w:r.right-r.left,h:r.bottom-r.top});
@@ -184,7 +256,10 @@ const probeWithGeometry = (extra = "") => `
   // it. The rubric allows the overflow there and nowhere else, so the answer has to
   // come from the chain.
   const ownTextGeometry = ${OWN_TEXT_GEOMETRY_SOURCE};
-  const ownTextOnly = ${PURE_OWN_TEXT_SOURCE};
+  // The explainable evaluator, so the record can say WHY a text node kept the
+  // conservative envelope. One list backs both this and the policy's boolean;
+  // see PURE_OWN_TEXT_VERDICT_SOURCE for why that matters.
+  const pureOwnTextView = ${PURE_OWN_TEXT_VERDICT_SOURCE};
   const insideHorizontalScroller = (el) => {
     let node = el.parentElement;
     while (node && node.nodeType === 1) {
@@ -321,11 +396,20 @@ const probeWithGeometry = (extra = "") => `
     // Pure own text uses line fragments, never the envelope spanning wrapped
     // lines. Controls and mixed/non-text paint retain the conservative old box:
     // shrinking those to text would erase borders, backgrounds and hit areas.
-    const pureOwnText = ownTextOnly(el,style,ownText,interactiveNode,px);
+    // Recording costs the whole-map census only on own-text candidates: those
+    // are the nodes whose conservative verdict used to be unexplained, and they
+    // are few per frame, so the descendant census is affordable on them alone.
+    const purity = pureOwnTextView(el,style,ownText,interactiveNode,px,ownText.length > 0);
+    const pureOwnText = purity.pure;
     const u08PaintFragments = pureOwnText ? ownTextGeometry(el,clipIntersection).textFragments.flatMap(f => f.clipped ? [f.clipped] : []) : undefined;
     nodes.push({
       index,
       u08PaintFragments,
+      // Recorded, never interpreted: undefined means "not asked" (the node has no
+      // own text), while an object is the gate's actual reason for keeping the
+      // envelope. Serialized diagnostics stay bounded by per-row truncation and
+      // by covering candidate text nodes only.
+      u08PaintExclusion: !pureOwnText && ownText.length > 0 ? {blockedBy: purity.blockedBy, expected: purity.expected, observed: purity.observed, conditions: purity.conditions} : undefined,
       tag: el.tagName.toLowerCase(),
       path: (() => {
         const parts = [];

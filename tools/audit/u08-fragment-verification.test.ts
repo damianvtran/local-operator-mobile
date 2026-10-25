@@ -573,6 +573,30 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		expect(() => evaluateRepairedCell(noFragments, ORIGINAL_NODE_PATH)).toThrow(
 			"fragment measurement",
 		);
+		// The refusal must carry the gate's reason: this run reported only the
+		// absence of a measurement, so a reader could not tell which condition
+		// rejected a real react-native-web text node. The condition name and the
+		// observed/expected pair come from the probe's record, never from a guess.
+		const explained = incident();
+		const span = explained.nodes[1];
+		if (!span) throw Error("Missing fixture");
+		span.u08PaintExclusion = {
+			blockedBy: "text-shadow",
+			expected: "none",
+			observed: "1px 1px black",
+			conditions: [
+				{
+					name: "text-shadow",
+					expected: "none",
+					observed: "1px 1px black",
+					ok: false,
+				},
+			],
+		};
+		delete span.u08PaintFragments;
+		expect(() => evaluateRepairedCell(explained, ORIGINAL_NODE_PATH)).toThrow(
+			'node 1: own-text purity blocked by text-shadow, observed "1px 1px black", expected "none"',
+		);
 		const empty = incident();
 		for (const n of empty.nodes.filter((n) => n.tag === "span"))
 			n.u08PaintFragments = [];

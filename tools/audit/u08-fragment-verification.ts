@@ -10,7 +10,12 @@ import { reDriveMismatch } from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { type AuditRecord, auditCell } from "./audit.ts";
-import { type AuditState, runChecks, U08_SUPPRESSION } from "./checks.ts";
+import {
+	type AuditNode,
+	type AuditState,
+	runChecks,
+	U08_SUPPRESSION,
+} from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { type PaintRect, paintOverlap } from "./paint-fragments.ts";
 import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
@@ -270,6 +275,22 @@ export function verificationRecords(base: AuditRecord): AuditRecord[] {
 	);
 }
 const CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
+/** The refusal has to name the gate's reason, not only its absence: the run this
+ * check failed on reported "Missing actual own-text fragment measurement" and
+ * nothing else, which cannot distinguish a react-native-web property the gate
+ * tests differently from a premise the gate can never satisfy for RNW. The
+ * condition name is never truncated — an unnamed reason cannot be acted on — and
+ * the observed/expected pair is already length-bounded by the probe.
+ * A node without a record is a hand-built fixture or a legacy packet: say so
+ * rather than invent a condition. */
+function paintRefusalReason(node: AuditNode | undefined) {
+	const why = node?.u08PaintExclusion;
+	if (!why)
+		return `node ${node?.index ?? "unknown"}: no own-text purity record, conservative envelope retained`;
+	const observed = JSON.stringify(why.observed) ?? "undefined";
+	const expected = JSON.stringify(why.expected) ?? "undefined";
+	return `node ${node.index}: own-text purity blocked by ${why.blockedBy ?? "unknown"}, observed ${observed}, expected ${expected}`;
+}
 export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 	if (state.u08GeometryVersion !== 1)
 		throw new Error("Missing corrected fragment schema");
@@ -317,7 +338,9 @@ export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 			!Array.isArray(node.u08PaintFragments) ||
 			!node.u08PaintFragments.some((r) => r.w > 0 && r.h > 0)
 		)
-			throw new Error("Missing actual own-text fragment measurement");
+			throw new Error(
+				`Missing actual own-text fragment measurement (${paintRefusalReason(node)})`,
+			);
 		const control = node.ancestors
 			.map((index) => state.nodes.find((n) => n.index === index))
 			.find((n) => n?.tag === "button");
@@ -489,6 +512,10 @@ export async function verifyFragments(ctx: Context) {
 							n.u08PaintFragments === undefined
 								? "conservative/unobserved"
 								: "measured",
+						// The reason the status is conservative, beside the status itself: a
+						// reader can tell a property RNW emits differently from a premise the
+						// gate can never satisfy without another hosted run.
+						paintExclusion: n.u08PaintExclusion ?? null,
 						fragments: n.u08PaintFragments,
 					}))
 			: [];
