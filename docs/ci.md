@@ -43,10 +43,14 @@ second after the 03:17 nightly (40158909122) was created; and the other way roun
 push run 39543983044, created 04:25:45Z, was cancelled at 04:26:54Z with no jobs
 at all, one second after dispatch 39544082930 was created in the same lane.
 `scripts/workflow-concurrency.test.ts` fails if any of those keys stops
-distinguishing its triggers, and covers every workflow in which two triggers can
-start a run on one ref. `cancel-in-progress` is unchanged, so this is not immunity
-from cancellation: a *running* run on `main` is still never cancelled, but the one
-pending run a group may hold is still replaced by a newer run in the same lane.
+distinguishing its triggers or its refs, and requires `cancel-in-progress` to
+render false on `refs/heads/main` in every workflow that declares a concurrency
+block — stated in the file, not inherited from a default — so the rule that no
+running `main` run is cancelled is pinned rather than assumed. It covers every
+workflow in which two events can race for one ref. `cancel-in-progress` is
+otherwise unchanged, so this is not immunity from cancellation: a *running* run
+on `main` is still never cancelled, but the one pending run a group may hold is
+still replaced by a newer run in the same lane.
 The two `account-routing-*` lanes deliberately keep their own pre-existing key so
 their artefacts and baselines stay comparable, and `release.yml` keeps
 `workflow`+`ref` because its two triggers meet only on a tag, where both are the

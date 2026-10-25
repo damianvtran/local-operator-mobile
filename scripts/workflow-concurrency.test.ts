@@ -35,6 +35,16 @@
  * `concurrency:` block has no group to compete in and cannot drop a run; it is
  * listed, not skipped, so adding a block to one is a decision the suite reports.
  *
+ * THE PROPERTIES A LANE MUST HAVE, each with a control that proves it can fail:
+ * the trigger (`github.event_name`) separates two events that can share a ref;
+ * the ref (`github.ref`) separates one event on two refs, because a key that
+ * drops it folds every branch into one group and the branch supersede then
+ * cancels silently; and `cancel-in-progress` renders false on `refs/heads/main`
+ * for EVERY covered workflow, since a running `main` run is the record of a
+ * merged commit and cancelling it loses that record rather than saving a minute.
+ * That last one deliberately applies to release.yml as well, whose exemption is
+ * from the trigger rule alone.
+ *
  * The reader is structure-tolerant (comments, key order, block or flow lists,
  * `.yml` or `.yaml`) but fails closed: an argument, operator or function call it
  * cannot model throws rather than returning a lane that might be wrong.
@@ -490,6 +500,27 @@ interface WorkflowFile {
 	cancelInProgress: string | null;
 }
 
+/**
+ * The value `cancel-in-progress` resolves to for one run. Unlike `group`, this
+ * scalar may legitimately be a bare literal (`false`), which is one value for
+ * every run and exactly what release.yml wants, so it cannot go through `lane()`'s
+ * "a lane must interpolate" rule.
+ */
+function cancelValue(expression: string, run: RunIdentity): Value {
+	const open = expression.indexOf("${{");
+	if (open === -1) return evaluate(expression.trim(), run);
+	const close = expression.indexOf("}}", open);
+	if (close === -1) {
+		throw new Error(`unclosed \${{ in cancel-in-progress: ${expression}`);
+	}
+	if (expression.slice(close + 2).trim() !== "") {
+		throw new Error(
+			`cancel-in-progress has text this guard cannot read after its expression: ${expression}`,
+		);
+	}
+	return evaluate(expression.slice(open + 3, close), run);
+}
+
 function concurrencyOf(source: string): {
 	group: string | null;
 	cancelInProgress: string | null;
@@ -554,6 +585,41 @@ const covered = workflows.filter(
 );
 
 /**
+ * Two branch refs one event can fire on. The second is deliberately NOT the
+ * default branch: a key that carries the trigger but not the ref renders one
+ * lane for both, which is the defect the ref assertion pins.
+ */
+const MAIN_REF = `${HEADS}${DEFAULT_BRANCH}`;
+const NOT_MAIN_REF = `${HEADS}not-${DEFAULT_BRANCH}`;
+
+/**
+ * Every `inputs.proof_mode` a dispatch can carry, `null` being the empty `inputs`
+ * context every other event has. Rendered against every workflow: only e2e.yml
+ * reads the context, and the rest ignoring it is what keeps this matrix uniform.
+ */
+const PROOF_MODES: (string | null)[] = [
+	null,
+	"full",
+	"account-routing-ios-proof",
+	"account-routing-android-proof",
+];
+
+/**
+ * The clause shapes that keep a running `main` run alive, one per covered
+ * workflow, longest first so e2e's compound guard is rewritten in one piece.
+ * A regression deletes the guard or flips the literal `false`, either of which
+ * leaves the scalar rendering `true` on `main` — the mutation the control below
+ * applies. A workflow whose guard changes shape matches none of these and fails
+ * the control loudly instead of passing unexercised.
+ */
+const MAIN_SAFE_CLAUSES = [
+	"inputs.proof_mode != 'account-routing-ios-proof' && inputs.proof_mode != 'account-routing-android-proof' && github.ref != 'refs/heads/main'",
+	"github.event_name == 'pull_request'",
+	"github.ref != 'refs/heads/main'",
+	"false",
+];
+
+/**
  * Workflows the trigger rule deliberately does not apply to. Each entry names the
  * reason AND the structural premise that keeps the reason true — asserted below,
  * so the exemption cannot quietly stop being one. Absence from this map is not an
@@ -612,6 +678,24 @@ describe("workflow concurrency keys", () => {
 		const cases = collisions(workflow.triggers);
 		const group = workflow.group;
 		const exemption = EXEMPT[workflow.file];
+		// Every event this workflow declares. A dispatch is only the clearest case of
+		// one event reaching many branches, and the ref belongs in the lane whichever
+		// trigger produced it — so the ref property is checked on the event, not on
+		// the trigger's current branch filter.
+		const events = [
+			...new Set(workflow.triggers.map((trigger) => trigger.event)),
+		];
+		// Every run identity that can land on `main`, across every proof a dispatch
+		// can carry: the `main` property is checked on each path into it.
+		const mainRuns: RunIdentity[] = workflow.triggers
+			.filter((trigger) => trigger.firesOn(MAIN_REF))
+			.flatMap((trigger) =>
+				PROOF_MODES.map((proof) => ({
+					event: trigger.event,
+					ref: MAIN_REF,
+					proof,
+				})),
+			);
 
 		describe(workflow.file, () => {
 			if (group === null) {
@@ -622,6 +706,54 @@ describe("workflow concurrency keys", () => {
 				});
 				return;
 			}
+
+			/*
+			 * Applies to the exempt workflow too. release.yml is the one where a
+			 * cancelled `main` run costs the most — the merged commit whose release never
+			 * published — so the trigger rule's exemption deliberately stops short of
+			 * this line, and `cancel-in-progress: false` is asserted rather than assumed.
+			 */
+			it("never cancels a run on refs/heads/main", () => {
+				const scalar = workflow.cancelInProgress;
+				expect(
+					scalar,
+					"`concurrency.cancel-in-progress` is not stated, so this file never says whether a running main run survives the next push",
+				).not.toBeNull();
+				// Non-vacuity: an empty matrix means the trigger reader broke, not that
+				// there was nothing to check.
+				expect(mainRuns.length).toBeGreaterThan(0);
+				for (const run of mainRuns) {
+					const value = cancelValue(scalar ?? "", run);
+					expect(
+						isFalsy(value),
+						`${workflow.file}: a ${run.event} run on ${run.ref} (proof_mode ${run.proof ?? "unset"}) would cancel a RUNNING main run — cancel-in-progress rendered ${String(value)}`,
+					).toBe(true);
+				}
+			});
+
+			it("would fail a cancel-in-progress that cancels on main, so the check can fail", () => {
+				// The regression, applied to this file: with the clause that keeps `main`
+				// alive replaced by `true`, the rendering is what a deleted guard (or a
+				// flipped literal) leaves behind. If that still read as safe, the assertion
+				// above would be pinning nothing.
+				let cancelling = workflow.cancelInProgress ?? "";
+				for (const clause of MAIN_SAFE_CLAUSES) {
+					cancelling = cancelling.replaceAll(clause, "true");
+				}
+				expect(
+					cancelling,
+					`${workflow.file}: cancel-in-progress matches none of MAIN_SAFE_CLAUSES, so this control cannot exercise it`,
+				).not.toBe(workflow.cancelInProgress);
+				const value = cancelValue(cancelling, {
+					event: "workflow_dispatch",
+					ref: MAIN_REF,
+					proof: null,
+				});
+				expect(
+					isFalsy(value),
+					`${workflow.file}: the mutated cancel-in-progress still reads as safe on ${MAIN_REF}`,
+				).toBe(false);
+			});
 
 			if (exemption) {
 				it("is exempt only while its stated premise holds", () => {
@@ -635,6 +767,64 @@ describe("workflow concurrency keys", () => {
 
 			it("keys the group on an expression", () => {
 				expect(group.startsWith("${{") && group.endsWith("}}")).toBe(true);
+			});
+
+			it("renders a different lane for one event on two different refs", () => {
+				// `github.ref` is the third dimension of the key. Keyed on workflow + trigger
+				// alone, every dispatch of one proof on every branch shares a group, so a
+				// branch dispatch with `cancel-in-progress: true` kills the older one — the
+				// silent-cancel class this suite exists for, one dimension over. Asserted on
+				// each event's expression, so a branch filter that widens later (or a branch
+				// push lane the filters currently restrict to `main`) cannot inherit a key
+				// that drops the ref.
+				expect(events.length).toBeGreaterThan(0);
+				for (const event of events) {
+					for (const proof of PROOF_MODES) {
+						const first = lane(group, {
+							event,
+							ref: MAIN_REF,
+							proof,
+						});
+						const second = lane(group, {
+							event,
+							ref: NOT_MAIN_REF,
+							proof,
+						});
+						expect(
+							first,
+							`a ${event} run with proof_mode ${proof ?? "unset"} on ${MAIN_REF} and on ${NOT_MAIN_REF} share the lane ${first}`,
+						).not.toBe(second);
+					}
+				}
+			});
+
+			it("collapses those refs once github.ref is a constant, so the check can fail", () => {
+				// The ref dimension's own control, matching the trigger one below: the ref
+				// variable is what keeps these lanes apart, so replacing it with a constant
+				// must put both refs back into one lane.
+				const flattened = group.replaceAll("github.ref", "'constant'");
+				expect(
+					flattened,
+					`${workflow.file}: the group reads no github.ref for this control to remove`,
+				).not.toBe(group);
+				for (const event of events) {
+					for (const proof of PROOF_MODES) {
+						expect(
+							lane(flattened, {
+								event,
+								ref: NOT_MAIN_REF,
+								proof,
+							}),
+							`${workflow.file}: ${event} lanes on two refs still differ without github.ref`,
+						).toBe(
+							lane(flattened, {
+								event,
+								ref: MAIN_REF,
+								proof,
+							}),
+						);
+					}
+				}
 			});
 
 			it("renders a different lane for every pair of triggers that can share a ref", () => {

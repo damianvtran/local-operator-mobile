@@ -90,8 +90,9 @@ on:
 # run of the same proof waits behind the first instead of killing it. That is not
 # immunity from every cancel — GitHub keeps ONE pending run per group, so a third
 # run in one main lane still replaces whichever predecessor was only waiting. A
-# same-proof dispatch on a non-main ref still supersedes its older run; no branch
-# push reaches this workflow at all, since `on.push.branches` is `main` alone.
+# same-proof dispatch on a non-main ref still supersedes its older run; and no
+# push to any branch other than `main` reaches this workflow, since
+# `on.push.branches` is `main` alone, so the non-main rule never meets a push.
 concurrency:
   group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, inputs.proof_mode || 'full') || format('{0}-{1}-{2}', github.workflow, github.event_name, github.ref) }}
   cancel-in-progress: ${{ inputs.proof_mode != 'account-routing-ios-proof' && inputs.proof_mode != 'account-routing-android-proof' && github.ref != 'refs/heads/main' }}
