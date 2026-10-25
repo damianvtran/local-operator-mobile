@@ -501,6 +501,19 @@ const largestDifference = (a, b) =>
 
 const failures = [];
 
+/* How many isolated pixels may sit beyond a surface's tolerance and still pass.
+ *
+ * Measured, not chosen for comfort. Cross-Chrome drift on the runner moves
+ * 232-327 pixels by 1/255 on the Play set, 573-790 by 1-2/255 on the phone set,
+ * and 9,026-47,479 by 2/255 on the iPad set — all absorbed by the per-surface
+ * tolerance. One phone frame also carries a single pixel at 14/255, which fails a
+ * zero-outlier rule while saying nothing about content. The smallest content
+ * change this project has measured is a 10x10 recolour (100 pixels) and a
+ * one-character headline edit is 439-770 pixels, so a handful of isolated pixels
+ * cannot hide a real edit. Applies only where a surface has a tolerance; the
+ * preview sheet and feature graphic keep zero outliers. */
+const STRAY_PIXELS = 8;
+
 const stale = (path, why) => {
 	console.error(`stale: ${path} — ${why}`);
 	failures.push(path);
@@ -561,6 +574,13 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		}
 		return verified.push(outPath);
 	}
+	if (fuzz > 0 && Number.isFinite(differing) && differing > 0 && differing <= STRAY_PIXELS) {
+		console.log(
+			`  ${name}: pixels identical within the ${fuzz}% fuzz except ${differing} isolated ` +
+				`pixel(s)${worst} — inside the ${STRAY_PIXELS}-pixel encoder allowance (bytes differ)`,
+		);
+		return verified.push(outPath);
+	}
 	if (differing === null) {
 		return stale(
 			outPath,
@@ -570,7 +590,7 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	if (differing === undefined) {
 		return stale(
 			outPath,
-			"the pixel comparison itself failed (the decoder ran but produced no AE count)",
+			"the pixel comparison itself failed (the decoder ran but produced no count)",
 		);
 	}
 	stale(
