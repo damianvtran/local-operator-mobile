@@ -161,9 +161,12 @@ required once `android` is enabled.
   faces from `design/fonts/*.woff2`, so no sibling checkout is involved in how the
   captions render. `--target frames --check` now re-renders each committed listing
   frame on every surface and compares it — bytes where the encoder matches the
-  rendering machine, pixels otherwise, and it prints which — so a font fallback or
-  caption change fails the gate rather than shipping, and CI runs that check as its
-  own hard step. A rendered-font assertion that names the face is still open as a
+  renderer, and otherwise pixels within that surface's own tolerance from
+  `frames.json` (the iPad needs the most slack: its capture is the one resampled
+  into a smaller slot) — reporting which comparison it made, how far the pixels
+  moved, and how many sat outside the tolerance. So a template, capture or caption
+  change fails the gate rather than shipping, and CI runs that check as its own
+  hard step. A rendered-font assertion that names the face is still open as a
   separate nicety.*
   *The spec colophon is no longer on any of these frames: review round 1 removed it
   from the iPhone template, the iPad and Play templates were rendered without one,
