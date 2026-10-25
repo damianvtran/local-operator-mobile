@@ -27,11 +27,12 @@
  *    package.json (its `main` and `export:web` decide what the bundle is, and the
  *    proof renders a prebuilt dist), and dependency identity.
  *  - INPUT_TREE_PINS: the scene the proof is fed — the relay corpus, the turn
- *    supplement fixtures, and the positive-control canary. Editing transcript
- *    text in `fixtures/relay/**` moves the line boxes being measured while
+ *    supplement fixtures read by the relay, and the positive-control canary.
+ *    Reader-shaped selection excludes corpus documentation and unused records.
+ *    Editing transcript text in `fixtures/relay/**` moves line boxes while
  *    RECORD.pinnedScenario still names the same scenario.
  *
- * OUT OF SCOPE by construction (no exclusion list to get wrong): the design kit's
+ * OUT OF SCOPE by construction (reader-shaped fixture selection below): the design kit's
  * documentation captures (`design/store-screenshots`), its preview page, app
  * icons, native config plugins, `docs/`, test files, and fixtures no proof reads.
  * Merging or editing any of those cannot refuse a run.
@@ -141,9 +142,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 	"fixtures/relay":
-		"bae82aa6b2bcb052b981d87d159257d6e4c395aa56def1116c51571af820b893",
+		"c1b9c2bc12fdae19972252bd6ecedd5585d98f4b22865656f7938c37f92914cb",
 	"fixtures/supplements":
-		"b739f3e1d417a70088dae3a03d6f5421e4813c07ab43a4804231414c1dc2c64a",
+		"29bad98e91e6e29bd8148505f06058c24ff6682b3b4ba62bd43575a6a94d19cc",
 };
 
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
@@ -185,6 +186,32 @@ export function pinnedScopes(): string[] {
 	].sort();
 }
 
+/** Match the readers, not the directory names: fixtures.ts loads direct HTTP /
+ * synthetic JSON, every direct SSE entry, and two named gateway/probe records;
+ * scenarios.ts reads supplement rows and relay.ts serves one HTML document.
+ * A README at either root (or an unused probe/message record) cannot move a
+ * measured line box. SSE has deliberately NO extension exclusion: its reader
+ * consumes even a prose-named entry, so such a file must remain pinned. */
+const RELAY_JSON = /^fixtures\/relay\/(?:http|synthetic)\/[^/]+\.json$/;
+const RELAY_SSE = /^fixtures\/relay\/sse\/[^/]+$/;
+const SUPPLEMENT_ROWS = /^fixtures\/supplements\/rows\/[^/]+\.json$/;
+
+export function isPinnedContentPath(path: string): boolean {
+	if (path.startsWith("fixtures/relay/"))
+		return (
+			RELAY_JSON.test(path) ||
+			RELAY_SSE.test(path) ||
+			path === "fixtures/relay/gateway/gateway-refusal-constants.json" ||
+			path === "fixtures/relay/probes/wedged-row-signal.json"
+		);
+	if (path.startsWith("fixtures/supplements/"))
+		return (
+			SUPPLEMENT_ROWS.test(path) ||
+			path === "fixtures/supplements/documents/populated.html"
+		);
+	return true;
+}
+
 export function snapshotContent(root: string = REPO_ROOT): RepositoryContent {
 	const listed = execFileSync(
 		"git",
@@ -196,6 +223,7 @@ export function snapshotContent(root: string = REPO_ROOT): RepositoryContent {
 	const files = new Map<string, string>();
 	const missing = new Set<string>();
 	for (const path of listed) {
+		if (!isPinnedContentPath(path)) continue;
 		try {
 			files.set(path, sha256(readFileSync(resolve(root, path))));
 		} catch (error) {
@@ -214,7 +242,7 @@ export function treeDigest(content: RepositoryContent, root: string): string {
 	const prefix = `${root}/`;
 	return sha256(
 		[...content.files]
-			.filter(([path]) => path.startsWith(prefix))
+			.filter(([path]) => path.startsWith(prefix) && isPinnedContentPath(path))
 			.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 			.map(([path, digest]) => `${digest}  ${path}\n`)
 			.join(""),
@@ -241,11 +269,13 @@ export interface Drift {
 /** A vanished member is reported once by path, not also as a failed root digest:
  * one deletion should not read as two verdicts. */
 const hasMissingUnder = (content: RepositoryContent, root: string) =>
-	[...content.missing].some((path) => path.startsWith(`${root}/`));
+	[...content.missing].some(
+		(path) => path.startsWith(`${root}/`) && isPinnedContentPath(path),
+	);
 
 export function contentDrift(content: RepositoryContent): Drift[] {
 	const drift: Drift[] = [];
-	for (const path of [...content.missing].sort())
+	for (const path of [...content.missing].filter(isPinnedContentPath).sort())
 		drift.push({
 			kind: "missing",
 			scope: path,

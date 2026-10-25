@@ -21,16 +21,21 @@ import {
 	mkdtempSync,
 	readFileSync,
 	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
+import { isBuiltin } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import * as ts from "typescript/unstable/ast";
+import { API } from "typescript/unstable/sync";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
 	assertPinnedContent,
 	contentDrift,
 	INPUT_TREE_PINS,
 	INSTRUMENT_PINS,
+	isPinnedContentPath,
 	pinnedScopes,
 	RENDER_FILE_PINS,
 	RENDER_TREE_PINS,
@@ -43,10 +48,16 @@ const sha = (bytes: Uint8Array) =>
 	createHash("sha256").update(bytes).digest("hex");
 
 let fixture: string;
+let parserRoot: string;
+let parser: API;
+let parserConfig: string | undefined;
+let parserSequence = 0;
 
 /** Copy every pinned scope into a throwaway git repository. `git add -A` is what
  * the guard reads: a merged file is in the index, a scratch file is not. */
 beforeAll(() => {
+	parserRoot = mkdtempSync(join(tmpdir(), "u08-import-parser-"));
+	parser = new API({ cwd: parserRoot });
 	fixture = mkdtempSync(join(tmpdir(), "u08-content-pins-"));
 	for (const scope of pinnedScopes()) {
 		const source = resolve(root, scope);
@@ -70,9 +81,15 @@ beforeAll(() => {
 		],
 		{ cwd: fixture },
 	);
-});
+	// Real git/index and corpus copying shares host I/O with other sessions;
+	// keep setup bounded without mistaking a 10s fleet-load delay for drift.
+}, 30_000);
 
-afterAll(() => rmSync(fixture, { recursive: true, force: true }));
+afterAll(() => {
+	parser?.close();
+	if (parserRoot) rmSync(parserRoot, { recursive: true, force: true });
+	if (fixture) rmSync(fixture, { recursive: true, force: true });
+});
 
 /** Restore the base commit and drop untracked additions between cases. */
 afterEach(() => {
@@ -136,6 +153,59 @@ describe("U08 content-identity admission", () => {
 			)}`,
 		);
 	});
+
+	it.each(["fixtures/relay", "fixtures/supplements"])(
+		"admits README-only edits and deletion in %s",
+		(scope) => {
+			append(`${scope}/README.md`, "\nDocumentation only.\n");
+			execFileSync("git", ["add", "-A"], { cwd: fixture });
+			expect(() => assertPinnedContent(snapshotContent(fixture))).not.toThrow();
+			rmSync(resolve(fixture, `${scope}/README.md`));
+			expect(() => assertPinnedContent(snapshotContent(fixture))).not.toThrow();
+		},
+	);
+
+	it("keeps fixture selection aligned with reader behavior, not prose extensions", () => {
+		for (const path of [
+			"fixtures/relay/http/new.json",
+			"fixtures/relay/synthetic/new.json",
+			"fixtures/relay/sse/new.txt",
+			"fixtures/relay/sse/README.md",
+			"fixtures/supplements/rows/new.json",
+			"fixtures/supplements/documents/populated.html",
+		])
+			expect(isPinnedContentPath(path), path).toBe(true);
+		for (const path of [
+			"fixtures/relay/README.md",
+			"fixtures/supplements/README.md",
+			"fixtures/relay/LICENSE",
+			"fixtures/relay/http/notes.md",
+			"fixtures/supplements/messages/messages.json",
+			"fixtures/relay/probes/unused.json",
+		])
+			expect(isPinnedContentPath(path), path).toBe(false);
+	});
+
+	it.each([
+		"fixtures/supplements/rows/done_populated.json",
+		"fixtures/supplements/documents/populated.html",
+	])("refuses a real supplement input edit: %s", (path) => {
+		append(path, "\n");
+		expect(() => assertPinnedContent(snapshotContent(fixture))).toThrow(
+			"input-tree fixtures/supplements",
+		);
+	});
+
+	it.each(["fixtures/relay/http/new.json", "fixtures/relay/sse/README.md"])(
+		"refuses newly tracked reader inputs, including SSE prose: %s",
+		(path) => {
+			writeFileSync(resolve(fixture, path), "{}");
+			execFileSync("git", ["add", "-A"], { cwd: fixture });
+			expect(() => assertPinnedContent(snapshotContent(fixture))).toThrow(
+				"input-tree fixtures/relay",
+			);
+		},
+	);
 
 	it("refuses an edited relay fixture through the input digest, not just the scenario name", () => {
 		// RECORD.pinnedScenario pins the scenario name; the rows behind it come
@@ -297,12 +367,98 @@ describe("U08 content-identity admission", () => {
 
 /* ------------------------------------------------------------- the closure -- */
 
-const STATEMENT =
-	/(?:^|\n)\s*(?:import|export)\s+(type\s+)?[^;]*?from\s+"([^"]+)"/g;
-const DYNAMIC = /import\(\s*"([^"]+)"\s*\)/g;
+/** Use the already-installed compiler: regexes silently lost side effects and
+ * quote variants. Unknown/computed edges must stop the completeness claim, not
+ * disappear from it. Node builtins are the only non-repository exemption. */
+function valueSpecifiers(source: string, entry: string): string[] {
+	// TypeScript 7 exposes parsing through its native API, not createSourceFile.
+	// One isolated noResolve/noLib project parses only the supplied source; it
+	// must not load the app, installed @types or the operator's configuration.
+	// Use unique source/project identities: TS 7's API caches source ASTs across
+	// snapshots even after disk invalidation. Reusing input.ts made consecutive
+	// negative controls parse the first control's bytes instead of their own.
+	const sequence = ++parserSequence;
+	const input = join(parserRoot, `input-${sequence}.ts`);
+	const config = join(parserRoot, `tsconfig-${sequence}.json`);
+	writeFileSync(input, source);
+	writeFileSync(
+		config,
+		JSON.stringify({
+			compilerOptions: { noResolve: true, noLib: true, types: [] },
+			files: [input],
+		}),
+	);
+	const snapshot = parser.updateSnapshot({
+		openProjects: [config],
+		...(parserConfig ? { closeProjects: [parserConfig] } : {}),
+	});
+	parserConfig = config;
+	try {
+		const program = snapshot.getProject(config)?.program;
+		if (!program || program.getSyntacticDiagnostics(input).length)
+			throw new Error(`Cannot parse import closure: ${entry}`);
+		const file = program.getSourceFile(input);
+		if (!file) throw new Error(`Missing parsed source: ${entry}`);
+		const specs: string[] = [];
+		const literal = (node: ts.Node | undefined) => {
+			if (
+				!node ||
+				!(ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+			)
+				throw new Error(
+					`Unsupported module load ${node?.getText(file) ?? "<missing>"} in ${entry}`,
+				);
+			specs.push(node.text);
+		};
+		const visit = (node: ts.Node) => {
+			if (ts.isImportDeclaration(node)) {
+				const clause = node.importClause;
+				const bindings = clause?.namedBindings;
+				const onlyTypes =
+					clause?.phaseModifier === ts.SyntaxKind.TypeKeyword ||
+					(!clause?.name &&
+						bindings &&
+						ts.isNamedImports(bindings) &&
+						bindings.elements.length > 0 &&
+						bindings.elements.every((item) => item.isTypeOnly));
+				if (!onlyTypes) literal(node.moduleSpecifier);
+			} else if (ts.isExportDeclaration(node) && node.moduleSpecifier) {
+				const clause = node.exportClause;
+				const onlyTypes =
+					node.isTypeOnly ||
+					(clause &&
+						ts.isNamedExports(clause) &&
+						clause.elements.length > 0 &&
+						clause.elements.every((item) => item.isTypeOnly));
+				if (!onlyTypes) literal(node.moduleSpecifier);
+			} else if (ts.isImportEqualsDeclaration(node) && !node.isTypeOnly) {
+				if (!ts.isExternalModuleReference(node.moduleReference))
+					throw new Error(
+						`Unsupported module alias ${node.getText(file)} in ${entry}`,
+					);
+				literal(node.moduleReference.expression);
+			} else if (
+				ts.isCallExpression(node) &&
+				(node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+					(ts.isIdentifier(node.expression) &&
+						node.expression.text === "require") ||
+					(ts.isPropertyAccessExpression(node.expression) &&
+						node.expression.name.text === "require"))
+			) {
+				literal(node.arguments[0]);
+			}
+			node.forEachChild(visit);
+		};
+		visit(file);
+		return specs;
+	} finally {
+		snapshot.dispose();
+	}
+}
 const REPO_SCOPE = /^(?:tools|src)\//;
+const TRUSTED = new Set(["tools/audit/u08-content-pins.ts"]);
 
-function resolveSpecifier(spec: string, from: string): string | null {
+function resolveSpecifier(spec: string, from: string): string {
 	const base = resolve(root, dirname(from), spec);
 	for (const candidate of [
 		base,
@@ -311,29 +467,111 @@ function resolveSpecifier(spec: string, from: string): string | null {
 		join(base, "index.ts"),
 		join(base, "index.tsx"),
 	])
-		if (existsSync(candidate)) return candidate.slice(root.length + 1);
-	return null;
+		if (existsSync(candidate) && statSync(candidate).isFile()) {
+			const module = candidate.slice(root.length + 1);
+			if (!candidate.startsWith(`${root}/`) || !REPO_SCOPE.test(module))
+				throw new Error(`Outside pinned roots: ${spec} from ${from}`);
+			if (
+				!TRUSTED.has(module) &&
+				INSTRUMENT_PINS[module] === undefined &&
+				!(module.startsWith("src/") && RENDER_TREE_PINS.src)
+			)
+				throw new Error(`Unpinned module: ${spec} from ${from}`);
+			return module;
+		}
+	throw new Error(`Unresolved module: ${spec} from ${from}`);
 }
 
 /** Static value imports and dynamic imports, which is what Node actually loads. */
-function loadedModules(entry: string): string[] {
-	const source = readFileSync(resolve(root, entry), "utf8");
-	const specs = [
-		...[...source.matchAll(STATEMENT)]
-			.filter((match) => !match[1])
-			.map((match) => match[2] as string),
-		...[...source.matchAll(DYNAMIC)].map((match) => match[1] as string),
-	];
-	return specs
-		.filter((spec) => spec.startsWith("."))
-		.map((spec) => resolveSpecifier(spec, entry))
-		.filter((module): module is string => module !== null);
+function loadedModules(
+	entry: string,
+	source = readFileSync(resolve(root, entry), "utf8"),
+): string[] {
+	return valueSpecifiers(source, entry).flatMap((spec) => {
+		if (isBuiltin(spec)) return [];
+		if (!spec.startsWith("."))
+			throw new Error(`Unpinned module: ${spec} from ${entry}`);
+		return [resolveSpecifier(spec, entry)];
+	});
 }
+
+describe("import discovery refuses incomplete closure evidence", () => {
+	it.each([
+		'import "./u08-content-pins.test.ts";',
+		"import { x } from './u08-content-pins.test.ts';",
+		"import(`./u08-content-pins.test.ts`);",
+		"require('./u08-content-pins.test.ts');",
+		'export * from "./u08-content-pins.test.ts";',
+	])("refuses an unpinned value edge: %s", (source) => {
+		expect(() =>
+			loadedModules("tools/audit/u08-geometry-proof.ts", source),
+		).toThrow("Unpinned module: ./u08-content-pins.test.ts");
+	});
+
+	it.each(["import(path)", "require(path)", `import(\`./\${path}.ts\`)`])(
+		"refuses computed loads: %s",
+		(source) => {
+			expect(() =>
+				loadedModules("tools/audit/u08-geometry-proof.ts", source),
+			).toThrow("Unsupported module load");
+		},
+	);
+
+	it.each([
+		'import "../../fixtures/relay/README.md";',
+		"import('../../fixtures/relay/README.md')",
+	])("rejects outside-root edges in every load form: %s", (source) => {
+		expect(() =>
+			loadedModules("tools/audit/u08-geometry-proof.ts", source),
+		).toThrow("Outside pinned roots: ../../fixtures/relay/README.md");
+	});
+
+	it("allows pinned literals, builtins and erased type-only imports", () => {
+		expect(
+			loadedModules(
+				"tools/audit/u08-geometry-proof.ts",
+				`
+			import './color.ts';
+			export * from "./color.ts";
+			import(\`./color.ts\`);
+			require('./color.ts');
+			import { readFileSync } from 'node:fs';
+			import type { T } from './missing-type.ts';
+			import { type T } from './missing-type.ts';
+			export type { T } from './missing-type.ts';
+		`,
+			),
+		).toEqual(Array(4).fill("tools/audit/color.ts"));
+	});
+
+	it("refuses unpinned packages and invalid syntax", () => {
+		expect(() =>
+			loadedModules(
+				"tools/audit/u08-geometry-proof.ts",
+				"import 'unknown-package';",
+			),
+		).toThrow("Unpinned module: unknown-package");
+		expect(() =>
+			loadedModules("tools/audit/u08-geometry-proof.ts", "import {"),
+		).toThrow("Cannot parse import closure");
+	});
+
+	it.each([
+		'import "./missing-u08-module.ts";',
+		'import { x } from "./missing-u08-module.ts";',
+	])(
+		"refuses an unresolved specifier rather than dropping it: %s",
+		(source) => {
+			expect(() =>
+				loadedModules("tools/audit/u08-geometry-proof.ts", source),
+			).toThrow("Unresolved module: ./missing-u08-module.ts");
+		},
+	);
+});
 
 describe("the pin table covers what the drivers load", () => {
 	/** The trust root cannot pin itself; the test asserts this is the only
 	 * exemption, so a newly imported module cannot inherit one by accident. */
-	const TRUSTED = new Set(["tools/audit/u08-content-pins.ts"]);
 	const DRIVERS = [
 		"tools/audit/u08-geometry-proof.ts",
 		"tools/audit/u08-fragment-verification.ts",
@@ -348,11 +586,14 @@ describe("the pin table covers what the drivers load", () => {
 			seen.add(current);
 			stack.push(...loadedModules(current));
 		}
-		const unpinned = [...seen]
+		const instrument = [...seen]
 			.filter((module) => !module.startsWith("src/"))
-			.filter((module) => !TRUSTED.has(module))
-			.filter((module) => INSTRUMENT_PINS[module] === undefined);
-		expect(unpinned).toEqual([]);
+			.filter((module) => !TRUSTED.has(module));
+		// Exact keys, including the separately loaded positive-control document:
+		// neither dropping a key nor leaving stale exemptions can shrink coverage.
+		expect(Object.keys(INSTRUMENT_PINS).sort()).toEqual(
+			[...instrument, "e2e/fixtures/audit-canary/index.html"].sort(),
+		);
 		// App modules the harness imports are covered by the render tree, and
 		// nothing may load from outside tools/ and src/.
 		expect([...seen].filter((module) => !REPO_SCOPE.test(module))).toEqual([]);
