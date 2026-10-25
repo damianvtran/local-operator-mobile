@@ -475,6 +475,23 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: The frame-difference arithmetic, on this runner's ImageMagick
+        # `Checks` runs on ubuntu-latest with no ImageMagick, so the decoder cases in
+        # scripts/design/frame-difference.test.ts skip there. Here the decoder exists,
+        # and these are the sizes that matter: 1,080,000 pixels is past the point
+        # where the formatter prints scientific notation, which a prefix parse read as
+        # 3 — a full-canvas change counted as three pixels (review round 2).
+        run: node design/preview/frame-difference.probe.mjs
+
+      - name: The frame gate fails a stale frame with its summary, not an uncaught throw
+        # Round 3: `capture.mjs --check` lost its `failures` declaration, so the first
+        # stale frame threw ReferenceError after printing that frame's own line — the
+        # summary never printed, the rest of the set went unchecked, and the browser
+        # tree leaked (nine orphans reaped at job end). CI stayed green only because
+        # the step that reached it is the soft-fail preview one. This drives the stale
+        # path for real, against a one-frame tree.
+        run: node design/preview/capture-stale.probe.mjs
+
       - name: The committed listing frames re-render identically
         # A HARD gate, and separate from the step above on purpose. That step has
         # to tolerate failure while the preview sheet's shipped faces live in a

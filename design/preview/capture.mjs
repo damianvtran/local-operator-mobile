@@ -442,6 +442,15 @@ if (fontDir && !existsSync(fontCssPath)) {
  * return is a claim in this script's log, and a wrong one is worse than none.
  * `STRAY_PIXELS` travels with them for the same reason: the allowance and the
  * measured evidence for it belong beside the number they qualify. */
+
+/* The list `stale()` fills and the closing summary counts. It is declared here,
+ * above its only writer, because it is the one binding whose absence is silent on
+ * a clean tree: every passing run never reaches `stale()`, so a missing
+ * declaration only throws on the FIRST stale frame — after that frame's own line
+ * has been printed, which reads like a gate that worked but leaves the summary
+ * unprinted, the rest of the set unchecked and Chrome un-reaped (round 3; the
+ * reason `scripts/design/capture-check.test.ts` drives the stale path for real). */
+const failures = [];
 const stale = (path, why) => {
 	console.error(`stale: ${path} — ${why}`);
 	failures.push(path);

@@ -68,7 +68,10 @@ export const alphaTool = () =>
  */
 export const parseScalar = (printed) => {
 	const text = String(printed).trim();
-	if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) return undefined;
+	/* Unsigned only. A count of pixels cannot be negative, and a leading sign is
+	 * how a formatted report grows a `-0` or a `-5` that would otherwise pass for a
+	 * measurement; the exponent keeps its sign, which is the one place it is real. */
+	if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) return undefined;
 	const value = Number(text);
 	return Number.isFinite(value) ? Math.round(value) : undefined;
 };

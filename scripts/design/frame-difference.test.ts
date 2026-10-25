@@ -21,9 +21,14 @@ import {
  *
  * These tests pin both halves of the fix: the parse takes a whole number, and the
  * expression is driven with an input that formats in scientific notation, not only
- * with small counts. The arithmetic cases need a decoder; they skip with a reason
- * on a machine without one, which is what `capture.mjs` itself does (it reports
- * "no decoder" rather than passing).
+ * with small counts.
+ *
+ * WHERE THE ARITHMETIC CASES ACTUALLY RUN IN CI: `pnpm test` runs in `Checks` on
+ * `ubuntu-latest`, which has no ImageMagick, so the decoder cases skip there and
+ * say so. The same cases are a hard gate in the design job, which installs the
+ * decoder and runs `design/preview/frame-difference.probe.mjs`; a skip in the one
+ * job that guarantees its dependency would be a gate that only runs when it is
+ * already fine.
  */
 
 const decoder = alphaTool();
@@ -91,11 +96,17 @@ describe("parseScalar", () => {
 		expect(parseScalar("2.5")).toBe(3);
 	});
 
-	it("refuses anything that is not one complete number", () => {
+	it("refuses anything that is not one complete unsigned number", () => {
 		/* A prefix parse is the bug this replaces: `111.119 (0.0001)` and a
-		 * thousands-separated `1,234` must be "could not measure", never 111 or 1. */
+		 * thousands-separated `1,234` must be "could not measure", never 111 or 1.
+		 * A count of pixels cannot be negative either, so a leading sign is refused
+		 * rather than turned into `-0` or `-5` and compared as a measurement (round
+		 * 3, finding 2). The exponent keeps its sign: that one is real. */
 		expect(parseScalar("111.119 (0.0001)")).toBeUndefined();
 		expect(parseScalar("1,234")).toBeUndefined();
+		expect(parseScalar("-5")).toBeUndefined();
+		expect(parseScalar("+5")).toBeUndefined();
+		expect(parseScalar("-0")).toBeUndefined();
 		expect(parseScalar("")).toBeUndefined();
 		expect(parseScalar("abc")).toBeUndefined();
 	});
