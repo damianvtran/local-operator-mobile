@@ -533,6 +533,11 @@ function collisions(
 			const a = triggers[first];
 			const b = triggers[second];
 			if (!a || !b) continue;
+			// Two triggers of one event ARE one lane by definition: a second cron
+			// entry, or two branch filters of one `push`, are meant to supersede each
+			// other. Only a cross-event pair can drop work that the other run would
+			// have done, which is the defect this suite is about.
+			if (a.event === b.event) continue;
 			for (const ref of refs) {
 				if (a.firesOn(ref) && b.firesOn(ref)) {
 					cases.push({ a, b, ref });
@@ -561,9 +566,18 @@ const EXEMPT: Record<
 	"release.yml": {
 		reason:
 			"its two triggers meet only on a tag, where both are the same release of the same artefacts; keying them apart would let a dispatch race the push run into one Release and a double store upload. `cancel-in-progress: false` already keeps a running release alive, and replacing a *pending* duplicate with the newer identical run loses no work.",
-		// Tag-only push: no branch of this workflow can gain a lane a schedule
-		// or a branch dispatch also reaches.
-		premise: (workflow) => workflow.filters.branches.length === 0,
+		// Exact, not approximate: every pair that could collide here must be a tag
+		// push against a dispatch — the same release twice — and the push must stay
+		// tag-only. Add a branch push or a cron to release.yml and the premise fails,
+		// which is how the exemption stops being one the moment its reason does.
+		premise: (workflow) =>
+			workflow.filters.branches.length === 0 &&
+			collisions(workflow.triggers).every(
+				({ a, b, ref }) =>
+					ref.startsWith(TAGS) &&
+					[a.event, b.event].includes("push") &&
+					[a.event, b.event].includes("workflow_dispatch"),
+			),
 	},
 };
 
