@@ -2716,6 +2716,131 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		}),
 	);
 
+	/* ------------------------------------------------------------ store frames --
+	 *
+	 * The listing screenshots (`design/store-screenshots/`) are read by a person, not
+	 * asserted against a marker, so their content has to read like somebody's own
+	 * work. The corpus's default worlds cannot: the live captures say "Hello from the
+	 * mock provider" and "Short turn 3: say something brief", which is harness text
+	 * on a store frame. These scenarios are the SAME app rendering the SAME wire —
+	 * they only swap which projection the relay serves, to the synthetic
+	 * `every-entry-kind` conversation (a real project's transcript, provenance
+	 * `synthetic`), and they exist so a capture can NAME its world (`--scenario`)
+	 * rather than take whatever the registry's first match for a cell happens to be.
+	 *
+	 * They re-point no existing cell: `cellScenarios` takes the FIRST scenario that
+	 * declares a cell, and each of these is declared after the world the audit matrix
+	 * already pins. A run that pins one says so in its own record.
+	 *
+	 * What they deliberately do NOT fix is the route label a seeded web build shows
+	 * (`127.0.0.1:<port>`): the app prints the connected route, and a served build's
+	 * route IS the harness's origin. That is a property of capturing the web target,
+	 * not of a fixture, and it is named in the store-screenshots README instead.
+	 */
+	add(
+		"store-rail",
+		"The checkpoint rail over the store transcript: the same ticks the captured `checkpoints-ready` journal carries, drawn beside every-entry-kind's turns.",
+		["S5/rail"],
+		() => ({
+			projections: { [CAPTURED_SESSION]: structuredClone(everyKind) },
+			checkpoints: checkpointsFor("checkpoints-ready"),
+		}),
+	);
+
+	/** Another computer's sessions, as a store frame shows them: reachable, one busy,
+	 *  no refusal and no old-build row (`meshRows()`'s own two defects are deliberate
+	 *  there and are not what "every computer's sessions, in one list" claims). The
+	 *  first row keeps `meshRows()`'s id because `CELL_OPENERS` presses THAT row to
+	 *  open the move sheet. */
+	const storePeerRows = (): Json[] => [
+		remoteRow({
+			session_id: "9f2c1a7b0d3e",
+			conversation_name: "Deploy the staging stack",
+			live_state: "busy",
+		}),
+		remoteRow({
+			session_id: "0a1b2c3d4e5f",
+			conversation_name: "Index the vendor catalogue",
+			owner_device: "d_7a8b9c0d1e2f",
+			owner_device_name: "Laptop",
+		}),
+		remoteRow({
+			session_id: "8b9c0d1e2f3a",
+			conversation_name: "Render the launch film",
+			owner_device: "d_3c4d5e6f7a8b",
+			owner_device_name: "Build mini",
+		}),
+	];
+
+	const storeMeshWorld = (): ScenarioWorld => ({
+		projections: { [CAPTURED_SESSION]: structuredClone(everyKind) },
+		peerRows: storePeerRows(),
+	});
+
+	add(
+		"store-mesh",
+		"The store transcript's session list with three other computers' sessions appended: reachable, one busy, none refused.",
+		["S15/mesh-remote"],
+		() => storeMeshWorld(),
+	);
+
+	/* The code frame's world: `rich-rows` itself puts its ```ts block at the TOP of
+	 * the conversation, and a capture settles at the transcript's last row — so the
+	 * frame showed the diff and both tables and none of the code block its caption
+	 * promises (review round 1, Q3). One more fenced block at the TAIL is the
+	 * smallest change that makes the pixels match the claim, and it stays in a
+	 * store-only world so the audit's own `S5/rich-rows` cell keeps the content it
+	 * measures. The row is cloned from the same fixture's own assistant entry, so
+	 * its shape is the corpus's rather than re-typed; `images` is emptied because
+	 * the mock has no bytes to serve for one. */
+	const richRowsWithCode = projectionFrom(richRowsFrame, {
+		transcript: [
+			...richRowsFrame.transcript,
+			(() => {
+				const row = structuredClone(
+					richRowsFrame.transcript[1],
+				) as SessionProjection["transcript"][number];
+				row.id = "m-code-tail";
+				row.text =
+					"And the caller:\n\n```ts\nconst id = commentId(row);\nif (id !== null) emit(id);\n```\n";
+				row.images = [];
+				return row;
+			})(),
+		],
+	});
+
+	add(
+		"store-diff",
+		"The store transcript for the code frame: the captured rich-rows conversation plus one more fenced block at its tail, where the capture settles.",
+		["S5/rich-rows"],
+		() => ({
+			projections: {
+				[richRowsFrame.session_id]: structuredClone(richRowsWithCode),
+			},
+		}),
+	);
+
+	/* The idle home's chips read the relay's projection; with no conversation at all
+	 * (`empty`) they render `n/a`, which is the honest answer there and a poor
+	 * store frame (review round 1, Q5). This world is that same home with the live
+	 * conversation present, so the chips carry a real model and effort. */
+	add(
+		"store-home",
+		"The home composer, idle, with the relay's ranked model catalogue behind it: the home reads its model chip from that catalogue, so without one the frame shows `n/a` (review round 1, Q5). The effort chip has no session to report a rung and stays `n/a` — that is the home's own state, not a fixture gap.",
+		["S4/idle"],
+		() => ({
+			projections: { [CAPTURED_SESSION]: structuredClone(everyKind) },
+			models: rankedModels,
+		}),
+	);
+
+	add(
+		"store-move-receipt",
+		"The store transcript's move receipt: the route's phase transcript over the same three peers.",
+		["S15/move-receipt"],
+		() => ({ ...storeMeshWorld(), transfer: { kind: "receipt" } }),
+	);
+
 	/* ------------------------------------------------------- turn supplements -- */
 
 	/* The C0 contract fixtures, read where they live (see fixtures/supplements/

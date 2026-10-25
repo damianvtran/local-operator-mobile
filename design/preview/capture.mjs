@@ -228,7 +228,15 @@ await send("Runtime.enable");
  * `shot()` for capturing. `settle` exists because a font that swaps in after
  * the load event changes the metrics: capturing on loadEventFired alone gives a
  * frame with the fallback face, which is a still nobody would sign off. */
-const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" }) => {
+const openPage = async ({
+	file,
+	width,
+	height,
+	dpr,
+	theme = null,
+	extraCss = "",
+	query = null,
+}) => {
 	await send("Emulation.setDeviceMetricsOverride", {
 		width,
 		height,
@@ -237,7 +245,15 @@ const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" 
 		screenWidth: width,
 		screenHeight: height,
 	});
-	const url = `file://${new URL(file, repoRoot).pathname}${theme ? `?theme=${theme}` : ""}`;
+	/* The template reads its own frame from the query string: the caption and the
+	 * capture's path are DATA (`design/store-screenshots/frames.json`), so a frame
+	 * is re-rendered by passing them, never by editing this file — and never by
+	 * pasting base64 into it. `URLSearchParams` does the escaping, because a
+	 * headline carries spaces and punctuation. */
+	const params = new URLSearchParams();
+	if (theme) params.set("theme", theme);
+	for (const [name, value] of Object.entries(query ?? {})) params.set(name, value);
+	const url = `file://${new URL(file, repoRoot).pathname}${params.size ? `?${params}` : ""}`;
 	const loaded = onEvent("Page.loadEventFired");
 	await send("Page.navigate", { url });
 	await loaded;
@@ -290,6 +306,18 @@ const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" 
 	return {
 		state: JSON.parse(state.value),
 		metrics: JSON.parse(result.value),
+		/* Run an expression in the page and get its value back. The store-frame
+		 * render uses it to prove the capture it points at actually loaded (a wrong
+		 * path is a broken image, and a broken image in a slot is a plausible-
+		 * looking blank at exactly the right size). */
+		evaluate: async (expression) => {
+			const { result: out } = await send("Runtime.evaluate", {
+				expression,
+				awaitPromise: true,
+				returnByValue: true,
+			});
+			return out.value;
+		},
 		/* Grow the emulated viewport to the document's own height and capture THAT,
 		 * instead of asking for a beyond-viewport clip.
 		 *
@@ -480,6 +508,36 @@ if (target === "preview" || target === "all") {
 	}
 }
 
+/* ---- the 24-bit strip, shared by every store asset --------------------- */
+
+/* Play requires JPEG or 24-bit PNG with NO alpha channel, and App Store Connect
+ * rejects transparency; the capture always comes back RGBA (colour type 6). The
+ * strip is part of the artefact, so it is applied to the fresh render too when
+ * checking — otherwise the comparison would be between two different encodings
+ * and would always fail. */
+const stripAlpha24 = (path) => {
+	const bin = alphaTool();
+	if (!bin) {
+		console.warn(
+			`warning: no ImageMagick, so ${path} may keep an alpha channel — run \`magick ${path} -alpha off PNG24:${path}\``,
+		);
+		process.exitCode = 1;
+		return;
+	}
+	/* Drop the timestamp chunks for the same reason the icon generator does:
+	 * a `tIME` chunk makes a byte gate impossible for no benefit. */
+	execFileSync(
+		bin,
+		[path, "-alpha", "off", "-define", "png:exclude-chunks=time,date", `PNG24:${path}`],
+		{ stdio: "pipe" },
+	);
+	const bytes = readFileSync(path);
+	if (bytes[25] === 6) {
+		console.error(`PROBLEM: ${path} is still RGBA after the strip`);
+		process.exitCode = 1;
+	}
+};
+
 /* ---- 3. the Play feature graphic -------------------------------------- */
 
 if (target === "feature" || target === "all") {
@@ -492,37 +550,11 @@ if (target === "feature" || target === "all") {
 	});
 	const png = await pagep.shot();
 	const outPath = new URL("app-icon/store/play-feature-graphic-1024x500.png", root).pathname;
-	/* Play requires JPEG or 24-bit PNG with NO alpha channel, and the capture
-	 * always comes back RGBA. The strip is part of the artefact, so it is applied
-	 * to the fresh render too when checking — otherwise the comparison would be
-	 * between two different encodings and would always fail. */
-	const stripAlpha = (path) => {
-		const bin = alphaTool();
-		if (!bin) {
-			console.warn(
-				`warning: no ImageMagick, so ${path} may keep an alpha channel — run \`magick ${path} -alpha off PNG24:${path}\``,
-			);
-			process.exitCode = 1;
-			return;
-		}
-		/* Drop the timestamp chunks for the same reason the icon generator does:
-		 * a `tIME` chunk makes a byte gate impossible for no benefit. */
-		execFileSync(
-			bin,
-			[path, "-alpha", "off", "-define", "png:exclude-chunks=time,date", `PNG24:${path}`],
-			{ stdio: "pipe" },
-		);
-		const bytes = readFileSync(path);
-		if (bytes[25] === 6) {
-			console.error(`PROBLEM: ${path} is still RGBA after the strip`);
-			process.exitCode = 1;
-		}
-	};
 	const hasAlpha = png[25] === 6; /* PNG colour type: 6 = RGBA, 2 = RGB (byte 25 of IHDR) */
 	console.log(
 		`feature graphic: ${png.length} B, alpha channel: ${hasAlpha ? "present" : "none"}`,
 	);
-	save(png, outPath, { reencode: hasAlpha ? stripAlpha : null });
+	save(png, outPath, { reencode: hasAlpha ? stripAlpha24 : null });
 }
 
 /* ---- 4. store-screenshot frames --------------------------------------- */
@@ -558,6 +590,83 @@ if (target === "frames" || target === "all") {
 		);
 		if (!ok) process.exitCode = 1;
 		previewTargets.push(path);
+	}
+
+	/* The committed listings: one PNG per frame in `frames.json`, rendered from
+	 * the same template with that frame's caption and capture as data. These ARE
+	 * committed artefacts (the set the store takes), so `--check` verifies them
+	 * byte-for-byte like the preview sheet, and the canvas size is asserted on
+	 * every one — an off-size listing is rejected by the store, not resized. */
+	const set = JSON.parse(
+		readFileSync(new URL("store-screenshots/frames.json", root), "utf8"),
+	);
+	const frameDir = new URL(`store-screenshots/${set.outDir}/`, root).pathname;
+	if (!check) mkdirSync(frameDir, { recursive: true });
+	for (const frame of set.frames) {
+		const capture = `${set.capture.dir}/${frame.slug}.png`;
+		const pagep = await openPage({
+			file: `design/store-screenshots/${set.template}`,
+			width: set.canvas.width,
+			height: set.canvas.height,
+			dpr: 1,
+			theme: "dark",
+			query: {
+				eyebrow: frame.eyebrow,
+				headline: frame.headline,
+				capture,
+			},
+		});
+		/* The slot's image is decoded before the shot is taken, and its OWN pixel
+		 * size is asserted against the capture spec: a wrong path renders a broken
+		 * image, which is a plausible blank at exactly the right canvas size. */
+		await pagep.evaluate(
+			"Promise.all([...document.images].map((i) => i.decode().catch(() => null)))",
+		);
+		const shown = await pagep.evaluate(
+			'(() => { const i = document.getElementById("capture"); return i === null ? null : { w: i.naturalWidth, h: i.naturalHeight }; })()',
+		);
+		if (
+			shown === null ||
+			shown.w !== set.capture.pixels.width ||
+			shown.h !== set.capture.pixels.height
+		) {
+			console.error(
+				`PROBLEM: ${frame.slug} — the slot shows ` +
+					`${shown === null ? "no image" : `${shown.w}x${shown.h}`} where ${capture} should be ` +
+					`${set.capture.pixels.width}x${set.capture.pixels.height}`,
+			);
+			process.exitCode = 1;
+			continue;
+		}
+		/* No build metadata on a store asset. The template used to draw a spec
+		 * block ("App Store · 6.9\"", "1320 × 2868 @1x", the alt-size list) beside
+		 * its wordmark; that describes the FILE to a maintainer and would have
+		 * shipped inside every listing (review round 1, Q1). Asserted here rather
+		 * than trusted to stay deleted: the canvas size and the alt sizes belong in
+		 * this script's own output, not in the image. */
+		const meta = await pagep.evaluate(`(() => {
+			const hit = /(\\d{3,4}\\s*×\\s*\\d{3,4})|@1x|\\balt:/i.exec(document.body.innerText);
+			return { hit: hit === null ? null : hit[0], spec: document.querySelector(".spec") !== null };
+		})()`);
+		if (meta === null || meta.hit !== null || meta.spec) {
+			console.error(
+				`PROBLEM: ${frame.slug} — the composed frame carries build metadata ` +
+					`(${meta === null ? "the check could not run" : meta.spec ? "a .spec block" : JSON.stringify(meta.hit)})`,
+			);
+			process.exitCode = 1;
+			continue;
+		}
+		const png = await pagep.shot();
+		const { width: w, height: h } = pngDimensions(png);
+		const ok = w === set.canvas.width && h === set.canvas.height;
+		console.log(
+			`${frame.slug}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${set.canvas.width}x${set.canvas.height})`} · capture ${shown.w}x${shown.h}`,
+		);
+		if (!ok) {
+			process.exitCode = 1;
+			continue;
+		}
+		save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24 });
 	}
 }
 
