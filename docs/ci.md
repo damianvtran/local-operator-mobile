@@ -30,6 +30,32 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+### One pending run per group, so the trigger is part of the key
+
+GitHub keeps a single *pending* run per concurrency group: a run that queues
+behind an already-pending one replaces it, and the replaced run ends as
+`cancelled` without a single job starting. `e2e.yml`, `android.yml` and `ios.yml`
+therefore name `github.event_name` in their key — and `e2e.yml`, for a manual run,
+the requested `proof_mode` too — so neither the nightly (e2e only) nor a merged
+push can drop a queued manual run, and two proofs never queue against each other. Both directions
+were measured on `main`: dispatch 40157909029, queued 03:21:30Z, was cancelled one
+second after the 03:17 nightly (40158909122) was created; and the other way round,
+push run 39543983044, created 04:25:45Z, was cancelled at 04:26:54Z with no jobs
+at all, one second after dispatch 39544082930 was created in the same lane.
+`scripts/workflow-concurrency.test.ts` fails if any of those keys stops
+distinguishing its triggers or its refs, and requires `cancel-in-progress` to
+render false on `refs/heads/main` in every workflow that declares a concurrency
+block — stated in the file, not inherited from a default — so the rule that no
+running `main` run is cancelled is pinned rather than assumed. It covers every
+workflow in which two events can race for one ref. `cancel-in-progress` is
+otherwise unchanged, so this is not immunity from cancellation: a *running* run
+on `main` is still never cancelled, but the one pending run a group may hold is
+still replaced by a newer run in the same lane.
+The two `account-routing-*` lanes deliberately keep their own pre-existing key so
+their artefacts and baselines stay comparable, and `release.yml` keeps
+`workflow`+`ref` because its two triggers meet only on a tag, where both are the
+same release of the same artefacts.
+
 ## Corrected U-08 fragment verification (remote CI only)
 
 Control readiness uses the unique TurnBar's rendered caret (`▸` condensed,
