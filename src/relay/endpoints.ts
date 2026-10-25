@@ -500,6 +500,11 @@ export class RelayEndpoints {
 			state?: NotificationState;
 			cursor?: string;
 			limit?: number;
+			/** One conversation's rows only (the relay's 12-hex session id). */
+			session_id?: string;
+			/** The boundary a multi-page walk freezes: rows stamped after it are
+			 *  not served, and the answer's `high_water` is capped to it. */
+			through_seq?: number;
 		},
 		signal?: AbortSignal,
 	): Promise<Payload<"notifications">> {
@@ -509,6 +514,8 @@ export class RelayEndpoints {
 				state: options?.state,
 				cursor: options?.cursor,
 				limit: wireLimit(options?.limit, NOTIFICATIONS_LIMIT),
+				session_id: options?.session_id,
+				through_seq: options?.through_seq,
 			})}`,
 			signal,
 		});

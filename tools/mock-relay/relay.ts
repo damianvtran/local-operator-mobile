@@ -2885,7 +2885,20 @@ export function createRelay(options: RelayOptions = {}) {
 			const state = url.searchParams.get("state") ?? "unread";
 			const rawLimit = Number(url.searchParams.get("limit") ?? "");
 			const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50;
-			sendJson(res, 200, notificationsStore.page(state, limit));
+			/* The live route's narrowing parameters, passed through so a client
+			 * that walks a conversation's pages under one boundary is exercised
+			 * against paging rather than against one answer that held everything. */
+			const rawThrough = url.searchParams.get("through_seq");
+			const through = rawThrough === null ? Number.NaN : Number(rawThrough);
+			sendJson(
+				res,
+				200,
+				notificationsStore.page(state, limit, {
+					sessionId: url.searchParams.get("session_id") ?? undefined,
+					throughSeq: Number.isFinite(through) ? through : undefined,
+					cursor: url.searchParams.get("cursor") ?? undefined,
+				}),
+			);
 			return;
 		}
 

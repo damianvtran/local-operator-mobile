@@ -15,6 +15,13 @@ import {
 import type { NotificationItem } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
+	confirmDismissBody,
+	confirmDismissTitle,
+	DISMISS_CONFIRM_LABEL,
+	dismissAllActionLabel,
+} from "@/features/notifications/conversation-dismiss";
+import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import {
 	ALL_CAUGHT_UP_BODY,
 	ALL_CAUGHT_UP_TITLE,
 	canDismiss,
@@ -47,6 +54,7 @@ import {
 	ReadReceiptTracker,
 	reviewToken,
 } from "@/features/notifications/notifications-read-receipts";
+import { useConversationDismiss } from "@/features/notifications/use-conversation-dismiss";
 import {
 	skippedSentence,
 	useNotifications,
@@ -64,6 +72,7 @@ import {
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
+import { Dialog } from "@/ui/components/dialog";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
@@ -105,6 +114,14 @@ export default function Notifications() {
 	const { relay } = useConnection();
 	const client = relay();
 	const inbox = useNotifications(client, client !== null);
+	/* The row's "Dismiss all from <conversation>" accessibility action. It walks
+	 *  the conversation's full scope itself (the list holds one page), so the
+	 *  confirmation's number is the number applied; the detail's From card runs
+	 *  the same hook, so the two doors cannot disagree. */
+	const { reload } = inbox;
+	const dismissAll = useConversationDismiss(client, () =>
+		reload({ silent: true }),
+	);
 
 	/** Multi-select mode. Off by default: the list is for reading, and a screen
 	 *  that opened in selection mode would make the first tap mean the wrong
@@ -336,18 +353,10 @@ export default function Notifications() {
 		}
 		if (response !== null) {
 			return (
-				<ScrollView
-					contentContainerStyle={{ paddingBottom: selecting ? 96 : 24 }}
-					refreshControl={
-						<RefreshControl
-							refreshing={inbox.busy && !writing}
-							onRefresh={() => inbox.reload({ silent: true })}
-						/>
-					}
-					onTouchStart={() => noteInput("touch")}
-					onScrollBeginDrag={() => noteInput("scroll")}
-					testID={CONTROL.inboxList}
-				>
+				/* The rows only: a touch here is the in-view receipt's evidence, as
+				 *  it was when the rows had their own scroll view — a press on the
+				 *  toolbar above is not a touch "after the row rendered" on the row. */
+				<View onTouchStart={() => noteInput("touch")}>
 					{sections.map((section) => (
 						<View key={section.id} className="gap-2 px-4 pt-3">
 							<SectionHeader label={section.title} />
@@ -366,6 +375,12 @@ export default function Notifications() {
 										])
 									}
 									onAnswer={() => openItem(item)}
+									onDismissConversation={() =>
+										void dismissAll.askFresh(
+											item.session.id,
+											item.session.title,
+										)
+									}
 								/>
 							))}
 						</View>
@@ -387,7 +402,7 @@ export default function Notifications() {
 							/>
 						</View>
 					) : null}
-				</ScrollView>
+				</View>
 			);
 		}
 		/* No answer, no failure: the read has not landed yet (an older frame's
@@ -411,86 +426,145 @@ export default function Notifications() {
 			}
 		>
 			<View className="flex-1">
-				<View className="gap-2 px-4 pb-2 pt-3">
-					<SegmentedFilter value={inbox.filter} onChange={inbox.setFilter} />
-					<View className="flex-row items-center gap-2">
-						{response !== null && hasUnread(response) && !selecting ? (
-							<Button
-								label={writing ? MARK_ALL_BUSY : MARK_ALL_LABEL}
-								onPress={() => void onMarkAll()}
-								variant="quiet"
-								size="sm"
-								disabled={writing}
-								testID={CONTROL.inboxMarkAll}
+				{/* ONE scroll region for the toolbar and the rows, with only the
+				 *  selection bar pinned below it. With the toolbar fixed above a
+				 *  scrolling list, a short landscape phone at 200 % text spent its
+				 *  whole 390 pt on the filter, the two verbs, the count and the
+				 *  selection bar: the list's own height measured zero, so no row could
+				 *  be reached or selected (capture S18/multi-select, iphone-15-landscape
+				 *  at 200 %: the first row's checkbox "unreachable"). Scrolling the
+				 *  toolbar away is what gives the rows the screen back. */}
+				<ScrollView
+					className="flex-1"
+					contentContainerClassName="grow"
+					contentContainerStyle={{ paddingBottom: 24 }}
+					refreshControl={
+						response !== null ? (
+							<RefreshControl
+								refreshing={inbox.busy && !writing}
+								onRefresh={() => inbox.reload({ silent: true })}
 							/>
-						) : null}
-						{rows.length > 0 ? (
-							<Button
-								label={selecting ? SELECT_DONE : SELECT_LABEL}
-								onPress={() =>
-									selecting ? clearSelection() : setSelecting(true)
-								}
-								variant="quiet"
-								size="sm"
-								testID={
-									selecting ? CONTROL.inboxSelectionDone : CONTROL.inboxSelect
-								}
-							/>
-						) : null}
+						) : undefined
+					}
+					onScrollBeginDrag={() => noteInput("scroll")}
+					testID={CONTROL.inboxList}
+				>
+					<View className="gap-2 px-4 pb-2 pt-3">
+						<SegmentedFilter value={inbox.filter} onChange={inbox.setFilter} />
+						<View className="flex-row items-center gap-2">
+							{response !== null && hasUnread(response) && !selecting ? (
+								<Button
+									label={writing ? MARK_ALL_BUSY : MARK_ALL_LABEL}
+									onPress={() => void onMarkAll()}
+									variant="quiet"
+									size="sm"
+									disabled={writing}
+									testID={CONTROL.inboxMarkAll}
+								/>
+							) : null}
+							{rows.length > 0 ? (
+								<Button
+									label={selecting ? SELECT_DONE : SELECT_LABEL}
+									onPress={() =>
+										selecting ? clearSelection() : setSelecting(true)
+									}
+									variant="quiet"
+									size="sm"
+									testID={
+										selecting ? CONTROL.inboxSelectionDone : CONTROL.inboxSelect
+									}
+								/>
+							) : null}
+						</View>
 					</View>
-				</View>
-				{response !== null && hasUnread(response) ? (
-					<Text className="px-4 pb-2 text-meta text-ink-dim">
-						{unreadSummary(response.unread_count)}
-					</Text>
-				) : null}
-				{skipped !== null ? (
-					<View className="px-4 pb-2" testID={SURFACE.inboxSkipped}>
-						<Alert severity="warning">{skipped}</Alert>
+					{response !== null && hasUnread(response) ? (
+						<Text className="px-4 pb-2 text-meta text-ink-dim">
+							{unreadSummary(response.unread_count)}
+						</Text>
+					) : null}
+					{skipped !== null ? (
+						<View className="px-4 pb-2" testID={SURFACE.inboxSkipped}>
+							<Alert severity="warning">{skipped}</Alert>
+						</View>
+					) : null}
+					<View className="px-4 pb-2">
+						<DismissReceipt dismissAll={dismissAll} />
 					</View>
-				) : null}
-				{body}
+					{body}
+				</ScrollView>
 				{selecting ? (
 					<View
 						/* In the layout, not over it: an absolute bar covers the last rows,
 						 *  and a control that covers content is an overlap the reader pays
 						 *  for (the audit scores it, and it hid the very items the
 						 *  selection was made from). */
-						className="flex-row items-center gap-2 border-hairline border-t bg-canvas px-4 py-3"
+						/* WRAPS rather than widening the screen. At 200 % text on a 320 pt
+						 *  phone the count plus two outline buttons is 367 pt in one row;
+						 *  the document grew past the viewport, mobile Chrome widened the
+						 *  layout viewport to fit, and the screen's own ground stopped
+						 *  covering it (CI run 40229891769: canvas measured transparent on
+						 *  S18/multi-select at iphone-se 200 %, with U-06 +47 pt on the
+						 *  same frames). The count keeps its natural width; the verbs are
+						 *  one group that drops to its own line, and wraps inside it, when
+						 *  they cannot share the count's. */
+						className="flex-row flex-wrap items-center gap-2 border-hairline border-t bg-canvas px-4 py-3"
 						testID={SURFACE.inboxSelectionBar}
 					>
-						<Text className="flex-1 text-meta text-ink-dim">
+						<Text className="grow text-meta text-ink-dim">
 							{selectedCountLabel(selectedCount)}
 						</Text>
-						<Button
-							label={MARK_READ_LABEL}
-							onPress={() => void onWrite("read")}
-							variant="outline"
-							size="sm"
-							disabled={selectedCount === 0 || writing}
-							testID={CONTROL.inboxMarkRead}
-						/>
-						{inbox.filter === "all" ? (
+						<View className="shrink flex-row flex-wrap items-center gap-2">
 							<Button
-								label={MARK_UNREAD_LABEL}
-								onPress={() => void onWrite("unread")}
+								label={MARK_READ_LABEL}
+								onPress={() => void onWrite("read")}
 								variant="outline"
 								size="sm"
 								disabled={selectedCount === 0 || writing}
-								testID={CONTROL.inboxMarkUnread}
+								testID={CONTROL.inboxMarkRead}
 							/>
-						) : null}
-						<Button
-							label={DISMISS_LABEL}
-							onPress={() => void onWrite("dismiss")}
-							variant="outline"
-							size="sm"
-							disabled={selectedCount === 0 || writing}
-							testID={CONTROL.inboxDismiss}
-						/>
+							{inbox.filter === "all" ? (
+								<Button
+									label={MARK_UNREAD_LABEL}
+									onPress={() => void onWrite("unread")}
+									variant="outline"
+									size="sm"
+									disabled={selectedCount === 0 || writing}
+									testID={CONTROL.inboxMarkUnread}
+								/>
+							) : null}
+							<Button
+								label={DISMISS_LABEL}
+								onPress={() => void onWrite("dismiss")}
+								variant="outline"
+								size="sm"
+								disabled={selectedCount === 0 || writing}
+								testID={CONTROL.inboxDismiss}
+							/>
+						</View>
 					</View>
 				) : null}
 			</View>
+			<Dialog
+				visible={dismissAll.phase.kind === "confirming"}
+				testID={CONTROL.inboxDismissAllDialog}
+				title={
+					dismissAll.phase.kind === "confirming"
+						? confirmDismissTitle(
+								dismissAll.phase.scope.tokens.length,
+								dismissAll.phase.scope.title,
+							)
+						: ""
+				}
+				body={
+					dismissAll.phase.kind === "confirming"
+						? confirmDismissBody(dismissAll.phase.scope.openAsks)
+						: ""
+				}
+				confirmLabel={DISMISS_CONFIRM_LABEL}
+				destructive
+				onConfirm={() => void dismissAll.confirm()}
+				onCancel={dismissAll.cancel}
+			/>
 		</Screen>
 	);
 }
@@ -538,6 +612,7 @@ function InboxRow({
 	onPressIn,
 	onDismiss,
 	onAnswer,
+	onDismissConversation,
 }: {
 	item: NotificationItem;
 	nowMs: number;
@@ -547,12 +622,32 @@ function InboxRow({
 	onPressIn: () => void;
 	onDismiss: () => void;
 	onAnswer: () => void;
+	onDismissConversation: () => void;
 }) {
 	const isAsk = item.source === "ask" || item.ask !== null;
+	/* The conversation verb rides on UPDATE rows only (design §10's rotor
+	 *  entries): an ask row's verb is Answer, and offering "dismiss all" from a
+	 *  row the action would skip reads as a promise it cannot keep. Off in
+	 *  selection mode, where a row's activation means "toggle". */
+	const conversationAction =
+		!isAsk && !selecting
+			? [
+					{
+						name: "dismissConversation",
+						label: dismissAllActionLabel(item.session.title),
+					},
+				]
+			: undefined;
 	return (
 		<Pressable
 			onPress={onPress}
 			onPressIn={onPressIn}
+			accessibilityActions={conversationAction}
+			onAccessibilityAction={(event) => {
+				if (event.nativeEvent.actionName === "dismissConversation") {
+					onDismissConversation();
+				}
+			}}
 			accessibilityRole={ROLE.button}
 			accessibilityState={selecting ? { selected } : undefined}
 			accessibilityLabel={

@@ -109,33 +109,122 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 	 *  inside it are the store's, so a stale seeded value cannot leak out. */
 	const serialize = (row: Row): Json => row.item;
 
-	const page = (state: string, limit: number): Json => {
+	/** The next `seq`. Rows and writes share one counter, as on the live store
+	 *  (`store.py` `_next_seq`): every write re-stamps the row it moved, which is
+	 *  what lets a bounded bulk write tell "counted, then changed elsewhere" from
+	 *  "counted and untouched". */
+	const nextSeq = (): number => {
+		for (const row of rows.values()) {
+			highWater = Math.max(highWater, asNumber(row.item.seq));
+		}
+		highWater += 1;
+		return highWater;
+	};
+
+	/**
+	 * One page, with the live route's paging and scoping (`items.py` `list_page`,
+	 * `store.py` `list_items`): newest content first by `(updated_at, id)`, an
+	 * opaque `<updated_at>.<id>` keyset cursor, `session_id` narrowing, and a
+	 * `through_seq` that caps both the rows and the `high_water` the answer
+	 * reports. `waiting` rides the first page only and `observed` names exactly
+	 * the tokens this answer served — the set a bulk write must echo.
+	 *
+	 * WHY THE MOCK PAGES AT ALL: "dismiss all from a conversation" must count and
+	 * clear EVERY page, and a mock that answered everything at once could not tell
+	 * a client that walks the cursor from one that stops at the first page.
+	 */
+	const page = (
+		state: string,
+		limit: number,
+		options: { sessionId?: string; throughSeq?: number; cursor?: string } = {},
+	): Json => {
+		const bounded = Math.max(1, Math.min(Math.trunc(limit), 100));
+		const current = Math.max(
+			highWater,
+			...[...rows.values()].map((row) => asNumber(row.item.seq)),
+		);
+		const boundary =
+			options.throughSeq === undefined
+				? current
+				: Math.min(current, options.throughSeq);
+		const inSession = (row: Row): boolean =>
+			options.sessionId === undefined ||
+			asString(asRecord(row.item.session)?.id) === options.sessionId;
 		const visible = [...rows.values()].filter((row) => {
 			const dismissed = asBoolean(row.item.dismissed);
 			if (state === "dismissed") return dismissed;
 			if (state === "all") return !dismissed;
 			return !dismissed && !asBoolean(row.item.read);
 		});
-		const items = visible
+		const newestFirst = (a: Row, b: Row): number => {
+			const byTime = asNumber(b.item.updated_at) - asNumber(a.item.updated_at);
+			if (byTime !== 0) return byTime;
+			return asString(b.item.id) < asString(a.item.id) ? -1 : 1;
+		};
+		const after = (() => {
+			const raw = options.cursor ?? "";
+			const dot = raw.indexOf(".");
+			if (dot <= 0) return null;
+			const at = Number(raw.slice(0, dot));
+			return Number.isFinite(at) ? { at, id: raw.slice(dot + 1) } : null;
+		})();
+		const updates = visible
 			.filter((row) => asRecord(row.item.ask) === undefined)
-			.map((row) => serialize(row))
-			.slice(0, limit);
+			.filter(inSession)
+			.filter((row) => asNumber(row.item.seq) <= boundary)
+			.filter((row) => {
+				if (after === null) return true;
+				const at = asNumber(row.item.updated_at);
+				return (
+					at < after.at || (at === after.at && asString(row.item.id) < after.id)
+				);
+			})
+			.sort(newestFirst);
+		const slice = updates.slice(0, bounded);
+		const last = slice[slice.length - 1];
+		const nextCursor =
+			updates.length > bounded && last !== undefined
+				? `${asNumber(last.item.updated_at)}.${asString(last.item.id)}`
+				: null;
+		const items = slice.map((row) => serialize(row));
 		const waiting =
-			state === "unread" || state === "all"
+			after === null && (state === "unread" || state === "all")
 				? visible
 						.filter((row) => asRecord(row.item.ask) !== undefined)
+						.filter(inSession)
 						.map((row) => serialize(row))
 				: [];
+		const tokens = [...items, ...waiting].map((item) => {
+			const record = asRecord(item) ?? {};
+			return { id: asString(record.id), revision: asNumber(record.revision) };
+		});
 		return {
 			items,
-			/* `waiting` is first-page-only on the real route; this mock answers one
-			 * page and says so with a null cursor, which is the same contract. */
 			waiting,
-			next_cursor: null,
+			next_cursor: nextCursor,
 			unread_count: unreadCount(),
 			waiting_count: waitingCount(),
-			high_water: highWater,
+			high_water: boundary,
+			observed: tokens,
 		};
+	};
+
+	/** A row that arrives AFTER a client read its page: the next seq, revision 1.
+	 *  The test seam for "a late item is never swept up by a bound it postdates"
+	 *  (the live store's `notify`, reduced to what the bound reads). */
+	const insert = (item: Record<string, Json>): void => {
+		const id = asString(item.id);
+		if (id === "") return;
+		rows.set(id, {
+			item: {
+				revision: 1,
+				read: false,
+				dismissed: false,
+				...item,
+				seq: nextSeq(),
+			},
+			history: [],
+		});
 	};
 
 	const detail = (rawId: string): Outcome => {
@@ -195,8 +284,26 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 		const all = record.all === true;
 		const throughSeq = asNumber(record.through_seq, Number.POSITIVE_INFINITY);
 		const sessionId = asString(record.session_id);
+		const observed = Array.isArray(record.observed)
+			? asArray(record.observed).map((value) => asRecord(value) ?? {})
+			: null;
+		const bulk = ids.length === 0;
 		const targets: { id: string; revision: number | null }[] = [];
-		if (ids.length > 0) {
+		if (bulk && observed !== null && (all || sessionId !== "")) {
+			/* The live route's bulk shape (`items.py` `apply_patch`): ONLY the
+			 * echoed tokens, narrowed to the named conversation, each at its own
+			 * revision — a scalar watermark alone cannot name what was seen. */
+			for (const token of observed) {
+				const id = asString(token.id);
+				const owner = asString(asRecord(rows.get(id)?.item.session)?.id);
+				if (all || owner === sessionId) {
+					targets.push({
+						id,
+						revision: typeof token.revision === "number" ? token.revision : 0,
+					});
+				}
+			}
+		} else if (ids.length > 0) {
 			for (const target of ids) {
 				targets.push({
 					id: asString(target.id),
@@ -238,7 +345,14 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				skipped.push({ id: target.id, reason: "live_ask" });
 				continue;
 			}
-			const next = { ...row.item };
+			/* Counted, then moved elsewhere (read, dismissed, revised): the row's
+			 * seq is past the bound the client froze, so the live store refuses it
+			 * as stale rather than applying a gesture to a state nobody saw. */
+			if (bulk && observed !== null && asNumber(row.item.seq) > throughSeq) {
+				skipped.push({ id: target.id, reason: "stale_revision" });
+				continue;
+			}
+			const next: Record<string, Json> = { ...row.item, seq: nextSeq() };
 			if (op === "read" || op === "unread") {
 				next.read = op === "read";
 				next.read_via = op === "read" ? "explicit" : null;
@@ -290,7 +404,12 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				skipped.push({ id, reason: "live_ask" });
 				continue;
 			}
-			row.item = { ...row.item, read: true, read_via: "in_view" };
+			row.item = {
+				...row.item,
+				read: true,
+				read_via: "in_view",
+				seq: nextSeq(),
+			};
 			changed.push(id);
 		}
 		return {
@@ -315,7 +434,7 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 		return max;
 	};
 
-	return { page, detail, patch, seen };
+	return { page, detail, patch, seen, insert };
 }
 
 export type NotificationsStore = ReturnType<typeof createNotificationsStore>;

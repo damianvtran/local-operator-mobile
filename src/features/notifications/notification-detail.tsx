@@ -6,6 +6,15 @@ import { ScrollView, Text, View } from "react-native";
 import type { NotificationDetailResponse, PendingAsk } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
+	type ConversationScope,
+	confirmDismissBody,
+	confirmDismissTitle,
+	DISMISS_CONFIRM_LABEL,
+	dismissAllLabel,
+	dismissAllPendingLabel,
+} from "@/features/notifications/conversation-dismiss";
+import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import {
 	OPEN_LABEL,
 	RETRY_LABEL,
 	relativeTime,
@@ -13,12 +22,17 @@ import {
 	VANISHED_TITLE,
 	waitingSummary,
 } from "@/features/notifications/notifications-model";
+import {
+	type ConversationDismiss,
+	useConversationDismiss,
+} from "@/features/notifications/use-conversation-dismiss";
 import { refusalSentence } from "@/features/notifications/use-notifications";
 import { isRelayMissing } from "@/relay";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
+import { Dialog } from "@/ui/components/dialog";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
@@ -60,6 +74,28 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 	const [state, setState] = useState<DetailState>({ kind: "loading" });
 	/** The newest load's ticket: a late answer to a superseded one is dropped. */
 	const ticketRef = useRef(0);
+	/* The From card's count: the conversation's FULL scope, walked once the
+	 *  detail (and its own read) has settled. `null` while counting or after a
+	 *  failed count — the label then says "Dismiss all" with no number rather
+	 *  than a number this screen cannot stand behind. */
+	const [scope, setScope] = useState<ConversationScope | null>(null);
+	const scopeTicketRef = useRef(0);
+	/* Re-walk after every write, so the card's number is the relay's state and
+	 *  never this screen's arithmetic on a receipt. */
+	const rewalkRef = useRef<() => void>(() => undefined);
+	const dismissAll = useConversationDismiss(client, () => rewalkRef.current());
+	const { observe } = dismissAll;
+
+	const recount = useCallback(
+		async (sessionId: string, title: string) => {
+			const ticket = ++scopeTicketRef.current;
+			setScope(null);
+			const walked = await observe(sessionId, title);
+			if (ticket !== scopeTicketRef.current) return;
+			setScope(walked);
+		},
+		[observe],
+	);
 
 	const back = useCallback(() => {
 		/* Back goes to the inbox, not to whatever screen was open before a deep link
@@ -89,13 +125,20 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					 * leaves the item unread — the safe direction — and the next open
 					 * retries it. */
 					if (!detail.item.read) {
-						void live
+						await live
 							.patchNotifications({
 								op: "read",
 								ids: [{ id: detail.item.id, revision: detail.item.revision }],
 							})
 							.catch(() => undefined);
 					}
+					if (ticket !== ticketRef.current) return;
+					/* Count AFTER the read settles: the read re-stamps this item's seq,
+					 * and a boundary frozen before it would make the write refuse the
+					 * very item the reader is looking at as "changed since counted". */
+					rewalkRef.current = () =>
+						void recount(detail.session.id, detail.session.title);
+					rewalkRef.current();
 				} catch (error) {
 					/* A late answer to a superseded load (a retry the reader pressed while
 					 * the first was still in flight) must not overwrite the newer one. */
@@ -113,7 +156,7 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				}
 			})();
 		},
-		[client, itemId],
+		[client, itemId, recount],
 	);
 
 	/** One load, with a fresh ticket. The retry control calls it directly rather
@@ -181,6 +224,8 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 			<DetailBody
 				detail={state.detail}
 				onOpen={() => openConversation(state.detail.session.id)}
+				scope={scope}
+				dismissAll={dismissAll}
 			/>
 		);
 	})();
@@ -202,6 +247,27 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 			<ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
 				{body}
 			</ScrollView>
+			<Dialog
+				visible={dismissAll.phase.kind === "confirming"}
+				testID={CONTROL.inboxDismissAllDialog}
+				title={
+					dismissAll.phase.kind === "confirming"
+						? confirmDismissTitle(
+								dismissAll.phase.scope.tokens.length,
+								dismissAll.phase.scope.title,
+							)
+						: ""
+				}
+				body={
+					dismissAll.phase.kind === "confirming"
+						? confirmDismissBody(dismissAll.phase.scope.openAsks)
+						: ""
+				}
+				confirmLabel={DISMISS_CONFIRM_LABEL}
+				destructive
+				onConfirm={() => void dismissAll.confirm()}
+				onCancel={dismissAll.cancel}
+			/>
 		</Screen>
 	);
 }
@@ -209,9 +275,13 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 function DetailBody({
 	detail,
 	onOpen,
+	scope,
+	dismissAll,
 }: {
 	detail: NotificationDetailResponse;
 	onOpen: () => void;
+	scope: ConversationScope | null;
+	dismissAll: ConversationDismiss;
 }) {
 	const { item, session, anchor, projects, asks, history } = detail;
 	return (
@@ -253,6 +323,12 @@ function DetailBody({
 				variant="primary"
 				testID={CONTROL.inboxDetailOpen}
 			/>
+			<FromCard
+				title={session.title}
+				liveState={session.live_state}
+				scope={scope}
+				dismissAll={dismissAll}
+			/>
 			{projects.length > 0 ? (
 				<View className="gap-2">
 					<SectionHeader label="Projects" />
@@ -286,6 +362,65 @@ function DetailBody({
 				) : (
 					asks.map((ask) => <AskLine key={ask.ask_id} ask={ask} />)
 				)}
+			</View>
+		</View>
+	);
+}
+
+/**
+ * The From card (design §2 / §10): the source conversation and its one bulk
+ * verb, "Dismiss all n".
+ *
+ * The number is the conversation's FULL scope (every page under one frozen
+ * boundary), never the rows the inbox happened to load, and the confirmation
+ * shows that same number because it owns that same scope. The receipt is
+ * INLINE rather than a toast: it carries an action (Undo) and, when partial, a
+ * sentence the reader must be able to read in full — components.md §10 rules
+ * both out of a toast that disappears.
+ */
+function FromCard({
+	title,
+	liveState,
+	scope,
+	dismissAll,
+}: {
+	title: string;
+	liveState: string;
+	scope: ConversationScope | null;
+	dismissAll: ConversationDismiss;
+}) {
+	const { phase } = dismissAll;
+	const busy = phase.kind === "applying" || phase.kind === "undoing";
+	const empty = scope !== null && scope.tokens.length === 0;
+	return (
+		<View className="gap-2" testID={SURFACE.inboxDetailFrom}>
+			<SectionHeader label="From" />
+			<View className="gap-3 rounded-md border-hairline bg-elevated p-3">
+				<Text className="text-body text-ink">{`${title} · ${liveState}`}</Text>
+				{empty ? (
+					<Text className="text-meta text-ink-dim">
+						No updates from this conversation to dismiss.
+					</Text>
+				) : (
+					<Button
+						label={
+							scope === null
+								? dismissAllPendingLabel(title)
+								: dismissAllLabel(scope.tokens.length, title)
+						}
+						onPress={() => {
+							if (scope !== null) dismissAll.ask(scope);
+						}}
+						variant="danger"
+						size="sm"
+						/* No count yet means no promise yet: the control waits for the
+						 *  walk rather than confirming a number it has not got. */
+						disabled={scope === null || busy}
+						loading={busy}
+						testID={CONTROL.inboxDismissAll}
+					/>
+				)}
+				<DismissReceipt dismissAll={dismissAll} />
 			</View>
 		</View>
 	);

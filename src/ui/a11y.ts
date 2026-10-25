@@ -472,6 +472,11 @@ export const CONTROL = {
 	inboxDetailBack: "notification-back",
 	inboxDetailRetry: "notification-detail-retry",
 	inboxDetailOpen: "notification-open-conversation",
+	/** "Dismiss all n from <conversation>" — the detail's From card door, its
+	 *  confirmation and the receipt's Undo. */
+	inboxDismissAll: "notification-dismiss-all",
+	inboxDismissAllDialog: "notification-dismiss-all-dialog",
+	inboxDismissAllUndo: "notification-dismiss-all-undo",
 	/** The item detail's ask card reuses the session screen's answer surface, so
 	 *  this id names the SECTION that holds it rather than a second answer form. */
 	inboxDetailAsks: "notification-detail-asks",
@@ -590,6 +595,8 @@ export const SURFACE = {
 	inboxError: "notifications-error",
 	inboxDetailLoading: "notification-detail-loading",
 	inboxDetailVanished: "notification-detail-vanished",
+	inboxDetailFrom: "notification-detail-from",
+	inboxDismissAllReceipt: "notification-dismiss-all-receipt",
 	/** The supervisor strip: present ONLY when nothing on this machine would
 	 *  actually fire a cold wake (`supervisorLead` returns "" otherwise). The
 	 *  index alone cannot answer "will these fire" — the strip is that answer,
