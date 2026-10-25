@@ -472,7 +472,18 @@ export const notificationsResponseSchema = z.looseObject({
 	next_cursor: z.string().nullable(),
 	unread_count: z.number().int(),
 	waiting_count: z.number().int(),
+	/** The live relay also counts the UNREAD asks among `waiting` (measured at
+	 *  local-operator `a7d149e705`); absent on a relay that does not publish it,
+	 *  which the badge reads as unknown rather than as zero. */
+	waiting_unread_count: z.number().int().optional(),
 	high_water: z.number().int(),
+	/** The tokens this answer OBSERVED — exactly what a bulk write has to echo
+	 *  (the live `PATCH` refuses a bulk target without them). Absent on a relay
+	 *  that predates the bound, where the client derives them from the rows it
+	 *  was handed. */
+	observed: z
+		.array(z.looseObject({ id: nonEmpty, revision: z.number().int() }))
+		.optional(),
 });
 
 /**

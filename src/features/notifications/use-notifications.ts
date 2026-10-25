@@ -266,6 +266,15 @@ export function useNotifications(
 				op: "read",
 				all: true,
 				through_seq: answer.high_water,
+				/* The tokens the answer observed. A relay that predates the field
+				 * omits it, so the rows on screen are the fallback — the same window,
+				 * stated by the client when the server did not state it. */
+				observed:
+					answer.observed ??
+					[...answer.waiting, ...answer.items].map((item) => ({
+						id: item.id,
+						revision: item.revision,
+					})),
 			}),
 		);
 	}, [response, settle]);

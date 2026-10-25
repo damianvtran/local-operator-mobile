@@ -344,6 +344,11 @@ export interface NotificationPatchRequest {
 	session_id?: string;
 	through_seq?: number;
 	all?: true;
+	/** The tokens the screen OBSERVED — required by a bulk target (a by-session or
+	 *  `all` write): the live route refuses one without them, and they are what
+	 *  bounds the sweep to the events this client actually held. A selection
+	 *  (`ids`) must NOT carry them. */
+	observed?: NotificationTarget[];
 }
 
 /**

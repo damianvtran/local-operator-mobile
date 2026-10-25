@@ -999,7 +999,20 @@ export interface NotificationsResponse {
 	next_cursor: string | null;
 	unread_count: number;
 	waiting_count: number;
+	/** Present on the live relay (`a7d149e705`); absent means the relay does not
+	 *  publish it, never zero. */
+	waiting_unread_count?: number;
 	high_water: number;
+	/** The id/revision tokens this answer observed. A BULK write must echo them
+	 *  (the live route refuses one without), which is what bounds a mark-all to
+	 *  the events the screen actually held. */
+	observed?: NotificationObservedToken[];
+}
+
+/** One id at one revision, as the list answer reports what it observed. */
+export interface NotificationObservedToken {
+	id: string;
+	revision: number;
 }
 
 /** One title/excerpt a row carried at a revision (`history` in the detail).
