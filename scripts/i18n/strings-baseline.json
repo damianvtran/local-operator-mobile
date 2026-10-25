@@ -1,0 +1,1149 @@
+{
+	"$comment": "Existing user-facing literals, recorded once so the checker can fail on NEW ones. Shrink-only: `node scripts/i18n/check-strings.ts --update` removes entries that are gone and refuses to add any. Keying a literal is the only way to remove one.",
+	"findings": [
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Nothing answered."
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Paused while the app is in the background. Reopen it to keep watching."
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Refresh"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Remove this computer?"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Start again"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "This computer is not running the Local Operator harness."
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Three minutes with no tunnel listed and no host answering. Check the"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Use my own tunnel instead"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Use this computer"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Waiting for Radient to list your computer…"
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Your computer answered."
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "Your computers"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "1. On the computer"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "2. Publish it"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "3. In the app"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "4. Test it"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Before you expose it"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Needed only for an address over http, which sends the password in the clear"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "No Radient account is needed for any of this. You publish the relay on"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Public URL"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Relay password"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "The password `lop mobile` asked for"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "The relay binds loopback only, so this is the machine that has to"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "This address is unencrypted"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "This makes a real request through your tunnel before anything is"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Turn the opt-in on to use it, or give an https:"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "You are putting your own computer on the internet, and the relay"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "Your own tunnel"
+		},
+		{
+			"file": "src/features/auth/own-tunnel.tsx",
+			"text": "https://your-tunnel.example.com"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "0123…-lop"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Attach"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Attach one that already exists"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Create one on the computer"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "If you created the tunnel in the Radient console, attach it by the"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "If your relay is reachable at a URL you already know, connect to it"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "In a terminal on the computer you want to control:"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Or in the Local Operator TUI, in two commands:"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Remote access is not active"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "TUI"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Terminal"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "This app drives the sessions on your own computer, so that computer has"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Tunnel id"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Use an address instead"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "is the price the Radient console shows for this"
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Finish signing in there, then come back to this app."
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Finishing sign-in…"
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Nothing was changed on your account."
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Opening your browser…"
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Sign-in was cancelled."
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "This build cannot finish a Radient sign-in."
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "Waiting for your browser."
+		},
+		{
+			"file": "src/features/auth/sign-in-panel.tsx",
+			"text": "You can still connect with the relay"
+		},
+		{
+			"file": "src/features/auth/sign-in.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/auth/sign-in.tsx",
+			"text": "Sign in"
+		},
+		{
+			"file": "src/features/auth/sign-in.tsx",
+			"text": "Sign in with Radient"
+		},
+		{
+			"file": "src/features/auth/sign-in.tsx",
+			"text": "Use an address and password"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "Connect with Radient"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "Needs a Radient account. Radient runs the tunnel for you and gives you"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "Recommended"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "Set up your own tunnel"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "The advanced path: you publish your computer yourself, through a"
+		},
+		{
+			"file": "src/features/auth/tunnel-paths.tsx",
+			"text": "Use my own tunnel"
+		},
+		{
+			"file": "src/features/auth/welcome.tsx",
+			"text": "Local Operator"
+		},
+		{
+			"file": "src/features/auth/welcome.tsx",
+			"text": "Set up your own tunnel"
+		},
+		{
+			"file": "src/features/auth/welcome.tsx",
+			"text": "Sign in with Radient"
+		},
+		{
+			"file": "src/features/auth/welcome.tsx",
+			"text": "This app drives the sessions on your own machine and shows what it"
+		},
+		{
+			"file": "src/features/home/home-splash.tsx",
+			"text": "Connect a computer"
+		},
+		{
+			"file": "src/features/home/home.tsx",
+			"text": "Choose another folder"
+		},
+		{
+			"file": "src/features/home/home.tsx",
+			"text": "Could not start"
+		},
+		{
+			"file": "src/features/home/home.tsx",
+			"text": "Open conversations"
+		},
+		{
+			"file": "src/features/home/home.tsx",
+			"text": "Settings"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Add"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "An asset can carry at most 12 tags."
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Cancel"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Description"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Discard changes?"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Edit"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Edit details"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Library"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Message about this asset"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Name"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "New tag"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "No source conversation is recorded for this asset."
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "No tags yet. Edit the details to add one."
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Open chat"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Save"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Seen in"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Send"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Tags"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "This file has moved or been deleted. Its name, tags and"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "topic-name"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Any tag"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Done"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Filter by kind"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Filters"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Library"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "More kinds"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Name, tag or words"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "No tags yet. The Librarian adds them as it organizes assets."
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Refresh library"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Search the library"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Sort"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Status"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Tag"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "/Users/you/projects"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Could not start"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "First message (optional)"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Folder"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Home"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Model"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "New session"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "Path on the computer"
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "The folder must be inside your home directory on that computer."
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "The session takes its name from what you say in it."
+		},
+		{
+			"file": "src/features/new-session/new-session.tsx",
+			"text": "What should it do?"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Could not resume"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Past sessions"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Search"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Search past sessions"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Some conversations could not be read just now, so this list may be"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "We couldn't load these"
+		},
+		{
+			"file": "src/features/past/past.tsx",
+			"text": "Words or title"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Create"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Description"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Name"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "New project"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Separate with commas or spaces."
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Status"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "Tags"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "What this project is for"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "ios, q4"
+		},
+		{
+			"file": "src/features/projects/project-create.tsx",
+			"text": "my-project"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Add milestone"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Delete project"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Empty the box to clear the date."
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Name"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "No milestones."
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "No sessions linked."
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Remove milestone"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Target date"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "YYYY-MM-DD"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "linked sessions"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "milestones"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "progress"
+		},
+		{
+			"file": "src/features/projects/project-detail.tsx",
+			"text": "release cut"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "New project"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "Projects"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "We couldn"
+		},
+		{
+			"file": "src/features/schedules/schedules-copy.ts",
+			"text": "${Math.floor(magnitude / 3_600)}h"
+		},
+		{
+			"file": "src/features/schedules/schedules-copy.ts",
+			"text": "${Math.floor(magnitude / 60)}m"
+		},
+		{
+			"file": "src/features/schedules/schedules-copy.ts",
+			"text": "${Math.floor(magnitude / 86_400)}d"
+		},
+		{
+			"file": "src/features/schedules/schedules-copy.ts",
+			"text": "${Math.floor(magnitude)}s"
+		},
+		{
+			"file": "src/features/schedules/schedules.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/schedules/schedules.tsx",
+			"text": "Schedules"
+		},
+		{
+			"file": "src/features/schedules/schedules.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/session/components/ask-bar.tsx",
+			"text": "Show the questions"
+		},
+		{
+			"file": "src/features/session/components/ask-response-row.tsx",
+			"text": "what the agent was told"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Answer"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Decline"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Dismiss"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Open conversation"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Other"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Showing the newest questions — open a conversation to see the rest"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "This app shows queued questions while it is open. It cannot reach you"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "Your answer"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "choose any that apply"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "no answer was recorded for this ask."
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "no answer — decide yourself"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "nothing left to answer here — another surface has already taken"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "secret — sent directly, not shown in the transcript"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "· recommended"
+		},
+		{
+			"file": "src/features/session/components/asks-sheet.tsx",
+			"text": "· urgent"
+		},
+		{
+			"file": "src/features/session/components/checkpoint-rail.tsx",
+			"text": "Checkpoints couldn't be read"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "Attach an image"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "Discard"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "Discard voice input"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "Message"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "Stop the running turn"
+		},
+		{
+			"file": "src/features/session/components/composer.tsx",
+			"text": "attach"
+		},
+		{
+			"file": "src/features/session/components/find-bar.tsx",
+			"text": "Close search"
+		},
+		{
+			"file": "src/features/session/components/find-bar.tsx",
+			"text": "Next match"
+		},
+		{
+			"file": "src/features/session/components/find-bar.tsx",
+			"text": "Previous match"
+		},
+		{
+			"file": "src/features/session/components/imagegen-card.tsx",
+			"text": "Stop turn"
+		},
+		{
+			"file": "src/features/session/components/imagegen-card.tsx",
+			"text": "Stops the running turn, which cancels this generation."
+		},
+		{
+			"file": "src/features/session/components/model-sheet.tsx",
+			"text": "effort"
+		},
+		{
+			"file": "src/features/session/components/model-sheet.tsx",
+			"text": "loading…"
+		},
+		{
+			"file": "src/features/session/components/model-sheet.tsx",
+			"text": "model"
+		},
+		{
+			"file": "src/features/session/components/model-sheet.tsx",
+			"text": "no models available"
+		},
+		{
+			"file": "src/features/session/components/model-sheet.tsx",
+			"text": "not connected"
+		},
+		{
+			"file": "src/features/session/components/pending-card.tsx",
+			"text": "Approve"
+		},
+		{
+			"file": "src/features/session/components/pending-card.tsx",
+			"text": "Deny"
+		},
+		{
+			"file": "src/features/session/components/pending-card.tsx",
+			"text": "Submit"
+		},
+		{
+			"file": "src/features/session/components/pending-card.tsx",
+			"text": "secret — sent directly, not shown in the transcript"
+		},
+		{
+			"file": "src/features/session/components/slash-sheet.tsx",
+			"text": "Filter commands"
+		},
+		{
+			"file": "src/features/session/components/slash-sheet.tsx",
+			"text": "commands"
+		},
+		{
+			"file": "src/features/session/components/slash-sheet.tsx",
+			"text": "filter commands"
+		},
+		{
+			"file": "src/features/session/components/slash-sheet.tsx",
+			"text": "loading…"
+		},
+		{
+			"file": "src/features/session/components/slash-sheet.tsx",
+			"text": "no matching commands"
+		},
+		{
+			"file": "src/features/session/components/subagents-panel.tsx",
+			"text": "subagents"
+		},
+		{
+			"file": "src/features/session/components/supplement-block.tsx",
+			"text": "Adjust the graphic"
+		},
+		{
+			"file": "src/features/session/components/supplement-block.tsx",
+			"text": "Adjust the graphic…"
+		},
+		{
+			"file": "src/features/session/components/tool-row.tsx",
+			"text": "Interrupted — the output above is partial."
+		},
+		{
+			"file": "src/features/session/components/transcript-image.tsx",
+			"text": "Attached image"
+		},
+		{
+			"file": "src/features/session/components/transcript-row.tsx",
+			"text": "· woken"
+		},
+		{
+			"file": "src/features/session/components/transcript-video.tsx",
+			"text": "Opens the full-screen player."
+		},
+		{
+			"file": "src/features/session/components/transcript-video.tsx",
+			"text": "Play video"
+		},
+		{
+			"file": "src/features/sessions/conversations-drawer.tsx",
+			"text": "Close conversations"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Close conversations"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Computers"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Library"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Move or copy…"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Name, id or folder"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "New chat"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Open"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Past sessions"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Projects"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Schedules"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Search conversations"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Tags…"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "Move or copy to"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "No other devices are visible."
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "On this computer"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "Right now"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "Steps"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "Still waiting — the same request is being asked again, so this cannot"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "This app can offer the devices your sessions show. A device with no"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Remove all tags"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Remove all tags?"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Saving…"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Tags"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Try again"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "We couldn"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Your categories didn't load"
+		},
+		{
+			"file": "src/features/settings/notifications-section.tsx",
+			"text": "Checking this computer"
+		},
+		{
+			"file": "src/features/settings/notifications-section.tsx",
+			"text": "Could not read this computer"
+		},
+		{
+			"file": "src/features/settings/notifications-section.tsx",
+			"text": "Notifications"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Edit"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Public URL"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Relay password"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Remove"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "The password the relay was started with"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "This build has no secure keystore, so the tunnel lasts for this"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "This runtime cannot store it"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Your own tunnel"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "https://your-tunnel.example.com"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "About"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Add a computer"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Appearance"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Back"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Computers"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Connection"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Delete my Radient account"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Deleting your account happens in the Radient console, in the browser"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Refresh"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Settings"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Sign out"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Sign out?"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Signed in"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Status"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Text size"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Theme"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "This phone"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Try the last action again"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Use"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "Version"
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "active"
+		},
+		{
+			"file": "src/ui/components/dialog.tsx",
+			"text": "Cancel"
+		},
+		{
+			"file": "src/ui/components/list-row.tsx",
+			"text": "new"
+		},
+		{
+			"file": "src/ui/components/refusal-surface.tsx",
+			"text": "Open the Radient console"
+		},
+		{
+			"file": "src/ui/components/refusal-surface.tsx",
+			"text": "Sign in again"
+		},
+		{
+			"file": "src/ui/components/refusal-surface.tsx",
+			"text": "Use another address"
+		},
+		{
+			"file": "src/ui/components/sheet.tsx",
+			"text": "Close"
+		},
+		{
+			"file": "src/ui/components/skeleton.tsx",
+			"text": "Loading"
+		}
+	]
+}

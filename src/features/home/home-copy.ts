@@ -7,27 +7,33 @@
  * they obey the desktop's own two rules (no two entries share a leading verb;
  * at most one entry creates an agent). The tips are the desktop pool's entries
  * whose move is true on a phone, shortened to the phone row's width.
+ *
+ * EVERY LINE BELOW NOW COMES FROM THE CATALOGUE (`src/i18n/`), and the copy
+ * itself lives in `src/i18n/catalogues/en/mobile.home.json` with its translator
+ * context beside it. The constants stay as constants because that is how the
+ * splash and their tests read them; they therefore resolve at IMPORT, which is
+ * the stated limit of this first slice (see `src/i18n/runtime.ts`).
  */
-export const GREETING = "What can I help you with today?";
+import { t } from "@/i18n";
+
+export const GREETING = t("mobile.home.greeting");
 
 /** The splash's replacement while the first send is in flight — one line, so
  *  the composer never moves when the splash changes height under it. */
-export const STARTING = "Starting…";
+export const STARTING = t("mobile.home.starting");
 
 /** The refused-start sentence, verbatim from `/new` (the relay's own sentence
  *  is preferred when it has one — see `home.tsx`). */
-export const REFUSED_START_FALLBACK =
-	"That folder doesn't exist on this computer.";
+export const REFUSED_START_FALLBACK = t("mobile.home.refused_start_fallback");
 
 /** The composer's disabled reason when nothing is connected. Also the sentence
  *  the connect action's slot is named for in the spec. */
-export const CONNECT_DISABLED_REASON = "Connect a computer to send.";
+export const CONNECT_DISABLED_REASON = t("mobile.home.connect_disabled_reason");
 
 /** The folders read failed — the same sentence `/new` uses for the same failure
  *  (`new-session.tsx`), so one failure has one voice. Carried here because the
  *  home also has to clear it on a successful re-read (review M2). */
-export const FOLDERS_READ_FAILED =
-	"We couldn't read this computer's folders just now.";
+export const FOLDERS_READ_FAILED = t("mobile.home.folders_read_failed");
 
 /**
  * Whether the composer holds a draft at all.
@@ -52,12 +58,12 @@ export const SUGGESTION_CHAR_BUDGET = 24;
  * frame to differ per run.
  */
 export const HOME_SUGGESTIONS = [
-	"Turn on phone access",
-	"Create a team of agents",
-	"Show me the last turn",
-	"Set up Linear MCP",
-	"Review this repo",
-	"Wake me with a summary",
+	t("mobile.home.suggestion.phone_access"),
+	t("mobile.home.suggestion.team_of_agents"),
+	t("mobile.home.suggestion.last_turn"),
+	t("mobile.home.suggestion.linear_mcp"),
+	t("mobile.home.suggestion.review_repo"),
+	t("mobile.home.suggestion.wake_summary"),
 ] as const;
 
 /** How many rows the splash shows: 3 at 390 pt, 2 at 320 (`>=` keeps the
@@ -110,9 +116,9 @@ export const TIP_CHAR_BUDGET = 48;
  * that clips is a fragment, not a tip.
  */
 export const HOME_TIPS = [
-	"set a schedule to run a prompt on a timer",
-	"ask for parallel work to fan out subagents",
-	"search past conversations to reopen a session",
+	t("mobile.home.tip.schedule"),
+	t("mobile.home.tip.parallel"),
+	t("mobile.home.tip.search"),
 ] as const;
 
 /** One tip's dwell time. `tipAt` wraps, so the ring's length is the pool's. */

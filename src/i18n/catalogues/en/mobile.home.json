@@ -1,0 +1,16 @@
+{
+	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
+	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
+	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.refused_start_fallback": "That folder doesn't exist on this computer.",
+	"mobile.home.starting": "Starting…",
+	"mobile.home.suggestion.last_turn": "Show me the last turn",
+	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
+	"mobile.home.suggestion.phone_access": "Turn on phone access",
+	"mobile.home.suggestion.review_repo": "Review this repo",
+	"mobile.home.suggestion.team_of_agents": "Create a team of agents",
+	"mobile.home.suggestion.wake_summary": "Wake me with a summary",
+	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
+	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
+	"mobile.home.tip.search": "search past conversations to reopen a session"
+}

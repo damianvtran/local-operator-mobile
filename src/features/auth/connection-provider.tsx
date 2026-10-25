@@ -72,6 +72,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { setLocaleSource } from "@/i18n";
 import {
 	type RelayEndpoints,
 	RelayError,
@@ -110,6 +111,12 @@ import {
 export const connectionStore = createConnectionStore();
 export const listStore = createListStore();
 export const configStore = createConfigStore();
+
+/* The i18n runtime reads the relay's RESOLVED language from this store and from
+ * nowhere else (`src/i18n/locale.ts` explains why that is the only source). The
+ * registration is a function rather than an import so the runtime stays free of
+ * this file's `react-native` dependency and can be exercised in Node. */
+setLocaleSource(() => configStore.getState().language);
 
 export const useConnectionState = <T,>(
 	selector: (state: ConnectionSnapshot) => T,
