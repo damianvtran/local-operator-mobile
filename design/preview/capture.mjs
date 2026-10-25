@@ -437,24 +437,58 @@ const alphaTool = () =>
 		}
 	});
 
-/** How many pixels differ by more than `fuzz` percent (ImageMagick's AE).
+/** How many pixels differ by more than `fuzz` percent — counted from the mask
+ * `compare` writes, never parsed out of its metric text.
+ *
  * 0 means identical (or every difference under the fuzz); a number means that
  * many pixels are past it; null means no decoder is installed; undefined means
  * the comparison itself failed. Those last three are deliberately distinct:
- * "no decoder" and "could not run" must never read as a pass in a log. */
-const pixelDifference = (a, b, fuzz = 0) => {
+ * "no decoder" and "could not run" must never read as a pass in a log.
+ *
+ * WHY THE MASK AND NOT `-metric AE`: the metric is printed by the decoder's own
+ * formatter, and the formatters disagree. ImageMagick 7.1.2-18 (this host) prints
+ * `111119` for a count, while 7.1.2-33 (the CI runner) printed `111.119` for the
+ * same count in this remediation's first run — a scaled form `parseFloat` reads
+ * as a fractional pixel count 1000x too small. The mask is a 1-bit image whose
+ * mean is the count on either build, so the log says what was measured. */
+const pixelDifference = (a, b, fuzz, maskPath) => {
 	const bin = alphaTool();
 	if (!bin) return null;
-	const args = ["compare", "-metric", "AE"];
+	const args = ["compare"];
 	if (fuzz > 0) args.push("-fuzz", `${fuzz}%`);
-	args.push(a, b, "null:");
+	args.push("-highlight-color", "white", "-lowlight-color", "black", a, b, maskPath);
 	try {
 		execFileSync(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
-		return 0;
-	} catch (e) {
-		const said = String(e.stderr ?? "").trim();
-		const count = Number.parseFloat(said);
+	} catch {
+		/* `compare` exits 1 whenever the images differ, which is the normal case
+		 * here. A decoder that could not run writes no mask, and that is the fact
+		 * checked next — not the exit code. */
+	}
+	if (!existsSync(maskPath)) return undefined;
+	try {
+		/* Flattened to a binary mask first: the highlight/lowlight pair already
+		 * leaves two tones, and forcing them removes any dependence on whether a
+		 * given build keeps an alpha channel, whose presence would move the mean. */
+		const counted = execFileSync(
+			bin,
+			[
+				maskPath,
+				"-alpha",
+				"off",
+				"-colorspace",
+				"Gray",
+				"-threshold",
+				"50%",
+				"-format",
+				"%[fx:round(mean*w*h)]",
+				"info:",
+			],
+			{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+		).trim();
+		const count = Number.parseInt(counted, 10);
 		return Number.isFinite(count) ? count : undefined;
+	} catch {
+		return undefined;
 	}
 };
 
@@ -484,13 +518,19 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
 		return verified.push(outPath);
 	}
-	/* Both counts, always. `strict` is what the same render would have differed by
-	 * at zero tolerance — the number that says whether this surface's tolerance
-	 * was needed on this frame, and how far a zero-tolerance surface has moved if
-	 * a future Chrome breaks it. `differing` is the pass/fail rule. */
-	const strict = pixelDifference(fresh, outPath, 0);
-	const differing = fuzz === 0 ? strict : pixelDifference(fresh, outPath, fuzz);
+	/* Both counts, always. `strict` is the number of pixels that differ from the
+	 * committed capture at zero tolerance; `differing` is the same count under the
+	 * surface's fuzz, and is the pass/fail rule. Printed together so the log says
+	 * whether the fuzz was doing any work on this frame. */
 	const name = outPath.split("/").pop();
+	/* One mask name per frame path, not per basename: every surface has an
+	 * `01-…png`, and a mask left by one surface must never be read as another's. */
+	const maskKey = outPath.replace(/[^a-zA-Z0-9]+/g, "_");
+	const strict = pixelDifference(fresh, outPath, 0, `${scratchVerify}/m0${maskKey}`);
+	const differing =
+		fuzz === 0
+			? strict
+			: pixelDifference(fresh, outPath, fuzz, `${scratchVerify}/m${fuzz}${maskKey}`);
 	if (differing === 0) {
 		if (fuzz === 0) {
 			console.log(
