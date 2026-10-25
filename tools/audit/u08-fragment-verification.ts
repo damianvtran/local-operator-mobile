@@ -10,7 +10,12 @@ import { reDriveMismatch } from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { type AuditRecord, auditCell } from "./audit.ts";
-import { type AuditState, runChecks, U08_SUPPRESSION } from "./checks.ts";
+import {
+	type AuditNode,
+	type AuditState,
+	runChecks,
+	U08_SUPPRESSION,
+} from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { type PaintRect, paintOverlap } from "./paint-fragments.ts";
 import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
@@ -152,6 +157,142 @@ export interface FailureContext {
 	control: unknown;
 	error: string;
 }
+type FailureReceipt = FailureContext & Record<string, unknown>;
+interface GeometryEntry {
+	index?: unknown;
+	ownText?: unknown;
+	fragmentStatus?: unknown;
+	paintExclusion?: unknown;
+	[key: string]: unknown;
+}
+/** Half the reserve, so the outer NOT-REPRODUCED receipt still fits beside it. */
+export const FAILURE_RECEIPT_LIMIT_BYTES = FAILURE_RESERVE_BYTES / 2;
+function geometryEntries(receipt: FailureReceipt): GeometryEntry[] {
+	const environment = receipt.environment as {
+		targetTextGeometry?: unknown;
+	} | null;
+	return Array.isArray(environment?.targetTextGeometry)
+		? (environment?.targetTextGeometry as GeometryEntry[])
+		: [];
+}
+/** The receipt's copy of one exclusion: identity and the condition that rejected
+ * the node, not the 29-row map. `failed` keeps every condition that said no, so a
+ * second failure is never hidden by the first; the passing rows are pure byte
+ * cost once the node is already known to be excluded. */
+function compactExclusion(value: unknown) {
+	if (!value || typeof value !== "object") return value ?? null;
+	const why = value as {
+		blockedBy?: unknown;
+		expected?: unknown;
+		observed?: unknown;
+		conditions?: unknown;
+		failed?: unknown;
+	};
+	// Idempotent on purpose: steps 2 and 3 compact entries step 1 already compacted,
+	// and a record without `conditions` must keep the names it was reduced to.
+	// Deriving `failed` from `conditions` alone rebuilt it empty, so the layer-2
+	// receipt claimed no condition failed while `blockedBy` named one (R2-1/Q1).
+	const failed = Array.isArray(why.conditions)
+		? (why.conditions as { name?: unknown; ok?: unknown }[])
+				.filter((row) => row && row.ok === false)
+				.map((row) => row.name)
+		: Array.isArray(why.failed)
+			? (why.failed as unknown[])
+			: [];
+	return {
+		blockedBy: why.blockedBy ?? null,
+		expected: why.expected ?? null,
+		observed: why.observed ?? null,
+		failed,
+	};
+}
+/** The `error` copy is capped at 256 bytes so a protocol error cannot crowd the
+ * receipt, but a plain cut can end mid-sentence and lose the condition name the
+ * geometry phase is read for (R2 N1). Keep the parenthetical reason the refusal
+ * appends and mark any cut with an ellipsis, so a shortened message can never
+ * read as a complete one. */
+function boundError(error: string, limit = 256) {
+	if (error.length <= limit) return error;
+	const marker = " … ";
+	const at = error.lastIndexOf(" (node ");
+	const tail = at > 0 ? error.slice(at) : "";
+	if (tail && tail.length + marker.length < limit)
+		return `${error.slice(0, limit - tail.length - marker.length)}${marker}${tail}`;
+	return `${error.slice(0, limit - marker.length)}${marker}`;
+}
+/** The failure receipt has to keep proving the ENVIRONMENT — viewport, insets,
+ * theme, text scale and whether the env() override applied — and, for each
+ * conservative target node, which condition rejected it. The full exclusion map
+ * is what pushes the receipt past its 8 KiB context budget (measured ~4.9 KB per
+ * explained node, 22.6 KB for the four-node incident shape), and the previous
+ * shrink dropped `environment` wholesale — removing exactly the evidence the
+ * geometry phase is read for. So the ladder drops the bulky map first and never
+ * the environment: the whole map stays in `*-ready.json`, written before geometry
+ * adjudication and bounded by the 5 MiB aggregate instead of 8 KiB. The final
+ * form keeps one line per node: identity, first failing condition, observed and
+ * expected — the same facts the refusal message names. */
+export function shrinkFailureReceipt(receipt: FailureReceipt): Buffer {
+	const serialize = () => Buffer.from(JSON.stringify(receipt, null, 2));
+	let json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 1. Bound the protocol error, collapse the control trace to an identifying
+	// summary, and keep only the failing rows of each exclusion.
+	receipt.error = boundError(String(receipt.error));
+	receipt.readiness = {
+		omitted: "context budget",
+		path: (receipt.readiness as { path?: unknown } | null)?.path,
+	};
+	receipt.control = {
+		summary: String(JSON.stringify(receipt.control)).slice(0, 1024),
+	};
+	for (const entry of geometryEntries(receipt))
+		entry.paintExclusion = compactExclusion(entry.paintExclusion);
+	json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 2. Drop the geometry numbers and fragment arrays; identity plus the reason is
+	// what the failed phase is read for, and the rects are in `*-ready.json` too.
+	const nodes = geometryEntries(receipt);
+	if (receipt.environment)
+		receipt.environment.targetTextGeometry = nodes.map((entry) => ({
+			index: entry.index,
+			ownText:
+				typeof entry.ownText === "string"
+					? entry.ownText.slice(0, 32)
+					: (entry.ownText ?? null),
+			fragmentStatus: entry.fragmentStatus ?? null,
+			paintExclusion: compactExclusion(entry.paintExclusion),
+		}));
+	json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 3. Last resort: the environment's identifying fields and one line per node.
+	if (receipt.environment) {
+		const environment = receipt.environment as Record<string, unknown>;
+		receipt.environment = {
+			viewport: environment.viewport,
+			insets: environment.insets,
+			theme: environment.theme,
+			textScale: environment.textScale,
+			insetsOverride: environment.insetsOverride,
+			targetTextGeometry: nodes.map((entry) => {
+				const why = compactExclusion(entry.paintExclusion) as {
+					blockedBy?: unknown;
+					observed?: unknown;
+					expected?: unknown;
+				} | null;
+				return {
+					index: entry.index,
+					blockedBy: why?.blockedBy ?? null,
+					observed: why?.observed ?? null,
+					expected: why?.expected ?? null,
+				};
+			}),
+		};
+	}
+	json = serialize();
+	if (json.length > FAILURE_RECEIPT_LIMIT_BYTES)
+		throw new Error("Failure context exceeds reserved artifact budget");
+	return json;
+}
 /** Failure evidence belongs inside the live-page lifetime. Keep normal outputs
  * below the existing reserve, and use at most half of it for this context so
  * the outer NOT-REPRODUCED receipt still fits. Screenshot failure never becomes
@@ -233,24 +374,8 @@ export async function writeFailureEvidence(
 		diagnosed: false,
 		screenshot,
 	};
-	let json = Buffer.from(JSON.stringify(receipt, null, 2));
-	if (json.length > FAILURE_RESERVE_BYTES / 2) {
-		// Oversized protocol errors must not crowd out the cell/control identity.
-		receipt.error = context.error.slice(0, 256);
-		receipt.readiness = {
-			omitted: "context budget",
-			path: context.readiness?.path,
-		};
-		receipt.control = {
-			summary: String(JSON.stringify(context.control)).slice(0, 1024),
-		};
-		receipt.environment = { omitted: "context budget" };
-		json = Buffer.from(JSON.stringify(receipt, null, 2));
-	}
-	if (
-		json.length > FAILURE_RESERVE_BYTES / 2 ||
-		bytes + json.length > ARTIFACT_LIMIT_BYTES - 2048
-	)
+	const json = shrinkFailureReceipt(receipt);
+	if (bytes + json.length > ARTIFACT_LIMIT_BYTES - 2048)
 		throw new Error("Failure context exceeds reserved artifact budget");
 	writeFileSync(resolve(out, "failure.json"), json);
 }
@@ -270,6 +395,30 @@ export function verificationRecords(base: AuditRecord): AuditRecord[] {
 	);
 }
 const CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
+/** The refusal has to name the gate's reason, not only its absence: the run this
+ * check failed on reported "Missing actual own-text fragment measurement" and
+ * nothing else, which cannot distinguish a react-native-web property the gate
+ * tests differently from a premise the gate can never satisfy for RNW. The
+ * condition name is never truncated — an unnamed reason cannot be acted on — and
+ * the observed/expected pair is already length-bounded by the probe.
+ * A node without a record is a hand-built fixture or a legacy packet: say so
+ * rather than invent a condition. */
+function paintRefusalReason(node: AuditNode | undefined) {
+	const why = node?.u08PaintExclusion;
+	if (why) {
+		const observed = JSON.stringify(why.observed) ?? "undefined";
+		const expected = JSON.stringify(why.expected) ?? "undefined";
+		return `node ${node.index}: own-text purity blocked by ${why.blockedBy ?? "unknown"}, observed ${observed}, expected ${expected}`;
+	}
+	// `[]` (or only zero-area rects) is the OPPOSITE case to a missing record: the
+	// node was certified pure, so there is no exclusion to name and no conservative
+	// envelope was kept — the text simply painted nothing measurable. Reporting it
+	// as "no purity record, conservative envelope retained" was the same class of
+	// misleading refusal this diagnostic exists to remove.
+	if (node && Array.isArray(node.u08PaintFragments))
+		return `node ${node.index}: certified pure, no positive own-text fragment (${node.u08PaintFragments.length} measured, none with positive area)`;
+	return `node ${node?.index ?? "unknown"}: no own-text purity record, conservative envelope retained`;
+}
 export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 	if (state.u08GeometryVersion !== 1)
 		throw new Error("Missing corrected fragment schema");
@@ -317,7 +466,9 @@ export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 			!Array.isArray(node.u08PaintFragments) ||
 			!node.u08PaintFragments.some((r) => r.w > 0 && r.h > 0)
 		)
-			throw new Error("Missing actual own-text fragment measurement");
+			throw new Error(
+				`Missing actual own-text fragment measurement (${paintRefusalReason(node)})`,
+			);
 		const control = node.ancestors
 			.map((index) => state.nodes.find((n) => n.index === index))
 			.find((n) => n?.tag === "button");
@@ -489,6 +640,10 @@ export async function verifyFragments(ctx: Context) {
 							n.u08PaintFragments === undefined
 								? "conservative/unobserved"
 								: "measured",
+						// The reason the status is conservative, beside the status itself: a
+						// reader can tell a property RNW emits differently from a premise the
+						// gate can never satisfy without another hosted run.
+						paintExclusion: n.u08PaintExclusion ?? null,
 						fragments: n.u08PaintFragments,
 					}))
 			: [];
