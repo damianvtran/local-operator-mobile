@@ -405,6 +405,16 @@ if (fontDir && !existsSync(fontCssPath)) {
  * says which of the two comparisons passed. A missing decoder is a FAILURE,
  * never a pass, because "could not prove it differs" and "it differs" must not
  * look the same in a log.
+ *
+ * The listing frames ask for a 2% per-pixel fuzz on that pixel comparison. The
+ * store slots are smaller than the captures (the iPad slot scales 2048 into
+ * 1400), and Chrome's resampler moved by a level or two between 155 and 156 at
+ * those edges: the same committed frame rendered pixel-exact here and "stale" on
+ * the CI runner, while the 1:1 Play frames and the phone frames matched. A
+ * caption, font or template change moves whole glyphs far past 2%, so the fuzz
+ * keeps the gate's claim ("this file still matches its own page") without
+ * pinning it to one browser build. The preview sheet and feature graphic keep
+ * zero tolerance.
  */
 
 const alphaTool = () =>
@@ -417,18 +427,24 @@ const alphaTool = () =>
 		}
 	});
 
-const pixelsIdentical = (a, b) => {
+/** How many pixels differ by more than `fuzz` percent (ImageMagick's AE).
+ * 0 means identical (or every difference under the fuzz); a number means that
+ * many pixels are past it; null means no decoder is installed; undefined means
+ * the comparison itself failed. Those last three are deliberately distinct:
+ * "no decoder" and "could not run" must never read as a pass in a log. */
+const pixelDifference = (a, b, fuzz = 0) => {
 	const bin = alphaTool();
 	if (!bin) return null;
+	const args = ["compare", "-metric", "AE"];
+	if (fuzz > 0) args.push("-fuzz", `${fuzz}%`);
+	args.push(a, b, "null:");
 	try {
-		execFileSync(bin, ["compare", "-metric", "AE", a, b, "null:"], {
-			stdio: ["ignore", "pipe", "pipe"],
-		});
-		return true;
+		execFileSync(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
+		return 0;
 	} catch (e) {
 		const said = String(e.stderr ?? "").trim();
-		if (/^\d+/.test(said)) return false;
-		return null;
+		const count = Number.parseFloat(said);
+		return Number.isFinite(count) ? count : undefined;
 	}
 };
 
@@ -442,7 +458,7 @@ const stale = (path, why) => {
 
 /** In generation mode: write. In `--check`: compare against the committed file
  * and report the strongest comparison that passed. */
-const save = (pngBuffer, outPath, { reencode = null } = {}) => {
+const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	if (!check) {
 		writeFileSync(outPath, pngBuffer);
 		previewTargets.push(outPath);
@@ -457,15 +473,31 @@ const save = (pngBuffer, outPath, { reencode = null } = {}) => {
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
 		return verified.push(outPath);
 	}
-	if (pixelsIdentical(fresh, outPath) === true) {
+	const differing = pixelDifference(fresh, outPath, fuzz);
+	if (differing === 0) {
 		console.log(
-			`  ${outPath.split("/").pop()}: pixels identical (bytes differ — either encoder metadata or a real content change of sub-threshold pixels)`,
+			fuzz === 0
+				? `  ${outPath.split("/").pop()}: pixels identical (bytes differ — either encoder metadata or a real content change of sub-threshold pixels)`
+				: `  ${outPath.split("/").pop()}: pixels identical within the ${fuzz}% resampling fuzz (bytes differ)`,
 		);
 		return verified.push(outPath);
 	}
+	if (differing === null) {
+		return stale(
+			outPath,
+			"no image decoder is installed, so the pixel comparison could not be made",
+		);
+	}
+	if (differing === undefined) {
+		return stale(
+			outPath,
+			"the pixel comparison itself failed (the decoder ran but produced no AE count)",
+		);
+	}
 	stale(
 		outPath,
-		"does not match a fresh render of its own page (bytes and pixels both differ, or no decoder is available to prove the pixels match)",
+		`does not match a fresh render of its own page (${differing} pixel(s) differ beyond ` +
+			`${fuzz === 0 ? "zero tolerance" : `a ${fuzz}% fuzz`})`,
 	);
 };
 
@@ -671,7 +703,7 @@ if (target === "frames" || target === "all") {
 				process.exitCode = 1;
 				continue;
 			}
-			save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24 });
+			save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24, fuzz: 2 });
 		}
 	}
 }
