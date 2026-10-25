@@ -127,7 +127,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/visual/matrix.ts":
 		"172b9fe4007edcee68ded3dba4d93f584c9b1d848b3d05e6d68a12e942c35f44",
 	"e2e/fixtures/audit-canary/index.html":
-		"721a48e28a4f0282cfbf15c5f25a3f19d7c9ae10e0ffcb31edc7c2503af35bb9",
+		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
