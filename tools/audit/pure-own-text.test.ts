@@ -1,6 +1,7 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import {
+	EXTRACT_PROBE,
 	PURE_OWN_TEXT_SOURCE,
 	PURE_OWN_TEXT_VERDICT_SOURCE,
 	U08_COMPACT_SOURCE,
@@ -411,6 +412,15 @@ describe("the diagnostic record's emission and truncation rules", () => {
 		expect(record?.blockedBy).toBe("text-shadow");
 		expect(record?.observed).toBe("1px 1px black");
 		expect(record?.conditions).toHaveLength(NAMES.length);
+	});
+
+	it("injects each shared source exactly once instead of inlining a copy", () => {
+		const occurrences = (haystack: string, needle: string) =>
+			haystack.split(needle).length - 1;
+		// An inline copy beside the export would keep both green while the probe and
+		// its tests stopped sharing a rule; the count is what makes that impossible.
+		expect(occurrences(EXTRACT_PROBE, U08_COMPACT_SOURCE)).toBe(1);
+		expect(occurrences(EXTRACT_PROBE, U08_PAINT_EXCLUSION_SOURCE)).toBe(1);
 	});
 
 	it("truncates a long observed value but never a condition name", () => {

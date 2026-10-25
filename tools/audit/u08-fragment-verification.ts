@@ -186,18 +186,39 @@ function compactExclusion(value: unknown) {
 		expected?: unknown;
 		observed?: unknown;
 		conditions?: unknown;
+		failed?: unknown;
 	};
-	const conditions = Array.isArray(why.conditions)
+	// Idempotent on purpose: steps 2 and 3 compact entries step 1 already compacted,
+	// and a record without `conditions` must keep the names it was reduced to.
+	// Deriving `failed` from `conditions` alone rebuilt it empty, so the layer-2
+	// receipt claimed no condition failed while `blockedBy` named one (R2-1/Q1).
+	const failed = Array.isArray(why.conditions)
 		? (why.conditions as { name?: unknown; ok?: unknown }[])
-		: [];
+				.filter((row) => row && row.ok === false)
+				.map((row) => row.name)
+		: Array.isArray(why.failed)
+			? (why.failed as unknown[])
+			: [];
 	return {
 		blockedBy: why.blockedBy ?? null,
 		expected: why.expected ?? null,
 		observed: why.observed ?? null,
-		failed: conditions
-			.filter((row) => row && row.ok === false)
-			.map((row) => row.name),
+		failed,
 	};
+}
+/** The `error` copy is capped at 256 bytes so a protocol error cannot crowd the
+ * receipt, but a plain cut can end mid-sentence and lose the condition name the
+ * geometry phase is read for (R2 N1). Keep the parenthetical reason the refusal
+ * appends and mark any cut with an ellipsis, so a shortened message can never
+ * read as a complete one. */
+function boundError(error: string, limit = 256) {
+	if (error.length <= limit) return error;
+	const marker = " … ";
+	const at = error.lastIndexOf(" (node ");
+	const tail = at > 0 ? error.slice(at) : "";
+	if (tail && tail.length + marker.length < limit)
+		return `${error.slice(0, limit - tail.length - marker.length)}${marker}${tail}`;
+	return `${error.slice(0, limit - marker.length)}${marker}`;
 }
 /** The failure receipt has to keep proving the ENVIRONMENT — viewport, insets,
  * theme, text scale and whether the env() override applied — and, for each
@@ -216,7 +237,7 @@ export function shrinkFailureReceipt(receipt: FailureReceipt): Buffer {
 	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
 	// 1. Bound the protocol error, collapse the control trace to an identifying
 	// summary, and keep only the failing rows of each exclusion.
-	receipt.error = String(receipt.error).slice(0, 256);
+	receipt.error = boundError(String(receipt.error));
 	receipt.readiness = {
 		omitted: "context budget",
 		path: (receipt.readiness as { path?: unknown } | null)?.path,

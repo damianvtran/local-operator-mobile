@@ -874,3 +874,82 @@ describe("failure receipt keeps the environment when the exclusion maps are bulk
 		expect(written.error).toContain("element-descendants");
 	});
 });
+
+/** Ten real condition names that fail together, in the rule's order — the shape
+ * that pushes the ladder to its second layer (8 nodes, >=10 failing rows). */
+const LAYER_FAILURES = [
+	"background-image",
+	"border-image-source",
+	"box-shadow",
+	"text-shadow",
+	"filter",
+	"backdrop-filter",
+	"mask-image",
+	"text-emphasis-style",
+	"outline-width",
+	"column-rule-width",
+];
+/** Eight nodes at the largest size the receipt reaches: long own text and line
+ * fragments that layer 2 drops, so the test proves which layer ran. */
+function layeredReceipt(): FailureContext & Record<string, unknown> {
+	const receipt = incidentReceipt();
+	const environment = receipt.environment as Record<string, unknown>;
+	environment.targetTextGeometry = Array.from({ length: 8 }, (_, index) => ({
+		index: 64 + index,
+		ownText: "wrapped label text ".repeat(11).slice(0, 200),
+		rect: { x: 25, y: 463, w: 321, h: 61, right: 346, bottom: 524 },
+		visibleRect: { x: 25, y: 463, w: 321, h: 22, right: 346, bottom: 486 },
+		fragmentStatus: "conservative/unobserved",
+		fragments: [
+			{ x: 25, y: 463, w: 321, h: 22 },
+			{ x: 25, y: 487, w: 321, h: 22 },
+			{ x: 25, y: 511, w: 321, h: 22 },
+		],
+		paintExclusion: {
+			blockedBy: "element-descendants",
+			expected: 0,
+			observed: 2,
+			conditions: INCIDENT_CONDITIONS.map((name) => ({
+				name,
+				expected: "none",
+				observed: "rgba(0, 0, 0, 0)",
+				ok: !LAYER_FAILURES.includes(name),
+			})),
+		},
+	}));
+	return receipt;
+}
+
+describe("failure receipt compaction is idempotent across ladder layers", () => {
+	it("keeps every failing condition name when the ladder reaches its second layer", () => {
+		const receipt = layeredReceipt();
+		const untrimmed = Buffer.from(JSON.stringify(receipt, null, 2));
+		expect(untrimmed.length).toBeGreaterThan(FAILURE_RECEIPT_LIMIT_BYTES);
+
+		const written = JSON.parse(shrinkFailureReceipt(receipt).toString("utf8"));
+		const nodes = written.environment.targetTextGeometry;
+		expect(nodes).toHaveLength(8);
+		// Layer 2 is the one that re-compacts: the geometry numbers go, the reasons
+		// must not. `rect` absent proves this test actually reached that layer.
+		expect(nodes[0].rect).toBeUndefined();
+		expect(nodes[0].fragments).toBeUndefined();
+		for (const node of nodes) {
+			expect(node.paintExclusion.blockedBy).toBe("element-descendants");
+			expect(node.paintExclusion.failed).toEqual(LAYER_FAILURES);
+		}
+	});
+
+	it("marks a truncated error and keeps the named condition reachable", () => {
+		const receipt = layeredReceipt();
+		const path = `/session/${"x".repeat(400)}?lo-scroll=top`;
+		const error = `geometry theme=dark state=condensed path=${path}: Missing actual own-text fragment measurement (node 66: own-text purity blocked by element-descendants, observed 2, expected 0)`;
+		receipt.error = error;
+		receipt.readiness = { path };
+		const written = JSON.parse(shrinkFailureReceipt(receipt).toString("utf8"));
+		expect(written.error.length).toBeLessThanOrEqual(256);
+		// A cut must announce itself, and the reason must survive it.
+		expect(written.error).toContain("…");
+		expect(written.error).toContain("element-descendants");
+		expect(written.error.endsWith("expected 0)")).toBe(true);
+	});
+});
