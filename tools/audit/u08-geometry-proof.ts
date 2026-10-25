@@ -15,6 +15,7 @@ import { type AuditRecord, auditCell } from "./audit.ts";
 import { type AuditState, runChecks } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
+import { assertPinnedContent } from "./u08-content-pins.ts";
 
 export const ORIGINAL_HEAD = "c8d1d44c6b5bf53381d65c77f209d817d323ba74";
 export const ORIGINAL_RUN = "39483683151";
@@ -22,7 +23,9 @@ export const ORIGINAL_PROBE_SHA256 =
 	"2ef600e4b42640db7b921a3fba9f17b1f380701f92e7546beab07cf424e67c13";
 export const ORIGINAL_POLICY_SHA256 =
 	"785138818c460fcdeeb2e3fcc4f2ff682b85c0572ab02ebf3fcf9e4f2547000d";
-export const REPAIR_BASE = "f28df58fc8eef450d0339610a1de9dd8f967be47";
+// REPAIR_BASE (f28df58) and ORIGINAL_HEAD delimited the path-diff allowlists that
+// used to admit this run; content pins replace them, and the historical run/head
+// constants above stay exactly as captured.
 export const RECORD: AuditRecord = {
 	screen: "path:/session/{sessionId}?lo-scroll=top",
 	state: "condensed",
@@ -199,61 +202,14 @@ async function main() {
 	const out = resolve(str(flags, "out") ?? "u08-geometry"),
 		build = resolve(str(flags, "web-dir") ?? "dist");
 	mkdirSync(out, { recursive: true });
-	const allowed = new Set([
-		".github/workflows/e2e.yml",
-		"docs/ci.md",
-		"tools/audit/audit.ts",
-		"tools/audit/checks.ts",
-		"tools/audit/probe.ts",
-		"tools/audit/u08-geometry-proof.ts",
-		"tools/audit/u08-geometry-proof.test.ts",
-		"scripts/ci/account-routing-proof.test.ts",
-		"tools/visual/core-audit-only.test.ts",
-		...(corrected
-			? [
-					"tools/audit/paint-fragments.ts",
-					"tools/audit/paint-fragments.test.ts",
-					"tools/audit/u08-fragment-verification.ts",
-					"tools/audit/u08-fragment-verification.test.ts",
-				]
-			: []),
-	]);
-	const changed = execFileSync(
-		"git",
-		["diff", "--name-only", corrected ? REPAIR_BASE : ORIGINAL_HEAD, "HEAD"],
-		{ encoding: "utf8" },
-	)
-		.trim()
-		.split("\n")
-		.filter(Boolean);
-	if (changed.some((path) => !allowed.has(path)))
-		throw new Error(
-			"Source differs outside the reviewed diagnostic-only scope; refusing approximate proof",
-		);
+	// Admission is content identity, never a path diff: a merged file that cannot
+	// move a measured box must not refuse the run, and an allowlisted file whose
+	// content changed must. Both proofs measure the same pinned instrument, so the
+	// check is shared; u08-content-pins.ts explains the scope file by file.
+	assertPinnedContent();
 	const head = execFileSync("git", ["rev-parse", "HEAD"], {
 		encoding: "utf8",
 	}).trim();
-	execFileSync(
-		"git",
-		[
-			"diff",
-			"--exit-code",
-			ORIGINAL_HEAD,
-			"HEAD",
-			"--",
-			"app",
-			"src",
-			"assets",
-			"design",
-			"package.json",
-			"pnpm-lock.yaml",
-			"app.config.ts",
-			"metro.config.js",
-			"babel.config.js",
-			"tailwind.config.js",
-		],
-		{ stdio: "pipe" },
-	);
 	if (bool(flags, "preflight-only", false)) return;
 	const relay = createRelay({ scenario: "long-transcript" });
 	let server: Awaited<ReturnType<typeof serveDir>> | undefined,
