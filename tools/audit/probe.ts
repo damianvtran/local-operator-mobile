@@ -39,6 +39,17 @@ import type { AuditAxNode } from "./checks.ts";
  * said no, with what it observed and what it expected. A second implementation
  * of the rule would drift from the gate, and the drift would be invisible until
  * a node was certified from a condition the report never showed. */
+/** One truncation rule for every value the record carries, exported so a test can
+ * hold its exact width. Condition names never pass through it — they are literals
+ * from the probe table, and a truncated name would silently rename a condition —
+ * so only `observed` values are shortened. */
+export const U08_COMPACT_SOURCE = String.raw`(value) => value === undefined ? null : typeof value === 'string' && value.length > 48 ? value.slice(0, 45) + '...' : value`;
+/** The one emission rule for the diagnostic record: only an own-text node that
+ * stayed conservative carries one, because a node with no own text was never a
+ * candidate and a pure node has nothing to explain. Exported (and used by the
+ * probe) so a test can pin the guard: dropping it would add a record to every
+ * node in the frame, and a 3,384-cell audit would carry that bloat. */
+export const U08_PAINT_EXCLUSION_SOURCE = String.raw`(purity, ownText) => !purity.pure && ownText.length > 0 ? {blockedBy: purity.blockedBy, expected: purity.expected, observed: purity.observed, conditions: purity.conditions} : undefined`;
 export const PURE_OWN_TEXT_VERDICT_SOURCE = String.raw`(() => {
  // Built once per page: the probes close over the shared context object, never
  // over one node, so a few hundred frames do not rebuild the rule per node.
@@ -87,11 +98,13 @@ export const PURE_OWN_TEXT_VERDICT_SOURCE = String.raw`(() => {
   };
   // Artifact bytes are bounded: a value is truncated, never a condition name, so
   // every row stays identifiable in the failure receipt.
-  const compact = (value) => value === undefined ? null
-   : typeof value === 'string' && value.length > 48 ? value.slice(0, 45) + '...' : value;
+  const compact = ${U08_COMPACT_SOURCE};
   const s = style || {};
+  // Read once: two conditions need this value, and the old short-circuit never
+  // read the same CSSStyleDeclaration property twice to answer them.
+  const rawDisplay = s.display;
   const context = {el: el, s: s, ownText: ownText, interactiveNode: interactiveNode, px: px,
-   display: typeof s.display === 'string' ? s.display : ''};
+   display: typeof rawDisplay === 'string' ? rawDisplay : ''};
   for (const probe of probes) {
    const read = attempt(() => probe[2](context));
    const verdict = read.read ? attempt(() => probe[3](read.value, context)) : {value: false};
@@ -114,8 +127,10 @@ export const PURE_OWN_TEXT_VERDICT_SOURCE = String.raw`(() => {
    conditions: rows};
  };
 })()`;
-/** The boolean the canonical probe and the policy have always consumed. It is the
- * SAME evaluator with the whole-map recording off, never a parallel rule. */
+/** Test-only alias kept for the classifier tests that drive the boolean: at this
+ * head the probe reads `.pure` off the verdict object and the policy consumes
+ * `u08PaintFragments`, so no production path calls this. It is the same evaluator
+ * with detail off, never a second implementation of the rule. */
 export const PURE_OWN_TEXT_SOURCE = String.raw`(el,style,ownText,interactiveNode,px) => (${PURE_OWN_TEXT_VERDICT_SOURCE})(el,style,ownText,interactiveNode,px,false).pure`;
 
 export const OWN_TEXT_GEOMETRY_SOURCE = String.raw`(el,clip) => {
@@ -260,6 +275,7 @@ const probeWithGeometry = (extra = "") => `
   // conservative envelope. One list backs both this and the policy's boolean;
   // see PURE_OWN_TEXT_VERDICT_SOURCE for why that matters.
   const pureOwnTextView = ${PURE_OWN_TEXT_VERDICT_SOURCE};
+  const paintExclusionFor = ${U08_PAINT_EXCLUSION_SOURCE};
   const insideHorizontalScroller = (el) => {
     let node = el.parentElement;
     while (node && node.nodeType === 1) {
@@ -407,9 +423,10 @@ const probeWithGeometry = (extra = "") => `
       u08PaintFragments,
       // Recorded, never interpreted: undefined means "not asked" (the node has no
       // own text), while an object is the gate's actual reason for keeping the
-      // envelope. Serialized diagnostics stay bounded by per-row truncation and
-      // by covering candidate text nodes only.
-      u08PaintExclusion: !pureOwnText && ownText.length > 0 ? {blockedBy: purity.blockedBy, expected: purity.expected, observed: purity.observed, conditions: purity.conditions} : undefined,
+      // envelope. The emission rule is defined once and shared; serialized
+      // diagnostics stay bounded by per-row truncation and by covering candidate
+      // text nodes only.
+      u08PaintExclusion: paintExclusionFor(purity, ownText),
       tag: el.tagName.toLowerCase(),
       path: (() => {
         const parts = [];

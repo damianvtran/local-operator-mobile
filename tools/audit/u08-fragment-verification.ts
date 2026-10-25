@@ -157,6 +157,121 @@ export interface FailureContext {
 	control: unknown;
 	error: string;
 }
+type FailureReceipt = FailureContext & Record<string, unknown>;
+interface GeometryEntry {
+	index?: unknown;
+	ownText?: unknown;
+	fragmentStatus?: unknown;
+	paintExclusion?: unknown;
+	[key: string]: unknown;
+}
+/** Half the reserve, so the outer NOT-REPRODUCED receipt still fits beside it. */
+export const FAILURE_RECEIPT_LIMIT_BYTES = FAILURE_RESERVE_BYTES / 2;
+function geometryEntries(receipt: FailureReceipt): GeometryEntry[] {
+	const environment = receipt.environment as {
+		targetTextGeometry?: unknown;
+	} | null;
+	return Array.isArray(environment?.targetTextGeometry)
+		? (environment?.targetTextGeometry as GeometryEntry[])
+		: [];
+}
+/** The receipt's copy of one exclusion: identity and the condition that rejected
+ * the node, not the 29-row map. `failed` keeps every condition that said no, so a
+ * second failure is never hidden by the first; the passing rows are pure byte
+ * cost once the node is already known to be excluded. */
+function compactExclusion(value: unknown) {
+	if (!value || typeof value !== "object") return value ?? null;
+	const why = value as {
+		blockedBy?: unknown;
+		expected?: unknown;
+		observed?: unknown;
+		conditions?: unknown;
+	};
+	const conditions = Array.isArray(why.conditions)
+		? (why.conditions as { name?: unknown; ok?: unknown }[])
+		: [];
+	return {
+		blockedBy: why.blockedBy ?? null,
+		expected: why.expected ?? null,
+		observed: why.observed ?? null,
+		failed: conditions
+			.filter((row) => row && row.ok === false)
+			.map((row) => row.name),
+	};
+}
+/** The failure receipt has to keep proving the ENVIRONMENT — viewport, insets,
+ * theme, text scale and whether the env() override applied — and, for each
+ * conservative target node, which condition rejected it. The full exclusion map
+ * is what pushes the receipt past its 8 KiB context budget (measured ~4.9 KB per
+ * explained node, 22.6 KB for the four-node incident shape), and the previous
+ * shrink dropped `environment` wholesale — removing exactly the evidence the
+ * geometry phase is read for. So the ladder drops the bulky map first and never
+ * the environment: the whole map stays in `*-ready.json`, written before geometry
+ * adjudication and bounded by the 5 MiB aggregate instead of 8 KiB. The final
+ * form keeps one line per node: identity, first failing condition, observed and
+ * expected — the same facts the refusal message names. */
+export function shrinkFailureReceipt(receipt: FailureReceipt): Buffer {
+	const serialize = () => Buffer.from(JSON.stringify(receipt, null, 2));
+	let json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 1. Bound the protocol error, collapse the control trace to an identifying
+	// summary, and keep only the failing rows of each exclusion.
+	receipt.error = String(receipt.error).slice(0, 256);
+	receipt.readiness = {
+		omitted: "context budget",
+		path: (receipt.readiness as { path?: unknown } | null)?.path,
+	};
+	receipt.control = {
+		summary: String(JSON.stringify(receipt.control)).slice(0, 1024),
+	};
+	for (const entry of geometryEntries(receipt))
+		entry.paintExclusion = compactExclusion(entry.paintExclusion);
+	json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 2. Drop the geometry numbers and fragment arrays; identity plus the reason is
+	// what the failed phase is read for, and the rects are in `*-ready.json` too.
+	const nodes = geometryEntries(receipt);
+	if (receipt.environment)
+		receipt.environment.targetTextGeometry = nodes.map((entry) => ({
+			index: entry.index,
+			ownText:
+				typeof entry.ownText === "string"
+					? entry.ownText.slice(0, 32)
+					: (entry.ownText ?? null),
+			fragmentStatus: entry.fragmentStatus ?? null,
+			paintExclusion: compactExclusion(entry.paintExclusion),
+		}));
+	json = serialize();
+	if (json.length <= FAILURE_RECEIPT_LIMIT_BYTES) return json;
+	// 3. Last resort: the environment's identifying fields and one line per node.
+	if (receipt.environment) {
+		const environment = receipt.environment as Record<string, unknown>;
+		receipt.environment = {
+			viewport: environment.viewport,
+			insets: environment.insets,
+			theme: environment.theme,
+			textScale: environment.textScale,
+			insetsOverride: environment.insetsOverride,
+			targetTextGeometry: nodes.map((entry) => {
+				const why = compactExclusion(entry.paintExclusion) as {
+					blockedBy?: unknown;
+					observed?: unknown;
+					expected?: unknown;
+				} | null;
+				return {
+					index: entry.index,
+					blockedBy: why?.blockedBy ?? null,
+					observed: why?.observed ?? null,
+					expected: why?.expected ?? null,
+				};
+			}),
+		};
+	}
+	json = serialize();
+	if (json.length > FAILURE_RECEIPT_LIMIT_BYTES)
+		throw new Error("Failure context exceeds reserved artifact budget");
+	return json;
+}
 /** Failure evidence belongs inside the live-page lifetime. Keep normal outputs
  * below the existing reserve, and use at most half of it for this context so
  * the outer NOT-REPRODUCED receipt still fits. Screenshot failure never becomes
@@ -238,24 +353,8 @@ export async function writeFailureEvidence(
 		diagnosed: false,
 		screenshot,
 	};
-	let json = Buffer.from(JSON.stringify(receipt, null, 2));
-	if (json.length > FAILURE_RESERVE_BYTES / 2) {
-		// Oversized protocol errors must not crowd out the cell/control identity.
-		receipt.error = context.error.slice(0, 256);
-		receipt.readiness = {
-			omitted: "context budget",
-			path: context.readiness?.path,
-		};
-		receipt.control = {
-			summary: String(JSON.stringify(context.control)).slice(0, 1024),
-		};
-		receipt.environment = { omitted: "context budget" };
-		json = Buffer.from(JSON.stringify(receipt, null, 2));
-	}
-	if (
-		json.length > FAILURE_RESERVE_BYTES / 2 ||
-		bytes + json.length > ARTIFACT_LIMIT_BYTES - 2048
-	)
+	const json = shrinkFailureReceipt(receipt);
+	if (bytes + json.length > ARTIFACT_LIMIT_BYTES - 2048)
 		throw new Error("Failure context exceeds reserved artifact budget");
 	writeFileSync(resolve(out, "failure.json"), json);
 }
@@ -285,11 +384,19 @@ const CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
  * rather than invent a condition. */
 function paintRefusalReason(node: AuditNode | undefined) {
 	const why = node?.u08PaintExclusion;
-	if (!why)
-		return `node ${node?.index ?? "unknown"}: no own-text purity record, conservative envelope retained`;
-	const observed = JSON.stringify(why.observed) ?? "undefined";
-	const expected = JSON.stringify(why.expected) ?? "undefined";
-	return `node ${node.index}: own-text purity blocked by ${why.blockedBy ?? "unknown"}, observed ${observed}, expected ${expected}`;
+	if (why) {
+		const observed = JSON.stringify(why.observed) ?? "undefined";
+		const expected = JSON.stringify(why.expected) ?? "undefined";
+		return `node ${node.index}: own-text purity blocked by ${why.blockedBy ?? "unknown"}, observed ${observed}, expected ${expected}`;
+	}
+	// `[]` (or only zero-area rects) is the OPPOSITE case to a missing record: the
+	// node was certified pure, so there is no exclusion to name and no conservative
+	// envelope was kept — the text simply painted nothing measurable. Reporting it
+	// as "no purity record, conservative envelope retained" was the same class of
+	// misleading refusal this diagnostic exists to remove.
+	if (node && Array.isArray(node.u08PaintFragments))
+		return `node ${node.index}: certified pure, no positive own-text fragment (${node.u08PaintFragments.length} measured, none with positive area)`;
+	return `node ${node?.index ?? "unknown"}: no own-text purity record, conservative envelope retained`;
 }
 export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 	if (state.u08GeometryVersion !== 1)

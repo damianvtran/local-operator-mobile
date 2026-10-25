@@ -19,10 +19,12 @@ import {
 	assertCoverage,
 	assertTurnControl,
 	evaluateRepairedCell,
+	FAILURE_RECEIPT_LIMIT_BYTES,
 	FAILURE_RESERVE_BYTES,
 	type FailureContext,
 	nextArtifactBytes,
 	POSITIVE_IDS,
+	shrinkFailureReceipt,
 	TURN_CONTROL_ID,
 	TURN_CONTROL_SOURCE,
 	verificationRecords,
@@ -571,7 +573,7 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		const noFragments = incident();
 		for (const n of noFragments.nodes) delete n.u08PaintFragments;
 		expect(() => evaluateRepairedCell(noFragments, ORIGINAL_NODE_PATH)).toThrow(
-			"fragment measurement",
+			"node 1: no own-text purity record, conservative envelope retained",
 		);
 		// The refusal must carry the gate's reason: this run reported only the
 		// absence of a measurement, so a reader could not tell which condition
@@ -600,8 +602,11 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		const empty = incident();
 		for (const n of empty.nodes.filter((n) => n.tag === "span"))
 			n.u08PaintFragments = [];
+		// `[]` is a certified-pure node whose text painted nothing measurable, which
+		// is the opposite claim to a missing record: the refusal must say so rather
+		// than report a purity failure that never happened.
 		expect(() => evaluateRepairedCell(empty, ORIGINAL_NODE_PATH)).toThrow(
-			"fragment measurement",
+			"node 1: certified pure, no positive own-text fragment (0 measured, none with positive area)",
 		);
 		const collision = incident(),
 			a = collision.nodes[1],
@@ -701,5 +706,171 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		expect(() =>
 			nextArtifactBytes(ARTIFACT_LIMIT_BYTES - FAILURE_RESERVE_BYTES, 1),
 		).toThrow("artifact budget");
+	});
+});
+
+/** The probe's ordered condition names, mirrored here because this fixture is
+ * about the receipt's BYTE budget: `pure-own-text.test.ts` pins the real list and
+ * its order, and the row count is asserted below so a longer rule shows up here. */
+const INCIDENT_CONDITIONS = [
+	"own-text",
+	"interactive",
+	"display",
+	"display-not-list-item",
+	"content",
+	"background-color",
+	"background-image",
+	"border-image-source",
+	"box-shadow",
+	"text-shadow",
+	"text-decoration-line",
+	"filter",
+	"backdrop-filter",
+	"mask-image",
+	"text-emphasis-style",
+	"border-top-width",
+	"border-right-width",
+	"border-bottom-width",
+	"border-left-width",
+	"outline-width",
+	"column-rule-width",
+	"-webkit-text-stroke-width",
+	"-webkit-box-reflect",
+	"svg-ancestor",
+	"replaced-content",
+	"element-descendants",
+	"::before-content",
+	"::after-content",
+	"::marker-content",
+];
+const TARGET_RECTS = {
+	64: "completed",
+	65: "✓",
+	66: "· 38 steps · 1m 12s",
+	68: "▸",
+};
+/** The failed run's four conservative target-subtree nodes, at the values
+ * `dark-condensed-ready.json` (run 40114267609) recorded, each carrying the
+ * 29-row exclusion the probe emits. */
+function incidentTargetGeometry() {
+	return Object.entries(TARGET_RECTS).map(([index, ownText]) => ({
+		index: Number(index),
+		ownText,
+		rect: { x: 25, y: 463, w: 321, h: 61, right: 346, bottom: 524 },
+		visibleRect: { x: 25, y: 463, w: 321, h: 22, right: 346, bottom: 486 },
+		fragmentStatus: "conservative/unobserved",
+		paintExclusion: {
+			blockedBy: "element-descendants",
+			expected: 0,
+			observed: 2,
+			conditions: INCIDENT_CONDITIONS.map((name) => ({
+				name,
+				expected: "none",
+				observed: name === "element-descendants" ? 2 : "rgba(0, 0, 0, 0)",
+				ok: name !== "element-descendants",
+			})),
+		},
+	}));
+}
+function incidentReceipt(): FailureContext & Record<string, unknown> {
+	return {
+		head: "2a3acf7",
+		phase: "geometry",
+		cell: {
+			theme: "dark",
+			state: "condensed",
+			path: "/session/6714def86197?lo-scroll=top",
+		},
+		completedKeys: [],
+		readiness: {
+			path: "/session/6714def86197",
+			testIds: Array.from(
+				{ length: 24 },
+				(_, i) => `turn-bar-tc-conv-${i}-user`,
+			),
+		},
+		environment: {
+			viewport: { width: 390, height: 844, dpr: 3 },
+			insets: { top: 59, bottom: 34, left: 0, right: 0 },
+			theme: "dark",
+			textScale: "1.5",
+			insetsOverride: { applied: true, reason: null },
+			targetTextGeometry: incidentTargetGeometry(),
+		},
+		control: {
+			trace: Array.from({ length: 18 }, (_, depth) => ({
+				depth,
+				tag: "DIV",
+				display: "flex",
+				visibility: "visible",
+				opacity: "1",
+				effectiveOpacity: 1,
+			})),
+		},
+		error:
+			"geometry theme=dark state=condensed path=/session/6714def86197?lo-scroll=top: Missing actual own-text fragment measurement (node 66: own-text purity blocked by element-descendants, observed 2, expected 0)",
+		kind: "FAILED CORRECTED VERIFICATION — NOT A GEOMETRY VERDICT",
+		schema: 1,
+		expectedControl: {
+			controlId: TURN_CONTROL_ID,
+			count: 1,
+			ariaExpanded: "false",
+			ariaMayBeAbsent: true,
+			caret: "▸",
+		},
+		readabilityFailure: null,
+		diagnosed: false,
+		screenshot: { status: "saved" },
+	};
+}
+
+describe("failure receipt keeps the environment when the exclusion maps are bulky", () => {
+	it("drops the per-condition map before it may drop the environment or a node's reason", () => {
+		const receipt = incidentReceipt();
+		// The incident shape is what overran the 8 KiB context budget: prove the
+		// fixture is actually over it before asserting what survives.
+		const untrimmed = Buffer.from(JSON.stringify(receipt, null, 2));
+		expect(INCIDENT_CONDITIONS).toHaveLength(29);
+		expect(untrimmed.length).toBeGreaterThan(FAILURE_RECEIPT_LIMIT_BYTES);
+
+		const json = shrinkFailureReceipt(receipt);
+		expect(json.length).toBeLessThan(FAILURE_RECEIPT_LIMIT_BYTES);
+		const written = JSON.parse(json.toString("utf8"));
+		// What proves the environment is still there — the fields the old shrink
+		// dropped along with the geometry.
+		expect(written.environment.viewport).toEqual({
+			width: 390,
+			height: 844,
+			dpr: 3,
+		});
+		expect(written.environment.insets).toEqual({
+			top: 59,
+			bottom: 34,
+			left: 0,
+			right: 0,
+		});
+		expect(written.environment.theme).toBe("dark");
+		expect(written.environment.textScale).toBe("1.5");
+		expect(written.environment.insetsOverride).toEqual({
+			applied: true,
+			reason: null,
+		});
+		// Every conservative node keeps its identity and the condition that rejected
+		// it, which is the fact the refused geometry phase is read for.
+		expect(
+			written.environment.targetTextGeometry.map(
+				(node: { index: number }) => node.index,
+			),
+		).toEqual([64, 65, 66, 68]);
+		for (const node of written.environment.targetTextGeometry) {
+			expect(node.paintExclusion.blockedBy).toBe("element-descendants");
+			expect(node.paintExclusion.observed).toBe(2);
+			expect(node.paintExclusion.expected).toBe(0);
+		}
+		// The 29-row map is the byte cost that goes; the `*-ready.json` receipt keeps it.
+		expect(
+			written.environment.targetTextGeometry[0]?.paintExclusion.conditions,
+		).toBeUndefined();
+		expect(written.error).toContain("element-descendants");
 	});
 });

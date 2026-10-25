@@ -1,6 +1,11 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { PURE_OWN_TEXT_SOURCE, PURE_OWN_TEXT_VERDICT_SOURCE } from "./probe.ts";
+import {
+	PURE_OWN_TEXT_SOURCE,
+	PURE_OWN_TEXT_VERDICT_SOURCE,
+	U08_COMPACT_SOURCE,
+	U08_PAINT_EXCLUSION_SOURCE,
+} from "./probe.ts";
 
 /**
  * These tests drive the ACTUAL in-page evaluator — the same source string the
@@ -370,5 +375,60 @@ describe("own-text purity verdict", () => {
 		});
 		expect(owner.pure).toBe(false);
 		expect(owner.blockedBy).toBe("element-descendants");
+	});
+});
+
+describe("the diagnostic record's emission and truncation rules", () => {
+	const emit = (purity: unknown, ownText: string) =>
+		runInNewContext(
+			`(${U08_PAINT_EXCLUSION_SOURCE})`,
+			{},
+			{ timeout: 100 },
+		)(purity, ownText) as
+			| { blockedBy?: string; observed?: unknown; conditions?: unknown[] }
+			| undefined;
+	const compact = (value: unknown) =>
+		runInNewContext(
+			`(${U08_COMPACT_SOURCE})`,
+			{},
+			{ timeout: 100 },
+		)(value) as unknown;
+	const conservative = () =>
+		run(load(), {
+			name: "text-shadow",
+			observed: "x",
+			style: { textShadow: "1px 1px black" },
+		});
+
+	it("is emitted only for an own-text node that stayed conservative", () => {
+		const purity = conservative();
+		// No own text was never a candidate: dropping this guard would add a record to
+		// every node in the frame, and a 3,384-cell audit would carry the bloat.
+		expect(emit(purity, "")).toBeUndefined();
+		// A pure node has nothing to explain.
+		expect(emit({ ...purity, pure: true }, "own text")).toBeUndefined();
+		const record = emit(purity, "own text");
+		expect(record?.blockedBy).toBe("text-shadow");
+		expect(record?.observed).toBe("1px 1px black");
+		expect(record?.conditions).toHaveLength(NAMES.length);
+	});
+
+	it("truncates a long observed value but never a condition name", () => {
+		expect(compact(undefined)).toBeNull();
+		expect(compact("short")).toBe("short");
+		const long = "x".repeat(60);
+		expect(compact(long)).toBe(`${long.slice(0, 45)}...`);
+		const result = run(load(), {
+			name: "text-shadow",
+			observed: long,
+			style: { textShadow: long },
+		});
+		expect(result.blockedBy).toBe("text-shadow");
+		expect(
+			result.conditions.find((row) => row.name === "text-shadow")?.observed,
+		).toBe(`${long.slice(0, 45)}...`);
+		// Every name survives at full length, so the cap can never rename a condition.
+		expect(Array.from(result.conditions, (row) => row.name)).toEqual(NAMES);
+		expect(NAMES.every((name) => name.length <= 48)).toBe(true);
 	});
 });
