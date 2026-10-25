@@ -32,8 +32,16 @@ on:
   pull_request:
   workflow_dispatch:
 
+# THE TRIGGER IS PART OF THE KEY, for the same reason e2e.yml spells out at
+# length: GitHub keeps one pending run per concurrency group, so a run that
+# queues behind an already-pending one replaces it and is `cancelled` with no job
+# ever created. Keyed on workflow + ref alone, a `workflow_dispatch` queued
+# behind a running push run on `main` shared its lane with the next push, so that
+# push's queued run dropped the dispatch silently. `github.event_name` gives each
+# trigger its own lane; `cancel-in-progress` is untouched, so a running run on
+# `main` is still never cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
