@@ -162,9 +162,10 @@ required once `android` is enabled.
   captions render. `--target frames --check` now re-renders each committed listing
   frame on every surface and compares it — bytes where the encoder matches the
   renderer, and otherwise pixels within that surface's own tolerance from
-  `frames.json` (the iPad needs the most slack: its capture is the one resampled
-  into a smaller slot) — reporting which comparison it made, how far the pixels
-  moved, and how many sat outside the tolerance. So a template, capture or caption
+  `frames.json` (1%, the measured drift of every surface being 1-2 levels; the
+  iPad's capture is the one resampled into a smaller slot, and it needs no more
+  than that) — reporting which comparison it made, how far the pixels moved, and
+  how many sat outside the tolerance. So a template, capture or caption
   change fails the gate rather than shipping, and CI runs that check as its own
   hard step. A rendered-font assertion that names the face is still open as a
   separate nicety.*

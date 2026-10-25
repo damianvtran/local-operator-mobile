@@ -28,6 +28,12 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	alphaTool,
+	largestDifference,
+	pixelDifference,
+	STRAY_PIXELS,
+} from "./frame-difference.mjs";
 
 const here = new URL(".", import.meta.url);
 const root = new URL("../", here); // design/
@@ -412,13 +418,16 @@ if (fontDir && !existsSync(fontCssPath)) {
  * Chrome 156 runner, re-rendering against frames committed from Chrome 155, the
  * iPhone set differed in 573-790 pixels, Play in 232-327, and the iPad set —
  * whose capture is the one scaled down into a smaller slot (2048 px into 1400) —
- * in 9,026-47,479. A single global 2% hid that: it was looser than the phone and
- * Play surfaces needed and told a reader nothing. Each surface now carries its
- * own number, and the log prints, per frame, the count at zero tolerance and the
- * largest channel difference, so the value can be re-derived rather than trusted.
- * A caption, font or template change is far outside any of these: a one-pixel
- * shift of the whole frame is 157,129 differing pixels and a one-word caption
- * edit about 10,000, against a few hundred from the encoder.
+ * in 9,026-47,479. A single global 2% hid that: it was looser than any of them
+ * needed and told a reader nothing. The largest channel difference on any frame
+ * was 2/255 (0.78%), so 1% — 2.5 levels — is the smallest whole percent that
+ * covers the measured drift, and each surface carries it in `frames.json` rather
+ * than sharing a constant: a surface that needs more raises only its own value,
+ * with the run that moved it. The log prints, per frame, the count at zero
+ * tolerance and the largest channel difference, so both numbers can be re-derived
+ * rather than trusted. A caption, font or template change is far outside any of
+ * these: a one-pixel shift of the whole frame is 157,129 differing pixels and a
+ * one-word caption edit about 10,000, against a few hundred from the encoder.
  *
  * Every pixel comparison prints BOTH counts: the pixels past the surface's
  * tolerance (the pass/fail rule) and the pixels that differ at zero tolerance
@@ -428,92 +437,11 @@ if (fontDir && !existsSync(fontCssPath)) {
  * had never been measured (review round 1, finding 2).
  */
 
-const alphaTool = () =>
-	["magick", "convert"].find((bin) => {
-		try {
-			execFileSync(bin, ["--version"], { stdio: "ignore" });
-			return true;
-		} catch {
-			return false;
-		}
-	});
-
-/** How many pixels differ by more than `fuzz` percent.
- *
- * THE RULE, stated because this number goes into the log: a pixel differs when
- * the LARGEST of its channel differences exceeds `fuzz` percent of the channel
- * range. It is computed from the two images directly — difference, per-channel
- * max, threshold, count — so the answer is arithmetic rather than a decoder's
- * rendering or formatting convention.
- *
- * WHY NOT THE DECODER'S METRIC: `compare -metric AE` was the original source and
- * it was not trustworthy across builds. ImageMagick 7.1.2-33 on the CI runner
- * printed `111.119` for a count of 111,119 (a scaled form `parseFloat` read as a
- * fractional pixel count), and its `-highlight-color/-lowlight-color` mask
- * disagreed with its own AE by a factor of 2.5 on the same pair. The arithmetic
- * below has one meaning on any build, which is what a logged number needs.
- *
- * 0 means identical (or every difference under the fuzz); a number means that
- * many pixels are past it; null means no decoder is installed; undefined means
- * the comparison itself failed. Those last three stay deliberately distinct:
- * "no decoder" and "could not run" must never read as a pass in a log. */
-const differenceScan = (a, b, tail) => {
-	const bin = alphaTool();
-	if (!bin) return null;
-	try {
-		const out = execFileSync(
-			bin,
-			[
-				a,
-				"-alpha",
-				"off",
-				b,
-				"-alpha",
-				"off",
-				"-compose",
-				"difference",
-				"-composite",
-				/* Per-channel abs difference; `-separate` splits the channels and
-				 * `-evaluate-sequence max` reduces them to the largest one. */
-				"-separate",
-				"-evaluate-sequence",
-				"max",
-				...tail,
-			],
-			{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-		).trim();
-		const value = Number.parseInt(out, 10);
-		return Number.isFinite(value) ? value : undefined;
-	} catch {
-		return undefined;
-	}
-};
-
-const pixelDifference = (a, b, fuzz) =>
-	differenceScan(a, b, ["-threshold", `${fuzz}%`, "-format", "%[fx:round(mean*w*h)]", "info:"]);
-
-/** The largest per-channel difference anywhere between two images, in 8-bit
- * levels. It is what says how much slack a surface plausibly needs: a count alone
- * cannot distinguish hundreds of 1-level encoder shifts from hundreds of 30-level
- * ones, and a tolerance chosen without that is a guess. */
-const largestDifference = (a, b) =>
-	differenceScan(a, b, ["-format", "%[fx:round(maxima*255)]", "info:"]);
-
-const failures = [];
-
-/* How many isolated pixels may sit beyond a surface's tolerance and still pass.
- *
- * Measured, not chosen for comfort. Cross-Chrome drift on the runner moves
- * 232-327 pixels by 1/255 on the Play set, 573-790 by 1-2/255 on the phone set,
- * and 9,026-47,479 by 2/255 on the iPad set — all absorbed by the per-surface
- * tolerance. One phone frame also carries a single pixel at 14/255, which fails a
- * zero-outlier rule while saying nothing about content. The smallest content
- * change this project has measured is a 10x10 recolour (100 pixels) and a
- * one-character headline edit is 439-770 pixels, so a handful of isolated pixels
- * cannot hide a real edit. Applies only where a surface has a tolerance; the
- * preview sheet and feature graphic keep zero outliers. */
-const STRAY_PIXELS = 8;
-
+/* The comparison primitives live in `frame-difference.mjs` so their arithmetic
+ * can be tested against a real decoder without launching Chrome — the count they
+ * return is a claim in this script's log, and a wrong one is worse than none.
+ * `STRAY_PIXELS` travels with them for the same reason: the allowance and the
+ * measured evidence for it belong beside the number they qualify. */
 const stale = (path, why) => {
 	console.error(`stale: ${path} — ${why}`);
 	failures.push(path);

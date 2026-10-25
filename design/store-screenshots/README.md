@@ -115,12 +115,15 @@ the script prints which comparison it made and on what tolerance: `byte-identica
 count that differs at zero tolerance and the largest channel difference. CI's
 Chrome encodes PNGs differently from a developer's and resamples the iPad slot
 slightly differently too; every surface carries its own `compareFuzz` in
-`frames.json`, set from those measurements rather than from a shared default, and
-the log prints the numbers the value can be checked against. At most eight
+`frames.json` — 1%, the smallest step above the measured drift of 1–2 levels —
+and the log prints the numbers the value can be checked against. At most eight
 isolated pixels may sit beyond a tolerance before the frame fails, because one
 phone frame carries a single pixel at 14/255 on the runner while the smallest real
 change measured here is a 10 × 10 recolour (100 pixels): the log names those
-stragglers, so the allowance is visible rather than silent. Either way a caption,
+stragglers, so the allowance is visible rather than silent. It counts pixels and
+does not test their spatial isolation, so eight adjacent pixels pass exactly as
+eight scattered ones do — a stated limit, not an oversight, and two thousandths of
+one percent of the smallest frame. Either way a caption,
 a template or a capture edit that leaked into the assets fails. `--check` run from CI
 targets the frames alone, which is its own hard step, so a stale listing cannot
 merge behind the preview sheet's font warning.

@@ -27,16 +27,18 @@
 		"`design/preview/capture.mjs --check` allows when it re-renders a frame and the",
 		"bytes differ. The rule it feeds: a pixel differs when the LARGEST of its channel",
 		"differences exceeds that percent of the channel range, so 1% is about two and a",
-		"half 8-bit levels and 2% about five. Absent means zero.",
+		"half 8-bit levels. Absent means zero.",
 		"",
 		"The values are measured, not chosen for comfort. On the Chrome 156 runner every",
 		"surface drifts from the Chrome 155 render: 573-790 pixels on the iPhone set,",
 		"232-327 on Play, 9,026-47,479 on the iPad set, whose capture is the one scaled",
 		"into a smaller slot (2048 px into 1400). Zero tolerance therefore fails all",
-		"three on a runner; a single global 2% hid that and over-loosened whichever",
-		"surfaces needed less. The check prints, per frame, the differing count at zero",
-		"tolerance and the largest channel difference, so any of these numbers can be",
-		"re-derived from a passing run rather than trusted."
+		"three on a runner. The largest channel difference on any frame of any set was",
+		"2/255 (0.78%), so 1% is the smallest whole percent that covers it — the same",
+		"value on all three, because the numbers say they need the same. Raise a",
+		"surface's value only with the run that moved it: the check prints, per frame,",
+		"the differing count at zero tolerance and the largest channel difference, so",
+		"both the need and the size are readable from a passing run."
 	],
 	"surfaces": [
 		{
@@ -176,7 +178,7 @@
 			},
 			"template": "ipad-13.html",
 			"outDir": "appstore-ipad-13",
-			"compareFuzz": 2,
+			"compareFuzz": 1,
 			"capture": {
 				"dir": "app-captures/ipad-13",
 				"device": "tablet-pro",
