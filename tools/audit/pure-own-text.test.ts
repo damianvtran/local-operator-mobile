@@ -94,7 +94,9 @@ const neutralStyle = (): Record<string, string> => ({
 	maskImage: "none",
 	textEmphasisStyle: "none",
 	outlineWidth: "0",
+	outlineStyle: "none",
 	columnRuleWidth: "0",
+	columnRuleStyle: "none",
 	webkitTextStrokeWidth: "0",
 	webkitBoxReflect: "none",
 	borderTopWidth: "0",
@@ -224,8 +226,19 @@ const CASES: Case[] = [
 		style: { borderBottomWidth: "1" },
 	},
 	{ name: "border-left-width", observed: 1, style: { borderLeftWidth: "1" } },
-	{ name: "outline-width", observed: 1, style: { outlineWidth: "1" } },
-	{ name: "column-rule-width", observed: 1, style: { columnRuleWidth: "1" } },
+	// The observation carries the style beside the width: "1px solid" is a painted
+	// outline, where Chrome's "3px none" for an unstyled node is not (the real
+	// browser cases live in outline-rule-purity.chrome.test.ts).
+	{
+		name: "outline-width",
+		observed: "1px solid",
+		style: { outlineWidth: "1", outlineStyle: "solid" },
+	},
+	{
+		name: "column-rule-width",
+		observed: "1px solid",
+		style: { columnRuleWidth: "1", columnRuleStyle: "solid" },
+	},
 	{
 		name: "-webkit-text-stroke-width",
 		observed: "1",
