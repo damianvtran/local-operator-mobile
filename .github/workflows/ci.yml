@@ -487,10 +487,11 @@ jobs:
         #
         # Byte-for-byte on the machine that rendered them; on a runner whose Chrome
         # encodes PNGs differently, pixels within each surface's `compareFuzz`
-        # tolerance from `frames.json` (zero on the iPhone and Play sets; 2% on the
-        # iPad set, the one whose capture is resampled into a smaller slot).
-        # `capture.mjs` prints which comparison it made and how many pixels the
-        # tolerance had to absorb, and any of those is a pass.
+        # tolerance from `frames.json` (per surface, and every surface needs one —
+        # the encoder difference moves a few hundred pixels even where nothing is
+        # resampled). `capture.mjs` prints which comparison it made, how many pixels
+        # the tolerance had to absorb at zero tolerance, and the largest channel
+        # difference, so the values can be re-derived from the log.
         run: node design/preview/capture.mjs --target frames --check
 
       - name: Render the preview sheet for the review rounds

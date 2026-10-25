@@ -407,24 +407,25 @@ if (fontDir && !existsSync(fontCssPath)) {
  * look the same in a log.
  *
  * The listing frames take their per-pixel tolerance from `frames.json`, per
- * surface (`compareFuzz`; absent means zero). Only the iPad surface carries one,
- * and that is an empirical number, not a blanket allowance: on the Chrome 156
- * runner every one of its nine frames differed while all nine iPhone and eight
- * Play frames matched at zero. The iPad is also where the resampling is worst
- * (a 2048px capture scaled into a 1400px slot), and Chrome moved that
- * scaling by a pixel value or so between 155 and 156. The iPhone frames are
- * scaled too (1290 into 1000) but did not move, and the Play frames are not scaled at all, so
- * those two keep the zero-tolerance claim their measurements support. A caption,
- * font or template change moves whole glyphs far past 2% (measured: a one-word
- * headline edit scores ~10k pixels), so the tolerance keeps the gate's claim
- * ("this file still matches its own page") without pinning it to one browser
- * build. The preview sheet and feature graphic keep zero tolerance.
+ * surface (`compareFuzz`; absent means zero), and the values there are measured.
+ * Zero tolerance does not hold on a runner for ANY of the three surfaces: on the
+ * Chrome 156 runner, re-rendering against frames committed from Chrome 155, the
+ * iPhone set differed in 573-790 pixels, Play in 232-327, and the iPad set —
+ * whose capture is the one scaled down into a smaller slot (2048 px into 1400) —
+ * in 9,026-47,479. A single global 2% hid that: it was looser than the phone and
+ * Play surfaces needed and told a reader nothing. Each surface now carries its
+ * own number, and the log prints, per frame, the count at zero tolerance and the
+ * largest channel difference, so the value can be re-derived rather than trusted.
+ * A caption, font or template change is far outside any of these: a one-pixel
+ * shift of the whole frame is 157,129 differing pixels and a one-word caption
+ * edit about 10,000, against a few hundred from the encoder.
  *
  * Every pixel comparison prints BOTH counts: the pixels past the surface's
  * tolerance (the pass/fail rule) and the pixels that differ at zero tolerance
- * (what the tolerance absorbed — zero when it was not needed). One number alone
- * cannot say whether a tolerance was load-bearing, which is how a blanket 2%
- * ended up over 17 frames that had never needed it (review round 1, finding 2).
+ * with the worst channel difference beside them (what the tolerance absorbed —
+ * zero when it was not needed). One number alone cannot say whether a tolerance
+ * was load-bearing, which is how a blanket 2% ended up over 17 frames whose need
+ * had never been measured (review round 1, finding 2).
  */
 
 const alphaTool = () =>
@@ -437,60 +438,66 @@ const alphaTool = () =>
 		}
 	});
 
-/** How many pixels differ by more than `fuzz` percent — counted from the mask
- * `compare` writes, never parsed out of its metric text.
+/** How many pixels differ by more than `fuzz` percent.
+ *
+ * THE RULE, stated because this number goes into the log: a pixel differs when
+ * the LARGEST of its channel differences exceeds `fuzz` percent of the channel
+ * range. It is computed from the two images directly — difference, per-channel
+ * max, threshold, count — so the answer is arithmetic rather than a decoder's
+ * rendering or formatting convention.
+ *
+ * WHY NOT THE DECODER'S METRIC: `compare -metric AE` was the original source and
+ * it was not trustworthy across builds. ImageMagick 7.1.2-33 on the CI runner
+ * printed `111.119` for a count of 111,119 (a scaled form `parseFloat` read as a
+ * fractional pixel count), and its `-highlight-color/-lowlight-color` mask
+ * disagreed with its own AE by a factor of 2.5 on the same pair. The arithmetic
+ * below has one meaning on any build, which is what a logged number needs.
  *
  * 0 means identical (or every difference under the fuzz); a number means that
  * many pixels are past it; null means no decoder is installed; undefined means
- * the comparison itself failed. Those last three are deliberately distinct:
- * "no decoder" and "could not run" must never read as a pass in a log.
- *
- * WHY THE MASK AND NOT `-metric AE`: the metric is printed by the decoder's own
- * formatter, and the formatters disagree. ImageMagick 7.1.2-18 (this host) prints
- * `111119` for a count, while 7.1.2-33 (the CI runner) printed `111.119` for the
- * same count in this remediation's first run — a scaled form `parseFloat` reads
- * as a fractional pixel count 1000x too small. The mask is a 1-bit image whose
- * mean is the count on either build, so the log says what was measured. */
-const pixelDifference = (a, b, fuzz, maskPath) => {
+ * the comparison itself failed. Those last three stay deliberately distinct:
+ * "no decoder" and "could not run" must never read as a pass in a log. */
+const differenceScan = (a, b, tail) => {
 	const bin = alphaTool();
 	if (!bin) return null;
-	const args = ["compare"];
-	if (fuzz > 0) args.push("-fuzz", `${fuzz}%`);
-	args.push("-highlight-color", "white", "-lowlight-color", "black", a, b, maskPath);
 	try {
-		execFileSync(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
-	} catch {
-		/* `compare` exits 1 whenever the images differ, which is the normal case
-		 * here. A decoder that could not run writes no mask, and that is the fact
-		 * checked next — not the exit code. */
-	}
-	if (!existsSync(maskPath)) return undefined;
-	try {
-		/* Flattened to a binary mask first: the highlight/lowlight pair already
-		 * leaves two tones, and forcing them removes any dependence on whether a
-		 * given build keeps an alpha channel, whose presence would move the mean. */
-		const counted = execFileSync(
+		const out = execFileSync(
 			bin,
 			[
-				maskPath,
+				a,
 				"-alpha",
 				"off",
-				"-colorspace",
-				"Gray",
-				"-threshold",
-				"50%",
-				"-format",
-				"%[fx:round(mean*w*h)]",
-				"info:",
+				b,
+				"-alpha",
+				"off",
+				"-compose",
+				"difference",
+				"-composite",
+				/* Per-channel abs difference; `-separate` splits the channels and
+				 * `-evaluate-sequence max` reduces them to the largest one. */
+				"-separate",
+				"-evaluate-sequence",
+				"max",
+				...tail,
 			],
 			{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
 		).trim();
-		const count = Number.parseInt(counted, 10);
-		return Number.isFinite(count) ? count : undefined;
+		const value = Number.parseInt(out, 10);
+		return Number.isFinite(value) ? value : undefined;
 	} catch {
 		return undefined;
 	}
 };
+
+const pixelDifference = (a, b, fuzz) =>
+	differenceScan(a, b, ["-threshold", `${fuzz}%`, "-format", "%[fx:round(mean*w*h)]", "info:"]);
+
+/** The largest per-channel difference anywhere between two images, in 8-bit
+ * levels. It is what says how much slack a surface plausibly needs: a count alone
+ * cannot distinguish hundreds of 1-level encoder shifts from hundreds of 30-level
+ * ones, and a tolerance chosen without that is a guess. */
+const largestDifference = (a, b) =>
+	differenceScan(a, b, ["-format", "%[fx:round(maxima*255)]", "info:"]);
 
 const failures = [];
 
@@ -523,18 +530,18 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	 * surface's fuzz, and is the pass/fail rule. Printed together so the log says
 	 * whether the fuzz was doing any work on this frame. */
 	const name = outPath.split("/").pop();
-	/* One mask name per frame path, not per basename: every surface has an
-	 * `01-…png`, and a mask left by one surface must never be read as another's. */
-	const maskKey = outPath.replace(/[^a-zA-Z0-9]+/g, "_");
-	const strict = pixelDifference(fresh, outPath, 0, `${scratchVerify}/m0${maskKey}`);
-	const differing =
-		fuzz === 0
-			? strict
-			: pixelDifference(fresh, outPath, fuzz, `${scratchVerify}/m${fuzz}${maskKey}`);
+	const strict = pixelDifference(fresh, outPath, 0);
+	const differing = fuzz === 0 ? strict : pixelDifference(fresh, outPath, fuzz);
+	/* Measured only where something actually differs — the strict count, the
+	 * tolerated count, or both — and used in every message below: how far the worst
+	 * pixel moved. Skipped entirely on the pixel-identical path, where it is 0 by
+	 * definition and the extra decode would buy nothing. */
+	const spread = differing === 0 && strict === 0 ? 0 : largestDifference(fresh, outPath);
+	const worst = Number.isFinite(spread) ? `; largest ${spread}/255` : "";
 	if (differing === 0) {
 		if (fuzz === 0) {
 			console.log(
-				`  ${name}: pixels identical (bytes differ — encoder metadata or a change of sub-threshold pixels)`,
+				`  ${name}: pixels identical (bytes differ — the encoder wrote different bytes for the same pixels)`,
 			);
 		} else if (strict === 0) {
 			console.log(
@@ -544,7 +551,7 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		} else if (Number.isFinite(strict)) {
 			console.log(
 				`  ${name}: pixels identical within the ${fuzz}% resampling fuzz — ` +
-					`${strict} pixel(s) differ at zero tolerance, so the fuzz was load-bearing (bytes differ)`,
+					`${strict} pixel(s) differ at zero tolerance${worst}, so the fuzz was load-bearing (bytes differ)`,
 			);
 		} else {
 			console.log(
@@ -570,7 +577,7 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		outPath,
 		`does not match a fresh render of its own page (${differing} pixel(s) differ beyond ` +
 			`${fuzz === 0 ? "zero tolerance" : `a ${fuzz}% fuzz`}` +
-			`${fuzz === 0 || !Number.isFinite(strict) ? "" : `, ${strict} at zero tolerance`})`,
+			`${fuzz === 0 || !Number.isFinite(strict) ? "" : `, ${strict} at zero tolerance`}${worst})`,
 	);
 };
 

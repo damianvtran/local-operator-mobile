@@ -112,10 +112,11 @@ frame that carries build metadata.
 with the committed files — bytes where the encoder matches, pixels otherwise, and
 the script prints which comparison it made and on what tolerance: `byte-identical`,
 `pixels identical` at zero, or `pixels identical within the N% fuzz` beside the
-count that differs at zero tolerance. CI's Chrome encodes PNGs differently from a
-developer's and resamples the iPad slot slightly differently too, so that surface
-alone carries a 2% tolerance in `frames.json` (`compareFuzz`); the iPhone and Play
-sets keep zero, which is what they matched on the runner. Either way a caption, a
+count that differs at zero tolerance and the largest channel difference. CI's
+Chrome encodes PNGs differently from a developer's and resamples the iPad slot
+slightly differently too; every surface carries its own `compareFuzz` in
+`frames.json`, set from those measurements rather than from a shared default, and
+the log prints the numbers the value can be checked against. Either way a caption, a
 template or a capture edit that leaked into the assets fails. CI runs
 `--target frames --check` as its own hard step, so a stale listing cannot merge
 behind the preview sheet's font warning.
