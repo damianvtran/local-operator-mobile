@@ -151,8 +151,16 @@ required once `android` is enabled.
 - **Two follow-ups for that re-shoot:** the store README's "390 × 844 at dpr 3"
   is wrong as written (the arithmetically right pairs are **430×932 @3 =
   1290×2796**, or 440×956 → 1320×2868); and `node design/preview/capture.mjs
-  --target frames --check` asserts sizes only, so it cannot catch a silent font
-  fallback — add a rendered-font assertion.
+  --target frames --check` asserted sizes only, so it could not catch a silent
+  font fallback — add a rendered-font assertion.
+  *Both are settled for the iPhone set committed in
+  `design/store-screenshots/appstore-iphone-6.9/`. Its captures are `iphone-max` at
+  3x — 1290 × 2796, the first pair — and the frame template loads the SHIPPED
+  faces from `design/fonts/*.woff2`, so no sibling checkout is involved in how the
+  captions render. `--target frames --check` now re-renders each committed listing
+  frame and compares it byte-for-byte, so a silent font fallback (or a caption
+  edit) fails the gate rather than shipping; a rendered-font assertion that names
+  the face is still open as a separate nicety.*
 - **Template facts:** the compose pipeline is committed and fixed (vendored
   `@font-face`, PR #70); the per-shot caption copy is editable in one re-render;
   the iPad caption rhythm wants ~16 px loosening; the spec colophon on each frame

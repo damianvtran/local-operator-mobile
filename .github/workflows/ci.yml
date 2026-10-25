@@ -423,7 +423,12 @@ jobs:
         # `--check` defaults to every target (design/README.md is explicit that a
         # gate whose default scope is narrower than the page it documents is the
         # same defect as one that cannot fail), so this also covers the four
-        # committed frames under docs/design/preview.
+        # committed frames under docs/design/preview AND the nine committed
+        # iPhone listing frames under design/store-screenshots/appstore-iphone-6.9.
+        # The listing frames do not share the caveat below: their template loads
+        # the shipped faces from design/fonts/*.woff2, which ARE in this
+        # repository, so that half of the gate verifies on a clean runner even
+        # when the sheet cannot.
         #
         # IT FAILS ONLY WHERE IT CAN DISCRIMINATE, and this is a finding rather
         # than a preference. `capture.mjs` renders the sheet with the SHIPPED

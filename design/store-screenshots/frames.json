@@ -1,0 +1,143 @@
+{
+	"$comment": [
+		"The iPhone 6.9-inch listing set: nine frames, in the order App Store Connect takes them.",
+		"",
+		"This file is the ONE source for three things a render needs, which is why it is data",
+		"rather than a table copied into the HTML: the caption each frame carries, the app",
+		"capture that fills its slot, and the harness state that capture was taken from.",
+		"`design/preview/capture.mjs --target frames` reads it to render the committed PNGs,",
+		"and `design/store-screenshots/capture-frames.mjs` reads it to re-take the app captures",
+		"they are made of. Captions are the plan's (`docs/publishing/listing-screenshots.md`,",
+		"'The set — nine shots, claim-first order'); changing one is a re-render, not an edit",
+		"to a PNG.",
+		"",
+		"Paths are relative to this directory. `cell` and `scenario` are the mock relay's own",
+		"words (`tools/visual/matrix.ts`, `tools/mock-relay/scenarios.ts`): the capture runs",
+		"that cell with that world pinned, so the frame is the app rendering a real relay",
+		"answer and nothing in it is composited."
+	],
+	"surface": "App Store, iPhone 6.9-inch",
+	"canvas": {
+		"width": 1320,
+		"height": 2868
+	},
+	"template": "iphone-6.9.html",
+	"outDir": "appstore-iphone-6.9",
+	"capture": {
+		"dir": "app-captures/iphone-max",
+		"device": "iphone-max",
+		"viewport": {
+			"width": 430,
+			"height": 932
+		},
+		"dpr": 3,
+		"pixels": {
+			"width": 1290,
+			"height": 2796
+		},
+		"theme": "dark",
+		"scale": "100"
+	},
+	"frames": [
+		{
+			"slug": "01-session-transcript",
+			"eyebrow": "01 · Sessions",
+			"headline": "Every session on your machine, in your pocket.",
+			"shows": "A running session: turns, tool rows, the tasks and subagents strips, and the composer.",
+			"cell": "S5/populated",
+			"scenario": "every-entry-kind",
+			"expect": [
+				"session-screen"
+			]
+		},
+		{
+			"slug": "02-session-diff",
+			"eyebrow": "02 · Code",
+			"headline": "Diffs and code blocks, as your agent writes them.",
+			"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
+			"cell": "S5/rich-rows",
+			"scenario": "rich-rows",
+			"expect": [
+				"session-screen"
+			]
+		},
+		{
+			"slug": "03-approval-card",
+			"eyebrow": "03 · Approvals",
+			"headline": "Approve each command, before it runs.",
+			"shows": "The approval card for a destructive command: Approve, Deny, and the always-allow switch.",
+			"cell": "S8/approval",
+			"scenario": "approval-destructive",
+			"expect": [
+				"session-screen"
+			]
+		},
+		{
+			"slug": "04-checkpoint-rail",
+			"eyebrow": "04 · Checkpoints",
+			"headline": "Every turn, marked as it finishes.",
+			"shows": "The per-turn checkpoint rail down the transcript's edge: user dashes and completed ticks.",
+			"cell": "S5/rail",
+			"scenario": "store-rail",
+			"expect": [
+				"session-screen"
+			]
+		},
+		{
+			"slug": "05-session-search",
+			"eyebrow": "05 · Search",
+			"headline": "Find any message in the conversation.",
+			"shows": "The in-conversation find sheet on a query, with its matches and the scope line.",
+			"cell": "S5/find-results",
+			"scenario": "long-transcript",
+			"expect": [
+				"session-screen"
+			]
+		},
+		{
+			"slug": "06-sessions-remote",
+			"eyebrow": "06 · Computers",
+			"headline": "Every computer's sessions, in one list.",
+			"shows": "The sessions list with another computer's sessions appended to this one's.",
+			"cell": "S15/mesh-remote",
+			"scenario": "store-mesh",
+			"expect": [
+				"sessions-screen"
+			]
+		},
+		{
+			"slug": "07-move-receipt",
+			"eyebrow": "07 · Handoff",
+			"headline": "Move a session between your computers.",
+			"shows": "A move's receipt: the phase transcript from prepared to done, and the read it points at.",
+			"cell": "S15/move-receipt",
+			"scenario": "store-move-receipt",
+			"expect": [
+				"sessions-screen"
+			]
+		},
+		{
+			"slug": "08-new-chat",
+			"eyebrow": "08 · New chat",
+			"headline": "Ask your agent — it runs on your computer.",
+			"shows": "The home composer, idle: the first thing a new install shows.",
+			"cell": "S4/idle",
+			"scenario": "empty",
+			"expect": [
+				"home-screen"
+			]
+		},
+		{
+			"slug": "09-sign-in",
+			"eyebrow": "09 · Connect",
+			"headline": "Connect to your own computer.",
+			"shows": "Sign-in, in its real sparse state: the browser finishes the sign-in, so the app never sees the password.",
+			"cell": "path:/sign-in/empty",
+			"scenario": null,
+			"seed": false,
+			"expect": [
+				"sign-in-screen"
+			]
+		}
+	]
+}
