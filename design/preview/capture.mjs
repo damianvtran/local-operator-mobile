@@ -638,6 +638,24 @@ if (target === "frames" || target === "all") {
 			process.exitCode = 1;
 			continue;
 		}
+		/* No build metadata on a store asset. The template used to draw a spec
+		 * block ("App Store · 6.9\"", "1320 × 2868 @1x", the alt-size list) beside
+		 * its wordmark; that describes the FILE to a maintainer and would have
+		 * shipped inside every listing (review round 1, Q1). Asserted here rather
+		 * than trusted to stay deleted: the canvas size and the alt sizes belong in
+		 * this script's own output, not in the image. */
+		const meta = await pagep.evaluate(`(() => {
+			const hit = /(\\d{3,4}\\s*×\\s*\\d{3,4})|@1x|\\balt:/i.exec(document.body.innerText);
+			return { hit: hit === null ? null : hit[0], spec: document.querySelector(".spec") !== null };
+		})()`);
+		if (meta === null || meta.hit !== null || meta.spec) {
+			console.error(
+				`PROBLEM: ${frame.slug} — the composed frame carries build metadata ` +
+					`(${meta === null ? "the check could not run" : meta.spec ? "a .spec block" : JSON.stringify(meta.hit)})`,
+			);
+			process.exitCode = 1;
+			continue;
+		}
 		const png = await pagep.shot();
 		const { width: w, height: h } = pngDimensions(png);
 		const ok = w === set.canvas.width && h === set.canvas.height;

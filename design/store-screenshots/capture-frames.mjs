@@ -156,6 +156,18 @@ try {
 			);
 			continue;
 		}
+		/* The harness's own verdict on the FRAME, not just the state: a cell can be
+		 * `ready` and still have painted no theme (a transparent canvas is what the
+		 * probe reports when the app never settled). The harness exits 1 for it and
+		 * the wrapper used to copy the frame anyway, which is a plausible-looking
+		 * blank in a store asset — QA round 1, Q4's adjacent gap. */
+		/* The run above captured exactly one cell, so every theme problem in its
+		 * manifest belongs to this frame. */
+		const themeProblems = manifest.themeProblems ?? [];
+		if (themeProblems.length > 0) {
+			failures.push(`${frame.slug}: ${record.cell} — ${themeProblems.join("; ")}`);
+			continue;
+		}
 		/* A cell whose STATE marker the app does not declare (sign-in: docs/e2e/README,
 		 * "nine empty markers") is captured but reported NOT MEASURABLE. The frame is
 		 * still the real screen — the harness lists what it SAW, which is how the

@@ -98,8 +98,9 @@ pre-submission build (step 1 is provisional until the capture-method item under
    capture's path, the eyebrow and the headline arrive as query parameters from
    `frames.json`, and the slot's shell (radius, clip, shadow) is kept.
 3. **Render** with `node design/preview/capture.mjs --target frames`, which asserts
-   every canvas against the store's spec and every slot's image against the
-   capture's own pixels.
+   every canvas against the store's spec, every slot's image against the capture's
+   own pixels, and that the composed frame carries no build metadata (a spec block
+   shipped inside every listing until review round 1 removed it).
 4. **Verify before upload**: no alpha (Play wants 24-bit PNG; App Store Connect
    rejects transparency), no secret or harness-world text on any frame, and view
    every frame once — a size check is not visual evidence.

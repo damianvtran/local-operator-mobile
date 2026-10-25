@@ -398,6 +398,11 @@ node design/preview/capture.mjs --check           # needs Google Chrome
 `build-icons --check` and `capture --check` re-render every committed asset and
 compare it with the file in the tree, so they need the same tools their
 generators need, and they say so — in install lines — when one is missing.
+`design-kit` additionally runs `capture.mjs --target frames --check` as its OWN
+hard step: the preview-sheet step has to tolerate failure while the sheet's faces
+live in a sibling checkout, and a stale listing must not merge green behind that
+warning. The listing frames load their faces from this repository, so that step
+either matches or is a real regression.
 
 The CI helper scripts are ordinary Node programs and can be exercised directly.
 They take their inputs as flags precisely so this works without a runner:

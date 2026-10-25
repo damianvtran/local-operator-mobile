@@ -169,18 +169,13 @@
 				letter-spacing: -0.012em;
 			}
 
-			.spec {
-				margin-left: auto;
-				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 30px;
-				color: #656056;
-				text-align: right;
-				line-height: 1.5;
-				/* Three short lines that cannot wrap. The first version read
-				 * "App Store · 6.9\" iPhone class" and the phrase wrapped mid-label,
-				 * which reads as a layout bug in an asset about to be uploaded. */
-				white-space: nowrap;
-			}
+			/* No spec block. The frame used to carry one (`App Store · 6.9"` /
+			 * `1320 × 2868 @1x` / `alt: …`) beside the wordmark, and that is build
+			 * metadata: it describes the file to a maintainer, not the product to a
+			 * shopper, and every frame here is an asset that goes to a store. The
+			 * canvas size is asserted by the renderer instead
+			 * (`design/preview/capture.mjs`), and that assertion is the record.
+			 * Review round 1, Q1. */
 		</style>
 	</head>
 	<body>
@@ -221,11 +216,6 @@
 					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
 				</svg>
 				<span class="wordmark">Local Operator</span>
-				<span class="spec">
-					App Store · 6.9"<br />
-					1320 × 2868 @1x<br />
-					alt: 1290×2796, 1260×2736
-				</span>
 			</footer>
 		</div>
 

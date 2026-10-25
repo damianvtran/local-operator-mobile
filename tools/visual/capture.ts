@@ -1910,6 +1910,25 @@ export async function runCapture(options: CaptureOptions) {
 			 * previous cell left behind — a state the cell does not name, measured under its
 			 * name. See `tools/audit/audit.ts`.
 			 */
+			/* A named world must DECLARE this cell. The relay rejects an unknown
+			 * scenario name and accepts a known one for any cell, so
+			 * `--scenario store-rail --cells S15/mesh-remote` would serve a world
+			 * that never renders the cell asked for, and the frame would be a
+			 * different state under the cell's name — the fixture-confusion class
+			 * this harness exists to prevent (review round 1, MINOR-3). Only a
+			 * registry-declared cell can be checked: a `path:` cell is not in the
+			 * registry at all, and a named world is how an ad-hoc page gets one. */
+			if (
+				options.scenario !== undefined &&
+				registryBacked &&
+				!(state?.cellScenarios?.[cell.cell] ?? []).includes(options.scenario)
+			) {
+				abandonCell(
+					`--scenario '${options.scenario}' does not declare ${cell.cell}; ` +
+						`the worlds that do are ${(state?.cellScenarios?.[cell.cell] ?? []).join(", ") || "none"}`,
+				);
+				continue;
+			}
 			const cellScenario =
 				options.scenario ??
 				(registryBacked
@@ -1966,7 +1985,11 @@ export async function runCapture(options: CaptureOptions) {
 			// The scenario travels WITH the cell, for the same reason the seed travels with
 			// the run (see `meta.seed`): the audit re-drives this URL, and the relay has to be
 			// back in the state the cell names before it does.
-			record.pinnedScenario = cellScenario;
+			/* Null, not the requested name, when no relay applied it: a manifest
+			 * that claims a world the run never served is replayed faithfully by
+			 * `tools/audit/audit.ts`, which is worse than recording nothing
+			 * (review round 1, MINOR-2). */
+			record.pinnedScenario = relay === undefined ? null : cellScenario;
 			if (relay !== undefined) {
 				/* Bounded for the same reason as the count before it, and here the frame is already
 				 * captured: a relay that dies now costs this cell its REACH fact (`null` already means

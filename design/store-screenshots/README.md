@@ -25,21 +25,25 @@ land in `appstore-iphone-6.9/` (committed).
 
 **The nine files in `appstore-iphone-6.9/` are the App Store listing's iPhone
 6.9-inch screenshots**, in the order the store takes them (one to ten allowed).
-Every one is 1320 × 2868, 24-bit PNG, no alpha. Each is the real app — a web
-build of this repository driven against the mock relay by
-`tools/visual/capture.ts` — inset into the frame; nothing is composited and no
-part of a screenshot is drawn by hand.
+Every one is 1320 × 2868, 24-bit PNG, no alpha. The app screen inside each frame
+is a real capture — a web build of this repository driven against the mock relay by
+`tools/visual/capture.ts` — and no part of that screen is drawn, retouched or
+replaced. What the template draws is the frame AROUND it: the canvas, the caption
+band and the wordmark. The frame carries no build metadata: an earlier revision put
+a spec block (`App Store · 6.9"`, `1320 × 2868 @1x`, the alt-size list) beside the
+wordmark, and the render now FAILS a composed frame that contains one. Sizes belong
+to this document and to the renderer's own output, not to the image.
 
 | # | File | Shows | Captured from | World |
 |---|---|---|---|---|
 | 01 | `01-session-transcript.png` | A running session: turns, tool rows, the tasks and subagents strips, the composer. | `S5/populated` | `every-entry-kind` |
-| 02 | `02-session-diff.png` | A real fenced diff, a fenced code block and two tables. | `S5/rich-rows` | `rich-rows` |
+| 02 | `02-session-diff.png` | A real fenced diff, a fenced code block and two tables. | `S5/rich-rows` | `store-diff` |
 | 03 | `03-approval-card.png` | The approval card: Approve, Deny, always-allow. | `S8/approval` | `approval-destructive` |
 | 04 | `04-checkpoint-rail.png` | The per-turn checkpoint rail down the transcript's edge. | `S5/rail` | `store-rail` |
 | 05 | `05-session-search.png` | The in-conversation find sheet on a query. | `S5/find-results` | `long-transcript` |
 | 06 | `06-sessions-remote.png` | The sessions list with another computer's sessions in it. | `S15/mesh-remote` | `store-mesh` |
 | 07 | `07-move-receipt.png` | A move's receipt: prepared, handing off, committed, done. | `S15/move-receipt` | `store-move-receipt` |
-| 08 | `08-new-chat.png` | The home composer, idle. | `S4/idle` | `empty` |
+| 08 | `08-new-chat.png` | The home composer, idle, with the relay's ranked catalogue behind its model chip. | `S4/idle` | `store-home` |
 | 09 | `09-sign-in.png` | Sign-in, the real sparse state. | `path:/sign-in/empty` (unseeded) | — |
 
 The copy on each frame — eyebrow and headline — is in `frames.json`, which is the
@@ -54,6 +58,20 @@ node design/store-screenshots/capture-frames.mjs       # the nine app captures
 node design/preview/capture.mjs --target frames        # the nine listing frames
 ```
 
+Two things a re-run on a fresh `git worktree` has to know, both measured in review
+round 1's QA pass:
+
+- **`pnpm <script>` does not run in a worktree whose `node_modules` is a symlink to
+  the primary checkout** (this repository's own sharing convention): pnpm refuses
+  before the script with `workspace hoist directory is not a real directory`. Run
+  the underlying command (`./node_modules/.bin/expo export --platform web`) or work
+  in a checkout with its own tree.
+- **A first export in a fresh tree can emit the uncompiled stylesheet** (7 KB of
+  raw `@source`/`@theme` with no utility classes, instead of ~31 KB). The build
+  still prints `Exported: dist`. Pass `--clear`, and treat "the frames came back as
+  unstyled text on a transparent canvas" as this, not as an app fault: the capture
+  harness reports it as a theme problem and refuses the cell.
+
 The first two produce `app-captures/iphone-max/<slug>.png` — the raw app screens,
 1290 × 2796 (a 6.9-inch phone at 3x), committed so the composed frames can be
 checked without a relay. The third composes each one into the template and writes
@@ -61,8 +79,12 @@ checked without a relay. The third composes each one into the template and write
 image did not load.
 
 `node design/preview/capture.mjs --check` re-renders all nine and compares them
-with the committed files byte-for-byte, which is what keeps a caption or a
-template edit from leaving the assets behind.
+with the committed files — bytes where the encoder matches, pixels otherwise, and
+the script prints which comparison it made (CI's Chrome encodes PNGs differently
+from a developer's, and reports `pixels identical`). Either way a caption, a
+template or a capture edit that leaked into the assets fails. CI runs
+`--target frames --check` as its own hard step, so a stale listing cannot merge
+behind the preview sheet's font warning.
 
 `capture-frames.mjs` starts its own mock relay on an ephemeral port and reaps it;
 `--relay <url>` uses one you started instead. It names the WORLD each frame comes
@@ -72,11 +94,26 @@ worlds for these cells say "Hello from the mock provider".
 
 ### What these frames deliberately do not fix
 
-- **The route label.** Frames 06–08 show the connected route as
-  `127.0.0.1:<port>`. That is the app printing its real route, and a served web
-  build's route IS the harness's origin; on a device it is the user's tunnel
-  hostname. No fixture can change it, and the frame is not edited to hide it — it
-  is named here so the pre-upload content pass looks at it with everything else.
+- **The route label — open, and a decision for the release owner.** Frames 06–08
+  show the connected route as `127.0.0.1:<port>`. It is the app printing the route
+  it was given, and a served web build's route IS the harness's origin; on a device
+  it is the user's tunnel hostname. Review round 1 asked for one bounded attempt at
+  a non-loopback origin, and it was made and refused BY THE APP:
+
+  ```
+  $ node tools/visual/capture.ts … --host studio-mini.lop.localhost --cells S15/mesh-remote
+  …site declared 'mesh-remote' … the app made no request to the mock relay for this
+  cell
+  ```
+
+  `src/connection/profile.ts` (`isPrivateHost`, `validateCustomBaseUrl`) allows
+  `http://` only for a literal private ADDRESS — `127.x`, `10.x`, `192.168.x`,
+  `172.16–31`, `169.254`, `::1`, CGNAT — so a name, `*.localhost` included, is
+  refused before a request is made. Serving the build over `https://` would need a
+  certificate the harness does not have, and a LAN address would make the committed
+  PNG irreproducible across machines. The frame is not masked. The choice (accept
+  the route as the app prints it, or capture 06–08 from a device on a real tunnel)
+  is on `docs/publishing/checklist.md` C2, where the upload gate reads it.
 - **The truncated conversation title.** A phone header gives about 260 pt to the
   title, so "Refactor the relay client" renders on frames 01–05 as the app's own
   middle-ellipsis form ("Refactor t…ay client"). That is the app's behaviour, not

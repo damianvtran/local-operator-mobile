@@ -56,7 +56,7 @@
 			"headline": "Diffs and code blocks, as your agent writes them.",
 			"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
 			"cell": "S5/rich-rows",
-			"scenario": "rich-rows",
+			"scenario": "store-diff",
 			"expect": [
 				"session-screen"
 			]
@@ -122,7 +122,7 @@
 			"headline": "Ask your agent — it runs on your computer.",
 			"shows": "The home composer, idle: the first thing a new install shows.",
 			"cell": "S4/idle",
-			"scenario": "empty",
+			"scenario": "store-home",
 			"expect": [
 				"home-screen"
 			]

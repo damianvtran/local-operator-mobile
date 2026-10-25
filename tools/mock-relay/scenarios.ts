@@ -2784,6 +2784,56 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => storeMeshWorld(),
 	);
 
+	/* The code frame's world: `rich-rows` itself puts its ```ts block at the TOP of
+	 * the conversation, and a capture settles at the transcript's last row — so the
+	 * frame showed the diff and both tables and none of the code block its caption
+	 * promises (review round 1, Q3). One more fenced block at the TAIL is the
+	 * smallest change that makes the pixels match the claim, and it stays in a
+	 * store-only world so the audit's own `S5/rich-rows` cell keeps the content it
+	 * measures. The row is cloned from the same fixture's own assistant entry, so
+	 * its shape is the corpus's rather than re-typed; `images` is emptied because
+	 * the mock has no bytes to serve for one. */
+	const richRowsWithCode = projectionFrom(richRowsFrame, {
+		transcript: [
+			...richRowsFrame.transcript,
+			(() => {
+				const row = structuredClone(
+					richRowsFrame.transcript[1],
+				) as SessionProjection["transcript"][number];
+				row.id = "m-code-tail";
+				row.text =
+					"And the caller:\n\n```ts\nconst id = commentId(row);\nif (id !== null) emit(id);\n```\n";
+				row.images = [];
+				return row;
+			})(),
+		],
+	});
+
+	add(
+		"store-diff",
+		"The store transcript for the code frame: the captured rich-rows conversation plus one more fenced block at its tail, where the capture settles.",
+		["S5/rich-rows"],
+		() => ({
+			projections: {
+				[richRowsFrame.session_id]: structuredClone(richRowsWithCode),
+			},
+		}),
+	);
+
+	/* The idle home's chips read the relay's projection; with no conversation at all
+	 * (`empty`) they render `n/a`, which is the honest answer there and a poor
+	 * store frame (review round 1, Q5). This world is that same home with the live
+	 * conversation present, so the chips carry a real model and effort. */
+	add(
+		"store-home",
+		"The home composer, idle, with the relay's ranked model catalogue behind it: the home reads its model chip from that catalogue, so without one the frame shows `n/a` (review round 1, Q5). The effort chip has no session to report a rung and stays `n/a` — that is the home's own state, not a fixture gap.",
+		["S4/idle"],
+		() => ({
+			projections: { [CAPTURED_SESSION]: structuredClone(everyKind) },
+			models: rankedModels,
+		}),
+	);
+
 	add(
 		"store-move-receipt",
 		"The store transcript's move receipt: the route's phase transcript over the same three peers.",
