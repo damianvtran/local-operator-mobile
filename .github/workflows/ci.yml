@@ -485,9 +485,12 @@ jobs:
         # beside them, so a frame that no longer matches its caption, its page or
         # its capture fails here.
         #
-        # Byte-for-byte on the machine that rendered them, pixel-for-pixel on a
-        # runner whose Chrome encodes PNGs differently — `capture.mjs` prints which
-        # comparison it made, and both are a pass.
+        # Byte-for-byte on the machine that rendered them; on a runner whose Chrome
+        # encodes PNGs differently, pixels within each surface's `compareFuzz`
+        # tolerance from `frames.json` (zero on the iPhone and Play sets; 2% on the
+        # iPad set, the one whose capture is resampled into a smaller slot).
+        # `capture.mjs` prints which comparison it made and how many pixels the
+        # tolerance had to absorb, and any of those is a pass.
         run: node design/preview/capture.mjs --target frames --check
 
       - name: Render the preview sheet for the review rounds

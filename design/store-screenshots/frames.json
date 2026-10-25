@@ -21,7 +21,16 @@
 		"`crop` (Play only) is the vertical edge the capture is anchored to inside the slot.",
 		"Play's slot is taller than a phone screen, so the template crops the capture rather",
 		"than letterboxing it; the per-shot anchors are the plan's ('Mapping onto the",
-		"templates'). It is the only field a frame may carry that the other surfaces ignore."
+		"templates'). It is the only field a frame may carry that the other surfaces ignore.",
+		"",
+		"`compareFuzz` (a surface field) is the pixel tolerance, in percent, that",
+		"`design/preview/capture.mjs --check` allows when it re-renders a frame and the bytes",
+		"differ: how far a pixel's channels may drift before it counts as a difference.",
+		"Absent means zero, and zero is what a surface should carry unless a runner has",
+		"proved the need: on Chrome 156 the iPad set's nine frames were stale at zero",
+		"while all nine iPhone and eight Play frames matched, so only the iPad carries 2.",
+		"The check prints the differing-pixel count at zero tolerance beside the tolerated",
+		"one, so whether that 2% is still needed can be read off a passing run."
 	],
 	"surfaces": [
 		{
@@ -160,6 +169,7 @@
 			},
 			"template": "ipad-13.html",
 			"outDir": "appstore-ipad-13",
+			"compareFuzz": 2,
 			"capture": {
 				"dir": "app-captures/ipad-13",
 				"device": "tablet-pro",

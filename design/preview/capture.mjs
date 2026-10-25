@@ -406,15 +406,25 @@ if (fontDir && !existsSync(fontCssPath)) {
  * never a pass, because "could not prove it differs" and "it differs" must not
  * look the same in a log.
  *
- * The listing frames ask for a 2% per-pixel fuzz on that pixel comparison. The
- * store slots are smaller than the captures (the iPad slot scales 2048 into
- * 1400), and Chrome's resampler moved by a level or two between 155 and 156 at
- * those edges: the same committed frame rendered pixel-exact here and "stale" on
- * the CI runner, while the 1:1 Play frames and the phone frames matched. A
- * caption, font or template change moves whole glyphs far past 2%, so the fuzz
- * keeps the gate's claim ("this file still matches its own page") without
- * pinning it to one browser build. The preview sheet and feature graphic keep
- * zero tolerance.
+ * The listing frames take their per-pixel tolerance from `frames.json`, per
+ * surface (`compareFuzz`; absent means zero). Only the iPad surface carries one,
+ * and that is an empirical number, not a blanket allowance: on the Chrome 156
+ * runner every one of its nine frames differed while all nine iPhone and eight
+ * Play frames matched at zero. The iPad is also where the resampling is worst
+ * (a 2048px capture scaled into a 1400px slot), and Chrome moved that
+ * scaling by a pixel value or so between 155 and 156. The iPhone frames are
+ * scaled too (1290 into 1000) but did not move, and the Play frames are not scaled at all, so
+ * those two keep the zero-tolerance claim their measurements support. A caption,
+ * font or template change moves whole glyphs far past 2% (measured: a one-word
+ * headline edit scores ~10k pixels), so the tolerance keeps the gate's claim
+ * ("this file still matches its own page") without pinning it to one browser
+ * build. The preview sheet and feature graphic keep zero tolerance.
+ *
+ * Every pixel comparison prints BOTH counts: the pixels past the surface's
+ * tolerance (the pass/fail rule) and the pixels that differ at zero tolerance
+ * (what the tolerance absorbed — zero when it was not needed). One number alone
+ * cannot say whether a tolerance was load-bearing, which is how a blanket 2%
+ * ended up over 17 frames that had never needed it (review round 1, finding 2).
  */
 
 const alphaTool = () =>
@@ -457,7 +467,8 @@ const stale = (path, why) => {
 };
 
 /** In generation mode: write. In `--check`: compare against the committed file
- * and report the strongest comparison that passed. */
+ * and report the strongest comparison that passed. `fuzz` is the surface's own
+ * tolerance, passed by the caller from `frames.json`. */
 const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	if (!check) {
 		writeFileSync(outPath, pngBuffer);
@@ -473,13 +484,34 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
 		return verified.push(outPath);
 	}
-	const differing = pixelDifference(fresh, outPath, fuzz);
+	/* Both counts, always. `strict` is what the same render would have differed by
+	 * at zero tolerance — the number that says whether this surface's tolerance
+	 * was needed on this frame, and how far a zero-tolerance surface has moved if
+	 * a future Chrome breaks it. `differing` is the pass/fail rule. */
+	const strict = pixelDifference(fresh, outPath, 0);
+	const differing = fuzz === 0 ? strict : pixelDifference(fresh, outPath, fuzz);
+	const name = outPath.split("/").pop();
 	if (differing === 0) {
-		console.log(
-			fuzz === 0
-				? `  ${outPath.split("/").pop()}: pixels identical (bytes differ — either encoder metadata or a real content change of sub-threshold pixels)`
-				: `  ${outPath.split("/").pop()}: pixels identical within the ${fuzz}% resampling fuzz (bytes differ)`,
-		);
+		if (fuzz === 0) {
+			console.log(
+				`  ${name}: pixels identical (bytes differ — encoder metadata or a change of sub-threshold pixels)`,
+			);
+		} else if (strict === 0) {
+			console.log(
+				`  ${name}: pixels identical at zero tolerance as well as within the ${fuzz}% fuzz ` +
+					"(bytes differ — the fuzz was not needed on this frame)",
+			);
+		} else if (Number.isFinite(strict)) {
+			console.log(
+				`  ${name}: pixels identical within the ${fuzz}% resampling fuzz — ` +
+					`${strict} pixel(s) differ at zero tolerance, so the fuzz was load-bearing (bytes differ)`,
+			);
+		} else {
+			console.log(
+				`  ${name}: pixels identical within the ${fuzz}% resampling fuzz (bytes differ; ` +
+					"the zero-tolerance count could not be made)",
+			);
+		}
 		return verified.push(outPath);
 	}
 	if (differing === null) {
@@ -497,7 +529,8 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	stale(
 		outPath,
 		`does not match a fresh render of its own page (${differing} pixel(s) differ beyond ` +
-			`${fuzz === 0 ? "zero tolerance" : `a ${fuzz}% fuzz`})`,
+			`${fuzz === 0 ? "zero tolerance" : `a ${fuzz}% fuzz`}` +
+			`${fuzz === 0 || !Number.isFinite(strict) ? "" : `, ${strict} at zero tolerance`})`,
 	);
 };
 
@@ -703,7 +736,10 @@ if (target === "frames" || target === "all") {
 				process.exitCode = 1;
 				continue;
 			}
-			save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24, fuzz: 2 });
+			save(png, `${frameDir}${frame.slug}.png`, {
+				reencode: stripAlpha24,
+				fuzz: surface.compareFuzz ?? 0,
+			});
 		}
 	}
 }

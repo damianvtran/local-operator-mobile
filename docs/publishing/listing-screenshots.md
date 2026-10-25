@@ -108,13 +108,21 @@ pre-submission build (step 1 is provisional until the capture-method item under
    every frame once — a size check is not visual evidence.
 
 The 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
-`play-phone/` ×8), the raw captures and `MANIFEST.sha256` are now committed in
-`design/store-screenshots/`; an earlier parity lane's copy of the same 26 survives
-in its scratchpad mirror —
-`~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/`, its
-`MANIFEST.sha256` re-verified 26/26 (the lane's report and compose pipeline sit
-one level up in `appcaps/`) — after the `store-shots` worktree that rendered
-them (`design/store-screenshots/out/`, gitignored by design) was pruned. That
+`play-phone/` ×8) and the raw captures they are composed from are committed in
+`design/store-screenshots/`. No hash manifest is committed with them, and that is
+deliberate: the PNG bytes depend on the Chrome that encoded them (the CI runner's
+differs from a developer's, and for the iPad set also in resampled pixels), so a
+committed `sha256` list would go stale on every other host while saying nothing
+about the content. Freshness is proved by `node design/preview/capture.mjs
+--target frames --check` instead — it re-renders each frame from its own page and
+compares, bytes first and then pixels within that surface's `compareFuzz`, and CI
+runs it as a hard step. An earlier parity lane's copy of the same 26 survives in
+its scratchpad mirror —
+`~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/` (its
+`MANIFEST.sha256` verified 26/26 when the lane wrote it; the lane's report and
+compose pipeline sit one level up in `appcaps/`) — after the `store-shots`
+worktree that rendered them (`design/store-screenshots/out/`, gitignored by
+design) was pruned. That
 mirror was rendered off the `02da0334` tree; the committed sets are rendered
 from the current tree and reproducible in place. The pre-upload content pass
 (13 of 26 of the earlier files carry harness-world text) stays the standing gate
