@@ -77,7 +77,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/paint-fragments.ts":
 		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
 	"tools/audit/probe.ts":
-		"ec9ba1291093e87094ea677d69f05de2f0019dd8d4fa12fbc49f19e390ddf5f1",
+		"4083769831f6d34b5c0db4fd7c432fa94317ac00db4fa05eb947947c4ec677ba",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":

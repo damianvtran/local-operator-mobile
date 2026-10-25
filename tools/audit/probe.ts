@@ -77,8 +77,24 @@ export const PURE_OWN_TEXT_VERDICT_SOURCE = String.raw`(() => {
   ['border-left-width', 0, (c) => c.px(c.s.borderLeftWidth), (v) => v === 0],
  ]) probes.push(condition);
  probes.push(
-  ['outline-width', 0, (c) => c.px(c.s.outlineWidth), (v) => v === 0],
-  ['column-rule-width', 0, (c) => c.px(c.s.columnRuleWidth), (v) => v === 0],
+  // OUTLINE AND COLUMN RULE: "does this node PAINT one", not "is the width zero".
+  // Chrome keeps the INITIAL width (medium = 3px) in the computed value when the
+  // style is 'none', unlike border-*-width which reads 0 — measured on Chrome
+  // 155.0.8059.85: a plain span reports outline-width 3px / outline-style none and
+  // column-rule-width 3px / column-rule-style none. Reading the bare width blocked
+  // every ordinary text node (hosted run 40205225129, nodes 64/65/66/68) on a line
+  // that paints nothing. So the verdict is: style none paints nothing, otherwise
+  // a non-zero width paints. The observation records BOTH ("3px none"), so a reader
+  // of the receipt sees why a 3px width was not a failure, and a node that does
+  // paint ("2px solid") still shows what it painted. A style that is missing or
+  // unfamiliar is not none, so it falls back to the width and stays conservative.
+  // The column rule is deliberately not narrowed to multicol containers: a rule on
+  // a non-multicol node paints nothing, but proving "not a multicol context" would
+  // be a new relaxation, and this change only stops counting what is provably unpainted.
+  ['outline-width', 0, (c) => c.px(c.s.outlineWidth) + 'px ' + c.s.outlineStyle,
+   (v, c) => c.s.outlineStyle === 'none' || c.px(c.s.outlineWidth) === 0],
+  ['column-rule-width', 0, (c) => c.px(c.s.columnRuleWidth) + 'px ' + c.s.columnRuleStyle,
+   (v, c) => c.s.columnRuleStyle === 'none' || c.px(c.s.columnRuleWidth) === 0],
   ['-webkit-text-stroke-width', 0, (c) => c.s.webkitTextStrokeWidth, (v, c) => !v || c.px(v) === 0],
   ['-webkit-box-reflect', 'none', (c) => c.s.webkitBoxReflect, (v) => !v || v === 'none'],
   ['svg-ancestor', false, (c) => Boolean(c.el.closest('svg')), (v) => v === false],
