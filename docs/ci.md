@@ -30,7 +30,22 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+### One pending run per group, so the trigger is part of the key
+
+GitHub keeps a single *pending* run per concurrency group: a run that queues
+behind an already-pending one replaces it, and the replaced run ends as
+`cancelled` without a single job starting. `e2e.yml`'s key therefore names
+`github.event_name`, and for a manual run the requested `proof_mode` too — so a
+nightly cannot drop a queued manual proof, and two proofs never queue against
+each other. Before that, a dispatch on `main` and the `03:17` nightly shared
+`E2E (…)-refs/heads/main` and the nightly cancelled the queued dispatch
+(measured 2026-10-25: runs 40157909029 and 40158909122).
+`scripts/e2e-workflow-concurrency.test.ts` fails if the key stops distinguishing
+a schedule run from a manual one. The two `account-routing-*` lanes deliberately
+keep their own pre-existing key so their artefacts and baselines stay comparable.
+
 ## Corrected U-08 fragment verification (remote CI only)
+
 
 Control readiness uses the unique TurnBar's rendered caret (`▸` condensed,
 `▾` expanded), which comes from its actual open state. Missing `aria-expanded`

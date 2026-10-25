@@ -66,8 +66,30 @@ on:
       - main
   pull_request:
 
+# THE CONCURRENCY KEY CARRIES THE TRIGGER, and a manual run also carries its
+# proof. It has to. GitHub keeps ONE pending run per group: when a second run
+# queues against a group that already has a pending run, the OLDER pending one
+# is cancelled — it never starts, no job is created, and its conclusion reads
+# `cancelled`, which is the least visible outcome a run can have. With the key
+# built from workflow and ref alone, a manual `workflow_dispatch` on `main` and
+# the 03:17 nightly resolved to the same group
+# (`E2E (mock relay, audit and Maestro)-refs/heads/main`), so a nightly landing
+# while a manual proof was still queued silently killed that proof (measured
+# 2026-10-25: dispatch run 40157909029 queued 03:21:30Z, cancelled 03:37:41Z —
+# one second after schedule run 40158909122 was created). Keying by
+# `github.event_name` separates the nightly from every manual run, and adding
+# `inputs.proof_mode` to the manual key separates two different proofs. Do not
+# "simplify" this back to workflow + ref: that reintroduces the silent cancel.
+# The two account-routing lanes keep their previous keys verbatim — they are the
+# stable identities their artefacts and baselines are read under, and only a
+# dispatch can carry a proof, so no scheduled or pushed run can collide with them.
+#
+# `cancel-in-progress` keeps its meaning unchanged: a branch push still supersedes
+# its older run on that branch, and nothing on `refs/heads/main` is ever cancelled
+# — a second manual run of the same proof waits its turn rather than killing the
+# first.
 concurrency:
-  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || format('{0}-{1}', github.workflow, github.ref) }}
+  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, inputs.proof_mode || 'full') || format('{0}-{1}-{2}', github.workflow, github.event_name, github.ref) }}
   cancel-in-progress: ${{ inputs.proof_mode != 'account-routing-ios-proof' && inputs.proof_mode != 'account-routing-android-proof' && github.ref != 'refs/heads/main' }}
 
 permissions:
