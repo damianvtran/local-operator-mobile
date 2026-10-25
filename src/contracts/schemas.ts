@@ -53,6 +53,10 @@ import type {
 	LinkedSession,
 	ModelEntry,
 	ModelsResponse,
+	NotificationDetailResponse,
+	NotificationItem,
+	NotificationsResponse,
+	NotificationWriteResponse,
 	PastSession,
 	PastSessionsResponse,
 	PeerSender,
@@ -379,6 +383,150 @@ export const pendingAskSchema = z.looseObject({
 export const asksResponseSchema = z.looseObject({
 	asks: z.array(pendingAskSchema),
 	asks_truncated: z.boolean().optional(),
+});
+
+/* ------------------------------------------------------- notifications -- */
+
+/**
+ * The inbox (local-operator notifications contract §2.2, relay §5.4).
+ *
+ * NOTHING IS DEFAULTED HERE, for the reason every row family above states: a
+ * relay with this route live publishes every field, and the fields that can be
+ * absent have a specific reading the reader must apply rather than a value this
+ * file could invent. `read_via: null` is an UNREAD row, never `"explicit"`; a
+ * missing `anchor_id` is "this item names no transcript entry", never an empty
+ * anchor to scroll to.
+ *
+ * `source`, `priority` and `read_via` are plain strings on purpose. The relay
+ * enumerates the values it sends today, but a row is still renderable when a
+ * newer relay aggregates a source this build does not know — refusing the whole
+ * list because one row grew a word would blank the operator's inbox over a row
+ * they could simply read. The screens classify: their known style for what they
+ * recognise, the neutral shape otherwise.
+ */
+const notificationItemSchema = z.looseObject({
+	id: nonEmpty,
+	/** How the row reads: `notify` (an update) or `ask` (an open ask that is
+	 *  pinned in Waiting on you and offers Answer instead of Dismiss). */
+	source: z.string(),
+	priority: z.string(),
+	title: z.string(),
+	excerpt: z.string(),
+	created_at: epochSeconds,
+	updated_at: epochSeconds,
+	seq: z.number().int(),
+	/** The ACK TOKEN. Every write names the revision it rendered; the relay skips
+	 *  a stale one rather than clearing an update the operator never saw. */
+	revision: z.number().int(),
+	read: z.boolean(),
+	/** `"explicit" | "in_view" | "watching"` on a read row, `null` while unread. */
+	read_via: z.string().nullable(),
+	dismissed: z.boolean(),
+	repeat_count: z.number().int(),
+	key: z.string().optional(),
+	anchor_id: z.string().optional(),
+	session: z.looseObject({
+		id: nonEmpty,
+		title: z.string(),
+		agent_id: z.string(),
+		live: z.boolean(),
+	}),
+	projects: z.array(
+		z.looseObject({
+			key: z.string(),
+			name: z.string(),
+			status: z.string(),
+		}),
+	),
+	/** `null` on an update: an ask row's block is what makes it pinned and what
+	 *  decides its verb (Answer, not Dismiss — contract §2.3). */
+	ask: z
+		.looseObject({
+			status: z.string(),
+			deadline_at: epochSeconds,
+			question_count: z.number().int(),
+			dismissible: z.boolean(),
+		})
+		.nullable(),
+	actions: z.looseObject({
+		dismiss: z.boolean(),
+		answer: z.boolean(),
+		read: z.boolean(),
+	}),
+	/** Waiting rows only, passed through exactly as `api_asks` sends them: is a
+	 *  runtime attached to that conversation right now, and does the ask survive
+	 *  a restart. Absent means the relay did not say. */
+	runtime_live: z.boolean().optional(),
+	durable: z.boolean().optional(),
+});
+
+/** `GET /api/notifications` (contract §5.2, mirrored by the relay at §5.4).
+ *
+ * `waiting` is the OPEN ASKS array, unpaged and first-page only; `high_water`
+ * is the through-token a mark-all write names, so a gesture can never clear more
+ * than the screen had actually loaded.
+ */
+export const notificationsResponseSchema = z.looseObject({
+	items: z.array(notificationItemSchema),
+	waiting: z.array(notificationItemSchema),
+	next_cursor: z.string().nullable(),
+	unread_count: z.number().int(),
+	waiting_count: z.number().int(),
+	high_water: z.number().int(),
+});
+
+/**
+ * `GET /api/notifications/{id}`: the row plus what a detail view needs and the
+ * list deliberately does not carry — the revision history, the source
+ * conversation, the anchor's excerpt, and that conversation's asks INCLUDING
+ * settled ones (the one place a settled ask appears; the reel shows open only).
+ *
+ * `anchor: null` is honest absence: the transcript entry could not be resolved,
+ * and a phone that drew an empty quote instead would be inventing a message.
+ */
+export const notificationDetailSchema = z.looseObject({
+	item: notificationItemSchema,
+	history: z.array(
+		z.looseObject({
+			revision: z.number().int(),
+			at: epochSeconds,
+			title: z.string(),
+			excerpt: z.string(),
+		}),
+	),
+	session: z.looseObject({
+		id: nonEmpty,
+		title: z.string(),
+		agent_id: z.string(),
+		live_state: z.string(),
+		cwd: z.string(),
+	}),
+	anchor: z.looseObject({ id: nonEmpty, excerpt: z.string() }).nullable(),
+	projects: z.array(
+		z.looseObject({
+			key: z.string(),
+			name: z.string(),
+			status: z.string(),
+		}),
+	),
+	asks: z.array(pendingAskSchema),
+});
+
+/**
+ * The answer to `PATCH /api/notifications` and to the in-view receipt
+ * (`POST /api/notifications/seen`), one shape for both.
+ *
+ * `changed` is what the store MOVED and `skipped` names what it refused, with
+ * the relay's own reason — a screen that reported its whole selection as done
+ * would be claiming a write the relay skipped. `stale_revision` and `live_ask`
+ * are the two a reader can be told about: the row moved under the gesture, or
+ * the thing is an open ask and cannot be dismissed at all.
+ */
+export const notificationWriteResponseSchema = z.looseObject({
+	changed: z.array(z.string()),
+	skipped: z.array(z.looseObject({ id: z.string(), reason: z.string() })),
+	unread_count: z.number().int(),
+	high_water: z.number().int(),
 });
 
 /* -------------------------------------------------------------- schedules -- */
@@ -946,6 +1094,22 @@ export const unreadBlockSchema = z.looseObject({
 	degraded: z.array(z.string()),
 });
 
+/** The inbox block riding the session list frame (`{unread_count, waiting_count,
+ *  high_water}`, contract §5.4). A SIBLING of `unread`, not a replacement: the
+ *  two count different things (completions vs inbox items) and neither may be
+ *  derived from the other.
+ *
+ *  ABSENT on an older relay, and absence means UNKNOWN, never 0 — the same rule
+ *  `unreadBlockSchema` states, and the reason the entry points draw no number
+ *  rather than a zero. All three fields ride together because the relay
+ *  publishes them from one store read; a partial block would be a claim about a
+ *  moment that never existed. */
+export const notificationsBlockSchema = z.looseObject({
+	unread_count: z.number().int(),
+	waiting_count: z.number().int(),
+	high_water: z.number().int(),
+});
+
 export const sessionListFrameSchema = z.looseObject({
 	sessions: z.array(sessionSummarySchema),
 	/** `[]` when healthy — present on every frame so "nothing to report" is
@@ -953,6 +1117,10 @@ export const sessionListFrameSchema = z.looseObject({
 	degraded: z.array(z.string()),
 	/** Optional on the schema and **never defaulted** — see `unreadBlockSchema`. */
 	unread: unreadBlockSchema.optional(),
+	/** The inbox's own counts, on the same frame the list already repaints from so
+	 *  the phone needs no second stream (contract §5.4). Optional and never
+	 *  defaulted: an older relay omits it, which means unknown. */
+	notifications: notificationsBlockSchema.optional(),
 	/* Defaulted through a factory for the same reason `stt` is: a loose object's
 	 * input type carries an index signature, so a bare object literal is not
 	 * assignable — and an older relay omitting the block must still yield a frame
@@ -1731,6 +1899,13 @@ export const SCHEMAS = {
 	supplementDocument: supplementDocumentSchema,
 	/** `GET /api/asks`: the aggregate route the asks sheet reads. */
 	asks: asksResponseSchema,
+	/** The inbox (`GET /api/notifications`, its detail, and the one answer shape
+	 *  both write routes return). Registered because every route this client
+	 *  parses must have a schema at the boundary — an endpoint whose payload has
+	 *  no `SCHEMAS` entry is a typed lie, not a compile error. */
+	notifications: notificationsResponseSchema,
+	notificationDetail: notificationDetailSchema,
+	notificationWrite: notificationWriteResponseSchema,
 	/** `GET /api/schedules`: the machine-wide armed index — the Schedules
 	 *  surface's one read, and like `asks` a route this client consumes at the
 	 *  parse boundary. */
@@ -1896,6 +2071,13 @@ type WireMirror = {
 	commandAck: CommandAck;
 	seen: SeenResponse;
 	asks: AsksResponse;
+	/* The inbox family (local-operator notifications contract §2.2/§5.2, relay
+	 *  §5.4). Asserted like every read family around it: a schema whose output
+	 *  stops being assignable to these declarations reds `WireConformance`
+	 *  before a phone renders an inbox row the relay no longer sends. */
+	notifications: NotificationsResponse;
+	notificationDetail: NotificationDetailResponse;
+	notificationWrite: NotificationWriteResponse;
 	/* The armed index (`GET /api/schedules`): asserted, not excused, like every
 	 *  read family around it — a schema whose output stops being assignable to
 	 *  these mirror declarations trips `AssertAll`. */
@@ -2095,6 +2277,10 @@ export type {
 	LinkedSession,
 	ModelEntry,
 	ModelsResponse,
+	NotificationDetailResponse,
+	NotificationItem,
+	NotificationsResponse,
+	NotificationWriteResponse,
 	PastSession,
 	PastSessionsResponse,
 	PeerSender,

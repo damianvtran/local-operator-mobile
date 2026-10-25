@@ -26,6 +26,12 @@ export const DEEP_LINK_SCHEME = "localoperator";
  *  not-found rather than the app guessing). */
 const SESSION_LINK = /^localoperator:(?:\/\/)?s\/([^/?#\s]+)$/i;
 
+/** `localoperator://n/<id>` — the notification link (design §10). Same one-segment
+ *  rule as the session link: a second segment, a query or a fragment is not the
+ *  shape this app claims, and the honest answer to an unrecognised shape is to
+ *  leave it alone. */
+const NOTIFICATION_LINK = /^localoperator:(?:\/\/)?n\/([^/?#\s]+)$/i;
+
 /** An id that is only dots — `.`/`..` and their `%2e` spellings, which decode
  *  into dot segments a router normalises away (see the guard below). */
 const DOTS_ONLY = /^\.+$/;
@@ -35,6 +41,11 @@ export interface NativeIntent {
 	path: string;
 	/** The session id the link names, or `null` when this was not a session link. */
 	sessionId: string | null;
+	/** The notification id the link names, or `null`. A notification link is NOT
+	 *  recorded as a pending session destination: the inbox detail resolves it
+	 *  itself, and waiting for a conversation to become reachable is a decision
+	 *  about the item, not about the link. */
+	notificationId: string | null;
 }
 
 /**
@@ -48,9 +59,20 @@ export interface NativeIntent {
  */
 export function nativeIntentFor(path: string): NativeIntent {
 	const trimmed = path.trim();
+	const notification = NOTIFICATION_LINK.exec(trimmed);
+	const notificationId = segmentOf(notification?.[1]);
+	if (notificationId !== null) {
+		return {
+			path: `/notifications/${encodeURIComponent(notificationId)}`,
+			sessionId: null,
+			notificationId,
+		};
+	}
 	const match = SESSION_LINK.exec(trimmed);
 	const raw = match?.[1];
-	if (raw === undefined) return { path, sessionId: null };
+	if (raw === undefined) {
+		return { path, sessionId: null, notificationId: null };
+	}
 	let id: string;
 	let escaped: string;
 	try {
@@ -65,7 +87,7 @@ export function nativeIntentFor(path: string): NativeIntent {
 	} catch {
 		/* A lone `%` is not a decodable id, and a string that cannot be
 		 * re-encoded is not an id either; hand the link back whole. */
-		return { path, sessionId: null };
+		return { path, sessionId: null, notificationId: null };
 	}
 	/* `/` cannot survive into the route, and neither can a dots-only id: `.` and
 	 * `..` are the dot segments a router normalises away (`%2e` spellings decode
@@ -73,7 +95,27 @@ export function nativeIntentFor(path: string): NativeIntent {
 	 * rewrite claims. An id that is only dots is no session id — it passes
 	 * through like every other shape this module does not recognise. */
 	if (id.length === 0 || id.includes("/") || DOTS_ONLY.test(id)) {
-		return { path, sessionId: null };
+		return { path, sessionId: null, notificationId: null };
 	}
-	return { path: `/session/${escaped}`, sessionId: id };
+	return { path: `/session/${escaped}`, sessionId: id, notificationId: null };
+}
+
+/** The decoded, re-encodable form of one path segment, or `null` when it is not
+ *  one. Shared by both link shapes so the two cannot drift on the guard that
+ *  stops a route-building string from smuggling a separator (or a dot segment a
+ *  router normalises away) into a destination. */
+function segmentOf(raw: string | undefined): string | null {
+	if (raw === undefined) return null;
+	let id: string;
+	try {
+		id = decodeURIComponent(raw);
+		/* The encode is the second half of the same operation: an unpaired
+		 * surrogate decodes cleanly and has no escape, and "never throws" only
+		 * holds if both halves are caught. */
+		encodeURIComponent(id);
+	} catch {
+		return null;
+	}
+	if (id.length === 0 || id.includes("/") || DOTS_ONLY.test(id)) return null;
+	return id;
 }

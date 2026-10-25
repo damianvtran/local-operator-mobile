@@ -308,6 +308,69 @@ export interface LibraryAssetPatch {
 	archived?: boolean;
 }
 
+/** The notification routes' own page bound (`limit=1..100`, default 50). */
+export const NOTIFICATIONS_LIMIT = { default: 50, min: 1, max: 100 } as const;
+
+/** The list filter's closed vocabulary (`state=unread|all|dismissed`). `unread`
+ *  is the relay's default, and the phone reads it first for the same reason the
+ *  badge counts it: they are the same question. */
+export type NotificationState = "unread" | "all" | "dismissed";
+
+/** One id at one revision — the token every notification write names.
+ *
+ *  A write that named only the id could clear an update published after the row
+ *  was rendered, which is the R10 failure applied to items: the operator would
+ *  lose a message they never saw. The relay answers a stale token in `skipped`
+ *  and the screen reports it instead of claiming the clear. */
+export interface NotificationTarget {
+	id: string;
+	revision: number;
+}
+
+/**
+ * `PATCH /api/notifications` — the explicit acts (contract §5.2, relay §5.4).
+ *
+ * EXACTLY ONE target is legal, and the three shapes are the route's own: a
+ * selection (`ids`), one conversation through a seq (`session_id` +
+ * `through_seq`), or everything loaded (`all` + `through_seq`). The seq is what
+ * makes a bulk clear token-bound: a sweep can only reach rows at or below the
+ * `high_water` the rendered list carried, so a row that arrived while the screen
+ * was open survives its mark-all. `all` is spelled `true` rather than a boolean
+ * so a false cannot be sent as a silent no-op.
+ */
+export interface NotificationPatchRequest {
+	op: "read" | "unread" | "dismiss" | "undismiss";
+	ids?: NotificationTarget[];
+	session_id?: string;
+	through_seq?: number;
+	all?: true;
+}
+
+/**
+ * `POST /api/notifications/seen` — an in-view receipt's evidence (contract §6.4,
+ * decisions D8).
+ *
+ * This is a CLAIM ABOUT THE READER, not a convenience: it says "this exact item,
+ * at this exact revision, was on screen in a focused foreground app and the
+ * operator touched the screen afterwards". Everything the phone cannot prove it
+ * must leave out rather than approximate, because a receipt that fires on a
+ * mount alone marks unread work as seen and the operator never learns it
+ * existed. `input_at_ms` is the fresh interaction's own timestamp (ms, like the
+ * desktop evidence), and `visible_since_ms` is when the row settled on screen.
+ */
+export interface NotificationSeenRequest {
+	items: NotificationTarget[];
+	evidence: {
+		surface: "native";
+		/** The conversation the receipt is scoped to, when the rows share one. */
+		session_id?: string;
+		/** The trusted gesture kind, from the platform's own event stream. */
+		input_kind: "touch" | "press" | "scroll" | "focus";
+		input_at_ms: number;
+		visible_since_ms: number;
+	};
+}
+
 export class RelayEndpoints {
 	private readonly http: RelayHttpClient;
 
@@ -410,6 +473,100 @@ export class RelayEndpoints {
 		return this.http.json("asks", {
 			method: "GET",
 			path: "/api/asks",
+			signal,
+		});
+	}
+
+	/**
+	 * The inbox (`GET /api/notifications`, notifications contract §5.4).
+	 *
+	 * ONE read for the whole screen: `waiting` (the open asks, unpaged and pinned)
+	 * and `items` (the updates) arrive together with the badge's own counts, so the
+	 * badge and the list cannot disagree about the same moment. `state` selects the
+	 * pile (`unread` — the relay's default — or `all`, which is where a row the
+	 * operator has already read stays readable); `cursor` is opaque and only the
+	 * relay can mint one.
+	 *
+	 * A limit the caller did not supply is omitted, like every other paged route
+	 * here: the page size is the relay's policy to default.
+	 */
+	async notifications(
+		options?: {
+			state?: NotificationState;
+			cursor?: string;
+			limit?: number;
+		},
+		signal?: AbortSignal,
+	): Promise<Payload<"notifications">> {
+		return this.http.json("notifications", {
+			method: "GET",
+			path: `/api/notifications${query({
+				state: options?.state,
+				cursor: options?.cursor,
+				limit: wireLimit(options?.limit, NOTIFICATIONS_LIMIT),
+			})}`,
+			signal,
+		});
+	}
+
+	/**
+	 * One item's detail (`GET /api/notifications/{id}`): the revision history, the
+	 * source conversation, the anchor's excerpt and that conversation's asks.
+	 *
+	 * The id is escaped because an ask row's id is `ask:<session>:<ask_id>` — a
+	 * composite the relay builds, not a token this client may assume is URL-safe.
+	 * An id the relay cannot resolve is its own `404`, whose sentence the screen
+	 * shows instead of re-wording a vanished item.
+	 */
+	async notification(
+		id: string,
+		signal?: AbortSignal,
+	): Promise<Payload<"notificationDetail">> {
+		return this.http.json("notificationDetail", {
+			method: "GET",
+			path: `/api/notifications/${encodeURIComponent(id)}`,
+			signal,
+		});
+	}
+
+	/**
+	 * The explicit acts: read/unread, dismiss/undismiss (`PATCH /api/notifications`).
+	 *
+	 * The body carries revision tokens, never bare ids for a token-bound act, and
+	 * the answer reports what MOVED — `changed` and `skipped` — because a screen
+	 * that assumed its whole selection landed would report a write the relay
+	 * refused (a row that moved under the gesture, an open ask that cannot be
+	 * dismissed at all).
+	 */
+	async patchNotifications(
+		body: NotificationPatchRequest,
+		signal?: AbortSignal,
+	): Promise<Payload<"notificationWrite">> {
+		return this.http.json("notificationWrite", {
+			method: "PATCH",
+			path: "/api/notifications",
+			body,
+			signal,
+		});
+	}
+
+	/**
+	 * The in-view receipt (`POST /api/notifications/seen`, contract §6.4 / D8).
+	 *
+	 * Deliberately a separate route from `patchNotifications`: this one asserts the
+	 * reader SAW the rows, which is a claim the server re-checks against each row's
+	 * current revision and the evidence's freshness. A read that is not evidenced
+	 * stays explicit (`patchNotifications` with `op: "read"`), and no automatic
+	 * path ever sends a session-wide receipt.
+	 */
+	async markNotificationsSeen(
+		body: NotificationSeenRequest,
+		signal?: AbortSignal,
+	): Promise<Payload<"notificationWrite">> {
+		return this.http.json("notificationWrite", {
+			method: "POST",
+			path: "/api/notifications/seen",
+			body,
 			signal,
 		});
 	}

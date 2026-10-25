@@ -16,7 +16,7 @@
 		},
 		"web-audit": {
 			"condition": "inputs.proof_mode != 's15-proof'",
-			"bodyWithoutConditionSha256": "6cd90d57f879dde6cefbee25ecd2fc5a6c4c5ca503253a8f66373681a861fbdb"
+			"bodyWithoutConditionSha256": "1f73ecde1751ff658dbf599e93b10e653cd29964057ae3dacfdad83475ded99e"
 		},
 		"s15-proof": {
 			"condition": "github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'",
@@ -24,7 +24,7 @@
 		},
 		"web-audit-core": {
 			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
-			"bodyWithoutConditionSha256": "55c4b5f68059f2ab24e8c34b7696a3b29853c3034b445085112a8ad88ce6cd24"
+			"bodyWithoutConditionSha256": "3824a57cef814d7fd3d1b1f6e1a2bd5842a3b8e5f6b683a0440539245a937a4d"
 		},
 		"maestro-android": {
 			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",

@@ -69,13 +69,13 @@ doc drifts from the run the first time anyone adds a check.
   with: { name: audit-frames, path: frames/ }
 ```
 
-**`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 3384
+**`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 3600
 cells; at the 2.24 s/cell this harness measured on the runner (403 cells in 903 s) that
 is ~126 minutes, against a step bound of 175. The tier is declared in
 `tools/visual/matrix.ts` rather than spelled here as a `--devices` list so the sample,
 the plan and the manifest all read one list a reviewer can argue with, and it captures
-every declared cell at two device profiles, both themes and scales 100/135/200 — 1128
-cells, ~42 minutes. The full `core` tier (`--tier core`) and the 12408-cell `full` tier
+every declared cell at two device profiles, both themes and scales 100/135/200 — 1200
+cells, ~45 minutes. The full `core` tier (`--tier core`) and the 13200-cell `full` tier
 (`--full`) stay runnable locally and on a dispatched run; nothing is reachable only
 through CI.
 
@@ -127,25 +127,27 @@ job here that tests the *instrument* rather than the app.
 `--tier ci` covers 2 of the matrix's 19 declared profiles, so until this job
 existed nothing automated covered the device variety the operator's rule asks
 for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core`
-tier (5 profiles / 3384 cells) on the schedule and on demand only, so a pull
-request does not pay for it and the `ci` step's 55-minute bound is not stretched.
+tier (5 profiles / 3600 cells) on the schedule and on demand only, so a pull
+request does not pay for it and the `ci` step's 65-minute bound is not stretched.
 
 Both bounds are derived from the measured rate and checked against the plan the
 run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so
-the 3384-cell `core` capture is ~126 min, and `--plan --tier core --consecutive`
-prints the 10,152 frames and derives a deadline of 10,152 s. Those two numbers agree
-because both are 3384 x 3 — three frames per cell with `--consecutive`, and the
+the 3600-cell `core` capture is ~134 min, and `--plan --tier core --consecutive`
+prints the 10,800 frames and derives a deadline of 10,800 s. Those two numbers agree
+because both are 3,600 x 3 — three frames per cell with `--consecutive`, and the
 budget's three seconds per cell — not because the deadline is frame-derived. The
 capture step is
-bound at 161, which is above that
+bound at 180, which is above that
 derived deadline — so the step cannot cut short the budget the run computes for
-itself — and ~1.4x the measured cost. The audit's rate is its own, not the
+itself — and ~1.35x the measured cost. The audit's rate is its own, not the
 capture's: its run measured 1.47 s/cell — killed at the old 70-minute bound with
-2,870 of 3,024 cells done in 70m12s = 4,212 s (run 38530472075) — so 3384 cells x
-1.47 s = 4,974 s ≈ 78 min, and its step is bound at 95. The step caps now sum
-ABOVE the job's 241 on paper (`161 + 95 = 256`, where they summed to 230 of 240
-before this change); measured, the job runs ~126 min of capture + ~83 min of
-audit ≈ 198 min. Re-derive the job cap if either step's bound is raised again.
+2,870 of 3,024 cells done in 70m12s = 4,212 s (run 38530472075) — so 3,600 cells x
+1.47 s = 5,292 s ≈ 88 min, and its step is bound at 110. The step caps sum to the
+job's own 290 on paper (`180 + 110`), while the REAL requirement is the capture
+bound plus the audit's measured need — `180 + 89 = 269`, 21 min under the cap; a
+step cap is a ceiling, not a budget. Measured, the job runs ~134 min of capture +
+~88 min of audit ≈ 222 min. Re-derive the job cap if either step's bound is raised
+again.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

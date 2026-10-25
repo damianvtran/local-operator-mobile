@@ -15,6 +15,7 @@ import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	inboxBadgeCount,
 	isRemoteRow,
 	relativeTimeFor,
 	remoteAttention,
@@ -45,6 +46,7 @@ import {
 	sessionTagLineId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
@@ -141,6 +143,10 @@ export const ConversationsPane = ({
 	const stale = useListState((state) => state.stale);
 	const lastFrameAt = useListState((state) => state.lastFrameAt);
 	const capabilities = useListState((state) => state.capabilities);
+	/* The inbox's own count, off the list frame (contract §5.4). `null` draws no
+	 * numeral — an older relay's omission is unknown, never a zero. */
+	const inboxBlock = useListState((state) => state.notifications);
+	const inboxCount = inboxBadgeCount(inboxBlock);
 	const computers = useConnectionState((state) => state.computers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
@@ -333,6 +339,33 @@ export const ConversationsPane = ({
 					size="sm"
 					testID={CONTROL.sidebarSchedules}
 				/>
+			</View>
+			{/* The sixth route, and the one the operator named: the inbox. Its
+			 *  count rides the button's own row, so the pane can say how much is
+			 *  waiting without opening it. Other rail rows keep their quiet pill:
+			 *  only this badge is asked to stand out (decisions §D5). */}
+			<View className="w-full flex-row items-center gap-2">
+				<View className="flex-1">
+					<Button
+						label="Notifications"
+						onPress={() => {
+							onNavigate?.();
+							router.push("/notifications");
+						}}
+						variant="quiet"
+						size="sm"
+						testID={CONTROL.sidebarNotifications}
+					/>
+				</View>
+				{inboxCount !== null && inboxCount > 0 ? (
+					<Badge
+						label={String(inboxCount)}
+						tone="warning"
+						mono
+						testID={CONTROL.sidebarNotificationsCount}
+						accessibilityLabel={`Notifications, ${inboxCount} unread`}
+					/>
+				) : null}
 			</View>
 			{/* The fifth route, gated on the relay's own capability flag. An older
 			 *  relay omits `features.library`; showing the entry there would offer a

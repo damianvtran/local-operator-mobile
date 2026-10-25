@@ -1664,6 +1664,21 @@ export const U42_EXEMPTIONS: Array<{
 	},
 
 	{
+		path: "div.css-g5y9jx.gap-2>div.css-g5y9jx.flex-row",
+		value: 2,
+		properties: [
+			"padding-top",
+			"padding-right",
+			"padding-bottom",
+			"padding-left",
+		],
+		reason:
+			"the kit's Segmented track inset (`ui/variants.ts` `segmentedTrackClasses` p-0.5, 2pt) — " +
+			"the selected-pill inset the COMPONENT owns, rendered on the inbox's filter row but not " +
+			"introduced by this screen; absorbing it would change the control on every surface that " +
+			"renders it",
+	},
+	{
 		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",
 		value: 10,
 		properties: [

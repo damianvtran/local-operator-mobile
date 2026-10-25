@@ -86,6 +86,10 @@ export const SCREEN = {
 	 *  the detail is a route of its own; a capture must tell which one drew. */
 	library: "library-screen",
 	libraryDetail: "library-detail-screen",
+	/** The notifications inbox and its pushed item detail. Two roots because the
+	 *  detail is a route of its own; a capture must be able to tell which drew. */
+	notifications: "notifications-screen",
+	notificationDetail: "notification-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -114,6 +118,12 @@ export const EMPTY = {
 	 *  search-empty surface below). */
 	library: "library-empty",
 	librarySearch: "library-search-empty",
+	/** The inbox with NOTHING in it — the relay answered, the pile is empty and
+	 *  nothing is pinned ("All caught up"). Rendered only under those
+	 *  conditions, so a failed read can never produce it. */
+	notifications: "notifications-empty",
+	/** The unread filter with no unread rows, while the All filter still holds
+	 *  history — "nothing unread" is a different sentence from "all caught up". */
 	notFound: "not-found-empty",
 } as const;
 
@@ -438,6 +448,33 @@ export const CONTROL = {
 	 *  failed read (the desktop's own "Try again", kept because a roll of the
 	 *  dice is the one remedy a read failure has). */
 	schedulesBack: "schedules-back",
+	/* --- the notifications inbox (the relay inbox slice). The entry point the
+	 *  home header draws (`homeNotifications`) is separate from the panel's own
+	 *  footer row (`sidebarNotifications`) for the same reason the computer
+	 *  switcher's two are: two controls, two ids, so a flow can press one and
+	 *  prove which it reached. */
+	homeNotifications: "home-notifications",
+	homeNotificationsCount: "home-notifications-count",
+	sidebarNotifications: "sidebar-notifications",
+	sidebarNotificationsCount: "sidebar-notifications-count",
+	inboxBack: "notifications-back",
+	inboxList: "notifications-list",
+	inboxLoadMore: "notifications-load-more",
+	inboxRetry: "notifications-retry",
+	inboxFilterUnread: "notifications-filter-unread",
+	inboxFilterAll: "notifications-filter-all",
+	inboxMarkAll: "notifications-mark-all",
+	inboxSelect: "notifications-select",
+	inboxSelectionDone: "notifications-selection-done",
+	inboxMarkRead: "notifications-mark-read",
+	inboxMarkUnread: "notifications-mark-unread",
+	inboxDismiss: "notifications-dismiss",
+	inboxDetailBack: "notification-back",
+	inboxDetailRetry: "notification-detail-retry",
+	inboxDetailOpen: "notification-open-conversation",
+	/** The item detail's ask card reuses the session screen's answer surface, so
+	 *  this id names the SECTION that holds it rather than a second answer form. */
+	inboxDetailAsks: "notification-detail-asks",
 	schedulesRetry: "schedules-retry",
 	/* --- the Library (the catalogue slice). The footer entry is `sidebarLibrary`;
 	 *  the list's search/filter/sort controls and the detail's metadata and chat
@@ -544,6 +581,15 @@ export const SURFACE = {
 	 *  conversations pane (R-2), which is why every loading state carries a
 	 *  marker of its own. */
 	schedulesLoading: "schedules-loading",
+	/* --- the inbox's own surfaces: its loading skeleton, the multi-select bar
+	 * that floats above the list, and the refusals line. Each is a state a
+	 * capture has to be able to name, so each carries its own id. */
+	inboxLoading: "notifications-loading",
+	inboxSelectionBar: "notifications-selection-bar",
+	inboxSkipped: "notifications-skipped",
+	inboxError: "notifications-error",
+	inboxDetailLoading: "notification-detail-loading",
+	inboxDetailVanished: "notification-detail-vanished",
 	/** The supervisor strip: present ONLY when nothing on this machine would
 	 *  actually fire a cold wake (`supervisorLead` returns "" otherwise). The
 	 *  index alone cannot answer "will these fire" — the strip is that answer,
@@ -954,6 +1000,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  entries sit in different sections with different facts (one shows fire
 	 *  instants, the other watch health). `schedule-more-` is the per-entry
 	 *  disclosure that puts a capped conversation's hidden rows back. */
+	"notification-row-",
+	"notification-select-",
+	"notification-answer-",
+	"notification-dismiss-",
 	"schedule-wake-row-",
 	"schedule-monitor-row-",
 	"schedule-more-",
@@ -1241,6 +1291,24 @@ export const STATE_MARKER = {
 	 *  a shape the wire cannot send). `read-error` and `truncated` are the two
 	 *  honest-answer strips, each rendered in ITS state only — and the empty
 	 *  state is `EMPTY.schedules`, unreachable while either family errored. */
+	/* The notifications inbox (S18): the piled list, the pinned rows and the
+	 *  states that must never be confused with one another. `populated` is the row
+	 *  family; `multi-select` is the bar that only exists while a selection is
+	 *  active; `error` is the refusal strip, rendered INSTEAD of a list so a
+	 *  failed read can never look like an empty inbox. */
+	notifications: {
+		loading: SURFACE.inboxLoading,
+		empty: EMPTY.notifications,
+		populated: "notification-row-",
+		error: SURFACE.inboxError,
+		"multi-select": SURFACE.inboxSelectionBar,
+	},
+	/* The pushed detail, whose subject is the id prefix `notification-detail-`. */
+	"notification-detail": {
+		loading: SURFACE.inboxDetailLoading,
+		populated: CONTROL.inboxDetailOpen,
+		vanished: SURFACE.inboxDetailVanished,
+	},
 	schedules: {
 		loading: SURFACE.schedulesLoading,
 		empty: EMPTY.schedules,
@@ -1624,6 +1692,28 @@ export const librarySourceId = (sessionId: string): string =>
  * AND monitors, and its two entries sit in different sections: a single
  * `schedule-row-<id>` would address two elements.
  */
+/** One inbox row, keyed by the relay's item id (an update's `n_…` or an ask's
+ *  `ask:<session>:<ask_id>`). The id can carry a colon, which is legal in a DOM
+ *  id and in Maestro's `id:` matching, so it is used verbatim rather than
+ *  slugged — two items differing only in punctuation must not share a selector. */
+export const notificationRowId = (itemId: string): string =>
+	`notification-row-${itemId}`;
+
+/** The per-row "Answer" action on an open ask: it opens the item detail, where
+ *  the ask card is. Distinct from `notificationRowId` so a flow presses the verb
+ *  rather than the row. */
+export const notificationAnswerId = (itemId: string): string =>
+	`notification-answer-${itemId}`;
+
+/** The per-row one-click dismiss. Present only on rows the relay admits. */
+export const notificationDismissId = (itemId: string): string =>
+	`notification-dismiss-${itemId}`;
+
+/** The selection checkbox on that row. Its own id, so a flow selects a row
+ *  without pressing through to the detail. */
+export const notificationSelectId = (itemId: string): string =>
+	`notification-select-${itemId}`;
+
 export const scheduleWakeRowId = (sessionId: string): string =>
 	`schedule-wake-row-${sessionId}`;
 

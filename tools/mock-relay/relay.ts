@@ -52,8 +52,17 @@ import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
 import { createLibraryStore } from "./library.ts";
+import {
+	createNotificationsStore,
+	type NotificationsStore,
+} from "./notifications.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
-import type { ScenarioWorld, StreamSpec, TransferScript } from "./scenarios.ts";
+import type {
+	FixtureOverride,
+	ScenarioWorld,
+	StreamSpec,
+	TransferScript,
+} from "./scenarios.ts";
 import {
 	buildScenarios,
 	capabilityBlock,
@@ -597,6 +606,42 @@ export function createRelay(options: RelayOptions = {}) {
 	 * create in one cell's scenario must not appear in the next one's.
 	 */
 	const projects = createProjectsStore(fix);
+	/** The inbox store (see `notifications.ts`): seeded from the synthetic
+	 *  `notifications-populated` corpus and mutated by the same writes the real
+	 *  routes perform, so a dismiss really removes the row a later read returns.
+	 *  Reset with the world, so one cell's dismiss cannot leak into the next. */
+	/**
+	 * One inbox fixture's BODY, without its provenance marker.
+	 *
+	 * The corpus files carry `provenance` as the authority on their own origin
+	 * (`fixtures/relay/README.md`), and the routes must not serve that field to a
+	 * client: it is a statement about the file, not about the relay's answer.
+	 * `payload` is the accessor that resolves a name across all three corpora.
+	 */
+	const inboxFixture = (name: string): Json => {
+		const value = fix.payload(name);
+		if (typeof value !== "object" || value === null) return {};
+		const record = { ...(value as Record<string, Json>) };
+		delete record.provenance;
+		return record;
+	};
+
+	const notifications = (world: ScenarioWorld): NotificationsStore =>
+		createNotificationsStore({
+			seed:
+				world.notifications !== undefined &&
+				!isFixtureOverride(world.notifications)
+					? world.notifications
+					: inboxFixture("notifications-populated"),
+			details: {
+				n_audit: inboxFixture("notifications-detail"),
+			},
+		});
+	let notificationsStore = notifications({});
+	/** The world the store above was built for. A scenario change rebuilds it so a
+	 *  dismiss taken in one cell cannot be read back in the next (the projects
+	 *  store's rule, which has the same failure mode). */
+	let notificationsScanned: ScenarioWorld | null = null;
 	/** The Library store (see `library.ts`): seeded from the hand-authored
 	 *  `library-listing` fixture and mutated by the same writes the metadata store
 	 *  performs. Reset with the world so a tag/patch in one cell cannot leak into
@@ -1032,6 +1077,10 @@ export function createRelay(options: RelayOptions = {}) {
 	/** The session rows for the listing, in the relay's own rank order. */
 	const rowsFor = (): SessionSummary[] => {
 		const world = state.world;
+		if (world !== notificationsScanned) {
+			notificationsScanned = world;
+			notificationsStore = notifications(world);
+		}
 		const overrides = world.rowOverrides ?? {};
 		/* Per-session overrides win over the blanket ones: `unseen` is a fact about
 		 * ONE conversation, and the §1.4 equality cell needs a mix. */
@@ -2821,6 +2870,45 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		/* ------------------------------------------------------- notifications -- */
+
+		if (pathname === "/api/notifications" && method === "GET") {
+			/* The inbox read. A scenario may pin the whole body (a bare body or a
+			 * recorded answer); otherwise the STORE answers, so a dismiss or a read
+			 * taken earlier in the same capture is visible here — a canned body
+			 * would make "the row disappeared" a claim about a constant. */
+			const pinned = world.notifications;
+			if (isFixtureOverride(pinned)) {
+				sendJson(res, pinned.status, pinned.json ?? {}, pinned.headers);
+				return;
+			}
+			const state = url.searchParams.get("state") ?? "unread";
+			const rawLimit = Number(url.searchParams.get("limit") ?? "");
+			const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50;
+			sendJson(res, 200, notificationsStore.page(state, limit));
+			return;
+		}
+
+		if (pathname === "/api/notifications" && method === "PATCH") {
+			const outcome = notificationsStore.patch(body);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
+		if (pathname === "/api/notifications/seen" && method === "POST") {
+			const outcome = notificationsStore.seen(body);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
+		const notificationDetail = /^\/api\/notifications\/([^/]+)$/.exec(pathname);
+		if (notificationDetail && method === "GET") {
+			const id = decodeURIComponent(notificationDetail[1] ?? "");
+			const outcome = notificationsStore.detail(id);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
 		if (pathname === "/api/schedules" && method === "GET") {
 			/* The armed index (S17): the scenario's whole body when it declares
 			 *  one (a bare body or a recorded response), else the captured EMPTY
@@ -4097,4 +4185,15 @@ if (import.meta.main) {
 	};
 	process.on("SIGINT", stop);
 	process.on("SIGTERM", stop);
+}
+
+/** Whether a scenario pinned a whole RESPONSE for a route rather than a body.
+ *  The two are different claims: a recorded answer means "the relay said this",
+ *  so the store must not be consulted at all. */
+function isFixtureOverride(value: unknown): value is FixtureOverride {
+	if (typeof value !== "object" || value === null) return false;
+	const record = value as Record<string, unknown>;
+	return (
+		typeof record.status === "number" && typeof record.headers === "object"
+	);
 }

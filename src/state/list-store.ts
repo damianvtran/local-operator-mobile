@@ -22,6 +22,7 @@ import { createStore } from "zustand/vanilla";
 
 import type {
 	Capabilities,
+	NotificationsBlock,
 	SessionListFrame,
 	SessionSummary,
 	UnreadBlock,
@@ -38,6 +39,10 @@ export interface ListSnapshot {
 	 *  relay omits the block and that absence means **unknown, never 0** — the
 	 *  badge reads `count` when it is a number and shows no number otherwise. */
 	unread: UnreadBlock | null;
+	/** The inbox's counts off the same frame (`notifications`, contract §5.4).
+	 *  `null` until a frame carries it — an older relay omits the block, and that
+	 *  absence is UNKNOWN, never 0: the entry points draw no number. */
+	notifications: NotificationsBlock | null;
 	/** How many frames have been applied. Surfaced for diagnostics and for a test to
 	 *  assert a repaint happened. */
 	frameCount: number;
@@ -51,7 +56,9 @@ export interface ListActions {
 	/** Applies one full frame. Wholesale replacement, by design. */
 	applyFrame: (
 		frame: Pick<SessionListFrame, "sessions" | "degraded"> &
-			Partial<Pick<SessionListFrame, "capabilities" | "unread">>,
+			Partial<
+				Pick<SessionListFrame, "capabilities" | "unread" | "notifications">
+			>,
 		at?: number,
 	) => void;
 	/** Marks the rendered list as no longer live. Never clears it. */
@@ -68,6 +75,7 @@ const INITIAL: ListSnapshot = {
 	degraded: [],
 	capabilities: {},
 	unread: null,
+	notifications: null,
 	frameCount: 0,
 	lastFrameAt: null,
 	stale: true,
@@ -94,6 +102,10 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				 * WINS, including when it says `degraded` (count absent, badge darkens
 				 * again). */
 				unread: frame.unread ?? get().unread,
+				/* Same retention rule as `unread`, for the same reason: a relay that
+				 * publishes the inbox block publishes it on every frame, so absence
+				 * means an older relay rather than "the counts vanished". */
+				notifications: frame.notifications ?? get().notifications,
 				frameCount: get().frameCount + 1,
 				lastFrameAt: at ?? now(),
 				stale: false,

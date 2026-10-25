@@ -96,6 +96,10 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	 *  are sections of it, and the sheet/panel entries above stay separate
 	 *  subjects only where the app really renders two roots. */
 	S17: "schedules",
+	/** The notifications inbox (S18) and its pushed detail: one subject each, so
+	 *  a frame says which of the two drew. */
+	S18: "notifications",
+	"S18-detail": "notification-detail",
 };
 
 /**

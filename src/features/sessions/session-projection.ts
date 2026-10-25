@@ -8,7 +8,11 @@
  * decision that gets changed by accident.
  */
 
-import type { SessionSummary, UnreadBlock } from "@/contracts";
+import type {
+	NotificationsBlock,
+	SessionSummary,
+	UnreadBlock,
+} from "@/contracts";
 
 /**
  * The one state mark a row shows (docs/ux/flows.md § 5 step 2).
@@ -428,4 +432,21 @@ export function visiblePeers(
 		out.push({ deviceId, label: remoteDeviceLabel(session) });
 	}
 	return out;
+}
+
+/**
+ * The inbox badge's number, or `null` when the relay did not say.
+ *
+ * The SAME rule as `unreadBadgeCount`, applied to a different store: the number
+ * is the machine's own read of the inbox (`notifications.unread_count` on the
+ * list frame, contract §5.4), never a count this client derives from the rows it
+ * happens to hold. `null` — an older relay, or a frame that has not carried the
+ * block yet — draws NO number rather than a zero: absence is unknown, and a zero
+ * is a real answer that clears the badge.
+ */
+export function inboxBadgeCount(
+	block: NotificationsBlock | null,
+): number | null {
+	if (block === null) return null;
+	return block.unread_count;
 }

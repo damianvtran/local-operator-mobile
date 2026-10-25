@@ -1,0 +1,14 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 7f4b0bab4",
+    "modelled_on": "the notifications contract \u00a72.2 item shape and the \u00a75.2/\u00a75.4 route bodies (local_operator/server/routes/desktop_notifications.py once L1b lands)",
+    "why": "The relay routes do not exist at local-operator 7f4b0bab4, so there is nothing to capture; the app is built against the contract and this sample is what its boundary parses until the routes land. A live capture replaces it then, with its own provenance."
+  },
+  "items": [],
+  "waiting": [],
+  "next_cursor": null,
+  "unread_count": 0,
+  "waiting_count": 0,
+  "high_water": 0
+}

@@ -191,6 +191,17 @@ export interface ScenarioWorld {
 	 */
 	schedules?: Json | FixtureOverride;
 	/**
+	 * The inbox (`GET /api/notifications`, contract §5.4). A bare body seeds the
+	 * mock's notification STORE, so the write routes move it; a recorded answer
+	 * (`FixtureOverride`) pins the response instead — the refusal case, where the
+	 * store must never be consulted.
+	 *
+	 * A scenario silent about notifications serves the synthetic
+	 * `notifications-populated` corpus: a machine with an inbox, which is what a
+	 * capture of the screen is for.
+	 */
+	notifications?: Json | FixtureOverride;
+	/**
 	 * The checkpoint rail's manifest (S5): the whole
 	 * `GET /api/sessions/{id}/checkpoints` body, or a RECORDED RESPONSE
 	 * (`FixtureOverride`) when a cell needs a status the route does not
@@ -596,6 +607,22 @@ const ANSWERS: readonly string[] = [
  * `fix` is the object `loadFixtures()` returns.
  */
 export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
+	/**
+	 * One inbox fixture's BODY, without its provenance marker.
+	 *
+	 * The corpus files state their own origin in `provenance`, and that field must
+	 * never reach a client: it describes the FILE, not a relay response. The relay
+	 * strips it again for the default world; doing it here means a scenario that
+	 * pins a body cannot leak it either.
+	 */
+	const inboxBody = (name: string): Json => {
+		const value = fix.payload(name);
+		if (typeof value !== "object" || value === null) return {};
+		const record = { ...(value as Record<string, Json>) };
+		delete record.provenance;
+		return record;
+	};
+
 	const capabilities = fix.list("sessions-empty").capabilities;
 	const emptyList = () => ({ sessions: [], degraded: [] });
 
@@ -2326,6 +2353,45 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				},
 			};
 		},
+	);
+
+	/* ----------------------------------------------------------- notifications -- */
+
+	add(
+		"notifications-empty",
+		"An inbox with nothing in it: no unread updates, no pinned asks. The screen must say it is all caught up rather than showing an empty frame.",
+		["S18/empty"],
+		() => ({ notifications: inboxBody("notifications-empty") }),
+	);
+
+	add(
+		"notifications-loading",
+		"No inbox read has been answered yet: the routes hold their responses open and the streams stay silent with keepalives only.",
+		["S18/loading"],
+		() => ({ hold: { api: "forever" }, stream: { mode: "keepalive-only" } }),
+	);
+
+	add(
+		"notifications-populated",
+		"The synthetic populated inbox: five updates across today, yesterday and earlier, one of them already read, and one pinned open ask from a live runtime.",
+		["S18/populated", "S18/multi-select", "S18-detail/populated"],
+		() => ({ notifications: inboxBody("notifications-populated") }),
+	);
+
+	add(
+		"notifications-refused",
+		"The inbox store could not be read: the route answers 503 with its own sentence, so the screen must render the refusal rather than an empty inbox.",
+		["S18/error"],
+		() => ({
+			notifications: {
+				status: 503,
+				headers: { "content-type": "application/json; charset=utf-8" },
+				json: {
+					error: "The notification store is busy; try again in a moment.",
+					code: "notification_store_busy",
+				},
+			},
+		}),
 	);
 
 	/* -------------------------------------------------------------- schedules -- */

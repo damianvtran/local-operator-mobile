@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Menu, Settings } from "lucide-react-native";
+import { Bell, Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
@@ -36,7 +36,10 @@ import { connectionView } from "@/features/session/connection-view";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
-import { unreadBadgeCount } from "@/features/sessions/session-projection";
+import {
+	inboxBadgeCount,
+	unreadBadgeCount,
+} from "@/features/sessions/session-projection";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
@@ -123,6 +126,7 @@ export default function Home({
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
 	const unread = useListState((state) => state.unread);
+	const inbox = useListState((state) => state.notifications);
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
@@ -262,6 +266,9 @@ export default function Home({
 	 * never rendered as 0. The conversations pane's degraded banner is the
 	 * "says so". */
 	const badgeCount = unreadBadgeCount(unread);
+	/* The inbox's own number, from the same frame (contract §5.4). Same absence
+	 * rule: `null` draws no numeral, never a 0 the machine did not send. */
+	const inboxCount = inboxBadgeCount(inbox);
 
 	/* The banner: only the states the product has sentences for. A refusal renders
 	 * its own fuller surface below (and nothing here duplicates it); the
@@ -680,6 +687,25 @@ export default function Home({
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
 						 *  Settings. The gear says what the control does; the accessible name
 						 *  still comes from the caller's label. */}
+						{inboxCount !== null && inboxCount > 0 ? (
+							<Badge
+								label={`${inboxCount}`}
+								tone="warning"
+								mono
+								testID={CONTROL.homeNotificationsCount}
+								accessibilityLabel={`Notifications, ${inboxCount} unread`}
+							/>
+						) : null}
+						<IconButton
+							accessibilityLabel={
+								inboxCount === null
+									? "Notifications"
+									: `Notifications, ${inboxCount} unread`
+							}
+							onPress={() => router.push("/notifications")}
+							icon={({ color, size }) => <Bell color={color} size={size} />}
+							testID={CONTROL.homeNotifications}
+						/>
 						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}
