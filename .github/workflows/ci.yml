@@ -479,10 +479,11 @@ jobs:
         # A HARD gate, and separate from the step above on purpose. That step has
         # to tolerate failure while the preview sheet's shipped faces live in a
         # sibling checkout (docs/ci.md, "When a run goes red"), so a stale LISTING
-        # would have merged green behind its warning. These nine frames have no
-        # such excuse: their template loads the faces from this repository and the
-        # captures they compose are committed beside them, so a frame that no
-        # longer matches its caption, its page or its capture fails here.
+        # would have merged green behind its warning. These 26 frames (nine iPhone,
+        # nine iPad, eight Play) have no such excuse: every template loads the
+        # faces from this repository and the captures they compose are committed
+        # beside them, so a frame that no longer matches its caption, its page or
+        # its capture fails here.
         #
         # Byte-for-byte on the machine that rendered them, pixel-for-pixel on a
         # runner whose Chrome encodes PNGs differently — `capture.mjs` prints which

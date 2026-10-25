@@ -1,6 +1,6 @@
 {
 	"$comment": [
-		"The iPhone 6.9-inch listing set: nine frames, in the order App Store Connect takes them.",
+		"The three store listings this repository ships, in the order each store takes them.",
 		"",
 		"This file is the ONE source for three things a render needs, which is why it is data",
 		"rather than a table copied into the HTML: the caption each frame carries, the app",
@@ -11,132 +11,394 @@
 		"'The set — nine shots, claim-first order'); changing one is a re-render, not an edit",
 		"to a PNG.",
 		"",
+		"`surfaces` is the surface itself: the template that draws it, the canvas the store",
+		"requires, the output directory, and the device profile its captures are taken at.",
 		"Paths are relative to this directory. `cell` and `scenario` are the mock relay's own",
 		"words (`tools/visual/matrix.ts`, `tools/mock-relay/scenarios.ts`): the capture runs",
 		"that cell with that world pinned, so the frame is the app rendering a real relay",
-		"answer and nothing in it is composited."
+		"answer and nothing in it is composited.",
+		"",
+		"`crop` (Play only) is the vertical edge the capture is anchored to inside the slot.",
+		"Play's slot is taller than a phone screen, so the template crops the capture rather",
+		"than letterboxing it; the per-shot anchors are the plan's ('Mapping onto the",
+		"templates'). It is the only field a frame may carry that the other surfaces ignore."
 	],
-	"surface": "App Store, iPhone 6.9-inch",
-	"canvas": {
-		"width": 1320,
-		"height": 2868
-	},
-	"template": "iphone-6.9.html",
-	"outDir": "appstore-iphone-6.9",
-	"capture": {
-		"dir": "app-captures/iphone-max",
-		"device": "iphone-max",
-		"viewport": {
-			"width": 430,
-			"height": 932
-		},
-		"dpr": 3,
-		"pixels": {
-			"width": 1290,
-			"height": 2796
-		},
-		"theme": "dark",
-		"scale": "100"
-	},
-	"frames": [
+	"surfaces": [
 		{
-			"slug": "01-session-transcript",
-			"eyebrow": "01 · Sessions",
-			"headline": "Every session on your machine, in your pocket.",
-			"shows": "A running session: turns, tool rows, the tasks and subagents strips, and the composer.",
-			"cell": "S5/populated",
-			"scenario": "every-entry-kind",
-			"expect": [
-				"session-screen"
+			"id": "appstore-iphone-6.9",
+			"surface": "App Store, iPhone 6.9-inch",
+			"canvas": {
+				"width": 1320,
+				"height": 2868
+			},
+			"template": "iphone-6.9.html",
+			"outDir": "appstore-iphone-6.9",
+			"capture": {
+				"dir": "app-captures/iphone-max",
+				"device": "iphone-max",
+				"viewport": {
+					"width": 430,
+					"height": 932
+				},
+				"dpr": 3,
+				"pixels": {
+					"width": 1290,
+					"height": 2796
+				},
+				"theme": "dark",
+				"scale": "100"
+			},
+			"frames": [
+				{
+					"slug": "01-session-transcript",
+					"eyebrow": "01 · Sessions",
+					"headline": "Every session on your machine, in your pocket.",
+					"shows": "A running session: turns, tool rows, the tasks and subagents strips, and the composer.",
+					"cell": "S5/populated",
+					"scenario": "every-entry-kind",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "02-session-diff",
+					"eyebrow": "02 · Code",
+					"headline": "Diffs and code blocks, as your agent writes them.",
+					"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
+					"cell": "S5/rich-rows",
+					"scenario": "store-diff",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "03-approval-card",
+					"eyebrow": "03 · Approvals",
+					"headline": "Approve each command, before it runs.",
+					"shows": "The approval card for a destructive command: Approve, Deny, and the always-allow switch.",
+					"cell": "S8/approval",
+					"scenario": "approval-destructive",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "04-checkpoint-rail",
+					"eyebrow": "04 · Checkpoints",
+					"headline": "Every turn, marked as it finishes.",
+					"shows": "The per-turn checkpoint rail down the transcript's edge: user dashes and completed ticks.",
+					"cell": "S5/rail",
+					"scenario": "store-rail",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "05-session-search",
+					"eyebrow": "05 · Search",
+					"headline": "Find any message in the conversation.",
+					"shows": "The in-conversation find sheet on a query, with its matches and the scope line.",
+					"cell": "S5/find-results",
+					"scenario": "long-transcript",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "06-sessions-remote",
+					"eyebrow": "06 · Computers",
+					"headline": "Every computer's sessions, in one list.",
+					"shows": "The sessions list with another computer's sessions appended to this one's.",
+					"cell": "S15/mesh-remote",
+					"scenario": "store-mesh",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "07-move-receipt",
+					"eyebrow": "07 · Handoff",
+					"headline": "Move a session between your computers.",
+					"shows": "A move's receipt: the phase transcript from prepared to done, and the read it points at.",
+					"cell": "S15/move-receipt",
+					"scenario": "store-move-receipt",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "08-new-chat",
+					"eyebrow": "08 · New chat",
+					"headline": "Ask your agent — it runs on your computer.",
+					"shows": "The home composer, idle: the first thing a new install shows.",
+					"cell": "S4/idle",
+					"scenario": "store-home",
+					"expect": [
+						"home-screen"
+					]
+				},
+				{
+					"slug": "09-sign-in",
+					"eyebrow": "09 · Connect",
+					"headline": "Connect to your own computer.",
+					"shows": "Sign-in, in its real sparse state: the browser finishes the sign-in, so the app never sees the password.",
+					"cell": "path:/sign-in/empty",
+					"scenario": null,
+					"seed": false,
+					"expect": [
+						"sign-in-screen"
+					]
+				}
 			]
 		},
 		{
-			"slug": "02-session-diff",
-			"eyebrow": "02 · Code",
-			"headline": "Diffs and code blocks, as your agent writes them.",
-			"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
-			"cell": "S5/rich-rows",
-			"scenario": "store-diff",
-			"expect": [
-				"session-screen"
+			"id": "appstore-ipad-13",
+			"surface": "App Store, iPad 13-inch",
+			"canvas": {
+				"width": 2064,
+				"height": 2752
+			},
+			"template": "ipad-13.html",
+			"outDir": "appstore-ipad-13",
+			"capture": {
+				"dir": "app-captures/ipad-13",
+				"device": "tablet-pro",
+				"viewport": {
+					"width": 1024,
+					"height": 1366
+				},
+				"dpr": 2,
+				"pixels": {
+					"width": 2048,
+					"height": 2732
+				},
+				"theme": "dark",
+				"scale": "100"
+			},
+			"frames": [
+				{
+					"slug": "01-session-transcript",
+					"eyebrow": "01 · Sessions",
+					"headline": "Every session, on a bigger screen.",
+					"shows": "The tablet transcript: the session list beside the running session, with the two-pane layout the extra width earns.",
+					"cell": "S5/populated",
+					"scenario": "every-entry-kind",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "02-session-diff",
+					"eyebrow": "02 · Code",
+					"headline": "Diffs and code blocks, as your agent writes them.",
+					"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
+					"cell": "S5/rich-rows",
+					"scenario": "store-diff",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "03-approval-card",
+					"eyebrow": "03 · Approvals",
+					"headline": "Approve each command, before it runs.",
+					"shows": "The approval card for a destructive command: Approve, Deny, and the always-allow switch.",
+					"cell": "S8/approval",
+					"scenario": "approval-destructive",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "04-checkpoint-rail",
+					"eyebrow": "04 · Checkpoints",
+					"headline": "Every turn, marked as it finishes.",
+					"shows": "The per-turn checkpoint rail down the transcript's edge: user dashes and completed ticks.",
+					"cell": "S5/rail",
+					"scenario": "store-rail",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "05-session-search",
+					"eyebrow": "05 · Search",
+					"headline": "Find any message in the conversation.",
+					"shows": "The in-conversation find sheet on a query, with its matches and the scope line.",
+					"cell": "S5/find-results",
+					"scenario": "long-transcript",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "06-sessions-remote",
+					"eyebrow": "06 · Computers",
+					"headline": "Every computer's sessions, in one list.",
+					"shows": "The sessions list with another computer's sessions appended to this one's.",
+					"cell": "S15/mesh-remote",
+					"scenario": "store-mesh",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "07-move-receipt",
+					"eyebrow": "07 · Handoff",
+					"headline": "Move a session between your computers.",
+					"shows": "A move's receipt: the phase transcript from prepared to done, and the read it points at.",
+					"cell": "S15/move-receipt",
+					"scenario": "store-move-receipt",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "08-new-chat",
+					"eyebrow": "08 · New chat",
+					"headline": "Ask your agent — it runs on your computer.",
+					"shows": "The home composer, idle: the first thing a new install shows.",
+					"cell": "S4/idle",
+					"scenario": "store-home",
+					"expect": [
+						"home-screen"
+					]
+				},
+				{
+					"slug": "09-sign-in",
+					"eyebrow": "09 · Connect",
+					"headline": "Connect to your own computer.",
+					"shows": "Sign-in, in its real sparse state: the browser finishes the sign-in, so the app never sees the password.",
+					"cell": "path:/sign-in/empty",
+					"scenario": null,
+					"seed": false,
+					"expect": [
+						"sign-in-screen"
+					]
+				}
 			]
 		},
 		{
-			"slug": "03-approval-card",
-			"eyebrow": "03 · Approvals",
-			"headline": "Approve each command, before it runs.",
-			"shows": "The approval card for a destructive command: Approve, Deny, and the always-allow switch.",
-			"cell": "S8/approval",
-			"scenario": "approval-destructive",
-			"expect": [
-				"session-screen"
-			]
-		},
-		{
-			"slug": "04-checkpoint-rail",
-			"eyebrow": "04 · Checkpoints",
-			"headline": "Every turn, marked as it finishes.",
-			"shows": "The per-turn checkpoint rail down the transcript's edge: user dashes and completed ticks.",
-			"cell": "S5/rail",
-			"scenario": "store-rail",
-			"expect": [
-				"session-screen"
-			]
-		},
-		{
-			"slug": "05-session-search",
-			"eyebrow": "05 · Search",
-			"headline": "Find any message in the conversation.",
-			"shows": "The in-conversation find sheet on a query, with its matches and the scope line.",
-			"cell": "S5/find-results",
-			"scenario": "long-transcript",
-			"expect": [
-				"session-screen"
-			]
-		},
-		{
-			"slug": "06-sessions-remote",
-			"eyebrow": "06 · Computers",
-			"headline": "Every computer's sessions, in one list.",
-			"shows": "The sessions list with another computer's sessions appended to this one's.",
-			"cell": "S15/mesh-remote",
-			"scenario": "store-mesh",
-			"expect": [
-				"sessions-screen"
-			]
-		},
-		{
-			"slug": "07-move-receipt",
-			"eyebrow": "07 · Handoff",
-			"headline": "Move a session between your computers.",
-			"shows": "A move's receipt: the phase transcript from prepared to done, and the read it points at.",
-			"cell": "S15/move-receipt",
-			"scenario": "store-move-receipt",
-			"expect": [
-				"sessions-screen"
-			]
-		},
-		{
-			"slug": "08-new-chat",
-			"eyebrow": "08 · New chat",
-			"headline": "Ask your agent — it runs on your computer.",
-			"shows": "The home composer, idle: the first thing a new install shows.",
-			"cell": "S4/idle",
-			"scenario": "store-home",
-			"expect": [
-				"home-screen"
-			]
-		},
-		{
-			"slug": "09-sign-in",
-			"eyebrow": "09 · Connect",
-			"headline": "Connect to your own computer.",
-			"shows": "Sign-in, in its real sparse state: the browser finishes the sign-in, so the app never sees the password.",
-			"cell": "path:/sign-in/empty",
-			"scenario": null,
-			"seed": false,
-			"expect": [
-				"sign-in-screen"
+			"id": "play-phone",
+			"surface": "Google Play, phone",
+			"canvas": {
+				"width": 1080,
+				"height": 1920
+			},
+			"template": "play-phone.html",
+			"outDir": "play-phone",
+			"capture": {
+				"dir": "app-captures/play-phone",
+				"device": "android-small",
+				"viewport": {
+					"width": 360,
+					"height": 780
+				},
+				"dpr": 3,
+				"pixels": {
+					"width": 1080,
+					"height": 2340
+				},
+				"theme": "dark",
+				"scale": "100"
+			},
+			"frames": [
+				{
+					"slug": "01-session-transcript",
+					"eyebrow": "01 · Sessions",
+					"headline": "Every session on your machine, in your pocket.",
+					"shows": "A running session: turns, tool rows, the tasks and subagents strips, and the composer.",
+					"cell": "S5/populated",
+					"scenario": "every-entry-kind",
+					"crop": "top",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "02-session-diff",
+					"eyebrow": "02 · Code",
+					"headline": "Diffs and code blocks, as your agent writes them.",
+					"shows": "A real fenced diff, a fenced code block and two tables, with the rows that own the copy control.",
+					"cell": "S5/rich-rows",
+					"scenario": "store-diff",
+					"crop": "top",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "03-approval-card",
+					"eyebrow": "03 · Approvals",
+					"headline": "Approve each command, before it runs.",
+					"shows": "The approval card for a destructive command: Approve, Deny, and the always-allow switch.",
+					"cell": "S8/approval",
+					"scenario": "approval-destructive",
+					"crop": "bottom",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "04-checkpoint-rail",
+					"eyebrow": "04 · Checkpoints",
+					"headline": "Every turn, marked as it finishes.",
+					"shows": "The per-turn checkpoint rail down the transcript's edge: user dashes and completed ticks.",
+					"cell": "S5/rail",
+					"scenario": "store-rail",
+					"crop": "top",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "05-session-search",
+					"eyebrow": "05 · Search",
+					"headline": "Find any message in the conversation.",
+					"shows": "The in-conversation find sheet on a query, with its matches and the scope line.",
+					"cell": "S5/find-results",
+					"scenario": "long-transcript",
+					"crop": "bottom",
+					"expect": [
+						"session-screen"
+					]
+				},
+				{
+					"slug": "06-sessions-remote",
+					"eyebrow": "06 · Computers",
+					"headline": "Every computer's sessions, in one list.",
+					"shows": "The sessions list with another computer's sessions appended to this one's.",
+					"cell": "S15/mesh-remote",
+					"scenario": "store-mesh",
+					"crop": "top",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "07-move-receipt",
+					"eyebrow": "07 · Handoff",
+					"headline": "Move a session between your computers.",
+					"shows": "A move's receipt: the phase transcript from prepared to done, and the read it points at.",
+					"cell": "S15/move-receipt",
+					"scenario": "store-move-receipt",
+					"crop": "bottom",
+					"expect": [
+						"sessions-screen"
+					]
+				},
+				{
+					"slug": "08-new-chat",
+					"eyebrow": "08 · New chat",
+					"headline": "Ask your agent — it runs on your computer.",
+					"shows": "The home composer, idle: the first thing a new install shows.",
+					"cell": "S4/idle",
+					"scenario": "store-home",
+					"crop": "bottom",
+					"expect": [
+						"home-screen"
+					]
+				}
 			]
 		}
 	]

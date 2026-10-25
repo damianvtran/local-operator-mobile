@@ -560,113 +560,119 @@ if (target === "feature" || target === "all") {
 /* ---- 4. store-screenshot frames --------------------------------------- */
 
 if (target === "frames" || target === "all") {
-	/* Frames are scratch output, not committed artefacts, so `--check` renders
-	 * them only to assert their SIZES against the store specs — the templates are
-	 * what is committed, and the frames are what an implementation pass fills in. */
+	/* A template rendered with no query is not a listing: it is the empty slot,
+	 * and it is rendered only so its canvas can be asserted against the store's
+	 * spec. One surface at a time, from frames.json, so a template and the
+	 * committed set rendered from it cannot disagree about a canvas. */
 	const outDir = check
 		? `${scratch}/frames`
 		: new URL("store-screenshots/out/", root).pathname;
 	mkdirSync(outDir, { recursive: true });
-	const specs = [
-		["iphone-6.9", 1320, 2868, 1],
-		["ipad-13", 2064, 2752, 1],
-		["play-phone", 1080, 1920, 1],
-	];
-	for (const [name, width, height, dpr] of specs) {
+	const set = JSON.parse(
+		readFileSync(new URL("store-screenshots/frames.json", root), "utf8"),
+	);
+	for (const surface of set.surfaces) {
 		const pagep = await openPage({
-			file: `design/store-screenshots/${name}.html`,
-			width,
-			height,
-			dpr,
+			file: `design/store-screenshots/${surface.template}`,
+			width: surface.canvas.width,
+			height: surface.canvas.height,
+			dpr: 1,
 			theme: "dark",
 		});
 		const png = await pagep.shot();
-		const path = `${outDir}/${name}.png`;
+		const path = `${outDir}/${surface.id}.png`;
 		writeFileSync(path, png);
 		const { width: w, height: h } = pngDimensions(png);
-		const ok = w === width && h === height;
+		const ok = w === surface.canvas.width && h === surface.canvas.height;
 		console.log(
-			`${name}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${width}x${height})`}`,
+			`${surface.id}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${surface.canvas.width}x${surface.canvas.height})`}`,
 		);
 		if (!ok) process.exitCode = 1;
 		previewTargets.push(path);
 	}
 
 	/* The committed listings: one PNG per frame in `frames.json`, rendered from
-	 * the same template with that frame's caption and capture as data. These ARE
-	 * committed artefacts (the set the store takes), so `--check` verifies them
-	 * byte-for-byte like the preview sheet, and the canvas size is asserted on
-	 * every one — an off-size listing is rejected by the store, not resized. */
-	const set = JSON.parse(
-		readFileSync(new URL("store-screenshots/frames.json", root), "utf8"),
-	);
-	const frameDir = new URL(`store-screenshots/${set.outDir}/`, root).pathname;
-	if (!check) mkdirSync(frameDir, { recursive: true });
-	for (const frame of set.frames) {
-		const capture = `${set.capture.dir}/${frame.slug}.png`;
-		const pagep = await openPage({
-			file: `design/store-screenshots/${set.template}`,
-			width: set.canvas.width,
-			height: set.canvas.height,
-			dpr: 1,
-			theme: "dark",
-			query: {
+	 * the surface's template with that frame's caption and capture as data. These
+	 * ARE committed artefacts (the set the store takes), so `--check` verifies
+	 * every surface's frames byte-for-byte like the preview sheet, and the canvas
+	 * size is asserted on every one — an off-size listing is rejected by the
+	 * store, not resized. */
+	for (const surface of set.surfaces) {
+		const frameDir = new URL(`store-screenshots/${surface.outDir}/`, root).pathname;
+		if (!check) mkdirSync(frameDir, { recursive: true });
+		for (const frame of surface.frames) {
+			const capture = `${surface.capture.dir}/${frame.slug}.png`;
+			const query = {
 				eyebrow: frame.eyebrow,
 				headline: frame.headline,
 				capture,
-			},
-		});
-		/* The slot's image is decoded before the shot is taken, and its OWN pixel
-		 * size is asserted against the capture spec: a wrong path renders a broken
-		 * image, which is a plausible blank at exactly the right canvas size. */
-		await pagep.evaluate(
-			"Promise.all([...document.images].map((i) => i.decode().catch(() => null)))",
-		);
-		const shown = await pagep.evaluate(
-			'(() => { const i = document.getElementById("capture"); return i === null ? null : { w: i.naturalWidth, h: i.naturalHeight }; })()',
-		);
-		if (
-			shown === null ||
-			shown.w !== set.capture.pixels.width ||
-			shown.h !== set.capture.pixels.height
-		) {
-			console.error(
-				`PROBLEM: ${frame.slug} — the slot shows ` +
-					`${shown === null ? "no image" : `${shown.w}x${shown.h}`} where ${capture} should be ` +
-					`${set.capture.pixels.width}x${set.capture.pixels.height}`,
+			};
+			/* Play's slot is taller than a phone screen, so the capture is anchored
+			 * to the top or bottom edge inside it and the template crops the rest
+			 * (`frames.json` names the edge per shot); the App Store templates have
+			 * no crop and are not sent one. */
+			if (frame.crop) query.crop = frame.crop;
+			const pagep = await openPage({
+				file: `design/store-screenshots/${surface.template}`,
+				width: surface.canvas.width,
+				height: surface.canvas.height,
+				dpr: 1,
+				theme: "dark",
+				query,
+			});
+			/* The slot's image is decoded before the shot is taken, and its OWN
+			 * pixel size is asserted against the capture spec: a wrong path renders a
+			 * broken image, which is a plausible blank at exactly the right canvas
+			 * size. */
+			await pagep.evaluate(
+				"Promise.all([...document.images].map((i) => i.decode().catch(() => null)))",
 			);
-			process.exitCode = 1;
-			continue;
-		}
-		/* No build metadata on a store asset. The template used to draw a spec
-		 * block ("App Store · 6.9\"", "1320 × 2868 @1x", the alt-size list) beside
-		 * its wordmark; that describes the FILE to a maintainer and would have
-		 * shipped inside every listing (review round 1, Q1). Asserted here rather
-		 * than trusted to stay deleted: the canvas size and the alt sizes belong in
-		 * this script's own output, not in the image. */
-		const meta = await pagep.evaluate(`(() => {
-			const hit = /(\\d{3,4}\\s*×\\s*\\d{3,4})|@1x|\\balt:/i.exec(document.body.innerText);
-			return { hit: hit === null ? null : hit[0], spec: document.querySelector(".spec") !== null };
-		})()`);
-		if (meta === null || meta.hit !== null || meta.spec) {
-			console.error(
-				`PROBLEM: ${frame.slug} — the composed frame carries build metadata ` +
-					`(${meta === null ? "the check could not run" : meta.spec ? "a .spec block" : JSON.stringify(meta.hit)})`,
+			const shown = await pagep.evaluate(
+				'(() => { const i = document.getElementById("capture"); return i === null ? null : { w: i.naturalWidth, h: i.naturalHeight }; })()',
 			);
-			process.exitCode = 1;
-			continue;
+			if (
+				shown === null ||
+				shown.w !== surface.capture.pixels.width ||
+				shown.h !== surface.capture.pixels.height
+			) {
+				console.error(
+					`PROBLEM: ${surface.id}/${frame.slug} — the slot shows ` +
+						`${shown === null ? "no image" : `${shown.w}x${shown.h}`} where ${capture} should be ` +
+						`${surface.capture.pixels.width}x${surface.capture.pixels.height}`,
+				);
+				process.exitCode = 1;
+				continue;
+			}
+			/* No build metadata on a store asset. The templates used to draw a spec
+			 * block ("App Store · 6.9\"", "1320 × 2868 @1x", the alt-size list) beside
+			 * their wordmark; that describes the FILE to a maintainer and would have
+			 * shipped inside every listing (review round 1, Q1). Asserted here rather
+			 * than trusted to stay deleted: the canvas size and the alt sizes belong in
+			 * this script's own output, not in the image. */
+			const meta = await pagep.evaluate(`(() => {
+				const hit = /(\\d{3,4}\\s*×\\s*\\d{3,4})|@1x|\\balt:/i.exec(document.body.innerText);
+				return { hit: hit === null ? null : hit[0], spec: document.querySelector(".spec") !== null };
+			})()`);
+			if (meta === null || meta.hit !== null || meta.spec) {
+				console.error(
+					`PROBLEM: ${surface.id}/${frame.slug} — the composed frame carries build metadata ` +
+						`(${meta === null ? "the check could not run" : meta.spec ? "a .spec block" : JSON.stringify(meta.hit)})`,
+				);
+				process.exitCode = 1;
+				continue;
+			}
+			const png = await pagep.shot();
+			const { width: w, height: h } = pngDimensions(png);
+			const ok = w === surface.canvas.width && h === surface.canvas.height;
+			console.log(
+				`${surface.id}/${frame.slug}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${surface.canvas.width}x${surface.canvas.height})`} · capture ${shown.w}x${shown.h}`,
+			);
+			if (!ok) {
+				process.exitCode = 1;
+				continue;
+			}
+			save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24 });
 		}
-		const png = await pagep.shot();
-		const { width: w, height: h } = pngDimensions(png);
-		const ok = w === set.canvas.width && h === set.canvas.height;
-		console.log(
-			`${frame.slug}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${set.canvas.width}x${set.canvas.height})`} · capture ${shown.w}x${shown.h}`,
-		);
-		if (!ok) {
-			process.exitCode = 1;
-			continue;
-		}
-		save(png, `${frameDir}${frame.slug}.png`, { reencode: stripAlpha24 });
 	}
 }
 

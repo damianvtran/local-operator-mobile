@@ -132,12 +132,13 @@ required once `android` is enabled.
 
 ## Store assets — produced, parked with the work
 
-- **26 frames verified off `main`** (the `02da0334` tree; the set — counts,
-  order, theme, captions — is defined in
-  [`listing-screenshots.md`](./listing-screenshots.md)): App Store 6.9" ×9
-  (1320×2868), **iPad 13" ×9 (2064×2752)**, Play ×8 (1080×1920), plus
-  `MANIFEST.sha256` and raw captures. They survive in the parity lane's session
-  scratchpad, `~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/`
+- **26 frames committed in `design/store-screenshots/`** (rendered from the
+  current tree on 2026-10-25; the set — counts, order, theme, captions — is
+  defined in [`listing-screenshots.md`](./listing-screenshots.md)): App Store 6.9"
+  ×9 (1320×2868), **iPad 13" ×9 (2064×2752)**, Play ×8 (1080×1920), plus the raw
+  app captures beside them. An earlier parity lane's copy of the same 26, verified
+  off the `02da0334` tree, survives in its session scratchpad,
+  `~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/`
   (`MANIFEST.sha256` verifies 26/26); the `store-shots` worktree that rendered
   them has been pruned.
 - **The iPad class is required**, not optional: the app sets `supportsTablet: true`
@@ -153,24 +154,29 @@ required once `android` is enabled.
   1290×2796**, or 440×956 → 1320×2868); and `node design/preview/capture.mjs
   --target frames --check` asserted sizes only, so it could not catch a silent
   font fallback — add a rendered-font assertion.
-  *Both are settled for the iPhone set committed in
-  `design/store-screenshots/appstore-iphone-6.9/`. Its captures are `iphone-max` at
-  3x — 1290 × 2796, the first pair — and the frame template loads the SHIPPED
+  *Both are settled for the committed sets in `design/store-screenshots/` — the
+  iPhone, iPad and Play frames alike. Their captures are `iphone-max` at 3x
+  (1290 × 2796), `tablet-pro` at 2x (2048 × 2732) and `android-small` at 3x
+  (1080 × 2340) — and every frame template loads the SHIPPED
   faces from `design/fonts/*.woff2`, so no sibling checkout is involved in how the
   captions render. `--target frames --check` now re-renders each committed listing
-  frame and compares it — bytes where the encoder matches the rendering machine,
-  pixels otherwise, and it prints which — so a caption or font change fails the
-  gate rather than shipping, and CI runs that check as its own hard step. A
-  rendered-font assertion that names the face is still open as a separate nicety.*
-  *The spec colophon is no longer on these frames: review round 1 removed it from
-  the template and the render now fails a composed frame that carries build
-  metadata. The loopback route on 06–08 is still open, and it is on the checklist
-  (C2) rather than only here.*
-- **Template facts:** the compose pipeline is committed and fixed (vendored
-  `@font-face`, PR #70); the per-shot caption copy is editable in one re-render;
-  the iPad caption rhythm wants ~16 px loosening; the spec colophon on each frame
-  is a decide-once item at the re-shoot. Play caps screenshots at 8 per device
-  type; Apple wants 1–10 per size at the 6.9" class.
+  frame on every surface and compares it — bytes where the encoder matches the
+  rendering machine, pixels otherwise, and it prints which — so a font fallback or
+  caption change fails the gate rather than shipping, and CI runs that check as its
+  own hard step. A rendered-font assertion that names the face is still open as a
+  separate nicety.*
+  *The spec colophon is no longer on any of these frames: review round 1 removed it
+  from the iPhone template, the iPad and Play templates were rendered without one,
+  and the render now fails a composed frame that carries build metadata. The
+  loopback route on 06–08 is still open, and it is on the checklist (C2) rather
+  than only here.*
+- **Template facts:** the compositor pipeline is committed and fixed (font faces
+  are vendored in the repository, and `design/preview/capture.mjs --target frames`
+  renders all three surfaces); the per-shot copy is in `frames.json` and re-renders
+  in one command; the iPad band was authored at the iPhone's proportions scaled by
+  2064/1320 and may still want ~16 px of loosening at review. Spec colophons are
+  gone from every frame and the render rejects one that reappears. Play caps
+  screenshots at 8 per device type; Apple wants 1–10 per size at the 6.9" class.
 
 ## Out of scope of this park (still moving)
 
