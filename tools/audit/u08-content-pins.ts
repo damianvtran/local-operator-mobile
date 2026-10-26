@@ -124,8 +124,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * the driver since the auth-fence work on this branch and was never pinned — the
 	 * coverage test caught it as a gap rather than a drift, so the entry is added
 	 * here (same batch) instead of leaving a module the driver runs unguarded. */
+	/* Re-pinned with the D9 capacity fix (4c67362): the ledger's byte ceiling is a
+	 * guard the driver's own evidence path depends on, so its bytes are pinned like
+	 * the rest of the instrument. Only the constant moved. */
 	"tools/mock-relay/startup.ts":
-		"45263674dd997205829e4b11b520a25e4ffbacc5d706a6107114ca655e257f24",
+		"e51390abdcec9e3e88d674304f1b236bc0b991e12e65f166e8f89567c1bd38ca",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
