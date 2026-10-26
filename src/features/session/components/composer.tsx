@@ -714,13 +714,85 @@ export const Composer = ({
 		</>
 	);
 
+	// Metadata wraps within the toolbar, never reducing the editor's width.
+	const receipt = (
+		<View
+			onLayout={(event) =>
+				setReceiptHeight(Math.round(event.nativeEvent.layout.height))
+			}
+			className={
+				compact === null
+					? "min-w-0 flex-1 flex-row flex-wrap items-center gap-1"
+					: "min-w-0 flex-1 flex-row flex-wrap items-center gap-1"
+			}
+		>
+			{leadingChip}
+			{queuedCount > 0 ? (
+				<Text
+					className="text-mono-sm text-ink-dim"
+					testID={SURFACE.queuedMessageChip}
+				>
+					{queuedCount} queued
+				</Text>
+			) : null}
+			<ComposerChipButton
+				chip={modelChip}
+				onPress={onOpenModels}
+				chooseHint="Choose the model"
+				// Sized to the settled chip (measured 119.6 pt with a model name):
+				// a bar that is too short makes the swap jump sideways.
+				loadingWidthClassName="w-24"
+				testID={CONTROL.composerModelChip}
+			/>
+			{effortChip ? (
+				<ComposerChipButton
+					chip={effortChip}
+					onPress={onOpenEffort}
+					chooseHint="Choose the effort"
+					loadingWidthClassName="w-7"
+					testID={CONTROL.composerEffortChip}
+				/>
+			) : null}
+			{/* The voice mic: shown only when the relay says voice input can run here AND
+				    this build can record (`voice.micVisible`). Absence of `capabilities.stt`
+				    is unavailable, so an older relay simply never renders it.
+
+				    It sits on the receipt line, NOT in the field's row, because a control in
+				    that row costs the field its width: 48 target + the 8 gap took the 320 pt
+				    field's content box from 166 to 110 px, which wrapped the placeholder to
+				    two lines at 100 % and four at 200 % (breaking mid-word, since even
+				    "Message" no longer fit) and grew the resting composer to 55 % of the
+				    viewport, clipping the last transcript row (design round 1, D1/D2). Here it
+				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
+				    can push it to a second line rather than squeeze the field. */}
+			{voice?.micVisible ? (
+				<IconButton
+					accessibilityLabel={micLabel(voice.phase)}
+					accessibilityHint={MIC_HINT[voice.phase]}
+					disabled={voice.phase === "transcribing"}
+					outlined
+					onPress={voice.press}
+					icon={({ color, size }) =>
+						voice.phase === "recording" ? (
+							<Square color={color} size={size} />
+						) : (
+							<Mic color={color} size={size} />
+						)
+					}
+					testID={CONTROL.composerMic}
+				/>
+			) : null}
+		</View>
+	);
+
 	const main = (
 		<>
-			<View className="flex-row items-end gap-2">
-				<View className="min-w-0 flex-1">
+			<View className="gap-1">
+				<View className="w-full min-w-0">
 					<Textarea
 						label="Message"
-						hideLabel={compact !== null}
+						hideLabel
+						integrated
 						value={draft}
 						onChangeText={onDraftChange}
 						placeholder={COMPOSER_COPY.placeholder}
@@ -739,68 +811,73 @@ export const Composer = ({
 						testID={CONTROL.composerInput}
 					/>
 				</View>
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel="Attach an image"
-					accessibilityState={state({ busy: attaching, disabled: attaching })}
-					disabled={attaching}
-					onPress={() => setAttachSheetOpen(true)}
-					testID={CONTROL.composerAttach}
-				>
-					<View className="h-11 w-11 items-center justify-center rounded-full border border-control">
-						{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
-						 *  `text-ink-muted` inherits the stylesheet's fixed 14 px and never reads a
-						 *  `--text-*` role, so the glyph ignored the reader's text size — the same
-						 *  defect the splash's suggestion labels were fixed for. Its cost is to the
-						 *  MEASUREMENT as much as the reader: at 200 % every text node around it
-						 *  doubles and this one does not, so it sits at the 100 %-median height and
-						 *  drags the run-level median down — the drawer's own `S15/populated` 200 %
-						 *  cells were reported UNREADY ("median text 34.796875px at 200% against
-						 *  1.74x the 100% cell"), which makes `audit:capture` exit 1 for any cell
-						 *  set containing the populated drawer. `body-sm` (14 px / 400) is the step
-						 *  the glyph already PAINTS, so 100 % is unchanged and the glyph now scales
-						 *  with everything beside it. `aria-hidden` stays: the label a reader hears
-						 *  is the button's own ("Attach an image"). */}
-						<Text className="text-body-sm text-ink-muted" aria-hidden>
-							＋
-						</Text>
-					</View>
-				</Pressable>
-				{controls.stopVisible ? (
+				<View className="flex-row items-center gap-1">
 					<Pressable
+						style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 						accessibilityRole={ROLE.button}
-						accessibilityLabel="Stop the running turn"
-						onPress={onStop}
-						testID={CONTROL.composerStop}
+						accessibilityLabel="Attach an image"
+						accessibilityState={state({ busy: attaching, disabled: attaching })}
+						disabled={attaching}
+						onPress={() => setAttachSheetOpen(true)}
+						testID={CONTROL.composerAttach}
 					>
-						<View className="h-11 w-11 items-center justify-center rounded-full border border-danger-border">
-							<Text className="text-danger" aria-hidden>
-								■
+						<View className="h-11 w-11 items-center justify-center">
+							{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
+							 *  `text-ink-muted` inherits the stylesheet's fixed 14 px and never reads a
+							 *  `--text-*` role, so the glyph ignored the reader's text size — the same
+							 *  defect the splash's suggestion labels were fixed for. Its cost is to the
+							 *  MEASUREMENT as much as the reader: at 200 % every text node around it
+							 *  doubles and this one does not, so it sits at the 100 %-median height and
+							 *  drags the run-level median down — the drawer's own `S15/populated` 200 %
+							 *  cells were reported UNREADY ("median text 34.796875px at 200% against
+							 *  1.74x the 100% cell"), which makes `audit:capture` exit 1 for any cell
+							 *  set containing the populated drawer. `body-sm` (14 px / 400) is the step
+							 *  the glyph already PAINTS, so 100 % is unchanged and the glyph now scales
+							 *  with everything beside it. `aria-hidden` stays: the label a reader hears
+							 *  is the button's own ("Attach an image"). */}
+							<Text className="text-body-sm text-ink-muted" aria-hidden>
+								＋
 							</Text>
 						</View>
 					</Pressable>
-				) : null}
-				{/* The width is PINNED, whatever the label: a control that grows when it
+					{receipt}
+					{controls.stopVisible ? (
+						<Pressable
+							accessibilityRole={ROLE.button}
+							accessibilityLabel="Stop the running turn"
+							style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+							onPress={onStop}
+							testID={CONTROL.composerStop}
+						>
+							<View className="h-11 w-11 items-center justify-center rounded-full border border-danger-border">
+								<Text className="text-danger" aria-hidden>
+									■
+								</Text>
+							</View>
+						</Pressable>
+					) : null}
+					{/* The width is PINNED, whatever the label: a control that grows when it
 				    morphs moves everything after it, which on a phone means it moves under
 				    the thumb about to press it. */}
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={controls.primary.accessibilityLabel}
-					accessibilityState={state({
-						disabled: controls.primary.disabled,
-						busy: controls.sending,
-					})}
-					disabled={controls.primary.disabled}
-					onPress={onSend}
-					testID={CONTROL.composerSend}
-				>
-					<View
-						className={cx(
-							"h-11 w-11 items-center justify-center rounded-full",
-							controls.primary.disabled ? "bg-sunken" : "bg-accent",
-						)}
+					<Pressable
+						accessibilityRole={ROLE.button}
+						accessibilityLabel={controls.primary.accessibilityLabel}
+						style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+						accessibilityState={state({
+							disabled: controls.primary.disabled,
+							busy: controls.sending,
+						})}
+						disabled={controls.primary.disabled}
+						onPress={onSend}
+						testID={CONTROL.composerSend}
 					>
-						{/* The disabled ink is the kit's own constant, not a local choice: this
+						<View
+							className={cx(
+								"h-11 w-11 items-center justify-center rounded-full",
+								controls.primary.disabled ? "bg-sunken" : "bg-accent",
+							)}
+						>
+							{/* The disabled ink is the kit's own constant, not a local choice: this
 						    control is the only one in the app that hand-rolls the primary's
 						    disabled treatment instead of going through `Button`, and it was the
 						    one place still painting a disabled label in `ink-disabled` — 2.42:1 on
@@ -809,18 +886,19 @@ export const Composer = ({
 						    own stricter rule being missed: a label NAMES the action, so
 						    `CONTROL_DISABLED_INK` is `ink-dim` and `variants.test.ts` pins it. That
 						    is 5.02:1 light, 6.59:1 dark. */}
-						<Text
-							className={cx(
-								"text-body-sm font-medium",
-								controls.primary.disabled
-									? CONTROL_DISABLED_INK
-									: "text-on-accent",
-							)}
-						>
-							{controls.primary.label}
-						</Text>
-					</View>
-				</Pressable>
+							<Text
+								className={cx(
+									"text-body-sm font-medium",
+									controls.primary.disabled
+										? CONTROL_DISABLED_INK
+										: "text-on-accent",
+								)}
+							>
+								{controls.primary.label}
+							</Text>
+						</View>
+					</Pressable>
+				</View>
 			</View>
 			{/* The dictation row (design §2.5): a line that SPANS the composer, holding
 			    one height across recording, transcribing and the three outcome states, so
@@ -883,83 +961,6 @@ export const Composer = ({
 				</View>
 			) : null}
 
-			{/* The receipt line: the queued count is the only thing here that changes on
-			    its own, and the chips are the reader's two levers on the turn.
-
-			    `flex-wrap` is what keeps the levers REACHABLE at 200 % platform text
-			    (design round 4, D28): the model chip's label alone is 213 pt there, so a
-			    nowrap row put the effort chip entirely beyond a 320 pt viewport
-			    (measured: `composer-effort-chip` 267.2 → 336.4 at 150 %, 335.6 → 419.2 at
-			    200 %) — a control no finger can reach. Wrapping costs a second line only
-			    at the scales that need one, and takes nothing away at 100 %. */}
-			<View
-				onLayout={(event) =>
-					setReceiptHeight(Math.round(event.nativeEvent.layout.height))
-				}
-				className={
-					compact === null
-						? "flex-row flex-wrap items-center gap-2 pt-2"
-						: "flex-row flex-wrap items-center gap-2 pt-1"
-				}
-			>
-				{leadingChip}
-				{queuedCount > 0 ? (
-					<Text
-						className="text-mono-sm text-ink-dim"
-						testID={SURFACE.queuedMessageChip}
-					>
-						{queuedCount} queued
-					</Text>
-				) : null}
-				<View className="flex-1" />
-				<ComposerChipButton
-					chip={modelChip}
-					onPress={onOpenModels}
-					chooseHint="Choose the model"
-					// Sized to the settled chip (measured 119.6 pt with a model name):
-					// a bar that is too short makes the swap jump sideways.
-					loadingWidthClassName="w-24"
-					testID={CONTROL.composerModelChip}
-				/>
-				{effortChip ? (
-					<ComposerChipButton
-						chip={effortChip}
-						onPress={onOpenEffort}
-						chooseHint="Choose the effort"
-						loadingWidthClassName="w-7"
-						testID={CONTROL.composerEffortChip}
-					/>
-				) : null}
-				{/* The voice mic: shown only when the relay says voice input can run here AND
-				    this build can record (`voice.micVisible`). Absence of `capabilities.stt`
-				    is unavailable, so an older relay simply never renders it.
-
-				    It sits on the receipt line, NOT in the field's row, because a control in
-				    that row costs the field its width: 48 target + the 8 gap took the 320 pt
-				    field's content box from 166 to 110 px, which wrapped the placeholder to
-				    two lines at 100 % and four at 200 % (breaking mid-word, since even
-				    "Message" no longer fit) and grew the resting composer to 55 % of the
-				    viewport, clipping the last transcript row (design round 1, D1/D2). Here it
-				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
-				    can push it to a second line rather than squeeze the field. */}
-				{voice?.micVisible ? (
-					<IconButton
-						accessibilityLabel={micLabel(voice.phase)}
-						accessibilityHint={MIC_HINT[voice.phase]}
-						disabled={voice.phase === "transcribing"}
-						outlined
-						onPress={voice.press}
-						icon={({ color, size }) =>
-							voice.phase === "recording" ? (
-								<Square color={color} size={size} />
-							) : (
-								<Mic color={color} size={size} />
-							)
-						}
-						testID={CONTROL.composerMic}
-					/>
-				) : null}
-			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />
@@ -1010,8 +1011,8 @@ export const Composer = ({
 			onLayout={onLayout}
 			className={
 				compact === null
-					? "border-t border-hairline px-4 pt-2 pb-2"
-					: "border-t border-hairline px-4 pt-1 pb-1"
+					? "mx-3 mb-2 rounded-xl bg-elevated px-2 pt-2 pb-2"
+					: "mx-3 mb-1 rounded-xl bg-elevated px-2 pt-1 pb-1"
 			}
 			testID={testID}
 		>

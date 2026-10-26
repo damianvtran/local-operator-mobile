@@ -51,6 +51,7 @@ import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
@@ -569,6 +570,14 @@ export default function Home({
 				headerLeading={
 					split ? undefined : (
 						<View className="flex-row items-center gap-1">
+							<IconButton
+								accessibilityLabel="Open conversations"
+								onPress={() => setPanelOpen(true)}
+								icon={({ color, size }) => <Menu color={color} size={size} />}
+								size={24}
+								testID={CONTROL.homeSidebar}
+							/>
+							<NavigationMark />
 							{badgeCount !== null && badgeCount > 0 ? (
 								<Badge
 									label={`${badgeCount}`}
@@ -580,12 +589,6 @@ export default function Home({
 									accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
 								/>
 							) : null}
-							<IconButton
-								accessibilityLabel="Open conversations"
-								onPress={() => setPanelOpen(true)}
-								icon={({ color, size }) => <Menu color={color} size={size} />}
-								testID={CONTROL.homeSidebar}
-							/>
 						</View>
 					)
 				}

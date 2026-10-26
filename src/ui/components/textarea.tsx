@@ -35,6 +35,8 @@ export type TextareaProps = {
 	 *  of a 390 pt screen and the placeholder already says what the field is. The name
 	 *  is never removed: `accessibilityLabel` below still carries it. */
 	hideLabel?: boolean;
+	/** Composer owns the outer surface; keep the focus/invalid indication here. */
+	integrated?: boolean;
 	/** A HARD pixel ceiling on the field's height, applied on top of `maxLines`. For the
 	 *  short-landscape composer, whose budget is the screen's height and not a line count:
 	 *  past it the field scrolls itself, so the controls beside and below it never leave
@@ -102,6 +104,7 @@ export const Textarea = ({
 	invalid = false,
 	disabled = false,
 	hideLabel = false,
+	integrated = false,
 	maxLines = 6,
 	maxHeightPx,
 	placeholderMaxLines,
@@ -241,7 +244,7 @@ export const Textarea = ({
 				) : null}
 				<TextInput
 					ref={resolvedRef}
-					className={fieldClasses(fieldState)}
+					className={fieldClasses(fieldState, { inComposer: integrated })}
 					/* One `style`, because a textarea's box IS its visual: the growing height
 					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
 					 *  web/audit profile) have to be resolved together (D6). */

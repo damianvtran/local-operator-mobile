@@ -53,6 +53,7 @@ import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
 import { tailFit } from "@/ui/components/list-row-meta";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
@@ -283,7 +284,7 @@ export const ConversationsPane = ({
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (
 		<View
-			className="gap-2 border-hairline border-t px-2 pb-2 pt-2"
+			className="gap-2 bg-sunken px-2 pb-2 pt-3"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		>
 			<View className="flex-row flex-wrap gap-2">
@@ -366,7 +367,8 @@ export const ConversationsPane = ({
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
 			{/* ---- the header row: switcher・search・close (close: drawer only) ---- */}
-			<View className="flex-row items-center gap-1 px-2">
+			<View className="flex-row items-center gap-2 px-3 py-2">
+				<NavigationMark size={32} />
 				<Pressable
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={`${switcherLabel} — choose a computer`}
@@ -399,6 +401,7 @@ export const ConversationsPane = ({
 					accessibilityLabel="Search conversations"
 					onPress={() => setSearching((value) => !value)}
 					icon={({ color, size }) => <Search color={color} size={size} />}
+					size={24}
 					testID={CONTROL.sidebarSearch}
 				/>
 				{onClose ? (
@@ -448,7 +451,7 @@ export const ConversationsPane = ({
 						onNewChat?.();
 					}}
 					testID={CONTROL.sidebarNewChat}
-					className="flex-row items-center gap-3 border-hairline border-b px-4"
+					className="flex-row items-center gap-3 px-4"
 					style={{ minHeight: 56 }}
 				>
 					<SquarePen size={20} color={newChatInk} />

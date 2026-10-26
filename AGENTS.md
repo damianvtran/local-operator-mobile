@@ -95,6 +95,13 @@ This repository is **public**.
   profile directory.
 - Do not leave windows, servers, or background processes running after a task.
 
+## Native interaction design
+
+For conversation, navigation, composer or sheet changes, read
+[`docs/design/native-interaction-guidelines.md`](docs/design/native-interaction-guidelines.md)
+alongside the existing design kit. It records identity provenance, native
+geometry, draft/queue/privacy boundaries and the rendered-evidence gate.
+
 ## Writing
 
 - Comment the **why** — the constraint, the context, the decision — not what the

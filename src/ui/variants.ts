@@ -223,7 +223,13 @@ export const fieldClasses = (
 			// `danger` and the message sits adjacent in `body-sm`, never colour alone.
 			return cx(base, fill, "border-danger");
 		default:
-			return cx(base, fill, "border-border-control");
+			return cx(
+				base,
+				fill,
+				options.inComposer
+					? "border-transparent web:focus-visible:border-accent"
+					: "border-border-control",
+			);
 	}
 };
 
