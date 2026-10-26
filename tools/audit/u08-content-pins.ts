@@ -115,11 +115,17 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"b3f94c0eba8559301f2f04119e992c625a9a9a108bacd043e48efdfcd6af4ee4",
+		"ababd96948daf1a1f55b63d8a7cf6fb95dbda8c7386e71aa1765d169bf4970e6",
 	"tools/mock-relay/scenarios.ts":
 		"530b6e922af122dcaf62180eed49923e7f0ed671d630c1da904dd8bbdc5c8c96",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
+	/* The startup evidence helper the fixture's relay imports. It has been loaded by
+	 * the driver since the auth-fence work on this branch and was never pinned — the
+	 * coverage test caught it as a gap rather than a drift, so the entry is added
+	 * here (same batch) instead of leaving a module the driver runs unguarded. */
+	"tools/mock-relay/startup.ts":
+		"45263674dd997205829e4b11b520a25e4ffbacc5d706a6107114ca655e257f24",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
@@ -131,13 +137,22 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
-	app: "0b3b61aa1c024867e2a1331c206e93fd758f7a8e0a3f7c7c2418757876a6dc8d",
+	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
+	 * polish work itself (new status-tray module, one-row session chrome, Home splash
+	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
+	 * the guard is doing its job, not failing. `tools/mock-relay/relay.ts` moved with
+	 * them because its fixture semantics changed for the same screens.
+	 *
+	 * A re-pin is only legitimate when the reader can see WHY from this diff; a pin
+	 * bumped to make CI green earns nothing, and the suite still refuses every other
+	 * file's drift (`--print` is the only way to produce these values). */
+	app: "8793fc7e7b4da8255fcefd09a0caf4e56c0930237c62b86fde23bb68a49a5d35",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "c74f3eeb6a48c496758582ccc795731588082017020c1dd0319e94d59277f712",
+	src: "dc43fd9669c5b8dff45f83fbb6581de42b0e4848ff14831da6b562737db2f8a8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
