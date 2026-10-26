@@ -8,7 +8,10 @@ import {
 	buttonClasses,
 	chipClasses,
 	emptyStateClasses,
+	FIELD_BORDER_Y,
+	fieldBoxHeight,
 	fieldClasses,
+	fieldScrollsWithContent,
 	listRowIndicator,
 	segmentedItemClasses,
 	segmentedLabelClasses,
@@ -17,9 +20,6 @@ import {
 	skeletonClasses,
 	touchFloorFor,
 	webFieldOverflow,
-	FIELD_BORDER_Y,
-	fieldBoxHeight,
-	fieldScrollsWithContent,
 } from "@/ui/variants";
 
 /**

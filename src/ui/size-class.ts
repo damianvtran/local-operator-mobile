@@ -1,6 +1,7 @@
 import { maxColumnWidth } from "@/ui/column";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { LAYOUT } from "@/ui/tokens.gen";
+import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
  * The adaptive layout vocabulary, in ONE place, and FREE OF `react-native`.
@@ -382,7 +383,13 @@ export const composerBudget = (
 		maxHeight - receiptHeight - padding - dictationReserve,
 	);
 	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
-	return { field: Math.max(touchFloor, room - extras), extras };
+	const fieldBox = Math.max(touchFloor, room - extras);
+	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
+	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
+	 *  Returning the box here made the composer overspend its share by the border, so
+	 *  the paint budget is converted once, here, where it is decided — the caller and
+	 *  the component then agree without either subtracting a constant of its own. */
+	return { field: fieldBox - FIELD_BORDER_Y, extras };
 };
 
 /**

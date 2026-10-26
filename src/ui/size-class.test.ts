@@ -15,6 +15,7 @@ import {
 	snapRegion,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
  * The layout thresholds, and only the thresholds.
@@ -335,34 +336,43 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		// 390 pt screen at 200 %: composer share 0.45 -> 175 pt; receipt line 52; padding 8.
 		// An error line (40 pt) is above the field.
 		const budget = composerBudget(175, 52, 40, 48, 8);
-		expect(budget).toEqual({ extras: 40, field: 75 });
-		// the controls (field row + receipt) never exceed the budget
-		expect(budget.field + budget.extras + 52 + 8).toBeLessThanOrEqual(175);
+		// `field` is the CONTENT cap; the field paints cap + its 1px border top and
+		// bottom, which is the box the composer's share has to pay for.
+		expect(budget).toEqual({ extras: 40, field: 73 });
+		const painted = budget.field + FIELD_BORDER_Y + budget.extras + 52 + 8;
+		if (painted > 175) throw new Error(`over budget: ${painted} > 175`);
+		expect(painted).toBe(175);
 	});
 
 	it("never takes the field's touch floor for the extras: they scroll instead", () => {
 		// 150 pt of attachments in 115 pt of room: the extras are capped, the field keeps 48
 		const budget = composerBudget(175, 52, 150, 48, 8);
-		expect(budget.field).toBe(48);
+		// 46 content + 2 border = the 48 pt touch floor, in the box the screen spends
+		expect(budget.field).toBe(48 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y).toBe(48);
 		expect(budget.extras).toBe(115 - 48);
 	});
 
 	it("with nothing above the field the field takes the whole remainder", () => {
 		expect(composerBudget(175, 52, 0, 48, 8)).toEqual({
 			extras: 0,
-			field: 115,
+			field: 115 - FIELD_BORDER_Y,
 		});
 	});
 
 	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
 		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
 		const budget = composerBudget(175, 52, 0, 48, 8, 57);
-		expect(budget.field).toBe(58);
-		expect(budget.field + 52 + 8 + 57).toBeLessThanOrEqual(175);
+		expect(budget.field).toBe(58 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y + 52 + 8 + 57).toBeLessThanOrEqual(
+			175,
+		);
 	});
 
 	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
-		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
+		// The floor is a PAINTED floor (min-height on the field's box), so the content
+		// cap it translates to is one border shorter.
+		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48 - FIELD_BORDER_Y);
 	});
 });
 

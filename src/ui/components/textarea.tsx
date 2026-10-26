@@ -7,10 +7,10 @@ import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
 	type FieldState,
+	fieldBoxHeight,
 	fieldClasses,
 	fieldScrollsWithContent,
 	TEXTAREA_MAX_PX,
-	fieldBoxHeight,
 	webFieldOverflow,
 	webFieldResize,
 } from "@/ui/variants";
