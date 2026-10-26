@@ -16,18 +16,16 @@ templates themselves stay in the tree as the empty slots they are.
 | `ipad-13.html` | 2064 × 2752 | 1400 × 1867 | App Store Connect, 13-inch iPad class — **required, the app runs on iPad** | `appstore-ipad-13/` — 9 |
 | `play-phone.html` | 1080 × 1920 | 1080 × 1700 | Google Play, phone | `play-phone/` — 8 |
 
-**How the committed set was made (2026-10-26, head `987e2fb`).** These 26 frames
-and the 26 raw captures beside them were NOT produced by `capture-frames.mjs`.
-They were captured in this repository's installed browser, through a scratch
-fixed-viewport harness page that embeds the app's own web export in a same-origin
-iframe and drives it against the mock relay, then composed by these templates —
-the same pages, differently driven. Every output was checked against its canvas
-(1320 × 2868 / 2064 × 2752 / 1080 × 1920, 24-bit RGB, no alpha) and the raws against
-their profile sizes (1290 × 2796 / 2048 × 2732 / 1080 × 2340). No retouching.
-`capture-frames.mjs` and its CI comparison remain the STANDARD method for future
-regenerations; the harness path exists so a design pass can stage frames without
-the headless engine, and this set is its first output. Known limits below still
-apply, and the pre-upload content pass has not happened.
+**A refresh is staged beside them (2026-10-26).** `staged/native-polish-1026/`
+holds 26 raw captures and 26 frames from the native-polish design pass, produced in
+the installed browser through a fixed-viewport harness page rather than by
+`capture-frames.mjs`. Those bytes differ from the standard renderer's, so they are
+kept OUT of the committed directories above: replacing them would fail the
+design-kit `capture.mjs --check` byte gate, and that gate is right to fail. The
+committed set below remains the verified one. The staged set waits on design
+sign-off, caption wording for 02–09, the submission capture-method decision and the
+pre-upload content pass; it replaces nothing until then, and `staged/` itself is not
+checked by the byte gate. See its own `README.md` and `manifest.json`.
 
 Render them with `node design/preview/capture.mjs --target frames`, which **asserts
 every output's size against the store's spec** — an off-by-one canvas is rejected
