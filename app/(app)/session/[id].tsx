@@ -99,7 +99,6 @@ import {
 	snapRegion,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { LAYOUT } from "@/ui/tokens.gen";
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -450,7 +449,7 @@ export default function Session() {
 	 * cannot disagree — see `sessionStatusLayout`. `phone` is a WIDTH question, not
 	 * `compact`: gating on `compact` left the old task/subagent bands on portrait
 	 * phones, which is exactly what D2 fixed. */
-	const { phone, tray, inlineSecondary, statusSheet } = sessionStatusLayout(
+	const { tray, inlineSecondary, statusSheet } = sessionStatusLayout(
 		viewportWidth,
 		compact,
 	);

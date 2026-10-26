@@ -89,7 +89,7 @@ describe("phone status surface wiring (D2 final)", () => {
 		);
 		// The tray replaces the strip on a phone ...
 		expect(screen).toContain(
-			"const { phone, tray, inlineSecondary, statusSheet }",
+			"const { tray, inlineSecondary, statusSheet } = sessionStatusLayout(",
 		);
 		expect(screen).toContain("{tray ? (");
 		// ... both panels open the SAME sheet there (not a dead disabled prop) ...

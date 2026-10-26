@@ -391,11 +391,14 @@ describe("session status layout", () => {
 		});
 	});
 
-	it("keeps short landscape as it was", () => {
+	it("keeps short landscape exactly as it was", () => {
+		// Before the phone flag, compact rendered the TRAY, no inline region and the
+		// sheet — the tray was designed here. Encoding the opposite turned landscape
+		// into a duplicate band with dead panel buttons (R8-1).
 		const landscape = sessionStatusLayout(844, true);
 		expect(landscape.phone).toBe(false);
-		expect(landscape.tray).toBe(false);
-		expect(landscape.inlineSecondary).toBe(true);
+		expect(landscape.tray).toBe(true);
+		expect(landscape.inlineSecondary).toBe(false);
 		expect(landscape.statusSheet).toBe(true);
 	});
 });

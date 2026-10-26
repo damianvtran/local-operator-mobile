@@ -411,10 +411,13 @@ export const sessionStatusLayout = (
 	const phone = width < LAYOUT.tabletBreakpoint;
 	return {
 		phone,
-		tray: phone && !compact,
-		inlineSecondary: !phone || compact,
-		/* On a phone (and in short landscape) the sheet is the only surface the panels
-		 * have; a tablet keeps per-panel open state. */
+		/* Short landscape ALREADY had the tray (that is where it was designed), so it
+		 * keeps it: `tray` is phone-or-compact, and the sheet follows the tray. The
+		 * inline stack belongs only where neither holds — a tablet column. Gating the
+		 * tray on `phone` alone regressed landscape into a tray plus a live inline
+		 * region plus a sheet nothing could open (review R8-1). */
+		tray: phone || compact,
+		inlineSecondary: !phone && !compact,
 		statusSheet: phone || compact,
 	};
 };
