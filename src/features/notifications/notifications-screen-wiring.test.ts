@@ -73,7 +73,17 @@ describe("the inbox screen wires the read receipt to its list", () => {
 			source.indexOf("});", source.indexOf("useReceiptFeed({")),
 		);
 		expect(call).toContain("covered:");
-		expect(call).toContain("focused: isFocused");
+		/* The focus fact is the ROUTE's, computed from the path: round 2 tracked it
+		 *  with a transition effect and a cold arrival never fired it (QA Q5). */
+		expect(call).toContain("focused,");
+		expect(source).toContain('usePathname() === "/notifications"');
+		/* ...and the detail derives the complement from the same source. */
+		expect(
+			readFileSync(
+				new URL("./notification-detail.tsx", import.meta.url),
+				"utf8",
+			),
+		).toContain('usePathname().startsWith("/notifications/")');
 		expect(call).toContain("enabled:");
 		/* `covered` must be derived, not hard-coded: round 1 shipped
 		 * `setCovered(false)` beside a dialog over the same list. */

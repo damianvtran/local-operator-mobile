@@ -157,6 +157,11 @@ export function toggleSelection(
 	selection: ReadonlySet<string>,
 	item: NotificationItem,
 ): Set<string> {
+	/* AN ASK IS NEVER SELECTED, whoever asks. It cannot be dismissed (the relay
+	 *  answers `skipped: live_ask`) and it cannot be read (it is answered), so it
+	 *  is not a member of any selection — which also keeps the count the reader is
+	 *  shown equal to the count the doors can act on (design review round 2 D9). */
+	if (item.source === "ask") return new Set(selection);
 	const next = new Set(selection);
 	const key = rowKey(item);
 	if (next.has(key)) next.delete(key);

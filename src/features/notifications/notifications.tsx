@@ -1,6 +1,6 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { ChevronLeft, X } from "lucide-react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
@@ -80,7 +80,6 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
 import { Skeleton } from "@/ui/components/skeleton";
-import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
 /**
@@ -127,16 +126,21 @@ export default function Notifications() {
 	const [selecting, setSelecting] = useState(false);
 	const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
 	const [writing, setWriting] = useState(false);
+	/** Set when Dismiss is pressed in selection mode, so the phase watcher can
+	 *  tell a selection's dismissal from the From card's. */
+	const selectionDismissed = useRef(false);
 
 	/** Whether this route is the focused one. The receipt feed refuses to send
-	 *  anything while a pushed detail screen is over this list. */
-	const [isFocused, setIsFocused] = useState(false);
-	useFocusEffect(
-		useCallback(() => {
-			setIsFocused(true);
-			return () => setIsFocused(false);
-		}, []),
-	);
+	 *  anything while a pushed detail screen is over this list.
+	 *
+	 *  READ FROM THE NAVIGATOR, not tracked with a transition effect. Round 2
+	 *  shipped the effect, and a COLD arrival — `/notifications` opened directly, as
+	 *  the capture does and as a deep link does — never fired it, so the screen
+	 *  believed it was unfocused forever and sent zero receipts after two real
+	 *  drags (QA round 2 Q5). `useIsFocused` answers what the navigator already
+	 *  knows, on the first frame included; `use-asks-sheet.ts` and
+	 *  `use-completion-ack.ts` read the same hook. */
+	const focused = usePathname() === "/notifications";
 
 	/** The evidenced read path: ONE feed, driven by the list's own viewability
 	 *  answers plus the screen's presence facts. It lives in `use-receipt-feed`
@@ -150,7 +154,7 @@ export default function Notifications() {
 		covered:
 			dismissAll.phase.kind === "confirming" ||
 			dismissAll.phase.kind === "applying",
-		focused: isFocused,
+		focused,
 		enabled: client !== null,
 	});
 
@@ -256,11 +260,25 @@ export default function Notifications() {
 		[dismissAll],
 	);
 
+	/* A confirmed multi-select dismissal must leave the bar. Otherwise it stays up
+	 * over a selection of rows that no longer exist, and the reader reads "Nothing
+	 * selected" under a receipt (code review round 2 minor 3). The single-selection
+	 * door clears itself; the confirm door ends asynchronously and says nothing
+	 * about which door began it, so the phase is watched with a ref that records
+	 * whether a selection was what went to the dialog. */
+	useEffect(() => {
+		if (!selectionDismissed.current) return;
+		if (dismissAll.phase.kind !== "done") return;
+		selectionDismissed.current = false;
+		if (dismissAll.phase.receipt.changed.length > 0) clearSelection();
+	}, [dismissAll.phase, clearSelection]);
+
 	/** Dismiss the selection: a dialog when it can remove more than one row, the
 	 *  direct receipt when it removes exactly one. */
 	const onDismissSelection = useCallback(() => {
 		const targets = dismissableTargets(selection, rows);
 		if (targets.length === 0) return;
+		selectionDismissed.current = true;
 		if (targets.length === 1) {
 			void dismissAll.dismissNow(targets).then((ok) => {
 				if (ok) clearSelection();
@@ -307,7 +325,6 @@ export default function Notifications() {
 	 *  header, i.e. below this the stack cannot leave room for one card. */
 	const { height: viewportHeight, width: viewportWidth } =
 		useWindowDimensions();
-	const { effectiveScale } = useTextScale();
 	/* ONE ROW ONLY WHERE ONE ROW FITS. Short landscape (844×390) has the width for
 	 *  filter-beside-verbs and needs the height, which is the case design review D4
 	 *  measured (72 % chrome at 100 %, no row at all at 200 %). A 320 pt phone at
@@ -329,13 +346,23 @@ export default function Notifications() {
 			 * 100 %: first skeleton bar 229 pt, first card 339 pt). */
 			return (
 				<View className="gap-2 px-4 pt-3" testID={SURFACE.inboxLoading}>
-					{/* The filter's own box, then the verb row, then the count. */}
+					{/* THE SKELETON HOLDS EVERY STRIP ABOVE THE FIRST CARD, not just the
+					 *  filter. Round 2 measured the filter placeholder landing 3 pt from
+					 *  the real control while the card block still began 84 pt high
+					 *  (243 vs 327), because the verb row, the count line and the section
+					 *  label had no placeholder (design review round 2, D5 residual).
+					 *  Each strip is the real element's own height and the container's
+					 *  `gap-2` supplies the rhythm, so the two states line up. */}
 					<Skeleton lines={1} barClassName="h-12 w-full" />
 					<View className="flex-row items-center gap-2">
 						<Skeleton lines={1} barClassName="h-8 w-2/5" />
 						<Skeleton lines={1} barClassName="h-8 w-1/4" />
 					</View>
-					<View className="gap-3 pt-3">
+					<Skeleton lines={1} barClassName="h-4 w-1/3" />
+					<View className="pt-3">
+						<Skeleton lines={1} barClassName="h-4 w-2/5" />
+					</View>
+					<View className="gap-3">
 						{[0, 1, 2, 3].map((index) => (
 							<Skeleton key={index} lines={2} />
 						))}
@@ -730,7 +757,13 @@ function InboxRow({
 			testID={notificationRowId(item.id)}
 		>
 			<View className="flex-row items-start gap-2">
-				{selecting ? (
+				{/* AN OPEN ASK GETS NO CHECKBOX. It cannot be dismissed (the relay refuses
+				 *  it: `skipped: live_ask`) and it is not read — it is answered — so a
+				 *  selectable box would offer an action the model then drops, and it
+				 *  moved the confirmation threshold while doing it: "2 items selected"
+				 *  opened no dialog and dismissed one row, with no skipped sentence
+				 *  (design review round 2 D9). The row's own action is Answer. */}
+				{selecting && item.source !== "ask" ? (
 					<View
 						className={cx(
 							/* A REAL BORDER, NOT `border-hairline`: that token carries a

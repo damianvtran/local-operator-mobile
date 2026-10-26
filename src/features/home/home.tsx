@@ -687,25 +687,39 @@ export default function Home({
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
 						 *  Settings. The gear says what the control does; the accessible name
 						 *  still comes from the caller's label. */}
-						{inboxCount !== null && inboxCount > 0 ? (
-							<Badge
-								label={`${inboxCount}`}
-								tone="warning"
-								mono
-								testID={CONTROL.homeNotificationsCount}
-								accessibilityLabel={`Notifications, ${inboxCount} unread`}
+						{/* THE COUNT BELONGS TO THE BELL, so it sits ON the bell. As a
+						 *  sibling chip it measured 25.3 × 22 pt in the header's control
+						 *  row, 8 pt from the button's box and ~24 pt from the glyph it
+						 *  counts — the fifth control the reader tries to tap, and inert
+						 *  (design review round 2 D10). Anchored to the pressable's
+						 *  top-right corner it reads as one control with the target, and
+						 *  `pointerEvents="none"` keeps the whole 48 pt box tappable. */}
+						<View className="relative">
+							<IconButton
+								accessibilityLabel={
+									inboxCount === null
+										? "Notifications"
+										: `Notifications, ${inboxCount} unread`
+								}
+								onPress={() => router.push("/notifications")}
+								icon={({ color, size }) => <Bell color={color} size={size} />}
+								testID={CONTROL.homeNotifications}
 							/>
-						) : null}
-						<IconButton
-							accessibilityLabel={
-								inboxCount === null
-									? "Notifications"
-									: `Notifications, ${inboxCount} unread`
-							}
-							onPress={() => router.push("/notifications")}
-							icon={({ color, size }) => <Bell color={color} size={size} />}
-							testID={CONTROL.homeNotifications}
-						/>
+							{inboxCount !== null && inboxCount > 0 ? (
+								<View
+									pointerEvents="none"
+									className="absolute -right-1 -top-1"
+									testID={CONTROL.homeNotificationsCount}
+								>
+									<Badge
+										label={`${inboxCount}`}
+										tone="warning"
+										mono
+										accessibilityLabel={`${inboxCount} unread notifications`}
+									/>
+								</View>
+							) : null}
+						</View>
 						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}

@@ -179,7 +179,7 @@ export const Screen = ({
 								<Heading
 									level={1}
 									className="text-display text-ink"
-									numberOfLines={2}
+									numberOfLines={1}
 								>
 									{title}
 								</Heading>
@@ -188,7 +188,7 @@ export const Screen = ({
 									<Heading
 										level={1}
 										className="text-display text-ink"
-										numberOfLines={2}
+										numberOfLines={1}
 									>
 										{title}
 									</Heading>

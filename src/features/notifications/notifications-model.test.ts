@@ -138,7 +138,7 @@ describe("selection and the token it sends", () => {
 		expect(toggleSelection(picked, row).size).toBe(0);
 	});
 
-	it("never offers a dismiss on an open ask", () => {
+	it("never offers a dismiss or a selection on an open ask", () => {
 		const ask = item({
 			id: "ask:1",
 			source: "ask",
@@ -150,12 +150,13 @@ describe("selection and the token it sends", () => {
 			},
 		});
 		expect(canDismiss(ask)).toBe(false);
-		/* Its READ token is still a real target: an ask can be marked read from
-		 * the reel; it just cannot be dismissed from it. */
+		/* AND IT IS NOT SELECTABLE EITHER (design review round 2 D9). It cannot be
+		 * dismissed and it is not read — it is answered — so a checkbox on it would
+		 * offer an action the model drops, while inflating the count the reader is
+		 * shown against the count the doors can act on. */
 		const picked = toggleSelection(new Set<string>(), ask);
-		expect(selectionTargets(picked, [ask])).toEqual([
-			{ id: "ask:1", revision: 1 },
-		]);
+		expect(picked.size).toBe(0);
+		expect(selectionTargets(picked, [ask])).toEqual([]);
 	});
 
 	it("mark-all names the answer's high-water, not a count of rows", () => {

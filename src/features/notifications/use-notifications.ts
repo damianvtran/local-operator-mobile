@@ -214,6 +214,11 @@ export function useNotifications(
 				setResponse({
 					...answer,
 					waiting: held.waiting,
+					/* The FIRST answer's boundary, because that is the window the rows on
+					 *  screen were served under. `Math.min` also keeps it honest if a relay
+					 *  ever reports a LOWER watermark (store reset, restart): the conservative
+					 *  direction — those rows come back as `stale_revision` in the receipt
+					 * rather than being silently claimed as read. */
 					high_water: Math.min(held.high_water, answer.high_water),
 					observed: unionTokens(held.observed, answer.observed),
 					items: [...held.items, ...answer.items],

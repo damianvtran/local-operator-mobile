@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -89,16 +89,13 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 	const { observe, reportCountFailed } = dismissAll;
 
 	/* The detail's OWN evidenced read: one row is on screen here, so the feed is
-	 *  handed that one row and the reader's touch is what clears it (code review
-	 *  M2 — round 1 read on mount, which cleared an item merely for being
-	 *  navigated to, including from a deep link or a cold start). */
-	const [isFocused, setIsFocused] = useState(false);
-	useFocusEffect(
-		useCallback(() => {
-			setIsFocused(true);
-			return () => setIsFocused(false);
-		}, []),
-	);
+	/** Whether this pinned detail is the focused route. Read from the navigator
+	 *  for the inbox's reason (QA round 2 Q5): a deep link lands here cold, and a
+	 *  transition effect never fires on the route that opens the app. */
+	/* THIS route is in front when the path names an item; the list beneath it is not.
+	 *  A pathname is what both platforms agree on, and it is right on the first frame
+	 *  — the navigator's focus event is not (QA round 2 Q5). */
+	const focused = usePathname().startsWith("/notifications/");
 	const sendSeen = useCallback(
 		async (
 			targets: Array<{ id: string; revision: number }>,
@@ -123,7 +120,7 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 		covered:
 			dismissAll.phase.kind === "confirming" ||
 			dismissAll.phase.kind === "applying",
-		focused: isFocused,
+		focused,
 		enabled: client !== null,
 	});
 

@@ -120,7 +120,7 @@ describe("the read-receipt feed", () => {
 	});
 
 	it("restarts the dwell when a row leaves the screen and comes back", async () => {
-		const { feed, send } = feedWith();
+		const { feed } = feedWith();
 		feed.viewable(at(ROW).info, at(ROW).nowMs);
 		feed.noteInput("touch", T0 + 50);
 		feed.viewable(gone(T0 + 400).info, T0 + 400); // scrolled away before the dwell elapsed
@@ -174,5 +174,105 @@ describe("the observed-token union behind Mark all read", () => {
 
 	it("survives a relay that omits the field entirely", () => {
 		expect(unionTokens(undefined, undefined)).toEqual([]);
+	});
+});
+
+describe("a refused answer is final, and asks are never marked", () => {
+	const ASK = { id: "ask:session-1:q1", revision: 1 };
+
+	it("does not answer twice when the server refuses the write (M1 loop)", async () => {
+		/* QA round 2 Q4, measured on the real relay: a pinned open ask sat in view,
+		 * the relay answered `live_ask`, nothing settled, and the same body went out
+		 * 20 times in 10 s. A refusal IS the answer. */
+		const send = vi.fn(async () => ({
+			ok: true,
+			changed: [],
+			skipped: [{ id: "n_pinned", reason: "stale_revision" }],
+		}));
+		const feed = createReceiptFeed({ send });
+		feed.setAppActive(true);
+		feed.setFocused(true);
+		feed.viewable(
+			{ viewableItems: [{ item: { id: "n_pinned", revision: 1 } }] },
+			T0,
+		);
+		feed.noteInput("touch", T0 + 10);
+		expect(await feed.tick(T0 + 1_100)).toEqual([
+			{ id: "n_pinned", revision: 1 },
+		]);
+		/* Ten more seconds of ticks with nothing moving: no second write. */
+		for (let i = 1; i <= 20; i += 1) {
+			expect(await feed.tick(T0 + 1_100 + i * 500)).toEqual([]);
+		}
+		expect(send).toHaveBeenCalledTimes(1);
+	});
+
+	it("CONTROL: an accepted answer also settles, so the loop test is about refusals", async () => {
+		const send = vi.fn(async () => ({ ok: true, changed: ["n_pinned"] }));
+		const feed = createReceiptFeed({ send });
+		feed.setAppActive(true);
+		feed.setFocused(true);
+		feed.viewable(
+			{ viewableItems: [{ item: { id: "n_pinned", revision: 1 } }] },
+			T0,
+		);
+		feed.noteInput("touch", T0 + 10);
+		expect(await feed.tick(T0 + 1_100)).toEqual([
+			{ id: "n_pinned", revision: 1 },
+		]);
+		expect(await feed.tick(T0 + 5_000)).toEqual([]);
+		expect(send).toHaveBeenCalledTimes(1);
+	});
+
+	it("never builds a receipt for an ask, even a pinned one filling the screen", async () => {
+		const send = vi.fn(async () => ({ ok: true, changed: [] }));
+		const feed = createReceiptFeed({ send });
+		feed.setAppActive(true);
+		feed.setFocused(true);
+		feed.viewable({ viewableItems: [{ item: ASK }] });
+		feed.noteInput("touch", T0 + 10);
+		expect(await feed.tick(T0 + 2_000)).toEqual([]);
+		expect(send).not.toHaveBeenCalled();
+	});
+
+	it("still sends for an update that shares the screen with an ask", async () => {
+		const send = vi.fn(async () => ({ ok: true, changed: ["n_audit"] }));
+		const feed = createReceiptFeed({ send });
+		feed.setAppActive(true);
+		feed.setFocused(true);
+		feed.viewable(
+			{
+				viewableItems: [
+					{ item: ASK },
+					{ item: { id: "n_audit", revision: 2 } },
+				],
+			},
+			T0,
+		);
+		feed.noteInput("touch", T0 + 10);
+		expect(await feed.tick(T0 + 1_100)).toEqual([
+			{ id: "n_audit", revision: 2 },
+		]);
+		expect(send).toHaveBeenCalledTimes(1);
+	});
+
+	it("retries after a transport failure, which is not an answer", async () => {
+		const send = vi
+			.fn()
+			.mockResolvedValueOnce({ ok: false, changed: [] })
+			.mockResolvedValueOnce({ ok: true, changed: ["n_pinned"] });
+		const feed = createReceiptFeed({ send });
+		feed.setAppActive(true);
+		feed.setFocused(true);
+		feed.viewable(
+			{ viewableItems: [{ item: { id: "n_pinned", revision: 1 } }] },
+			T0,
+		);
+		feed.noteInput("touch", T0 + 10);
+		expect(await feed.tick(T0 + 1_100)).toEqual([]); // the write never landed
+		expect(await feed.tick(T0 + 1_600)).toEqual([
+			{ id: "n_pinned", revision: 1 },
+		]);
+		expect(await feed.tick(T0 + 9_000)).toEqual([]);
 	});
 });

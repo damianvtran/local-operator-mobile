@@ -46,7 +46,7 @@ export function createReceiptFeed(options: {
 	send: (
 		targets: InboxToken[],
 		evidence: NotificationSeenRequest["evidence"],
-	) => Promise<{ ok: boolean; changed: string[] }>;
+	) => Promise<ReceiptAnswer>;
 }) {
 	const tracker = new ReadReceiptTracker();
 	let inFlight = false;
@@ -67,6 +67,13 @@ export function createReceiptFeed(options: {
 				const item = entry?.item;
 				if (item === undefined || item === null) continue;
 				if (typeof item.id !== "string") continue;
+				/* ASKS ARE NOT READ, THEY ARE ANSWERED. The relay refuses a
+				 * `notifications/seen` for a live ask (`{skipped:[{reason:"live_ask"}]}`),
+				 * and a pinned ask is on screen for as long as it is open — so asking
+				 * about it every tick produced a 2 Hz loop that wrote nothing (QA round
+				 * 2 Q4: 20 identical POSTs in 10 s with no gesture). A row that cannot
+				 * be read is not offered as evidence of having been read. */
+				if (isAskToken(item.id)) continue;
 				visible.push({ id: item.id, revision: item.revision });
 			}
 			tracker.render(visible, nowMs);
@@ -120,8 +127,19 @@ export function createReceiptFeed(options: {
 				 *  keys by `<id>@<revision>`. Comparing them directly is how a settled
 				 *  row gets re-sent on every tick, so the mapping is by id here and the
 				 *  token is taken from the target itself. */
-				const accepted = new Set(outcome.changed);
-				tracker.settle(targets.filter((target) => accepted.has(target.id)));
+				/* SETTLE ON EVERY TERMINAL ANSWER. The relay names what it took in
+				 *  `changed` and what it could not in `skipped` (`live_ask`,
+				 *  `stale_revision`, `dismissed`); settling only `changed` meant a
+				 *  refused row stayed due forever and re-sent on every tick (QA round 2
+				 *  Q4). A refusal is an answer: the row stays unread and is not asked
+				 *  about again for this render of this revision. A `!ok` outcome (the
+				 *  write never landed) still settles nothing, so a dropped connection
+				 *  retries. */
+				const answered = new Set([
+					...outcome.changed,
+					...(outcome.skipped ?? []).map((entry) => entry.id),
+				]);
+				tracker.settle(targets.filter((target) => answered.has(target.id)));
 				return targets;
 			} finally {
 				inFlight = false;
@@ -132,6 +150,20 @@ export function createReceiptFeed(options: {
 }
 
 export type ReceiptFeed = ReturnType<typeof createReceiptFeed>;
+
+/** What the relay answered: what it took, and what it refused and why. */
+export interface ReceiptAnswer {
+	ok: boolean;
+	changed: string[];
+	skipped?: Array<{ id: string; reason: string }>;
+}
+
+/** An ask's id is minted by the core as `ask:<session>:<ask_id>`; the inbox only
+ *  ever reads `notify` items, so the prefix is the test rather than a second
+ *  source-of-truth field on the wire type. */
+export function isAskToken(id: string): boolean {
+	return id.startsWith("ask:");
+}
 
 /**
  * The React side: owns the feed, wires the platform context (foreground, route
@@ -157,10 +189,20 @@ export function useReceiptFeed(options: {
 	noteInput: (kind: "touch" | "press" | "scroll" | "focus") => void;
 } {
 	const { send, covered, focused, enabled } = options;
-	/* The feed outlives renders: it holds the tracker. Rebuilt only when the
-	 *  sender identity changes, which is the connection itself. */
+	/* THE SENDER IS READ THROUGH A REF. `relay()` hands the screen a new client
+	 *  after a reconnect, and a feed that captured the first `send` closure would
+	 *  keep writing through the dead one: `ok` false, nothing settled, and the same
+	 *  rows re-offered every tick until a remount (code review round 2 minor 2). */
+	const sendRef = useRef(send);
+	sendRef.current = send;
+	/* The feed outlives renders: it holds the tracker. Its sender goes through
+	 *  `sendRef`, so the identity cannot go stale. */
 	const feedRef = useRef<ReceiptFeed | null>(null);
-	if (feedRef.current === null) feedRef.current = createReceiptFeed({ send });
+	if (feedRef.current === null) {
+		feedRef.current = createReceiptFeed({
+			send: (targets, evidence) => sendRef.current(targets, evidence),
+		});
+	}
 	const feed = feedRef.current;
 
 	const [appActive, setAppActive] = useState(
@@ -174,17 +216,23 @@ export function useReceiptFeed(options: {
 		return () => subscription.remove();
 	}, []);
 
-	/* A FOCUS-GAIN IS THE ONE TRUSTED GESTURE THAT IS NOT A TOUCH. Coming back to
-	 *  this screen is the reader putting it in front of themselves; the doctrine
-	 *  lists focus-gain as evidence, and without it a reader who returns to an
-	 *  already-rendered row would have to touch it before it could clear. Recorded
-	 *  on the transition, never per render — a re-render is not a gesture. */
-	const wasFocused = useRef(false);
+	/* NO FOCUS-GAIN AS EVIDENCE, and the reason is the dwell.
+	 *
+	 *  The doctrine lists focus-gain beside touches, but this engine requires a
+	 *  row to stay put for 100 ms…1s AFTER the signal — and a focus event carries
+	 *  no such interval: a screen you return to is already fully painted, so a
+	 *  focus tick would settle the dwell with zero dwell. Worse, `due()` measures
+	 *  the dwell from the row's RENDER, so a tab left on the inbox, a detour to a
+	 *  conversation and a return would settle everything at once. Dropping the
+	 *  signal is the fail-closed direction: the reader's next touch or scroll
+	 *  clears what they are looking at, and everything else stays unread.
+	 *
+	 *  The rendered view is discarded on blur for the same reason: a row that was
+	 *  on screen before a detour must start its dwell again when the reader comes
+	 *  back (code review round 2 minor 1 — the return-from-detail flush). */
 	useEffect(() => {
-		if (focused && enabled && !wasFocused.current) {
-			feed.noteInput("focus", Date.now());
-		}
-		wasFocused.current = focused && enabled;
+		if (focused && enabled) return;
+		feed.resetView();
 	}, [feed, focused, enabled]);
 
 	useEffect(() => {
