@@ -2602,9 +2602,35 @@ export interface SummaryMeasure {
 	caret: { left: number; top: number; bottom: number };
 }
 
+/** One name-test in the own-text purity rule, as the probe observed it. */
+export interface U08PurityCondition {
+	name: string;
+	expected: string | number | boolean | null;
+	/** The computed/measured value; truncated by the probe so a receipt stays bounded. */
+	observed: string | number | boolean | null;
+	ok: boolean;
+}
+/** Why the probe did NOT certify a node's own text as the only paint. Recorded
+ * instead of relaxing the rule: the two review rounds that caught a false
+ * negative (pseudo-element paint, a background-only child element) both came from
+ * a rule that was too permissive, so the fix for an unexplained conservative
+ * verdict is this record, never a weaker condition. Absent means the node had no
+ * own text and was never a candidate. */
+export interface U08PaintExclusion {
+	/** The first condition that said no; null only if every condition passed. */
+	blockedBy: string | null;
+	expected: string | number | boolean | null;
+	observed: string | number | boolean | null;
+	/** Every condition's verdict, so a report can tell a property react-native-web
+	 * emits differently from a premise it can never satisfy. */
+	conditions: U08PurityCondition[];
+}
 export interface AuditNode {
 	/** Missing => legacy/non-text envelope. [] => observed no own-text paint. */
 	u08PaintFragments?: PaintRect[];
+	/** Present only for an own-text node that stayed conservative, and only when the
+	 * probe was asked for the reason (the live probe always asks). */
+	u08PaintExclusion?: U08PaintExclusion;
 	index: number;
 	tag: string;
 	path: string;

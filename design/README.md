@@ -36,8 +36,9 @@ node design/tokens/check-upstream.mjs              # gate: the slice == the kit 
 node design/app-icon/build-icons.mjs               # generate: every icon/splash/store PNG + the SVG layers
 node design/app-icon/build-icons.mjs --check       # gate: re-renders all 33 files and compares them
 node design/preview/capture.mjs                    # generate: the preview sheet, both themes
-node design/preview/capture.mjs --check            # gate: EVERY target — the 5 committed captures (4 sheet
-                                                   #   frames + the Play feature graphic) + the 3 frame sizes
+node design/preview/capture.mjs --check            # gate: EVERY target — the 14 committed captures (4 sheet
+                                                   #   frames + the Play feature graphic + the 9 iPhone
+                                                   #   listing frames) + the 3 templates' canvas sizes
 node design/preview/capture.mjs --target feature   # generate: just the Play feature graphic
 ```
 

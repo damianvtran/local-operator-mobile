@@ -28,6 +28,12 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	alphaTool,
+	largestDifference,
+	pixelDifference,
+	STRAY_PIXELS,
+} from "./frame-difference.mjs";
 
 const here = new URL(".", import.meta.url);
 const root = new URL("../", here); // design/
@@ -228,7 +234,15 @@ await send("Runtime.enable");
  * `shot()` for capturing. `settle` exists because a font that swaps in after
  * the load event changes the metrics: capturing on loadEventFired alone gives a
  * frame with the fallback face, which is a still nobody would sign off. */
-const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" }) => {
+const openPage = async ({
+	file,
+	width,
+	height,
+	dpr,
+	theme = null,
+	extraCss = "",
+	query = null,
+}) => {
 	await send("Emulation.setDeviceMetricsOverride", {
 		width,
 		height,
@@ -237,7 +251,15 @@ const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" 
 		screenWidth: width,
 		screenHeight: height,
 	});
-	const url = `file://${new URL(file, repoRoot).pathname}${theme ? `?theme=${theme}` : ""}`;
+	/* The template reads its own frame from the query string: the caption and the
+	 * capture's path are DATA (`design/store-screenshots/frames.json`), so a frame
+	 * is re-rendered by passing them, never by editing this file — and never by
+	 * pasting base64 into it. `URLSearchParams` does the escaping, because a
+	 * headline carries spaces and punctuation. */
+	const params = new URLSearchParams();
+	if (theme) params.set("theme", theme);
+	for (const [name, value] of Object.entries(query ?? {})) params.set(name, value);
+	const url = `file://${new URL(file, repoRoot).pathname}${params.size ? `?${params}` : ""}`;
 	const loaded = onEvent("Page.loadEventFired");
 	await send("Page.navigate", { url });
 	await loaded;
@@ -290,6 +312,18 @@ const openPage = async ({ file, width, height, dpr, theme = null, extraCss = "" 
 	return {
 		state: JSON.parse(state.value),
 		metrics: JSON.parse(result.value),
+		/* Run an expression in the page and get its value back. The store-frame
+		 * render uses it to prove the capture it points at actually loaded (a wrong
+		 * path is a broken image, and a broken image in a slot is a plausible-
+		 * looking blank at exactly the right size). */
+		evaluate: async (expression) => {
+			const { result: out } = await send("Runtime.evaluate", {
+				expression,
+				awaitPromise: true,
+				returnByValue: true,
+			});
+			return out.value;
+		},
 		/* Grow the emulated viewport to the document's own height and capture THAT,
 		 * instead of asking for a beyond-viewport clip.
 		 *
@@ -377,35 +411,46 @@ if (fontDir && !existsSync(fontCssPath)) {
  * says which of the two comparisons passed. A missing decoder is a FAILURE,
  * never a pass, because "could not prove it differs" and "it differs" must not
  * look the same in a log.
+ *
+ * The listing frames take their per-pixel tolerance from `frames.json`, per
+ * surface (`compareFuzz`; absent means zero), and the values there are measured.
+ * Zero tolerance does not hold on a runner for ANY of the three surfaces: on the
+ * Chrome 156 runner, re-rendering against frames committed from Chrome 155, the
+ * iPhone set differed in 573-790 pixels, Play in 232-327, and the iPad set —
+ * whose capture is the one scaled down into a smaller slot (2048 px into 1400) —
+ * in 9,026-47,479. A single global 2% hid that: it was looser than any of them
+ * needed and told a reader nothing. The largest channel difference on any frame
+ * was 2/255 (0.78%), so 1% — 2.5 levels — is the smallest whole percent that
+ * covers the measured drift, and each surface carries it in `frames.json` rather
+ * than sharing a constant: a surface that needs more raises only its own value,
+ * with the run that moved it. The log prints, per frame, the count at zero
+ * tolerance and the largest channel difference, so both numbers can be re-derived
+ * rather than trusted. A caption, font or template change is far outside any of
+ * these: a one-pixel shift of the whole frame is 157,129 differing pixels and a
+ * one-word caption edit about 10,000, against a few hundred from the encoder.
+ *
+ * Every pixel comparison prints BOTH counts: the pixels past the surface's
+ * tolerance (the pass/fail rule) and the pixels that differ at zero tolerance
+ * with the worst channel difference beside them (what the tolerance absorbed —
+ * zero when it was not needed). One number alone cannot say whether a tolerance
+ * was load-bearing, which is how a blanket 2% ended up over 17 frames whose need
+ * had never been measured (review round 1, finding 2).
  */
 
-const alphaTool = () =>
-	["magick", "convert"].find((bin) => {
-		try {
-			execFileSync(bin, ["--version"], { stdio: "ignore" });
-			return true;
-		} catch {
-			return false;
-		}
-	});
+/* The comparison primitives live in `frame-difference.mjs` so their arithmetic
+ * can be tested against a real decoder without launching Chrome — the count they
+ * return is a claim in this script's log, and a wrong one is worse than none.
+ * `STRAY_PIXELS` travels with them for the same reason: the allowance and the
+ * measured evidence for it belong beside the number they qualify. */
 
-const pixelsIdentical = (a, b) => {
-	const bin = alphaTool();
-	if (!bin) return null;
-	try {
-		execFileSync(bin, ["compare", "-metric", "AE", a, b, "null:"], {
-			stdio: ["ignore", "pipe", "pipe"],
-		});
-		return true;
-	} catch (e) {
-		const said = String(e.stderr ?? "").trim();
-		if (/^\d+/.test(said)) return false;
-		return null;
-	}
-};
-
+/* The list `stale()` fills and the closing summary counts. It is declared here,
+ * above its only writer, because it is the one binding whose absence is silent on
+ * a clean tree: every passing run never reaches `stale()`, so a missing
+ * declaration only throws on the FIRST stale frame — after that frame's own line
+ * has been printed, which reads like a gate that worked but leaves the summary
+ * unprinted, the rest of the set unchecked and Chrome un-reaped (round 3; the
+ * reason `scripts/design/capture-check.test.ts` drives the stale path for real). */
 const failures = [];
-
 const stale = (path, why) => {
 	console.error(`stale: ${path} — ${why}`);
 	failures.push(path);
@@ -413,8 +458,9 @@ const stale = (path, why) => {
 };
 
 /** In generation mode: write. In `--check`: compare against the committed file
- * and report the strongest comparison that passed. */
-const save = (pngBuffer, outPath, { reencode = null } = {}) => {
+ * and report the strongest comparison that passed. `fuzz` is the surface's own
+ * tolerance, passed by the caller from `frames.json`. */
+const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 	if (!check) {
 		writeFileSync(outPath, pngBuffer);
 		previewTargets.push(outPath);
@@ -429,15 +475,66 @@ const save = (pngBuffer, outPath, { reencode = null } = {}) => {
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
 		return verified.push(outPath);
 	}
-	if (pixelsIdentical(fresh, outPath) === true) {
+	/* Both counts, always. `strict` is the number of pixels that differ from the
+	 * committed capture at zero tolerance; `differing` is the same count under the
+	 * surface's fuzz, and is the pass/fail rule. Printed together so the log says
+	 * whether the fuzz was doing any work on this frame. */
+	const name = outPath.split("/").pop();
+	const strict = pixelDifference(fresh, outPath, 0);
+	const differing = fuzz === 0 ? strict : pixelDifference(fresh, outPath, fuzz);
+	/* Measured only where something actually differs — the strict count, the
+	 * tolerated count, or both — and used in every message below: how far the worst
+	 * pixel moved. Skipped entirely on the pixel-identical path, where it is 0 by
+	 * definition and the extra decode would buy nothing. */
+	const spread = differing === 0 && strict === 0 ? 0 : largestDifference(fresh, outPath);
+	const worst = Number.isFinite(spread) ? `; largest ${spread}/255` : "";
+	if (differing === 0) {
+		if (fuzz === 0) {
+			console.log(
+				`  ${name}: pixels identical (bytes differ — the encoder wrote different bytes for the same pixels)`,
+			);
+		} else if (strict === 0) {
+			console.log(
+				`  ${name}: pixels identical at zero tolerance as well as within the ${fuzz}% fuzz ` +
+					"(bytes differ — the fuzz was not needed on this frame)",
+			);
+		} else if (Number.isFinite(strict)) {
+			console.log(
+				`  ${name}: pixels identical within the ${fuzz}% resampling fuzz — ` +
+					`${strict} pixel(s) differ at zero tolerance${worst}, so the fuzz was load-bearing (bytes differ)`,
+			);
+		} else {
+			console.log(
+				`  ${name}: pixels identical within the ${fuzz}% resampling fuzz (bytes differ; ` +
+					"the zero-tolerance count could not be made)",
+			);
+		}
+		return verified.push(outPath);
+	}
+	if (fuzz > 0 && Number.isFinite(differing) && differing > 0 && differing <= STRAY_PIXELS) {
 		console.log(
-			`  ${outPath.split("/").pop()}: pixels identical (bytes differ — either encoder metadata or a real content change of sub-threshold pixels)`,
+			`  ${name}: pixels identical within the ${fuzz}% fuzz except ${differing} isolated ` +
+				`pixel(s)${worst} — inside the ${STRAY_PIXELS}-pixel encoder allowance (bytes differ)`,
 		);
 		return verified.push(outPath);
 	}
+	if (differing === null) {
+		return stale(
+			outPath,
+			"no image decoder is installed, so the pixel comparison could not be made",
+		);
+	}
+	if (differing === undefined) {
+		return stale(
+			outPath,
+			"the pixel comparison itself failed (the decoder ran but produced no count)",
+		);
+	}
 	stale(
 		outPath,
-		"does not match a fresh render of its own page (bytes and pixels both differ, or no decoder is available to prove the pixels match)",
+		`does not match a fresh render of its own page (${differing} pixel(s) differ beyond ` +
+			`${fuzz === 0 ? "zero tolerance" : `a ${fuzz}% fuzz`}` +
+			`${fuzz === 0 || !Number.isFinite(strict) ? "" : `, ${strict} at zero tolerance`}${worst})`,
 	);
 };
 
@@ -480,6 +577,36 @@ if (target === "preview" || target === "all") {
 	}
 }
 
+/* ---- the 24-bit strip, shared by every store asset --------------------- */
+
+/* Play requires JPEG or 24-bit PNG with NO alpha channel, and App Store Connect
+ * rejects transparency; the capture always comes back RGBA (colour type 6). The
+ * strip is part of the artefact, so it is applied to the fresh render too when
+ * checking — otherwise the comparison would be between two different encodings
+ * and would always fail. */
+const stripAlpha24 = (path) => {
+	const bin = alphaTool();
+	if (!bin) {
+		console.warn(
+			`warning: no ImageMagick, so ${path} may keep an alpha channel — run \`magick ${path} -alpha off PNG24:${path}\``,
+		);
+		process.exitCode = 1;
+		return;
+	}
+	/* Drop the timestamp chunks for the same reason the icon generator does:
+	 * a `tIME` chunk makes a byte gate impossible for no benefit. */
+	execFileSync(
+		bin,
+		[path, "-alpha", "off", "-define", "png:exclude-chunks=time,date", `PNG24:${path}`],
+		{ stdio: "pipe" },
+	);
+	const bytes = readFileSync(path);
+	if (bytes[25] === 6) {
+		console.error(`PROBLEM: ${path} is still RGBA after the strip`);
+		process.exitCode = 1;
+	}
+};
+
 /* ---- 3. the Play feature graphic -------------------------------------- */
 
 if (target === "feature" || target === "all") {
@@ -492,72 +619,132 @@ if (target === "feature" || target === "all") {
 	});
 	const png = await pagep.shot();
 	const outPath = new URL("app-icon/store/play-feature-graphic-1024x500.png", root).pathname;
-	/* Play requires JPEG or 24-bit PNG with NO alpha channel, and the capture
-	 * always comes back RGBA. The strip is part of the artefact, so it is applied
-	 * to the fresh render too when checking — otherwise the comparison would be
-	 * between two different encodings and would always fail. */
-	const stripAlpha = (path) => {
-		const bin = alphaTool();
-		if (!bin) {
-			console.warn(
-				`warning: no ImageMagick, so ${path} may keep an alpha channel — run \`magick ${path} -alpha off PNG24:${path}\``,
-			);
-			process.exitCode = 1;
-			return;
-		}
-		/* Drop the timestamp chunks for the same reason the icon generator does:
-		 * a `tIME` chunk makes a byte gate impossible for no benefit. */
-		execFileSync(
-			bin,
-			[path, "-alpha", "off", "-define", "png:exclude-chunks=time,date", `PNG24:${path}`],
-			{ stdio: "pipe" },
-		);
-		const bytes = readFileSync(path);
-		if (bytes[25] === 6) {
-			console.error(`PROBLEM: ${path} is still RGBA after the strip`);
-			process.exitCode = 1;
-		}
-	};
 	const hasAlpha = png[25] === 6; /* PNG colour type: 6 = RGBA, 2 = RGB (byte 25 of IHDR) */
 	console.log(
 		`feature graphic: ${png.length} B, alpha channel: ${hasAlpha ? "present" : "none"}`,
 	);
-	save(png, outPath, { reencode: hasAlpha ? stripAlpha : null });
+	save(png, outPath, { reencode: hasAlpha ? stripAlpha24 : null });
 }
 
 /* ---- 4. store-screenshot frames --------------------------------------- */
 
 if (target === "frames" || target === "all") {
-	/* Frames are scratch output, not committed artefacts, so `--check` renders
-	 * them only to assert their SIZES against the store specs — the templates are
-	 * what is committed, and the frames are what an implementation pass fills in. */
+	/* A template rendered with no query is not a listing: it is the empty slot,
+	 * and it is rendered only so its canvas can be asserted against the store's
+	 * spec. One surface at a time, from frames.json, so a template and the
+	 * committed set rendered from it cannot disagree about a canvas. */
 	const outDir = check
 		? `${scratch}/frames`
 		: new URL("store-screenshots/out/", root).pathname;
 	mkdirSync(outDir, { recursive: true });
-	const specs = [
-		["iphone-6.9", 1320, 2868, 1],
-		["ipad-13", 2064, 2752, 1],
-		["play-phone", 1080, 1920, 1],
-	];
-	for (const [name, width, height, dpr] of specs) {
+	const set = JSON.parse(
+		readFileSync(new URL("store-screenshots/frames.json", root), "utf8"),
+	);
+	for (const surface of set.surfaces) {
 		const pagep = await openPage({
-			file: `design/store-screenshots/${name}.html`,
-			width,
-			height,
-			dpr,
+			file: `design/store-screenshots/${surface.template}`,
+			width: surface.canvas.width,
+			height: surface.canvas.height,
+			dpr: 1,
 			theme: "dark",
 		});
 		const png = await pagep.shot();
-		const path = `${outDir}/${name}.png`;
+		const path = `${outDir}/${surface.id}.png`;
 		writeFileSync(path, png);
 		const { width: w, height: h } = pngDimensions(png);
-		const ok = w === width && h === height;
+		const ok = w === surface.canvas.width && h === surface.canvas.height;
 		console.log(
-			`${name}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${width}x${height})`}`,
+			`${surface.id}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${surface.canvas.width}x${surface.canvas.height})`}`,
 		);
 		if (!ok) process.exitCode = 1;
 		previewTargets.push(path);
+	}
+
+	/* The committed listings: one PNG per frame in `frames.json`, rendered from
+	 * the surface's template with that frame's caption and capture as data. These
+	 * ARE committed artefacts (the set the store takes), so `--check` verifies
+	 * every surface's frames byte-for-byte like the preview sheet, and the canvas
+	 * size is asserted on every one — an off-size listing is rejected by the
+	 * store, not resized. */
+	for (const surface of set.surfaces) {
+		const frameDir = new URL(`store-screenshots/${surface.outDir}/`, root).pathname;
+		if (!check) mkdirSync(frameDir, { recursive: true });
+		for (const frame of surface.frames) {
+			const capture = `${surface.capture.dir}/${frame.slug}.png`;
+			const query = {
+				eyebrow: frame.eyebrow,
+				headline: frame.headline,
+				capture,
+			};
+			/* Play's slot is taller than a phone screen, so the capture is anchored
+			 * to the top or bottom edge inside it and the template crops the rest
+			 * (`frames.json` names the edge per shot); the App Store templates have
+			 * no crop and are not sent one. */
+			if (frame.crop) query.crop = frame.crop;
+			const pagep = await openPage({
+				file: `design/store-screenshots/${surface.template}`,
+				width: surface.canvas.width,
+				height: surface.canvas.height,
+				dpr: 1,
+				theme: "dark",
+				query,
+			});
+			/* The slot's image is decoded before the shot is taken, and its OWN
+			 * pixel size is asserted against the capture spec: a wrong path renders a
+			 * broken image, which is a plausible blank at exactly the right canvas
+			 * size. */
+			await pagep.evaluate(
+				"Promise.all([...document.images].map((i) => i.decode().catch(() => null)))",
+			);
+			const shown = await pagep.evaluate(
+				'(() => { const i = document.getElementById("capture"); return i === null ? null : { w: i.naturalWidth, h: i.naturalHeight }; })()',
+			);
+			if (
+				shown === null ||
+				shown.w !== surface.capture.pixels.width ||
+				shown.h !== surface.capture.pixels.height
+			) {
+				console.error(
+					`PROBLEM: ${surface.id}/${frame.slug} — the slot shows ` +
+						`${shown === null ? "no image" : `${shown.w}x${shown.h}`} where ${capture} should be ` +
+						`${surface.capture.pixels.width}x${surface.capture.pixels.height}`,
+				);
+				process.exitCode = 1;
+				continue;
+			}
+			/* No build metadata on a store asset. The templates used to draw a spec
+			 * block ("App Store · 6.9\"", "1320 × 2868 @1x", the alt-size list) beside
+			 * their wordmark; that describes the FILE to a maintainer and would have
+			 * shipped inside every listing (review round 1, Q1). Asserted here rather
+			 * than trusted to stay deleted: the canvas size and the alt sizes belong in
+			 * this script's own output, not in the image. */
+			const meta = await pagep.evaluate(`(() => {
+				const hit = /(\\d{3,4}\\s*×\\s*\\d{3,4})|@1x|\\balt:/i.exec(document.body.innerText);
+				return { hit: hit === null ? null : hit[0], spec: document.querySelector(".spec") !== null };
+			})()`);
+			if (meta === null || meta.hit !== null || meta.spec) {
+				console.error(
+					`PROBLEM: ${surface.id}/${frame.slug} — the composed frame carries build metadata ` +
+						`(${meta === null ? "the check could not run" : meta.spec ? "a .spec block" : JSON.stringify(meta.hit)})`,
+				);
+				process.exitCode = 1;
+				continue;
+			}
+			const png = await pagep.shot();
+			const { width: w, height: h } = pngDimensions(png);
+			const ok = w === surface.canvas.width && h === surface.canvas.height;
+			console.log(
+				`${surface.id}/${frame.slug}: ${w}x${h} ${ok ? "(matches the required size)" : `(PROBLEM: expected ${surface.canvas.width}x${surface.canvas.height})`} · capture ${shown.w}x${shown.h}`,
+			);
+			if (!ok) {
+				process.exitCode = 1;
+				continue;
+			}
+			save(png, `${frameDir}${frame.slug}.png`, {
+				reencode: stripAlpha24,
+				fuzz: surface.compareFuzz ?? 0,
+			});
+		}
 	}
 }
 
