@@ -553,7 +553,9 @@ export default function Notifications() {
 									<View className="items-center py-4">
 										<ActivityIndicator />
 									</View>
-								) : response !== null && response.next_cursor !== null ? (
+								) : response !== null &&
+									response.next_cursor !== null &&
+									inbox.loadMoreError === null ? (
 									/* A cursor page is a reader's explicit act, not a scroll
 									 *  trigger the list guesses at. */
 									<View className="items-center py-4">
@@ -565,11 +567,14 @@ export default function Notifications() {
 										/>
 									</View>
 								) : null}
-								{/* A PAGE THAT FAILED IS A STATED FAILURE (QA round 3, Q7).
-								 *  It used to be swallowed, so a rejected second page left the
-								 *  first 50 rows looking like the whole pile. The retry
-								 *  re-issues the SAME cursor — `loadMore` reads it from the
-								 *  held answer — so nothing about the window moves. */}
+								{/* A PAGE THAT FAILED IS A STATED FAILURE (QA round 3, Q7), AND
+								 *  ONE CONTROL (review round 4, m3). While the sentence is up the
+								 *  "Load more" button is suppressed — two buttons that both
+								 *  re-issue the same cursor would be the same verb twice, with
+								 *  only one of them promising to retry the failure the reader is
+								 *  reading about. The retry re-issues the SAME cursor: `loadMore`
+								 *  reads it from the held answer, so nothing about the window
+								 *  moves. */}
 								{inbox.loadMoreError !== null ? (
 									<View
 										className="gap-2 pb-4"
@@ -876,9 +881,14 @@ function InboxRow({
 								: item.session.title}
 							{seenLabel !== null ? ` · ${seenLabel}` : ""}
 						</Text>
-						<Text className="shrink-0 text-meta text-ink-dim">
-							{relativeTime(item.updated_at, nowMs)}
-						</Text>
+						{/* No clock is no age: `relativeTime` answers `""` for a zero stamp,
+						 *  and the element is not drawn at all rather than reserving an empty
+						 *  slot (QA round 4, O2). */}
+						{relativeTime(item.updated_at, nowMs) !== "" ? (
+							<Text className="shrink-0 text-meta text-ink-dim">
+								{relativeTime(item.updated_at, nowMs)}
+							</Text>
+						) : null}
 						{item.repeat_count > 1 ? (
 							<Badge
 								label={`×${item.repeat_count}`}

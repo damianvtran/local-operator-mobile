@@ -104,3 +104,42 @@ describe("the detail's explicit read", () => {
 		expect(detail).toContain("readLoadedDetail");
 	});
 });
+
+/** The hook owns the request lifecycle; the screen only paints it. */
+const hook = readFileSync(
+	new URL("./use-notifications.ts", import.meta.url),
+	"utf8",
+);
+
+describe("the failed-page state (review round 4, m1/m2/m3)", () => {
+	it("renders a stated failure with ONE retry control", () => {
+		expect(source).toContain("inbox.loadMoreError");
+		expect(source).toContain("SURFACE.inboxLoadMoreFailed");
+		expect(source).toContain("CONTROL.inboxLoadMoreRetry");
+		/* While the sentence is up the "Load more" button is suppressed: the gate
+		 * below is the conditional that does it, and two controls that re-issue the
+		 * same cursor would be the same verb twice. */
+		expect(source).toContain("inbox.loadMoreError === null");
+	});
+
+	it("clears the failure when a page-one answer lands", () => {
+		/* The error belongs to the cursor walk it happened in; a refresh or a
+		 * filter switch must not leave it (and its cursor) beside fresh rows. */
+		const load = hook.slice(hook.indexOf("const load = useCallback"));
+		const body = load.slice(0, load.indexOf("const loadMore"));
+		expect(body).toContain("setLoadMoreError(null)");
+	});
+
+	it("bounds the awaited detail read below a page read", () => {
+		const detail = readFileSync(
+			new URL("./notification-detail.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(detail).toContain("READ_CONFIRM_TIMEOUT_MS");
+		const wait = Number(
+			/READ_CONFIRM_TIMEOUT_MS = ([0-9_]+)/.exec(detail)?.[1]?.replace("_", ""),
+		);
+		expect(wait).toBeGreaterThan(0);
+		expect(wait).toBeLessThan(8_000);
+	});
+});

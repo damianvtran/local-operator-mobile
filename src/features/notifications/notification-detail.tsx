@@ -15,6 +15,7 @@ import {
 } from "@/features/notifications/conversation-dismiss";
 import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
 import {
+	conversationName,
 	OPEN_LABEL,
 	RETRY_LABEL,
 	readLoadedDetail,
@@ -49,6 +50,12 @@ import { SectionHeader } from "@/ui/components/section-header";
 import { Skeleton } from "@/ui/components/skeleton";
 
 const READ_TIMEOUT_MS = 8_000;
+
+/** The awaited explicit read's own budget — shorter than a page read because the
+ *  reader is sitting on this screen waiting for it before the From card can offer
+ *  its count (review round 4, m4). A timeout is treated as a failed read: the item
+ *  stays unread and the walk still starts. */
+const READ_CONFIRM_TIMEOUT_MS = 3_500;
 
 type DetailState =
 	| { kind: "loading" }
@@ -153,21 +160,36 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					 * starts before the read settles freezes a boundary BELOW the item on
 					 * screen, so the reader's own "Dismiss all" skips the very row they
 					 * opened as `stale_revision`. `readLoadedDetail` is that sequence. */
+					/* ITS OWN SHORT DEADLINE (review round 4, m4). This write is not a page
+					 * read: the reader is on the screen waiting for it before the From
+					 * card can offer its count, and the relay's other interactive reads are
+					 * bounded well below a page's budget. A read that has not landed in
+					 * this window is treated as failed — the item stays UNREAD (the safe
+					 * direction) and the walk below still runs, so Dismiss-all opens with a
+					 * FRESH boundary instead of a disabled card. */
 					const shown = await readLoadedDetail(detail, {
 						read: (id, revision) =>
-							live.patchNotifications({ op: "read", ids: [{ id, revision }] }),
+							live.patchNotifications(
+								{ op: "read", ids: [{ id, revision }] },
+								AbortSignal.timeout(READ_CONFIRM_TIMEOUT_MS),
+							),
 						reload: (id) =>
-							live.notification(id, AbortSignal.timeout(READ_TIMEOUT_MS)),
+							live.notification(
+								id,
+								AbortSignal.timeout(READ_CONFIRM_TIMEOUT_MS),
+							),
 					});
 					if (ticket !== ticketRef.current) return;
 					if (shown !== detail) setState({ kind: "ready", detail: shown });
-					if (ticket !== ticketRef.current) return;
 					/* Count AFTER the read settles: the read re-stamps this item's seq,
 					 * and a boundary frozen before it would make the write refuse the
 					 * very item the reader is looking at as "changed since counted".
 					 * The walk reads `shown`, so the count and the row on screen agree. */
 					rewalkRef.current = () =>
-						void recount(shown.session.id, shown.session.title);
+						void recount(
+							shown.session.id,
+							conversationName(shown.session.title),
+						);
 					rewalkRef.current();
 				} catch (error) {
 					/* A late answer to a superseded load (a retry the reader pressed while
@@ -356,7 +378,13 @@ function DetailBody({
 					{item.title}
 				</Text>
 				<Text className="text-meta text-ink-dim">
-					{`${session.title}${session.live || session.live_state === "live" ? " · Live" : ""} · ${relativeTime(item.updated_at, Date.now())}`}
+					{[
+						conversationName(session.title),
+						session.live || session.live_state === "live" ? "Live" : "",
+						relativeTime(item.updated_at, Date.now()),
+					]
+						.filter((part) => part !== "")
+						.join(" · ")}
 				</Text>
 			</View>
 			{item.source === "notify" && (item.body_md ?? "") !== "" ? (
@@ -418,7 +446,7 @@ function DetailBody({
 				/>
 			)}
 			<FromCard
-				title={session.title}
+				title={conversationName(session.title)}
 				liveState={
 					session.live === true || session.live_state === "live"
 						? "Live"

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { NotificationItem, NotificationsResponse } from "@/contracts";
 import {
 	canDismiss,
+	conversationName,
 	countLabel,
 	hasUnread,
 	inboxEmpty,
@@ -10,10 +11,13 @@ import {
 	inboxSections,
 	inboxUnreadCount,
 	markAllTarget,
+	mergePage,
 	notificationsEnabled,
 	readLoadedDetail,
+	relativeTime,
 	selectionTargets,
 	toggleSelection,
+	unionTokens,
 } from "@/features/notifications/notifications-model";
 
 function item(overrides: Partial<NotificationItem> = {}): NotificationItem {
@@ -266,5 +270,83 @@ describe("the explicit read, then the re-read (QA round 3, Q8)", () => {
 		});
 		expect(reads).toBe(0);
 		expect(shown).toBe(ask);
+	});
+
+	describe("one cursor page merged onto what the screen holds (review round 4, m1)", () => {
+		const page = (
+			overrides: Partial<NotificationsResponse> = {},
+		): NotificationsResponse => ({
+			...response(),
+			...overrides,
+		});
+
+		it("keeps page one's counts, waiting rows and boundary", () => {
+			const held = page({
+				items: [item({ id: "n_1" })],
+				waiting: [item({ id: "ask:aaaaaaaaaaaa:a1", source: "ask" })],
+				unread_count: 61,
+				waiting_count: 1,
+				waiting_unread_count: 1,
+				high_water: 61,
+				observed: [{ id: "n_1", revision: 1 }],
+				next_cursor: "c1",
+			});
+			const next = page({
+				items: [item({ id: "n_2" })],
+				waiting: [],
+				unread_count: 12,
+				waiting_count: 9,
+				waiting_unread_count: 9,
+				high_water: 99,
+				observed: [{ id: "n_2", revision: 1 }],
+				next_cursor: null,
+			});
+			const merged = mergePage(held, next);
+			expect(merged.unread_count).toBe(61);
+			expect(merged.waiting_count).toBe(1);
+			expect(merged.waiting_unread_count).toBe(1);
+			expect(merged.waiting).toEqual(held.waiting);
+			expect(merged.high_water).toBe(61);
+		});
+
+		it("never double-counts and never drops what page one carried", () => {
+			const held = page({ items: [item({ id: "n_1" })] });
+			const merged = mergePage(held, page({ items: [item({ id: "n_2" })] }));
+			expect(merged.items.map((row) => row.id)).toEqual(["n_1", "n_2"]);
+			expect(merged.items).toHaveLength(2);
+			/* Counts are carried, not summed — a page is not a count. */
+			expect(merged.unread_count).toBe(held.unread_count);
+		});
+
+		it("unions the observed window, so a bulk write reaches every page", () => {
+			const held = page({ observed: [{ id: "n_1", revision: 1 }] });
+			const next = page({
+				observed: [
+					{ id: "n_1", revision: 2 },
+					{ id: "n_2", revision: 1 },
+				],
+			});
+			const merged = mergePage(held, next);
+			expect(merged.observed).toEqual([
+				{ id: "n_1", revision: 2 },
+				{ id: "n_2", revision: 1 },
+			]);
+			expect(unionTokens(undefined, undefined)).toEqual([]);
+		});
+	});
+
+	describe("a zero clock and a nameless conversation (QA round 4, O1/O2)", () => {
+		it("renders no age for a zero stamp, never the whole epoch", () => {
+			expect(relativeTime(0, 1_792_926_900_000)).toBe("");
+			expect(relativeTime(Number.NaN, 1_792_926_900_000)).toBe("");
+			expect(relativeTime(1_792_926_840_000, 1_792_926_900_000)).toBe("1m ago");
+		});
+
+		it("names a nameless conversation the way the reel does", () => {
+			expect(conversationName("")).toBe("untitled");
+			expect(conversationName("   ")).toBe("untitled");
+			expect(conversationName(undefined)).toBe("untitled");
+			expect(conversationName("QA Alpha")).toBe("QA Alpha");
+		});
 	});
 });

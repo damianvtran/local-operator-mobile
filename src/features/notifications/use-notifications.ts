@@ -26,6 +26,7 @@ import type {
 import {
 	DETAIL_UNREACHABLE,
 	LOAD_MORE_FAILED,
+	mergePage,
 	READ_FAILED,
 	READ_UNREACHABLE,
 	SKIPPED_SENTENCE,
@@ -130,6 +131,13 @@ export function useNotifications(
 			if (client === null || !enabled) return;
 			const ticket = ++ticketRef.current;
 			const asked = filterRef.current;
+			/* A REFRESH CLEARS THE FAILED-PAGE LINE (review round 4, m2). The error
+			 * belongs to the cursor walk it happened in; a new page-one answer means
+			 * the list is current again, and leaving the sentence — and its retry,
+			 * which would re-issue a cursor from the OLD window — beside fresh rows
+			 * would describe a failure that no longer applies. Cleared for a silent
+			 * reload too: the rows it paints are page one's. */
+			setLoadMoreError(null);
 			if (options?.silent !== true) {
 				setLoading(true);
 				setRefused(null);
@@ -176,13 +184,11 @@ export function useNotifications(
 	}, []);
 
 	/**
-	 * The next page, APPENDED.
+	 * The next page, APPENDED — `mergePage` owns the arithmetic.
 	 *
-	 * `waiting` is first-page-only by contract, so the appended answer's waiting
-	 * list is ignored and the held one is kept: asking again would put the same
-	 * pinned rows at the top of a page that is about updates further down. The
-	 * counts come from the newest answer (they are store-wide, not page-wide), and
-	 * `high_water` with them.
+	 * `waiting`, the store-wide counts and `high_water` all stay PAGE ONE's, and
+	 * `observed` becomes the union: `mergePage` carries the reasons. This call
+	 * only adds the page's own rows.
 	 */
 	const loadMore = useCallback(() => {
 		const held = responseRef.current;
@@ -200,38 +206,7 @@ export function useNotifications(
 					cursor: held.next_cursor ?? undefined,
 				});
 				if (ticket !== ticketRef.current) return;
-				/* THE WINDOW IS THE UNION OF WHAT THE SCREEN HOLDS, not the page
-				 * that just landed. `observed` is what a bulk write may touch, so
-				 * replacing it page by page made "Mark all read" reach only the last
-				 * page while its label, the badge and `high_water` all described the
-				 * whole pile — 60 rows on screen, 10 cleared, and an empty `skipped`
-				 * so nothing even said so (code review M1, reproduced by its author).
-				 *
-				 * `high_water` stays the FIRST page's boundary: it is the boundary the
-				 * rows on screen were served under, and widening it to a later page
-				 * would let a mark-all reach an item that arrived after the reader
-				 * started reading. */
-				/* THE COUNTS ARE THE FIRST PAGE'S. They are store-wide figures the
-				 *  first answer published for the window the screen's rows were served
-				 *  under; taking a later page's numbers would re-label the pile under
-				 *  the reader mid-walk, and ADDING them would double-count rows that
-				 *  were never per-page. Only `items` grows, and only by the page's own
-				 *  rows. */
-				setResponse({
-					...answer,
-					unread_count: held.unread_count,
-					waiting_count: held.waiting_count,
-					waiting_unread_count: held.waiting_unread_count,
-					waiting: held.waiting,
-					/* The FIRST answer's boundary, because that is the window the rows on
-					 *  screen were served under. `Math.min` also keeps it honest if a relay
-					 *  ever reports a LOWER watermark (store reset, restart): the conservative
-					 *  direction — those rows come back as `stale_revision` in the receipt
-					 * rather than being silently claimed as read. */
-					high_water: Math.min(held.high_water, answer.high_water),
-					observed: unionTokens(held.observed, answer.observed),
-					items: [...held.items, ...answer.items],
-				});
+				setResponse(mergePage(held, answer));
 				setNowMs(Date.now());
 			} catch (error) {
 				/* A failed page is not a failed list — what is on screen stays — but it
@@ -378,18 +353,8 @@ const OFFLINE_SENTENCE = "Tunnel temporarily unavailable";
 export const WRITE_UNREACHABLE =
 	"That did not reach your computer. Nothing changed.";
 
-/** The union of two `observed` lists, deduped by id, keeping the LAST revision
- *  the relay stated for each. Exported for the test that pins M1. */
-export function unionTokens(
-	held: ReadonlyArray<{ id: string; revision: number }> | undefined,
-	next: ReadonlyArray<{ id: string; revision: number }> | undefined,
-): Array<{ id: string; revision: number }> {
-	const merged = new Map<string, { id: string; revision: number }>();
-	for (const token of [...(held ?? []), ...(next ?? [])]) {
-		merged.set(token.id, { id: token.id, revision: token.revision });
-	}
-	return [...merged.values()];
-}
+/* `unionTokens` lives with `mergePage` — the merge is its only caller now — and is
+ * re-exported here so the module that always published it still does. */
 
 export const INBOX_FAILED_READ = READ_FAILED;
 export const INBOX_UNREACHABLE = READ_UNREACHABLE;

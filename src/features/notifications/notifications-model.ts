@@ -318,6 +318,53 @@ export const DETAIL_UNREACHABLE =
  *  (`in 4m`, `2h overdue` on the schedules screen) rather than a timestamp: the
  *  reader is deciding what to clear, not reading a log. */
 /**
+ * One cursor page merged onto what the screen already holds.
+ *
+ * WHAT COMES FROM PAGE ONE, AND WHY. `waiting` is first-page-only by contract,
+ * and the store-wide counts describe the window the rows on screen were served
+ * under — a later page's numbers would re-label the pile under the reader
+ * mid-walk, and ADDING them would double-count rows that were never per-page.
+ * `high_water` stays the first answer's boundary (`Math.min`, so a relay that
+ * reports a lower watermark after a restart moves in the conservative
+ * direction) and the observed window is the UNION, because that is what a bulk
+ * write may touch: replacing it page by page made "Mark all read" reach only the
+ * last page while its label described the whole pile.
+ *
+ * Page-one rows are never dropped: the merge is an append, so a page that
+ * arrives while a refresh is in flight cannot erase what the reader is looking
+ * at. Extracted from the hook so the arithmetic is testable without a renderer
+ * (review round 4, m1).
+ */
+/** The union of two `observed` lists, deduped by id, keeping the LAST revision
+ *  the relay stated for each. */
+export function unionTokens(
+	held: ReadonlyArray<{ id: string; revision: number }> | undefined,
+	next: ReadonlyArray<{ id: string; revision: number }> | undefined,
+): Array<{ id: string; revision: number }> {
+	const merged = new Map<string, { id: string; revision: number }>();
+	for (const token of [...(held ?? []), ...(next ?? [])]) {
+		merged.set(token.id, { id: token.id, revision: token.revision });
+	}
+	return [...merged.values()];
+}
+
+export function mergePage(
+	held: NotificationsResponse,
+	page: NotificationsResponse,
+): NotificationsResponse {
+	return {
+		...page,
+		unread_count: held.unread_count,
+		waiting_count: held.waiting_count,
+		waiting_unread_count: held.waiting_unread_count,
+		waiting: held.waiting,
+		high_water: Math.min(held.high_water, page.high_water),
+		observed: unionTokens(held.observed, page.observed),
+		items: [...held.items, ...page.items],
+	};
+}
+
+/**
  * The explicit read of a LOADED detail, then the row read BACK — in that order,
  * always (QA round 3, Q8).
  *
@@ -354,7 +401,28 @@ export async function readLoadedDetail<
 	return refreshed ?? detail;
 }
 
+/**
+ * A clock as an age, or `""` when there is NO clock.
+ *
+ * `0` is the wire's "this field carries nothing" (an ask's `expires_at: 0` means
+ * no deadline; a row without an update stamp carries `updated_at: 0`). Formatting
+ * it as an age produced "20752d ago" — the whole distance from 1970 — so the
+ * caller renders no age at all, and the sentence around it drops its separator
+ * rather than trailing a `·` into nothing (QA round 4, O2).
+ */
+/**
+ * A conversation's name for copy, with the SAME fallback the reel uses
+ * (`state/list-store.ts` `sessionTitle`): a nameless conversation is
+ * "untitled". "Dismiss all 30 from " with nothing after it was the alternative
+ * (QA round 4, O1).
+ */
+export function conversationName(title: string | undefined | null): string {
+	const name = (title ?? "").trim();
+	return name.length > 0 ? name : "untitled";
+}
+
 export function relativeTime(atMs: number, nowMs: number): string {
+	if (!(atMs > 0)) return "";
 	const delta = Math.max(0, nowMs - atMs);
 	const minutes = Math.round(delta / 60_000);
 	if (minutes < 1) return "just now";
