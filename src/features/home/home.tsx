@@ -437,7 +437,7 @@ export default function Home({
 				/>
 			)}
 			{startup.snapshot.queue.length > 0 ? (
-				<View className="px-4 py-2" testID="startup-pending">
+				<View className="px-4 py-2" testID={SURFACE.startupPending}>
 					<Text
 						accessibilityLiveRegion="polite"
 						className="text-body-sm text-ink-muted"
@@ -453,7 +453,7 @@ export default function Home({
 						label="View queued messages"
 						variant="quiet"
 						size="sm"
-						testID="startup-view-queue"
+						testID={CONTROL.startupViewQueue}
 						onPress={() => setQueueOpen(true)}
 					/>
 				</View>
@@ -653,7 +653,7 @@ export default function Home({
 				visible={optionsOpen}
 				onClose={() => setOptionsOpen(false)}
 				title="Conversation options"
-				testID="startup-options"
+				testID={CONTROL.startupOptions}
 			>
 				<View className="gap-3 py-2">
 					<Input
@@ -672,7 +672,7 @@ export default function Home({
 							}
 							onPress={() => setOptionModel(model)}
 							disabled={startup.snapshot.phase !== "draft"}
-							testID={`startup-model-${model.selector}`}
+							testID={CONTROL.startupModelOption}
 						/>
 					))}
 					<Button
@@ -694,7 +694,7 @@ export default function Home({
 									: {}),
 							});
 						}}
-						testID="startup-options-apply"
+						testID={CONTROL.startupOptionsApply}
 					/>
 					{startup.snapshot.phase !== "draft" ? (
 						<Text className="text-body-sm text-ink-muted">
@@ -709,7 +709,7 @@ export default function Home({
 				visible={queueOpen}
 				onClose={() => setQueueOpen(false)}
 				title="Queued messages"
-				testID="startup-queue-sheet"
+				testID={CONTROL.startupQueueSheet}
 			>
 				<View className="gap-4 py-2">
 					{startup.snapshot.queue.map((message, index) => (

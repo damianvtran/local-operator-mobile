@@ -206,7 +206,6 @@ export const CONTROL = {
 	 * would pick arbitrarily), and `e2e/maestro/**` addresses the flow vocabulary
 	 * declared above. --- */
 	setupUseThisComputer: "setup-use-this-computer",
-	newSessionCreate: "new-session-create",
 	computersRetryAction: "computers-retry-action",
 	settingsThemeGroup: "settings-theme-group",
 	computersBanner: "computers-banner",
@@ -219,10 +218,6 @@ export const CONTROL = {
 	splitBody: "split-body",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
-	newSessionModel: "new-session-model",
-	newSessionModelDefault: "new-session-model-default",
-	newSessionPrompt: "new-session-prompt",
-	newSessionStart: "new-session-start",
 	sessionsSplit: "sessions-split",
 	sessionsNoRoute: "sessions-no-route",
 
@@ -237,9 +232,16 @@ export const CONTROL = {
 	signInUseAddress: "sign-in-use-address",
 	signInTryAnyway: "sign-in-try-anyway",
 	signInBack: "sign-in-back",
-	newSessionBack: "new-session-back",
-	newSessionHomeChip: "new-session-home-chip",
-	newSessionPathChip: "new-session-path-chip",
+	/** The provisional conversation's own controls. They live on the home and
+	 *  `/new` (one shared editor), so they are named once here rather than typed
+	 *  as literals at three call sites — the a11y contract rejects literals so a
+	 *  capture cell cannot invent an id the contract never declared. */
+	startupOptions: "startup-options",
+	startupOptionsApply: "startup-options-apply",
+	startupViewQueue: "startup-view-queue",
+	startupQueueSheet: "startup-queue-sheet",
+	startupOpenConversation: "startup-open-conversation",
+	startupModelOption: "startup-model-option",
 	pastBack: "past-back",
 	pastSearchField: "past-search-field",
 	pastSearch: "past-search",
@@ -517,6 +519,10 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The provisional conversation's own surfaces: its queued-count line and the
+	 *  transcript it adopts once the relay has returned a real session. */
+	startupPending: "startup-pending",
+	startupTranscript: "startup-transcript",
 	/** The Schedules screen's loading skeleton (S17). Its own id because the
 	 *  loading state must be distinguishable from the empty state — and on a
 	 *  320 pt phone the two frames once came out byte-identical on the

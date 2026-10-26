@@ -9,7 +9,9 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import type { PromptImage } from "@/contracts";
 import { useListState } from "@/features/auth/connection-provider";
+import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
 import {
@@ -60,8 +62,6 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { useStartup } from "@/features/new-session/use-startup";
-import type { PromptImage } from "@/contracts";
 import { isRemoteRow } from "@/features/sessions/session-projection";
 import { SessionTagLine } from "@/features/sessions/tag-line";
 import { canAssignSessionTags } from "@/features/sessions/tags";
@@ -138,12 +138,17 @@ export default function Session() {
 
 	const runtime = useSessionRuntime(sessionId);
 	const provisional = useStartup(null, sessionId);
-	const provisionalEditor = provisional.coordinator === null ? undefined : {
-		draft: provisional.snapshot.draft.text,
-		images: provisional.snapshot.draft.images,
-		setDraft: (text: string) => provisional.setText(text),
-		setImages: (next: PromptImage[] | ((current: PromptImage[]) => PromptImage[])) => provisional.setImages(next),
-	};
+	const provisionalEditor =
+		provisional.coordinator === null
+			? undefined
+			: {
+					draft: provisional.snapshot.draft.text,
+					images: provisional.snapshot.draft.images,
+					setDraft: (text: string) => provisional.setText(text),
+					setImages: (
+						next: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+					) => provisional.setImages(next),
+				};
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);

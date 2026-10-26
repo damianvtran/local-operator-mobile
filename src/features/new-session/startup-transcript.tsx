@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 
 /** Adopt the actual session above the existing editor, not in place of it.
@@ -51,7 +52,7 @@ export function StartupTranscript({
 					}
 					variant="quiet"
 					size="sm"
-					testID="startup-open-conversation"
+					testID={CONTROL.startupOpenConversation}
 					onPress={() => router.push(`/session/${sessionId}`)}
 				/>
 			</View>
@@ -66,7 +67,7 @@ export function StartupTranscript({
 				supplements={runtime.supplements}
 				projectionPid={runtime.projectionPid}
 				supplementClient={supplementClient}
-				testID="startup-transcript"
+				testID={SURFACE.startupTranscript}
 				empty={
 					<Text className="px-4 py-3 text-body-sm text-ink-muted">
 						Waiting for the conversation…

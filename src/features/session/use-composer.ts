@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { getStartupAuthorization, subscribeStartupAuthorization } from "@/connection/startup-authorization";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import {
+	getStartupAuthorization,
+	subscribeStartupAuthorization,
+} from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import {
@@ -135,14 +145,25 @@ export const useComposer = (input: {
 	onSent?: () => void;
 	/** An adopted provisional editor keeps its identity while this host adds the
 	 * normal session actions, dictation and slash controls around it. */
-	editor?: { draft: string; images: PromptImage[]; setDraft(text: string): void; setImages(value: PromptImage[] | ((current: PromptImage[]) => PromptImage[])): void };
+	editor?: {
+		draft: string;
+		images: PromptImage[];
+		setDraft(text: string): void;
+		setImages(
+			value: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+		): void;
+	};
 }): ComposerState => {
 	// `onSent` is destructured rather than kept as `input`: an object prop in a
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const endpoints = source.endpoints;
-	const authorization = useSyncExternalStore(subscribeStartupAuthorization, getStartupAuthorization, getStartupAuthorization);
+	const authorization = useSyncExternalStore(
+		subscribeStartupAuthorization,
+		getStartupAuthorization,
+		getStartupAuthorization,
+	);
 	const scope = authorization?.scope ?? null;
 	const storageIdentity = JSON.stringify([scope, sessionId]);
 	const editor = input.editor;
@@ -154,7 +175,6 @@ export const useComposer = (input: {
 
 	const [privateDraft, setPrivateDraft] = useState("");
 	const draft = editor?.draft ?? privateDraft;
-	const setDraftState = editor?.setDraft ?? setPrivateDraft;
 	/* Keyed by the session it was read for, not a bare boolean: a session switch
 	 * re-points this hook without remounting it, and a boolean left `true` from the
 	 * previous session would read the NEW session's still-unread draft as known.
@@ -168,7 +188,31 @@ export const useComposer = (input: {
 	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
 	const [privateImages, setPrivateImages] = useState<PromptImage[]>([]);
 	const images = editor?.images ?? privateImages;
-	const setImages = editor?.setImages ?? setPrivateImages;
+	/* Both writers stay STABLE while targeting whichever surface currently owns the
+	 * bytes. A plain `editor?.setter ?? setState` changes identity on every render,
+	 * which both invalidates the memoized callbacks below and can write through a
+	 * stale editor after adoption — the one handoff that must not lose a keystroke. */
+	const editorRef = useRef(editor);
+	editorRef.current = editor;
+	const draftRefForWrite = useRef(draft);
+	draftRefForWrite.current = draft;
+	const imagesRefForWrite = useRef(images);
+	imagesRefForWrite.current = images;
+	const setDraftState = useCallback((text: string) => {
+		const owner = editorRef.current;
+		if (owner === undefined) setPrivateDraft(text);
+		else owner.setDraft(text);
+	}, []);
+	const setImages = useCallback(
+		(next: PromptImage[] | ((current: PromptImage[]) => PromptImage[])) => {
+			const current = editorRef.current?.images ?? imagesRefForWrite.current;
+			const value = typeof next === "function" ? next(current) : next;
+			const owner = editorRef.current;
+			if (owner === undefined) setPrivateImages(value);
+			else owner.setImages(value);
+		},
+		[],
+	);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
@@ -239,7 +283,10 @@ export const useComposer = (input: {
 	const commitDraft = useCallback(
 		(text: string) => {
 			setDraftState(text);
-			if (editor === undefined && scope !== null) void writeDraft(sessionId, text, scope).catch(() => setError("Could not save the draft on this device."));
+			if (editor === undefined && scope !== null)
+				void writeDraft(sessionId, text, scope).catch(() =>
+					setError("Could not save the draft on this device."),
+				);
 		},
 		[sessionId, scope, editor, setDraftState],
 	);
@@ -427,6 +474,7 @@ export const useComposer = (input: {
 			sessionId,
 			envelopeStore,
 			setDraft,
+			setImages,
 			onSent,
 			streaming,
 			cancelDictationForSend,
@@ -581,57 +629,63 @@ export const useComposer = (input: {
 		[endpoints, sessionId],
 	);
 
-	const attach = useCallback((source: AttachSource) => {
-		void (async () => {
-			setAttaching(true);
-			/* A new attach supersedes the last failure the way `home.tsx`'s copies of
-			 * this handler already do (`setComposerError(null)`): without it, "No image
-			 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
-			 * described a state the composer was no longer in (agent review round 1,
-			 * R3). */
-			setError(null);
-			try {
-				const image =
-					source === "library"
-						? await pickImageFromLibrary()
-						: source === "paste"
-							? await pasteImage()
-							: await pickImageFromFiles();
-				if (image !== null) {
-					setImages((current) => [...current, image]);
-				} else if (source === "paste") {
-					/* The one arm that is not a cancel: the reader pressed Paste and no
-					 *  image came back. Told, because a press with no outcome reads as a
-					 *  broken control — the same rule `attachError` follows. */
-					setError(COMPOSER_COPY.pasteEmpty);
+	const attach = useCallback(
+		(source: AttachSource) => {
+			void (async () => {
+				setAttaching(true);
+				/* A new attach supersedes the last failure the way `home.tsx`'s copies of
+				 * this handler already do (`setComposerError(null)`): without it, "No image
+				 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
+				 * described a state the composer was no longer in (agent review round 1,
+				 * R3). */
+				setError(null);
+				try {
+					const image =
+						source === "library"
+							? await pickImageFromLibrary()
+							: source === "paste"
+								? await pasteImage()
+								: await pickImageFromFiles();
+					if (image !== null) {
+						setImages((current) => [...current, image]);
+					} else if (source === "paste") {
+						/* The one arm that is not a cancel: the reader pressed Paste and no
+						 *  image came back. Told, because a press with no outcome reads as a
+						 *  broken control — the same rule `attachError` follows. */
+						setError(COMPOSER_COPY.pasteEmpty);
+					}
+				} catch {
+					setError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
 				}
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+			})();
+		},
+		[setImages],
+	);
 
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
 	 *  as its destination: the event and the sheet's Paste row are two doors into
 	 *  one attachment path. */
-	const pasteFile = useCallback((file: File) => {
-		void (async () => {
-			setAttaching(true);
-			/* Same clear as `attach` above, for the same reason: this is the session
-			 * view's copy of home's handler and the two must not disagree. */
-			setError(null);
-			try {
-				const image = await readWebImageFile(file);
-				setImages((current) => [...current, image]);
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+	const pasteFile = useCallback(
+		(file: File) => {
+			void (async () => {
+				setAttaching(true);
+				/* Same clear as `attach` above, for the same reason: this is the session
+				 * view's copy of home's handler and the two must not disagree. */
+				setError(null);
+				try {
+					const image = await readWebImageFile(file);
+					setImages((current) => [...current, image]);
+				} catch {
+					setError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
+				}
+			})();
+		},
+		[setImages],
+	);
 
 	const slash = useCallback(
 		(command: SlashCommand) => {
@@ -699,10 +753,12 @@ export const useComposer = (input: {
 	);
 
 	return {
-		draft: editor !== undefined || draftReadFor === storageIdentity ? draft : "",
+		draft:
+			editor !== undefined || draftReadFor === storageIdentity ? draft : "",
 		draftReady: editor !== undefined || draftReadFor === storageIdentity,
 		setDraft,
-		images: editor !== undefined || draftReadFor === storageIdentity ? images : [],
+		images:
+			editor !== undefined || draftReadFor === storageIdentity ? images : [],
 		addImage: (image) => setImages((current) => [...current, image]),
 		removeImage: (index) =>
 			setImages((current) => current.filter((_, at) => at !== index)),
