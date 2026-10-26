@@ -318,6 +318,7 @@ const ComposerChipButton = ({
 				onPress={() => undefined}
 				disabled
 				quiet
+				shrink
 				accessibilityLabel={chip.accessibilityLabel}
 				accessibilityHint={chip.accessibilityHint}
 				testID={testID}
@@ -327,6 +328,7 @@ const ComposerChipButton = ({
 	return (
 		<Chip
 			label={chip.text}
+			shrink
 			onPress={onPress}
 			quiet
 			accessibilityLabel={chip.accessibilityLabel}

@@ -250,6 +250,31 @@ export const fieldScrollsWithContent = (
 	cap: number,
 ): boolean => contentFloor > cap;
 
+/** The field's border, top and bottom, in CSS pixels: `fieldClasses` draws a 1px
+ *  border, and the box is `border-box`, so a height set from the content's own
+ *  measurement is short by exactly this much unless it is added back. */
+export const FIELD_BORDER_Y = 2;
+
+/**
+ * The painted height of a field, in px.
+ *
+ * `contentFloor`, `oneLineBox` and `placeholderFloor` all describe the CONTENT box
+ * (text + `FIELD_PAD_Y`); `cap` is a content budget (`maxLines × line`). Under
+ * `border-box` the style's height is the border box, so the border must be added or
+ * the field clips its last line by 2px — measured on S16/create-filled at 100%:
+ * "content 88px in a 86px box (overflow-y: hidden)". The composer escapes only
+ * because its own content report happened to come back two pixels larger; the
+ * arithmetic was wrong for every field and visible wherever the report was exact.
+ */
+export const fieldBoxHeight = (
+	contentFloor: number,
+	oneLineBox: number,
+	placeholderFloor: number,
+	cap: number,
+): number =>
+	Math.min(Math.max(contentFloor, oneLineBox, placeholderFloor), cap) +
+	FIELD_BORDER_Y;
+
 export const fieldClasses = (
 	state: FieldState = "rest",
 	options: { inComposer?: boolean } = {},

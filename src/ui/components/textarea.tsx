@@ -10,6 +10,7 @@ import {
 	fieldClasses,
 	fieldScrollsWithContent,
 	TEXTAREA_MAX_PX,
+	fieldBoxHeight,
 	webFieldOverflow,
 	webFieldResize,
 } from "@/ui/variants";
@@ -275,8 +276,13 @@ export const Textarea = ({
 					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
 					 *  web/audit profile) have to be resolved together (D6). */
 					style={{
-						height: Math.min(
-							Math.max(contentFloor, oneLineBox, placeholderFloor),
+						/* The border is part of the painted box (border-box), so the height
+						 *  the content measured must grow by it or the last line is clipped
+						 *  by 2px — S16/create-filled's 100% frame (U-07). */
+						height: fieldBoxHeight(
+							contentFloor,
+							oneLineBox,
+							placeholderFloor,
 							cap,
 						),
 						minHeight: TOUCH_FLOOR,

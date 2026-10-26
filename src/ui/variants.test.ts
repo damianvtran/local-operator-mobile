@@ -17,6 +17,9 @@ import {
 	skeletonClasses,
 	touchFloorFor,
 	webFieldOverflow,
+	FIELD_BORDER_Y,
+	fieldBoxHeight,
+	fieldScrollsWithContent,
 } from "@/ui/variants";
 
 /**
@@ -328,5 +331,24 @@ describe("web field overflow", () => {
 		expect(source).toContain("webFieldStyle(Platform.OS, scrollable)");
 		expect(source).toContain("webFieldResize(platform)");
 		expect(source).toContain("scrollEnabled={scrollable}");
+	});
+});
+
+/* U-07, S16/create-filled at 100%: "content 88px in a 86px box (overflow-y:
+ * hidden)". The field's style height is a BORDER box, so a height computed from
+ * the content's own measurement clips the last line by the border unless the
+ * border is added back. */
+describe("the field's painted height includes its border", () => {
+	it("turns the capped content measurement into the border box", () => {
+		expect(fieldBoxHeight(88, 40, 0, 88)).toBe(88 + FIELD_BORDER_Y);
+		expect(fieldBoxHeight(60, 40, 0, 88)).toBe(60 + FIELD_BORDER_Y);
+		expect(fieldBoxHeight(20, 40, 50, 88)).toBe(50 + FIELD_BORDER_Y);
+		// The cap itself is a CONTENT budget: the painted box is two pixels taller.
+		expect(fieldBoxHeight(88, 40, 0, 88)).toBeGreaterThan(88);
+	});
+
+	it("keeps the scroll decision on the CONTENT budget, not the painted box", () => {
+		expect(fieldScrollsWithContent(88, 88)).toBe(false);
+		expect(fieldScrollsWithContent(89, 88)).toBe(true);
 	});
 });

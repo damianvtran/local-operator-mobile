@@ -163,14 +163,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * under `src/` only — `app` is unchanged this time and keeps its previous digest.
 	 * Fourth in the batch, for R11-1 and the five UX minors (queue surgery refused
 	 * during a flight, merge computed in-transaction, late-SID mapping, row copy);
-	 * again `src` only. */
+	 * again `src` only. Fifth, for the final audit's two geometry defects: the
+	 * composer chip's cap moved onto its own flex item (`src/ui/components/chip.tsx`,
+	 * U-08's 48×41 overlap at 320 pt / 200 %) and the field's painted height now adds
+	 * its border (`src/ui/variants.ts` `fieldBoxHeight`, wired in `textarea.tsx`,
+	 * U-07's "content 88px in a 86px box"); `src` only once more. */
 	app: "a95c87f6b74d94a1cd0ad49543279d3e77f45e56f897fd5bb24fd64cb3e1c68d",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "8c877096a2be460b85dfc1830a119964a18eabf42fddc15e8e1bb888a7dcc219",
+	src: "2ade5446e5d6de08d5e832df0c8db6f1cbac0718b49aeeb922eae23c9c2e826d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
