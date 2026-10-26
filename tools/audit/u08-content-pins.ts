@@ -1,0 +1,407 @@
+/** Content-identity admission for the U-08 proofs.
+ *
+ * WHY NOT PATH DIFFS. Both proofs used to admit themselves with `git diff`
+ * rules: "every path between REPAIR_BASE/ORIGINAL_HEAD and HEAD is in a fixed
+ * allowlist", and "nothing under app/src/assets/design/config differs from
+ * ORIGINAL_HEAD at all". Both ask "has anything changed since a fixed commit?",
+ * which is not the question a proof asks, and both go stale the moment unrelated
+ * work merges. Measured: hosted run 40179237342 died in preflight with "Source
+ * differs outside the reviewed diagnostic-only scope" before it launched a
+ * browser, because PR #109 added a test file and touched the instrument while PR
+ * #110 added listing frames under design/store-screenshots. Neither changes a
+ * measured pixel, and both are permanently outside such an allowlist.
+ *
+ * THE QUESTION WORTH ASKING is "is this still the same measurement of the same
+ * scene?". Three content identities answer it and nothing else:
+ *
+ *  - INSTRUMENT_PINS: every module either proof loads at run time — the static
+ *    value-import closure of both drivers, per file. That is the drivers
+ *    themselves, the in-page probe, the canonical checks and U-08 policy, the
+ *    paint and colour maths, the cell extractor, the browser/page/readiness
+ *    helpers (they pick the binary, its flags and the emulated metrics), and the
+ *    mock relay that builds the DOM. A test recomputes the closure and fails if
+ *    this table drifts from it.
+ *  - RENDER_TREE_PINS / RENDER_FILE_PINS: the app the proof was authored
+ *    against — the source that builds the bundle, the design tokens and vendored
+ *    faces the styling layer is generated from, the web shell and its fonts,
+ *    package.json (its `main` and `export:web` decide what the bundle is, and the
+ *    proof renders a prebuilt dist), and dependency identity.
+ *  - INPUT_TREE_PINS: the scene the proof is fed — the relay corpus, the turn
+ *    supplement fixtures read by the relay, and the positive-control canary.
+ *    Reader-shaped selection excludes corpus documentation and unused records.
+ *    Editing transcript text in `fixtures/relay/**` moves line boxes while
+ *    RECORD.pinnedScenario still names the same scenario.
+ *
+ * OUT OF SCOPE by construction (reader-shaped fixture selection below): the design kit's
+ * documentation captures (`design/store-screenshots`), its preview page, app
+ * icons, native config plugins, `docs/`, test files, and fixtures no proof reads.
+ * Merging or editing any of those cannot refuse a run.
+ *
+ * GRANULARITY. Modules are pinned per file so a refusal names them; render and
+ * input roots are one digest each, because pinning ~500 files by hand is not
+ * reviewable and a mismatch names the root. `--print` emits paste-ready
+ * declarations for the whole table.
+ *
+ * TRUST ROOT. These tables are it: editing them is how a re-pin happens, and that
+ * edit is visible in review like any other source change. Say the uncomfortable
+ * part plainly: a pull request that edits an instrument file and its pin in the
+ * same commit passes this guard. The table cannot pin the file that contains it,
+ * and nothing outside the repository checks the pair. That is inherent to a
+ * same-repo tripwire — what protects the proof is that the re-pin is a visible
+ * line in a reviewable diff, not that the tool catches its own author. The suite
+ * proves the pins match the tree they were committed with, and nothing more.
+ * The ORIGINAL_* constants in u08-geometry-proof.ts are a different thing and are
+ * never re-pinned — they identify the captured historical packet, not the
+ * instrument that runs today.
+ */
+
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const REPO_ROOT = resolve(import.meta.dirname, "../..");
+
+const sha256 = (content: string | Uint8Array) =>
+	createHash("sha256").update(content).digest("hex");
+
+/* --------------------------------------------------------------- the table -- */
+
+export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
+	"tools/audit/audit.ts":
+		"a6d619015bc78c7e5f753f452e326a722b172c18150371c3414c77fd8b4b2ebf",
+	"tools/audit/checks.ts":
+		"0342b7587d55d235db66030d470dc1b94145f8f76ddf1a2e5d0ddd0078c1e304",
+	"tools/audit/color.ts":
+		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
+	"tools/audit/paint-fragments.ts":
+		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
+	"tools/audit/probe.ts":
+		"4083769831f6d34b5c0db4fd7c432fa94317ac00db4fa05eb947947c4ec677ba",
+	"tools/audit/u08-fragment-verification.ts":
+		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
+	"tools/audit/u08-geometry-proof.ts":
+		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
+	"tools/lib/affordance.ts":
+		"06902d73d4a59043084c223897c45dbc55c6e89014aa57b4204904e4b19e3208",
+	"tools/lib/args.ts":
+		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
+	"tools/lib/cdp.ts":
+		"7875028a68f933c98dcb8df664427f167945e21dce514030ee268a20ce7fbd7e",
+	"tools/lib/chrome.ts":
+		"e635a8cf6460e397eaaebdce4a6e459d6d1ff62b4866fb4c56cc4dcb91927162",
+	"tools/lib/json.ts":
+		"24e4229a1af05da10dddf95dfbcabcdde564dbe97269d0974a25f0c32b8656a0",
+	"tools/lib/page.ts":
+		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
+	"tools/lib/readiness.ts":
+		"663b0da6d58769a3ca32f8983901485c6ad5ff07992939a68534d44a3509fcc6",
+	"tools/lib/relay.ts":
+		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
+	"tools/lib/static-server.ts":
+		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
+	"tools/mock-relay/account-routing-gate.ts":
+		"2388f03adfea61dd69bcf397428fb899ab5d5977f47574727d81087d8d597379",
+	"tools/mock-relay/account-routing-identity.ts":
+		"0d56a3cde84ebb8fdba12aaa2e96bf0435ea100ac4366b426ed842084fd74501",
+	"tools/mock-relay/account-routing.ts":
+		"0baaedd970b4729bf3692cd9b3354666a9c2670e48be5016edd23429e5649163",
+	"tools/mock-relay/faults.ts":
+		"813657253a6dcf107c3b905d8a246b828c7ca8aa29bbc018762bfebd8a528d2b",
+	"tools/mock-relay/fixtures.ts":
+		"1641e6e2b3b424a2143ea6c3b8e69f3f2fc5ca02f8418429ca0835e54cf8bb4e",
+	"tools/mock-relay/library.ts":
+		"e33cd28ff3c0fb72bc8088cb06c0290993c115ceaf3b4d6bb2773ec89b3fd304",
+	"tools/mock-relay/projects.ts":
+		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
+	"tools/mock-relay/relay.ts":
+		"b3f94c0eba8559301f2f04119e992c625a9a9a108bacd043e48efdfcd6af4ee4",
+	"tools/mock-relay/scenarios.ts":
+		"530b6e922af122dcaf62180eed49923e7f0ed671d630c1da904dd8bbdc5c8c96",
+	"tools/mock-relay/shape.ts":
+		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
+	"tools/mock-relay/transcribe.ts":
+		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
+	"tools/mock-relay/wire.ts":
+		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
+	"tools/visual/matrix.ts":
+		"172b9fe4007edcee68ded3dba4d93f584c9b1d848b3d05e6d68a12e942c35f44",
+	"e2e/fixtures/audit-canary/index.html":
+		"721a48e28a4f0282cfbf15c5f25a3f19d7c9ae10e0ffcb31edc7c2503af35bb9",
+};
+
+export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	app: "478316b5d8fd4234138f88b87194878ba324fa7bba1835a239b883e32a19ac15",
+	"design/fonts":
+		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
+	"design/tokens":
+		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
+	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
+	src: "f9f60f90e866ed183ff07abbc0b09a9523ec446db24b4869100a151a042c7caa",
+};
+
+export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
+	"fixtures/relay":
+		"c1b9c2bc12fdae19972252bd6ecedd5585d98f4b22865656f7938c37f92914cb",
+	"fixtures/supplements":
+		"29bad98e91e6e29bd8148505f06058c24ff6682b3b4ba62bd43575a6a94d19cc",
+};
+
+export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
+	"app.config.ts":
+		"81e92f5315dbc9df56c603c4ac58b54f90f52a64d20f6c0f4f4ab8d3c7cd0332",
+	"metro.config.js":
+		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
+	"package.json":
+		"766ef74869e325f6e0b1b0ace856b0359e894205b03f8eb1b77244bcd7c786de",
+	"pnpm-lock.yaml":
+		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+	"pnpm-workspace.yaml":
+		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
+};
+
+/** The re-pin an operator runs after reviewing a deliberate change. */
+export const REPIN_COMMAND = "node tools/audit/u08-content-pins.ts --print";
+
+/* ------------------------------------------------------------- the reading -- */
+
+/** Tracked content the pins describe: sha256 per file, plus the tracked paths
+ * that are gone from the working tree. `git ls-files` enumerates so .gitignore,
+ * node_modules and dist never enter a digest. */
+export interface RepositoryContent {
+	readonly files: ReadonlyMap<string, string>;
+	/** Tracked in the index, unreadable on disk — a deletion nobody staged. */
+	readonly missing: ReadonlySet<string>;
+}
+
+/** Every path handed to `git ls-files`: pinned files and pinned roots, sorted. */
+export function pinnedScopes(): string[] {
+	return [
+		...new Set([
+			...Object.keys(INSTRUMENT_PINS),
+			...Object.keys(RENDER_TREE_PINS),
+			...Object.keys(INPUT_TREE_PINS),
+			...Object.keys(RENDER_FILE_PINS),
+		]),
+	].sort();
+}
+
+/** Match the readers, not the directory names: fixtures.ts loads direct HTTP /
+ * synthetic JSON, every direct SSE entry, and two named gateway/probe records;
+ * scenarios.ts reads supplement rows and relay.ts serves one HTML document.
+ * A README at either root (or an unused probe/message record) cannot move a
+ * measured line box. SSE has deliberately NO extension exclusion: its reader
+ * consumes even a prose-named entry, so such a file must remain pinned. */
+const RELAY_JSON = /^fixtures\/relay\/(?:http|synthetic)\/[^/]+\.json$/;
+const RELAY_SSE = /^fixtures\/relay\/sse\/[^/]+$/;
+const SUPPLEMENT_ROWS = /^fixtures\/supplements\/rows\/[^/]+\.json$/;
+
+export function isPinnedContentPath(path: string): boolean {
+	if (path.startsWith("fixtures/relay/"))
+		return (
+			RELAY_JSON.test(path) ||
+			RELAY_SSE.test(path) ||
+			path === "fixtures/relay/gateway/gateway-refusal-constants.json" ||
+			path === "fixtures/relay/probes/wedged-row-signal.json"
+		);
+	if (path.startsWith("fixtures/supplements/"))
+		return (
+			SUPPLEMENT_ROWS.test(path) ||
+			path === "fixtures/supplements/documents/populated.html"
+		);
+	return true;
+}
+
+export function snapshotContent(root: string = REPO_ROOT): RepositoryContent {
+	const listed = execFileSync(
+		"git",
+		["ls-files", "-z", "--", ...pinnedScopes()],
+		{ cwd: root, encoding: "utf8" },
+	)
+		.split("\0")
+		.filter(Boolean);
+	const files = new Map<string, string>();
+	const missing = new Set<string>();
+	for (const path of listed) {
+		if (!isPinnedContentPath(path)) continue;
+		try {
+			files.set(path, sha256(readFileSync(resolve(root, path))));
+		} catch (error) {
+			// A tracked file removed without staging is absence, not a crash: the
+			// operator needs the path in the refusal, not a readFileSync stack.
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+			missing.add(path);
+		}
+	}
+	return { files, missing };
+}
+
+/** Order-independent digest of one root, so directory traversal order cannot
+ * change a verdict. */
+export function treeDigest(content: RepositoryContent, root: string): string {
+	const prefix = `${root}/`;
+	return sha256(
+		[...content.files]
+			.filter(([path]) => path.startsWith(prefix) && isPinnedContentPath(path))
+			.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+			.map(([path, digest]) => `${digest}  ${path}\n`)
+			.join(""),
+	);
+}
+
+/* ------------------------------------------------------------ the verdict -- */
+
+export type DriftKind =
+	| "missing"
+	| "instrument"
+	| "render-tree"
+	| "input-tree"
+	| "render-file";
+export interface Drift {
+	kind: DriftKind;
+	/** The pinned file or root that differs. */
+	scope: string;
+	pinned: string;
+	/** Re-hashed content, or "absent" when the pinned path is gone. */
+	actual: string;
+}
+
+/** A vanished member is reported once by path, not also as a failed root digest:
+ * one deletion should not read as two verdicts. */
+const hasMissingUnder = (content: RepositoryContent, root: string) =>
+	[...content.missing].some(
+		(path) => path.startsWith(`${root}/`) && isPinnedContentPath(path),
+	);
+
+export function contentDrift(content: RepositoryContent): Drift[] {
+	const drift: Drift[] = [];
+	for (const path of [...content.missing].filter(isPinnedContentPath).sort())
+		drift.push({
+			kind: "missing",
+			scope: path,
+			pinned: "tracked",
+			actual: "absent",
+		});
+	for (const [path, pinned] of Object.entries(INSTRUMENT_PINS)) {
+		if (content.missing.has(path)) continue;
+		const actual = content.files.get(path) ?? "absent";
+		if (actual !== pinned)
+			drift.push({ kind: "instrument", scope: path, pinned, actual });
+	}
+	const roots: [Record<string, string>, DriftKind][] = [
+		[RENDER_TREE_PINS, "render-tree"],
+		[INPUT_TREE_PINS, "input-tree"],
+	];
+	for (const [table, kind] of roots)
+		for (const [root, pinned] of Object.entries(table)) {
+			if (hasMissingUnder(content, root)) continue;
+			const actual = treeDigest(content, root);
+			if (actual !== pinned) drift.push({ kind, scope: root, pinned, actual });
+		}
+	for (const [path, pinned] of Object.entries(RENDER_FILE_PINS)) {
+		if (content.missing.has(path)) continue;
+		const actual = content.files.get(path) ?? "absent";
+		if (actual !== pinned)
+			drift.push({ kind: "render-file", scope: path, pinned, actual });
+	}
+	return drift;
+}
+
+/** Refuse before any browser work; the message must let an operator act. */
+export function assertPinnedContent(
+	content: RepositoryContent = snapshotContent(),
+) {
+	const drift = contentDrift(content);
+	if (drift.length === 0) return;
+	throw new Error(
+		[
+			"U08 content identity differs from the pinned baseline; refusing approximate proof:",
+			...drift.map(
+				(entry) =>
+					`  ${entry.kind} ${entry.scope} pinned=${entry.pinned} actual=${entry.actual}`,
+			),
+			`A deliberate re-pin is required: review that change against what the proof measures, then run \`${REPIN_COMMAND}\` and update the pin table in tools/audit/u08-content-pins.ts. Historical ORIGINAL_* incident hashes are never repinned.`,
+		].join("\n"),
+	);
+}
+
+/* ------------------------------------------------------------ the printing -- */
+
+/** Paste-ready declarations for the whole table. A pinned path that no longer
+ * exists prints as a comment with an instruction, never as a value, and makes the
+ * command exit non-zero: a deletion is not a re-pin. */
+export function pinDeclarations(content: RepositoryContent): {
+	declarations: string;
+	missing: string[];
+} {
+	const missing: string[] = [];
+	const declaration = (
+		name: string,
+		keys: readonly string[],
+		digestOf: (key: string) => string | null,
+	) =>
+		[
+			`export const ${name}: Readonly<Record<string, string>> = {`,
+			...keys.map((key) => {
+				const digest = digestOf(key);
+				if (digest === null) {
+					missing.push(key);
+					return [
+						`\t// MISSING ${key} — tracked in the table, gone from the tree.`,
+						"\t// Restore the file, or delete this key deliberately; never pin a deletion.",
+					].join("\n");
+				}
+				return `\t${JSON.stringify(key)}: ${JSON.stringify(digest)},`;
+			}),
+			"};",
+		].join("\n");
+	const fileDigest = (path: string) => content.files.get(path) ?? null;
+	// A root digest is meaningful only when every tracked member is readable.
+	const rootDigest = (root: string) =>
+		hasMissingUnder(content, root) ? null : treeDigest(content, root);
+	return {
+		declarations: [
+			declaration("INSTRUMENT_PINS", Object.keys(INSTRUMENT_PINS), fileDigest),
+			declaration(
+				"RENDER_TREE_PINS",
+				Object.keys(RENDER_TREE_PINS),
+				rootDigest,
+			),
+			declaration("INPUT_TREE_PINS", Object.keys(INPUT_TREE_PINS), rootDigest),
+			declaration(
+				"RENDER_FILE_PINS",
+				Object.keys(RENDER_FILE_PINS),
+				fileDigest,
+			),
+		].join("\n\n"),
+		missing,
+	};
+}
+
+if (import.meta.main) {
+	const args = process.argv.slice(2);
+	// `--root=` exists so the suite can exercise this command against a throwaway
+	// fixture, and so an operator can re-pin a clean clone without cd-ing into it.
+	const rootArg = args.find((arg) => arg.startsWith("--root="));
+	const content = snapshotContent(
+		rootArg ? resolve(rootArg.slice("--root=".length)) : REPO_ROOT,
+	);
+	if (args.includes("--print")) {
+		const { declarations, missing } = pinDeclarations(content);
+		console.log(declarations);
+		if (missing.length > 0) {
+			console.error(
+				`${missing.length} pinned path(s) are gone from the tree: ${missing.join(", ")}. Nothing was printed as a value for them — restore each file, or delete its key deliberately.`,
+			);
+			process.exitCode = 1;
+		}
+	} else {
+		try {
+			assertPinnedContent(content);
+			console.log("U08 content identity matches the pinned baseline");
+		} catch (error) {
+			console.error(error instanceof Error ? error.message : String(error));
+			process.exitCode = 1;
+		}
+	}
+}

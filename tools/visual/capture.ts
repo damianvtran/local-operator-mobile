@@ -1466,6 +1466,22 @@ export interface CaptureOptions {
 	 * relay about.
 	 */
 	noSeed?: boolean;
+	/**
+	 * Pin ONE scenario for every cell in this run, instead of taking the registry's
+	 * first scenario that declares each cell.
+	 *
+	 * The registry's first match is right for the audit matrix — one state per cell,
+	 * chosen once — but several scenarios deliberately serve the same cell with
+	 * different CONTENT (`every-entry-kind` and `idle` both render `S5/populated`;
+	 * `approval-destructive` and `approval` both render `S8/approval`). A capture
+	 * that needs a specific world — the store listing frames, whose text is read by
+	 * a person rather than asserted against a marker — has no other way to say
+	 * which one, because the pin is derived from the cell name alone.
+	 *
+	 * It is recorded as the cell's `pinnedScenario`, so the audit's re-drive pins
+	 * the same world the frame was taken of, exactly as it does for a derived pin.
+	 */
+	scenario?: string | undefined;
 }
 
 /** One captured cell and everything the audit and the gallery read off it. */
@@ -1894,9 +1910,30 @@ export async function runCapture(options: CaptureOptions) {
 			 * previous cell left behind — a state the cell does not name, measured under its
 			 * name. See `tools/audit/audit.ts`.
 			 */
-			const cellScenario = registryBacked
-				? (state?.cellScenarios?.[cell.cell]?.[0] ?? null)
-				: null;
+			/* A named world must DECLARE this cell. The relay rejects an unknown
+			 * scenario name and accepts a known one for any cell, so
+			 * `--scenario store-rail --cells S15/mesh-remote` would serve a world
+			 * that never renders the cell asked for, and the frame would be a
+			 * different state under the cell's name — the fixture-confusion class
+			 * this harness exists to prevent (review round 1, MINOR-3). Only a
+			 * registry-declared cell can be checked: a `path:` cell is not in the
+			 * registry at all, and a named world is how an ad-hoc page gets one. */
+			if (
+				options.scenario !== undefined &&
+				registryBacked &&
+				!(state?.cellScenarios?.[cell.cell] ?? []).includes(options.scenario)
+			) {
+				abandonCell(
+					`--scenario '${options.scenario}' does not declare ${cell.cell}; ` +
+						`the worlds that do are ${(state?.cellScenarios?.[cell.cell] ?? []).join(", ") || "none"}`,
+				);
+				continue;
+			}
+			const cellScenario =
+				options.scenario ??
+				(registryBacked
+					? (state?.cellScenarios?.[cell.cell]?.[0] ?? null)
+					: null);
 			if (cellScenario !== null && relay !== undefined) {
 				// Bounded like the cell itself: a pin whose relay is gone abandons THIS cell.
 				const pinned = await relayStep(
@@ -1948,7 +1985,11 @@ export async function runCapture(options: CaptureOptions) {
 			// The scenario travels WITH the cell, for the same reason the seed travels with
 			// the run (see `meta.seed`): the audit re-drives this URL, and the relay has to be
 			// back in the state the cell names before it does.
-			record.pinnedScenario = cellScenario;
+			/* Null, not the requested name, when no relay applied it: a manifest
+			 * that claims a world the run never served is replayed faithfully by
+			 * `tools/audit/audit.ts`, which is worse than recording nothing
+			 * (review round 1, MINOR-2). */
+			record.pinnedScenario = relay === undefined ? null : cellScenario;
 			if (relay !== undefined) {
 				/* Bounded for the same reason as the count before it, and here the frame is already
 				 * captured: a relay that dies now costs this cell its REACH fact (`null` already means
@@ -2846,6 +2887,9 @@ if (isMain) {
 				"                      password is the mock relay's DEFAULT_PASSWORD.",
 				"  --no-seed           do not seed the page at all, even with --relay: the state a",
 				"                      run needs to prove the app was NOT pointed at the relay",
+				"  --scenario <name>   pin ONE scenario for every cell in this run (default: the",
+				"                      first scenario the registry declares for each cell). The",
+				"                      pin is recorded per cell, so an audit re-drive replays it",
 				"  --relay <url>       mock relay base URL; supplies the scenario list and session ids",
 				"  --cells <a/b,...>   explicit screen/state cells (default: whatever the relay declares)",
 				"  --cell-timeout <s>  hard bound per cell; a cell that exceeds it FAILS with that reason (default 45)",
@@ -2926,6 +2970,7 @@ if (isMain) {
 			password: str(flags, "seed-password", "") || null,
 		},
 		noSeed: bool(flags, "no-seed"),
+		scenario: str(flags, "scenario", undefined),
 		// Bounds, in the CLI because CI's job timeout is not this tool's business:
 		// a cell that never settles must fail that cell, and a run that would outlive
 		// its job must stop accounting for itself and write what it has.

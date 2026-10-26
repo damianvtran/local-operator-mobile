@@ -1,5 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	truncateSync,
+	writeFileSync,
+} from "node:fs";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
@@ -7,11 +17,18 @@ import type { AuditNode, AuditState } from "./checks.ts";
 import {
 	ARTIFACT_LIMIT_BYTES,
 	assertCoverage,
+	assertTurnControl,
 	evaluateRepairedCell,
+	FAILURE_RECEIPT_LIMIT_BYTES,
 	FAILURE_RESERVE_BYTES,
+	type FailureContext,
 	nextArtifactBytes,
 	POSITIVE_IDS,
+	shrinkFailureReceipt,
+	TURN_CONTROL_ID,
+	TURN_CONTROL_SOURCE,
 	verificationRecords,
+	writeFailureEvidence,
 } from "./u08-fragment-verification.ts";
 import {
 	ORIGINAL_NODE_PATH,
@@ -20,6 +37,454 @@ import {
 } from "./u08-geometry-proof.ts";
 
 const root = resolve(import.meta.dirname, "../..");
+const require = createRequire(import.meta.url);
+const cell = {
+	theme: "dark",
+	state: "condensed",
+	path: "/session/6714def86197?lo-scroll=top",
+};
+interface PaintNode {
+	tagName: string;
+	parentElement: PaintNode | null;
+	childElementCount: number;
+	textContent: string;
+	style: {
+		display: string;
+		visibility: string;
+		opacity: string;
+		contentVisibility: string;
+	};
+	getClientRects: () => {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}[];
+	getAttribute: (name: string) => string | null;
+	querySelectorAll: () => PaintNode[];
+}
+function controlFixture(glyph = "▸", aria: string | null = null) {
+	const make = (
+		tagName: string,
+		parentElement: PaintNode | null,
+		textContent = "",
+	): PaintNode => ({
+		tagName,
+		parentElement,
+		textContent,
+		childElementCount: 0,
+		style: {
+			display: "block",
+			visibility: "visible",
+			opacity: "1",
+			contentVisibility: "visible",
+		},
+		getClientRects: () => [{ x: 0, y: 100, width: 12, height: 18 }],
+		getAttribute: () => null,
+		querySelectorAll: () => [],
+	});
+	const ancestor = make("BODY", null),
+		control = make("BUTTON", ancestor),
+		leaf = make("SPAN", control, glyph);
+	control.childElementCount = 1;
+	control.style.display = "flex";
+	leaf.style.display = "inline";
+	control.getAttribute = (name) => (name === "aria-expanded" ? aria : null);
+	control.querySelectorAll = () => [leaf];
+	let styleReads = 0;
+	const collect = (
+		controls: PaintNode[] = [control],
+		readStyle = (node: PaintNode) => node.style,
+	) => {
+		styleReads = 0;
+		const reading = runInNewContext(
+			TURN_CONTROL_SOURCE,
+			{
+				document: { querySelectorAll: () => controls },
+				getComputedStyle: (node: PaintNode) => {
+					styleReads++;
+					return readStyle(node);
+				},
+			},
+			{ timeout: 100 },
+		);
+		return { reading, styleReads };
+	};
+	return { ancestor, control, leaf, collect };
+}
+const png = Buffer.from(
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jwXcAAAAASUVORK5CYII=",
+	"base64",
+);
+function failureContext(): FailureContext {
+	return {
+		head: "synthetic-head",
+		phase: "control-state",
+		cell,
+		completedKeys: ["light-condensed"],
+		readiness: { path: "/session/6714def86197", testIds: [TURN_CONTROL_ID] },
+		environment: {
+			theme: "dark",
+			viewport: { width: 390, height: 844, dpr: 3 },
+		},
+		control: {
+			controlId: TURN_CONTROL_ID,
+			count: 1,
+			ariaExpanded: null,
+			caretCount: 0,
+			carets: [],
+		},
+		error: "control-state expected caret ▸; observed none",
+	};
+}
+function outputDir() {
+	return mkdtempSync(
+		resolve(
+			process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+			"u08-failure-test-",
+		),
+	);
+}
+
+describe("hosted control contract and live-lifetime failure evidence", () => {
+	it("accepts the actual installed RNW caret when accessibilityState does not become ARIA, and checks explicit ARIA consistently", () => {
+		// Real compiled package, bypassing native test mocks. SSR is not browser or
+		// native layout/IME proof: it discriminates this adapter/attribute contract.
+		const React = require("react"),
+			{ renderToStaticMarkup } = require("react-dom/server"),
+			{ Pressable, Text } = require("react-native-web");
+		for (const expanded of [false, true])
+			for (const explicit of [false, true]) {
+				const props = explicit
+					? { "aria-expanded": expanded }
+					: { accessibilityState: { expanded } };
+				const html = renderToStaticMarkup(
+					React.createElement(
+						Pressable,
+						{ testID: TURN_CONTROL_ID, accessibilityRole: "button", ...props },
+						React.createElement(Text, null, expanded ? "▾" : "▸"),
+					),
+				);
+				const carets = [...html.matchAll(/>(▸|▾)</gu)].map((m) => m[1]);
+				expect([
+					...html.matchAll(/data-testid="turn-bar-tc-conv-00-user"/g),
+				]).toHaveLength(1);
+				expect(carets).toEqual([expanded ? "▾" : "▸"]);
+				// Markup is actually rendered by RNW; style/layout facts below are explicit
+				// supplied logical controls, not claimed SSR/browser measurements.
+				const fixture = controlFixture(
+					carets[0],
+					html.match(/aria-expanded="([^"]*)"/)?.[1] ?? null,
+				);
+				const { reading, styleReads } = fixture.collect();
+				expect(styleReads).toBeGreaterThan(0);
+				expect(reading.ariaExpanded).toBe(explicit ? String(expanded) : null);
+				expect(reading.ariaExpanded === String(expanded)).toBe(explicit); // Old guard fails on the same real RNW output.
+				expect(reading.count).toBe(1);
+				expect(reading.carets).toEqual([expanded ? "▾" : "▸"]);
+				expect(() =>
+					assertTurnControl(
+						{ ...cell, state: expanded ? "expanded" : "condensed" },
+						reading,
+					),
+				).not.toThrow();
+			}
+	});
+	it("executes the real collector and refuses missing, duplicate, wrong-caret, hidden or contradictory state", () => {
+		const fixture = controlFixture();
+		const { control } = fixture;
+		const collect = (controls: PaintNode[]) =>
+			fixture.collect(controls).reading;
+		const good = collect([control]);
+		expect(() => assertTurnControl(cell, good)).not.toThrow();
+		expect(good.ariaExpanded).toBeNull();
+		for (const reading of [
+			collect([]),
+			collect([control, controlFixture().control]),
+			controlFixture("▾").collect().reading,
+			(() => {
+				const hidden = controlFixture();
+				hidden.leaf.getClientRects = () => [];
+				return hidden.collect().reading;
+			})(),
+			{ ...good, ariaExpanded: "true" },
+			{ ...good, ariaExpanded: undefined },
+			{ ...good, carets: ["▸", "▸"], caretCount: 2 },
+			undefined,
+		]) {
+			expect(() => assertTurnControl(cell, reading)).toThrow(
+				/control-state theme=dark state=condensed path=.*control=turn-bar.*expected aria=false caret=▸; unreadable=.*; observed=/,
+			);
+		}
+		expect(() =>
+			assertTurnControl(
+				{ ...cell, state: "expanded" },
+				{ ...good, carets: ["▾"], ariaExpanded: "false" },
+			),
+		).toThrow("expected aria=true");
+	});
+	it("refuses non-painted and collapsed caret/control witnesses through the actual probe and guard", () => {
+		type Fixture = ReturnType<typeof controlFixture>;
+		const cases: [string, (f: Fixture) => void, string][] = [
+			[
+				"own visibility",
+				(f) => {
+					f.leaf.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"own opacity",
+				(f) => {
+					f.leaf.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"control visibility",
+				(f) => {
+					f.control.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"control opacity",
+				(f) => {
+					f.control.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"ancestor visibility",
+				(f) => {
+					f.ancestor.style.visibility = "hidden";
+				},
+				"visibility",
+			],
+			[
+				"ancestor opacity",
+				(f) => {
+					f.ancestor.style.opacity = "0";
+				},
+				"opacity",
+			],
+			[
+				"caret zero area",
+				(f) => {
+					f.leaf.getClientRects = () => [{ x: 0, y: 100, width: 0, height: 0 }];
+				},
+				"rect-area",
+			],
+			[
+				"control zero area",
+				(f) => {
+					f.control.getClientRects = () => [
+						{ x: 0, y: 100, width: 0, height: 18 },
+					];
+				},
+				"rect-area",
+			],
+			[
+				"display none",
+				(f) => {
+					f.leaf.style.display = "none";
+					f.leaf.getClientRects = () => [];
+				},
+				"rect-area",
+			],
+			[
+				"ancestor display none",
+				(f) => {
+					f.ancestor.style.display = "none";
+				},
+				"display",
+			],
+			[
+				"effective opacity zero",
+				(f) => {
+					f.control.style.opacity = "1e-200";
+					f.ancestor.style.opacity = "1e-200";
+				},
+				"effective-opacity",
+			],
+			[
+				"unknown opacity",
+				(f) => {
+					f.leaf.style.opacity = "not-a-number";
+				},
+				"opacity",
+			],
+			[
+				"unreadable style",
+				(f) => {
+					Object.defineProperty(f.leaf.style, "visibility", {
+						get() {
+							throw new Error("unreadable computed visibility");
+						},
+					});
+				},
+				"computed-style",
+			],
+		];
+		for (const [name, mutate, property] of cases) {
+			const f = controlFixture();
+			mutate(f);
+			const { reading, styleReads } = f.collect();
+			expect(styleReads, name).toBeGreaterThan(0);
+			expect(() => assertTurnControl(cell, reading), name).toThrow(property);
+			expect(reading.caretCount, name).toBe(0);
+		}
+		const visible = controlFixture();
+		visible.leaf.style.opacity = "0.5";
+		visible.control.style.opacity = "0.5";
+		visible.ancestor.style.opacity = "0.5";
+		const { reading } = visible.collect();
+		expect(() => assertTurnControl(cell, reading)).not.toThrow();
+		expect(reading.caretVisibility[0].visibility.effectiveOpacity).toBe(0.125);
+	});
+	it("retains the failing computed property and measured style trace in failure diagnostics", async () => {
+		const f = controlFixture();
+		f.ancestor.style.opacity = "0";
+		const { reading } = f.collect();
+		const out = outputDir();
+		try {
+			await writeFailureEvidence(
+				out,
+				0,
+				{ ...failureContext(), control: reading },
+				null,
+			);
+			const saved = JSON.parse(
+				readFileSync(resolve(out, "failure.json"), "utf8"),
+			);
+			expect(saved.readabilityFailure).toMatchObject({
+				property: "opacity",
+				value: "0",
+				style: { tag: "BODY", opacity: "0", effectiveOpacity: 0 },
+			});
+			expect(
+				saved.control.controlVisibility.trace.some(
+					(t: { opacity: string }) => t.opacity === "0",
+				),
+			).toBe(true);
+			expect(saved.diagnosed).toBe(false);
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+	});
+
+	it("writes actual partial-context and PNG bytes before caller teardown, preserving prior cell records", async () => {
+		const out = outputDir();
+		let alive = true;
+		try {
+			writeFileSync(
+				resolve(out, "light-condensed.json"),
+				JSON.stringify({
+					kind: "PARTIAL CORRECTED CELL",
+					key: "light-condensed",
+				}),
+			);
+			await writeFailureEvidence(out, 0, failureContext(), async () => {
+				expect(alive).toBe(true);
+				return { data: png.toString("base64") };
+			});
+			alive = false;
+			const saved = JSON.parse(
+				readFileSync(resolve(out, "failure.json"), "utf8"),
+			);
+			expect(saved).toMatchObject({
+				...failureContext(),
+				diagnosed: false,
+				screenshot: { status: "saved" },
+			});
+			expect(readFileSync(resolve(out, "failure.png"))).toEqual(png);
+			expect(
+				JSON.parse(readFileSync(resolve(out, "light-condensed.json"), "utf8"))
+					.key,
+			).toBe("light-condensed");
+			expect(
+				readdirSync(out).reduce(
+					(n, name) => n + statSync(resolve(out, name)).size,
+					0,
+				),
+			).toBeLessThanOrEqual(ARTIFACT_LIMIT_BYTES);
+			expect(readdirSync(out)).not.toContain("verification.json");
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+	});
+	it("keeps failure context when screenshots fail or the aggregate image budget is exhausted", async () => {
+		for (const mode of ["no-page", "reject", "invalid", "budget", "stall"]) {
+			const out = outputDir();
+			try {
+				if (mode === "budget") {
+					writeFileSync(resolve(out, "prior.png"), "");
+					truncateSync(
+						resolve(out, "prior.png"),
+						ARTIFACT_LIMIT_BYTES - FAILURE_RESERVE_BYTES,
+					);
+				}
+				const capture =
+					mode === "no-page"
+						? null
+						: async () => {
+								if (mode === "stall") return new Promise<never>(() => {});
+								if (mode === "reject") throw new Error("page closed");
+								return {
+									data: mode === "invalid" ? "bad" : png.toString("base64"),
+								};
+							};
+				await writeFailureEvidence(out, 0, failureContext(), capture);
+				const saved = JSON.parse(
+					readFileSync(resolve(out, "failure.json"), "utf8"),
+				);
+				expect(saved.screenshot.status).toBe("unavailable");
+				expect(saved.cell).toEqual(cell);
+				expect(saved.diagnosed).toBe(false);
+				expect(readdirSync(out)).not.toContain("failure.png");
+				expect(
+					readdirSync(out).reduce(
+						(n, name) => n + statSync(resolve(out, name)).size,
+						0,
+					),
+				).toBeLessThanOrEqual(ARTIFACT_LIMIT_BYTES - 2048);
+			} finally {
+				rmSync(out, { recursive: true, force: true });
+			}
+		}
+	});
+	it("retains bounded cell identity when oversized errors have no control reply", async () => {
+		const out = outputDir();
+		try {
+			await writeFailureEvidence(
+				out,
+				0,
+				{
+					...failureContext(),
+					control: undefined,
+					error: "x".repeat(32768),
+					environment: { oversized: "x".repeat(32768) },
+				},
+				null,
+			);
+			const file = readFileSync(resolve(out, "failure.json"));
+			const saved = JSON.parse(file.toString());
+			expect(file.length).toBeLessThanOrEqual(FAILURE_RESERVE_BYTES / 2);
+			expect(saved.cell).toEqual(cell);
+			expect(saved.diagnosed).toBe(false);
+			expect(saved.expectedControl).toMatchObject({
+				controlId: TURN_CONTROL_ID,
+				caret: "▸",
+				ariaExpanded: "false",
+				ariaMayBeAbsent: true,
+			});
+			expect(saved.control.summary).toBe("undefined");
+		} finally {
+			rmSync(out, { recursive: true, force: true });
+		}
+	});
+});
+
 const JOB = /^ {2}([\w-]+):\n/m,
 	GUARD = /^ {4}if: (.+)$/m;
 function incident(): AuditState {
@@ -108,13 +573,40 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		const noFragments = incident();
 		for (const n of noFragments.nodes) delete n.u08PaintFragments;
 		expect(() => evaluateRepairedCell(noFragments, ORIGINAL_NODE_PATH)).toThrow(
-			"fragment measurement",
+			"node 1: no own-text purity record, conservative envelope retained",
+		);
+		// The refusal must carry the gate's reason: this run reported only the
+		// absence of a measurement, so a reader could not tell which condition
+		// rejected a real react-native-web text node. The condition name and the
+		// observed/expected pair come from the probe's record, never from a guess.
+		const explained = incident();
+		const span = explained.nodes[1];
+		if (!span) throw Error("Missing fixture");
+		span.u08PaintExclusion = {
+			blockedBy: "text-shadow",
+			expected: "none",
+			observed: "1px 1px black",
+			conditions: [
+				{
+					name: "text-shadow",
+					expected: "none",
+					observed: "1px 1px black",
+					ok: false,
+				},
+			],
+		};
+		delete span.u08PaintFragments;
+		expect(() => evaluateRepairedCell(explained, ORIGINAL_NODE_PATH)).toThrow(
+			'node 1: own-text purity blocked by text-shadow, observed "1px 1px black", expected "none"',
 		);
 		const empty = incident();
 		for (const n of empty.nodes.filter((n) => n.tag === "span"))
 			n.u08PaintFragments = [];
+		// `[]` is a certified-pure node whose text painted nothing measurable, which
+		// is the opposite claim to a missing record: the refusal must say so rather
+		// than report a purity failure that never happened.
 		expect(() => evaluateRepairedCell(empty, ORIGINAL_NODE_PATH)).toThrow(
-			"fragment measurement",
+			"node 1: certified pure, no positive own-text fragment (0 measured, none with positive area)",
 		);
 		const collision = incident(),
 			a = collision.nodes[1],
@@ -214,5 +706,250 @@ describe("bounded corrected verification is not historical reproduction", () => 
 		expect(() =>
 			nextArtifactBytes(ARTIFACT_LIMIT_BYTES - FAILURE_RESERVE_BYTES, 1),
 		).toThrow("artifact budget");
+	});
+});
+
+/** The probe's ordered condition names, mirrored here because this fixture is
+ * about the receipt's BYTE budget: `pure-own-text.test.ts` pins the real list and
+ * its order, and the row count is asserted below so a longer rule shows up here. */
+const INCIDENT_CONDITIONS = [
+	"own-text",
+	"interactive",
+	"display",
+	"display-not-list-item",
+	"content",
+	"background-color",
+	"background-image",
+	"border-image-source",
+	"box-shadow",
+	"text-shadow",
+	"text-decoration-line",
+	"filter",
+	"backdrop-filter",
+	"mask-image",
+	"text-emphasis-style",
+	"border-top-width",
+	"border-right-width",
+	"border-bottom-width",
+	"border-left-width",
+	"outline-width",
+	"column-rule-width",
+	"-webkit-text-stroke-width",
+	"-webkit-box-reflect",
+	"svg-ancestor",
+	"replaced-content",
+	"element-descendants",
+	"::before-content",
+	"::after-content",
+	"::marker-content",
+];
+const TARGET_RECTS = {
+	64: "completed",
+	65: "✓",
+	66: "· 38 steps · 1m 12s",
+	68: "▸",
+};
+/** The failed run's four conservative target-subtree nodes, at the values
+ * `dark-condensed-ready.json` (run 40114267609) recorded, each carrying the
+ * 29-row exclusion the probe emits. */
+function incidentTargetGeometry() {
+	return Object.entries(TARGET_RECTS).map(([index, ownText]) => ({
+		index: Number(index),
+		ownText,
+		rect: { x: 25, y: 463, w: 321, h: 61, right: 346, bottom: 524 },
+		visibleRect: { x: 25, y: 463, w: 321, h: 22, right: 346, bottom: 486 },
+		fragmentStatus: "conservative/unobserved",
+		paintExclusion: {
+			blockedBy: "element-descendants",
+			expected: 0,
+			observed: 2,
+			conditions: INCIDENT_CONDITIONS.map((name) => ({
+				name,
+				expected: "none",
+				observed: name === "element-descendants" ? 2 : "rgba(0, 0, 0, 0)",
+				ok: name !== "element-descendants",
+			})),
+		},
+	}));
+}
+function incidentReceipt(): FailureContext & Record<string, unknown> {
+	return {
+		head: "2a3acf7",
+		phase: "geometry",
+		cell: {
+			theme: "dark",
+			state: "condensed",
+			path: "/session/6714def86197?lo-scroll=top",
+		},
+		completedKeys: [],
+		readiness: {
+			path: "/session/6714def86197",
+			testIds: Array.from(
+				{ length: 24 },
+				(_, i) => `turn-bar-tc-conv-${i}-user`,
+			),
+		},
+		environment: {
+			viewport: { width: 390, height: 844, dpr: 3 },
+			insets: { top: 59, bottom: 34, left: 0, right: 0 },
+			theme: "dark",
+			textScale: "1.5",
+			insetsOverride: { applied: true, reason: null },
+			targetTextGeometry: incidentTargetGeometry(),
+		},
+		control: {
+			trace: Array.from({ length: 18 }, (_, depth) => ({
+				depth,
+				tag: "DIV",
+				display: "flex",
+				visibility: "visible",
+				opacity: "1",
+				effectiveOpacity: 1,
+			})),
+		},
+		error:
+			"geometry theme=dark state=condensed path=/session/6714def86197?lo-scroll=top: Missing actual own-text fragment measurement (node 66: own-text purity blocked by element-descendants, observed 2, expected 0)",
+		kind: "FAILED CORRECTED VERIFICATION — NOT A GEOMETRY VERDICT",
+		schema: 1,
+		expectedControl: {
+			controlId: TURN_CONTROL_ID,
+			count: 1,
+			ariaExpanded: "false",
+			ariaMayBeAbsent: true,
+			caret: "▸",
+		},
+		readabilityFailure: null,
+		diagnosed: false,
+		screenshot: { status: "saved" },
+	};
+}
+
+describe("failure receipt keeps the environment when the exclusion maps are bulky", () => {
+	it("drops the per-condition map before it may drop the environment or a node's reason", () => {
+		const receipt = incidentReceipt();
+		// The incident shape is what overran the 8 KiB context budget: prove the
+		// fixture is actually over it before asserting what survives.
+		const untrimmed = Buffer.from(JSON.stringify(receipt, null, 2));
+		expect(INCIDENT_CONDITIONS).toHaveLength(29);
+		expect(untrimmed.length).toBeGreaterThan(FAILURE_RECEIPT_LIMIT_BYTES);
+
+		const json = shrinkFailureReceipt(receipt);
+		expect(json.length).toBeLessThan(FAILURE_RECEIPT_LIMIT_BYTES);
+		const written = JSON.parse(json.toString("utf8"));
+		// What proves the environment is still there — the fields the old shrink
+		// dropped along with the geometry.
+		expect(written.environment.viewport).toEqual({
+			width: 390,
+			height: 844,
+			dpr: 3,
+		});
+		expect(written.environment.insets).toEqual({
+			top: 59,
+			bottom: 34,
+			left: 0,
+			right: 0,
+		});
+		expect(written.environment.theme).toBe("dark");
+		expect(written.environment.textScale).toBe("1.5");
+		expect(written.environment.insetsOverride).toEqual({
+			applied: true,
+			reason: null,
+		});
+		// Every conservative node keeps its identity and the condition that rejected
+		// it, which is the fact the refused geometry phase is read for.
+		expect(
+			written.environment.targetTextGeometry.map(
+				(node: { index: number }) => node.index,
+			),
+		).toEqual([64, 65, 66, 68]);
+		for (const node of written.environment.targetTextGeometry) {
+			expect(node.paintExclusion.blockedBy).toBe("element-descendants");
+			expect(node.paintExclusion.observed).toBe(2);
+			expect(node.paintExclusion.expected).toBe(0);
+		}
+		// The 29-row map is the byte cost that goes; the `*-ready.json` receipt keeps it.
+		expect(
+			written.environment.targetTextGeometry[0]?.paintExclusion.conditions,
+		).toBeUndefined();
+		expect(written.error).toContain("element-descendants");
+	});
+});
+
+/** Ten real condition names that fail together, in the rule's order — the shape
+ * that pushes the ladder to its second layer (8 nodes, >=10 failing rows). */
+const LAYER_FAILURES = [
+	"background-image",
+	"border-image-source",
+	"box-shadow",
+	"text-shadow",
+	"filter",
+	"backdrop-filter",
+	"mask-image",
+	"text-emphasis-style",
+	"outline-width",
+	"column-rule-width",
+];
+/** Eight nodes at the largest size the receipt reaches: long own text and line
+ * fragments that layer 2 drops, so the test proves which layer ran. */
+function layeredReceipt(): FailureContext & Record<string, unknown> {
+	const receipt = incidentReceipt();
+	const environment = receipt.environment as Record<string, unknown>;
+	environment.targetTextGeometry = Array.from({ length: 8 }, (_, index) => ({
+		index: 64 + index,
+		ownText: "wrapped label text ".repeat(11).slice(0, 200),
+		rect: { x: 25, y: 463, w: 321, h: 61, right: 346, bottom: 524 },
+		visibleRect: { x: 25, y: 463, w: 321, h: 22, right: 346, bottom: 486 },
+		fragmentStatus: "conservative/unobserved",
+		fragments: [
+			{ x: 25, y: 463, w: 321, h: 22 },
+			{ x: 25, y: 487, w: 321, h: 22 },
+			{ x: 25, y: 511, w: 321, h: 22 },
+		],
+		paintExclusion: {
+			blockedBy: "element-descendants",
+			expected: 0,
+			observed: 2,
+			conditions: INCIDENT_CONDITIONS.map((name) => ({
+				name,
+				expected: "none",
+				observed: "rgba(0, 0, 0, 0)",
+				ok: !LAYER_FAILURES.includes(name),
+			})),
+		},
+	}));
+	return receipt;
+}
+
+describe("failure receipt compaction is idempotent across ladder layers", () => {
+	it("keeps every failing condition name when the ladder reaches its second layer", () => {
+		const receipt = layeredReceipt();
+		const untrimmed = Buffer.from(JSON.stringify(receipt, null, 2));
+		expect(untrimmed.length).toBeGreaterThan(FAILURE_RECEIPT_LIMIT_BYTES);
+
+		const written = JSON.parse(shrinkFailureReceipt(receipt).toString("utf8"));
+		const nodes = written.environment.targetTextGeometry;
+		expect(nodes).toHaveLength(8);
+		// Layer 2 is the one that re-compacts: the geometry numbers go, the reasons
+		// must not. `rect` absent proves this test actually reached that layer.
+		expect(nodes[0].rect).toBeUndefined();
+		expect(nodes[0].fragments).toBeUndefined();
+		for (const node of nodes) {
+			expect(node.paintExclusion.blockedBy).toBe("element-descendants");
+			expect(node.paintExclusion.failed).toEqual(LAYER_FAILURES);
+		}
+	});
+
+	it("marks a truncated error and keeps the named condition reachable", () => {
+		const receipt = layeredReceipt();
+		const path = `/session/${"x".repeat(400)}?lo-scroll=top`;
+		const error = `geometry theme=dark state=condensed path=${path}: Missing actual own-text fragment measurement (node 66: own-text purity blocked by element-descendants, observed 2, expected 0)`;
+		receipt.error = error;
+		receipt.readiness = { path };
+		const written = JSON.parse(shrinkFailureReceipt(receipt).toString("utf8"));
+		expect(written.error.length).toBeLessThanOrEqual(256);
+		// A cut must announce itself, and the reason must survive it.
+		expect(written.error).toContain("…");
+		expect(written.error).toContain("element-descendants");
+		expect(written.error.endsWith("expected 0)")).toBe(true);
 	});
 });
