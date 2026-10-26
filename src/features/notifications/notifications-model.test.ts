@@ -15,6 +15,7 @@ import {
 	notificationsEnabled,
 	readLoadedDetail,
 	relativeTime,
+	rowAccessibilityLabel,
 	selectionTargets,
 	toggleSelection,
 	unionTokens,
@@ -347,6 +348,105 @@ describe("the explicit read, then the re-read (QA round 3, Q8)", () => {
 			expect(conversationName("   ")).toBe("untitled");
 			expect(conversationName(undefined)).toBe("untitled");
 			expect(conversationName("QA Alpha")).toBe("QA Alpha");
+		});
+	});
+
+	describe("the awaited read's own budget (round 5, m6)", () => {
+		type Detail = {
+			item: { id: string; read: boolean; revision: number; source: string };
+			session: { id: string; title: string };
+		};
+		const loaded = (): Detail => ({
+			item: { id: "n_1", read: false, revision: 69, source: "notify" },
+			session: { id: "s1", title: "QA Alpha" },
+		});
+
+		it("gives up on a hanging write and leaves the item UNREAD", async () => {
+			const started = Date.now();
+			const shown = await readLoadedDetail(
+				loaded(),
+				{
+					read: (_id, _revision, signal) =>
+						new Promise((_resolve, reject) => {
+							signal.addEventListener("abort", () =>
+								reject(new Error("aborted")),
+							);
+						}),
+					reload: async () => null,
+				},
+				{ timeoutMs: 40 },
+			);
+			/* The budget is what ends it: without the signal the promise never settles. */
+			expect(Date.now() - started).toBeLessThan(2_000);
+			expect(shown.item.read).toBe(false);
+			expect(shown.item.revision).toBe(69);
+		});
+
+		it("hands the caller a signal it can honour", async () => {
+			let seen: AbortSignal | null = null;
+			await readLoadedDetail(
+				loaded(),
+				{
+					read: (_id, _revision, signal) => {
+						seen = signal;
+						return Promise.resolve({ changed: [] });
+					},
+					reload: async () => null,
+				},
+				{ timeoutMs: 3_500 },
+			);
+			expect(seen).not.toBeNull();
+			expect((seen as unknown as AbortSignal).aborted).toBe(false);
+		});
+	});
+
+	describe("the row's spoken sentence (round 5, m7/n4)", () => {
+		const item = (
+			overrides: Partial<{
+				title: string;
+				priority: string;
+				updated_at: number;
+				session: { title: string };
+			}> = {},
+		) => ({
+			title: "Run finished",
+			priority: "normal",
+			updated_at: 1_792_926_900_000,
+			session: { title: "QA Alpha" },
+			...overrides,
+		});
+
+		it("ends cleanly when there is no clock", () => {
+			const said = rowAccessibilityLabel({
+				selecting: false,
+				selected: false,
+				item: item({ updated_at: 0 }),
+				nowMs: 1_792_926_900_000,
+			});
+			expect(said).toBe("Run finished. QA Alpha.");
+			expect(said.endsWith(". ")).toBe(false);
+		});
+
+		it("names an untitled conversation the way the reel does", () => {
+			expect(
+				rowAccessibilityLabel({
+					selecting: false,
+					selected: false,
+					item: item({ session: { title: "  " } }),
+					nowMs: 1_792_926_900_000,
+				}),
+			).toContain("untitled.");
+		});
+
+		it("keeps the selection sentence when selecting", () => {
+			expect(
+				rowAccessibilityLabel({
+					selecting: true,
+					selected: true,
+					item: item(),
+					nowMs: 1_792_926_900_000,
+				}),
+			).toBe("Selected: Run finished");
 		});
 	});
 });

@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import {
+	footerControl,
+	pageWalkFailed,
+	pageWalkStarted,
+} from "./notifications-model";
+
 /**
  * The screen owns no automatic read path.
  *
@@ -106,28 +112,51 @@ describe("the detail's explicit read", () => {
 });
 
 /** The hook owns the request lifecycle; the screen only paints it. */
+/** Top-level, per the repo's lint rule: a regex literal in a test body is a
+ *  allocation per run. */
+const MERGES_PAGE = /setResponse\(\s*mergePage\(held, answer\),?\s*\)/;
+const FAILS_THE_WALK = /setPageWalk\(\s*pageWalkFailed\(/;
+
 const hook = readFileSync(
 	new URL("./use-notifications.ts", import.meta.url),
 	"utf8",
 );
 
-describe("the failed-page state (review round 4, m1/m2/m3)", () => {
-	it("renders a stated failure with ONE retry control", () => {
-		expect(source).toContain("inbox.loadMoreError");
-		expect(source).toContain("SURFACE.inboxLoadMoreFailed");
-		expect(source).toContain("CONTROL.inboxLoadMoreRetry");
-		/* While the sentence is up the "Load more" button is suppressed: the gate
-		 * below is the conditional that does it, and two controls that re-issue the
-		 * same cursor would be the same verb twice. */
-		expect(source).toContain("inbox.loadMoreError === null");
+describe("the failed-page state — behavioural, not source text (round 5, m5/m6)", () => {
+	it("clears the failure when a page-one answer lands", () => {
+		/* The transitions ARE the rule: a refresh or filter switch starts the walk
+		 * again, and the failure that belonged to the old one goes with it. */
+		const failed = pageWalkFailed("Couldn't load the next page.");
+		expect(failed.error).not.toBeNull();
+		expect(pageWalkStarted().error).toBeNull();
 	});
 
-	it("clears the failure when a page-one answer lands", () => {
-		/* The error belongs to the cursor walk it happened in; a refresh or a
-		 * filter switch must not leave it (and its cursor) beside fresh rows. */
-		const load = hook.slice(hook.indexOf("const load = useCallback"));
-		const body = load.slice(0, load.indexOf("const loadMore"));
-		expect(body).toContain("setLoadMoreError(null)");
+	it("shows exactly ONE footer control in every state", () => {
+		expect(
+			footerControl({ loadingMore: true, hasCursor: true, error: null }),
+		).toBe("spinner");
+		expect(
+			footerControl({ loadingMore: false, hasCursor: true, error: "boom" }),
+		).toBe("retry");
+		expect(
+			footerControl({ loadingMore: false, hasCursor: true, error: null }),
+		).toBe("loadMore");
+		expect(
+			footerControl({ loadingMore: false, hasCursor: false, error: null }),
+		).toBe("none");
+		/* A spinner outranks a stale error: the request in flight is the newer fact. */
+		expect(
+			footerControl({ loadingMore: true, hasCursor: true, error: "boom" }),
+		).toBe("spinner");
+	});
+
+	it("has the hook route the page through `mergePage` and the walk through the pair", () => {
+		/* The one rule a renderer-free test cannot reach: the hook's own call. Assert
+		 * the call sites, so deleting either one fails here (m6). */
+		/* Formatting-tolerant: the call is what must survive, not its line breaks. */
+		expect(MERGES_PAGE.test(hook)).toBe(true);
+		expect(hook).toContain("setPageWalk(pageWalkStarted())");
+		expect(FAILS_THE_WALK.test(hook)).toBe(true);
 	});
 
 	it("bounds the awaited detail read below a page read", () => {
@@ -135,11 +164,12 @@ describe("the failed-page state (review round 4, m1/m2/m3)", () => {
 			new URL("./notification-detail.tsx", import.meta.url),
 			"utf8",
 		);
-		expect(detail).toContain("READ_CONFIRM_TIMEOUT_MS");
 		const wait = Number(
 			/READ_CONFIRM_TIMEOUT_MS = ([0-9_]+)/.exec(detail)?.[1]?.replace("_", ""),
 		);
 		expect(wait).toBeGreaterThan(0);
 		expect(wait).toBeLessThan(8_000);
+		/* And it is actually passed to the sequence, not merely defined. */
+		expect(detail).toContain("{ timeoutMs: READ_CONFIRM_TIMEOUT_MS }");
 	});
 });

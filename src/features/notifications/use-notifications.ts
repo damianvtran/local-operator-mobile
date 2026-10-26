@@ -27,6 +27,10 @@ import {
 	DETAIL_UNREACHABLE,
 	LOAD_MORE_FAILED,
 	mergePage,
+	PAGE_WALK_IDLE,
+	type PageWalk,
+	pageWalkFailed,
+	pageWalkStarted,
 	READ_FAILED,
 	READ_UNREACHABLE,
 	SKIPPED_SENTENCE,
@@ -104,7 +108,9 @@ export function useNotifications(
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
-	const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+	/** The cursor walk's failure, as a state PAIR so its rules are testable:
+	 *  `pageWalkStarted` clears, `pageWalkFailed` states (review round 5, m5). */
+	const [pageWalk, setPageWalk] = useState<PageWalk>(PAGE_WALK_IDLE);
 	const [filter, setFilterState] = useState<InboxFilter>("unread");
 	const [refused, setRefused] = useState<string | null>(null);
 	const [unreachable, setUnreachable] = useState(false);
@@ -137,7 +143,7 @@ export function useNotifications(
 			 * which would re-issue a cursor from the OLD window — beside fresh rows
 			 * would describe a failure that no longer applies. Cleared for a silent
 			 * reload too: the rows it paints are page one's. */
-			setLoadMoreError(null);
+			setPageWalk(pageWalkStarted());
 			if (options?.silent !== true) {
 				setLoading(true);
 				setRefused(null);
@@ -199,7 +205,7 @@ export function useNotifications(
 		const ticket = ++ticketRef.current;
 		void (async () => {
 			setLoadingMore(true);
-			setLoadMoreError(null);
+			setPageWalk(pageWalkStarted());
 			try {
 				const answer = await clientNow.notifications({
 					state: asking === "all" ? "all" : "unread",
@@ -214,7 +220,9 @@ export function useNotifications(
 				 * that re-issues this same cursor. The relay's own sentence rides when
 				 * it has one (a malformed page names the field it could not read). */
 				if (ticket === ticketRef.current) {
-					setLoadMoreError(refusalSentence(error) ?? LOAD_MORE_FAILED);
+					setPageWalk(
+						pageWalkFailed(refusalSentence(error) ?? LOAD_MORE_FAILED),
+					);
 				}
 			} finally {
 				if (ticket === ticketRef.current) setLoadingMore(false);
@@ -302,7 +310,7 @@ export function useNotifications(
 		loading,
 		busy,
 		loadingMore,
-		loadMoreError,
+		loadMoreError: pageWalk.error,
 		filter,
 		setFilter,
 		refused,
@@ -352,9 +360,6 @@ const OFFLINE_SENTENCE = "Tunnel temporarily unavailable";
 /** The line a write earns when it failed with no sentence from the relay. */
 export const WRITE_UNREACHABLE =
 	"That did not reach your computer. Nothing changed.";
-
-/* `unionTokens` lives with `mergePage` — the merge is its only caller now — and is
- * re-exported here so the module that always published it still does. */
 
 export const INBOX_FAILED_READ = READ_FAILED;
 export const INBOX_UNREACHABLE = READ_UNREACHABLE;

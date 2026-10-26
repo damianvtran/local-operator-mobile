@@ -167,18 +167,18 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					 * this window is treated as failed — the item stays UNREAD (the safe
 					 * direction) and the walk below still runs, so Dismiss-all opens with a
 					 * FRESH boundary instead of a disabled card. */
-					const shown = await readLoadedDetail(detail, {
-						read: (id, revision) =>
-							live.patchNotifications(
-								{ op: "read", ids: [{ id, revision }] },
-								AbortSignal.timeout(READ_CONFIRM_TIMEOUT_MS),
-							),
-						reload: (id) =>
-							live.notification(
-								id,
-								AbortSignal.timeout(READ_CONFIRM_TIMEOUT_MS),
-							),
-					});
+					const shown = await readLoadedDetail(
+						detail,
+						{
+							read: (id, revision, signal) =>
+								live.patchNotifications(
+									{ op: "read", ids: [{ id, revision }] },
+									signal,
+								),
+							reload: (id, signal) => live.notification(id, signal),
+						},
+						{ timeoutMs: READ_CONFIRM_TIMEOUT_MS },
+					);
 					if (ticket !== ticketRef.current) return;
 					if (shown !== detail) setState({ kind: "ready", detail: shown });
 					/* Count AFTER the read settles: the read re-stamps this item's seq,

@@ -318,6 +318,45 @@ export const DETAIL_UNREACHABLE =
  *  (`in 4m`, `2h overdue` on the schedules screen) rather than a timestamp: the
  *  reader is deciding what to clear, not reading a log. */
 /**
+ * The cursor walk's own state: the last failure, or nothing.
+ *
+ * A transition pair rather than a raw `string | null` in the hook, because the
+ * RULES are the behaviour — a refresh clears the failure, a failed page states
+ * one, a successful page clears it — and rules stated as functions can be driven
+ * by tests without a renderer (code review round 5, m5).
+ */
+export type PageWalk = { error: string | null };
+
+export const PAGE_WALK_IDLE: PageWalk = { error: null };
+
+/** A page-one answer (refresh, filter switch, silent reload) or a landed page:
+ *  whatever the walk said before is no longer true of the list on screen. */
+export function pageWalkStarted(): PageWalk {
+	return PAGE_WALK_IDLE;
+}
+
+/** The page failed; the sentence is what the reader is shown. */
+export function pageWalkFailed(sentence: string): PageWalk {
+	return { error: sentence };
+}
+
+/** Which single control the list footer shows. Exactly one — two buttons that
+ *  re-issue the same cursor would be one verb twice, and "Load more" beside a
+ *  failure sentence would promise something other than the retry it names
+ *  (code review round 5, m3/m5). */
+export type FooterControl = "spinner" | "retry" | "loadMore" | "none";
+
+export function footerControl(input: {
+	loadingMore: boolean;
+	hasCursor: boolean;
+	error: string | null;
+}): FooterControl {
+	if (input.loadingMore) return "spinner";
+	if (input.error !== null) return "retry";
+	return input.hasCursor ? "loadMore" : "none";
+}
+
+/**
  * One cursor page merged onto what the screen already holds.
  *
  * WHAT COMES FROM PAGE ONE, AND WHY. `waiting` is first-page-only by contract,
@@ -387,17 +426,28 @@ export async function readLoadedDetail<
 >(
 	detail: Detail,
 	io: {
-		read: (id: string, revision: number) => Promise<{ changed: string[] }>;
-		reload: (id: string) => Promise<Detail | null>;
+		read: (
+			id: string,
+			revision: number,
+			signal: AbortSignal,
+		) => Promise<{ changed: string[] }>;
+		reload: (id: string, signal: AbortSignal) => Promise<Detail | null>;
 	},
+	/** The write's own budget. Short because the reader is on this screen waiting
+	 *  for it; a timeout is a FAILED read — the item stays unread and the caller's
+	 *  walk still runs, so Dismiss-all opens on a fresh boundary (m4). */
+	budget: { timeoutMs: number } = { timeoutMs: 3_500 },
 ): Promise<Detail> {
 	if (detail.item.read || detail.item.source !== "notify") return detail;
-	const moved = await io.read(detail.item.id, detail.item.revision).then(
-		(answer) => answer.changed.includes(detail.item.id),
-		() => false,
-	);
+	const signal = AbortSignal.timeout(budget.timeoutMs);
+	const moved = await io
+		.read(detail.item.id, detail.item.revision, signal)
+		.then(
+			(answer) => answer.changed.includes(detail.item.id),
+			() => false,
+		);
 	if (!moved) return detail;
-	const refreshed = await io.reload(detail.item.id).catch(() => null);
+	const refreshed = await io.reload(detail.item.id, signal).catch(() => null);
 	return refreshed ?? detail;
 }
 
@@ -419,6 +469,39 @@ export async function readLoadedDetail<
 export function conversationName(title: string | undefined | null): string {
 	const name = (title ?? "").trim();
 	return name.length > 0 ? name : "untitled";
+}
+
+/**
+ * One row as a screen reader says it.
+ *
+ * Every clause is optional and nothing leaves a dangling separator: the age is
+ * OMITTED when there is no clock (`relativeTime` answers `""`), so a zero stamp
+ * no longer ends the sentence with ". " (code review round 5, n4), and the
+ * conversation is named through `conversationName` so an untitled conversation
+ * is "untitled" here too (m7).
+ */
+export function rowAccessibilityLabel(input: {
+	selecting: boolean;
+	selected: boolean;
+	item: {
+		title: string;
+		priority: string;
+		updated_at: number;
+		session: { title: string };
+	};
+	nowMs: number;
+}): string {
+	const { selecting, selected, item, nowMs } = input;
+	if (selecting) {
+		return `${selected ? "Selected" : "Not selected"}: ${item.title}`;
+	}
+	const parts = [
+		item.priority === "high" ? "High priority." : "",
+		`${item.title}.`,
+		`${conversationName(item.session.title)}.`,
+		relativeTime(item.updated_at, nowMs),
+	].filter((part) => part !== "");
+	return parts.join(" ");
 }
 
 export function relativeTime(atMs: number, nowMs: number): string {

@@ -27,11 +27,13 @@ import {
 	ALL_CAUGHT_UP_BODY,
 	ALL_CAUGHT_UP_TITLE,
 	canDismiss,
+	conversationName,
 	DISMISS_LABEL,
 	dismissableTargets,
 	EMPTY_ALL_BODY,
 	FILTER_ALL,
 	FILTER_UNREAD,
+	footerControl,
 	hasUnread,
 	inboxEmpty,
 	inboxRows,
@@ -45,6 +47,7 @@ import {
 	READ_UNREACHABLE,
 	RETRY_LABEL,
 	relativeTime,
+	rowAccessibilityLabel,
 	rowKey,
 	SELECT_DONE,
 	SELECT_LABEL,
@@ -160,6 +163,12 @@ export default function Notifications() {
 	 */
 
 	const response = inbox.response;
+	/* The footer's single control, decided in the model so it cannot be two. */
+	const footer = footerControl({
+		loadingMore: inbox.loadingMore,
+		hasCursor: response !== null && response.next_cursor !== null,
+		error: inbox.loadMoreError,
+	});
 	const rows = useMemo<NotificationItem[]>(
 		() => (response === null ? [] : inboxRows(response)),
 		[response],
@@ -516,7 +525,7 @@ export default function Notifications() {
 										onDismissConversation={() =>
 											void dismissAll.askFresh(
 												entry.item.session.id,
-												entry.item.session.title,
+												conversationName(entry.item.session.title),
 											)
 										}
 									/>
@@ -549,13 +558,15 @@ export default function Notifications() {
 						}
 						ListFooterComponent={
 							<View className="gap-2 px-4 pt-2">
-								{inbox.loadingMore ? (
+								{/* EXACTLY ONE CONTROL (review round 5, m3/m5). `footerControl`
+								 *  owns the choice, so the spinner, the retry and "Load more"
+								 *  cannot co-exist — two buttons that re-issue the same cursor
+								 *  would be one verb twice. */}
+								{footer === "spinner" ? (
 									<View className="items-center py-4">
 										<ActivityIndicator />
 									</View>
-								) : response !== null &&
-									response.next_cursor !== null &&
-									inbox.loadMoreError === null ? (
+								) : footer === "loadMore" ? (
 									/* A cursor page is a reader's explicit act, not a scroll
 									 *  trigger the list guesses at. */
 									<View className="items-center py-4">
@@ -575,7 +586,7 @@ export default function Notifications() {
 								 *  reading about. The retry re-issues the SAME cursor: `loadMore`
 								 *  reads it from the held answer, so nothing about the window
 								 *  moves. */}
-								{inbox.loadMoreError !== null ? (
+								{footer === "retry" && inbox.loadMoreError !== null ? (
 									<View
 										className="gap-2 pb-4"
 										testID={SURFACE.inboxLoadMoreFailed}
@@ -756,7 +767,7 @@ function InboxRow({
 			? [
 					{
 						name: "dismissConversation",
-						label: dismissAllActionLabel(item.session.title),
+						label: dismissAllActionLabel(conversationName(item.session.title)),
 					},
 				]
 			: undefined;
@@ -797,11 +808,12 @@ function InboxRow({
 			}
 			accessibilityRole={ROLE.button}
 			accessibilityState={selecting ? { selected } : undefined}
-			accessibilityLabel={
-				selecting
-					? `${selected ? "Selected" : "Not selected"}: ${item.title}`
-					: `${item.priority === "high" ? "High priority. " : ""}${item.title}. ${item.session.title}. ${relativeTime(item.updated_at, nowMs)}`
-			}
+			accessibilityLabel={rowAccessibilityLabel({
+				selecting,
+				selected,
+				item,
+				nowMs,
+			})}
 			className={cx(
 				"rounded-md border-hairline bg-elevated p-3",
 				selected ? "bg-row-selected" : null,
@@ -877,8 +889,8 @@ function InboxRow({
 							numberOfLines={1}
 						>
 							{isAsk
-								? `${item.session.title} · ${item.ask?.question_count ?? 1} question${(item.ask?.question_count ?? 1) === 1 ? "" : "s"}`
-								: item.session.title}
+								? `${conversationName(item.session.title)} · ${item.ask?.question_count ?? 1} question${(item.ask?.question_count ?? 1) === 1 ? "" : "s"}`
+								: conversationName(item.session.title)}
 							{seenLabel !== null ? ` · ${seenLabel}` : ""}
 						</Text>
 						{/* No clock is no age: `relativeTime` answers `""` for a zero stamp,
