@@ -234,6 +234,17 @@ export const webFieldOverflow = (
 ): "hidden" | undefined =>
 	platform === "web" && !scrollable ? "hidden" : undefined;
 
+/**
+ * The field's HEIGHT is the app's: it grows with the content to a cap and then
+ * scrolls. A user-dragged height is a state the app cannot restore or lay out, so
+ * the web build says `resize: none` on EVERY field — including a scrollable one —
+ * while native keeps its own view behaviour untouched. This is the other half of
+ * D1: `overflow: hidden` removed the scrollbar track, but the browser was still
+ * painting the diagonal resize grip on an empty 200 % field.
+ */
+export const webFieldResize = (platform: string): "none" | undefined =>
+	platform === "web" ? "none" : undefined;
+
 export const fieldScrollsWithContent = (
 	contentFloor: number,
 	cap: number,

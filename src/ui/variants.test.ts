@@ -325,7 +325,8 @@ describe("web field overflow", () => {
 			new URL("./components/textarea.tsx", import.meta.url),
 			"utf8",
 		);
-		expect(source).toContain("webFieldOverflowStyle(Platform.OS, scrollable)");
+		expect(source).toContain("webFieldStyle(Platform.OS, scrollable)");
+		expect(source).toContain("webFieldResize(platform)");
 		expect(source).toContain("scrollEnabled={scrollable}");
 	});
 });

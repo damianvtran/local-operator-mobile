@@ -11,6 +11,7 @@ import {
 	fieldScrollsWithContent,
 	TEXTAREA_MAX_PX,
 	webFieldOverflow,
+	webFieldResize,
 } from "@/ui/variants";
 
 /**
@@ -76,14 +77,19 @@ export type TextareaProps = {
  * text that fills it. Without that, the constants cap the box at ~1.4 lines of
  * 200 % text while the placeholder needs ~2.5, and the frame cuts it mid-word
  * (design round D20; the arithmetic was the defect, not the measurement path). */
-/** The style spread: `undefined` must not add a key at all, or a later
- *  `overflow` on the class list would be overridden by an empty object. */
-const webFieldOverflowStyle = (
+/** The style spread: an `undefined` value must not add a key at all, or a later
+ *  utility would be overridden by an empty object. Both web-only facts live here so
+ *  one call answers "what does the browser need to know about this box?". */
+const webFieldStyle = (
 	platform: string,
 	scrollable: boolean,
-): { overflow?: "hidden" } => {
+): { overflow?: "hidden"; resize?: "none" } => {
+	const style: { overflow?: "hidden"; resize?: "none" } = {};
 	const overflow = webFieldOverflow(platform, scrollable);
-	return overflow === undefined ? {} : { overflow };
+	if (overflow !== undefined) style.overflow = overflow;
+	const resize = webFieldResize(platform);
+	if (resize !== undefined) style.resize = resize;
+	return style;
 };
 
 const LINE_PX = 22;
@@ -281,7 +287,7 @@ export const Textarea = ({
 						 *  stayed green (final audit, D1). Web says it in CSS terms instead, and
 						 *  only when there is nothing to scroll; content past the cap keeps
 						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
-						...webFieldOverflowStyle(Platform.OS, scrollable),
+						...webFieldStyle(Platform.OS, scrollable),
 					}}
 					multiline
 					// The transcript scrolls, not the page: the field clips its own
