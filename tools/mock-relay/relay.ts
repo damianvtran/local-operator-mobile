@@ -1195,11 +1195,13 @@ export function createRelay(options: RelayOptions = {}) {
 				const counts = notificationsStore.page("all", 1) as unknown as {
 					unread_count?: number;
 					waiting_count?: number;
+					waiting_unread_count?: number;
 					high_water?: number;
 				};
 				return {
 					unread_count: Number(counts.unread_count ?? 0),
 					waiting_count: Number(counts.waiting_count ?? 0),
+					waiting_unread_count: Number(counts.waiting_unread_count ?? 0),
 					high_water: Number(counts.high_water ?? 0),
 				};
 			})(),
@@ -2926,6 +2928,32 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		if (pathname === "/api/notifications/seen" && method === "POST") {
+			/* THE PHONE'S OWN RECEIPT DOOR, as the real relay now serves it
+			 *  (local-operator `mobile/daemon.py:api_notifications_seen` at
+			 *  `3cacd0cad01`): `surface` is pinned to `native`, every item is
+			 *  re-checked against the store, and anything that fails is `skipped`
+			 *  with its reason. A non-native surface is refused with its own code,
+			 *  so a client can tell "wrong door" from "bad evidence". The mock
+			 *  keeps the same two answers because a mock that accepted anything
+			 *  would let a bare-assertion receipt pass a suite the production
+			 *  surface rejects. */
+			const record =
+				typeof body === "object" && body !== null
+					? (body as Record<string, unknown>)
+					: {};
+			const claim = record.evidence;
+			const evidence =
+				typeof claim === "object" && claim !== null
+					? (claim as Record<string, unknown>)
+					: {};
+			if (evidence.surface !== "native") {
+				sendJson(res, 422, {
+					error:
+						"read receipts on the relay are for the native surface, which reports touch, press or scroll edges",
+					code: "relay_surface_mismatch",
+				});
+				return;
+			}
 			const outcome = notificationsStore.seen(body);
 			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
 			return;

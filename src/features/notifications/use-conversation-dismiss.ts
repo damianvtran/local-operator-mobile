@@ -39,7 +39,10 @@ const PAGE_TIMEOUT_MS = 8_000;
  */
 export type DismissTarget =
 	| { kind: "scope"; scope: ConversationScope }
-	| { kind: "tokens"; tokens: ScopeToken[]; title: string };
+	/** An explicit set of id+revision tokens. Deliberately carries NO title: a
+	 *  selection can span more than one conversation, so a sentence naming one of
+	 *  them would be false (code review round 2, n3). */
+	| { kind: "tokens"; tokens: ScopeToken[] };
 
 export type ConversationDismissPhase =
 	| { kind: "idle" }
@@ -152,7 +155,7 @@ export function useConversationDismiss(
 				? { kind: "none", sentence: DISMISS_ALL_NONE }
 				: {
 						kind: "confirming",
-						target: { kind: "tokens", tokens, title: "" },
+						target: { kind: "tokens", tokens },
 					},
 		);
 	}, []);
@@ -201,7 +204,7 @@ export function useConversationDismiss(
 	const dismissNow = useCallback(
 		async (tokens: ScopeToken[]) => {
 			if (tokens.length === 0) return false;
-			return run({ kind: "tokens", tokens, title: "" });
+			return run({ kind: "tokens", tokens });
 		},
 		[run],
 	);

@@ -23,13 +23,26 @@
  * screen's due labels do.
  */
 
-import type { NotificationItem, NotificationsResponse } from "@/contracts";
+import type {
+	Capabilities,
+	NotificationItem,
+	NotificationsResponse,
+} from "@/contracts";
 import type { NotificationTarget } from "@/relay";
 
-/** `updated_at` is epoch SECONDS on this wire (the item shape's own unit — the
- *  session clocks are seconds too). */
-const MS = 1000;
+/** The inbox stamps are epoch MILLISECONDS, unlike the session clocks. */
 const DAY_MS = 86_400_000;
+
+/** The relay owns this capability flag. An older daemon omits it: hiding both
+ *  entry points there avoids offering a route that can only return 404. The
+ *  versioned feature bag has the same truth rule as Library's existing gate. */
+export function notificationsEnabled(capabilities: Capabilities): boolean {
+	const value = capabilities.features?.notifications;
+	if (value === undefined || value === null || value === false) return false;
+	if (typeof value === "number") return value > 0;
+	if (typeof value === "string") return value !== "" && value !== "0";
+	return true;
+}
 
 export type InboxSectionId =
 	| "waiting"
@@ -86,7 +99,7 @@ export function inboxSections(
 		NotificationItem[]
 	>();
 	for (const item of response.items) {
-		const bucket = timeBucket(item.updated_at * MS, nowMs);
+		const bucket = timeBucket(item.updated_at, nowMs);
 		const rows = buckets.get(bucket);
 		if (rows === undefined) buckets.set(bucket, [item]);
 		else rows.push(item);
@@ -244,9 +257,7 @@ export function plural(count: number, one: string, many: string): string {
 /** The lead sentence over the pinned section: how many things are actually
  *  blocked on the operator. A count of one is a sentence, not "1 asks". */
 export function waitingSummary(count: number): string {
-	return count === 1
-		? "1 agent is waiting on you"
-		: `${count} agents are waiting on you`;
+	return `Waiting on you · ${count}`;
 }
 
 /** The selection bar's own line: how many rows the next write will touch. */

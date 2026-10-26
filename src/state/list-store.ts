@@ -105,7 +105,15 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				/* Same retention rule as `unread`, for the same reason: a relay that
 				 * publishes the inbox block publishes it on every frame, so absence
 				 * means an older relay rather than "the counts vanished". */
-				notifications: frame.notifications ?? get().notifications,
+				/* A PRESENT BLOCK WITH NO COUNTS IS UNKNOWN, NOT A ZERO — the core
+				 * answers `{}` when its inbox store cannot be read ("unknown, never
+				 * zero", `daemon.py` `_notifications_block`). Mapping it to `null`
+				 * keeps the badge dark while the block is unreadable, and — because
+				 * the schema now accepts the empty block — the sessions frame this
+				 * list depends on is no longer dropped over it (NC5). */
+				notifications: notificationsOrNull(
+					frame.notifications ?? get().notifications,
+				),
 				frameCount: get().frameCount + 1,
 				lastFrameAt: at ?? now(),
 				stale: false,
@@ -161,4 +169,15 @@ export function sessionTitle(
 ): string {
 	const name = session.conversation_name.trim();
 	return name.length > 0 ? name : "untitled";
+}
+
+/** The block as the store keeps it: a known count is a block, anything else is
+ *  `null` (unknown). One helper so the SSE path, the cold GET and a reconnect
+ *  cannot read the same `{}` three ways. */
+export function notificationsOrNull(
+	block: NotificationsBlock | null | undefined,
+): NotificationsBlock | null {
+	if (block === null || block === undefined) return null;
+	if (block.unread_count === undefined) return null;
+	return block;
 }

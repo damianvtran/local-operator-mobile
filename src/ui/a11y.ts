@@ -1718,6 +1718,25 @@ export const notificationRowId = (itemId: string): string =>
 /** The per-row "Answer" action on an open ask: it opens the item detail, where
  *  the ask card is. Distinct from `notificationRowId` so a flow presses the verb
  *  rather than the row. */
+/** The priority chip on an inbox row (a `High` badge: the reader's cue that this
+ *  one is not routine). A cue rather than a control, but a flow that proves the
+ *  badge renders has to reach it, so it gets a stable id like the rest of the row. */
+export const notificationPriorityId = (itemId: string): string =>
+	`notification-priority-${itemId}`;
+
+/** The `×n` repeat count on a row the agent raised more than once. */
+export const notificationRepeatId = (itemId: string): string =>
+	`notification-repeat-${itemId}`;
+
+/** One of a notification's outbound links in the detail, keyed by the href the
+ *  relay sent (core normalises links to http/https). */
+export const notificationLinkId = (url: string): string =>
+	`notification-link-${url}`;
+
+/** The detail's door to the project the source conversation belongs to. */
+export const notificationProjectId = (projectId: string): string =>
+	`notification-project-${projectId}`;
+
 export const notificationAnswerId = (itemId: string): string =>
 	`notification-answer-${itemId}`;
 

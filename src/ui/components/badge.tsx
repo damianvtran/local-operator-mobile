@@ -20,6 +20,9 @@ import {
 export type BadgeProps = {
 	label: string;
 	tone?: SemanticTone;
+	/** Filled accent/on-accent, for a count that must read against the page
+	 *  rather than against a tinted badge (the desktop emphasis pill). */
+	emphasis?: boolean;
 	/** `mono-label` for a machine string (a version, an id), so the machine voice is
 	 * the same as every other machine string here. The label's CASE is preserved:
 	 * a badge that uppercased it rendered an identifier wrong (`v0.62.0` became
@@ -36,12 +39,17 @@ export type BadgeProps = {
 export const Badge = ({
 	label,
 	tone = "neutral",
+	emphasis = false,
 	mono = false,
 	testID,
 	accessibilityLabel,
 }: BadgeProps) => (
 	<View
-		className={badgeClasses(tone)}
+		className={
+			emphasis
+				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
+				: badgeClasses(tone)
+		}
 		testID={testID}
 		accessible={accessibilityLabel !== undefined}
 		accessibilityLabel={accessibilityLabel}
@@ -50,7 +58,7 @@ export const Badge = ({
 			// `leading-4` on BOTH variants, because the two steps' own line heights
 			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
 			// bound once (16 px) for the mono and the sans badge to be the same height.
-			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${badgeInkClasses(tone)}`}
+			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
 			// When the call site names the badge, the visible label is a rendering of
 			// that name, not a second name: hidden from assistive tech on every
 			// platform (the same shape as `Avatar`'s initials).

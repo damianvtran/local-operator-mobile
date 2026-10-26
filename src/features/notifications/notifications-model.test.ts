@@ -10,6 +10,7 @@ import {
 	inboxSections,
 	inboxUnreadCount,
 	markAllTarget,
+	notificationsEnabled,
 	selectionTargets,
 	toggleSelection,
 } from "@/features/notifications/notifications-model";
@@ -21,8 +22,8 @@ function item(overrides: Partial<NotificationItem> = {}): NotificationItem {
 		priority: "normal",
 		title: "An update",
 		excerpt: "",
-		created_at: 1_700_000_000,
-		updated_at: 1_700_000_000,
+		created_at: 1_700_000_000_000,
+		updated_at: 1_700_000_000_000,
 		seq: 1,
 		revision: 1,
 		read: false,
@@ -58,10 +59,10 @@ describe("the inbox's shape", () => {
 			response({
 				waiting: [item({ id: "ask:1", source: "ask" })],
 				items: [
-					item({ id: "n_today", updated_at: now / 1000 - 60 }),
-					item({ id: "n_yesterday", updated_at: now / 1000 - 26 * 3600 }),
-					item({ id: "n_week", updated_at: now / 1000 - 3 * 86_400 }),
-					item({ id: "n_old", updated_at: now / 1000 - 40 * 86_400 }),
+					item({ id: "n_today", updated_at: now - 60_000 }),
+					item({ id: "n_yesterday", updated_at: now - 26 * 3_600_000 }),
+					item({ id: "n_week", updated_at: now - 3 * 86_400_000 }),
+					item({ id: "n_old", updated_at: now - 40 * 86_400_000 }),
 				],
 			}),
 			now,
@@ -78,7 +79,7 @@ describe("the inbox's shape", () => {
 	it("omits a section with no rows rather than drawing an empty heading", () => {
 		const now = Date.UTC(2026, 9, 25, 12, 0, 0);
 		const sections = inboxSections(
-			response({ items: [item({ updated_at: now / 1000 - 60 })] }),
+			response({ items: [item({ updated_at: now - 60_000 })] }),
 			now,
 		);
 		expect(sections).toHaveLength(1);
@@ -167,5 +168,19 @@ describe("selection and the token it sends", () => {
 			markAllTarget(response({ unread_count: 40, high_water: 88 })),
 		).toEqual({ through_seq: 88 });
 		expect(markAllTarget(response())).toBeNull();
+	});
+});
+
+describe("the relay's capability gate", () => {
+	it("reads a versioned flag, and treats every absence as no", () => {
+		expect(notificationsEnabled({})).toBe(false);
+		expect(notificationsEnabled({ features: {} })).toBe(false);
+		expect(notificationsEnabled({ features: { notifications: 0 } })).toBe(
+			false,
+		);
+		expect(notificationsEnabled({ features: { notifications: 1 } })).toBe(true);
+		expect(notificationsEnabled({ features: { notifications: "2" } })).toBe(
+			true,
+		);
 	});
 });

@@ -118,6 +118,14 @@ const nonEmpty = z.string().min(1);
 /** Epoch seconds. Floats are normal on this wire (`1790727325.4341204`). */
 const epochSeconds = z.number();
 
+/** Epoch MILLISECONDS. The inbox is the one family that measures in ms: the core
+ *  stores and sends `now_ms()` (`notifications/store.py:131`), and the desktop
+ *  reads the same field the same way (`ui notifications-model.ts`). The session
+ *  clocks beside it are seconds, which is why the distinction is a named type
+ *  here rather than a comment — multiplying an ms stamp by 1000 rendered every
+ *  row as "just now" and pinned it under "Today" forever (NC3). */
+const epochMillis = z.number();
+
 export const entryKindSchema = z.string().min(1);
 
 export const toolStateSchema = z.enum([
@@ -348,6 +356,44 @@ export const askQuestionSchema = z.looseObject({
  * newer runtime's status must pass through as its own word, never be mapped
  * onto a known one.
  */
+/**
+ * One ask as the RELAY's detail carries it (`asks/store.session_asks` over the
+ * index entry, passed through verbatim).
+ *
+ * CANONICAL SIDE: the core's row is the truth; this schema is the tolerant
+ * reader. The stored rows the relay hands out are the projection's, whose
+ * `questions` may carry only `{header, question}` — the aggregate `PendingAsk`
+ * shape the app's asks sheet parses is what `GET /api/asks` sends, and requiring
+ * its question fields here rejected every real detail (NC1). Everything past
+ * `ask_id` is optional and the screen reads what it finds.
+ */
+export const relayAskRowSchema = z.object({
+	ask_id: nonEmpty,
+	session_id: z.string().optional(),
+	cwd: z.string().optional(),
+	status: z.string().optional(),
+	/** Epoch MILLISECONDS, like every other stamp in this family. */
+	created_at: z.number().optional(),
+	expires_at: z.number().optional(),
+	timeout_s: z.number().optional(),
+	urgent: z.boolean().optional(),
+	delivered: z.boolean().optional(),
+	questions: z
+		.array(
+			z.object({
+				id: z.string().optional(),
+				header: z.string().optional(),
+				question: z.string().optional(),
+				options: z.array(z.string()).optional(),
+				multi: z.boolean().optional(),
+				secret: z.boolean().optional(),
+				persist: z.boolean().optional(),
+			}),
+		)
+		.optional(),
+	answers: z.record(z.string(), z.array(z.string())).optional(),
+});
+
 export const pendingAskSchema = z.looseObject({
 	ask_id: nonEmpty,
 	/** Aggregate rows only; the per-session frame already addresses its session. */
@@ -412,8 +458,8 @@ const notificationItemSchema = z.looseObject({
 	priority: z.string(),
 	title: z.string(),
 	excerpt: z.string(),
-	created_at: epochSeconds,
-	updated_at: epochSeconds,
+	created_at: epochMillis,
+	updated_at: epochMillis,
 	seq: z.number().int(),
 	/** The ACK TOKEN. Every write names the revision it rendered; the relay skips
 	 *  a stale one rather than clearing an update the operator never saw. */
@@ -438,12 +484,18 @@ const notificationItemSchema = z.looseObject({
 			status: z.string(),
 		}),
 	),
+	/** The notify body as markdown and its links (`[{label, url}]`, http(s) only —
+	 *  core `store.normalize_links`). DETAIL ONLY: the list's excerpt is its first
+	 *  160 characters. Optional because a row without them is a row the agent
+	 *  raised with a title alone. */
+	body_md: z.string().optional(),
+	links: z.array(z.object({ label: z.string(), url: z.string() })).optional(),
 	/** `null` on an update: an ask row's block is what makes it pinned and what
 	 *  decides its verb (Answer, not Dismiss — contract §2.3). */
 	ask: z
 		.looseObject({
 			status: z.string(),
-			deadline_at: epochSeconds,
+			deadline_at: epochMillis,
 			question_count: z.number().int(),
 			dismissible: z.boolean(),
 		})
@@ -500,7 +552,7 @@ export const notificationDetailSchema = z.looseObject({
 	history: z.array(
 		z.looseObject({
 			revision: z.number().int(),
-			at: epochSeconds,
+			at: epochMillis,
 			title: z.string(),
 			excerpt: z.string(),
 		}),
@@ -509,7 +561,13 @@ export const notificationDetailSchema = z.looseObject({
 		id: nonEmpty,
 		title: z.string(),
 		agent_id: z.string(),
-		live_state: z.string(),
+		/** Liveness as the relay publishes it (`SessionFacts.get`). */
+		live: z.boolean().optional(),
+		/** An older/other producer's word for the same fact. Neither is required:
+		 *  the screen shows "Live" from `live ?? live_state === "live"`, and a
+		 *  detail that refused every item because one of two names for liveness was
+		 *  absent rejected the whole real relay (NC1). */
+		live_state: z.string().optional(),
 		cwd: z.string(),
 	}),
 	anchor: z.looseObject({ id: nonEmpty, excerpt: z.string() }).nullable(),
@@ -520,7 +578,9 @@ export const notificationDetailSchema = z.looseObject({
 			status: z.string(),
 		}),
 	),
-	asks: z.array(pendingAskSchema),
+	/** THIS CONVERSATION'S asks, as the relay relays them (`session_asks`), open
+	 *  first. Tolerant: see `relayAskRowSchema` for which side is canonical. */
+	asks: z.array(relayAskRowSchema),
 });
 
 /**
@@ -1112,13 +1172,25 @@ export const unreadBlockSchema = z.looseObject({
  *
  *  ABSENT on an older relay, and absence means UNKNOWN, never 0 — the same rule
  *  `unreadBlockSchema` states, and the reason the entry points draw no number
- *  rather than a zero. All three fields ride together because the relay
- *  publishes them from one store read; a partial block would be a claim about a
- *  moment that never existed. */
+ *  rather than a zero.
+ *
+ *  A PRESENT BLOCK WITH NO COUNTS IS ALSO UNKNOWN. The core answers `{}` when the
+ *  inbox store cannot be read ("unknown, never zero", `daemon.py`
+ *  `_notifications_block`), and the four counts are optional here for exactly
+ *  that case: requiring them dropped the whole sessions frame — freezing the
+ *  phone's conversation list over an inbox fault (NC5). `inboxBadgeCount` reads a
+ *  block with no counts as `null`. */
 export const notificationsBlockSchema = z.looseObject({
-	unread_count: z.number().int(),
-	waiting_count: z.number().int(),
-	high_water: z.number().int(),
+	/** The updates' unread count. */
+	unread_count: z.number().int().optional(),
+	/** Every pending ask (read and unread). */
+	waiting_count: z.number().int().optional(),
+	/** The UNREAD asks among them: half of the badge (`items.counts`). Optional
+	 *  because a relay that predates the split omits it, and the badge then adds
+	 *  nothing rather than inventing zero (NC7 / D16). */
+	waiting_unread_count: z.number().int().optional(),
+	/** The through-token, for a bulk write's boundary. */
+	high_water: z.number().int().optional(),
 });
 
 export const sessionListFrameSchema = z.looseObject({

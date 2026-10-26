@@ -31,7 +31,6 @@ import {
 } from "@/features/notifications/notifications-model";
 import type {
 	NotificationPatchRequest,
-	NotificationSeenRequest,
 	NotificationTarget,
 	RelayEndpoints,
 } from "@/relay";
@@ -89,12 +88,6 @@ export interface InboxState {
 	/** Mark everything this answer held as read. Names the answer's own
 	 *  `high_water`, so an item that arrived after the render stays unread. */
 	markAllRead: () => Promise<InboxWriteOutcome>;
-	/** The evidenced in-view receipt. Deliberately the ONLY automatic path, and
-	 *  it carries the platform's own gesture as evidence. */
-	seen: (
-		targets: NotificationTarget[],
-		evidence: NotificationSeenRequest["evidence"],
-	) => Promise<InboxWriteOutcome>;
 }
 
 export function useNotifications(
@@ -308,17 +301,6 @@ export function useNotifications(
 		);
 	}, [response, settle]);
 
-	const seen = useCallback(
-		(
-			targets: NotificationTarget[],
-			evidence: NotificationSeenRequest["evidence"],
-		) =>
-			settle((live) =>
-				live.markNotificationsSeen({ items: targets, evidence }),
-			),
-		[settle],
-	);
-
 	return {
 		response,
 		loading,
@@ -335,7 +317,6 @@ export function useNotifications(
 		loadMore,
 		write,
 		markAllRead,
-		seen,
 	};
 }
 

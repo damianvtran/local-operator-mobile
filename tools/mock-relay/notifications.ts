@@ -83,9 +83,25 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 	const detailSeeds = new Map(Object.entries(options.details ?? {}));
 	let highWater = asNumber(seed.high_water);
 
+	/** Unread UPDATE rows, the notify half of the badge. Open asks are counted
+	 *  separately (`waitingUnreadCount`), which is the split core publishes
+	 *  (`items.counts`: `unread_count` + `waiting_unread_count`). One combined
+	 *  count here double-counted an ask in the badge and hid the split. */
 	const unreadCount = (): number => {
 		let count = 0;
 		for (const row of rows.values()) {
+			if (asRecord(row.item.ask) !== undefined) continue;
+			if (!asBoolean(row.item.read) && !asBoolean(row.item.dismissed))
+				count += 1;
+		}
+		return count;
+	};
+
+	/** The unread asks among `waiting` — the other half of the badge. */
+	const waitingUnreadCount = (): number => {
+		let count = 0;
+		for (const row of rows.values()) {
+			if (asRecord(row.item.ask) === undefined) continue;
 			if (!asBoolean(row.item.read) && !asBoolean(row.item.dismissed))
 				count += 1;
 		}
@@ -204,6 +220,7 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 			next_cursor: nextCursor,
 			unread_count: unreadCount(),
 			waiting_count: waitingCount(),
+			waiting_unread_count: waitingUnreadCount(),
 			high_water: boundary,
 			observed: tokens,
 		};
@@ -249,11 +266,13 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				body: {
 					item: serialize(row),
 					history: row.history,
+					/* The shape core's `notify_item` produces (`items.py:191`): the
+					 *  conversation is nested with `live`, never a `live_state` word. */
 					session: {
 						id: asString(asRecord(row.item.session)?.id),
 						title: asString(asRecord(row.item.session)?.title),
 						agent_id: asString(asRecord(row.item.session)?.agent_id),
-						live_state: "idle",
+						live: asBoolean(asRecord(row.item.session)?.live),
 						cwd: "",
 					},
 					anchor: null,
@@ -381,6 +400,7 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				changed,
 				skipped,
 				unread_count: unreadCount(),
+				waiting_unread_count: waitingUnreadCount(),
 				high_water: unreadHighWater(),
 			},
 		};
@@ -408,8 +428,11 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				continue;
 			}
 			/* The evidence must be LATER than the row's own last update: a touch
-			 * that predates the item cannot have seen it. */
-			if (inputAtMs < asNumber(row.item.updated_at) * 1000) {
+			 * that predates the item cannot have seen it. Both sides are epoch
+			 * MILLISECONDS — the multiply that used to be here treated the row's
+			 * clock as seconds and made every receipt stale once the fixtures moved
+			 * to the relay's real unit. */
+			if (inputAtMs < asNumber(row.item.updated_at)) {
 				skipped.push({ id, reason: "stale_evidence" });
 				continue;
 			}
@@ -431,6 +454,7 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				changed,
 				skipped,
 				unread_count: unreadCount(),
+				waiting_unread_count: waitingUnreadCount(),
 				high_water: unreadHighWater(),
 			},
 		};

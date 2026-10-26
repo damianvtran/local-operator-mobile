@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
- * The screen actually hands its read-receipt feed to the list.
+ * The screen owns no automatic read path.
  *
  * WHY A SOURCE INVARIANT RATHER THAN A DOM RENDER. The blocker this round
  * (code review B1, QA Q1) was not a logic error — the tracker was correct and
@@ -33,86 +33,60 @@ import { describe, expect, it } from "vitest";
 const SCREEN = new URL("./notifications.tsx", import.meta.url);
 const source = readFileSync(SCREEN, "utf8");
 
-/** Everything between the list's opening tag and its closing `/>`. */
-function listProps(text: string): string {
-	const start = text.indexOf("<FlatList");
-	expect(start).toBeGreaterThan(-1);
-	const end = text.indexOf("/>", start);
-	expect(end).toBeGreaterThan(start);
-	return text.slice(start, end);
-}
-
-describe("the inbox screen wires the read receipt to its list", () => {
-	it("renders a FlatList, the only list that reports visibility", () => {
+describe("the inbox screen has no automatic read feed", () => {
+	it("keeps the list free of seen requests and visibility callbacks", () => {
 		expect(source).toContain("<FlatList");
-		/* A ScrollView cannot carry the visibility callback at all; if the rows
-		 * ever move back into one, this fails rather than silently going dead. */
-		expect(source).not.toContain("onViewableItemsChanged={undefined}");
+		expect(source).not.toContain("onViewableItemsChanged");
+		expect(source).not.toContain("markNotificationsSeen");
+		expect(source).not.toContain("useReceiptFeed");
+		expect(source).not.toContain("receipts.render");
+		expect(source).not.toContain("noteInput");
 	});
 
-	it("passes the feed's own callback and the 50 % config to that list", () => {
-		const props = listProps(source);
-		expect(props).toContain("onViewableItemsChanged={viewability}");
-		expect(props).toContain("viewabilityConfig={VIEWABILITY_CONFIG}");
-	});
-
-	it("feeds the tracker from the list's answer, not from a mount", () => {
-		/* The callback the list receives must reach `receipts.render` — the call
-		 * site round 1 never had. */
-		const adapter = source.slice(
-			source.indexOf("const viewability = useRef("),
-			source.indexOf("const response = inbox.response;"),
+	it("keeps the detail's read as a loaded, revision-bound PATCH", () => {
+		const detail = readFileSync(
+			new URL("./notification-detail.tsx", import.meta.url),
+			"utf8",
 		);
-		expect(adapter).toContain("receipts.render(");
-		expect(adapter).toContain('item.kind !== "row"');
-	});
-
-	it("gives the feed the presence facts it needs, including coverage", () => {
-		const call = source.slice(
-			source.indexOf("useReceiptFeed({"),
-			source.indexOf("});", source.indexOf("useReceiptFeed({")),
-		);
-		expect(call).toContain("covered:");
-		/* The focus fact is the ROUTE's, computed from the path: round 2 tracked it
-		 *  with a transition effect and a cold arrival never fired it (QA Q5). */
-		expect(call).toContain("focused,");
-		expect(source).toContain('usePathname() === "/notifications"');
-		/* ...and the detail derives the complement from the same source. */
-		expect(
-			readFileSync(
-				new URL("./notification-detail.tsx", import.meta.url),
-				"utf8",
-			),
-		).toContain('usePathname().startsWith("/notifications/")');
-		expect(call).toContain("enabled:");
-		/* `covered` must be derived, not hard-coded: round 1 shipped
-		 * `setCovered(false)` beside a dialog over the same list. */
-		expect(call).not.toContain("covered: false");
-	});
-
-	it("records a touch on the list's own surface", () => {
-		/* The gesture is what makes a receipt evidence; it is recorded on the
-		 *  list (a swipe between two rows still counts), not on each row. */
-		expect(source).toContain('onTouchStart={() => noteInput("touch")}');
+		expect(detail).toContain('op: "read"');
+		expect(detail).toContain("detail.item.revision");
+		expect(detail).not.toContain("useReceiptFeed");
+		expect(detail).not.toContain("markNotificationsSeen");
 	});
 });
 
-describe("the pushed detail reads only on evidence", () => {
-	const detail = readFileSync(
-		new URL("./notification-detail.tsx", import.meta.url),
-		"utf8",
-	);
-
-	it("does not mark the item read on mount", () => {
-		/* Round 1 sent `patchNotifications({op:"read"})` as soon as the fetch
-		 * resolved — no gesture, no foreground check — so merely opening an item
-		 * cleared it (code review M2). The detail's read is the feed's now. */
-		expect(detail).not.toContain('op: "read"');
-		expect(detail).toContain("useReceiptFeed({");
-		expect(detail).toContain("receipts.render(");
+describe("the detail keeps read-only ask context separate from answering", () => {
+	it("uses the existing session ask sheet rather than a second answer form", () => {
+		const detail = readFileSync(
+			new URL("./notification-detail.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(detail).toContain("AsksSheet");
+		expect(detail).toContain("Answer in conversation");
 	});
+});
 
-	it("records the reader's own gesture on the detail's scroll region", () => {
-		expect(detail).toContain('onTouchStart={() => noteInput("touch")}');
+describe("the screen separates an unknown capability from a refused one", () => {
+	it("keeps the skeleton until a frame has actually reported capabilities", () => {
+		/* Before the first list frame the capability bag is empty. Treating that
+		 * absence as "this relay has no inbox" painted the unsupported sentence
+		 * over the loading state — caught by the S18/loading capture, whose held
+		 * API never delivers a frame. */
+		expect(source).toContain("frameCount > 0");
+		expect(source).toContain("const unsupported = !enabled && frameCount > 0");
+	});
+});
+
+describe("the detail's explicit read", () => {
+	it("is sent for an update, and never for an ask", () => {
+		/* An ask is answered, not read: its read mark would claim the reader
+		 * finished with a question they have not answered, and Waiting on you does
+		 * not consult read state anyway (QA round 2, Q4's second half). */
+		const detail = readFileSync(
+			new URL("./notification-detail.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(detail).toContain('detail.item.source === "notify"');
+		expect(detail).toContain('op: "read"');
 	});
 });

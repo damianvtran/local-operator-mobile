@@ -1,9 +1,9 @@
-import { usePathname, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import type { NotificationDetailResponse, PendingAsk } from "@/contracts";
+import type { NotificationDetailResponse, RelayAskRow } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
 	type ConversationScope,
@@ -20,19 +20,25 @@ import {
 	relativeTime,
 	VANISHED_BODY,
 	VANISHED_TITLE,
-	waitingSummary,
 } from "@/features/notifications/notifications-model";
 import {
 	type ConversationDismiss,
 	useConversationDismiss,
 } from "@/features/notifications/use-conversation-dismiss";
 import { refusalSentence } from "@/features/notifications/use-notifications";
-import { useReceiptFeed } from "@/features/notifications/use-receipt-feed";
-import type { NotificationSeenRequest } from "@/relay";
-import { isRelayMissing } from "@/relay";
-import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
+import { Markdown } from "@/features/session/components/markdown";
+import { useSessionRuntime } from "@/features/session/use-session";
+import { isRelayError, isRelayMissing } from "@/relay";
+import {
+	CONTROL,
+	notificationLinkId,
+	notificationProjectId,
+	ROLE,
+	SCREEN,
+	SURFACE,
+} from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
-import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -48,7 +54,8 @@ type DetailState =
 	| { kind: "ready"; detail: NotificationDetailResponse }
 	| { kind: "vanished" }
 	| { kind: "refused"; sentence: string }
-	| { kind: "unreachable" };
+	| { kind: "unreachable" }
+	| { kind: "malformed"; sentence: string };
 
 /**
  * One notification's detail (design §10; contract §5.2/§5.4).
@@ -59,8 +66,8 @@ type DetailState =
  * unreachable, has shown the reader nothing and must not clear anything (D8:
  * "route mount or push tap alone before content renders is not" a read).
  *
- * WHAT IT SHOWS. The anchor's excerpt (an item has no separate body), the source
- * conversation, the related projects, the item's revision history, and that
+ * WHAT IT SHOWS. The notify body's markdown and links, the anchor's excerpt,
+ * the source conversation, related projects, the item's history, and that
  * conversation's asks INCLUDING settled ones — the one place a settled ask
  * appears, since the reel shows open ones only.
  *
@@ -87,42 +94,10 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 	const rewalkRef = useRef<() => void>(() => undefined);
 	const dismissAll = useConversationDismiss(client, () => rewalkRef.current());
 	const { observe, reportCountFailed } = dismissAll;
-
-	/* The detail's OWN evidenced read: one row is on screen here, so the feed is
-	/** Whether this pinned detail is the focused route. Read from the navigator
-	 *  for the inbox's reason (QA round 2 Q5): a deep link lands here cold, and a
-	 *  transition effect never fires on the route that opens the app. */
-	/* THIS route is in front when the path names an item; the list beneath it is not.
-	 *  A pathname is what both platforms agree on, and it is right on the first frame
-	 *  — the navigator's focus event is not (QA round 2 Q5). */
-	const focused = usePathname().startsWith("/notifications/");
-	const sendSeen = useCallback(
-		async (
-			targets: Array<{ id: string; revision: number }>,
-			evidence: NotificationSeenRequest["evidence"],
-		) => {
-			const live = client;
-			if (live === null) return { ok: false, changed: [] };
-			try {
-				const answer = await live.markNotificationsSeen({
-					items: targets,
-					evidence,
-				});
-				return { ok: true, changed: answer.changed };
-			} catch {
-				return { ok: false, changed: [] };
-			}
-		},
-		[client],
+	const runtime = useSessionRuntime(
+		state.kind === "ready" ? state.detail.session.id : "",
 	);
-	const { feed: receipts, noteInput } = useReceiptFeed({
-		send: sendSeen,
-		covered:
-			dismissAll.phase.kind === "confirming" ||
-			dismissAll.phase.kind === "applying",
-		focused,
-		enabled: client !== null,
-	});
+	const [asksOpen, setAsksOpen] = useState(false);
 
 	const recount = useCallback(
 		async (sessionId: string, title: string) => {
@@ -163,21 +138,24 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					);
 					if (ticket !== ticketRef.current) return;
 					setState({ kind: "ready", detail });
-					/* NO READ ON MOUNT. Round 1 marked the item read as soon as the
-					 * fetch resolved — no foreground check, no gesture, no dwell — and
-					 * the same code ran for a deep link opened from a chat client and
-					 * for a cold start, so merely navigating to an item cleared it
-					 * (code review M2; the doctrine says a read is a claim about the
-					 * reader). The evidenced feed below owns this read now: the body
-					 * renders, a real touch follows it, the app is active, and the row
-					 * stays for the dwell. An item nobody touched stays unread — the
-					 * safe direction.
-					 */
-					receipts.resetView();
-					receipts.render(
-						[{ id: detail.item.id, revision: detail.item.revision }],
-						Date.now(),
-					);
+					/* OPENING A LOADED DETAIL IS THE EXPLICIT READ (D11, contract §6.4).
+					 * Not a mount: the write happens only after this item's own content
+					 * rendered, and only for the revision the answer carried — so an item
+					 * that moved while the reader was opening it is not cleared unseen. A
+					 * failure is silent here: the row stays unread (the safe direction) and
+					 * the next open retries it. */
+					/* ASKS ARE ANSWERED, NOT READ: an ask's own mark would be a claim that
+					 *  the reader finished with a question they have not answered, and the
+					 *  "Waiting on you" group does not use read state anyway. Only an
+					 *  update detail writes a read (QA round 2 Q4's second half). */
+					if (!detail.item.read && detail.item.source === "notify") {
+						void live
+							.patchNotifications({
+								op: "read",
+								ids: [{ id: detail.item.id, revision: detail.item.revision }],
+							})
+							.catch(() => undefined);
+					}
 					if (ticket !== ticketRef.current) return;
 					/* Count AFTER the read settles: the read re-stamps this item's seq,
 					 * and a boundary frozen before it would make the write refuse the
@@ -193,6 +171,14 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 						setState({ kind: "vanished" });
 						return;
 					}
+					if (isRelayError(error) && error.kind === "malformed-frame") {
+						setState({
+							kind: "malformed",
+							sentence:
+								"The relay returned an unreadable notification detail. Please try again.",
+						});
+						return;
+					}
 					const sentence = refusalSentence(error);
 					setState(
 						sentence === null
@@ -202,7 +188,7 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				}
 			})();
 		},
-		[client, itemId, recount, receipts],
+		[client, itemId, recount],
 	);
 
 	/** One load, with a fresh ticket. The retry control calls it directly rather
@@ -253,6 +239,19 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				</View>
 			);
 		}
+		if (state.kind === "malformed") {
+			return (
+				<View className="gap-3 px-4 pt-4">
+					<Alert severity="error">{state.sentence}</Alert>
+					<Button
+						label={RETRY_LABEL}
+						onPress={reload}
+						variant="outline"
+						testID={CONTROL.inboxDetailRetry}
+					/>
+				</View>
+			);
+		}
 		if (state.kind === "unreachable") {
 			return (
 				<View className="gap-3 px-4 pt-4">
@@ -270,6 +269,10 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 			<DetailBody
 				detail={state.detail}
 				onOpen={() => openConversation(state.detail.session.id)}
+				onOpenProject={(key) =>
+					router.push(`/projects/${encodeURIComponent(key)}`)
+				}
+				onAnswer={() => setAsksOpen(true)}
 				scope={scope}
 				dismissAll={dismissAll}
 			/>
@@ -290,13 +293,26 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				/>
 			}
 		>
-			<ScrollView
-				contentContainerStyle={{ paddingBottom: 32 }}
-				onTouchStart={() => noteInput("touch")}
-				onScrollBeginDrag={() => noteInput("scroll")}
-			>
+			<ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
 				{body}
 			</ScrollView>
+			<AsksSheet
+				visible={asksOpen}
+				onClose={() => setAsksOpen(false)}
+				client={runtime.source.endpoints}
+				currentSessionId={
+					state.kind === "ready" ? state.detail.session.id : undefined
+				}
+				initialOpenAsk={
+					state.kind === "ready" && state.detail.item.source === "ask"
+						? state.detail.item.id
+						: null
+				}
+				onOpenConversation={(target) => {
+					setAsksOpen(false);
+					openConversation(target);
+				}}
+			/>
 			<Dialog
 				visible={dismissAll.phase.kind === "confirming"}
 				testID={CONTROL.inboxDismissAllDialog}
@@ -314,11 +330,15 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 function DetailBody({
 	detail,
 	onOpen,
+	onOpenProject,
+	onAnswer,
 	scope,
 	dismissAll,
 }: {
 	detail: NotificationDetailResponse;
 	onOpen: () => void;
+	onOpenProject: (key: string) => void;
+	onAnswer: () => void;
 	scope: ConversationScope | null;
 	dismissAll: ConversationDismiss;
 }) {
@@ -330,41 +350,74 @@ function DetailBody({
 					{item.title}
 				</Text>
 				<Text className="text-meta text-ink-dim">
-					{`${session.title} · ${session.live_state} · ${relativeTime(item.updated_at * 1000, Date.now())}`}
+					{`${session.title}${session.live || session.live_state === "live" ? " · Live" : ""} · ${relativeTime(item.updated_at, Date.now())}`}
 				</Text>
 			</View>
-			{anchor !== null && anchor.excerpt.length > 0 ? (
-				<View className="rounded-md border-hairline bg-elevated p-3">
-					<Text className="text-body text-ink">{anchor.excerpt}</Text>
+			{item.source === "notify" && (item.body_md ?? "") !== "" ? (
+				<View className="gap-2">
+					<SectionHeader label="Notification" />
+					<Markdown text={item.body_md ?? ""} />
 				</View>
-			) : (
-				/* Honest absence: the relay could not resolve the transcript entry, so
-				 * there is no quote to show and none is invented. */
+			) : null}
+			{(item.links ?? []).length > 0 ? (
+				<View className="gap-2">
+					<SectionHeader label="Links" />
+					{(item.links ?? []).map((link) => (
+						<Button
+							key={`${link.label}:${link.url}`}
+							label={link.label}
+							variant="outline"
+							onPress={() => {
+								void import("react-native").then(({ Linking }) =>
+									Linking.openURL(link.url),
+								);
+							}}
+							testID={notificationLinkId(link.url)}
+						/>
+					))}
+				</View>
+			) : null}
+			{anchor !== null && anchor.excerpt.length > 0 ? (
+				<View className="gap-2">
+					<SectionHeader label="Message" />
+					<View className="rounded-md border-hairline bg-elevated p-3">
+						<Text className="text-body text-ink">{anchor.excerpt}</Text>
+					</View>
+				</View>
+			) : item.anchor_id ? (
 				<Text className="text-meta text-ink-dim">
 					This item's message is no longer in the conversation.
 				</Text>
-			)}
+			) : null}
 			{item.ask !== null ? (
 				<View className="flex-row items-center gap-2">
-					<Badge
-						label={waitingSummary(1)}
-						tone="warning"
-						accessibilityLabel="Waiting on you"
-					/>
 					<Text className="text-meta text-ink-dim">
 						{`${item.ask.question_count} question${item.ask.question_count === 1 ? "" : "s"}`}
 					</Text>
 				</View>
 			) : null}
-			<Button
-				label={OPEN_LABEL}
-				onPress={onOpen}
-				variant="primary"
-				testID={CONTROL.inboxDetailOpen}
-			/>
+			{item.source === "ask" ? (
+				<Button
+					label="Answer in conversation"
+					onPress={onAnswer}
+					variant="primary"
+					testID={CONTROL.inboxDetailOpen}
+				/>
+			) : (
+				<Button
+					label={OPEN_LABEL}
+					onPress={onOpen}
+					variant="primary"
+					testID={CONTROL.inboxDetailOpen}
+				/>
+			)}
 			<FromCard
 				title={session.title}
-				liveState={session.live_state}
+				liveState={
+					session.live === true || session.live_state === "live"
+						? "Live"
+						: "Not live"
+				}
 				scope={scope}
 				dismissAll={dismissAll}
 			/>
@@ -372,24 +425,25 @@ function DetailBody({
 				<View className="gap-2">
 					<SectionHeader label="Projects" />
 					{projects.map((project) => (
-						<Text key={project.key} className="text-body text-ink">
-							{`${project.name} · ${project.status}`}
-						</Text>
+						<Button
+							key={project.key}
+							label={`${project.name} · ${project.status}`}
+							onPress={() => onOpenProject(project.key)}
+							variant="outline"
+							testID={notificationProjectId(project.key)}
+						/>
 					))}
 				</View>
 			) : null}
-			{history.length > 1 ? (
+			{history.length > 0 ? (
 				<View className="gap-2">
-					<SectionHeader label="Earlier revisions" />
-					{history
-						.slice(0, -1)
-						.reverse()
-						.map((entry) => (
-							<View key={entry.revision} className="gap-1">
-								<Text className="text-body text-ink">{entry.title}</Text>
-								<Text className="text-meta text-ink-dim">{entry.excerpt}</Text>
-							</View>
-						))}
+					<SectionHeader label="Earlier updates" />
+					{history.map((entry) => (
+						<View key={entry.revision} className="gap-1">
+							<Text className="text-body text-ink">{entry.title}</Text>
+							<Text className="text-meta text-ink-dim">{entry.excerpt}</Text>
+						</View>
+					))}
 				</View>
 			) : null}
 			<View className="gap-2" testID={CONTROL.inboxDetailAsks}>
@@ -468,9 +522,9 @@ function FromCard({
 /** One ask, read-only. The verb lives in the conversation (see the header), so
  *  this line states the question and its status rather than offering a second
  *  answer form. */
-function AskLine({ ask }: { ask: PendingAsk }) {
+function AskLine({ ask }: { ask: RelayAskRow }) {
 	const settled = ask.status !== "open";
-	const first = ask.questions[0]?.question ?? "Question unavailable";
+	const first = ask.questions?.[0]?.question ?? "Question unavailable";
 	return (
 		<View className="gap-1 rounded-md border-hairline bg-elevated p-3">
 			<Text className="text-body text-ink" numberOfLines={3}>

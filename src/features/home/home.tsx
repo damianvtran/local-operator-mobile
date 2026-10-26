@@ -20,6 +20,7 @@ import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
+import { notificationsEnabled } from "@/features/notifications/notifications-model";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -45,6 +46,7 @@ import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -103,6 +105,14 @@ export type HomeProps = {
 	notice?: string | null;
 };
 
+/** The bell glyph inside the header's composite notifications control. Its ink is
+ *  the icon-only control's own role (`ink-muted`), read from the theme rather than
+ *  inherited, because an SVG takes colour as a prop. */
+function BellIcon() {
+	const color = useTokenColor("ink-muted");
+	return <Bell color={color} size={20} />;
+}
+
 export default function Home({
 	forcePanelOpen = false,
 	newSession = false,
@@ -127,6 +137,9 @@ export default function Home({
 	const phase = useConnectionState((state) => state.phase);
 	const unread = useListState((state) => state.unread);
 	const inbox = useListState((state) => state.notifications);
+	const inboxEnabled = notificationsEnabled(
+		useListState((state) => state.capabilities),
+	);
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
@@ -687,39 +700,41 @@ export default function Home({
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
 						 *  Settings. The gear says what the control does; the accessible name
 						 *  still comes from the caller's label. */}
-						{/* THE COUNT BELONGS TO THE BELL, so it sits ON the bell. As a
-						 *  sibling chip it measured 25.3 × 22 pt in the header's control
-						 *  row, 8 pt from the button's box and ~24 pt from the glyph it
-						 *  counts — the fifth control the reader tries to tap, and inert
-						 *  (design review round 2 D10). Anchored to the pressable's
-						 *  top-right corner it reads as one control with the target, and
-						 *  `pointerEvents="none"` keeps the whole 48 pt box tappable. */}
-						<View className="relative">
-							<IconButton
+						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
+						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
+						 *  button's box — an inert fifth control the reader tries to tap
+						 *  (design review round 2 D10). An absolutely-positioned badge
+						 *  fixed the distance but OVERLAPPED the pressable's own box by
+						 *  94 pt² (audit U-08 on S4/idle), so the count is a trailing
+						 *  accessory INSIDE one pressable: a single 44 pt target, no
+						 *  overlap, and the number reads as part of the bell. */}
+						{inboxEnabled ? (
+							<Pressable
+								accessibilityRole={ROLE.button}
 								accessibilityLabel={
 									inboxCount === null
 										? "Notifications"
 										: `Notifications, ${inboxCount} unread`
 								}
 								onPress={() => router.push("/notifications")}
-								icon={({ color, size }) => <Bell color={color} size={size} />}
 								testID={CONTROL.homeNotifications}
-							/>
-							{inboxCount !== null && inboxCount > 0 ? (
-								<View
-									pointerEvents="none"
-									className="absolute -right-1 -top-1"
-									testID={CONTROL.homeNotificationsCount}
-								>
-									<Badge
-										label={`${inboxCount}`}
-										tone="warning"
-										mono
-										accessibilityLabel={`${inboxCount} unread notifications`}
-									/>
-								</View>
-							) : null}
-						</View>
+								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+								className="flex-row items-center justify-center gap-1 px-2"
+							>
+								<BellIcon />
+								{inboxCount !== null && inboxCount > 0 ? (
+									<View testID={CONTROL.homeNotificationsCount}>
+										<Badge
+											label={`${inboxCount}`}
+											tone="warning"
+											emphasis
+											mono
+											accessibilityLabel={`${inboxCount} unread notifications`}
+										/>
+									</View>
+								) : null}
+							</Pressable>
+						) : null}
 						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}

@@ -10,6 +10,7 @@ import {
 	useListState,
 } from "@/features/auth/connection-provider";
 import { libraryEnabled } from "@/features/library/library-model";
+import { notificationsEnabled } from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	attentionWord,
@@ -340,33 +341,42 @@ export const ConversationsPane = ({
 					testID={CONTROL.sidebarSchedules}
 				/>
 			</View>
-			{/* The sixth route, and the one the operator named: the inbox. Its
-			 *  count rides the button's own row, so the pane can say how much is
-			 *  waiting without opening it. Other rail rows keep their quiet pill:
-			 *  only this badge is asked to stand out (decisions §D5). */}
-			<View className="w-full flex-row items-center gap-2">
-				<View className="flex-1">
-					<Button
-						label="Notifications"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/notifications");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarNotifications}
-					/>
-				</View>
-				{inboxCount !== null && inboxCount > 0 ? (
-					<Badge
-						label={String(inboxCount)}
-						tone="warning"
-						mono
-						testID={CONTROL.sidebarNotificationsCount}
-						accessibilityLabel={`Notifications, ${inboxCount} unread`}
-					/>
-				) : null}
-			</View>
+			{notificationsEnabled(capabilities) ? (
+				<>
+					{/* The sixth route, and the one the operator named: the inbox. Its
+					 *  count rides the button's own row, so the pane can say how much is
+					 *  waiting without opening it. Other rail rows keep their quiet pill:
+					 *  only this badge is asked to stand out (decisions §D5). */}
+					<View className="relative w-full">
+						<View className="flex-1">
+							<Button
+								label="Notifications"
+								onPress={() => {
+									onNavigate?.();
+									router.push("/notifications");
+								}}
+								variant="quiet"
+								size="sm"
+								testID={CONTROL.sidebarNotifications}
+							/>
+						</View>
+						{inboxCount !== null && inboxCount > 0 ? (
+							<View
+								className="w-7 items-end"
+								testID={CONTROL.sidebarNotificationsCount}
+							>
+								<Badge
+									label={String(inboxCount)}
+									tone="warning"
+									emphasis
+									mono
+									accessibilityLabel={`Notifications, ${inboxCount} unread`}
+								/>
+							</View>
+						) : null}
+					</View>
+				</>
+			) : null}
 			{/* The fifth route, gated on the relay's own capability flag. An older
 			 *  relay omits `features.library`; showing the entry there would offer a
 			 *  control whose screen can only 404, so absence hides it. The gate is the

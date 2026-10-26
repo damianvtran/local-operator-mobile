@@ -1668,7 +1668,7 @@ export const U42_EXEMPTIONS: Array<{
 		 * into the list's header, and the old `gap-2 > flex-row` fragment stopped
 		 * matching, which turned this recorded exemption into 64 FAILs on the same
 		 * kit-owned 2 pt inset. Keyed on a marker the screen keeps for this purpose. */
-		path: "gap-2>div.css-g5y9jx>div.css-g5y9jx.flex-row",
+		path: "gap-2>div.css-g5y9jx.flex-row",
 		value: 2,
 		properties: [
 			"padding-top",
@@ -1680,24 +1680,8 @@ export const U42_EXEMPTIONS: Array<{
 			"the kit's Segmented track inset (`ui/variants.ts` `segmentedTrackClasses` p-0.5, 2pt) — " +
 			"the selected-pill inset the COMPONENT owns, rendered on the inbox's filter row but not " +
 			"introduced by this screen; absorbing it would change the control on every surface that " +
-			"renders it",
-	},
-	{
-		/* The SAME kit inset in the COMPACT toolbar (a short landscape screen puts the
-		 * filter and the verbs on one row), where the nesting is
-		 * `flex-row > flex-1 > flex-row`. Two fragments because the two layouts nest
-		 * differently; both name the one control, and the value bounds both to 2 pt. */
-		path: "div.css-g5y9jx.flex-row>div.css-g5y9jx.flex-1>div.css-g5y9jx.flex-row",
-		value: 2,
-		properties: [
-			"padding-top",
-			"padding-right",
-			"padding-bottom",
-			"padding-left",
-		],
-		reason:
-			"the kit's Segmented track inset (`ui/variants.ts` `segmentedTrackClasses` p-0.5, 2pt) " +
-			"on the compact toolbar — the same component-owned pill inset as the stacked entry above",
+			"renders it. The fragment names the nesting round 3 left when the verbs moved into the " +
+			"header: the filter is the list header's direct `gap-2` child, with no verb row between",
 	},
 	{
 		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",

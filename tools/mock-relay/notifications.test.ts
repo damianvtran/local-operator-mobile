@@ -33,12 +33,19 @@ describe("the inbox read", () => {
 			items: { id: string }[];
 			waiting: { id: string }[];
 			unread_count: number;
+			waiting_unread_count: number;
 			waiting_count: number;
 			next_cursor: string | null;
 		};
 		expect(page.items.map((row) => row.id)).not.toContain("n_read");
 		expect(page.waiting.map((row) => row.id)).toEqual(["ask:3f2a9c1b:a1"]);
-		expect(page.unread_count).toBe(5);
+		/* THE SPLIT THE CORE PUBLISHES (`items.counts`): `unread_count` is the
+		 *  notify half only, the open ask is counted in `waiting_unread_count`, and
+		 *  the badge sums the two. A mock that folded the ask into `unread_count`
+		 *  passed a screen whose badge then double-counted it (D16/NC7). */
+		expect(page.unread_count).toBe(4);
+		expect(page.waiting_unread_count).toBe(1);
+		expect(page.unread_count + page.waiting_unread_count).toBe(5);
 		expect(page.waiting_count).toBe(1);
 		expect(page.next_cursor).toBeNull();
 	});
@@ -155,8 +162,11 @@ describe("the writes", () => {
 			evidence: {
 				surface: "native",
 				input_kind: "touch",
-				input_at_ms: target.updated_at * 1000 - 1,
-				visible_since_ms: target.updated_at * 1000,
+				/* Both stamps are epoch MILLISECONDS on the wire: the row's own
+				 * clock is ms, so the edge is compared to it directly (the ×1000
+				 * that used to be here outlived the fixtures' unit move). */
+				input_at_ms: target.updated_at - 1,
+				visible_since_ms: target.updated_at,
 			},
 		});
 		if (!stale.ok) throw new Error("receipt refused");
@@ -167,8 +177,8 @@ describe("the writes", () => {
 			evidence: {
 				surface: "native",
 				input_kind: "touch",
-				input_at_ms: target.updated_at * 1000 + 1,
-				visible_since_ms: target.updated_at * 1000,
+				input_at_ms: target.updated_at + 1,
+				visible_since_ms: target.updated_at,
 			},
 		});
 		if (!fresh.ok) throw new Error("receipt refused");

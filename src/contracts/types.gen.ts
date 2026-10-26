@@ -963,6 +963,9 @@ export interface NotificationItem {
 	/** The transcript entry the item was raised against. Absent on an ask row and
 	 *  on a `notify` raised without a resolvable anchor. */
 	anchor_id?: string;
+	/** Detail only: the notify body's markdown and its links. */
+	body_md?: string;
+	links?: Array<{ label: string; url: string }>;
 	session: NotificationSessionRef;
 	projects: NotificationProjectRef[];
 	ask: NotificationAskBlock | null;
@@ -979,9 +982,13 @@ export interface NotificationItem {
  *  the frame omits the block entirely when the relay is older than the route,
  *  which the app reads as UNKNOWN rather than zero. */
 export interface NotificationsBlock {
-	unread_count: number;
-	waiting_count: number;
-	high_water: number;
+	/** Every field optional: the core answers `{}` when its store cannot be read,
+	 *  and a block with no counts is UNKNOWN — the badge then draws nothing. */
+	unread_count?: number;
+	waiting_count?: number;
+	/** The unread asks among `waiting` — the other half of the badge. */
+	waiting_unread_count?: number;
+	high_water?: number;
 }
 
 /** `GET /api/notifications` (contract §5.2/§5.4).
@@ -1032,7 +1039,11 @@ export interface NotificationDetailSession {
 	id: string;
 	title: string;
 	agent_id: string;
-	live_state: string;
+	/** Liveness as the relay publishes it (`SessionFacts.get`). */
+	live?: boolean;
+	/** The other producer's name for the same fact; either may arrive, so neither
+	 *  is required (the core sends `live` and no `live_state`). */
+	live_state?: string;
 	cwd: string;
 }
 
@@ -1053,7 +1064,31 @@ export interface NotificationDetailResponse {
 	session: NotificationDetailSession;
 	anchor: NotificationAnchorRef | null;
 	projects: NotificationProjectRef[];
-	asks: PendingAsk[];
+	asks: RelayAskRow[];
+}
+
+/** One ask as the relay's detail relays it (the core's stored row, verbatim).
+ *  Only `ask_id` is guaranteed; a question may carry its text and nothing else. */
+export interface RelayAskRow {
+	ask_id: string;
+	session_id?: string;
+	cwd?: string;
+	status?: string;
+	created_at?: number;
+	expires_at?: number;
+	timeout_s?: number;
+	urgent?: boolean;
+	delivered?: boolean;
+	questions?: Array<{
+		id?: string;
+		header?: string;
+		question?: string;
+		options?: string[];
+		multi?: boolean;
+		secret?: boolean;
+		persist?: boolean;
+	}>;
+	answers?: Record<string, string[]>;
 }
 
 /** One id a write refused, with the relay's own reason. `stale_revision` and

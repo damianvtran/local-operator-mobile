@@ -361,7 +361,20 @@ export function capabilityBlock(
 	 *  otherwise the app's footer entry is hidden against the only relay this
 	 *  harness can drive. This is the mock's own claim, not a corpus field: the
 	 *  captured `/api/sessions` predates the Library. */
-	next.features = { ...(next.features ?? {}), library: 1 };
+	next.features = {
+		...(next.features ?? {}),
+		library: 1,
+		/* The mock serves the inbox routes, so it must advertise the capability
+		 * the phone gates both entry points on. Without this the desktop and
+		 * relay agree and the harness hides the feature it exists to capture. */
+		notifications: 1,
+		/* The relay's receipt door, advertised as the real build does
+		 * (`3cacd0cad01`: `notifications_seen`). No screen keys on it yet — the
+		 * app ships explicit-read only (D11) — but a mock that stayed silent
+		 * about a door the production relay advertises is the divergence this
+		 * block exists to prevent. */
+		notifications_seen: 1,
+	};
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {

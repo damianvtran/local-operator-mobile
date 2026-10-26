@@ -1,9 +1,9 @@
 {
   "provenance": {
     "kind": "synthetic",
-    "relay_ref": "local-operator 7f4b0bab4",
-    "modelled_on": "the notifications contract \u00a72.2 item shape and the \u00a75.2/\u00a75.4 route bodies (local_operator/server/routes/desktop_notifications.py once L1b lands)",
-    "why": "The relay routes do not exist at local-operator 7f4b0bab4, so there is nothing to capture; the app is built against the contract and this sample is what its boundary parses until the routes land. A live capture replaces it then, with its own provenance."
+    "relay_ref": "local-operator 634471def",
+    "modelled_on": "the wire measured at origin/feat/notifications-banner-relay, pinned in src/contracts/__tests__/notifications-live.test.ts",
+    "why": "Synthetic fixture aligned to the real relay wire: epoch-ms notification clocks, lenient stored ask rows, nested session with live+cwd, and body_md/links on the detail."
   },
   "items": [
     {
@@ -12,8 +12,8 @@
       "priority": "normal",
       "title": "Nightly audit found 2 broken links",
       "excerpt": "Two internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.",
-      "created_at": 1792926900,
-      "updated_at": 1792926900,
+      "created_at": 1792926900000,
+      "updated_at": 1792926900000,
       "seq": 9,
       "revision": 2,
       "read": false,
@@ -39,7 +39,15 @@
         "answer": false,
         "read": true
       },
-      "key": "audit"
+      "key": "audit",
+      "body_md": "Two internal links in `docs/relay/contract.md` now return **404**. See the repair checklist below.",
+      "links": [
+        {
+          "label": "Relay contract",
+          "url": "https://example.invalid/relay-contract"
+        }
+      ],
+      "anchor_id": ""
     },
     {
       "id": "n_fraud",
@@ -47,8 +55,8 @@
       "priority": "high",
       "title": "Fraud attempt blocked on the agent server",
       "excerpt": "Three signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.",
-      "created_at": 1792916100,
-      "updated_at": 1792916100,
+      "created_at": 1792916100000,
+      "updated_at": 1792916100000,
       "seq": 8,
       "revision": 1,
       "read": false,
@@ -74,7 +82,8 @@
         "answer": false,
         "read": true
       },
-      "key": "fraud-watch"
+      "key": "fraud-watch",
+      "anchor_id": ""
     },
     {
       "id": "n_pr",
@@ -82,8 +91,8 @@
       "priority": "normal",
       "title": "PR #1188 needs your review",
       "excerpt": "An outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.",
-      "created_at": 1792862100,
-      "updated_at": 1792862100,
+      "created_at": 1792862100000,
+      "updated_at": 1792862100000,
       "seq": 7,
       "revision": 1,
       "read": false,
@@ -109,7 +118,8 @@
         "answer": false,
         "read": true
       },
-      "key": "pr-review"
+      "key": "pr-review",
+      "anchor_id": ""
     },
     {
       "id": "n_read",
@@ -117,8 +127,8 @@
       "priority": "normal",
       "title": "Campaign budget moved to $40/day",
       "excerpt": "article-search-svc campaign 4 was raised to $40/day after the conversion check passed.",
-      "created_at": 1792836900,
-      "updated_at": 1792836900,
+      "created_at": 1792836900000,
+      "updated_at": 1792836900000,
       "seq": 6,
       "revision": 1,
       "read": true,
@@ -138,7 +148,8 @@
         "answer": false,
         "read": true
       },
-      "key": "campaign"
+      "key": "campaign",
+      "anchor_id": ""
     },
     {
       "id": "n_deploy",
@@ -146,8 +157,8 @@
       "priority": "normal",
       "title": "Deploy finished",
       "excerpt": "admin-api v0.18.2 is live on the staging cluster; smoke checks passed.",
-      "created_at": 1792682100,
-      "updated_at": 1792682100,
+      "created_at": 1792682100000,
+      "updated_at": 1792682100000,
       "seq": 5,
       "revision": 1,
       "read": false,
@@ -167,7 +178,8 @@
         "answer": false,
         "read": true
       },
-      "key": "deploy"
+      "key": "deploy",
+      "anchor_id": ""
     }
   ],
   "waiting": [
@@ -177,8 +189,8 @@
       "priority": "high",
       "title": "Which payment provider should the migration target?",
       "excerpt": "Stripe is the cheaper option at current volume; Adyen already holds the EU merchant account.",
-      "created_at": 1792930500,
-      "updated_at": 1792930500,
+      "created_at": 1792930500000,
+      "updated_at": 1792930500000,
       "seq": 10,
       "revision": 1,
       "read": false,
@@ -204,7 +216,8 @@
         "read": true
       },
       "runtime_live": true,
-      "durable": true
+      "durable": true,
+      "anchor_id": ""
     }
   ],
   "next_cursor": null,

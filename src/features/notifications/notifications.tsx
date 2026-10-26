@@ -1,5 +1,5 @@
-import { usePathname, useRouter } from "expo-router";
-import { ChevronLeft, X } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { CheckCheck, ChevronLeft, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -7,12 +7,14 @@ import {
 	Pressable,
 	RefreshControl,
 	Text,
-	useWindowDimensions,
 	View,
 } from "react-native";
 
 import type { NotificationItem } from "@/contracts";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useListState,
+} from "@/features/auth/connection-provider";
 import {
 	confirmBodyFor,
 	confirmTitleFor,
@@ -35,10 +37,10 @@ import {
 	inboxRows,
 	inboxSections,
 	LOAD_MORE_LABEL,
-	MARK_ALL_BUSY,
 	MARK_ALL_LABEL,
 	MARK_READ_LABEL,
 	MARK_UNREAD_LABEL,
+	notificationsEnabled,
 	READ_UNREACHABLE,
 	RETRY_LABEL,
 	relativeTime,
@@ -48,7 +50,6 @@ import {
 	selectedCountLabel,
 	selectionTargets,
 	toggleSelection,
-	unreadSummary,
 	waitingSummary,
 } from "@/features/notifications/notifications-model";
 import { useConversationDismiss } from "@/features/notifications/use-conversation-dismiss";
@@ -56,15 +57,15 @@ import {
 	skippedSentence,
 	useNotifications,
 } from "@/features/notifications/use-notifications";
-import {
-	useReceiptFeed,
-	VIEWABILITY_CONFIG,
-} from "@/features/notifications/use-receipt-feed";
+import { AsksSheet } from "@/features/session/components/asks-sheet";
+import { useSessionRuntime } from "@/features/session/use-session";
 import {
 	CONTROL,
 	EMPTY,
 	notificationAnswerId,
 	notificationDismissId,
+	notificationPriorityId,
+	notificationRepeatId,
 	notificationRowId,
 	notificationSelectId,
 	ROLE,
@@ -72,6 +73,7 @@ import {
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -99,18 +101,27 @@ import { cx } from "@/ui/variants";
  * that moved under the gesture survives and is reported rather than silently
  * cleared.
  *
- * THE AUTOMATIC PATH IS THE ONLY SUBTLE THING HERE. A row can be marked read
- * without a tap, but only when the app is active, this screen is focused,
- * nothing covers the list, the exact row+revision rendered, a real touch or
- * scroll arrived AFTER it rendered, and it stayed for a second. Anything
- * unknown sends nothing (`notifications-read-receipts.ts`); a mount alone reads
- * nothing, and this file contains no session-wide sweep.
+ * READS ARE EXPLICIT (D11). Nothing on this reel auto-reads: an in-view receipt
+ * made rows vanish under the finger and the real relay refused it. Opening a
+ * loaded detail is the explicit read, revision-bound, and a row stays on this
+ * view until the next navigation or refresh rather than disappearing mid-touch.
  */
 export default function Notifications() {
 	const router = useRouter();
 	const { relay } = useConnection();
 	const client = relay();
-	const inbox = useNotifications(client, client !== null);
+	const capabilities = useListState((state) => state.capabilities);
+	const frameCount = useListState((state) => state.frameCount);
+	const enabled = notificationsEnabled(capabilities);
+	/* UNKNOWN IS NOT "NO". Before the first list frame, `capabilities` is an
+	 * empty bag: an absence there means "the relay has not spoken yet", so the
+	 * screen keeps its skeleton. Only a frame that HAS arrived and still omits
+	 * the flag earns the unsupported sentence — the contract's absence rule
+	 * (`libraryEnabled`'s, applied to a screen as well as an entry point). */
+	const unsupported = !enabled && frameCount > 0;
+	const inbox = useNotifications(client, enabled && client !== null);
+	const [answerSession, setAnswerSession] = useState<string | null>(null);
+	const runtime = useSessionRuntime(answerSession ?? "");
 	/* The row's "Dismiss all from <conversation>" accessibility action. It walks
 	 *  the conversation's full scope itself (the list holds one page), so the
 	 *  confirmation's number is the number applied; the detail's From card runs
@@ -130,56 +141,22 @@ export default function Notifications() {
 	 *  tell a selection's dismissal from the From card's. */
 	const selectionDismissed = useRef(false);
 
-	/** Whether this route is the focused one. The receipt feed refuses to send
-	 *  anything while a pushed detail screen is over this list.
+	/* NEITHER THE LIST NOR THE REEL AUTO-READS ANYTHING (D11).
 	 *
-	 *  READ FROM THE NAVIGATOR, not tracked with a transition effect. Round 2
-	 *  shipped the effect, and a COLD arrival — `/notifications` opened directly, as
-	 *  the capture does and as a deep link does — never fired it, so the screen
-	 *  believed it was unfocused forever and sent zero receipts after two real
-	 *  drags (QA round 2 Q5). `useIsFocused` answers what the navigator already
-	 *  knows, on the first frame included; `use-asks-sheet.ts` and
-	 *  `use-completion-ack.ts` read the same hook. */
-	const focused = usePathname() === "/notifications";
-
-	/** The evidenced read path: ONE feed, driven by the list's own viewability
-	 *  answers plus the screen's presence facts. It lives in `use-receipt-feed`
-	 *  because round 1 defined this callback and attached it to nothing — the
-	 *  evidenced path was dead on both platforms while the detail's unevidenced
-	 *  mount read was the only write that reached the relay (code review B1,
-	 *  QA Q1). */
-	const { feed: receipts, noteInput } = useReceiptFeed({
-		send: (targets, evidence) => inbox.seen(targets, evidence),
-		/* A dialog over the list covers the rows it is asking about. */
-		covered:
-			dismissAll.phase.kind === "confirming" ||
-			dismissAll.phase.kind === "applying",
-		focused,
-		enabled: client !== null,
-	});
-
-	/**
-	 * The list's viewability answers, narrowed to the rows they contain.
+	 * Round 3 removed the in-view receipt feed from this screen outright. Two
+	 * independent reasons, either sufficient:
 	 *
-	 * The callback identity must be STABLE for the life of the list — React Native
-	 * throws if it changes between renders — which is why it is a `useRef` value
-	 * rather than a fresh closure. Round 1's failure was the opposite kind: the
-	 * callback existed and nothing was given it.
+	 *  - the relay refuses a phone's read receipt. Its `POST /api/notifications/seen`
+	 *    answers 422 `relay_seen_unsupported` ("no relay/native auto-read in v1",
+	 *    contract §6.4), so every automatic write was a 2 Hz retry loop under a
+	 *    permanent red banner (NC2/ND2);
+	 *  - reading a reel row on touch made it vanish under the finger, on the one
+	 *    filter where the reader is working through a pile (ND1).
+	 *
+	 * What replaces it is the explicit act the contract names: opening an item's
+	 * LOADED detail marks that item read, with the revision it rendered
+	 * (`notification-detail.tsx`). Nothing on this screen writes a read.
 	 */
-	const viewability = useRef(
-		(info: {
-			viewableItems: Array<{ item?: InboxEntry | null } | null | undefined>;
-		}) => {
-			const visible = [];
-			for (const entry of info.viewableItems) {
-				const item = entry?.item;
-				if (item === undefined || item === null) continue;
-				if (item.kind !== "row") continue;
-				visible.push({ id: item.item.id, revision: item.item.revision });
-			}
-			receipts.render(visible, Date.now());
-		},
-	).current;
 
 	const response = inbox.response;
 	const rows = useMemo<NotificationItem[]>(
@@ -304,34 +281,23 @@ export default function Notifications() {
 		},
 		[router],
 	);
+	const answerItem = useCallback((item: NotificationItem) => {
+		/* The session's existing ask sheet owns answering, including secret fields
+		 * and the atomic submit. A notification detail is read-only context, not a
+		 * second answer form. */
+		setAnswerSession(item.session.id);
+	}, []);
 
 	const pressRow = useCallback(
 		(item: NotificationItem) => {
-			noteInput("press");
 			if (selecting) {
 				setSelection((held) => toggleSelection(held, item));
 				return;
 			}
 			openItem(item);
 		},
-		[noteInput, openItem, selecting],
+		[openItem, selecting],
 	);
-
-	/* A SHORT VIEWPORT OR A LARGE TEXT SCALE COLLAPSES THE TOOLBAR. Measured on
-	 *  the shipped frames: iphone-15-landscape at 100 % spent 72 % of its 390 pt
-	 *  on chrome before the first card, and at 200 % showed no row at all; the
-	 *  in-scroll stack (filter + verbs + count + heading) was the larger share
-	 *  (design review D4). The threshold is the first row's own height plus the
-	 *  header, i.e. below this the stack cannot leave room for one card. */
-	const { height: viewportHeight, width: viewportWidth } =
-		useWindowDimensions();
-	/* ONE ROW ONLY WHERE ONE ROW FITS. Short landscape (844×390) has the width for
-	 *  filter-beside-verbs and needs the height, which is the case design review D4
-	 *  measured (72 % chrome at 100 %, no row at all at 200 %). A 320 pt phone at
-	 *  200 % is short in neither dimension — it is NARROW, and side-by-side there
-	 *  overlapped the segmented control's own label over the verbs (caught by the
-	 *  audit's U-08 on the frame), so the stack stays. */
-	const compactToolbar = viewportHeight < 450 && viewportWidth >= 600;
 
 	const selectedCount = selectionTargets(selection, rows).length;
 	const skipped = skippedSentence(inbox.skipped);
@@ -339,6 +305,15 @@ export default function Notifications() {
 	/* --------------------------------------------------------------- render -- */
 
 	const body = (() => {
+		if (unsupported) {
+			return (
+				<EmptyState
+					headline="Notifications aren't available here"
+					next="This computer's relay does not offer the inbox. Update Local Operator on it to use notifications."
+					testID={EMPTY.notifications}
+				/>
+			);
+		}
 		if (inbox.loading && response === null) {
 			/* THE SKELETON HOLDS THE TOOLBAR'S SPACE. Without the verb row, the count
 			 * and the section label, the first card jumped 110 pt when the read
@@ -355,16 +330,23 @@ export default function Notifications() {
 					 *  `gap-2` supplies the rhythm, so the two states line up. */}
 					<Skeleton lines={1} barClassName="h-12 w-full" />
 					<View className="flex-row items-center gap-2">
-						<Skeleton lines={1} barClassName="h-8 w-2/5" />
-						<Skeleton lines={1} barClassName="h-8 w-1/4" />
+						<Skeleton lines={1} barClassName="h-8" widthClassName="w-24" />
+						<Skeleton lines={1} barClassName="h-8" widthClassName="w-16" />
 					</View>
-					<Skeleton lines={1} barClassName="h-4 w-1/3" />
 					<View className="pt-3">
-						<Skeleton lines={1} barClassName="h-4 w-2/5" />
+						<Skeleton lines={1} barClassName="h-4" widthClassName="w-2/5" />
 					</View>
-					<View className="gap-3">
-						{[0, 1, 2, 3].map((index) => (
-							<Skeleton key={index} lines={2} />
+					<View className="gap-2">
+						{[0, 1, 2].map((index) => (
+							<View key={index} className="gap-2 rounded-md bg-elevated p-3">
+								<Skeleton lines={1} barClassName="h-5" widthClassName="w-4/5" />
+								<Skeleton
+									lines={1}
+									barClassName="h-4"
+									widthClassName="w-full"
+								/>
+								<Skeleton lines={1} barClassName="h-4" widthClassName="w-2/5" />
+							</View>
 						))}
 					</View>
 				</View>
@@ -373,7 +355,7 @@ export default function Notifications() {
 		if (inbox.refused !== null) {
 			return (
 				<View className="gap-3 px-4 pt-4" testID={SURFACE.inboxError}>
-					<Alert severity="error" title="That did not work">
+					<Alert severity="error" title="Couldn't load notifications">
 						{inbox.refused}
 					</Alert>
 					<Button
@@ -403,11 +385,19 @@ export default function Notifications() {
 			 * the unread pile's verdict, and the All view saying it would claim the
 			 * store holds nothing when it holds read history. */
 			return inbox.filter === "unread" ? (
-				<EmptyState
-					headline={ALL_CAUGHT_UP_TITLE}
-					next={ALL_CAUGHT_UP_BODY}
-					testID={EMPTY.notifications}
-				/>
+				<View className="gap-2 px-4 pt-3">
+					<SegmentedFilter value={inbox.filter} onChange={inbox.setFilter} />
+					<EmptyState
+						headline={ALL_CAUGHT_UP_TITLE}
+						next={ALL_CAUGHT_UP_BODY}
+						action={{
+							label: "Show all notifications",
+							onPress: () => inbox.setFilter("all"),
+							testID: CONTROL.inboxFilterAll,
+						}}
+						testID={EMPTY.notifications}
+					/>
+				</View>
 			) : (
 				<EmptyState
 					headline="Nothing here yet"
@@ -416,9 +406,8 @@ export default function Notifications() {
 				/>
 			);
 		}
-		/* The populated case is the FlatList in the render below, not a branch
-		 *  here: the list owns the rows so the platform can answer "which are on
-		 *  screen", which is the whole read receipt. */
+		/* The populated case is the FlatList below. Rows never report reads on
+		 *  their own: a reader may scroll this pile without clearing it (D11). */
 		if (response !== null) return null;
 		/* No answer, no failure: the read has not landed yet (an older frame's
 		 * first tick). The skeleton above covers the common path; this is the
@@ -439,6 +428,44 @@ export default function Notifications() {
 					testID={CONTROL.inboxBack}
 				/>
 			}
+			headerAction={
+				/* THE VERBS LIVE IN THE HEADER. As an in-scroll row above the reel
+				 * they cost 48 pt of the height the rows need (design review ND11:
+				 * ≥ 4 rows above the fold on iPhone 15), and they are screen-level
+				 * actions rather than list content, so the header is where a reader
+				 * looks for them. */
+				<View className="flex-row items-center gap-2">
+					{response !== null && hasUnread(response) && !selecting ? (
+						/* The DOUBLE CHECK, with the words as its accessible name: as a
+						 * labelled button beside Select it needed ~100 pt, which pushed
+						 * the screen's own title into "Notificat…" at 390 pt. The icon
+						 * costs 44, the name still says exactly what it does, and the
+						 * action stays one tap from the reel. */
+						<IconButton
+							accessibilityLabel={MARK_ALL_LABEL}
+							onPress={() => void onMarkAll()}
+							disabled={writing}
+							icon={({ color, size }) => (
+								<CheckCheck color={color} size={size} />
+							)}
+							testID={CONTROL.inboxMarkAll}
+						/>
+					) : null}
+					{rows.length > 0 ? (
+						<Button
+							label={selecting ? SELECT_DONE : SELECT_LABEL}
+							onPress={() =>
+								selecting ? clearSelection() : setSelecting(true)
+							}
+							variant="quiet"
+							size="sm"
+							testID={
+								selecting ? CONTROL.inboxSelectionDone : CONTROL.inboxSelect
+							}
+						/>
+					) : null}
+				</View>
+			}
 		>
 			<View className="flex-1">
 				{/* ONE scroll region for the toolbar and the rows, with only the
@@ -453,14 +480,11 @@ export default function Notifications() {
 					<FlatList
 						className="flex-1"
 						contentContainerStyle={{ paddingBottom: 24 }}
-						/* The platform's own answer to "which rows are on screen", which is
-						 *  the ONLY thing that feeds the read receipt (B1). `data` carries the
-						 *  section headings as well as the rows, so the callback's `item` is
-						 *  narrowed by `kind` before the feed sees it. */
+						/* Sections and rows share one data array so the platform owns
+						 *  scrolling and row identity. No visibility callback is attached:
+						 *  merely viewing a reel row never reads it (D11). */
 						data={entries}
 						keyExtractor={(entry) => entry.id}
-						viewabilityConfig={VIEWABILITY_CONFIG}
-						onViewableItemsChanged={viewability}
 						renderItem={({ item: entry }) =>
 							entry.kind === "header" ? (
 								<View className="gap-2 px-4 pt-3">
@@ -480,9 +504,13 @@ export default function Notifications() {
 										selecting={selecting}
 										selected={selection.has(rowKey(entry.item))}
 										onPress={() => pressRow(entry.item)}
-										onPressIn={() => noteInput("press")}
 										onDismiss={() => void dismissOne(entry.item)}
-										onAnswer={() => openItem(entry.item)}
+										onAnswer={() => answerItem(entry.item)}
+										onWrite={(op, item) => {
+											void inbox.write(op, [
+												{ id: item.id, revision: item.revision },
+											]);
+										}}
 										onDismissConversation={() =>
 											void dismissAll.askFresh(
 												entry.item.session.id,
@@ -495,54 +523,16 @@ export default function Notifications() {
 						}
 						ListHeaderComponent={
 							<View className="gap-2 px-4 pb-1 pt-3">
-								<View
-									className={
-										compactToolbar ? "flex-row items-center gap-2" : "gap-2"
-									}
-								>
-									<View className={compactToolbar ? "flex-1" : undefined}>
-										<SegmentedFilter
-											value={inbox.filter}
-											onChange={inbox.setFilter}
-										/>
-									</View>
-									<View className="flex-row items-center gap-2">
-										{response !== null && hasUnread(response) && !selecting ? (
-											<Button
-												label={writing ? MARK_ALL_BUSY : MARK_ALL_LABEL}
-												onPress={() => void onMarkAll()}
-												variant="quiet"
-												size="sm"
-												disabled={writing}
-												testID={CONTROL.inboxMarkAll}
-											/>
-										) : null}
-										{rows.length > 0 ? (
-											<Button
-												label={selecting ? SELECT_DONE : SELECT_LABEL}
-												onPress={() =>
-													selecting ? clearSelection() : setSelecting(true)
-												}
-												variant="quiet"
-												size="sm"
-												testID={
-													selecting
-														? CONTROL.inboxSelectionDone
-														: CONTROL.inboxSelect
-												}
-											/>
-										) : null}
-									</View>
-								</View>
-								{/* The count line is folded away in the compact form: on a
-								 *  landscape phone at 200 % it was one of the rows that
-								 *  pushed the first card off screen entirely (design review
-								 *  D4). */}
-								{!compactToolbar && response !== null && hasUnread(response) ? (
-									<Text className="text-meta text-ink-dim">
-										{unreadSummary(response.unread_count)}
-									</Text>
-								) : null}
+								<SegmentedFilter
+									value={inbox.filter}
+									onChange={inbox.setFilter}
+									unreadCount={response?.unread_count ?? 0}
+								/>
+								{/* NO SEPARATE COUNT LINE. The pile's size rides the filter's
+								 *  own label ("Unread 4"), the way the desktop words it, so the
+								 *  number is stated once instead of twice — the second line cost
+								 *  28 pt of the height the reel needs for its rows (design
+								 *  review ND11: 4 rows above the fold on iPhone 15). */}
 								{inbox.writeError !== null ? (
 									<View testID={SURFACE.inboxSkipped}>
 										<Alert severity="error">{inbox.writeError}</Alert>
@@ -553,7 +543,6 @@ export default function Notifications() {
 										<Alert severity="warning">{skipped}</Alert>
 									</View>
 								) : null}
-								<DismissReceipt dismissAll={dismissAll} />
 							</View>
 						}
 						ListFooterComponent={
@@ -584,11 +573,6 @@ export default function Notifications() {
 								/>
 							) : undefined
 						}
-						onScrollBeginDrag={() => noteInput("scroll")}
-						/* A touch anywhere on the rows is the trusted gesture the receipt
-						 *  needs; it is recorded on the list, not on each row, so a swipe
-						 *  that starts between two rows still counts. */
-						onTouchStart={() => noteInput("touch")}
 						testID={CONTROL.inboxList}
 					/>
 				) : (
@@ -598,6 +582,10 @@ export default function Notifications() {
 					body
 				)}
 
+				{/* Receipts live in the pinned footer, never in the scrolled-away
+				 * list header: a one-click dismiss at the bottom of the reel must still
+				 * show its sentence and Undo (ND3). */}
+				<DismissReceipt dismissAll={dismissAll} />
 				{selecting ? (
 					<View
 						/* In the layout, not over it: an absolute bar covers the last rows,
@@ -650,6 +638,16 @@ export default function Notifications() {
 					</View>
 				) : null}
 			</View>
+			<AsksSheet
+				visible={answerSession !== null}
+				onClose={() => setAnswerSession(null)}
+				client={runtime.source.endpoints}
+				currentSessionId={answerSession ?? undefined}
+				onOpenConversation={(target) => {
+					setAnswerSession(null);
+					router.push(`/session/${target}`);
+				}}
+			/>
 			<Dialog
 				visible={dismissAll.phase.kind === "confirming"}
 				testID={CONTROL.inboxDismissAllDialog}
@@ -669,9 +667,11 @@ export default function Notifications() {
 function SegmentedFilter({
 	value,
 	onChange,
+	unreadCount = 0,
 }: {
 	value: "unread" | "all";
 	onChange: (value: "unread" | "all") => void;
+	unreadCount?: number;
 }) {
 	return (
 		<Segmented
@@ -679,7 +679,8 @@ function SegmentedFilter({
 			options={[
 				{
 					value: "unread",
-					label: FILTER_UNREAD,
+					label:
+						unreadCount > 0 ? `${FILTER_UNREAD} ${unreadCount}` : FILTER_UNREAD,
 					testID: CONTROL.inboxFilterUnread,
 				},
 				{ value: "all", label: FILTER_ALL, testID: CONTROL.inboxFilterAll },
@@ -704,20 +705,20 @@ function InboxRow({
 	selecting,
 	selected,
 	onPress,
-	onPressIn,
 	onDismiss,
 	onAnswer,
 	onDismissConversation,
+	onWrite,
 }: {
 	item: NotificationItem;
 	nowMs: number;
 	selecting: boolean;
 	selected: boolean;
 	onPress: () => void;
-	onPressIn: () => void;
 	onDismiss: () => void;
 	onAnswer: () => void;
 	onDismissConversation: () => void;
+	onWrite: (op: "read" | "unread", item: NotificationItem) => void;
 }) {
 	const isAsk = item.source === "ask" || item.ask !== null;
 	/* The conversation verb rides on UPDATE rows only (design §10's rotor
@@ -733,22 +734,47 @@ function InboxRow({
 					},
 				]
 			: undefined;
+	/* Swipe gestures are deliberately not implemented here: this app has no
+	 * swipe primitive or motion implementation to reuse, and adding one would
+	 * introduce a second interaction stack. The equivalent platform actions are
+	 * available to assistive technology on every update and ask row. */
+	const rowActions = [
+		...(conversationAction ?? []),
+		...(!isAsk && !selecting
+			? [
+					{ name: "markRead", label: item.read ? "Mark unread" : "Mark read" },
+					...(canDismiss(item)
+						? [{ name: "dismiss", label: DISMISS_LABEL }]
+						: []),
+				]
+			: []),
+		...(isAsk ? [{ name: "answer", label: "Answer" }] : []),
+	];
+	const onRowAction = (name: string) => {
+		if (name === "dismissConversation") onDismissConversation();
+		else if (name === "markRead") onWrite(item.read ? "unread" : "read", item);
+		else if (name === "dismiss") onDismiss();
+		else if (name === "answer") onAnswer();
+	};
+	const seenLabel =
+		item.read_via === "in_view"
+			? "Seen in conversation"
+			: item.read_via === "watching"
+				? "Seen live"
+				: null;
 	return (
 		<Pressable
 			onPress={onPress}
-			onPressIn={onPressIn}
-			accessibilityActions={conversationAction}
-			onAccessibilityAction={(event) => {
-				if (event.nativeEvent.actionName === "dismissConversation") {
-					onDismissConversation();
-				}
-			}}
+			accessibilityActions={rowActions}
+			onAccessibilityAction={(event) =>
+				onRowAction(event.nativeEvent.actionName)
+			}
 			accessibilityRole={ROLE.button}
 			accessibilityState={selecting ? { selected } : undefined}
 			accessibilityLabel={
 				selecting
 					? `${selected ? "Selected" : "Not selected"}: ${item.title}`
-					: `${item.title}. ${item.session.title}. ${relativeTime(item.updated_at * 1000, nowMs)}`
+					: `${item.priority === "high" ? "High priority. " : ""}${item.title}. ${item.session.title}. ${relativeTime(item.updated_at, nowMs)}`
 			}
 			className={cx(
 				"rounded-md border-hairline bg-elevated p-3",
@@ -787,7 +813,18 @@ function InboxRow({
 				 *  ellipsizing (measured on the 320 pt phone frame). */}
 				<View className="min-w-0 flex-1">
 					<View className="flex-row items-center gap-2">
+						{!item.read ? (
+							<View className="h-2 w-2 shrink-0 rounded-full bg-accent" />
+						) : null}
+						{item.priority === "high" ? (
+							<Badge
+								label="High"
+								tone="warning"
+								testID={notificationPriorityId(item.id)}
+							/>
+						) : null}
 						<Text
+							numberOfLines={1}
 							className={cx(
 								"min-w-0 flex-1 text-body",
 								item.read ? "text-ink-dim" : "text-ink",
@@ -795,13 +832,19 @@ function InboxRow({
 						>
 							{item.title}
 						</Text>
-						<Text className="shrink-0 text-meta text-ink-dim">
-							{relativeTime(item.updated_at * 1000, nowMs)}
-						</Text>
 					</View>
 					{item.excerpt.length > 0 ? (
-						<Text className="text-meta text-ink-muted">{item.excerpt}</Text>
+						<Text numberOfLines={1} className="text-meta text-ink-muted">
+							{item.excerpt}
+						</Text>
 					) : null}
+					{/* THE META LINE CARRIES THE TIME AND THE VERB. In the title row they
+					 *  competed with the title and the priority chip for a 288 pt column,
+					 *  and at the 320 pt phone / 135-200 % text the row's own min-content
+					 *  was 12 pt wider than the viewport (audit U-06, four rows on each of
+					 *  four CI cells). Here the session label is the only shrinking
+					 *  element; the clock, the repeat count and the control have their
+					 *  own boxes and none can push the row out. */}
 					<View className="mt-1 flex-row items-center gap-2">
 						<Text
 							className="min-w-0 flex-1 text-meta text-ink-dim"
@@ -810,7 +853,18 @@ function InboxRow({
 							{isAsk
 								? `${item.session.title} · ${item.ask?.question_count ?? 1} question${(item.ask?.question_count ?? 1) === 1 ? "" : "s"}`
 								: item.session.title}
+							{seenLabel !== null ? ` · ${seenLabel}` : ""}
 						</Text>
+						<Text className="shrink-0 text-meta text-ink-dim">
+							{relativeTime(item.updated_at, nowMs)}
+						</Text>
+						{item.repeat_count > 1 ? (
+							<Badge
+								label={`×${item.repeat_count}`}
+								tone="neutral"
+								testID={notificationRepeatId(item.id)}
+							/>
+						) : null}
 						{isAsk ? (
 							<Button
 								label="Answer"

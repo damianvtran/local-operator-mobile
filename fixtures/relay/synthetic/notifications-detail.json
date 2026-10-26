@@ -1,9 +1,9 @@
 {
   "provenance": {
     "kind": "synthetic",
-    "relay_ref": "local-operator 7f4b0bab4",
-    "modelled_on": "the notifications contract \u00a72.2 item shape and the \u00a75.2/\u00a75.4 route bodies (local_operator/server/routes/desktop_notifications.py once L1b lands)",
-    "why": "The relay routes do not exist at local-operator 7f4b0bab4, so there is nothing to capture; the app is built against the contract and this sample is what its boundary parses until the routes land. A live capture replaces it then, with its own provenance."
+    "relay_ref": "local-operator 634471def",
+    "modelled_on": "the wire measured at origin/feat/notifications-banner-relay, pinned in src/contracts/__tests__/notifications-live.test.ts",
+    "why": "Synthetic fixture aligned to the real relay wire: epoch-ms notification clocks, lenient stored ask rows, nested session with live+cwd, and body_md/links on the detail."
   },
   "item": {
     "id": "n_audit",
@@ -11,8 +11,8 @@
     "priority": "normal",
     "title": "Nightly audit found 2 broken links",
     "excerpt": "Two internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.",
-    "created_at": 1792926900,
-    "updated_at": 1792926900,
+    "created_at": 1792926900000,
+    "updated_at": 1792926900000,
     "seq": 9,
     "revision": 2,
     "read": false,
@@ -38,28 +38,30 @@
       "answer": false,
       "read": true
     },
-    "key": "audit"
+    "key": "audit",
+    "body_md": "Two internal links in `docs/relay/contract.md` now return **404**. See the repair checklist below.",
+    "links": [
+      {
+        "label": "Relay contract",
+        "url": "https://example.invalid/relay-contract"
+      }
+    ],
+    "anchor_id": "toolu_01J8z2"
   },
   "history": [
     {
       "revision": 1,
-      "at": 1792840500,
+      "at": 1792840500000,
       "title": "Nightly audit found 1 broken link",
       "excerpt": "One internal link in docs/relay/contract.md now 404."
-    },
-    {
-      "revision": 2,
-      "at": 1792926900,
-      "title": "Nightly audit found 2 broken links",
-      "excerpt": "Two internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md."
     }
   ],
   "session": {
     "id": "s_0001",
     "title": "Aida",
     "agent_id": "aida",
-    "live_state": "running",
-    "cwd": "~/minervaai"
+    "cwd": "~/minervaai",
+    "live": true
   },
   "anchor": {
     "id": "toolu_01J8z2",
@@ -76,29 +78,12 @@
     {
       "ask_id": "a0",
       "session_id": "s_0001",
-      "created_at": 1792746900,
-      "expires_at": 0,
-      "timeout_s": 0,
-      "urgent": false,
+      "created_at": 1792746900000,
       "status": "answered",
-      "delivered": true,
       "questions": [
         {
           "id": "q0",
-          "question": "Should I open a follow-up PR for the broken links?",
-          "options": [
-            {
-              "label": "Yes",
-              "description": "Open it now."
-            },
-            {
-              "label": "No",
-              "description": "Leave them."
-            }
-          ],
-          "multi": false,
-          "secret": false,
-          "persist": false
+          "question": "Should I open a follow-up PR for the broken links?"
         }
       ],
       "answers": {
