@@ -11,6 +11,7 @@ import {
 	inboxUnreadCount,
 	markAllTarget,
 	notificationsEnabled,
+	readLoadedDetail,
 	selectionTargets,
 	toggleSelection,
 } from "@/features/notifications/notifications-model";
@@ -182,5 +183,88 @@ describe("the relay's capability gate", () => {
 		expect(notificationsEnabled({ features: { notifications: "2" } })).toBe(
 			true,
 		);
+	});
+});
+
+describe("the explicit read, then the re-read (QA round 3, Q8)", () => {
+	type Detail = {
+		item: { id: string; read: boolean; revision: number; source: string };
+		session: { id: string; title: string };
+	};
+	const loaded = (): Detail => ({
+		item: { id: "n_1", read: false, revision: 69, source: "notify" },
+		session: { id: "s1", title: "QA Alpha" },
+	});
+
+	it("re-reads only AFTER the read settles, and returns the moved revision", async () => {
+		const order: string[] = [];
+		let settle: (() => void) | null = null;
+		const answer = readLoadedDetail(loaded(), {
+			read: async () => {
+				order.push("read:start");
+				await new Promise<void>((resolve) => {
+					settle = resolve;
+				});
+				order.push("read:settled");
+				return { changed: ["n_1"] };
+			},
+			reload: async () => {
+				order.push("reload");
+				return {
+					item: { id: "n_1", read: true, revision: 70, source: "notify" },
+					session: { id: "s1", title: "QA Alpha" },
+				};
+			},
+		});
+		await Promise.resolve();
+		/* Nothing has been re-read while the write is in flight — the defect was a
+		 * walk that started HERE, naming revision 69 the store had already moved. */
+		expect(order).toEqual(["read:start"]);
+		expect(settle).not.toBeNull();
+		(settle as unknown as () => void)();
+		const shown = await answer;
+		expect(order).toEqual(["read:start", "read:settled", "reload"]);
+		expect(shown.item.revision).toBe(70);
+	});
+
+	it("keeps the original when the write changed nothing, and never re-reads", async () => {
+		let reloaded = 0;
+		const shown = await readLoadedDetail(loaded(), {
+			read: async () => ({ changed: [] }),
+			reload: async () => {
+				reloaded += 1;
+				return null;
+			},
+		});
+		expect(reloaded).toBe(0);
+		expect(shown.item.read).toBe(false);
+		expect(shown.item.revision).toBe(69);
+	});
+
+	it("keeps the original when the write itself fails", async () => {
+		const shown = await readLoadedDetail(loaded(), {
+			read: async () => {
+				throw new Error("refused");
+			},
+			reload: async () => null,
+		});
+		expect(shown.item.revision).toBe(69);
+	});
+
+	it("never reads an ASK — an ask is answered, not read", async () => {
+		let reads = 0;
+		const ask: Detail = {
+			item: { id: "ask:s1:a1", read: false, revision: 1, source: "ask" },
+			session: { id: "s1", title: "QA Alpha" },
+		};
+		const shown = await readLoadedDetail(ask, {
+			read: async () => {
+				reads += 1;
+				return { changed: [] };
+			},
+			reload: async () => null,
+		});
+		expect(reads).toBe(0);
+		expect(shown).toBe(ask);
 	});
 });

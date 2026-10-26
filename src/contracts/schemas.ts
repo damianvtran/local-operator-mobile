@@ -307,7 +307,13 @@ export const subagentDetailSchema = subagentRowSchema.extend({
 
 export const askOptionSchema = z.looseObject({
 	label: z.string(),
-	description: z.string(),
+	/** OPTIONAL because the producer's mapping is (`asks/queue.py`
+	 *  `_question_shape` stores the ask tool's own option dict verbatim, and an
+	 *  option may carry only a label). Requiring it refused such an ask at the
+	 *  aggregate route, and the picker then read `.length` off `undefined` — the
+	 *  same primitive-vs-structure class as Q9, one layer down. Absent means the
+	 *  option has no consequence line, never an empty one drawn. */
+	description: z.string().optional(),
 });
 
 export const pendingRequestSchema = z.looseObject({
@@ -384,7 +390,39 @@ export const relayAskRowSchema = z.object({
 				id: z.string().optional(),
 				header: z.string().optional(),
 				question: z.string().optional(),
-				options: z.array(z.string()).optional(),
+				/* THE PRODUCER PUBLISHES OBJECTS, NOT STRINGS. Core's
+				 * `asks/queue.py::_question_shape` stores each option as the ask
+				 * tool's own mapping (`{label, description?}`), and the relay hands
+				 * those durable rows out verbatim — so a schema that accepted only
+				 * strings made every real detail with a picker ask unreadable
+				 * (QA round 3, Q9: `asks.0.questions.0.options.0 expected string,
+				 * received object`), with no Answer button and no detail at all.
+				 * Both spellings are accepted because a projection that predates
+				 * the mapping carried bare labels, and ONE shape comes out: the
+				 * reader never sees the wire's two spellings. */
+				options: z
+					.array(
+						z.union([
+							z.string(),
+							z.looseObject({
+								label: z.string(),
+								description: z.string().optional(),
+							}),
+						]),
+					)
+					.transform((list) =>
+						list.map((option) =>
+							typeof option === "string"
+								? { label: option }
+								: {
+										label: option.label,
+										...(option.description === undefined
+											? {}
+											: { description: option.description }),
+									},
+						),
+					)
+					.optional(),
 				multi: z.boolean().optional(),
 				secret: z.boolean().optional(),
 				persist: z.boolean().optional(),
@@ -520,7 +558,14 @@ const notificationItemSchema = z.looseObject({
  */
 export const notificationsResponseSchema = z.looseObject({
 	items: z.array(notificationItemSchema),
-	waiting: z.array(notificationItemSchema),
+	/* FIRST PAGE ONLY, AND ABSENT — NOT EMPTY — EVERYWHERE ELSE. The store omits
+	 * the key on a cursor page (`items.py::list_page` adds `waiting` only when
+	 * there is no cursor), and for `state=dismissed`/`source=notify` too. Requiring
+	 * it made every real second page a `malformed-frame` and left "Load more"
+	 * silently re-reading page one (QA round 3, Q7). Absent means "not on this
+	 * page"; the screen keeps the first page's rows and never invents an empty
+	 * group. */
+	waiting: z.array(notificationItemSchema).optional(),
 	next_cursor: z.string().nullable(),
 	unread_count: z.number().int(),
 	waiting_count: z.number().int(),

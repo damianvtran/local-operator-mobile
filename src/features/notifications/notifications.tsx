@@ -37,6 +37,7 @@ import {
 	inboxRows,
 	inboxSections,
 	LOAD_MORE_LABEL,
+	LOAD_MORE_RETRY,
 	MARK_ALL_LABEL,
 	MARK_READ_LABEL,
 	MARK_UNREAD_LABEL,
@@ -547,7 +548,7 @@ export default function Notifications() {
 							</View>
 						}
 						ListFooterComponent={
-							<View className="px-4 pt-2">
+							<View className="gap-2 px-4 pt-2">
 								{inbox.loadingMore ? (
 									<View className="items-center py-4">
 										<ActivityIndicator />
@@ -561,6 +562,25 @@ export default function Notifications() {
 											onPress={() => inbox.loadMore()}
 											variant="outline"
 											testID={CONTROL.inboxLoadMore}
+										/>
+									</View>
+								) : null}
+								{/* A PAGE THAT FAILED IS A STATED FAILURE (QA round 3, Q7).
+								 *  It used to be swallowed, so a rejected second page left the
+								 *  first 50 rows looking like the whole pile. The retry
+								 *  re-issues the SAME cursor — `loadMore` reads it from the
+								 *  held answer — so nothing about the window moves. */}
+								{inbox.loadMoreError !== null ? (
+									<View
+										className="gap-2 pb-4"
+										testID={SURFACE.inboxLoadMoreFailed}
+									>
+										<Alert severity="warning">{inbox.loadMoreError}</Alert>
+										<Button
+											label={LOAD_MORE_RETRY}
+											onPress={() => inbox.loadMore()}
+											variant="outline"
+											testID={CONTROL.inboxLoadMoreRetry}
 										/>
 									</View>
 								) : null}

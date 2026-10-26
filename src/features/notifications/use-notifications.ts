@@ -25,6 +25,7 @@ import type {
 } from "@/contracts";
 import {
 	DETAIL_UNREACHABLE,
+	LOAD_MORE_FAILED,
 	READ_FAILED,
 	READ_UNREACHABLE,
 	SKIPPED_SENTENCE,
@@ -80,6 +81,10 @@ export interface InboxState {
 	/** Load the next cursor page, appending to what is on screen. Absent (no
 	 *  `next_cursor`) means the last page is already here. */
 	loadMore: () => void;
+	/** Why the last cursor page did not land, or `null`. A page that fails must
+	 *  be a stated, retryable failure — before QA round 3 it was a silent no-op
+	 *  that left the first 50 rows looking like the whole pile. */
+	loadMoreError: string | null;
 	/** One explicit act over the given rows. */
 	write: (
 		op: NotificationPatchRequest["op"],
@@ -98,6 +103,7 @@ export function useNotifications(
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
+	const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 	const [filter, setFilterState] = useState<InboxFilter>("unread");
 	const [refused, setRefused] = useState<string | null>(null);
 	const [unreachable, setUnreachable] = useState(false);
@@ -187,6 +193,7 @@ export function useNotifications(
 		const ticket = ++ticketRef.current;
 		void (async () => {
 			setLoadingMore(true);
+			setLoadMoreError(null);
 			try {
 				const answer = await clientNow.notifications({
 					state: asking === "all" ? "all" : "unread",
@@ -204,8 +211,17 @@ export function useNotifications(
 				 * rows on screen were served under, and widening it to a later page
 				 * would let a mark-all reach an item that arrived after the reader
 				 * started reading. */
+				/* THE COUNTS ARE THE FIRST PAGE'S. They are store-wide figures the
+				 *  first answer published for the window the screen's rows were served
+				 *  under; taking a later page's numbers would re-label the pile under
+				 *  the reader mid-walk, and ADDING them would double-count rows that
+				 *  were never per-page. Only `items` grows, and only by the page's own
+				 *  rows. */
 				setResponse({
 					...answer,
+					unread_count: held.unread_count,
+					waiting_count: held.waiting_count,
+					waiting_unread_count: held.waiting_unread_count,
 					waiting: held.waiting,
 					/* The FIRST answer's boundary, because that is the window the rows on
 					 *  screen were served under. `Math.min` also keeps it honest if a relay
@@ -217,9 +233,14 @@ export function useNotifications(
 					items: [...held.items, ...answer.items],
 				});
 				setNowMs(Date.now());
-			} catch {
-				/* A failed page is not a failed list: what is on screen stays, and the
-				 * reader can ask again by pulling to refresh. */
+			} catch (error) {
+				/* A failed page is not a failed list — what is on screen stays — but it
+				 * is not a SILENT one either: the reader is told, and offered the retry
+				 * that re-issues this same cursor. The relay's own sentence rides when
+				 * it has one (a malformed page names the field it could not read). */
+				if (ticket === ticketRef.current) {
+					setLoadMoreError(refusalSentence(error) ?? LOAD_MORE_FAILED);
+				}
 			} finally {
 				if (ticket === ticketRef.current) setLoadingMore(false);
 			}
@@ -293,7 +314,7 @@ export function useNotifications(
 				 * stated by the client when the server did not state it. */
 				observed:
 					answer.observed ??
-					[...answer.waiting, ...answer.items].map((item) => ({
+					[...(answer.waiting ?? []), ...answer.items].map((item) => ({
 						id: item.id,
 						revision: item.revision,
 					})),
@@ -306,6 +327,7 @@ export function useNotifications(
 		loading,
 		busy,
 		loadingMore,
+		loadMoreError,
 		filter,
 		setFilter,
 		refused,

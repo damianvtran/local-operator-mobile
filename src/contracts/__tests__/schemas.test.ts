@@ -336,6 +336,14 @@ function classifyFixture(rel: string, value: unknown): Classification {
 	if (rel === "synthetic/notifications-detail.json") {
 		return { kind: "schema", schema: "notificationDetail", value };
 	}
+	/* The Answer surface's read: the CORE PRODUCER's question mapping (options as
+	 * `{label, description?}` objects, one of them without a description), which
+	 * the mock serves at `/api/asks` so a mock-built pass can reach the picker
+	 * (QA round 3, Q9). It is a payload this boundary parses, so it is classified
+	 * rather than excused. */
+	if (rel === "synthetic/asks-populated.json") {
+		return { kind: "schema", schema: "asks", value };
+	}
 
 	if (rel === "gateway/gateway-refusal-constants.json") {
 		return {

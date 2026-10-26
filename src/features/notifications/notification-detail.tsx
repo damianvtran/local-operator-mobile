@@ -17,6 +17,7 @@ import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
 import {
 	OPEN_LABEL,
 	RETRY_LABEL,
+	readLoadedDetail,
 	relativeTime,
 	VANISHED_BODY,
 	VANISHED_TITLE,
@@ -148,20 +149,25 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					 *  the reader finished with a question they have not answered, and the
 					 *  "Waiting on you" group does not use read state anyway. Only an
 					 *  update detail writes a read (QA round 2 Q4's second half). */
-					if (!detail.item.read && detail.item.source === "notify") {
-						void live
-							.patchNotifications({
-								op: "read",
-								ids: [{ id: detail.item.id, revision: detail.item.revision }],
-							})
-							.catch(() => undefined);
-					}
+					/* AWAITED, AND THEN THE ROW IS RE-READ (QA round 3, Q8): a walk that
+					 * starts before the read settles freezes a boundary BELOW the item on
+					 * screen, so the reader's own "Dismiss all" skips the very row they
+					 * opened as `stale_revision`. `readLoadedDetail` is that sequence. */
+					const shown = await readLoadedDetail(detail, {
+						read: (id, revision) =>
+							live.patchNotifications({ op: "read", ids: [{ id, revision }] }),
+						reload: (id) =>
+							live.notification(id, AbortSignal.timeout(READ_TIMEOUT_MS)),
+					});
+					if (ticket !== ticketRef.current) return;
+					if (shown !== detail) setState({ kind: "ready", detail: shown });
 					if (ticket !== ticketRef.current) return;
 					/* Count AFTER the read settles: the read re-stamps this item's seq,
 					 * and a boundary frozen before it would make the write refuse the
-					 * very item the reader is looking at as "changed since counted". */
+					 * very item the reader is looking at as "changed since counted".
+					 * The walk reads `shown`, so the count and the row on screen agree. */
 					rewalkRef.current = () =>
-						void recount(detail.session.id, detail.session.title);
+						void recount(shown.session.id, shown.session.title);
 					rewalkRef.current();
 				} catch (error) {
 					/* A late answer to a superseded load (a retry the reader pressed while

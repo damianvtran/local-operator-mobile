@@ -248,7 +248,9 @@ export interface SubagentDetail extends SubagentRow {
 
 export interface AskOption {
 	label: string;
-	description: string;
+	/** Optional on the wire: the producer stores the ask tool's own option dict,
+	 *  and an option may carry only a label. Absent = no consequence line. */
+	description?: string;
 }
 
 export interface PendingRequest {
@@ -1001,7 +1003,9 @@ export interface NotificationsBlock {
  */
 export interface NotificationsResponse {
 	items: NotificationItem[];
-	waiting: NotificationItem[];
+	/** Present on the FIRST page only; absent (never `[]`) on a cursor page and
+	 *  under `state=dismissed`/`source=notify`, where the relay omits the key. */
+	waiting?: NotificationItem[];
 	/** Opaque, `null` on the last page. */
 	next_cursor: string | null;
 	unread_count: number;
@@ -1083,7 +1087,10 @@ export interface RelayAskRow {
 		id?: string;
 		header?: string;
 		question?: string;
-		options?: string[];
+		/** NORMALISED by the reader: the wire carries either a bare label string
+		 *  (older projections) or the producer's `{label, description?}` mapping,
+		 *  and `relayAskRowSchema` folds both into this one shape. */
+		options?: AskOption[];
 		multi?: boolean;
 		secret?: boolean;
 		persist?: boolean;

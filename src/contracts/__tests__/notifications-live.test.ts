@@ -199,6 +199,56 @@ const LIVE_SEEN_REFUSAL = {
 	code: "relay_surface_mismatch",
 };
 
+/**
+ * A REAL CURSOR PAGE, as `items.py::list_page` spells it: `waiting` is ABSENT
+ * (the key is added only when there is no cursor), every other field is present.
+ * QA round 3 measured exactly this answer and the client rejected it —
+ * `waiting Invalid input: expected array, received undefined` — so "Load more"
+ * could never append a single row against the live relay (Q7).
+ */
+const LIVE_CURSOR_PAGE: unknown = (() => {
+	/* Built from the same captured first page, with the ONE key the live route
+	 * drops on a cursor page removed and a single row kept: the row is real
+	 * bytes, so this test cannot pass on a shape the relay never sends. */
+	const { waiting: _omitted, ...rest } = LIVE_LIST as Record<string, unknown>;
+	const items = (LIVE_LIST as { items: unknown[] }).items;
+	return { ...rest, items: [items[0]], next_cursor: null };
+})();
+
+/**
+ * A REAL DETAIL WHOSE CONVERSATION HAS A PICKER ASK, pinned to the producer's
+ * own question mapping: `asks/queue.py::_question_shape` stores each option as
+ * the ask tool's mapping, so `options` arrives as OBJECTS. QA round 3 measured
+ * both the ask's detail and a notify detail in that conversation failing with
+ * `asks.0.questions.0.options.0 expected string, received object` (Q9). One
+ * option carries no description, because the producer may omit it.
+ */
+const LIVE_DETAIL_PICKER_ASK: unknown = {
+	...(LIVE_DETAIL as Record<string, unknown>),
+	asks: [
+		{
+			ask_id: "ask_1",
+			session_id: "3f2a9c1b",
+			status: "open",
+			questions: [
+				{
+					id: "q1",
+					question: "Which payment provider should the migration target?",
+					options: [
+						{ label: "Yes", description: "Send the synthetic report" },
+						{ label: "No", description: "Keep it local" },
+						{ label: "Ask me later" },
+					],
+					multi: false,
+					recommended: 0,
+					secret: false,
+					persist: false,
+				},
+			],
+		},
+	],
+};
+
 describe("the inbox contract against the live relay's answers", () => {
 	it("parses the populated list and the ask half of the badge", () => {
 		const parsed = parsePayload("notifications", LIVE_LIST);
@@ -290,5 +340,39 @@ describe("the inbox contract against the live relay's answers", () => {
 		 * sends it (see the S18 read tests). */
 		expect(LIVE_SEEN_REFUSAL.code).toBe("relay_surface_mismatch");
 		expect(LIVE_SEEN_REFUSAL.error).toContain("native surface");
+	});
+
+	it("parses a REAL cursor page whose `waiting` key is ABSENT (Q7)", () => {
+		const parsed = parsePayload("notifications", LIVE_CURSOR_PAGE);
+		expect(parsed.waiting).toBeUndefined();
+		expect(parsed.items).toHaveLength(1);
+		expect(parsed.next_cursor).toBeNull();
+	});
+
+	it("keeps `waiting` meaningful when the first page DOES carry it", () => {
+		const parsed = parsePayload("notifications", LIVE_LIST);
+		expect(Array.isArray(parsed.waiting)).toBe(true);
+	});
+
+	it("normalises the producer's option MAPPINGS to one shape (Q9)", () => {
+		const parsed = parsePayload("notificationDetail", LIVE_DETAIL_PICKER_ASK);
+		const options = parsed.asks[0]?.questions?.[0]?.options ?? [];
+		expect(options).toEqual([
+			{ label: "Yes", description: "Send the synthetic report" },
+			{ label: "No", description: "Keep it local" },
+			{ label: "Ask me later" },
+		]);
+	});
+
+	it("still accepts a bare label string, the older projection's spelling", () => {
+		const detail = JSON.parse(JSON.stringify(LIVE_DETAIL_PICKER_ASK)) as {
+			asks: Array<{ questions: Array<{ options: unknown[] }> }>;
+		};
+		detail.asks[0]!.questions[0]!.options = ["Yes", "No"];
+		const parsed = parsePayload("notificationDetail", detail);
+		expect(parsed.asks[0]?.questions?.[0]?.options).toEqual([
+			{ label: "Yes" },
+			{ label: "No" },
+		]);
 	});
 });

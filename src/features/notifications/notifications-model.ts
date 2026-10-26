@@ -86,13 +86,12 @@ export function inboxSections(
 	response: NotificationsResponse,
 	nowMs: number,
 ): InboxSection[] {
+	/* `waiting` is absent on a cursor page and under some filters; absent is "no
+	 * pinned rows in THIS answer", which is what an omitted section renders. */
+	const waiting = response.waiting ?? [];
 	const sections: InboxSection[] = [];
-	if (response.waiting.length > 0) {
-		sections.push({
-			id: "waiting",
-			title: WAITING_TITLE,
-			items: response.waiting,
-		});
+	if (waiting.length > 0) {
+		sections.push({ id: "waiting", title: WAITING_TITLE, items: waiting });
 	}
 	const buckets = new Map<
 		Exclude<InboxSectionId, "waiting">,
@@ -134,7 +133,7 @@ export function timeBucket(
 /** Every row on screen, section by section — the order the FlatList renders, so
  *  a viewability callback's indices map back to this array. */
 export function inboxRows(response: NotificationsResponse): NotificationItem[] {
-	return [...response.waiting, ...response.items];
+	return [...(response.waiting ?? []), ...response.items];
 }
 
 /** The number the entry point's badge draws: unread updates plus unread open
@@ -245,7 +244,7 @@ export function hasUnread(response: NotificationsResponse): boolean {
  *  and nothing is pinned. Distinguished from "no items YET" by the caller, which
  *  only renders it once a read has landed. */
 export function inboxEmpty(response: NotificationsResponse): boolean {
-	return response.items.length === 0 && response.waiting.length === 0;
+	return response.items.length === 0 && (response.waiting ?? []).length === 0;
 }
 
 /** Plural agreement without a string table: the count decides the word, the
@@ -295,6 +294,12 @@ export const ANSWER_LABEL = "Answer";
 export const OPEN_LABEL = "Open conversation";
 export const RETRY_LABEL = "Try again";
 export const LOAD_MORE_LABEL = "Load more";
+/** The page failed and the reader may re-issue the same cursor. Deliberately
+ *  says "again": the failure is retryable, and the rows already on screen are
+ *  not in question. */
+export const LOAD_MORE_FAILED =
+	"Couldn't load the next page. The rows already shown are still accurate.";
+export const LOAD_MORE_RETRY = "Try again";
 export const BACK_LABEL = "Back";
 export const FILTER_UNREAD = "Unread";
 export const FILTER_ALL = "All";
@@ -312,6 +317,43 @@ export const DETAIL_UNREACHABLE =
 /** The row's one-line time, in the minute vocabulary the rest of the app uses
  *  (`in 4m`, `2h overdue` on the schedules screen) rather than a timestamp: the
  *  reader is deciding what to clear, not reading a log. */
+/**
+ * The explicit read of a LOADED detail, then the row read BACK — in that order,
+ * always (QA round 3, Q8).
+ *
+ * The read re-stamps the item and raises the store's `high_water`; a dismissal
+ * counted from the pre-read answer froze a boundary BELOW the row on screen, so
+ * the reader's own "Dismiss all" skipped the item they had just opened as
+ * `stale_revision` (measured: through_seq 232, observed revision 69, the read
+ * moved it to 70 → 40 of 41). Sequencing the two is the whole fix; the re-read
+ * exists because the write's answer names what CHANGED, not the revision the
+ * change produced, and every later write must name a token the relay honours.
+ *
+ * A failure is silent and keeps the original: the row stays unread (the safe
+ * direction) and the next open retries it. Only an UPDATE is read — an ask is
+ * answered, never read.
+ */
+export async function readLoadedDetail<
+	Detail extends {
+		item: { id: string; read: boolean; revision: number; source: string };
+	},
+>(
+	detail: Detail,
+	io: {
+		read: (id: string, revision: number) => Promise<{ changed: string[] }>;
+		reload: (id: string) => Promise<Detail | null>;
+	},
+): Promise<Detail> {
+	if (detail.item.read || detail.item.source !== "notify") return detail;
+	const moved = await io.read(detail.item.id, detail.item.revision).then(
+		(answer) => answer.changed.includes(detail.item.id),
+		() => false,
+	);
+	if (!moved) return detail;
+	const refreshed = await io.reload(detail.item.id).catch(() => null);
+	return refreshed ?? detail;
+}
+
 export function relativeTime(atMs: number, nowMs: number): string {
 	const delta = Math.max(0, nowMs - atMs);
 	const minutes = Math.round(delta / 60_000);

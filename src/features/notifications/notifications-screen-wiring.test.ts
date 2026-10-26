@@ -32,6 +32,11 @@ import { describe, expect, it } from "vitest";
 
 const SCREEN = new URL("./notifications.tsx", import.meta.url);
 const source = readFileSync(SCREEN, "utf8");
+/** The read/refresh sequence's own home, asserted where the rule now lives. */
+const model = readFileSync(
+	new URL("./notifications-model.ts", import.meta.url),
+	"utf8",
+);
 
 describe("the inbox screen has no automatic read feed", () => {
 	it("keeps the list free of seen requests and visibility callbacks", () => {
@@ -48,8 +53,13 @@ describe("the inbox screen has no automatic read feed", () => {
 			new URL("./notification-detail.tsx", import.meta.url),
 			"utf8",
 		);
+		expect(detail).toContain("readLoadedDetail");
 		expect(detail).toContain('op: "read"');
-		expect(detail).toContain("detail.item.revision");
+		/* The revision the write names is the one the DETAIL carried — the helper
+		 * takes `detail` and names `detail.item.revision`, so the rule lives there
+		 * and the screen cannot invent a token (QA round 3, Q8 moved the sequence,
+		 * never the binding). */
+		expect(model).toContain("detail.item.revision");
 		expect(detail).not.toContain("useReceiptFeed");
 		expect(detail).not.toContain("markNotificationsSeen");
 	});
@@ -86,7 +96,11 @@ describe("the detail's explicit read", () => {
 			new URL("./notification-detail.tsx", import.meta.url),
 			"utf8",
 		);
-		expect(detail).toContain('detail.item.source === "notify"');
-		expect(detail).toContain('op: "read"');
+		/* The guard moved with the sequence: `readLoadedDetail` is the one place
+		 * that decides whether an item is read at all, so the ask rule is asserted
+		 * THERE (and behaviourally in notifications-model.test.ts) while the screen
+		 * is asserted to route every read through it. */
+		expect(model).toContain('detail.item.source !== "notify"');
+		expect(detail).toContain("readLoadedDetail");
 	});
 });

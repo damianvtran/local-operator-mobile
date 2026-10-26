@@ -2921,6 +2921,18 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		if (pathname === "/api/asks" && method === "GET") {
+			/* THE ANSWER SURFACE'S READ, which the mock did not serve at all: every
+			 *  mock-built pass therefore rendered "the relay is too old" instead of
+			 *  the picker, and a real picker ask could not be exercised on a mock at
+			 *  all (QA round 3, Q9's second half). The fixture is the CORE
+			 *  PRODUCER's shape — options as `{label, description?}` mappings, one of
+			 *  them without a description — so the sheet is exercised against what
+			 *  `asks/queue.py::_question_shape` actually emits. */
+			sendJson(res, 200, inboxFixture("asks-populated"));
+			return;
+		}
+
 		if (pathname === "/api/notifications" && method === "PATCH") {
 			const outcome = notificationsStore.patch(body);
 			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);

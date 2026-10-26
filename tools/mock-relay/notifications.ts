@@ -203,20 +203,26 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 				? `${asNumber(last.item.updated_at)}.${asString(last.item.id)}`
 				: null;
 		const items = slice.map((row) => serialize(row));
-		const waiting =
-			after === null && (state === "unread" || state === "all")
-				? visible
-						.filter((row) => asRecord(row.item.ask) !== undefined)
-						.filter(inSession)
-						.map((row) => serialize(row))
-				: [];
+		/* THE KEY IS OMITTED, NOT EMPTIED (the live route's own spelling,
+		 * `items.py::list_page`: `waiting` is added only when there is no cursor and
+		 * the state/source can show asks). A mock that answered `[]` on a cursor
+		 * page would let a client that requires the field pass here and fail against
+		 * the relay — which is exactly how QA round 3 found Q7. */
+		const showWaiting =
+			after === null && (state === "unread" || state === "all");
+		const waiting = showWaiting
+			? visible
+					.filter((row) => asRecord(row.item.ask) !== undefined)
+					.filter(inSession)
+					.map((row) => serialize(row))
+			: [];
 		const tokens = [...items, ...waiting].map((item) => {
 			const record = asRecord(item) ?? {};
 			return { id: asString(record.id), revision: asNumber(record.revision) };
 		});
 		return {
 			items,
-			waiting,
+			...(showWaiting ? { waiting } : {}),
 			next_cursor: nextCursor,
 			unread_count: unreadCount(),
 			waiting_count: waitingCount(),
