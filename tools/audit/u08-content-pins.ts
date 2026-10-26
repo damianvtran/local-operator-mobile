@@ -145,14 +145,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 *
 	 * A re-pin is only legitimate when the reader can see WHY from this diff; a pin
 	 * bumped to make CI green earns nothing, and the suite still refuses every other
-	 * file's drift (`--print` is the only way to produce these values). */
-	app: "8793fc7e7b4da8255fcefd09a0caf4e56c0930237c62b86fde23bb68a49a5d35",
+	 * file's drift (`--print` is the only way to produce these values).
+	 *
+	 * Re-pinned again 2026-10-26, still deliberately, for two later source commits on
+	 * this branch: `987e2fb` (the status layout predicate moved the phone/landscape
+	 * decision into `src/ui/size-class.ts` and wired it in `app/(app)/session/[id].tsx`
+	 * — hence BOTH trees move) and `46bd248` (Home's New-chat callback became a
+	 * memoised callback reading a refreshed ref; src only). Neither commit adds or
+	 * removes a file under these roots; the digests move because those files' bytes do. */
+	app: "a95c87f6b74d94a1cd0ad49543279d3e77f45e56f897fd5bb24fd64cb3e1c68d",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "dc43fd9669c5b8dff45f83fbb6581de42b0e4848ff14831da6b562737db2f8a8",
+	src: "6bc53c57b51d821d867300aaf8b82952bd90797f970d71ff1beff5ee864a0e8f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
