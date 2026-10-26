@@ -423,7 +423,12 @@ jobs:
         # `--check` defaults to every target (design/README.md is explicit that a
         # gate whose default scope is narrower than the page it documents is the
         # same defect as one that cannot fail), so this also covers the four
-        # committed frames under docs/design/preview.
+        # committed frames under docs/design/preview AND the nine committed
+        # iPhone listing frames under design/store-screenshots/appstore-iphone-6.9.
+        # The listing frames do not share the caveat below: their template loads
+        # the shipped faces from design/fonts/*.woff2, which ARE in this
+        # repository, so that half of the gate verifies on a clean runner even
+        # when the sheet cannot.
         #
         # IT FAILS ONLY WHERE IT CAN DISCRIMINATE, and this is a finding rather
         # than a preference. `capture.mjs` renders the sheet with the SHIPPED
@@ -469,6 +474,42 @@ jobs:
               echo "soon as they are."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: The frame-difference arithmetic, on this runner's ImageMagick
+        # `Checks` runs on ubuntu-latest with no ImageMagick, so the decoder cases in
+        # scripts/design/frame-difference.test.ts skip there. Here the decoder exists,
+        # and these are the sizes that matter: 1,080,000 pixels is past the point
+        # where the formatter prints scientific notation, which a prefix parse read as
+        # 3 — a full-canvas change counted as three pixels (review round 2).
+        run: node design/preview/frame-difference.probe.mjs
+
+      - name: The frame gate fails a stale frame with its summary, not an uncaught throw
+        # Round 3: `capture.mjs --check` lost its `failures` declaration, so the first
+        # stale frame threw ReferenceError after printing that frame's own line — the
+        # summary never printed, the rest of the set went unchecked, and the browser
+        # tree leaked (nine orphans reaped at job end). CI stayed green only because
+        # the step that reached it is the soft-fail preview one. This drives the stale
+        # path for real, against a one-frame tree.
+        run: node design/preview/capture-stale.probe.mjs
+
+      - name: The committed listing frames re-render identically
+        # A HARD gate, and separate from the step above on purpose. That step has
+        # to tolerate failure while the preview sheet's shipped faces live in a
+        # sibling checkout (docs/ci.md, "When a run goes red"), so a stale LISTING
+        # would have merged green behind its warning. These 26 frames (nine iPhone,
+        # nine iPad, eight Play) have no such excuse: every template loads the
+        # faces from this repository and the captures they compose are committed
+        # beside them, so a frame that no longer matches its caption, its page or
+        # its capture fails here.
+        #
+        # Byte-for-byte on the machine that rendered them; on a runner whose Chrome
+        # encodes PNGs differently, pixels within each surface's `compareFuzz`
+        # tolerance from `frames.json` (per surface, and every surface needs one —
+        # the encoder difference moves a few hundred pixels even where nothing is
+        # resampled). `capture.mjs` prints which comparison it made, how many pixels
+        # the tolerance had to absorb at zero tolerance, and the largest channel
+        # difference, so the values can be re-derived from the log.
+        run: node design/preview/capture.mjs --target frames --check
 
       - name: Render the preview sheet for the review rounds
         # These are the frames a designer or UX round looks at. They are written
