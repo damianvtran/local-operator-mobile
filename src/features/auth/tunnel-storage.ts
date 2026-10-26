@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-
 import {
 	type CustomRouteSet,
 	expoSecureStore,
@@ -14,6 +13,7 @@ import {
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
+import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 
 /**
  * Where the app keeps the reader's credentials.
@@ -48,6 +48,15 @@ import {
 
 let adapter: SecureStoreAdapter | null = null;
 let storage: SecureStorage | null = null;
+let opening: Promise<TunnelStorage> | null = null;
+
+// Lazy callbacks keep platform initialization out of module evaluation and the
+// authorization owner independent of React/coordinator imports.
+configureStartupAuthorizationStorage({
+	read: async () => (await open()).storage.readStartupAuthorization(),
+	write: async (record) =>
+		(await open()).storage.writeStartupAuthorization(record),
+});
 
 /**
  * The reader's own tunnel, as this layer stores it.
@@ -75,10 +84,20 @@ async function open(): Promise<TunnelStorage> {
 	if (storage && adapter) {
 		return { storage, adapter, persistent: Platform.OS !== "web" };
 	}
-	const persistent = Platform.OS !== "web";
-	adapter = persistent ? await expoSecureStore() : memorySecureStore();
-	storage = new SecureStorage(adapter);
-	return { storage, adapter, persistent };
+	if (!opening) {
+		opening = (async () => {
+			const persistent = Platform.OS !== "web";
+			adapter = persistent ? await expoSecureStore() : memorySecureStore();
+			storage = new SecureStorage(adapter);
+			return { storage, adapter, persistent };
+		})();
+		// Concurrent credential/generation reads must share one adapter, including
+		// the memory-only web fallback. A failed platform open remains retryable.
+		void opening.catch(() => {
+			opening = null;
+		});
+	}
+	return opening;
 }
 
 /** The stored tunnel, or null. A runtime whose keystore refuses reads (a locked
@@ -219,11 +238,8 @@ export async function writeStoredTunnelSession(
  * drift apart.
  */
 export async function clearStoredCredentials(): Promise<void> {
-	try {
-		const { storage: store } = await open();
-		await store.clearAll();
-	} catch {
-		/* A keystore that refuses the delete leaves the reader signed in on this device,
-		 * which is what the reader then sees; there is no honest alternative to report. */
-	}
+	const { storage: store } = await open();
+	// A failed delete is NOT successful sign-out. Let the provider retain a
+	// closed admission gate and report failure instead of resurrecting at restart.
+	await store.clearAll();
 }

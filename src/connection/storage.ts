@@ -59,6 +59,7 @@ export const SECURE_KEYS = {
 	oauth: "lop.mobile.oauth",
 	tunnel: "lop.mobile.tunnel",
 	custom: "lop.mobile.custom",
+	startupAuthorization: "lop.mobile.startup-authorization",
 } as const;
 
 /** The value iOS has historically refused. Anything larger is refused here. */
@@ -99,6 +100,23 @@ export interface CustomRouteSet {
 	password: string | null;
 	allow_insecure: boolean;
 }
+
+/** A random admission generation, NOT an account identifier or credential digest.
+ *
+ * The three states are three different boundaries; collapsing them would either
+ * lose a reader's drafts on a token blip or expose them to the next sign-in:
+ *
+ * - `active` — the generation the current drafts belong to, bound to the exact
+ *   route it was proven against.
+ * - `revoked` — the session ended without proof (`401`, lapsed grant, cancelled
+ *   login). No draft is deleted; the next login mints a different generation, so
+ *   the old drafts are unreachable from it rather than destroyed.
+ * - `tombstone` — a sign-out or identity change erased the private data. The
+ *   marker survives a crash mid-deletion, and the next admission finishes that
+ *   cleanup before it may hand out a new generation. */
+export type StartupAuthorizationRecord =
+	| { version: 1; state: "active"; generation: string; route: string }
+	| { version: 1; state: "revoked" | "tombstone" };
 
 /** A value that cannot be stored safely, with the reason named. */
 export class SecureStorageError extends Error {
@@ -184,14 +202,74 @@ export class SecureStorage {
 		await this.write(SECURE_KEYS.custom, value);
 	}
 
+	/** Unlike credential discovery, this read cannot interpret a locked keystore
+	 * as absence: that would admit a replacement scope over unfinished cleanup. */
+	async readStartupAuthorization(): Promise<StartupAuthorizationRecord | null> {
+		const raw = await this.adapter.getItemAsync(
+			SECURE_KEYS.startupAuthorization,
+			this.writeOptions(),
+		);
+		if (raw === null) return null;
+		let value: unknown;
+		try {
+			value = JSON.parse(raw);
+		} catch {
+			value = null;
+		}
+		if (typeof value === "object" && value !== null) {
+			const record = value as {
+				version?: unknown;
+				state?: unknown;
+				generation?: unknown;
+				route?: unknown;
+			};
+			if (record.version === 1 && record.state === "tombstone")
+				return { version: 1, state: "tombstone" };
+			if (record.version === 1 && record.state === "revoked")
+				return { version: 1, state: "revoked" };
+			if (
+				record.version === 1 &&
+				record.state === "active" &&
+				typeof record.generation === "string" &&
+				record.generation.length > 0 &&
+				typeof record.route === "string" &&
+				record.route.length > 0
+			)
+				return {
+					version: 1,
+					state: "active",
+					generation: record.generation,
+					route: record.route,
+				};
+		}
+		throw new SecureStorageError(
+			"The startup authorization record is unreadable",
+			SECURE_KEYS.startupAuthorization,
+		);
+	}
+
+	async writeStartupAuthorization(
+		value: StartupAuthorizationRecord,
+	): Promise<void> {
+		await this.write(SECURE_KEYS.startupAuthorization, value);
+	}
+
 	/** Sign-out. Clears every item this app owns; unrelated keystore items are
-	 *  another app's business. */
+	 *  another app's business. Privacy deletion must fail visibly rather than
+	 *  reuse credential discovery's best-effort corrupt-item removal. */
 	async clearAll(): Promise<void> {
-		await Promise.all([
-			this.remove(SECURE_KEYS.oauth),
-			this.remove(SECURE_KEYS.tunnel),
-			this.remove(SECURE_KEYS.custom),
-		]);
+		await Promise.all(
+			Object.values(SECURE_KEYS).map(async (key) => {
+				await this.adapter.deleteItemAsync(key, this.writeOptions());
+				if (
+					(await this.adapter.getItemAsync(key, this.writeOptions())) !== null
+				)
+					throw new SecureStorageError(
+						"Credential removal could not be confirmed",
+						key,
+					);
+			}),
+		);
 	}
 
 	/** The Radient grant is gone but the tunnel session is kept: the ADR keeps the
