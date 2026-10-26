@@ -76,6 +76,33 @@ export type AvatarFailure = "permanent" | "transient";
  * cool-down. An unclassified throw is treated as transient so a bug never
  * hides a photo for the rest of the session.
  */
+/*
+ * The longest the hub's `Retry-After` may hide a photo. Unbounded, a huge
+ * delta-seconds value or a far-future HTTP-date would leave it on initials for
+ * the whole session (review round 2, R2-2). Ten minutes is long enough to
+ * respect a real rate limit, short enough that a mistake heals in one sitting.
+ */
+export const AVATAR_RETRY_AFTER_MAX_MS = 10 * 60_000;
+
+/**
+ * The cool-down after a transient failure: the hub's `Retry-After` clamped to
+ * the ceiling above, or the default when absent. Zero (the client's clamp of a
+ * negative or past value) takes the default too, because a zero wait would
+ * re-request on every remount during a 429.
+ */
+export function transientDelay(
+	retryAfterMs: number | null | undefined,
+	fallbackMs: number,
+): number {
+	if (
+		retryAfterMs == null ||
+		!Number.isFinite(retryAfterMs) ||
+		retryAfterMs <= 0
+	)
+		return fallbackMs;
+	return Math.min(retryAfterMs, AVATAR_RETRY_AFTER_MAX_MS);
+}
+
 const retryAfterOf = (error: unknown): number | null =>
 	isHubError(error) ? error.retryAfterMs : null;
 
@@ -137,6 +164,9 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	/* Bumped by `clear()`. A read that started under an older epoch resolves
 	 * to its caller but is never stored. */
 	let epoch = 0;
+	/* Reads started and not yet settled, so `wakeOne` can tell whether a woken
+	 * waiter took a slot. */
+	let inFlight = 0;
 	/*
 	 * Reads refused because every slot is an outstanding read. They wait, FIFO,
 	 * and one is started each time a read settles, so an organization with more
@@ -145,8 +175,19 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	 * bytes, and only one per mounted mark.
 	 */
 	const waiters: Waiter[] = [];
+	/*
+	 * Hand freed capacity to the queue. A woken waiter's `load()` may start no
+	 * fetch at all (its photo is already held, already in flight as a duplicate
+	 * key, or cooling down), and then nothing would ever wake the NEXT waiter:
+	 * the queue would strand with a slot free (review round 2, R2-1). So keep
+	 * waking until a waiter actually occupies a slot or the room runs out.
+	 */
 	const wakeOne = () => {
-		waiters.shift()?.run();
+		while (waiters.length > 0 && makeRoom(1, 0)) {
+			const before = inFlight;
+			waiters.shift()?.run();
+			if (inFlight > before) return;
+		}
 	};
 
 	const remove = (key: string) => {
@@ -208,7 +249,7 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		retryAfterMs?: number | null,
 	): void => {
 		if (failure === "transient") {
-			remember(key, now() + (retryAfterMs ?? cooldown), false);
+			remember(key, now() + transientDelay(retryAfterMs, cooldown), false);
 			return;
 		}
 		remember(key, Number.POSITIVE_INFINITY, true);
@@ -242,12 +283,15 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 			// Every slot is an outstanding read: wait for one to settle.
 			return new Promise((resolve) => {
 				waiters.push({
+					// `load` runs synchronously up to starting its fetch, so the
+					// caller sees `inFlight` move before this returns.
 					run: () => resolve(load(key, fetchUri, classify)),
 					cancel: () => resolve(null),
 				});
 			});
 		}
 		const started = epoch;
+		inFlight += 1;
 		const promise = fetchUri()
 			.then(
 				(uri) => {
@@ -257,7 +301,9 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 					 * evicted: storing it would empty the cache and still not fit,
 					 * and not remembering it would refetch it on every mount. */
 					if (uri.length > maxBytes) {
-						fail(key, "permanent");
+						// THIS size only: "too big for the cache" is about the
+						// variant, not the photo, so the other size stays readable.
+						remember(key, Number.POSITIVE_INFINITY, true);
 						return null;
 					}
 					if (!makeRoom(1, uri.length)) return uri;
@@ -273,7 +319,9 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 				},
 			)
 			.finally(() => {
-				if (started === epoch) wakeOne();
+				if (started !== epoch) return;
+				inFlight -= 1;
+				wakeOne();
 			});
 		entries.set(key, { state: "loading", promise });
 		return promise;
@@ -304,6 +352,7 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		/** Sign-out / account change: nothing held survives, nothing in flight lands. */
 		clear(): void {
 			epoch += 1;
+			inFlight = 0;
 			entries.clear();
 			heldBytes = 0;
 			// Queued reads belong to the old account: settle them, never run them.

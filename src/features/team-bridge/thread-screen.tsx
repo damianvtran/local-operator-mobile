@@ -306,7 +306,12 @@ function ThreadContent({
 				</View>
 				<View className="min-w-0 flex-1">
 					{!item.continuation && (
-						<View className="flex-row flex-wrap items-baseline gap-x-2">
+						/* `relative z-10`: the author control pads its box to 44 pt with
+						 * a negative margin, so its bottom 11 pt overhang the body
+						 * below. As a later sibling the body painted (and hit-tested)
+						 * over that overhang and over the focus ring (design round 2,
+						 * D6). Raising the header makes the whole 44 pt the name's. */
+						<View className="relative z-10 flex-row flex-wrap items-baseline gap-x-2">
 							{subject ? (
 								<ProfileAuthorName
 									subject={subject}

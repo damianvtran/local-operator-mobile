@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+	AVATAR_RETRY_AFTER_MAX_MS,
 	avatarFailure,
 	avatarKey,
 	avatarVersion,
 	createAvatarCache,
+	transientDelay,
 } from "@/team-bridge/avatars";
 import {
 	AVATAR_MAX_BYTES,
@@ -331,6 +333,115 @@ describe("avatar cache", () => {
 		expect(flaky).toHaveBeenCalledTimes(2);
 	});
 
+	it("R2-1: a woken read that starts no download still hands the slot on", async () => {
+		// The reviewer's case: one slot; queue b, b again, then c; settle a, then b.
+		const cache = createAvatarCache({ maxEntries: 1 });
+		const pending = () => {
+			let release: (uri: string) => void = () => undefined;
+			const promise = new Promise<string>((done) => (release = done));
+			return { fetch: () => promise, release: (uri: string) => release(uri) };
+		};
+		const a = pending();
+		const b = pending();
+		void cache.load("a", a.fetch, permanent);
+		const b1 = cache.load("b", b.fetch, permanent);
+		const b2 = cache.load("b", b.fetch, permanent);
+		const other = vi.fn(async () => "data:c");
+		const c = cache.load("c", other, permanent);
+		a.release("data:a");
+		await new Promise((done) => setTimeout(done, 0));
+		b.release("data:b");
+		expect(await b1).toBe("data:b");
+		expect(await b2).toBe("data:b");
+		const outcome = await Promise.race([
+			c,
+			new Promise((done) => setTimeout(() => done("stuck"), 50)),
+		]);
+		expect(outcome).toBe("data:c");
+		expect(other).toHaveBeenCalledTimes(1);
+	});
+
+	it("R2-2: Retry-After is clamped to a ceiling, and 0 or negative uses the default", async () => {
+		let clock = 0;
+		const cache = createAvatarCache({
+			transientCooldownMs: 60_000,
+			now: () => clock,
+		});
+		const limited = (retryAfterMs: number) =>
+			vi.fn(async () => {
+				throw new HubError({
+					kind: "rate_limited",
+					message: "x",
+					status: 429,
+					retryAfterMs,
+				});
+			});
+		const huge = limited(999_999_999_000);
+		await cache.load("huge", huge, avatarFailure);
+		clock = AVATAR_RETRY_AFTER_MAX_MS;
+		await cache.load("huge", huge, avatarFailure);
+		expect(huge).toHaveBeenCalledTimes(2);
+		clock = 0;
+		const zero = limited(0);
+		await cache.load("zero", zero, avatarFailure);
+		clock = 59_999;
+		await cache.load("zero", zero, avatarFailure);
+		expect(zero).toHaveBeenCalledTimes(1);
+		clock = 60_000;
+		await cache.load("zero", zero, avatarFailure);
+		expect(zero).toHaveBeenCalledTimes(2);
+	});
+
+	it("R2-2: a real 429 with huge delta-seconds or a far HTTP-date waits at most the ceiling", async () => {
+		for (const header of ["999999999", "Wed, 01 Jan 2099 00:00:00 GMT"]) {
+			const error = await createHubClient({
+				accessToken: async () => "token-a",
+				fetchImpl: (async () =>
+					new Response("{}", {
+						status: 429,
+						headers: { "retry-after": header },
+					})) as unknown as typeof fetch,
+			})
+				.avatarBytes(ADA, HASH, 64)
+				.catch((caught: unknown) => caught);
+			expect(avatarFailure(error)).toBe("transient");
+			let clock = 0;
+			const cache = createAvatarCache({ now: () => clock });
+			const fetchUri = vi.fn(async () => {
+				throw error;
+			});
+			await cache.load("k", fetchUri, avatarFailure);
+			clock = AVATAR_RETRY_AFTER_MAX_MS - 1;
+			await cache.load("k", fetchUri, avatarFailure);
+			expect(fetchUri).toHaveBeenCalledTimes(1);
+			clock = AVATAR_RETRY_AFTER_MAX_MS;
+			await cache.load("k", fetchUri, avatarFailure);
+			expect(fetchUri).toHaveBeenCalledTimes(2);
+		}
+	});
+
+	it("R2-2: a past HTTP-date (clamped to 0 by the client) waits the default, never 0", () => {
+		expect(transientDelay(0, 60_000)).toBe(60_000);
+		expect(transientDelay(-5, 60_000)).toBe(60_000);
+		expect(transientDelay(null, 60_000)).toBe(60_000);
+		expect(transientDelay(5000, 60_000)).toBe(5000);
+		expect(transientDelay(Number.POSITIVE_INFINITY, 60_000)).toBe(60_000);
+	});
+
+	it("NIT: a photo refused only for the cache budget does not fail its other size", async () => {
+		const cache = createAvatarCache({ maxBytes: 100 });
+		await cache.load(
+			avatarKey(ADA, HASH, 256),
+			async () => "x".repeat(101),
+			permanent,
+		);
+		const small = vi.fn(async () => "data:small");
+		expect(await cache.load(avatarKey(ADA, HASH, 64), small, permanent)).toBe(
+			"data:small",
+		);
+		expect(small).toHaveBeenCalledTimes(1);
+	});
+
 	it("classifies failures: 404/refusal/malformed permanent, network/server transient", () => {
 		const of = (kind: ConstructorParameters<typeof HubError>[0]["kind"]) =>
 			avatarFailure(new HubError({ kind, message: "x" }));
@@ -437,6 +548,59 @@ describe("hub client avatarBytes", () => {
 		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
 			kind: "unreachable",
 		});
+	});
+
+	it("R2-3: with no Content-Length, the stream is cancelled as soon as it passes the cap", async () => {
+		let pulled = 0;
+		let cancelled = false;
+		const chunk = new Uint8Array(64 * 1024);
+		chunk.set(PNG);
+		const client = createHubClient({
+			accessToken: async () => "token-a",
+			fetchImpl: (async () =>
+				new Response(
+					new ReadableStream({
+						pull(controller) {
+							pulled += chunk.length;
+							controller.enqueue(chunk);
+						},
+						cancel() {
+							cancelled = true;
+						},
+					}),
+					{ status: 200 },
+				)) as unknown as typeof fetch,
+		});
+		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
+			kind: "malformed",
+		});
+		expect(cancelled).toBe(true);
+		// Read stops within one chunk of the cap, never megabytes past it.
+		expect(pulled).toBeLessThanOrEqual(AVATAR_MAX_BYTES + 3 * chunk.length);
+	});
+
+	it("R2-3: a body that stalls mid-stream is cancelled when the deadline fires", async () => {
+		let cancelled = false;
+		const client = createHubClient({
+			accessToken: async () => "token-a",
+			timeoutMs: 50,
+			fetchImpl: (async () =>
+				new Response(
+					new ReadableStream({
+						start(controller) {
+							controller.enqueue(PNG);
+						},
+						cancel() {
+							cancelled = true;
+						},
+					}),
+					{ status: 200 },
+				)) as unknown as typeof fetch,
+		});
+		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
+			kind: "unreachable",
+		});
+		expect(cancelled).toBe(true);
 	});
 
 	it("refreshes once on a 401, like every other hub read", async () => {

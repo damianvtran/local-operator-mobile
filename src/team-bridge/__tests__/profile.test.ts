@@ -60,7 +60,8 @@ describe("profile card", () => {
 		expect(card.markLabel).toBe("Aida");
 		expect(card.kind).toBe("agent");
 		expect(card.badge).toBe("Agent");
-		expect(card.owner).toBe("Ben’s chief of staff");
+		// D8: the role only; the heading and "About Ben" already name the owner.
+		expect(card.owner).toBe("Chief of staff");
 		expect(card.detailsLabel).toBe("About Ben");
 	});
 

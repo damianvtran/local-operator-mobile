@@ -230,6 +230,10 @@ export function ProfileAuthorPhoto({
 			tabIndex={-1}
 			accessibilityElementsHidden
 			importantForAccessibility="no-hide-descendants"
+			// Both props above are native-only; react-native-web copies
+			// `aria-hidden`, which is what keeps the initials out of the web
+			// accessibility tree (design round 2, D7; `brand-mark.tsx` likewise).
+			aria-hidden
 			hitSlop={6}
 			onPress={() => onOpen(subject)}
 		>

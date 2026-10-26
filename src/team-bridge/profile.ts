@@ -35,7 +35,7 @@ export type ProfileCard = {
 	kind: "human" | "agent";
 	/** The badge's word. */
 	badge: string;
-	/** For an agent, whose agent it is. `null` for a person. */
+	/** For an agent, its role line ("Chief of staff"). `null` for a person. */
 	owner: string | null;
 	/**
 	 * The heading over the title/description/local-time group on an AGENT card,
@@ -116,7 +116,10 @@ export function profileCard(
 		markLabel: subjectMarkLabel(subject),
 		kind: agentName ? "agent" : "human",
 		badge: agentName ? "Agent" : "Person",
-		owner: agentName ? `${personName}’s chief of staff` : null,
+		/* Just the role: the heading already reads "Agent (Owner)" and the
+		 * details sit under "About {owner}", so naming the owner a third time
+		 * pushed their details below the fold for long names (design D8). */
+		owner: agentName ? "Chief of staff" : null,
 		detailsLabel: agentName ? `About ${personName}` : null,
 		title: present(profile?.title),
 		description: present(profile?.description),

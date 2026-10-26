@@ -599,14 +599,28 @@ export function createHubClient(deps: HubClientDeps) {
 			 * ONE deadline over the headers AND the body. `once()` disarms its
 			 * timer when the headers arrive, which is right for a small JSON
 			 * body but would let a body that stalls mid-stream hold the photo's
-			 * cache slot forever. Aborting this controller cancels the fetch and
-			 * its body stream; the caller's own abort is forwarded into it.
+			 * cache slot forever. The caller's own abort is forwarded in.
+			 *
+			 * WHAT IS ACTUALLY CANCELLED, by runtime (review round 2, R2-3):
+			 * - Where `response.body` is a stream (browsers, the web target, Node
+			 *   tests), it is read chunk by chunk with a running byte count, and
+			 *   the reader is cancelled the moment the count passes
+			 *   `AVATAR_MAX_BYTES` or the deadline fires. Nothing past the cap is
+			 *   buffered, and a stalled body stops being read.
+			 * - React Native's XHR-backed `fetch` exposes no body stream. There,
+			 *   `Content-Length` is the only early refusal, `arrayBuffer()` is
+			 *   checked after the read, and the deadline settles THIS call (the
+			 *   slot is freed) but cannot stop the platform finishing a download
+			 *   it already started. The hub's variants are a few KB, so that
+			 *   residual is a bound on waste, not on memory held by this app.
 			 */
 			const deadline = new AbortController();
 			let timedOut = false;
+			let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 			const timer = setTimeout(() => {
 				timedOut = true;
 				deadline.abort();
+				void reader?.cancel().catch(() => undefined);
 			}, timeoutMs);
 			const forward = () => deadline.abort();
 			if (signal?.aborted) deadline.abort();
@@ -626,6 +640,14 @@ export function createHubClient(deps: HubClientDeps) {
 						"Radient returned a profile photo larger than this app reads.",
 					status,
 				});
+			/* Settles when the deadline fires, for the reads below that the abort
+			 * alone may not reject on every runtime. */
+			const aborted = new Promise<never>((_, reject) => {
+				const fire = () => reject(unreachable(null));
+				if (deadline.signal.aborted) fire();
+				else deadline.signal.addEventListener("abort", fire, { once: true });
+			});
+			aborted.catch(() => undefined);
 			let bytes: Uint8Array;
 			let status: number;
 			try {
@@ -644,22 +666,31 @@ export function createHubClient(deps: HubClientDeps) {
 					void response.body?.cancel().catch(() => undefined);
 					throw tooLarge(status);
 				}
-				/* The abort is raced explicitly as well: not every runtime's
-				 * `arrayBuffer()` rejects when its request's signal aborts. */
-				const body = await Promise.race([
-					response.arrayBuffer(),
-					new Promise<never>((_, reject) => {
-						if (deadline.signal.aborted) reject(unreachable(status));
-						deadline.signal.addEventListener(
-							"abort",
-							() => reject(unreachable(status)),
-							{ once: true },
-						);
-					}),
-				]);
-				// Content-Length can be absent or wrong: check what was read.
-				if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
-				bytes = new Uint8Array(body);
+				if (response.body && typeof response.body.getReader === "function") {
+					reader = response.body.getReader();
+					const chunks: Uint8Array[] = [];
+					let total = 0;
+					for (;;) {
+						const next = await Promise.race([reader.read(), aborted]);
+						if (next.done) break;
+						total += next.value.byteLength;
+						if (total > AVATAR_MAX_BYTES) {
+							void reader.cancel().catch(() => undefined);
+							throw tooLarge(status);
+						}
+						chunks.push(next.value);
+					}
+					bytes = new Uint8Array(total);
+					let offset = 0;
+					for (const chunk of chunks) {
+						bytes.set(chunk, offset);
+						offset += chunk.byteLength;
+					}
+				} else {
+					const body = await Promise.race([response.arrayBuffer(), aborted]);
+					if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
+					bytes = new Uint8Array(body);
+				}
 			} catch (error) {
 				/* The caller's own abort propagates as itself (an unmounted view).
 				 * The deadline turns a hung read into a retryable state; a refusal

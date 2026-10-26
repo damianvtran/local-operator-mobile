@@ -57,7 +57,9 @@ describe("profile details on the web target", () => {
 		const html = renderToStaticMarkup(h(ProfileDetails, { card, photo: null }));
 		expect(card.name).toBe("Nova (Ada)");
 		expect(html).toContain("Agent");
-		expect(html).toContain("Ada’s chief of staff");
+		expect(html).toContain("Chief of staff");
+		// D8: the owner is named in the heading and in "About Ada", not a third time.
+		expect(html.split("Ada").length - 1).toBe(2);
 	});
 
 	it("D1: the full, long name is the body's heading, not left to the one-line title", () => {

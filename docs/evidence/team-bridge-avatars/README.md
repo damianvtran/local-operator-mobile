@@ -56,3 +56,27 @@ from the live DOM.
   exactly one focusable element (it was two: the photo had `tabindex=0`). The
   photo still opens the card on touch. Frames:
   `r1-remediation-thread-{light,dark}-360`.
+
+## Round 2 remediation
+
+Same rig, 360 pt. These are `document.elementFromPoint` scans down the centre
+of each author control, run against two builds: with the fix, and a control
+build of the same tree with `relative z-10` removed.
+
+| Header (box y, height) | Control build: rows that hit the name | Fixed build | Bottom edge (1 px in) |
+|---|---|---|---|
+| Ada (118.8, 44) | 34 (119–152) | **44 (119–162)** | miss → **hit** |
+| Sam (213.8, 44) | 34 | **44** | miss → **hit** |
+| Ada (357.6, 44) | 34 | **44** | miss → **hit** |
+| Aida (Ben) (582.7, 44) | 34 | **44** | miss → **hit** |
+
+Light and dark give identical numbers. A fifth header (Sam, y 703) sits under
+the pinned composer in this unscrolled frame and reads 0 in both builds.
+That is the composer covering it, not the overhang.
+
+- **D7:** all 5 author-photo initials in the thread are now inside an
+  `aria-hidden="true"` subtree on web: 0 of 5 exposed.
+- **D8:** the long agent card names the owner twice, in the heading and in
+  "About …". The role line reads "Chief of staff", and the owner's title now
+  starts on the first screen at 360.
+  Frames: `r2-remediation-card-longagent-{light,dark}-360`.
