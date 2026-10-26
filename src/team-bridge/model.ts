@@ -17,7 +17,9 @@ import type {
 	MemberInput,
 	Message,
 	Notify,
+	Settings,
 	Status,
+	StatusConsent,
 	StatusTenant,
 } from "@/team-bridge/contract";
 
@@ -610,4 +612,57 @@ export function newClientRef(random: () => number = Math.random): string {
 			.toString(16)
 			.padStart(8, "0");
 	return `m-${Date.now().toString(36)}-${part()}${part()}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Default-on notice                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** The only provenance that earns the notice. Exact string match: the hub's enum has grown before. */
+export const DEFAULT_ON_PROVENANCE = "default_on";
+
+export type DefaultOnNotice = {
+	tenantId: string;
+	/** The consent version the member was enrolled under (and whose text is held). */
+	version: string;
+	/** The served text, verbatim. Never reformatted: it is what the member agreed to. */
+	text: string;
+};
+
+/**
+ * Whether the one-time "Team Bridge is on for you" notice applies.
+ *
+ * ALL of these must hold, and each exists to avoid a false claim to the person:
+ * - the organization is eligible (an ineligible one is read-only history, not "on");
+ * - the endpoint is `active` (paused or opted-out is not "on for you");
+ * - the consent record is the server's own `default_on` provenance and still
+ *   counts (`current !== false`). `dialog` and `settings` mean the person chose
+ *   it; an unknown value (a newer hub) is treated as "not default-on", because
+ *   telling someone they were enrolled by default on a guess is worse than
+ *   staying quiet;
+ * - the served text is the SAME version the record cites. The notice promises to
+ *   show what the member was enrolled under, and the status read serves one
+ *   version per caller, so a mismatch has no honest text to show.
+ *
+ * Dismissal is a separate, device-local rule (the store), not part of this one.
+ */
+export function defaultOnNoticeFor(input: {
+	tenantId: string;
+	eligible: boolean;
+	settings: Settings;
+	served: StatusConsent | null;
+}): DefaultOnNotice | null {
+	const { settings, served } = input;
+	const endpoint = settings.endpoint;
+	const consent = endpoint?.consent;
+	if (!input.eligible || !endpoint || !consent || !served) return null;
+	if (endpoint.state !== "active") return null;
+	if (consent.consented_via !== DEFAULT_ON_PROVENANCE) return null;
+	if (consent.current === false) return null;
+	if (!consent.version || consent.version !== served.version) return null;
+	return {
+		tenantId: input.tenantId,
+		version: served.version,
+		text: served.text,
+	};
 }

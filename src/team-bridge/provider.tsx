@@ -19,6 +19,7 @@ import { useConnection } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
+import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
 import {
 	installTeamBridgeNotifications,
 	registerTeamBridgeDevice,
@@ -123,7 +124,11 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			},
 		});
 		return {
-			...createTeamBridgeStore({ hub: () => hub, accessToken }),
+			...createTeamBridgeStore({
+				hub: () => hub,
+				accessToken,
+				dismissals: deviceNoticeDismissals,
+			}),
 			hub,
 			pushes,
 			registerPush: () => pushes.register(),

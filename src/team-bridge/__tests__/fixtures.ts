@@ -160,3 +160,30 @@ export const message = (
 	created_at: createdAt,
 	...overrides,
 });
+
+/** The served consent pair (`responses.BridgeConsent`); the text is a placeholder, never the real legal copy. */
+export const CONSENT_V2 = {
+	version: "bridge_consent_v2",
+	text: "Example consent text, line one.\nLine two: shown exactly as served.",
+	accepted_versions: ["bridge_consent_v1", "bridge_consent_v2"],
+};
+
+/** `GET /settings` for an active endpoint, with the given consent provenance. */
+export const settings = (
+	via: string,
+	overrides: {
+		state?: string;
+		version?: string;
+		current?: boolean;
+	} = {},
+) => ({
+	endpoint: {
+		id: "bep_self",
+		state: overrides.state ?? "active",
+		consent: {
+			version: overrides.version ?? "bridge_consent_v2",
+			consented_via: via,
+			current: overrides.current ?? true,
+		},
+	},
+});

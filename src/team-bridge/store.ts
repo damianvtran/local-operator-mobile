@@ -29,8 +29,11 @@ import type {
 	DirectoryMember,
 	Message,
 	Notify,
+	StatusConsent,
 } from "@/team-bridge/contract";
 import {
+	type DefaultOnNotice,
+	defaultOnNoticeFor,
 	type Eligibility,
 	eligibility,
 	mergeMessages,
@@ -73,6 +76,23 @@ export interface TeamBridgeState {
 	totalUnread: number;
 	orgs: Record<string, OrgData>;
 	threads: Record<string, ThreadData>;
+	/** The consent the status read served (eligible callers only). Held for the default-on notice's text. */
+	servedConsent: StatusConsent | null;
+	/** The notice to show for the selected organization, or null. Never set before dismissal was read. */
+	defaultOnNotice: DefaultOnNotice | null;
+	/** A failed Turn off. The notice stays so the person can retry. */
+	defaultOnNoticeError: HubError | null;
+	defaultOnNoticeBusy: boolean;
+}
+
+/**
+ * Device-local, per-account-and-organization record that the default-on notice
+ * was dismissed (or its Turn off succeeded). It never expires: the product rule
+ * is "never returns once dismissed". Injected so the store stays Node-testable.
+ */
+export interface NoticeDismissals {
+	has(accountId: string, tenantId: string): Promise<boolean>;
+	set(accountId: string, tenantId: string): Promise<void>;
 }
 
 const emptyOrg = (): OrgData => ({
@@ -104,6 +124,10 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	totalUnread: 0,
 	orgs: {},
 	threads: {},
+	servedConsent: null,
+	defaultOnNotice: null,
+	defaultOnNoticeError: null,
+	defaultOnNoticeBusy: false,
 });
 
 /** A history page this size; the hub clamps it anyway. */
@@ -119,6 +143,8 @@ export function createTeamBridgeStore(deps: {
 	/** Persisted org choice. Injected so tests and the web build stay in memory. */
 	rememberOrg?: (tenantId: string) => void;
 	recallOrg?: () => string | null;
+	/** Absent (tests, web fixtures without storage) means the notice never shows: it cannot promise "once". */
+	dismissals?: NoticeDismissals;
 	now?: () => number;
 }) {
 	const store = createStore<TeamBridgeState>(() => initialTeamBridgeState());
@@ -223,7 +249,12 @@ export function createTeamBridgeStore(deps: {
 		if (error.kind === "plan") {
 			generation += 1;
 			inFlight.clear();
-			store.setState({ gate: "plan_required", gateError: error });
+			store.setState({
+				gate: "plan_required",
+				gateError: error,
+				defaultOnNoticeBusy: false,
+				defaultOnNoticeError: null,
+			});
 			return true;
 		}
 		return false;
@@ -312,13 +343,128 @@ export function createTeamBridgeStore(deps: {
 					selfAccountId: accountIdFromToken(token),
 					organizations,
 					selectedTenantId: selected?.tenantId ?? null,
+					servedConsent: read.status.consent ?? null,
 				});
 			});
+		},
+
+		/**
+		 * Decide whether the one-time default-on notice shows for this organization.
+		 *
+		 * READ-ONLY and best effort: it only ever reads (`GET /settings`), so mounting
+		 * the tab fires nothing at the hub that changes state, and enrolment stays
+		 * the desktop runtime's job. Any failure (storage, hub, parse) shows NO
+		 * notice: the notice is additive, and a screen that cannot prove "not
+		 * dismissed" or "enrolled by default" must stay quiet rather than guess.
+		 */
+		loadDefaultOnNotice(tenantId: string): Promise<void> {
+			return once(`notice:${tenantId}`, async (owned) => {
+				const client = deps.hub();
+				const state = store.getState();
+				const accountId = state.selfAccountId;
+				const organization = state.organizations.find(
+					(o) => o.tenantId === tenantId,
+				);
+				if (!client || !deps.dismissals || !accountId || !organization) return;
+				try {
+					if (await deps.dismissals.has(accountId, tenantId)) return;
+					const settings = await client.settings(tenantId);
+					if (!owned()) return;
+					// Re-read: a dismissal or Turn off can land while the GET is in flight.
+					if (await deps.dismissals.has(accountId, tenantId)) return;
+					if (!owned()) return;
+					const notice = defaultOnNoticeFor({
+						tenantId,
+						eligible: organization.eligible,
+						settings,
+						served: store.getState().servedConsent,
+					});
+					if (notice && store.getState().selectedTenantId === tenantId) {
+						store.setState({
+							defaultOnNotice: notice,
+							defaultOnNoticeBusy: false,
+							defaultOnNoticeError: null,
+						});
+					}
+				} catch {
+					// Status owns the tab gate; this additive read must never close it.
+				}
+			});
+		},
+
+		/** Dismiss for good on this device. The notice hides even if the write fails (it returns next launch then). */
+		async dismissDefaultOnNotice(): Promise<void> {
+			const notice = store.getState().defaultOnNotice;
+			const accountId = store.getState().selfAccountId;
+			if (!notice) return;
+			store.setState({ defaultOnNotice: null, defaultOnNoticeError: null });
+			if (!accountId) return;
+			try {
+				await deps.dismissals?.set(accountId, notice.tenantId);
+			} catch {
+				/* Hidden for this session; storage failure must not trap the person behind a banner. */
+			}
+		},
+
+		/**
+		 * "Turn off": `PUT /settings {state: "disabled", tenant_id}` alone. The notice
+		 * is dismissed only AFTER the hub confirmed; a refusal keeps it and records
+		 * the error, because a banner that vanished while the setting stayed on
+		 * would be a false "off".
+		 */
+		async turnOffDefaultOn(): Promise<void> {
+			const notice = store.getState().defaultOnNotice;
+			const accountId = store.getState().selfAccountId;
+			const client = deps.hub();
+			if (!notice || !client || store.getState().defaultOnNoticeBusy) return;
+			store.setState({ defaultOnNoticeBusy: true, defaultOnNoticeError: null });
+			const epoch = generation;
+			try {
+				await client.turnOff(notice.tenantId);
+			} catch (error) {
+				if (epoch !== generation || store.getState().defaultOnNotice !== notice)
+					return;
+				const hubError = isHubError(error)
+					? error
+					: new HubError({
+							kind: "unreachable",
+							message: "Radient could not be reached. Try again.",
+						});
+				store.setState({
+					defaultOnNoticeBusy: false,
+					defaultOnNoticeError: hubError,
+				});
+				return;
+			}
+			if (epoch !== generation) return;
+			// A PUT belongs to the account/org captured before dispatch, not whichever
+			// notice happens to be visible when it completes after an org switch.
+			if (store.getState().defaultOnNotice === notice) {
+				store.setState({
+					defaultOnNotice: null,
+					defaultOnNoticeBusy: false,
+					defaultOnNoticeError: null,
+				});
+			}
+			if (accountId) {
+				try {
+					await deps.dismissals?.set(accountId, notice.tenantId);
+				} catch {
+					/* A persistence failure must not undo a confirmed opt-out. */
+				}
+			}
 		},
 
 		selectOrganization(tenantId: string) {
 			if (!store.getState().organizations.some((o) => o.tenantId === tenantId))
 				return;
+			if (store.getState().selectedTenantId !== tenantId) {
+				store.setState({
+					defaultOnNotice: null,
+					defaultOnNoticeBusy: false,
+					defaultOnNoticeError: null,
+				});
+			}
 			store.setState({ selectedTenantId: tenantId });
 			deps.rememberOrg?.(tenantId);
 		},
