@@ -18,6 +18,7 @@ import { useStore } from "zustand";
 import { useConnection } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
+import { clearAttachmentCache } from "@/team-bridge/attachments";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import {
 	installTeamBridgeNotifications,
@@ -132,6 +133,15 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
 		return () => {
+			/*
+			 * This provider is keyed by account (`TeamBridgeProvider`), so its
+			 * teardown IS the account boundary, including a direct A→B replacement
+			 * that never passes through signed-out and so never reaches
+			 * `store.actions.reset`. The image cache is module-level: clearing it
+			 * here empties A's decoded images and bumps the epoch, so A's loads
+			 * still in flight are returned to nobody and never stored for B.
+			 */
+			clearAttachmentCache();
 			remove();
 			void value.pushes.retire().catch(() => undefined);
 		};

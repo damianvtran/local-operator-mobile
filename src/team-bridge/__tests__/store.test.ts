@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-
+import { attachmentCacheSize, loadAttachment } from "@/team-bridge/attachments";
 import {
 	createHubClient,
 	type HubClient,
@@ -876,4 +876,53 @@ describe("terminal authorization refusals", () => {
 			});
 		},
 	);
+
+	describe("image attachments", () => {
+		it("offers attachments only when status advertises them", async () => {
+			const without = createTeamBridgeStore({
+				hub: () => fakeHub(),
+				accessToken: async () => token(SELF),
+			});
+			await without.actions.checkStatus();
+			expect(without.store.getState().attachments).toBe(null);
+			const hub = fakeHub({
+				status: vi.fn(async () =>
+					status({ attachments: { enabled: true, max_count: 4 } }),
+				),
+			});
+			const withBlock = createTeamBridgeStore({
+				hub: () => hub,
+				accessToken: async () => token(SELF),
+			});
+			await withBlock.actions.checkStatus();
+			expect(withBlock.store.getState().attachments).toEqual({ maxCount: 4 });
+		});
+
+		it("forwards attachment ids on send", async () => {
+			const sent = { ...message(5, SELF, "2026-10-21T10:05:00Z"), body: "" };
+			const hub = fakeHub({ send: vi.fn(async () => sent) });
+			const { actions } = createTeamBridgeStore({
+				hub: () => hub,
+				accessToken: async () => token(SELF),
+			});
+			await actions.checkStatus();
+			await actions.send(TENANT, "c1", "", "ref", ["batt_1"]);
+			expect(hub.send).toHaveBeenCalledWith(TENANT, "c1", {
+				clientRef: "ref",
+				body: "",
+				attachmentIds: ["batt_1"],
+			});
+		});
+
+		it("reset (sign-out/account change) clears the in-memory image cache", async () => {
+			const { actions } = createTeamBridgeStore({
+				hub: () => fakeHub(),
+				accessToken: async () => token(SELF),
+			});
+			await loadAttachment("t/c/m/a", async () => "data:image/png;base64,AA==");
+			expect(attachmentCacheSize()).toBe(1);
+			actions.reset();
+			expect(attachmentCacheSize()).toBe(0);
+		});
+	});
 });

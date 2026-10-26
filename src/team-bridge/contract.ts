@@ -108,6 +108,36 @@ export const conversationListSchema = z.looseObject({
 });
 export type ConversationList = z.infer<typeof conversationListSchema>;
 
+/**
+ * The image types the hub stores and serves (`attachments.mime_types`). PNG and
+ * JPEG only: the hub sniffs the bytes and refuses everything else with 415, so
+ * the phone converts before it uploads and never offers another type.
+ */
+export const ATTACHMENT_MIME_TYPES = ["image/png", "image/jpeg"] as const;
+
+/**
+ * One image descriptor on a message (`attachments[]`, the hub's message view).
+ *
+ * METADATA ONLY. A descriptor never carries a URL or bytes: the image is read
+ * through the bearer-authenticated byte route for THIS message
+ * (`client.attachmentBytes`), so possessing a descriptor grants nothing.
+ *
+ * `state` is optional because a bound, readable image is the default the hub
+ * may omit. `expired` is the retention sweeper's tombstone (bytes purged after
+ * the conversation-content horizon, the descriptor kept so the row can say so);
+ * any other value is a state this build does not know and renders as
+ * "unavailable" rather than trying to fetch.
+ */
+export const attachmentDescriptorSchema = z.looseObject({
+	id,
+	mime: z.string().optional(),
+	size: z.number().int().nonnegative().optional(),
+	width: z.number().int().nonnegative().optional(),
+	height: z.number().int().nonnegative().optional(),
+	state: z.string().optional(),
+});
+export type AttachmentDescriptor = z.infer<typeof attachmentDescriptorSchema>;
+
 export const messageSchema = z.looseObject({
 	id,
 	conversation_id: id,
@@ -128,8 +158,34 @@ export const messageSchema = z.looseObject({
 	origin: z.enum(["human", "agent", "system"]),
 	agent_label: z.string().optional(),
 	created_at: z.string(),
+	/*
+	 * Additive (image attachments). PER-ROW TOLERANCE: one descriptor this build
+	 * cannot read becomes `null` (rendered as an unavailable image) instead of
+	 * failing the whole history page, and a non-array value is dropped. A message
+	 * from a server without attachments simply has none.
+	 */
+	attachments: z
+		.array(attachmentDescriptorSchema.nullable().catch(null))
+		.optional()
+		.catch(undefined),
 });
 export type Message = z.infer<typeof messageSchema>;
+
+/**
+ * `POST /conversations/:cid/attachments` answer: `{attachment: {...}}`. The
+ * fields the composer needs are the id (sent as `attachment_ids`) and the
+ * dimensions (the chip's aspect); `sha256`/`expires_at` are tolerated, never
+ * shown or logged.
+ */
+export const uploadedAttachmentSchema = z
+	.looseObject({
+		attachment: attachmentDescriptorSchema.extend({
+			mime: z.enum(ATTACHMENT_MIME_TYPES),
+			size: z.number().int().nonnegative(),
+		}),
+	})
+	.transform((v) => v.attachment);
+export type UploadedAttachment = z.infer<typeof uploadedAttachmentSchema>;
 
 export const messagePageSchema = z.looseObject({
 	messages: z.array(messageSchema),
@@ -261,6 +317,22 @@ export const statusTenantSchema = z.looseObject({
 });
 export type StatusTenant = z.infer<typeof statusTenantSchema>;
 
+/**
+ * The hub's attachments capability (`status.attachments`), present only when
+ * the server has an attachment store wired. ABSENT means "this server cannot
+ * take images": an older hub would answer `attachment_ids` with 400 (strict
+ * DTO), so the composer offers no attach affordance at all rather than a
+ * control that fails on send. A malformed block degrades to absent.
+ */
+export const attachmentsCapabilitySchema = z.looseObject({
+	enabled: z.boolean(),
+	max_count: z.number().int().positive().optional(),
+	max_bytes: z.number().int().positive().optional(),
+	max_pixels: z.number().int().positive().optional(),
+	mime_types: z.array(z.string()).optional(),
+});
+export type AttachmentsCapability = z.infer<typeof attachmentsCapabilitySchema>;
+
 export const statusSchema = z.looseObject({
 	/*
 	 * A decimal STRING on the wire (`bridge.APIVersion = "1"`). Accepting a number
@@ -269,6 +341,7 @@ export const statusSchema = z.looseObject({
 	api_version: z.union([z.string(), z.number()]),
 	available: z.boolean(),
 	tenants: z.array(statusTenantSchema),
+	attachments: attachmentsCapabilitySchema.optional().catch(undefined),
 });
 export type Status = z.infer<typeof statusSchema>;
 

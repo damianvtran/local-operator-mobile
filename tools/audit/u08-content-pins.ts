@@ -137,7 +137,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "f9f60f90e866ed183ff07abbc0b09a9523ec446db24b4869100a151a042c7caa",
+	src: "8ef50f091b09ca66d74a3d602a40a8c20f082da49096cb14ab0e9ca74247bb2a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -153,9 +153,9 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"766ef74869e325f6e0b1b0ace856b0359e894205b03f8eb1b77244bcd7c786de",
+		"3902ac955bbfb0ff10dd43033bc1077f9a306f8c707733ada94b9cd03bf4825d",
 	"pnpm-lock.yaml":
-		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+		"b97bcf6ed8b98b55f9bf7f290e28e88983eb0e22f34cf480b88d93533ebdb841",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };
