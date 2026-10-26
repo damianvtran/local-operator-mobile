@@ -53,7 +53,14 @@ export const STARTUP_LIMITS = {
 	admissions: 128,
 	sessions: 64,
 	imagesPerCommand: 64,
-	bytes: 8 * 1024 * 1024,
+	/* The ledger retains BOTH body representations (raw bytes and the parsed clone),
+	 * so a request costs about twice its wire size here. D9 is the fixture that
+	 * proves the bare relay has no body ceiling: it posts an 11 MiB prompt, i.e.
+	 * roughly 22 MiB of retained evidence. At 8 MiB the probe was refused by this
+	 * capacity guard with a 507 before the handler ever ran — the divergence check
+	 * failed on the mock's own accounting, not on the behaviour it asserts. 32 MiB
+	 * admits D9 with room and stays a finite bound for every other case. */
+	bytes: 32 * 1024 * 1024,
 } as const;
 const digest = (bytes: string | Buffer) =>
 	createHash("sha256").update(bytes).digest("hex");
