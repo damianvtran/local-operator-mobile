@@ -191,13 +191,12 @@ export const ConversationsPane = ({
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 	const scrollFooter = sidebarFooterScrolls(useLayout());
 
-	/* The switcher's full identity. Named whole and painted on two lines with a
-	 *  MIDDLE ellipsis: the machine and the port are what tell two hosts apart,
-	 *  and the tail fit this replaced kept only the tail ("…0.0.1:49869") — a
-	 *  fragment several machines can share, spending the header on an ambiguity.
-	 *  react-native-web ignores `ellipsizeMode`, so wrapping plus the platform's
-	 *  own clamp is what keeps both ends; the button's accessible label carries
-	 *  the string unbroken for a screen reader. */
+	/* The switcher's full identity, painted as ONE fitted line (`middleFit`).
+	 *  Two shapes came before this and both failed visibly: a tail fit kept only
+	 *  "…0.0.1:49869", and a two-line middle let the platform break INSIDE the
+	 *  address ("127.0.0.1:49" over "892") at 320 pt and 200 % text. react-native-web
+	 *  ignores `ellipsizeMode`, so the painted string is pre-fitted rather than
+	 *  wrapped; the button's accessible label still carries it unbroken. */
 	const switcherLabel = listLabel(computers, tunnelId, route);
 
 	const filtered = useMemo(() => {

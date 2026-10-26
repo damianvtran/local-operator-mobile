@@ -384,3 +384,37 @@ export const composerBudget = (
 	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
 	return { field: Math.max(touchFloor, room - extras), extras };
 };
+
+/**
+ * Which secondary-status surface a session screen uses — ONE decision, three
+ * consumers, so the tray, the sheet and the inline region cannot disagree (design D2,
+ * final visual audit).
+ *
+ * `phone` is a WIDTH question (`< tabletBreakpoint`), not `compact`: 430/390/360 are
+ * phones, 1024 is not, and `compact` means short-landscape chrome. Gating the tray on
+ * `compact` was the defect — a portrait phone is not short, so the old persistent
+ * task/subagent bands stayed on the very screen the design fixed.
+ *
+ * `inlineSecondary` keeps the capped scroller exactly where it was designed: short
+ * landscape (its rows and cue) and tablet (plain siblings). A portrait phone shows
+ * the tray instead and must not ALSO render the old stack.
+ */
+export const sessionStatusLayout = (
+	width: number,
+	compact: boolean,
+): {
+	phone: boolean;
+	tray: boolean;
+	inlineSecondary: boolean;
+	statusSheet: boolean;
+} => {
+	const phone = width < LAYOUT.tabletBreakpoint;
+	return {
+		phone,
+		tray: phone && !compact,
+		inlineSecondary: !phone || compact,
+		/* On a phone (and in short landscape) the sheet is the only surface the panels
+		 * have; a tablet keeps per-panel open state. */
+		statusSheet: phone || compact,
+	};
+};

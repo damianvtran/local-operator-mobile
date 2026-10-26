@@ -71,9 +71,31 @@ describe("final design audit wiring", () => {
 		// The rendered host Text, found by its own fitting call — the accessible-label
 		// template above it is a different element.
 		const at = source.indexOf("hostWidth > 0");
-		const block = source.slice(source.lastIndexOf("<Text", at), source.indexOf("</Text>", at));
+		const block = source.slice(
+			source.lastIndexOf("<Text", at),
+			source.indexOf("</Text>", at),
+		);
 		// D3: a one-line tail fit showed "127.0.0.1:498…" at large text.
 		expect(block).toContain("numberOfLines={1}");
 		expect(block).toContain("middleFit(");
+	});
+});
+
+describe("phone status surface wiring (D2 final)", () => {
+	it("gates the tray, the sheet and the inline region on ONE layout decision", () => {
+		const screen = readFileSync(
+			new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+			"utf8",
+		);
+		// The tray replaces the strip on a phone ...
+		expect(screen).toContain(
+			"const { phone, tray, inlineSecondary, statusSheet }",
+		);
+		expect(screen).toContain("{tray ? (");
+		// ... both panels open the SAME sheet there (not a dead disabled prop) ...
+		expect(screen.match(/statusSheet \? statusSheetOpen/g)?.length).toBe(2);
+		// ... and the old inline stack is not painted beside it.
+		expect(screen).toContain('inlineSecondary ? {} : { display: "none"');
+		expect(screen).toContain("const regionItems = !inlineSecondary");
 	});
 });

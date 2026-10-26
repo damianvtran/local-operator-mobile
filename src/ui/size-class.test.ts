@@ -10,6 +10,7 @@ import {
 	layoutFor,
 	regionOrder,
 	SPLIT_MIN_HEIGHT,
+	sessionStatusLayout,
 	sidebarFooterScrolls,
 	snapRegion,
 } from "@/ui/size-class";
@@ -362,5 +363,39 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 
 	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
 		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
+	});
+});
+
+/**
+ * D2, final visual audit: the tray is a PHONE surface, and the old inline bands must
+ * not survive on a portrait phone. These are the exact widths the store/README
+ * captures use, plus the tablet and short-landscape cases that must NOT change.
+ */
+describe("session status layout", () => {
+	it("is a phone at the capture widths and not at tablet", () => {
+		for (const width of [360, 390, 430]) {
+			expect(sessionStatusLayout(width, false)).toEqual({
+				phone: true,
+				tray: true,
+				inlineSecondary: false,
+				statusSheet: true,
+			});
+		}
+		expect(sessionStatusLayout(1024, false).phone).toBe(false);
+		// Tablet: inline panels, per-panel open state, no tray.
+		expect(sessionStatusLayout(1024, false)).toEqual({
+			phone: false,
+			tray: false,
+			inlineSecondary: true,
+			statusSheet: false,
+		});
+	});
+
+	it("keeps short landscape as it was", () => {
+		const landscape = sessionStatusLayout(844, true);
+		expect(landscape.phone).toBe(false);
+		expect(landscape.tray).toBe(false);
+		expect(landscape.inlineSecondary).toBe(true);
+		expect(landscape.statusSheet).toBe(true);
 	});
 });

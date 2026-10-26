@@ -95,9 +95,11 @@ import {
 	compactChromeShare,
 	type RegionKey,
 	regionOrder,
+	sessionStatusLayout,
 	snapRegion,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { LAYOUT } from "@/ui/tokens.gen";
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -444,6 +446,14 @@ export default function Session() {
 	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
 	 *  shortened portrait window never takes this branch (`compactChromeFor`). */
 	const compact = useCompactChrome();
+	/* ONE decision, three consumers (tray, sheet, inline region), so the surfaces
+	 * cannot disagree — see `sessionStatusLayout`. `phone` is a WIDTH question, not
+	 * `compact`: gating on `compact` left the old task/subagent bands on portrait
+	 * phones, which is exactly what D2 fixed. */
+	const { phone, tray, inlineSecondary, statusSheet } = sessionStatusLayout(
+		viewportWidth,
+		compact,
+	);
 	const { effectiveScale } = useTextScale();
 	/* The secondary region's own scroller, and what it needs to behave: each child's
 	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
@@ -506,9 +516,9 @@ export default function Session() {
 		<TodosPanel
 			testID={SURFACE.todosPanel}
 			todos={todos}
-			open={compact ? statusSheetOpen : openPanel === "todos"}
+			open={statusSheet ? statusSheetOpen : openPanel === "todos"}
 			onToggle={() =>
-				compact || openPanel !== "todos" ? undefined : setOpenPanel(null)
+				statusSheet || openPanel !== "todos" ? undefined : setOpenPanel(null)
 			}
 			heldShut={pending !== null}
 			compact={compact}
@@ -520,9 +530,11 @@ export default function Session() {
 			subagents={subagents}
 			viewportHeight={viewportHeight}
 			compact={compact}
-			open={compact ? statusSheetOpen : openPanel === "subagents"}
+			open={statusSheet ? statusSheetOpen : openPanel === "subagents"}
 			onToggle={() =>
-				compact || openPanel !== "subagents" ? undefined : setOpenPanel(null)
+				statusSheet || openPanel !== "subagents"
+					? undefined
+					: setOpenPanel(null)
 			}
 			onOpenAgent={openAgent}
 		/>
@@ -773,9 +785,9 @@ export default function Session() {
 	 *  (and the cue that explained the cut) is not rendered at all. Wide keeps the
 	 *  inline panels — a tablet column has the room, and a reader there can see the
 	 *  list and the roster at once. */
-	const regionItems = compact
+	const regionItems = !inlineSecondary
 		? []
-		: regionOrder(false, rosterNeedsAttention(subagents.clauses))
+		: regionOrder(compact, rosterNeedsAttention(subagents.clauses))
 				.map((key) => ({ key, node: regionNodes[key] }))
 				.filter((item) => item.node !== null);
 	const panelOpen = openPanel !== null;
@@ -851,7 +863,13 @@ export default function Session() {
 					? "none"
 					: "flex") as "none" | "flex",
 			}
-		: ({ flexGrow: 0, flexShrink: 0 } as const);
+		: ({
+				flexGrow: 0,
+				flexShrink: 0,
+				/* A portrait phone shows the tray instead, so the old stack keeps its place in
+				 *  the tree (rotation must not remount the panels) but is not painted. */
+				...(inlineSecondary ? {} : { display: "none" as const }),
+			} as const);
 
 	/* Opening a panel scrolls the region to that panel's header, so the rows the
 	 *  reader asked for are the thing on screen — before this, the roster opened below
@@ -941,7 +959,7 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
-			{compact ? (
+			{tray ? (
 				<StatusTray facts={trayFacts} onOpen={() => setStatusSheetOpen(true)} />
 			) : (
 				statusStrip
