@@ -157,14 +157,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Third re-pin in the same batch, for the UX U1 remediation: the stranded-queue
 	 * escape (coordinator enqueue gate, `restoreQueueToDraft`/`discardQueue`, the
 	 * fresh-draft rotation in `startup-runtime.ts`, the Home row and its help), all
-	 * under `src/` only — `app` is unchanged this time and keeps its previous digest. */
+	 * under `src/` only — `app` is unchanged this time and keeps its previous digest.
+	 * Fourth in the batch, for R11-1 and the five UX minors (queue surgery refused
+	 * during a flight, merge computed in-transaction, late-SID mapping, row copy);
+	 * again `src` only. */
 	app: "a95c87f6b74d94a1cd0ad49543279d3e77f45e56f897fd5bb24fd64cb3e1c68d",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "e84c605ae34208f1463a4d0dda8a8e36382d3bc9ed3b6bc343f459d57b374c57",
+	src: "8c877096a2be460b85dfc1830a119964a18eabf42fddc15e8e1bb888a7dcc219",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

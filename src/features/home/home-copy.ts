@@ -137,8 +137,14 @@ export function startupQueueState(
 	phase: StartupPhase,
 	sessionId: string | null,
 ): string | null {
-	if (sessionId !== null) return "Sending queued messages…";
-	if (phase === "starting") return STARTING;
+	/* `null` for `starting`: the splash already paints "Starting…" on the same
+	 * screen, and the row existed twice for one state (UX U2). The row still
+	 * renders there — it keeps the queued sheet reachable — it just adds no words. */
+	if (phase === "starting") return null;
+	if (sessionId !== null)
+		return phase === "blocked"
+			? "Retry to send queued messages"
+			: "Sending queued messages…";
 	if (phase === "unconfirmed") return "Start not confirmed";
 	return "Not started";
 }

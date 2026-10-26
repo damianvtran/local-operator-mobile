@@ -157,6 +157,10 @@ export default function Home({
 	const setDraft = startup.setText;
 	const setImages = startup.setImages;
 	const starting = startup.snapshot.phase === "starting";
+	const queueLine = startupQueueState(
+		startup.snapshot.phase,
+		startup.snapshot.sessionId,
+	);
 	/* The header host is ONE token: measured so the painted string can be fitted
 	 * rather than wrapped (D3). */
 	const [hostWidth, setHostWidth] = useState(0);
@@ -467,15 +471,14 @@ export default function Home({
 			{startup.snapshot.queue.length > 0 ||
 			startup.snapshot.phase === "unconfirmed" ? (
 				<View className="px-4 py-2" testID={SURFACE.startupPending}>
-					<Text
-						accessibilityLiveRegion="polite"
-						className="text-body-sm text-ink-muted"
-					>
-						{startupQueueState(
-							startup.snapshot.phase,
-							startup.snapshot.sessionId,
-						)}
-					</Text>
+					{queueLine !== null ? (
+						<Text
+							accessibilityLiveRegion="polite"
+							className="text-body-sm text-ink-muted"
+						>
+							{queueLine}
+						</Text>
+					) : null}
 					{startup.snapshot.queue.length > 0 ? (
 						<Button
 							label="View queued messages"

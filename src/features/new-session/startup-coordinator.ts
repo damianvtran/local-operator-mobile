@@ -88,8 +88,10 @@ const UNCONFIRMED =
 /** A send while the start is unconfirmed would join a queue nothing can drain:
  *  there is no session id to address and the create is terminal until a person
  *  reconciles it. Say so and keep the text in the editor instead (UX U1). */
+const QUEUE_BUSY =
+	"A message is being sent right now. Try again when it finishes.";
 const UNCONFIRMED_SEND =
-	"This conversation was never confirmed as started, so nothing was queued. Your message is still in the editor — start a new session to send it.";
+	"This conversation was never confirmed as started, so nothing was queued. Your message is still in the editor — copy it before starting a new session, which opens an empty draft.";
 
 /** One owner per authorization scope. The durable outbox, not the retry helper's
  * expiring slot, owns message identity. Every admission is committed before its
@@ -425,23 +427,38 @@ export class StartupCoordinator {
 	async restoreQueueToDraft(): Promise<boolean> {
 		await this.ready;
 		if (!this.allowed() || this.record.queue.length === 0) return false;
-		const held = this.record.queue.map((message) => copy(message));
-		const current = copy(this.value.draft);
-		const text = [current.text, ...held.map((message) => message.text)]
-			.filter((part) => part.trim() !== "")
-			.join("\n\n");
-		const images = [
-			...current.images,
-			...held.flatMap((message) => message.images ?? []),
-		].map((image) => copy(image));
-		const saved = await this.persist((record) => ({
-			...record,
-			queue: [],
-			draft: { text, images },
-		}));
-		if (!saved) return false;
-		this.draftRevision += 1;
-		this.publish({ draft: { text, images } });
+		/* A drain owns the queue head while it is in flight: moving or dropping the
+		 * queue under it let an admitted message be re-sent under a new id (duplicate
+		 * delivery) or lost with no id to reconcile (R11-1). Refusing is honest and
+		 * immediate; the reader can act the moment the flight settles. */
+		if (this.flight !== null) {
+			this.publish({ error: QUEUE_BUSY });
+			return false;
+		}
+		/* The merge is computed INSIDE the transaction, against the record's draft at
+		 * execution time: the editor may have been typed into while this awaited the
+		 * persistence tail, and merging a stale snapshot would silently drop it. */
+		const revision = this.draftRevision;
+		let merged: StartupDraft | null = null;
+		const saved = await this.persist((record) => {
+			const held = record.queue.map((message) => copy(message));
+			const text = [record.draft.text, ...held.map((message) => message.text)]
+				.filter((part) => part.trim() !== "")
+				.join("\n\n");
+			const images = [
+				...record.draft.images,
+				...held.flatMap((message) => message.images ?? []),
+			].map((image) => copy(image));
+			merged = { text, images };
+			return { ...record, queue: [], draft: { text, images } };
+		});
+		if (!saved || merged === null) return false;
+		if (revision === this.draftRevision) {
+			// Only repaint the editor if nobody typed during the transaction; a newer
+			// keystroke is the reader's, and the next edit persists it over this merge.
+			this.draftRevision += 1;
+			this.publish({ draft: merged });
+		}
 		return true;
 	}
 
@@ -449,6 +466,10 @@ export class StartupCoordinator {
 	async discardQueue(): Promise<boolean> {
 		await this.ready;
 		if (!this.allowed() || this.record.queue.length === 0) return false;
+		if (this.flight !== null) {
+			this.publish({ error: QUEUE_BUSY });
+			return false;
+		}
 		return this.persist((record) => ({ ...record, queue: [] }));
 	}
 

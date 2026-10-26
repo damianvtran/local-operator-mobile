@@ -147,12 +147,20 @@ describe("the queue row says the state once", () => {
 	});
 
 	it("maps the states that can still drain, or cannot start at all", () => {
-		expect(startupQueueState("starting", null)).toBe(STARTING);
 		expect(startupQueueState("ready", "sid")).toBe("Sending queued messages…");
-		expect(startupQueueState("blocked", "sid")).toBe(
-			"Sending queued messages…",
-		);
 		expect(startupQueueState("refused", null)).toBe("Not started");
+	});
+
+	it("stays silent while starting — the splash already says it (UX U2)", () => {
+		expect(startupQueueState("starting", null)).toBeNull();
+		expect(startupQueueState("starting", "sid")).toBeNull();
+		expect(STARTING).toBe("Starting…");
+	});
+
+	it("does not claim to be sending while delivery is blocked", () => {
+		expect(startupQueueState("blocked", "sid")).toBe(
+			"Retry to send queued messages",
+		);
 	});
 
 	it("never repeats the count — the composer's chip owns it (UX U2)", () => {

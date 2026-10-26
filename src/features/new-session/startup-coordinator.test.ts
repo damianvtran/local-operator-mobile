@@ -462,3 +462,58 @@ describe("a queue that cannot drain is not a dead end", () => {
 		expect(x.disk()?.queue).toHaveLength(0);
 	});
 });
+
+/* R11-1: the queue head belongs to an in-flight drain. Moving or dropping it
+ * under a held `send` re-sent an admitted message under a new id (duplicate
+ * delivery) or lost it with no id left to reconcile. The fix refuses while a
+ * flight is open, so both tests hold the send, try, and only then release. */
+describe("queue surgery is refused while a send is in flight", () => {
+	const held = async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		let release!: () => void;
+		const gate = new Promise<void>((done) => {
+			release = done;
+		});
+		x.send.mockImplementation(async (id: string, message) => {
+			await gate;
+			x.admissions.push({ id: message.command_id, text: message.text });
+		});
+		x.setStart(async () => ({ session_id: "session-1" }));
+		await x.coordinator.configure({ cwd: "/home/fixture" });
+		x.coordinator.edit("held text", []);
+		await x.coordinator.enqueue();
+		// Let the drain reach the held send before the surgery is attempted.
+		await Promise.resolve();
+		await Promise.resolve();
+		return { x, release };
+	};
+
+	it("refuses a restore, then the admitted message is delivered exactly once", async () => {
+		const { x, release } = await held();
+
+		expect(await x.coordinator.restoreQueueToDraft()).toBe(false);
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+		expect(x.coordinator.snapshot().draft.text).toBe("");
+		expect(x.coordinator.snapshot().error).toContain("being sent right now");
+
+		release();
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().queue).toHaveLength(0);
+		expect(x.admissions).toHaveLength(1);
+	});
+
+	it("refuses a discard, then the message is still delivered exactly once", async () => {
+		const { x, release } = await held();
+
+		expect(await x.coordinator.discardQueue()).toBe(false);
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+		expect(x.coordinator.snapshot().error).toContain("being sent right now");
+
+		release();
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().queue).toHaveLength(0);
+		expect(x.coordinator.snapshot().phase).toBe("ready");
+		expect(x.admissions).toHaveLength(1);
+	});
+});

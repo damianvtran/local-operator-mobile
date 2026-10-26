@@ -100,6 +100,24 @@ export async function openStartup(
 					JSON.stringify([auth.scope, "session", previousSnapshot.sessionId]),
 					key,
 				);
+			else {
+				/* A create still in flight when New is pressed may save its session id
+				 * into the OLD record after the pointer has moved: the coordinator keeps
+				 * that late write (it only forbids navigation and dispatch in a replaced
+				 * scope). Without a mapping that conversation exists but cannot be found
+				 * after a restart, so map it the moment it lands. */
+				const rotated = coordinator;
+				const rotatedKey = key;
+				const stop = rotated.subscribe(() => {
+					const sid = rotated.snapshot().sessionId;
+					if (sid === null) return;
+					stop();
+					void startupDeviceStore.set(
+						JSON.stringify([auth.scope, "session", sid]),
+						rotatedKey,
+					);
+				});
+			}
 			coordinator.pause();
 			localId = randomUUID();
 			key = JSON.stringify([auth.scope, localId]);
