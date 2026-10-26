@@ -418,6 +418,7 @@ export default function Notifications() {
 	return (
 		<Screen
 			title="Notifications"
+			titleLines={1}
 			testID={SCREEN.notifications}
 			scroll={false}
 			headerLeading={

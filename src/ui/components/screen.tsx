@@ -30,6 +30,12 @@ export type ScreenProps = {
 	children: ReactNode;
 	/** Right-aligned header control (a settings affordance, a new-session button). */
 	headerAction?: ReactNode;
+	/** How many lines the title may take. Defaults to 2 — the header's own
+	 *  allowance since it shipped. A screen that names itself in one word-ish
+	 *  string at large text can ask for 1 instead of changing this for every
+	 *  screen: the inbox did exactly that, and a global clamp altered the S5
+	 *  session title at 200 % (audit U-08 on an untouched screen). */
+	titleLines?: 1 | 2;
 	/** Left-aligned header control (a back affordance). */
 	headerLeading?: ReactNode;
 	/**
@@ -90,6 +96,7 @@ export const Screen = ({
 	children,
 	headerAction,
 	headerLeading,
+	titleLines = 2,
 	headerDetail,
 	scroll = true,
 	capColumn = true,
@@ -179,7 +186,7 @@ export const Screen = ({
 								<Heading
 									level={1}
 									className="text-display text-ink"
-									numberOfLines={1}
+									numberOfLines={titleLines}
 								>
 									{title}
 								</Heading>
@@ -188,7 +195,7 @@ export const Screen = ({
 									<Heading
 										level={1}
 										className="text-display text-ink"
-										numberOfLines={1}
+										numberOfLines={titleLines}
 									>
 										{title}
 									</Heading>
