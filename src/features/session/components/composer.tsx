@@ -317,6 +317,7 @@ const ComposerChipButton = ({
 				// instead of a second, divergent chip shape.
 				onPress={() => undefined}
 				disabled
+				quiet
 				accessibilityLabel={chip.accessibilityLabel}
 				accessibilityHint={chip.accessibilityHint}
 				testID={testID}
@@ -327,6 +328,7 @@ const ComposerChipButton = ({
 		<Chip
 			label={chip.text}
 			onPress={onPress}
+			quiet
 			accessibilityLabel={chip.accessibilityLabel}
 			accessibilityHint={chooseHint}
 			testID={testID}

@@ -5,7 +5,12 @@ import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { type FieldState, fieldClasses, TEXTAREA_MAX_PX } from "@/ui/variants";
+import {
+	type FieldState,
+	fieldClasses,
+	fieldScrollsWithContent,
+	TEXTAREA_MAX_PX,
+} from "@/ui/variants";
 
 /**
  * A multi-line field that grows to six lines and then scrolls.
@@ -258,7 +263,7 @@ export const Textarea = ({
 					multiline
 					// The transcript scrolls, not the page: the field clips its own
 					// overflow once it hits the cap.
-					scrollEnabled={Math.max(contentFloor, placeholderFloor) > cap}
+					scrollEnabled={fieldScrollsWithContent(contentFloor, cap)}
 					onContentSizeChange={handleContentSize}
 					accessibilityRole={ROLE.text}
 					accessibilityLabel={label}

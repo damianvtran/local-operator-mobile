@@ -207,6 +207,22 @@ export type FieldState = "rest" | "invalid" | "disabled";
  * `body` = 16pt, always: below 16, iOS zooms the page on focus and the layout
  * moves under the reader's thumb (components.md § 0.1, § 4).
  */
+/**
+ * Whether the field scrolls itself, which is a question about its CONTENT only.
+ *
+ * The resting floor is clamped to ONE placeholder line by design (D1/D20), so at
+ * 200 % text the placeholder can be taller than the box. Feeding the placeholder's
+ * height into this decision made the platform paint a scrollbar — and, on the web
+ * build, the scrollbar's own corner glyph — on a field the reader had typed
+ * nothing into, which is the most common state of the composer. A placeholder is
+ * a hint that may be clipped; the reader's own text may not be lost. So the value
+ * content alone decides, and `cap` is the six-line ceiling.
+ */
+export const fieldScrollsWithContent = (
+	contentFloor: number,
+	cap: number,
+): boolean => contentFloor > cap;
+
 export const fieldClasses = (
 	state: FieldState = "rest",
 	options: { inComposer?: boolean } = {},
@@ -326,15 +342,30 @@ export const skeletonBarClasses = (input?: {
 }): string =>
 	`${input?.barClassName ?? "h-4"} ${input?.widthClassName ?? "w-full"} rounded-sm`;
 
-export const chipClasses = (state: ControlState = {}): string =>
-	cx(
-		"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
-		state.disabled
-			? "bg-surface border-hairline"
-			: state.selected
-				? "bg-accent-muted border-accent-border"
-				: "bg-surface border-border-control",
-	);
+export const chipClasses = (
+	state: ControlState = {},
+	options: { quiet?: boolean } = {},
+): string =>
+	options.quiet
+		? cx(
+				// Quiet: the shared composer ground is already a surface, so a chip there
+				// is a target with states rather than a second box. The floor stays —
+				// this changes the paint, never the geometry a thumb has to hit.
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border border-transparent px-2",
+				state.disabled
+					? "bg-transparent"
+					: state.selected
+						? "bg-accent-muted"
+						: "bg-transparent",
+			)
+		: cx(
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
+				state.disabled
+					? "bg-surface border-hairline"
+					: state.selected
+						? "bg-accent-muted border-accent-border"
+						: "bg-surface border-border-control",
+			);
 
 /**
  * The chip label's ink, per § 6: `ink-muted` at rest, `accent-active` (light) /

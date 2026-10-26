@@ -35,6 +35,10 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
+import {
+	StatusTray,
+	type StatusTrayFacts,
+} from "@/features/session/components/status-tray";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
@@ -82,6 +86,7 @@ import {
 	Skeleton,
 } from "@/ui/components";
 import { NavigationMark } from "@/ui/components/navigation-mark";
+import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
@@ -190,6 +195,9 @@ export default function Session() {
 	const [openPanel, setOpenPanel] = useState<null | "todos" | "subagents">(
 		null,
 	);
+	/** The compact status sheet. The tray's one row opens it; on a wide column
+	 *  the panels stay inline, so this is never true there. */
+	const [statusSheetOpen, setStatusSheetOpen] = useState(false);
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
@@ -498,8 +506,10 @@ export default function Session() {
 		<TodosPanel
 			testID={SURFACE.todosPanel}
 			todos={todos}
-			open={openPanel === "todos"}
-			onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
+			open={compact ? statusSheetOpen : openPanel === "todos"}
+			onToggle={() =>
+				compact || openPanel !== "todos" ? undefined : setOpenPanel(null)
+			}
 			heldShut={pending !== null}
 			compact={compact}
 		/>
@@ -510,9 +520,9 @@ export default function Session() {
 			subagents={subagents}
 			viewportHeight={viewportHeight}
 			compact={compact}
-			open={openPanel === "subagents"}
+			open={compact ? statusSheetOpen : openPanel === "subagents"}
 			onToggle={() =>
-				setOpenPanel(openPanel === "subagents" ? null : "subagents")
+				compact || openPanel !== "subagents" ? undefined : setOpenPanel(null)
 			}
 			onOpenAgent={openAgent}
 		/>
@@ -673,6 +683,24 @@ export default function Session() {
 	 *  panel directly below carries the same lever and the same counts in its own
 	 *  header, so nothing becomes unreachable — it is one control, not two. */
 	const showChip = !compact && subagents.total > 0;
+	/* The compact tray's facts, taken from the SAME projections the panels read:
+	 *  a row that counted its own way would be able to disagree with the sheet it
+	 *  opens. `null` means "nothing to say", never zero. */
+	const trayFacts: StatusTrayFacts = {
+		working: working === null ? null : working.activity,
+		tasks: todos.empty
+			? null
+			: { open: todos.total - todos.done, total: todos.total },
+		agents:
+			subagents.total > 0
+				? { running: subagents.running, total: subagents.total }
+				: null,
+		context:
+			projection?.context_tokens != null && projection?.context_window != null
+				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
+				: null,
+	};
+
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
 			<View
@@ -741,12 +769,15 @@ export default function Session() {
 		todos: todosPanel,
 		strip: compact ? statusStrip : null,
 	};
-	const regionItems = regionOrder(
-		compact,
-		rosterNeedsAttention(subagents.clauses),
-	)
-		.map((key) => ({ key, node: regionNodes[key] }))
-		.filter((item) => item.node !== null);
+	/* Compact: the tray is the whole of the secondary status, so the clipped stack
+	 *  (and the cue that explained the cut) is not rendered at all. Wide keeps the
+	 *  inline panels — a tablet column has the room, and a reader there can see the
+	 *  list and the roster at once. */
+	const regionItems = compact
+		? []
+		: regionOrder(false, rosterNeedsAttention(subagents.clauses))
+				.map((key) => ({ key, node: regionNodes[key] }))
+				.filter((item) => item.node !== null);
 	const panelOpen = openPanel !== null;
 	const regionCap = compact
 		? Math.round(
@@ -910,7 +941,11 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
-			{compact ? null : statusStrip}
+			{compact ? (
+				<StatusTray facts={trayFacts} onOpen={() => setStatusSheetOpen(true)} />
+			) : (
+				statusStrip
+			)}
 
 			{/* The transcript, the panels and the composer, in one measure-capped
 			    column. `Screen` applies the cap (`src/ui/column.ts`): a 1366 pt tablet
@@ -1188,6 +1223,30 @@ export default function Session() {
 					/>
 				</View>
 			</View>
+
+			{/* One row in the column, the same panels one tap away. The panels keep
+			    their own testIDs and their own content; only the clip is gone, because
+			    inside a sheet the list can be as tall as it is. */}
+			<Sheet
+				visible={statusSheetOpen}
+				onClose={() => setStatusSheetOpen(false)}
+				title="status"
+				testID={SURFACE.sessionStatusSheet}
+			>
+				<View className="gap-2 pb-2">
+					{workingLineView}
+					{subagents.total > 0 ? subagentsPanel : null}
+					{todos.empty ? null : todosPanel}
+					{projection?.context_tokens != null ? (
+						<Text className="px-4 text-mono-sm text-ink-dim">
+							{trayFacts.context}
+							{projection.cumulative_parent_cost != null
+								? ` · $${projection.cumulative_parent_cost.toFixed(2)}`
+								: ""}
+						</Text>
+					) : null}
+				</View>
+			</Sheet>
 
 			<ModelSheet
 				visible={modelsOpen}

@@ -337,6 +337,8 @@ export const CONTROL = {
 	 *  controls on different surfaces and a flow reaching for one must not be able
 	 *  to land on the other. */
 	sessionSubagents: "session-subagents-chip",
+	/** The compact status row: the one control that opens working/tasks/agents. */
+	sessionStatusTray: "session-status-tray",
 	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
 	 * secondary region and drops this chip, because the roster header carries the same
 	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
@@ -521,6 +523,8 @@ export const CONTROL = {
 export const SURFACE = {
 	/** The provisional conversation's own surfaces: its queued-count line and the
 	 *  transcript it adopts once the relay has returned a real session. */
+	/** The sheet the compact status row opens. */
+	sessionStatusSheet: "session-status-sheet",
 	startupPending: "startup-pending",
 	startupTranscript: "startup-transcript",
 	/** The Schedules screen's loading skeleton (S17). Its own id because the

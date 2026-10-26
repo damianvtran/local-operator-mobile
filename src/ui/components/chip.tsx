@@ -31,6 +31,12 @@ export type ChipProps = {
 	accessibilityLabel?: string;
 	accessibilityHint?: string;
 	leadingIcon?: ReactNode;
+	/** Paint the chip as a quiet disclosure on an existing surface: no fill and no
+	 *  visible border at rest, states only. For a chip that lives ON a tonal panel
+	 *  (the composer), where the default pill would be a box inside a box. The
+	 *  target geometry is unchanged — quiet is a paint decision, never a smaller
+	 *  thumb target. */
+	quiet?: boolean;
 	testID: string;
 };
 
@@ -42,6 +48,7 @@ export const Chip = ({
 	accessibilityLabel,
 	accessibilityHint,
 	leadingIcon,
+	quiet = false,
 	testID,
 }: ChipProps) => (
 	<Pressable
@@ -55,7 +62,7 @@ export const Chip = ({
 	>
 		{({ pressed }) => (
 			<View
-				className={chipClasses({ selected, disabled, pressed })}
+				className={chipClasses({ selected, disabled, pressed }, { quiet })}
 				/* Same rule as the fields and the Button: the floor is real geometry,
 				 *  per platform, and the audit reads the box. BOTH axes: a chip sized to
 				 *  its label measured 33.2×48 pt for a lone `~` — a thumb target under

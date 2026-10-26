@@ -287,3 +287,23 @@ describe("skeleton bar classes", () => {
 		expect(skeletonBarClasses()).toBe("h-4 w-full rounded-sm");
 	});
 });
+
+describe("quiet chip", () => {
+	/* The composer sits on a tonal ground, so its disclosures are text plus states
+	 * rather than a second fill and border. The change is paint only: a quiet chip
+	 * that lost its 44 pt floor would trade a visual tidy-up for a tooltip-sized
+	 * target — the failure this file exists to prevent. */
+	it("paints nothing at rest but keeps the full touch target", () => {
+		const quiet = chipClasses({}, { quiet: true });
+		expect(quiet).toContain("min-h-11");
+		expect(quiet).toContain("border-transparent");
+		expect(quiet).not.toContain("border-border-control");
+		expect(quiet).not.toContain("bg-surface");
+	});
+
+	it("leaves the default chip unchanged", () => {
+		expect(chipClasses({})).toContain("border-border-control");
+		expect(chipClasses({})).toContain("bg-surface");
+		expect(chipClasses({}, { quiet: true })).not.toBe(chipClasses({}));
+	});
+});

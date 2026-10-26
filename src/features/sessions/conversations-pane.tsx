@@ -52,7 +52,6 @@ import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
-import { tailFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
@@ -190,23 +189,14 @@ export const ConversationsPane = ({
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 	const scrollFooter = sidebarFooterScrolls(useLayout());
 
-	/* The switcher's painted label. The text box's OWN width is the budget —
-	 *  measured on the line, so it cannot drift from the flex rules — and the
-	 *  fit is the row's meta arithmetic (`tailFit`): whole before the first
-	 *  layout (the common label fits, so the first frame is the settled frame),
-	 *  tail-kept once the box is narrower than the string. Measured motivation
-	 *  (review round 3, D3): at 200 % the drawer's 143 dp box dropped the port
-	 *  of `127.0.0.1:51078` — the only part that differs per session — because
-	 *  react-native-web ignores `ellipsizeMode`, so the painted STRING is the
-	 *  only control over which end survives. The home header paints the same
-	 *  ladder whole at 200 %: its box is wider, and the fit engages only where
-	 *  the box runs out. */
+	/* The switcher's full identity. Named whole and painted on two lines with a
+	 *  MIDDLE ellipsis: the machine and the port are what tell two hosts apart,
+	 *  and the tail fit this replaced kept only the tail ("…0.0.1:49869") — a
+	 *  fragment several machines can share, spending the header on an ambiguity.
+	 *  react-native-web ignores `ellipsizeMode`, so wrapping plus the platform's
+	 *  own clamp is what keeps both ends; the button's accessible label carries
+	 *  the string unbroken for a screen reader. */
 	const switcherLabel = listLabel(computers, tunnelId, route);
-	const [switcherLabelWidth, setSwitcherLabelWidth] = useState(0);
-	const paintedSwitcherLabel =
-		switcherLabelWidth > 0
-			? tailFit(switcherLabel, switcherLabelWidth, effectiveScale)
-			: switcherLabel;
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -383,18 +373,16 @@ export const ConversationsPane = ({
 					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
+					{/* Two lines, middle-ellipsized: the machine name AND the port are what
+					 *  tell two hosts apart, and the tail fit this replaced kept only the
+					 *  tail ("…0.0.1:49869") — a fragment several machines can share. The
+					 *  full value stays in the button's accessible label above. */}
 					<Text
 						className="text-mono-sm text-ink-muted"
-						numberOfLines={1}
-						ellipsizeMode="tail"
-						/* The painted string is fitted above (`tailFit`); this pair stays as the
-						 *  platform mop-up, as on the row's meta line: on iOS/Android the tail
-						 *  ellipsis is the direction the fitted string already has. */
-						onLayout={(event) =>
-							setSwitcherLabelWidth(event.nativeEvent.layout.width)
-						}
+						numberOfLines={2}
+						ellipsizeMode="middle"
 					>
-						{paintedSwitcherLabel}
+						{switcherLabel}
 					</Text>
 				</Pressable>
 				<IconButton
