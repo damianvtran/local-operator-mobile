@@ -18,10 +18,31 @@
  * admission, so "dispatch is open" always means "an authorization is in force".
  */
 
-export class DispatchClosedError extends Error {
+/**
+ * A REFUSAL TO START, expressed in the app's one error vocabulary.
+ *
+ * It extends `RelayError` rather than `Error` so it can travel through the same
+ * non-rejecting `Settled` channel as every other outcome without a second error
+ * type: `envelope: "clear"` is the honest classification — nothing reached the
+ * wire, so there is nothing to replay and no ambiguity to preserve — and `retry:
+ * "never"` keeps a doomed replay from looking like progress.
+ */
+import { RelayError } from "./errors";
+
+export class DispatchClosedError extends RelayError {
 	constructor() {
-		super("dispatch is closed while sign-out completes");
-		this.name = "DispatchClosedError";
+		super(
+			"rejected",
+			"Sign-out is in progress, so this message was not sent.",
+			{
+				diagnostic: "dispatch is closed while sign-out completes",
+				/* A stable machine name: the class is the ergonomic check, and this is what
+				 * a log or a diagnostic line can carry without instanceof. */
+				code: "dispatch-closed",
+				retry: "never",
+				envelope: "clear",
+			},
+		);
 	}
 }
 
@@ -47,6 +68,12 @@ export function runCommandOperation<T>(
 	const settle = () => operations.delete(running);
 	running.then(settle, settle);
 	return running;
+}
+
+/** Whether the barrier is currently closed. Distinct from `isDispatchClosed`,
+ *  which narrows an already-thrown error. */
+export function isDispatchWithdrawn(): boolean {
+	return closed;
 }
 
 /** Stop accepting new command operations. Idempotent. */

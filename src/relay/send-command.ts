@@ -51,7 +51,7 @@
 import type { InputMode, PromptImage } from "../contracts";
 import {
 	DispatchClosedError,
-	isDispatchClosed,
+	isDispatchWithdrawn,
 	runCommandOperation,
 } from "./command-lifecycle";
 import type { RelayEndpoints } from "./endpoints";
@@ -151,7 +151,13 @@ function begin(
 	 * it here rather than in `runSend` is what makes "through final settle" exact: a
 	 * purge that starts mid-flight waits for the envelope's disposition to be
 	 * written (or deliberately kept as ambiguity), never for a half of it. */
-	const finished = runCommandOperation(async (): Promise<Settled> => {
+	/* A closed barrier is a REFUSAL TO START, not a failed send: nothing was put on
+	 * the wire and nothing must be recorded as ambiguity. It therefore joins the
+	 * existing non-rejecting `Settled` channel rather than arriving as a rejected
+	 * operation — a rejected `finished` also made the registry's cleanup chain an
+	 * unhandled rejection (review round 3, R3-1), because `void finished.then(...)`
+	 * has no rejection arm and the failure is already reported through `outcomeOf`. */
+	const lifecycle = async (): Promise<Settled> => {
 		if (predecessor) {
 			const settled = await predecessor.finished;
 			/* A DIFFERENT instruction must not take the single envelope slot while the
@@ -183,7 +189,13 @@ function begin(
 					: transportError(cause, "send command"),
 			};
 		}
-	});
+	};
+	const finished: Promise<Settled> = isDispatchWithdrawn()
+		? Promise.resolve<Settled>({
+				ok: false,
+				error: new DispatchClosedError(),
+			})
+		: runCommandOperation(lifecycle);
 	const entry: InFlightSend = { payload, finished };
 	registry.set(input.sessionId, entry);
 	void finished.then(() => {

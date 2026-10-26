@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { DispatchClosedError } from "@/relay/command-lifecycle";
 import { RelayError } from "@/relay/errors";
 import { StartupCoordinator, type StartupRecord } from "./startup-coordinator";
 
@@ -373,5 +374,28 @@ describe("a refused create is recoverable", () => {
 			reloaded.coordinator.snapshot().queue.map((item) => item.text),
 		).toEqual(["keep me"]);
 		expect(reloaded.coordinator.snapshot().error).toBeNull();
+	});
+});
+
+/**
+ * R3-1: a closed dispatch is a refusal to start, not an unknown outcome. It must
+ * not leave the item in the blocked/HOLD state, because nothing was ever sent.
+ */
+describe("a sign-out refusal is not an ambiguous delivery", () => {
+	it("returns the message to the editor when dispatch is closed", async () => {
+		const x = setup();
+		const session = setup();
+		await session.coordinator.ready;
+		await session.coordinator.configure({ cwd: "/home/fixture" });
+		session.coordinator.edit("unsent", []);
+		await session.coordinator.enqueue();
+		session.send.mockImplementation(async () => {
+			throw new DispatchClosedError();
+		});
+		session.create.resolve({ session_id: "session-a" });
+		await session.coordinator.settled();
+		expect(session.coordinator.snapshot().phase).not.toBe("blocked");
+		expect(session.coordinator.snapshot().queue).toHaveLength(0);
+		expect(session.coordinator.snapshot().error).toContain("not sent");
 	});
 });

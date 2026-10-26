@@ -127,8 +127,11 @@ describe("a sign-out cannot outrun an open command", () => {
 	it("refuses a NEW command once dispatch is withdrawn", async () => {
 		const f = fixture();
 		withdrawDispatch();
-		const refused = await f.send().catch((error: unknown) => error);
-		expect(isDispatchClosed(refused)).toBe(true);
+		// The PUBLIC rejection is what a caller sees, so the assertion observes it
+		// rather than swallowing it: a closed barrier must read as a refusal to
+		// start, and the registry's cleanup chain must not be left with an unhandled
+		// derived rejection (review round 3, R3-1).
+		await expect(f.send()).rejects.toSatisfy(isDispatchClosed);
 		expect(f.wasCalled()).toBe(false);
 	});
 });
