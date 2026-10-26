@@ -198,10 +198,16 @@ export class StartupCoordinator {
 
 	async configure(selection: StartSessionRequest, replace = false) {
 		await this.ready;
-		// A selected target is immutable once creation is in progress or a SID exists.
+		/* A selected target is immutable once creation is in progress or a SID exists.
+		 * `refused` is neither: the relay answered "no", so nothing was created and the
+		 * reader is correcting a request that never happened. It is therefore treated
+		 * as editable and returns to `draft` — otherwise the copy told them to check
+		 * the folder while every control that could change it stayed disabled (QA). */
+		const editable =
+			this.record.phase === "draft" || this.record.phase === "refused";
 		if (
 			this.record.sessionId !== null ||
-			this.record.phase !== "draft" ||
+			!editable ||
 			(!replace && this.record.selection !== null) ||
 			JSON.stringify(this.record.selection) === JSON.stringify(selection)
 		)
@@ -209,6 +215,7 @@ export class StartupCoordinator {
 		if (
 			await this.persist((record) => ({
 				...record,
+				phase: "draft",
 				selection: copy(selection),
 			}))
 		)
@@ -449,9 +456,14 @@ function validRecord(value: StartupRecord, scope: string): boolean {
 	return (
 		value.version === 1 &&
 		value.scope === scope &&
-		["draft", "starting", "ready", "unconfirmed", "blocked"].includes(
-			value.phase,
-		) &&
+		[
+			"draft",
+			"starting",
+			"ready",
+			"refused",
+			"unconfirmed",
+			"blocked",
+		].includes(value.phase) &&
 		(value.sessionId === null ||
 			(typeof value.sessionId === "string" && value.sessionId.length > 0)) &&
 		(value.selection === null ||

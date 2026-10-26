@@ -27,8 +27,18 @@ const setup = (saved: StartupRecord | null = null) => {
 		}),
 	};
 	const entered = deferred<void>();
-	const start = vi.fn(() => {
+	/* Scripted starts, for the cases whose point is WHICH attempt fails. The default
+	 * still hands back the one deferred the older tests drive by hand, so nothing
+	 * else in this file changes shape. */
+	const selections: unknown[] = [];
+	let script:
+		| ((call: number, selection: unknown) => Promise<{ session_id: string }>)
+		| null = null;
+	let calls = 0;
+	const start = vi.fn((selection?: unknown) => {
+		selections.push(selection);
 		entered.resolve();
+		if (script !== null) return script(++calls, selection);
 		return create.promise;
 	});
 	const send = vi.fn(
@@ -59,6 +69,12 @@ const setup = (saved: StartupRecord | null = null) => {
 		create,
 		entered,
 		admissions,
+		selections,
+		setStart: (
+			fn: (call: number, selection: unknown) => Promise<{ session_id: string }>,
+		) => {
+			script = fn;
+		},
 		disk: () => disk,
 		revoke: () => {
 			valid = false;
@@ -304,5 +320,58 @@ describe("definite refusals are not ambiguity", () => {
 		expect(x.coordinator.snapshot().queue).toHaveLength(0);
 		expect(x.coordinator.snapshot().draft.text).toBe("invalid");
 		expect(x.admissions.map((item) => item.text)).toEqual(["invalid", "later"]);
+	});
+});
+
+/**
+ * QA round 1: a refused create must not be a dead end. The copy asks the reader to
+ * check the folder, so the controls and the restart path have to honour that.
+ */
+describe("a refused create is recoverable", () => {
+	const refusal = () =>
+		new RelayError("rejected", "That folder is outside your home.", {
+			status: 400,
+		});
+
+	it("accepts a corrected selection and retries with the new target", async () => {
+		const x = setup();
+		x.setStart(async (call) => {
+			if (call === 1) throw refusal();
+			return { session_id: "session-a" };
+		});
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/etc" });
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().phase).toBe("refused");
+
+		// The correction the copy promises: change the folder, then send again.
+		await x.coordinator.configure({ cwd: "/tmp/valid" }, true);
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().phase).toBe("ready");
+		expect(x.selections.at(-1)).toMatchObject({ cwd: "/tmp/valid" });
+	});
+
+	it("restores a persisted refused record instead of discarding its queue", async () => {
+		const x = setup();
+		x.setStart(async () => {
+			throw refusal();
+		});
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/etc" });
+		x.coordinator.edit("keep me", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().phase).toBe("refused");
+
+		// A fresh process over the same disk: the record is legal, the bytes survive.
+		const reloaded = setup(x.disk());
+		await reloaded.coordinator.ready;
+		expect(reloaded.coordinator.snapshot().phase).toBe("refused");
+		expect(
+			reloaded.coordinator.snapshot().queue.map((item) => item.text),
+		).toEqual(["keep me"]);
+		expect(reloaded.coordinator.snapshot().error).toBeNull();
 	});
 });

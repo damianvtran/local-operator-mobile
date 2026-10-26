@@ -154,6 +154,13 @@ export default function Home({
 	const setDraft = startup.setText;
 	const setImages = startup.setImages;
 	const starting = startup.snapshot.phase === "starting";
+	/* The folder/model/options controls are the reader's while the request is still
+	 * theirs to change. A `refused` create never happened, so it belongs in that set
+	 * with `draft` — the copy already asks them to check the folder, and QA found the
+	 * controls disabled at exactly that moment (a dead end: retry re-posted the same
+	 * invalid selection). */
+	const selectionEditable =
+		startup.snapshot.phase === "draft" || startup.snapshot.phase === "refused";
 	const [problem, setProblem] = useState<string | null>(null);
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
@@ -660,7 +667,7 @@ export default function Home({
 						label="Folder on this computer"
 						value={optionPath}
 						onChangeText={setOptionPath}
-						disabled={startup.snapshot.phase !== "draft"}
+						disabled={!selectionEditable}
 						testID={CONTROL.newSessionCwd}
 					/>
 					{models.map((model) => (
@@ -671,15 +678,13 @@ export default function Home({
 								optionModel?.selector === model.selector ? "primary" : "quiet"
 							}
 							onPress={() => setOptionModel(model)}
-							disabled={startup.snapshot.phase !== "draft"}
+							disabled={!selectionEditable}
 							testID={CONTROL.startupModelOption}
 						/>
 					))}
 					<Button
 						label="Use these options"
-						disabled={
-							startup.snapshot.phase !== "draft" || optionPath.trim() === ""
-						}
+						disabled={!selectionEditable || optionPath.trim() === ""}
 						onPress={() => {
 							setHomeDirectory(optionPath.trim());
 							setTopModel(optionModel);
@@ -696,7 +701,7 @@ export default function Home({
 						}}
 						testID={CONTROL.startupOptionsApply}
 					/>
-					{startup.snapshot.phase !== "draft" ? (
+					{!selectionEditable ? (
 						<Text className="text-body-sm text-ink-muted">
 							This conversation's starting options are fixed. Use Conversation
 							details for its live controls.
