@@ -193,6 +193,11 @@ pnpm audit:capture --dir dist --out "$SCRATCH/frames" --relay "$MOCK_URL" \
   --devices iphone-15 --themes dark --scales 100
 ```
 
+A cell's world is normally the FIRST scenario the registry declares for it. A run that
+needs a specific one — the listing screenshots, whose text is read rather than asserted —
+pins it with `--scenario <name>` for every cell in the run, and the record carries that
+name, so the audit re-drives the same world the frame was taken of.
+
 `--relay` is enough. The harness serves the build itself and proxies the relay's
 paths (`/api/`, `/healthz`, `/login`, `/logout`) **at that origin**, so it seeds
 the page with the origin the build is served from and the mock relay's own
@@ -409,6 +414,11 @@ second hand-maintained list.
 | `mesh-move-hold` | S15/move-progress | A move under way: `POST /api/sessions/{id}/transfer` holds its answer, so the sheet's in-flight state is the app's own rendering of a request that is still out. |
 | `mesh-move-receipt` | S15/move-receipt | The receipt: the route answers the phase transcript (`prepared`/`handing_off`/`committed`/`done`), the only claim about where the conversation now lives. |
 | `mesh-move-unconfirmed` | S15/move-unconfirmed | No answer: the route refuses `503 relay_unavailable` (the relay is not running), so the outcome is UNKNOWN — the copy says so and points at the read rather than reporting a failure. |
+| `store-rail` | S5/rail | The checkpoint rail over the `every-entry-kind` transcript. The ticks are the captured `checkpoints-ready` journal's own, and the rail places each by its `seq` fraction (`src/features/session/checkpoint-rail.ts`), so nothing in the frame claims a tick belongs to a particular row. Exists for the listing set, which has to read like a person's session. |
+| `store-mesh` | S15/mesh-remote | The same store transcript's session list with three of another computer's sessions appended — all reachable, one busy — and none of `mesh-rows`'s two deliberate defects (a refused row and an old-build row), which are what the MATRIX measures and not what a store frame claims. |
+| `store-move-receipt` | S15/move-receipt | `store-mesh`'s world with the transfer route answering its phase transcript: the move sheet's receipt over the store rows rather than over the standard world's. |
+| `store-diff` | S5/rich-rows | The `rich-rows` conversation with one more fenced block at its TAIL. `rich-rows` puts its ```ts block at the top of a conversation a capture settles at the bottom of, so the store frame showed the diff and both tables and none of the code its caption promises; the audit's own `S5/rich-rows` cell keeps the content it measures. |
+| `store-home` | S4/idle | The idle home with the relay's ranked model catalogue behind it: the home reads its model chip from that catalogue, so without one the frame says `n/a`. The effort chip has no session on this screen and stays `n/a` by the app's own rule. |
 | `search-empty` | S15/populated | A search query with no results; a capture types no query, so the cell it fills is the world's one live row. |
 | `search-hit` | S15/populated | A search with body-only matches, which must be marked as such. |
 | `models-ranked` | — (no cell) | The full ranked model catalogue — order is the ranking, never re-sorted. It declared `S9/populated`, and that cell was removed: the sheets are modals the app opens from the composer, no wire action opens one, and the cell therefore rendered `S5/populated` byte-for-byte (see the capture section). `CELL_OPENERS` now gives the harness a way to press such a control, so a later slice can re-declare the cell; nothing in this one does. |

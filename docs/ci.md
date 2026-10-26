@@ -30,7 +30,59 @@ The only skip that can appear in a green run by design is the path-gated
 at all, and a run whose `harness` job fails is red, with the missing pieces named
 in the annotation.
 
+### One pending run per group, so the trigger is part of the key
+
+GitHub keeps a single *pending* run per concurrency group: a run that queues
+behind an already-pending one replaces it, and the replaced run ends as
+`cancelled` without a single job starting. `e2e.yml`, `android.yml` and `ios.yml`
+therefore name `github.event_name` in their key — and `e2e.yml`, for a manual run,
+the requested `proof_mode` too — so neither the nightly (e2e only) nor a merged
+push can drop a queued manual run, and two proofs never queue against each other. Both directions
+were measured on `main`: dispatch 40157909029, queued 03:21:30Z, was cancelled one
+second after the 03:17 nightly (40158909122) was created; and the other way round,
+push run 39543983044, created 04:25:45Z, was cancelled at 04:26:54Z with no jobs
+at all, one second after dispatch 39544082930 was created in the same lane.
+`scripts/workflow-concurrency.test.ts` fails if any of those keys stops
+distinguishing its triggers or its refs, and requires `cancel-in-progress` to
+render false on `refs/heads/main` in every workflow that declares a concurrency
+block — stated in the file, not inherited from a default — so the rule that no
+running `main` run is cancelled is pinned rather than assumed. It covers every
+workflow in which two events can race for one ref. `cancel-in-progress` is
+otherwise unchanged, so this is not immunity from cancellation: a *running* run
+on `main` is still never cancelled, but the one pending run a group may hold is
+still replaced by a newer run in the same lane.
+The two `account-routing-*` lanes deliberately keep their own pre-existing key so
+their artefacts and baselines stay comparable, and `release.yml` keeps
+`workflow`+`ref` because its two triggers meet only on a tag, where both are the
+same release of the same artefacts.
+
 ## Corrected U-08 fragment verification (remote CI only)
+
+Control readiness uses the unique TurnBar's rendered caret (`▸` condensed,
+`▾` expanded), which comes from its actual open state. Missing `aria-expanded`
+is recorded as absent, not interpreted as false; when present it must agree.
+The web adapter does not forward the app's native `accessibilityState.expanded`:
+[run39698089334](https://github.com/damianvtran/local-operator-mobile/actions/runs/39698089334)
+failed on that unsupported attribute assumption before any geometry verdict.
+Missing/ambiguous controls, missing/wrong carets and contradictory ARIA still
+refuse verification. A nonempty client-rect list alone is not readable paint:
+the target and glyph require positive-area boxes, and computed display,
+visibility and opacity are inspected through every ancestor. Hidden/transparent,
+unreadable or unknown styles, collapsed target/glyph boxes and zero accumulated
+opacity refuse. The failed property, ancestor depth, measured value and bounded
+style trace accompany the control diagnostics; missing ARIA still stays null.
+This is a control-readability gate, not raster/occlusion or geometry clearance. The separate pre-existing web ARIA omission is not repaired
+by this harness change; native app semantics are unchanged.
+
+Each ready cell and completed geometry record is persisted separately, so later
+failure preserves partial progress without claiming complete verification.
+On error, before page teardown, `failure.json` records phase, cell/theme/state/path,
+expected/observed control data, readiness, environment and completed cell keys;
+`failure.png` captures the live page when available within a1.5-second bound.
+Unavailable/invalid/over-budget screenshots are explicitly reported, not passed.
+The existing5MiB aggregate cap reserves space for context and the outer
+`NOT-REPRODUCED.json` receipt. Partial/failure artifacts are not geometry PASS
+and never replace complete four-cell plus genuine-collision coverage.
 
 ```sh
 gh workflow run e2e.yml --ref <branch-or-tag> -f proof_mode=u08-fragment-verification
@@ -372,6 +424,11 @@ node design/preview/capture.mjs --check           # needs Google Chrome
 `build-icons --check` and `capture --check` re-render every committed asset and
 compare it with the file in the tree, so they need the same tools their
 generators need, and they say so — in install lines — when one is missing.
+`design-kit` additionally runs `capture.mjs --target frames --check` as its OWN
+hard step: the preview-sheet step has to tolerate failure while the sheet's faces
+live in a sibling checkout, and a stale listing must not merge green behind that
+warning. The listing frames load their faces from this repository, so that step
+either matches or is a real regression.
 
 The CI helper scripts are ordinary Node programs and can be exercised directly.
 They take their inputs as flags precisely so this works without a runner:
@@ -655,7 +712,7 @@ afternoon.
 | Symptom | Usual cause |
 |---|---|
 | `design-kit` fails on `build-icons.mjs --check` or on `capture.mjs --check` when the reference faces are present | The asset was regenerated on a machine with a different rasterizer, Chrome version or font stack. Both gates re-render and compare bytes first, pixels second, and print which comparison passed. The icons gate is reproducible on `macos-26` with `brew install librsvg imagemagick` (which is what this job installs); the capture gate additionally needs the SHIPPED typefaces, so on a clean runner it reports `NOT VERIFIED` instead of failing — read the warning, and see the next row. |
-| `design-kit` warns that the preview capture gate could not make its claim | The sheet renders with the shipped typefaces (Figtree, JetBrains Mono) from a sibling checkout's `public/fonts`, and those woff2 files are not in this repository. Without them the page falls back to the platform face and the five committed captures all differ (measured 2026-09-30: `0 of 5 committed captures verified`). The step turns into a hard failure on its own the moment the reference faces are reachable — a job that checks the sibling repo out before it, or the faces committed under `design/fonts/` (whose `OFL.txt` is already there) and `capture.mjs` pointed at them. That change belongs to the design kit, not to CI. |
+| `design-kit` warns that the preview capture gate could not make its claim | The sheet renders with the shipped typefaces (Figtree, JetBrains Mono) from a sibling checkout's `public/fonts`, and those woff2 files are not in this repository. Without them the page falls back to the platform face and the five committed sheet/feature captures all differ (measured 2026-09-30: `0 of 5 committed captures verified`). The gate's other half — the 26 listing frames under `design/store-screenshots/` (App Store iPhone, App Store iPad, Play) — is not affected: their templates load the shipped faces from `design/fonts/*.woff2`, which are committed, so those 26 verify on a clean runner — pixels within the per-surface tolerance in `design/store-screenshots/frames.json` (`compareFuzz`: every surface carries one, because the same encoder and resampler difference that moves the iPad's 2048 px captures into a smaller slot also nudges a few hundred pixels on the phone and Play frames) — and the step's log names each of them, printing the zero-tolerance differing-pixel count and the largest channel difference so the tolerance can be re-checked against what it absorbs. Byte identity is a this-host-only result: it holds only when the runner's Chrome encodes like the one that wrote the committed files, which no surface does. The step turns into a hard failure on its own the moment the reference faces are reachable — a job that checks the sibling repo out before it, or the faces committed under `design/fonts/` (whose `OFL.txt` is already there) and `capture.mjs` pointed at them. That change belongs to the design kit, not to CI. |
 | `checks` fails in `pnpm lint` on files under `tools/**` or `e2e/**` | Those trees are the audit harness, which was written on a branch with no package manifest and so has never met biome. The errors are formatting and lint diagnostics in the harness's own files; the fix belongs to that stream, and `pnpm lint` is right to refuse a tree that does not pass it. |
 | `design-kit` fails on `build-preset.mjs --check` | `design/tokens/tokens.json` changed and `tailwind-preset.js` (and the preview's CSS) were not regenerated — run the generator without `--check`. |
 | `design-kit` fails on `check-upstream.mjs` | The failure line names which of the two checks fired. `(a)` the pin is lying: the slice or the lock disagrees with the kit at the locked ref — re-vendor the slice from `damianvtran/local-operator-design` at that ref, updating `design-kit.lock.json`'s `ref`, `commit` and hashes together. `(b)` a brand role moved: restore the value the slice carries, or — if the difference is deliberate — record it as a pin in the script with its reason (and in the kit's divergence register at its next release, if it should outlive this file). |

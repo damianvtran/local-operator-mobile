@@ -9,8 +9,11 @@
 			 *
 			 * This file is a TEMPLATE, not a screenshot. It draws the canvas at
 			 * exactly the size App Store Connect requires and reserves the app's
-			 * screen area inside it, so the implementation phase drops a real app
-			 * capture into the marked slot and gets a correctly-sized asset.
+			 * screen area inside it; a real app capture fills that slot, and the
+			 * caption is data. `frames.json` beside this file is the source: it names
+			 * the nine frames, their copy and their captures, and
+			 * `design/preview/capture.mjs --target frames` renders one PNG per entry
+			 * (see "The iPhone 6.9-inch set" in README.md here).
 			 *
 			 * Why the app area is inset rather than full-bleed: App Store Connect
 			 * validates the IMAGE, and only 1260x2736 / 1290x2796 / 1320x2868 are
@@ -21,7 +24,9 @@
 			 *
 			 * The slot's aspect matches a modern iPhone screen exactly:
 			 *      slot 1000 x 2172  ==  0.4603  ==  1320 / 2868
-			 * so the app capture scales to fit with no letterboxing at all.
+			 * so the app capture (a 6.9-inch phone at 3x: 1290 x 2796, 0.4614)
+			 * covers it with no letterboxing, and the ~1 px it loses per side is
+			 * stated in the slot's own CSS comment.
 			 *
 			 * Sources for the sizes (read 2026-09-29):
 			 *   https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
@@ -114,6 +119,20 @@
 				color: #b5afa2;
 			}
 
+			/* A real capture fills the slot edge to edge. `object-fit: cover`
+			 * rather than `contain`: the slot's aspect is 0.4603 and the 6.9-inch
+			 * capture's is 0.4614, so covering costs about one device pixel at each
+			 * side, while letterboxing — the thing the inset exists to avoid —
+			 * would put two bars of canvas colour inside the device. `flex: none`
+			 * keeps the flex parent from shrinking the image. */
+			.slot img {
+				flex: none;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				display: block;
+			}
+
 			.slot.empty {
 				background: repeating-linear-gradient(
 					45deg,
@@ -150,34 +169,36 @@
 				letter-spacing: -0.012em;
 			}
 
-			.spec {
-				margin-left: auto;
-				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 30px;
-				color: #656056;
-				text-align: right;
-				line-height: 1.5;
-				/* Three short lines that cannot wrap. The first version read
-				 * "App Store · 6.9\" iPhone class" and the phrase wrapped mid-label,
-				 * which reads as a layout bug in an asset about to be uploaded. */
-				white-space: nowrap;
-			}
+			/* No spec block. The frame used to carry one (`App Store · 6.9"` /
+			 * `1320 × 2868 @1x` / `alt: …`) beside the wordmark, and that is build
+			 * metadata: it describes the file to a maintainer, not the product to a
+			 * shopper, and every frame here is an asset that goes to a store. The
+			 * canvas size is asserted by the renderer instead
+			 * (`design/preview/capture.mjs`), and that assertion is the record.
+			 * Review round 1, Q1. */
 		</style>
 	</head>
 	<body>
 		<div class="frame">
 			<!-- 1 -------------------------------------------------------------------->
 			<div class="band">
-				<p class="eyebrow">01 · Sessions</p>
-				<h1>Every session on your machine, in your pocket.</h1>
+				<p class="eyebrow" id="eyebrow">01 · Sessions</p>
+				<h1 id="headline">Every session on your machine, in your pocket.</h1>
 			</div>
 
 			<!-- 2 -------------------------------------------------------------------->
-			<!-- Replace this element with <img src="…" width="1000" height="2172"> once
-			     a real capture exists, and drop the `empty` class. 1000x2172 is the
-			     slot; a capture at 3x (3000x6516) fits it exactly at no scale. -->
-			<div class="slot empty">
-				<div class="slot-label">
+			<!-- The slot is filled from the query string, so a capture is a PATH rather
+			     than a base64 paste and the caption travels with it — one render per
+			     frame, all nine driven by `frames.json`:
+
+			       iphone-6.9.html?eyebrow=01+·+Sessions
+			                      &headline=Every+session+on+your+machine,+in+your+pocket.
+			                      &capture=app-captures/iphone-max/01-session-transcript.png
+
+			     With no query at all the file stays what its name says: a TEMPLATE,
+			     showing the empty slot and the copy frame 01 carries. -->
+			<div class="slot empty" id="slot">
+				<div class="slot-label" id="slot-label">
 					app capture<br />
 					1000 × 2172 (3x: 3000 × 6516)<br />
 					aspect 0.4603 = 1320 / 2868
@@ -195,12 +216,31 @@
 					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
 				</svg>
 				<span class="wordmark">Local Operator</span>
-				<span class="spec">
-					App Store · 6.9"<br />
-					1320 × 2868 @1x<br />
-					alt: 1290×2796, 1260×2736
-				</span>
 			</footer>
 		</div>
+
+		<!-- Fills the slot, and nothing else, when a frame is asked for. It runs during
+		     parsing, so the <img> is in the document before the load event and the
+		     capture script's screenshot cannot race the image: that script also asserts
+		     the file's own pixel dimensions, which is what fails when a path is wrong. -->
+		<script>
+			(() => {
+				const params = new URLSearchParams(location.search);
+				const capture = params.get("capture");
+				if (capture === null || capture === "") return;
+				const eyebrow = params.get("eyebrow");
+				const headline = params.get("headline");
+				if (eyebrow) document.getElementById("eyebrow").textContent = eyebrow;
+				if (headline) document.getElementById("headline").textContent = headline;
+				const slot = document.getElementById("slot");
+				slot.classList.remove("empty");
+				document.getElementById("slot-label").remove();
+				const img = document.createElement("img");
+				img.id = "capture";
+				img.alt = "";
+				img.src = capture;
+				slot.append(img);
+			})();
+		</script>
 	</body>
 </html>
