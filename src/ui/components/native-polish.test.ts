@@ -47,8 +47,32 @@ describe("native conversation chrome", () => {
 		const end = text.indexOf(`testID={CONTROL.${id}}`);
 		const start = text.lastIndexOf("<IconButton", end);
 		expect(start).toBeGreaterThanOrEqual(0);
-		expect(text.slice(start, text.indexOf("/>", end))).toContain(
-			"size={22}",
+		expect(text.slice(start, text.indexOf("/>", end))).toContain("size={22}");
+	});
+});
+
+describe("final design audit wiring", () => {
+	it("gives the home folder chip the same quiet treatment as the model chip", () => {
+		const source = readFileSync(
+			new URL("../../features/home/home.tsx", import.meta.url),
+			"utf8",
 		);
+		const at = source.indexOf("testID={CONTROL.homeTargetFolder}");
+		const chip = source.slice(source.lastIndexOf("<Chip", at), at);
+		// D2: one row of disclosures must not mix a filled bordered chip with flat text.
+		expect(chip).toContain("quiet");
+	});
+
+	it("names the home header's computer on two lines with a middle ellipsis", () => {
+		const source = readFileSync(
+			new URL("../../features/home/home.tsx", import.meta.url),
+			"utf8",
+		);
+		// The rendered child, not the accessible-label template above it.
+		const at = source.lastIndexOf("{listLabel(computers, tunnelId, route)}");
+		const block = source.slice(source.lastIndexOf("<Text", at), at);
+		// D3: a one-line tail fit showed "127.0.0.1:498…" at large text.
+		expect(block).toContain("numberOfLines={2}");
+		expect(block).toContain('ellipsizeMode="middle"');
 	});
 });

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
@@ -15,6 +16,7 @@ import {
 	skeletonBarClasses,
 	skeletonClasses,
 	touchFloorFor,
+	webFieldOverflow,
 } from "@/ui/variants";
 
 /**
@@ -305,5 +307,25 @@ describe("quiet chip", () => {
 		expect(chipClasses({})).toContain("border-border-control");
 		expect(chipClasses({})).toContain("bg-surface");
 		expect(chipClasses({}, { quiet: true })).not.toBe(chipClasses({}));
+	});
+});
+
+describe("web field overflow", () => {
+	/* The rendered defect the helper exists to prevent: `scrollEnabled={false}` is a
+	 * native-only prop, and react-native-web kept painting an empty field's scrollbar
+	 * and resize handle at 200 % (final audit D1). */
+	it("hides overflow on web only when the field has nothing to scroll", () => {
+		expect(webFieldOverflow("web", false)).toBe("hidden");
+		expect(webFieldOverflow("web", true)).toBeUndefined();
+		expect(webFieldOverflow("ios", false)).toBeUndefined();
+	});
+
+	it("is what the field actually reads", () => {
+		const source = readFileSync(
+			new URL("./components/textarea.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("webFieldOverflowStyle(Platform.OS, scrollable)");
+		expect(source).toContain("scrollEnabled={scrollable}");
 	});
 });

@@ -544,6 +544,11 @@ export default function Home({
 									);
 									setOptionsOpen(true);
 								}}
+								/* The same quiet disclosure the model chip uses: one row of
+								 *  disclosures should not mix a filled, bordered chip with flat
+								 *  text (final audit, D2). Paint only — the 44 pt target, the
+								 *  hint and the options sheet behind it are unchanged. */
+								quiet
 								accessibilityLabel={`Working in ${homeDirectory}`}
 								accessibilityHint="Choose another folder"
 								testID={CONTROL.homeTargetFolder}
@@ -622,10 +627,15 @@ export default function Home({
 							className="min-w-0 flex-1 justify-center"
 							style={{ minHeight: TOUCH_FLOOR }}
 						>
+							{/* Two lines with a MIDDLE ellipsis, the same identity rule the
+							 *  panel's drawer uses: at large text a one-line tail fit kept only
+							 *  "127.0.0.1:498…", a fragment that names neither the machine nor
+							 *  the port. The full value stays in the button's accessible label
+							 *  above, and the layout keeps its single flexible row. */}
 							<Text
 								className="text-mono-sm text-ink-muted"
-								numberOfLines={1}
-								ellipsizeMode="tail"
+								numberOfLines={2}
+								ellipsizeMode="middle"
 							>
 								{listLabel(computers, tunnelId, route)}
 							</Text>

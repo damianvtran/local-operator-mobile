@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Platform, Text, TextInput, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -10,6 +10,7 @@ import {
 	fieldClasses,
 	fieldScrollsWithContent,
 	TEXTAREA_MAX_PX,
+	webFieldOverflow,
 } from "@/ui/variants";
 
 /**
@@ -75,6 +76,16 @@ export type TextareaProps = {
  * text that fills it. Without that, the constants cap the box at ~1.4 lines of
  * 200 % text while the placeholder needs ~2.5, and the frame cuts it mid-word
  * (design round D20; the arithmetic was the defect, not the measurement path). */
+/** The style spread: `undefined` must not add a key at all, or a later
+ *  `overflow` on the class list would be overridden by an empty object. */
+const webFieldOverflowStyle = (
+	platform: string,
+	scrollable: boolean,
+): { overflow?: "hidden" } => {
+	const overflow = webFieldOverflow(platform, scrollable);
+	return overflow === undefined ? {} : { overflow };
+};
+
 const LINE_PX = 22;
 
 /** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
@@ -183,6 +194,10 @@ export const Textarea = ({
 			? "invalid"
 			: "rest";
 	const inputRef = useRef<TextInput | null>(null);
+	/* ONE decision, read by two consumers: the native `scrollEnabled` prop and the
+	 *  web `overflow` style. Computing it twice is how a proof can pass while the
+	 *  rendered field still scrolls. */
+	const scrollable = fieldScrollsWithContent(contentFloor, cap);
 	/* The caller's handle wins: it exists so the home can focus the field, and
 	 *  the internal one is never read — only forwarded to the element. */
 	const resolvedRef = fieldRef ?? inputRef;
@@ -259,11 +274,19 @@ export const Textarea = ({
 							cap,
 						),
 						minHeight: TOUCH_FLOOR,
+						/* `scrollEnabled` is a NATIVE prop: react-native-web does not turn it
+						 *  into CSS, so `false` left the browser free to paint its own overflow
+						 *  on an empty field at 200 % — the scrollbar and resize glyph the design
+						 *  round kept seeing in real Settings captures while a helper-only test
+						 *  stayed green (final audit, D1). Web says it in CSS terms instead, and
+						 *  only when there is nothing to scroll; content past the cap keeps
+						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
+						...webFieldOverflowStyle(Platform.OS, scrollable),
 					}}
 					multiline
 					// The transcript scrolls, not the page: the field clips its own
 					// overflow once it hits the cap.
-					scrollEnabled={fieldScrollsWithContent(contentFloor, cap)}
+					scrollEnabled={scrollable}
 					onContentSizeChange={handleContentSize}
 					accessibilityRole={ROLE.text}
 					accessibilityLabel={label}

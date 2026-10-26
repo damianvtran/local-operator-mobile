@@ -218,6 +218,22 @@ export type FieldState = "rest" | "invalid" | "disabled";
  * a hint that may be clipped; the reader's own text may not be lost. So the value
  * content alone decides, and `cap` is the six-line ceiling.
  */
+/**
+ * What a field tells the WEB about scrolling.
+ *
+ * `scrollEnabled` is native-only: react-native-web ignores it, so a false value
+ * left the browser painting its own scrollbar and resize handle on an empty field
+ * at 200 % (final audit D1 — a helper test was green while the real Settings
+ * capture still showed chrome). Web needs the CSS spelling, and only when there
+ * is nothing to scroll; past the cap it keeps the default `auto`, matching the
+ * native prop.
+ */
+export const webFieldOverflow = (
+	platform: string,
+	scrollable: boolean,
+): "hidden" | undefined =>
+	platform === "web" && !scrollable ? "hidden" : undefined;
+
 export const fieldScrollsWithContent = (
 	contentFloor: number,
 	cap: number,

@@ -31,7 +31,14 @@ describe("textarea scroll decision", () => {
 		);
 		// A second, placeholder-aware expression here is the defect: it is how the
 		// empty-field scrollbar came back the first time.
+		// The decision moved into ONE named value when the web overflow rule needed
+		// the same answer (final audit, D1): the prop and the CSS must not be able to
+		// disagree, so the wiring check follows the name rather than the call site.
 		expect(source).toContain(
+			"const scrollable = fieldScrollsWithContent(contentFloor, cap)",
+		);
+		expect(source).toContain("scrollEnabled={scrollable}");
+		expect(source).not.toContain(
 			"scrollEnabled={fieldScrollsWithContent(contentFloor, cap)}",
 		);
 		expect(source).not.toContain(
