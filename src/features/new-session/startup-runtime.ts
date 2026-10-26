@@ -163,7 +163,9 @@ export async function startupForSession(
 export async function retireStartupCoordinators(): Promise<void> {
 	const owners = [...coordinators.values()];
 	for (const owner of owners) owner.revoke();
-	await Promise.all(owners.map((owner) => owner.flush()));
+	/* `quiesce`, not `flush`: retirement is where a drain still sitting inside
+	 * `deps.send` must be waited for, and only `quiesce` covers the flight. */
+	await Promise.all(owners.map((owner) => owner.quiesce()));
 	await Promise.allSettled([...opening.values()]);
 	await startupDeviceStore.clear();
 	coordinators.clear();

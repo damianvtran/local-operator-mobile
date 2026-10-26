@@ -35,6 +35,11 @@
 import { Platform } from "react-native";
 import { getStartupAuthorization } from "@/connection/startup-authorization";
 import {
+	awaitCommandOperations,
+	reopenDispatch,
+	withdrawDispatch,
+} from "@/relay/command-lifecycle";
+import {
 	awaitPrivateWrites,
 	reopenPrivateWrites,
 	runPrivateWrite,
@@ -321,6 +326,13 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	 * left nothing behind. */
 	withdrawPrivateWrites();
 	await awaitPrivateWrites();
+	/* Dispatch is the second half of the same promise. An envelope is not just a
+	 * key: `client.command` may still be on the wire, and deleting the envelope
+	 * before its disposition is written loses an admitted command (success) or
+	 * untracks ambiguity (lost reply). Withdraw refuses new sends; the await covers
+	 * every accepted one through its final settle (review round 2, R1-4). */
+	withdrawDispatch();
+	await awaitCommandOperations();
 	const privateKey = (key: string) =>
 		key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith("lo-mobile-command:");
 	if (Platform.OS === "web") {
@@ -355,6 +367,7 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	/* Justified by the caller's contract: a caller that keeps using the store after
 	 * a purge is starting a new owner's work, and must say so through admission. */
 	reopenPrivateWrites();
+	reopenDispatch();
 };
 
 export const clearAllDrafts = async (): Promise<void> => {

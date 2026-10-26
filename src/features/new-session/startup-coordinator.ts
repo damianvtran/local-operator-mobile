@@ -445,6 +445,20 @@ export class StartupCoordinator {
 		await this.ready;
 		await this.tail;
 	}
+	/**
+	 * "Nothing of mine is still running": the persistence tail AND the drain.
+	 *
+	 * Separate from `flush()` on purpose. `flush()` is the persistence barrier the
+	 * typing path uses while a create may legitimately still be in flight; a
+	 * retirement that waited on it would be wrong to redefine. This is the one
+	 * retirement awaits before the purge (review round 2, R1-4: `flush()` alone
+	 * reported quiescence with `client.command` still open).
+	 */
+	async quiesce() {
+		await this.ready;
+		await this.flight;
+		await this.tail;
+	}
 	async settled() {
 		await this.flush();
 		await this.flight;

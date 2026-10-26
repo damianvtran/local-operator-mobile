@@ -49,6 +49,11 @@
  */
 
 import type { InputMode, PromptImage } from "../contracts";
+import {
+	DispatchClosedError,
+	isDispatchClosed,
+	runCommandOperation,
+} from "./command-lifecycle";
 import type { RelayEndpoints } from "./endpoints";
 import { isRelayError, RelayError, transportError } from "./errors";
 import {
@@ -142,7 +147,11 @@ function begin(
 	predecessor: InFlightSend | undefined,
 	payload: string,
 ): InFlightSend {
-	const finished = (async (): Promise<Settled> => {
+	/* The whole hold -> HTTP -> settle lifecycle is the registered operation. Doing
+	 * it here rather than in `runSend` is what makes "through final settle" exact: a
+	 * purge that starts mid-flight waits for the envelope's disposition to be
+	 * written (or deliberately kept as ambiguity), never for a half of it. */
+	const finished = runCommandOperation(async (): Promise<Settled> => {
 		if (predecessor) {
 			const settled = await predecessor.finished;
 			/* A DIFFERENT instruction must not take the single envelope slot while the
@@ -174,7 +183,7 @@ function begin(
 					: transportError(cause, "send command"),
 			};
 		}
-	})();
+	});
 	const entry: InFlightSend = { payload, finished };
 	registry.set(input.sessionId, entry);
 	void finished.then(() => {
@@ -230,8 +239,10 @@ export async function sendPersistedCommand(
 	const payload = payloadKeyOf(input);
 	if (unresolved && unresolved.payload === payload) {
 		/* The same instruction: join it. The joiner's own bytes ARE what is being
-		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. */
-		return outcomeOf(await unresolved.finished);
+		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. The
+		 * wait is registered as an operation, because a purge that starts now still
+		 * has to see this settle before it may delete the envelope. */
+		return outcomeOf(await runCommandOperation(() => unresolved.finished));
 	}
 	return outcomeOf(await begin(input, registry, unresolved, payload).finished);
 }

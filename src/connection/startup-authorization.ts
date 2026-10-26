@@ -40,6 +40,7 @@
  */
 
 import { reopenPrivateWrites } from "@/features/session/scoped-storage";
+import { reopenDispatch } from "@/relay/command-lifecycle";
 import { randomState } from "./pkce";
 import type { StartupAuthorizationRecord } from "./storage";
 
@@ -197,6 +198,7 @@ export class StartupAuthorizationLifecycle {
 			 * sign-out closed them, and nothing may write for a scope that no longer
 			 * has an owner. */
 			reopenPrivateWrites();
+			reopenDispatch();
 			this.authorization = Object.freeze({
 				scope: record.generation,
 				revision,
