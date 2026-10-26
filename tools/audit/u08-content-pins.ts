@@ -71,7 +71,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"a6d619015bc78c7e5f753f452e326a722b172c18150371c3414c77fd8b4b2ebf",
 	"tools/audit/checks.ts":
-		"061e0c2aa32ed792aa707733e515f82dc84754526e0b5c97290d215b60bf8984",
+		"0342b7587d55d235db66030d470dc1b94145f8f76ddf1a2e5d0ddd0078c1e304",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -131,13 +131,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
-	app: "0b3b61aa1c024867e2a1331c206e93fd758f7a8e0a3f7c7c2418757876a6dc8d",
+	app: "478316b5d8fd4234138f88b87194878ba324fa7bba1835a239b883e32a19ac15",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "c74f3eeb6a48c496758582ccc795731588082017020c1dd0319e94d59277f712",
+	src: "f9f60f90e866ed183ff07abbc0b09a9523ec446db24b4869100a151a042c7caa",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
