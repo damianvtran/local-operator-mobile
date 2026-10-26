@@ -383,13 +383,23 @@ export default function Home({
 	// The coordinator freezes the submitted bytes; later typing stays editable.
 	const send = startup.send;
 
-	const newChat = () => {
+	/* A STABLE identity, with the latest coordinator behind it. The drawer carries the
+	 * New-chat intent across the close and acts on it in `onDismiss` — by which time
+	 * Home has already re-rendered for `setPanelOpen(false)` — and it drops that
+	 * intent whenever this callback's identity changes. An inline closure is a new
+	 * function on every render, so closing the drawer cancelled the request: the
+	 * sheet went away and the old session (and its coordinator) stayed. `useStartup`
+	 * returns fresh functions per render, so the reference is refreshed on each render
+	 * and the stable callback always calls the current one. */
+	const newConversationRef = useRef(startup.newConversation);
+	newConversationRef.current = startup.newConversation;
+	const newChat = useCallback(() => {
 		setPanelOpen(false);
-		void startup
-			.newConversation()
+		void newConversationRef
+			.current()
 			.then(() => requestAnimationFrame(() => fieldRef.current?.focus()))
 			.catch(() => setComposerError("Could not open a new draft safely."));
-	};
+	}, []);
 
 	const pane = (
 		<ConversationsPane
