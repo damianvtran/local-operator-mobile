@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
 import { Mic, Square, X } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
 	type LayoutChangeEvent,
@@ -224,6 +224,19 @@ export type ComposerProps = {
 	 *  size cannot push the composer, or the model and effort chips in it, off a 390 pt
 	 *  screen. Nothing is removed: every control stays in the one scrollable body. */
 	compact?: { maxHeight: number } | null;
+	/** The whole composer's ceiling in px, from the window geometry. `compact.maxHeight`
+	 *  is the short-landscape share; this is the COLUMN's remaining height, which
+	 *  applies on portrait too — a six-line draft at 200 % otherwise pushed the field,
+	 *  the chips and the action row past the window bottom (design recheck D-c). */
+	limit?: number | null;
+	/** Reports the composer's painted box in WINDOW coordinates. The SCREEN owns the
+	 *  window height; the composer owns the geometry, so the measurement lives here
+	 *  and no wrapper reparents the field (footer contract). Height is part of it:
+	 *  the ceiling only binds once the painted bottom reaches the window. */
+	onMeasure?: (box: { top: number; height: number }) => void;
+	/** Any value whose change moves the composer without resizing it (the find bar,
+	 *  a panel, the pending card). The measurement effect watches it. */
+	measureKey?: string;
 	/** Measure the existing root without inserting an input-reparenting wrapper. */
 	onLayout?: (event: LayoutChangeEvent) => void;
 	testID: string;
@@ -366,6 +379,9 @@ export const Composer = ({
 	slashSheet,
 	fieldRef,
 	compact = null,
+	limit = null,
+	onMeasure,
+	measureKey = "",
 	testID,
 	onLayout,
 }: ComposerProps) => {
@@ -558,21 +574,58 @@ export const Composer = ({
 		voice?.micVisible === true &&
 		(rowIsLive(voice.phase) || voice.status !== "");
 	const DICTATION_ROW_MARGIN_PX = 8;
+	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
+	 *  form and `pt-2 pb-2` everywhere else. The budget spends what the box paints. */
+	const composerPad = compact === null ? 16 : COMPOSER_PAD;
+	const bound = compact === null ? limit : compact.maxHeight;
 	const budget =
-		compact === null
+		bound === null
 			? null
 			: composerBudget(
-					compact.maxHeight,
+					bound,
 					receiptHeight,
 					extrasHeight,
 					TOUCH_FLOOR,
-					COMPOSER_PAD,
+					composerPad,
 					dictationShowing
 						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
 						: 0,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;
+
+	/* The window-coordinate top of the composer, for the portrait ceiling. `react-
+	 *  native-web` implements `measureInWindow` on the host node; native resolves it
+	 *  asynchronously, which is why this only publishes a number and never gates the
+	 *  first paint (a `null` top means "no limit" — the old behaviour — for a frame). */
+	const publishBox = useCallback(() => {
+		if (!onMeasure) return;
+		/* On the web the host node answers directly: `measureInWindow` there returns
+		 *  a CACHED layout, so after the draft grew the screen kept reading the empty
+		 *  composer's box (top 335, height 225 — "fits") and the ceiling never bound
+		 *  ([redacted]: bound "none" at a bottom of 739 in a 568 pt window). Native
+		 *  keeps the platform call, which is live and asynchronous. */
+		const node = rootRef.current as unknown as {
+			getBoundingClientRect?: () => DOMRect;
+		} | null;
+		const rect = node?.getBoundingClientRect?.();
+		if (rect) {
+			onMeasure({ top: Math.round(rect.top), height: Math.round(rect.height) });
+			return;
+		}
+		rootRef.current?.measureInWindow((_x, y, _w, h) =>
+			onMeasure({ top: Math.round(y), height: Math.round(h) }),
+		);
+	}, [onMeasure]);
+	/* One string, because the effect must run when ANY of these moves the composer —
+	 *  the receipt wrapping, the extras, the scale, the mode, the dictation row — or
+	 *  when the screen says the chrome above it changed. Listing them as separate
+	 *  dependencies is what the lint rule objects to, and a stale top is how the
+	 *  ceiling stops matching the column. */
+	const measurementKey = `${measureKey}|${receiptHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}`;
+	useEffect(() => {
+		publishBox();
+	}, [publishBox, measurementKey]);
 
 	/* TWO fragments, one scroll owner. `extras` is everything ABOVE the field —
 	 *  attachments, the retained-instruction alert, the error, the disabled reason — and
@@ -1017,13 +1070,23 @@ export const Composer = ({
 	return (
 		<View
 			ref={rootRef}
-			onLayout={onLayout}
+			onLayout={(event) => {
+				onLayout?.(event);
+				publishBox();
+			}}
 			className={
 				compact === null
 					? "mx-3 mb-2 rounded-xl bg-elevated px-2 pt-2 pb-2"
 					: "mx-3 mb-1 rounded-xl bg-elevated px-2 pt-1 pb-1"
 			}
 			testID={testID}
+			/* The budget decides the FIELD's cap; this is the box's own guarantee. The
+			 *  root is the surface the window actually pays for, and a few pixels of
+			 *  fixed chrome (the notice row between field and receipt) are not in the
+			 *  field's ceiling arithmetic — [redacted]: 258 painted against a 254
+			 *  limit, bottom 572 in a 568 pt window. The field still scrolls its text,
+			 *  so nothing is hidden by the cap; only the box's tail is bounded. */
+			style={bound === null ? undefined : { maxHeight: bound }}
 		>
 			{/* ONE parent shape in both modes: the extras ScrollView is always here and only
 			    its style and `scrollEnabled` change. Switching between a fragment and a

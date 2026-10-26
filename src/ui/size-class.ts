@@ -1,6 +1,6 @@
 import { maxColumnWidth } from "@/ui/column";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
-import { LAYOUT } from "@/ui/tokens.gen";
+import { LAYOUT, TOUCH_TARGET } from "@/ui/tokens.gen";
 import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
@@ -390,6 +390,36 @@ export const composerBudget = (
 	 *  the paint budget is converted once, here, where it is decided — the caller and
 	 *  the component then agree without either subtracting a constant of its own. */
 	return { field: fieldBox - FIELD_BORDER_Y, extras };
+};
+
+/**
+ * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
+ *
+ * Portrait phones have no short-landscape budget, so a six-line draft at 200 %
+ * text grew the composer past the window bottom (design recheck D-c: surface
+ * [12, 314.4, 296, 424.8], bottom 739 against a 568 pt window) — the field, the
+ * chips and the action row were all unreachable.
+ *
+ * The rule is deliberately "overflow OR already at the window", not "always
+ * window - top": the composer is bottom-anchored while it fits, so `top =
+ * bottom - height` makes `window - top` an identity that can never let it grow,
+ * and measuring it while EMPTY froze a long draft at two lines (observed at
+ * 320 pt / 100 %: field 60 px against a 132 px cap). Here an unbounded pass may
+ * grow until its painted bottom reaches the window; only then does the ceiling
+ * bind, and `>=` keeps it bound while the capped box sits exactly on the edge. A
+ * one-pixel tolerance absorbs the integer rounding of both numbers.
+ */
+export const composerLimit = (
+	viewportHeight: number,
+	top: number | null,
+	height: number | null,
+): number | null => {
+	if (top === null || height === null) return null;
+	const overflows = top + height >= viewportHeight - 1;
+	if (!overflows) return null;
+	/* The floor is the SMALLEST target the kit allows, not a share: a limit below
+	 *  one control would collapse the composer rather than bound it. */
+	return Math.max(TOUCH_TARGET.ios, Math.round(viewportHeight - top));
 };
 
 /**

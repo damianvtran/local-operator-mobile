@@ -169,14 +169,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * its border (`src/ui/variants.ts` `fieldBoxHeight`, wired in `textarea.tsx`,
 	 * U-07's "content 88px in a 86px box"); `src` only once more. Sixth, for code
 	 * R14: organized imports in `textarea.tsx`/`variants.test.ts` and the border
-	 * reserved once in `composerBudget` (`size-class.ts`); `src` only. */
-	app: "a95c87f6b74d94a1cd0ad49543279d3e77f45e56f897fd5bb24fd64cb3e1c68d",
+	 * reserved once in `composerBudget` (`size-class.ts`); `src` only. Seventh, for
+	 * design recheck D-c: the portrait composer is bounded by the window through
+	 * `composerLimit` and a self-measured top (`composer.tsx` and the session screen
+	 * `app/(app)/session/[id].tsx`), so BOTH trees move. */
+	app: "e8924ef20031d42a928a92143d25950464c21790bddf89730f8c71a282ce4279",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "3b46fcccbdbf83c32b3611d2f807a9f78b0400e78a7890c16a44b662b69f5058",
+	src: "08261b95e1ec70e30e330f80d59b8225ed0fe0e6af192adfe3f0c1b2e0ba7b5b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

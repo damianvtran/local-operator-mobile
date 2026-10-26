@@ -93,6 +93,7 @@ import {
 	COMPACT_OPEN_PANEL_SHARE,
 	COMPACT_PENDING_SHARE,
 	compactChromeShare,
+	composerLimit,
 	type RegionKey,
 	regionOrder,
 	sessionStatusLayout,
@@ -459,6 +460,14 @@ export default function Session() {
 	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
 	 *  yet", and the region then uses its plain cap for one frame. */
 	const regionRef = useRef<ScrollView | null>(null);
+	/* The composer's top in WINDOW coordinates, for `composerLimit`: portrait has no
+	 *  short-landscape budget, and this is the only honest ceiling for a long draft at
+	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
+	 *  would reparent the field, which the footer contract forbids. */
+	const [composerBox, setComposerBox] = useState<{
+		top: number;
+		height: number;
+	} | null>(null);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
 	>({});
@@ -1191,6 +1200,13 @@ export default function Session() {
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
+						limit={composerLimit(
+							viewportHeight,
+							composerBox?.top ?? null,
+							composerBox?.height ?? null,
+						)}
+						onMeasure={setComposerBox}
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
 						compact={
 							compact
 								? {

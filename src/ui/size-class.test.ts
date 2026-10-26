@@ -4,6 +4,7 @@ import {
 	compactChromeFor,
 	compactChromeShare,
 	composerBudget,
+	composerLimit,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
@@ -15,6 +16,7 @@ import {
 	snapRegion,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { TOUCH_TARGET } from "@/ui/tokens.gen";
 import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
@@ -331,6 +333,27 @@ describe("regionOrder", () => {
 	});
 });
 
+describe("composerLimit (D-c: portrait is bounded by the window too)", () => {
+	it("answers only when the composer reaches the window's bottom", () => {
+		// The recheck's exact frame: 320x568, composer 314.4 + 424.8 = 739.2
+		expect(composerLimit(568, 314, 425)).toBe(254);
+		expect(composerLimit(844, 470, 400)).toBe(374);
+	});
+
+	it("has no answer before the first measurement, or while it still fits", () => {
+		expect(composerLimit(568, null, null)).toBe(null);
+		// 100 % portrait: the composer still sits inside the window — old behaviour
+		expect(composerLimit(568, 380, 60)).toBe(null);
+		// 320/200% long draft: 314 + 424 is over the bottom, and stays capped at it
+		expect(composerLimit(568, 314, 254)).toBe(254);
+	});
+
+	it("never returns less than one control target", () => {
+		expect(composerLimit(568, 560, 40)).toBe(TOUCH_TARGET.ios);
+		expect(composerLimit(568, 700, 10)).toBe(TOUCH_TARGET.ios);
+	});
+});
+
 describe("composerBudget (UX U1: the actions never scroll away)", () => {
 	it("on a tight screen the field gets everything and the extras scroll in what is left", () => {
 		// 390 pt screen at 200 %: composer share 0.45 -> 175 pt; receipt line 52; padding 8.
@@ -367,6 +390,23 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		expect(budget.field + FIELD_BORDER_Y + 52 + 8 + 57).toBeLessThanOrEqual(
 			175,
 		);
+	});
+
+	it("spends a portrait column budget without overspending it", () => {
+		// 320x568 / 200 %: limit 254, receipt wrapped to 112, root pad 16, no extras.
+		const budget = composerBudget(254, 112, 0, 48, 16);
+		const painted = budget.field + FIELD_BORDER_Y + 112 + 16;
+		if (painted > 254) throw new Error(`over column: ${painted} > 254`);
+		expect(painted).toBe(254);
+		expect(budget.field).toBe(254 - 112 - 16 - FIELD_BORDER_Y);
+	});
+
+	it("gives the extras their share before the field on a narrow column", () => {
+		const budget = composerBudget(254, 112, 80, 48, 16);
+		// 126 of room, of which the field's 48 pt floor is reserved: the extras get 78
+		expect(budget.extras).toBe(78);
+		expect(budget.field).toBe(48 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y + 112 + 16 + budget.extras).toBe(254);
 	});
 
 	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
