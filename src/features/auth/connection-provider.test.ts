@@ -216,6 +216,8 @@ async function relay(
 		privateHistory?: string;
 		emptyFrame?: boolean;
 		frameTitle?: string;
+		/** The initial list read fails while the stream stays healthy (R1-1). */
+		sessionsFailure?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -351,6 +353,10 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
+			if (options.sessionsFailure) {
+				json({ detail: "Sessions unavailable", reason: "connector" }, 503);
+				return;
+			}
 			json(body("sessions-empty"));
 			return;
 		}
@@ -479,6 +485,26 @@ afterEach(async () => {
 	vi.useRealTimers();
 	vi.restoreAllMocks();
 	vi.unstubAllGlobals();
+});
+
+describe("startup authorization is admitted by the route (R1-1)", () => {
+	it("survives a failed cold-start list read with a healthy stream", async () => {
+		const mock = await relay({ sessionsFailure: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// The read failed: the list says so ...
+		expect(mock.events).toContain("GET /api/sessions");
+		// ... and the route is still authorized to start work, which is what the
+		// startup coordinator opens on.
+		expect(getStartupAuthorization()).not.toBeNull();
+	});
 });
 
 describe("mounted provider authentication retirement", () => {

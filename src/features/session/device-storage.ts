@@ -34,7 +34,13 @@
 
 import { Platform } from "react-native";
 import { getStartupAuthorization } from "@/connection/startup-authorization";
-import { scopedStore } from "./scoped-storage";
+import {
+	awaitPrivateWrites,
+	reopenPrivateWrites,
+	runPrivateWrite,
+	scopedStore,
+	withdrawPrivateWrites,
+} from "./scoped-storage";
 
 /** The port. Identical in shape to `retry-envelope.ts`'s `EnvelopeStore`, which
  *  is why the envelope store takes this object directly rather than an adapter. */
@@ -191,12 +197,16 @@ export const deviceStore: DeviceStore = {
 		return isWeb() ? webGet(key) : nativeGet(key);
 	},
 	async set(key, value) {
-		if (isWeb()) webSet(key, value);
-		else await nativeSet(key, value);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webSet(key, value);
+			else await nativeSet(key, value);
+		});
 	},
 	async remove(key) {
-		if (isWeb()) webRemove(key);
-		else await nativeRemove(key);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webRemove(key);
+			else await nativeRemove(key);
+		});
 	},
 	async keys() {
 		if (isWeb()) return webKeys();
@@ -212,11 +222,19 @@ export const deviceStore: DeviceStore = {
 
 /**
  * Draft keys. A separate prefix from the envelope's (`lo-mobile-command:`) on
- * purpose, because the two have DIFFERENT lifetimes on a `401`: the envelope is
- * scoped to the identity that has just gone and is cleared with it, while the
- * draft is the reader's own unfinished sentence and survives to be sent after they
- * sign back in (`docs/ux/flows.md` § `C5` — "Never clear drafts on an auth blip";
- * the web client's rule, kept).
+ * purpose: they are different FAMILIES with different clearance rules, and the
+ * explicit purge names both.
+ *
+ * **On a `401` neither family is sent, and neither is adopted again (R1-5).**
+ * The generation is revoked, so every scoped key — drafts included — stays
+ * present but inaccessible: the record that would let anyone read it belongs to
+ * an owner who is no longer in force, and the next admission mints a NEW
+ * generation rather than reusing the old scope. Recovering that work after a
+ * reauthentication requires a proven same-person signal, which this app does not
+ * have yet: that is StageB work and it is not approved. Until it is, the honest
+ * contract is "unfinished work from an expired sign-in is quarantined, not
+ * recoverable", and `docs/ux/flows.md` § C5 says so instead of promising
+ * otherwise.
  */
 export const DRAFT_KEY_PREFIX = "lo-mobile-draft:";
 
@@ -297,6 +315,12 @@ export const clearDraft = async (
  * This is invoked ONLY by an explicit auth boundary, not an upgrade migration:
  * legacy unknown-owner keys remain quarantined until that privacy boundary. */
 export const clearAuthorizationData = async (): Promise<void> => {
+	/* Withdraw first, drain second, delete third (review R1-4). A writer that was
+	 * already past its admission check still runs to completion — its bytes are
+	 * written and then removed, which is the only order that can promise the purge
+	 * left nothing behind. */
+	withdrawPrivateWrites();
+	await awaitPrivateWrites();
 	const privateKey = (key: string) =>
 		key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith("lo-mobile-command:");
 	if (Platform.OS === "web") {
@@ -319,7 +343,18 @@ export const clearAuthorizationData = async (): Promise<void> => {
 			}
 		}
 	}
+	/* A late writer can also have created the native directory after the listing
+	 * above; removing it is safe because the barrier has already drained the tails
+	 * and no new write may start. */
+	if (Platform.OS !== "web") {
+		const { Directory, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists && directory.list().length === 0) directory.delete();
+	}
 	for (const key of memory.keys()) if (privateKey(key)) memory.delete(key);
+	/* Justified by the caller's contract: a caller that keeps using the store after
+	 * a purge is starting a new owner's work, and must say so through admission. */
+	reopenPrivateWrites();
 };
 
 export const clearAllDrafts = async (): Promise<void> => {

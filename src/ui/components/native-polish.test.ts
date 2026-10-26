@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { fieldClasses } from "../variants";
 
 const source = (path: string) =>
-	readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
 /** Wiring checks are not visual evidence. They pin the accessible control/asset
  * choices while the rendered baseline/after round judges geometry and hierarchy. */
@@ -33,15 +33,22 @@ describe("native conversation chrome", () => {
 		);
 	});
 
+	/* 22, not 24 and not the 20 the chrome shipped with: 24 crowded the 44 pt
+	 * target and 20 read light beside it (user feedback on the polish round). The
+	 * ladder in `IconButton` gained 22 as a named step for exactly this, so the
+	 * assertion pins the number the design settled on rather than a range. */
 	it.each([
-		["features/home/home.tsx", "homeSidebar"],
-		["features/sessions/conversations-pane.tsx", "sidebarSearch"],
-	])("makes the named navigation glyph legible in %s", (path, id) => {
+		["src/features/home/home.tsx", "homeSidebar"],
+		["src/features/sessions/conversations-pane.tsx", "sidebarSearch"],
+		["app/(app)/session/[id].tsx", "sessionFind"],
+	])("keeps the native chrome glyph at 22 in %s", (path, id) => {
 		// Icon render callbacks contain >, so inspect the complete caller's local span.
 		const text = source(path);
 		const end = text.indexOf(`testID={CONTROL.${id}}`);
 		const start = text.lastIndexOf("<IconButton", end);
 		expect(start).toBeGreaterThanOrEqual(0);
-		expect(text.slice(start, text.indexOf("/>", end))).toContain("size={24}");
+		expect(text.slice(start, text.indexOf("/>", end))).toContain(
+			"size={22}",
+		);
 	});
 });

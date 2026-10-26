@@ -21,8 +21,11 @@ export type IconButtonProps = {
 	accessibilityLabel: string;
 	onPress: () => void;
 	icon: (props: { color: string; size: number }) => ReactNode;
-	/** Sizes are 12 / 14 / 16 / 20 / 24; 12 is the floor (§ 3). */
-	size?: 12 | 14 | 16 | 20 | 24;
+	/** Sizes are 12 / 14 / 16 / 20 / 22 / 24; 12 is the floor (§ 3). 22 exists for
+	 *  the native chrome's menu/search/find glyphs, where 24 crowded the 44 pt target
+	 *  and the original 20 read light (user feedback, this batch). Brand marks are
+	 *  unaffected — they are their own component with their own sizes. */
+	size?: 12 | 14 | 16 | 20 | 22 | 24;
 	disabled?: boolean;
 	/** Adds `border-control` where the icon alone does not carry the affordance. */
 	outlined?: boolean;

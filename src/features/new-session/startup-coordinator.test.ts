@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { RelayError } from "@/relay/errors";
 import { StartupCoordinator, type StartupRecord } from "./startup-coordinator";
 
 const deferred = <T>() => {
@@ -230,5 +231,78 @@ describe("durable provisional conversation", () => {
 		await y.coordinator.enqueue();
 		expect(y.store.save).not.toHaveBeenCalled();
 		expect(y.start).not.toHaveBeenCalled();
+	});
+});
+
+/** A relay's ANSWER and a lost answer are different facts, and the queue must
+ *  treat them differently: one is recoverable work, the other is a HOLD. These
+ *  are the review's R1-2/R1-3 expressed against the real error type, so the
+ *  classification under test is the one `errors.ts` publishes. */
+describe("definite refusals are not ambiguity", () => {
+	const refused = (status: number, message: string) =>
+		new RelayError("rejected", message, { status, detail: message });
+
+	it("surfaces a refused create and lets the reader correct and retry", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/outside/home" });
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		x.create.reject(
+			refused(400, "That folder doesn't exist on this computer."),
+		);
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().phase).toBe("refused");
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+		expect(x.coordinator.snapshot().error).toContain("folder");
+
+		// The correction path: retry is a NEW attempt, not a replay of the refusal.
+		await x.coordinator.retry();
+		await x.coordinator.settled();
+		expect(x.start).toHaveBeenCalledTimes(2);
+	});
+
+	it("keeps an unanswered create in the permanent HOLD", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/home/fixture" });
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		x.create.reject(new TypeError("network request failed"));
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().phase).toBe("unconfirmed");
+		await x.coordinator.retry();
+		expect(x.start).toHaveBeenCalledTimes(1);
+	});
+
+	it("returns a refused command to the editor and keeps draining", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/home/fixture" });
+		x.coordinator.edit("invalid", []);
+		await x.coordinator.enqueue();
+		x.coordinator.edit("later", []);
+		await x.coordinator.enqueue();
+		let call = 0;
+		x.send.mockImplementation(
+			async (
+				_id: string,
+				message: { command_id: string; text: string; images?: unknown },
+			) => {
+				x.admissions.push({
+					id: message.command_id,
+					text: message.text,
+					images: message.images,
+				});
+				if (++call === 1) throw refused(422, "that command is not valid here");
+			},
+		);
+		x.create.resolve({ session_id: "session-a" });
+		await x.coordinator.settled();
+		// The rejected item is gone from the queue, its bytes are editable again, and
+		// the message behind it was not stalled behind a dead replay.
+		expect(x.coordinator.snapshot().queue).toHaveLength(0);
+		expect(x.coordinator.snapshot().draft.text).toBe("invalid");
+		expect(x.admissions.map((item) => item.text)).toEqual(["invalid", "later"]);
 	});
 });

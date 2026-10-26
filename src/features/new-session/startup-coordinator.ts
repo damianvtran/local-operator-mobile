@@ -1,5 +1,6 @@
 import type { PromptImage } from "@/contracts";
 import type { StartSessionRequest } from "@/relay/endpoints";
+import { isRelayError } from "@/relay/errors";
 import {
 	type ContinuationEnvelope,
 	isValidEnvelope,
@@ -9,6 +10,11 @@ export type StartupPhase =
 	| "draft"
 	| "starting"
 	| "ready"
+	/* A DEFINITE refusal of the create (the relay answered, nothing was made): the
+	 * queue survives and the reader may correct the selection and send again —
+	 * unlike `unconfirmed`, which means no answer arrived and a second POST could
+	 * make a second conversation. */
+	| "refused"
 	| "unconfirmed"
 	| "blocked";
 export type StartupDraft = { text: string; images: PromptImage[] };
@@ -37,8 +43,46 @@ export type StartupDeps = {
 };
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/** What a failure means for work already committed to the outbox.
+ *
+ *  This does NOT re-derive anything from status codes: `RelayError.envelope` is
+ *  the decision `errors.ts` already made for every kind, and a second table here
+ *  is exactly how the two drift apart. Three outcomes matter to the coordinator:
+ *
+ *   - `definitive` — the relay answered and refused (`clear`): nothing landed, so
+ *     the work must become actionable again rather than sit in a HOLD.
+ *   - `unauthorized` — the owning identity is gone (`clear-all`): stop, keep the
+ *     bytes inaccessible, and let reauthentication mint its own generation.
+ *   - `ambiguous` — no usable answer (`keep`): the command may or may not have
+ *     been admitted, so the same immutable ID is the only safe replay.
+ */
+export type FailureClass = "definitive" | "unauthorized" | "ambiguous";
+
+export const classifyFailure = (error: unknown): FailureClass => {
+	if (!isRelayError(error)) return "ambiguous";
+	if (error.envelope === "clear") return "definitive";
+	if (error.envelope === "clear-all") return "unauthorized";
+	return "ambiguous";
+};
+
+/** The relay's own sentence when it has one, and never a status code. */
+const failureMessage = (error: unknown, fallback: string): string =>
+	isRelayError(error) && error.displayableMessage.trim() !== ""
+		? error.displayableMessage
+		: error instanceof Error && error.message.trim() !== ""
+			? error.message
+			: fallback;
 const SAVE_FAILED =
 	"Could not save this conversation. Your message is still here; nothing new was sent.";
+const REFUSED =
+	"The relay refused to start this conversation. Check the folder and model, then send again.";
+const SEND_REFUSED =
+	"The relay refused that message, so it is back in your draft.";
+const UNAUTHORIZED =
+	"Sign in again to send this. Your draft has not been sent.";
+const BLOCKED =
+	"Could not confirm message delivery. Retry keeps the same message identity; later messages are waiting.";
 const UNCONFIRMED =
 	"Could not confirm that the conversation started. Your queued messages have not been sent. Check Conversations before starting another.";
 
@@ -55,6 +99,7 @@ export class StartupCoordinator {
 	private reservedRevision = -1;
 	private tail: Promise<void> = Promise.resolve();
 	private flight: Promise<void> | null = null;
+	private pendingKick = false;
 	private listeners = new Set<() => void>();
 	private active = true;
 	private revoked = false;
@@ -221,17 +266,28 @@ export class StartupCoordinator {
 	}
 	private kick() {
 		if (
-			this.flight ||
 			!this.allowed() ||
 			this.record.queue.length === 0 ||
 			this.record.phase === "blocked" ||
 			this.record.phase === "unconfirmed"
 		)
 			return;
+		/* A tap that arrives while a drain is still unwinding must not be dropped:
+		 * Retry right after a refusal is the common case, and the drain that was
+		 * running has already decided its outcome. Remember the request and re-run
+		 * once the current flight settles. */
+		if (this.flight) {
+			this.pendingKick = true;
+			return;
+		}
 		this.flight = Promise.resolve()
 			.then(() => this.drain())
 			.finally(() => {
 				this.flight = null;
+				if (this.pendingKick) {
+					this.pendingKick = false;
+					this.kick();
+				}
 			});
 	}
 	private async drain() {
@@ -247,9 +303,26 @@ export class StartupCoordinator {
 			let sessionId: string;
 			try {
 				sessionId = (await deps.start(copy(selection))).session_id;
-			} catch {
-				await this.persist((record) => ({ ...record, phase: "unconfirmed" }));
-				this.publish({ error: UNCONFIRMED });
+			} catch (failure) {
+				const outcome = classifyFailure(failure);
+				if (outcome === "definitive") {
+					// The relay refused the request itself: nothing exists, so the queue
+					// stays and the selection becomes correctable again.
+					await this.persist((record) => ({ ...record, phase: "refused" }));
+					this.publish({
+						error: failureMessage(failure, REFUSED),
+					});
+					return;
+				}
+				// Unauthorized and ambiguous both stop automatic work; only the ambiguous
+				// case is a permanent HOLD, because only it could have created something.
+				await this.persist((record) => ({
+					...record,
+					phase: outcome === "unauthorized" ? "blocked" : "unconfirmed",
+				}));
+				this.publish({
+					error: outcome === "unauthorized" ? UNAUTHORIZED : UNCONFIRMED,
+				});
 				return;
 			}
 			// Late completion may save its own SID, but cannot navigate or dispatch in
@@ -272,11 +345,39 @@ export class StartupCoordinator {
 			if (!message) return;
 			try {
 				await deps.send(this.record.sessionId, copy(message));
-			} catch {
+			} catch (failure) {
+				const outcome = classifyFailure(failure);
+				if (outcome === "definitive") {
+					/* The relay answered "no" about THIS command. Replaying it would be a
+					 * lie about delivery and would stall everything behind it, so the item
+					 * leaves the queue and its bytes go back to the editor the reader owns. */
+					const restored =
+						this.record.draft.text.trim() === "" &&
+						this.record.draft.images.length === 0
+							? {
+									text: message.text,
+									images: message.images ? copy(message.images) : [],
+								}
+							: null;
+					if (
+						await this.persist((record) => ({
+							...record,
+							queue: record.queue.filter(
+								(entry) => entry.command_id !== message.command_id,
+							),
+							draft: restored ?? record.draft,
+						}))
+					) {
+						this.publish({
+							...(restored ? { draft: restored } : {}),
+							error: failureMessage(failure, SEND_REFUSED),
+						});
+					}
+					continue;
+				}
 				await this.persist((record) => ({ ...record, phase: "blocked" }));
 				this.publish({
-					error:
-						"Could not confirm message delivery. Retry keeps the same message identity; later messages are waiting.",
+					error: outcome === "unauthorized" ? UNAUTHORIZED : BLOCKED,
 				});
 				return;
 			}
@@ -306,7 +407,17 @@ export class StartupCoordinator {
 		) {
 			this.publish({ error: null });
 			this.kick();
-		} else if (this.record.phase === "draft") this.kick();
+		} else if (
+			this.record.phase === "draft" ||
+			this.record.phase === "refused"
+		) {
+			/* A refused create is retryable: nothing was made, so this is a NEW attempt
+			 * with the selection as it stands, not a replay of an unknown outcome. */
+			if (this.record.phase === "refused")
+				await this.persist((record) => ({ ...record, phase: "draft" }));
+			this.publish({ error: null });
+			this.kick();
+		}
 	}
 	pause() {
 		this.active = false;

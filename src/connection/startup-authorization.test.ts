@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { StartupAuthorizationLifecycle } from "./startup-authorization";
+import { scopedStore } from "@/features/session/scoped-storage";
+import {
+	getStartupAuthorization,
+	StartupAuthorizationLifecycle,
+} from "./startup-authorization";
 import { memorySecureStore, SecureStorage } from "./storage";
 
 /**
@@ -240,4 +244,50 @@ describe("startup authorization privacy boundary", () => {
 			}
 		},
 	);
+});
+
+/**
+ * R1-5: a `401` revokes the generation, so nothing written under it can be read
+ * after the same route authenticates again. This pins the CONTRACT as it now reads
+ * — quarantine, no automatic recovery — rather than a recovery path StageB has
+ * not been approved for.
+ */
+describe("401 quarantine is not silently recovered", () => {
+	it("mints a new generation and exposes nothing of the old one", async () => {
+		const { lifecycle } = fixture();
+		const life = lifecycle();
+		const bytes = new Map<string, string>();
+		const store = {
+			get: async (key: string) => bytes.get(key) ?? null,
+			set: async (key: string, value: string) => {
+				bytes.set(key, value);
+			},
+			remove: async (key: string) => {
+				bytes.delete(key);
+			},
+			keys: async () => [...bytes.keys()],
+		};
+
+		// `suspend()` is how a real caller abandons the previous attempt and takes a
+		// fresh revision; admission is refused for any revision that is not current.
+		const first = await life.admit("https://relay.example", life.suspend());
+		await scopedStore(store, first?.scope ?? null).set(
+			"lo-mobile-draft:session-a",
+			"typed before the expiry",
+		);
+		expect(bytes.size).toBe(1);
+
+		// What the provider does on a 401: revoke, keep the quarantine.
+		await life.revoke();
+		expect(getStartupAuthorization()).toBeNull();
+		expect(bytes.size).toBe(1);
+
+		const second = await life.admit("https://relay.example", life.suspend());
+		expect(second?.scope).not.toBe(first?.scope);
+		expect(
+			await scopedStore(store, second?.scope ?? null).get(
+				"lo-mobile-draft:session-a",
+			),
+		).toBeNull();
+	});
 });

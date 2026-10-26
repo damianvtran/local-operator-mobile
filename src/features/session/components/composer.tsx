@@ -851,7 +851,12 @@ export const Composer = ({
 							onPress={onStop}
 							testID={CONTROL.composerStop}
 						>
-							<View className="h-11 w-11 items-center justify-center rounded-full border border-danger-border">
+							{/* A ring inside the composer was a second box in the one place the
+							 *  composer is meant to be a single quiet surface (user feedback,
+							 *  this batch). The stop is a glyph with its press surface, at the
+							 *  same 44 pt target; the danger ink is the affordance, not a ring
+							 *  drawn around it. */}
+							<View className="h-11 w-11 items-center justify-center rounded-full">
 								<Text className="text-danger" aria-hidden>
 									■
 								</Text>

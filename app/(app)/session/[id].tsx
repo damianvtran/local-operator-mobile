@@ -898,7 +898,7 @@ export default function Session() {
 				<IconButton
 					accessibilityLabel="Search this conversation"
 					accessibilityHint="Finds messages in the transcript loaded on this device"
-					size={24}
+					size={22}
 					testID={CONTROL.sessionFind}
 					onPress={find.open}
 					icon={({ color, size }) => <Search color={color} size={size} />}

@@ -608,6 +608,33 @@ export const ConnectionProvider = ({
 				return;
 			startStream(client, admission);
 			startConfig(client);
+			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
+			 * list read (review R1-1). Gating it on a frame meant one transient 503 on
+			 * `GET /sessions` left a healthy, stream-populated route permanently unable
+			 * to start a conversation — the stream's seed frame does not admit, and
+			 * neither did a later refresh. The retry covers a storage write that failed
+			 * once; `null` means a newer attempt superseded this one and must not retry. */
+			const admitStartup = async (): Promise<void> => {
+				for (let attempt = 0; attempt < 2; attempt += 1) {
+					if (!isAdmissionActive()) return;
+					try {
+						await startupAuthorizationLifecycle.admit(
+							admission.routeKey,
+							admission.authorizationRevision,
+						);
+						return;
+					} catch {
+						if (!isAdmissionActive()) return;
+					}
+				}
+				if (isAdmissionActive())
+					connectionStore
+						.getState()
+						.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+			};
+			const isAdmissionActive = () => admission.isCurrent();
+			await admitStartup();
+			if (!admission.isCurrent()) return;
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
@@ -631,22 +658,6 @@ export const ConnectionProvider = ({
 				},
 			);
 			if (frame && admission.isCurrent()) {
-				try {
-					if (
-						!(await startupAuthorizationLifecycle.admit(
-							admission.routeKey,
-							admission.authorizationRevision,
-						))
-					)
-						return;
-				} catch {
-					if (admission.isCurrent())
-						connectionStore
-							.getState()
-							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
-					return;
-				}
-				if (!admission.isCurrent()) return;
 				listStore.getState().applyFrame({
 					sessions: frame.sessions,
 					degraded: frame.degraded,

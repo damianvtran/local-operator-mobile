@@ -39,6 +39,7 @@
  * NOT here: this module proves a locally generated generation, not a person.
  */
 
+import { reopenPrivateWrites } from "@/features/session/scoped-storage";
 import { randomState } from "./pkce";
 import type { StartupAuthorizationRecord } from "./storage";
 
@@ -192,6 +193,10 @@ export class StartupAuthorizationLifecycle {
 				await this.storage.write(record);
 			}
 			if (!this.isCurrent(revision) || record.state !== "active") return null;
+			/* Admission is the ONLY moment private writes reopen: a purge that ran at
+			 * sign-out closed them, and nothing may write for a scope that no longer
+			 * has an owner. */
+			reopenPrivateWrites();
 			this.authorization = Object.freeze({
 				scope: record.generation,
 				revision,

@@ -584,7 +584,7 @@ export default function Home({
 								accessibilityLabel="Open conversations"
 								onPress={() => setPanelOpen(true)}
 								icon={({ color, size }) => <Menu color={color} size={size} />}
-								size={24}
+								size={22}
 								testID={CONTROL.homeSidebar}
 							/>
 							<NavigationMark />

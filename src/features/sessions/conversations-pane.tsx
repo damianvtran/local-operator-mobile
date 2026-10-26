@@ -389,7 +389,7 @@ export const ConversationsPane = ({
 					accessibilityLabel="Search conversations"
 					onPress={() => setSearching((value) => !value)}
 					icon={({ color, size }) => <Search color={color} size={size} />}
-					size={24}
+					size={22}
 					testID={CONTROL.sidebarSearch}
 				/>
 				{onClose ? (
