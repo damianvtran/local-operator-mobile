@@ -1,6 +1,7 @@
 # Store listing screenshots — the intended set
 
-**Status: all three sets are rendered (2026-10-25).** The App Store 6.9-inch
+**Status: all three sets are rendered and staged on the native-polish branch
+(2026-10-26, product head `987e2fb`).** The App Store 6.9-inch
 frames — all nine — are committed in `design/store-screenshots/appstore-iphone-6.9/`,
 the App Store 13-inch iPad frames — all nine — in
 `design/store-screenshots/appstore-ipad-13/`, and Google Play's phone frames —
@@ -108,8 +109,22 @@ pre-submission build (step 1 is provisional until the capture-method item under
    every frame once — a size check is not visual evidence.
 
 The 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
-`play-phone/` ×8) and the raw captures they are composed from are committed in
-`design/store-screenshots/`. No hash manifest is committed with them, and that is
+`play-phone/` ×8, each at its store canvas: 1320 × 2868, 2064 × 2752, 1080 × 1920,
+24-bit RGB, no alpha) and the 26 raw captures they are composed from
+(`design/store-screenshots/app-captures/`, 1290 × 2796 / 2048 × 2732 / 1080 × 2340,
+RGB) are committed in `design/store-screenshots/`.
+
+**Capture provenance (this pass).** The phone and iPad captures were made in this
+repository's installed browser through a fixed-viewport harness page — the app's own
+web export in a same-origin iframe, the mock relay behind it, the repository's
+existing `iphone-6.9.html` / `ipad-13.html` / `play-phone.html` templates doing the
+composing — not by the headless-Chrome pipeline. The portrait/phone frames were
+recaptured at product head `94b3fc2` (the compact-status-row change); the tablet,
+list, home and sign-in frames were retained from `3b0e048` with a source-diff and
+pixel-compatibility argument recorded in that lane's report, not by assumption.
+`capture-frames.mjs` and its CI check remain the standard method for future
+regenerations. The README's documentation images in `docs/assets/screenshots/` are
+a SEPARATE set with their own provenance and are not listing assets. No hash manifest is committed with them, and that is
 deliberate: the PNG bytes depend on the Chrome that encoded them (the CI runner's
 differs from a developer's, and for the iPad set also in resampled pixels), so a
 committed `sha256` list would go stale on every other host while saying nothing
@@ -157,10 +172,11 @@ analysis against `main` @ `6628f26` (not re-rendered):
 
 - **Caption wording 02–09** — authored for this set, editable with one
   re-render each; approve or edit before the final render.
-- **Capture method for the submission files** — the produced files are
-  web-export renders; `apple-app-store.md` § 9.2 describes captures from CI (a
-  simulator job) or a Mac. Reconcile at the frozen-build re-shoot so the
-  submission method is a decision, not a drift.
+- **Capture method for the submission files** — the staged files are web-export
+  renders from the installed-browser harness (not the headless pipeline);
+  `apple-app-store.md` § 9.2 describes captures from CI (a simulator job) or a Mac.
+  Reconcile at the frozen-build re-shoot so the submission method is a decision,
+  not a drift. **Nothing in this pass was submitted to either store.**
 - Everything else — counts, order, the single theme, the template mapping — is
   approval-only.
 
