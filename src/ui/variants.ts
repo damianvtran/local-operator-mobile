@@ -660,7 +660,9 @@ export const emptyStateClasses =
  * boundary of required content. */
 export const dividerClasses = "h-px w-full bg-hairline";
 
-export type AvatarSize = "sm" | "md";
+/* `lg` is the Team Bridge profile card's photo: 80 pt, drawn from the 256 px
+ * variant so it stays sharp at 3x. Rows keep `sm`/`md`. */
+export type AvatarSize = "sm" | "md" | "lg";
 
 export const AVATAR_SIZES: Record<
 	AvatarSize,
@@ -668,12 +670,15 @@ export const AVATAR_SIZES: Record<
 > = {
 	sm: { box: "h-8 w-8", text: "text-meta", px: 32 },
 	md: { box: "h-11 w-11", text: "text-label", px: 44 },
+	lg: { box: "h-20 w-20", text: "text-title", px: 80 },
 };
 
 /** `radius.full` — an avatar is a circle, and `full` is the kit's token for it. */
 export const avatarClasses = (size: AvatarSize = "md"): string =>
 	cx(
-		"items-center justify-center rounded-full bg-accent-muted",
+		// `overflow-hidden` clips a photo to the circle. No border: a photo is its
+		// own edge, and the desktop dropped avatar borders for the same reason.
+		"items-center justify-center overflow-hidden rounded-full bg-accent-muted",
 		AVATAR_SIZES[size].box,
 	);
 

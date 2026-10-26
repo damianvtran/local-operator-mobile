@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import { BellOff } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 import type { Conversation } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
+import { dmSubject, type ProfileSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import {
 	CONTROL,
@@ -19,13 +19,19 @@ import {
 	teamBridgeConversationId,
 	teamBridgeOrganizationId,
 	teamBridgePersonId,
+	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { BridgeBack, BridgeGate } from "./gate";
+import {
+	PersonAvatar,
+	ProfileAvatarButton,
+	ProfileSheet,
+	useOpenTarget,
+} from "./profile-card";
 
 export function BridgeRow({
 	label,
@@ -34,6 +40,7 @@ export function BridgeRow({
 	disabled,
 	onPress,
 	testID,
+	profile,
 }: {
 	label: string;
 	detail?: string | null;
@@ -41,10 +48,90 @@ export function BridgeRow({
 	disabled?: boolean;
 	onPress: () => void;
 	testID: string;
+	/**
+	 * The person this row is about. Their photo replaces the initials, and the
+	 * photo becomes its own "view profile" control BESIDE the row's link (a
+	 * control nested in a link is one merged element to a screen reader). It
+	 * stays pressable on a dimmed row: who someone is does not depend on
+	 * whether they turned Team Bridge on.
+	 */
+	profile?: {
+		subject: ProfileSubject;
+		onOpen: (subject: ProfileSubject) => void;
+		testID: string;
+	};
 }) {
 	const unread = conversation ? model.rowUnread(conversation) : null;
 	const muted = conversation && model.showsMutedGlyph(conversation);
 	const mutedColor = useTokenColor("ink-muted");
+	if (profile)
+		return (
+			/* No vertical padding HERE: the link carries `py-3` so its whole
+			 * height is tappable, and its label column's `min-h-11` matches the
+			 * 44 pt photo, so this row is 68 pt like every Channels/Groups row
+			 * (design round 1, D2: these rows had dropped to 56). */
+			<View
+				className={`min-h-14 flex-row items-center gap-3 rounded-sm px-4 ${disabled ? "opacity-50" : ""}`}
+			>
+				<ProfileAvatarButton
+					subject={profile.subject}
+					label={label}
+					onOpen={profile.onOpen}
+					testID={profile.testID}
+				/>
+				<BridgeRowLink
+					label={label}
+					detail={detail}
+					unread={unread}
+					muted={!!muted}
+					mutedColor={mutedColor}
+					disabled={disabled}
+					onPress={onPress}
+					testID={testID}
+					className="min-w-0 flex-1 flex-row items-center gap-3 py-3"
+				/>
+			</View>
+		);
+	return (
+		<BridgeRowLink
+			label={label}
+			detail={detail}
+			unread={unread}
+			muted={!!muted}
+			mutedColor={mutedColor}
+			disabled={disabled}
+			onPress={onPress}
+			testID={testID}
+			className={`min-h-14 flex-row items-center gap-3 rounded-sm px-4 py-3 ${disabled ? "opacity-50" : ""}`}
+			leading={<PersonAvatar member={null} label={label} />}
+		/>
+	);
+}
+
+/** The row's one link: label, reason, quiet glyph and unread count. */
+function BridgeRowLink({
+	label,
+	detail,
+	unread,
+	muted,
+	mutedColor,
+	disabled,
+	onPress,
+	testID,
+	className,
+	leading,
+}: {
+	label: string;
+	detail?: string | null;
+	unread: ReturnType<typeof model.rowUnread> | null;
+	muted: boolean;
+	mutedColor: string;
+	disabled?: boolean;
+	onPress: () => void;
+	testID: string;
+	className: string;
+	leading?: React.ReactNode;
+}) {
 	return (
 		<Pressable
 			accessibilityRole="link"
@@ -60,10 +147,10 @@ export function BridgeRow({
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
-			className={`min-h-14 flex-row items-center gap-3 rounded-sm px-4 py-3 ${disabled ? "opacity-50" : ""}`}
+			className={className}
 		>
-			<Avatar initials={initialsOf(label)} />
-			<View className="min-w-0 flex-1">
+			{leading}
+			<View className="min-h-11 min-w-0 flex-1 justify-center">
 				<Text
 					className={`text-body text-ink ${unread?.count ? "font-semibold" : ""}`}
 				>
@@ -97,8 +184,9 @@ export function BridgeRow({
 function ListContent() {
 	const { actions } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
-	const router = useRouter();
+	const open = useOpenTarget();
 	const [switching, setSwitching] = useState(false);
+	const [profile, setProfile] = useState<ProfileSubject | null>(null);
 	const tenantId = state.selectedTenantId;
 	const org = tenantId ? state.orgs[tenantId] : undefined;
 	const selected = state.organizations.find((o) => o.tenantId === tenantId);
@@ -122,16 +210,6 @@ function ListContent() {
 		const dm = model.dmWithAgent(conversations, chief.person.account_id);
 		if (dm) represented.add(dm.id);
 	}
-	const open = (target: model.Target) => {
-		const params =
-			target.kind === "conversation"
-				? { tenantId: target.tenantId, conversationId: target.conversationId }
-				: { ...target, conversationId: "new" };
-		router.push({
-			pathname: "/team-bridge/[tenantId]/[conversationId]",
-			params,
-		});
-	};
 	const existing = (conversation: Conversation) =>
 		open({
 			kind: "conversation",
@@ -140,18 +218,30 @@ function ListContent() {
 		});
 	const conversationRows = (rows: Conversation[], empty: string) =>
 		rows.length ? (
-			rows.map((c) => (
-				<BridgeRow
-					key={c.id}
-					label={
-						model.conversationTitle(c, state.selfAccountId) ?? "Conversation"
-					}
-					conversation={c}
-					detail={model.isPreview(c) ? "Preview · Join to read" : null}
-					onPress={() => existing(c)}
-					testID={teamBridgeConversationId(c.id)}
-				/>
-			))
+			rows.map((c) => {
+				const subject = dmSubject(c, people, state.selfAccountId);
+				return (
+					<BridgeRow
+						key={c.id}
+						label={
+							model.conversationTitle(c, state.selfAccountId) ?? "Conversation"
+						}
+						conversation={c}
+						detail={model.isPreview(c) ? "Preview · Join to read" : null}
+						onPress={() => existing(c)}
+						testID={teamBridgeConversationId(c.id)}
+						profile={
+							subject
+								? {
+										subject,
+										onOpen: setProfile,
+										testID: teamBridgeProfileOpenId(c.id),
+									}
+								: undefined
+						}
+					/>
+				);
+			})
 		) : empty ? (
 			<Text className="px-4 py-3 text-body text-ink-muted">{empty}</Text>
 		) : null;
@@ -280,6 +370,11 @@ function ListContent() {
 									conversation={dm}
 									disabled={rowState === "unavailable" || rowState === "self"}
 									testID={teamBridgePersonId(person.account_id)}
+									profile={{
+										subject: { person, agent: false },
+										onOpen: setProfile,
+										testID: teamBridgeProfileOpenId(person.account_id),
+									}}
 									onPress={() =>
 										dm
 											? existing(dm)
@@ -317,6 +412,11 @@ function ListContent() {
 									detail={chief.paused ? "Paused" : "Chief of staff"}
 									conversation={dm}
 									testID={teamBridgeChiefId(chief.endpointId)}
+									profile={{
+										subject: { person: chief.person, agent: true },
+										onOpen: setProfile,
+										testID: teamBridgeProfileOpenId(chief.endpointId),
+									}}
 									onPress={() =>
 										dm
 											? existing(dm)
@@ -343,6 +443,13 @@ function ListContent() {
 					</>
 				)}
 			</ScrollView>
+			{tenantId && (
+				<ProfileSheet
+					subject={profile}
+					tenantId={tenantId}
+					onClose={() => setProfile(null)}
+				/>
+			)}
 			<Sheet
 				visible={switching}
 				onClose={() => setSwitching(false)}

@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 
 import { AVATAR_SIZES, type AvatarSize, avatarClasses } from "@/ui/variants";
 
@@ -8,15 +8,27 @@ import { AVATAR_SIZES, type AvatarSize, avatarClasses } from "@/ui/variants";
  * `radius.full` — a circle is what the avatar IS, and `full` is the kit's token
  * for that (tokens.json § radius.assignment).
  *
- * Initials only in v1: the app has no avatar imagery and a placeholder image
- * would be a lie about what the account provides. The initials are decorative
- * (the surrounding row names the account), so the mark itself is hidden from the
- * accessibility tree and the accessible name comes from the caller's label.
+ * A photo when the caller has one, initials otherwise. The primitive never
+ * fetches: `imageUri` is an already-resolved local URI (Team Bridge hands it
+ * the `data:` URI of bytes read with the bearer, `src/team-bridge/avatars.ts`),
+ * because a remote URL here would be fetched without auth. Initials stay
+ * painted UNDER the photo, so a slow decode shows the initials rather than an
+ * empty circle, and a decode failure (`onImageError`) leaves exactly what
+ * there was before. No placeholder image is ever drawn: a generic silhouette
+ * would be a lie about what the account provides.
+ *
+ * Both renderings are decorative (the surrounding row names the account), so
+ * the mark is hidden from the accessibility tree and the accessible name comes
+ * from the caller's label.
  */
 export type AvatarProps = {
 	/** One or two characters. Derived from the account label by the caller. */
 	initials: string;
 	size?: AvatarSize;
+	/** A local (`data:`/`file:`) URI to show over the initials. Never a remote URL. */
+	imageUri?: string | null;
+	/** The decoder refused `imageUri`; the caller drops it so initials remain. */
+	onImageError?: () => void;
 	accessibilityLabel?: string;
 	testID?: string;
 };
@@ -49,6 +61,8 @@ export const initialsOf = (label: string): string => {
 export const Avatar = ({
 	initials,
 	size = "md",
+	imageUri,
+	onImageError,
 	accessibilityLabel,
 	testID,
 }: AvatarProps) => (
@@ -67,5 +81,26 @@ export const Avatar = ({
 		>
 			{initials}
 		</Text>
+		{imageUri ? (
+			<Image
+				source={{ uri: imageUri }}
+				// Laid over the initials at the circle's own size; `avatarClasses`
+				// clips it. `resizeMode` as a PROP: React Native reads the prop
+				// first, and react-native-web deprecates the STYLE form ("Image:
+				// style.resizeMode is deprecated. Please use props.resizeMode"),
+				// warning once per page.
+				resizeMode="cover"
+				style={{
+					position: "absolute",
+					top: 0,
+					left: 0,
+					width: AVATAR_SIZES[size].px,
+					height: AVATAR_SIZES[size].px,
+				}}
+				accessibilityElementsHidden
+				importantForAccessibility="no"
+				onError={onImageError}
+			/>
+		) : null}
 	</View>
 );
