@@ -66,6 +66,10 @@ export function BridgeRow({
 	const mutedColor = useTokenColor("ink-muted");
 	if (profile)
 		return (
+			/* No vertical padding HERE: the link carries `py-3` so its whole
+			 * height is tappable, and its label column's `min-h-11` matches the
+			 * 44 pt photo, so this row is 68 pt like every Channels/Groups row
+			 * (design round 1, D2: these rows had dropped to 56). */
 			<View
 				className={`min-h-14 flex-row items-center gap-3 rounded-sm px-4 ${disabled ? "opacity-50" : ""}`}
 			>
@@ -84,7 +88,7 @@ export function BridgeRow({
 					disabled={disabled}
 					onPress={onPress}
 					testID={testID}
-					className="min-h-14 min-w-0 flex-1 flex-row items-center gap-3 py-3"
+					className="min-w-0 flex-1 flex-row items-center gap-3 py-3"
 				/>
 			</View>
 		);
@@ -146,7 +150,7 @@ function BridgeRowLink({
 			className={className}
 		>
 			{leading}
-			<View className="min-w-0 flex-1">
+			<View className="min-h-11 min-w-0 flex-1 justify-center">
 				<Text
 					className={`text-body text-ink ${unread?.count ? "font-semibold" : ""}`}
 				>

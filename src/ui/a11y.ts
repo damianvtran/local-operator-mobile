@@ -551,6 +551,7 @@ export const SURFACE = {
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
 	teamBridgeProfile: "team-bridge-profile",
+	teamBridgeProfileName: "team-bridge-profile-name",
 	teamBridgePlanConsole: "team-bridge-plan-console",
 	teamBridgeSections: "team-bridge-sections",
 	teamBridgeSendError: "team-bridge-send-error",

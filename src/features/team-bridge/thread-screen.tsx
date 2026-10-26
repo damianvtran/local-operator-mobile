@@ -20,7 +20,6 @@ import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
 import {
 	CONTROL,
-	ROLE,
 	SCREEN,
 	SURFACE,
 	teamBridgeMessageId,
@@ -35,7 +34,8 @@ import { BridgeBack, BridgeGate } from "./gate";
 import { createMessageSender } from "./message-sender";
 import {
 	PersonAvatar,
-	ProfileAvatarButton,
+	ProfileAuthorName,
+	ProfileAuthorPhoto,
 	ProfileSheet,
 } from "./profile-card";
 
@@ -299,13 +299,7 @@ function ThreadContent({
 				<View className="w-8">
 					{!item.continuation &&
 						(subject ? (
-							<ProfileAvatarButton
-								subject={subject}
-								label={sender}
-								size="sm"
-								onOpen={setProfile}
-								testID={teamBridgeProfileOpenId(item.message.id)}
-							/>
+							<ProfileAuthorPhoto subject={subject} onOpen={setProfile} />
 						) : (
 							<PersonAvatar member={null} label={sender} size="sm" />
 						))}
@@ -314,14 +308,12 @@ function ThreadContent({
 					{!item.continuation && (
 						<View className="flex-row flex-wrap items-baseline gap-x-2">
 							{subject ? (
-								<Text
-									accessibilityRole={ROLE.button}
-									accessibilityHint="Opens their profile"
-									onPress={() => setProfile(subject)}
-									className="text-body font-semibold text-ink"
-								>
-									{sender}
-								</Text>
+								<ProfileAuthorName
+									subject={subject}
+									label={sender}
+									onOpen={setProfile}
+									testID={teamBridgeProfileOpenId(item.message.id)}
+								/>
 							) : (
 								<Text className="text-body font-semibold text-ink">
 									{sender}

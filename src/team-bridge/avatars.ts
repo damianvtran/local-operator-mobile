@@ -76,6 +76,9 @@ export type AvatarFailure = "permanent" | "transient";
  * cool-down. An unclassified throw is treated as transient so a bug never
  * hides a photo for the rest of the session.
  */
+const retryAfterOf = (error: unknown): number | null =>
+	isHubError(error) ? error.retryAfterMs : null;
+
 export function avatarFailure(error: unknown): AvatarFailure {
 	if (!isHubError(error)) return "transient";
 	switch (error.kind) {
@@ -92,7 +95,14 @@ export function avatarFailure(error: unknown): AvatarFailure {
 type Entry =
 	| { state: "ready"; uri: string; bytes: number }
 	| { state: "loading"; promise: Promise<string | null> }
-	| { state: "failed"; retryAt: number };
+	| { state: "failed"; retryAt: number; permanent: boolean };
+
+/** A read waiting for a slot: run it when one frees, or settle it on `clear()`. */
+type Waiter = { run: () => void; cancel: () => void };
+
+/* `account:hash:size`, as `avatarKey` builds it; anything else has no sibling. */
+const SIZED_KEY = /^(.*):(64|256)$/;
+const SIZES: readonly AvatarPixels[] = [64, 256];
 
 export interface AvatarCacheOptions {
 	/** Most entries held, photos and remembered failures together. */
@@ -107,7 +117,9 @@ export interface AvatarCacheOptions {
 /*
  * 64 px variants are ~3 KB and 256 px ones a few tens of KB (§2), ~1.33× as
  * base64. 4 MiB of URIs holds a full organization's row photos plus a handful
- * of card photos; 200 entries bounds the map itself, failures included.
+ * of card photos; 200 entries bounds the map itself, failures included. The
+ * client refuses a body over `AVATAR_MAX_BYTES` (~1.4 MiB as a URI), so one
+ * valid photo always fits; a URI over the whole budget is refused below anyway.
  */
 const DEFAULT_MAX_ENTRIES = 200;
 const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
@@ -125,6 +137,17 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	/* Bumped by `clear()`. A read that started under an older epoch resolves
 	 * to its caller but is never stored. */
 	let epoch = 0;
+	/*
+	 * Reads refused because every slot is an outstanding read. They wait, FIFO,
+	 * and one is started each time a read settles, so an organization with more
+	 * photos than slots fills in as reads finish instead of leaving the overflow
+	 * on initials until the screen remounts. The queue holds closures, not
+	 * bytes, and only one per mounted mark.
+	 */
+	const waiters: Waiter[] = [];
+	const wakeOne = () => {
+		waiters.shift()?.run();
+	};
 
 	const remove = (key: string) => {
 		const entry = entries.get(key);
@@ -159,19 +182,101 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		);
 	};
 
+	const remember = (key: string, retryAt: number, permanent: boolean) => {
+		remove(key);
+		if (!makeRoom(1, 0)) return;
+		entries.set(key, { state: "failed", retryAt, permanent });
+	};
+
 	/**
 	 * Remember that `key` cannot be shown. Also called by the view when the
 	 * image decoder rejects bytes the sniff accepted, so a corrupt photo falls
 	 * back to initials once instead of being re-read on every mount.
+	 *
+	 * A PERMANENT failure also marks the other size of the same account and
+	 * hash: the hub's 404 ("no photo, or not yours to read") does not depend on
+	 * size, so the card's 256 px read after a row's 64 px 404 would only repeat
+	 * it. A sibling already shown or in flight is left alone. A transient
+	 * failure stays per key: one size timing out says nothing about the other.
+	 *
+	 * `retryAfterMs` is the hub's `Retry-After`, when it sent one: the honest
+	 * cool-down for a 429, in place of the fixed one.
 	 */
-	const fail = (key: string, failure: AvatarFailure): void => {
-		remove(key);
-		if (!makeRoom(1, 0)) return;
-		entries.set(key, {
-			state: "failed",
-			retryAt:
-				failure === "transient" ? now() + cooldown : Number.POSITIVE_INFINITY,
-		});
+	const fail = (
+		key: string,
+		failure: AvatarFailure,
+		retryAfterMs?: number | null,
+	): void => {
+		if (failure === "transient") {
+			remember(key, now() + (retryAfterMs ?? cooldown), false);
+			return;
+		}
+		remember(key, Number.POSITIVE_INFINITY, true);
+		const sized = SIZED_KEY.exec(key);
+		if (!sized) return;
+		for (const size of SIZES) {
+			const sibling = `${sized[1]}:${size}`;
+			if (sibling === key) continue;
+			const state = entries.get(sibling)?.state;
+			if (state === "ready" || state === "loading") continue;
+			remember(sibling, Number.POSITIVE_INFINITY, true);
+		}
+	};
+
+	const load = (
+		key: string,
+		fetchUri: () => Promise<string>,
+		classify: (error: unknown) => AvatarFailure,
+	): Promise<string | null> => {
+		const held = entries.get(key);
+		if (held?.state === "ready") {
+			touch(key, held);
+			return Promise.resolve(held.uri);
+		}
+		if (held?.state === "loading") return held.promise;
+		if (held?.state === "failed") {
+			if (now() < held.retryAt) return Promise.resolve(null);
+			remove(key);
+		}
+		if (!makeRoom(1, 0)) {
+			// Every slot is an outstanding read: wait for one to settle.
+			return new Promise((resolve) => {
+				waiters.push({
+					run: () => resolve(load(key, fetchUri, classify)),
+					cancel: () => resolve(null),
+				});
+			});
+		}
+		const started = epoch;
+		const promise = fetchUri()
+			.then(
+				(uri) => {
+					if (started !== epoch) return uri;
+					remove(key);
+					/* A URI over the WHOLE budget is refused before anything is
+					 * evicted: storing it would empty the cache and still not fit,
+					 * and not remembering it would refetch it on every mount. */
+					if (uri.length > maxBytes) {
+						fail(key, "permanent");
+						return null;
+					}
+					if (!makeRoom(1, uri.length)) return uri;
+					heldBytes += uri.length;
+					entries.set(key, { state: "ready", uri, bytes: uri.length });
+					return uri;
+				},
+				(error: unknown) => {
+					if (started !== epoch) return null;
+					remove(key);
+					fail(key, classify(error), retryAfterOf(error));
+					return null;
+				},
+			)
+			.finally(() => {
+				if (started === epoch) wakeOne();
+			});
+		entries.set(key, { state: "loading", promise });
+		return promise;
 	};
 
 	return {
@@ -186,47 +291,13 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		/**
 		 * The photo for `key`: the held one, the read already in flight, or a new
 		 * read through `fetchUri`. Resolves `null` (render initials) for a
-		 * remembered failure, a failed read, or no room to start one.
+		 * remembered failure, a failed read, or a URI too large to hold. When
+		 * every slot is an outstanding read it waits for one to settle.
 		 *
 		 * `fetchUri` rejects with a classified failure; anything that is not
 		 * `"transient"` is treated as permanent for this key.
 		 */
-		load(
-			key: string,
-			fetchUri: () => Promise<string>,
-			classify: (error: unknown) => AvatarFailure,
-		): Promise<string | null> {
-			const held = entries.get(key);
-			if (held?.state === "ready") {
-				touch(key, held);
-				return Promise.resolve(held.uri);
-			}
-			if (held?.state === "loading") return held.promise;
-			if (held?.state === "failed") {
-				if (now() < held.retryAt) return Promise.resolve(null);
-				remove(key);
-			}
-			if (!makeRoom(1, 0)) return Promise.resolve(null);
-			const started = epoch;
-			const promise = fetchUri().then(
-				(uri) => {
-					if (started !== epoch) return uri;
-					remove(key);
-					if (!makeRoom(1, uri.length)) return uri;
-					heldBytes += uri.length;
-					entries.set(key, { state: "ready", uri, bytes: uri.length });
-					return uri;
-				},
-				(error: unknown) => {
-					if (started !== epoch) return null;
-					remove(key);
-					fail(key, classify(error));
-					return null;
-				},
-			);
-			entries.set(key, { state: "loading", promise });
-			return promise;
-		},
+		load,
 
 		fail,
 
@@ -235,6 +306,8 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 			epoch += 1;
 			entries.clear();
 			heldBytes = 0;
+			// Queued reads belong to the old account: settle them, never run them.
+			for (const waiter of waiters.splice(0)) waiter.cancel();
 		},
 
 		/** For tests and diagnostics: counts only, never keys or bytes. */

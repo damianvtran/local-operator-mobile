@@ -170,6 +170,15 @@ export interface HubClientDeps {
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
+/*
+ * The largest profile photo body this client will read. The hub stores at most
+ * a 1 MiB upload and serves re-encoded 64/256 px variants of a few KB to a few
+ * tens of KB (agent-server `docs/ACCOUNT-PROFILE.md` §2), so 1 MiB is already
+ * generous; anything larger is not an avatar this hub produced and is refused
+ * as `malformed` (a permanent failure for that hash) rather than decoded.
+ */
+export const AVATAR_MAX_BYTES = 1024 * 1024;
+
 type Query = Record<string, string | number | undefined>;
 
 function queryString(query: Query | undefined): string {
@@ -586,31 +595,89 @@ export function createHubClient(deps: HubClientDeps) {
 			size: 64 | 256,
 			signal?: AbortSignal,
 		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
-			const response = await authorized(
-				"GET",
-				`/accounts/${encodeURIComponent(accountId)}/avatar`,
-				{
-					query: { v: hash, size },
-					raw: { root: "/v1", accept: "image/png, image/jpeg" },
-					signal,
-				},
-			);
-			let bytes: Uint8Array;
-			try {
-				bytes = new Uint8Array(await response.arrayBuffer());
-			} catch {
-				throw new HubError({
+			/*
+			 * ONE deadline over the headers AND the body. `once()` disarms its
+			 * timer when the headers arrive, which is right for a small JSON
+			 * body but would let a body that stalls mid-stream hold the photo's
+			 * cache slot forever. Aborting this controller cancels the fetch and
+			 * its body stream; the caller's own abort is forwarded into it.
+			 */
+			const deadline = new AbortController();
+			let timedOut = false;
+			const timer = setTimeout(() => {
+				timedOut = true;
+				deadline.abort();
+			}, timeoutMs);
+			const forward = () => deadline.abort();
+			if (signal?.aborted) deadline.abort();
+			else signal?.addEventListener("abort", forward, { once: true });
+			const unreachable = (status: number | null) =>
+				new HubError({
 					kind: "unreachable",
-					message: "The profile photo could not be downloaded.",
-					status: response.status,
+					message: timedOut
+						? "The profile photo took too long to download."
+						: "The profile photo could not be downloaded.",
+					status,
 				});
+			const tooLarge = (status: number) =>
+				new HubError({
+					kind: "malformed",
+					message:
+						"Radient returned a profile photo larger than this app reads.",
+					status,
+				});
+			let bytes: Uint8Array;
+			let status: number;
+			try {
+				const response = await authorized(
+					"GET",
+					`/accounts/${encodeURIComponent(accountId)}/avatar`,
+					{
+						query: { v: hash, size },
+						raw: { root: "/v1", accept: "image/png, image/jpeg" },
+						signal: deadline.signal,
+					},
+				);
+				status = response.status;
+				const declared = Number(response.headers.get("content-length"));
+				if (Number.isFinite(declared) && declared > AVATAR_MAX_BYTES) {
+					void response.body?.cancel().catch(() => undefined);
+					throw tooLarge(status);
+				}
+				/* The abort is raced explicitly as well: not every runtime's
+				 * `arrayBuffer()` rejects when its request's signal aborts. */
+				const body = await Promise.race([
+					response.arrayBuffer(),
+					new Promise<never>((_, reject) => {
+						if (deadline.signal.aborted) reject(unreachable(status));
+						deadline.signal.addEventListener(
+							"abort",
+							() => reject(unreachable(status)),
+							{ once: true },
+						);
+					}),
+				]);
+				// Content-Length can be absent or wrong: check what was read.
+				if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
+				bytes = new Uint8Array(body);
+			} catch (error) {
+				/* The caller's own abort propagates as itself (an unmounted view).
+				 * The deadline turns a hung read into a retryable state; a refusal
+				 * the hub classified keeps its class. */
+				if (signal?.aborted && !timedOut) throw error;
+				if (timedOut) throw unreachable(null);
+				if (isHubError(error)) throw error;
+				throw unreachable(null);
+			} finally {
+				clearTimeout(timer);
+				signal?.removeEventListener("abort", forward);
 			}
 			const mime = sniffImageMime(bytes);
 			if (!mime) {
 				throw new HubError({
 					kind: "malformed",
 					message: "Radient returned a profile photo this app could not read.",
-					status: response.status,
+					status,
 				});
 			}
 			return { mime, bytes };

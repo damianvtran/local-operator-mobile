@@ -47,6 +47,7 @@ describe("profile card", () => {
 			kind: "human",
 			badge: "Person",
 			owner: null,
+			detailsLabel: null,
 			title: "Founder",
 			description: "Runs the org.",
 			localTime: "10:05 AM",
@@ -60,6 +61,7 @@ describe("profile card", () => {
 		expect(card.kind).toBe("agent");
 		expect(card.badge).toBe("Agent");
 		expect(card.owner).toBe("Ben’s chief of staff");
+		expect(card.detailsLabel).toBe("About Ben");
 	});
 
 	it("an agent's initials come from its own name, never the 'Name (Owner)' label", () => {

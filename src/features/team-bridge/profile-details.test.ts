@@ -60,6 +60,53 @@ describe("profile details on the web target", () => {
 		expect(html).toContain("Ada’s chief of staff");
 	});
 
+	it("D1: the full, long name is the body's heading, not left to the one-line title", () => {
+		if (!row) throw new Error("row");
+		const long = {
+			...row,
+			display_label: "Maximiliana Konstantinopoulou-Whitfield-Abernathy",
+		};
+		const card = profileCard({ person: long, agent: false }, NOW);
+		const html = renderToStaticMarkup(h(ProfileDetails, { card, photo: null }));
+		expect(html).toContain("Maximiliana Konstantinopoulou-Whitfield-Abernathy");
+		expect(html).toContain('data-testid="team-bridge-profile-name"');
+		// Name, then the job title, then the badge: the desktop's order.
+		const at = (text: string) => html.indexOf(text);
+		expect(at("Maximiliana")).toBeLessThan(at("Staff engineer"));
+		expect(at("Staff engineer")).toBeLessThan(at(">Person<"));
+	});
+
+	it("D4: the local time line carries the clock glyph, hidden from assistive tech", () => {
+		if (!row) throw new Error("row");
+		const card = profileCard({ person: row, agent: false }, NOW, "en-GB");
+		const html = renderToStaticMarkup(
+			h(ProfileDetails, {
+				card,
+				photo: null,
+				clock: h("span", { "data-glyph": "clock" }),
+			}),
+		);
+		expect(html).toContain('data-glyph="clock"');
+		expect(html.indexOf('data-glyph="clock"')).toBeLessThan(
+			html.indexOf("Local time"),
+		);
+	});
+
+	it("D5: an agent card groups the owner's details under the owner", () => {
+		if (!row) throw new Error("row");
+		const agentRow = {
+			...row,
+			agent: { endpoint_id: "bep_ada", name: "Nova", state: "active" },
+		};
+		const card = profileCard({ person: agentRow, agent: true }, NOW);
+		const html = renderToStaticMarkup(h(ProfileDetails, { card, photo: null }));
+		expect(html.indexOf("About Ada")).toBeGreaterThan(-1);
+		expect(html.indexOf("About Ada")).toBeLessThan(
+			html.indexOf("Staff engineer"),
+		);
+		expect(html.indexOf(">Agent<")).toBeLessThan(html.indexOf("About Ada"));
+	});
+
 	it("an invalid timezone shows no clock line at all", () => {
 		if (!row) throw new Error("row");
 		const broken = {

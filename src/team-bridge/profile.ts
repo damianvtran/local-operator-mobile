@@ -37,6 +37,13 @@ export type ProfileCard = {
 	badge: string;
 	/** For an agent, whose agent it is. `null` for a person. */
 	owner: string | null;
+	/**
+	 * The heading over the title/description/local-time group on an AGENT card,
+	 * where those details are the OWNER's (§7: an agent shows its owner's
+	 * profile). Without it the owner's job title reads as the agent's. `null`
+	 * for a person, whose details are their own.
+	 */
+	detailsLabel: string | null;
 	title: string | null;
 	description: string | null;
 	/** The person's wall-clock time, or `null` when no usable zone is known. */
@@ -110,6 +117,7 @@ export function profileCard(
 		kind: agentName ? "agent" : "human",
 		badge: agentName ? "Agent" : "Person",
 		owner: agentName ? `${personName}’s chief of staff` : null,
+		detailsLabel: agentName ? `About ${personName}` : null,
 		title: present(profile?.title),
 		description: present(profile?.description),
 		localTime: localTime(profile?.timezone, now, locale),

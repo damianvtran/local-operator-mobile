@@ -6,6 +6,9 @@
  * can reach this server: its opted-in web client creates a synthetic token.
  *
  * Run: node tools/mock-team-bridge.ts <export-dir> <port>
+ * Strict bearer: MOCK_TEAM_BRIDGE_STRICT=1 refuses (401) any avatar read whose
+ * bearer is not the fixture token, and `case=revoked` refuses every avatar
+ * read, so the client's 401 → refresh → initials path is reproducible.
  * Open /__phone?case=populated&theme=light (390x844 iframe viewport), then use
  * browser tool for interactions/screenshots. A fixture is NOT hub integration
  * or native-push evidence; README records those limits explicitly.
@@ -29,12 +32,14 @@ import {
 	status,
 	TENANT,
 } from "../src/team-bridge/__tests__/fixtures.ts";
+import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
 	/^\/mock-hub\/([a-z_-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
 const ADA_HASH = "0123456789abcdef";
+const LONG = "acct_long_0005";
 /* Ben's row advertises a photo the hub then 404s: the "photo removed between
  * the directory read and the image read" case, which must render initials. */
 const BEN_HASH = "fedcba9876543210";
@@ -134,6 +139,21 @@ const people = [
 		avatar_url: `/v1/accounts/${BEN}/avatar?v=${BEN_HASH}`,
 	}),
 	person(CY, "Cy", { bridge_enabled: false, bridge_state: "none" }),
+	/* Long values at the hub's own bounds (64-rune name, 80-rune title), so
+	 * the card's wrapping can be judged at phone widths (design round 1, D1). */
+	person(LONG, "Maximiliana Konstantinopoulou-Whitfield-Abernathy", {
+		agent: {
+			endpoint_id: "bep_long",
+			name: "Wilhelmina the Extraordinarily Thorough",
+			state: "active",
+		},
+		profile: {
+			title: "Principal Programme Manager, Cross-Organisational Partnerships",
+			description:
+				"Coordinates partner launches across three regions and keeps the shared roadmap honest. See https://example.com/a-very-long-unbroken-reference-path-for-wrapping",
+			timezone: "Asia/Tokyo",
+		},
+	}),
 ];
 const today = new Date();
 today.setHours(9, 0, 0, 0);
@@ -190,7 +210,7 @@ const server = createServer(async (req, res) => {
 			const qaCase = url.searchParams.get("case") ?? "populated";
 			const theme = url.searchParams.get("theme") ?? "light";
 			const requestedWidth = url.searchParams.get("width") ?? "390";
-			const phoneWidth = ["320", "390", "430"].includes(requestedWidth)
+			const phoneWidth = ["320", "360", "390", "430"].includes(requestedWidth)
 				? requestedWidth
 				: "390";
 			const route =
@@ -222,7 +242,12 @@ setInterval(()=>{try{
 				method: req.method ?? "GET",
 				path: `${url.pathname}${url.search}`,
 			});
-			const authorized = req.headers.authorization?.startsWith("Bearer ");
+			const bearer = req.headers.authorization ?? "";
+			const authorized =
+				avatar[1] !== "revoked" &&
+				(process.env.MOCK_TEAM_BRIDGE_STRICT === "1"
+					? bearer === `Bearer ${TEAM_BRIDGE_FIXTURE_TOKEN}`
+					: bearer.startsWith("Bearer "));
 			if (!authorized) {
 				send(401, { error: "invalid or expired token" });
 				return;

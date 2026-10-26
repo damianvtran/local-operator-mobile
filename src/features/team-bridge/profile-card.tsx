@@ -12,9 +12,9 @@
  * scrim) and its own modal accessibility scope.
  */
 import { useRouter } from "expo-router";
-import { MessageSquare } from "lucide-react-native";
+import { Clock, MessageSquare } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
 import {
 	type AvatarPixels,
@@ -32,6 +32,7 @@ import {
 } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
@@ -180,6 +181,68 @@ export function ProfileAvatarButton({
 }
 
 /**
+ * A thread author: the photo and the name open the same card, so they are ONE
+ * accessible control (design round 1, D3). The name is the focus stop,
+ * labelled with the name, and its hit box is padded to 44 pt with an equal
+ * negative margin so the header keeps its line height. The photo stays
+ * tappable for touch, but is hidden from assistive tech and the tab order so
+ * it is not a second stop doing the same thing.
+ */
+export function ProfileAuthorName({
+	subject,
+	label,
+	onOpen,
+	testID,
+}: {
+	subject: ProfileSubject;
+	label: string;
+	onOpen: (subject: ProfileSubject) => void;
+	testID: string;
+}) {
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={label}
+			accessibilityHint="Opens their profile"
+			onPress={() => onOpen(subject)}
+			testID={testID}
+			className="-my-2.5 py-2.5"
+		>
+			<Text className="text-body font-semibold text-ink">{label}</Text>
+		</Pressable>
+	);
+}
+
+/** The author's photo: a touch target for the card, invisible to assistive tech. */
+export function ProfileAuthorPhoto({
+	subject,
+	onOpen,
+}: {
+	subject: ProfileSubject;
+	onOpen: (subject: ProfileSubject) => void;
+}) {
+	return (
+		<Pressable
+			accessible={false}
+			// Native reads `focusable`; react-native-web ignores it and reads
+			// `tabIndex`, so both are set or the web keeps a second tab stop.
+			focusable={false}
+			tabIndex={-1}
+			accessibilityElementsHidden
+			importantForAccessibility="no-hide-descendants"
+			hitSlop={6}
+			onPress={() => onOpen(subject)}
+		>
+			<PersonAvatar
+				member={subject.person}
+				label={subjectMarkLabel(subject)}
+				size="sm"
+			/>
+		</Pressable>
+	);
+}
+
+/**
  * The card. `subject` null is closed. `currentConversationId` lets the thread
  * screen close the sheet instead of pushing the conversation it already shows.
  */
@@ -199,6 +262,7 @@ export function ProfileSheet({
 	const conversations = useTeamBridgeState(
 		(s) => s.orgs[tenantId]?.conversations,
 	);
+	const mutedInk = useTokenColor("ink-muted");
 	const [now, setNow] = useState(() => new Date());
 	useEffect(() => {
 		if (!subject) return;
@@ -220,7 +284,10 @@ export function ProfileSheet({
 		<Sheet
 			visible={!!subject}
 			onClose={onClose}
-			title={card?.name ?? "Profile"}
+			/* "Profile", not the name: the title row is one line and truncates,
+			 * and a long name or "Agent (Owner)" pair was cut there (design D1).
+			 * The full name is the body's first heading and wraps. */
+			title="Profile"
 			testID={SURFACE.teamBridgeProfile}
 			footer={
 				target ? (
@@ -248,6 +315,7 @@ export function ProfileSheet({
 			{subject && card && (
 				<ProfileDetails
 					card={card}
+					clock={<Clock size={14} color={mutedInk} />}
 					photo={
 						<PersonAvatar
 							member={subject.person}

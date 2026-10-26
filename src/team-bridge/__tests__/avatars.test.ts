@@ -6,7 +6,11 @@ import {
 	avatarVersion,
 	createAvatarCache,
 } from "@/team-bridge/avatars";
-import { createHubClient, HubError } from "@/team-bridge/client";
+import {
+	AVATAR_MAX_BYTES,
+	createHubClient,
+	HubError,
+} from "@/team-bridge/client";
 import { directorySchema } from "@/team-bridge/contract";
 
 import { ADA, BEN, person } from "./fixtures";
@@ -165,7 +169,7 @@ describe("avatar cache", () => {
 		expect(cache.stats().entries).toBe(2);
 	});
 
-	it("evicts by bytes, and a photo bigger than the whole budget is shown but not held", async () => {
+	it("evicts by bytes; a photo bigger than the whole budget is refused (R1-1)", async () => {
 		const cache = createAvatarCache({ maxBytes: 10 });
 		await cache.load("a", async () => "123456", permanent);
 		await cache.load("b", async () => "abcdef", permanent);
@@ -174,7 +178,7 @@ describe("avatar cache", () => {
 		expect(cache.stats().bytes).toBe(6);
 		expect(
 			await cache.load("huge", async () => "x".repeat(11), permanent),
-		).toBe("x".repeat(11));
+		).toBeNull();
 		expect(cache.peek("huge")).toBeNull();
 		expect(cache.stats().bytes).toBeLessThanOrEqual(10);
 	});
@@ -233,6 +237,98 @@ describe("avatar cache", () => {
 		cache.fail(key, "permanent");
 		expect(await cache.load(key, fetchUri, avatarFailure)).toBeNull();
 		expect(fetchUri).toHaveBeenCalledTimes(1);
+	});
+
+	it("R1-1: a photo larger than the whole budget evicts nothing and is not refetched", async () => {
+		const cache = createAvatarCache({ maxBytes: 100 });
+		for (const key of ["a", "b", "c"])
+			await cache.load(key, async () => "x".repeat(30), permanent);
+		const huge = vi.fn(async () => "y".repeat(101));
+		expect(await cache.load("huge", huge, permanent)).toBeNull();
+		expect(cache.stats()).toEqual({ entries: 4, bytes: 90 });
+		expect(cache.peek("a")).toBe("x".repeat(30));
+		expect(await cache.load("huge", huge, permanent)).toBeNull();
+		expect(huge).toHaveBeenCalledTimes(1);
+	});
+
+	it("R1-3: a read refused for lack of slots proceeds once a slot frees", async () => {
+		const cache = createAvatarCache({ maxEntries: 1 });
+		let release: (uri: string) => void = () => undefined;
+		const first = cache.load(
+			"a",
+			() => new Promise<string>((done) => (release = done)),
+			permanent,
+		);
+		const second = cache.load("b", async () => "data:b", permanent);
+		release("data:a");
+		expect(await first).toBe("data:a");
+		expect(await second).toBe("data:b");
+	});
+
+	it("R1-3: clear() settles queued reads with initials and never runs them", async () => {
+		const cache = createAvatarCache({ maxEntries: 1 });
+		void cache.load("a", () => new Promise<string>(() => undefined), permanent);
+		const queued = vi.fn(async () => "data:b");
+		const second = cache.load("b", queued, permanent);
+		cache.clear();
+		expect(await second).toBeNull();
+		expect(queued).not.toHaveBeenCalled();
+	});
+
+	it("R1-4: a 429 waits the server's Retry-After, not the fixed cool-down", async () => {
+		let clock = 0;
+		const cache = createAvatarCache({
+			transientCooldownMs: 60_000,
+			now: () => clock,
+		});
+		const fetchUri = vi.fn(async () => {
+			throw new HubError({
+				kind: "rate_limited",
+				message: "x",
+				status: 429,
+				retryAfterMs: 5000,
+			});
+		});
+		const key = avatarKey(ADA, HASH, 64);
+		await cache.load(key, fetchUri, avatarFailure);
+		clock = 4999;
+		await cache.load(key, fetchUri, avatarFailure);
+		expect(fetchUri).toHaveBeenCalledTimes(1);
+		clock = 5000;
+		await cache.load(key, fetchUri, avatarFailure);
+		expect(fetchUri).toHaveBeenCalledTimes(2);
+	});
+
+	it("Q1-1: a permanent failure at one size marks the other size for that hash", async () => {
+		const cache = createAvatarCache();
+		const missing = vi.fn(async () => {
+			throw new HubError({ kind: "not_found", message: "x", status: 404 });
+		});
+		await cache.load(avatarKey(BEN, HASH, 64), missing, avatarFailure);
+		expect(
+			await cache.load(avatarKey(BEN, HASH, 256), missing, avatarFailure),
+		).toBeNull();
+		expect(missing).toHaveBeenCalledTimes(1);
+		// A NEW hash is a new photo and is read.
+		await cache.load(avatarKey(BEN, NEW_HASH, 256), missing, avatarFailure);
+		expect(missing).toHaveBeenCalledTimes(2);
+	});
+
+	it("Q1-1: a transient failure, or a sibling already shown, is left alone", async () => {
+		const cache = createAvatarCache();
+		await cache.load(
+			avatarKey(ADA, HASH, 64),
+			async () => "data:64",
+			permanent,
+		);
+		cache.fail(avatarKey(ADA, HASH, 256), "permanent");
+		expect(cache.peek(avatarKey(ADA, HASH, 64))).toBe("data:64");
+		const flaky = vi.fn(async () => {
+			throw new HubError({ kind: "unreachable", message: "x" });
+		});
+		await cache.load(avatarKey(BEN, HASH, 64), flaky, avatarFailure);
+		await cache.load(avatarKey(BEN, HASH, 256), flaky, avatarFailure);
+		expect(flaky).toHaveBeenCalledTimes(2);
 	});
 
 	it("classifies failures: 404/refusal/malformed permanent, network/server transient", () => {
@@ -299,6 +395,47 @@ describe("hub client avatarBytes", () => {
 		});
 		await expect(client.avatarBytes(ADA, HASH, 256)).rejects.toMatchObject({
 			kind: "malformed",
+		});
+	});
+
+	it("R1-1: a body over the cap is malformed, by Content-Length or by length read", async () => {
+		const big = new Uint8Array(AVATAR_MAX_BYTES + 1);
+		big.set(PNG);
+		const answers = [
+			() =>
+				new Response(PNG, {
+					status: 200,
+					headers: { "content-length": String(AVATAR_MAX_BYTES + 1) },
+				}),
+			() => new Response(big, { status: 200 }),
+		];
+		const client = createHubClient({
+			accessToken: async () => "token-a",
+			fetchImpl: (async () =>
+				(answers.shift() as () => Response)()) as unknown as typeof fetch,
+		});
+		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
+			kind: "malformed",
+		});
+		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
+			kind: "malformed",
+		});
+	});
+
+	it("R1-2: a body that stalls after the headers times out instead of holding a slot", async () => {
+		const client = createHubClient({
+			accessToken: async () => "token-a",
+			timeoutMs: 50,
+			fetchImpl: (async () =>
+				new Response(
+					new ReadableStream({
+						start: () => undefined,
+					}),
+					{ status: 200 },
+				)) as unknown as typeof fetch,
+		});
+		await expect(client.avatarBytes(ADA, HASH, 64)).rejects.toMatchObject({
+			kind: "unreachable",
 		});
 	});
 

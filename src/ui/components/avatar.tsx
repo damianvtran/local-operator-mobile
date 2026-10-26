@@ -85,15 +85,17 @@ export const Avatar = ({
 			<Image
 				source={{ uri: imageUri }}
 				// Laid over the initials at the circle's own size; `avatarClasses`
-				// clips it. `resizeMode` in the style: the prop form is deprecated in
-				// RN 0.86 and warns per render (`transcript-image.tsx`, same reason).
+				// clips it. `resizeMode` as a PROP: React Native reads the prop
+				// first, and react-native-web deprecates the STYLE form ("Image:
+				// style.resizeMode is deprecated. Please use props.resizeMode"),
+				// warning once per page.
+				resizeMode="cover"
 				style={{
 					position: "absolute",
 					top: 0,
 					left: 0,
 					width: AVATAR_SIZES[size].px,
 					height: AVATAR_SIZES[size].px,
-					resizeMode: "cover",
 				}}
 				accessibilityElementsHidden
 				importantForAccessibility="no"

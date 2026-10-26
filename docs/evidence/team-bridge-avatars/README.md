@@ -31,3 +31,28 @@ Hub request counts on a fresh origin (`/__stats`, no bearer recorded): one
 64 px read for each person with an `avatar_url`, one 256 px read for each
 card opened, and **no repeat of Ben's 404** across list → card → thread →
 card.
+
+## Round 1 remediation
+
+Same rig (web export, loopback mock in `MOCK_TEAM_BRIDGE_STRICT=1`, 360 and
+430 pt iframes). A long-name person, "Maximiliana
+Konstantinopoulou-Whitfield-Abernathy", and her long-named agent "Wilhelmina
+the Extraordinarily Thorough" are now committed fixture rows. Geometry was read
+from the live DOM.
+
+- **D1, the full name wraps beside the photo.** The heading is 198×78 at 360
+  (3 lines) and 268×78 at 430. The agent's is 198×156 at 360 and 268×104 at
+  430. In every case `white-space: pre-wrap` and `scrollWidth == clientWidth`,
+  so nothing clips. The order is name, title, badge; the owner's details sit
+  under "About {owner}" on agent cards. The sheet title reads "Profile".
+  Frames: `r1-remediation-card-long-*`, `r1-remediation-card-longagent-*`,
+  light and dark at 360 and 430.
+- **D2, rows are back to 68 pt.** Every one-line row at 360 measures 68:
+  Channels, Groups, People (Sam, Ada, Ben, Cy) and Chiefs of staff. Before the
+  fix Ada and Ben were 56 and the rest 64.8. Rows grow only when a long label
+  wraps. Frames: `r1-remediation-list-{light,dark}-360`.
+- **D3, one 44 pt focus stop per message header.** The author name is the
+  control: Ada 28.9×44, Sam 32×44, "Aida (Ben)" 76.3×44. Each header has
+  exactly one focusable element (it was two: the photo had `tabindex=0`). The
+  photo still opens the card on touch. Frames:
+  `r1-remediation-thread-{light,dark}-360`.
