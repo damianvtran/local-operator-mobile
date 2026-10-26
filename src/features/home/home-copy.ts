@@ -8,6 +8,8 @@
  * at most one entry creates an agent). The tips are the desktop pool's entries
  * whose move is true on a phone, shortened to the phone row's width.
  */
+import type { StartupPhase } from "@/features/new-session/startup-coordinator";
+
 export const GREETING = "What can I help you with today?";
 
 /** The splash's replacement while the first send is in flight — one line, so
@@ -120,3 +122,23 @@ export const HOME_TIP_ROTATE_MS = 12_000;
 
 export const tipAt = (index: number): string =>
 	HOME_TIPS[index % HOME_TIPS.length] ?? HOME_TIPS[0];
+
+/**
+ * What Home says about work that has not left the device — state only, never the
+ * count: the composer's own chip already says "1 queued", and saying it twice on
+ * one screen was UX U2. `null` means this row has nothing to add.
+ *
+ * The important case is `unconfirmed`: the create may or may not have happened,
+ * no session id exists, and no automatic retry is possible. "Waiting to start…"
+ * was a lie there — nothing was waiting and nothing would start — so the copy
+ * names the state instead and the row keeps the queued sheet one tap away.
+ */
+export function startupQueueState(
+	phase: StartupPhase,
+	sessionId: string | null,
+): string | null {
+	if (sessionId !== null) return "Sending queued messages…";
+	if (phase === "starting") return STARTING;
+	if (phase === "unconfirmed") return "Start not confirmed";
+	return "Not started";
+}

@@ -14,6 +14,7 @@ import {
 	CONNECT_DISABLED_REASON,
 	FOLDERS_READ_FAILED,
 	REFUSED_START_FALLBACK,
+	startupQueueState,
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
@@ -459,26 +460,31 @@ export default function Home({
 					starting={starting}
 				/>
 			)}
-			{startup.snapshot.queue.length > 0 ? (
+			{/* State only, and only while there is something to say: the count is the
+			 *  composer chip's (UX U2), an unconfirmed start is named rather than
+			 *  described as "waiting" (UX U1), and the queued sheet stays one tap
+			 *  away whenever it holds anything. */}
+			{startup.snapshot.queue.length > 0 ||
+			startup.snapshot.phase === "unconfirmed" ? (
 				<View className="px-4 py-2" testID={SURFACE.startupPending}>
 					<Text
 						accessibilityLiveRegion="polite"
 						className="text-body-sm text-ink-muted"
 					>
-						{starting
-							? "Starting…"
-							: startup.snapshot.sessionId
-								? "Sending queued messages…"
-								: "Waiting to start…"}{" "}
-						{startup.snapshot.queue.length} queued
+						{startupQueueState(
+							startup.snapshot.phase,
+							startup.snapshot.sessionId,
+						)}
 					</Text>
-					<Button
-						label="View queued messages"
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.startupViewQueue}
-						onPress={() => setQueueOpen(true)}
-					/>
+					{startup.snapshot.queue.length > 0 ? (
+						<Button
+							label="View queued messages"
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.startupViewQueue}
+							onPress={() => setQueueOpen(true)}
+						/>
+					) : null}
 				</View>
 			) : null}
 
@@ -768,6 +774,31 @@ export default function Home({
 							) : null}
 						</View>
 					))}
+					{/* UX U1: a queue that cannot drain must not be a dead end. These are
+					    the reader's own bytes — they can go back to the editor, or go
+					    away on an explicit word, and neither happens behind their back. */}
+					<View className="gap-2">
+						<Button
+							label="Move queued messages to draft"
+							variant="quiet"
+							testID={CONTROL.startupQueueRestore}
+							onPress={() => {
+								void startup.restoreQueueToDraft().then((done) => {
+									if (done) setQueueOpen(false);
+								});
+							}}
+						/>
+						<Button
+							label="Discard queued messages"
+							variant="quiet"
+							testID={CONTROL.startupQueueDiscard}
+							onPress={() => {
+								void startup.discardQueue().then((done) => {
+									if (done) setQueueOpen(false);
+								});
+							}}
+						/>
+					</View>
 				</View>
 			</Sheet>
 

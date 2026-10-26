@@ -240,6 +240,8 @@ export const CONTROL = {
 	startupOptionsApply: "startup-options-apply",
 	startupViewQueue: "startup-view-queue",
 	startupQueueSheet: "startup-queue-sheet",
+	startupQueueRestore: "startup-queue-restore",
+	startupQueueDiscard: "startup-queue-discard",
 	startupOpenConversation: "startup-open-conversation",
 	startupModelOption: "startup-model-option",
 	pastBack: "past-back",

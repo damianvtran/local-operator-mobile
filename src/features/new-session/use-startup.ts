@@ -186,6 +186,11 @@ export function useStartup(
 		retry: () => {
 			if (coordinator) void coordinator.retry();
 		},
+		/* UX U1 recovery: a queue that cannot drain is the reader's text, so it goes
+		 * back to the editor (or is discarded) on their word, never silently. */
+		restoreQueueToDraft: () =>
+			coordinator?.restoreQueueToDraft() ?? Promise.resolve(false),
+		discardQueue: () => coordinator?.discardQueue() ?? Promise.resolve(false),
 		newConversation: async () => {
 			if (!authorization || !client) return;
 			const next = await openStartup(authorization, client, true);

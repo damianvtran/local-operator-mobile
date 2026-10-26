@@ -10,6 +10,7 @@ import {
 	HOME_TIPS,
 	STARTING,
 	SUGGESTION_CHAR_BUDGET,
+	startupQueueState,
 	suggestionCountFor,
 	suggestionSlotFor,
 	TIP_CHAR_BUDGET,
@@ -136,5 +137,36 @@ describe("the draft gate", () => {
 		expect(
 			suggestionSlotFor({ connected: false, draft: "typed", width: 390 }).kind,
 		).toBe("connect");
+	});
+});
+
+describe("the queue row says the state once", () => {
+	it("names an unconfirmed start instead of claiming something is waiting", () => {
+		expect(startupQueueState("unconfirmed", null)).toBe("Start not confirmed");
+		expect(startupQueueState("unconfirmed", null)).not.toContain("Waiting");
+	});
+
+	it("maps the states that can still drain, or cannot start at all", () => {
+		expect(startupQueueState("starting", null)).toBe(STARTING);
+		expect(startupQueueState("ready", "sid")).toBe("Sending queued messages…");
+		expect(startupQueueState("blocked", "sid")).toBe(
+			"Sending queued messages…",
+		);
+		expect(startupQueueState("refused", null)).toBe("Not started");
+	});
+
+	it("never repeats the count — the composer's chip owns it (UX U2)", () => {
+		for (const phase of [
+			"draft",
+			"starting",
+			"ready",
+			"refused",
+			"unconfirmed",
+			"blocked",
+		] as const)
+			for (const sid of [null, "sid"])
+				expect(startupQueueState(phase, sid) ?? "").not.toMatch(
+					/queued \d|\d queued/,
+				);
 	});
 });

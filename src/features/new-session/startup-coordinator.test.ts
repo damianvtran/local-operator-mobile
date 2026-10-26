@@ -399,3 +399,66 @@ describe("a sign-out refusal is not an ambiguous delivery", () => {
 		expect(session.coordinator.snapshot().error).toContain("not sent");
 	});
 });
+
+/* UX U1, the trapped state: an ambiguous create leaves no session id, `retry()`
+ * refuses it by design, and the old Home let Send keep appending to a queue that
+ * nothing could drain. These three cases are the whole escape route. */
+describe("a queue that cannot drain is not a dead end", () => {
+	const unconfirmed = async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		x.coordinator.edit("first", []);
+		await x.coordinator.enqueue();
+		x.setStart(async () => {
+			throw new Error("network unreachable");
+		});
+		await x.coordinator.configure({ cwd: "/home/fixture" });
+		await x.coordinator.quiesce();
+		expect(x.coordinator.snapshot().phase).toBe("unconfirmed");
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+		return x;
+	};
+
+	it("refuses a send that would join the stranded queue and keeps the text editable", async () => {
+		const x = await unconfirmed();
+		x.coordinator.edit("second", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.quiesce();
+
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+		expect(x.coordinator.snapshot().draft.text).toBe("second");
+		expect(x.coordinator.snapshot().error).toContain(
+			"never confirmed as started",
+		);
+	});
+
+	it("returns the stranded messages to the editor, in order, with no invented id", async () => {
+		const x = await unconfirmed();
+		x.coordinator.edit("second", []);
+
+		expect(await x.coordinator.restoreQueueToDraft()).toBe(true);
+		const snapshot = x.coordinator.snapshot();
+		expect(snapshot.queue).toHaveLength(0);
+		expect(snapshot.draft.text).toBe("second\n\nfirst");
+		expect(snapshot.sessionId).toBeNull();
+
+		await x.coordinator.flush();
+		expect(x.disk()?.queue).toHaveLength(0);
+		expect(x.disk()?.draft.text).toBe("second\n\nfirst");
+	});
+
+	it("discards only on an explicit word", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		x.coordinator.edit("held", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.flush();
+		expect(x.coordinator.snapshot().queue).toHaveLength(1);
+
+		expect(await x.coordinator.discardQueue()).toBe(true);
+		expect(x.coordinator.snapshot().queue).toHaveLength(0);
+		expect(x.coordinator.snapshot().draft.text).toBe("");
+		await x.coordinator.flush();
+		expect(x.disk()?.queue).toHaveLength(0);
+	});
+});

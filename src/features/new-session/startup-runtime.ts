@@ -80,16 +80,26 @@ export async function openStartup(
 			coordinators.set(key, coordinator);
 		}
 		await coordinator.ready;
-		if (fresh && coordinator.snapshot().sessionId !== null) {
-			// Retain the old conversation's unfinished editor for its exact SID.
-			await startupDeviceStore.set(
-				JSON.stringify([
-					auth.scope,
-					"session",
-					coordinator.snapshot().sessionId,
-				]),
-				key,
-			);
+		/* An explicit New must open a FRESH editor without destroying what the old one
+		 * holds. `sessionId !== null` is not the only state worth keeping: an
+		 * unconfirmed create (no session id, queued messages) has no automatic
+		 * recovery, and reusing its coordinator made New a no-op — the trap UX U1
+		 * found, where only sign-out escaped. Rotating leaves the old record under its
+		 * own key (nothing is deleted or overwritten, no id is invented) while the
+		 * active pointer moves to a new local identity. */
+		const previousSnapshot = coordinator.snapshot();
+		const holdsPrivateWork =
+			previousSnapshot.sessionId !== null ||
+			previousSnapshot.queue.length > 0 ||
+			previousSnapshot.phase === "unconfirmed" ||
+			previousSnapshot.phase === "starting";
+		if (fresh && holdsPrivateWork) {
+			if (previousSnapshot.sessionId !== null)
+				// Retain the old conversation's unfinished editor for its exact SID.
+				await startupDeviceStore.set(
+					JSON.stringify([auth.scope, "session", previousSnapshot.sessionId]),
+					key,
+				);
 			coordinator.pause();
 			localId = randomUUID();
 			key = JSON.stringify([auth.scope, localId]);

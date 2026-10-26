@@ -85,6 +85,11 @@ const BLOCKED =
 	"Could not confirm message delivery. Retry keeps the same message identity; later messages are waiting.";
 const UNCONFIRMED =
 	"Could not confirm that the conversation started. Your queued messages have not been sent. Check Conversations before starting another.";
+/** A send while the start is unconfirmed would join a queue nothing can drain:
+ *  there is no session id to address and the create is terminal until a person
+ *  reconciles it. Say so and keep the text in the editor instead (UX U1). */
+const UNCONFIRMED_SEND =
+	"This conversation was never confirmed as started, so nothing was queued. Your message is still in the editor — start a new session to send it.";
 
 /** One owner per authorization scope. The durable outbox, not the retry helper's
  * expiring slot, owns message identity. Every admission is committed before its
@@ -224,6 +229,14 @@ export class StartupCoordinator {
 
 	async enqueue() {
 		if (this.revoked || this.reservedRevision === this.draftRevision) return;
+		/* Nothing may be added to a queue that cannot drain. An unconfirmed create
+		 * has no session id and no automatic recovery (`retry()` refuses it), so an
+		 * append here is the trap UX U1 found: Send looked enabled and silently
+		 * stacked text that could never leave. The draft stays the reader's. */
+		if (this.record.phase === "unconfirmed" && this.record.sessionId === null) {
+			this.publish({ error: UNCONFIRMED_SEND });
+			return;
+		}
 		const draft = copy(this.value.draft);
 		if (draft.text.trim() === "" && draft.images.length === 0) return;
 		if (this.record.queue.length >= 64) {
@@ -403,6 +416,40 @@ export class StartupCoordinator {
 			}
 			this.publish({ error: null });
 		}
+	}
+
+	/** The reader's way out of a queue nothing can drain. Every queued message
+	 *  returns to the editor it came from — text joined in arrival order, images in
+	 *  the same order — and the queue is cleared in the same committed transaction,
+	 *  so one message can never be both "queued" and "in the editor". */
+	async restoreQueueToDraft(): Promise<boolean> {
+		await this.ready;
+		if (!this.allowed() || this.record.queue.length === 0) return false;
+		const held = this.record.queue.map((message) => copy(message));
+		const current = copy(this.value.draft);
+		const text = [current.text, ...held.map((message) => message.text)]
+			.filter((part) => part.trim() !== "")
+			.join("\n\n");
+		const images = [
+			...current.images,
+			...held.flatMap((message) => message.images ?? []),
+		].map((image) => copy(image));
+		const saved = await this.persist((record) => ({
+			...record,
+			queue: [],
+			draft: { text, images },
+		}));
+		if (!saved) return false;
+		this.draftRevision += 1;
+		this.publish({ draft: { text, images } });
+		return true;
+	}
+
+	/** Explicit discard. Queued bytes are the reader's; they go only when said so. */
+	async discardQueue(): Promise<boolean> {
+		await this.ready;
+		if (!this.allowed() || this.record.queue.length === 0) return false;
+		return this.persist((record) => ({ ...record, queue: [] }));
 	}
 
 	async retry() {
