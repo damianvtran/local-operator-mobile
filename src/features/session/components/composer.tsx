@@ -624,6 +624,13 @@ export const Composer = ({
 	 *  ceiling stops matching the column. */
 	const measurementKey = `${measureKey}|${receiptHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}`;
 	useEffect(() => {
+		/* `measurementKey` is READ here only to make it the dependency it is: the
+		 *  effect's whole purpose is to re-measure when the key changes (find bar,
+		 *  panels, pending card, receipt wrap, extras, scale, mode), and none of
+		 *  those values is an input to the measurement itself. Removing it — what
+		 *  the unsafe quick-fix offers — is the stale-top defect this exists to
+		 *  avoid, so it is referenced rather than suppressed. */
+		if (measurementKey === "") return;
 		publishBox();
 	}, [publishBox, measurementKey]);
 
