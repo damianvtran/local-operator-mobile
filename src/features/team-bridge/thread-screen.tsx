@@ -14,23 +14,30 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
 import type { Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
+import { type ProfileSubject, senderSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
 import {
 	CONTROL,
+	ROLE,
 	SCREEN,
 	SURFACE,
 	teamBridgeMessageId,
 	teamBridgeNotifyId,
+	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
 import { BridgeBack, BridgeGate } from "./gate";
 import { createMessageSender } from "./message-sender";
+import {
+	PersonAvatar,
+	ProfileAvatarButton,
+	ProfileSheet,
+} from "./profile-card";
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
@@ -69,6 +76,7 @@ function ThreadContent({
 	const sendingRef = useRef(false);
 	const [sendError, setSendError] = useState<string | null>(null);
 	const [notifyOpen, setNotifyOpen] = useState(false);
+	const [profile, setProfile] = useState<ProfileSubject | null>(null);
 	const [notifyError, setNotifyError] = useState<string | null>(null);
 	const [notifyBusy, setNotifyBusy] = useState(false);
 	const [joining, setJoining] = useState(false);
@@ -281,20 +289,44 @@ function ThreadContent({
 				</Text>
 			);
 		const sender = model.senderLabel(item.message.sender, people);
+		// A sender the directory no longer knows keeps a plain, inert header.
+		const subject = senderSubject(item.message.sender, people);
 		return (
 			<View
 				className={`flex-row gap-3 px-4 ${item.continuation ? "py-1" : "pt-4 pb-1"}`}
 				testID={teamBridgeMessageId(item.message.id)}
 			>
 				<View className="w-8">
-					{!item.continuation && (
-						<Avatar initials={initialsOf(sender)} size="sm" />
-					)}
+					{!item.continuation &&
+						(subject ? (
+							<ProfileAvatarButton
+								subject={subject}
+								label={sender}
+								size="sm"
+								onOpen={setProfile}
+								testID={teamBridgeProfileOpenId(item.message.id)}
+							/>
+						) : (
+							<PersonAvatar member={null} label={sender} size="sm" />
+						))}
 				</View>
 				<View className="min-w-0 flex-1">
 					{!item.continuation && (
 						<View className="flex-row flex-wrap items-baseline gap-x-2">
-							<Text className="text-body font-semibold text-ink">{sender}</Text>
+							{subject ? (
+								<Text
+									accessibilityRole={ROLE.button}
+									accessibilityHint="Opens their profile"
+									onPress={() => setProfile(subject)}
+									className="text-body font-semibold text-ink"
+								>
+									{sender}
+								</Text>
+							) : (
+								<Text className="text-body font-semibold text-ink">
+									{sender}
+								</Text>
+							)}
 							<Text className="text-meta text-ink-muted">
 								{model.messageTime(item.message.created_at)}
 							</Text>
@@ -563,6 +595,12 @@ function ThreadContent({
 					</>
 				)}
 			</KeyboardAvoidingView>
+			<ProfileSheet
+				subject={profile}
+				tenantId={tenantId}
+				onClose={() => setProfile(null)}
+				currentConversationId={conversationId}
+			/>
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}

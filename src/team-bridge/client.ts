@@ -54,6 +54,17 @@ import {
 } from "@/team-bridge/contract";
 
 const TRAILING_SLASHES = /\/+$/;
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const JPEG_MAGIC = [0xff, 0xd8, 0xff];
+
+/** PNG or JPEG by content, never by the served header alone. */
+function sniffImageMime(bytes: Uint8Array): "image/png" | "image/jpeg" | null {
+	const starts = (magic: number[]) =>
+		bytes.length >= magic.length && magic.every((b, i) => bytes[i] === b);
+	if (starts(PNG_MAGIC)) return "image/png";
+	if (starts(JPEG_MAGIC)) return "image/jpeg";
+	return null;
+}
 const DELTA_SECONDS = /^\d+$/;
 
 /**
@@ -238,6 +249,13 @@ export function createHubClient(deps: HubClientDeps) {
 		query?: Query,
 		body?: unknown,
 		signal?: AbortSignal,
+		/*
+		 * A non-messaging read on the SAME hub with the SAME bearer: the avatar
+		 * route lives under `/v1/accounts`, and answers with image bytes. Kept on
+		 * this one request path so it inherits the timeout, abort and the single
+		 * 401 refresh instead of growing a second fetch with its own rules.
+		 */
+		raw?: { root: string; accept: string },
 	): Promise<Response> {
 		const fetchImpl = resolveFetch(deps.fetchImpl);
 		/*
@@ -256,11 +274,11 @@ export function createHubClient(deps: HubClientDeps) {
 		else signal?.addEventListener("abort", forward, { once: true });
 		try {
 			return await fetchImpl(
-				`${base}/v1/messaging${path}${queryString(query)}`,
+				`${base}${raw?.root ?? "/v1/messaging"}${path}${queryString(query)}`,
 				{
 					method,
 					headers: {
-						accept: "application/json",
+						accept: raw?.accept ?? "application/json",
 						authorization: `Bearer ${token}`,
 						...(body === undefined
 							? {}
@@ -288,12 +306,19 @@ export function createHubClient(deps: HubClientDeps) {
 		}
 	}
 
-	async function request<T>(
+	type RequestOptions = {
+		query?: Query;
+		body?: unknown;
+		signal?: AbortSignal;
+		raw?: { root: string; accept: string };
+	};
+
+	/** Token, one request, one forced refresh on 401, and the refusal class. */
+	async function authorized(
 		method: "GET" | "POST" | "PUT" | "DELETE",
 		path: string,
-		parse: ((value: unknown) => T) | null,
-		options: { query?: Query; body?: unknown; signal?: AbortSignal } = {},
-	): Promise<T> {
+		options: RequestOptions,
+	): Promise<Response> {
 		const access = async (force = false) => {
 			try {
 				return await deps.accessToken(force ? { force: true } : undefined);
@@ -320,6 +345,7 @@ export function createHubClient(deps: HubClientDeps) {
 			options.query,
 			options.body,
 			options.signal,
+			options.raw,
 		);
 		if (response.status === 401) {
 			/* One forced refresh, one retry. A token revoked server-side before its
@@ -339,9 +365,20 @@ export function createHubClient(deps: HubClientDeps) {
 				options.query,
 				options.body,
 				options.signal,
+				options.raw,
 			);
 		}
 		if (!response.ok) throw await errorFrom(response);
+		return response;
+	}
+
+	async function request<T>(
+		method: "GET" | "POST" | "PUT" | "DELETE",
+		path: string,
+		parse: ((value: unknown) => T) | null,
+		options: RequestOptions = {},
+	): Promise<T> {
+		const response = await authorized(method, path, options);
 		if (parse === null) return undefined as T;
 		let raw: unknown;
 		try {
@@ -526,6 +563,57 @@ export function createHubClient(deps: HubClientDeps) {
 				query: { scope: "account" },
 				signal,
 			});
+		},
+
+		/**
+		 * One person's profile photo bytes (`GET /v1/accounts/{id}/avatar`,
+		 * agent-server `docs/ACCOUNT-PROFILE.md` §7), read with the same bearer as
+		 * every messaging call. The route answers 404 for "no photo" and for "not
+		 * yours to read" alike; both surface as `not_found`.
+		 *
+		 * The path is REBUILT from the parsed account id and hash rather than
+		 * taken from the directory's `avatar_url` verbatim, so a row can never
+		 * steer this request anywhere but the avatar route. `v` pins the content:
+		 * a new photo is a new hash and so a new cache key.
+		 *
+		 * FAIL CLOSED on content: the server re-encodes to PNG or JPEG, so bytes
+		 * that sniff as anything else (an edge's HTML error page) are `malformed`
+		 * and never handed to an image view.
+		 */
+		async avatarBytes(
+			accountId: string,
+			hash: string,
+			size: 64 | 256,
+			signal?: AbortSignal,
+		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+			const response = await authorized(
+				"GET",
+				`/accounts/${encodeURIComponent(accountId)}/avatar`,
+				{
+					query: { v: hash, size },
+					raw: { root: "/v1", accept: "image/png, image/jpeg" },
+					signal,
+				},
+			);
+			let bytes: Uint8Array;
+			try {
+				bytes = new Uint8Array(await response.arrayBuffer());
+			} catch {
+				throw new HubError({
+					kind: "unreachable",
+					message: "The profile photo could not be downloaded.",
+					status: response.status,
+				});
+			}
+			const mime = sniffImageMime(bytes);
+			if (!mime) {
+				throw new HubError({
+					kind: "malformed",
+					message: "Radient returned a profile photo this app could not read.",
+					status: response.status,
+				});
+			}
+			return { mime, bytes };
 		},
 
 		/** One organization's people. The tenant is REQUIRED: there is no implicit org. */

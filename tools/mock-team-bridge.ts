@@ -14,6 +14,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
+import { deflateSync } from "node:zlib";
 import {
 	ADA,
 	agentDm,
@@ -30,6 +31,52 @@ import {
 } from "../src/team-bridge/__tests__/fixtures.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
+/* The profile slice's avatar route sits beside messaging, not under it. */
+const AVATAR_ROUTE =
+	/^\/mock-hub\/([a-z_-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
+const ADA_HASH = "0123456789abcdef";
+/* Ben's row advertises a photo the hub then 404s: the "photo removed between
+ * the directory read and the image read" case, which must render initials. */
+const BEN_HASH = "fedcba9876543210";
+/*
+ * A synthetic 64x64 PNG, generated here rather than committed as an asset so
+ * the fixture carries no image of anyone: a flat accent-coloured square.
+ */
+function syntheticPng(edge: number): Buffer {
+	const crcTable = Array.from({ length: 256 }, (_, n) => {
+		let c = n;
+		for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		return c >>> 0;
+	});
+	const crc = (bytes: Buffer) => {
+		let c = 0xffffffff;
+		for (const b of bytes) c = (crcTable[(c ^ b) & 0xff] ?? 0) ^ (c >>> 8);
+		return (c ^ 0xffffffff) >>> 0;
+	};
+	const chunk = (type: string, data: Buffer) => {
+		const length = Buffer.alloc(4);
+		length.writeUInt32BE(data.length);
+		const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+		const sum = Buffer.alloc(4);
+		sum.writeUInt32BE(crc(body));
+		return Buffer.concat([length, body, sum]);
+	};
+	const header = Buffer.alloc(13);
+	header.writeUInt32BE(edge, 0);
+	header.writeUInt32BE(edge, 4);
+	header.set([8, 2, 0, 0, 0], 8);
+	const row = Buffer.concat([
+		Buffer.from([0]),
+		Buffer.alloc(edge * 3, Buffer.from([0x2f, 0x6f, 0x5e])),
+	]);
+	const raw = Buffer.concat(Array.from({ length: edge }, () => row));
+	return Buffer.concat([
+		Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+		chunk("IHDR", header),
+		chunk("IDAT", deflateSync(raw)),
+		chunk("IEND", Buffer.alloc(0)),
+	]);
+}
 
 const root = resolve(process.argv[2] ?? "dist");
 const port = Number(process.argv[3] ?? 18743);
@@ -70,9 +117,21 @@ const people = [
 	person(SELF, "Sam"),
 	person(ADA, "Ada", {
 		agent: { endpoint_id: "bep_ada", name: "Nova", state: "active" },
+		// `pronouns` is sent as the real hub sends it, to prove it is never shown.
+		profile: {
+			display_name: "Ada",
+			title: "Staff engineer",
+			description: "Builds the mobile client and reviews the hub contract.",
+			timezone: "Europe/London",
+			pronouns: "she/her",
+			avatar: { hash: ADA_HASH },
+		} as never,
+		avatar_url: `/v1/accounts/${ADA}/avatar?v=${ADA_HASH}`,
 	}),
 	person(BEN, "Ben", {
 		agent: { endpoint_id: "bep_ben", name: "Aida", state: "active" },
+		profile: { title: "Founder", timezone: "Not/AZone" },
+		avatar_url: `/v1/accounts/${BEN}/avatar?v=${BEN_HASH}`,
 	}),
 	person(CY, "Cy", { bridge_enabled: false, bridge_state: "none" }),
 ];
@@ -153,6 +212,32 @@ setInterval(()=>{try{
 		}
 		if (url.pathname === "/__stats") {
 			ok({ created, requests });
+			return;
+		}
+		const avatar = AVATAR_ROUTE.exec(url.pathname);
+		if (avatar) {
+			// Counted like every hub call, without the bearer, so a capture can
+			// show reads are bounded (no retry storm on the 404).
+			requests.push({
+				method: req.method ?? "GET",
+				path: `${url.pathname}${url.search}`,
+			});
+			const authorized = req.headers.authorization?.startsWith("Bearer ");
+			if (!authorized) {
+				send(401, { error: "invalid or expired token" });
+				return;
+			}
+			if (avatar[2] !== ADA || url.searchParams.get("v") !== ADA_HASH) {
+				send(404, { error: "Not found" });
+				return;
+			}
+			const size = url.searchParams.get("size") === "256" ? 256 : 64;
+			res.writeHead(200, {
+				"content-type": "image/png",
+				"cache-control": "private, max-age=31536000, immutable",
+				vary: "Authorization",
+			});
+			res.end(syntheticPng(size));
 			return;
 		}
 		const match = MOCK_ROUTE.exec(url.pathname);

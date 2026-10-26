@@ -18,6 +18,7 @@ import { useStore } from "zustand";
 import { useConnection } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
+import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import {
 	installTeamBridgeNotifications,
@@ -39,6 +40,7 @@ import { teamBridgeFixture } from "@/testing/team-bridge-fixture";
 const Context = createContext<
 	| (TeamBridgeStore & {
 			hub: HubClient;
+			avatars: AvatarCache;
 			registerPush: () => Promise<void>;
 			pushes: ReturnType<typeof createPushLifecycle>;
 	  })
@@ -125,6 +127,9 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		return {
 			...createTeamBridgeStore({ hub: () => hub, accessToken }),
 			hub,
+			// Created with this account-keyed value, so a different account
+			// never reads this cache (`src/team-bridge/avatars.ts`).
+			avatars: createAvatarCache(),
 			pushes,
 			registerPush: () => pushes.register(),
 		};
@@ -132,6 +137,9 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
 		return () => {
+			// Account replacement unmounts this provider; drop its photos now
+			// rather than waiting for the collector, and retire reads in flight.
+			value.avatars.clear();
 			remove();
 			void value.pushes.retire().catch(() => undefined);
 		};
@@ -141,6 +149,7 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		if (!connection.radientSignedIn && !fixture) {
 			value.pushes.suspend();
 			value.actions.reset();
+			value.avatars.clear();
 			void value.actions.checkStatus();
 			return;
 		}
