@@ -52,6 +52,7 @@ import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
+import { middleFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
@@ -186,6 +187,7 @@ export const ConversationsPane = ({
 	}, []);
 
 	const { effectiveScale } = useTextScale();
+	const [switcherWidth, setSwitcherWidth] = useState(0);
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 	const scrollFooter = sidebarFooterScrolls(useLayout());
 
@@ -373,16 +375,21 @@ export const ConversationsPane = ({
 					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
-					{/* Two lines, middle-ellipsized: the machine name AND the port are what
-					 *  tell two hosts apart, and the tail fit this replaced kept only the
-					 *  tail ("…0.0.1:49869") — a fragment several machines can share. The
-					 *  full value stays in the button's accessible label above. */}
+					{/* ONE unbreakable line, pre-fitted with a middle ellipsis: the drawer's
+					 * box is narrower than the home header's, and a two-line middle let the
+					 * platform break inside the address/port at 320 pt and 200 % (D3). The
+					 * full value stays in the button's accessible label above. */}
 					<Text
 						className="text-mono-sm text-ink-muted"
-						numberOfLines={2}
-						ellipsizeMode="middle"
+						numberOfLines={1}
+						onLayout={(event) =>
+							setSwitcherWidth(Math.floor(event.nativeEvent.layout.width))
+						}
+						style={{ flexShrink: 1 }}
 					>
-						{switcherLabel}
+						{switcherWidth > 0
+							? middleFit(switcherLabel, switcherWidth, effectiveScale)
+							: switcherLabel}
 					</Text>
 				</Pressable>
 				<IconButton

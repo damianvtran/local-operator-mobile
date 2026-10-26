@@ -63,16 +63,17 @@ describe("final design audit wiring", () => {
 		expect(chip).toContain("quiet");
 	});
 
-	it("names the home header's computer on two lines with a middle ellipsis", () => {
+	it("keeps the home header's computer on ONE fitted line", () => {
 		const source = readFileSync(
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		// The rendered child, not the accessible-label template above it.
-		const at = source.lastIndexOf("{listLabel(computers, tunnelId, route)}");
-		const block = source.slice(source.lastIndexOf("<Text", at), at);
+		// The rendered host Text, found by its own fitting call — the accessible-label
+		// template above it is a different element.
+		const at = source.indexOf("hostWidth > 0");
+		const block = source.slice(source.lastIndexOf("<Text", at), source.indexOf("</Text>", at));
 		// D3: a one-line tail fit showed "127.0.0.1:498…" at large text.
-		expect(block).toContain("numberOfLines={2}");
-		expect(block).toContain('ellipsizeMode="middle"');
+		expect(block).toContain("numberOfLines={1}");
+		expect(block).toContain("middleFit(");
 	});
 });

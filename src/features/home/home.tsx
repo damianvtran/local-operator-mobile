@@ -49,11 +49,13 @@ import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
+import { middleFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
  * The composer home: `/` since the Part 2 slice, and the default destination
@@ -154,6 +156,10 @@ export default function Home({
 	const setDraft = startup.setText;
 	const setImages = startup.setImages;
 	const starting = startup.snapshot.phase === "starting";
+	/* The header host is ONE token: measured so the painted string can be fitted
+	 * rather than wrapped (D3). */
+	const [hostWidth, setHostWidth] = useState(0);
+	const { effectiveScale } = useTextScale();
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
 	 * with `draft` — the copy already asks them to check the folder, and QA found the
@@ -627,17 +633,27 @@ export default function Home({
 							className="min-w-0 flex-1 justify-center"
 							style={{ minHeight: TOUCH_FLOOR }}
 						>
-							{/* Two lines with a MIDDLE ellipsis, the same identity rule the
-							 *  panel's drawer uses: at large text a one-line tail fit kept only
-							 *  "127.0.0.1:498…", a fragment that names neither the machine nor
-							 *  the port. The full value stays in the button's accessible label
-							 *  above, and the layout keeps its single flexible row. */}
+							{/* ONE unbreakable line, pre-fitted with a middle ellipsis. A tail
+							 *  fit kept only "…0.0.1:49869"; a two-line middle let the platform
+							 *  break at the string's own break opportunities, so the port
+							 *  split into "…:49" / "892" at 320 pt and 200 % (design D3). The
+							 *  full value stays in the accessible label above and the header's
+							 *  height is unchanged — one line, always. */}
 							<Text
 								className="text-mono-sm text-ink-muted"
-								numberOfLines={2}
-								ellipsizeMode="middle"
+								numberOfLines={1}
+								onLayout={(event) =>
+									setHostWidth(Math.floor(event.nativeEvent.layout.width))
+								}
+								style={{ flexShrink: 1 }}
 							>
-								{listLabel(computers, tunnelId, route)}
+								{hostWidth > 0
+									? middleFit(
+											listLabel(computers, tunnelId, route),
+											hostWidth,
+											effectiveScale,
+										)
+									: listLabel(computers, tunnelId, route)}
 							</Text>
 						</Pressable>
 						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
