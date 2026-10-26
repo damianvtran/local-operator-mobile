@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { getStartupAuthorization, subscribeStartupAuthorization } from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import {
@@ -132,19 +133,28 @@ export const useComposer = (input: {
 	capabilities: Capabilities | null | undefined;
 	/** Bumped by the screen when a pending card needs the draft left alone. */
 	onSent?: () => void;
+	/** An adopted provisional editor keeps its identity while this host adds the
+	 * normal session actions, dictation and slash controls around it. */
+	editor?: { draft: string; images: PromptImage[]; setDraft(text: string): void; setImages(value: PromptImage[] | ((current: PromptImage[]) => PromptImage[])): void };
 }): ComposerState => {
 	// `onSent` is destructured rather than kept as `input`: an object prop in a
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const endpoints = source.endpoints;
+	const authorization = useSyncExternalStore(subscribeStartupAuthorization, getStartupAuthorization, getStartupAuthorization);
+	const scope = authorization?.scope ?? null;
+	const storageIdentity = JSON.stringify([scope, sessionId]);
+	const editor = input.editor;
 
 	/* ONE store per session, shared process-wide: two instances on one session
 	 * would each mint an id for the same typed instruction, which is the duplicate
 	 * POST the retry envelope exists to prevent. See `envelope-store.ts`. */
-	const envelopeStore = envelopeStoreFor(sessionId);
+	const envelopeStore = envelopeStoreFor(sessionId, scope);
 
-	const [draft, setDraftState] = useState("");
+	const [privateDraft, setPrivateDraft] = useState("");
+	const draft = editor?.draft ?? privateDraft;
+	const setDraftState = editor?.setDraft ?? setPrivateDraft;
 	/* Keyed by the session it was read for, not a bare boolean: a session switch
 	 * re-points this hook without remounting it, and a boolean left `true` from the
 	 * previous session would read the NEW session's still-unread draft as known.
@@ -156,7 +166,9 @@ export const useComposer = (input: {
 	 * every cross-conversation navigation mounts a fresh screen - which is why the
 	 * clear is a one-line belt, not a repair of a seen defect. */
 	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
-	const [images, setImages] = useState<PromptImage[]>([]);
+	const [privateImages, setPrivateImages] = useState<PromptImage[]>([]);
+	const images = editor?.images ?? privateImages;
+	const setImages = editor?.setImages ?? setPrivateImages;
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
@@ -191,9 +203,9 @@ export const useComposer = (input: {
 	 * that writes once per send instead. */
 	useEffect(() => {
 		let cancelled = false;
-		setDraftState("");
+		setPrivateDraft("");
 		setDraftReadFor(null);
-		setImages([]);
+		setPrivateImages([]);
 		setError(null);
 		setNotice(null);
 		/* The draft window RESTARTS here too. The route carries no `getId`/`key` on
@@ -203,10 +215,10 @@ export const useComposer = (input: {
 		 * with A's `input_path`: immutable identity written onto a durable row (agent
 		 * review round 1, M1). It resets with the rest of the per-session state. */
 		provenanceRef.current = resetOnSessionSwitch();
-		readDraft(sessionId).then((stored) => {
+		readDraft(sessionId, scope).then((stored) => {
 			if (cancelled) return;
-			setDraftState(stored);
-			setDraftReadFor(sessionId);
+			setPrivateDraft(stored);
+			setDraftReadFor(storageIdentity);
 		});
 		// The retained envelope is re-read from storage rather than kept in memory:
 		// that is the point of it being durable, and it is how a retry survives a
@@ -219,7 +231,7 @@ export const useComposer = (input: {
 		return () => {
 			cancelled = true;
 		};
-	}, [sessionId, envelopeStore]);
+	}, [sessionId, envelopeStore, scope, storageIdentity]);
 
 	/** Writes the draft and its persistence WITHOUT touching provenance. Used by the
 	 *  dictation append, whose edit is a dictation, not typing — routing it through
@@ -227,9 +239,9 @@ export const useComposer = (input: {
 	const commitDraft = useCallback(
 		(text: string) => {
 			setDraftState(text);
-			void writeDraft(sessionId, text);
+			if (editor === undefined && scope !== null) void writeDraft(sessionId, text, scope).catch(() => setError("Could not save the draft on this device."));
 		},
-		[sessionId],
+		[sessionId, scope, editor, setDraftState],
 	);
 
 	/** Classifies one USER-driven draft change (typing, a slash fill, an ack clear):
@@ -687,10 +699,10 @@ export const useComposer = (input: {
 	);
 
 	return {
-		draft,
-		draftReady: draftReadFor === sessionId,
+		draft: editor !== undefined || draftReadFor === storageIdentity ? draft : "",
+		draftReady: editor !== undefined || draftReadFor === storageIdentity,
 		setDraft,
-		images,
+		images: editor !== undefined || draftReadFor === storageIdentity ? images : [],
 		addImage: (image) => setImages((current) => [...current, image]),
 		removeImage: (index) =>
 			setImages((current) => current.filter((_, at) => at !== index)),

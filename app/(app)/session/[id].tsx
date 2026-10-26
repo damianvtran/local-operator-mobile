@@ -60,6 +60,8 @@ import { useCompletionAck } from "@/features/session/use-completion-ack";
 import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { useStartup } from "@/features/new-session/use-startup";
+import type { PromptImage } from "@/contracts";
 import { isRemoteRow } from "@/features/sessions/session-projection";
 import { SessionTagLine } from "@/features/sessions/tag-line";
 import { canAssignSessionTags } from "@/features/sessions/tags";
@@ -79,6 +81,7 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
@@ -134,6 +137,13 @@ export default function Session() {
 	const [tagsOpen, setTagsOpen] = useState(false);
 
 	const runtime = useSessionRuntime(sessionId);
+	const provisional = useStartup(null, sessionId);
+	const provisionalEditor = provisional.coordinator === null ? undefined : {
+		draft: provisional.snapshot.draft.text,
+		images: provisional.snapshot.draft.images,
+		setDraft: (text: string) => provisional.setText(text),
+		setImages: (next: PromptImage[] | ((current: PromptImage[]) => PromptImage[])) => provisional.setImages(next),
+	};
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);
@@ -152,6 +162,7 @@ export default function Session() {
 		streaming: runtime.streaming,
 		ended: runtime.projection?.ended === true,
 		capabilities,
+		editor: provisionalEditor,
 	});
 
 	/* The supplement block's host calls: one session-scoped client, built here
@@ -831,12 +842,15 @@ export default function Session() {
 			scroll={false}
 			testID={SCREEN.session}
 			headerLeading={
-				<IconButton
-					accessibilityLabel="Back to sessions"
-					testID={CONTROL.sessionBack}
-					onPress={() => router.back()}
-					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
-				/>
+				<View className="flex-row items-center gap-1">
+					<IconButton
+						accessibilityLabel="Back to sessions"
+						testID={CONTROL.sessionBack}
+						onPress={() => router.back()}
+						icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
+					/>
+					<NavigationMark />
+				</View>
 			}
 			headerAction={
 				/* The find lever. It is the kit's own header control (`IconButton`) — 48 pt on

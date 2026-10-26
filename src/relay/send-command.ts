@@ -51,7 +51,12 @@
 import type { InputMode, PromptImage } from "../contracts";
 import type { RelayEndpoints } from "./endpoints";
 import { isRelayError, RelayError, transportError } from "./errors";
-import type { ContinuationOp, RetryEnvelopeStore } from "./retry-envelope";
+import {
+	type ContinuationEnvelope,
+	type ContinuationOp,
+	EnvelopeStorageError,
+	type RetryEnvelopeStore,
+} from "./retry-envelope";
 
 export interface SendResult {
 	/** The relay's own sentence: `prompt admitted`, or `already admitted` on a
@@ -70,6 +75,9 @@ export interface SendCommandInput {
 	op: ContinuationOp;
 	text: string;
 	images?: PromptImage[];
+	/** A durable outbox owns this identity across helper cleanup/expiry. Never
+	 * replace it with holdNew's UUID or displace a different unresolved item. */
+	envelope?: ContinuationEnvelope;
 	/** The silent annotation (design §2.1): `input_mode` and, when a dictation ran,
 	 *  the `input_path` the transcribe response returned. Part of the instruction's
 	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
@@ -117,6 +125,7 @@ function registryFor(envelopes: RetryEnvelopeStore): Map<string, InFlightSend> {
  *  same image with its fields in a different order are still one instruction. */
 function payloadKeyOf(input: SendCommandInput): string {
 	return JSON.stringify([
+		input.envelope?.command_id ?? null,
 		input.op,
 		input.text,
 		(input.images ?? []).map((image) => [image.mime_type, image.data_b64]),
@@ -230,13 +239,36 @@ export async function sendPersistedCommand(
 /** The one place an envelope is held, sent and settled. */
 async function runSend(input: SendCommandInput): Promise<SendResult> {
 	const { client, envelopes, sessionId } = input;
-	const held = await envelopes.holdNew(
-		sessionId,
-		input.op,
-		input.text,
-		input.images,
-		{ input_mode: input.input_mode, input_path: input.input_path },
-	);
+	let held: { envelope: ContinuationEnvelope; reused: boolean };
+	if (input.envelope) {
+		const expected = input.envelope;
+		const existing = await envelopes.peek(sessionId);
+		const expectedPayload = payloadKeyOf({
+			...input,
+			...expected,
+			envelope: expected,
+		});
+		if (
+			expectedPayload !== payloadKeyOf(input) ||
+			(existing &&
+				payloadKeyOf({ ...input, ...existing, envelope: existing }) !==
+					expectedPayload)
+		) {
+			throw new EnvelopeStorageError(
+				"a different unresolved instruction owns this session",
+			);
+		}
+		await envelopes.hold(sessionId, expected);
+		held = { envelope: expected, reused: false };
+	} else {
+		held = await envelopes.holdNew(
+			sessionId,
+			input.op,
+			input.text,
+			input.images,
+			{ input_mode: input.input_mode, input_path: input.input_path },
+		);
+	}
 	const { envelope } = held;
 	try {
 		const ack = await client.command(sessionId, {

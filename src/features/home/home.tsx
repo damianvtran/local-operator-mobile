@@ -1,4 +1,3 @@
-import { randomUUID } from "expo-crypto";
 import { useRouter } from "expo-router";
 import { Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +17,8 @@ import {
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
+import { StartupTranscript } from "@/features/new-session/startup-transcript";
+import { useStartup } from "@/features/new-session/use-startup";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -31,11 +32,6 @@ import { ConnectionBanner } from "@/features/session/components/connection-banne
 import type { ComposerControls } from "@/features/session/composer";
 import { COMPOSER_COPY } from "@/features/session/composer";
 import { connectionView } from "@/features/session/connection-view";
-import {
-	clearHomeDraft,
-	readHomeDraft,
-	writeHomeDraft,
-} from "@/features/session/device-storage";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
@@ -49,11 +45,14 @@ import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
+import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
+import { Input } from "@/ui/components/input";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
+import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 
 /**
@@ -88,6 +87,7 @@ import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
  * composer that can never send (the old list's D3 lesson, moved verbatim).
  */
 export type HomeProps = {
+	newSession?: boolean;
 	/** `/conversations` renders the home with the panel open — the programmatic
 	 *  open ADR 0006 § 6.6 needs (a deep link the computer does not know lands on
 	 *  the panel with one honest sentence). On a docked layout the list is always
@@ -99,6 +99,7 @@ export type HomeProps = {
 
 export default function Home({
 	forcePanelOpen = false,
+	newSession = false,
 	notice = null,
 }: HomeProps) {
 	const router = useRouter();
@@ -122,8 +123,12 @@ export default function Home({
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
-	const [draft, setDraftState] = useState("");
-	const [images, setImages] = useState<PromptImage[]>([]);
+	const [optionsOpen, setOptionsOpen] = useState(false);
+	const [queueOpen, setQueueOpen] = useState(false);
+	const [optionPath, setOptionPath] = useState("");
+	const [optionModel, setOptionModel] = useState<ModelEntry | null>(null);
+	const [running, setRunning] = useState(false);
+	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [attaching, setAttaching] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
 	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
@@ -131,7 +136,24 @@ export default function Home({
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
 	const [topModel, setTopModel] = useState<ModelEntry | null>(null);
 	const [modelsLoaded, setModelsLoaded] = useState(false);
-	const [starting, setStarting] = useState(false);
+	const selection = useMemo(
+		() =>
+			homeDirectory === null || !modelsLoaded
+				? null
+				: {
+						cwd: homeDirectory,
+						...(topModel
+							? { provider: topModel.provider, model_id: topModel.model_id }
+							: {}),
+					},
+		[homeDirectory, topModel, modelsLoaded],
+	);
+	const startup = useStartup(selection);
+	const draft = startup.snapshot.draft.text;
+	const images = startup.snapshot.draft.images;
+	const setDraft = startup.setText;
+	const setImages = startup.setImages;
+	const starting = startup.snapshot.phase === "starting";
 	const [problem, setProblem] = useState<string | null>(null);
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
@@ -173,6 +195,7 @@ export default function Home({
 			.models()
 			.then((catalogue) => {
 				if (!live) return;
+				setModels(catalogue.models);
 				setTopModel(catalogue.models[0] ?? null);
 				setModelsLoaded(true);
 			})
@@ -186,25 +209,6 @@ export default function Home({
 
 	const retryDirectories = useCallback(() => {
 		setDirectoriesAttempt((attempt) => attempt + 1);
-	}, []);
-
-	/* The home's draft, restored once. If the reader has already typed by the
-	 * time the read resolves, what they have typed wins — the store is storage,
-	 * not an authority over the live field. */
-	useEffect(() => {
-		let live = true;
-		void readHomeDraft().then((text) => {
-			if (live && text !== "")
-				setDraftState((current) => (current === "" ? text : current));
-		});
-		return () => {
-			live = false;
-		};
-	}, []);
-
-	const setDraft = useCallback((text: string) => {
-		setDraftState(text);
-		void writeHomeDraft(text);
 	}, []);
 
 	/* A cold start with no route belongs on the welcome surface — the list's own
@@ -276,50 +280,56 @@ export default function Home({
 		[offline, computers, tunnelId, route],
 	);
 
-	const attach = useCallback((source: AttachSource) => {
-		void (async () => {
-			setAttaching(true);
-			setComposerError(null);
-			try {
-				const image =
-					source === "library"
-						? await pickImageFromLibrary()
-						: source === "paste"
-							? await pasteImage()
-							: await pickImageFromFiles();
-				if (image !== null) {
-					setImages((current) => [...current, image]);
-				} else if (source === "paste") {
-					/* A press with no outcome reads as a broken control — the same rule
-					 *  `attachError` follows in the other direction. */
-					setComposerError(COMPOSER_COPY.pasteEmpty);
+	const attach = useCallback(
+		(source: AttachSource) => {
+			void (async () => {
+				setAttaching(true);
+				setComposerError(null);
+				try {
+					const image =
+						source === "library"
+							? await pickImageFromLibrary()
+							: source === "paste"
+								? await pasteImage()
+								: await pickImageFromFiles();
+					if (image !== null) {
+						setImages((current) => [...current, image]);
+					} else if (source === "paste") {
+						/* A press with no outcome reads as a broken control — the same rule
+						 *  `attachError` follows in the other direction. */
+						setComposerError(COMPOSER_COPY.pasteEmpty);
+					}
+				} catch {
+					/* Said, never swallowed — the composer's own error line. */
+					setComposerError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
 				}
-			} catch {
-				/* Said, never swallowed — the composer's own error line. */
-				setComposerError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+			})();
+		},
+		[setImages],
+	);
 
 	/** The web paste event's image file: same strip, same failure line as the
 	 *  sheet's own rows (`use-composer.ts`'s `pasteFile` is the session view's
 	 *  copy of this handler). */
-	const pasteFile = useCallback((file: File) => {
-		void (async () => {
-			setAttaching(true);
-			setComposerError(null);
-			try {
-				const image = await readWebImageFile(file);
-				setImages((current) => [...current, image]);
-			} catch {
-				setComposerError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+	const pasteFile = useCallback(
+		(file: File) => {
+			void (async () => {
+				setAttaching(true);
+				setComposerError(null);
+				try {
+					const image = await readWebImageFile(file);
+					setImages((current) => [...current, image]);
+				} catch {
+					setComposerError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
+				}
+			})();
+		},
+		[setImages],
+	);
 
 	const controls: ComposerControls = useMemo(
 		() => ({
@@ -327,29 +337,26 @@ export default function Home({
 				kind: "send",
 				/* Same morph as a session's: `…` while a send is in flight, `↑`
 				 * otherwise, and the word lives in the accessible label. */
-				label: starting ? "…" : "↑",
+				label: "↑",
 				op: "prompt",
-				disabled:
-					starting ||
-					!connected ||
-					homeDirectory === null ||
-					(draft.trim() === "" && images.length === 0),
-				accessibilityLabel: starting ? "Sending" : "Send message",
+				disabled: draft.trim() === "" && images.length === 0,
+				accessibilityLabel: starting ? "Queue message" : "Send message",
 			},
-			stopVisible: false,
-			sending: starting,
+			stopVisible: running,
+			sending: false,
 			/* The one sentence the composer says when it cannot send: with nothing
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
 			disabledReason: connected ? null : CONNECT_DISABLED_REASON,
 		}),
-		[connected, draft, homeDirectory, images.length, starting],
+		[connected, draft, images.length, starting, running],
 	);
 
 	const chips = useMemo(
 		() =>
 			composerChipLabels({
-				model: topModel?.selector ?? null,
+				model:
+					startup.snapshot.selection?.model_id ?? topModel?.selector ?? null,
 				effort: null,
 				connection: modelsLoaded
 					? "connected"
@@ -357,84 +364,19 @@ export default function Home({
 						? "loading"
 						: "unreachable",
 			}),
-		[topModel, modelsLoaded, connected],
+		[topModel, modelsLoaded, connected, startup.snapshot.selection?.model_id],
 	);
 
-	const send = useCallback(() => {
-		void (async () => {
-			const active = relay();
-			const text = draft.trim();
-			if (
-				active === null ||
-				!connected ||
-				homeDirectory === null ||
-				starting ||
-				(text === "" && images.length === 0)
-			) {
-				return;
-			}
-			setStarting(true);
-			setProblem(null);
-			setComposerError(null);
-			try {
-				const started = await active.startSession({
-					cwd: homeDirectory,
-					...(topModel !== null
-						? { provider: topModel.provider, model_id: topModel.model_id }
-						: {}),
-				});
-				try {
-					await active.command(started.session_id, {
-						op: "prompt",
-						command_id: randomUUID(),
-						text,
-						...(images.length > 0 ? { images } : {}),
-					});
-					/* Delivered: the draft and its attachments are cleared because
-					 * the same text travelled as the first prompt — never both. */
-					await clearHomeDraft();
-					setDraftState("");
-					setImages([]);
-				} catch {
-					/* The session exists either way; the reader is taken to it and
-					 * the draft is KEPT (it was not delivered). */
-					showToast(
-						"The session started, but your first message was not sent.",
-					);
-				}
-				setPanelOpen(false);
-				router.push(`/session/${started.session_id}`);
-			} catch (error) {
-				/* The relay's own sentence when it has one (it names the folder or the
-				 * reason), and never a runtime's prose — `/new`'s rule, verbatim. */
-				setProblem(
-					error instanceof RelayError
-						? error.displayableMessage
-						: REFUSED_START_FALLBACK,
-				);
-			} finally {
-				setStarting(false);
-			}
-		})();
-	}, [
-		relay,
-		connected,
-		homeDirectory,
-		starting,
-		draft,
-		images,
-		topModel,
-		router,
-		showToast,
-	]);
+	// The coordinator freezes the submitted bytes; later typing stays editable.
+	const send = startup.send;
 
-	const newChat = useCallback(() => {
+	const newChat = () => {
 		setPanelOpen(false);
-		/* After the drawer's own frame: focusing a field under a modal that is
-		 * still mounted is a no-op on iOS, and the reader pressed New chat to
-		 * TYPE. */
-		requestAnimationFrame(() => fieldRef.current?.focus());
-	}, []);
+		void startup
+			.newConversation()
+			.then(() => requestAnimationFrame(() => fieldRef.current?.focus()))
+			.catch(() => setComposerError("Could not open a new draft safely."));
+	};
 
 	const pane = (
 		<ConversationsPane
@@ -480,13 +422,42 @@ export default function Home({
 				/>
 			) : null}
 
-			<HomeSplash
-				draft={draft}
-				connected={connected}
-				onPick={setDraft}
-				onConnect={() => router.push("/tunnels")}
-				starting={starting}
-			/>
+			{startup.snapshot.sessionId ? (
+				<StartupTranscript
+					sessionId={startup.snapshot.sessionId}
+					onStreaming={setRunning}
+				/>
+			) : (
+				<HomeSplash
+					draft={draft}
+					connected={connected}
+					onPick={setDraft}
+					onConnect={() => router.push("/tunnels")}
+					starting={starting}
+				/>
+			)}
+			{startup.snapshot.queue.length > 0 ? (
+				<View className="px-4 py-2" testID="startup-pending">
+					<Text
+						accessibilityLiveRegion="polite"
+						className="text-body-sm text-ink-muted"
+					>
+						{starting
+							? "Starting…"
+							: startup.snapshot.sessionId
+								? "Sending queued messages…"
+								: "Waiting to start…"}{" "}
+						{startup.snapshot.queue.length} queued
+					</Text>
+					<Button
+						label="View queued messages"
+						variant="quiet"
+						size="sm"
+						testID="startup-view-queue"
+						onPress={() => setQueueOpen(true)}
+					/>
+				</View>
+			) : null}
 
 			{/* A folders read that failed leaves the composer unsendable; the sentence
 			 *  is `/new`'s verbatim line and the retry is the path the failure never
@@ -526,19 +497,46 @@ export default function Home({
 					onPasteFile={pasteFile}
 					attaching={attaching}
 					onSend={send}
-					onStop={() => undefined}
-					retainedMessage={null}
+					onStop={() => {
+						const sid = startup.snapshot.sessionId;
+						const active = relay();
+						if (sid && active)
+							void active
+								.command(sid, { op: "abort" })
+								.catch(() => setComposerError("Could not stop the turn."));
+					}}
+					retainedMessage={
+						startup.snapshot.phase === "blocked"
+							? "Your queued message is retained."
+							: null
+					}
 					notice={null}
-					onRetry={() => undefined}
+					onRetry={startup.retry}
 					showResume={false}
 					onResume={() => undefined}
-					error={composerError}
-					queuedCount={0}
+					error={startup.snapshot.error ?? composerError}
+					queuedCount={startup.snapshot.queue.length}
 					leadingChip={
 						homeDirectory !== null ? (
 							<Chip
-								label={homeShortened(homeDirectory, homeDirectory)}
-								onPress={() => router.push("/new")}
+								label={homeShortened(
+									startup.snapshot.selection?.cwd ?? homeDirectory,
+									homeDirectory,
+								)}
+								onPress={() => {
+									setOptionPath(
+										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+									);
+									setOptionModel(
+										models.find(
+											(model) =>
+												model.provider ===
+													startup.snapshot.selection?.provider &&
+												model.model_id === startup.snapshot.selection?.model_id,
+										) ?? topModel,
+									);
+									setOptionsOpen(true);
+								}}
 								accessibilityLabel={`Working in ${homeDirectory}`}
 								accessibilityHint="Choose another folder"
 								testID={CONTROL.homeTargetFolder}
@@ -547,7 +545,19 @@ export default function Home({
 					}
 					modelChip={chips.model}
 					effortChip={null}
-					onOpenModels={() => router.push("/new")}
+					onOpenModels={() => {
+						setOptionPath(
+							startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+						);
+						setOptionModel(
+							models.find(
+								(model) =>
+									model.provider === startup.snapshot.selection?.provider &&
+									model.model_id === startup.snapshot.selection?.model_id,
+							) ?? topModel,
+						);
+						setOptionsOpen(true);
+					}}
 					onOpenEffort={() => undefined}
 					slashQuery={null}
 					slashSheet={null}
@@ -560,7 +570,7 @@ export default function Home({
 	return (
 		<>
 			<Screen
-				testID={SCREEN.home}
+				testID={newSession ? SCREEN.newSession : SCREEN.home}
 				scroll={false}
 				/* The cap comes off only when the split is real — the list pane then
 				 *  owns its own width and the measure belongs to the composer column
@@ -638,6 +648,87 @@ export default function Home({
 					composerColumn
 				)}
 			</Screen>
+
+			<Sheet
+				visible={optionsOpen}
+				onClose={() => setOptionsOpen(false)}
+				title="Conversation options"
+				testID="startup-options"
+			>
+				<View className="gap-3 py-2">
+					<Input
+						label="Folder on this computer"
+						value={optionPath}
+						onChangeText={setOptionPath}
+						disabled={startup.snapshot.phase !== "draft"}
+						testID={CONTROL.newSessionCwd}
+					/>
+					{models.map((model) => (
+						<Button
+							key={model.selector}
+							label={model.label ?? model.name ?? model.selector}
+							variant={
+								optionModel?.selector === model.selector ? "primary" : "quiet"
+							}
+							onPress={() => setOptionModel(model)}
+							disabled={startup.snapshot.phase !== "draft"}
+							testID={`startup-model-${model.selector}`}
+						/>
+					))}
+					<Button
+						label="Use these options"
+						disabled={
+							startup.snapshot.phase !== "draft" || optionPath.trim() === ""
+						}
+						onPress={() => {
+							setHomeDirectory(optionPath.trim());
+							setTopModel(optionModel);
+							setOptionsOpen(false);
+							void startup.configure({
+								cwd: optionPath.trim(),
+								...(optionModel
+									? {
+											provider: optionModel.provider,
+											model_id: optionModel.model_id,
+										}
+									: {}),
+							});
+						}}
+						testID="startup-options-apply"
+					/>
+					{startup.snapshot.phase !== "draft" ? (
+						<Text className="text-body-sm text-ink-muted">
+							This conversation's starting options are fixed. Use Conversation
+							details for its live controls.
+						</Text>
+					) : null}
+				</View>
+			</Sheet>
+
+			<Sheet
+				visible={queueOpen}
+				onClose={() => setQueueOpen(false)}
+				title="Queued messages"
+				testID="startup-queue-sheet"
+			>
+				<View className="gap-4 py-2">
+					{startup.snapshot.queue.map((message, index) => (
+						<View key={message.command_id} className="gap-1">
+							<Text className="text-meta text-ink-muted">
+								Queued message {index + 1}
+							</Text>
+							<Text selectable className="text-body text-ink">
+								{message.text}
+							</Text>
+							{message.images?.length ? (
+								<Text className="text-body-sm text-ink-muted">
+									{message.images.length} image attachments retained
+								</Text>
+							) : null}
+						</View>
+					))}
+				</View>
+			</Sheet>
 
 			<HomeStateMarkers draft={draft} offline={offline || !connected} />
 

@@ -1,5 +1,7 @@
+import { getStartupAuthorization } from "@/connection/startup-authorization";
 import { deviceStore } from "@/features/session/device-storage";
 import { RetryEnvelopeStore } from "@/relay";
+import { scopedStore } from "./scoped-storage";
 
 /**
  * ONE envelope store per session, for the whole process.
@@ -27,11 +29,17 @@ import { RetryEnvelopeStore } from "@/relay";
 const stores = new Map<string, RetryEnvelopeStore>();
 
 /** The store for a session, created on first use and shared after that. */
-export const envelopeStoreFor = (sessionId: string): RetryEnvelopeStore => {
-	const existing = stores.get(sessionId);
+export const envelopeStoreFor = (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): RetryEnvelopeStore => {
+	const identity = JSON.stringify([scope, sessionId]);
+	const existing = stores.get(identity);
 	if (existing !== undefined) return existing;
-	const created = new RetryEnvelopeStore({ store: deviceStore });
-	stores.set(sessionId, created);
+	const created = new RetryEnvelopeStore({
+		store: scopedStore(deviceStore, scope),
+	});
+	stores.set(identity, created);
 	return created;
 };
 
@@ -39,5 +47,8 @@ export const envelopeStoreFor = (sessionId: string): RetryEnvelopeStore => {
  *  this only drops the shared instance — the next caller gets a fresh view of the
  *  same bytes rather than a different envelope. */
 export const forgetEnvelopeStore = (sessionId: string): void => {
-	stores.delete(sessionId);
+	for (const key of stores.keys()) {
+		const pair = JSON.parse(key) as [string | null, string];
+		if (pair[1] === sessionId) stores.delete(key);
+	}
 };

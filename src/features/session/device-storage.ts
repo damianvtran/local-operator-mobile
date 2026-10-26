@@ -33,6 +33,8 @@
  */
 
 import { Platform } from "react-native";
+import { getStartupAuthorization } from "@/connection/startup-authorization";
+import { scopedStore } from "./scoped-storage";
 
 /** The port. Identical in shape to `retry-envelope.ts`'s `EnvelopeStore`, which
  *  is why the envelope store takes this object directly rather than an adapter. */
@@ -234,7 +236,12 @@ export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
 
 export const readHomeDraft = async (): Promise<string> => {
 	try {
-		return (await deviceStore.get(HOME_DRAFT_KEY)) ?? "";
+		return (
+			(await scopedStore(
+				deviceStore,
+				getStartupAuthorization()?.scope ?? null,
+			).get(HOME_DRAFT_KEY)) ?? ""
+		);
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
 		 * best-effort here because a failed READ has lost nothing. */
@@ -243,14 +250,24 @@ export const readHomeDraft = async (): Promise<string> => {
 };
 
 export const writeHomeDraft = (text: string): Promise<void> =>
-	deviceStore.set(HOME_DRAFT_KEY, text);
+	scopedStore(deviceStore, getStartupAuthorization()?.scope ?? null).set(
+		HOME_DRAFT_KEY,
+		text,
+	);
 
 export const clearHomeDraft = (): Promise<void> =>
-	deviceStore.remove(HOME_DRAFT_KEY);
+	scopedStore(deviceStore, getStartupAuthorization()?.scope ?? null).remove(
+		HOME_DRAFT_KEY,
+	);
 
-export const readDraft = async (sessionId: string): Promise<string> => {
+export const readDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<string> => {
 	try {
-		return (await deviceStore.get(draftKey(sessionId))) ?? "";
+		return (
+			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ?? ""
+		);
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
 		 * best-effort here because a failed READ has lost nothing. */
@@ -261,16 +278,50 @@ export const readDraft = async (sessionId: string): Promise<string> => {
 export const writeDraft = async (
 	sessionId: string,
 	text: string,
-): Promise<void> => deviceStore.set(draftKey(sessionId), text);
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> =>
+	scopedStore(deviceStore, scope).set(draftKey(sessionId), text);
 
-export const clearDraft = async (sessionId: string): Promise<void> =>
-	deviceStore.remove(draftKey(sessionId));
+export const clearDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> => scopedStore(deviceStore, scope).remove(draftKey(sessionId));
 
 /**
  * Clears every draft. Called on an EXPLICIT sign-out and on an identity change —
  * the two cases the rule above names — and never on a `401`, which is the case
  * that reads like one but is not.
  */
+/** Auth retirement is fail-closed, unlike ordinary best-effort draft reads.
+ * Never turn blocked enumeration/deletion into a successful account switch.
+ * This is invoked ONLY by an explicit auth boundary, not an upgrade migration:
+ * legacy unknown-owner keys remain quarantined until that privacy boundary. */
+export const clearAuthorizationData = async (): Promise<void> => {
+	const privateKey = (key: string) =>
+		key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith("lo-mobile-command:");
+	if (Platform.OS === "web") {
+		const storage = globalThis.localStorage;
+		if (!storage) throw new Error("private storage cannot be enumerated");
+		const keys: string[] = [];
+		for (let index = 0; index < storage.length; index++) {
+			const key = storage.key(index);
+			if (key !== null && privateKey(key)) keys.push(key);
+		}
+		for (const key of keys) storage.removeItem(key);
+	} else {
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists) {
+			for (const entry of directory.list()) {
+				if (!(entry instanceof File) || !entry.name.endsWith(".json")) continue;
+				const key = decodeURIComponent(entry.name.slice(0, -5));
+				if (privateKey(key)) entry.delete();
+			}
+		}
+	}
+	for (const key of memory.keys()) if (privateKey(key)) memory.delete(key);
+};
+
 export const clearAllDrafts = async (): Promise<void> => {
 	for (const key of await deviceStore.keys()) {
 		if (key.startsWith(DRAFT_KEY_PREFIX)) await deviceStore.remove(key);
