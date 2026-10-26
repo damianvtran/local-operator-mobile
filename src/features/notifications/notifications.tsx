@@ -1,31 +1,32 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronLeft, X } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
-	AppState,
+	FlatList,
 	Pressable,
 	RefreshControl,
-	ScrollView,
 	Text,
+	useWindowDimensions,
 	View,
-	type ViewToken,
 } from "react-native";
 
 import type { NotificationItem } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
-	confirmDismissBody,
-	confirmDismissTitle,
+	confirmBodyFor,
+	confirmTitleFor,
 	DISMISS_CONFIRM_LABEL,
 	dismissAllActionLabel,
 } from "@/features/notifications/conversation-dismiss";
 import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import type { InboxEntry } from "@/features/notifications/notifications-model";
 import {
 	ALL_CAUGHT_UP_BODY,
 	ALL_CAUGHT_UP_TITLE,
 	canDismiss,
 	DISMISS_LABEL,
+	dismissableTargets,
 	EMPTY_ALL_BODY,
 	FILTER_ALL,
 	FILTER_UNREAD,
@@ -50,15 +51,15 @@ import {
 	unreadSummary,
 	waitingSummary,
 } from "@/features/notifications/notifications-model";
-import {
-	ReadReceiptTracker,
-	reviewToken,
-} from "@/features/notifications/notifications-read-receipts";
 import { useConversationDismiss } from "@/features/notifications/use-conversation-dismiss";
 import {
 	skippedSentence,
 	useNotifications,
 } from "@/features/notifications/use-notifications";
+import {
+	useReceiptFeed,
+	VIEWABILITY_CONFIG,
+} from "@/features/notifications/use-receipt-feed";
 import {
 	CONTROL,
 	EMPTY,
@@ -79,11 +80,8 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
 import { Skeleton } from "@/ui/components/skeleton";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
-
-/** The receipt loop's cadence: the completion-ack loop's own 500 ms, for the same
- *  reason — a receipt should not wait a visible tick to land. */
-const RECEIPT_CHECK_MS = 500;
 
 /**
  * The notifications inbox (design §10; contract §5.4).
@@ -130,13 +128,54 @@ export default function Notifications() {
 	const [selection, setSelection] = useState<ReadonlySet<string>>(new Set());
 	const [writing, setWriting] = useState(false);
 
-	/** The receipt engine, one per screen instance. Its `settled` set is what
-	 *  stops a second touch re-sending what the relay already accepted. */
-	const receipts = useRef(new ReadReceiptTracker()).current;
-	const receiptInFlight = useRef(false);
-	/** The newest `seen` sender, so the loop below never calls a stale closure. */
-	const sendSeen = useRef(inbox.seen);
-	sendSeen.current = inbox.seen;
+	/** Whether this route is the focused one. The receipt feed refuses to send
+	 *  anything while a pushed detail screen is over this list. */
+	const [isFocused, setIsFocused] = useState(false);
+	useFocusEffect(
+		useCallback(() => {
+			setIsFocused(true);
+			return () => setIsFocused(false);
+		}, []),
+	);
+
+	/** The evidenced read path: ONE feed, driven by the list's own viewability
+	 *  answers plus the screen's presence facts. It lives in `use-receipt-feed`
+	 *  because round 1 defined this callback and attached it to nothing — the
+	 *  evidenced path was dead on both platforms while the detail's unevidenced
+	 *  mount read was the only write that reached the relay (code review B1,
+	 *  QA Q1). */
+	const { feed: receipts, noteInput } = useReceiptFeed({
+		send: (targets, evidence) => inbox.seen(targets, evidence),
+		/* A dialog over the list covers the rows it is asking about. */
+		covered:
+			dismissAll.phase.kind === "confirming" ||
+			dismissAll.phase.kind === "applying",
+		focused: isFocused,
+		enabled: client !== null,
+	});
+
+	/**
+	 * The list's viewability answers, narrowed to the rows they contain.
+	 *
+	 * The callback identity must be STABLE for the life of the list — React Native
+	 * throws if it changes between renders — which is why it is a `useRef` value
+	 * rather than a fresh closure. Round 1's failure was the opposite kind: the
+	 * callback existed and nothing was given it.
+	 */
+	const viewability = useRef(
+		(info: {
+			viewableItems: Array<{ item?: InboxEntry | null } | null | undefined>;
+		}) => {
+			const visible = [];
+			for (const entry of info.viewableItems) {
+				const item = entry?.item;
+				if (item === undefined || item === null) continue;
+				if (item.kind !== "row") continue;
+				visible.push({ id: item.item.id, revision: item.item.revision });
+			}
+			receipts.render(visible, Date.now());
+		},
+	).current;
 
 	const response = inbox.response;
 	const rows = useMemo<NotificationItem[]>(
@@ -154,79 +193,23 @@ export default function Notifications() {
 					})),
 		[response, inbox.nowMs],
 	);
-
-	/* ---- presence: the three facts the receipt engine cannot know by itself ---- */
-
-	useEffect(() => {
-		receipts.setAppActive(AppState.currentState === "active");
-		const subscription = AppState.addEventListener("change", (next) => {
-			receipts.setAppActive(next === "active");
-		});
-		return () => subscription.remove();
-	}, [receipts]);
-
-	useFocusEffect(
-		useCallback(() => {
-			receipts.setScreenFocused(true);
-			/* A covering surface is a SHEET or a dialog. This screen opens neither:
-			 * the multi-select bar sits in the layout, not over it, so it cannot hide
-			 * a row. The flag is set explicitly rather than left to a default, so the
-			 * day a sheet lands here the omission is visible. */
-			receipts.setCovered(false);
-			return () => {
-				receipts.setScreenFocused(false);
-				receipts.resetView();
-			};
-		}, [receipts]),
-	);
-
-	/** A trusted gesture — a touch, a drag, a press. Never a navigation and never
-	 *  a timer: neither says a person was there. */
-	const noteInput = useCallback(
-		(kind: "touch" | "press" | "scroll") => {
-			receipts.noteInput(Date.now(), kind);
-		},
-		[receipts],
-	);
-
-	/** Viewability is the platform's own answer to "is this row on screen", at
-	 *  the 50 % threshold the doctrine uses. */
-	const onViewable = useRef((info: { viewableItems: ViewToken[] }) => {
-		const visible = info.viewableItems
-			.map((token) => token.item as NotificationItem | undefined)
-			.filter((item): item is NotificationItem => item !== undefined)
-			.map((item) => ({ id: item.id, revision: item.revision }));
-		receipts.render(visible, Date.now());
-	}).current;
-
-	useEffect(() => {
-		const timer = setInterval(() => {
-			const now = Date.now();
-			const targets = receipts.due(now);
-			if (targets.length === 0 || receiptInFlight.current) return;
-			const presence = receipts.evidence(now);
-			if (presence === null) return;
-			receiptInFlight.current = true;
-			void sendSeen
-				.current(targets, {
-					surface: "native",
-					input_kind: presence.input_kind,
-					input_at_ms: presence.input_at_ms,
-					visible_since_ms: now,
-				})
-				.then((outcome) => {
-					if (!outcome.ok) return;
-					const accepted = new Set(outcome.changed);
-					receipts.settle(
-						targets.filter((target) => accepted.has(reviewToken(target))),
-					);
-				})
-				.finally(() => {
-					receiptInFlight.current = false;
-				});
-		}, RECEIPT_CHECK_MS);
-		return () => clearInterval(timer);
-	}, [receipts]);
+	/**
+	 * The list's flat data: section headings and rows in reading order.
+	 *
+	 * `FlatList` needs ONE array, and the viewability answers index into it, so
+	 * the sections are flattened here (`inboxRows` stays the source of the row
+	 * list the writes use, so the two can never disagree about which rows exist).
+	 */
+	const entries = useMemo<InboxEntry[]>(() => {
+		const out: InboxEntry[] = [];
+		for (const section of sections) {
+			out.push({ kind: "header", id: `h:${section.id}`, title: section.title });
+			for (const item of section.data) {
+				out.push({ kind: "row", id: `r:${rowKey(item)}`, item });
+			}
+		}
+		return out;
+	}, [sections]);
 
 	/* ------------------------------------------------------------- the acts -- */
 
@@ -235,26 +218,20 @@ export default function Notifications() {
 		setSelecting(false);
 	}, []);
 
+	/**
+	 * Mark selected rows read or unread. No dialog: this verb is reversible by its
+	 * own counterpart, so it needs neither confirmation nor Undo.
+	 */
 	const onWrite = useCallback(
-		async (op: "read" | "unread" | "dismiss") => {
+		async (op: "read" | "unread") => {
 			const targets = selectionTargets(selection, rows);
 			if (targets.length === 0) return;
 			setWriting(true);
 			try {
-				await inbox.write(
-					op,
-					/* Dismiss skips the rows the relay does not admit, rather than sending
-					 * them to be refused: an open ask is settled through its own door. */
-					op === "dismiss"
-						? targets.filter((target) => {
-								const row = rows.find(
-									(candidate) => candidate.id === target.id,
-								);
-								return row !== undefined && canDismiss(row);
-							})
-						: targets,
-				);
-				clearSelection();
+				const outcome = await inbox.write(op, targets);
+				/* Only a write that landed clears the selection. A refusal leaves the
+				 * rows selected and says why (code review M3 / QA Q3). */
+				if (outcome.ok) clearSelection();
 			} finally {
 				setWriting(false);
 			}
@@ -262,6 +239,38 @@ export default function Notifications() {
 		[clearSelection, inbox, rows, selection],
 	);
 
+	/**
+	 * Dismiss ONE row: no dialog, but the same receipt and the same undo as every
+	 * other dismiss. A single dismiss is not worth an interruption, and it is not
+	 * worth being unrecoverable either — the relay reverses it with `undismiss`
+	 * (design review D2).
+	 */
+	const dismissOne = useCallback(
+		(item: NotificationItem) =>
+			dismissAll.dismissNow([
+				{
+					id: item.id,
+					revision: item.revision,
+				},
+			]),
+		[dismissAll],
+	);
+
+	/** Dismiss the selection: a dialog when it can remove more than one row, the
+	 *  direct receipt when it removes exactly one. */
+	const onDismissSelection = useCallback(() => {
+		const targets = dismissableTargets(selection, rows);
+		if (targets.length === 0) return;
+		if (targets.length === 1) {
+			void dismissAll.dismissNow(targets).then((ok) => {
+				if (ok) clearSelection();
+			});
+			return;
+		}
+		dismissAll.askTargets(targets);
+	}, [clearSelection, dismissAll, rows, selection]);
+
+	/** Mark all read, then keep the selection state honest about whether it landed. */
 	const onMarkAll = useCallback(async () => {
 		setWriting(true);
 		try {
@@ -290,6 +299,23 @@ export default function Notifications() {
 		[noteInput, openItem, selecting],
 	);
 
+	/* A SHORT VIEWPORT OR A LARGE TEXT SCALE COLLAPSES THE TOOLBAR. Measured on
+	 *  the shipped frames: iphone-15-landscape at 100 % spent 72 % of its 390 pt
+	 *  on chrome before the first card, and at 200 % showed no row at all; the
+	 *  in-scroll stack (filter + verbs + count + heading) was the larger share
+	 *  (design review D4). The threshold is the first row's own height plus the
+	 *  header, i.e. below this the stack cannot leave room for one card. */
+	const { height: viewportHeight, width: viewportWidth } =
+		useWindowDimensions();
+	const { effectiveScale } = useTextScale();
+	/* ONE ROW ONLY WHERE ONE ROW FITS. Short landscape (844×390) has the width for
+	 *  filter-beside-verbs and needs the height, which is the case design review D4
+	 *  measured (72 % chrome at 100 %, no row at all at 200 %). A 320 pt phone at
+	 *  200 % is short in neither dimension — it is NARROW, and side-by-side there
+	 *  overlapped the segmented control's own label over the verbs (caught by the
+	 *  audit's U-08 on the frame), so the stack stays. */
+	const compactToolbar = viewportHeight < 450 && viewportWidth >= 600;
+
 	const selectedCount = selectionTargets(selection, rows).length;
 	const skipped = skippedSentence(inbox.skipped);
 
@@ -297,11 +323,23 @@ export default function Notifications() {
 
 	const body = (() => {
 		if (inbox.loading && response === null) {
+			/* THE SKELETON HOLDS THE TOOLBAR'S SPACE. Without the verb row, the count
+			 * and the section label, the first card jumped 110 pt when the read
+			 * landed — once per visit (design review D5, measured on iphone-15 at
+			 * 100 %: first skeleton bar 229 pt, first card 339 pt). */
 			return (
-				<View className="gap-3 px-4 pt-4" testID={SURFACE.inboxLoading}>
-					{[0, 1, 2, 3].map((index) => (
-						<Skeleton key={index} lines={2} />
-					))}
+				<View className="gap-2 px-4 pt-3" testID={SURFACE.inboxLoading}>
+					{/* The filter's own box, then the verb row, then the count. */}
+					<Skeleton lines={1} barClassName="h-12 w-full" />
+					<View className="flex-row items-center gap-2">
+						<Skeleton lines={1} barClassName="h-8 w-2/5" />
+						<Skeleton lines={1} barClassName="h-8 w-1/4" />
+					</View>
+					<View className="gap-3 pt-3">
+						{[0, 1, 2, 3].map((index) => (
+							<Skeleton key={index} lines={2} />
+						))}
+					</View>
 				</View>
 			);
 		}
@@ -347,64 +385,14 @@ export default function Notifications() {
 				<EmptyState
 					headline="Nothing here yet"
 					next={EMPTY_ALL_BODY}
-					testID={EMPTY.notifications}
+					testID={EMPTY.notificationsAll}
 				/>
 			);
 		}
-		if (response !== null) {
-			return (
-				/* The rows only: a touch here is the in-view receipt's evidence, as
-				 *  it was when the rows had their own scroll view — a press on the
-				 *  toolbar above is not a touch "after the row rendered" on the row. */
-				<View onTouchStart={() => noteInput("touch")}>
-					{sections.map((section) => (
-						<View key={section.id} className="gap-2 px-4 pt-3">
-							<SectionHeader label={section.title} />
-							{section.data.map((item) => (
-								<InboxRow
-									key={rowKey(item)}
-									item={item}
-									nowMs={inbox.nowMs}
-									selecting={selecting}
-									selected={selection.has(rowKey(item))}
-									onPress={() => pressRow(item)}
-									onPressIn={() => noteInput("press")}
-									onDismiss={() =>
-										void inbox.write("dismiss", [
-											{ id: item.id, revision: item.revision },
-										])
-									}
-									onAnswer={() => openItem(item)}
-									onDismissConversation={() =>
-										void dismissAll.askFresh(
-											item.session.id,
-											item.session.title,
-										)
-									}
-								/>
-							))}
-						</View>
-					))}
-					{inbox.loadingMore ? (
-						<View className="items-center py-4">
-							<ActivityIndicator />
-						</View>
-					) : response !== null && response.next_cursor !== null ? (
-						/* A cursor page is a reader's explicit act, not a scroll trigger
-						 *  the list guesses at: the relay mints `next_cursor`, and asking
-						 *  for one more page is what the button says. */
-						<View className="items-center px-4 py-4">
-							<Button
-								label={LOAD_MORE_LABEL}
-								onPress={() => inbox.loadMore()}
-								variant="outline"
-								testID={CONTROL.inboxLoadMore}
-							/>
-						</View>
-					) : null}
-				</View>
-			);
-		}
+		/* The populated case is the FlatList in the render below, not a branch
+		 *  here: the list owns the rows so the platform can answer "which are on
+		 *  screen", which is the whole read receipt. */
+		if (response !== null) return null;
 		/* No answer, no failure: the read has not landed yet (an older frame's
 		 * first tick). The skeleton above covers the common path; this is the
 		 * honest blank rather than an invented empty state. */
@@ -434,64 +422,155 @@ export default function Notifications() {
 				 *  be reached or selected (capture S18/multi-select, iphone-15-landscape
 				 *  at 200 %: the first row's checkbox "unreachable"). Scrolling the
 				 *  toolbar away is what gives the rows the screen back. */}
-				<ScrollView
-					className="flex-1"
-					contentContainerClassName="grow"
-					contentContainerStyle={{ paddingBottom: 24 }}
-					refreshControl={
-						response !== null ? (
-							<RefreshControl
-								refreshing={inbox.busy && !writing}
-								onRefresh={() => inbox.reload({ silent: true })}
-							/>
-						) : undefined
-					}
-					onScrollBeginDrag={() => noteInput("scroll")}
-					testID={CONTROL.inboxList}
-				>
-					<View className="gap-2 px-4 pb-2 pt-3">
-						<SegmentedFilter value={inbox.filter} onChange={inbox.setFilter} />
-						<View className="flex-row items-center gap-2">
-							{response !== null && hasUnread(response) && !selecting ? (
-								<Button
-									label={writing ? MARK_ALL_BUSY : MARK_ALL_LABEL}
-									onPress={() => void onMarkAll()}
-									variant="quiet"
-									size="sm"
-									disabled={writing}
-									testID={CONTROL.inboxMarkAll}
-								/>
-							) : null}
-							{rows.length > 0 ? (
-								<Button
-									label={selecting ? SELECT_DONE : SELECT_LABEL}
-									onPress={() =>
-										selecting ? clearSelection() : setSelecting(true)
+				{response !== null && entries.length > 0 ? (
+					<FlatList
+						className="flex-1"
+						contentContainerStyle={{ paddingBottom: 24 }}
+						/* The platform's own answer to "which rows are on screen", which is
+						 *  the ONLY thing that feeds the read receipt (B1). `data` carries the
+						 *  section headings as well as the rows, so the callback's `item` is
+						 *  narrowed by `kind` before the feed sees it. */
+						data={entries}
+						keyExtractor={(entry) => entry.id}
+						viewabilityConfig={VIEWABILITY_CONFIG}
+						onViewableItemsChanged={viewability}
+						renderItem={({ item: entry }) =>
+							entry.kind === "header" ? (
+								<View className="gap-2 px-4 pt-3">
+									<SectionHeader
+										label={
+											entry.id === "h:waiting" && response !== null
+												? waitingSummary(response.waiting_count)
+												: entry.title
+										}
+									/>
+								</View>
+							) : (
+								<View className="px-4 pt-2">
+									<InboxRow
+										item={entry.item}
+										nowMs={inbox.nowMs}
+										selecting={selecting}
+										selected={selection.has(rowKey(entry.item))}
+										onPress={() => pressRow(entry.item)}
+										onPressIn={() => noteInput("press")}
+										onDismiss={() => void dismissOne(entry.item)}
+										onAnswer={() => openItem(entry.item)}
+										onDismissConversation={() =>
+											void dismissAll.askFresh(
+												entry.item.session.id,
+												entry.item.session.title,
+											)
+										}
+									/>
+								</View>
+							)
+						}
+						ListHeaderComponent={
+							<View className="gap-2 px-4 pb-1 pt-3">
+								<View
+									className={
+										compactToolbar ? "flex-row items-center gap-2" : "gap-2"
 									}
-									variant="quiet"
-									size="sm"
-									testID={
-										selecting ? CONTROL.inboxSelectionDone : CONTROL.inboxSelect
-									}
+								>
+									<View className={compactToolbar ? "flex-1" : undefined}>
+										<SegmentedFilter
+											value={inbox.filter}
+											onChange={inbox.setFilter}
+										/>
+									</View>
+									<View className="flex-row items-center gap-2">
+										{response !== null && hasUnread(response) && !selecting ? (
+											<Button
+												label={writing ? MARK_ALL_BUSY : MARK_ALL_LABEL}
+												onPress={() => void onMarkAll()}
+												variant="quiet"
+												size="sm"
+												disabled={writing}
+												testID={CONTROL.inboxMarkAll}
+											/>
+										) : null}
+										{rows.length > 0 ? (
+											<Button
+												label={selecting ? SELECT_DONE : SELECT_LABEL}
+												onPress={() =>
+													selecting ? clearSelection() : setSelecting(true)
+												}
+												variant="quiet"
+												size="sm"
+												testID={
+													selecting
+														? CONTROL.inboxSelectionDone
+														: CONTROL.inboxSelect
+												}
+											/>
+										) : null}
+									</View>
+								</View>
+								{/* The count line is folded away in the compact form: on a
+								 *  landscape phone at 200 % it was one of the rows that
+								 *  pushed the first card off screen entirely (design review
+								 *  D4). */}
+								{!compactToolbar && response !== null && hasUnread(response) ? (
+									<Text className="text-meta text-ink-dim">
+										{unreadSummary(response.unread_count)}
+									</Text>
+								) : null}
+								{inbox.writeError !== null ? (
+									<View testID={SURFACE.inboxSkipped}>
+										<Alert severity="error">{inbox.writeError}</Alert>
+									</View>
+								) : null}
+								{skipped !== null ? (
+									<View testID={SURFACE.inboxSkipped}>
+										<Alert severity="warning">{skipped}</Alert>
+									</View>
+								) : null}
+								<DismissReceipt dismissAll={dismissAll} />
+							</View>
+						}
+						ListFooterComponent={
+							<View className="px-4 pt-2">
+								{inbox.loadingMore ? (
+									<View className="items-center py-4">
+										<ActivityIndicator />
+									</View>
+								) : response !== null && response.next_cursor !== null ? (
+									/* A cursor page is a reader's explicit act, not a scroll
+									 *  trigger the list guesses at. */
+									<View className="items-center py-4">
+										<Button
+											label={LOAD_MORE_LABEL}
+											onPress={() => inbox.loadMore()}
+											variant="outline"
+											testID={CONTROL.inboxLoadMore}
+										/>
+									</View>
+								) : null}
+							</View>
+						}
+						refreshControl={
+							response !== null ? (
+								<RefreshControl
+									refreshing={inbox.busy && !writing}
+									onRefresh={() => inbox.reload({ silent: true })}
 								/>
-							) : null}
-						</View>
-					</View>
-					{response !== null && hasUnread(response) ? (
-						<Text className="px-4 pb-2 text-meta text-ink-dim">
-							{unreadSummary(response.unread_count)}
-						</Text>
-					) : null}
-					{skipped !== null ? (
-						<View className="px-4 pb-2" testID={SURFACE.inboxSkipped}>
-							<Alert severity="warning">{skipped}</Alert>
-						</View>
-					) : null}
-					<View className="px-4 pb-2">
-						<DismissReceipt dismissAll={dismissAll} />
-					</View>
-					{body}
-				</ScrollView>
+							) : undefined
+						}
+						onScrollBeginDrag={() => noteInput("scroll")}
+						/* A touch anywhere on the rows is the trusted gesture the receipt
+						 *  needs; it is recorded on the list, not on each row, so a swipe
+						 *  that starts between two rows still counts. */
+						onTouchStart={() => noteInput("touch")}
+						testID={CONTROL.inboxList}
+					/>
+				) : (
+					/* Every other state — loading, refused, unreachable, empty — draws
+					 * its own view, so an unreadable inbox can never look like an
+					 * empty one. */
+					body
+				)}
+
 				{selecting ? (
 					<View
 						/* In the layout, not over it: an absolute bar covers the last rows,
@@ -534,7 +613,7 @@ export default function Notifications() {
 							) : null}
 							<Button
 								label={DISMISS_LABEL}
-								onPress={() => void onWrite("dismiss")}
+								onPress={onDismissSelection}
 								variant="outline"
 								size="sm"
 								disabled={selectedCount === 0 || writing}
@@ -547,19 +626,8 @@ export default function Notifications() {
 			<Dialog
 				visible={dismissAll.phase.kind === "confirming"}
 				testID={CONTROL.inboxDismissAllDialog}
-				title={
-					dismissAll.phase.kind === "confirming"
-						? confirmDismissTitle(
-								dismissAll.phase.scope.tokens.length,
-								dismissAll.phase.scope.title,
-							)
-						: ""
-				}
-				body={
-					dismissAll.phase.kind === "confirming"
-						? confirmDismissBody(dismissAll.phase.scope.openAsks)
-						: ""
-				}
+				title={confirmTitleFor(dismissAll.phase)}
+				body={confirmBodyFor(dismissAll.phase)}
 				confirmLabel={DISMISS_CONFIRM_LABEL}
 				destructive
 				onConfirm={() => void dismissAll.confirm()}
@@ -665,8 +733,15 @@ function InboxRow({
 				{selecting ? (
 					<View
 						className={cx(
-							"mt-1 h-5 w-5 items-center justify-center rounded-sm border-hairline",
-							selected ? "bg-accent" : "bg-elevated",
+							/* A REAL BORDER, NOT `border-hairline`: that token carries a
+							 * colour but resolves to `border-width: 0` on the web target, so
+							 * the unchecked box measured 1.00:1 against its own card in both
+							 * themes — invisible in the one state where the reader is being
+							 * asked to choose rows (design review D1). 2 pt of `ink-dim`
+							 * clears the 3:1 boundary bar on both cards (5.73:1 light,
+							 * 4.7:1 dark, measured in that review). */
+							"mt-1 h-5 w-5 items-center justify-center rounded-sm border-2 border-ink-dim",
+							selected ? "border-transparent bg-accent" : "bg-elevated",
 						)}
 						testID={notificationSelectId(item.id)}
 					>

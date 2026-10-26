@@ -122,8 +122,13 @@ export const EMPTY = {
 	 *  nothing is pinned ("All caught up"). Rendered only under those
 	 *  conditions, so a failed read can never produce it. */
 	notifications: "notifications-empty",
-	/** The unread filter with no unread rows, while the All filter still holds
-	 *  history — "nothing unread" is a different sentence from "all caught up". */
+	/** The same empty ANSWER read on the All filter, which says "Nothing here
+	 *  yet" rather than "All caught up": claiming the store is clear while it
+	 *  holds read history would be a different lie. Two sentences, two ids, so a
+	 *  capture can name which one it drew (`empty` marks the unread one — no cell
+	 *  captures the All variant yet, and this id is how one would). */
+	notificationsAll: "notifications-empty-all",
+	/** The not-found route's blank. */
 	notFound: "not-found-empty",
 } as const;
 
@@ -1306,6 +1311,10 @@ export const STATE_MARKER = {
 	notifications: {
 		loading: SURFACE.inboxLoading,
 		empty: EMPTY.notifications,
+		/* The All filter's empty answer is a different sentence under a different
+		 * id; no cell captures it yet, and this entry is how one would (code review
+		 * m5: one marker could not tell the two apart). */
+		"empty-all": EMPTY.notificationsAll,
 		populated: "notification-row-",
 		error: SURFACE.inboxError,
 		"multi-select": SURFACE.inboxSelectionBar,

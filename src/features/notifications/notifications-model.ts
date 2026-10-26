@@ -306,3 +306,15 @@ export function relativeTime(atMs: number, nowMs: number): string {
 	const days = Math.round(hours / 24);
 	return days === 1 ? "yesterday" : `${days}d ago`;
 }
+
+/**
+ * One line of the inbox list: a section heading or a row.
+ *
+ * The screen's list is virtualised (the receipt feed needs the platform's own
+ * viewability answers), so the sections are flattened into one array whose
+ * indices the viewability callback reports. `row` entries carry the item itself,
+ * which is what the feed needs to key a receipt by id AND revision.
+ */
+export type InboxEntry =
+	| { kind: "header"; id: string; title: string }
+	| { kind: "row"; id: string; item: NotificationItem };

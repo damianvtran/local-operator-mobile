@@ -159,6 +159,14 @@ export class ReadReceiptTracker {
 		return due;
 	}
 
+	/** When this exact revision first rendered, or `null` if it is not on screen
+	 *  (or was settled and re-entered). The feed uses it for the evidence's
+	 *  `visible_since_ms`: the newest render in a batch, which is when the last
+	 *  row of that batch appeared — never the clock at send time. */
+	renderedAt(token: string): number | null {
+		return this.rendered.get(token) ?? null;
+	}
+
 	/** Record what the relay accepted. Only `changed` tokens are marked — a
 	 *  skipped row (stale, or a live ask) stays eligible, and the next read will
 	 *  re-key it if it really moved. */

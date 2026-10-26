@@ -74,6 +74,9 @@ export interface InboxState {
 	nowMs: number;
 	/** The last write's refusals, for the line under the toolbar. */
 	skipped: NotificationWriteResponse["skipped"];
+	/** The relay's sentence for a write that did not land, or the transport
+	 *  line. `null` once a later write succeeds. */
+	writeError: string | null;
 	reload: (options?: { silent?: boolean }) => void;
 	/** Load the next cursor page, appending to what is on screen. Absent (no
 	 *  `next_cursor`) means the last page is already here. */
@@ -106,6 +109,10 @@ export function useNotifications(
 	const [refused, setRefused] = useState<string | null>(null);
 	const [unreachable, setUnreachable] = useState(false);
 	const [nowMs, setNowMs] = useState(() => Date.now());
+	/** The relay's own sentence for a write it refused, or the transport line.
+	 *  Round 1 discarded it: a 422 or a dropped tunnel left the rows in place and
+	 *  the screen silent (code review M3 / QA Q3). */
+	const [writeError, setWriteError] = useState<string | null>(null);
 	const [skipped, setSkipped] = useState<NotificationWriteResponse["skipped"]>(
 		[],
 	);
@@ -193,9 +200,22 @@ export function useNotifications(
 					cursor: held.next_cursor ?? undefined,
 				});
 				if (ticket !== ticketRef.current) return;
+				/* THE WINDOW IS THE UNION OF WHAT THE SCREEN HOLDS, not the page
+				 * that just landed. `observed` is what a bulk write may touch, so
+				 * replacing it page by page made "Mark all read" reach only the last
+				 * page while its label, the badge and `high_water` all described the
+				 * whole pile — 60 rows on screen, 10 cleared, and an empty `skipped`
+				 * so nothing even said so (code review M1, reproduced by its author).
+				 *
+				 * `high_water` stays the FIRST page's boundary: it is the boundary the
+				 * rows on screen were served under, and widening it to a later page
+				 * would let a mark-all reach an item that arrived after the reader
+				 * started reading. */
 				setResponse({
 					...answer,
 					waiting: held.waiting,
+					high_water: Math.min(held.high_water, answer.high_water),
+					observed: unionTokens(held.observed, answer.observed),
 					items: [...held.items, ...answer.items],
 				});
 				setNowMs(Date.now());
@@ -231,14 +251,18 @@ export function useNotifications(
 			setBusy(true);
 			try {
 				const answer = await call(client);
+				setWriteError(null);
 				setSkipped(answer.skipped);
 				/* Re-read rather than patch the rows locally: the relay's answer is
 				 * the store's state, and a local edit would drift from it the first
 				 * time a write was skipped. */
 				await load({ silent: true });
 				return { ok: true, changed: answer.changed, skipped: answer.skipped };
-			} catch {
-				setSkipped([]);
+			} catch (error) {
+				/* The rows stay (correct); the silence was the defect. An earlier
+				 * skip warning is NOT cleared here — it described a real answer this
+				 * write did not replace. */
+				setWriteError(refusalSentence(error) ?? WRITE_UNREACHABLE);
 				return { ok: false, changed: [], skipped: [] };
 			} finally {
 				setBusy(false);
@@ -301,6 +325,7 @@ export function useNotifications(
 		unreachable,
 		nowMs,
 		skipped,
+		writeError,
 		reload: load,
 		loadMore,
 		write,
@@ -314,9 +339,19 @@ export function useNotifications(
  *  re-wording). */
 export function refusalSentence(error: unknown): string | null {
 	if (!isRelayError(error)) return null;
-	if (error.kind !== "rejected") return null;
 	const sentence = error.displayableMessage.trim();
-	return sentence === "" ? null : sentence;
+	if (sentence === "") return null;
+	if (error.kind === "rejected") return sentence;
+	/* A 503 from the RELAY (the store being busy, say) arrives classified as
+	 * `offline` because the tunnel guard and this route share the status code.
+	 * When such an answer carries its own sentence, that sentence is the cause;
+	 * asserting "couldn't reach your computer" about a machine that just replied
+	 * is false, and QA Q2 caught exactly that on the shipped error cell. The
+	 * generic transport copy is the only thing suppressed. */
+	if (error.kind === "computer-offline" && sentence !== OFFLINE_SENTENCE) {
+		return sentence;
+	}
+	return null;
 }
 
 /** The line a write's refusals earn. One sentence for the whole line: the reader
@@ -325,6 +360,27 @@ export function skippedSentence(
 	skipped: NotificationWriteResponse["skipped"],
 ): string | null {
 	return skipped.length === 0 ? null : SKIPPED_SENTENCE;
+}
+
+/** The transport copy the connection's own surface uses; suppressed here because
+ *  the screen says it in its own words for a real outage. */
+const OFFLINE_SENTENCE = "Tunnel temporarily unavailable";
+
+/** The line a write earns when it failed with no sentence from the relay. */
+export const WRITE_UNREACHABLE =
+	"That did not reach your computer. Nothing changed.";
+
+/** The union of two `observed` lists, deduped by id, keeping the LAST revision
+ *  the relay stated for each. Exported for the test that pins M1. */
+export function unionTokens(
+	held: ReadonlyArray<{ id: string; revision: number }> | undefined,
+	next: ReadonlyArray<{ id: string; revision: number }> | undefined,
+): Array<{ id: string; revision: number }> {
+	const merged = new Map<string, { id: string; revision: number }>();
+	for (const token of [...(held ?? []), ...(next ?? [])]) {
+		merged.set(token.id, { id: token.id, revision: token.revision });
+	}
+	return [...merged.values()];
 }
 
 export const INBOX_FAILED_READ = READ_FAILED;

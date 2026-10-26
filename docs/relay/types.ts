@@ -703,6 +703,25 @@ export interface SessionListFrame {
    *  relay omits the block, and **absence means "unknown", never 0**. `count`
    *  is absent when `degraded` is non-empty. */
   unread?: UnreadBlock;
+  /** The inbox's own counts (contract §5.4), published on this frame so a phone
+   *  needs no second stream. Absent on an older relay, and **absence means
+   *  unknown, never 0** — the badge then draws no number rather than a zero.
+   *
+   * This block was missing from this file after it shipped on the app's schema
+   * (`src/contracts/schemas.ts`, `sessionListFrameSchema`), which is how the
+   * mock relay came to serve a frame the badge could never read: the designed
+   * count had never rendered in any frame (design review D3). */
+  notifications?: NotificationsBlock;
+}
+
+/** The inbox's counts (`SessionListFrame.notifications`): the badge's number,
+ *  the pinned asks, and the boundary a bounded bulk read is compared against.
+ *  All three ride together because the relay publishes them from one store
+ *  read — a partial block would describe a moment that never existed. */
+export interface NotificationsBlock {
+  unread_count: number;
+  waiting_count: number;
+  high_water: number;
 }
 
 /** The frame-level unread aggregate. `count` is the §1.4 badge number:

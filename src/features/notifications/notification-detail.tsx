@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -7,8 +7,8 @@ import type { NotificationDetailResponse, PendingAsk } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
 	type ConversationScope,
-	confirmDismissBody,
-	confirmDismissTitle,
+	confirmBodyFor,
+	confirmTitleFor,
 	DISMISS_CONFIRM_LABEL,
 	dismissAllLabel,
 	dismissAllPendingLabel,
@@ -27,6 +27,8 @@ import {
 	useConversationDismiss,
 } from "@/features/notifications/use-conversation-dismiss";
 import { refusalSentence } from "@/features/notifications/use-notifications";
+import { useReceiptFeed } from "@/features/notifications/use-receipt-feed";
+import type { NotificationSeenRequest } from "@/relay";
 import { isRelayMissing } from "@/relay";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -84,7 +86,46 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 	 *  never this screen's arithmetic on a receipt. */
 	const rewalkRef = useRef<() => void>(() => undefined);
 	const dismissAll = useConversationDismiss(client, () => rewalkRef.current());
-	const { observe } = dismissAll;
+	const { observe, reportCountFailed } = dismissAll;
+
+	/* The detail's OWN evidenced read: one row is on screen here, so the feed is
+	 *  handed that one row and the reader's touch is what clears it (code review
+	 *  M2 — round 1 read on mount, which cleared an item merely for being
+	 *  navigated to, including from a deep link or a cold start). */
+	const [isFocused, setIsFocused] = useState(false);
+	useFocusEffect(
+		useCallback(() => {
+			setIsFocused(true);
+			return () => setIsFocused(false);
+		}, []),
+	);
+	const sendSeen = useCallback(
+		async (
+			targets: Array<{ id: string; revision: number }>,
+			evidence: NotificationSeenRequest["evidence"],
+		) => {
+			const live = client;
+			if (live === null) return { ok: false, changed: [] };
+			try {
+				const answer = await live.markNotificationsSeen({
+					items: targets,
+					evidence,
+				});
+				return { ok: true, changed: answer.changed };
+			} catch {
+				return { ok: false, changed: [] };
+			}
+		},
+		[client],
+	);
+	const { feed: receipts, noteInput } = useReceiptFeed({
+		send: sendSeen,
+		covered:
+			dismissAll.phase.kind === "confirming" ||
+			dismissAll.phase.kind === "applying",
+		focused: isFocused,
+		enabled: client !== null,
+	});
 
 	const recount = useCallback(
 		async (sessionId: string, title: string) => {
@@ -93,8 +134,12 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 			const walked = await observe(sessionId, title);
 			if (ticket !== scopeTicketRef.current) return;
 			setScope(walked);
+			/* A failed walk used to leave the card permanently disabled with no
+			 * sentence — while the list's door for the same action said why (code
+			 * review M4). */
+			if (walked === null) reportCountFailed();
 		},
-		[observe],
+		[observe, reportCountFailed],
 	);
 
 	const back = useCallback(() => {
@@ -121,17 +166,21 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 					);
 					if (ticket !== ticketRef.current) return;
 					setState({ kind: "ready", detail });
-					/* The explicit read, sent only now that content rendered. A failure
-					 * leaves the item unread — the safe direction — and the next open
-					 * retries it. */
-					if (!detail.item.read) {
-						await live
-							.patchNotifications({
-								op: "read",
-								ids: [{ id: detail.item.id, revision: detail.item.revision }],
-							})
-							.catch(() => undefined);
-					}
+					/* NO READ ON MOUNT. Round 1 marked the item read as soon as the
+					 * fetch resolved — no foreground check, no gesture, no dwell — and
+					 * the same code ran for a deep link opened from a chat client and
+					 * for a cold start, so merely navigating to an item cleared it
+					 * (code review M2; the doctrine says a read is a claim about the
+					 * reader). The evidenced feed below owns this read now: the body
+					 * renders, a real touch follows it, the app is active, and the row
+					 * stays for the dwell. An item nobody touched stays unread — the
+					 * safe direction.
+					 */
+					receipts.resetView();
+					receipts.render(
+						[{ id: detail.item.id, revision: detail.item.revision }],
+						Date.now(),
+					);
 					if (ticket !== ticketRef.current) return;
 					/* Count AFTER the read settles: the read re-stamps this item's seq,
 					 * and a boundary frozen before it would make the write refuse the
@@ -156,7 +205,7 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				}
 			})();
 		},
-		[client, itemId, recount],
+		[client, itemId, recount, receipts],
 	);
 
 	/** One load, with a fresh ticket. The retry control calls it directly rather
@@ -244,25 +293,18 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				/>
 			}
 		>
-			<ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+			<ScrollView
+				contentContainerStyle={{ paddingBottom: 32 }}
+				onTouchStart={() => noteInput("touch")}
+				onScrollBeginDrag={() => noteInput("scroll")}
+			>
 				{body}
 			</ScrollView>
 			<Dialog
 				visible={dismissAll.phase.kind === "confirming"}
 				testID={CONTROL.inboxDismissAllDialog}
-				title={
-					dismissAll.phase.kind === "confirming"
-						? confirmDismissTitle(
-								dismissAll.phase.scope.tokens.length,
-								dismissAll.phase.scope.title,
-							)
-						: ""
-				}
-				body={
-					dismissAll.phase.kind === "confirming"
-						? confirmDismissBody(dismissAll.phase.scope.openAsks)
-						: ""
-				}
+				title={confirmTitleFor(dismissAll.phase)}
+				body={confirmBodyFor(dismissAll.phase)}
 				confirmLabel={DISMISS_CONFIRM_LABEL}
 				destructive
 				onConfirm={() => void dismissAll.confirm()}

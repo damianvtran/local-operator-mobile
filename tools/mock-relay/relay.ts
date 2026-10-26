@@ -1186,6 +1186,23 @@ export function createRelay(options: RelayOptions = {}) {
 				return capabilities;
 			})(),
 			unread,
+			/* THE INBOX COUNTS RIDE THE LIST FRAME (contract §5.4). Both new entry
+			 * points read the badge from here, and the mock answered only
+			 * `sessions`/`degraded`/`capabilities`/`unread` — so the count the design
+			 * puts on the home bell and the conversations rail had never rendered in
+			 * a frame: a designed state nobody had seen (design review D3). */
+			notifications: (() => {
+				const counts = notificationsStore.page("all", 1) as unknown as {
+					unread_count?: number;
+					waiting_count?: number;
+					high_water?: number;
+				};
+				return {
+					unread_count: Number(counts.unread_count ?? 0),
+					waiting_count: Number(counts.waiting_count ?? 0),
+					high_water: Number(counts.high_water ?? 0),
+				};
+			})(),
 		};
 	};
 

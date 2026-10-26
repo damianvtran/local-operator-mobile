@@ -288,6 +288,19 @@ export function createNotificationsStore(options: NotificationsStoreOptions) {
 			? asArray(record.observed).map((value) => asRecord(value) ?? {})
 			: null;
 		const bulk = ids.length === 0;
+		/* A BULK TARGET WITHOUT TOKENS IS REFUSED, with the live route's own
+		 * sentence (measured at local-operator a7d149e705). The mock used to accept
+		 * it and fall through to a seq sweep, which is why the under-delivering
+		 * mark-all passed the suite: no test sent the body the app sends, and a mock
+		 * that accepts anything cannot catch a client that sends too little (code
+		 * review m1). */
+		if (bulk && (all || sessionId !== "") && observed === null) {
+			return {
+				ok: false,
+				status: 422,
+				body: { error: "bulk writes require 0..500 observed tokens" },
+			};
+		}
 		const targets: { id: string; revision: number | null }[] = [];
 		if (bulk && observed !== null && (all || sessionId !== "")) {
 			/* The live route's bulk shape (`items.py` `apply_patch`): ONLY the

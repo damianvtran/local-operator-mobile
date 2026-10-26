@@ -116,7 +116,22 @@ describe("the writes", () => {
 
 	it("bounds a mark-all to the through_seq the screen enumerated", () => {
 		const live = store();
-		const outcome = live.patch({ op: "read", all: true, through_seq: 6 });
+		/* The body the APP sends: `all` + the boundary + the tokens the answer
+		 * observed. The old test sent `all` + `through_seq` alone — a body the app
+		 * never sends and the live relay 422s — which is why the mark-all that
+		 * reached only the last page passed the suite (code review m1). */
+		const page = live.page("all", 50) as unknown as {
+			observed: { id: string; revision: number }[];
+		};
+		const before = page.observed.filter((token) =>
+			["n_deploy", "n_read"].includes(token.id),
+		);
+		const outcome = live.patch({
+			op: "read",
+			all: true,
+			through_seq: 6,
+			observed: before,
+		});
 		if (!outcome.ok) throw new Error("mark-all refused");
 		const body = outcome.body as { changed: string[] };
 		/* seq 5 (n_deploy), 6 (n_read — already read, so it is still "changed" by
@@ -160,5 +175,38 @@ describe("the writes", () => {
 		expect((fresh.body as { changed: string[] }).changed).toEqual([target.id]);
 		const unread = live.page("unread", 50) as { items: { id: string }[] };
 		expect(unread.items.map((row) => row.id)).not.toContain(target.id);
+	});
+});
+
+describe("the bulk write needs its tokens", () => {
+	it("refuses a bulk target with no observed tokens, in the relay's words", () => {
+		/* The live route's answer, measured at local-operator a7d149e705. */
+		for (const body of [
+			{ op: "read", all: true, through_seq: 6 },
+			{ op: "dismiss", session_id: "s_0001", through_seq: 6 },
+		]) {
+			const outcome = store().patch(body);
+			expect(outcome.ok).toBe(false);
+			if (!outcome.ok) {
+				expect(outcome.status).toBe(422);
+				expect((outcome.body as { error?: string }).error).toBe(
+					"bulk writes require 0..500 observed tokens",
+				);
+			}
+		}
+	});
+
+	it("accepts a bulk target that echoes what the answer observed", () => {
+		const live = store();
+		const outcome = live.patch({
+			op: "read",
+			all: true,
+			through_seq: 10,
+			observed: [{ id: "n_fraud", revision: 1 }],
+		});
+		if (!outcome.ok) throw new Error("a token-bound bulk write was refused");
+		expect((outcome.body as { changed: string[] }).changed).toEqual([
+			"n_fraud",
+		]);
 	});
 });

@@ -81,7 +81,9 @@ export type ScopeWriteBody =
 			through_seq: number;
 			observed: ScopeToken[];
 	  }
-	| { op: "undismiss"; ids: ScopeToken[] };
+	/* `ids` covers both directions: a selection (or a single row) names its rows,
+	 *  and its Undo names the same original tokens back. */
+	| { op: "dismiss" | "undismiss"; ids: ScopeToken[] };
 
 /** What the confirmation owns: the exact rows its number counted. */
 export interface ConversationScope {
@@ -235,6 +237,57 @@ export async function applyConversationOperation(
 	return receipt;
 }
 
+/**
+ * Dismiss (or restore) an explicit SET of rows, by the tokens the screen holds.
+ *
+ * The same receipt and the same Undo as the conversation sweep, because the
+ * reader's risk is the same: two doors that both say "Dismiss" may not mean two
+ * different safety levels (design review D2). What differs is the target — a
+ * selection names its rows by id+revision, so no `session_id` and no boundary is
+ * sent, and the route applies exactly those tokens.
+ */
+export async function applyTokenOperation(
+	send: (body: ScopeWriteBody) => Promise<ScopeWriteAnswer>,
+	op: "dismiss" | "undismiss",
+	tokens: ReadonlyArray<ScopeToken>,
+): Promise<ScopeReceipt> {
+	const captured = [
+		...new Map(tokens.map((token) => [token.id, { ...token }])).values(),
+	];
+	const receipt: ScopeReceipt = {
+		changed: [],
+		skipped: [],
+		pending: captured,
+		failed: false,
+	};
+	const settled = new Set<string>();
+	for (let index = 0; index < captured.length; index += SCOPE_BATCH_LIMIT) {
+		const batch = captured.slice(index, index + SCOPE_BATCH_LIMIT);
+		const byId = new Map(batch.map((token) => [token.id, token]));
+		try {
+			const answer = await send({ op, ids: batch });
+			for (const id of answer.changed) {
+				const token = byId.get(id);
+				if (token !== undefined && !settled.has(id)) {
+					receipt.changed.push(token);
+					settled.add(id);
+				}
+			}
+			for (const skip of answer.skipped) {
+				if (byId.has(skip.id) && !settled.has(skip.id)) {
+					receipt.skipped.push({ id: skip.id, reason: skip.reason });
+					settled.add(skip.id);
+				}
+			}
+		} catch {
+			receipt.failed = true;
+		}
+		receipt.pending = captured.filter((token) => !settled.has(token.id));
+		if (receipt.failed) break;
+	}
+	return receipt;
+}
+
 /** Whether every named token is confirmed changed — the only state that earns
  *  the plain sentence. Anything else keeps the counts on screen. */
 export function receiptComplete(receipt: ScopeReceipt, expected: number) {
@@ -285,6 +338,26 @@ export function confirmDismissBody(openAsks: number): string {
 		: "Only updates are dismissed; open asks always stay until they're answered.";
 }
 
+/** The selection's own confirmation — the same dialog, scoped to rows the reader
+ *  can see, so it is the number they selected and nothing else. */
+export function confirmSelectionTitle(count: number): string {
+	return `Dismiss ${updates(count)}?`;
+}
+
+export function confirmSelectionBody(): string {
+	return "This clears the rows you selected. Undo appears straight after, and asks stay until they're answered.";
+}
+
+/** The single-row door's receipt: no dialog (one row is a small act), but always
+ *  Undo — a mis-tap costs one touch to reverse, not a lost item. */
+export function dismissOneLabel(count: number): string {
+	return `Dismissed ${updates(count)}.`;
+}
+
+export function dismissSelectionLabel(count: number): string {
+	return `Dismissed ${updates(count)}.`;
+}
+
 export const DISMISS_ALL_NONE = "No updates from this conversation to dismiss.";
 export const DISMISS_ALL_COUNT_FAILED =
 	"Couldn't count this conversation's updates.";
@@ -309,8 +382,15 @@ export function dismissReceiptSentence(
 		);
 	}
 	if (receipt.pending.length > 0) {
+		/* TWO DIFFERENT FACTS, TWO SENTENCES. A dropped request may still have
+		 * committed, so its tokens are "not confirmed"; a relay that answered 200
+		 * and simply did not name some ids has answered — those were refused
+		 * without a reason, and saying the connection dropped would be a false
+		 * explanation of a real answer (code review m3). */
 		parts.push(
-			`${receipt.pending.length} not confirmed — the connection dropped.`,
+			receipt.failed
+				? `${receipt.pending.length} not confirmed — the connection dropped.`
+				: `${receipt.pending.length} were not answered by the relay.`,
 		);
 	}
 	return `${parts.join(" ")}${asks}`;
@@ -326,4 +406,40 @@ export function undoReceiptSentence(
 	}
 	const rest = expected - receipt.changed.length;
 	return `Restored ${receipt.changed.length} of ${updates(expected)}. ${rest} could not be restored.`;
+}
+
+/** What a dismissal can name: a conversation's scope, or explicit rows. */
+export type DismissTargetView =
+	| { kind: "scope"; scope: ConversationScope }
+	| { kind: "tokens"; tokens: ScopeToken[] };
+
+/**
+ * The sliver of a dismiss phase the dialog's copy needs.
+ *
+ * Structural on purpose: the phase union is the hook's state machine, and making
+ * this module depend on every variant of it would put the copy at the mercy of
+ * each new state. `target` is present only while confirming.
+ */
+export interface ConfirmationPhase {
+	kind: string;
+	target?: DismissTargetView;
+}
+
+/** The confirmation's title, whichever target the flow holds. One dialog, two
+ *  counts: a conversation's whole scope, or the rows the reader selected. */
+export function confirmTitleFor(phase: ConfirmationPhase): string {
+	const target = phase.target;
+	if (phase.kind !== "confirming" || target === undefined) return "";
+	return target.kind === "scope"
+		? confirmDismissTitle(target.scope.tokens.length, target.scope.title)
+		: confirmSelectionTitle(target.tokens.length);
+}
+
+/** The confirmation's second line: what is NOT included, or what Undo covers. */
+export function confirmBodyFor(phase: ConfirmationPhase): string {
+	const target = phase.target;
+	if (phase.kind !== "confirming" || target === undefined) return "";
+	return target.kind === "scope"
+		? confirmDismissBody(target.scope.openAsks)
+		: confirmSelectionBody();
 }
