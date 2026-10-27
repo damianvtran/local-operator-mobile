@@ -52,7 +52,10 @@ describe("sidebarFooterScrolls", () => {
 		).toBe(false);
 		/* And ordinary text changes nothing, whatever the height. */
 		expect(
-			sidebarFooterScrolls(layoutFor(320, 568), { largeText: false }),
+			sidebarFooterScrolls(layoutFor(320, 568), {
+				largeText: false,
+				routes: 6,
+			}),
 		).toBe(false);
 	});
 
@@ -81,15 +84,22 @@ describe("sidebarFooterScrolls", () => {
 	});
 
 	it("preserves rows in short landscape without changing portrait or tablet flow", () => {
-		expect(sidebarFooterScrolls(layoutFor(844, 390))).toBe(true);
-		expect(sidebarFooterScrolls(layoutFor(568, 320))).toBe(true);
-		for (const [width, height] of [
-			[390, 844],
-			[320, 568],
-			[834, 1112],
-			[1112, 834],
-		] as const) {
-			expect(sidebarFooterScrolls(layoutFor(width, height))).toBe(false);
+		/* `routes` is REQUIRED (code review round 8, R8-05): a default would let a
+		 *  stray call silently pick the strictest floor, which is the one case this
+		 *  rule exists to leave alone. */
+		for (const routes of [5, 6]) {
+			expect(sidebarFooterScrolls(layoutFor(844, 390), { routes })).toBe(true);
+			expect(sidebarFooterScrolls(layoutFor(568, 320), { routes })).toBe(true);
+			for (const [width, height] of [
+				[390, 844],
+				[320, 568],
+				[834, 1112],
+				[1112, 834],
+			] as const) {
+				expect(sidebarFooterScrolls(layoutFor(width, height), { routes })).toBe(
+					false,
+				);
+			}
 		}
 	});
 });

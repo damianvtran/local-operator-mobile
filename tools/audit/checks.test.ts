@@ -63,6 +63,7 @@ const node = (over: Partial<AuditNode> = {}): AuditNode =>
 		escapedClip: false,
 		ariaHidden: false,
 		inModalDialog: false,
+		modalRoot: null,
 		ownInk: false,
 		interactive: false,
 		disabled: false,

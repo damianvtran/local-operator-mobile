@@ -462,6 +462,10 @@ export const CONTROL = {
 	homeNotificationsCount: "home-notifications-count",
 	sidebarNotifications: "sidebar-notifications",
 	sidebarNotificationsCount: "sidebar-notifications-count",
+	/** The invisible mirror of that count, which keeps the row symmetric (D19/D22).
+	 *  It carries no content and is hidden from assistive tech; the id exists so a
+	 *  test can measure the two sides against each other. */
+	sidebarNotificationsSpacer: "sidebar-notifications-spacer",
 	inboxBack: "notifications-back",
 	inboxList: "notifications-list",
 	inboxLoadMore: "notifications-load-more",

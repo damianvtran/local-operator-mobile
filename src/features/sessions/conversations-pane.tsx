@@ -127,6 +127,54 @@ export type ConversationsPaneProps = {
 	homeDirectory?: string | null;
 };
 
+/**
+ * The inbox count pill, rendered TWICE on its rail row: visibly at the row's end
+ * and invisibly at its start.
+ *
+ * WHY A MIRROR RATHER THAN A CONSTANT. The two sides used to be fixed 40 pt, but
+ * the pill grows with its text: at 320 × 568 / 200 % `99+` measured wider than the
+ * slot, ran past the pane's edge and the list clipped it to "99" (design round 7,
+ * D22 / code review round 8, R8-02 — on native the slot stays 40 dp while the
+ * system text size grows the badge). Both sides are now the same element, so they
+ * are the same width at every text size and the route's label stays centred the
+ * way `D19` requires, without a measurement pass: a `onLayout`-measured spacer
+ * would move the label after first paint, and the capture's own "frames changed
+ * after first paint" check would then be measuring our reflow.
+ *
+ * The invisibility is on the BADGE, not on this wrapper: a transparent wrapper
+ * still leaves the badge inside it a painted node, and the audit read the mirrored
+ * count as a colour-only status (U-03) — a status with no word or name, because a
+ * spacer has none to give. `Badge`'s `hidden` prop drops the badge itself from the
+ * painted frame while it keeps its box, and the wrapper below hides the subtree
+ * from assistive tech: it is a spacer, not content.
+ */
+const RailCount = ({ count, hidden }: { count: number; hidden?: boolean }) => (
+	<View
+		className="items-center"
+		testID={
+			hidden === true
+				? CONTROL.sidebarNotificationsSpacer
+				: CONTROL.sidebarNotificationsCount
+		}
+		aria-hidden={hidden}
+		accessibilityElementsHidden={hidden}
+		importantForAccessibility={hidden === true ? "no-hide-descendants" : "auto"}
+		pointerEvents={hidden === true ? "none" : "auto"}
+	>
+		<Badge
+			/* The app's one cap, as the home bell uses (R7-02/D21). */
+			label={countLabel(count)}
+			tone="warning"
+			emphasis
+			mono
+			hidden={hidden}
+			accessibilityLabel={
+				hidden === true ? undefined : `Notifications, ${count} unread`
+			}
+		/>
+	</View>
+);
+
 export const ConversationsPane = ({
 	onClose,
 	onNavigate,
@@ -372,13 +420,13 @@ export const ConversationsPane = ({
 					 *  4 rows). The count belongs on the destination's own line, the way
 					 *  the home header's bell carries it. */}
 					<View className="w-full flex-row items-center">
-						{/* A LEADING SPACER THE WIDTH OF THE COUNT, so the label centres on the
-						 *  rail's centre line like every sibling: with the count added to one
-						 *  side only, this destination's label sat 15.6 pt left of the others
-						 *  at 100 % and 19.3 pt left at 200 % (design round 6, D19). The
-						 *  spacer is decorative and carries nothing. */}
+						{/* THE SAME PILL, INVISIBLE, so the label centres on the rail's centre
+						 *  line like every sibling: with the count added to one side only it
+						 *  sat 15.6 pt left of the others at 100 % and 19.3 pt left at 200 %
+						 *  (design round 6, D19). A copy rather than a constant keeps both
+						 *  sides equal at every text size (design round 7, D22). */}
 						{inboxCount !== null && inboxCount > 0 ? (
-							<View className="w-10" />
+							<RailCount count={inboxCount} hidden />
 						) : null}
 						<View className="flex-1">
 							<Button
@@ -393,21 +441,7 @@ export const ConversationsPane = ({
 							/>
 						</View>
 						{inboxCount !== null && inboxCount > 0 ? (
-							<View
-								className="w-10 items-center"
-								testID={CONTROL.sidebarNotificationsCount}
-							>
-								<Badge
-									/* The app's one cap, as the home bell uses: a long count would
-									 *  take the width this row now shares with the label
-									 *  (R7-02/D21). */
-									label={countLabel(inboxCount)}
-									tone="warning"
-									emphasis
-									mono
-									accessibilityLabel={`Notifications, ${inboxCount} unread`}
-								/>
-							</View>
+							<RailCount count={inboxCount} />
 						) : null}
 					</View>
 				</>

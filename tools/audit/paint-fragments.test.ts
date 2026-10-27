@@ -68,6 +68,7 @@ function node(
 		borderWidth: 0,
 		childImages: 0,
 		inModalDialog: false,
+		modalRoot: null,
 	} as unknown as AuditNode;
 }
 function rows(nodes: AuditNode[]) {
@@ -123,6 +124,7 @@ describe("U-08 cross-modal coverage", () => {
 			...node(10, box(0, 0, 390, 844)),
 			ownText: "",
 			inModalDialog: true,
+			modalRoot: 10,
 		} as AuditNode,
 		{
 			...node(11, box(20, 300, 200, 44)),
@@ -130,6 +132,7 @@ describe("U-08 cross-modal coverage", () => {
 			interactive: true,
 			ancestors: [10, 0],
 			inModalDialog: true,
+			modalRoot: 10,
 		} as AuditNode,
 		// The later-presented sheet, its opaque ground (a SIBLING of its text,
 		// which is why the same-layer surface test cannot see it) and the text.
@@ -137,12 +140,14 @@ describe("U-08 cross-modal coverage", () => {
 			...node(20, box(0, 200, 390, 644)),
 			ownText: "",
 			inModalDialog: true,
+			modalRoot: 20,
 		} as AuditNode,
 		{
 			...node(21, cover.box),
 			ownText: "",
 			ancestors: [20, 0],
 			inModalDialog: true,
+			modalRoot: 20,
 			ownBackground: cover.ownBackground,
 		} as AuditNode,
 		{
@@ -150,6 +155,7 @@ describe("U-08 cross-modal coverage", () => {
 			ownText: "Moving the conversation to this computer…",
 			ancestors: [20, 0],
 			inModalDialog: true,
+			modalRoot: 20,
 		} as AuditNode,
 	];
 
@@ -169,6 +175,75 @@ describe("U-08 cross-modal coverage", () => {
 			layered({ ownBackground: "rgb(30, 28, 25)", box: box(0, 320, 390, 524) }),
 		);
 		expect(out.some((r) => r.verdict === "FAIL")).toBe(true);
+	});
+
+	/**
+	 * R8-01: ONE dialog, two sibling subtrees, and a dialog root the probe did not
+	 * emit.
+	 *
+	 * The recorded root is what makes this a real same-dialog collision. An
+	 * earlier version inferred the layer by walking the node's EMITTED dialog
+	 * ancestors, so a root that the probe drops (zero-size, `display: none`,
+	 * `opacity: 0`) handed the two subtrees different "layers": the pair read as
+	 * cross-modal, the later subtree's opaque ground was accepted as the higher
+	 * layer's cover, and a control under a sheet inside the SAME dialog was excused
+	 * (code review round 8, R8-01). The probe now names the root from the DOM, so
+	 * both sides answer with the dialog's own index — here 10, which is not in the
+	 * node list at all — and the pair is judged on what is painted.
+	 */
+	const sameDialog = () => [
+		// 10 is the dialog root and is deliberately absent from the list, as a
+		// zero-size or `display: none` root would be. The two sides sit in the two
+		// EMITTED wrapper subtrees (13 and 15) the old ancestor walk mistook for
+		// layers.
+		{
+			...node(11, box(20, 300, 200, 44)),
+			ownText: "Save",
+			interactive: true,
+			ancestors: [10, 13],
+			inModalDialog: true,
+			modalRoot: 10,
+		} as AuditNode,
+		{
+			...node(13, box(0, 0, 390, 844)),
+			ownText: "",
+			ancestors: [10, 0],
+			inModalDialog: true,
+			modalRoot: 10,
+		} as AuditNode,
+		{
+			...node(12, box(20, 290, 260, 80)),
+			ownText: "Moving the conversation to this computer…",
+			ancestors: [10, 15],
+			inModalDialog: true,
+			modalRoot: 10,
+		} as AuditNode,
+		{
+			...node(15, box(0, 0, 390, 844)),
+			ownText: "",
+			ancestors: [10, 0],
+			inModalDialog: true,
+			modalRoot: 10,
+		} as AuditNode,
+		// The opaque ground, a SIBLING of the text inside the same wrapper 15: it
+		// covers the control entirely and is nobody's ancestor, which is exactly the
+		// shape the old walk read as "the higher modal layer's surface".
+		{
+			...node(14, box(0, 200, 390, 644)),
+			ownText: "",
+			ancestors: [10, 15],
+			inModalDialog: true,
+			modalRoot: 10,
+			ownBackground: "rgb(30, 28, 25)",
+		} as AuditNode,
+	];
+
+	it("fails a covered control when both sides share one dialog's root (R8-01)", () => {
+		const out = rows(sameDialog());
+		expect(out.some((r) => r.verdict === "FAIL")).toBe(true);
+		expect(
+			out.some((r) => r.measured?.includes(U08_SUPPRESSION.CROSS_MODAL)),
+		).toBe(false);
 	});
 
 	it("still fails when the higher layer's cover is translucent", () => {

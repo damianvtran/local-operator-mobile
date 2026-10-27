@@ -34,6 +34,13 @@ export type BadgeProps = {
 	 *  (a bare count). The label stays the rendering; this is what assistive
 	 *  tech is told instead of the numeral. */
 	accessibilityLabel?: string;
+	/** Rendered but not seen: a SPACER built from the badge's own metrics.
+	 *
+	 *  `opacity` on the badge ITSELF, not on a wrapper, because a wrapper would
+	 *  leave the badge inside it a painted node the audit still judges — the
+	 *  rail's mirrored count read as a colour-only status (U-03) exactly that way.
+	 *  Nothing is announced either: the call site also hides the subtree. */
+	hidden?: boolean;
 };
 
 export const Badge = ({
@@ -43,13 +50,14 @@ export const Badge = ({
 	mono = false,
 	testID,
 	accessibilityLabel,
+	hidden = false,
 }: BadgeProps) => (
 	<View
-		className={
+		className={`${
 			emphasis
 				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
 				: badgeClasses(tone)
-		}
+		}${hidden ? " opacity-0" : ""}`}
 		testID={testID}
 		accessible={accessibilityLabel !== undefined}
 		accessibilityLabel={accessibilityLabel}

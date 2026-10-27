@@ -1188,26 +1188,21 @@ function dialogSeparator(
 }
 
 /**
- * The document index of a node's OUTERMOST `aria-modal` root, or `null` when the
- * node is not inside a dialog.
+ * The document index of the node's `aria-modal` ROOT, or `null` outside a dialog.
  *
- * `index` is the element's position in the probe's document-order list, so a
- * LARGER root index is a dialog presented LATER and therefore painted above the
- * earlier one. The outermost root is the smallest such index among the node's
- * dialog ancestors: ancestors always precede their descendants in document order,
- * which makes the answer independent of the order the chain was walked.
+ * READ, not inferred. `index` is the element's position in the probe's
+ * document-order list, so a LARGER root index is a dialog presented LATER and
+ * painted above the earlier one. The probe records the root from the DOM, which
+ * is why two subtrees of the SAME dialog always answer with one number: an
+ * earlier version walked the node's emitted ancestors and took the topmost dialog
+ * ancestor that happened to be in the frame, so a dialog whose own root was
+ * dropped (zero-size, `display: none`, `opacity: 0`) handed its two subtrees
+ * different "layers" and the cross-modal exemption could excuse a real
+ * same-dialog collision (code review round 8, R8-01; fixture in
+ * `paint-fragments.test.ts`).
  */
-function modalLayerRoot(
-	node: AuditNode,
-	byIndex: Map<number, AuditNode>,
-): number | null {
-	if (!node.inModalDialog) return null;
-	let root: number | null = null;
-	for (const index of node.ancestors) {
-		if (!byIndex.get(index)?.inModalDialog) continue;
-		root = root === null ? index : Math.min(root, index);
-	}
-	return root;
+function modalLayerRoot(node: AuditNode): number | null {
+	return node.modalRoot;
 }
 
 /**
@@ -1224,13 +1219,12 @@ function crossModalCover(
 	higherRoot: number,
 	low: AuditNode,
 	state: AuditState,
-	byIndex: Map<number, AuditNode>,
 ): AuditNode | null {
 	const lowBox = paintedBox(low);
 	if (lowBox === null) return null;
 	for (const candidate of state.nodes) {
 		if (candidate.index === low.index) continue;
-		if (modalLayerRoot(candidate, byIndex) !== higherRoot) continue;
+		if (modalLayerRoot(candidate) !== higherRoot) continue;
 		if (!isOpaque(candidate)) continue;
 		if (low.ancestors.includes(candidate.index)) continue;
 		const box = paintedBox(candidate);
@@ -1379,12 +1373,12 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				 * defect in the frame — so the pair is the layering the second modal
 				 * exists to draw. Partial coverage, a translucent cover, or a cover in
 				 * the same or a lower layer still FAILS. */
-				const layerA = modalLayerRoot(a, byIndex);
-				const layerB = modalLayerRoot(b, byIndex);
+				const layerA = modalLayerRoot(a);
+				const layerB = modalLayerRoot(b);
 				if (layerA !== null && layerB !== null && layerA !== layerB) {
 					const higherRoot = Math.max(layerA, layerB);
 					const low = layerA > layerB ? b : a;
-					if (crossModalCover(higherRoot, low, state, byIndex) !== null) {
+					if (crossModalCover(higherRoot, low, state) !== null) {
 						suppress(a, b, U08_SUPPRESSION.CROSS_MODAL, layoutNote);
 						continue;
 					}
@@ -2853,6 +2847,9 @@ export interface AuditNode {
 	 *  own surface is not content under a safe-area edge, and pairs that straddle the
 	 *  dialog's boundary (or are separated by its opaque surface) are its layering,
 	 *  not a collision. */
+	/** The `aria-modal` root's document index, or null outside a dialog. One number
+	 *  per dialog, read from the DOM by the probe (R8-01). */
+	modalRoot: number | null;
 	inModalDialog: boolean;
 	ownInk: boolean;
 	interactive: boolean;
