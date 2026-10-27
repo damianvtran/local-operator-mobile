@@ -68,9 +68,16 @@ type SwitcherContextValue = {
 	 *  sheet closed, because the close returns focus to the opener, and on the web
 	 *  that focus scrolls the opener back into view (PR #122 UX round 3, U16). */
 	visible: boolean;
-	/** Counts fully dismissed sheets. On web, `visible=false` only STARTS the
-	 *  close; the later dismissal event means opener-focus restoration has run. */
-	dismissalCount: number;
+	/** Closes (visible true→false) and completed dismissals, counted together so a
+	 *  screen can tell whether a dismissal is still OWED (PR #122 review round 5,
+	 *  R5-M1). On web `visible=false` only STARTS the close; the dismissal event
+	 *  comes after RNW has restored focus to the opener. A screen that waits must
+	 *  wait only while `dismissals < closes` — waiting on "a dismissal since X" hangs
+	 *  for every change no sheet caused. Native never reports a dismissal (`Sheet`
+	 *  forwards `onDismiss` on web only), so there `dismissals` stays behind and
+	 *  callers fall back to `visible`. */
+	closes: number;
+	dismissals: number;
 };
 
 const SwitcherContext = createContext<SwitcherContextValue | null>(null);
@@ -92,23 +99,44 @@ export function ComputerSwitcherProvider({
 }: {
 	children: ReactNode;
 }) {
-	const [visible, setVisible] = useState(false);
-	const [dismissalCount, setDismissalCount] = useState(0);
+	/* One state object, so a render never sees `visible=false` with its close not
+	 *  yet counted: Settings reads both in the same effect. */
+	const [sheet, setSheet] = useState({
+		visible: false,
+		closes: 0,
+		dismissals: 0,
+	});
+	const close = useCallback(
+		() =>
+			setSheet((s) =>
+				s.visible ? { ...s, visible: false, closes: s.closes + 1 } : s,
+			),
+		[],
+	);
+	/* A dismissal settles EVERY close before it, not one: a sheet reopened before its
+	 *  fade finished may report a single dismissal for two closes, and a plain
+	 *  increment would then leave one owed forever. Clamping also keeps a stray
+	 *  dismissal from running ahead and satisfying the next close early. */
+	const dismiss = useCallback(
+		() => setSheet((s) => ({ ...s, dismissals: s.closes })),
+		[],
+	);
 	const value = useMemo(
 		() => ({
-			open: () => setVisible(true),
-			visible,
-			dismissalCount,
+			open: () => setSheet((s) => (s.visible ? s : { ...s, visible: true })),
+			visible: sheet.visible,
+			closes: sheet.closes,
+			dismissals: sheet.dismissals,
 		}),
-		[visible, dismissalCount],
+		[sheet],
 	);
 	return (
 		<SwitcherContext.Provider value={value}>
 			{children}
 			<ComputerSwitcherSheet
-				visible={visible}
-				onClose={() => setVisible(false)}
-				onDismiss={() => setDismissalCount((count) => count + 1)}
+				visible={sheet.visible}
+				onClose={close}
+				onDismiss={dismiss}
 			/>
 		</SwitcherContext.Provider>
 	);

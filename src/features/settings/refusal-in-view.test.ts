@@ -7,6 +7,7 @@ import {
 	refusalScrollY,
 	retryLanded,
 	retryStillOwned,
+	retryTargetMatches,
 } from "./refusal-in-view";
 
 /**
@@ -23,18 +24,98 @@ describe("when Settings scrolls to a refusal (U16)", () => {
 		expect(refusalAppeared(false, false)).toBe(false);
 	});
 
-	it("waits for dismissal even when the panel currently looks visible (U16)", () => {
-		const base = {
-			platform: "web",
-			sheetVisible: false,
-			sheetDismissedSinceRefusal: false,
-		};
-		expect(refusalRevealReady(base)).toBe(false);
+	it("reveals every refusal on web, waiting only for a dismissal that is owed (U16, R5-M1)", () => {
+		const web = { platform: "web", sheetVisible: false };
+		/* No sheet involved — failed Sign out behind a Dialog, a background restore:
+		 *  nothing is owed, so the reveal happens at once. */
 		expect(
-			refusalRevealReady({ ...base, sheetDismissedSinceRefusal: true }),
+			refusalRevealReady({ ...web, sheetCloses: 0, sheetDismissals: 0 }),
 		).toBe(true);
-		expect(refusalRevealReady({ ...base, sheetVisible: true })).toBe(false);
-		expect(refusalRevealReady({ ...base, platform: "android" })).toBe(true);
+		/* A failed pick closes the sheet: down, but RNW has not restored focus to the
+		 *  opener yet, so the reveal waits... */
+		expect(
+			refusalRevealReady({ ...web, sheetCloses: 3, sheetDismissals: 2 }),
+		).toBe(false);
+		/* ...and goes on the dismissal. */
+		expect(
+			refusalRevealReady({ ...web, sheetCloses: 3, sheetDismissals: 3 }),
+		).toBe(true);
+		/* A re-failing Try now on Settings, long after any sheet settled: at once. */
+		expect(
+			refusalRevealReady({ ...web, sheetCloses: 5, sheetDismissals: 5 }),
+		).toBe(true);
+		/* Up: never, on any platform. */
+		expect(
+			refusalRevealReady({
+				...web,
+				sheetVisible: true,
+				sheetCloses: 1,
+				sheetDismissals: 1,
+			}),
+		).toBe(false);
+	});
+
+	it("keeps native on the sheet-down path: no dismissal event there (U16)", () => {
+		/* Native never reports a dismissal, so the counts drift apart; they must not
+		 *  hold a reveal hostage. */
+		for (const platform of ["ios", "android"]) {
+			expect(
+				refusalRevealReady({
+					platform,
+					sheetVisible: false,
+					sheetCloses: 4,
+					sheetDismissals: 0,
+				}),
+			).toBe(true);
+			expect(
+				refusalRevealReady({
+					platform,
+					sheetVisible: true,
+					sheetCloses: 4,
+					sheetDismissals: 0,
+				}),
+			).toBe(false);
+		}
+	});
+
+	it("does not fire a stale reveal on a later, unrelated close (R5-M1)", () => {
+		/* Settings' arm/disarm, replayed: a refusal arms; it reveals at once (none
+		 *  owed); a refusal that clears before revealing disarms. Then the reader opens
+		 *  and closes the switcher with no refusal on screen — nothing is armed, so the
+		 *  dismissal has nothing to reveal. */
+		let armed = false;
+		let wasRefused = false;
+		let revealed = 0;
+		const step = (
+			refused: boolean,
+			sheet: {
+				sheetVisible: boolean;
+				sheetCloses: number;
+				sheetDismissals: number;
+			},
+		) => {
+			if (refusalAppeared(wasRefused, refused)) armed = true;
+			if (!refused) armed = false;
+			wasRefused = refused;
+			if (armed && refusalRevealReady({ platform: "web", ...sheet })) {
+				armed = false;
+				revealed += 1;
+			}
+		};
+		// a refusal appears while the sheet is closing: armed, waiting
+		step(true, { sheetVisible: false, sheetCloses: 1, sheetDismissals: 0 });
+		expect(revealed).toBe(0);
+		// it clears before the dismissal (a pick from elsewhere succeeded)
+		step(false, { sheetVisible: false, sheetCloses: 1, sheetDismissals: 0 });
+		// the late dismissal, then an unrelated open/close/dismiss
+		step(false, { sheetVisible: false, sheetCloses: 1, sheetDismissals: 1 });
+		step(false, { sheetVisible: true, sheetCloses: 1, sheetDismissals: 1 });
+		step(false, { sheetVisible: false, sheetCloses: 2, sheetDismissals: 2 });
+		expect(revealed).toBe(0);
+		// a sheetless refusal reveals once, at once, and not again on later closes
+		step(true, { sheetVisible: false, sheetCloses: 2, sheetDismissals: 2 });
+		step(true, { sheetVisible: false, sheetCloses: 3, sheetDismissals: 3 });
+		expect(revealed).toBe(1);
 	});
 
 	it("scrolls for every measured off-screen case, and leaves the visible one alone", () => {
@@ -95,6 +176,26 @@ describe("focus after this screen's Try now (U18)", () => {
 		/* A different computer selected, in flight or settled. */
 		expect(retryStillOwned({ ...armed, sameTarget: false })).toBe(false);
 		expect(retryStillOwned({ ...armed, retriedHere: false })).toBe(false);
+	});
+
+	it("owns an account-side retry by its start state, not tunnel equality (R5-m2)", () => {
+		/* Started with no computer selected: the restore landing on one is the retry
+		 *  working, so focus still moves to Status. */
+		expect(retryTargetMatches(null, "t1")).toBe(true);
+		expect(retryTargetMatches(null, null)).toBe(true);
+		/* Started on a computer: a pick of another one is not this retry. */
+		expect(retryTargetMatches("t1", "t1")).toBe(true);
+		expect(retryTargetMatches("t1", "t2")).toBe(false);
+		expect(retryTargetMatches("t1", null)).toBe(false);
+		expect(
+			retryStillOwned({
+				retriedHere: true,
+				retrySettled: true,
+				refused: false,
+				live: true,
+				sameTarget: retryTargetMatches(null, "t1"),
+			}),
+		).toBe(true);
 	});
 
 	it("moves only when this screen retried, the refusal cleared and the route is live", () => {

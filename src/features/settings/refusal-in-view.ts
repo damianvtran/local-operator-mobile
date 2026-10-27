@@ -28,17 +28,27 @@ export function refusalAppeared(before: boolean, now: boolean): boolean {
 	return !before && now;
 }
 
-/** A refusal behind a closing sheet must wait for dismissal, not merely
- *  `visible=false`: on web the modal's later focus restoration can scroll the
- *  opener back into view even while the panel currently looks fully visible.
- *  Native has no dismissal event, so it keeps the existing closed-state path. */
+/**
+ * Whether a refusal may be scrolled to NOW (U16; review round 5, R5-M1).
+ *
+ * Ordering constraint: on web a closing sheet's `visible=false` comes BEFORE RNW
+ * restores focus to its opener, and that focus scrolls the opener ("Switch
+ * computer", below the panel) back into view — undoing a reveal measured too early.
+ * So a reveal waits for the dismissal, but only one that is OWED: a sheet closed
+ * and not yet dismissed (`dismissals < closes`). A refusal no sheet caused — a
+ * failed Sign out behind a Dialog, a Try now that fails again, a background
+ * restore — owes nothing and reveals at once; waiting on "a dismissal since the
+ * refusal" would hang it until some later, unrelated close. Native has no
+ * dismissal event, so it reveals once the sheet is down.
+ */
 export function refusalRevealReady(input: {
 	platform: string;
 	sheetVisible: boolean;
-	sheetDismissedSinceRefusal: boolean;
+	sheetCloses: number;
+	sheetDismissals: number;
 }): boolean {
 	if (input.sheetVisible) return false;
-	return input.platform !== "web" || input.sheetDismissedSinceRefusal;
+	return input.platform !== "web" || input.sheetDismissals >= input.sheetCloses;
 }
 
 /** A vertical extent in window coordinates, as `measureInWindow` reports it. */
@@ -96,6 +106,21 @@ export function retryLanded(input: {
  *  `sameTarget` compares the selected computer, not `revision`: a pick changes
  *  `tunnelId` without touching `revision`, so a revision comparison would miss the
  *  very route change this guards. */
+/**
+ * Whether the selected computer is still the one a Try now re-ran (R4-m1, R5-m2).
+ * Owned by the retry's START state: a retry begun with no computer selected (an
+ * account-side refusal re-runs the restore) cannot name its target up front, so the
+ * computer the restore lands on is its own — a null→id change is the retry working,
+ * not a pick. Settings adopts that id as the target once it appears, so a later
+ * pick of a different computer still disarms the move.
+ */
+export function retryTargetMatches(
+	start: string | null,
+	now: string | null,
+): boolean {
+	return start === null || now === start;
+}
+
 export function retryStillOwned(input: {
 	retriedHere: boolean;
 	retrySettled: boolean;

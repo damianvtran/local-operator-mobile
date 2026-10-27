@@ -52,6 +52,7 @@ import {
 	refusalScrollY,
 	retryLanded,
 	retryStillOwned,
+	retryTargetMatches,
 } from "./refusal-in-view";
 
 /**
@@ -131,25 +132,22 @@ export default function Settings() {
 	const statusRef = useRef<View | null>(null);
 	const wasRefused = useRef(refusal !== null);
 	const [bringRefusalIntoView, setBringRefusalIntoView] = useState(false);
-	const refusalDismissal = useRef(switcher.dismissalCount);
 	useEffect(() => {
-		if (refusalAppeared(wasRefused.current, refusal !== null)) {
-			/* The count AT this refusal: a reveal armed by an earlier open must not be
-			 *  satisfied by a dismissal that happened before the panel even appeared. */
-			refusalDismissal.current = switcher.dismissalCount;
+		if (refusalAppeared(wasRefused.current, refusal !== null))
 			setBringRefusalIntoView(true);
-		}
+		/* A cleared refusal disarms its pending reveal, so nothing armed survives to
+		 *  fire on a later, unrelated sheet close (R5-M1). */
 		if (refusal === null) setBringRefusalIntoView(false);
 		wasRefused.current = refusal !== null;
-	}, [refusal, switcher.dismissalCount]);
+	}, [refusal]);
 	useEffect(() => {
 		if (
 			!bringRefusalIntoView ||
 			!refusalRevealReady({
 				platform: Platform.OS,
 				sheetVisible: switcher.visible,
-				sheetDismissedSinceRefusal:
-					switcher.dismissalCount > refusalDismissal.current,
+				sheetCloses: switcher.closes,
+				sheetDismissals: switcher.dismissals,
 			})
 		)
 			return;
@@ -174,7 +172,12 @@ export default function Settings() {
 				});
 			});
 		});
-	}, [bringRefusalIntoView, switcher.visible, switcher.dismissalCount]);
+	}, [
+		bringRefusalIntoView,
+		switcher.visible,
+		switcher.closes,
+		switcher.dismissals,
+	]);
 
 	/* U18: after THIS screen's Try now works, focus goes to the Status row that now
 	 *  says so — the button it was on unmounted with the refusal, and focus fell to
@@ -208,7 +211,7 @@ export default function Settings() {
 					retrySettled: true,
 					refused: now.surface !== null,
 					live: now.phase === "live",
-					sameTarget: now.tunnelId === target,
+					sameTarget: retryTargetMatches(retryTarget.current, now.tunnelId),
 				})
 			)
 				disarmRetry();
@@ -216,7 +219,15 @@ export default function Settings() {
 	}, [disarmRetry, retry]);
 	useEffect(() => {
 		if (!retriedHere.current) return;
-		const sameTarget = tunnelId === retryTarget.current;
+		/* An account-side retry (started with no computer) adopts the computer its
+		 *  restore lands on, so a later pick of another one still disarms (R5-m2). */
+		if (
+			retryTarget.current === null &&
+			tunnelId !== null &&
+			!retrySettled.current
+		)
+			retryTarget.current = tunnelId;
+		const sameTarget = retryTargetMatches(retryTarget.current, tunnelId);
 		if (
 			retryLanded({
 				retriedHere: true,

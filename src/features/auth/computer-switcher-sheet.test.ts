@@ -30,6 +30,9 @@ const host = vi.hoisted(() => ({
 	account: null as string | null,
 	closed: 0,
 	dismissed: 0,
+	/* The props the stub Sheet last received, so a test can fire its close and
+	 *  dismissal the way the real modal does (R5-m1). */
+	sheet: null as Props | null,
 	pushed: [] as unknown[],
 	pathname: "/settings",
 	params: {} as Record<string, string>,
@@ -96,10 +99,12 @@ vi.mock("@/ui/components/section-header", () => ({
 	},
 }));
 vi.mock("@/ui/components/sheet", () => ({
-	Sheet: (props: Props) =>
-		(props.visible
-			? [props.children, props.footer]
-			: null) as import("react").ReactNode,
+	Sheet: (props: Props) => {
+		host.sheet = props;
+		return (
+			props.visible ? [props.children, props.footer] : null
+		) as import("react").ReactNode;
+	},
 }));
 /* The probe never answers on its own: the test releases each one after the
  *  re-renders that used to discard it. */
@@ -152,7 +157,8 @@ vi.mock("@/features/auth/connection-provider", async () => {
 	};
 });
 
-const { ComputerSwitcherSheet } = await import("./computer-switcher-sheet");
+const { ComputerSwitcherProvider, ComputerSwitcherSheet, useComputerSwitcher } =
+	await import("./computer-switcher-sheet");
 
 /* Placeholder hosts only (AGENTS.md: never a real tunnel hostname). */
 const HOST_AWAKE = "0123456789abcdef0123456789abcdef-lop.example.com";
@@ -230,6 +236,8 @@ beforeEach(() => {
 	];
 	host.account = null;
 	host.closed = 0;
+	host.dismissed = 0;
+	host.sheet = null;
 	host.pushed.length = 0;
 	host.pathname = "/settings";
 	host.params = {};
@@ -458,5 +466,52 @@ describe("reopening after an account switch shows and probes only the new accoun
 		expect(words()).not.toContain("Account A computer");
 		/* A's host was probed once, for A's open, and never again. */
 		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+	});
+});
+
+describe("the provider counts the dismissals Settings waits on (review round 5, R5-m1)", () => {
+	/* Settings reveals a refusal only once no dismissal is owed (`dismissals >=
+	 *  closes`). That contract holds only if the provider counts BOTH and the Sheet's
+	 *  `onDismiss` is wired through to it: removing the forwarding would leave a web
+	 *  close owed forever and every switcher-caused refusal unrevealed. */
+	it("counts a close when the sheet goes down and a dismissal when the Sheet reports one", async () => {
+		let seen: ReturnType<typeof useComputerSwitcher> | null = null;
+		const Probe = () => {
+			seen = useComputerSwitcher();
+			return null;
+		};
+		const snap = () => {
+			const s = seen as ReturnType<typeof useComputerSwitcher> | null;
+			return {
+				visible: s?.visible,
+				closes: s?.closes,
+				dismissals: s?.dismissals,
+			};
+		};
+		/* Fires a handler the provider handed the (stubbed) Sheet; a missing one throws,
+		 *  which is the failure removing the wiring must produce. */
+		const fire = (name: "onClose" | "onDismiss") => {
+			const handler = host.sheet?.[name];
+			if (typeof handler !== "function")
+				throw new Error(`the provider passed the Sheet no ${name}`);
+			handler();
+		};
+		await act(async () =>
+			root?.render(
+				createElement(ComputerSwitcherProvider, null, createElement(Probe)),
+			),
+		);
+		expect(snap()).toEqual({ visible: false, closes: 0, dismissals: 0 });
+		await act(async () => (seen as unknown as { open: () => void }).open());
+		expect(snap()).toEqual({ visible: true, closes: 0, dismissals: 0 });
+		await act(async () => fire("onClose"));
+		/* Down but not yet dismissed: one dismissal owed. */
+		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 0 });
+		expect(typeof host.sheet?.onDismiss).toBe("function");
+		await act(async () => fire("onDismiss"));
+		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 1 });
+		/* A stray dismissal never runs ahead of the closes it settles. */
+		await act(async () => fire("onDismiss"));
+		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 1 });
 	});
 });

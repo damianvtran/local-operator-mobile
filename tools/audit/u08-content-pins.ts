@@ -268,14 +268,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * recomputed here from the merged tree with `--print`. Neither proof's scene
 	 * moves: PR #122 renders computer screens and an overlay that is closed by
 	 * default, and #123's tray is visible in every captured combination (its own
-	 * note below records the same reading). */
+	 * note below records the same reading).
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-5 remediation, `src` only: the
+	 * switcher provider counting closes alongside dismissals, Settings revealing a
+	 * refusal once no dismissal is owed, and the Try now focus move owned by the
+	 * retry's start state. No U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree. */
 	app: "82e9fc3d4f1b5827be73f4a72ea7505808f121ffb9a32f1eb728be4b9ef28163",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "c1ce5e6f2d1c4b3da7759264ad844eb20d27c0ad773aed2262393a8bbd714895",
+	src: "71a514050b7050ad1fb6e3873bdac774ac03aebeaa30d7e3d6b5c9244973a2fa",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
