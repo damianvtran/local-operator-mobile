@@ -100,6 +100,86 @@ function incidentNodes(): AuditNode[] {
 		]),
 	];
 }
+describe("U-08 cross-modal coverage", () => {
+	/**
+	 * THE SHAPE MEASURED ON `S15/move-progress` (ci run 40446249353, iPhone SE at
+	 * 200 %): the conversations drawer is open under the move sheet, so a drawer row
+	 * and the sheet's body text overlap. Both are inside their OWN `aria-modal`
+	 * dialog — so `MODAL_LAYER` cannot apply (neither side is the covered app) and
+	 * `MODAL_SURFACE` cannot either (the surface that hides the row belongs to the
+	 * OTHER dialog, so it is a sibling of the text, not an ancestor of it). The
+	 * sheet is opaque and hides the row completely: the layering a second modal
+	 * exists to draw, not a collision.
+	 */
+	const layered = (cover: { ownBackground: string; box: ReturnType<typeof box> }) =>
+		[
+			// The app root, and the first dialog (the drawer) with the row in it. The
+			// roots carry no text and are not controls: only the row and the sheet's
+			// text are candidates, which is the pair this describe is about.
+			{ ...node(0, box(0, 0, 390, 844)), ownText: "" } as AuditNode,
+			{
+				...node(10, box(0, 0, 390, 844)),
+				ownText: "",
+				inModalDialog: true,
+			} as AuditNode,
+			{
+				...node(11, box(20, 300, 200, 44)),
+				ownText: "",
+				interactive: true,
+				ancestors: [10, 0],
+				inModalDialog: true,
+			} as AuditNode,
+			// The later-presented sheet, its opaque ground (a SIBLING of its text,
+			// which is why the same-layer surface test cannot see it) and the text.
+			{
+				...node(20, box(0, 200, 390, 644)),
+				ownText: "",
+				inModalDialog: true,
+			} as AuditNode,
+			{
+				...node(21, cover.box),
+				ownText: "",
+				ancestors: [20, 0],
+				inModalDialog: true,
+				ownBackground: cover.ownBackground,
+			} as AuditNode,
+			{
+				...node(22, box(20, 290, 260, 80)),
+				ownText: "Moving the conversation to this computer…",
+				ancestors: [20, 0],
+				inModalDialog: true,
+			} as AuditNode,
+		];
+
+	it("exempts a node entirely under an opaque surface of the later modal layer", () => {
+		const out = rows(
+			layered({ ownBackground: "rgb(30, 28, 25)", box: box(0, 200, 390, 644) }),
+		);
+		expect(out.some((r) => r.verdict === "FAIL")).toBe(false);
+		expect(
+			out.some((r) => r.measured?.includes(U08_SUPPRESSION.CROSS_MODAL)),
+		).toBe(true);
+	});
+
+	it("still fails when the higher layer covers the node only in part", () => {
+		// The cover starts below the row's top edge, so a third of the row shows.
+		const out = rows(
+			layered({ ownBackground: "rgb(30, 28, 25)", box: box(0, 320, 390, 524) }),
+		);
+		expect(out.some((r) => r.verdict === "FAIL")).toBe(true);
+	});
+
+	it("still fails when the higher layer's cover is translucent", () => {
+		const out = rows(
+			layered({
+				ownBackground: "rgba(30, 28, 25, 0.6)",
+				box: box(0, 200, 390, 644),
+			}),
+		);
+		expect(out.some((r) => r.verdict === "FAIL")).toBe(true);
+	});
+});
+
 describe("U08 exact paint rectangle sets", () => {
 	it("preserves holes and never double-counts overlapping/duplicate fragments", () => {
 		expect(

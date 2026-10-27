@@ -1134,6 +1134,15 @@ export const U08_SUPPRESSION = {
 	 *  pair (the drawer's panel ground over the scrim beneath it). */
 	MODAL_SURFACE:
 		"the dialog's own opaque surface covers the pair where it overlaps",
+	/** CROSS-MODAL: the two sides belong to DIFFERENT modal layers, and the lower
+	 *  one lies entirely under an opaque surface of the later-presented layer.
+	 *  Two modals can be stacked — a move sheet over the conversations drawer — and
+	 *  then a row of the drawer under the sheet is hidden by it, not colliding with
+	 *  it. `aria-modal` describes only the app/dialog boundary, so neither branch
+	 *  above can see this pair: both sides are inside SOME dialog, and no single
+	 *  side's surface has to cover the region they share. */
+	CROSS_MODAL:
+		"a later modal layer's opaque surface covers the pair's lower side entirely",
 } as const;
 
 function dialogSeparator(
@@ -1178,6 +1187,66 @@ function dialogSeparator(
 	return null;
 }
 
+/**
+ * The document index of a node's OUTERMOST `aria-modal` root, or `null` when the
+ * node is not inside a dialog.
+ *
+ * `index` is the element's position in the probe's document-order list, so a
+ * LARGER root index is a dialog presented LATER and therefore painted above the
+ * earlier one. The outermost root is the smallest such index among the node's
+ * dialog ancestors: ancestors always precede their descendants in document order,
+ * which makes the answer independent of the order the chain was walked.
+ */
+function modalLayerRoot(
+	node: AuditNode,
+	byIndex: Map<number, AuditNode>,
+): number | null {
+	if (!node.inModalDialog) return null;
+	let root: number | null = null;
+	for (const index of node.ancestors) {
+		if (!byIndex.get(index)?.inModalDialog) continue;
+		root = root === null ? index : Math.min(root, index);
+	}
+	return root;
+}
+
+/**
+ * An opaque surface of the HIGHER modal layer that covers `low` entirely, or
+ * `null`.
+ *
+ * `low`'s PAINTED box is the region that has to be covered: what is hidden is
+ * what is drawn, and a node whose painting was clipped away is not drawn under
+ * anything. The cover is a surface of the higher layer, not an ancestor of the
+ * covered node — an ancestor of it would paint BEHIND it, and a shared ancestor
+ * of both would separate nothing.
+ */
+function crossModalCover(
+	higherRoot: number,
+	low: AuditNode,
+	state: AuditState,
+	byIndex: Map<number, AuditNode>,
+): AuditNode | null {
+	const lowBox = paintedBox(low);
+	if (lowBox === null) return null;
+	for (const candidate of state.nodes) {
+		if (candidate.index === low.index) continue;
+		if (modalLayerRoot(candidate, byIndex) !== higherRoot) continue;
+		if (!isOpaque(candidate)) continue;
+		if (low.ancestors.includes(candidate.index)) continue;
+		const box = paintedBox(candidate);
+		if (box === null) continue;
+		if (
+			box.x > lowBox.x + 1 ||
+			box.y > lowBox.y + 1 ||
+			box.x + box.w < lowBox.x + lowBox.w - 1 ||
+			box.y + box.h < lowBox.y + lowBox.h - 1
+		)
+			continue;
+		return candidate;
+	}
+	return null;
+}
+
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
@@ -1208,6 +1277,9 @@ function u08Overlap(state: AuditState): CheckRow[] {
 	 * the true count and the whole per-reason breakdown on every one of them (the cap
 	 * never bit on this manifest: the largest cell count was 8).
 	 */
+	/** Element index to node, for the layer walks below (the probe's list is not
+	 *  dense: the checks see a subset of the document). */
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	const suppressed: CheckRow[] = [];
 	const reasons = new Map<string, number>();
 	const suppress = (
@@ -1294,6 +1366,29 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				continue;
 			}
 			if (a.inModalDialog && b.inModalDialog) {
+				/* CROSS-MODAL, before the same-layer surface test: two stacked modals put
+				 * the pair in different layers, and the higher layer's opaque surface can
+				 * hide the lower side entirely. WHY THIS IS NOT A DEFECT, in the shape it
+				 * was measured: `S15/move-progress` on iPhone SE at 200 % (ci run
+				 * 40446249353) has the conversations drawer open under the move sheet;
+				 * a drawer row and the sheet's body text are both inside THEIR OWN
+				 * dialog, so `MODAL_LAYER` cannot apply (neither side is the covered
+				 * app) and `MODAL_SURFACE` cannot either (both are in dialogs, and no
+				 * surface of one side has to cover the region the pair shares). The
+				 * sheet is opaque and hides that row completely — there is no visual
+				 * defect in the frame — so the pair is the layering the second modal
+				 * exists to draw. Partial coverage, a translucent cover, or a cover in
+				 * the same or a lower layer still FAILS. */
+				const layerA = modalLayerRoot(a, byIndex);
+				const layerB = modalLayerRoot(b, byIndex);
+				if (layerA !== null && layerB !== null && layerA !== layerB) {
+					const higherRoot = Math.max(layerA, layerB);
+					const low = layerA > layerB ? b : a;
+					if (crossModalCover(higherRoot, low, state, byIndex) !== null) {
+						suppress(a, b, U08_SUPPRESSION.CROSS_MODAL, layoutNote);
+						continue;
+					}
+				}
 				const separator = dialogSeparator(a, b, state);
 				if (separator !== null) {
 					suppress(a, b, U08_SUPPRESSION.MODAL_SURFACE, layoutNote);
