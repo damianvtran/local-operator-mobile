@@ -81,4 +81,23 @@ export const HEALTH_COPY = {
 	},
 } as const;
 
+/**
+ * The state's own word, per verdict — the sheet's title and the control's
+ * accessible name. Two of them are the web client's `relay.health.*` keys;
+ * `not_answering` and `ended` are the words the relay's SPA reuses from
+ * `relay.chrome.session.subtitle.*` (there is no native catalogue runtime yet,
+ * so they live here as the same two strings, with the same meaning).
+ */
+export const HEALTH_STATE_WORDS: Record<
+	"live" | "not_answering" | "reconnecting" | "ended",
+	string
+> = {
+	live: HEALTH_COPY["relay.health.live"].source,
+	/* `relay.chrome.session.subtitle.not_answering` in the relay's catalogue. */
+	not_answering: "Not answering",
+	reconnecting: HEALTH_COPY["relay.health.reconnecting"].source,
+	/* `relay.chrome.session.subtitle.ended` in the relay's catalogue. */
+	ended: "Ended",
+};
+
 export type HealthCopyKey = keyof typeof HEALTH_COPY;
