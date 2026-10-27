@@ -20,7 +20,10 @@ import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
-import { notificationsEnabled } from "@/features/notifications/notifications-model";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -725,7 +728,9 @@ export default function Home({
 								{inboxCount !== null && inboxCount > 0 ? (
 									<View testID={CONTROL.homeNotificationsCount}>
 										<Badge
-											label={`${inboxCount}`}
+											/* THE APP'S ONE CAP: a four-digit count would widen the pill
+											 *  until it took width from the label (R7-02/D21). */
+											label={countLabel(inboxCount)}
 											tone="warning"
 											emphasis
 											mono

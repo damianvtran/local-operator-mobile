@@ -111,45 +111,47 @@ describe("U-08 cross-modal coverage", () => {
 	 * sheet is opaque and hides the row completely: the layering a second modal
 	 * exists to draw, not a collision.
 	 */
-	const layered = (cover: { ownBackground: string; box: ReturnType<typeof box> }) =>
-		[
-			// The app root, and the first dialog (the drawer) with the row in it. The
-			// roots carry no text and are not controls: only the row and the sheet's
-			// text are candidates, which is the pair this describe is about.
-			{ ...node(0, box(0, 0, 390, 844)), ownText: "" } as AuditNode,
-			{
-				...node(10, box(0, 0, 390, 844)),
-				ownText: "",
-				inModalDialog: true,
-			} as AuditNode,
-			{
-				...node(11, box(20, 300, 200, 44)),
-				ownText: "",
-				interactive: true,
-				ancestors: [10, 0],
-				inModalDialog: true,
-			} as AuditNode,
-			// The later-presented sheet, its opaque ground (a SIBLING of its text,
-			// which is why the same-layer surface test cannot see it) and the text.
-			{
-				...node(20, box(0, 200, 390, 644)),
-				ownText: "",
-				inModalDialog: true,
-			} as AuditNode,
-			{
-				...node(21, cover.box),
-				ownText: "",
-				ancestors: [20, 0],
-				inModalDialog: true,
-				ownBackground: cover.ownBackground,
-			} as AuditNode,
-			{
-				...node(22, box(20, 290, 260, 80)),
-				ownText: "Moving the conversation to this computer…",
-				ancestors: [20, 0],
-				inModalDialog: true,
-			} as AuditNode,
-		];
+	const layered = (cover: {
+		ownBackground: string;
+		box: ReturnType<typeof box>;
+	}) => [
+		// The app root, and the first dialog (the drawer) with the row in it. The
+		// roots carry no text and are not controls: only the row and the sheet's
+		// text are candidates, which is the pair this describe is about.
+		{ ...node(0, box(0, 0, 390, 844)), ownText: "" } as AuditNode,
+		{
+			...node(10, box(0, 0, 390, 844)),
+			ownText: "",
+			inModalDialog: true,
+		} as AuditNode,
+		{
+			...node(11, box(20, 300, 200, 44)),
+			ownText: "",
+			interactive: true,
+			ancestors: [10, 0],
+			inModalDialog: true,
+		} as AuditNode,
+		// The later-presented sheet, its opaque ground (a SIBLING of its text,
+		// which is why the same-layer surface test cannot see it) and the text.
+		{
+			...node(20, box(0, 200, 390, 644)),
+			ownText: "",
+			inModalDialog: true,
+		} as AuditNode,
+		{
+			...node(21, cover.box),
+			ownText: "",
+			ancestors: [20, 0],
+			inModalDialog: true,
+			ownBackground: cover.ownBackground,
+		} as AuditNode,
+		{
+			...node(22, box(20, 290, 260, 80)),
+			ownText: "Moving the conversation to this computer…",
+			ancestors: [20, 0],
+			inModalDialog: true,
+		} as AuditNode,
+	];
 
 	it("exempts a node entirely under an opaque surface of the later modal layer", () => {
 		const out = rows(

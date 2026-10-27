@@ -107,7 +107,28 @@ export const sidebarWidthFor = (viewportWidth: number): number =>
  * one destination fewer). 140 + 185 + 368 = 693; a pane at 700 pt shows one row
  * with the routes pinned, anything shorter cannot.
  */
-export const PINNED_ROUTES_PANE_FLOOR = 700;
+export const PINNED_ROUTES_BASE_FLOOR = 568;
+
+/** One destination row at the 200 % step: the rail's six destinations measured
+ *  368 pt, about 61 pt each including the grid's gaps. */
+const PINNED_ROUTE_ROW = 60;
+
+/** The pane height the pinned routes need with `routes` destinations at large text.
+ *
+ *  THE FLOOR FOLLOWS THE COUNT, deliberately: the sixth destination is what starved
+ *  the list (measured above), so a relay that does not advertise the inbox has five
+ *  and must see NO change — a rule that fired at five would take the pinned routes
+ *  away from every short portrait phone on an older relay, which is the regression
+ *  review round 7 named (R7-01). */
+/**
+ * NOTE what `layout.height` is: the VIEWPORT height, not the pane's. On native the
+ * safe-area insets come out of the pane, so a phone a little above the floor (780
+ * with a large top inset, say) can still be short of the 693 pt the derivation
+ * needs. The floor is therefore a lower bound, and the margin it leaves is the
+ * inset budget rather than slack (code review round 7, R7-03).
+ */
+export const pinnedRoutesPaneFloor = (routes: number): number =>
+	PINNED_ROUTES_BASE_FLOOR + Math.max(0, routes - 5) * PINNED_ROUTE_ROW;
 
 /** Whether the stacked secondary routes scroll WITH the list instead of being
  *  pinned beneath it.
@@ -126,11 +147,12 @@ export const PINNED_ROUTES_PANE_FLOOR = 700;
  * and target sizes. */
 export const sidebarFooterScrolls = (
 	layout: Layout,
-	largeText = false,
+	options: { largeText?: boolean; routes?: number } = {},
 ): boolean => {
 	if (layout.split) return false;
 	if (layout.orientation === "landscape") return true;
-	return largeText && layout.height < PINNED_ROUTES_PANE_FLOOR;
+	if (options.largeText !== true) return false;
+	return layout.height < pinnedRoutesPaneFloor(options.routes ?? 6);
 };
 
 /**

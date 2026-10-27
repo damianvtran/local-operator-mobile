@@ -10,7 +10,10 @@ import {
 	useListState,
 } from "@/features/auth/connection-provider";
 import { libraryEnabled } from "@/features/library/library-model";
-import { notificationsEnabled } from "@/features/notifications/notifications-model";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	attentionWord,
@@ -199,8 +202,17 @@ export const ConversationsPane = ({
 	/* Large text counts here because the routes grow with it: at 200 % on a
 	 *  320 × 568 pane the pinned footer left the list 60 pt and the first session
 	 *  row — the only thing that tells `ended` from `populated` — was entirely
-	 *  below the fold (`S15` refused the capture on 2026-10-27). */
-	const scrollFooter = sidebarFooterScrolls(useLayout(), largeText);
+	 *  below the fold (`S15` refused the capture on 2026-10-27). The number of
+	 *  destinations comes from the relay's own flags, so an older relay with fewer
+	 *  routes keeps the pinned footer it has always had (R7-01). */
+	const pinnedRoutes =
+		4 +
+		(notificationsEnabled(capabilities) ? 1 : 0) +
+		(libraryEnabled(capabilities) ? 1 : 0);
+	const scrollFooter = sidebarFooterScrolls(useLayout(), {
+		largeText,
+		routes: pinnedRoutes,
+	});
 
 	/* The switcher's full identity, painted as ONE fitted line (`middleFit`).
 	 *  Two shapes came before this and both failed visibly: a tail fit kept only
@@ -359,7 +371,15 @@ export const ConversationsPane = ({
 					 *  sheet's edge and the audit read the straddle as an overlap (U-08,
 					 *  4 rows). The count belongs on the destination's own line, the way
 					 *  the home header's bell carries it. */}
-					<View className="w-full flex-row items-center gap-2">
+					<View className="w-full flex-row items-center">
+						{/* A LEADING SPACER THE WIDTH OF THE COUNT, so the label centres on the
+						 *  rail's centre line like every sibling: with the count added to one
+						 *  side only, this destination's label sat 15.6 pt left of the others
+						 *  at 100 % and 19.3 pt left at 200 % (design round 6, D19). The
+						 *  spacer is decorative and carries nothing. */}
+						{inboxCount !== null && inboxCount > 0 ? (
+							<View className="w-10" />
+						) : null}
 						<View className="flex-1">
 							<Button
 								label="Notifications"
@@ -374,11 +394,14 @@ export const ConversationsPane = ({
 						</View>
 						{inboxCount !== null && inboxCount > 0 ? (
 							<View
-								className="items-center"
+								className="w-10 items-center"
 								testID={CONTROL.sidebarNotificationsCount}
 							>
 								<Badge
-									label={String(inboxCount)}
+									/* The app's one cap, as the home bell uses: a long count would
+									 *  take the width this row now shares with the label
+									 *  (R7-02/D21). */
+									label={countLabel(inboxCount)}
 									tone="warning"
 									emphasis
 									mono
