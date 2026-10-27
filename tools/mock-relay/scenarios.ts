@@ -636,6 +636,49 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		return record;
 	};
 
+	/**
+	 * A BUSY INBOX: the same corpus with enough unread updates that the rail's
+	 * count renders as `99+`.
+	 *
+	 * WHY IT EXISTS. The rail's count placement (D22/D23) has two states, and the
+	 * widest count in any fixture was 7 — `countLabel` caps at `99+`, so no captured
+	 * cell could ever leave the symmetric one: of 1200 cells, the 270 that mount the
+	 * count all mounted its mirror too (code review round 10, m-4). A designed state
+	 * that no frame renders cannot be reviewed, so one cell now renders it.
+	 *
+	 * HONEST, not a count bolted onto a short list: the rows are the same synthetic
+	 * updates repeated under distinct ids, all unread, and the counts are DERIVED
+	 * from those rows — so the badge, the inbox screen and the frame agree.
+	 */
+	const floodInbox = (name: string, unread: number): Json => {
+		const body = inboxBody(name) as unknown as {
+			items?: Array<Record<string, Json>>;
+			counts?: Record<string, Json>;
+		};
+		const seed = Array.isArray(body.items) ? body.items : [];
+		if (seed.length === 0) return body as unknown as Json;
+		const items = Array.from({ length: unread }, (_, index) => {
+			const row = seed[index % seed.length] as Record<string, Json>;
+			return {
+				...row,
+				id: `n_flood_${String(index).padStart(3, "0")}`,
+				// One revision per row, so the ack tokens stay distinct.
+				revision: index + 1,
+				read: false,
+				created_at: Number(row.created_at ?? 0) - index * 1000,
+			};
+		});
+		return {
+			...body,
+			items,
+			counts: {
+				...(body.counts ?? {}),
+				unread_count: unread,
+				waiting_unread_count: 0,
+			},
+		} as unknown as Json;
+	};
+
 	const capabilities = fix.list("sessions-empty").capabilities;
 	const emptyList = () => ({ sessions: [], degraded: [] });
 
@@ -2751,7 +2794,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"mesh-move-hold",
 		"A move under way: the transfer route holds its answer, so the sheet's in-flight state is the one a person sees rather than a fabricated one.",
 		["S15/move-progress"],
-		() => ({ ...meshWorld(), transfer: { kind: "receipt", delayMs: 30_000 } }),
+		() => ({
+			...meshWorld(),
+			transfer: { kind: "receipt", delayMs: 30_000 },
+			/* THE CELL THAT FORCES THE GROUPED PLACEMENT (review round 10, m-4): its
+			 *  iphone-se frames are the 247 pt rail pane at 200 % text, where a `99+`
+			 *  count cannot sit beside the label with a mirror on both sides. */
+			notifications: floodInbox("notifications-populated", 120),
+		}),
 	);
 
 	add(

@@ -220,3 +220,32 @@ describe("the bulk write needs its tokens", () => {
 		]);
 	});
 });
+
+describe("the fixture that makes the rail's grouped placement renderable (m-4)", () => {
+	/**
+	 * The rail's count placement has two states, and every fixture's count was ≤ 7
+	 * while `countLabel` caps at `99+` — so no captured cell could leave the
+	 * symmetric layout (code review round 10, m-4). `mesh-move-hold` now serves a
+	 * busy inbox, and these assertions keep it busy: the count AND the rows behind
+	 * it, so the frame's badge is not a number the list contradicts.
+	 */
+	it("serves S15/move-progress an inbox wide enough to read 99+", async () => {
+		const { buildScenarios } = await import("./scenarios.ts");
+		const { loadFixtures } = await import("./fixtures.ts");
+		const world = buildScenarios(loadFixtures())["mesh-move-hold"]?.world() as {
+			notifications?: { items?: unknown[]; counts?: Record<string, number> };
+		};
+		const inbox = world.notifications;
+		expect(inbox).toBeDefined();
+		const unread = inbox?.counts?.unread_count ?? 0;
+		// The rail's cap is 99+ (`notifications-model.ts` `countLabel`), so 100 is the
+		// first count that reads as three characters.
+		expect(inbox?.counts?.unread_count).toBeGreaterThanOrEqual(100);
+		// The rows agree with the count: one unread row per unread update.
+		expect(inbox?.items).toHaveLength(unread);
+		const ids = new Set(
+			(inbox?.items ?? []).map((row) => (row as { id: string }).id),
+		);
+		expect(ids.size).toBe(unread);
+	});
+});

@@ -1,31 +1,40 @@
 /**
- * Where the Notifications rail row puts its count, decided from MEASURED widths.
+ * Where the Notifications rail row puts its count.
  *
  * The row is `[count] [label] [count]` when the label is centred symmetrically
  * (design round 6, D19), because a count on one side only pushed the label 15.6 pt
  * left of its siblings at 100 % and 19.3 pt at 200 %. The mirror that balances it
- * is a real pill's width on each side, so the row has to hold
- * `label + 2 × count` before that centring can be exact.
+ * is a real pill's width on each side, so the row has to hold `label + 2 × count`
+ * before that centring can be exact. Where it cannot — at 320 × 568 / 200 % with
+ * `99+` the row is 247 pt, the pills 58.8 pt each and the label 141.2 pt, so the
+ * label overran its 127.8 pt slot and the count painted over its last letter
+ * ("Notification", design round 8, D23) — the mirror is dropped and the label and
+ * count are centred together as one pair.
  *
- * At 320 × 568 / 200 % with `99+` it cannot: the row is 247 pt, the two pills take
- * 119.2 pt and the label needs 141.2 pt, so the label overran its 127.8 pt slot and
- * the pill painted over its last letter — "Notification" (design round 8, D23;
- * symmetric centring there would need 260.4 pt). Legibility outranks exact
- * centring, so a row that does not fit drops the mirror and centres the
- * label+count PAIR instead, which needs ~205 pt and fits.
+ * THE INVARIANT, and it is about the UNMEASURED state, not about timing:
+ * **the unmeasured state is the safe one, and measurement may only improve it.**
+ * `grouped` is the default because it cannot overlap: it centres the pair and
+ * truncates the label rather than letting text reach the pill. `symmetric` is
+ * only ever adopted once a measurement proves the row holds `label + 2 × count`,
+ * so the exact centring D19 asks for is a strict improvement on a layout that was
+ * already correct — never a repair of a painted overlap.
  *
- * A PURE FUNCTION of the three widths, because the decision has to be made
- * BEFORE the row is painted: a switch after paint is a visible reflow, and the
- * capture's own "frames changed after first paint" check would then be measuring
- * a layout the reader never saw first. The caller measures and calls this; it
- * never guesses from the device or the text scale alone, because whether it fits
- * depends on the count's own length (`5` and `42` fit at 200 %, `99+` does not).
+ * That matters because a placement decided from a measurement cannot be promised
+ * before the first paint on every platform: on the web target `onLayout` arrives
+ * from a ResizeObserver in the render steps before paint, but on native it is
+ * delivered after the layout has been presented. Making the DEFAULT safe is the
+ * only way the rule holds on both.
+ *
+ * A PURE FUNCTION of the three widths, because whether the row fits depends on
+ * the count's own length — `5` and `42` fit at 200 %, `99+` does not — so neither
+ * the device nor the text scale can answer it alone.
  */
 export type RailCountPlacement = "symmetric" | "grouped";
 
-/** A pixel of slack, so a row that fits to within rounding does not lose its
- *  symmetric centring to a half-pixel. */
-const SLACK = 1;
+/** No tolerance. An exact fit is symmetric, and one point over is not: any slack
+ *  permits text to sit up to that slack under the pill, which is the one class of
+ *  defect this module exists to forbid (code review round 10, m-3/n-4). */
+const SLACK = 0;
 
 export type RailRowWidths = {
 	/** The row's own width, measured on the row itself (the pane's inner width,
@@ -44,32 +53,48 @@ export const railCountPlacement = ({
 }: RailRowWidths): RailCountPlacement =>
 	labelWidth + pillWidth * 2 <= rowWidth + SLACK ? "symmetric" : "grouped";
 
-/** The label's own box under a placement, for the geometry tests and for anyone
- *  reading why a row looks the way it does.
+/** The label's box under a placement, and whether the row had to shorten it.
+ *
+ *  These two functions are the MODEL the tests and the code comments reason with;
+ *  the row itself is laid out by flexbox and, in grouped mode, by the label's own
+ *  ellipsis. Where the model and a frame disagree, the frame is the truth — the
+ *  geometry is here so a change can be argued with in numbers.
  *
  *  Symmetric: the label is centred in the slot the two pills leave, so its centre
- *  IS the row's centre line — the same line every sibling label sits on.
- *  Grouped: the label and the count are centred together, so the label's centre
- *  sits half a pill left of the row's centre and nothing overlaps. */
+ *  IS the row's centre line — the line every sibling label sits on.
+ *  Grouped: label and count are centred together as one pair, so the label's
+ *  centre sits half a pill left of the row's. Above roughly 250 % text on the
+ *  smallest pane the pair itself overruns the row, and then the LABEL is the part
+ *  that gives: it ellipsizes so the count never clips and text never sits under
+ *  it (code review round 10, m-5). */
 export const railLabelBox = (
 	placement: RailCountPlacement,
 	{ rowWidth, labelWidth, pillWidth }: RailRowWidths,
-): { left: number; right: number; centre: number } => {
+): { left: number; right: number; centre: number; truncated: boolean } => {
+	const pairWidth = labelWidth + pillWidth;
+	const fitsGrouped = pairWidth <= rowWidth;
+	const shown =
+		placement === "symmetric" || fitsGrouped
+			? labelWidth
+			: Math.max(0, rowWidth - pillWidth);
 	const left =
 		placement === "symmetric"
-			? pillWidth + (rowWidth - pillWidth * 2 - labelWidth) / 2
-			: (rowWidth - (labelWidth + pillWidth)) / 2;
-	return { left, right: left + labelWidth, centre: left + labelWidth / 2 };
+			? pillWidth + (rowWidth - pillWidth * 2 - shown) / 2
+			: (rowWidth - (shown + pillWidth)) / 2;
+	return {
+		left,
+		right: left + shown,
+		centre: left + shown / 2,
+		truncated: shown < labelWidth,
+	};
 };
 
-/** The count pill's box under a placement. */
+/** The count pill's box under a placement. In grouped mode the pair is centred, so
+ *  the pill sits immediately after the label's (possibly shortened) box. */
 export const railPillBox = (
 	placement: RailCountPlacement,
-	{ rowWidth, labelWidth, pillWidth }: RailRowWidths,
+	widths: RailRowWidths,
 ): { left: number; right: number } => {
-	const left =
-		placement === "symmetric"
-			? rowWidth - pillWidth
-			: (rowWidth - (labelWidth + pillWidth)) / 2 + labelWidth;
-	return { left, right: left + pillWidth };
+	const label = railLabelBox(placement, widths);
+	return { left: label.right, right: label.right + widths.pillWidth };
 };

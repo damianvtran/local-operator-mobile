@@ -146,11 +146,15 @@ export type ConversationsPaneProps = {
  * the pill grows with its text: at 320 × 568 / 200 % `99+` measured wider than the
  * slot, ran past the pane's edge and the list clipped it to "99" (design round 7,
  * D22 / code review round 8, R8-02 — on native the slot stays 40 dp while the
- * system text size grows the badge). Both sides are now the same element, so they
- * are the same width at every text size and the route's label stays centred the
- * way `D19` requires, without a measurement pass: a `onLayout`-measured spacer
- * would move the label after first paint, and the capture's own "frames changed
- * after first paint" check would then be measuring our reflow.
+ * system text size grows the badge). Both sides are the same element, so they are
+ * the same width at every text size and the route's label sits on the rail's
+ * centre line the way `D19` requires.
+ *
+ * THE MIRROR IS NOT THE DEFAULT, and the row is grouped until a measurement says
+ * otherwise — see the placement state below. An earlier revision claimed the
+ * switch could always happen before the first paint; on native `onLayout` runs
+ * after layout is presented, so that claim was false, and the answer is to make
+ * the UNMEASURED state the safe one instead (code review round 10, M-2).
  *
  * The invisibility is on the BADGE, not on this wrapper: a transparent wrapper
  * still leaves the badge inside it a painted node, and the audit read the mirrored
@@ -159,6 +163,11 @@ export type ConversationsPaneProps = {
  * painted frame while it keeps its box, and the wrapper below hides the subtree
  * from assistive tech: it is a spacer, not content.
  */
+/** The destination's name, in ONE place: the button renders it and the out-of-flow
+ *  stand-in measures it, so a copy change cannot leave the row measuring a word it
+ *  no longer shows (code review round 10, m-6). */
+const RAIL_INBOX_LABEL = "Notifications";
+
 const RailCount = ({
 	count,
 	hidden,
@@ -229,38 +238,47 @@ export const ConversationsPane = ({
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 
-	/* THE INBOX ROW'S PLACEMENT, decided from measured widths (D23).
+	/* THE INBOX ROW'S PLACEMENT (D23), and the rule is about the UNMEASURED state:
+	 *  the unmeasured state is the SAFE one, and measurement may only improve it.
 	 *
-	 * `onLayout` is the measurement the capture and a reader both see first: on the
-	 * web target it is delivered from a ResizeObserver, which runs in the render
-	 * steps BEFORE the browser paints, so the row is never painted in one mode and
-	 * then switched to the other. A predicate on the text scale alone could not
-	 * answer the question — `5` and `42` fit at 200 % and `99+` does not — so the
-	 * widths are measured and `railCountPlacement` decides. */
+	 * So the row starts GROUPED — pair centred, label truncated if it must be, no
+	 * mirror — because that cannot overlap, and adopts the symmetric centring (D19)
+	 * only once a measurement proves the row holds `label + 2 × count`. A placement
+	 * decided from a measurement cannot be promised before the first paint on every
+	 * platform: on the web target `onLayout` arrives from a ResizeObserver in the
+	 * render steps before paint, but on native it is delivered after the layout is
+	 * presented. Making the default safe is what makes the rule true on both — and
+	 * measurement then only ever REPLACES a layout that was already correct.
+	 *
+	 * A predicate on the text scale could not answer the question either: `5` and
+	 * `42` fit at 200 % and `99+` does not, so the widths are measured. */
 	const [railWidths, setRailWidths] = useState<{
 		row?: number;
 		label?: number;
 		pill?: number;
 	}>({});
+	/* Each of these returns the PREVIOUS state when the number has not moved: a
+	 *  resize or a keyboard event must not re-render the whole pane for a width
+	 *  that is already known (code review round 10, n-3). */
 	const measureRow = (event: LayoutChangeEvent) => {
-		setRailWidths((held) => ({ ...held, row: event.nativeEvent.layout.width }));
+		const row = event.nativeEvent.layout.width;
+		setRailWidths((held) => (held.row === row ? held : { ...held, row }));
 	};
 	const measureLabel = (event: LayoutChangeEvent) => {
-		setRailWidths((held) => ({
-			...held,
-			label: event.nativeEvent.layout.width,
-		}));
+		const label = event.nativeEvent.layout.width;
+		setRailWidths((held) => (held.label === label ? held : { ...held, label }));
 	};
 	const measurePill = (width: number) => {
-		setRailWidths((held) => ({ ...held, pill: width }));
+		setRailWidths((held) =>
+			held.pill === width ? held : { ...held, pill: width },
+		);
 	};
-	/* Before all three are known the row renders the placement every fitting row
-	 *  uses, which is the one a reader at ordinary text sizes sees. */
+	/* GROUPED UNTIL PROVEN OTHERWISE — the safe state, never the majority one. */
 	const placement: RailCountPlacement =
 		railWidths.row === undefined ||
 		railWidths.label === undefined ||
 		railWidths.pill === undefined
-			? "symmetric"
+			? "grouped"
 			: railCountPlacement({
 					rowWidth: railWidths.row,
 					labelWidth: railWidths.label,
@@ -483,7 +501,20 @@ export const ConversationsPane = ({
 					 *  sheet's edge and the audit read the straddle as an overlap (U-08,
 					 *  4 rows). The count belongs on the destination's own line, the way
 					 *  the home header's bell carries it. */}
-					<View className="w-full flex-row items-center" onLayout={measureRow}>
+					<View
+						className={
+							placement === "symmetric"
+								? "w-full flex-row items-center"
+								: /* GROUPED centres the label and the count as ONE pair
+									 *  (code review round 10, M-1): the label loses
+									 *  `flex-1` below, so without `justify-center` the pair
+									 *  packs against the row's start edge — the model, the
+									 *  tests and the frame would describe three different
+									 *  layouts. */
+									"w-full flex-row items-center justify-center"
+						}
+						onLayout={measureRow}
+					>
 						{/* THE SAME PILL, INVISIBLE, so the label centres on the rail's centre
 						 *  line like every sibling: with the count added to one side only it
 						 *  sat 15.6 pt left of the others at 100 % and 19.3 pt left at 200 %
@@ -501,9 +532,19 @@ export const ConversationsPane = ({
 						placement === "symmetric" ? (
 							<RailCount count={inboxCount} hidden />
 						) : null}
-						<View className={placement === "symmetric" ? "flex-1" : undefined}>
+						<View
+							className={
+								placement === "symmetric"
+									? "flex-1"
+									: /* An over-running pair shortens the LABEL, never the
+										 *  count (m-5): the wrapper shrinks and the button's
+										 *  own text ellipsizes inside it. */
+										"shrink"
+							}
+						>
 							<Button
-								label="Notifications"
+								label={RAIL_INBOX_LABEL}
+								labelLines={placement === "symmetric" ? undefined : 1}
 								onPress={() => {
 									onNavigate?.();
 									router.push("/notifications");
@@ -528,7 +569,7 @@ export const ConversationsPane = ({
 							onLayout={measureLabel}
 							testID={CONTROL.sidebarNotificationsMeasure}
 						>
-							Notifications
+							{RAIL_INBOX_LABEL}
 						</Text>
 					</View>
 				</>

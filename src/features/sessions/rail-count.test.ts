@@ -28,6 +28,10 @@ import { inboxBadgeCount } from "./session-projection";
 const PANE = new URL("./conversations-pane.tsx", import.meta.url);
 const source = readFileSync(PANE, "utf8");
 
+/** Whitespace-insensitive, so re-indenting the component cannot turn a structural
+ *  assertion red over layout of the source (code review round 10, n-1). */
+const flat = (text: string) => text.replace(/\s+/g, " ");
+
 const railSection = () => {
 	// From the row's own leading comment (the invisible mirror comes BEFORE the
 	// button, so a slice that started at the label would miss one side) to the next
@@ -46,8 +50,8 @@ describe("the rail's inbox count", () => {
 		expect(rail.match(/<RailCount /g) ?? []).toHaveLength(2);
 		// …and exactly one is the invisible mirror, which the row renders only while
 		// its own measurement says the label and both pills fit (D23).
-		expect(rail).toContain(
-			'placement === "symmetric" ? (\n\t\t\t\t\t\t\t<RailCount count={inboxCount} hidden />',
+		expect(flat(rail)).toContain(
+			'placement === "symmetric" ? ( <RailCount count={inboxCount} hidden />',
 		);
 		expect(
 			rail.match(/<RailCount count=\{inboxCount\} hidden \/>/g) ?? [],
@@ -58,6 +62,35 @@ describe("the rail's inbox count", () => {
 				/<RailCount count=\{inboxCount\} onWidth=\{measurePill\} \/>/g,
 			) ?? [],
 		).toHaveLength(1);
+	});
+
+	it("starts in the safe placement and only improves on it (M-2)", () => {
+		/* The invariant is about the UNMEASURED state: measurement may only replace a
+		 * layout that was already correct, because on native `onLayout` is delivered
+		 * after the layout is presented. A `symmetric` default would paint the
+		 * overlap D23 exists to prevent, once, before switching. */
+		expect(flat(source)).toContain('? "grouped"');
+		expect(flat(source)).not.toContain('? "symmetric"');
+		// …and grouped is CENTRED as one pair, or the frame is not the model.
+		expect(flat(source)).toContain(
+			'"w-full flex-row items-center justify-center"',
+		);
+		// The mirror is the only thing that changes sides, and only under a PROVEN fit.
+		expect(flat(railSection())).toContain(
+			'placement === "symmetric" ? ( <RailCount count={inboxCount} hidden />',
+		);
+		// The pair's label is the part that gives when it overruns (m-5).
+		expect(flat(source)).toContain(
+			'labelLines={placement === "symmetric" ? undefined : 1}',
+		);
+	});
+
+	it("names the destination once (m-6)", () => {
+		const rail = railSection();
+		// The button and the measuring stand-in read the same constant…
+		expect(rail.match(/\{RAIL_INBOX_LABEL\}/g) ?? []).toHaveLength(2);
+		// …so no literal copy of the word survives in the row.
+		expect(rail.match(/"Notifications"/g) ?? []).toHaveLength(0);
 	});
 
 	it("does not pin either side to a fixed width", () => {

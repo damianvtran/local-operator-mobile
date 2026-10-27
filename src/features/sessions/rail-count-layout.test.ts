@@ -23,8 +23,16 @@ const TIGHT: RailRowWidths = {
 	pillWidth: 58.8,
 };
 
-/** The same label in a row where it fits: `5` and `42` are narrower pills, and
- *  `99+` fits as soon as the text scale drops. */
+/** Beyond this the PAIR overruns the row too, and the label has to give (m-5):
+ *  at 300 % the label is 211.8 pt, the pill 58.8 pt and the row 248 pt. */
+const OVERRUN: RailRowWidths = {
+	rowWidth: 248,
+	labelWidth: 211.8,
+	pillWidth: 58.8,
+};
+
+/** The same label in a row where it fits: a one- or two-character pill, and `99+`
+ *  as soon as the text scale drops. */
 const FITS: RailRowWidths[] = [
 	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 24 },
 	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 42 },
@@ -39,6 +47,11 @@ describe("the rail's count placement", () => {
 		const pill = railPillBox("grouped", TIGHT);
 		// No overlap: the label stops where the pill starts…
 		expect(label.right).toBeLessThanOrEqual(pill.left + 0.001);
+		expect(label.truncated).toBe(false);
+		// …the pair is centred as ONE group…
+		expect(
+			label.left + (label.right - label.left + pill.right - pill.left) / 2,
+		).toBeCloseTo(TIGHT.rowWidth / 2, 5);
 		// …and the pill stays inside the row's own edge (247, against the 255 the
 		// audit measures to, so the check has 8 pt of its own slack).
 		expect(pill.right).toBeLessThanOrEqual(247.001);
@@ -54,7 +67,35 @@ describe("the rail's count placement", () => {
 				widths.rowWidth / 2,
 				5,
 			);
+			expect(railLabelBox("symmetric", widths).truncated).toBe(false);
 		}
+	});
+
+	it("takes an exact fit as symmetric and one point over as grouped (m-3)", () => {
+		// `label + 2 × pill == row` is the last row that can hold the mirror, and
+		// `+1` is the first that cannot. Pinning both ends means a tolerance that
+		// quietly allowed text under the pill would go red.
+		expect(
+			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 50 }),
+		).toBe("symmetric");
+		expect(
+			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 50.5 }),
+		).toBe("grouped");
+	});
+
+	it("shortens the label rather than the count above 250 % text (m-5)", () => {
+		expect(railCountPlacement(OVERRUN)).toBe("grouped");
+		const label = railLabelBox("grouped", OVERRUN);
+		const pill = railPillBox("grouped", OVERRUN);
+		// The label gives way — it is the part that can ellipsize…
+		expect(label.truncated).toBe(true);
+		expect(label.right - label.left).toBeCloseTo(
+			OVERRUN.rowWidth - OVERRUN.pillWidth,
+			5,
+		);
+		// …so the count never clips at the pane edge and no text sits under it.
+		expect(pill.right).toBeLessThanOrEqual(OVERRUN.rowWidth + 0.001);
+		expect(label.right).toBeLessThanOrEqual(pill.left + 0.001);
 	});
 
 	it("would have overlapped under the old fixed-mirror row", () => {
@@ -72,15 +113,5 @@ describe("the rail's count placement", () => {
 		expect(oldTextLeft).toBeLessThan(TIGHT.pillWidth);
 		// The placement module removes the overlap instead of trimming the text.
 		expect(railLabelBox("grouped", TIGHT).right).toBeLessThan(oldTextRight);
-	});
-
-	it("treats a half-pixel shortfall as fitting", () => {
-		expect(
-			railCountPlacement({
-				rowWidth: 200,
-				labelWidth: 100,
-				pillWidth: 50.4,
-			}),
-		).toBe("symmetric");
 	});
 });
