@@ -52,8 +52,18 @@ export interface ConnectionSnapshot {
 	 *  token anywhere. */
 	accountLabel: string | null;
 	/** The computers discovery found, most recently updated first, minus the ones
-	 *  the reader removed (`hiddenTunnelIds`). */
+	 *  the reader removed (`hiddenTunnelIds`). ACCOUNT state: it survives a Radient
+	 *  `startRoute` (picking a computer) and is emptied only by `endRoute`
+	 *  (sign-out, sign-in), or by the provider on an `unauthorized` discovery. */
 	computers: DiscoveredComputer[];
+	/** Why the last discovery pass failed, or `null` once one succeeds. Kept apart
+	 *  from `surface` on purpose: listing an account's computers is not a ROUTE, so
+	 *  its failure must not flip a live route to `refused`, hide the rows it failed
+	 *  to refresh, or borrow a route refusal whose retry re-runs a route action
+	 *  (PR #121 design round 1, D2). The screen owns the sentence; the store keeps
+	 *  only which of the two failures it was, so a server's free text never reaches
+	 *  a banner. */
+	discoveryFailure: DiscoveryFailure | null;
 	/** Tunnel ids the reader removed from this phone. Discovery keeps reporting a
 	 *  removed computer — the account still has it — so the filter lives HERE, at
 	 *  the one entry point every discovery result goes through, rather than in a
@@ -77,12 +87,19 @@ export interface ConnectionSnapshot {
 	revision: number;
 }
 
+/** The two discovery outcomes that leave the list as it was: no answer, or an
+ *  answer this build cannot use. `unauthorized` is not one — it ends the account. */
+export type DiscoveryFailure = "unreachable" | "rejected";
+
 export interface ConnectionActions {
 	/** Starts a route. The ONLY entry point, so a route switch is always an
 	 *  explicit act. */
 	startRoute: (route: RouteProfile) => void;
-	/** Records the discovered computers, dropping any the reader removed. */
+	/** Records the discovered computers, dropping any the reader removed, and with
+	 *  them that discovery succeeded. */
 	setComputers: (computers: DiscoveredComputer[]) => void;
+	/** Records a failed discovery pass. The rows already listed stay. */
+	noteDiscoveryFailure: (failure: DiscoveryFailure) => void;
 	/** Replaces the removed set (hydration from the saved-computers registry) and
 	 *  re-filters the current list, so hydrating after discovery has already
 	 *  answered still hides what it should. */
@@ -124,6 +141,7 @@ const INITIAL: ConnectionSnapshot = {
 	route: null,
 	accountLabel: null,
 	computers: [],
+	discoveryFailure: null,
 	hiddenTunnelIds: [],
 	tunnelId: null,
 	detail: null,
@@ -142,6 +160,22 @@ export function createConnectionStore() {
 				hiddenTunnelIds: state.hiddenTunnelIds,
 				revision: state.revision + 1,
 				route,
+				/* Picking a computer STARTS a Radient route, so resetting the list here
+				 *  erased the very list the reader picked from: the picker fell back to
+				 *  "Set up a computer" while minting and stayed there if the mint failed
+				 *  (PR #121 review round 1, R1-M1; design D1). The account did not change,
+				 *  so its list and its last discovery outcome carry over. A custom route is
+				 *  a different identity, so STARTING one does not inherit Radient's rows.
+				 *  A later Refresh may still list them: connecting a custom address keeps
+				 *  the Radient grant (it is not a sign-out), and those rows are how the
+				 *  reader switches back to a Radient computer from Settings (PR #121 review
+				 *  round 2, R2-m2). */
+				...(route.mode === "radient"
+					? {
+							computers: state.computers,
+							discoveryFailure: state.discoveryFailure,
+						}
+					: {}),
 				/* A Radient route is not usable until a computer is picked, so it starts
 				 * discovering; a custom route is a single address and goes straight to
 				 * minting (which for it means "sign in with the password"). */
@@ -150,11 +184,34 @@ export function createConnectionStore() {
 		},
 
 		setComputers(computers) {
-			if (get().route === null) return;
+			/* No route guard, unlike the actions around it. The computer list is ACCOUNT
+			 *  state: Radient discovery runs after sign-in or a cold-start restore and
+			 *  BEFORE any route exists, because a route is what picking one of these
+			 *  computers creates. A `route === null` guard here dropped every discovery
+			 *  result and left an account with tunnels on "Set up a computer"
+			 *  (PR #120 QA round 1, Q1). A late result that belongs to a sign-out or a
+			 *  newer sign-in is dropped by the caller, which fences discovery on the
+			 *  startup-authorization revision (`refreshComputers` in
+			 *  `connection-provider.tsx`); `endRoute` still empties the list, and a
+			 *  Radient `startRoute` deliberately keeps it (picking is not signing out).
+			 *  What must not happen without a route — minting — stays guarded in
+			 *  `selectComputer`.
+			 *
+			 *  A list arriving IS a successful discovery, so it clears the last failure:
+			 *  a banner that outlived the outage it reported would be the dismiss-by-
+			 *  luck the kit's banner rule forbids (design round 1, D2). */
 			set({
 				computers: withoutHidden(computers, get().hiddenTunnelIds),
+				discoveryFailure: null,
 				phase: get().phase === "discovering" ? "discovering" : get().phase,
 			});
+		},
+
+		noteDiscoveryFailure(failure) {
+			/* No route guard, for the same reason as `setComputers`; and no `phase` or
+			 *  `surface` write, because a failed LISTING says nothing about a route that
+			 *  may be live right now. */
+			set({ discoveryFailure: failure });
 		},
 
 		setHiddenTunnelIds(tunnelIds) {

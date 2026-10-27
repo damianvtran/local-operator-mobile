@@ -1,8 +1,15 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import {
+	backAction,
+	computersView,
+	landingAfterPick,
+	type RowState,
+	rowState,
+} from "@/features/auth/computers-view";
 import {
 	connectionStore,
 	useConnection,
@@ -15,8 +22,10 @@ import {
 } from "@/features/auth/connector-wait";
 import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
+import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
@@ -92,13 +101,13 @@ function lastSeen(computer: DiscoveredComputer): string | null {
 
 const ComputerRow = ({
 	computer,
-	selected,
+	state,
 	reachability,
 	onPress,
 	onRemove,
 }: {
 	computer: DiscoveredComputer;
-	selected: boolean;
+	state: RowState;
 	reachability: Reachability;
 	onPress: () => void;
 	onRemove: () => void;
@@ -107,15 +116,21 @@ const ComputerRow = ({
 	const status = statusLabel(computer.status);
 	const reach = reachabilityLabel(reachability);
 	const seen = lastSeen(computer);
+	const spinnerColor = useTokenColor("ink-muted");
+	const selected = state === "active";
+	const connecting = state === "connecting";
 
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityState={{ selected }}
+			accessibilityState={{ selected, busy: connecting }}
 			accessibilityLabel={`${computer.name}, ${status.label}, ${reach.label}${
-				selected ? ", active" : ""
+				selected ? ", active" : connecting ? ", connecting" : ""
 			}`}
 			testID={ids.row}
+			/* A second tap while this row is minting would start a second route and
+			 *  retire the first mid-flight; the row says it is busy instead. */
+			disabled={connecting}
 			onPress={onPress}
 			onLongPress={onRemove}
 		>
@@ -137,6 +152,25 @@ const ComputerRow = ({
 							>
 								active
 							</Text>
+						) : null}
+						{/* The pending state a pick needs (design round 1, D1): the list stays
+						 *  and the tapped row says what it is doing, in a word as well as the
+						 *  kit's spinner, while the session is minted. */}
+						{connecting ? (
+							<View
+								className="shrink-0 flex-row items-center gap-1"
+								testID={CONTROL.computerConnectingMarker}
+							>
+								{/* The quiet Button's own spinner: same token, hidden from
+								 *  assistive tech because the word beside it is the content. */}
+								<ActivityIndicator
+									size="small"
+									color={spinnerColor}
+									accessibilityElementsHidden
+									importantForAccessibility="no"
+								/>
+								<Text className="text-meta text-ink-muted">Connecting…</Text>
+							</View>
 						) : null}
 					</View>
 					<Text
@@ -275,20 +309,60 @@ export default function Computers() {
 		discovering,
 		selectComputer,
 		retry,
-		busy,
 		refusal,
+		signInWithRadient,
+		signInState,
 	} = useConnection();
 
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
-	const detail = useConnectionState((state) => state.detail);
+	const route = useConnectionState((state) => state.route);
+	const discoveryFailure = useConnectionState(
+		(state) => state.discoveryFailure,
+	);
 
-	/* Nothing to list and nothing in flight: the set-up path (F-2). The in-flight
-	 *  signal is the provider's `discovering` flag, not a store phase — listing an
-	 *  account's computers happens before any route exists. */
-	const empty = computers.length === 0 && !discovering;
+	/* Which branches render is decided in `computers-view.ts`, where the Node suite
+	 *  can assert it: the set-up path (F-2) only for an account Radient said is
+	 *  empty, the skeleton on the provider's `discovering` flag, and the rows
+	 *  whenever there are any. */
+	/* Signed out is the `sign-in` refusal, or the browser hand-off its button
+	 *  started: `signInWithRadient` ends the route (clearing the refusal) before
+	 *  the browser opens, and an empty list then read as an empty account until
+	 *  the new grant's discovery answered (QA round 2, Q-r2-1/Q-r2-2). */
+	const signInPending = signInState.kind !== "idle";
+	const signedOut = refusal?.kind === "sign-in" || signInPending;
+	const view = computersView({
+		computers,
+		discovering,
+		discoveryFailure,
+		signedOut,
+	});
+	const empty = view.setup;
 	const [waiting, setWaiting] = useState(false);
+	/* The tunnel tapped on THIS screen, so arriving with a route already live is
+	 *  not mistaken for a pick that just landed (U1). */
+	const [picked, setPicked] = useState<string | null>(null);
+	const pick = useCallback(
+		(computer: DiscoveredComputer) => {
+			setPicked(computer.tunnelId);
+			void selectComputer(computer);
+		},
+		[selectComputer],
+	);
+	/* Read per render: the stack does not change under this screen while it is
+	 *  mounted, and the decision is re-taken whenever the phase moves. */
+	const canGoBack = router.canGoBack();
+
+	/* A pick made on the cold-start root lands on Home (U1, `landingAfterPick`).
+	 *  `replace`, not `push`: Computers was the root, and leaving it underneath
+	 *  would put the reader back on the list with the platform back. */
+	useEffect(() => {
+		if (landingAfterPick({ picked, tunnelId, phase, canGoBack }) === "home")
+			router.replace("/");
+	}, [canGoBack, phase, picked, router, tunnelId]);
+
+	const back = backAction({ canGoBack, routed: route !== null });
 	const [reachability, setReachability] = useState<
 		Record<string, Reachability>
 	>({});
@@ -333,30 +407,42 @@ export default function Computers() {
 
 	return (
 		<Screen
-			title={empty ? "Set up a computer" : "Computers"}
+			title={view.title}
 			testID={SCREEN.computers}
 			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
 			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
 			 *  from Settings and from a refusal surface — arriving from any of them with
 			 *  no back control leaves the platform gesture as the only exit (D7). */
 			headerLeading={
-				<Button
-					testID={CONTROL.computersBack}
-					label="Back"
-					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
-				/>
+				/* As the cold-start root with no route there is nowhere to go back to
+				 *  (Home's landing effect returns a restored account here), so the
+				 *  control is absent rather than inert (U1, `backAction`). */
+				back ? (
+					<Button
+						testID={CONTROL.computersBack}
+						label="Back"
+						onPress={() =>
+							back === "pop" ? router.back() : router.replace("/")
+						}
+						variant="quiet"
+						size="sm"
+					/>
+				) : null
 			}
 			headerAction={
-				!empty ? (
+				/* Spins for a DISCOVERY only, never for a pick: the row's own marker
+				 *  carries a pick (D12), and `Button` ignores presses while `loading`,
+				 *  so a slow Refresh absorbs repeat taps instead of stacking requests
+				 *  (U4) — the banner's Try now already worked this way. Hidden while
+				 *  signed out: a listing with no grant can only be refused again. */
+				!empty && !signedOut ? (
 					<Button
 						testID={CONTROL.computersRefresh}
 						label="Refresh"
 						onPress={() => void refreshComputers()}
 						variant="quiet"
 						size="sm"
-						loading={busy}
+						loading={discovering}
 					/>
 				) : null
 			}
@@ -369,43 +455,63 @@ export default function Computers() {
 					remedy={refusal.remedy}
 					retryAfterMs={refusal.retryAfterMs}
 					onRetry={() => void retry()}
+					/* The existing sign-in action, in place: it ends the refused route,
+					 *  hands off to the browser, and lists this account's computers when
+					 *  it returns (Q-r2-2). */
+					onSignIn={() => void signInWithRadient()}
 					onUseAnotherAddress={() => router.push("/custom")}
 				/>
 			) : null}
 
-			{/* A failure that kept the list on screen says so in a banner and leaves
-			 *  the cached rows below it: the cold-start rule, and the difference
-			 *  between stale and blank. */}
-			{!refusal && computers.length > 0 && detail ? (
+			{/* The hand-off's progress, where the button that started it was. Without
+			 *  it the screen went blank while the browser was open. */}
+			{signInPending ? (
+				<SignInPanel
+					state={signInState}
+					onStart={() => void signInWithRadient()}
+					onUseAddress={() => undefined}
+				/>
+			) : null}
+
+			{/* A failed discovery says so in a banner and leaves the cached rows below
+			 *  it: the cold-start rule, and the difference between stale and blank.
+			 *  It is the store's own discovery failure, not the route's refusal, so
+			 *  "Try now" re-runs discovery itself (D2/D3: it used to re-run a route
+			 *  action that, with no route, did nothing). It goes away on the next
+			 *  successful discovery, never on a dismiss (`banner.tsx`). */}
+			{view.banner ? (
 				<Banner
 					testID={CONTROL.computersBanner}
 					tone="warning"
-					message={detail}
+					message={view.banner}
 					action={{
-						label: "Retry",
+						label: "Try now",
 						onPress: () => void refreshComputers(),
+						loading: discovering,
 						testID: CONTROL.computersRetryAction,
 					}}
 				/>
 			) : null}
 
-			{phase === "discovering" && computers.length === 0 ? (
+			{view.skeleton ? (
 				<View className="gap-3 pt-4">
 					<Skeleton lines={1} />
 					<Skeleton lines={1} />
 				</View>
 			) : null}
 
-			{!refusal && computers.length > 0 ? (
+			{/* The rows stay under a refusal too. A failed mint is about ONE computer;
+			 *  hiding the others left the reader nothing to pick instead (D1). */}
+			{view.list ? (
 				<View testID={REGION.computersList}>
 					<SectionHeader label="Your computers" />
 					{computers.map((computer) => (
 						<ComputerRow
 							key={computer.tunnelId}
 							computer={computer}
-							selected={computer.tunnelId === tunnelId}
+							state={rowState(computer, { tunnelId, phase })}
 							reachability={reachability[computer.hostname] ?? "checking"}
-							onPress={() => void selectComputer(computer)}
+							onPress={() => pick(computer)}
 							onRemove={() => setRemoveTarget(computer)}
 						/>
 					))}
@@ -443,7 +549,7 @@ export default function Computers() {
 							<WaitPanel
 								state={wait.state}
 								appeared={appeared}
-								onUse={() => appeared && void selectComputer(appeared)}
+								onUse={() => appeared && pick(appeared)}
 								onStop={() => setWaiting(false)}
 							/>
 						</View>

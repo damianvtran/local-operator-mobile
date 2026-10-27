@@ -193,14 +193,34 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned again 2026-10-27 for the M1 review round 2 N1/N2 (`src` only):
 	 * read-only registry paths skip an entry whose read throws, writes keep its
 	 * id, and sign-out writes the empty index past an unreadable index. Registry
-	 * internals and their test only; nothing renders differently. */
+	 * internals and their test only; nothing renders differently.
+	 *
+	 * Re-pinned 2026-10-27 by PR #121, deliberately, `src` only (`app` unchanged):
+	 * `f41245c` lets Radient discovery record the account's computers before a route
+	 * exists (`src/state/connection-store.ts`), and the round-1 remediation commit
+	 * on top of it keeps that list through a pick and a failed Refresh (the store,
+	 * `computers.tsx` + new `computers-view.ts`, the provider's discovery arms and
+	 * refusal subject, Settings' failure line, the `retry` refusal's copy). Picker
+	 * and refusal screens only; nothing on the U-08 proofs' measured scenes.
+	 * Again, `src` only, for the PR's round-2 remediation: a cold-start pick lands
+	 * on Home, the 401 sign-in state and its button, the generation-fenced
+	 * `discovering` flag, network mint failures on `retry`, and Settings' row
+	 * state (`computers.tsx`, `computers-view.ts`, the provider, `settings.tsx`,
+	 * a store comment). Same screens; no U-08 scene.
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#120) into PR #121: both branches
+	 * edited `src/state/connection-store.ts` (the hidden-computer filter and the
+	 * route-free `setComputers`/Radient carry-over now live in one file), so the
+	 * merged `src` digest is neither side's; recomputed with `--print` from the
+	 * staged merge tree. `app` is #120's, which #121 never touched. Store and its
+	 * tests only; nothing renders differently. */
 	app: "9526e1c2ae9f10223c976f76608d44503520bc7759a9f4e42141bcb208a2a6ac",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "4f1a87f0e82906c46aebc572c0033f9c2ef454675a0fb082564fdc94abe0a680",
+	src: "f62e28109edfd533639ea9c3c40f673b87e5877dfe62f3667f44e96df2e2f70a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

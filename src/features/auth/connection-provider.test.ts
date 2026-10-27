@@ -17,6 +17,7 @@ import { memorySecureStore, SecureStorage } from "@/connection/storage";
 import {
 	ConnectionProvider,
 	connectionStore,
+	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { sessions as sessionProjections } from "@/features/session/runtime";
@@ -218,6 +219,18 @@ async function relay(
 		frameTitle?: string;
 		/** The initial list read fails while the stream stays healthy (R1-1). */
 		sessionsFailure?: boolean;
+		/** What Radient's `GET /v1/tunnels` lists; empty unless a test needs rows. */
+		tunnels?: unknown[];
+		/** Holds `GET /v1/tunnels` until `releaseTunnels`, so a test can end the
+		 *  account (sign out) while discovery is still in flight. */
+		holdTunnels?: boolean;
+		/** Holds `POST /v1/tunnels/session/code` until `releaseCode`, so a test can
+		 *  look at the store while a pick is minting. */
+		holdCode?: boolean;
+		/** Answers the session code request with a 500: a failed mint. */
+		failCode?: boolean;
+		/** Drops the session code request's connection: a pick made offline. */
+		dropCode?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -228,6 +241,18 @@ async function relay(
 	const releaseToken = deferred();
 	const refuseCatalogue = deferred();
 	const releaseHistory = deferred();
+	const tunnelsReceived = deferred();
+	const releaseTunnels = deferred();
+	const codeReceived = deferred();
+	const releaseCode = deferred();
+	/* What `GET /v1/tunnels` answers next: the listed tunnels, or a status a test
+	 *  switches to mid-run to fail a Refresh and then recover it. */
+	let tunnelsAnswer: "list" | 500 | 401 = "list";
+	/* Holds the NEXT `GET /v1/tunnels` only, so a test can sign in normally and
+	 *  then keep a Refresh in flight (R2-m1). */
+	let holdNext = false;
+	const nextTunnelsReceived = deferred();
+	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
@@ -245,10 +270,36 @@ async function relay(
 			response.end(JSON.stringify(value));
 		};
 		if (path === "/v1/tunnels") {
-			json({ msg: "ok", result: [] });
+			tunnelsReceived.resolve();
+			if (options.holdTunnels) await releaseTunnels.promise;
+			if (holdNext) {
+				holdNext = false;
+				nextTunnelsReceived.resolve();
+				await releaseNextTunnels.promise;
+			}
+			if (tunnelsAnswer === 500) {
+				response.writeHead(500, { "content-type": "text/plain" });
+				response.end("Synthetic control-plane failure");
+				return;
+			}
+			if (tunnelsAnswer === 401) {
+				json({ msg: "unauthorized" }, 401);
+				return;
+			}
+			json({ msg: "ok", result: options.tunnels ?? [] });
 			return;
 		}
 		if (path === "/v1/tunnels/session/code") {
+			codeReceived.resolve();
+			if (options.holdCode) await releaseCode.promise;
+			if (options.dropCode) {
+				request.socket.destroy();
+				return;
+			}
+			if (options.failCode) {
+				json({ msg: "synthetic mint failure" }, 500);
+				return;
+			}
 			json({ code: `synthetic-code-${++codeCount}` });
 			return;
 		}
@@ -397,6 +448,7 @@ async function relay(
 		releaseToken.resolve();
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
+		releaseTunnels.resolve();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -412,6 +464,18 @@ async function relay(
 		releaseToken,
 		refuseCatalogue,
 		releaseHistory,
+		tunnelsReceived,
+		releaseTunnels,
+		codeReceived,
+		releaseCode,
+		answerTunnels: (answer: "list" | 500 | 401) => {
+			tunnelsAnswer = answer;
+		},
+		holdNextTunnels: () => {
+			holdNext = true;
+		},
+		nextTunnelsReceived,
+		releaseNextTunnels,
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -1491,4 +1555,243 @@ describe("session ownership across routes", () => {
 				});
 		},
 	);
+});
+
+describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () => {
+	/* Two synthetic tunnels in the control plane's own shape, parsed by the real
+	 *  `discoverComputers`. Discovery answers before any route is started — a route
+	 *  is what picking one of these creates — so the list must survive `route ===
+	 *  null`; on `origin/main` the store dropped it and the picker read 0 rows. */
+	const tunnels = ["tun-synthetic-1", "tun-synthetic-2"].map((id, index) => ({
+		id,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${String(index + 1).padStart(32, "0")}-lop.example.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	it("lists the account's computers after sign-in, with no route started", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().route).toBeNull();
+		expect(
+			connectionStore
+				.getState()
+				.computers.map((c) => c.tunnelId)
+				.sort(),
+		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
+	});
+
+	it("lists the account's computers on a cold-start restore of a stored grant", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(() => connectionStore.getState().computers.length === 2);
+		expect(connectionStore.getState().route).toBeNull();
+		expect(latest.restoredAccount).toBe(true);
+	});
+
+	it("drops a discovery result that lands after sign-out (negative control)", async () => {
+		const mock = await relay({ tunnels, holdTunnels: true });
+		transport(mock.origin);
+		await mount();
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await mock.tunnelsReceived.promise;
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		mock.releaseTunnels.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		/* The tunnels WERE served; the provider's authorization fence, not the store,
+		 *  is what keeps them off a signed-out screen. */
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().phase).toBe("signed-out");
+	});
+});
+
+describe("the account's computers outlive a pick and a failed refresh (PR #121 round 1)", () => {
+	/* Hostnames the synthetic transport routes to the loopback relay, so a pick
+	 *  can mint against the control plane and then go live against the relay. */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const ids = () =>
+		connectionStore
+			.getState()
+			.computers.map((c) => c.tunnelId)
+			.sort();
+	const listed = ["tun-synthetic-1", "tun-synthetic-2"];
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(ids()).toEqual(listed);
+		return mock;
+	}
+
+	it("keeps the list while the picked computer mints and after it is live (R1-M1, D1)", async () => {
+		const mock = await signedIn({ holdCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		let picking!: Promise<void>;
+		await act(async () => {
+			picking = latest.selectComputer(second);
+		});
+		await mock.codeReceived.promise;
+		try {
+			/* Mid-mint: the route exists, the row is the chosen one, the list is whole. */
+			expect(connectionStore.getState().phase).toBe("minting");
+			expect(connectionStore.getState().tunnelId).toBe(second.tunnelId);
+			expect(ids()).toEqual(listed);
+		} finally {
+			/* Released even when an assertion fails, so a regression reports here
+			 *  rather than as a held mint timing out every later test's teardown. */
+			mock.releaseCode.resolve();
+		}
+		await act(async () => {
+			await picking;
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(ids()).toEqual(listed);
+	});
+
+	it("keeps the list when the mint fails, and names the PICKED computer (R1-m2)", async () => {
+		await signedIn({ failCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(ids()).toEqual(listed);
+		/* `computers[0]` was the subject before; the failure belongs to the second. */
+		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+	});
+
+	it("records a failed Refresh as account state over the cached rows, and a later success clears it (D2)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(500);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(ids()).toEqual(listed);
+		expect(connectionStore.getState().discoveryFailure).toBe("rejected");
+		/* Not a route refusal: nothing on screen blames a computer, and no refusal
+		 *  hides the rows. */
+		expect(connectionStore.getState().surface).toBeNull();
+		expect(latest.refusal).toBeNull();
+		mock.answerTunnels("list");
+		const before = mock.events.filter((e) => e === "GET /v1/tunnels").length;
+		/* What the banner's "Try now" calls. */
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(mock.events.filter((e) => e === "GET /v1/tunnels").length).toBe(
+			before + 1,
+		);
+		expect(connectionStore.getState().discoveryFailure).toBeNull();
+		expect(ids()).toEqual(listed);
+	});
+
+	it("clears the rows when Radient refuses the grant (R1-m1)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(401);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().surface).toBe("sign-in");
+		/* The screen reads this kind to show a sign-in state, not an empty
+		 *  account (QA round 2, Q-r2-1). */
+		expect(latest.refusal?.kind).toBe("sign-in");
+	});
+});
+
+/* The account-problem copy a network failure must never borrow (U5, D11). */
+const CONSOLE_COPY = /console|lop login/i;
+
+describe("a pick and a Refresh do not leave each other's state behind (PR #121 round 2)", () => {
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		return mock;
+	}
+
+	it("lowers `discovering` when a pick retires an in-flight Refresh (R2-m1)", async () => {
+		const mock = await signedIn({});
+		mock.holdNextTunnels();
+		let refreshing!: Promise<void>;
+		await act(async () => {
+			refreshing = latest.refreshComputers();
+		});
+		await mock.nextTunnelsReceived.promise;
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		try {
+			expect(latest.discovering).toBe(true);
+			/* The pick suspends the authorization revision, so the held pass is no
+			 *  longer current when it lands. */
+			await act(async () => {
+				await latest.selectComputer(second);
+			});
+			await until(() => connectionStore.getState().phase === "live");
+		} finally {
+			mock.releaseNextTunnels.resolve();
+		}
+		await act(async () => {
+			await refreshing;
+		});
+		/* Stuck `true` here was an inert Try now and an endless skeleton. */
+		expect(latest.discovering).toBe(false);
+	});
+
+	it("offers Try again, not the Radient console, for a pick made offline (U5, D11)", async () => {
+		await signedIn({ dropCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(latest.refusal).toMatchObject({
+			kind: "retry",
+			subject: "Synthetic computer 2",
+			detail: PICK_UNREACHABLE_DETAIL,
+			remedy: null,
+		});
+		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
+	});
 });
