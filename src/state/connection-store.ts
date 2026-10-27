@@ -51,10 +51,10 @@ export interface ConnectionSnapshot {
 	/** The signed-in identity, as a LABEL only: never an email in a log, never a
 	 *  token anywhere. */
 	accountLabel: string | null;
-	/** The computers discovery found, most recently updated first. ACCOUNT state:
-	 *  it survives a Radient `startRoute` (picking a computer) and is emptied only
-	 *  by `endRoute` (sign-out, sign-in), or by the provider on an `unauthorized`
-	 *  discovery. */
+	/** The computers discovery found, most recently updated first, minus the ones
+	 *  the reader removed (`hiddenTunnelIds`). ACCOUNT state: it survives a Radient
+	 *  `startRoute` (picking a computer) and is emptied only by `endRoute`
+	 *  (sign-out, sign-in), or by the provider on an `unauthorized` discovery. */
 	computers: DiscoveredComputer[];
 	/** Why the last discovery pass failed, or `null` once one succeeds. Kept apart
 	 *  from `surface` on purpose: listing an account's computers is not a ROUTE, so
@@ -64,6 +64,14 @@ export interface ConnectionSnapshot {
 	 *  only which of the two failures it was, so a server's free text never reaches
 	 *  a banner. */
 	discoveryFailure: DiscoveryFailure | null;
+	/** Tunnel ids the reader removed from this phone. Discovery keeps reporting a
+	 *  removed computer — the account still has it — so the filter lives HERE, at
+	 *  the one entry point every discovery result goes through, rather than in a
+	 *  screen that the next refresh would bypass. Persisted by
+	 *  `connection/saved-computers.ts` and hydrated into this store; unlike the rest
+	 *  of the snapshot it survives a route change, because removing a computer is a
+	 *  fact about this phone, not about one route. */
+	hiddenTunnelIds: string[];
 	/** The chosen computer's tunnel id, when one is chosen. */
 	tunnelId: string | null;
 	/** The relay's or the gateway's own sentence, written for a phone, displayed
@@ -87,10 +95,20 @@ export interface ConnectionActions {
 	/** Starts a route. The ONLY entry point, so a route switch is always an
 	 *  explicit act. */
 	startRoute: (route: RouteProfile) => void;
-	/** Records the discovered computers, and with them that discovery succeeded. */
+	/** Records the discovered computers, dropping any the reader removed, and with
+	 *  them that discovery succeeded. */
 	setComputers: (computers: DiscoveredComputer[]) => void;
 	/** Records a failed discovery pass. The rows already listed stay. */
 	noteDiscoveryFailure: (failure: DiscoveryFailure) => void;
+	/** Replaces the removed set (hydration from the saved-computers registry) and
+	 *  re-filters the current list, so hydrating after discovery has already
+	 *  answered still hides what it should. */
+	setHiddenTunnelIds: (tunnelIds: readonly string[]) => void;
+	/** The reader removed this computer: out of the list now and after every
+	 *  later discovery refresh. Persisting it is the caller's job. */
+	hideComputer: (tunnelId: string) => void;
+	/** The way back. The computer returns on the next discovery refresh. */
+	unhideComputer: (tunnelId: string) => void;
 	/** Picks a computer and moves to `minting`. */
 	selectComputer: (computer: DiscoveredComputer) => void;
 	/** The tunnel session exists and the relay answered: the route is usable. */
@@ -124,6 +142,7 @@ const INITIAL: ConnectionSnapshot = {
 	accountLabel: null,
 	computers: [],
 	discoveryFailure: null,
+	hiddenTunnelIds: [],
 	tunnelId: null,
 	detail: null,
 	surface: null,
@@ -138,6 +157,7 @@ export function createConnectionStore() {
 		startRoute(route) {
 			set((state) => ({
 				...INITIAL,
+				hiddenTunnelIds: state.hiddenTunnelIds,
 				revision: state.revision + 1,
 				route,
 				/* Picking a computer STARTS a Radient route, so resetting the list here
@@ -181,7 +201,7 @@ export function createConnectionStore() {
 			 *  a banner that outlived the outage it reported would be the dismiss-by-
 			 *  luck the kit's banner rule forbids (design round 1, D2). */
 			set({
-				computers,
+				computers: withoutHidden(computers, get().hiddenTunnelIds),
 				discoveryFailure: null,
 				phase: get().phase === "discovering" ? "discovering" : get().phase,
 			});
@@ -192,6 +212,25 @@ export function createConnectionStore() {
 			 *  `surface` write, because a failed LISTING says nothing about a route that
 			 *  may be live right now. */
 			set({ discoveryFailure: failure });
+		},
+
+		setHiddenTunnelIds(tunnelIds) {
+			const hiddenTunnelIds = [...new Set(tunnelIds)];
+			set({
+				hiddenTunnelIds,
+				computers: withoutHidden(get().computers, hiddenTunnelIds),
+			});
+		},
+
+		hideComputer(tunnelId) {
+			if (get().hiddenTunnelIds.includes(tunnelId)) return;
+			get().setHiddenTunnelIds([...get().hiddenTunnelIds, tunnelId]);
+		},
+
+		unhideComputer(tunnelId) {
+			set({
+				hiddenTunnelIds: get().hiddenTunnelIds.filter((id) => id !== tunnelId),
+			});
 		},
 
 		selectComputer(computer) {
@@ -254,9 +293,23 @@ export function createConnectionStore() {
 			/* Clearing the projections is the route switch's job (`architecture.md`
 			 * "Route switch") and belongs to the caller that owns both stores; this
 			 * action deliberately does not reach into another store. */
-			set((state) => ({ ...INITIAL, revision: state.revision + 1 }));
+			set((state) => ({
+				...INITIAL,
+				hiddenTunnelIds: state.hiddenTunnelIds,
+				revision: state.revision + 1,
+			}));
 		},
 	}));
+}
+
+function withoutHidden(
+	computers: DiscoveredComputer[],
+	hiddenTunnelIds: readonly string[],
+): DiscoveredComputer[] {
+	if (hiddenTunnelIds.length === 0) return computers;
+	return computers.filter(
+		(computer) => !hiddenTunnelIds.includes(computer.tunnelId),
+	);
 }
 
 export type ConnectionStoreApi = ReturnType<typeof createConnectionStore>;

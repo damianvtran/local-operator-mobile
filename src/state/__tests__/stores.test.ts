@@ -195,6 +195,69 @@ describe("the connection store is the only place a route starts or ends", () => 
 		expect(store.getState().discoveryFailure).toBeNull();
 	});
 
+	it("hides a removed computer from a discovery that finishes before a route starts", () => {
+		/* PR #121 dropped `setComputers`' route guard and PR #120 added the hidden
+		 *  filter to the same action; the merge must keep both. A route-free
+		 *  discovery (sign-in, cold-start restore) is exactly where a removed
+		 *  computer would come back if the filter only ran with a route
+		 *  (PR #120 review round 2, merge-conflict note). */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = {
+			...visible,
+			tunnelId: "t2",
+			name: "old desktop",
+			deviceId: "d2",
+			hostname: "h2",
+		} as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().route).toBeNull();
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().hiddenTunnelIds).toEqual(["t2"]);
+	});
+
+	it("keeps the visible list and the hidden set through a Radient pick", () => {
+		/* Picking starts a Radient route: #121 carries the list across it and #120
+		 *  carries the removed set, so neither a removed computer reappearing nor
+		 *  the picker emptying may follow from the pick. */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = { ...visible, tunnelId: "t2", hostname: "h2" } as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		store.getState().startRoute({
+			mode: "radient",
+			hostname: "h1",
+			tunnelId: "t1",
+		});
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().hiddenTunnelIds).toEqual(["t2"]);
+		/* And a refresh on the new route still filters with the carried set. */
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().computers).toEqual([visible]);
+	});
+
 	it("records a discovery failure without touching the route, and a list clears it", () => {
 		/* A failed LISTING is account state (design round 1, D2): it must not flip a
 		 *  live route to refused, and the next successful discovery clears it. */

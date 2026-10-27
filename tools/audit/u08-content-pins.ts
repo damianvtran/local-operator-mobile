@@ -176,6 +176,25 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * composer's re-measure effect reads `measurementKey` so the dependency the
 	 * ceiling contract needs is a real one (`src` only, no geometry change).
 	 *
+	 * Re-pinned 2026-10-27 for the saved-computers registry (M1): new non-rendering
+	 * modules (`src/connection/saved-computers.ts` and its test,
+	 * `src/features/auth/use-saved-computers-hydration.ts`), the connection store's
+	 * hidden-computer filter, the Computers screen's Remove handler, and a
+	 * render-nothing hydration component in `app/_layout.tsx` — so BOTH trees move.
+	 * No markup, style or copy changes; no proof scene renders differently.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 1 (`src` only; `app` is
+	 * unchanged): the registry no longer copies the custom slot and lets a
+	 * throwing read propagate, sign-out clears it, and the Remove handler and
+	 * startup merge moved into `src/features/auth/saved-computers-sync.ts` (plus
+	 * its test) so they can be tested. The screen's `onConfirm` now calls that
+	 * helper; no markup, style or copy changes.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 2 N1/N2 (`src` only):
+	 * read-only registry paths skip an entry whose read throws, writes keep its
+	 * id, and sign-out writes the empty index past an unreadable index. Registry
+	 * internals and their test only; nothing renders differently.
+	 *
 	 * Re-pinned 2026-10-27 by PR #121, deliberately, `src` only (`app` unchanged):
 	 * `f41245c` lets Radient discovery record the account's computers before a route
 	 * exists (`src/state/connection-store.ts`), and the round-1 remediation commit
@@ -187,14 +206,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * on Home, the 401 sign-in state and its button, the generation-fenced
 	 * `discovering` flag, network mint failures on `retry`, and Settings' row
 	 * state (`computers.tsx`, `computers-view.ts`, the provider, `settings.tsx`,
-	 * a store comment). Same screens; no U-08 scene. */
-	app: "e8924ef20031d42a928a92143d25950464c21790bddf89730f8c71a282ce4279",
+	 * a store comment). Same screens; no U-08 scene.
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#120) into PR #121: both branches
+	 * edited `src/state/connection-store.ts` (the hidden-computer filter and the
+	 * route-free `setComputers`/Radient carry-over now live in one file), so the
+	 * merged `src` digest is neither side's; recomputed with `--print` from the
+	 * staged merge tree. `app` is #120's, which #121 never touched. Store and its
+	 * tests only; nothing renders differently. */
+	app: "9526e1c2ae9f10223c976f76608d44503520bc7759a9f4e42141bcb208a2a6ac",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "b3273d2005baf657c15e641bffe236d2a54cc4bbef55b99d4f46009a6bf572ac",
+	src: "f62e28109edfd533639ea9c3c40f673b87e5877dfe62f3667f44e96df2e2f70a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

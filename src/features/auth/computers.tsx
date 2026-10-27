@@ -20,6 +20,7 @@ import {
 	probeHealth,
 	useConnectorWait,
 } from "@/features/auth/connector-wait";
+import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
@@ -563,17 +564,9 @@ export default function Computers() {
 				confirmLabel="Remove"
 				onConfirm={() => {
 					if (removeTarget) {
-						// The store owns the list; the screen owns only the confirmation.
-						/* Forgetting is local to this phone, and the store's
-						 *  `setComputers` is the one list it keeps: filtering here rather
-						 *  than adding a second mutation API for one screen. */
-						connectionStore
-							.getState()
-							.setComputers(
-								computers.filter(
-									(candidate) => candidate.tunnelId !== removeTarget.tunnelId,
-								),
-							);
+						/* Persisting the removal so discovery cannot undo it is
+						 *  `removeComputer`'s job; the screen owns only the confirmation. */
+						void removeComputer(connectionStore, removeTarget);
 					}
 					setRemoveTarget(null);
 				}}
