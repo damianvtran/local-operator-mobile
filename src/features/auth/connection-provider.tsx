@@ -70,6 +70,7 @@ import {
 	readSavedTunnel,
 	readStoredOauth,
 	readStoredTunnelSession,
+	rememberLiveComputer,
 	removeSavedTunnel,
 	type SavedTunnel,
 	writeSavedTunnel,
@@ -154,6 +155,10 @@ export type ConnectCustomInput = {
 	url: string;
 	password: string;
 	allowInsecure: boolean;
+	/** The saved computer being reconnected, when the caller knows it (a tap on a
+	 *  computer switcher row). Recording the live route by this id, not by address,
+	 *  is what keeps two saved computers at one address apart (decision a-2a8b). */
+	computerId?: string;
 };
 
 export type Connection = {
@@ -262,6 +267,33 @@ function routeForComputer(computer: DiscoveredComputer): RouteProfile | null {
 	const result = validateRadientHostname(computer.hostname, computer.tunnelId);
 	return result.ok ? result.route : null;
 }
+
+/**
+ * Remembers the computer a route just reached, for the computer switcher: once the
+ * route is LIVE, never on a pick, because a computer that refused or never answered
+ * is not one this phone has used. Fire-and-forget: the registry is a keystore
+ * write, and a route must not wait on it or fail with it. The id lands in the store
+ * only while the same route is still current, so a slow write cannot label the
+ * next one. Module scope for the same reason as `verifiedRetirement`.
+ */
+const rememberLiveRoute = (
+	admission: RouteAdmission,
+	computerId: string | undefined,
+): void => {
+	const state = connectionStore.getState();
+	const route = state.route;
+	if (!route || !admission.isCurrent()) return;
+	const name =
+		route.mode === "radient"
+			? state.discoveredComputers.find(
+					(computer) => computer.tunnelId === route.tunnelId,
+				)?.name
+			: undefined;
+	void rememberLiveComputer(route, { name, computerId }).then((entry) => {
+		if (entry && admission.isCurrent())
+			connectionStore.getState().noteComputer(entry.id);
+	});
+};
 
 /** Turns an unverified purge into the typed refusal the surfaces already know,
  *  so a sign-out reports `false` rather than pretending the device is clean.
@@ -599,6 +631,7 @@ export const ConnectionProvider = ({
 		async (
 			client: ReturnType<typeof createRelayClient>,
 			admission: StartupRouteAdmission,
+			computerId?: string,
 		): Promise<void> => {
 			if (
 				!admission.isCurrent() ||
@@ -613,6 +646,7 @@ export const ConnectionProvider = ({
 				})
 			)
 				return;
+			rememberLiveRoute(admission, computerId);
 			startStream(client, admission);
 			startConfig(client);
 			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
@@ -678,7 +712,7 @@ export const ConnectionProvider = ({
 
 	const connectCustom = useCallback(
 		async (
-			{ url, password, allowInsecure }: ConnectCustomInput,
+			{ url, password, allowInsecure, computerId }: ConnectCustomInput,
 			restoring = false,
 		) => {
 			setBusy(true);
@@ -721,12 +755,12 @@ export const ConnectionProvider = ({
 					},
 				});
 
-				await goLive(client, admission);
+				await goLive(client, admission, computerId);
 			} catch (error) {
 				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>
-						connectCustom({ url, password, allowInsecure }),
+						connectCustom({ url, password, allowInsecure, computerId }),
 					);
 					return;
 				}

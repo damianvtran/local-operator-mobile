@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
@@ -70,11 +70,26 @@ export default function OwnTunnel() {
 	const router = useRouter();
 	const { saveCustomRoute, connectCustom } = useConnection();
 	const { savedTunnel: saved } = useConnection();
+	/* `?url=` is the computer switcher's hand-off for an own-address computer with
+	 *  no stored password: only one password slot exists until per-phone keys
+	 *  arrive with pairing, so a second saved address opens here, pre-filled, rather
+	 *  than in a password store this app does not have. The saved slot's password is
+	 *  offered only when the slot IS that address — never another computer's. */
+	const { url: prefill, insecure } = useLocalSearchParams<{
+		url?: string;
+		insecure?: string;
+	}>();
+	const prefilled = typeof prefill === "string" && prefill.length > 0;
+	const forSlot = !prefilled || prefill === saved?.baseUrl;
 
-	const [url, setUrl] = useState(saved?.baseUrl ?? "");
-	const [password, setPassword] = useState(saved?.password ?? "");
+	const [url, setUrl] = useState(prefilled ? prefill : (saved?.baseUrl ?? ""));
+	const [password, setPassword] = useState(
+		forSlot ? (saved?.password ?? "") : "",
+	);
 	const [allowInsecure, setAllowInsecure] = useState(
-		saved?.allowInsecure ?? false,
+		/* The plain-http opt-in the reader already gave THIS address, as the registry
+		 *  recorded it; never inferred from the host. */
+		forSlot ? (saved?.allowInsecure ?? false) : insecure === "1",
 	);
 	const [testing, setTesting] = useState(false);
 	const [saving, setSaving] = useState(false);

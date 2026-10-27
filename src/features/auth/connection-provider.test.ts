@@ -27,6 +27,11 @@ import {
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
+import {
+	performSwitcherTap,
+	switcherSections,
+	switcherTap,
+} from "./computer-switcher-view";
 
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
@@ -68,7 +73,16 @@ const durable = vi.hoisted(() => ({
 	clearBlock: null as Promise<void> | null,
 	clearsStarted: 0,
 }));
+type TunnelStorageModule = typeof import("@/features/auth/tunnel-storage");
+/* The saved-computers registry is the REAL module's (the web runtime, so its
+ *  memory keystore): the switcher tests assert what the provider records there,
+ *  and a stand-in would only prove the stand-in. Credentials stay synthetic. */
+const realRegistry = () =>
+	vi.importActual<TunnelStorageModule>("@/features/auth/tunnel-storage");
 vi.mock("@/features/auth/tunnel-storage", () => ({
+	rememberLiveComputer: async (
+		...args: Parameters<TunnelStorageModule["rememberLiveComputer"]>
+	) => (await realRegistry()).rememberLiveComputer(...args),
 	readSavedTunnel: async () => durable.saved,
 	readStoredOauth: async () => durable.oauth,
 	readStoredTunnelSession: async () => durable.session,
@@ -1793,5 +1807,162 @@ describe("a pick and a Refresh do not leave each other's state behind (PR #121 r
 			remedy: null,
 		});
 		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
+	});
+});
+
+describe("the computer switcher's registry (M2a)", () => {
+	/* The registry the provider writes to is the real one over the web runtime's
+	 *  memory keystore, a process singleton: each test starts from an empty list. */
+	beforeEach(async () => {
+		const registry = await vi.importActual<TunnelStorageModule>(
+			"@/features/auth/tunnel-storage",
+		);
+		await registry.clearStoredCredentials();
+	});
+	const saved = async () =>
+		(
+			await vi.importActual<TunnelStorageModule>(
+				"@/features/auth/tunnel-storage",
+			)
+		).readSavedComputers();
+	const tunnels = [
+		{
+			id: "tun-synthetic-1",
+			name: "Synthetic computer 1",
+			hostname: `${"a".repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		},
+	];
+
+	it("remembers a live Radient route by tunnel id and marks it used", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		/* Discovery alone records nothing: the phone has not USED the computer. */
+		expect(await saved()).toEqual([]);
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		const before = Date.now();
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entries = await saved();
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			transport: "radient",
+			tunnelId: "tun-synthetic-1",
+			name: "Synthetic computer 1",
+			hidden: false,
+		});
+		expect(entries[0]?.lastUsedAt).toBeGreaterThanOrEqual(before);
+		/* The store names the live computer by its REGISTRY id, not its address. */
+		expect(connectionStore.getState().computerId).toBe(entries[0]?.id);
+	});
+
+	it("remembers a live custom route by address and marks it used", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		const before = Date.now();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entries = await saved();
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			transport: "custom",
+			baseUrl: mock.origin,
+			allowInsecure: true,
+		});
+		expect(entries[0]?.lastUsedAt).toBeGreaterThanOrEqual(before);
+		expect(connectionStore.getState().computerId).toBe(entries[0]?.id);
+		/* Metadata only: the password never reaches the registry. */
+		expect(JSON.stringify(entries)).not.toContain("test-only");
+	});
+
+	it("does not remember a computer whose route never went live (negative control)", async () => {
+		/* The mint fails, so the pick ends `refused`: a computer this phone never
+		 *  reached is not one it has used, and must not join "On this phone". */
+		const mock = await relay({ tunnels, failCode: true });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(await saved()).toEqual([]);
+		expect(connectionStore.getState().computerId).toBeNull();
+	});
+
+	it("a tap on a saved custom row starts a custom route to it, keyed by its registry id", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		/* A custom computer the phone used before, then a Radient-less phone state. */
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entry = (await saved())[0];
+		if (!entry) throw new Error("not remembered");
+		await act(async () => {
+			connectionStore.getState().endRoute();
+		});
+		expect(connectionStore.getState().route).toBeNull();
+
+		const row = switcherSections({
+			saved: await saved(),
+			discovered: [],
+			probes: {},
+			route: { phase: "signed-out", tunnelId: null },
+			activeComputerId: null,
+			pendingKey: null,
+			radientSignedOut: false,
+		}).onPhone[0];
+		if (!row) throw new Error("no switcher row");
+		const tap = switcherTap(row, {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		});
+		expect(tap.kind).toBe("connect-custom");
+		await act(async () => {
+			await performSwitcherTap(tap, {
+				selectComputer: latest.selectComputer,
+				connectCustom: latest.connectCustom,
+				signInWithRadient: latest.signInWithRadient,
+				unhide: () => {},
+				enterPassword: () => {},
+				openConsole: () => {},
+				close: () => {},
+			});
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route).toMatchObject({
+			mode: "custom",
+			baseUrl: mock.origin,
+		});
+		await until(() => connectionStore.getState().computerId === entry.id);
+		/* The same computer, not a second entry at the same address. */
+		expect(await saved()).toHaveLength(1);
 	});
 });

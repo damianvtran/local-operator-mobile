@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	discoveryFailureMessage,
 	rowState,
@@ -69,6 +70,7 @@ export default function Settings() {
 		lastError,
 		discovering,
 	} = useConnection();
+	const switcher = useComputerSwitcher();
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -254,6 +256,15 @@ export default function Settings() {
 							 *  uses, which also absorbs repeat taps while one is in flight
 							 *  (U4). */
 							loading={discovering}
+						/>
+						{/* Every computer this phone knows, own-address ones included — the
+						 *  rows above are only the account's Radient computers. */}
+						<Button
+							testID={CONTROL.settingsSwitchComputer}
+							label="Switch computer"
+							onPress={switcher.open}
+							variant="quiet"
+							size="sm"
 						/>
 						<Button
 							testID={CONTROL.settingsAddComputer}

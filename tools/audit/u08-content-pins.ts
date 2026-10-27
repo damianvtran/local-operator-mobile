@@ -213,14 +213,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * route-free `setComputers`/Radient carry-over now live in one file), so the
 	 * merged `src` digest is neither side's; recomputed with `--print` from the
 	 * staged merge tree. `app` is #120's, which #121 never touched. Store and its
-	 * tests only; nothing renders differently. */
-	app: "9526e1c2ae9f10223c976f76608d44503520bc7759a9f4e42141bcb208a2a6ac",
+	 * tests only; nothing renders differently.
+	 *
+	 * Re-pinned 2026-10-27 for the computer switcher (M2a), deliberately, `app` and
+	 * `src`: `app/_layout.tsx` mounts the one switcher sheet's provider around the
+	 * stack, and `src` adds the sheet and its view model, the store's unfiltered
+	 * discovery list and live computer id, the provider's remember-on-live, the
+	 * probe-at-origin, the own-address `?url=` prefill, and the Switch entry points
+	 * on Computers and Settings. Computer screens and an overlay that is closed by
+	 * default; no U-08 scene. Recomputed with `--print` from the staged tree. */
+	app: "236a990f4d9a5016eeaf0c6cb924be4630965584e8aaafcc32973a4dbcab0b15",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "f62e28109edfd533639ea9c3c40f673b87e5877dfe62f3667f44e96df2e2f70a",
+	src: "fd8002d150a7591575f5aebddb54f8de49806bb4394612aaa237cec36e1e7e40",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

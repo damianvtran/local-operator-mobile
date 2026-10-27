@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	backAction,
 	computersView,
@@ -314,6 +315,7 @@ export default function Computers() {
 		signInState,
 	} = useConnection();
 
+	const switcher = useComputerSwitcher();
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -436,14 +438,26 @@ export default function Computers() {
 				 *  (U4) — the banner's Try now already worked this way. Hidden while
 				 *  signed out: a listing with no grant can only be refused again. */
 				!empty && !signedOut ? (
-					<Button
-						testID={CONTROL.computersRefresh}
-						label="Refresh"
-						onPress={() => void refreshComputers()}
-						variant="quiet"
-						size="sm"
-						loading={discovering}
-					/>
+					<View className="flex-row items-center gap-1">
+						{/* The switcher beside Refresh: this screen lists only the account's
+						 *  Radient computers, and Switch is the one place that also holds
+						 *  the reader's own-address computers and the removed ones. */}
+						<Button
+							testID={CONTROL.computersSwitch}
+							label="Switch"
+							onPress={switcher.open}
+							variant="quiet"
+							size="sm"
+						/>
+						<Button
+							testID={CONTROL.computersRefresh}
+							label="Refresh"
+							onPress={() => void refreshComputers()}
+							variant="quiet"
+							size="sm"
+							loading={discovering}
+						/>
+					</View>
 				) : null
 			}
 		>

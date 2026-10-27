@@ -227,6 +227,45 @@ describe("the connection store is the only place a route starts or ends", () => 
 		expect(store.getState().hiddenTunnelIds).toEqual(["t2"]);
 	});
 
+	it("keeps the unfiltered discovery for the switcher, and an un-hide relists at once (M2a)", () => {
+		/* The switcher's "not connected" section needs a removed computer the account
+		 *  still lists; every other reader keeps the filtered `computers`. */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = { ...visible, tunnelId: "t2", hostname: "h2" } as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().discoveredComputers).toEqual([visible, removed]);
+		store.getState().unhideComputer("t2");
+		expect(store.getState().computers).toEqual([visible, removed]);
+		/* `computerId` belongs to a route: ignored without one, reset by the next. */
+		store.getState().noteComputer("saved-1");
+		expect(store.getState().computerId).toBeNull();
+		store
+			.getState()
+			.startRoute({ mode: "radient", hostname: "h1", tunnelId: "t1" });
+		store.getState().noteComputer("saved-1");
+		expect(store.getState().computerId).toBe("saved-1");
+		store
+			.getState()
+			.startRoute({ mode: "radient", hostname: "h2", tunnelId: "t2" });
+		expect(store.getState().computerId).toBeNull();
+		expect(store.getState().discoveredComputers).toHaveLength(2);
+		store.getState().endRoute();
+		expect(store.getState().discoveredComputers).toEqual([]);
+	});
+
 	it("keeps the visible list and the hidden set through a Radient pick", () => {
 		/* Picking starts a Radient route: #121 carries the list across it and #120
 		 *  carries the removed set, so neither a removed computer reappearing nor
