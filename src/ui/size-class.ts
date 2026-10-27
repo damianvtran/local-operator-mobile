@@ -94,12 +94,44 @@ export const sidebarWidthFor = (viewportWidth: number): number =>
 		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
 	);
 
-/** In short landscape the stacked secondary routes cannot stay pinned without
- * taking the conversation list's height. Use the same height policy that rejects
- * a split pane there; portrait and roomy tablet layouts keep their pinned footer.
- * Scrolling the routes with the list preserves text scaling and target sizes. */
-export const sidebarFooterScrolls = (layout: Layout): boolean =>
-	layout.orientation === "landscape" && !layout.split;
+/** The pane height below which the pinned secondary routes starve the list.
+ *
+ * MEASURED, not chosen. At 320 × 568 / 200 % the sidebar's own chrome is 140 pt
+ * above the list and the pinned routes are 368 pt (six destinations at the 200 %
+ * step), so the list was left 60 pt against its own 185 pt of content — a 46 pt
+ * section header plus a 139 pt row — and the first row sat entirely below the
+ * list's viewport. The consequence was not cosmetic: `S15/ended` and
+ * `S15/populated` are distinguished ONLY by that row's meta line, so both cells
+ * photographed identically and the capture refused the run (`iPhone SE`,
+ * 2026-10-27, run 40438251913; the same cells are distinct on main, which has
+ * one destination fewer). 140 + 185 + 368 = 693; a pane at 700 pt shows one row
+ * with the routes pinned, anything shorter cannot.
+ */
+export const PINNED_ROUTES_PANE_FLOOR = 700;
+
+/** Whether the stacked secondary routes scroll WITH the list instead of being
+ *  pinned beneath it.
+ *
+ * Two cases cannot keep them pinned: short landscape, where the pane is shorter
+ * than its own chrome (the rule that also rejects a split pane there), and large
+ * text in a short portrait pane, where the routes grow with the reader's text
+ * size and would take the list's height — the same reasoning the landscape rule
+ * records, applied to the axis the text scale stretches.
+ *
+ * A PREDICATE, deliberately: switching this after measuring the list would move
+ * the footer on the second paint, and the capture's own check ("frames that
+ * changed after first paint") would then be measuring a layout that is no
+ * longer the one the reader saw first. Portrait and roomy tablet layouts keep
+ * their pinned footer; scrolling the routes with the list preserves text scaling
+ * and target sizes. */
+export const sidebarFooterScrolls = (
+	layout: Layout,
+	largeText = false,
+): boolean => {
+	if (layout.split) return false;
+	if (layout.orientation === "landscape") return true;
+	return largeText && layout.height < PINNED_ROUTES_PANE_FLOOR;
+};
 
 /**
  * COMPACT SESSION CHROME: a phone held on its side, where the screen is shorter

@@ -196,7 +196,11 @@ export const ConversationsPane = ({
 	const { effectiveScale } = useTextScale();
 	const [switcherWidth, setSwitcherWidth] = useState(0);
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-	const scrollFooter = sidebarFooterScrolls(useLayout());
+	/* Large text counts here because the routes grow with it: at 200 % on a
+	 *  320 × 568 pane the pinned footer left the list 60 pt and the first session
+	 *  row — the only thing that tells `ended` from `populated` — was entirely
+	 *  below the fold (`S15` refused the capture on 2026-10-27). */
+	const scrollFooter = sidebarFooterScrolls(useLayout(), largeText);
 
 	/* The switcher's full identity, painted as ONE fitted line (`middleFit`).
 	 *  Two shapes came before this and both failed visibly: a tail fit kept only

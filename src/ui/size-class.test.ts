@@ -33,6 +33,17 @@ import { FIELD_BORDER_Y } from "@/ui/variants";
  */
 
 describe("sidebarFooterScrolls", () => {
+	it("scrolls the routes when large text would take the list's height", () => {
+		/* The measured case: 320 × 568 at 200 % left the list 60 pt, so the first
+		 *  row sat below the fold and two distinct states photographed as one. */
+		expect(sidebarFooterScrolls(layoutFor(320, 568), true)).toBe(true);
+		/* Roomy panes keep the pinned footer even at large text. */
+		expect(sidebarFooterScrolls(layoutFor(390, 844), true)).toBe(false);
+		expect(sidebarFooterScrolls(layoutFor(834, 1112), true)).toBe(false);
+		/* And ordinary text changes nothing, whatever the height. */
+		expect(sidebarFooterScrolls(layoutFor(320, 568), false)).toBe(false);
+	});
+
 	it("preserves rows in short landscape without changing portrait or tablet flow", () => {
 		expect(sidebarFooterScrolls(layoutFor(844, 390))).toBe(true);
 		expect(sidebarFooterScrolls(layoutFor(568, 320))).toBe(true);
