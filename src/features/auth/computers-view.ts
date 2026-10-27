@@ -169,6 +169,31 @@ export function landingAfterPick(input: {
 }
 
 /**
+ * The computer the set-up wait is waiting FOR: the first Local Operator computer
+ * listed now that was not listed when the wait started, or `null`.
+ *
+ * One function for both readers on the Computers screen — the wait's `acquire`,
+ * which hands it to `useConnectorWait` so W2/W3 can happen, and the panel's "Use
+ * this computer", which picks it — so the computer probed is the computer offered.
+ * `acquire` used to answer `null` unconditionally, and the hook reads `null` as "no
+ * row yet": in add mode over a populated list the wait never left W1 and ended on
+ * "no tunnel listed" with the new tunnel on the list (PR #122 review round 3,
+ * R3-M1; UX U17). On an empty account `listedAtStart` is empty, so the first
+ * listed computer is the answer, as before.
+ */
+export function newlyListed(
+	computers: readonly DiscoveredComputer[],
+	listedAtStart: ReadonlySet<string>,
+): DiscoveredComputer | null {
+	return (
+		computers.find(
+			(computer) =>
+				computer.supportsLocalOperator && !listedAtStart.has(computer.tunnelId),
+		) ?? null
+	);
+}
+
+/**
  * What the header's Back does (U1). With a screen underneath, it pops. As the
  * stack's root it goes Home — but only once a route exists: with none, Home's
  * landing effect sends a restored account straight back here, so the control

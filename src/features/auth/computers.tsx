@@ -1,8 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import {
+	type ComputerStatus,
+	type DiscoveredComputer,
+	RADIENT_CONSOLE_TUNNELS_URL,
+} from "@/connection";
 import {
 	useComputerSwitcher,
 	usePhoneKnowsComputers,
@@ -11,6 +16,7 @@ import {
 	backAction,
 	computersView,
 	landingAfterPick,
+	newlyListed,
 	type RowState,
 	rowState,
 } from "@/features/auth/computers-view";
@@ -407,17 +413,26 @@ export default function Computers() {
 		};
 	}, [computers, reachability]);
 
-	const acquire = useCallback(async () => {
-		await refreshComputers();
-		return null;
-	}, [refreshComputers]);
-
-	const wait = useConnectorWait({ acquire, enabled: waiting });
 	/* The computers listed when the wait started. "Add a computer" opens the set-up
 	 *  path over an account that already has some (U12), and the wait is for the
 	 *  NEW one: the first listed computer would otherwise be offered as the one that
 	 *  just appeared. Empty for an empty account, so that path is unchanged. */
 	const listedAtWait = useRef<ReadonlySet<string>>(new Set());
+	/* Lists again, then answers with the computer that appeared since the wait
+	 *  started — the hook's only way past W1 (R3-M1/U17, `newlyListed`). Read from
+	 *  the store, not the render's `computers`: the refresh has just written it, and
+	 *  this closure predates that render. `rawStatus` is Radient's own word, which
+	 *  W2 shows verbatim. */
+	const acquire = useCallback(async () => {
+		await refreshComputers();
+		const found = newlyListed(
+			connectionStore.getState().computers,
+			listedAtWait.current,
+		);
+		return found ? { hostname: found.hostname, status: found.rawStatus } : null;
+	}, [refreshComputers]);
+
+	const wait = useConnectorWait({ acquire, enabled: waiting });
 	const startWaiting = useCallback(() => {
 		listedAtWait.current = new Set(
 			connectionStore.getState().computers.map((computer) => computer.tunnelId),
@@ -425,12 +440,7 @@ export default function Computers() {
 		setWaiting(true);
 	}, []);
 	const appeared = useMemo(
-		() =>
-			computers.find(
-				(computer) =>
-					computer.supportsLocalOperator &&
-					!listedAtWait.current.has(computer.tunnelId),
-			) ?? null,
+		() => newlyListed(computers, listedAtWait.current),
 		[computers],
 	);
 
@@ -520,6 +530,13 @@ export default function Computers() {
 					 *  hands off to the browser, and lists this account's computers when
 					 *  it returns (Q-r2-2). */
 					onSignIn={() => void signInWithRadient()}
+					/* The console-side causes' one remedy, as Settings offers it: the
+					 *  surface tells the reader to open the console, so a screen that
+					 *  passes no handler printed the instruction with no way to follow it
+					 *  (PR #122 QA round 3, Q7). */
+					onOpenConsole={() =>
+						void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
+					}
 					onUseAnotherAddress={() => router.push("/custom")}
 				/>
 			) : null}

@@ -709,24 +709,56 @@ describe("the password entry says what the one slot actually holds (review n1, U
 });
 
 describe("the sheet's Add a computer reaches an add path (UX U6, U12)", () => {
+	/* `computersView`'s own input: the decision is that screen's, not a rule beside
+	 *  it (R3-n1). */
+	const view = (
+		listed: number,
+		extra: Partial<Parameters<typeof addComputerTarget>[0]["view"]> = {},
+	) => ({
+		computers: Array.from({ length: listed }, (_, index) =>
+			discovered(`t${index}`, HOST_A),
+		),
+		discovering: false,
+		discoveryFailure: null,
+		signedOut: false,
+		adding: false,
+		...extra,
+	});
+
 	it("pushes the set-up paths from any other screen", () => {
-		expect(
-			addComputerTarget({ pathname: "/settings", adding: false, listed: 3 }),
-		).toBe("push");
+		expect(addComputerTarget({ pathname: "/settings", view: view(3) })).toBe(
+			"push",
+		);
 	});
 
 	it("pushes them over a POPULATED Computers list, which has no add path (U12)", () => {
-		expect(
-			addComputerTarget({ pathname: "/tunnels", adding: false, listed: 2 }),
-		).toBe("push");
+		expect(addComputerTarget({ pathname: "/tunnels", view: view(2) })).toBe(
+			"push",
+		);
 	});
 
 	it("only closes over a Computers screen already showing them (U6)", () => {
+		expect(addComputerTarget({ pathname: "/tunnels", view: view(0) })).toBe(
+			"close",
+		);
 		expect(
-			addComputerTarget({ pathname: "/tunnels", adding: false, listed: 0 }),
+			addComputerTarget({
+				pathname: "/tunnels",
+				view: view(2, { adding: true }),
+			}),
 		).toBe("close");
-		expect(
-			addComputerTarget({ pathname: "/tunnels", adding: true, listed: 2 }),
-		).toBe("close");
+	});
+
+	it("pushes over an empty list the screen is NOT showing set-up for (R3-n1)", () => {
+		/* Loading: a skeleton. Failed: a banner. Signed out: Sign in again. None of
+		 *  them is the set-up path, so closing would land on no add path. */
+		for (const extra of [
+			{ discovering: true },
+			{ discoveryFailure: "unreachable" as const },
+			{ signedOut: true },
+		])
+			expect(
+				addComputerTarget({ pathname: "/tunnels", view: view(0, extra) }),
+			).toBe("push");
 	});
 });

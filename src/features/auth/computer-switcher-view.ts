@@ -3,6 +3,7 @@ import type {
 	SavedComputer,
 	SavedCustomComputer,
 } from "@/connection/saved-computers";
+import { computersView } from "@/features/auth/computers-view";
 import type { ConnectionPhase } from "@/state/connection-store";
 
 /**
@@ -623,19 +624,24 @@ export function rowHint(
  * What the sheet's "Add a computer" does: push the set-up paths, or just close
  * because the screen behind already shows them.
  *
- * The Computers route shows the set-up paths for an account with nothing listed
+ * The Computers route shows the set-up paths for an account Radient said is empty
  * and in its add mode (`ADD_COMPUTER_HREF`); there, pushing again stacked an
  * identical screen and the tap looked dead (UX round 1, U6). Over a POPULATED list
  * a bare close left the reader on rows with no add path (UX round 2, U12), so that
  * case — and every other screen — pushes the add mode.
+ *
+ * "Already shows them" is decided by `computersView` itself, from the SAME input
+ * the screen behind renders from, never a second rule beside it: a bare
+ * `computers.length === 0` closed over an empty list that was still loading or had
+ * failed, where the screen shows a skeleton or a banner and no add path (PR #122
+ * review round 3, R3-n1).
  */
 export function addComputerTarget(input: {
 	pathname: string;
-	adding: boolean;
-	listed: number;
+	view: Parameters<typeof computersView>[0];
 }): "push" | "close" {
 	if (input.pathname !== "/tunnels") return "push";
-	return input.adding || input.listed === 0 ? "close" : "push";
+	return computersView(input.view).setup ? "close" : "push";
 }
 
 /**

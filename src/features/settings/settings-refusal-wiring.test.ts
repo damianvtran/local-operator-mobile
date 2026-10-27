@@ -21,8 +21,11 @@ const SETTINGS = readFileSync(
 	fileURLToPath(new URL("./settings.tsx", import.meta.url)),
 	"utf8",
 );
+/* The surface sits inside the wrapper Settings measures and scrolls to (U16). */
 const SURFACE_BLOCK =
-	/\{refusal \? \(\s*<RefusalSurface([\s\S]*?)\/>\s*\) : null\}/;
+	/\{refusal \? \([\s\S]*?<RefusalSurface([\s\S]*?)\/>\s*<\/View>\s*\) : null\}/;
+const SCROLL_WAITS_FOR_SHEET =
+	/if \(!bringRefusalIntoView \|\| switcher\.visible\) return;/;
 
 describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 	const block = SURFACE_BLOCK.exec(SETTINGS);
@@ -39,7 +42,9 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 	});
 
 	it("wires every remedy the surface can offer, Try again to the provider's retry", () => {
-		expect(block?.[1]).toContain("onRetry={() => void retry()}");
+		/* `retryHere` is the provider's `retry`, noted as this screen's (U18). */
+		expect(block?.[1]).toContain("onRetry={retryHere}");
+		expect(SETTINGS).toContain("void retry();");
 		expect(block?.[1]).toContain("onSignIn={() => void signInWithRadient()}");
 		expect(block?.[1]).toContain("onOpenConsole=");
 		expect(block?.[1]).toContain("onUseAnotherAddress=");
@@ -51,6 +56,32 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 		expect(at("<ConnectionPill")).toBeLessThan(surface);
 		expect(surface).toBeLessThan(at("computerRowIds(computer.hostname).row"));
 		expect(surface).toBeLessThan(at("CONTROL.settingsSwitchComputer"));
+	});
+
+	it("scrolls the refusal into view once the switcher has closed (U16)", () => {
+		/* The Screen's ScrollView is the one scrolled, the surface's wrapper is what
+		 *  is measured, and the scroll waits for the sheet to go down. */
+		expect(SETTINGS).toContain("scrollRef={scrollRef}");
+		expect(SETTINGS).toContain("<View ref={refusalRef} collapsable={false}>");
+		expect(SETTINGS).toMatch(SCROLL_WAITS_FOR_SHEET);
+		expect(SETTINGS).toContain(
+			"scroller.scrollTo({ y: refusalScrollY(layoutY), animated: false })",
+		);
+		expect(SETTINGS).toContain("refusalOutOfView(");
+	});
+
+	it("offers ONE retry for one refusal: no Diagnostics duplicate (R3-m1)", () => {
+		expect(SETTINGS).not.toContain("settingsRetryLastAction");
+		expect(SETTINGS).not.toContain("Try the last action again");
+		expect(SETTINGS.split("onRetry=")).toHaveLength(2);
+	});
+
+	it("moves focus to Status after its own Try now lands (U18)", () => {
+		expect(block?.[1]).toContain("onRetry={retryHere}");
+		expect(SETTINGS).toContain("ref={statusRef}");
+		/* A div takes `focus()` only with a tabindex. */
+		expect(SETTINGS).toContain("tabIndex={-1}");
+		expect(SETTINGS).toContain("retryLanded({");
 	});
 
 	it("sends Add a computer to the set-up paths, not the bare list (U12)", () => {

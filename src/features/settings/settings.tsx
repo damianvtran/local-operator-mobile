@@ -1,8 +1,15 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	AccessibilityInfo,
+	findNodeHandle,
+	Platform,
+	type ScrollView,
+	Text,
+	View,
+} from "react-native";
 
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
@@ -37,6 +44,12 @@ import type { ThemePreference } from "@/ui/tokens.gen";
 import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
+import {
+	refusalAppeared,
+	refusalOutOfView,
+	refusalScrollY,
+	retryLanded,
+} from "./refusal-in-view";
 
 /**
  * Settings (docs/ux/flows.md § 10, F-10).
@@ -105,6 +118,78 @@ export default function Settings() {
 		minting: phase === "minting",
 	});
 
+	/* U16: a refusal that appears scrolls into view, once — after the switcher
+	 *  that produced it has closed (`useComputerSwitcher().visible`): the close
+	 *  returns focus to "Switch computer", and on the web that focus scrolls the
+	 *  opener back into view, so scrolling earlier was undone by it. The refusal is
+	 *  measured against the scroll CONTENT (`getInnerViewNode`) for the offset and
+	 *  against the window for "is it already showing"; both measurements are async
+	 *  on every platform, so they read the panel's laid-out height. */
+	const scrollRef = useRef<ScrollView | null>(null);
+	const refusalRef = useRef<View | null>(null);
+	const statusRef = useRef<View | null>(null);
+	const wasRefused = useRef(refusal !== null);
+	const [bringRefusalIntoView, setBringRefusalIntoView] = useState(false);
+	useEffect(() => {
+		if (refusalAppeared(wasRefused.current, refusal !== null))
+			setBringRefusalIntoView(true);
+		if (refusal === null) setBringRefusalIntoView(false);
+		wasRefused.current = refusal !== null;
+	}, [refusal]);
+	useEffect(() => {
+		if (!bringRefusalIntoView || switcher.visible) return;
+		setBringRefusalIntoView(false);
+		const scroller = scrollRef.current;
+		const panel = refusalRef.current;
+		const content = scroller?.getInnerViewNode?.();
+		if (!scroller || !panel || !content) return;
+		const viewportBox =
+			(scroller.getNativeScrollRef?.() as View | null) ??
+			(scroller as unknown as View);
+		panel.measureLayout(content, (_x, layoutY) => {
+			panel.measureInWindow((_px, top, _pw, height) => {
+				viewportBox.measureInWindow((_vx, viewTop, _vw, viewHeight) => {
+					if (
+						refusalOutOfView(
+							{ top, height },
+							{ top: viewTop, height: viewHeight },
+						)
+					)
+						scroller.scrollTo({ y: refusalScrollY(layoutY), animated: false });
+				});
+			});
+		});
+	}, [bringRefusalIntoView, switcher.visible]);
+
+	/* U18: after THIS screen's Try now works, focus goes to the Status row that now
+	 *  says so — the button it was on unmounted with the refusal, and focus fell to
+	 *  the document body. */
+	const retriedHere = useRef(false);
+	const retryHere = useCallback(() => {
+		retriedHere.current = true;
+		void retry();
+	}, [retry]);
+	useEffect(() => {
+		if (
+			!retryLanded({
+				retriedHere: retriedHere.current,
+				refused: refusal !== null,
+				live: phase === "live",
+			})
+		)
+			return;
+		retriedHere.current = false;
+		const row = statusRef.current;
+		if (!row) return;
+		/* The web moves keyboard focus (the row's `tabIndex={-1}` lets a div take
+		 *  it); a phone moves the screen reader's. */
+		if (Platform.OS === "web") row.focus();
+		else {
+			const handle = findNodeHandle(row);
+			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+		}
+	}, [phase, refusal]);
+
 	const doSignOut = useCallback(async () => {
 		setConfirmSignOut(false);
 		// A failed remote logout keeps its refusal/retry on this screen; do not
@@ -118,6 +203,7 @@ export default function Settings() {
 		<Screen
 			title="Settings"
 			testID={SCREEN.settings}
+			scrollRef={scrollRef}
 			headerLeading={
 				<Button
 					testID={CONTROL.settingsBack}
@@ -176,7 +262,13 @@ export default function Settings() {
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
 					<SectionHeader label="Connection" />
-					<View className="flex-row items-center justify-between">
+					<View
+						ref={statusRef}
+						/* Programmatically focusable, never a Tab stop: the target of U18's
+						 *  focus move after Try now, and nothing else. */
+						tabIndex={-1}
+						className="flex-row items-center justify-between"
+					>
 						<Text className="text-body-sm text-ink-muted">Status</Text>
 						{/* The WORD, not just the dot. In the list the connected state is
 						 *  deliberately silent (it is furniture there), but this is the VALUE
@@ -202,21 +294,25 @@ export default function Settings() {
 					 *  its own rules decide which remedy a cause gets (no prominent retry for
 					 *  a console-side cause), and "Switch computer" stays just below it. */}
 					{refusal ? (
-						<RefusalSurface
-							kind={refusal.kind}
-							subject={refusal.subject}
-							detail={refusal.detail}
-							remedy={refusal.remedy}
-							retryAfterMs={refusal.retryAfterMs}
-							/* The provider's retry re-runs what failed — for a pick, that
-							 *  same computer (`noteError`'s closure in `selectComputer`). */
-							onRetry={() => void retry()}
-							onSignIn={() => void signInWithRadient()}
-							onOpenConsole={() =>
-								void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
-							}
-							onUseAnotherAddress={() => router.push("/custom")}
-						/>
+						/* The wrapper is what is measured and scrolled to (U16, above);
+						 *  the surface keeps its own `role=alert` live region. */
+						<View ref={refusalRef} collapsable={false}>
+							<RefusalSurface
+								kind={refusal.kind}
+								subject={refusal.subject}
+								detail={refusal.detail}
+								remedy={refusal.remedy}
+								retryAfterMs={refusal.retryAfterMs}
+								/* The provider's retry re-runs what failed — for a pick, that
+								 *  same computer (`noteError`'s closure in `selectComputer`). */
+								onRetry={retryHere}
+								onSignIn={() => void signInWithRadient()}
+								onOpenConsole={() =>
+									void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
+								}
+								onUseAnotherAddress={() => router.push("/custom")}
+							/>
+						</View>
 					) : null}
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
@@ -399,15 +495,12 @@ export default function Settings() {
 						These lines never include a token, a password, or a session's
 						content.
 					</Text>
-					{refusal ? (
-						<Button
-							testID={CONTROL.settingsRetryLastAction}
-							label="Try the last action again"
-							onPress={() => void retry()}
-							variant="outline"
-							size="sm"
-						/>
-					) : null}
+					{/* No second retry here: the refusal surface under Status carries
+					 *  this refusal's remedy, Try again included where retrying can work,
+					 *  and it is always rendered with it. The old Diagnostics retry
+					 *  beside it was two controls for one refusal (PR #122 review round 3,
+					 *  R3-m1) — and offered a retry for the console-side causes the
+					 *  surface deliberately gives none. */}
 				</View>
 
 				<Divider />

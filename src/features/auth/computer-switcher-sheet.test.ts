@@ -34,6 +34,7 @@ const host = vi.hoisted(() => ({
 	params: {} as Record<string, string>,
 	readGate: null as Promise<void> | null,
 	selectComputer: null as null | ((computer: unknown) => Promise<void>),
+	discovering: false,
 }));
 
 /* Text is collected as rendered strings; a pressable is recorded by testID so the
@@ -144,6 +145,8 @@ vi.mock("@/features/auth/connection-provider", async () => {
 			signInWithRadient: async () => {},
 			savedTunnel: null,
 			refusal: null,
+			discovering: host.discovering,
+			signInState: { kind: "idle" },
 		}),
 	};
 });
@@ -226,6 +229,7 @@ beforeEach(() => {
 	host.params = {};
 	host.readGate = null;
 	host.selectComputer = null;
+	host.discovering = false;
 	visible = true;
 	store.api = createConnectionStore();
 	const doc = {
@@ -388,6 +392,25 @@ describe("Add a computer reaches an add path from every screen (U6, U12)", () =>
 		expect(host.closed).toBe(1);
 		expect(host.pushed).toEqual([ADD]);
 		host.pathname = "/settings";
+		await render();
+		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
+		expect(host.pushed).toEqual([ADD, ADD]);
+	});
+
+	it("pushes over an empty Computers list that is still loading, as that screen shows no add path (R3-n1)", async () => {
+		/* No rows yet and discovery in flight: the screen behind is a skeleton, not
+		 *  the set-up paths, so a bare close would leave the reader on it. */
+		host.pathname = "/tunnels";
+		host.discovering = true;
+		await render();
+		await flush();
+		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
+		expect(host.pushed).toEqual([ADD]);
+		/* A failed discovery: a banner, still no add path. */
+		host.discovering = false;
+		await act(async () =>
+			store.api?.getState().noteDiscoveryFailure("unreachable"),
+		);
 		await render();
 		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
 		expect(host.pushed).toEqual([ADD, ADD]);

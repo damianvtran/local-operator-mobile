@@ -302,7 +302,6 @@ export const CONTROL = {
 	settingsRefresh: "settings-refresh",
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
-	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",

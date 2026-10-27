@@ -61,7 +61,14 @@ import { Sheet } from "@/ui/components/sheet";
  * be two lists that could disagree about the same computer.
  */
 
-type SwitcherContextValue = { open: () => void };
+type SwitcherContextValue = {
+	open: () => void;
+	/** Whether the sheet is up. A screen that reacts to what a pick left behind
+	 *  waits for it to go down: Settings scrolls a refusal into view only after the
+	 *  sheet closed, because the close returns focus to the opener, and on the web
+	 *  that focus scrolls the opener back into view (PR #122 UX round 3, U16). */
+	visible: boolean;
+};
 
 const SwitcherContext = createContext<SwitcherContextValue | null>(null);
 
@@ -83,7 +90,10 @@ export function ComputerSwitcherProvider({
 	children: ReactNode;
 }) {
 	const [visible, setVisible] = useState(false);
-	const value = useMemo(() => ({ open: () => setVisible(true) }), []);
+	const value = useMemo(
+		() => ({ open: () => setVisible(true), visible }),
+		[visible],
+	);
 	return (
 		<SwitcherContext.Provider value={value}>
 			{children}
@@ -290,6 +300,8 @@ export function ComputerSwitcherSheet({
 		signInWithRadient,
 		savedTunnel,
 		refusal,
+		discovering,
+		signInState,
 	} = useConnection();
 	const discovered = useConnectionState((state) => state.discoveredComputers);
 	const phase = useConnectionState((state) => state.phase);
@@ -520,11 +532,21 @@ export function ComputerSwitcherSheet({
 						 *  Computers screen that ALREADY shows those paths — an empty
 						 *  account, or the add mode itself — closing is the whole step:
 						 *  pushing it again stacked an identical screen (UX round 1, U6). */
+						/* The screen behind's own `computersView` input, read the way
+						 *  `computers.tsx` reads it, so the sheet and that screen agree on
+						 *  whether the set-up paths are showing (R3-n1). */
+						const now = connectionStore.getState();
 						if (
 							addComputerTarget({
 								pathname,
-								adding: addParam === "1",
-								listed: connectionStore.getState().computers.length,
+								view: {
+									computers: now.computers,
+									discovering,
+									discoveryFailure: now.discoveryFailure,
+									signedOut:
+										refusal?.kind === "sign-in" || signInState.kind !== "idle",
+									adding: addParam === "1",
+								},
 							}) === "push"
 						)
 							router.push(ADD_COMPUTER_HREF);
