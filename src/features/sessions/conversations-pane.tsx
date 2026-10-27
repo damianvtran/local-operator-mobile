@@ -351,7 +351,15 @@ export const ConversationsPane = ({
 					 *  count rides the button's own row, so the pane can say how much is
 					 *  waiting without opening it. Other rail rows keep their quiet pill:
 					 *  only this badge is asked to stand out (decisions §D5). */}
-					<View className="relative w-full">
+					{/* ONE LINE, count included. The badge used to be a sibling BELOW
+					 *  the label in a column view, so it orphaned onto its own row and
+					 *  the rail grew by two rows instead of one — measured against main
+					 *  on iphone-se / 135 % (`S15/move-progress`): our pinned footer was
+					 *  312 pt to main's 236 pt, which put a rail row across the move
+					 *  sheet's edge and the audit read the straddle as an overlap (U-08,
+					 *  4 rows). The count belongs on the destination's own line, the way
+					 *  the home header's bell carries it. */}
+					<View className="w-full flex-row items-center gap-2">
 						<View className="flex-1">
 							<Button
 								label="Notifications"
@@ -366,7 +374,7 @@ export const ConversationsPane = ({
 						</View>
 						{inboxCount !== null && inboxCount > 0 ? (
 							<View
-								className="w-7 items-end"
+								className="items-center"
 								testID={CONTROL.sidebarNotificationsCount}
 							>
 								<Badge
