@@ -26,6 +26,17 @@ const HOST_A = "0123456789abcdef0123456789abcdef-lop.example.com";
 const HOST_B = "fedcba9876543210fedcba9876543210-lop.example.com";
 const SECRET_FIELD = /password|grant|refresh|access/;
 
+/** The adapter a fixture's registry was built over, for a "restart" read. */
+const adapters = new WeakMap<
+	SavedComputers,
+	ReturnType<typeof memorySecureStore>
+>();
+function fixtureAdapter(registry: SavedComputers) {
+	const adapter = adapters.get(registry);
+	if (!adapter) throw new Error("not a fixture registry");
+	return adapter;
+}
+
 function fixture(seed: Record<string, string> = {}) {
 	const adapter = memorySecureStore(seed);
 	let clock = 1_000;
@@ -34,6 +45,7 @@ function fixture(seed: Record<string, string> = {}) {
 		now: () => clock,
 		newId: () => `id${(next++).toString().padStart(2, "0")}`,
 	});
+	adapters.set(registry, adapter);
 	return {
 		adapter,
 		registry,
@@ -132,6 +144,94 @@ describe("the saved-computers registry", () => {
 		}
 	});
 
+	it("treats an address change as the same computer: id, timestamps, hidden and identity survive it", async () => {
+		const { registry, tick } = fixture();
+		const saved = await registry.rememberCustom({
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+			name: "Home",
+		});
+		expect(saved.identity).toBeNull();
+		await registry.hide(saved.id);
+		tick(50);
+
+		/* A VPN / network change re-points the URL. Same computer. */
+		const moved = await registry.updateAddress(saved.id, {
+			baseUrl: "https://relay-vpn.example.com/",
+		});
+		expect(moved).toEqual({
+			...saved,
+			hidden: true,
+			baseUrl: "https://relay-vpn.example.com",
+		});
+		const reread = await new SavedComputers(fixtureAdapter(registry)).list();
+		expect(reread).toEqual([moved]);
+
+		/* Re-saving by id under yet another address updates in place, never forks. */
+		await registry.rememberCustom({
+			id: saved.id,
+			baseUrl: "https://10.0.0.5:8443",
+			allowInsecure: true,
+		});
+		const after = await registry.list();
+		expect(after).toHaveLength(1);
+		expect(after[0]).toMatchObject({
+			id: saved.id,
+			addedAt: saved.addedAt,
+			lastUsedAt: saved.lastUsedAt,
+			hidden: true,
+			name: "Home",
+			baseUrl: "https://10.0.0.5:8443",
+			allowInsecure: true,
+			identity: null,
+		});
+
+		/* Unknown id, or a Radient entry: no address to move. */
+		expect(
+			await registry.updateAddress("nope", { baseUrl: "https://x.example" }),
+		).toBeNull();
+		const radient = await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+			name: "Studio",
+		});
+		expect(
+			await registry.updateAddress(radient.id, {
+				baseUrl: "https://x.example",
+			}),
+		).toBeNull();
+	});
+
+	it("reads a reserved key fingerprint back and keeps it across refreshes, without verifying it", async () => {
+		const { adapter, registry } = fixture();
+		const saved = await registry.rememberCustom({
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+		});
+		/* Nothing in this slice writes a fingerprint; a later build will. Seed it
+		 *  the way that build would, then check this one carries it through. */
+		const key = `${SAVED_COMPUTER_KEY_PREFIX}${saved.id}`;
+		const stored = JSON.parse(adapter.items.get(key) ?? "{}");
+		adapter.items.set(
+			key,
+			JSON.stringify({
+				...stored,
+				identity: { key_fingerprint: "sha256:00ff" },
+			}),
+		);
+		await registry.updateAddress(saved.id, {
+			baseUrl: "https://relay-2.example.com",
+		});
+		await registry.rememberCustom({
+			id: saved.id,
+			baseUrl: "https://relay-3.example.com",
+			allowInsecure: false,
+		});
+		expect((await registry.list())[0]?.identity).toEqual({
+			key_fingerprint: "sha256:00ff",
+		});
+	});
+
 	it("keeps a refreshed computer hidden: discovery reporting it is not the reader asking for it back", async () => {
 		const { registry } = fixture();
 		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "x" });
@@ -228,6 +328,7 @@ describe("migration from the single custom slot", () => {
 				addedAt: 1_000,
 				lastUsedAt: 1_000,
 				hidden: false,
+				identity: null,
 			},
 		]);
 		expect(adapter.items.get(SECURE_KEYS.custom)).toBe(legacy);

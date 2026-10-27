@@ -30,6 +30,12 @@
  *   cannot parse, and a migration must never change the slot it migrates from.
  *   The slot stays exactly as it was, so a build without this module (a rollback)
  *   still finds the reader's own tunnel and its remembered password.
+ * - **Identity is the computer's key, never its address.** A VPN, a Wi-Fi to
+ *   cellular hop, a new IP or a re-pointed custom URL is the SAME computer, so an
+ *   entry's local `id`, timestamps and `hidden` flag never derive from
+ *   `baseUrl` or `hostname`, and `updateAddress` changes an address in place.
+ *   `identity.key_fingerprint` is reserved for the key that will prove it (pinning
+ *   is a later slice); it is `null` on every entry today.
  * - **Secure store, though nothing here is secret.** Hostnames and addresses are
  *   still personal, and the keystore is this app's only durable store with the
  *   per-device accessibility class; AsyncStorage would put them in a plain file.
@@ -66,6 +72,13 @@ export const MAX_DISPLAY_NAME_CHARS = 120;
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
 const TRAILING_SLASHES = /\/+$/;
 
+/** What will identify a computer cryptographically. Reserved: nothing writes a
+ *  fingerprint yet, and nothing here verifies one — pinning is a later slice. The
+ *  field exists now so entries written by this build already have the shape. */
+export interface ComputerIdentity {
+	key_fingerprint?: string;
+}
+
 interface SavedComputerBase {
 	/** Local, stable, opaque. Not an account or device identifier. */
 	id: string;
@@ -78,6 +91,8 @@ interface SavedComputerBase {
 	/** The reader removed it. Discovery keeps reporting it; the app keeps it out
 	 *  of every list and never reconnects to it on its own. */
 	hidden: boolean;
+	/** `null` until key pinning lands. See `ComputerIdentity`. */
+	identity: ComputerIdentity | null;
 }
 
 export interface SavedRadientComputer extends SavedComputerBase {
@@ -102,6 +117,9 @@ export interface RadientComputerInput {
 }
 
 export interface CustomComputerInput {
+	/** The entry being re-saved, when the caller knows it. Matching by id is the
+	 *  only match that survives an address change. */
+	id?: string;
 	baseUrl: string;
 	allowInsecure: boolean;
 	/** Defaults to the address's host, the one name the reader is sure to know. */
@@ -180,17 +198,38 @@ export class SavedComputers {
 					addedAt: existing?.addedAt ?? now,
 					lastUsedAt: existing?.lastUsedAt ?? now,
 					hidden: existing?.hidden ?? false,
+					identity: existing?.identity ?? null,
 				}),
 			),
 		);
 	}
 
-	/** Adds or refreshes a custom computer, keyed by its address. */
+	/**
+	 * Adds or refreshes a custom computer.
+	 *
+	 * Matching, in order: the entry `id` when given (an address may have changed
+	 * since), else an entry at the same address. The address match is a stopgap
+	 * for "the reader saved the same URL twice" until a key fingerprint can say
+	 * whether it is the same computer. It is deliberately NOT how an address change
+	 * is recorded: re-saving under a new URL without the id would fork one computer
+	 * into two entries, so a caller that knows the entry passes its `id` or calls
+	 * `updateAddress`. An unknown `id` falls through to the address match rather
+	 * than inventing a second entry for an address already saved.
+	 */
 	async rememberCustom(input: CustomComputerInput): Promise<SavedComputer> {
 		const baseUrl = normaliseBaseUrl(input.baseUrl);
-		return this.serial(() =>
-			this.upsert(
-				(entry) => entry.transport === "custom" && entry.baseUrl === baseUrl,
+		return this.serial(async () => {
+			const byId =
+				input.id === undefined
+					? undefined
+					: (await this.load()).find(
+							(entry) => entry.transport === "custom" && entry.id === input.id,
+						);
+			return this.upsert(
+				byId
+					? (entry) => entry.id === byId.id
+					: (entry) =>
+							entry.transport === "custom" && entry.baseUrl === baseUrl,
 				(existing, now) => ({
 					transport: "custom",
 					id: existing?.id ?? "",
@@ -203,9 +242,35 @@ export class SavedComputers {
 					addedAt: existing?.addedAt ?? now,
 					lastUsedAt: existing?.lastUsedAt ?? now,
 					hidden: existing?.hidden ?? false,
+					identity: existing?.identity ?? null,
 				}),
-			),
-		);
+			);
+		});
+	}
+
+	/**
+	 * Moves a custom computer to a new address, keeping everything that makes it
+	 * the same computer: id, timestamps, name, `hidden`, `identity`. A network
+	 * change is not a new computer. Another entry may already sit at that
+	 * address — two entries at one address is allowed, because an address is not
+	 * an identity. Returns `null` for an unknown id or a Radient entry, whose
+	 * address is the tunnel's and is refreshed by `rememberRadient`.
+	 */
+	async updateAddress(
+		id: string,
+		address: { baseUrl: string; allowInsecure?: boolean },
+	): Promise<SavedComputer | null> {
+		return this.serial(async () => {
+			const existing = (await this.load()).find((entry) => entry.id === id);
+			if (existing?.transport !== "custom") return null;
+			const next: SavedCustomComputer = {
+				...existing,
+				baseUrl: normaliseBaseUrl(address.baseUrl),
+				allowInsecure: address.allowInsecure ?? existing.allowInsecure,
+			};
+			await this.writeEntry(next);
+			return next;
+		});
 	}
 
 	/** "Remove" on a Radient computer: remembered AND hidden in one write, so a
@@ -224,6 +289,7 @@ export class SavedComputers {
 					addedAt: existing?.addedAt ?? now,
 					lastUsedAt: existing?.lastUsedAt ?? now,
 					hidden: true,
+					identity: existing?.identity ?? null,
 				}),
 			),
 		);
@@ -361,6 +427,7 @@ export class SavedComputers {
 			addedAt: now,
 			lastUsedAt: now,
 			hidden: false,
+			identity: null,
 		};
 		await this.writeEntry(entry);
 		await this.writeIndex([entry]);
@@ -532,7 +599,13 @@ function parseEntry(value: unknown, id: string): SavedComputer | null {
 	const addedAt = finite(record.addedAt);
 	const lastUsedAt = finite(record.lastUsedAt) ?? addedAt;
 	if (addedAt === null || lastUsedAt === null) return null;
-	const base = { id, addedAt, lastUsedAt, hidden: record.hidden === true };
+	const base = {
+		id,
+		addedAt,
+		lastUsedAt,
+		hidden: record.hidden === true,
+		identity: parseIdentity(record.identity),
+	};
 	if (
 		record.transport === "radient" &&
 		typeof record.tunnelId === "string" &&
@@ -560,6 +633,16 @@ function parseEntry(value: unknown, id: string): SavedComputer | null {
 			name: clampName(name, hostOf(record.baseUrl)),
 		};
 	return null;
+}
+
+/** Tolerant on purpose: an unreadable identity is "not known yet", which is what
+ *  every entry is today, and must not cost the reader the computer. */
+function parseIdentity(value: unknown): ComputerIdentity | null {
+	if (typeof value !== "object" || value === null) return null;
+	const fingerprint = (value as { key_fingerprint?: unknown }).key_fingerprint;
+	return typeof fingerprint === "string" && fingerprint.length > 0
+		? { key_fingerprint: fingerprint }
+		: null;
 }
 
 function finite(value: unknown): number | null {
