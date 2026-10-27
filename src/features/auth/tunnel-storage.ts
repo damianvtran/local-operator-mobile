@@ -179,6 +179,14 @@ export async function readStoredOauth(): Promise<RadientTokens | null> {
 	}
 }
 
+/** The Radient account id of the stored grant (`RadientTokens.account_id`), or
+ *  `null` when there is none or it predates the field. The computer switcher reads
+ *  it to scope saved Radient computers to the account that used them; a keystore
+ *  that refuses the read reports none, which lists them (the "unknown" rule). */
+export async function readStoredRadientAccount(): Promise<string | null> {
+	return (await readStoredOauth())?.account_id ?? null;
+}
+
 /** Persists the grant. Returns whether it can survive a restart, so a caller can tell
  *  "signed in and remembered" from "signed in for this run" instead of implying the
  *  first. */
@@ -349,22 +357,40 @@ export async function readSavedComputers(): Promise<SavedComputer[]> {
  */
 export async function rememberLiveComputer(
 	route: RouteProfile,
-	input: { name?: string; computerId?: string } = {},
+	input: {
+		name?: string;
+		computerId?: string;
+		account?: string;
+		onlyIf?: () => boolean;
+	} = {},
 ): Promise<SavedComputer | null> {
 	try {
 		const store = await savedComputers();
+		const options = { onlyIf: input.onlyIf };
 		const entry =
 			route.mode === "radient"
-				? await store.rememberRadient({
-						tunnelId: route.tunnelId,
-						hostname: route.hostname,
-						name: input.name ?? route.hostname,
-					})
-				: await store.rememberCustom({
-						id: input.computerId,
-						baseUrl: route.baseUrl,
-						allowInsecure: route.allowInsecure,
-					});
+				? await store.rememberRadient(
+						{
+							tunnelId: route.tunnelId,
+							hostname: route.hostname,
+							/* No name → the registry keeps the saved one (a never-named
+							 *  computer still falls back to its hostname there). */
+							...(input.name !== undefined ? { name: input.name } : {}),
+							...(input.account !== undefined
+								? { account: input.account }
+								: {}),
+						},
+						options,
+					)
+				: await store.rememberCustom(
+						{
+							id: input.computerId,
+							baseUrl: route.baseUrl,
+							allowInsecure: route.allowInsecure,
+						},
+						options,
+					);
+		if (input.onlyIf && !input.onlyIf()) return null;
 		return (await store.markUsed(entry.id)) ?? entry;
 	} catch {
 		return null;
@@ -382,8 +408,8 @@ export async function unhideSavedComputer(id: string): Promise<void> {
 	}
 }
 
-/** The way back from a removal, by tunnel id. No screen calls it yet; the
- *  switcher slice adds the surface. */
+/** The way back from a removal, by tunnel id: the computer switcher's
+ *  not-connected rows, for a removed computer it reached through discovery. */
 export async function unhideRadientComputer(tunnelId: string): Promise<void> {
 	try {
 		const store = await savedComputers();

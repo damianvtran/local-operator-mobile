@@ -60,6 +60,50 @@ export interface RadientTokens {
 	/** Shown as the signed-in identity. Only ever a label, and only when the token
 	 *  response carried one; no userinfo call is made (the endpoint is unverified). */
 	account_label: string | null;
+	/**
+	 * The Radient account id: the `sub` claim of the token response's `id_token`
+	 * (Radient's token endpoint mints one on both the code and the refresh grant,
+	 * because the scope asks for `openid`; the desktop client reads the same claim,
+	 * `identity_from_token_response` in local-operator's Radient OAuth provider).
+	 * Opaque and never an email. Used ONLY to scope the saved Radient computers to
+	 * the account that used them (`SavedRadientComputer.account`) — never as an
+	 * authorization input, which is why the token is decoded without verifying its
+	 * signature. Optional: a credential stored before this field existed has none,
+	 * and a response without an `id_token` keeps the previous value.
+	 */
+	account_id?: string | null;
+}
+
+/**
+ * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
+ * JWT carrying one. Best effort by design: a missing or malformed token changes
+ * nothing about sign-in, it only leaves the account unknown.
+ */
+export function accountIdFromIdToken(token: unknown): string | null {
+	if (typeof token !== "string") return null;
+	const parts = token.split(".");
+	if (parts.length !== 3 || !parts[1]) return null;
+	try {
+		const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+		const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+		const json =
+			typeof atob === "function"
+				? atob(padded)
+				: /* Hermes without `atob`: the same fallback `pkce.ts` uses for `btoa`. */
+					(
+						globalThis as unknown as {
+							Buffer: {
+								from(value: string, encoding: string): { toString(): string };
+							};
+						}
+					).Buffer.from(padded, "base64").toString();
+		const claims = JSON.parse(json) as { sub?: unknown };
+		return typeof claims.sub === "string" && claims.sub.trim().length > 0
+			? claims.sub.trim()
+			: null;
+	} catch {
+		return null;
+	}
 }
 
 export type RadientAuthFailure =
@@ -118,6 +162,7 @@ interface TokenResponse {
 	scope?: unknown;
 	email?: unknown;
 	name?: unknown;
+	id_token?: unknown;
 	error?: unknown;
 	error_description?: unknown;
 }
@@ -126,6 +171,7 @@ function tokensFromResponse(
 	body: TokenResponse,
 	now: () => number,
 	previousRefresh: string | null,
+	previousAccount: string | null = null,
 ): RadientTokens {
 	const access = body.access_token;
 	if (typeof access !== "string" || access.length === 0) {
@@ -158,6 +204,7 @@ function tokensFromResponse(
 		token_type:
 			typeof body.token_type === "string" ? body.token_type : "Bearer",
 		account_label: labelSource,
+		account_id: accountIdFromIdToken(body.id_token) ?? previousAccount,
 	};
 }
 
@@ -341,7 +388,12 @@ export async function refreshRadientTokens(
 		deps,
 		"the Radient token refresh",
 	);
-	return tokensFromResponse(body, now, tokens.refresh);
+	return tokensFromResponse(
+		body,
+		now,
+		tokens.refresh,
+		tokens.account_id ?? null,
+	);
 }
 
 /**

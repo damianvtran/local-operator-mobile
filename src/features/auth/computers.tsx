@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
-import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
+import {
+	useComputerSwitcher,
+	usePhoneKnowsComputers,
+} from "@/features/auth/computer-switcher-sheet";
 import {
 	backAction,
 	computersView,
@@ -316,6 +319,7 @@ export default function Computers() {
 	} = useConnection();
 
 	const switcher = useComputerSwitcher();
+	const phoneKnowsComputers = usePhoneKnowsComputers();
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -435,28 +439,38 @@ export default function Computers() {
 				/* Spins for a DISCOVERY only, never for a pick: the row's own marker
 				 *  carries a pick (D12), and `Button` ignores presses while `loading`,
 				 *  so a slow Refresh absorbs repeat taps instead of stacking requests
-				 *  (U4) — the banner's Try now already worked this way. Hidden while
-				 *  signed out: a listing with no grant can only be refused again. */
-				!empty && !signedOut ? (
-					<View className="flex-row items-center gap-1">
+				 *  (U4) — the banner's Try now already worked this way. Refresh is
+				 *  hidden while signed out: a listing with no grant can only be refused
+				 *  again. */
+				!empty || phoneKnowsComputers ? (
+					<View className="flex-row flex-wrap items-center gap-1">
 						{/* The switcher beside Refresh: this screen lists only the account's
-						 *  Radient computers, and Switch is the one place that also holds
-						 *  the reader's own-address computers and the removed ones. */}
-						<Button
-							testID={CONTROL.computersSwitch}
-							label="Switch"
-							onPress={switcher.open}
-							variant="quiet"
-							size="sm"
-						/>
-						<Button
-							testID={CONTROL.computersRefresh}
-							label="Refresh"
-							onPress={() => void refreshComputers()}
-							variant="quiet"
-							size="sm"
-							loading={discovering}
-						/>
+						 *  Radient computers, and the switcher is the one place that also
+						 *  holds the reader's own-address computers and the removed ones.
+						 *  So it stays visible exactly where this list cannot help — an
+						 *  empty or set-up list, or signed out — whenever this phone knows
+						 *  a computer (PR #122 QA round 1, Q3; review n2; UX round 1, U5).
+						 *  Labelled as in Settings: a bare "Switch" beside "Refresh" did
+						 *  not say what it switches (U5). */}
+						{!empty || phoneKnowsComputers ? (
+							<Button
+								testID={CONTROL.computersSwitch}
+								label="Switch computer"
+								onPress={switcher.open}
+								variant="quiet"
+								size="sm"
+							/>
+						) : null}
+						{!empty && !signedOut ? (
+							<Button
+								testID={CONTROL.computersRefresh}
+								label="Refresh"
+								onPress={() => void refreshComputers()}
+								variant="quiet"
+								size="sm"
+								loading={discovering}
+							/>
+						) : null}
 					</View>
 				) : null
 			}

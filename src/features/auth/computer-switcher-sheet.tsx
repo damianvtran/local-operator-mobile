@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Check, Laptop, Plus, Server } from "lucide-react-native";
 import {
@@ -21,6 +21,8 @@ import {
 	pendingKeyFor,
 	pendingLanded,
 	performSwitcherTap,
+	pickFailed,
+	rowHint,
 	type SwitcherHealth,
 	type SwitcherRow,
 	stableSections,
@@ -35,6 +37,7 @@ import {
 import { probeHealthAt } from "@/features/auth/connector-wait";
 import {
 	readSavedComputers,
+	readStoredRadientAccount,
 	unhideRadientComputer,
 	unhideSavedComputer,
 } from "@/features/auth/tunnel-storage";
@@ -88,6 +91,30 @@ export function ComputerSwitcherProvider({
 			/>
 		</SwitcherContext.Provider>
 	);
+}
+
+/**
+ * Whether this phone has saved any computer it may show, for the entry points that
+ * would otherwise hide the switcher with the account's list: the Computers screen
+ * in its empty / set-up / signed-out states is exactly where the own-address rows
+ * and the "Sign in again" rows are the way out (QA round 1, Q3; UX round 1, U5).
+ * Re-read whenever the live computer or the removed set changes, like the sheet.
+ */
+export function usePhoneKnowsComputers(): boolean {
+	const computerId = useConnectionState((state) => state.computerId);
+	const hiddenTunnelIds = useConnectionState((state) => state.hiddenTunnelIds);
+	const [knows, setKnows] = useState(false);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `computerId` and `hiddenTunnelIds` are TRIGGERS for a re-read, not reads.
+	useEffect(() => {
+		let live = true;
+		void readSavedComputers().then((entries) => {
+			if (live) setKnows(entries.some((entry) => !entry.hidden));
+		});
+		return () => {
+			live = false;
+		};
+	}, [computerId, hiddenTunnelIds]);
+	return knows;
 }
 
 /** The dot's token per health. A token ROLE, as in `connection-pill.tsx`:
@@ -170,6 +197,7 @@ const SwitcherRowView = ({
 	const muted = useTokenColor("ink-muted");
 	const Glyph = row.transport.kind === "custom" ? Server : Laptop;
 	const word = healthLabel(row.health, now);
+	const hint = rowHint(row, section);
 	const transportLabel =
 		row.transport.kind === "radient"
 			? "Radient"
@@ -189,10 +217,21 @@ const SwitcherRowView = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={`flex-row items-center gap-3 border-b border-hairline py-3 ${
-						row.active ? "bg-row-hover" : pressed ? "bg-row-hover" : ""
+					className={`relative flex-row items-center gap-3 border-b border-hairline py-3 pl-2 ${
+						row.active ? "bg-row-selected" : pressed ? "bg-row-hover" : ""
 					}`}
 				>
+					{/* The row in use carries the kit's selected ground plus an accent bar.
+					 *  The ground alone measured 1.16:1 light / 1.0:1 dark against the sheet
+					 *  (design round 1, D2); the bar is `accent`, 5.5:1 light / 6.3:1 dark on
+					 *  `elevated` and 4.5:1 / 6.1:1 on `row-selected`, clearing the 3:1
+					 *  non-text floor. Decoration: the check and ", in use" carry it too. */}
+					{row.active ? (
+						<View
+							className="absolute bottom-0 left-0 top-0 w-1 bg-accent"
+							aria-hidden
+						/>
+					) : null}
 					{/* The check sits in its own column so names line up whether or not
 					 *  a row is active (frame p5-switcher-sheet). */}
 					<View className="w-5 items-center">
@@ -219,12 +258,8 @@ const SwitcherRowView = ({
 							)}
 						</View>
 						<TransportTag row={row} />
-						{section === "not-connected" ? (
-							<Text className="text-meta text-ink-dim">
-								{row.hidden
-									? "Removed from this phone. Tap to bring it back."
-									: "Tap to connect"}
-							</Text>
+						{hint !== null ? (
+							<Text className="text-meta text-ink-dim">{hint}</Text>
 						) : null}
 					</View>
 				</View>
@@ -245,6 +280,7 @@ export function ComputerSwitcherSheet({
 	onClose: () => void;
 }) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const {
 		selectComputer,
 		connectCustom,
@@ -259,6 +295,11 @@ export function ComputerSwitcherSheet({
 	const hiddenTunnelIds = useConnectionState((state) => state.hiddenTunnelIds);
 
 	const [saved, setSaved] = useState<SavedComputer[]>([]);
+	/* The Radient account signed in on this phone, read with the registry: it scopes
+	 *  the saved Radient computers (`radientEntryBelongs`, review round 1 M2). Read
+	 *  from the stored grant rather than the provider's memory because a cold start on
+	 *  an own address never loads the grant into memory (UX round 1, U3). */
+	const [radientAccount, setRadientAccount] = useState<string | null>(null);
 	/* The order is frozen only once the registry has answered: freezing on the first
 	 *  render would freeze a discovery-only list, and every saved computer would then
 	 *  be appended below it as "new" — the wrong order, held for the whole open. */
@@ -266,6 +307,9 @@ export function ComputerSwitcherSheet({
 	const [probes, setProbes] = useState<Record<string, ProbeState>>({});
 	const [answeredAt, setAnsweredAt] = useState<Record<string, number>>({});
 	const [pendingKey, setPendingKey] = useState<string | null>(null);
+	/* The same key, readable from a settled tap's continuation without a stale
+	 *  closure: only the tap that is still pending may close the sheet on failure. */
+	const pendingRef = useRef<string | null>(null);
 	/* The order the sheet opened with (`stableSections`): rows must not move under
 	 *  the finger as probes answer. A ref, not state: it changes only at open. */
 	const order = useRef<string[] | null>(null);
@@ -280,16 +324,20 @@ export function ComputerSwitcherSheet({
 		if (!visible) {
 			order.current = null;
 			setLoaded(false);
+			pendingRef.current = null;
 			setPendingKey(null);
 			return;
 		}
 		setNow(Date.now());
 		let live = true;
-		void readSavedComputers().then((entries) => {
-			if (!live) return;
-			setSaved(entries);
-			setLoaded(true);
-		});
+		void Promise.all([readSavedComputers(), readStoredRadientAccount()]).then(
+			([entries, account]) => {
+				if (!live) return;
+				setSaved(entries);
+				setRadientAccount(account);
+				setLoaded(true);
+			},
+		);
 		return () => {
 			live = false;
 		};
@@ -305,6 +353,7 @@ export function ComputerSwitcherSheet({
 		activeComputerId: computerId,
 		pendingKey,
 		radientSignedOut,
+		radientAccount,
 	});
 	const { sections, order: nextOrder } = stableSections(
 		computed,
@@ -314,29 +363,41 @@ export function ComputerSwitcherSheet({
 
 	/* One probe per origin per open: the phone's own `/healthz`, the only signal
 	 *  that may say "Online". Results stay for the sheet's life so reopening within
-	 *  a run starts from the last answer instead of "Checking…" on every row. */
-	const origins = useMemo(
-		() =>
-			[...sections.onPhone, ...sections.notConnected]
-				.filter((row) => row.health.kind !== "sign-in")
-				.map((row) => row.origin),
-		[sections],
-	);
+	 *  a run starts from the last answer instead of "Checking…" on every row.
+	 *
+	 *  The effect is keyed on the origins as a STRING and its answers are fenced on
+	 *  the OPEN, not on the effect run. `sections` is rebuilt on every render, so an
+	 *  effect keyed on an array derived from it re-ran on every render: the first
+	 *  `setProbes("checking")` re-rendered, the cleanup marked that run dead, the
+	 *  `probedThisOpen` guard stopped a re-probe, and every answer was thrown away —
+	 *  the sheet said "Checking…" forever (PR #122 round 1: review B1, design D1, QA
+	 *  Q1, UX U1). `computer-switcher-sheet.test.ts` renders the sheet to hold it. */
+	const originsKey = [...sections.onPhone, ...sections.notConnected]
+		.filter((row) => row.health.kind !== "sign-in")
+		.map((row) => row.origin)
+		.join("\n");
 	const probedThisOpen = useRef(new Set<string>());
+	/* Bumped when an open ENDS (close or unmount): an answer that arrives after it
+	 *  belongs to an open nobody is looking at, and is dropped. */
+	const openGeneration = useRef(0);
 	useEffect(() => {
-		if (!visible) {
-			probedThisOpen.current = new Set();
-			return;
-		}
-		let live = true;
-		for (const origin of origins) {
+		if (!visible) return;
+		probedThisOpen.current = new Set();
+		return () => {
+			openGeneration.current += 1;
+		};
+	}, [visible]);
+	useEffect(() => {
+		if (!visible || originsKey.length === 0) return;
+		const open = openGeneration.current;
+		for (const origin of originsKey.split("\n")) {
 			if (probedThisOpen.current.has(origin)) continue;
 			probedThisOpen.current.add(origin);
 			setProbes((current) =>
 				current[origin] ? current : { ...current, [origin]: "checking" },
 			);
 			void probeHealthAt(origin).then((health) => {
-				if (!live) return;
+				if (openGeneration.current !== open) return;
 				setProbes((current) => ({
 					...current,
 					[origin]: health ? "answered" : "silent",
@@ -345,10 +406,7 @@ export function ComputerSwitcherSheet({
 					setAnsweredAt((current) => ({ ...current, [origin]: Date.now() }));
 			});
 		}
-		return () => {
-			live = false;
-		};
-	}, [visible, origins]);
+	}, [visible, originsKey]);
 
 	const slot = savedTunnel
 		? {
@@ -362,7 +420,10 @@ export function ComputerSwitcherSheet({
 		(row: SwitcherRow) => {
 			const action = switcherTap(row, slot);
 			const pending = pendingKeyFor(action);
-			if (pending !== null) setPendingKey(pending);
+			if (pending !== null) {
+				pendingRef.current = pending;
+				setPendingKey(pending);
+			}
 			void performSwitcherTap(action, {
 				selectComputer,
 				connectCustom,
@@ -376,13 +437,30 @@ export function ComputerSwitcherSheet({
 						? unhideSavedComputer(savedId)
 						: unhideRadientComputer(hiddenTunnel));
 				},
-				enterPassword: (url, allowInsecure) =>
+				/* The registry id only: the screen reads the address and the plain-http
+				 *  opt-in from the registry, never from a URL a link could set (review
+				 *  round 1, m1). */
+				enterPassword: (computerId) =>
 					router.push({
 						pathname: "/own-tunnel",
-						params: allowInsecure ? { url, insecure: "1" } : { url },
+						params: { computer: computerId },
 					}),
 				openConsole: () =>
 					void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL),
+			}).then(() => {
+				/* A pick that FAILED closes the sheet: the refusal (and "Sign in again")
+				 *  is painted on the screen behind the scrim, and a row held on
+				 *  "Connecting…" over it hid the only explanation (review M1, UX U2).
+				 *  Only this tap's own outcome: a newer tap owns the sheet otherwise. */
+				if (
+					pending === null ||
+					pendingRef.current !== pending ||
+					!pickFailed(connectionStore.getState().phase)
+				)
+					return;
+				pendingRef.current = null;
+				setPendingKey(null);
+				onClose();
 			});
 		},
 		[connectCustom, onClose, router, selectComputer, signInWithRadient, slot],
@@ -402,7 +480,9 @@ export function ComputerSwitcherSheet({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
-			title="Computers"
+			/* Echoes the control that opened it ("Switch computer"); "Computers" sat
+			 *  over the Computers screen's own title (design round 1, D6). */
+			title="Switch computer"
 			testID={SURFACE.computerSwitcherSheet}
 			footer={
 				<Button
@@ -412,8 +492,11 @@ export function ComputerSwitcherSheet({
 						onClose();
 						/* The existing set-up flows: the Computers screen offers both
 						 *  Radient set-up and "Use my own tunnel instead", so the switcher
-						 *  does not grow a second copy of that choice. */
-						router.push("/tunnels");
+						 *  does not grow a second copy of that choice. Opened FROM that
+						 *  screen, closing is the whole step: pushing it again stacked a
+						 *  second identical Computers screen, so the tap looked dead and
+						 *  Back led to the same screen (UX round 1, U6). */
+						if (pathname !== "/tunnels") router.push("/tunnels");
 					}}
 					variant="outline"
 					testID={CONTROL.switcherAddComputer}

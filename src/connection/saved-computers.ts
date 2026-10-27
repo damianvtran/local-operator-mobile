@@ -105,6 +105,20 @@ export interface SavedRadientComputer extends SavedComputerBase {
 	tunnelId: string;
 	/** The Radient tunnel origin, exactly as discovery issued it. */
 	hostname: string;
+	/**
+	 * The Radient account the computer was used under: the account id (the OAuth
+	 * `id_token`'s `sub`), opaque and never the email. `null` when it is not known —
+	 * an entry written before this field existed, or a sign-in whose token response
+	 * carried no id.
+	 *
+	 * Why it exists: signing in with a second Radient account does not clear this
+	 * registry (only sign-out does), so without it account A's computers — names and
+	 * hostnames, account-linked personal data — would be listed as this phone's under
+	 * account B, probed, and offered for a mint B cannot authorise (PR #122 review
+	 * round 1, M2). The switcher shows a saved Radient entry only when the signed-in
+	 * account matches this key, or when that account's own discovery lists the tunnel.
+	 */
+	account: string | null;
 }
 
 export interface SavedCustomComputer extends SavedComputerBase {
@@ -118,7 +132,28 @@ export type SavedComputer = SavedRadientComputer | SavedCustomComputer;
 export interface RadientComputerInput {
 	tunnelId: string;
 	hostname: string;
-	name: string;
+	/** Omitted when the caller does not know it (a pick made from a saved row that
+	 *  discovery has not listed): the saved name is then kept, and only a computer
+	 *  never named falls back to its hostname. A hostname must never overwrite a
+	 *  name the reader already sees (PR #122 QA round 1, Q2). */
+	name?: string;
+	/** See `SavedRadientComputer.account`. Omitted (not `null`) when unknown, so a
+	 *  key already recorded is kept rather than erased. */
+	account?: string | null;
+}
+
+/** A remember whose `onlyIf` guard failed inside the serialised write: the route
+ *  it describes ended, or sign-out cleared the registry, while the write queued. */
+export class RegistryWriteFenced extends Error {
+	override readonly name = "RegistryWriteFenced";
+}
+
+/** Options for a remember the caller may need to withdraw while it is queued. */
+export interface RememberOptions {
+	/** Checked INSIDE the serialised operation, after every write queued before it
+	 *  (a sign-out's `clear()` included) has finished. False → nothing is written and
+	 *  the call rejects with `RegistryWriteFenced` (PR #122 review round 1, m3). */
+	onlyIf?: () => boolean;
 }
 
 export interface CustomComputerInput {
@@ -197,25 +232,22 @@ export class SavedComputers {
 	/** Adds or refreshes a Radient computer, keyed by tunnel id. A refresh keeps
 	 *  the entry's id, timestamps and `hidden` flag: discovery reporting a
 	 *  computer again is not the reader asking to see it again. */
-	async rememberRadient(input: RadientComputerInput): Promise<SavedComputer> {
-		return this.serial(() =>
-			this.upsert(
+	async rememberRadient(
+		input: RadientComputerInput,
+		options: RememberOptions = {},
+	): Promise<SavedComputer> {
+		return this.serial(() => {
+			if (options.onlyIf && !options.onlyIf())
+				return Promise.reject(
+					new RegistryWriteFenced("route no longer current"),
+				);
+			return this.upsert(
 				"fail",
 				(entry) =>
 					entry.transport === "radient" && entry.tunnelId === input.tunnelId,
-				(existing, now) => ({
-					transport: "radient",
-					id: existing?.id ?? "",
-					tunnelId: input.tunnelId,
-					hostname: input.hostname,
-					name: clampName(input.name, input.hostname),
-					addedAt: existing?.addedAt ?? now,
-					lastUsedAt: existing?.lastUsedAt ?? now,
-					hidden: existing?.hidden ?? false,
-					identity: existing?.identity ?? null,
-				}),
-			),
-		);
+				(existing, now) => radientEntry(input, existing, now, false),
+			);
+		});
 	}
 
 	/**
@@ -233,9 +265,14 @@ export class SavedComputers {
 	 * refreshes the one added FIRST — index order — so the choice is stable across
 	 * reads rather than dependent on `lastUsedAt`.
 	 */
-	async rememberCustom(input: CustomComputerInput): Promise<SavedComputer> {
+	async rememberCustom(
+		input: CustomComputerInput,
+		options: RememberOptions = {},
+	): Promise<SavedComputer> {
 		const baseUrl = normaliseBaseUrl(input.baseUrl);
 		return this.serial(async () => {
+			if (options.onlyIf && !options.onlyIf())
+				throw new RegistryWriteFenced("route no longer current");
 			const target =
 				input.id === undefined ? null : await this.readTarget(input.id);
 			const byId = target?.transport === "custom" ? target : undefined;
@@ -302,17 +339,7 @@ export class SavedComputers {
 				"keep",
 				(entry) =>
 					entry.transport === "radient" && entry.tunnelId === input.tunnelId,
-				(existing, now) => ({
-					transport: "radient",
-					id: existing?.id ?? "",
-					tunnelId: input.tunnelId,
-					hostname: input.hostname,
-					name: clampName(input.name, input.hostname),
-					addedAt: existing?.addedAt ?? now,
-					lastUsedAt: existing?.lastUsedAt ?? now,
-					hidden: true,
-					identity: existing?.identity ?? null,
-				}),
+				(existing, now) => radientEntry(input, existing, now, true),
 			),
 		);
 	}
@@ -321,8 +348,9 @@ export class SavedComputers {
 		return this.patch(id, () => ({ hidden: true }));
 	}
 
-	/** The way back from "Remove". The computer reappears on the next discovery
-	 *  refresh; the store does not keep an unfiltered copy to restore it from. */
+	/** The way back from "Remove". The connection store re-filters its last
+	 *  discovery answer (`unhideComputer`), so the computer is listed again at once
+	 *  when discovery had listed it; this only makes the change durable. */
 	async unhide(id: string): Promise<SavedComputer | null> {
 		return this.patch(id, () => ({ hidden: false }));
 	}
@@ -630,6 +658,31 @@ function defaultId(): string {
 	return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** One builder for both Radient writes, so a remember and a Remove agree on what
+ *  survives a refresh: the id, timestamps, identity, the saved name when no new one
+ *  is given, and the account key when the caller does not know it. */
+function radientEntry(
+	input: RadientComputerInput,
+	existing: SavedComputer | undefined,
+	now: number,
+	hidden: boolean,
+): SavedRadientComputer {
+	const previous = existing?.transport === "radient" ? existing : undefined;
+	return {
+		transport: "radient",
+		id: existing?.id ?? "",
+		tunnelId: input.tunnelId,
+		hostname: input.hostname,
+		name: clampName(input.name ?? existing?.name ?? "", input.hostname),
+		account:
+			input.account !== undefined ? input.account : (previous?.account ?? null),
+		addedAt: existing?.addedAt ?? now,
+		lastUsedAt: existing?.lastUsedAt ?? now,
+		hidden: hidden || (existing?.hidden ?? false),
+		identity: existing?.identity ?? null,
+	};
+}
+
 function clampName(name: string, fallback: string): string {
 	const trimmed = name.trim() || fallback;
 	return trimmed.length > MAX_DISPLAY_NAME_CHARS
@@ -691,6 +744,12 @@ function parseEntry(value: unknown, id: string): SavedComputer | null {
 			tunnelId: record.tunnelId,
 			hostname: record.hostname,
 			name: clampName(name, record.hostname),
+			/* Absent on entries written before the key existed: `null`, which the
+			 *  switcher treats as "not known" (see `SavedRadientComputer.account`). */
+			account:
+				typeof record.account === "string" && record.account.length > 0
+					? record.account
+					: null,
 		};
 	if (
 		record.transport === "custom" &&

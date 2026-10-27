@@ -221,14 +221,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * discovery list and live computer id, the provider's remember-on-live, the
 	 * probe-at-origin, the own-address `?url=` prefill, and the Switch entry points
 	 * on Computers and Settings. Computer screens and an overlay that is closed by
-	 * default; no U-08 scene. Recomputed with `--print` from the staged tree. */
+	 * default; no U-08 scene. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-1 remediation, `src` only: the
+	 * switcher's probe lifecycle, failed-pick close, account-scoped Radient entries
+	 * (the grant's account id), kept names, the stored-grant load before a pick,
+	 * the registry-id own-address hand-off and its password-first entry, the active
+	 * row's accent bar, and the Computers header's "Switch computer". Same screens;
+	 * no U-08 scene. `app` unchanged. Recomputed with `--print` from the staged tree. */
 	app: "236a990f4d9a5016eeaf0c6cb924be4630965584e8aaafcc32973a4dbcab0b15",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "fd8002d150a7591575f5aebddb54f8de49806bb4394612aaa237cec36e1e7e40",
+	src: "e98b2b2cb4c2a45209208f0d8f03480f3f777887d74c836db2c031a4f4a0b589",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

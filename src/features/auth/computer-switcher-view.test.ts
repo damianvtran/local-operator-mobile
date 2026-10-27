@@ -6,9 +6,13 @@ import type {
 } from "@/connection/saved-computers";
 import {
 	healthLabel,
+	ownTunnelPrefill,
 	pendingKeyFor,
 	pendingLanded,
 	performSwitcherTap,
+	pickFailed,
+	radientEntryBelongs,
+	rowHint,
 	type SwitcherDeps,
 	type SwitcherInput,
 	stableSections,
@@ -26,6 +30,7 @@ const PI = "http://pi.example.net";
 const NOW = 1_800_000_000_000;
 /* The pairing states' words: nothing may render them until pairing ships. */
 const UNSHIPPED_WORDS = /approval|same computer/i;
+const BRING_BACK = /bring it back/;
 
 const discovered = (
 	tunnelId: string,
@@ -61,6 +66,7 @@ const radient = (
 	lastUsedAt: NOW - 1_000_000,
 	hidden: false,
 	identity: null,
+	account: null,
 	...extra,
 });
 
@@ -410,14 +416,15 @@ describe("what a tap does", () => {
 		});
 	});
 
-	it("opens the own-address entry pre-filled when the one slot is another address", () => {
+	it("opens the own-address entry by registry id when the one slot is another address", () => {
 		const row = switcherSections(input({ saved: [custom("c2", PI)] }))
 			.onPhone[0];
 		if (!row) throw new Error("no row");
+		/* The id ONLY (review round 1, m1): the screen reads the address and the
+		 *  plain-http opt-in from the registry, never from link parameters. */
 		expect(switcherTap(row, slot)).toEqual({
 			kind: "enter-password",
-			url: PI,
-			allowInsecure: true,
+			computerId: "c2",
 		});
 		/* ...and when the slot holds no password at all. */
 		const home = switcherSections(input({ saved: [custom("c1", HOME)] }))
@@ -484,5 +491,196 @@ describe("what a tap does", () => {
 		});
 		expect(deps.selectComputer).not.toHaveBeenCalled();
 		expect(deps.enterPassword).not.toHaveBeenCalled();
+	});
+});
+
+/* ------------------------------------------------- PR #122 round-1 remediation */
+
+describe("a failed Radient pick (review M1, UX U2)", () => {
+	const picked = (phase: SwitcherInput["route"]["phase"]) =>
+		switcherSections(
+			input({
+				saved: [radient("r1", "t1", HOST_A)],
+				route: { phase, tunnelId: "t1" },
+				pendingKey: "t1",
+				radientSignedOut: phase === "signed-out",
+			}),
+		).onPhone[0];
+
+	it("is connecting only while it mints", () => {
+		expect(picked("minting")?.connecting).toBe(true);
+		/* Each of these held the spinner and the disabled row on c0d07c7. */
+		expect(picked("refused")?.connecting).toBe(false);
+		expect(picked("signed-out")?.connecting).toBe(false);
+		expect(picked("degraded")?.connecting).toBe(false);
+	});
+
+	it("leaves a signed-out row tappable into Sign in again", () => {
+		const row = picked("signed-out");
+		if (!row) throw new Error("no row");
+		expect(row.health.kind).toBe("sign-in");
+		expect(switcherTap(row, null)).toEqual({ kind: "sign-in" });
+	});
+
+	it("is a failure the sheet closes on only once refused or signed out", () => {
+		expect(pickFailed("refused")).toBe(true);
+		expect(pickFailed("signed-out")).toBe(true);
+		for (const phase of ["minting", "live", "degraded", "re-minting"] as const)
+			expect(pickFailed(phase)).toBe(false);
+	});
+});
+
+describe("saved Radient computers are scoped to their account (review M2)", () => {
+	const saved = [
+		radient("a1", "ta", HOST_A, { account: "acct-A" }),
+		radient("b1", "tb", HOST_B, { account: "acct-B" }),
+		radient("u1", "tu", HOST_C, { account: null }),
+	];
+	const onPhone = (over: Partial<SwitcherInput>) =>
+		keys(switcherSections(input({ saved, ...over })).onPhone);
+
+	it("lists only the signed-in account's computers, never another account's", () => {
+		expect(onPhone({ radientAccount: "acct-B" })).toEqual(["b1"]);
+		expect(onPhone({ radientAccount: "acct-A" })).toEqual(["a1"]);
+	});
+
+	it("lists an unstamped (pre-key) entry only when this account's discovery lists it", () => {
+		expect(onPhone({ radientAccount: "acct-B" })).not.toContain("u1");
+		expect(
+			onPhone({
+				radientAccount: "acct-B",
+				discovered: [discovered("tu", HOST_C)],
+			}),
+		).toContain("u1");
+	});
+
+	it("trusts discovery over a stale stamp: Radient says the tunnel is this account's", () => {
+		expect(
+			onPhone({
+				radientAccount: "acct-B",
+				discovered: [discovered("ta", HOST_A)],
+			}),
+		).toContain("a1");
+	});
+
+	it("lists them all when no account is known: nobody else's to leak to, and Sign in again lives there", () => {
+		expect(onPhone({ radientAccount: null }).sort()).toEqual(
+			["a1", "b1", "u1"].sort(),
+		);
+		expect(radientEntryBelongs({ account: "x" }, null, false)).toBe(true);
+	});
+
+	it("never filters an own-address computer by account", () => {
+		expect(
+			keys(
+				switcherSections(
+					input({ saved: [custom("c1", HOME)], radientAccount: "acct-B" }),
+				).onPhone,
+			),
+		).toEqual(["c1"]);
+	});
+});
+
+describe("a removed computer that is in use (QA Q4)", () => {
+	it("is brought back by the tap its row promises", async () => {
+		const row = switcherSections(
+			input({
+				saved: [radient("r1", "t1", HOST_A, { hidden: true })],
+				discovered: [discovered("t1", HOST_A)],
+				route: { phase: "live", tunnelId: "t1" },
+			}),
+		).notConnected[0];
+		if (!row) throw new Error("no row");
+		expect(row.active && row.hidden).toBe(true);
+		expect(rowHint(row, "not-connected")).toMatch(BRING_BACK);
+		const tap = switcherTap(row, null);
+		expect(tap).toEqual({
+			kind: "unhide",
+			target: { savedId: "r1", tunnelId: "t1" },
+		});
+		const deps: SwitcherDeps = {
+			selectComputer: vi.fn(async () => {}),
+			connectCustom: vi.fn(async () => {}),
+			signInWithRadient: vi.fn(async () => {}),
+			unhide: vi.fn(),
+			enterPassword: vi.fn(),
+			openConsole: vi.fn(),
+			close: vi.fn(),
+		};
+		await performSwitcherTap(tap, deps);
+		expect(deps.unhide).toHaveBeenCalledWith({ savedId: "r1", tunnelId: "t1" });
+		expect(deps.close).toHaveBeenCalled();
+		/* Already live: no second route. */
+		expect(deps.selectComputer).not.toHaveBeenCalled();
+	});
+});
+
+describe("the line under a row says what its tap does (design D3/D7, UX U7)", () => {
+	const row = (over: Partial<SwitcherInput>) =>
+		switcherSections(input(over)).notConnected[0];
+
+	it("says Add credit on a paused computer, whose tap opens the console", () => {
+		const paused = row({
+			discovered: [
+				discovered("t1", HOST_A, {
+					billing: { eligible: false, message: null },
+				}),
+			],
+		});
+		if (!paused) throw new Error("no row");
+		expect(switcherTap(paused, null)).toEqual({ kind: "open-console" });
+		expect(rowHint(paused, "not-connected")).toBe("Add credit in Radient");
+	});
+
+	it("says nothing under Connecting…", () => {
+		const connecting = row({
+			discovered: [discovered("t1", HOST_A)],
+			route: { phase: "minting", tunnelId: "t1" },
+			pendingKey: "t1",
+		});
+		if (!connecting) throw new Error("no row");
+		expect(connecting.connecting).toBe(true);
+		expect(rowHint(connecting, "not-connected")).toBeNull();
+	});
+
+	it("says Tap to connect only on the account's not-connected rows", () => {
+		const fresh = row({ discovered: [discovered("t1", HOST_A)] });
+		if (!fresh) throw new Error("no row");
+		expect(rowHint(fresh, "not-connected")).toBe("Tap to connect");
+		const mine = switcherSections(input({ saved: [custom("c1", HOME)] }))
+			.onPhone[0];
+		if (!mine) throw new Error("no row");
+		expect(rowHint(mine, "on-phone")).toBeNull();
+	});
+});
+
+describe("the own-address hand-off reads the registry, not the link (review m1)", () => {
+	const entries = [custom("c1", HOME), custom("c2", PI)];
+
+	it("fills the address and opt-in from the entry the id names", () => {
+		expect(ownTunnelPrefill(entries, "c2", null)).toEqual({
+			computerId: "c2",
+			name: "pi.example.net",
+			url: PI,
+			allowInsecure: true,
+			password: "",
+		});
+	});
+
+	it("offers the one slot's password only when the slot IS that address", () => {
+		const slot = {
+			baseUrl: `${HOME}/`,
+			password: "test-only",
+			allowInsecure: false,
+		};
+		expect(ownTunnelPrefill(entries, "c1", slot)?.password).toBe("test-only");
+		expect(ownTunnelPrefill(entries, "c2", slot)?.password).toBe("");
+	});
+
+	it("ignores an unknown id or a Radient entry", () => {
+		expect(ownTunnelPrefill(entries, "nope", null)).toBeNull();
+		expect(
+			ownTunnelPrefill([radient("r1", "t1", HOST_A)], "r1", null),
+		).toBeNull();
 	});
 });

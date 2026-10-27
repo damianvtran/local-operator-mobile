@@ -1966,3 +1966,137 @@ describe("the computer switcher's registry (M2a)", () => {
 		expect(await saved()).toHaveLength(1);
 	});
 });
+
+describe("PR #122 round-1 remediation: the provider's side of the switcher", () => {
+	beforeEach(async () => {
+		const registry = await vi.importActual<TunnelStorageModule>(
+			"@/features/auth/tunnel-storage",
+		);
+		await registry.clearStoredCredentials();
+	});
+	const saved = async () =>
+		(
+			await vi.importActual<TunnelStorageModule>(
+				"@/features/auth/tunnel-storage",
+			)
+		).readSavedComputers();
+	const tunnel = {
+		id: "tun-[redacted]-1",
+		name: "Synthetic computer 1",
+		hostname: `${"a".repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	};
+
+	it("loads the stored Radient grant for a pick made after a cold start on an own address (U3)", async () => {
+		/* The cold start dials the own address and never reads the Radient grant. */
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		durable.oauth = { ...oauth, account_id: "acct-[redacted]" };
+		durable.saved = {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
+		await mount();
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route?.mode).toBe("custom");
+		/* A switcher tap on a saved Radient computer discovery has not listed. */
+		const computerFromRow: DiscoveredComputer = {
+			...computer("x"),
+			tunnelId: tunnel.id,
+			hostname: tunnel.hostname,
+			name: "Synthetic computer 1",
+		};
+		await act(async () => {
+			await latest.selectComputer(computerFromRow);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route).toMatchObject({
+			mode: "radient",
+			tunnelId: tunnel.id,
+		});
+		expect(mock.events).toContain("POST /v1/tunnels/session/code");
+		/* And the route it reached is recorded under that account (M2). */
+		await until(() => connectionStore.getState().computerId !== null);
+		const entry = (await saved()).find(
+			(candidate) => candidate.transport === "radient",
+		);
+		expect(entry).toMatchObject({ account: "acct-[redacted]" });
+	});
+
+	it("refuses a pick with no stored grant as Sign in, not a console dead end (U3 negative control)", async () => {
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.selectComputer({
+				...computer("x"),
+				tunnelId: tunnel.id,
+				hostname: tunnel.hostname,
+			});
+		});
+		expect(connectionStore.getState().surface).toBe("sign-in");
+		expect(mock.events).not.toContain("POST /v1/tunnels/session/code");
+	});
+
+	it("keeps the saved name when switching back from an own address, where discovery is empty (Q2)", async () => {
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		expect((await saved())[0]?.name).toBe("Synthetic computer 1");
+		/* Own address: a custom startRoute empties discovery. */
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().route?.mode === "custom");
+		expect(connectionStore.getState().discoveredComputers).toEqual([]);
+		/* Back to the Radient computer through its switcher row (a stand-in pick). */
+		const row = switcherSections({
+			saved: await saved(),
+			discovered: [],
+			probes: {},
+			route: { phase: "live", tunnelId: null },
+			activeComputerId: connectionStore.getState().computerId,
+			pendingKey: null,
+			radientSignedOut: false,
+		}).onPhone.find((candidate) => candidate.transport.kind === "radient");
+		if (!row) throw new Error("no Radient row");
+		await act(async () => {
+			await performSwitcherTap(switcherTap(row, null), {
+				selectComputer: latest.selectComputer,
+				connectCustom: latest.connectCustom,
+				signInWithRadient: latest.signInWithRadient,
+				unhide: () => {},
+				enterPassword: () => {},
+				openConsole: () => {},
+				close: () => {},
+			});
+		});
+		await until(
+			() =>
+				connectionStore.getState().route?.mode === "radient" &&
+				connectionStore.getState().phase === "live",
+		);
+		/* Let the fire-and-forget remember land, then read the name back. */
+		await until(() => connectionStore.getState().computerId === row.savedId);
+		const radientEntry = (await saved()).find(
+			(candidate) => candidate.transport === "radient",
+		);
+		expect(radientEntry?.name).toBe("Synthetic computer 1");
+		expect(radientEntry?.name).not.toBe(tunnel.hostname);
+	});
+});

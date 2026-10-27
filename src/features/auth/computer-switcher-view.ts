@@ -1,5 +1,8 @@
 import type { DiscoveredComputer } from "@/connection";
-import type { SavedComputer } from "@/connection/saved-computers";
+import type {
+	SavedComputer,
+	SavedCustomComputer,
+} from "@/connection/saved-computers";
 import type { ConnectionPhase } from "@/state/connection-store";
 
 /**
@@ -106,9 +109,44 @@ export type SwitcherInput = {
 	pendingKey: string | null;
 	/** Radient refused this phone's grant: the `sign-in` refusal is up. */
 	radientSignedOut: boolean;
+	/** The Radient account this phone is signed in to (`account_id`, the OAuth
+	 *  `id_token`'s `sub`), or `null` when unknown. Scopes saved Radient computers:
+	 *  see `radientEntryBelongs`. Optional so a caller with no account reads as
+	 *  "unknown", the conservative case. */
+	radientAccount?: string | null;
 };
 
 const USABLE: readonly ConnectionPhase[] = ["live", "degraded", "re-minting"];
+
+/**
+ * Whether a saved Radient computer may be listed for the account signed in now.
+ *
+ * Only sign-out clears the registry, so a "Sign in again" into a different Radient
+ * account would otherwise list the first account's computers — their names and
+ * hostnames — as this phone's, probe them, and offer a mint the new account cannot
+ * authorise (PR #122 review round 1, M2). The rule, first match wins:
+ *
+ * 1. The current account's own discovery lists the tunnel: Radient says it is
+ *    theirs, whatever the entry recorded.
+ * 2. No account is known right now (signed out of Radient, a revoked grant, or a
+ *    sign-in whose token response carried no account id): there is no other
+ *    account to leak to, and the row is how the reader signs back in ("Sign in
+ *    again"), so it is listed.
+ * 3. Otherwise only an entry stamped with this same account id is listed. An entry
+ *    with NO stamp — written before the stamp existed — is NOT listed to a known
+ *    account it cannot be shown to belong to; discovery (rule 1) brings it back,
+ *    and its next live use stamps it. Only pre-release builds of this switcher
+ *    wrote visible Radient entries, so this hides nothing a released phone showed.
+ */
+export function radientEntryBelongs(
+	entry: { account: string | null },
+	account: string | null,
+	listed: boolean,
+): boolean {
+	if (listed) return true;
+	if (account === null) return true;
+	return entry.account === account;
+}
 
 export function radientOrigin(hostname: string): string {
 	return `https://${hostname}`;
@@ -202,8 +240,16 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 
 	for (const entry of input.saved) {
 		if (entry.transport === "radient") {
-			savedTunnels.add(entry.tunnelId);
 			const discovered = byTunnel.get(entry.tunnelId) ?? null;
+			if (
+				!radientEntryBelongs(
+					entry,
+					input.radientAccount ?? null,
+					discovered !== null,
+				)
+			)
+				continue;
+			savedTunnels.add(entry.tunnelId);
 			if (entry.hidden && !discovered) continue;
 			/* Discovery's hostname wins when it has one: Radient may re-issue the
 			 *  origin, and the tunnel id is what makes it the same computer. */
@@ -223,10 +269,7 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 					lastSeenAt: latest(entry.lastUsedAt, input.answeredAt?.[origin]),
 				}),
 				active: phaseUsable && input.route.tunnelId === entry.tunnelId,
-				connecting:
-					input.pendingKey === entry.tunnelId &&
-					!phaseUsable &&
-					input.route.tunnelId === entry.tunnelId,
+				connecting: radientConnecting(input, entry.tunnelId),
 				hidden: entry.hidden,
 				lastUsedAt: entry.lastUsedAt,
 				discovered,
@@ -289,10 +332,7 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 				lastSeenAt: latest(input.answeredAt?.[origin]),
 			}),
 			active: phaseUsable && input.route.tunnelId === computer.tunnelId,
-			connecting:
-				input.pendingKey === computer.tunnelId &&
-				!phaseUsable &&
-				input.route.tunnelId === computer.tunnelId,
+			connecting: radientConnecting(input, computer.tunnelId),
 			hidden: false,
 			lastUsedAt: 0,
 			discovered: computer,
@@ -300,6 +340,18 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 	}
 
 	return { onPhone: sortRows(onPhone), notConnected: sortRows(notConnected) };
+}
+
+/** A Radient row is connecting only while its pick is MINTING — the custom rule's
+ *  shape. "Not usable yet" was the old test, and `refused`/`signed-out` are not
+ *  usable either: a failed pick kept its spinner and its disabled row, so the retry
+ *  and the "Sign in again" tap were both blocked (PR #122 review round 1, M1). */
+function radientConnecting(input: SwitcherInput, tunnelId: string): boolean {
+	return (
+		input.pendingKey === tunnelId &&
+		input.route.phase === "minting" &&
+		input.route.tunnelId === tunnelId
+	);
 }
 
 /** Active first, then online, then most recently used; the name breaks a tie so
@@ -360,6 +412,10 @@ export type CustomSlot = {
 export type SwitcherTap =
 	/** Already in use: the sheet just closes. */
 	| { kind: "close" }
+	/** In use AND removed from this phone: brought back, then the sheet closes. The
+	 *  row promises "Tap to bring it back", and a bare close left it removed (PR
+	 *  #122 QA round 1, Q4). */
+	| { kind: "unhide"; target: { savedId: string | null; tunnelId: string } }
 	| { kind: "sign-in" }
 	/** Billing is paused: the fix is in the Radient console, not here. */
 	| { kind: "open-console" }
@@ -378,8 +434,9 @@ export type SwitcherTap =
 				computerId: string;
 			};
 	  }
-	/** No password stored for this address: the own-address entry, pre-filled. */
-	| { kind: "enter-password"; url: string; allowInsecure: boolean };
+	/** No password stored for this address: the own-address entry, pre-filled from
+	 *  the registry entry `computerId` names (never from a URL the link carried). */
+	| { kind: "enter-password"; computerId: string };
 
 const TRAILING_SLASHES = /\/+$/;
 const sameAddress = (a: string, b: string) =>
@@ -395,13 +452,18 @@ const sameAddress = (a: string, b: string) =>
  * address filled in.
  */
 export function switcherTap(row: SwitcherRow, slot: CustomSlot): SwitcherTap {
+	if (row.active && row.hidden && row.transport.kind === "radient")
+		return {
+			kind: "unhide",
+			target: { savedId: row.savedId, tunnelId: row.transport.tunnelId },
+		};
 	if (row.active) return { kind: "close" };
 	if (row.health.kind === "sign-in") return { kind: "sign-in" };
 	if (row.health.kind === "paused") return { kind: "open-console" };
 	if (row.transport.kind === "custom") {
 		const transport = row.transport;
+		if (row.savedId === null) return { kind: "close" };
 		if (
-			row.savedId !== null &&
 			slot !== null &&
 			slot.password !== null &&
 			sameAddress(slot.baseUrl, transport.baseUrl)
@@ -415,11 +477,7 @@ export function switcherTap(row: SwitcherRow, slot: CustomSlot): SwitcherTap {
 					computerId: row.savedId,
 				},
 			};
-		return {
-			kind: "enter-password",
-			url: transport.baseUrl,
-			allowInsecure: transport.allowInsecure,
-		};
+		return { kind: "enter-password", computerId: row.savedId };
 	}
 	return {
 		kind: "select-radient",
@@ -489,7 +547,7 @@ export type SwitcherDeps = {
 	}) => Promise<void>;
 	signInWithRadient: () => Promise<void>;
 	unhide: (target: { savedId: string | null; tunnelId: string }) => void;
-	enterPassword: (url: string, allowInsecure: boolean) => void;
+	enterPassword: (computerId: string) => void;
 	openConsole: () => void;
 	close: () => void;
 };
@@ -504,6 +562,10 @@ export async function performSwitcherTap(
 		case "close":
 			deps.close();
 			return;
+		case "unhide":
+			deps.unhide(tap.target);
+			deps.close();
+			return;
 		case "sign-in":
 			deps.close();
 			await deps.signInWithRadient();
@@ -513,7 +575,7 @@ export async function performSwitcherTap(
 			return;
 		case "enter-password":
 			deps.close();
-			deps.enterPassword(tap.url, tap.allowInsecure);
+			deps.enterPassword(tap.computerId);
 			return;
 		case "select-radient":
 			if (tap.unhide) deps.unhide(tap.unhide);
@@ -523,4 +585,74 @@ export async function performSwitcherTap(
 			await deps.connectCustom(tap.input);
 			return;
 	}
+}
+
+/**
+ * Whether a pick the sheet started has FAILED, read once the pick's promise has
+ * settled. A refused or signed-out route is the screen's to explain: its refusal
+ * surface (and "Sign in again") is painted behind the scrim, so the sheet closes
+ * rather than holding a row on "Connecting…" over a reason nobody can read (PR #122
+ * review round 1, M1; UX round 1, U2).
+ */
+export function pickFailed(phase: ConnectionPhase): boolean {
+	return phase === "refused" || phase === "signed-out";
+}
+
+/**
+ * The line under a row's name and tag, or `null` for none. One decision so every
+ * line says what a tap on that row actually does:
+ *
+ * - none while it connects — "Tap to connect" under "Connecting…" asked for the tap
+ *   already made (design round 1, D7);
+ * - a removed computer says how to bring it back, and the tap does (`unhide`);
+ * - a paused one says where the fix is — the tap opens the Radient console, so "Tap
+ *   to connect" promised a connection it never starts (design D3, UX U7);
+ * - only the account's not-connected rows say "Tap to connect".
+ */
+export function rowHint(
+	row: SwitcherRow,
+	section: "on-phone" | "not-connected",
+): string | null {
+	if (row.connecting) return null;
+	if (row.hidden) return "Removed from this phone. Tap to bring it back.";
+	if (row.health.kind === "paused") return "Add credit in Radient";
+	return section === "not-connected" ? "Tap to connect" : null;
+}
+
+/**
+ * What the own-address screen fills in when the switcher hands it a saved computer
+ * with no stored password.
+ *
+ * The hand-off carries the registry id ONLY, and everything else is read from the
+ * registry: a `?url=` and `?insecure=1` the screen trusted could be set by any link
+ * that opens it, pre-filling a stranger's address with the plain-http opt-in
+ * already on (PR #122 review round 1, m1). The id also carries through to
+ * `connectCustom({computerId})`, so the reconnect is recorded against this entry
+ * rather than forking a second one by address. The one password slot is offered
+ * only when it IS this address — never another computer's password.
+ */
+export function ownTunnelPrefill(
+	entries: readonly SavedComputer[],
+	computerId: string,
+	slot: CustomSlot,
+): {
+	computerId: string;
+	name: string;
+	url: string;
+	allowInsecure: boolean;
+	password: string;
+} | null {
+	const entry = entries.find(
+		(candidate): candidate is SavedCustomComputer =>
+			candidate.id === computerId && candidate.transport === "custom",
+	);
+	if (!entry) return null;
+	const sameSlot = slot !== null && sameAddress(slot.baseUrl, entry.baseUrl);
+	return {
+		computerId: entry.id,
+		name: entry.name,
+		url: entry.baseUrl,
+		allowInsecure: entry.allowInsecure,
+		password: sameSlot ? (slot?.password ?? "") : "",
+	};
 }
