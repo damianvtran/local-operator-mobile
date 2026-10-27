@@ -99,7 +99,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  `minimum-scale=1` IS LOAD-BEARING. This page overflows horizontally ON PURPOSE
+  (#too-wide, the full-width bars, the nowrap run: 1728px of scroll width at 150%
+  text scale). Under mobile emulation Chrome then lets the LAYOUT viewport grow to
+  fit the content, down to its 0.25 minimum page scale, so `window.innerWidth/Height`
+  — what the audit's state reader records as `state.viewport` — read 1560 x 3376
+  (exactly 4 x the emulated 390 x 844) while `visualViewport` and
+  `documentElement.clientWidth` still said 390. The /clean path does not overflow and
+  read 390, so only the defect page lied. The u08 fragment verification's positive
+  control asserts the canonical 390 x 844 on this page and failed on exactly that
+  (hosted run 40213370013). Pinning the minimum page scale to 1 keeps the layout
+  viewport at the emulated size however far the content overflows, so the defects
+  are still measured against the device they claim to overflow.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, viewport-fit=cover">
 <title>Audit canary</title>
 <style>
 	:root {
