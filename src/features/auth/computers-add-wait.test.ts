@@ -134,6 +134,16 @@ vi.mock("@/features/auth/connection-provider", async () => {
 			discovering: false,
 			selectComputer: async (computer: unknown) => {
 				host.picked.push(computer);
+				/* The provider's successful path: a route, then the pick, then live. The
+				 *  store's actions ignore both calls while no route exists. */
+				const api = store.api?.getState();
+				api?.startRoute({
+					mode: "radient",
+					hostname: (computer as DiscoveredComputer).hostname,
+					tunnelId: (computer as DiscoveredComputer).tunnelId,
+				});
+				api?.selectComputer(computer as DiscoveredComputer);
+				api?.markLive();
 			},
 			retry: async () => {},
 			refusal: host.refusal,
@@ -260,8 +270,33 @@ describe("adding a computer over a populated list finds the new one (R3-M1/U17)"
 		 *  own reachability probe also runs; that is the list's, not the wait's.) */
 		expect(probed.some((url) => url.includes(NEW.hostname))).toBe(true);
 
-		host.presses.get(CONTROL.computersUseThisComputer)?.();
+		await act(async () => {
+			host.presses.get(CONTROL.computersUseThisComputer)?.();
+		});
 		expect(host.picked).toEqual([NEW]);
+		/* Q8/U19: after the pick goes live the answered panel and its mint action are
+		 *  gone, so a second tap cannot mint again. Re-rendered first, because `words()`
+		 *  accumulates every Text of every render since the last one. */
+		await render();
+		expect(store.api?.getState().phase).toBe("live");
+		expect(words()).toContain("Connected to New Mini.");
+		expect(words()).not.toContain("Your computer answered.");
+		expect(words()).not.toContain("Use this computer");
+		/* One mint, not two: the control is gone from the tree and the row says active. */
+		expect(host.picked).toHaveLength(1);
+	});
+
+	it("omits an unknown protocol version rather than showing developer vocabulary", async () => {
+		vi.stubGlobal("fetch", async () => ({
+			ok: true,
+			json: async () => ({ ok: true, version: null, sessions: null }),
+		}));
+		await render();
+		await act(async () => host.onWait?.());
+		for (let tick = 0; tick < 6; tick += 1) await poll();
+		await render();
+		expect(words()).toContain("Your computer answered.");
+		expect(words()).not.toContain("protocol version unknown");
 	});
 
 	it("keeps waiting while only the computers listed at the start are there", async () => {

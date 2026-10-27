@@ -28,6 +28,19 @@ export function refusalAppeared(before: boolean, now: boolean): boolean {
 	return !before && now;
 }
 
+/** A refusal behind a closing sheet must wait for dismissal, not merely
+ *  `visible=false`: on web the modal's later focus restoration can scroll the
+ *  opener back into view even while the panel currently looks fully visible.
+ *  Native has no dismissal event, so it keeps the existing closed-state path. */
+export function refusalRevealReady(input: {
+	platform: string;
+	sheetVisible: boolean;
+	sheetDismissedSinceRefusal: boolean;
+}): boolean {
+	if (input.sheetVisible) return false;
+	return input.platform !== "web" || input.sheetDismissedSinceRefusal;
+}
+
 /** A vertical extent in window coordinates, as `measureInWindow` reports it. */
 export type WindowBand = { top: number; height: number };
 
@@ -72,4 +85,25 @@ export function retryLanded(input: {
 	live: boolean;
 }): boolean {
 	return input.retriedHere && !input.refused && input.live;
+}
+
+/** Whether the U18 focus move is still the retry's to make (PR #122 review round 4,
+ *  R4-m1). It is, while the retry is in flight and the route is still the one it
+ *  re-ran; and it stays the retry's once it has landed, until the move consumes it.
+ *  A retry that SETTLED without going live must drop the intent: otherwise a later,
+ *  unrelated success — a pick from the switcher, which also restores focus to its
+ *  opener — would move focus to Status on the retry's behalf.
+ *  `sameTarget` compares the selected computer, not `revision`: a pick changes
+ *  `tunnelId` without touching `revision`, so a revision comparison would miss the
+ *  very route change this guards. */
+export function retryStillOwned(input: {
+	retriedHere: boolean;
+	retrySettled: boolean;
+	refused: boolean;
+	live: boolean;
+	sameTarget: boolean;
+}): boolean {
+	if (!input.retriedHere || !input.sameTarget) return false;
+	if (!input.retrySettled) return true;
+	return !input.refused && input.live;
 }

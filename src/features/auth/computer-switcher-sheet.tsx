@@ -68,6 +68,9 @@ type SwitcherContextValue = {
 	 *  sheet closed, because the close returns focus to the opener, and on the web
 	 *  that focus scrolls the opener back into view (PR #122 UX round 3, U16). */
 	visible: boolean;
+	/** Counts fully dismissed sheets. On web, `visible=false` only STARTS the
+	 *  close; the later dismissal event means opener-focus restoration has run. */
+	dismissalCount: number;
 };
 
 const SwitcherContext = createContext<SwitcherContextValue | null>(null);
@@ -90,9 +93,14 @@ export function ComputerSwitcherProvider({
 	children: ReactNode;
 }) {
 	const [visible, setVisible] = useState(false);
+	const [dismissalCount, setDismissalCount] = useState(0);
 	const value = useMemo(
-		() => ({ open: () => setVisible(true), visible }),
-		[visible],
+		() => ({
+			open: () => setVisible(true),
+			visible,
+			dismissalCount,
+		}),
+		[visible, dismissalCount],
 	);
 	return (
 		<SwitcherContext.Provider value={value}>
@@ -100,6 +108,7 @@ export function ComputerSwitcherProvider({
 			<ComputerSwitcherSheet
 				visible={visible}
 				onClose={() => setVisible(false)}
+				onDismiss={() => setDismissalCount((count) => count + 1)}
 			/>
 		</SwitcherContext.Provider>
 	);
@@ -287,9 +296,11 @@ const SwitcherRowView = ({
 export function ComputerSwitcherSheet({
 	visible,
 	onClose,
+	onDismiss,
 }: {
 	visible: boolean;
 	onClose: () => void;
+	onDismiss: () => void;
 }) {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -516,6 +527,7 @@ export function ComputerSwitcherSheet({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
+			onDismiss={onDismiss}
 			/* Echoes the control that opened it ("Switch computer"); "Computers" sat
 			 *  over the Computers screen's own title (design round 1, D6). */
 			title="Switch computer"

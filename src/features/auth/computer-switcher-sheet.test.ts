@@ -29,6 +29,7 @@ const host = vi.hoisted(() => ({
 	saved: [] as SavedComputer[],
 	account: null as string | null,
 	closed: 0,
+	dismissed: 0,
 	pushed: [] as unknown[],
 	pathname: "/settings",
 	params: {} as Record<string, string>,
@@ -203,6 +204,11 @@ async function render() {
 				visible,
 				onClose: () => {
 					host.closed += 1;
+				},
+				/* The real provider counts completed dismissals; this host records them
+				 *  so a test can assert the sheet reported one. */
+				onDismiss: () => {
+					host.dismissed += 1;
 				},
 			}),
 		),

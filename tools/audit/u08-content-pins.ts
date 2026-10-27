@@ -241,14 +241,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refusal into view and dropping the Diagnostics retry, the sheet's Add a
 	 * computer deciding from `computersView`, and the Computers console remedy. No
 	 * U-08 scene changes; `app` unchanged. Recomputed with `--print` from the staged
-	 * tree. */
+	 * tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-4 remediation, `src` only: the sheet
+	 * primitive forwarding the web modal's completed dismissal, Settings revealing
+	 * its refusal on that dismissal and disarming its retry on failure, and Computers
+	 * replacing the answered panel with a connected confirmation once the pick is
+	 * live. No U-08 scene changes; `app` unchanged. Recomputed with `--print` from
+	 * the staged tree. */
 	app: "236a990f4d9a5016eeaf0c6cb924be4630965584e8aaafcc32973a4dbcab0b15",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "fc9eebe981d267cb6ef5401d0f0196befffc52520385e71fd531fffe56203fc4",
+	src: "f5d3655cd2d538d6a261cc8c27307137070af906f3b5333fdb574c02193a1de5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

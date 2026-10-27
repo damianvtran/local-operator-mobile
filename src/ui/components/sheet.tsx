@@ -4,6 +4,7 @@ import {
 	Animated,
 	Easing,
 	Modal,
+	Platform,
 	Pressable,
 	ScrollView,
 	useWindowDimensions,
@@ -90,6 +91,8 @@ let sheetFadeSeq = 0;
 export type SheetProps = {
 	visible: boolean;
 	onClose: () => void;
+	/** Web only: fires after the modal has stopped rendering and returned focus. */
+	onDismiss?: () => void;
 	/** The sheet's accessible name; also its visible title. */
 	title: string;
 	detent?: SheetDetent;
@@ -115,6 +118,7 @@ export type SheetProps = {
 export const Sheet = ({
 	visible,
 	onClose,
+	onDismiss,
 	title,
 	detent = "content",
 	children,
@@ -248,6 +252,7 @@ export const Sheet = ({
 				transparent
 				animationType="none"
 				onRequestClose={onClose}
+				onDismiss={Platform.OS === "web" ? onDismiss : undefined}
 				// The covered application is inert while the sheet is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal

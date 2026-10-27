@@ -19,6 +19,7 @@ import {
 	rowState,
 } from "@/features/auth/computers-view";
 import {
+	connectionStore,
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
@@ -47,8 +48,10 @@ import { OwnTunnelSettings } from "./own-tunnel-settings";
 import {
 	refusalAppeared,
 	refusalOutOfView,
+	refusalRevealReady,
 	refusalScrollY,
 	retryLanded,
+	retryStillOwned,
 } from "./refusal-in-view";
 
 /**
@@ -118,26 +121,38 @@ export default function Settings() {
 		minting: phase === "minting",
 	});
 
-	/* U16: a refusal that appears scrolls into view, once — after the switcher
-	 *  that produced it has closed (`useComputerSwitcher().visible`): the close
-	 *  returns focus to "Switch computer", and on the web that focus scrolls the
-	 *  opener back into view, so scrolling earlier was undone by it. The refusal is
-	 *  measured against the scroll CONTENT (`getInnerViewNode`) for the offset and
-	 *  against the window for "is it already showing"; both measurements are async
-	 *  on every platform, so they read the panel's laid-out height. */
+	/* U16: a refusal that appears scrolls into view, once — AFTER the switcher's
+	 *  web dismissal, not just `visible=false`. RNW restores focus to the opener
+	 *  during the later modal unmount, and that focus can scroll an apparently
+	 *  visible refusal off-screen. Measuring on dismissal is the ordering contract;
+	 *  no timer can provide it. Native has no dismissal event and uses close. */
 	const scrollRef = useRef<ScrollView | null>(null);
 	const refusalRef = useRef<View | null>(null);
 	const statusRef = useRef<View | null>(null);
 	const wasRefused = useRef(refusal !== null);
 	const [bringRefusalIntoView, setBringRefusalIntoView] = useState(false);
+	const refusalDismissal = useRef(switcher.dismissalCount);
 	useEffect(() => {
-		if (refusalAppeared(wasRefused.current, refusal !== null))
+		if (refusalAppeared(wasRefused.current, refusal !== null)) {
+			/* The count AT this refusal: a reveal armed by an earlier open must not be
+			 *  satisfied by a dismissal that happened before the panel even appeared. */
+			refusalDismissal.current = switcher.dismissalCount;
 			setBringRefusalIntoView(true);
+		}
 		if (refusal === null) setBringRefusalIntoView(false);
 		wasRefused.current = refusal !== null;
-	}, [refusal]);
+	}, [refusal, switcher.dismissalCount]);
 	useEffect(() => {
-		if (!bringRefusalIntoView || switcher.visible) return;
+		if (
+			!bringRefusalIntoView ||
+			!refusalRevealReady({
+				platform: Platform.OS,
+				sheetVisible: switcher.visible,
+				sheetDismissedSinceRefusal:
+					switcher.dismissalCount > refusalDismissal.current,
+			})
+		)
+			return;
 		setBringRefusalIntoView(false);
 		const scroller = scrollRef.current;
 		const panel = refusalRef.current;
@@ -159,36 +174,80 @@ export default function Settings() {
 				});
 			});
 		});
-	}, [bringRefusalIntoView, switcher.visible]);
+	}, [bringRefusalIntoView, switcher.visible, switcher.dismissalCount]);
 
 	/* U18: after THIS screen's Try now works, focus goes to the Status row that now
 	 *  says so — the button it was on unmounted with the refusal, and focus fell to
-	 *  the document body. */
+	 *  the document body. `retryTarget` is the computer this retry re-ran, because a
+	 *  pick from the switcher changes it and that pick's own focus return must not
+	 *  be read as this retry landing (review round 4, R4-m1). */
 	const retriedHere = useRef(false);
+	const retrySettled = useRef(false);
+	const retryTarget = useRef<string | null>(null);
+	const disarmRetry = useCallback(() => {
+		retriedHere.current = false;
+		retrySettled.current = false;
+		retryTarget.current = null;
+	}, []);
 	const retryHere = useCallback(() => {
 		retriedHere.current = true;
-		void retry();
-	}, [retry]);
+		retrySettled.current = false;
+		const target = connectionStore.getState().tunnelId;
+		retryTarget.current = target;
+		void retry().finally(() => {
+			retrySettled.current = true;
+			/* Read the STORE, not this render's closures: they predate the retry and
+			 *  cannot describe its outcome. A retry that settles without going live
+			 *  drops the intent here — no state change follows a failed retry, so the
+			 *  effect below would never re-run to notice, and a later unrelated
+			 *  success would move focus on its behalf. */
+			const now = connectionStore.getState();
+			if (
+				!retryStillOwned({
+					retriedHere: true,
+					retrySettled: true,
+					refused: now.surface !== null,
+					live: now.phase === "live",
+					sameTarget: now.tunnelId === target,
+				})
+			)
+				disarmRetry();
+		});
+	}, [disarmRetry, retry]);
 	useEffect(() => {
+		if (!retriedHere.current) return;
+		const sameTarget = tunnelId === retryTarget.current;
 		if (
-			!retryLanded({
-				retriedHere: retriedHere.current,
+			retryLanded({
+				retriedHere: true,
 				refused: refusal !== null,
 				live: phase === "live",
+			}) &&
+			sameTarget
+		) {
+			disarmRetry();
+			const row = statusRef.current;
+			if (!row) return;
+			/* The web moves keyboard focus (the row's `focusable` makes it addressable);
+			 *  a phone moves the screen reader's. */
+			if (Platform.OS === "web") row.focus();
+			else {
+				const handle = findNodeHandle(row);
+				if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+			}
+			return;
+		}
+		if (
+			!retryStillOwned({
+				retriedHere: true,
+				retrySettled: retrySettled.current,
+				refused: refusal !== null,
+				live: phase === "live",
+				sameTarget,
 			})
 		)
-			return;
-		retriedHere.current = false;
-		const row = statusRef.current;
-		if (!row) return;
-		/* The web moves keyboard focus (the row's `tabIndex={-1}` lets a div take
-		 *  it); a phone moves the screen reader's. */
-		if (Platform.OS === "web") row.focus();
-		else {
-			const handle = findNodeHandle(row);
-			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
-		}
-	}, [phase, refusal]);
+			disarmRetry();
+	}, [disarmRetry, phase, refusal, tunnelId]);
 
 	const doSignOut = useCallback(async () => {
 		setConfirmSignOut(false);

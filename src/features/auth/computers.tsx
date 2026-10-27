@@ -267,16 +267,19 @@ const WaitPanel = ({
 				</>
 			) : null}
 			{state.kind === "w3" ? (
-				<>
-					<Text className="text-body text-ink">Your computer answered.</Text>
-					<Text className="text-body-sm text-ink-muted">
-						Its relay reports protocol version {state.version ?? "unknown"}
-						{state.sessions !== null
-							? ` and ${state.sessions} running session${state.sessions === 1 ? "" : "s"}`
-							: ""}
-						.
-					</Text>
-				</>
+				<Text className="text-body text-ink">Your computer answered.</Text>
+			) : null}
+			{state.kind === "w3" &&
+			(state.version !== null || state.sessions !== null) ? (
+				<Text className="text-body-sm text-ink-muted">
+					{state.version !== null
+						? `Its relay reports protocol version ${state.version}`
+						: "Its relay reports"}
+					{state.sessions !== null
+						? `${state.version !== null ? " and" : ""} ${state.sessions} running session${state.sessions === 1 ? "" : "s"}`
+						: ""}
+					.
+				</Text>
 			) : null}
 			{state.kind === "w4" ? (
 				<>
@@ -433,6 +436,12 @@ export default function Computers() {
 	}, [refreshComputers]);
 
 	const wait = useConnectorWait({ acquire, enabled: waiting });
+	/* Add mode has no landing navigation (it is a pushed route, `landingAfterPick`),
+	 *  so once THIS pick is live the answered panel with its mint action is replaced
+	 *  by a plain confirmation: leaving an actionable "Use this computer" over a live
+	 *  connection invited a second mint (QA round 4 Q8, UX U19). */
+	const addedComputerLive =
+		add === "1" && picked !== null && tunnelId === picked && phase === "live";
 	const startWaiting = useCallback(() => {
 		listedAtWait.current = new Set(
 			connectionStore.getState().computers.map((computer) => computer.tunnelId),
@@ -622,14 +631,29 @@ export default function Computers() {
 							/>
 						</TunnelPaths>
 					)}
-					{waiting ? (
+					{waiting && !addedComputerLive ? (
 						<View className="gap-3 pt-2">
 							<WaitPanel
 								state={wait.state}
 								appeared={appeared}
-								onUse={() => appeared && pick(appeared)}
+								/* Unreachable once the pick is live, and guarded anyway: a second
+								 *  mint from a stale control would retire a working route (Q8/U19). */
+								onUse={() => {
+									if (!addedComputerLive && appeared) pick(appeared);
+								}}
 								onStop={() => setWaiting(false)}
 							/>
+						</View>
+					) : null}
+					{addedComputerLive ? (
+						<View className="gap-1 rounded-sm border border-hairline bg-surface p-4">
+							<Text className="text-body text-ink">
+								Connected to {appeared?.name ?? "your computer"}.
+							</Text>
+							<Text className="text-body-sm text-ink-muted">
+								It stays listed on this phone, so you can switch back from the
+								computer list.
+							</Text>
 						</View>
 					) : null}
 				</>

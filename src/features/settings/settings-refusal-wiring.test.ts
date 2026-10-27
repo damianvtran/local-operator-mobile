@@ -24,8 +24,7 @@ const SETTINGS = readFileSync(
 /* The surface sits inside the wrapper Settings measures and scrolls to (U16). */
 const SURFACE_BLOCK =
 	/\{refusal \? \([\s\S]*?<RefusalSurface([\s\S]*?)\/>\s*<\/View>\s*\) : null\}/;
-const SCROLL_WAITS_FOR_SHEET =
-	/if \(!bringRefusalIntoView \|\| switcher\.visible\) return;/;
+const SCROLL_WAITS_FOR_SHEET = /refusalRevealReady\(\{/;
 
 describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 	const block = SURFACE_BLOCK.exec(SETTINGS);
@@ -44,7 +43,7 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 	it("wires every remedy the surface can offer, Try again to the provider's retry", () => {
 		/* `retryHere` is the provider's `retry`, noted as this screen's (U18). */
 		expect(block?.[1]).toContain("onRetry={retryHere}");
-		expect(SETTINGS).toContain("void retry();");
+		expect(SETTINGS).toContain("void retry()");
 		expect(block?.[1]).toContain("onSignIn={() => void signInWithRadient()}");
 		expect(block?.[1]).toContain("onOpenConsole=");
 		expect(block?.[1]).toContain("onUseAnotherAddress=");

@@ -3,8 +3,10 @@ import {
 	REFUSAL_SCROLL_MARGIN,
 	refusalAppeared,
 	refusalOutOfView,
+	refusalRevealReady,
 	refusalScrollY,
 	retryLanded,
+	retryStillOwned,
 } from "./refusal-in-view";
 
 /**
@@ -19,6 +21,20 @@ describe("when Settings scrolls to a refusal (U16)", () => {
 		expect(refusalAppeared(true, true)).toBe(false);
 		expect(refusalAppeared(true, false)).toBe(false);
 		expect(refusalAppeared(false, false)).toBe(false);
+	});
+
+	it("waits for dismissal even when the panel currently looks visible (U16)", () => {
+		const base = {
+			platform: "web",
+			sheetVisible: false,
+			sheetDismissedSinceRefusal: false,
+		};
+		expect(refusalRevealReady(base)).toBe(false);
+		expect(
+			refusalRevealReady({ ...base, sheetDismissedSinceRefusal: true }),
+		).toBe(true);
+		expect(refusalRevealReady({ ...base, sheetVisible: true })).toBe(false);
+		expect(refusalRevealReady({ ...base, platform: "android" })).toBe(true);
 	});
 
 	it("scrolls for every measured off-screen case, and leaves the visible one alone", () => {
@@ -54,6 +70,33 @@ describe("when Settings scrolls to a refusal (U16)", () => {
 });
 
 describe("focus after this screen's Try now (U18)", () => {
+	it("drops retry ownership on failure and on a different target (R4-m1)", () => {
+		const armed = {
+			retriedHere: true,
+			retrySettled: false,
+			refused: true,
+			live: false,
+			sameTarget: true,
+		};
+		/* In flight on the same computer: still the retry's move to make. */
+		expect(retryStillOwned(armed)).toBe(true);
+		/* Settled and still refused: the retry failed, so a later success — a pick
+		 *  from the switcher — must not move focus on its behalf. */
+		expect(retryStillOwned({ ...armed, retrySettled: true })).toBe(false);
+		/* Settled and live: the move is still owed until the focus effect consumes it. */
+		expect(
+			retryStillOwned({
+				...armed,
+				retrySettled: true,
+				refused: false,
+				live: true,
+			}),
+		).toBe(true);
+		/* A different computer selected, in flight or settled. */
+		expect(retryStillOwned({ ...armed, sameTarget: false })).toBe(false);
+		expect(retryStillOwned({ ...armed, retriedHere: false })).toBe(false);
+	});
+
 	it("moves only when this screen retried, the refusal cleared and the route is live", () => {
 		expect(retryLanded({ retriedHere: true, refused: false, live: true })).toBe(
 			true,
