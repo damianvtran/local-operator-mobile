@@ -51,8 +51,19 @@ export interface ConnectionSnapshot {
 	/** The signed-in identity, as a LABEL only: never an email in a log, never a
 	 *  token anywhere. */
 	accountLabel: string | null;
-	/** The computers discovery found, most recently updated first. */
+	/** The computers discovery found, most recently updated first. ACCOUNT state:
+	 *  it survives a Radient `startRoute` (picking a computer) and is emptied only
+	 *  by `endRoute` (sign-out, sign-in), or by the provider on an `unauthorized`
+	 *  discovery. */
 	computers: DiscoveredComputer[];
+	/** Why the last discovery pass failed, or `null` once one succeeds. Kept apart
+	 *  from `surface` on purpose: listing an account's computers is not a ROUTE, so
+	 *  its failure must not flip a live route to `refused`, hide the rows it failed
+	 *  to refresh, or borrow a route refusal whose retry re-runs a route action
+	 *  (PR #121 design round 1, D2). The screen owns the sentence; the store keeps
+	 *  only which of the two failures it was, so a server's free text never reaches
+	 *  a banner. */
+	discoveryFailure: DiscoveryFailure | null;
 	/** The chosen computer's tunnel id, when one is chosen. */
 	tunnelId: string | null;
 	/** The relay's or the gateway's own sentence, written for a phone, displayed
@@ -68,12 +79,18 @@ export interface ConnectionSnapshot {
 	revision: number;
 }
 
+/** The two discovery outcomes that leave the list as it was: no answer, or an
+ *  answer this build cannot use. `unauthorized` is not one — it ends the account. */
+export type DiscoveryFailure = "unreachable" | "rejected";
+
 export interface ConnectionActions {
 	/** Starts a route. The ONLY entry point, so a route switch is always an
 	 *  explicit act. */
 	startRoute: (route: RouteProfile) => void;
-	/** Records the discovered computers. */
+	/** Records the discovered computers, and with them that discovery succeeded. */
 	setComputers: (computers: DiscoveredComputer[]) => void;
+	/** Records a failed discovery pass. The rows already listed stay. */
+	noteDiscoveryFailure: (failure: DiscoveryFailure) => void;
 	/** Picks a computer and moves to `minting`. */
 	selectComputer: (computer: DiscoveredComputer) => void;
 	/** The tunnel session exists and the relay answered: the route is usable. */
@@ -106,6 +123,7 @@ const INITIAL: ConnectionSnapshot = {
 	route: null,
 	accountLabel: null,
 	computers: [],
+	discoveryFailure: null,
 	tunnelId: null,
 	detail: null,
 	surface: null,
@@ -122,6 +140,18 @@ export function createConnectionStore() {
 				...INITIAL,
 				revision: state.revision + 1,
 				route,
+				/* Picking a computer STARTS a Radient route, so resetting the list here
+				 *  erased the very list the reader picked from: the picker fell back to
+				 *  "Set up a computer" while minting and stayed there if the mint failed
+				 *  (PR #121 review round 1, R1-M1; design D1). The account did not change,
+				 *  so its list and its last discovery outcome carry over. A custom route is
+				 *  a different identity entirely and must not inherit Radient's rows. */
+				...(route.mode === "radient"
+					? {
+							computers: state.computers,
+							discoveryFailure: state.discoveryFailure,
+						}
+					: {}),
 				/* A Radient route is not usable until a computer is picked, so it starts
 				 * discovering; a custom route is a single address and goes straight to
 				 * minting (which for it means "sign in with the password"). */
@@ -138,12 +168,26 @@ export function createConnectionStore() {
 			 *  (PR #120 QA round 1, Q1). A late result that belongs to a sign-out or a
 			 *  newer sign-in is dropped by the caller, which fences discovery on the
 			 *  startup-authorization revision (`refreshComputers` in
-			 *  `connection-provider.tsx`); `endRoute` still empties the list. What must
-			 *  not happen without a route — minting — stays guarded in `selectComputer`. */
+			 *  `connection-provider.tsx`); `endRoute` still empties the list, and a
+			 *  Radient `startRoute` deliberately keeps it (picking is not signing out).
+			 *  What must not happen without a route — minting — stays guarded in
+			 *  `selectComputer`.
+			 *
+			 *  A list arriving IS a successful discovery, so it clears the last failure:
+			 *  a banner that outlived the outage it reported would be the dismiss-by-
+			 *  luck the kit's banner rule forbids (design round 1, D2). */
 			set({
 				computers,
+				discoveryFailure: null,
 				phase: get().phase === "discovering" ? "discovering" : get().phase,
 			});
+		},
+
+		noteDiscoveryFailure(failure) {
+			/* No route guard, for the same reason as `setComputers`; and no `phase` or
+			 *  `surface` write, because a failed LISTING says nothing about a route that
+			 *  may be live right now. */
+			set({ discoveryFailure: failure });
 		},
 
 		selectComputer(computer) {

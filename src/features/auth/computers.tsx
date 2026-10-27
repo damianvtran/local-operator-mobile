@@ -1,8 +1,13 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import {
+	computersView,
+	type RowState,
+	rowState,
+} from "@/features/auth/computers-view";
 import {
 	connectionStore,
 	useConnection,
@@ -16,6 +21,7 @@ import {
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
@@ -91,13 +97,13 @@ function lastSeen(computer: DiscoveredComputer): string | null {
 
 const ComputerRow = ({
 	computer,
-	selected,
+	state,
 	reachability,
 	onPress,
 	onRemove,
 }: {
 	computer: DiscoveredComputer;
-	selected: boolean;
+	state: RowState;
 	reachability: Reachability;
 	onPress: () => void;
 	onRemove: () => void;
@@ -106,15 +112,21 @@ const ComputerRow = ({
 	const status = statusLabel(computer.status);
 	const reach = reachabilityLabel(reachability);
 	const seen = lastSeen(computer);
+	const spinnerColor = useTokenColor("ink-muted");
+	const selected = state === "active";
+	const connecting = state === "connecting";
 
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityState={{ selected }}
+			accessibilityState={{ selected, busy: connecting }}
 			accessibilityLabel={`${computer.name}, ${status.label}, ${reach.label}${
-				selected ? ", active" : ""
+				selected ? ", active" : connecting ? ", connecting" : ""
 			}`}
 			testID={ids.row}
+			/* A second tap while this row is minting would start a second route and
+			 *  retire the first mid-flight; the row says it is busy instead. */
+			disabled={connecting}
 			onPress={onPress}
 			onLongPress={onRemove}
 		>
@@ -136,6 +148,25 @@ const ComputerRow = ({
 							>
 								active
 							</Text>
+						) : null}
+						{/* The pending state a pick needs (design round 1, D1): the list stays
+						 *  and the tapped row says what it is doing, in a word as well as the
+						 *  kit's spinner, while the session is minted. */}
+						{connecting ? (
+							<View
+								className="shrink-0 flex-row items-center gap-1"
+								testID={CONTROL.computerConnectingMarker}
+							>
+								{/* The quiet Button's own spinner: same token, hidden from
+								 *  assistive tech because the word beside it is the content. */}
+								<ActivityIndicator
+									size="small"
+									color={spinnerColor}
+									accessibilityElementsHidden
+									importantForAccessibility="no"
+								/>
+								<Text className="text-meta text-ink-muted">Connecting…</Text>
+							</View>
 						) : null}
 					</View>
 					<Text
@@ -281,12 +312,16 @@ export default function Computers() {
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
-	const detail = useConnectionState((state) => state.detail);
+	const discoveryFailure = useConnectionState(
+		(state) => state.discoveryFailure,
+	);
 
-	/* Nothing to list and nothing in flight: the set-up path (F-2). The in-flight
-	 *  signal is the provider's `discovering` flag, not a store phase — listing an
-	 *  account's computers happens before any route exists. */
-	const empty = computers.length === 0 && !discovering;
+	/* Which branches render is decided in `computers-view.ts`, where the Node suite
+	 *  can assert it: the set-up path (F-2) only for an account Radient said is
+	 *  empty, the skeleton on the provider's `discovering` flag, and the rows
+	 *  whenever there are any. */
+	const view = computersView({ computers, discovering, discoveryFailure });
+	const empty = view.setup;
 	const [waiting, setWaiting] = useState(false);
 	const [reachability, setReachability] = useState<
 		Record<string, Reachability>
@@ -332,7 +367,7 @@ export default function Computers() {
 
 	return (
 		<Screen
-			title={empty ? "Set up a computer" : "Computers"}
+			title={view.title}
 			testID={SCREEN.computers}
 			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
 			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
@@ -372,37 +407,43 @@ export default function Computers() {
 				/>
 			) : null}
 
-			{/* A failure that kept the list on screen says so in a banner and leaves
-			 *  the cached rows below it: the cold-start rule, and the difference
-			 *  between stale and blank. */}
-			{!refusal && computers.length > 0 && detail ? (
+			{/* A failed discovery says so in a banner and leaves the cached rows below
+			 *  it: the cold-start rule, and the difference between stale and blank.
+			 *  It is the store's own discovery failure, not the route's refusal, so
+			 *  "Try now" re-runs discovery itself (D2/D3: it used to re-run a route
+			 *  action that, with no route, did nothing). It goes away on the next
+			 *  successful discovery, never on a dismiss (`banner.tsx`). */}
+			{view.banner ? (
 				<Banner
 					testID={CONTROL.computersBanner}
 					tone="warning"
-					message={detail}
+					message={view.banner}
 					action={{
-						label: "Retry",
+						label: "Try now",
 						onPress: () => void refreshComputers(),
+						loading: discovering,
 						testID: CONTROL.computersRetryAction,
 					}}
 				/>
 			) : null}
 
-			{phase === "discovering" && computers.length === 0 ? (
+			{view.skeleton ? (
 				<View className="gap-3 pt-4">
 					<Skeleton lines={1} />
 					<Skeleton lines={1} />
 				</View>
 			) : null}
 
-			{!refusal && computers.length > 0 ? (
+			{/* The rows stay under a refusal too. A failed mint is about ONE computer;
+			 *  hiding the others left the reader nothing to pick instead (D1). */}
+			{view.list ? (
 				<View testID={REGION.computersList}>
 					<SectionHeader label="Your computers" />
 					{computers.map((computer) => (
 						<ComputerRow
 							key={computer.tunnelId}
 							computer={computer}
-							selected={computer.tunnelId === tunnelId}
+							state={rowState(computer, { tunnelId, phase })}
 							reachability={reachability[computer.hostname] ?? "checking"}
 							onPress={() => void selectComputer(computer)}
 							onRemove={() => setRemoveTarget(computer)}

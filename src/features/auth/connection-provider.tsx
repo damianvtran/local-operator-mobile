@@ -763,6 +763,10 @@ export const ConnectionProvider = ({
 					 *  unreadable answer says nothing about whether the grant is still good. */
 					void revokeAuthorization(clearStoredOauth);
 					setDiscovering(false);
+					/* The rows go with the grant. A revoked account's list left in the store
+					 *  stayed rendered in Settings beside "Not signed in with Radient" (PR #121
+					 *  review round 1, R1-m1), now that the list outlives a route start. */
+					connectionStore.getState().setComputers([]);
 					/* The landing latch goes with the credential (review round 5, r5-n1). This
 					 *  is the SECOND place a session ends — `signOut` is the other — and a latch
 					 *  left set here would route a signed-out reader to `/tunnels` the moment
@@ -774,17 +778,15 @@ export const ConnectionProvider = ({
 						displayableMessage: "Your Radient session expired.",
 					});
 					return;
+				/* The two failures that say nothing about the grant are ACCOUNT-level, not a
+				 *  route refusal. Routed through `noteFailure` they flipped a live route to
+				 *  `refused`, hid the rows they failed to refresh, named the first computer
+				 *  as the thing "not ready yet", and offered a Try now that re-ran a route
+				 *  action instead of this one (PR #121 design round 1, D2/D3). The Computers
+				 *  screen renders this as a banner whose action calls `refreshComputers`. */
 				case "unreachable":
-					connectionStore.getState().noteFailure({
-						surface: "retry",
-						displayableMessage: result.message,
-					});
-					return;
 				case "rejected":
-					connectionStore.getState().noteFailure({
-						surface: "diagnostic",
-						displayableMessage: result.message,
-					});
+					connectionStore.getState().noteDiscoveryFailure(result.kind);
 					return;
 			}
 		} finally {
@@ -1333,6 +1335,7 @@ export const ConnectionProvider = ({
 	const retryAfterMs = useConnectionState((state) => state.retryAfterMs);
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
+	const tunnelId = useConnectionState((state) => state.tunnelId);
 
 	const refusal = useMemo<RefusalView | null>(() => {
 		if (!surface || surface === "none") return null;
@@ -1343,12 +1346,22 @@ export const ConnectionProvider = ({
 		 *  `relay-stopped` headline that already says "The relay" — the frame read
 		 *  "The relay is not running on The relay." A bare address is the one name
 		 *  this app is certain the reader recognises." */
-		const subject =
-			computers.length > 0
-				? (computers[0]?.name ?? "Your computer")
-				: route?.mode === "radient"
+		/* The computer is the CHOSEN one, matched by tunnel id — never `computers[0]`.
+		 *  The list now outlives a route start, so the first row is just whichever
+		 *  computer Radient listed first: a refusal for the second computer named the
+		 *  first (PR #121 review round 1, R1-m2). */
+		const chosen = computers.find((computer) => computer.tunnelId === tunnelId);
+		/* No route at all means the refusal came from the ACCOUNT side — a cold-start
+		 *  restore that could not reach Radient, or a grant Radient refused — since a
+		 *  custom route always exists before it can fail. "That address" named an
+		 *  address the reader never typed (design round 1, D3). */
+		const subject = chosen
+			? chosen.name
+			: route === null
+				? "Radient"
+				: route.mode === "radient"
 					? "Your computer"
-					: (route?.baseUrl ?? "That address");
+					: route.baseUrl;
 		return refusalFromError({
 			error: lastError,
 			surface,
@@ -1356,7 +1369,7 @@ export const ConnectionProvider = ({
 			retryAfterMs,
 			subject,
 		});
-	}, [computers, detail, lastError, retryAfterMs, route, surface]);
+	}, [computers, detail, lastError, retryAfterMs, route, surface, tunnelId]);
 
 	const value = useMemo<Connection>(
 		() => ({

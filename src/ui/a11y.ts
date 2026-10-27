@@ -190,6 +190,9 @@ export const CONTROL = {
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
 	 *  state rather than inferred from a colour. */
 	computerSelectedMarker: "computer-selected-marker",
+	/** Set on the row being connected while its session is minted: the list stays
+	 *  and the tapped row carries the pending state (PR #121, D1). */
+	computerConnectingMarker: "computer-connecting-marker",
 
 	settingsSignOut: "settings-sign-out",
 	settingsThemeDark: "settings-theme-dark",
@@ -1058,6 +1061,9 @@ export const REGION = {
 	welcomeHeadline: "welcome-headline",
 
 	settingsConnection: "settings-section-connection",
+	/** The Settings Refresh's failure line: discovery failures are account state,
+	 *  not a route refusal (PR #121, D2). */
+	settingsDiscoveryFailure: "settings-discovery-failure",
 	settingsAppearance: "settings-section-appearance",
 	settingsDiagnostics: "settings-section-diagnostics",
 	/** Notifications: the permission state and the honest machine line

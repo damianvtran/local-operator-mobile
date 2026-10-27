@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
+import { discoveryFailureMessage } from "@/features/auth/computers-view";
 import {
 	useConnection,
 	useConnectionState,
@@ -69,6 +70,9 @@ export default function Settings() {
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const accountLabel = useConnectionState((state) => state.accountLabel);
+	const discoveryFailure = useConnectionState(
+		(state) => state.discoveryFailure,
+	);
 
 	const { theme, setPreference } = useThemePreference();
 	const textScale = useTextScale();
@@ -212,6 +216,18 @@ export default function Settings() {
 								</View>
 							))}
 						</View>
+					) : null}
+					{/* A failed Refresh is an ACCOUNT failure now, not a route refusal (PR
+					 *  #121, D2), so it no longer surfaces as this screen's refusal: the
+					 *  line under the list is where this screen's Refresh reports it. Same
+					 *  sentence as the Computers banner, from one place. */}
+					{discoveryFailure ? (
+						<Text
+							className="text-body-sm text-warning"
+							testID={REGION.settingsDiscoveryFailure}
+						>
+							{discoveryFailureMessage(discoveryFailure, computers.length > 0)}
+						</Text>
 					) : null}
 					{/* `flex-wrap`: two controls side by side are 2 x (label + padding) wide,
 					 *  and at 200 % text that is wider than a 320 pt phone — the row ran to

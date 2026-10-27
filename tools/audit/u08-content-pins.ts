@@ -174,14 +174,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `composerLimit` and a self-measured top (`composer.tsx` and the session screen
 	 * `app/(app)/session/[id].tsx`), so BOTH trees move. Eighth, lint-only: the
 	 * composer's re-measure effect reads `measurementKey` so the dependency the
-	 * ceiling contract needs is a real one (`src` only, no geometry change). */
+	 * ceiling contract needs is a real one (`src` only, no geometry change).
+	 *
+	 * Re-pinned 2026-10-27 by PR #121, deliberately, `src` only (`app` unchanged):
+	 * `f41245c` lets Radient discovery record the account's computers before a route
+	 * exists (`src/state/connection-store.ts`), and the round-1 remediation commit
+	 * on top of it keeps that list through a pick and a failed Refresh (the store,
+	 * `computers.tsx` + new `computers-view.ts`, the provider's discovery arms and
+	 * refusal subject, Settings' failure line, the `retry` refusal's copy). Picker
+	 * and refusal screens only; nothing on the U-08 proofs' measured scenes. */
 	app: "e8924ef20031d42a928a92143d25950464c21790bddf89730f8c71a282ce4279",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "ca5df859debaa1f8a00e7e49a8bd791fa5cddce1e5a6678f43ac01686e11eb8c",
+	src: "953800ab4ec91fa61d0fd2e0ca9db62bd7dba95281390a68aa6c5a71af3fb589",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

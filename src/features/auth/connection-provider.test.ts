@@ -223,6 +223,11 @@ async function relay(
 		/** Holds `GET /v1/tunnels` until `releaseTunnels`, so a test can end the
 		 *  account (sign out) while discovery is still in flight. */
 		holdTunnels?: boolean;
+		/** Holds `POST /v1/tunnels/session/code` until `releaseCode`, so a test can
+		 *  look at the store while a pick is minting. */
+		holdCode?: boolean;
+		/** Answers the session code request with a 500: a failed mint. */
+		failCode?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -235,6 +240,11 @@ async function relay(
 	const releaseHistory = deferred();
 	const tunnelsReceived = deferred();
 	const releaseTunnels = deferred();
+	const codeReceived = deferred();
+	const releaseCode = deferred();
+	/* What `GET /v1/tunnels` answers next: the listed tunnels, or a status a test
+	 *  switches to mid-run to fail a Refresh and then recover it. */
+	let tunnelsAnswer: "list" | 500 | 401 = "list";
 	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
@@ -254,10 +264,25 @@ async function relay(
 		if (path === "/v1/tunnels") {
 			tunnelsReceived.resolve();
 			if (options.holdTunnels) await releaseTunnels.promise;
+			if (tunnelsAnswer === 500) {
+				response.writeHead(500, { "content-type": "text/plain" });
+				response.end("Synthetic control-plane failure");
+				return;
+			}
+			if (tunnelsAnswer === 401) {
+				json({ msg: "unauthorized" }, 401);
+				return;
+			}
 			json({ msg: "ok", result: options.tunnels ?? [] });
 			return;
 		}
 		if (path === "/v1/tunnels/session/code") {
+			codeReceived.resolve();
+			if (options.holdCode) await releaseCode.promise;
+			if (options.failCode) {
+				json({ msg: "synthetic mint failure" }, 500);
+				return;
+			}
 			json({ code: `synthetic-code-${++codeCount}` });
 			return;
 		}
@@ -424,6 +449,11 @@ async function relay(
 		releaseHistory,
 		tunnelsReceived,
 		releaseTunnels,
+		codeReceived,
+		releaseCode,
+		answerTunnels: (answer: "list" | 500 | 401) => {
+			tunnelsAnswer = answer;
+		},
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -1566,5 +1596,108 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 		expect(mock.events).toContain("GET /v1/tunnels");
 		expect(connectionStore.getState().computers).toEqual([]);
 		expect(connectionStore.getState().phase).toBe("signed-out");
+	});
+});
+
+describe("the account's computers outlive a pick and a failed refresh (PR #121 round 1)", () => {
+	/* Hostnames the synthetic transport routes to the loopback relay, so a pick
+	 *  can mint against the control plane and then go live against the relay. */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const ids = () =>
+		connectionStore
+			.getState()
+			.computers.map((c) => c.tunnelId)
+			.sort();
+	const listed = ["tun-synthetic-1", "tun-synthetic-2"];
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(ids()).toEqual(listed);
+		return mock;
+	}
+
+	it("keeps the list while the picked computer mints and after it is live (R1-M1, D1)", async () => {
+		const mock = await signedIn({ holdCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		let picking!: Promise<void>;
+		await act(async () => {
+			picking = latest.selectComputer(second);
+		});
+		await mock.codeReceived.promise;
+		try {
+			/* Mid-mint: the route exists, the row is the chosen one, the list is whole. */
+			expect(connectionStore.getState().phase).toBe("minting");
+			expect(connectionStore.getState().tunnelId).toBe(second.tunnelId);
+			expect(ids()).toEqual(listed);
+		} finally {
+			/* Released even when an assertion fails, so a regression reports here
+			 *  rather than as a held mint timing out every later test's teardown. */
+			mock.releaseCode.resolve();
+		}
+		await act(async () => {
+			await picking;
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(ids()).toEqual(listed);
+	});
+
+	it("keeps the list when the mint fails, and names the PICKED computer (R1-m2)", async () => {
+		await signedIn({ failCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(ids()).toEqual(listed);
+		/* `computers[0]` was the subject before; the failure belongs to the second. */
+		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+	});
+
+	it("records a failed Refresh as account state over the cached rows, and a later success clears it (D2)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(500);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(ids()).toEqual(listed);
+		expect(connectionStore.getState().discoveryFailure).toBe("rejected");
+		/* Not a route refusal: nothing on screen blames a computer, and no refusal
+		 *  hides the rows. */
+		expect(connectionStore.getState().surface).toBeNull();
+		expect(latest.refusal).toBeNull();
+		mock.answerTunnels("list");
+		const before = mock.events.filter((e) => e === "GET /v1/tunnels").length;
+		/* What the banner's "Try now" calls. */
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(mock.events.filter((e) => e === "GET /v1/tunnels").length).toBe(
+			before + 1,
+		);
+		expect(connectionStore.getState().discoveryFailure).toBeNull();
+		expect(ids()).toEqual(listed);
+	});
+
+	it("clears the rows when Radient refuses the grant (R1-m1)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(401);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().surface).toBe("sign-in");
 	});
 });

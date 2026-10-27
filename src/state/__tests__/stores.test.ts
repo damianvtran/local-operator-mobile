@@ -161,6 +161,58 @@ describe("the connection store is the only place a route starts or ends", () => 
 		expect(store.getState().computers).toEqual([]);
 	});
 
+	it("keeps the account's computers through a Radient route start, not a custom one", () => {
+		/* Picking a computer starts a Radient route; resetting the list there erased
+		 *  the list the reader picked from (PR #121 review round 1, R1-M1). */
+		const store = createConnectionStore();
+		const discovered = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		store.getState().setComputers([discovered]);
+		store.getState().noteDiscoveryFailure("unreachable");
+		store.getState().startRoute({
+			mode: "radient",
+			hostname: "h",
+			tunnelId: "t1",
+		});
+		expect(store.getState().computers).toEqual([discovered]);
+		expect(store.getState().discoveryFailure).toBe("unreachable");
+		/* A custom route is another identity: Radient's rows do not follow it. */
+		store.getState().startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example",
+			allowInsecure: false,
+		});
+		expect(store.getState().computers).toEqual([]);
+		expect(store.getState().discoveryFailure).toBeNull();
+	});
+
+	it("records a discovery failure without touching the route, and a list clears it", () => {
+		/* A failed LISTING is account state (design round 1, D2): it must not flip a
+		 *  live route to refused, and the next successful discovery clears it. */
+		const store = createConnectionStore();
+		store.getState().startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example",
+			allowInsecure: false,
+		});
+		store.getState().markLive();
+		store.getState().noteDiscoveryFailure("rejected");
+		expect(store.getState().phase).toBe("live");
+		expect(store.getState().surface).toBeNull();
+		expect(store.getState().discoveryFailure).toBe("rejected");
+		store.getState().setComputers([]);
+		expect(store.getState().discoveryFailure).toBeNull();
+	});
+
 	it("sends a sign-in failure back to signed-out and keeps the route", () => {
 		const store = createConnectionStore();
 		store.getState().startRoute({

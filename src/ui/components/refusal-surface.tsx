@@ -124,7 +124,11 @@ const NEXT: Record<RefusalKind, () => string> = {
 	 *  scoping cannot keep. */
 	"sign-in": () =>
 		"Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
-	retry: () => "It clears by itself — this will keep trying.",
+	/* No promise of an automatic retry: nothing on the paths that raise this
+	 *  surface (a cold-start restore that could not reach Radient, a mint's network
+	 *  failure) schedules one, and a driven wait saw ONE request in 30 s (PR #121
+	 *  design round 1, D2/D3). The button below is the retry. */
+	retry: () => "Usually a passing network problem. Try again in a moment.",
 	diagnostic: () =>
 		"Nothing on this screen can fix it; this is a bug in the app.",
 	"certificate-rejected": () =>
@@ -228,15 +232,15 @@ export const RefusalSurface = ({
 					<Text className="text-mono-sm text-ink-muted">{remedy}</Text>
 				</View>
 			) : null}
-			{kind === "retry" ? (
+			{/* Only the server's own backoff is worth a line, and it is stated as
+			 *  advice, not as a retry this screen schedules — none is scheduled (D2). */}
+			{kind === "retry" && waitSeconds ? (
 				<View className="flex-row items-center gap-2">
 					<Text
 						className="text-body-sm text-ink-dim"
 						testID={REGION.connectionErrorClearsByItself}
 					>
-						{waitSeconds
-							? `Trying again in about ${waitSeconds}s.`
-							: "Trying again in a moment."}
+						{`Wait about ${waitSeconds}s before trying again.`}
 					</Text>
 				</View>
 			) : null}
