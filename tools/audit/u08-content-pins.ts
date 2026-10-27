@@ -228,14 +228,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (the grant's account id), kept names, the stored-grant load before a pick,
 	 * the registry-id own-address hand-off and its password-first entry, the active
 	 * row's accent bar, and the Computers header's "Switch computer". Same screens;
-	 * no U-08 scene. `app` unchanged. Recomputed with `--print` from the staged tree. */
+	 * no U-08 scene. `app` unchanged. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-2 remediation, `src` only: Settings'
+	 * refusal surface, the refusal surface's live region, the Computers header's
+	 * measured stack width and add mode, the switcher's per-open account state and
+	 * Add a computer target, and the password-entry copy. No U-08 scene changes;
+	 * `app` unchanged. Recomputed with `--print` from the staged tree. */
 	app: "236a990f4d9a5016eeaf0c6cb924be4630965584e8aaafcc32973a4dbcab0b15",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "e98b2b2cb4c2a45209208f0d8f03480f3f777887d74c836db2c031a4f4a0b589",
+	src: "eed4a6cde2da8339a4f9277819427bb92ec2605f8fee150d3a3edad9d4675f4d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

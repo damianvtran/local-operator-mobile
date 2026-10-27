@@ -620,6 +620,54 @@ export function rowHint(
 }
 
 /**
+ * What the sheet's "Add a computer" does: push the set-up paths, or just close
+ * because the screen behind already shows them.
+ *
+ * The Computers route shows the set-up paths for an account with nothing listed
+ * and in its add mode (`ADD_COMPUTER_HREF`); there, pushing again stacked an
+ * identical screen and the tap looked dead (UX round 1, U6). Over a POPULATED list
+ * a bare close left the reader on rows with no add path (UX round 2, U12), so that
+ * case — and every other screen — pushes the add mode.
+ */
+export function addComputerTarget(input: {
+	pathname: string;
+	adding: boolean;
+	listed: number;
+}): "push" | "close" {
+	if (input.pathname !== "/tunnels") return "push";
+	return input.adding || input.listed === 0 ? "close" : "push";
+}
+
+/**
+ * The sentence under "Enter the password for <name>", from what the phone's ONE
+ * password slot holds. The switcher reaches this screen both when the slot belongs
+ * to another address and when there is no slot at all (the own tunnel removed in
+ * Settings, a cold start with the password not saved); the first sentence said
+ * "it belongs to another address" in both, which was false in the second (review
+ * round 2 n1, UX U15). Saving costs the other computer's password only when there
+ * is one, so only that case says so, once (design round 2, D11).
+ */
+export function passwordEntryExplanation(
+	slotBaseUrl: string | null,
+	url: string,
+): string {
+	const slot =
+		slotBaseUrl === null
+			? "empty"
+			: sameAddress(slotBaseUrl, url)
+				? "this-address"
+				: "another-address";
+	switch (slot) {
+		case "another-address":
+			return "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.";
+		case "empty":
+			return "This phone has no relay password saved. Enter this computer's password, test it, then save.";
+		case "this-address":
+			return "This phone's saved relay password is for this address. Test it, then save.";
+	}
+}
+
+/**
  * What the own-address screen fills in when the switcher hands it a saved computer
  * with no stored password.
  *

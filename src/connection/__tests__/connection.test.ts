@@ -510,6 +510,34 @@ describe("the Radient account id comes from the id_token's sub (PR #122 M2)", ()
 		expect(tokens.account_id).toBe("acct_placeholder");
 	});
 
+	it("reads sub on the authorization-code grant too (review round 2, m2)", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at1",
+				refresh_token: "rt1",
+				expires_in: 3600,
+				id_token: jwt({ sub: "acct_code_placeholder", email: "x@example.com" }),
+			}),
+		);
+		const tokens = await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+			fetchImpl,
+			now: () => 0,
+		});
+		expect(tokens.account_id).toBe("acct_code_placeholder");
+		/* A sign-in with no id_token knows no account, rather than guessing one. */
+		const bare = recordingFetch(() =>
+			jsonResponse({ access_token: "at1", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+					fetchImpl: bare.fetchImpl,
+					now: () => 0,
+				})
+			).account_id,
+		).toBeNull();
+	});
+
 	it("keeps the previous id when a refresh carries no id_token, and is null when none was ever known", async () => {
 		const { fetchImpl } = recordingFetch(() =>
 			jsonResponse({ access_token: "at2", expires_in: 3600 }),

@@ -3,7 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { isPrivateHost } from "@/connection";
-import { ownTunnelPrefill } from "@/features/auth/computer-switcher-view";
+import {
+	ownTunnelPrefill,
+	passwordEntryExplanation,
+} from "@/features/auth/computer-switcher-view";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
 	COMPUTER_COMMANDS,
@@ -228,9 +231,7 @@ export default function OwnTunnel() {
 						{`Enter the password for ${known.name}`}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
-						This phone keeps one relay password, and it belongs to another
-						address. Enter this computer's, test it, then save — saving makes it
-						the one this phone keeps.
+						{passwordEntryExplanation(saved?.baseUrl ?? null, url)}
 					</Text>
 					<Text
 						className="text-mono-sm text-ink-dim"
@@ -243,7 +244,7 @@ export default function OwnTunnel() {
 						label="Relay password"
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password `lop mobile` asked for"
+						placeholder="The password from lop mobile"
 						secureTextEntry
 						autoCapitalize="none"
 						autoFocus
@@ -326,7 +327,7 @@ export default function OwnTunnel() {
 						label="Relay password"
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password `lop mobile` asked for"
+						placeholder="The password from lop mobile"
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}

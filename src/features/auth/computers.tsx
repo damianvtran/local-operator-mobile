@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
@@ -39,6 +39,7 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
+import { computersHeaderStackWidth } from "@/ui/size-class";
 
 /**
  * Computers: discovery, the picker, and the set-up path (docs/ux/flows.md § 2 and
@@ -338,14 +339,17 @@ export default function Computers() {
 	 *  the new grant's discovery answered (QA round 2, Q-r2-1/Q-r2-2). */
 	const signInPending = signInState.kind !== "idle";
 	const signedOut = refusal?.kind === "sign-in" || signInPending;
+	const [waiting, setWaiting] = useState(false);
+	/* `?add=1` is the "Add a computer" hand-off (`ADD_COMPUTER_HREF`). */
+	const { add } = useLocalSearchParams<{ add?: string }>();
 	const view = computersView({
 		computers,
 		discovering,
 		discoveryFailure,
 		signedOut,
+		adding: add === "1",
 	});
 	const empty = view.setup;
-	const [waiting, setWaiting] = useState(false);
 	/* The tunnel tapped on THIS screen, so arriving with a route already live is
 	 *  not mistaken for a pick that just landed (U1). */
 	const [picked, setPicked] = useState<string | null>(null);
@@ -369,6 +373,9 @@ export default function Computers() {
 	}, [canGoBack, phase, picked, router, tunnelId]);
 
 	const back = backAction({ canGoBack, routed: route !== null });
+	/* Named once: the header renders them AND sizes its stacking point from them. */
+	const showSwitch = !empty || phoneKnowsComputers;
+	const showRefresh = !empty && !signedOut;
 	const [reachability, setReachability] = useState<
 		Record<string, Reachability>
 	>({});
@@ -406,8 +413,24 @@ export default function Computers() {
 	}, [refreshComputers]);
 
 	const wait = useConnectorWait({ acquire, enabled: waiting });
+	/* The computers listed when the wait started. "Add a computer" opens the set-up
+	 *  path over an account that already has some (U12), and the wait is for the
+	 *  NEW one: the first listed computer would otherwise be offered as the one that
+	 *  just appeared. Empty for an empty account, so that path is unchanged. */
+	const listedAtWait = useRef<ReadonlySet<string>>(new Set());
+	const startWaiting = useCallback(() => {
+		listedAtWait.current = new Set(
+			connectionStore.getState().computers.map((computer) => computer.tunnelId),
+		);
+		setWaiting(true);
+	}, []);
 	const appeared = useMemo(
-		() => computers.find((computer) => computer.supportsLocalOperator) ?? null,
+		() =>
+			computers.find(
+				(computer) =>
+					computer.supportsLocalOperator &&
+					!listedAtWait.current.has(computer.tunnelId),
+			) ?? null,
 		[computers],
 	);
 
@@ -415,6 +438,16 @@ export default function Computers() {
 		<Screen
 			title={view.title}
 			testID={SCREEN.computers}
+			/* This header's own fit, from the controls it is rendering now: "Switch
+			 *  computer" made the cluster heavier than the kit floor allows for, and the
+			 *  title clipped to "Comp…" at 390 pt (PR #122 design round 2, D10; UX U13).
+			 *  `computersHeaderStackWidth` holds the measured pieces. */
+			stackBelowWidth={computersHeaderStackWidth({
+				title: view.title,
+				back: back !== null,
+				switcher: showSwitch,
+				refresh: showRefresh,
+			})}
 			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
 			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
 			 *  from Settings and from a refusal surface — arriving from any of them with
@@ -442,7 +475,7 @@ export default function Computers() {
 				 *  (U4) — the banner's Try now already worked this way. Refresh is
 				 *  hidden while signed out: a listing with no grant can only be refused
 				 *  again. */
-				!empty || phoneKnowsComputers ? (
+				showSwitch || showRefresh ? (
 					<View className="flex-row flex-wrap items-center gap-1">
 						{/* The switcher beside Refresh: this screen lists only the account's
 						 *  Radient computers, and the switcher is the one place that also
@@ -452,7 +485,7 @@ export default function Computers() {
 						 *  a computer (PR #122 QA round 1, Q3; review n2; UX round 1, U5).
 						 *  Labelled as in Settings: a bare "Switch" beside "Refresh" did
 						 *  not say what it switches (U5). */}
-						{!empty || phoneKnowsComputers ? (
+						{showSwitch ? (
 							<Button
 								testID={CONTROL.computersSwitch}
 								label="Switch computer"
@@ -461,7 +494,7 @@ export default function Computers() {
 								size="sm"
 							/>
 						) : null}
-						{!empty && !signedOut ? (
+						{showRefresh ? (
 							<Button
 								testID={CONTROL.computersRefresh}
 								label="Refresh"
@@ -567,7 +600,7 @@ export default function Computers() {
 						<TunnelPaths onOwnTunnel={() => router.push("/own-tunnel")}>
 							<SetupComputer
 								billing={billing}
-								onWaitForConnector={() => setWaiting(true)}
+								onWaitForConnector={startWaiting}
 								waiting={false}
 							/>
 						</TunnelPaths>

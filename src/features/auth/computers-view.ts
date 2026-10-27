@@ -59,6 +59,17 @@ export function rowState(
 	return "idle";
 }
 
+/**
+ * Where every "Add a computer" goes: the Computers route in its add mode, which
+ * shows the set-up paths (Radient, or your own tunnel) even when the account
+ * already lists computers. One constant so the switcher's footer and Settings
+ * cannot drift into two destinations for one label (PR #122 UX round 2, U12).
+ */
+export const ADD_COMPUTER_HREF = {
+	pathname: "/tunnels",
+	params: { add: "1" },
+} as const;
+
 export type ComputersView = {
 	title: "Computers" | "Set up a computer";
 	/** The loading skeleton: a discovery pass is in flight and nothing is cached. */
@@ -80,8 +91,24 @@ export function computersView(input: {
 	 *  with it (R1-m1), so an empty list here means "signed out", not "empty
 	 *  account". */
 	signedOut?: boolean;
+	/** The reader asked to ADD a computer (`ADD_COMPUTER_HREF`): the set-up paths,
+	 *  whatever the account already lists. */
+	adding?: boolean;
 }): ComputersView {
 	const rows = input.computers.length > 0;
+	/* An explicit "Add a computer" is the set-up path even over a populated list:
+	 *  that list offers no way to add one, so the switcher's and Settings' "Add a
+	 *  computer" landed on rows with nothing to add (PR #122 UX round 2, U12). The
+	 *  rows are one Back away, on the screen the reader came from. Signed out still
+	 *  wins — an add with a refused grant would only be refused again. */
+	if (input.adding && !input.signedOut)
+		return {
+			title: "Set up a computer",
+			skeleton: false,
+			list: false,
+			banner: null,
+			setup: true,
+		};
 	/* "Set up a computer" is an ANSWER — Radient listed none — so it needs a
 	 *  discovery that finished, did not fail, and was asked with a grant Radient
 	 *  still accepts. Stacking it under an error showed a reader on a flaky

@@ -1,6 +1,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DiscoveredComputer } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import { createConnectionStore } from "@/state/connection-store";
 import { CONTROL, switcherRowIds } from "@/ui/a11y";
@@ -30,6 +31,8 @@ const host = vi.hoisted(() => ({
 	closed: 0,
 	pushed: [] as unknown[],
 	pathname: "/settings",
+	params: {} as Record<string, string>,
+	readGate: null as Promise<void> | null,
 	selectComputer: null as null | ((computer: unknown) => Promise<void>),
 }));
 
@@ -73,6 +76,7 @@ vi.mock("expo-web-browser", () => ({ openBrowserAsync: async () => ({}) }));
 vi.mock("expo-router", () => ({
 	useRouter: () => ({ push: (target: unknown) => host.pushed.push(target) }),
 	usePathname: () => host.pathname,
+	useGlobalSearchParams: () => host.params,
 }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
 vi.mock("@/ui/components/button", () => ({
@@ -106,8 +110,16 @@ vi.mock("@/features/auth/connector-wait", () => ({
 		}),
 }));
 vi.mock("@/features/auth/tunnel-storage", () => ({
-	readSavedComputers: async () => host.saved,
-	readStoredRadientAccount: async () => host.account,
+	/* `readGate` holds the registry read so a test can look at the frame BEFORE it
+	 *  lands; without it, async `act` lets the read finish inside the same render. */
+	readSavedComputers: async () => {
+		await host.readGate;
+		return host.saved;
+	},
+	readStoredRadientAccount: async () => {
+		await host.readGate;
+		return host.account;
+	},
 	unhideRadientComputer: async () => {},
 	unhideSavedComputer: async () => {},
 }));
@@ -161,6 +173,23 @@ const radient = (
 	identity: null,
 });
 
+/* A discovered row in the shape the provider stores (`DiscoveredComputer`). */
+const listed = (
+	tunnelId: string,
+	hostname: string,
+	name: string,
+): DiscoveredComputer => ({
+	tunnelId,
+	name,
+	deviceId: `device-${tunnelId}`,
+	hostname,
+	status: "ready",
+	rawStatus: "active",
+	supportsLocalOperator: true,
+	billing: { eligible: true, message: null },
+	updatedAt: 0,
+});
+
 let root: ReturnType<typeof createRoot> | null = null;
 let visible = true;
 async function render() {
@@ -194,6 +223,8 @@ beforeEach(() => {
 	host.closed = 0;
 	host.pushed.length = 0;
 	host.pathname = "/settings";
+	host.params = {};
+	host.readGate = null;
 	host.selectComputer = null;
 	visible = true;
 	store.api = createConnectionStore();
@@ -321,17 +352,82 @@ describe("saved Radient computers follow the account (M2)", () => {
 	});
 });
 
-describe("Add a computer from the Computers screen (U6)", () => {
-	it("closes instead of pushing a second Computers screen, and pushes it from anywhere else", async () => {
+describe("Add a computer reaches an add path from every screen (U6, U12)", () => {
+	const ADD = { pathname: "/tunnels", params: { add: "1" } };
+
+	it("closes over a Computers screen already showing the set-up paths", async () => {
+		/* An empty account: the screen behind IS the set-up path (U6). */
 		host.pathname = "/tunnels";
 		await render();
 		await flush();
 		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
 		expect(host.closed).toBe(1);
 		expect(host.pushed).toEqual([]);
+		/* The add mode itself: the same. */
+		host.params = { add: "1" };
+		await act(async () =>
+			store.api
+				?.getState()
+				.setComputers([listed("t1", HOST_AWAKE, "Awake computer")]),
+		);
+		await render();
+		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
+		expect(host.pushed).toEqual([]);
+	});
+
+	it("opens the set-up paths over a POPULATED Computers list, and from Settings (U12)", async () => {
+		host.pathname = "/tunnels";
+		await act(async () =>
+			store.api
+				?.getState()
+				.setComputers([listed("t1", HOST_AWAKE, "Awake computer")]),
+		);
+		await render();
+		await flush();
+		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
+		expect(host.closed).toBe(1);
+		expect(host.pushed).toEqual([ADD]);
 		host.pathname = "/settings";
 		await render();
 		await act(async () => host.presses.get(CONTROL.switcherAddComputer)?.());
-		expect(host.pushed).toEqual(["/tunnels"]);
+		expect(host.pushed).toEqual([ADD, ADD]);
+	});
+});
+
+describe("reopening after an account switch shows and probes only the new account (review round 2, m1)", () => {
+	it("never paints or probes account A's computer once B is signed in", async () => {
+		host.saved = [
+			radient("r1", "t1", HOST_AWAKE, "Account A computer", "acct-A"),
+		];
+		host.account = "acct-A";
+		await render();
+		await flush();
+		await render();
+		expect(words()).toContain("Account A computer");
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+
+		/* Close, then "Sign in again" as B: the registry and the grant both move. */
+		visible = false;
+		await render();
+		host.account = "acct-B";
+		let landRead!: () => void;
+		host.readGate = new Promise<void>((resolve) => {
+			landRead = resolve;
+		});
+		visible = true;
+		/* The reopen's frames BEFORE the registry read lands. */
+		await render();
+		await flush();
+		await render();
+		expect(words()).not.toContain("Account A computer");
+		/* Nor a "No computers" answer the read has not given yet. */
+		expect(words()).not.toContain("No computers on this phone yet.");
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		await act(async () => landRead());
+		await flush();
+		await render();
+		expect(words()).not.toContain("Account A computer");
+		/* A's host was probed once, for A's open, and never again. */
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
 	});
 });

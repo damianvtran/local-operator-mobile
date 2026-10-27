@@ -1,4 +1,4 @@
-import { usePathname, useRouter } from "expo-router";
+import { useGlobalSearchParams, usePathname, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Check, Laptop, Plus, Server } from "lucide-react-native";
 import {
@@ -16,6 +16,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import {
+	addComputerTarget,
 	healthLabel,
 	type ProbeState,
 	pendingKeyFor,
@@ -29,6 +30,7 @@ import {
 	switcherSections,
 	switcherTap,
 } from "@/features/auth/computer-switcher-view";
+import { ADD_COMPUTER_HREF } from "@/features/auth/computers-view";
 import {
 	connectionStore,
 	useConnection,
@@ -281,6 +283,7 @@ export function ComputerSwitcherSheet({
 }) {
 	const router = useRouter();
 	const pathname = usePathname();
+	const { add: addParam } = useGlobalSearchParams<{ add?: string }>();
 	const {
 		selectComputer,
 		connectCustom,
@@ -314,6 +317,8 @@ export function ComputerSwitcherSheet({
 	 *  the finger as probes answer. A ref, not state: it changes only at open. */
 	const order = useRef<string[] | null>(null);
 	const [now, setNow] = useState(() => Date.now());
+	/* The account the cached probe answers were gathered under (see the read). */
+	const probedForAccount = useRef<string | null>(null);
 
 	/* Re-read on every open: the registry changes behind the sheet (a route went
 	 *  live, a Remove on the Computers screen), and the switcher is opened rarely
@@ -326,6 +331,12 @@ export function ComputerSwitcherSheet({
 			setLoaded(false);
 			pendingRef.current = null;
 			setPendingKey(null);
+			/* The registry snapshot and its account are this OPEN's. Kept across a
+			 *  close, the next open painted them for a frame — and probed them — before
+			 *  its own read landed, so after an A→B sign-in one of A's computers
+			 *  flashed and had its `/healthz` hit (PR #122 review round 2, m1). */
+			setSaved([]);
+			setRadientAccount(null);
 			return;
 		}
 		setNow(Date.now());
@@ -333,6 +344,13 @@ export function ComputerSwitcherSheet({
 		void Promise.all([readSavedComputers(), readStoredRadientAccount()]).then(
 			([entries, account]) => {
 				if (!live) return;
+				/* Another account's answers are not this one's: a host that answered
+				 *  for A says nothing about B, so the cached words go with the account. */
+				if (account !== probedForAccount.current) {
+					probedForAccount.current = account;
+					setProbes({});
+					setAnsweredAt({});
+				}
 				setSaved(entries);
 				setRadientAccount(account);
 				setLoaded(true);
@@ -387,8 +405,10 @@ export function ComputerSwitcherSheet({
 			openGeneration.current += 1;
 		};
 	}, [visible]);
+	/* Not before this open's registry read has landed: until then the rows are the
+	 *  account's discovery alone, and probing waits for the scoped list (m1). */
 	useEffect(() => {
-		if (!visible || originsKey.length === 0) return;
+		if (!visible || !loaded || originsKey.length === 0) return;
 		const open = openGeneration.current;
 		for (const origin of originsKey.split("\n")) {
 			if (probedThisOpen.current.has(origin)) continue;
@@ -406,7 +426,7 @@ export function ComputerSwitcherSheet({
 					setAnsweredAt((current) => ({ ...current, [origin]: Date.now() }));
 			});
 		}
-	}, [visible, originsKey]);
+	}, [visible, loaded, originsKey]);
 
 	const slot = savedTunnel
 		? {
@@ -473,8 +493,12 @@ export function ComputerSwitcherSheet({
 		if (visible && landed) onClose();
 	}, [visible, landed, onClose]);
 
+	/* "No computers" is an answer, so it waits for the read (m1: the cleared
+	 *  snapshot would otherwise say it for a frame on every open). */
 	const empty =
-		sections.onPhone.length === 0 && sections.notConnected.length === 0;
+		loaded &&
+		sections.onPhone.length === 0 &&
+		sections.notConnected.length === 0;
 
 	return (
 		<Sheet
@@ -490,13 +514,20 @@ export function ComputerSwitcherSheet({
 					leadingIcon={({ color, size }) => <Plus color={color} size={size} />}
 					onPress={() => {
 						onClose();
-						/* The existing set-up flows: the Computers screen offers both
-						 *  Radient set-up and "Use my own tunnel instead", so the switcher
-						 *  does not grow a second copy of that choice. Opened FROM that
-						 *  screen, closing is the whole step: pushing it again stacked a
-						 *  second identical Computers screen, so the tap looked dead and
-						 *  Back led to the same screen (UX round 1, U6). */
-						if (pathname !== "/tunnels") router.push("/tunnels");
+						/* The existing set-up paths (Radient, or your own tunnel), in the
+						 *  Computers route's add mode: a populated list there has no add
+						 *  path, so landing on it was a dead end (UX round 2, U12). Over a
+						 *  Computers screen that ALREADY shows those paths — an empty
+						 *  account, or the add mode itself — closing is the whole step:
+						 *  pushing it again stacked an identical screen (UX round 1, U6). */
+						if (
+							addComputerTarget({
+								pathname,
+								adding: addParam === "1",
+								listed: connectionStore.getState().computers.length,
+							}) === "push"
+						)
+							router.push(ADD_COMPUTER_HREF);
 					}}
 					variant="outline"
 					testID={CONTROL.switcherAddComputer}

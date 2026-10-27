@@ -272,6 +272,9 @@ async function relay(
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
+	/* Whether the session code request fails NOW: starts at `options.failCode`, and a
+	 *  test can lift it to retry the same pick against a recovered control plane. */
+	let failCode = options.failCode ?? false;
 	let failedStream = false;
 	const server = createServer(async (request, response) => {
 		const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -310,7 +313,7 @@ async function relay(
 				request.socket.destroy();
 				return;
 			}
-			if (options.failCode) {
+			if (failCode) {
 				json({ msg: "synthetic mint failure" }, 500);
 				return;
 			}
@@ -492,6 +495,9 @@ async function relay(
 		releaseNextTunnels,
 		allowLogout: () => {
 			failLogout = false;
+		},
+		allowCode: () => {
+			failCode = false;
 		},
 	};
 }
@@ -1700,6 +1706,33 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		expect(ids()).toEqual(listed);
 		/* `computers[0]` was the subject before; the failure belongs to the second. */
 		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+	});
+
+	it("retries the PICKED computer from the refusal's Try again, and goes live on it (PR #122 Q6/U11)", async () => {
+		/* Every entry point's refusal surface (Settings, Computers, Home) calls the
+		 *  provider's `retry`; a failed switch is only recoverable from Settings if
+		 *  that re-runs the computer the reader picked, not a list read. */
+		const mock = await signedIn({ failCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+		const mints = () =>
+			mock.events.filter((event) => event === "POST /v1/tunnels/session/code")
+				.length;
+		const before = mints();
+		mock.allowCode();
+		await act(async () => {
+			await latest.retry();
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().tunnelId).toBe(second.tunnelId);
+		expect(latest.refusal).toBeNull();
+		/* Exactly one more mint, for that computer. */
+		expect(mints()).toBe(before + 1);
 	});
 
 	it("records a failed Refresh as account state over the cached rows, and a later success clears it (D2)", async () => {

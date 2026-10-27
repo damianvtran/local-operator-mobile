@@ -5,8 +5,10 @@ import type {
 	SavedRadientComputer,
 } from "@/connection/saved-computers";
 import {
+	addComputerTarget,
 	healthLabel,
 	ownTunnelPrefill,
+	passwordEntryExplanation,
 	pendingKeyFor,
 	pendingLanded,
 	performSwitcherTap,
@@ -682,5 +684,49 @@ describe("the own-address hand-off reads the registry, not the link (review m1)"
 		expect(
 			ownTunnelPrefill([radient("r1", "t1", HOST_A)], "r1", null),
 		).toBeNull();
+	});
+});
+
+describe("the password entry says what the one slot actually holds (review n1, UX U15, design D11)", () => {
+	it("says another address owns the slot only when one does, and says it once", () => {
+		const other = passwordEntryExplanation(`${HOME}/`, PI);
+		expect(other).toContain("belongs to another address");
+		expect(other).toContain("It replaces the other one.");
+		expect(other.match(/one this phone keeps/g)).toBeNull();
+	});
+
+	it("does not claim another address when nothing is saved", () => {
+		const empty = passwordEntryExplanation(null, PI);
+		expect(empty).not.toContain("another address");
+		expect(empty).toContain("no relay password saved");
+	});
+
+	it("recognises the slot's own address despite a trailing slash", () => {
+		expect(passwordEntryExplanation(`${PI}/`, PI)).not.toContain(
+			"another address",
+		);
+	});
+});
+
+describe("the sheet's Add a computer reaches an add path (UX U6, U12)", () => {
+	it("pushes the set-up paths from any other screen", () => {
+		expect(
+			addComputerTarget({ pathname: "/settings", adding: false, listed: 3 }),
+		).toBe("push");
+	});
+
+	it("pushes them over a POPULATED Computers list, which has no add path (U12)", () => {
+		expect(
+			addComputerTarget({ pathname: "/tunnels", adding: false, listed: 2 }),
+		).toBe("push");
+	});
+
+	it("only closes over a Computers screen already showing them (U6)", () => {
+		expect(
+			addComputerTarget({ pathname: "/tunnels", adding: false, listed: 0 }),
+		).toBe("close");
+		expect(
+			addComputerTarget({ pathname: "/tunnels", adding: true, listed: 2 }),
+		).toBe("close");
 	});
 });

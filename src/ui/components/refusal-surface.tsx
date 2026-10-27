@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { CONTROL, REGION, ROLE, SURFACE } from "@/ui/a11y";
+import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -193,7 +193,17 @@ export const RefusalSurface = ({
 	const { effectiveScale } = useTextScale();
 
 	return (
-		<View className="gap-3 py-6" testID={testID}>
+		<View
+			className="gap-3 py-6"
+			testID={testID}
+			/* Announced when it appears, as the kit's `Banner` is: a failed switch
+			 *  closes the sheet onto this surface while focus returns to the control
+			 *  that opened it, so without a live region a screen-reader user heard the
+			 *  button and not the reason (PR #122 UX round 2, U14). Polite, because the
+			 *  reader's own tap caused it; the headline keeps its `header` role. */
+			accessibilityRole={ROLE.alert}
+			accessibilityLiveRegion={LIVE_REGION.polite}
+		>
 			<View className="flex-row items-start gap-2">
 				<AlertTriangle
 					color={danger}

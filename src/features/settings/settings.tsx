@@ -7,6 +7,7 @@ import { Text, View } from "react-native";
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
+	ADD_COMPUTER_HREF,
 	discoveryFailureMessage,
 	rowState,
 } from "@/features/auth/computers-view";
@@ -26,6 +27,7 @@ import {
 } from "@/ui/components/connection-pill";
 import { Dialog } from "@/ui/components/dialog";
 import { Divider } from "@/ui/components/divider";
+import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
@@ -66,6 +68,7 @@ export default function Settings() {
 		retry,
 		refreshComputers,
 		refusal,
+		signInWithRadient,
 		streamHealth,
 		lastError,
 		discovering,
@@ -190,6 +193,31 @@ export default function Settings() {
 						 *  was the defect; one derivation is the fix. */}
 						<ConnectionPill state={status.state} message={status.message} />
 					</View>
+					{/* The route's refusal, under the Status it explains and above the list.
+					 *  The switcher opens from here and CLOSES on a failed pick so the reason
+					 *  is readable behind it (PR #122 M1/U2) — but this screen had nothing
+					 *  behind it except "Not connected", and the reason was painted on the
+					 *  hidden Home (QA round 2, Q6; UX U11). The same surface Computers and
+					 *  Home render, so every entry point shows one sentence for one failure;
+					 *  its own rules decide which remedy a cause gets (no prominent retry for
+					 *  a console-side cause), and "Switch computer" stays just below it. */}
+					{refusal ? (
+						<RefusalSurface
+							kind={refusal.kind}
+							subject={refusal.subject}
+							detail={refusal.detail}
+							remedy={refusal.remedy}
+							retryAfterMs={refusal.retryAfterMs}
+							/* The provider's retry re-runs what failed — for a pick, that
+							 *  same computer (`noteError`'s closure in `selectComputer`). */
+							onRetry={() => void retry()}
+							onSignIn={() => void signInWithRadient()}
+							onOpenConsole={() =>
+								void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
+							}
+							onUseAnotherAddress={() => router.push("/custom")}
+						/>
+					) : null}
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
 							<Text className="text-body-sm text-ink-muted">Computers</Text>
@@ -269,7 +297,10 @@ export default function Settings() {
 						<Button
 							testID={CONTROL.settingsAddComputer}
 							label="Add a computer"
-							onPress={() => router.push("/tunnels")}
+							/* The set-up paths, not the list: the list has no add path once
+							 *  the account has a computer (UX round 2, U12), and the switcher's
+							 *  own "Add a computer" goes to the same place. */
+							onPress={() => router.push(ADD_COMPUTER_HREF)}
 							variant="quiet"
 							size="sm"
 						/>

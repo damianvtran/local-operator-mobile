@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { DiscoveredComputer } from "@/connection";
 import {
+	ADD_COMPUTER_HREF,
 	backAction,
 	computersView,
 	discoveryFailureMessage,
@@ -194,5 +195,41 @@ describe("backAction (U1)", () => {
 
 	it("is absent at the root with no route, where Home would bounce straight back", () => {
 		expect(backAction({ canGoBack: false, routed: false })).toBeNull();
+	});
+});
+
+describe("Add a computer opens the set-up paths over a populated list (PR #122 U12)", () => {
+	it("shows set-up, not the rows, when the reader asked to add", () => {
+		const view = computersView({
+			computers: [row("a", "Studio Mac")],
+			discovering: false,
+			discoveryFailure: null,
+			adding: true,
+		});
+		expect(view).toMatchObject({
+			title: "Set up a computer",
+			setup: true,
+			list: false,
+			banner: null,
+		});
+	});
+
+	it("keeps the list without the add mode, and signed out still wins", () => {
+		const base = {
+			computers: [row("a", "Studio Mac")],
+			discovering: false,
+			discoveryFailure: null,
+		};
+		expect(computersView(base).list).toBe(true);
+		expect(
+			computersView({ ...base, adding: true, signedOut: true }).setup,
+		).toBe(false);
+	});
+
+	it("is the one destination every Add a computer uses", () => {
+		expect(ADD_COMPUTER_HREF).toEqual({
+			pathname: "/tunnels",
+			params: { add: "1" },
+		});
 	});
 });
