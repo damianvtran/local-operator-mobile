@@ -10,6 +10,7 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { headerBellShowsCount } from "@/features/home/header-fit";
 import {
 	CONNECT_DISABLED_REASON,
 	FOLDERS_READ_FAILED,
@@ -666,14 +667,22 @@ export default function Home({
 					<View className="min-w-0 flex-1 flex-row items-center gap-2">
 						{/* The computer this will run on, and the switcher: the same
 						 *  `listLabel` ladder the panel's row uses, so the two cannot
-						 *  name one machine differently. */}
+						 *  name one machine differently.
+						 *
+						 *  BOTH AXES carry the floor. `minHeight` alone left this the one
+						 *  control the flex row could shrink: beside a `99+` bell at 200 %
+						 *  text it measured 36.4 pt with the label "…1" (design round 9,
+						 *  D24; the four E2E U-01 rows at `S15/move-progress`). The width
+						 *  floor is only honourable because the BELL yields its pill at
+						 *  large text — see `headerBellShowsCount` — so nothing overflows
+						 *  the 320 pt row to escape it. */}
 						<Pressable
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
 							onPress={() => router.push("/tunnels")}
 							testID={CONTROL.computersButton}
 							className="min-w-0 flex-1 justify-center"
-							style={{ minHeight: TOUCH_FLOOR }}
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 						>
 							{/* ONE unbreakable line, pre-fitted with a middle ellipsis. A tail
 							 *  fit kept only "…0.0.1:49869"; a two-line middle let the platform
@@ -725,7 +734,15 @@ export default function Home({
 								className="flex-row items-center justify-center gap-1 px-2"
 							>
 								<BellIcon />
-								{inboxCount !== null && inboxCount > 0 ? (
+								{/* THE PILL YIELDS FIRST, at and above 200 % text. The bell keeps
+								 *  its 44 pt target and its accessible name keeps the count
+								 *  ("Notifications, 120 unread"), while the ~55 pt the pill
+								 *  was taking goes to the computer switcher, which otherwise
+								 *  cannot hold its own floor (D24). Nothing is lost silently:
+								 *  the same number is on the rail's row inside the pane. */}
+								{inboxCount !== null &&
+								inboxCount > 0 &&
+								headerBellShowsCount(effectiveScale) ? (
 									<View testID={CONTROL.homeNotificationsCount}>
 										<Badge
 											/* THE APP'S ONE CAP: a four-digit count would widen the pill

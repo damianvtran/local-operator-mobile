@@ -273,6 +273,11 @@ export const ConversationsPane = ({
 			held.pill === width ? held : { ...held, pill: width },
 		);
 	};
+	/* NO COUNT IS NOT A PLACEMENT QUESTION. With nothing to place there is no pair
+	 *  and no mirror: the destination must look like its siblings — full width, the
+	 *  label on the rail's centre line — rather than sitting as a grouped pair for
+	 *  the rest of its life (code review round 11, m-3). */
+	const hasInboxCount = inboxCount !== null && inboxCount > 0;
 	/* GROUPED UNTIL PROVEN OTHERWISE — the safe state, never the majority one. */
 	const placement: RailCountPlacement =
 		railWidths.row === undefined ||
@@ -503,7 +508,7 @@ export const ConversationsPane = ({
 					 *  the home header's bell carries it. */}
 					<View
 						className={
-							placement === "symmetric"
+							placement === "symmetric" || !hasInboxCount
 								? "w-full flex-row items-center"
 								: /* GROUPED centres the label and the count as ONE pair
 									 *  (code review round 10, M-1): the label loses
@@ -527,14 +532,12 @@ export const ConversationsPane = ({
 						 *  (design round 8, D23). Then the mirror is dropped and the label
 						 *  and count are centred as one pair, which needs ~205 pt: legible
 						 *  first, exactly symmetric whenever it fits. */}
-						{inboxCount !== null &&
-						inboxCount > 0 &&
-						placement === "symmetric" ? (
+						{hasInboxCount && placement === "symmetric" ? (
 							<RailCount count={inboxCount} hidden />
 						) : null}
 						<View
 							className={
-								placement === "symmetric"
+								placement === "symmetric" || !hasInboxCount
 									? "flex-1"
 									: /* An over-running pair shortens the LABEL, never the
 										 *  count (m-5): the wrapper shrinks and the button's
@@ -544,7 +547,9 @@ export const ConversationsPane = ({
 						>
 							<Button
 								label={RAIL_INBOX_LABEL}
-								labelLines={placement === "symmetric" ? undefined : 1}
+								labelLines={
+									placement === "symmetric" || !hasInboxCount ? undefined : 1
+								}
 								onPress={() => {
 									onNavigate?.();
 									router.push("/notifications");
@@ -554,7 +559,7 @@ export const ConversationsPane = ({
 								testID={CONTROL.sidebarNotifications}
 							/>
 						</View>
-						{inboxCount !== null && inboxCount > 0 ? (
+						{hasInboxCount ? (
 							<RailCount count={inboxCount} onWidth={measurePill} />
 						) : null}
 						{/* THE MEASURING STAND-INS. Out of flow and unpainted, so they
@@ -610,9 +615,18 @@ export const ConversationsPane = ({
 					testID={CONTROL.sidebarSwitcher}
 					className="min-w-0 flex-1 justify-center px-2"
 					/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
-					 *  is not iOS — the web/audit profile included, which is the build the
-					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
-					style={{ minHeight: TOUCH_FLOOR }}
+					 *  is not iOS — the web/audit target included, which is the build the
+					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher).
+					 *
+					 * BOTH AXES, on its own merits: a height floor a neighbour can squeeze
+					 * on the other axis is not a floor, and this control's label pre-fits to
+					 * its measured width, so it can use the 44 and still paint its own middle
+					 * ellipsis. The four U-01 rows of ci run 40579948001 were NOT this
+					 * control: they were the HOME header's `computers-button`, squeezed to
+					 * 36.4 pt beside the bell's `99+` pill at 200 % text. That one is fixed
+					 * at the defect, in `home.tsx` (design round 9, D24) — the same floor
+					 * here, and a bell whose pill yields at large text. */
+					style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 				>
 					{/* ONE unbreakable line, pre-fitted with a middle ellipsis: the drawer's
 					 * box is narrower than the home header's, and a two-line middle let the

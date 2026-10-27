@@ -36,6 +36,18 @@ export type RailCountPlacement = "symmetric" | "grouped";
  *  defect this module exists to forbid (code review round 10, m-3/n-4). */
 const SLACK = 0;
 
+/**
+ * What the quiet Button adds around the label it is given: `px-3` a side plus the
+ * control's always-present 1 pt border (`ui/variants.ts` `sm` and the base look).
+ *
+ * MEASURED, and it has to be in the fit test: the label width comes from a bare
+ * text stand-in, while the box the row must fit is the BUTTON's. Leaving the
+ * padding out chose symmetric for a `42` count at 200 % on a 320 pt pane with
+ * 0.3 pt to spare, and the button's real box then overran the slot it was centring
+ * in (QA round 6, Q11).
+ */
+export const RAIL_LABEL_CHROME = 26;
+
 export type RailRowWidths = {
 	/** The row's own width, measured on the row itself (the pane's inner width,
 	 *  not the window's: the rail is a pane inside it). */
@@ -51,7 +63,15 @@ export const railCountPlacement = ({
 	labelWidth,
 	pillWidth,
 }: RailRowWidths): RailCountPlacement =>
-	labelWidth + pillWidth * 2 <= rowWidth + SLACK ? "symmetric" : "grouped";
+	labelWidth + RAIL_LABEL_CHROME + pillWidth * 2 <= rowWidth + SLACK
+		? "symmetric"
+		: "grouped";
+
+/** No count at all: nothing to place, and the label takes the whole row — a row
+ *  with no pill must look like every sibling destination rather than sitting in
+ *  the grouped pair for the rest of its life (code review round 11, m-3). */
+export const railRowHasCount = (pillWidth: number | undefined): boolean =>
+	pillWidth !== undefined;
 
 /** The label's box under a placement, and whether the row had to shorten it.
  *
@@ -71,16 +91,19 @@ export const railLabelBox = (
 	placement: RailCountPlacement,
 	{ rowWidth, labelWidth, pillWidth }: RailRowWidths,
 ): { left: number; right: number; centre: number; truncated: boolean } => {
-	const pairWidth = labelWidth + pillWidth;
+	const pairWidth = labelWidth + RAIL_LABEL_CHROME + pillWidth;
 	const fitsGrouped = pairWidth <= rowWidth;
 	const shown =
 		placement === "symmetric" || fitsGrouped
 			? labelWidth
-			: Math.max(0, rowWidth - pillWidth);
+			: Math.max(0, rowWidth - pillWidth - RAIL_LABEL_CHROME);
 	const left =
 		placement === "symmetric"
 			? pillWidth + (rowWidth - pillWidth * 2 - shown) / 2
-			: (rowWidth - (shown + pillWidth)) / 2;
+			: /* The BUTTON box is centred as part of the pair; its label sits inside
+				 *  that box by half the chrome, which is where the text's own box starts. */
+				(rowWidth - (shown + RAIL_LABEL_CHROME + pillWidth)) / 2 +
+				RAIL_LABEL_CHROME / 2;
 	return {
 		left,
 		right: left + shown,
@@ -96,5 +119,6 @@ export const railPillBox = (
 	widths: RailRowWidths,
 ): { left: number; right: number } => {
 	const label = railLabelBox(placement, widths);
-	return { left: label.right, right: label.right + widths.pillWidth };
+	const boxRight = label.right + RAIL_LABEL_CHROME / 2;
+	return { left: boxRight, right: boxRight + widths.pillWidth };
 };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+	RAIL_LABEL_CHROME,
 	type RailRowWidths,
 	railCountPlacement,
 	railLabelBox,
@@ -31,14 +32,11 @@ const OVERRUN: RailRowWidths = {
 	pillWidth: 58.8,
 };
 
-/** The same label in a row where it fits: a one- or two-character pill, and `99+`
- *  as soon as the text scale drops. */
-const FITS: RailRowWidths[] = [
-	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 24 },
-	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 42 },
-	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 30 },
-	{ rowWidth: 247, labelWidth: 141.2, pillWidth: 40 },
-];
+/** The same label in rows that fit. The button's own chrome counts (Q11): of the
+ *  247 pt row, `141.2 + 26` is the label's box, leaving 79.8 pt for BOTH pills — so
+ *  a 38 pt pill fits and 40 does not. `42` at 200 % is the case QA measured a
+ *  0.3 pt gap on, and it is grouped here. */
+const FITS: number[] = [24, 30, 36, 38];
 
 describe("the rail's count placement", () => {
 	it("drops the mirror for `99+` in a 320 pt pane at 200 % (D23)", () => {
@@ -59,7 +57,12 @@ describe("the rail's count placement", () => {
 	});
 
 	it("keeps the symmetric centring wherever the row fits", () => {
-		for (const widths of FITS) {
+		for (const pillWidth of FITS) {
+			const widths: RailRowWidths = {
+				rowWidth: 247,
+				labelWidth: 141.2,
+				pillWidth,
+			};
 			expect(railCountPlacement(widths)).toBe("symmetric");
 			// Symmetric means the label sits on the row's centre line — the line every
 			// sibling destination's label is measured against.
@@ -75,12 +78,24 @@ describe("the rail's count placement", () => {
 		// `label + 2 × pill == row` is the last row that can hold the mirror, and
 		// `+1` is the first that cannot. Pinning both ends means a tolerance that
 		// quietly allowed text under the pill would go red.
+		// `label + chrome + 2 × pill` against the row: 100 + 26 + 2 × 37 = 200 exactly.
 		expect(
-			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 50 }),
+			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 37 }),
 		).toBe("symmetric");
 		expect(
-			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 50.5 }),
+			railCountPlacement({ rowWidth: 200, labelWidth: 100, pillWidth: 37.5 }),
 		).toBe("grouped");
+		// Q11: the case QA measured — `42` at 200 % on the 320 pt pane. Without the
+		// button's 26 pt of chrome this was symmetric with 0.3 pt to spare.
+		expect(
+			railCountPlacement({ rowWidth: 247, labelWidth: 141.2, pillWidth: 42 }),
+		).toBe("grouped");
+		// …and the narrower counts the rail really shows at 200 % still fit.
+		for (const pillWidth of [24, 30, 36]) {
+			expect(
+				railCountPlacement({ rowWidth: 247, labelWidth: 141.2, pillWidth }),
+			).toBe("symmetric");
+		}
 	});
 
 	it("shortens the label rather than the count above 250 % text (m-5)", () => {
@@ -90,7 +105,7 @@ describe("the rail's count placement", () => {
 		// The label gives way — it is the part that can ellipsize…
 		expect(label.truncated).toBe(true);
 		expect(label.right - label.left).toBeCloseTo(
-			OVERRUN.rowWidth - OVERRUN.pillWidth,
+			OVERRUN.rowWidth - OVERRUN.pillWidth - RAIL_LABEL_CHROME,
 			5,
 		);
 		// …so the count never clips at the pane edge and no text sits under it.

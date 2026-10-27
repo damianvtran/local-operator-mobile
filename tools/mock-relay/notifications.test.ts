@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import type { Json } from "../lib/json.ts";
 import { createNotificationsStore } from "./notifications.ts";
 
 /**
@@ -226,26 +227,37 @@ describe("the fixture that makes the rail's grouped placement renderable (m-4)",
 	 * The rail's count placement has two states, and every fixture's count was ≤ 7
 	 * while `countLabel` caps at `99+` — so no captured cell could leave the
 	 * symmetric layout (code review round 10, m-4). `mesh-move-hold` now serves a
-	 * busy inbox, and these assertions keep it busy: the count AND the rows behind
-	 * it, so the frame's badge is not a number the list contradicts.
+	 * busy inbox, and this asserts it through the SAME store the relay does: the
+	 * counts are the store's own derivation (review round 11, m-1), with the seed's
+	 * pinned ask still waiting, and the rows behind the count distinct.
 	 */
 	it("serves S15/move-progress an inbox wide enough to read 99+", async () => {
 		const { buildScenarios } = await import("./scenarios.ts");
 		const { loadFixtures } = await import("./fixtures.ts");
+		const { createNotificationsStore } = await import("./notifications.ts");
 		const world = buildScenarios(loadFixtures())["mesh-move-hold"]?.world() as {
-			notifications?: { items?: unknown[]; counts?: Record<string, number> };
+			notifications?: Json;
 		};
-		const inbox = world.notifications;
-		expect(inbox).toBeDefined();
-		const unread = inbox?.counts?.unread_count ?? 0;
-		// The rail's cap is 99+ (`notifications-model.ts` `countLabel`), so 100 is the
-		// first count that reads as three characters.
-		expect(inbox?.counts?.unread_count).toBeGreaterThanOrEqual(100);
-		// The rows agree with the count: one unread row per unread update.
-		expect(inbox?.items).toHaveLength(unread);
-		const ids = new Set(
-			(inbox?.items ?? []).map((row) => (row as { id: string }).id),
+		const seed = world.notifications;
+		// The scenario is REQUIRED to seed an inbox: a `undefined` here is the
+		// fixture going missing, not a case to skip.
+		if (seed === undefined) throw new Error("mesh-move-hold seeds no inbox");
+		const store = createNotificationsStore({ seed, details: {} });
+		const page = store.page("all", 500) as {
+			items: { id: string; seq: number }[];
+			unread_count: number;
+			waiting_unread_count: number;
+		};
+		// The rail reads `unread + waiting` (`countLabel` caps at 99+), and the ask the
+		// seed still holds is counted where the relay counts it.
+		expect(page.unread_count).toBeGreaterThanOrEqual(100);
+		expect(page.waiting_unread_count).toBe(1);
+		// Every row is distinct on the two keys the store orders and addresses by.
+		expect(new Set(page.items.map((row) => row.id)).size).toBe(
+			page.items.length,
 		);
-		expect(ids.size).toBe(unread);
+		expect(new Set(page.items.map((row) => row.seq)).size).toBe(
+			page.items.length,
+		);
 	});
 });

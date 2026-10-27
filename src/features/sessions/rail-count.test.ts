@@ -81,7 +81,31 @@ describe("the rail's inbox count", () => {
 		);
 		// The pair's label is the part that gives when it overruns (m-5).
 		expect(flat(source)).toContain(
-			'labelLines={placement === "symmetric" ? undefined : 1}',
+			'labelLines={ placement === "symmetric" || !hasInboxCount ? undefined : 1 }',
+		);
+	});
+
+	it("shrinks the grouped wrapper, so an over-running pair shortens the label (m-2)", () => {
+		const rail = railSection();
+		// The ellipsis only happens because the WRAPPER can shrink; without it the
+		// label keeps its width and paints under the badge again.
+		expect(rail).toMatch(/\?\s*"flex-1"\s*:\s*\/\*[\s\S]*?\*\/\s*"shrink"/);
+		expect(rail).toContain('"shrink"');
+	});
+
+	it("bottoms out in a full-width row when there is no count (R11 m-1)", () => {
+		// No count means no pair: the row keeps the symmetric shape so the control is
+		// as wide as its siblings instead of sitting as a grouped pair forever.
+		// The ROW's own class sits above the slice these tests otherwise read, so the
+		// whole module is the subject for the first assertion.
+		expect(flat(source)).toContain(
+			'placement === "symmetric" || !hasInboxCount ? "w-full flex-row items-center"',
+		);
+		expect(flat(source)).toContain(
+			'placement === "symmetric" || !hasInboxCount ? "flex-1"',
+		);
+		expect(flat(source)).toContain(
+			"const hasInboxCount = inboxCount !== null && inboxCount > 0;",
 		);
 	});
 

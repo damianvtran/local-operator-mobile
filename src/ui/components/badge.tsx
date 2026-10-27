@@ -55,7 +55,7 @@ export const Badge = ({
 	<View
 		className={`${
 			emphasis
-				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
+				? "self-start min-h-5 rounded-full border-0 bg-accent px-2 py-0.5"
 				: badgeClasses(tone)
 		}${hidden ? " opacity-0" : ""}`}
 		testID={testID}
@@ -63,10 +63,15 @@ export const Badge = ({
 		accessibilityLabel={accessibilityLabel}
 	>
 		<Text
-			// `leading-4` on BOTH variants, because the two steps' own line heights
-			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
-			// bound once (16 px) for the mono and the sans badge to be the same height.
-			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
+			/* THE LINE BOX FOLLOWS THE TYPE STEP, because a fixed one cannot. A pinned
+			 *  `leading-4` (16 pt) held the two variants to one height at 100 %, but at
+			 *  300 % text the digits are 33 pt on that 16 pt line and the ink ran 3.4 pt
+			 *  above and 1.1 pt below the pill — the tops of the 9s effectively vanished
+			 *  (design round 9, D25). `leading-none` lets each step carry its own line
+			 *  box; the container's `min-h-5` keeps the 20 pt pill every existing caller
+			 *  paints at 100 %, so the kit's own geometry is unchanged and only the
+			 *  large-text case grows. */
+			className={`leading-none ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
 			// When the call site names the badge, the visible label is a rendering of
 			// that name, not a second name: hidden from assistive tech on every
 			// platform (the same shape as `Avatar`'s initials).

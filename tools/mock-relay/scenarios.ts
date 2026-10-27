@@ -662,20 +662,26 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			return {
 				...row,
 				id: `n_flood_${String(index).padStart(3, "0")}`,
-				// One revision per row, so the ack tokens stay distinct.
+				// DISTINCT KEYS AND ORDER: the store orders by `seq` and keys rows by
+				// id, so repeated seed rows would collide on both (review round 11, m-1).
+				seq: index + 1,
 				revision: index + 1,
 				read: false,
+				read_via: null,
+				dismissed: false,
 				created_at: Number(row.created_at ?? 0) - index * 1000,
 			};
 		});
+		/* NO `counts` BLOCK. The store DERIVES `unread_count` and
+		 *  `waiting_unread_count` from the rows it serves (`notifications.ts`
+		 *  `unreadCount`/`waitingUnreadCount`), so a hand-written block here would be
+		 *  ignored at best and a lie at worst — it said zero waiting while the seed's
+		 *  pinned ask is still served (review round 11, m-1). The badge then reads
+		 *  `120 unread + 1 waiting`, which is what the page and the rail will show. */
 		return {
 			...body,
 			items,
-			counts: {
-				...(body.counts ?? {}),
-				unread_count: unread,
-				waiting_unread_count: 0,
-			},
+			high_water: unread,
 		} as unknown as Json;
 	};
 
@@ -2432,6 +2438,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"The synthetic populated inbox: five updates across today, yesterday and earlier, one of them already read, and one pinned open ask from a live runtime.",
 		["S18/populated", "S18/multi-select", "S18-detail/populated"],
 		() => ({ notifications: inboxBody("notifications-populated") }),
+	);
+
+	add(
+		"notifications-busy",
+		"A machine with a busy inbox and NOTHING OVER IT: the conversations pane's own rail footer is in view, so the count's two placements are photographed — symmetric at 100/135 %, grouped at 200 % where a mirror on each side would push the label under the count.",
+		["S15/notifications-busy"],
+		() => ({
+			...meshWorld(),
+			notifications: floodInbox("notifications-populated", 120),
+		}),
 	);
 
 	add(

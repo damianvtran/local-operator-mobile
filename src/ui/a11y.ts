@@ -1500,6 +1500,14 @@ export const STATE_MARKER = {
 		 *  another device — and `mesh-unreachable` is the unreachable word on such
 		 *  a row. The sheet's four states are each their own marker (see
 		 *  `SURFACE.sessionMove*`). */
+		/* A busy inbox, on the rail row itself. The pane is already `open`, so the
+		 *  affirmative claim this cell needs is the COUNT's pill: it exists only when
+		 *  the relay reported unread items, and its two placements (symmetric, or the
+		 *  grouped pair when a mirror on each side would push the label under it) are
+		 *  the states `S15/notifications-busy` is photographed for. The spacer that
+		 *  mirrors it is a DIFFERENT id for the same reason: a frame must not satisfy
+		 *  this state with the invisible stand-in. */
+		"notifications-busy": CONTROL.sidebarNotificationsCount,
 		"mesh-remote": "session-remote-",
 		"mesh-unreachable": SURFACE.sessionRemoteUnreachable,
 		"move-pick": SURFACE.sessionMoveSheet,
