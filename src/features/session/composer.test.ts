@@ -104,7 +104,7 @@ describe("the send/steer morph", () => {
 		expect(sending.sending).toBe(true);
 	});
 
-	it("sends nothing to an ended session, whatever the draft says", () => {
+	it("keeps the primary ENABLED on an ended session, because a send reopens it", () => {
 		const ended = composerControls({
 			streaming: false,
 			hasDraft: true,
@@ -113,21 +113,18 @@ describe("the send/steer morph", () => {
 			envelopePending: false,
 			ended: true,
 		});
-		expect(ended.primary.disabled).toBe(true);
-		// And it SAYS so, and what the reader can do instead. A dead control with no
-		// reason is the "control that cannot work" pattern this feature exists to
-		// avoid (review round 1, M4): `disabledReason` was computed for the retained
-		// case and read by nobody, so the ended case had no copy anywhere at all.
-		expect(ended.disabledReason).toBe(COMPOSER_COPY.endedSession);
-		expect(ended.disabledReason).toContain("ended");
-		// The two reasons are distinct: an unresolved instruction is a different
-		// problem from a session that is over, and each names its own remedy.
-		expect(ended.disabledReason).not.toBe(COMPOSER_COPY.retryDisabledHint);
+		// A send to an ended session is itself resume-then-send (the daemon wakes a
+		// host for a prompt with no live entry), so the primary is the way back —
+		// disabling it would refuse the one action that revives the session. The
+		// placeholder, not a disabled reason, says what a send does.
+		expect(ended.primary.disabled).toBe(false);
+		expect(ended.disabledReason).toBeNull();
 	});
 
-	it("keeps the ended reason ahead of the retained one", () => {
-		// Both can be true at once. The ended state is the one that explains why the
-		// retry cannot help either, so it is the sentence the reader gets.
+	it("an ended session with an unresolved instruction still blocks on the instruction, not the death", () => {
+		// Both can be true at once. The retained instruction is the thing that
+		// blocks a second send (the duplicate hazard), and its reason is the one
+		// the reader needs — ended no longer supplies a disabled reason at all.
 		const both = composerControls({
 			streaming: false,
 			hasDraft: true,
@@ -136,7 +133,8 @@ describe("the send/steer morph", () => {
 			envelopePending: true,
 			ended: true,
 		});
-		expect(both.disabledReason).toBe(COMPOSER_COPY.endedSession);
+		expect(both.primary.disabled).toBe(true);
+		expect(both.disabledReason).toBe(COMPOSER_COPY.retryDisabledHint);
 	});
 });
 

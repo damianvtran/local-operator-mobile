@@ -49,6 +49,17 @@ export type ScreenProps = {
 	 * the header already allows (`min-h-14`, never `h-14`).
 	 */
 	headerDetail?: ReactNode;
+	/**
+	 * A replacement for the title's `<Heading>` — used by the session header,
+	 * whose title block is a CONTROL (the status dot + name, a tap opens the
+	 * health sheet). When set, it renders wherever the Heading would, in both the
+	 * stacked and inline branches and with or without `headerDetail`; the caller
+	 * owns the text, the truncation and the press target. Optional and absent on
+	 * every other screen, so those render byte-for-byte as before. The `title`
+	 * string is STILL required alongside it: the stacking trigger
+	 * (`headerStacks`) reads whether a title exists.
+	 */
+	titleNode?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
@@ -98,6 +109,7 @@ export const Screen = ({
 	headerLeading,
 	titleLines = 2,
 	headerDetail,
+	titleNode,
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
@@ -183,15 +195,7 @@ export const Screen = ({
 						<View className="flex-row items-center gap-2">{headerLeading}</View>
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className="text-display text-ink"
-									numberOfLines={titleLines}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="gap-1">
+								(titleNode ?? (
 									<Heading
 										level={1}
 										className="text-display text-ink"
@@ -199,6 +203,18 @@ export const Screen = ({
 									>
 										{title}
 									</Heading>
+								))
+							) : (
+								<View className="gap-1">
+									{titleNode ?? (
+										<Heading
+											level={1}
+											className="text-display text-ink"
+											numberOfLines={titleLines}
+										>
+											{title}
+										</Heading>
+									)}
 									{headerDetail}
 								</View>
 							)
@@ -217,28 +233,34 @@ export const Screen = ({
 						{headerLeading}
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className={
-										compact
-											? "flex-1 text-title text-ink"
-											: "flex-1 text-display text-ink"
-									}
-									numberOfLines={1}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="min-w-0 flex-1 gap-1">
+								(titleNode ?? (
 									<Heading
 										level={1}
 										className={
-											compact ? "text-title text-ink" : "text-display text-ink"
+											compact
+												? "flex-1 text-title text-ink"
+												: "flex-1 text-display text-ink"
 										}
 										numberOfLines={1}
 									>
 										{title}
 									</Heading>
+								))
+							) : (
+								<View className="min-w-0 flex-1 gap-1">
+									{titleNode ?? (
+										<Heading
+											level={1}
+											className={
+												compact
+													? "text-title text-ink"
+													: "text-display text-ink"
+											}
+											numberOfLines={1}
+										>
+											{title}
+										</Heading>
+									)}
 									{headerDetail}
 								</View>
 							)

@@ -473,6 +473,17 @@ export interface SessionProjection {
    *  branch raises it on the *entry* (`daemon.py:2619-2620`), which is what the
    *  summary row reads; the payload mirror follows a dial/reader failure. */
   degraded: boolean;
+  /** The relay's "owner has gone quiet" verdict (local-operator #3008,
+   *  `types.py::SessionProjection.heartbeat_stale`): true when the runtime's
+   *  heartbeat AND its frames are both older than `SESSION_HEALTH_WINDOW_S`
+   *  (45 s); false while either is fresh.
+   *
+   *  ABSENT, not null, when the daemon has nothing to measure — an older
+   *  daemon, or a durable rebuild with no live owner (`daemon.py` pops the key
+   *  for a `None` verdict, so a durable frame stays byte-identical to what it
+   *  was before the field existed). Absence is "not reported": a client paints
+   *  nothing from it, never yellow. */
+  heartbeat_stale?: boolean;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from

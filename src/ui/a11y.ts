@@ -382,6 +382,21 @@ export const CONTROL = {
 	 *  the bar when a hit is active; edit goes back to the results). Two controls,
 	 *  two names, so a flow cannot pass by pressing the wrong one. --- */
 	sessionFind: "session-find",
+	/* --- the session header's status dot (#3008 port). The title block is ONE
+	 *  control that opens the explanation sheet; Resume lives in that sheet and
+	 *  in the header's overflow menu. The dot itself is decorative (`aria-hidden`)
+	 *  — the control's accessible name carries the state word, so colour is never
+	 *  the only signal. --- */
+	sessionHealth: "session-health",
+	sessionHealthSheet: "session-health-sheet",
+	sessionHealthResume: "session-health-resume",
+	sessionMenu: "session-menu",
+	/* The session HEADER's own overflow sheet — deliberately NOT the pane's
+	 *  long-press menu (`SURFACE.sessionMenuSheet`, a different surface on a
+	 *  different screen). Named for its owner so the two can never be confused
+	 *  in a flow or a frame. */
+	sessionHeaderMenuSheet: "session-header-menu-sheet",
+	sessionMenuResume: "session-menu-resume",
 	findField: "find-field",
 	findEdit: "find-edit",
 	findPrev: "find-prev",
@@ -1389,6 +1404,13 @@ export const STATE_MARKER = {
 		error: "session-error",
 		degraded: "session-degraded",
 		queued: "session-queued",
+		/* The header dot's YELLOW "quiet" reading (local-operator #3008 port):
+		 *  present only when `heartbeat_stale` is the cause that won, so the
+		 *  `S5/health-quiet` cell can never be satisfied by the degraded look. */
+		"health-quiet": "session-health-quiet",
+		/* The dot's sheet OPEN (S5/health-sheet): the surface itself is the marker,
+		 *  the way the status sheet and the session menu are. */
+		"health-sheet": CONTROL.sessionHealthSheet,
 		/* The in-conversation find (this slice): one marker per state a cell
 		 *  declares. `find-results` — the sheet open with a query typed and at
 		 *  least one match; `find-related` — the same sheet whose matches include

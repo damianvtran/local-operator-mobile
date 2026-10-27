@@ -119,6 +119,10 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
  */
 export const STATE_MARKER_ALIASES: Record<string, string> = {
 	"populated-long": "populated",
+	/* The grey dot's ended cell renders the same look the `ended` marker claims
+	 * (the header's grey status word + the terminal session), so it borrows that
+	 * marker rather than inventing a second id for one state. */
+	"health-ended": "ended",
 	narrow: "populated",
 	scroll: "populated",
 	approval: "pending-approval",

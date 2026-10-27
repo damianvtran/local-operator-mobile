@@ -190,6 +190,10 @@ export type ComposerProps = {
 	/** The resume affordance, driven by the wire's `stop_reason === "aborted"`. */
 	showResume: boolean;
 	onResume: () => void;
+	/** The session's health verdict is ENDED (from the header's dot). Changes the
+	 *  placeholder to "send to reopen", and suppresses the aborted-turn Resume —
+	 *  an ended session yields to the header's Resume, which is the same act. */
+	ended?: boolean;
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
@@ -368,6 +372,7 @@ export const Composer = ({
 	onRetry,
 	showResume,
 	onResume,
+	ended = false,
 	error,
 	queuedCount,
 	leadingChip,
@@ -705,7 +710,7 @@ export const Composer = ({
 			{/* The resume affordance. Exactly ONE on the screen, and only for a turn that
 			    was aborted — a completed turn also stops streaming, and offering to
 			    "resume" a finished conversation is a control with no meaning. */}
-			{showResume ? (
+			{showResume && !ended ? (
 				<View className="pb-2">
 					<Button
 						label={COMPOSER_COPY.resumeLabel}
@@ -859,7 +864,9 @@ export const Composer = ({
 						integrated
 						value={draft}
 						onChangeText={onDraftChange}
-						placeholder={COMPOSER_COPY.placeholder}
+						placeholder={
+							ended ? COMPOSER_COPY.endedPlaceholder : COMPOSER_COPY.placeholder
+						}
 						maxLines={6}
 						maxHeightPx={fieldMaxHeight}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height

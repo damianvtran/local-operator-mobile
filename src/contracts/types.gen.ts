@@ -377,6 +377,18 @@ export interface SessionProjection {
 	/** Never observed `true` over the relay; derive liveness from the list row. */
 	ended: boolean;
 	degraded: boolean;
+	/**
+	 * The relay's "owner has gone quiet" verdict (local-operator #3008,
+	 * `SessionProjection.heartbeat_stale` in `mobile/types.py`): true once BOTH
+	 * the runtime's heartbeat and its frames are older than the daemon's one
+	 * health window (`SESSION_HEALTH_WINDOW_S`), false while either is fresh.
+	 *
+	 * ABSENT, not null, on the wire: the daemon POPS the key when the verdict is
+	 * `None` ("not reported" — an older daemon, or a durable rebuild with no
+	 * live owner to measure). Absence therefore reads as NO signal, never as
+	 * stale, and never as live either — `pid: 0` still says a disk rebuild.
+	 */
+	heartbeat_stale?: boolean;
 	transcript: TranscriptEntry[];
 	todos: TodoPhase[];
 	subagents: SubagentRow[];

@@ -38,6 +38,12 @@ export const SessionStateMarkers = ({
 			{flags.ended ? <View testID={STATE_MARKER.session.ended} /> : null}
 			{flags.aborted ? <View testID={STATE_MARKER.session.aborted} /> : null}
 			{flags.degraded ? <View testID={STATE_MARKER.session.degraded} /> : null}
+			{flags.healthQuiet ? (
+				<View testID={STATE_MARKER.session["health-quiet"]} />
+			) : null}
+			{flags.healthSheet ? (
+				<View testID={STATE_MARKER.session["health-sheet"]} />
+			) : null}
 			{flags.queued ? <View testID={STATE_MARKER.session.queued} /> : null}
 			{flags.richRows ? (
 				<View testID={STATE_MARKER.session["rich-rows"]} />

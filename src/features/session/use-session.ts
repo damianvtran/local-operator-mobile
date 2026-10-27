@@ -72,6 +72,8 @@ export interface SessionRuntime {
 	streaming: boolean;
 	streamingRowId: string | null;
 	connection: ConnectionView;
+	/** The session stream's own liveness, for the header's status dot. */
+	connected: boolean;
 	commands: SlashCommand[];
 	models: ModelEntry[];
 	loading: boolean;
@@ -713,6 +715,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		streaming: projection?.streaming === true,
 		streamingRowId,
 		connection,
+		/** The session stream's own liveness, for the header's status dot
+		 *  (`sessionHealth`: a down link reads "reconnecting", and every frame
+		 *  reading below it is stale). `entry.connected`, not the route's phase —
+		 *  a stale frame kept on screen still counts as a reading. */
+		connected: entry.connected,
 		commands: ownsProjection ? commands : [],
 		models: ownsProjection ? models : [],
 		loading,

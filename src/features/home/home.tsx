@@ -398,6 +398,9 @@ export default function Home({
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
 			disabledReason: connected ? null : CONNECT_DISABLED_REASON,
+			/* The home has no session and no health dot, so it can never be ended:
+			 *  the placeholder never switches to the reopen hint here. */
+			ended: false,
 		}),
 		[connected, draft, images.length, starting, running],
 	);

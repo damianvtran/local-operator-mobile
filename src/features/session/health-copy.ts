@@ -1,0 +1,84 @@
+/**
+ * The session-health dot's copy: the nine `relay.health.*` strings the relay
+ * web client ships (local-operator #3008, catalogues `relay.health.json` at
+ * `24d328a19a`), kept VERBATIM. These are reviewed, audited SAFETY COPY — the
+ * sheet's explanations say what a send actually does in each state, and a
+ * native port that rewords them makes the two clients describe one state two
+ * ways.
+ *
+ * SOURCE fallback only, in the shape this repo already uses
+ * (`account-routing-copy.ts`): native main has no qualified catalogue runtime
+ * (the i18n runtime is still an open PR), so these are finite, stable keys
+ * with per-key translator context carried from the core's
+ * `relay.health.context.json`. No other locales ship on native main yet; when
+ * the catalogue runtime lands, the core's seven audited locale catalogues
+ * (fr, es, ru, vi, zh-CN, hi, ur) are the translations to adopt, unchanged.
+ */
+export const HEALTH_SOURCE_LOCALE = "en" as const;
+
+export const HEALTH_COPY = {
+	"relay.health.live": {
+		source: "Live",
+		context:
+			"Accessible name and sheet title for the GREEN status dot: the session's process is running on the user's computer, its heartbeat is fresh and the phone's link is up. One short state word; avoid 'Connected' (the phone-link word) and 'Active' (whose negation is Idle).",
+		role: "status label",
+		maxCells: 16,
+	},
+	"relay.health.live_detail": {
+		source: "Running on your computer — messages reach it right away",
+		context:
+			"Sheet body for the green dot. 'Your computer' is the machine running the agent session, not the phone. 'Right away' means delivered to the running session now, not queued for a restart — never promise an instant reply.",
+		role: "status sheet explanation",
+	},
+	"relay.health.reconnecting": {
+		source: "Reconnecting",
+		context:
+			"Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis.",
+		role: "status label",
+		maxCells: 16,
+	},
+	"relay.health.reconnecting_detail": {
+		source:
+			"This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+		context:
+			"Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued.",
+		role: "status sheet explanation",
+	},
+	"relay.health.dropped_detail": {
+		source:
+			"Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
+		context:
+			"Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen.",
+		role: "status sheet explanation",
+	},
+	"relay.health.quiet_detail": {
+		source:
+			"This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
+		context:
+			"Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery.",
+		role: "status sheet explanation",
+	},
+	"relay.health.ended_detail": {
+		source:
+			"History is kept. Send a message or tap Resume to reopen it in your home folder.",
+		context:
+			"Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder.",
+		role: "status sheet explanation",
+	},
+	"relay.health.ended_send_failed": {
+		source:
+			"This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
+		context:
+			"Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume.",
+		role: "composer error message",
+	},
+	"relay.health.ended_placeholder": {
+		source: "Send to reopen in your home folder…",
+		context:
+			"Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…).",
+		role: "message field placeholder",
+		maxCells: 36,
+	},
+} as const;
+
+export type HealthCopyKey = keyof typeof HEALTH_COPY;

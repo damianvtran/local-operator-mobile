@@ -30,6 +30,10 @@ import {
 	ModelSheet,
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
+import {
+	SessionHealthControl,
+	useResume,
+} from "@/features/session/components/session-health";
 import { SlashSheet } from "@/features/session/components/slash-sheet";
 import {
 	FindStateMarkers,
@@ -46,6 +50,7 @@ import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
+import { sessionHealth } from "@/features/session/health";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
@@ -173,7 +178,10 @@ export default function Session() {
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
-		ended: runtime.projection?.ended === true,
+		/* The ended verdict comes FROM THE DOT (`sessionHealth`), not
+		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
+		 *  too, and a send to either REOPENS it. */
+		ended: sessionHealth(runtime.projection, runtime.connected) === "ended",
 		capabilities,
 		editor: provisionalEditor,
 	});
@@ -345,6 +353,12 @@ export default function Session() {
 		projection?.asks,
 	);
 
+	/* The header dot's sheet + the session menu, held here (not in the control) so
+	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`
+	 *  marker and the sheet it claims cannot disagree. */
+	const [healthSheetOpen, setHealthSheetOpen] = useState(false);
+	const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+
 	/* The state markers the design audit reads, from the same facts the screen renders
 	 *  from — a marker is a claim about the state the reader is in, so it may only be
 	 *  emitted for a fact that is TRUE. Memoised because this is the route a reader
@@ -367,6 +381,11 @@ export default function Session() {
 				 * state the visible block does not show. */
 				supplements: runtime.supplements,
 				supplementPid: runtime.projectionPid,
+				/* The dot's verdict, from the same call the dot renders — so the
+				 * `S5/health-quiet` marker cannot claim a yellow the header is not
+				 * showing. */
+				health: sessionHealth(projection, runtime.connected),
+				healthSheetOpen,
 			}),
 		[
 			projection,
@@ -377,12 +396,21 @@ export default function Session() {
 			runtime.projectionPid,
 			subagents.total,
 			composer.voice.micVisible,
+			runtime.connected,
+			healthSheetOpen,
 		],
 	);
 	/* One definition of `aborted`, used by the marker and by the resume affordance.
 	 *  Two copies of this predicate is how the copy a reader sees and the copy a cell
 	 *  is measured by drift apart (`state-marker.ts` § `sessionFactsFrom`). */
 	const aborted = stateFacts.aborted;
+
+	/* The header's status dot: ONE verdict, read by the dot, the composer's
+	 *  placeholder and the ended send-failure sentence. From runtime signals the
+	 *  relay publishes (ended / degraded / heartbeat_stale / pid) plus the phone's
+	 *  own link, never from the last message — `health.ts` owns the ladder. */
+	const health = sessionHealth(projection, runtime.connected);
+	const resume = useResume(sessionId, health === "ended");
 
 	const pendingViewProps = useMemo(
 		() =>
@@ -915,21 +943,40 @@ export default function Session() {
 					<NavigationMark />
 				</View>
 			}
-			headerAction={
-				/* The find lever. It is the kit's own header control (`IconButton`) — 48 pt on
-				   the web/audit build, 44 on iOS — and it IS header chrome: `header.ts`
-				   counts it and its gap in the title budget. An earlier note here argued the
-				   icon "cannot clip the middle truncation's budget"; the 2026-10-11
-				   full-surface pass measured that it can and did, so the comment and the sum
-				   were corrected together (review round 1, F1). */
-				<IconButton
-					accessibilityLabel="Search this conversation"
-					accessibilityHint="Finds messages in the transcript loaded on this device"
-					size={22}
-					testID={CONTROL.sessionFind}
-					onPress={find.open}
-					icon={({ color, size }) => <Search color={color} size={size} />}
-				/>
+			/* The title block is a CONTROL: the status dot + the conversation name,
+			 *  a tap on which opens the health sheet (with Resume when grey). The
+			 *  control also renders the header's action cluster — the find lever and
+			 *  the overflow menu, which carries Resume too — so `headerAction` is not
+			 *  set separately. `title` stays for the stacking trigger. */
+			titleNode={
+				<SessionHealthControl
+					health={health}
+					projection={projection}
+					sheetOpen={healthSheetOpen}
+					onSheetOpenChange={setHealthSheetOpen}
+					resume={resume}
+					menuOpen={sessionMenuOpen}
+					onMenuOpenChange={setSessionMenuOpen}
+					findAction={
+						<IconButton
+							accessibilityLabel="Search this conversation"
+							accessibilityHint="Finds messages in the transcript loaded on this device"
+							size={22}
+							testID={CONTROL.sessionFind}
+							onPress={find.open}
+							icon={({ color, size }) => <Search color={color} size={size} />}
+						/>
+					}
+				>
+					<Text
+						className={
+							compact ? "text-title text-ink" : "text-display text-ink"
+						}
+						numberOfLines={1}
+					>
+						{headerTitle}
+					</Text>
+				</SessionHealthControl>
 			}
 			/* The conversation's tags, in the header's own column. The line is a
 			 *  disclosure on a LOCAL conversation whose relay advertises the routes
@@ -1256,6 +1303,7 @@ export default function Session() {
 						onRetry={composer.retry}
 						showResume={aborted}
 						onResume={composer.send}
+						ended={health === "ended"}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
 						modelChip={chipLabels.model}
