@@ -13,6 +13,10 @@ import {
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
+import {
+	type RadientComputerInput,
+	SavedComputers,
+} from "@/connection/saved-computers";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 
 /**
@@ -49,6 +53,7 @@ import { configureStartupAuthorizationStorage } from "@/connection/startup-autho
 let adapter: SecureStoreAdapter | null = null;
 let storage: SecureStorage | null = null;
 let opening: Promise<TunnelStorage> | null = null;
+let registry: SavedComputers | null = null;
 
 // Lazy callbacks keep platform initialization out of module evaluation and the
 // authorization owner independent of React/coordinator imports.
@@ -242,4 +247,62 @@ export async function clearStoredCredentials(): Promise<void> {
 	// A failed delete is NOT successful sign-out. Let the provider retain a
 	// closed admission gate and report failure instead of resurrecting at restart.
 	await store.clearAll();
+}
+
+/* ------------------------------------------------------------ saved computers */
+
+/**
+ * The saved-computers registry over the SAME adapter singleton, for the reason
+ * point 1 of the module note gives. One registry instance, too: it serialises its
+ * own read-modify-writes, which only holds if every caller shares it.
+ *
+ * Deliberately NOT cleared by `clearStoredCredentials`: the registry holds no
+ * credential, and `clearAll()` is the credential wipe. Whether sign-out should also
+ * forget the list is a decision for the switcher slice, which is where the list
+ * first becomes visible on its own.
+ */
+async function savedComputers(): Promise<SavedComputers> {
+	const { adapter: store } = await open();
+	registry ??= new SavedComputers(store);
+	return registry;
+}
+
+/** The Radient computers the reader removed. A keystore that refuses the read
+ *  reports none, which shows a removed computer again rather than failing a
+ *  screen — the reader can remove it again, and nothing reconnects on its own. */
+export async function readHiddenTunnelIds(): Promise<string[]> {
+	try {
+		return await (await savedComputers()).hiddenTunnelIds();
+	} catch {
+		return [];
+	}
+}
+
+/** Remembers that the reader removed this computer. Returns whether that will
+ *  survive a restart, so a caller can say so instead of implying it. */
+export async function hideRadientComputer(
+	computer: RadientComputerInput,
+): Promise<{ persistent: boolean }> {
+	try {
+		const { persistent } = await open();
+		await (await savedComputers()).hideRadient(computer);
+		return { persistent };
+	} catch {
+		return { persistent: false };
+	}
+}
+
+/** The way back from a removal, by tunnel id. No screen calls it yet; the
+ *  switcher slice adds the surface. */
+export async function unhideRadientComputer(tunnelId: string): Promise<void> {
+	try {
+		const store = await savedComputers();
+		const entry = (await store.list()).find(
+			(candidate) =>
+				candidate.transport === "radient" && candidate.tunnelId === tunnelId,
+		);
+		if (entry) await store.unhide(entry.id);
+	} catch {
+		/* Nothing saved to un-hide, or nothing that can store it. */
+	}
 }

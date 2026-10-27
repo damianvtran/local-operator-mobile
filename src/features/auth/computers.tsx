@@ -15,6 +15,7 @@ import {
 } from "@/features/auth/connector-wait";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
+import { hideRadientComputer } from "@/features/auth/tunnel-storage";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
@@ -457,17 +458,19 @@ export default function Computers() {
 				confirmLabel="Remove"
 				onConfirm={() => {
 					if (removeTarget) {
-						// The store owns the list; the screen owns only the confirmation.
-						/* Forgetting is local to this phone, and the store's
-						 *  `setComputers` is the one list it keeps: filtering here rather
-						 *  than adding a second mutation API for one screen. */
-						connectionStore
-							.getState()
-							.setComputers(
-								computers.filter(
-									(candidate) => candidate.tunnelId !== removeTarget.tunnelId,
-								),
-							);
+						/* Removing is local to this phone and must OUTLAST discovery: the
+						 *  account still has the computer, so the next refresh reports it
+						 *  again. Filtering the list here (the old behaviour) lost to that
+						 *  refresh; the store's hidden set filters every later
+						 *  `setComputers`, and the registry keeps it across restarts. The
+						 *  store is updated first so the row leaves at once, whatever the
+						 *  keystore write does. */
+						connectionStore.getState().hideComputer(removeTarget.tunnelId);
+						void hideRadientComputer({
+							tunnelId: removeTarget.tunnelId,
+							hostname: removeTarget.hostname,
+							name: removeTarget.name,
+						});
 					}
 					setRemoveTarget(null);
 				}}

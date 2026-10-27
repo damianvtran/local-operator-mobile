@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ConnectionProvider } from "@/features/auth/connection-provider";
+import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
@@ -42,6 +43,7 @@ export default function RootLayout() {
 					<TextScaleProvider>
 						<View className="flex-1 bg-canvas">
 							<ThemedStatusBar />
+							<SavedComputersHydration />
 							<DeepLinkResolution />
 							<NotificationTapRouting />
 							<Stack screenOptions={{ headerShown: false }} />
@@ -66,6 +68,16 @@ export default function RootLayout() {
  */
 const DeepLinkResolution = () => {
 	useDeepLinkResolution();
+	return null;
+};
+
+/**
+ * Removed computers, loaded once at the root so no screen shows one after a cold
+ * start (see the hook). Renders nothing; private for the same reason as
+ * `ThemedStatusBar`.
+ */
+const SavedComputersHydration = () => {
+	useSavedComputersHydration();
 	return null;
 };
 
