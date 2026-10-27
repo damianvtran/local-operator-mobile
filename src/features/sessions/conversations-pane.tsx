@@ -52,7 +52,8 @@ import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
-import { tailFit } from "@/ui/components/list-row-meta";
+import { middleFit } from "@/ui/components/list-row-meta";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
@@ -186,26 +187,17 @@ export const ConversationsPane = ({
 	}, []);
 
 	const { effectiveScale } = useTextScale();
+	const [switcherWidth, setSwitcherWidth] = useState(0);
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
 	const scrollFooter = sidebarFooterScrolls(useLayout());
 
-	/* The switcher's painted label. The text box's OWN width is the budget —
-	 *  measured on the line, so it cannot drift from the flex rules — and the
-	 *  fit is the row's meta arithmetic (`tailFit`): whole before the first
-	 *  layout (the common label fits, so the first frame is the settled frame),
-	 *  tail-kept once the box is narrower than the string. Measured motivation
-	 *  (review round 3, D3): at 200 % the drawer's 143 dp box dropped the port
-	 *  of `127.0.0.1:51078` — the only part that differs per session — because
-	 *  react-native-web ignores `ellipsizeMode`, so the painted STRING is the
-	 *  only control over which end survives. The home header paints the same
-	 *  ladder whole at 200 %: its box is wider, and the fit engages only where
-	 *  the box runs out. */
+	/* The switcher's full identity, painted as ONE fitted line (`middleFit`).
+	 *  Two shapes came before this and both failed visibly: a tail fit kept only
+	 *  "…0.0.1:49869", and a two-line middle let the platform break INSIDE the
+	 *  address ("127.0.0.1:49" over "892") at 320 pt and 200 % text. react-native-web
+	 *  ignores `ellipsizeMode`, so the painted string is pre-fitted rather than
+	 *  wrapped; the button's accessible label still carries it unbroken. */
 	const switcherLabel = listLabel(computers, tunnelId, route);
-	const [switcherLabelWidth, setSwitcherLabelWidth] = useState(0);
-	const paintedSwitcherLabel =
-		switcherLabelWidth > 0
-			? tailFit(switcherLabel, switcherLabelWidth, effectiveScale)
-			: switcherLabel;
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -283,7 +275,7 @@ export const ConversationsPane = ({
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (
 		<View
-			className="gap-2 border-hairline border-t px-2 pb-2 pt-2"
+			className="gap-2 bg-sunken px-2 pb-2 pt-3"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		>
 			<View className="flex-row flex-wrap gap-2">
@@ -366,7 +358,8 @@ export const ConversationsPane = ({
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
 			{/* ---- the header row: switcher・search・close (close: drawer only) ---- */}
-			<View className="flex-row items-center gap-1 px-2">
+			<View className="flex-row items-center gap-2 px-3 py-2">
+				<NavigationMark size={32} />
 				<Pressable
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={`${switcherLabel} — choose a computer`}
@@ -381,24 +374,28 @@ export const ConversationsPane = ({
 					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
+					{/* ONE unbreakable line, pre-fitted with a middle ellipsis: the drawer's
+					 * box is narrower than the home header's, and a two-line middle let the
+					 * platform break inside the address/port at 320 pt and 200 % (D3). The
+					 * full value stays in the button's accessible label above. */}
 					<Text
 						className="text-mono-sm text-ink-muted"
 						numberOfLines={1}
-						ellipsizeMode="tail"
-						/* The painted string is fitted above (`tailFit`); this pair stays as the
-						 *  platform mop-up, as on the row's meta line: on iOS/Android the tail
-						 *  ellipsis is the direction the fitted string already has. */
 						onLayout={(event) =>
-							setSwitcherLabelWidth(event.nativeEvent.layout.width)
+							setSwitcherWidth(Math.floor(event.nativeEvent.layout.width))
 						}
+						style={{ flexShrink: 1 }}
 					>
-						{paintedSwitcherLabel}
+						{switcherWidth > 0
+							? middleFit(switcherLabel, switcherWidth, effectiveScale)
+							: switcherLabel}
 					</Text>
 				</Pressable>
 				<IconButton
 					accessibilityLabel="Search conversations"
 					onPress={() => setSearching((value) => !value)}
 					icon={({ color, size }) => <Search color={color} size={size} />}
+					size={22}
 					testID={CONTROL.sidebarSearch}
 				/>
 				{onClose ? (
@@ -448,7 +445,7 @@ export const ConversationsPane = ({
 						onNewChat?.();
 					}}
 					testID={CONTROL.sidebarNewChat}
-					className="flex-row items-center gap-3 border-hairline border-b px-4"
+					className="flex-row items-center gap-3 px-4"
 					style={{ minHeight: 56 }}
 				>
 					<SquarePen size={20} color={newChatInk} />

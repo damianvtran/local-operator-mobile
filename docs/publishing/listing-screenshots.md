@@ -1,6 +1,7 @@
 # Store listing screenshots — the intended set
 
-**Status: all three sets are rendered (2026-10-25).** The App Store 6.9-inch
+**Status: the verified set is committed (2026-10-25); a refresh is STAGED, not
+committed over it (2026-10-26).** The App Store 6.9-inch
 frames — all nine — are committed in `design/store-screenshots/appstore-iphone-6.9/`,
 the App Store 13-inch iPad frames — all nine — in
 `design/store-screenshots/appstore-ipad-13/`, and Google Play's phone frames —
@@ -107,9 +108,34 @@ pre-submission build (step 1 is provisional until the capture-method item under
    rejects transparency), no secret or harness-world text on any frame, and view
    every frame once — a size check is not visual evidence.
 
-The 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
-`play-phone/` ×8) and the raw captures they are composed from are committed in
-`design/store-screenshots/`. No hash manifest is committed with them, and that is
+The verified 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
+`play-phone/` ×8, each at its store canvas: 1320 × 2868, 2064 × 2752, 1080 × 1920,
+24-bit RGB, no alpha) and the 26 raw captures they are composed from
+(`design/store-screenshots/app-captures/`, 1290 × 2796 / 2048 × 2732 / 1080 × 2340,
+RGB) are committed in `design/store-screenshots/`, produced by the standard headless
+pipeline. That set stays as it is: it is what `capture.mjs --check` verifies in CI.
+
+**Staged refresh, pending approval (2026-10-26).** The native-polish design pass
+produced a refreshed set through a different route: the app's own web export embedded
+in a fixed-viewport harness page in the installed browser (same-origin iframe) against
+the mock relay, composed by the same three templates. Those bytes are not what the
+headless renderer emits, so replacing the committed set would fail the design-kit
+`capture.mjs --check` byte gate — which is correct, and is why the refresh lives in
+`design/store-screenshots/staged/native-polish-1026/` instead: 26 raw captures and 26
+frames at the same canvases, with a `manifest.json` of sizes and hashes. Portrait and
+phone frames were recaptured at product head `94b3fc2` (the compact-status-row
+change); iPad 01–09, iPhone 06/08/09 and Play 06/08 were retained from `3b0e048` with
+a source-diff and pixel-compatibility argument, not by assumption. `46bd248` — the
+current code head — changes only the New-chat callback identity and its tests, with no
+pixel change. The staged set replaces nothing until design sign-off on the frames,
+caption wording for 02–09, the submission capture-method decision, and the pre-upload
+content pass all land. Nothing has been submitted to either store.
+
+The README's documentation images in `docs/assets/screenshots/` are a SEPARATE set:
+13 of them were refreshed in this pass (390 pt, 780 × 1688) and `sign-in-light.png`
+is unchanged because that theme could not be persisted in the capture browser.
+
+The verified set carries no committed hash manifest, and that is
 deliberate: the PNG bytes depend on the Chrome that encoded them (the CI runner's
 differs from a developer's, and for the iPad set also in resampled pixels), so a
 committed `sha256` list would go stale on every other host while saying nothing
@@ -157,10 +183,11 @@ analysis against `main` @ `6628f26` (not re-rendered):
 
 - **Caption wording 02–09** — authored for this set, editable with one
   re-render each; approve or edit before the final render.
-- **Capture method for the submission files** — the produced files are
-  web-export renders; `apple-app-store.md` § 9.2 describes captures from CI (a
-  simulator job) or a Mac. Reconcile at the frozen-build re-shoot so the
-  submission method is a decision, not a drift.
+- **Capture method for the submission files** — the staged files are web-export
+  renders from the installed-browser harness (not the headless pipeline);
+  `apple-app-store.md` § 9.2 describes captures from CI (a simulator job) or a Mac.
+  Reconcile at the frozen-build re-shoot so the submission method is a decision,
+  not a drift. **Nothing in this pass was submitted to either store.**
 - Everything else — counts, order, the single theme, the template mapping — is
   approval-only.
 

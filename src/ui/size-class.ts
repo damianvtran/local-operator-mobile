@@ -1,6 +1,7 @@
 import { maxColumnWidth } from "@/ui/column";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
-import { LAYOUT } from "@/ui/tokens.gen";
+import { LAYOUT, TOUCH_TARGET } from "@/ui/tokens.gen";
+import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
  * The adaptive layout vocabulary, in ONE place, and FREE OF `react-native`.
@@ -382,5 +383,78 @@ export const composerBudget = (
 		maxHeight - receiptHeight - padding - dictationReserve,
 	);
 	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
-	return { field: Math.max(touchFloor, room - extras), extras };
+	const fieldBox = Math.max(touchFloor, room - extras);
+	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
+	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
+	 *  Returning the box here made the composer overspend its share by the border, so
+	 *  the paint budget is converted once, here, where it is decided — the caller and
+	 *  the component then agree without either subtracting a constant of its own. */
+	return { field: fieldBox - FIELD_BORDER_Y, extras };
+};
+
+/**
+ * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
+ *
+ * Portrait phones have no short-landscape budget, so a six-line draft at 200 %
+ * text grew the composer past the window bottom (design recheck D-c: surface
+ * [12, 314.4, 296, 424.8], bottom 739 against a 568 pt window) — the field, the
+ * chips and the action row were all unreachable.
+ *
+ * The rule is deliberately "overflow OR already at the window", not "always
+ * window - top": the composer is bottom-anchored while it fits, so `top =
+ * bottom - height` makes `window - top` an identity that can never let it grow,
+ * and measuring it while EMPTY froze a long draft at two lines (observed at
+ * 320 pt / 100 %: field 60 px against a 132 px cap). Here an unbounded pass may
+ * grow until its painted bottom reaches the window; only then does the ceiling
+ * bind, and `>=` keeps it bound while the capped box sits exactly on the edge. A
+ * one-pixel tolerance absorbs the integer rounding of both numbers.
+ */
+export const composerLimit = (
+	viewportHeight: number,
+	top: number | null,
+	height: number | null,
+): number | null => {
+	if (top === null || height === null) return null;
+	const overflows = top + height >= viewportHeight - 1;
+	if (!overflows) return null;
+	/* The floor is the SMALLEST target the kit allows, not a share: a limit below
+	 *  one control would collapse the composer rather than bound it. */
+	return Math.max(TOUCH_TARGET.ios, Math.round(viewportHeight - top));
+};
+
+/**
+ * Which secondary-status surface a session screen uses — ONE decision, three
+ * consumers, so the tray, the sheet and the inline region cannot disagree (design D2,
+ * final visual audit).
+ *
+ * `phone` is a WIDTH question (`< tabletBreakpoint`), not `compact`: 430/390/360 are
+ * phones, 1024 is not, and `compact` means short-landscape chrome. Gating the tray on
+ * `compact` was the defect — a portrait phone is not short, so the old persistent
+ * task/subagent bands stayed on the very screen the design fixed.
+ *
+ * `inlineSecondary` keeps the capped scroller exactly where it was designed: short
+ * landscape (its rows and cue) and tablet (plain siblings). A portrait phone shows
+ * the tray instead and must not ALSO render the old stack.
+ */
+export const sessionStatusLayout = (
+	width: number,
+	compact: boolean,
+): {
+	phone: boolean;
+	tray: boolean;
+	inlineSecondary: boolean;
+	statusSheet: boolean;
+} => {
+	const phone = width < LAYOUT.tabletBreakpoint;
+	return {
+		phone,
+		/* Short landscape ALREADY had the tray (that is where it was designed), so it
+		 * keeps it: `tray` is phone-or-compact, and the sheet follows the tray. The
+		 * inline stack belongs only where neither holds — a tablet column. Gating the
+		 * tray on `phone` alone regressed landscape into a tray plus a live inline
+		 * region plus a sheet nothing could open (review R8-1). */
+		tray: phone || compact,
+		inlineSecondary: !phone && !compact,
+		statusSheet: phone || compact,
+	};
 };

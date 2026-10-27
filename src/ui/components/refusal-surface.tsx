@@ -118,8 +118,12 @@ const NEXT: Record<RefusalKind, () => string> = {
 	console: () =>
 		"Open the Radient console to fix it there. Signing in on this phone will not change it.",
 	password: () => "Check the relay password on the computer, then try again.",
+	/* R1-5: a 401 revokes the authorization generation, so unfinished work is
+	 *  quarantined — not sent, not adopted again by signing back in. The sentence
+	 *  has to say that, because "we kept your draft" would be a promise the storage
+	 *  scoping cannot keep. */
 	"sign-in": () =>
-		"The browser finishes the sign-in, so the app never sees your password.",
+		"Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
 	retry: () => "It clears by itself — this will keep trying.",
 	diagnostic: () =>
 		"Nothing on this screen can fix it; this is a bug in the app.",

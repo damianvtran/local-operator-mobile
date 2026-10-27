@@ -61,6 +61,10 @@ import {
 	validateRadientHostname,
 } from "@/connection";
 import {
+	registerStartupAuthorizationCleanup,
+	startupAuthorizationLifecycle,
+} from "@/connection/startup-authorization";
+import {
 	clearStoredCredentials,
 	clearStoredOauth,
 	readSavedTunnel,
@@ -72,6 +76,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { clearAuthorizationData } from "@/features/session/device-storage";
 import {
 	type RelayEndpoints,
 	RelayError,
@@ -110,6 +115,14 @@ import {
 export const connectionStore = createConnectionStore();
 export const listStore = createListStore();
 export const configStore = createConfigStore();
+
+// Registration outlives route/provider mounts, just like the credential store.
+// Startup storage registers independently, avoiding an auth/coordinator cycle.
+registerStartupAuthorizationCleanup(clearAuthorizationData);
+type StartupRouteAdmission = RouteAdmission & {
+	authorizationRevision: number;
+	routeKey: string;
+};
 
 export const useConnectionState = <T,>(
 	selector: (state: ConnectionSnapshot) => T,
@@ -245,6 +258,20 @@ function routeForComputer(computer: DiscoveredComputer): RouteProfile | null {
 	return result.ok ? result.route : null;
 }
 
+/** Turns an unverified purge into the typed refusal the surfaces already know,
+ *  so a sign-out reports `false` rather than pretending the device is clean.
+ *  Module scope on purpose: it reads no component state, so it never becomes a
+ *  hook dependency that changes on every render. */
+const verifiedRetirement = (retirement: Promise<boolean>): Promise<void> =>
+	retirement.then((verified) => {
+		if (verified) return;
+		throw new RelayError(
+			"rejected",
+			"Cannot confirm those local drafts were removed",
+			{ surface: "diagnostic", detail: "" },
+		);
+	});
+
 export const ConnectionProvider = ({
 	children,
 }: {
@@ -284,6 +311,7 @@ export const ConnectionProvider = ({
 		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
+			startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
 			streamRef.current?.stop();
@@ -299,10 +327,60 @@ export const ConnectionProvider = ({
 		};
 	}, []);
 
+	/** Authentication ended without proof — a `401`, a lapsed grant, a cancelled
+	 *  login. The gate closes now and the persisted generation is invalidated, but
+	 *  NO draft is deleted: the reader's unfinished sentence survives a token blip
+	 *  (`docs/ux/flows.md` § C5) and is simply unreachable from the next generation.
+	 *  `afterCleanup` is for the credential that is genuinely dead (an expired
+	 *  grant), never for private content. */
+	const revokeAuthorization = useCallback(
+		(afterRevoke?: () => Promise<void>): Promise<boolean> =>
+			startupAuthorizationLifecycle.revoke(afterRevoke).then(
+				() => true,
+				() => {
+					if (mountedRef.current) {
+						setBusy(false);
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+					}
+					return false;
+				},
+			),
+		[],
+	);
+
+	/** The synchronous half revokes dispatch; the resolved value reports whether
+	 * every deletion was VERIFIED. The rejection itself stays on the lifecycle's
+	 * own tail, so admission stays closed after a failure even though this
+	 * caller-facing promise resolves — no unhandled rejection from a 401 handler,
+	 * and no false success either. */
+	const retireAuthorization = useCallback(
+		(
+			preserveUnscoped = false,
+			afterCleanup?: () => Promise<void>,
+		): Promise<boolean> =>
+			startupAuthorizationLifecycle.retire(preserveUnscoped, afterCleanup).then(
+				() => true,
+				() => {
+					if (mountedRef.current) {
+						setBusy(false);
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+					}
+					return false;
+				},
+			),
+		[],
+	);
+
 	/** Records a typed failure: the store owns the surface, and the retry closure
 	 *  is what the refusal surface's button re-runs. */
 	const noteError = useCallback(
 		(error: RelayError, retry?: () => Promise<void>) => {
+			if (error.surface === "password" || error.surface === "sign-in")
+				void revokeAuthorization();
 			setLastError(error);
 			retryRef.current = retry ?? null;
 			connectionStore.getState().noteFailure({
@@ -322,7 +400,7 @@ export const ConnectionProvider = ({
 				retryAfterMs: error.retryAfterMs ?? null,
 			});
 		},
-		[],
+		[revokeAuthorization],
 	);
 
 	const stopStream = useCallback(() => {
@@ -475,7 +553,8 @@ export const ConnectionProvider = ({
 	/** Retire the old client before publishing a provisional route. Its address
 	 * is useful for loading/refusal UI, but must not carry protected requests. */
 	const beginRoute = useCallback(
-		(route: RouteProfile) => {
+		(route: RouteProfile): StartupRouteAdmission => {
+			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
 			stopStream();
@@ -492,7 +571,18 @@ export const ConnectionProvider = ({
 			setLastError(null);
 			retryRef.current = null;
 			connectionStore.getState().startRoute(route);
-			return routeAdmission(connectionStore, () => mountedRef.current);
+			// Keep route ownership independent from the dispatch generation: a 401
+			// closes dispatch immediately, but its typed onError must still reach
+			// this route's refusal surface rather than disappear as a stale event.
+			const admission = routeAdmission(
+				connectionStore,
+				() => mountedRef.current,
+			);
+			return {
+				...admission,
+				authorizationRevision,
+				routeKey: JSON.stringify(route),
+			};
 		},
 		[stopStream, stopConfig],
 	);
@@ -501,8 +591,15 @@ export const ConnectionProvider = ({
 	const goLive = useCallback(
 		async (
 			client: ReturnType<typeof createRelayClient>,
-			admission: RouteAdmission,
+			admission: StartupRouteAdmission,
 		): Promise<void> => {
+			if (
+				!admission.isCurrent() ||
+				!startupAuthorizationLifecycle.isCurrent(
+					admission.authorizationRevision,
+				)
+			)
+				return;
 			if (
 				!admission.publish(() => {
 					clientRef.current = client;
@@ -511,6 +608,33 @@ export const ConnectionProvider = ({
 				return;
 			startStream(client, admission);
 			startConfig(client);
+			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
+			 * list read (review R1-1). Gating it on a frame meant one transient 503 on
+			 * `GET /sessions` left a healthy, stream-populated route permanently unable
+			 * to start a conversation — the stream's seed frame does not admit, and
+			 * neither did a later refresh. The retry covers a storage write that failed
+			 * once; `null` means a newer attempt superseded this one and must not retry. */
+			const admitStartup = async (): Promise<void> => {
+				for (let attempt = 0; attempt < 2; attempt += 1) {
+					if (!isAdmissionActive()) return;
+					try {
+						await startupAuthorizationLifecycle.admit(
+							admission.routeKey,
+							admission.authorizationRevision,
+						);
+						return;
+					} catch {
+						if (!isAdmissionActive()) return;
+					}
+				}
+				if (isAdmissionActive())
+					connectionStore
+						.getState()
+						.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+			};
+			const isAdmissionActive = () => admission.isCurrent();
+			await admitStartup();
+			if (!admission.isCurrent()) return;
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
@@ -546,9 +670,12 @@ export const ConnectionProvider = ({
 	);
 
 	const connectCustom = useCallback(
-		async ({ url, password, allowInsecure }: ConnectCustomInput) => {
+		async (
+			{ url, password, allowInsecure }: ConnectCustomInput,
+			restoring = false,
+		) => {
 			setBusy(true);
-			let admission: RouteAdmission | null = null;
+			let admission: StartupRouteAdmission | null = null;
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
@@ -564,13 +691,21 @@ export const ConnectionProvider = ({
 					return;
 				}
 				const route = validated.route;
+				const privacy = restoring
+					? Promise.resolve()
+					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
+				await privacy;
+				await nativeCredentialRetirement.settled();
+				if (!admission.isCurrent()) return;
 				if (!(await authenticateCustomRoute(route, password, admission)))
 					return;
 				const client = createRelayClient({
 					route,
 					onResponse: (facts) => {
 						if (admission?.isCurrent() && facts.status === 401) {
+							void revokeAuthorization();
+							setBusy(false);
 							connectionStore.getState().noteFailure({
 								surface: "password",
 								displayableMessage: "",
@@ -594,7 +729,7 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, noteError],
+		[beginRoute, goLive, noteError, retireAuthorization, revokeAuthorization],
 	);
 
 	const refreshComputers = useCallback(async () => {
@@ -602,10 +737,15 @@ export const ConnectionProvider = ({
 		 * phases describe a route, so the in-flight flag lives beside it instead of
 		 * inventing a route to hang a phase on. */
 		setDiscovering(true);
+		const revision = startupAuthorizationLifecycle.getRevision();
+		const tokens = tokensRef.current;
+		const isCurrent = () =>
+			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);
 		const result = await discoverComputers({
-			accessToken: async () => tokensRef.current?.access ?? null,
+			accessToken: async () => tokens?.access ?? null,
 		});
 		try {
+			if (!isCurrent()) return;
 			switch (result.kind) {
 				case "computers":
 					connectionStore.getState().setComputers(result.computers);
@@ -621,7 +761,8 @@ export const ConnectionProvider = ({
 					 *  again" is a state the reader passes through once and not a loop. The other
 					 *  two failure arms deliberately KEEP the credential: an unreachable API or an
 					 *  unreadable answer says nothing about whether the grant is still good. */
-					await clearStoredOauth();
+					void revokeAuthorization(clearStoredOauth);
+					setDiscovering(false);
 					/* The landing latch goes with the credential (review round 5, r5-n1). This
 					 *  is the SECOND place a session ends — `signOut` is the other — and a latch
 					 *  left set here would route a signed-out reader to `/tunnels` the moment
@@ -647,39 +788,56 @@ export const ConnectionProvider = ({
 					return;
 			}
 		} finally {
-			if (mountedRef.current) setDiscovering(false);
+			if (isCurrent()) setDiscovering(false);
 		}
-	}, []);
+	}, [revokeAuthorization]);
 
 	const signInWithRadient = useCallback(async () => {
+		const privacy = retireAuthorization(true);
+		const revision = startupAuthorizationLifecycle.getRevision();
+		const isCurrent = () =>
+			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);
+		cancelledRef.current = true;
+		stopStream();
+		stopConfig();
+		clientRef.current = null;
+		tokensRef.current = null;
+		const retired = nativeCredentialRetirement.retire(managerRef.current);
+		managerRef.current = null;
+		connectionStore.getState().endRoute();
 		setBusy(true);
 		try {
+			await Promise.all([verifiedRetirement(privacy), retired]);
+			if (!isCurrent()) return;
 			const result = await beginRadientSignIn({
 				onState: (state) => {
-					if (mountedRef.current) setSignInState(state);
+					if (isCurrent()) setSignInState(state);
 				},
 			});
-			if (!result.ok) return;
+			if (!result.ok || !isCurrent()) return;
 			tokensRef.current = result.tokens;
 			/* Persisted BEFORE discovery, and before any route exists: the credential is
 			 *  what makes the NEXT launch a computers screen instead of a second browser
 			 *  hand-off, and a discovery that then fails (an unreachable API, an empty
 			 *  account) must not throw a valid grant away. A runtime that cannot store it
 			 *  still gets a working session this run — `writeStoredOauth` reports which. */
-			await writeStoredOauth(result.tokens);
-			if (mountedRef.current) setSignInState({ kind: "idle" });
+			await startupAuthorizationLifecycle.runIfCurrent(revision, () =>
+				writeStoredOauth(result.tokens),
+			);
+			if (!isCurrent()) return;
+			setSignInState({ kind: "idle" });
 			/* Straight into discovery, which is what makes the button's promise —
 			 * "finds your computers" — true rather than a second tap away. */
 			await refreshComputers();
 		} finally {
-			if (mountedRef.current) setBusy(false);
+			if (isCurrent()) setBusy(false);
 		}
-	}, [refreshComputers]);
+	}, [refreshComputers, retireAuthorization, stopStream, stopConfig]);
 
 	const selectComputer = useCallback(
 		async (computer: DiscoveredComputer) => {
 			setBusy(true);
-			let admission: RouteAdmission | null = null;
+			let admission: StartupRouteAdmission | null = null;
 			try {
 				const route = routeForComputer(computer);
 				if (!route) {
@@ -726,6 +884,8 @@ export const ConnectionProvider = ({
 						 * signal; the connection layer types it as `sign-in`, and this
 						 * only records it so the surface is decided once. */
 						if (admission?.isCurrent() && facts.status === 401) {
+							void revokeAuthorization();
+							setBusy(false);
 							connectionStore.getState().noteFailure({
 								surface: "sign-in",
 								displayableMessage: "",
@@ -761,7 +921,7 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, noteError],
+		[beginRoute, goLive, noteError, revokeAuthorization],
 	);
 
 	const refreshList = useCallback(async () => {
@@ -856,17 +1016,19 @@ export const ConnectionProvider = ({
 	);
 
 	const signOut = useCallback(async () => {
+		const privacy = verifiedRetirement(
+			retireAuthorization(false, () =>
+				nativeCredentialRetirement.retire(null, clearStoredCredentials),
+			),
+		);
 		if (pendingSignOutRef.current) {
 			const owner = revocationOwnerRef.current;
 			// The retained operation may originate from forgetting one custom route,
 			// which deliberately preserves OAuth. Ordinary Sign out still wipes all
 			// owned credentials, serialized before any newer native admission.
-			const clear = nativeCredentialRetirement.retire(
-				null,
-				clearStoredCredentials,
-			);
+			const clear = nativeCredentialRetirement.settled();
 			const [, confirmed] = await Promise.all([
-				clear,
+				Promise.all([clear, privacy]),
 				pendingSignOutRef.current(),
 			]);
 			// Remote success may precede the additional clear. Validate ownership
@@ -902,12 +1064,13 @@ export const ConnectionProvider = ({
 		const revision = connectionStore.getState().revision;
 		// Enqueue both side effects before yielding. A new native selection waits
 		// for the clear; a new same-origin login queues behind the final logout.
-		const retired = nativeCredentialRetirement.retire(
-			manager,
-			clearStoredCredentials,
+		const retired = nativeCredentialRetirement.retire(manager);
+		return await confirmRevocation(
+			activeRoute,
+			revision,
+			Promise.all([retired, privacy]).then(() => undefined),
 		);
-		return await confirmRevocation(activeRoute, revision, retired);
-	}, [confirmRevocation, stopStream, stopConfig]);
+	}, [confirmRevocation, stopStream, stopConfig, retireAuthorization]);
 
 	const retry = useCallback(async () => {
 		const pending = retryRef.current;
@@ -944,6 +1107,7 @@ export const ConnectionProvider = ({
 		 * Admission is withdrawn first, just as in `signOut`; revocation uses the
 		 * captured route so a slow response cannot leave requests enabled. */
 		if (active?.mode === "custom") {
+			const privacy = verifiedRetirement(retireAuthorization());
 			clientRef.current = null;
 			connectionStore.getState().endRoute();
 			stopStream();
@@ -956,12 +1120,14 @@ export const ConnectionProvider = ({
 			await confirmRevocation(
 				active,
 				connectionStore.getState().revision,
-				nativeCredentialRetirement.settled(),
+				Promise.all([nativeCredentialRetirement.settled(), privacy]).then(
+					() => undefined,
+				),
 			);
 		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, [confirmRevocation, stopStream, stopConfig]);
+	}, [confirmRevocation, stopStream, stopConfig, retireAuthorization]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",
@@ -981,6 +1147,12 @@ export const ConnectionProvider = ({
 	 */
 	const restoreRadient = useCallback(async () => {
 		const revision = connectionStore.getState().revision;
+		const authorizationRevision = startupAuthorizationLifecycle.getRevision();
+		const isCurrent = () =>
+			mountedRef.current &&
+			!cancelledRef.current &&
+			connectionStore.getState().revision === revision &&
+			startupAuthorizationLifecycle.isCurrent(authorizationRevision);
 		/* The decision is `planRestore` and the carrying-out is `carryOutRestore`,
 		 *  both data/injectable and therefore testable; this wires them to the
 		 *  live storage, the live refresh and the list's own discovery. See that
@@ -990,11 +1162,18 @@ export const ConnectionProvider = ({
 		const outcome = await carryOutRestore({
 			readOauth: readStoredOauth,
 			writeOauth: async (tokens) => {
-				await writeStoredOauth(tokens);
+				if (isCurrent())
+					await startupAuthorizationLifecycle.runIfCurrent(
+						authorizationRevision,
+						() => writeStoredOauth(tokens),
+					);
 			},
-			clearOauth: clearStoredOauth,
+			clearOauth: async () => {
+				if (isCurrent()) await revokeAuthorization(clearStoredOauth);
+			},
 			refresh: (tokens) => refreshRadientTokens(tokens),
 			discover: async (tokens) => {
+				if (!isCurrent()) return;
 				tokensRef.current = tokens;
 				if (mountedRef.current) setRestoredAccount(true);
 				/* Discovery is what turns a credential into a computers screen, and
@@ -1002,10 +1181,9 @@ export const ConnectionProvider = ({
 				 *  since. */
 				await refreshComputers();
 			},
-			isCancelled: () =>
-				cancelledRef.current ||
-				connectionStore.getState().revision !== revision,
+			isCancelled: () => !isCurrent(),
 		});
+		if (!isCurrent()) return;
 		/* One-way latch no more: any restore that does not end accepted clears it, so a
 		 *  later arrival at `/` cannot inherit a stale "signed in" landing. */
 		if (!outcome.restored && mountedRef.current) setRestoredAccount(false);
@@ -1020,7 +1198,7 @@ export const ConnectionProvider = ({
 		if (outcome.refusal.surface === "retry") {
 			retryRef.current = () => restoreRef.current();
 		}
-	}, [refreshComputers]);
+	}, [refreshComputers, revokeAuthorization]);
 
 	/* The restore function is stable (its only dependency is `refreshComputers`), but
 	 *  the retry it publishes must call the latest one, and the two would otherwise
@@ -1052,10 +1230,13 @@ export const ConnectionProvider = ({
 		const client = createRelayClient({
 			route,
 			onResponse: (facts) => {
-				if (admission.isCurrent() && facts.status === 401)
+				if (admission.isCurrent() && facts.status === 401) {
+					void revokeAuthorization();
+					setBusy(false);
 					connectionStore
 						.getState()
 						.noteFailure({ surface: "password", displayableMessage: "" });
+				}
 			},
 		});
 		try {
@@ -1067,7 +1248,7 @@ export const ConnectionProvider = ({
 			if (admission.isCurrent() && error instanceof RelayError)
 				noteError(error);
 		}
-	}, [beginRoute, goLive, noteError]);
+	}, [beginRoute, goLive, noteError, revokeAuthorization]);
 
 	/* The cold start. On web an explicit `lo-relay` override wins; otherwise the saved
 	 * CUSTOM tunnel is resumed, and failing that a stored RADIENT credential is
@@ -1099,11 +1280,14 @@ export const ConnectionProvider = ({
 				if (stored) {
 					setSavedTunnel(stored);
 					if (stored.password != null) {
-						await connectCustom({
-							url: stored.baseUrl,
-							password: stored.password,
-							allowInsecure: stored.allowInsecure,
-						});
+						await connectCustom(
+							{
+								url: stored.baseUrl,
+								password: stored.password,
+								allowInsecure: stored.allowInsecure,
+							},
+							true,
+						);
 						return;
 					}
 				}

@@ -207,6 +207,74 @@ export type FieldState = "rest" | "invalid" | "disabled";
  * `body` = 16pt, always: below 16, iOS zooms the page on focus and the layout
  * moves under the reader's thumb (components.md § 0.1, § 4).
  */
+/**
+ * Whether the field scrolls itself, which is a question about its CONTENT only.
+ *
+ * The resting floor is clamped to ONE placeholder line by design (D1/D20), so at
+ * 200 % text the placeholder can be taller than the box. Feeding the placeholder's
+ * height into this decision made the platform paint a scrollbar — and, on the web
+ * build, the scrollbar's own corner glyph — on a field the reader had typed
+ * nothing into, which is the most common state of the composer. A placeholder is
+ * a hint that may be clipped; the reader's own text may not be lost. So the value
+ * content alone decides, and `cap` is the six-line ceiling.
+ */
+/**
+ * What a field tells the WEB about scrolling.
+ *
+ * `scrollEnabled` is native-only: react-native-web ignores it, so a false value
+ * left the browser painting its own scrollbar and resize handle on an empty field
+ * at 200 % (final audit D1 — a helper test was green while the real Settings
+ * capture still showed chrome). Web needs the CSS spelling, and only when there
+ * is nothing to scroll; past the cap it keeps the default `auto`, matching the
+ * native prop.
+ */
+export const webFieldOverflow = (
+	platform: string,
+	scrollable: boolean,
+): "hidden" | undefined =>
+	platform === "web" && !scrollable ? "hidden" : undefined;
+
+/**
+ * The field's HEIGHT is the app's: it grows with the content to a cap and then
+ * scrolls. A user-dragged height is a state the app cannot restore or lay out, so
+ * the web build says `resize: none` on EVERY field — including a scrollable one —
+ * while native keeps its own view behaviour untouched. This is the other half of
+ * D1: `overflow: hidden` removed the scrollbar track, but the browser was still
+ * painting the diagonal resize grip on an empty 200 % field.
+ */
+export const webFieldResize = (platform: string): "none" | undefined =>
+	platform === "web" ? "none" : undefined;
+
+export const fieldScrollsWithContent = (
+	contentFloor: number,
+	cap: number,
+): boolean => contentFloor > cap;
+
+/** The field's border, top and bottom, in CSS pixels: `fieldClasses` draws a 1px
+ *  border, and the box is `border-box`, so a height set from the content's own
+ *  measurement is short by exactly this much unless it is added back. */
+export const FIELD_BORDER_Y = 2;
+
+/**
+ * The painted height of a field, in px.
+ *
+ * `contentFloor`, `oneLineBox` and `placeholderFloor` all describe the CONTENT box
+ * (text + `FIELD_PAD_Y`); `cap` is a content budget (`maxLines × line`). Under
+ * `border-box` the style's height is the border box, so the border must be added or
+ * the field clips its last line by 2px — measured on S16/create-filled at 100%:
+ * "content 88px in a 86px box (overflow-y: hidden)". The composer escapes only
+ * because its own content report happened to come back two pixels larger; the
+ * arithmetic was wrong for every field and visible wherever the report was exact.
+ */
+export const fieldBoxHeight = (
+	contentFloor: number,
+	oneLineBox: number,
+	placeholderFloor: number,
+	cap: number,
+): number =>
+	Math.min(Math.max(contentFloor, oneLineBox, placeholderFloor), cap) +
+	FIELD_BORDER_Y;
+
 export const fieldClasses = (
 	state: FieldState = "rest",
 	options: { inComposer?: boolean } = {},
@@ -223,7 +291,13 @@ export const fieldClasses = (
 			// `danger` and the message sits adjacent in `body-sm`, never colour alone.
 			return cx(base, fill, "border-danger");
 		default:
-			return cx(base, fill, "border-border-control");
+			return cx(
+				base,
+				fill,
+				options.inComposer
+					? "border-transparent web:focus-visible:border-accent"
+					: "border-border-control",
+			);
 	}
 };
 
@@ -320,15 +394,30 @@ export const skeletonBarClasses = (input?: {
 }): string =>
 	`${input?.barClassName ?? "h-4"} ${input?.widthClassName ?? "w-full"} rounded-sm`;
 
-export const chipClasses = (state: ControlState = {}): string =>
-	cx(
-		"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
-		state.disabled
-			? "bg-surface border-hairline"
-			: state.selected
-				? "bg-accent-muted border-accent-border"
-				: "bg-surface border-border-control",
-	);
+export const chipClasses = (
+	state: ControlState = {},
+	options: { quiet?: boolean } = {},
+): string =>
+	options.quiet
+		? cx(
+				// Quiet: the shared composer ground is already a surface, so a chip there
+				// is a target with states rather than a second box. The floor stays —
+				// this changes the paint, never the geometry a thumb has to hit.
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border border-transparent px-2",
+				state.disabled
+					? "bg-transparent"
+					: state.selected
+						? "bg-accent-muted"
+						: "bg-transparent",
+			)
+		: cx(
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
+				state.disabled
+					? "bg-surface border-hairline"
+					: state.selected
+						? "bg-accent-muted border-accent-border"
+						: "bg-surface border-border-control",
+			);
 
 /**
  * The chip label's ink, per § 6: `ink-muted` at rest, `accent-active` (light) /

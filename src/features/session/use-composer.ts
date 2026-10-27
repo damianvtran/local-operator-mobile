@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import {
+	getStartupAuthorization,
+	subscribeStartupAuthorization,
+} from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import {
@@ -132,19 +143,38 @@ export const useComposer = (input: {
 	capabilities: Capabilities | null | undefined;
 	/** Bumped by the screen when a pending card needs the draft left alone. */
 	onSent?: () => void;
+	/** An adopted provisional editor keeps its identity while this host adds the
+	 * normal session actions, dictation and slash controls around it. */
+	editor?: {
+		draft: string;
+		images: PromptImage[];
+		setDraft(text: string): void;
+		setImages(
+			value: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+		): void;
+	};
 }): ComposerState => {
 	// `onSent` is destructured rather than kept as `input`: an object prop in a
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const endpoints = source.endpoints;
+	const authorization = useSyncExternalStore(
+		subscribeStartupAuthorization,
+		getStartupAuthorization,
+		getStartupAuthorization,
+	);
+	const scope = authorization?.scope ?? null;
+	const storageIdentity = JSON.stringify([scope, sessionId]);
+	const editor = input.editor;
 
 	/* ONE store per session, shared process-wide: two instances on one session
 	 * would each mint an id for the same typed instruction, which is the duplicate
 	 * POST the retry envelope exists to prevent. See `envelope-store.ts`. */
-	const envelopeStore = envelopeStoreFor(sessionId);
+	const envelopeStore = envelopeStoreFor(sessionId, scope);
 
-	const [draft, setDraftState] = useState("");
+	const [privateDraft, setPrivateDraft] = useState("");
+	const draft = editor?.draft ?? privateDraft;
 	/* Keyed by the session it was read for, not a bare boolean: a session switch
 	 * re-points this hook without remounting it, and a boolean left `true` from the
 	 * previous session would read the NEW session's still-unread draft as known.
@@ -156,7 +186,33 @@ export const useComposer = (input: {
 	 * every cross-conversation navigation mounts a fresh screen - which is why the
 	 * clear is a one-line belt, not a repair of a seen defect. */
 	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
-	const [images, setImages] = useState<PromptImage[]>([]);
+	const [privateImages, setPrivateImages] = useState<PromptImage[]>([]);
+	const images = editor?.images ?? privateImages;
+	/* Both writers stay STABLE while targeting whichever surface currently owns the
+	 * bytes. A plain `editor?.setter ?? setState` changes identity on every render,
+	 * which both invalidates the memoized callbacks below and can write through a
+	 * stale editor after adoption — the one handoff that must not lose a keystroke. */
+	const editorRef = useRef(editor);
+	editorRef.current = editor;
+	const draftRefForWrite = useRef(draft);
+	draftRefForWrite.current = draft;
+	const imagesRefForWrite = useRef(images);
+	imagesRefForWrite.current = images;
+	const setDraftState = useCallback((text: string) => {
+		const owner = editorRef.current;
+		if (owner === undefined) setPrivateDraft(text);
+		else owner.setDraft(text);
+	}, []);
+	const setImages = useCallback(
+		(next: PromptImage[] | ((current: PromptImage[]) => PromptImage[])) => {
+			const current = editorRef.current?.images ?? imagesRefForWrite.current;
+			const value = typeof next === "function" ? next(current) : next;
+			const owner = editorRef.current;
+			if (owner === undefined) setPrivateImages(value);
+			else owner.setImages(value);
+		},
+		[],
+	);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
@@ -191,9 +247,9 @@ export const useComposer = (input: {
 	 * that writes once per send instead. */
 	useEffect(() => {
 		let cancelled = false;
-		setDraftState("");
+		setPrivateDraft("");
 		setDraftReadFor(null);
-		setImages([]);
+		setPrivateImages([]);
 		setError(null);
 		setNotice(null);
 		/* The draft window RESTARTS here too. The route carries no `getId`/`key` on
@@ -203,10 +259,10 @@ export const useComposer = (input: {
 		 * with A's `input_path`: immutable identity written onto a durable row (agent
 		 * review round 1, M1). It resets with the rest of the per-session state. */
 		provenanceRef.current = resetOnSessionSwitch();
-		readDraft(sessionId).then((stored) => {
+		readDraft(sessionId, scope).then((stored) => {
 			if (cancelled) return;
-			setDraftState(stored);
-			setDraftReadFor(sessionId);
+			setPrivateDraft(stored);
+			setDraftReadFor(storageIdentity);
 		});
 		// The retained envelope is re-read from storage rather than kept in memory:
 		// that is the point of it being durable, and it is how a retry survives a
@@ -219,7 +275,7 @@ export const useComposer = (input: {
 		return () => {
 			cancelled = true;
 		};
-	}, [sessionId, envelopeStore]);
+	}, [sessionId, envelopeStore, scope, storageIdentity]);
 
 	/** Writes the draft and its persistence WITHOUT touching provenance. Used by the
 	 *  dictation append, whose edit is a dictation, not typing — routing it through
@@ -227,9 +283,12 @@ export const useComposer = (input: {
 	const commitDraft = useCallback(
 		(text: string) => {
 			setDraftState(text);
-			void writeDraft(sessionId, text);
+			if (editor === undefined && scope !== null)
+				void writeDraft(sessionId, text, scope).catch(() =>
+					setError("Could not save the draft on this device."),
+				);
 		},
-		[sessionId],
+		[sessionId, scope, editor, setDraftState],
 	);
 
 	/** Classifies one USER-driven draft change (typing, a slash fill, an ack clear):
@@ -415,6 +474,7 @@ export const useComposer = (input: {
 			sessionId,
 			envelopeStore,
 			setDraft,
+			setImages,
 			onSent,
 			streaming,
 			cancelDictationForSend,
@@ -569,57 +629,63 @@ export const useComposer = (input: {
 		[endpoints, sessionId],
 	);
 
-	const attach = useCallback((source: AttachSource) => {
-		void (async () => {
-			setAttaching(true);
-			/* A new attach supersedes the last failure the way `home.tsx`'s copies of
-			 * this handler already do (`setComposerError(null)`): without it, "No image
-			 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
-			 * described a state the composer was no longer in (agent review round 1,
-			 * R3). */
-			setError(null);
-			try {
-				const image =
-					source === "library"
-						? await pickImageFromLibrary()
-						: source === "paste"
-							? await pasteImage()
-							: await pickImageFromFiles();
-				if (image !== null) {
-					setImages((current) => [...current, image]);
-				} else if (source === "paste") {
-					/* The one arm that is not a cancel: the reader pressed Paste and no
-					 *  image came back. Told, because a press with no outcome reads as a
-					 *  broken control — the same rule `attachError` follows. */
-					setError(COMPOSER_COPY.pasteEmpty);
+	const attach = useCallback(
+		(source: AttachSource) => {
+			void (async () => {
+				setAttaching(true);
+				/* A new attach supersedes the last failure the way `home.tsx`'s copies of
+				 * this handler already do (`setComposerError(null)`): without it, "No image
+				 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
+				 * described a state the composer was no longer in (agent review round 1,
+				 * R3). */
+				setError(null);
+				try {
+					const image =
+						source === "library"
+							? await pickImageFromLibrary()
+							: source === "paste"
+								? await pasteImage()
+								: await pickImageFromFiles();
+					if (image !== null) {
+						setImages((current) => [...current, image]);
+					} else if (source === "paste") {
+						/* The one arm that is not a cancel: the reader pressed Paste and no
+						 *  image came back. Told, because a press with no outcome reads as a
+						 *  broken control — the same rule `attachError` follows. */
+						setError(COMPOSER_COPY.pasteEmpty);
+					}
+				} catch {
+					setError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
 				}
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+			})();
+		},
+		[setImages],
+	);
 
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
 	 *  as its destination: the event and the sheet's Paste row are two doors into
 	 *  one attachment path. */
-	const pasteFile = useCallback((file: File) => {
-		void (async () => {
-			setAttaching(true);
-			/* Same clear as `attach` above, for the same reason: this is the session
-			 * view's copy of home's handler and the two must not disagree. */
-			setError(null);
-			try {
-				const image = await readWebImageFile(file);
-				setImages((current) => [...current, image]);
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+	const pasteFile = useCallback(
+		(file: File) => {
+			void (async () => {
+				setAttaching(true);
+				/* Same clear as `attach` above, for the same reason: this is the session
+				 * view's copy of home's handler and the two must not disagree. */
+				setError(null);
+				try {
+					const image = await readWebImageFile(file);
+					setImages((current) => [...current, image]);
+				} catch {
+					setError(COMPOSER_COPY.attachError);
+				} finally {
+					setAttaching(false);
+				}
+			})();
+		},
+		[setImages],
+	);
 
 	const slash = useCallback(
 		(command: SlashCommand) => {
@@ -687,10 +753,12 @@ export const useComposer = (input: {
 	);
 
 	return {
-		draft,
-		draftReady: draftReadFor === sessionId,
+		draft:
+			editor !== undefined || draftReadFor === storageIdentity ? draft : "",
+		draftReady: editor !== undefined || draftReadFor === storageIdentity,
 		setDraft,
-		images,
+		images:
+			editor !== undefined || draftReadFor === storageIdentity ? images : [],
 		addImage: (image) => setImages((current) => [...current, image]),
 		removeImage: (index) =>
 			setImages((current) => current.filter((_, at) => at !== index)),

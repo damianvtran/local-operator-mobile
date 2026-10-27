@@ -115,11 +115,20 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"b3f94c0eba8559301f2f04119e992c625a9a9a108bacd043e48efdfcd6af4ee4",
+		"ababd96948daf1a1f55b63d8a7cf6fb95dbda8c7386e71aa1765d169bf4970e6",
 	"tools/mock-relay/scenarios.ts":
 		"530b6e922af122dcaf62180eed49923e7f0ed671d630c1da904dd8bbdc5c8c96",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
+	/* The startup evidence helper the fixture's relay imports. It has been loaded by
+	 * the driver since the auth-fence work on this branch and was never pinned — the
+	 * coverage test caught it as a gap rather than a drift, so the entry is added
+	 * here (same batch) instead of leaving a module the driver runs unguarded. */
+	/* Re-pinned with the D9 capacity fix (4c67362): the ledger's byte ceiling is a
+	 * guard the driver's own evidence path depends on, so its bytes are pinned like
+	 * the rest of the instrument. Only the constant moved. */
+	"tools/mock-relay/startup.ts":
+		"e51390abdcec9e3e88d674304f1b236bc0b991e12e65f166e8f89567c1bd38ca",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
@@ -131,13 +140,48 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
-	app: "0b3b61aa1c024867e2a1331c206e93fd758f7a8e0a3f7c7c2418757876a6dc8d",
+	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
+	 * polish work itself (new status-tray module, one-row session chrome, Home splash
+	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
+	 * the guard is doing its job, not failing. `tools/mock-relay/relay.ts` moved with
+	 * them because its fixture semantics changed for the same screens.
+	 *
+	 * A re-pin is only legitimate when the reader can see WHY from this diff; a pin
+	 * bumped to make CI green earns nothing, and the suite still refuses every other
+	 * file's drift (`--print` is the only way to produce these values).
+	 *
+	 * Re-pinned again 2026-10-26, still deliberately, for two later source commits on
+	 * this branch: `987e2fb` (the status layout predicate moved the phone/landscape
+	 * decision into `src/ui/size-class.ts` and wired it in `app/(app)/session/[id].tsx`
+	 * — hence BOTH trees move) and `46bd248` (Home's New-chat callback became a
+	 * memoised callback reading a refreshed ref; src only). Neither commit adds or
+	 * removes a file under these roots; the digests move because those files' bytes do.
+	 *
+	 * Third re-pin in the same batch, for the UX U1 remediation: the stranded-queue
+	 * escape (coordinator enqueue gate, `restoreQueueToDraft`/`discardQueue`, the
+	 * fresh-draft rotation in `startup-runtime.ts`, the Home row and its help), all
+	 * under `src/` only — `app` is unchanged this time and keeps its previous digest.
+	 * Fourth in the batch, for R11-1 and the five UX minors (queue surgery refused
+	 * during a flight, merge computed in-transaction, late-SID mapping, row copy);
+	 * again `src` only. Fifth, for the final audit's two geometry defects: the
+	 * composer chip's cap moved onto its own flex item (`src/ui/components/chip.tsx`,
+	 * U-08's 48×41 overlap at 320 pt / 200 %) and the field's painted height now adds
+	 * its border (`src/ui/variants.ts` `fieldBoxHeight`, wired in `textarea.tsx`,
+	 * U-07's "content 88px in a 86px box"); `src` only once more. Sixth, for code
+	 * R14: organized imports in `textarea.tsx`/`variants.test.ts` and the border
+	 * reserved once in `composerBudget` (`size-class.ts`); `src` only. Seventh, for
+	 * design recheck D-c: the portrait composer is bounded by the window through
+	 * `composerLimit` and a self-measured top (`composer.tsx` and the session screen
+	 * `app/(app)/session/[id].tsx`), so BOTH trees move. Eighth, lint-only: the
+	 * composer's re-measure effect reads `measurementKey` so the dependency the
+	 * ceiling contract needs is a real one (`src` only, no geometry change). */
+	app: "e8924ef20031d42a928a92143d25950464c21790bddf89730f8c71a282ce4279",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "c74f3eeb6a48c496758582ccc795731588082017020c1dd0319e94d59277f712",
+	src: "ca5df859debaa1f8a00e7e49a8bd791fa5cddce1e5a6678f43ac01686e11eb8c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

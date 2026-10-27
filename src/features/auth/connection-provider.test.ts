@@ -9,6 +9,12 @@ import type {
 	TunnelSession,
 } from "@/connection";
 import {
+	configureStartupAuthorizationStorage,
+	getStartupAuthorization,
+	startupAuthorizationLifecycle,
+} from "@/connection/startup-authorization";
+import { memorySecureStore, SecureStorage } from "@/connection/storage";
+import {
 	ConnectionProvider,
 	connectionStore,
 	useConnection,
@@ -21,12 +27,39 @@ import {
 import { useSessionRuntime } from "@/features/session/use-session";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 
+// The strict privacy adapter is supplied by the adjacent storage slice. These
+// tests exercise the real provider boundary, not native filesystem/Keychain I/O.
+const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
+const handoff = vi.hoisted(() => ({
+	block: null as Promise<void> | null,
+	started: false,
+}));
+vi.mock("./radient-sign-in", () => ({
+	beginRadientSignIn: async () => {
+		handoff.started = true;
+		await handoff.block;
+		return { ok: true, tokens: oauth };
+	},
+}));
+vi.mock("@/features/session/device-storage", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	clearAuthorizationData: async () => {
+		privacy.calls += 1;
+		if (privacy.fail) throw new Error("Synthetic privacy storage failure");
+	},
+}));
+
 vi.mock("react-native", () => ({
 	Platform: { OS: "web" },
 	AppState: { addEventListener: () => ({ remove() {} }) },
 }));
 const durable = vi.hoisted(() => ({
 	oauth: null as RadientTokens | null,
+	saved: null as {
+		baseUrl: string;
+		password: string;
+		allowInsecure: boolean;
+	} | null,
 	session: null as TunnelSession | null,
 	events: [] as string[],
 	writeBlock: null as Promise<void> | null,
@@ -35,7 +68,7 @@ const durable = vi.hoisted(() => ({
 	clearsStarted: 0,
 }));
 vi.mock("@/features/auth/tunnel-storage", () => ({
-	readSavedTunnel: async () => null,
+	readSavedTunnel: async () => durable.saved,
 	readStoredOauth: async () => durable.oauth,
 	readStoredTunnelSession: async () => durable.session,
 	writeStoredTunnelSession: async (session: TunnelSession) => {
@@ -56,7 +89,11 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 	},
 	removeSavedTunnel: async () => {},
 	writeSavedTunnel: async () => {},
-	writeStoredOauth: async () => ({ persistent: false }),
+	writeStoredOauth: async (tokens: RadientTokens) => {
+		durable.events.push("oauth-write");
+		durable.oauth = tokens;
+		return { persistent: false };
+	},
 }));
 
 /** The existing modal hook tests use ReactDOM's client renderer with a small
@@ -179,6 +216,8 @@ async function relay(
 		privateHistory?: string;
 		emptyFrame?: boolean;
 		frameTitle?: string;
+		/** The initial list read fails while the stream stays healthy (R1-1). */
+		sessionsFailure?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -314,6 +353,10 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
+			if (options.sessionsFailure) {
+				json({ detail: "Sessions unavailable", reason: "connector" }, 503);
+				return;
+			}
 			json(body("sessions-empty"));
 			return;
 		}
@@ -410,7 +453,18 @@ function transport(controlPlane?: string) {
 	);
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+	privacy.fail = false;
+	handoff.block = null;
+	handoff.started = false;
+	durable.saved = null;
+	const storage = new SecureStorage(memorySecureStore());
+	configureStartupAuthorizationStorage({
+		read: () => storage.readStartupAuthorization(),
+		write: (record) => storage.writeStartupAuthorization(record),
+	});
+	await startupAuthorizationLifecycle.retire();
+	privacy.calls = 0;
 	observedSession = null;
 	wire.length = 0;
 	sessionProjections.getState().reset();
@@ -433,7 +487,111 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
+describe("startup authorization is admitted by the route (R1-1)", () => {
+	it("survives a failed cold-start list read with a healthy stream", async () => {
+		const mock = await relay({ sessionsFailure: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// The read failed: the list says so ...
+		expect(mock.events).toContain("GET /api/sessions");
+		// ... and the route is still authorized to start work, which is what the
+		// startup coordinator opens on.
+		expect(getStartupAuthorization()).not.toBeNull();
+	});
+});
+
 describe("mounted provider authentication retirement", () => {
+	it("reports failed privacy cleanup and keeps replacement admission closed", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(getStartupAuthorization()).not.toBeNull();
+		privacy.fail = true;
+		await act(async () => {
+			expect(await latest.signOut()).toBe(false);
+		});
+		expect(getStartupAuthorization()).toBeNull();
+		expect(connectionStore.getState().surface).toBe("diagnostic");
+		privacy.fail = false;
+	});
+
+	it("ignores an OAuth browser result that arrives after explicit signout", async () => {
+		await mount();
+		const held = deferred();
+		handoff.block = held.promise;
+		cleanup.push(async () => {
+			held.resolve();
+		});
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await until(() => handoff.started);
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		held.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		expect(durable.events).not.toContain("oauth-write");
+		expect(durable.oauth).toBeNull();
+		expect(getStartupAuthorization()).toBeNull();
+		expect(connectionStore.getState().route).toBeNull();
+	});
+
+	it("retains a generation on verified saved-route remount, rotates it on same-URL explicit login", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		const input = {
+			url: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
+		await act(async () => {
+			await latest.connectCustom(input);
+		});
+		const original = getStartupAuthorization()?.scope;
+		expect(original).toBeTruthy();
+		durable.saved = {
+			baseUrl: input.url,
+			password: input.password,
+			allowInsecure: true,
+		};
+		await unmount();
+		await mount();
+		await until(() => getStartupAuthorization() !== null);
+		expect(getStartupAuthorization()?.scope).toBe(original);
+		await act(async () => {
+			await latest.connectCustom(input);
+		});
+		expect(getStartupAuthorization()?.scope).not.toBe(original);
+	});
+
+	it("explicit sign-out invokes verified private-data cleanup even without a selected route", async () => {
+		await mount();
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		expect(privacy.calls).toBeGreaterThan(0);
+		expect(getStartupAuthorization()).toBeNull();
+	});
+
 	it("drains a late native mint, revokes its session, then clears durable credentials", async () => {
 		const mock = await relay({ holdToken: true });
 		transport(mock.origin);
@@ -974,6 +1132,9 @@ describe("mounted provider authentication retirement", () => {
 				expect(await latest.signOut()).toBe(false);
 			});
 			const clear = deferred();
+			cleanup.push(async () => {
+				clear.resolve();
+			});
 			durable.clearBlock = clear.promise;
 			if (mode !== "failure") old.allowLogout();
 			let exiting!: Promise<boolean>;
@@ -994,20 +1155,25 @@ describe("mounted provider authentication retirement", () => {
 			);
 			expect(completed).toBe(false);
 			const current = mode === "retain" ? null : await relay();
+			let connecting: Promise<void> | undefined;
 			if (current)
 				await act(async () => {
-					await latest.connectCustom({
+					connecting = latest.connectCustom({
 						url: current.origin,
 						password: "test-only",
 						allowInsecure: true,
 					});
 				});
-			const currentClient = latest.relay();
-			const currentCookie = current ? jars.get(current.origin) : null;
+			// Replacement admission now waits for verified privacy/credential
+			// retirement; it may not race a durable clear from the former identity.
+			expect(getStartupAuthorization()).toBeNull();
+			if (current) expect(current.events).not.toContain("POST /login");
 			clear.resolve();
 			await act(async () => {
-				await exiting;
+				await Promise.all([exiting, connecting]);
 			});
+			const currentClient = latest.relay();
+			const currentCookie = current ? jars.get(current.origin) : null;
 			expect(await exiting).toBe(mode === "retain");
 			if (current) {
 				expect(latest.relay()).toBe(currentClient);
