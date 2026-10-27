@@ -992,6 +992,18 @@ export default function Session() {
 			<View className="flex-1 min-h-0">
 				<View
 					className="flex-1 min-h-0"
+					/* Short landscape: a pending decision collapses the transcript and hides the
+					 * secondary region, so the column's remaining children no longer fill it.
+					 * Anchor that cluster to the BOTTOM rather than letting the slack fall
+					 * below the composer: otherwise the composer jumps up when a decision
+					 * arrives and drops back after it is answered (the floating-composer
+					 * defect design D18 fixed for the loading state). Portrait and tablet
+					 * keep the normal column flow. */
+					style={
+						compact && pendingViewProps !== null
+							? { justifyContent: "flex-end" as const }
+							: undefined
+					}
 					testID={SURFACE.sessionColumn}
 					onLayout={(event) =>
 						measureRecovery("column", event.nativeEvent.layout.height)

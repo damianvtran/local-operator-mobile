@@ -218,17 +218,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned 2026-10-27 for the S8 short-landscape overlap fix (BOTH trees move):
 	 * `statusTrayVisible` in `src/ui/size-class.ts` and its one use in
 	 * `app/(app)/session/[id].tsx` hide the one-row status tray while a pending
-	 * approval/ask is on screen in short landscape. It changes no other state or
-	 * viewport: the proofs' scene is a 390x844 portrait `long-transcript` cell with
-	 * no pending decision (`tray` stays visible there, `compact` is false), so nodes
-	 * 64/65/66 of the four original cells measure what they measured before. */
-	app: "414bed98b1bda3d9ca16d51caa9d98a09d492b112c3397389852013ea45b003f",
+	 * approval/ask is on screen in short landscape, and bottom-anchor that cluster
+	 * so the freed height does not become a band under the composer (design D1).
+	 * It changes no other state or viewport: the proofs' scene is a 390x844 portrait
+	 * `long-transcript` cell with no pending decision (`tray` stays visible there,
+	 * `compact` is false), so nodes 64/65/66 of the four original cells measure what
+	 * they measured before. Re-pinned a second time in the same PR for that round-1
+	 * remediation, after the LAST `src`/`app` edit (`native-polish.test.ts`). */
+	app: "9ca98d858daab08a3140dde400de3beafc4d955b2645e80be30456df87ae3633",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "3e512fdbf33eb1f806997cbead646795bef57794afee29397e877d1d589b2966",
+	src: "7b162812b77bfc7160fe263b21b773084235a36474d75602921b17911d7d71b5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

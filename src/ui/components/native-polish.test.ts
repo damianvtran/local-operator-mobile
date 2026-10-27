@@ -111,4 +111,18 @@ describe("phone status surface wiring (D2 final)", () => {
 		);
 		expect(screen).not.toContain("{tray ? (\n\t\t\t\t<StatusTray");
 	});
+
+	it("bottom-anchors a pending decision's card and composer in short landscape", () => {
+		const screen = readFileSync(
+			new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+			"utf8",
+		);
+		// With the transcript collapsed and the status tray yielding, the remaining
+		// children do not fill the column. Without this the slack lands UNDER the
+		// composer (38 pt at approval/100 %, 55 pt at ask/100 %, measured) and the
+		// composer jumps as the decision arrives and is answered (design D1/D18).
+		expect(screen).toContain(
+			'compact && pendingViewProps !== null\n\t\t\t\t\t\t\t? { justifyContent: "flex-end" as const }',
+		);
+	});
 });
