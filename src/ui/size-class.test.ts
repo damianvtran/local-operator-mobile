@@ -14,6 +14,7 @@ import {
 	sessionStatusLayout,
 	sidebarFooterScrolls,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
@@ -450,5 +451,32 @@ describe("session status layout", () => {
 		expect(landscape.tray).toBe(true);
 		expect(landscape.inlineSecondary).toBe(false);
 		expect(landscape.statusSheet).toBe(true);
+	});
+});
+
+describe("status tray beside a pending decision", () => {
+	// Measured at 844x390, 200 % text (nightly 2026-10-27, S8 approval/populated-long,
+	// U-08): the tray's 48 pt row took the column from 338 pt to 290 pt, and the card's
+	// pinned Approve/Deny (46-48 pt, shrink-0) ended UNDER the composer. The tray has to
+	// yield in short landscape, exactly as the inline region it replaced did (UX U12).
+	it("yields to a pending approval or ask in short landscape", () => {
+		const landscape = sessionStatusLayout(844, true);
+		expect(statusTrayVisible(landscape.tray, true, true)).toBe(false);
+	});
+
+	it("returns the moment the decision is answered", () => {
+		const landscape = sessionStatusLayout(844, true);
+		expect(statusTrayVisible(landscape.tray, true, false)).toBe(true);
+	});
+
+	it("stays beside the card on a tall phone, which has the room", () => {
+		const portrait = sessionStatusLayout(390, false);
+		expect(statusTrayVisible(portrait.tray, false, true)).toBe(true);
+	});
+
+	it("never paints where the layout has no tray (tablet)", () => {
+		const tablet = sessionStatusLayout(1024, false);
+		expect(statusTrayVisible(tablet.tray, false, false)).toBe(false);
+		expect(statusTrayVisible(tablet.tray, false, true)).toBe(false);
 	});
 });
