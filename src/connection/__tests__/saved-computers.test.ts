@@ -1,6 +1,7 @@
 /**
- * The saved-computers registry: CRUD, the bound, migration from the single custom
- * slot, and the removal that discovery must not undo (bug B4).
+ * The saved-computers registry: CRUD, the bound, sign-out's clear, the custom slot
+ * it deliberately does NOT copy, and the removal that discovery must not undo
+ * (bug B4).
  *
  * Everything runs over `memorySecureStore`, the same adapter the app's web target
  * uses, so the assertions read the raw keystore items a phone would hold.
@@ -18,7 +19,6 @@ import {
 	MAX_SECURE_VALUE_CHARS,
 	memorySecureStore,
 	SECURE_KEYS,
-	SecureStorage,
 } from "../storage";
 
 /** Placeholder addresses only: this repository is public. */
@@ -307,77 +307,116 @@ describe("the saved-computers registry", () => {
 	});
 });
 
-describe("migration from the single custom slot", () => {
+describe("the custom slot is not copied (R1)", () => {
 	const legacy = JSON.stringify({
 		base_url: "https://relay.example.com/",
 		password: "placeholder-password",
 		allow_insecure: true,
 	});
 
-	it("seeds one custom entry and leaves the slot byte-for-byte unchanged", async () => {
+	it("seeds nothing from lop.mobile.custom, writes no marker, and leaves the slot as it was", async () => {
 		const { adapter, registry } = fixture({ [SECURE_KEYS.custom]: legacy });
 
-		const entries = await registry.list();
-		expect(entries).toEqual([
-			{
-				transport: "custom",
-				id: "id00",
-				baseUrl: "https://relay.example.com",
-				allowInsecure: true,
-				name: "relay.example.com",
-				addedAt: 1_000,
-				lastUsedAt: 1_000,
-				hidden: false,
-				identity: null,
-			},
-		]);
-		expect(adapter.items.get(SECURE_KEYS.custom)).toBe(legacy);
-		/* The password stays where `storage.ts` owns it, and only there. */
-		expect(adapter.items.get(`${SAVED_COMPUTER_KEY_PREFIX}id00`)).not.toContain(
-			"placeholder-password",
-		);
-		expect(await new SecureStorage(adapter).readCustomRoute()).toEqual({
-			base_url: "https://relay.example.com/",
-			password: "placeholder-password",
-			allow_insecure: true,
-		});
-	});
-
-	it("is idempotent: a re-run, and a fresh instance after a restart, seed nothing more", async () => {
-		const { adapter, registry } = fixture({ [SECURE_KEYS.custom]: legacy });
-		await registry.list();
-		await registry.list();
-		const restarted = new SavedComputers(adapter, { newId: () => "other" });
-		expect((await restarted.list()).map((entry) => entry.id)).toEqual(["id00"]);
-
-		/* Forgetting the migrated entry sticks: the index's presence is the
-		 *  migration marker, so the slot (still there) is not re-seeded. */
-		await restarted.forget("id00");
-		expect(await new SavedComputers(adapter).list()).toEqual([]);
-		expect(adapter.items.get(SECURE_KEYS.custom)).toBe(legacy);
-	});
-
-	it("never deletes an unparseable custom slot, unlike the credential reader", async () => {
-		const { adapter, registry } = fixture({ [SECURE_KEYS.custom]: "{broken" });
 		expect(await registry.list()).toEqual([]);
-		expect(adapter.items.get(SECURE_KEYS.custom)).toBe("{broken");
-	});
+		expect(await registry.hiddenTunnelIds()).toEqual([]);
+		/* A read writes nothing: no index (the old migration marker), no entry. */
+		expect([...adapter.items.keys()]).toEqual([SECURE_KEYS.custom]);
+		expect(adapter.items.get(SECURE_KEYS.custom)).toBe(legacy);
 
-	it("does not mark the migration done when the keystore refuses the read", async () => {
-		const adapter = memorySecureStore({ [SECURE_KEYS.custom]: legacy });
-		let locked = true;
-		const flaky = {
-			...adapter,
+		/* A first write lists only what was written, never the slot's address. */
+		await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+			name: "a",
+		});
+		expect((await registry.list()).map((entry) => entry.transport)).toEqual([
+			"radient",
+		]);
+	});
+});
+
+describe("clear (sign-out)", () => {
+	it("deletes every entry and leaves an empty index, even past an unreadable entry", async () => {
+		const { adapter: base } = fixture();
+		let failing: string | null = null;
+		const adapter = {
+			...base,
 			getItemAsync: async (key: string) => {
-				if (locked) throw new Error("keystore locked");
-				return adapter.getItemAsync(key);
+				if (key === failing) throw new Error("keystore read failed");
+				return base.getItemAsync(key);
 			},
 		};
-		const registry = new SavedComputers(flaky, { newId: () => "id00" });
-		await expect(registry.list()).rejects.toThrow("keystore locked");
-		expect(adapter.items.has(SAVED_COMPUTERS_INDEX_KEY)).toBe(false);
-		locked = false;
-		expect(await registry.list()).toHaveLength(1);
+		const registry = new SavedComputers(adapter, {
+			newId: (() => {
+				let next = 0;
+				return () => `id${(next++).toString().padStart(2, "0")}`;
+			})(),
+		});
+		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "a" });
+		await registry.rememberCustom({
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+		});
+		failing = `${SAVED_COMPUTER_KEY_PREFIX}id00`;
+
+		await registry.clear();
+
+		failing = null;
+		expect(base.items.get(SAVED_COMPUTERS_INDEX_KEY)).toBe(
+			JSON.stringify({ v: 1, ids: [] }),
+		);
+		expect(
+			[...base.items.keys()].filter((key) =>
+				key.startsWith(SAVED_COMPUTER_KEY_PREFIX),
+			),
+		).toEqual([]);
+		expect(await registry.list()).toEqual([]);
+		expect(await new SavedComputers(base).hiddenTunnelIds()).toEqual([]);
+	});
+});
+
+describe("a keystore read that throws is not a corrupt entry (R2)", () => {
+	it("fails the write and keeps the hidden entry, instead of dropping it from the index", async () => {
+		const { adapter: base } = fixture();
+		let failOnce: string | null = null;
+		const adapter = {
+			...base,
+			getItemAsync: async (key: string) => {
+				if (key === failOnce) {
+					failOnce = null;
+					throw new Error("keystore read failed");
+				}
+				return base.getItemAsync(key);
+			},
+		};
+		let next = 0;
+		const registry = new SavedComputers(adapter, {
+			newId: () => `id${(next++).toString().padStart(2, "0")}`,
+		});
+		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "a" });
+		const indexBefore = base.items.get(SAVED_COMPUTERS_INDEX_KEY);
+
+		failOnce = `${SAVED_COMPUTER_KEY_PREFIX}id00`;
+		await expect(
+			registry.rememberRadient({ tunnelId: "t2", hostname: HOST_B, name: "b" }),
+		).rejects.toThrow("keystore read failed");
+
+		/* Untouched: the index still names the hidden entry, so it stays hidden. */
+		expect(base.items.get(SAVED_COMPUTERS_INDEX_KEY)).toBe(indexBefore);
+		expect(await registry.hiddenTunnelIds()).toEqual(["t1"]);
+
+		/* The retry, once the keystore answers, keeps both. */
+		await registry.rememberRadient({
+			tunnelId: "t2",
+			hostname: HOST_B,
+			name: "b",
+		});
+		expect(await registry.hiddenTunnelIds()).toEqual(["t1"]);
+		expect(
+			(await registry.list()).map((entry) =>
+				entry.transport === "radient" ? entry.tunnelId : entry.id,
+			),
+		).toEqual(expect.arrayContaining(["t1", "t2"]));
 	});
 });
 

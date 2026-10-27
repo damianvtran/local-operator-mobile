@@ -54,6 +54,7 @@ let adapter: SecureStoreAdapter | null = null;
 let storage: SecureStorage | null = null;
 let opening: Promise<TunnelStorage> | null = null;
 let registry: SavedComputers | null = null;
+const savedComputersClearedListeners = new Set<() => void>();
 
 // Lazy callbacks keep platform initialization out of module evaluation and the
 // authorization owner independent of React/coordinator imports.
@@ -241,12 +242,38 @@ export async function writeStoredTunnelSession(
  * Deliberately the ONLY full wipe, and deliberately here rather than duplicated at the
  * sign-out call site, so the three records cannot be cleared by three code paths and
  * drift apart.
+ *
+ * The saved-computers registry goes too, AFTER the credentials: the Sign out dialog
+ * promises "forgetting it here", and Radient hostnames are account-linked personal
+ * data the reader could no longer see or delete once signed out. Removals are keyed by
+ * tunnel id, so a second account would only carry the first one's dead weight. The
+ * registry comes second so a failure there still leaves the credentials gone, and it
+ * fails the sign-out like a credential delete does — a retry runs both again, and
+ * `clearAll()` is idempotent. Listeners hear about it only once the keystore agrees,
+ * so the in-memory hidden set never claims a wipe that did not happen.
  */
 export async function clearStoredCredentials(): Promise<void> {
 	const { storage: store } = await open();
 	// A failed delete is NOT successful sign-out. Let the provider retain a
 	// closed admission gate and report failure instead of resurrecting at restart.
 	await store.clearAll();
+	await (await savedComputers()).clear();
+	for (const listener of savedComputersClearedListeners) listener();
+}
+
+/**
+ * Called after sign-out has cleared the saved-computers registry.
+ *
+ * A listener rather than a store call because this module must not import the
+ * connection store's owner (`connection-provider.tsx` imports THIS module), and the
+ * provider's sign-out path is a later slice's to rewire. The root hydration hook is
+ * the subscriber: it already owns moving registry state into the store.
+ */
+export function onSavedComputersCleared(listener: () => void): () => void {
+	savedComputersClearedListeners.add(listener);
+	return () => {
+		savedComputersClearedListeners.delete(listener);
+	};
 }
 
 /* ------------------------------------------------------------ saved computers */
@@ -256,10 +283,7 @@ export async function clearStoredCredentials(): Promise<void> {
  * point 1 of the module note gives. One registry instance, too: it serialises its
  * own read-modify-writes, which only holds if every caller shares it.
  *
- * Deliberately NOT cleared by `clearStoredCredentials`: the registry holds no
- * credential, and `clearAll()` is the credential wipe. Whether sign-out should also
- * forget the list is a decision for the switcher slice, which is where the list
- * first becomes visible on its own.
+ * Cleared by `clearStoredCredentials` (sign-out), after `clearAll()`; see there.
  */
 async function savedComputers(): Promise<SavedComputers> {
 	const { adapter: store } = await open();
@@ -279,7 +303,10 @@ export async function readHiddenTunnelIds(): Promise<string[]> {
 }
 
 /** Remembers that the reader removed this computer. Returns whether that will
- *  survive a restart, so a caller can say so instead of implying it. */
+ *  survive a restart, so a caller can say so instead of implying it. The
+ *  Computers screen does not say so yet: on web (`memorySecureStore`) a removal
+ *  lasts for the session, and the copy for that belongs with the switcher's
+ *  surface rather than a toast, which is never for a shortfall. */
 export async function hideRadientComputer(
 	computer: RadientComputerInput,
 ): Promise<{ persistent: boolean }> {

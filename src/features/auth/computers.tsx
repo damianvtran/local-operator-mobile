@@ -13,9 +13,9 @@ import {
 	probeHealth,
 	useConnectorWait,
 } from "@/features/auth/connector-wait";
+import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
-import { hideRadientComputer } from "@/features/auth/tunnel-storage";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
@@ -458,19 +458,9 @@ export default function Computers() {
 				confirmLabel="Remove"
 				onConfirm={() => {
 					if (removeTarget) {
-						/* Removing is local to this phone and must OUTLAST discovery: the
-						 *  account still has the computer, so the next refresh reports it
-						 *  again. Filtering the list here (the old behaviour) lost to that
-						 *  refresh; the store's hidden set filters every later
-						 *  `setComputers`, and the registry keeps it across restarts. The
-						 *  store is updated first so the row leaves at once, whatever the
-						 *  keystore write does. */
-						connectionStore.getState().hideComputer(removeTarget.tunnelId);
-						void hideRadientComputer({
-							tunnelId: removeTarget.tunnelId,
-							hostname: removeTarget.hostname,
-							name: removeTarget.name,
-						});
+						/* Persisting the removal so discovery cannot undo it is
+						 *  `removeComputer`'s job; the screen owns only the confirmation. */
+						void removeComputer(connectionStore, removeTarget);
 					}
 					setRemoveTarget(null);
 				}}

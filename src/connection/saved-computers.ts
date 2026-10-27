@@ -24,12 +24,14 @@
  *   list. Sixteen entries in one blob could exceed the cap; one entry cannot.
  * - **Bounded.** `MAX_SAVED_COMPUTERS` caps the list so the index stays far
  *   under the cap and an unbounded discovery feed cannot grow the keystore.
- * - **Migration without deletion.** The first read seeds the registry from the
- *   existing `lop.mobile.custom` slot, parsed here from the raw value rather than
- *   through `SecureStorage.readCustomRoute()` — that reader deletes an item it
- *   cannot parse, and a migration must never change the slot it migrates from.
- *   The slot stays exactly as it was, so a build without this module (a rollback)
- *   still finds the reader's own tunnel and its remembered password.
+ * - **No copy of the custom slot, yet.** The reader's own tunnel stays in the
+ *   single `lop.mobile.custom` slot `./storage.ts` owns, and this registry does
+ *   NOT seed itself from it. A seeded entry would be a snapshot nothing keeps in
+ *   sync: saving, forgetting or signing out changes the slot, not the copy, so
+ *   the registry would keep an address the reader asked the app to forget. The
+ *   custom transport and `updateAddress` exist so the switcher slice can make
+ *   the registry the owner of custom computers, writing through on every save,
+ *   forget and sign-out in one place — not a one-shot copy here.
  * - **Identity is the computer's key, never its address.** A VPN, a Wi-Fi to
  *   cellular hop, a new IP or a re-pointed custom URL is the SAME computer, so an
  *   entry's local `id`, timestamps and `hidden` flag never derive from
@@ -37,21 +39,24 @@
  *   `identity.key_fingerprint` is reserved for the key that will prove it (pinning
  *   is a later slice); it is `null` on every entry today.
  * - **Secure store, though nothing here is secret.** Hostnames and addresses are
- *   still personal, and the keystore is this app's only durable store with the
- *   per-device accessibility class; AsyncStorage would put them in a plain file.
+ *   still personal, and the keystore keeps them out of a plain file, which is
+ *   what AsyncStorage would be. It does NOT add a per-device accessibility class
+ *   today: `tunnel-storage.ts` builds this registry, like the credential slots,
+ *   without `keychainAccessible`, so every item gets expo-secure-store's default
+ *   (`WHEN_UNLOCKED`, which an encrypted backup can carry to another device).
+ *   That gap predates this module and is shared with the credential slots; the
+ *   option is plumbed through so fixing it for both is one change.
  */
 
 import {
 	MAX_SECURE_VALUE_CHARS,
-	SECURE_KEYS,
 	SecureStorageError,
 	type SecureStoreAdapter,
 	type SecureStoreOptions,
 } from "./storage";
 
-/** The index item: the ordered list of entry ids. Its PRESENCE is also the
- *  migration marker — once it exists, the custom slot is never re-seeded, so a
- *  reader who forgets the migrated entry does not see it come back. */
+/** The index item: the ordered list of entry ids, oldest added first. A missing
+ *  index is an empty registry; nothing is seeded from anywhere on a first read. */
 export const SAVED_COMPUTERS_INDEX_KEY = "lop.mobile.computers";
 
 /** The per-entry item prefix. `expo-secure-store` keys may hold only
@@ -214,7 +219,10 @@ export class SavedComputers {
 	 * is recorded: re-saving under a new URL without the id would fork one computer
 	 * into two entries, so a caller that knows the entry passes its `id` or calls
 	 * `updateAddress`. An unknown `id` falls through to the address match rather
-	 * than inventing a second entry for an address already saved.
+	 * than inventing a second entry for an address already saved. When several
+	 * entries share the address (`updateAddress` allows it), the address match
+	 * refreshes the one added FIRST — index order — so the choice is stable across
+	 * reads rather than dependent on `lastUsedAt`.
 	 */
 	async rememberCustom(input: CustomComputerInput): Promise<SavedComputer> {
 		const baseUrl = normaliseBaseUrl(input.baseUrl);
@@ -321,16 +329,25 @@ export class SavedComputers {
 		});
 	}
 
-	/** Every entry and the index. Leaves the custom slot alone, like every other
-	 *  operation here — that slot belongs to `./storage.ts`. */
+	/**
+	 * Every entry, leaving an EMPTY index (sign-out). Leaves the custom slot alone,
+	 * like every other operation here — that slot belongs to `./storage.ts`.
+	 *
+	 * Works from the raw index, not `load()`: an entry whose read fails must still
+	 * be deleted, and a flaky entry read must not make sign-out fail. The empty
+	 * index is written BEFORE the items go, for the same crash rule as `forget`;
+	 * writing it rather than deleting it keeps "cleared" a state on disk, so a
+	 * later seeding rule can never mistake a signed-out phone for a fresh install.
+	 */
 	async clear(): Promise<void> {
 		await this.serial(async () => {
-			const entries = await this.load();
-			await this.adapter.deleteItemAsync(
+			const rawIndex = await this.adapter.getItemAsync(
 				SAVED_COMPUTERS_INDEX_KEY,
 				this.writeOptions(),
 			);
-			for (const entry of entries) await this.deleteEntry(entry.id);
+			const ids = rawIndex === null ? [] : parseIndex(rawIndex);
+			await this.writeIndex([]);
+			for (const id of ids) await this.deleteEntry(id);
 		});
 	}
 
@@ -381,13 +398,15 @@ export class SavedComputers {
 		return next;
 	}
 
-	/** The entries, migrating on the first ever read. */
+	/** The entries, in index order. A read the keystore REFUSES propagates, so the
+	 *  mutation that asked fails before it rewrites the index; only a missing or
+	 *  unparseable item is dropped (see `readEntry`). */
 	private async load(): Promise<SavedComputer[]> {
 		const rawIndex = await this.adapter.getItemAsync(
 			SAVED_COMPUTERS_INDEX_KEY,
 			this.writeOptions(),
 		);
-		if (rawIndex === null) return this.migrate();
+		if (rawIndex === null) return [];
 		const ids = parseIndex(rawIndex);
 		const entries: SavedComputer[] = [];
 		for (const id of ids) {
@@ -400,47 +419,19 @@ export class SavedComputers {
 	}
 
 	/**
-	 * Seeds the registry from the single custom slot, once.
+	 * One entry, or `null` when it is gone or unparseable — the only two cases
+	 * that may cost the reader that computer.
 	 *
-	 * The slot is only READ. A read that throws (a keystore still locked after a
-	 * reboot) is rethrown rather than read as "no custom computer": writing an
-	 * empty index then would mark the migration done and lose the reader's tunnel
-	 * from this list for good.
+	 * A THROWING read is not one of them and is deliberately not caught: Android
+	 * keystore reads fail transiently, and treating that as "corrupt" would let
+	 * the caller's write drop the id from the index — a hidden entry lost that
+	 * way is a removed computer coming back.
 	 */
-	private async migrate(): Promise<SavedComputer[]> {
+	private async readEntry(id: string): Promise<SavedComputer | null> {
 		const raw = await this.adapter.getItemAsync(
-			SECURE_KEYS.custom,
+			entryKey(id),
 			this.writeOptions(),
 		);
-		const seed = raw === null ? null : parseLegacyCustom(raw);
-		if (!seed) {
-			await this.writeIndex([]);
-			return [];
-		}
-		const now = this.now();
-		const entry: SavedCustomComputer = {
-			transport: "custom",
-			id: this.freshId([]),
-			baseUrl: seed.baseUrl,
-			allowInsecure: seed.allowInsecure,
-			name: clampName(hostOf(seed.baseUrl), seed.baseUrl),
-			addedAt: now,
-			lastUsedAt: now,
-			hidden: false,
-			identity: null,
-		};
-		await this.writeEntry(entry);
-		await this.writeIndex([entry]);
-		return [entry];
-	}
-
-	private async readEntry(id: string): Promise<SavedComputer | null> {
-		let raw: string | null;
-		try {
-			raw = await this.adapter.getItemAsync(entryKey(id), this.writeOptions());
-		} catch {
-			return null;
-		}
 		if (raw === null) return null;
 		try {
 			return parseEntry(JSON.parse(raw), id);
@@ -567,27 +558,6 @@ function parseIndex(raw: string): string[] {
 			.slice(0, MAX_SAVED_COMPUTERS);
 	} catch {
 		return [];
-	}
-}
-
-/** The legacy slot's address fields, and nothing else: its password stays where
- *  it is, owned by `./storage.ts`. */
-function parseLegacyCustom(
-	raw: string,
-): { baseUrl: string; allowInsecure: boolean } | null {
-	try {
-		const value = JSON.parse(raw) as {
-			base_url?: unknown;
-			allow_insecure?: unknown;
-		};
-		if (typeof value?.base_url !== "string" || value.base_url.length === 0)
-			return null;
-		return {
-			baseUrl: normaliseBaseUrl(value.base_url),
-			allowInsecure: value.allow_insecure === true,
-		};
-	} catch {
-		return null;
 	}
 }
 

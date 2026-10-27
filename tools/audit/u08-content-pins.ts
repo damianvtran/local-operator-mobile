@@ -181,14 +181,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `src/features/auth/use-saved-computers-hydration.ts`), the connection store's
 	 * hidden-computer filter, the Computers screen's Remove handler, and a
 	 * render-nothing hydration component in `app/_layout.tsx` — so BOTH trees move.
-	 * No markup, style or copy changes; no proof scene renders differently. */
+	 * No markup, style or copy changes; no proof scene renders differently.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 1 (`src` only; `app` is
+	 * unchanged): the registry no longer copies the custom slot and lets a
+	 * throwing read propagate, sign-out clears it, and the Remove handler and
+	 * startup merge moved into `src/features/auth/saved-computers-sync.ts` (plus
+	 * its test) so they can be tested. The screen's `onConfirm` now calls that
+	 * helper; no markup, style or copy changes. */
 	app: "9526e1c2ae9f10223c976f76608d44503520bc7759a9f4e42141bcb208a2a6ac",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "8156551492aa59184b555029be706bbe6b7cc7749a340c333ebde3ac9f5e928c",
+	src: "8f27524bc7235336f82c711f6b4f48a06faa2ce48bae7d1385a72afe6b53afe5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
