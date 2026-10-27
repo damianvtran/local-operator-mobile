@@ -188,14 +188,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * throwing read propagate, sign-out clears it, and the Remove handler and
 	 * startup merge moved into `src/features/auth/saved-computers-sync.ts` (plus
 	 * its test) so they can be tested. The screen's `onConfirm` now calls that
-	 * helper; no markup, style or copy changes. */
+	 * helper; no markup, style or copy changes.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 2 N1/N2 (`src` only):
+	 * read-only registry paths skip an entry whose read throws, writes keep its
+	 * id, and sign-out writes the empty index past an unreadable index. Registry
+	 * internals and their test only; nothing renders differently. */
 	app: "9526e1c2ae9f10223c976f76608d44503520bc7759a9f4e42141bcb208a2a6ac",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "8f27524bc7235336f82c711f6b4f48a06faa2ce48bae7d1385a72afe6b53afe5",
+	src: "4f1a87f0e82906c46aebc572c0033f9c2ef454675a0fb082564fdc94abe0a680",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

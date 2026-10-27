@@ -6,7 +6,7 @@
  * Everything runs over `memorySecureStore`, the same adapter the app's web target
  * uses, so the assertions read the raw keystore items a phone would hold.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createConnectionStore } from "../../state";
 import type { DiscoveredComputer } from "../discovery";
 import {
@@ -417,6 +417,138 @@ describe("a keystore read that throws is not a corrupt entry (R2)", () => {
 				entry.transport === "radient" ? entry.tunnelId : entry.id,
 			),
 		).toEqual(expect.arrayContaining(["t1", "t2"]));
+	});
+});
+
+describe("one unreadable entry costs that entry, not the registry (N1)", () => {
+	/** Two hidden computers and a visible one; `id00`'s keystore read throws on
+	 *  every attempt — the permanent `DecryptException` case — until reset. */
+	async function withUnreadableEntry() {
+		const { adapter: base } = fixture();
+		let failing: string | null = null;
+		const adapter = {
+			...base,
+			getItemAsync: async (key: string) => {
+				if (key === failing) throw new Error("keystore read failed");
+				return base.getItemAsync(key);
+			},
+		};
+		let next = 0;
+		const registry = new SavedComputers(adapter, {
+			newId: () => `id${(next++).toString().padStart(2, "0")}`,
+		});
+		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "a" });
+		await registry.hideRadient({ tunnelId: "t2", hostname: HOST_B, name: "b" });
+		await registry.rememberRadient({
+			tunnelId: "t3",
+			hostname: HOST_B,
+			name: "c",
+		});
+		failing = `${SAVED_COMPUTER_KEY_PREFIX}id00`;
+		const warnings: unknown[][] = [];
+		const warn = vi
+			.spyOn(console, "warn")
+			.mockImplementation((...args: unknown[]) => {
+				warnings.push(args);
+			});
+		return {
+			base,
+			registry,
+			warnings,
+			heal: () => {
+				failing = null;
+				warn.mockRestore();
+			},
+		};
+	}
+
+	it("still returns the other hidden ids, and logs the skip without the entry's value", async () => {
+		const { registry, warnings, heal } = await withUnreadableEntry();
+
+		expect(await registry.hiddenTunnelIds()).toEqual(["t2"]);
+		expect(
+			(await registry.visible()).map((entry) =>
+				entry.transport === "radient" ? entry.tunnelId : entry.id,
+			),
+		).toEqual(["t3"]);
+		expect(warnings.length).toBeGreaterThan(0);
+		const logged = JSON.stringify(warnings);
+		expect(logged).toContain("id00");
+		expect(logged).not.toContain(HOST_A);
+		expect(logged).not.toContain("t1");
+		heal();
+	});
+
+	it("persists a Remove of a different computer and keeps the unreadable id in the index", async () => {
+		const { base, registry, heal } = await withUnreadableEntry();
+
+		await registry.hideRadient({ tunnelId: "t3", hostname: HOST_B, name: "c" });
+		/* A different, readable entry is hidden/un-hidden/forgotten past it too. */
+		await registry.unhide("id01");
+		await registry.hide("id01");
+
+		expect(
+			JSON.parse(base.items.get(SAVED_COMPUTERS_INDEX_KEY) ?? "null"),
+		).toEqual({ v: 1, ids: ["id00", "id01", "id02"] });
+		heal();
+		/* Once the keystore answers again, every removal is there — nothing lost. */
+		expect((await registry.hiddenTunnelIds()).sort()).toEqual([
+			"t1",
+			"t2",
+			"t3",
+		]);
+	});
+
+	it("forgets a different computer without dropping the unreadable id", async () => {
+		const { base, registry, heal } = await withUnreadableEntry();
+
+		await registry.forget("id02");
+
+		expect(
+			JSON.parse(base.items.get(SAVED_COMPUTERS_INDEX_KEY) ?? "null"),
+		).toEqual({ v: 1, ids: ["id00", "id01"] });
+		heal();
+		expect((await registry.hiddenTunnelIds()).sort()).toEqual(["t1", "t2"]);
+	});
+
+	it("still refuses a write that would need the unreadable entry itself", async () => {
+		const { base, registry, heal } = await withUnreadableEntry();
+		const indexBefore = base.items.get(SAVED_COMPUTERS_INDEX_KEY);
+
+		await expect(registry.unhide("id00")).rejects.toThrow(
+			"keystore read failed",
+		);
+		await expect(
+			registry.rememberRadient({ tunnelId: "t4", hostname: HOST_A, name: "d" }),
+		).rejects.toThrow("keystore read failed");
+
+		expect(base.items.get(SAVED_COMPUTERS_INDEX_KEY)).toBe(indexBefore);
+		heal();
+		expect((await registry.hiddenTunnelIds()).sort()).toEqual(["t1", "t2"]);
+	});
+});
+
+describe("clear (sign-out) past an unreadable index (N2)", () => {
+	it("writes the empty index first, then surfaces the read error", async () => {
+		const { adapter: base, registry } = fixture();
+		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "a" });
+		const adapter = {
+			...base,
+			getItemAsync: async (key: string) => {
+				if (key === SAVED_COMPUTERS_INDEX_KEY)
+					throw new Error("keystore read failed");
+				return base.getItemAsync(key);
+			},
+		};
+
+		await expect(new SavedComputers(adapter).clear()).rejects.toThrow(
+			"keystore read failed",
+		);
+
+		expect(base.items.get(SAVED_COMPUTERS_INDEX_KEY)).toBe(
+			JSON.stringify({ v: 1, ids: [] }),
+		);
+		expect(await new SavedComputers(base).hiddenTunnelIds()).toEqual([]);
 	});
 });
 

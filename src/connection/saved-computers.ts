@@ -158,9 +158,17 @@ export class SavedComputers {
 		this.options = options;
 	}
 
-	/** Every entry, hidden ones included, most recently used first. */
+	/** Every entry, hidden ones included, most recently used first.
+	 *
+	 *  READ-ONLY, so tolerant: an entry whose keystore read throws is skipped and
+	 *  the rest are returned. Failing the whole read instead would empty the
+	 *  hidden set for the app run (every removed computer back) over one flaky
+	 *  item, and a permanently unreadable item would do it on every start. Nothing
+	 *  is written here, so skipping cannot drop the id from the index. */
 	async list(): Promise<SavedComputer[]> {
-		return this.serial(async () => sortByUse(await this.load()));
+		return this.serial(async () =>
+			sortByUse(readable(await this.readSlots(), "list")),
+		);
 	}
 
 	/** The entries a list or a switcher may show. */
@@ -192,6 +200,7 @@ export class SavedComputers {
 	async rememberRadient(input: RadientComputerInput): Promise<SavedComputer> {
 		return this.serial(() =>
 			this.upsert(
+				"fail",
 				(entry) =>
 					entry.transport === "radient" && entry.tunnelId === input.tunnelId,
 				(existing, now) => ({
@@ -227,13 +236,11 @@ export class SavedComputers {
 	async rememberCustom(input: CustomComputerInput): Promise<SavedComputer> {
 		const baseUrl = normaliseBaseUrl(input.baseUrl);
 		return this.serial(async () => {
-			const byId =
-				input.id === undefined
-					? undefined
-					: (await this.load()).find(
-							(entry) => entry.transport === "custom" && entry.id === input.id,
-						);
+			const target =
+				input.id === undefined ? null : await this.readTarget(input.id);
+			const byId = target?.transport === "custom" ? target : undefined;
 			return this.upsert(
+				"fail",
 				byId
 					? (entry) => entry.id === byId.id
 					: (entry) =>
@@ -269,7 +276,7 @@ export class SavedComputers {
 		address: { baseUrl: string; allowInsecure?: boolean },
 	): Promise<SavedComputer | null> {
 		return this.serial(async () => {
-			const existing = (await this.load()).find((entry) => entry.id === id);
+			const existing = await this.readTarget(id);
 			if (existing?.transport !== "custom") return null;
 			const next: SavedCustomComputer = {
 				...existing,
@@ -282,10 +289,17 @@ export class SavedComputers {
 	}
 
 	/** "Remove" on a Radient computer: remembered AND hidden in one write, so a
-	 *  computer known only from discovery (never saved before) stays removed. */
+	 *  computer known only from discovery (never saved before) stays removed.
+	 *
+	 *  Proceeds past an entry whose read throws, keeping that id in the index
+	 *  (`upsert`'s `unreadable: "keep"`). If the unreadable entry IS this tunnel,
+	 *  the result is a second hidden record for it, which is the reader's intent
+	 *  either way; refusing instead would make every Remove fail while one item
+	 *  stays unreadable. */
 	async hideRadient(input: RadientComputerInput): Promise<SavedComputer> {
 		return this.serial(() =>
 			this.upsert(
+				"keep",
 				(entry) =>
 					entry.transport === "radient" && entry.tunnelId === input.tunnelId,
 				(existing, now) => ({
@@ -319,12 +333,18 @@ export class SavedComputers {
 	}
 
 	/** Drops an entry entirely. Index first, then the item: a crash between the
-	 *  two leaves an unreachable item, never an index pointing at nothing. */
+	 *  two leaves an unreachable item, never an index pointing at nothing.
+	 *
+	 *  Works on index ids, not entries: forgetting needs nothing from the item, so
+	 *  an unreadable target is still forgotten, and every OTHER id — readable or
+	 *  not — is written back. */
 	async forget(id: string): Promise<void> {
 		await this.serial(async () => {
-			const entries = await this.load();
-			if (!entries.some((entry) => entry.id === id)) return;
-			await this.writeIndex(entries.filter((entry) => entry.id !== id));
+			const slots = await this.readSlots();
+			if (!slots.some((slot) => slot.id === id)) return;
+			await this.writeIndex(
+				slots.filter((slot) => slot.id !== id).map((slot) => slot.id),
+			);
 			await this.deleteEntry(id);
 		});
 	}
@@ -341,10 +361,21 @@ export class SavedComputers {
 	 */
 	async clear(): Promise<void> {
 		await this.serial(async () => {
-			const rawIndex = await this.adapter.getItemAsync(
-				SAVED_COMPUTERS_INDEX_KEY,
-				this.writeOptions(),
-			);
+			let rawIndex: string | null;
+			try {
+				rawIndex = await this.adapter.getItemAsync(
+					SAVED_COMPUTERS_INDEX_KEY,
+					this.writeOptions(),
+				);
+			} catch (error) {
+				/* An unreadable INDEX still must not leave the registry populated after
+				 * sign-out: the empty index needs no read, so it is written anyway and the
+				 * registry is logically empty. Only the items it named stay behind,
+				 * unreachable. The read error is still surfaced, so sign-out reports the
+				 * failure (and a retry re-runs) rather than claiming a clean wipe. */
+				await this.writeIndex([]);
+				throw error;
+			}
 			const ids = rawIndex === null ? [] : parseIndex(rawIndex);
 			await this.writeIndex([]);
 			for (const id of ids) await this.deleteEntry(id);
@@ -364,8 +395,7 @@ export class SavedComputers {
 		change: (now: number) => Partial<SavedComputerBase>,
 	): Promise<SavedComputer | null> {
 		return this.serial(async () => {
-			const entries = await this.load();
-			const existing = entries.find((entry) => entry.id === id);
+			const existing = await this.readTarget(id);
 			if (!existing) return null;
 			const next = { ...existing, ...change(this.now()) } as SavedComputer;
 			await this.writeEntry(next);
@@ -373,11 +403,32 @@ export class SavedComputers {
 		});
 	}
 
+	/**
+	 * Refresh-or-add, keyed by `match`. `unreadable` says what to do when an entry
+	 * read THROWS (R2: never treated as corrupt):
+	 *
+	 * - `"fail"` — reject before writing anything. For `rememberRadient` and
+	 *   `rememberCustom`: the unreadable entry may be the very computer being
+	 *   refreshed, and adding a fresh one beside it would fork that computer into
+	 *   two records with diverging `hidden`/timestamps.
+	 * - `"keep"` — proceed, and write every unreadable id back into the index in
+	 *   place. Only for writes whose result is safe even if they fork (`hideRadient`).
+	 *
+	 * Either way no write drops an id it could not read. Unreadable entries count
+	 * toward the bound and are never evicted: their `hidden` flag is unknown, and
+	 * evicting a hidden one would resurrect a removed computer.
+	 */
 	private async upsert(
+		unreadable: "fail" | "keep",
 		match: (entry: SavedComputer) => boolean,
 		build: (existing: SavedComputer | undefined, now: number) => SavedComputer,
 	): Promise<SavedComputer> {
-		const entries = await this.load();
+		const slots = await this.readSlots();
+		if (unreadable === "fail") {
+			const failed = slots.find((slot) => "error" in slot);
+			if (failed && "error" in failed) throw failed.error;
+		}
+		const entries = readable(slots, "write");
 		const existing = entries.find(match);
 		const now = this.now();
 		const next = build(existing, now);
@@ -385,47 +436,76 @@ export class SavedComputers {
 			await this.writeEntry(next);
 			return next;
 		}
-		next.id = this.freshId(entries);
-		const evicted = evictionFor(entries);
-		const kept = evicted
-			? entries.filter((entry) => entry.id !== evicted.id)
-			: entries;
+		next.id = this.freshId(slots.map((slot) => slot.id));
+		const evicted = evictionFor(entries, slots.length);
+		const kept = slots
+			.map((slot) => slot.id)
+			.filter((id) => id !== evicted?.id);
+		/* Only possible when the bound is full and nothing is evictable (every slot
+		 * unreadable): `parseIndex` would truncate the new id off the end, so the
+		 * write would claim a success the next read cannot see. */
+		if (kept.length >= MAX_SAVED_COMPUTERS)
+			throw new SecureStorageError(
+				"the saved-computer list is full of entries that cannot be read",
+				SAVED_COMPUTERS_INDEX_KEY,
+			);
 		/* Entry before index: a crash between the two leaves an item nothing lists
 		 * (harmless), never an index naming an item that does not exist. */
 		await this.writeEntry(next);
-		await this.writeIndex([...kept, next]);
+		await this.writeIndex([...kept, next.id]);
 		if (evicted) await this.deleteEntry(evicted.id);
 		return next;
 	}
 
-	/** The entries, in index order. A read the keystore REFUSES propagates, so the
-	 *  mutation that asked fails before it rewrites the index; only a missing or
-	 *  unparseable item is dropped (see `readEntry`). */
-	private async load(): Promise<SavedComputer[]> {
+	/** The entry a patch targets, or `null` when the index does not name it (or it
+	 *  is gone/corrupt). Other entries' read errors are irrelevant — a patch writes
+	 *  only its own item, never the index — but the TARGET's error propagates: a
+	 *  patch cannot be built from an entry it could not read. */
+	private async readTarget(id: string): Promise<SavedComputer | null> {
+		const slot = (await this.readSlots()).find(
+			(candidate) => candidate.id === id,
+		);
+		if (!slot) return null;
+		if ("error" in slot) throw slot.error;
+		return slot.entry;
+	}
+
+	/**
+	 * One slot per index id, in index order, with its entry or the error its read
+	 * threw. A missing or unparseable item yields no slot: that is the one case that
+	 * costs the computer (the next index write drops its id). A THROWING read keeps
+	 * its slot, so each caller decides — read-only paths skip it, writes keep the id
+	 * or fail — instead of one item's error deciding for the whole registry.
+	 *
+	 * An index read that throws still propagates: without it there is nothing to
+	 * read or to write back.
+	 */
+	private async readSlots(): Promise<Slot[]> {
 		const rawIndex = await this.adapter.getItemAsync(
 			SAVED_COMPUTERS_INDEX_KEY,
 			this.writeOptions(),
 		);
 		if (rawIndex === null) return [];
-		const ids = parseIndex(rawIndex);
-		const entries: SavedComputer[] = [];
-		for (const id of ids) {
-			const entry = await this.readEntry(id);
-			/* A corrupt or missing item costs that one computer; the next write of the
-			 * index drops its id. */
-			if (entry) entries.push(entry);
+		const slots: Slot[] = [];
+		for (const id of parseIndex(rawIndex)) {
+			try {
+				const entry = await this.readEntry(id);
+				if (entry) slots.push({ id, entry });
+			} catch (error) {
+				slots.push({ id, error });
+			}
 		}
-		return entries;
+		return slots;
 	}
 
 	/**
 	 * One entry, or `null` when it is gone or unparseable — the only two cases
 	 * that may cost the reader that computer.
 	 *
-	 * A THROWING read is not one of them and is deliberately not caught: Android
-	 * keystore reads fail transiently, and treating that as "corrupt" would let
-	 * the caller's write drop the id from the index — a hidden entry lost that
-	 * way is a removed computer coming back.
+	 * A THROWING read is not one of them and is deliberately not caught here:
+	 * Android keystore reads fail transiently, and treating that as "corrupt" would
+	 * let the caller's write drop the id from the index — a hidden entry lost that
+	 * way is a removed computer coming back. `readSlots` records it instead.
 	 */
 	private async readEntry(id: string): Promise<SavedComputer | null> {
 		const raw = await this.adapter.getItemAsync(
@@ -444,11 +524,8 @@ export class SavedComputers {
 		await this.write(entryKey(entry.id), { v: 1, ...entry });
 	}
 
-	private async writeIndex(entries: SavedComputer[]): Promise<void> {
-		await this.write(SAVED_COMPUTERS_INDEX_KEY, {
-			v: 1,
-			ids: entries.map((entry) => entry.id),
-		});
+	private async writeIndex(ids: string[]): Promise<void> {
+		await this.write(SAVED_COMPUTERS_INDEX_KEY, { v: 1, ids });
 	}
 
 	private async deleteEntry(id: string): Promise<void> {
@@ -471,8 +548,8 @@ export class SavedComputers {
 		await this.adapter.setItemAsync(key, raw, this.writeOptions());
 	}
 
-	private freshId(entries: SavedComputer[]): string {
-		const taken = new Set(entries.map((entry) => entry.id));
+	private freshId(ids: string[]): string {
+		const taken = new Set(ids);
 		for (;;) {
 			const id = (this.options.newId ?? defaultId)();
 			if (!SAFE_ID.test(id))
@@ -504,12 +581,37 @@ function sortByUse(entries: SavedComputer[]): SavedComputer[] {
 	return [...entries].sort((a, b) => b.lastUsedAt - a.lastUsedAt);
 }
 
+/** An index id with what its read produced. */
+type Slot =
+	| { id: string; entry: SavedComputer }
+	| { id: string; error: unknown };
+
+/** The entries that could be read, in index order; each skipped one is logged
+ *  with its local id and the error's message only — the item's value never
+ *  reaches the log, and an id is a local opaque handle, not an address. */
+function readable(slots: Slot[], path: "list" | "write"): SavedComputer[] {
+	const entries: SavedComputer[] = [];
+	for (const slot of slots) {
+		if ("entry" in slot) entries.push(slot.entry);
+		else
+			console.warn(
+				`[saved-computers] entry ${slot.id} could not be read; the ${path} skips it and keeps its id in the index`,
+				slot.error instanceof Error ? slot.error.message : String(slot.error),
+			);
+	}
+	return entries;
+}
+
 /** Which entry to drop when a new one would exceed the bound: the least recently
  *  used VISIBLE entry first. A hidden entry is what keeps a removed computer
  *  removed, so evicting one would resurrect it; only a list made entirely of
- *  hidden entries gives up its oldest. */
-function evictionFor(entries: SavedComputer[]): SavedComputer | null {
-	if (entries.length < MAX_SAVED_COMPUTERS) return null;
+ *  hidden entries gives up its oldest. `total` counts unreadable slots too: they
+ *  occupy the bound but are never candidates (their `hidden` flag is unknown). */
+function evictionFor(
+	entries: SavedComputer[],
+	total: number,
+): SavedComputer | null {
+	if (total < MAX_SAVED_COMPUTERS) return null;
 	const oldestFirst = [...entries].sort((a, b) => a.lastUsedAt - b.lastUsedAt);
 	return oldestFirst.find((entry) => !entry.hidden) ?? oldestFirst[0] ?? null;
 }
