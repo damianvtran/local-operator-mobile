@@ -218,6 +218,11 @@ async function relay(
 		frameTitle?: string;
 		/** The initial list read fails while the stream stays healthy (R1-1). */
 		sessionsFailure?: boolean;
+		/** What Radient's `GET /v1/tunnels` lists; empty unless a test needs rows. */
+		tunnels?: unknown[];
+		/** Holds `GET /v1/tunnels` until `releaseTunnels`, so a test can end the
+		 *  account (sign out) while discovery is still in flight. */
+		holdTunnels?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -228,6 +233,8 @@ async function relay(
 	const releaseToken = deferred();
 	const refuseCatalogue = deferred();
 	const releaseHistory = deferred();
+	const tunnelsReceived = deferred();
+	const releaseTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
@@ -245,7 +252,9 @@ async function relay(
 			response.end(JSON.stringify(value));
 		};
 		if (path === "/v1/tunnels") {
-			json({ msg: "ok", result: [] });
+			tunnelsReceived.resolve();
+			if (options.holdTunnels) await releaseTunnels.promise;
+			json({ msg: "ok", result: options.tunnels ?? [] });
 			return;
 		}
 		if (path === "/v1/tunnels/session/code") {
@@ -397,6 +406,7 @@ async function relay(
 		releaseToken.resolve();
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
+		releaseTunnels.resolve();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -412,6 +422,8 @@ async function relay(
 		releaseToken,
 		refuseCatalogue,
 		releaseHistory,
+		tunnelsReceived,
+		releaseTunnels,
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -1491,4 +1503,68 @@ describe("session ownership across routes", () => {
 				});
 		},
 	);
+});
+
+describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () => {
+	/* Two synthetic tunnels in the control plane's own shape, parsed by the real
+	 *  `discoverComputers`. Discovery answers before any route is started — a route
+	 *  is what picking one of these creates — so the list must survive `route ===
+	 *  null`; on `origin/main` the store dropped it and the picker read 0 rows. */
+	const tunnels = ["tun-synthetic-1", "tun-synthetic-2"].map((id, index) => ({
+		id,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${String(index + 1).padStart(32, "0")}-lop.example.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	it("lists the account's computers after sign-in, with no route started", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().route).toBeNull();
+		expect(
+			connectionStore
+				.getState()
+				.computers.map((c) => c.tunnelId)
+				.sort(),
+		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
+	});
+
+	it("lists the account's computers on a cold-start restore of a stored grant", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(() => connectionStore.getState().computers.length === 2);
+		expect(connectionStore.getState().route).toBeNull();
+		expect(latest.restoredAccount).toBe(true);
+	});
+
+	it("drops a discovery result that lands after sign-out (negative control)", async () => {
+		const mock = await relay({ tunnels, holdTunnels: true });
+		transport(mock.origin);
+		await mount();
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await mock.tunnelsReceived.promise;
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		mock.releaseTunnels.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		/* The tunnels WERE served; the provider's authorization fence, not the store,
+		 *  is what keeps them off a signed-out screen. */
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().phase).toBe("signed-out");
+	});
 });

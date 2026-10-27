@@ -133,6 +133,34 @@ describe("the connection store is the only place a route starts or ends", () => 
 		expect(store.getState().tunnelId).toBeNull();
 	});
 
+	it("keeps the account's computers when discovery finishes before a route starts", () => {
+		/* Radient discovery lists an ACCOUNT's computers before any route exists —
+		 *  the route is what picking one of them creates — so a store that drops
+		 *  the list while `route` is null leaves the picker on "Set up a computer"
+		 *  for an account with tunnels (PR #120 QA round 1, Q1). */
+		const store = createConnectionStore();
+		const discovered = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		store.getState().setComputers([discovered]);
+		expect(store.getState().computers).toEqual([discovered]);
+		/* Recording the list is not a route switch: still signed out, no route. */
+		expect(store.getState().route).toBeNull();
+		expect(store.getState().phase).toBe("signed-out");
+
+		/* Sign-out still empties it: `endRoute` resets to the initial snapshot. */
+		store.getState().endRoute();
+		expect(store.getState().computers).toEqual([]);
+	});
+
 	it("sends a sign-in failure back to signed-out and keeps the route", () => {
 		const store = createConnectionStore();
 		store.getState().startRoute({

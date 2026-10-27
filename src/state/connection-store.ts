@@ -130,7 +130,16 @@ export function createConnectionStore() {
 		},
 
 		setComputers(computers) {
-			if (get().route === null) return;
+			/* No route guard, unlike the actions around it. The computer list is ACCOUNT
+			 *  state: Radient discovery runs after sign-in or a cold-start restore and
+			 *  BEFORE any route exists, because a route is what picking one of these
+			 *  computers creates. A `route === null` guard here dropped every discovery
+			 *  result and left an account with tunnels on "Set up a computer"
+			 *  (PR #120 QA round 1, Q1). A late result that belongs to a sign-out or a
+			 *  newer sign-in is dropped by the caller, which fences discovery on the
+			 *  startup-authorization revision (`refreshComputers` in
+			 *  `connection-provider.tsx`); `endRoute` still empties the list. What must
+			 *  not happen without a route — minting — stays guarded in `selectComputer`. */
 			set({
 				computers,
 				phase: get().phase === "discovering" ? "discovering" : get().phase,
