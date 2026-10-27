@@ -248,14 +248,34 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * its refusal on that dismissal and disarming its retry on failure, and Computers
 	 * replacing the answered panel with a connected confirmation once the pick is
 	 * live. No U-08 scene changes; `app` unchanged. Recomputed with `--print` from
-	 * the staged tree. */
-	app: "236a990f4d9a5016eeaf0c6cb924be4630965584e8aaafcc32973a4dbcab0b15",
+	 * the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for the S8 short-landscape overlap fix (BOTH trees move):
+	 * `statusTrayVisible` in `src/ui/size-class.ts` and its one use in
+	 * `app/(app)/session/[id].tsx` hide the one-row status tray while a pending
+	 * approval/ask is on screen in short landscape, and bottom-anchor that cluster
+	 * so the freed height does not become a band under the composer (design D1).
+	 * It changes no other state or viewport: the proofs' scene is a 390x844 portrait
+	 * `long-transcript` cell with no pending decision (`tray` stays visible there,
+	 * `compact` is false), so nodes 64/65/66 of the four original cells measure what
+	 * they measured before. Re-pinned a second time in the same PR for that round-1
+	 * remediation, after the LAST `src`/`app` edit (`native-polish.test.ts`).
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#123) into PR #122: the two branches'
+	 * digests are both stale on the merge, because `src` now carries PR #122's
+	 * round-4 Settings/Computers changes AND PR #123's `statusTrayVisible`, and
+	 * `app` carries #123's `app/(app)/session/[id].tsx` tray wiring. Both are
+	 * recomputed here from the merged tree with `--print`. Neither proof's scene
+	 * moves: PR #122 renders computer screens and an overlay that is closed by
+	 * default, and #123's tray is visible in every captured combination (its own
+	 * note below records the same reading). */
+	app: "82e9fc3d4f1b5827be73f4a72ea7505808f121ffb9a32f1eb728be4b9ef28163",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "f5d3655cd2d538d6a261cc8c27307137070af906f3b5333fdb574c02193a1de5",
+	src: "c1ce5e6f2d1c4b3da7759264ad844eb20d27c0ad773aed2262393a8bbd714895",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

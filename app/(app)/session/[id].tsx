@@ -98,6 +98,7 @@ import {
 	regionOrder,
 	sessionStatusLayout,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -968,7 +969,15 @@ export default function Session() {
 				caveat={runtime.olderThanLoaded}
 			/>
 			{tray ? (
-				<StatusTray facts={trayFacts} onOpen={() => setStatusSheetOpen(true)} />
+				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
+				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
+				 *  under the composer at 135-200 % text. */
+				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
+					<StatusTray
+						facts={trayFacts}
+						onOpen={() => setStatusSheetOpen(true)}
+					/>
+				) : null
 			) : (
 				statusStrip
 			)}
@@ -983,6 +992,18 @@ export default function Session() {
 			<View className="flex-1 min-h-0">
 				<View
 					className="flex-1 min-h-0"
+					/* Short landscape: a pending decision collapses the transcript and hides the
+					 * secondary region, so the column's remaining children no longer fill it.
+					 * Anchor that cluster to the BOTTOM rather than letting the slack fall
+					 * below the composer: otherwise the composer jumps up when a decision
+					 * arrives and drops back after it is answered (the floating-composer
+					 * defect design D18 fixed for the loading state). Portrait and tablet
+					 * keep the normal column flow. */
+					style={
+						compact && pendingViewProps !== null
+							? { justifyContent: "flex-end" as const }
+							: undefined
+					}
 					testID={SURFACE.sessionColumn}
 					onLayout={(event) =>
 						measureRecovery("column", event.nativeEvent.layout.height)

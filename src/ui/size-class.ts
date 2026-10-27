@@ -471,6 +471,27 @@ export const composerLimit = (
 };
 
 /**
+ * Whether the one-row status tray is painted. In short landscape it yields to a
+ * pending approval or ask: that surface is pinned beside the composer and its
+ * Approve/Deny (or Submit) controls are `shrink-0` at the touch floor, so the card
+ * can only give up its scrolling body. At 844x390 the column is 338 pt without the
+ * tray (header 52); the composer (125) + the card's pinned header, 56 pt body floor
+ * and controls (205) + the wrapper's 4 leave nothing, so the 48 pt tray row #118
+ * added pushed the pinned controls UNDER the composer at 200 % text (measured: the
+ * Approve/Deny boxes at y 246-294 beneath a composer starting at y 260).
+ *
+ * The old inline region was already hidden for the same reason (UX U12: "a whole
+ * region or none; the roster comes back the moment the decision is made") — the tray
+ * replaced it without inheriting that rule. A portrait phone is tall enough to keep
+ * the tray beside the card, so only `compact` yields.
+ */
+export const statusTrayVisible = (
+	tray: boolean,
+	compact: boolean,
+	decisionPending: boolean,
+): boolean => tray && !(compact && decisionPending);
+
+/**
  * Which secondary-status surface a session screen uses — ONE decision, three
  * consumers, so the tray, the sheet and the inline region cannot disagree (design D2,
  * final visual audit).
