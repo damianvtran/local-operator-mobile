@@ -1,7 +1,14 @@
 import { useRouter } from "expo-router";
 import { Search, SquarePen, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import {
+	FlatList,
+	type LayoutChangeEvent,
+	Pressable,
+	RefreshControl,
+	Text,
+	View,
+} from "react-native";
 
 import type { SessionSummary } from "@/contracts";
 import {
@@ -15,6 +22,10 @@ import {
 	notificationsEnabled,
 } from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
+import {
+	type RailCountPlacement,
+	railCountPlacement,
+} from "@/features/sessions/rail-count-layout";
 import {
 	attentionWord,
 	degradedNote,
@@ -148,7 +159,17 @@ export type ConversationsPaneProps = {
  * painted frame while it keeps its box, and the wrapper below hides the subtree
  * from assistive tech: it is a spacer, not content.
  */
-const RailCount = ({ count, hidden }: { count: number; hidden?: boolean }) => (
+const RailCount = ({
+	count,
+	hidden,
+	onWidth,
+}: {
+	count: number;
+	hidden?: boolean;
+	/** Reports the pill's own width, so the row can decide its placement from a
+	 *  measurement rather than from a guess about the text scale (D23). */
+	onWidth?: (width: number) => void;
+}) => (
 	<View
 		className="items-center"
 		testID={
@@ -160,6 +181,11 @@ const RailCount = ({ count, hidden }: { count: number; hidden?: boolean }) => (
 		accessibilityElementsHidden={hidden}
 		importantForAccessibility={hidden === true ? "no-hide-descendants" : "auto"}
 		pointerEvents={hidden === true ? "none" : "auto"}
+		onLayout={
+			onWidth === undefined
+				? undefined
+				: (event) => onWidth(event.nativeEvent.layout.width)
+		}
 	>
 		<Badge
 			/* The app's one cap, as the home bell uses (R7-02/D21). */
@@ -202,6 +228,44 @@ export const ConversationsPane = ({
 	const computers = useConnectionState((state) => state.computers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
+
+	/* THE INBOX ROW'S PLACEMENT, decided from measured widths (D23).
+	 *
+	 * `onLayout` is the measurement the capture and a reader both see first: on the
+	 * web target it is delivered from a ResizeObserver, which runs in the render
+	 * steps BEFORE the browser paints, so the row is never painted in one mode and
+	 * then switched to the other. A predicate on the text scale alone could not
+	 * answer the question — `5` and `42` fit at 200 % and `99+` does not — so the
+	 * widths are measured and `railCountPlacement` decides. */
+	const [railWidths, setRailWidths] = useState<{
+		row?: number;
+		label?: number;
+		pill?: number;
+	}>({});
+	const measureRow = (event: LayoutChangeEvent) => {
+		setRailWidths((held) => ({ ...held, row: event.nativeEvent.layout.width }));
+	};
+	const measureLabel = (event: LayoutChangeEvent) => {
+		setRailWidths((held) => ({
+			...held,
+			label: event.nativeEvent.layout.width,
+		}));
+	};
+	const measurePill = (width: number) => {
+		setRailWidths((held) => ({ ...held, pill: width }));
+	};
+	/* Before all three are known the row renders the placement every fitting row
+	 *  uses, which is the one a reader at ordinary text sizes sees. */
+	const placement: RailCountPlacement =
+		railWidths.row === undefined ||
+		railWidths.label === undefined ||
+		railWidths.pill === undefined
+			? "symmetric"
+			: railCountPlacement({
+					rowWidth: railWidths.row,
+					labelWidth: railWidths.label,
+					pillWidth: railWidths.pill,
+				});
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -419,16 +483,25 @@ export const ConversationsPane = ({
 					 *  sheet's edge and the audit read the straddle as an overlap (U-08,
 					 *  4 rows). The count belongs on the destination's own line, the way
 					 *  the home header's bell carries it. */}
-					<View className="w-full flex-row items-center">
+					<View className="w-full flex-row items-center" onLayout={measureRow}>
 						{/* THE SAME PILL, INVISIBLE, so the label centres on the rail's centre
 						 *  line like every sibling: with the count added to one side only it
 						 *  sat 15.6 pt left of the others at 100 % and 19.3 pt left at 200 %
 						 *  (design round 6, D19). A copy rather than a constant keeps both
-						 *  sides equal at every text size (design round 7, D22). */}
-						{inboxCount !== null && inboxCount > 0 ? (
+						 *  sides equal at every text size (design round 7, D22).
+						 *
+						 *  Only when the row can HOLD it. At 320 × 568 / 200 % with `99+`
+						 *  the two pills and the label need 258.8 pt of a 247 pt row, and
+						 *  the label painted over the pill's own edge — "Notification"
+						 *  (design round 8, D23). Then the mirror is dropped and the label
+						 *  and count are centred as one pair, which needs ~205 pt: legible
+						 *  first, exactly symmetric whenever it fits. */}
+						{inboxCount !== null &&
+						inboxCount > 0 &&
+						placement === "symmetric" ? (
 							<RailCount count={inboxCount} hidden />
 						) : null}
-						<View className="flex-1">
+						<View className={placement === "symmetric" ? "flex-1" : undefined}>
 							<Button
 								label="Notifications"
 								onPress={() => {
@@ -441,8 +514,22 @@ export const ConversationsPane = ({
 							/>
 						</View>
 						{inboxCount !== null && inboxCount > 0 ? (
-							<RailCount count={inboxCount} />
+							<RailCount count={inboxCount} onWidth={measurePill} />
 						) : null}
+						{/* THE MEASURING STAND-INS. Out of flow and unpainted, so they
+						 *  neither move the row nor reach the audit's node set, and both
+						 *  wear the label's own type step so their width is the label's. */}
+						<Text
+							className="text-meta absolute opacity-0"
+							pointerEvents="none"
+							aria-hidden
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+							onLayout={measureLabel}
+							testID={CONTROL.sidebarNotificationsMeasure}
+						>
+							Notifications
+						</Text>
 					</View>
 				</>
 			) : null}

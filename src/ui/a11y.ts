@@ -466,6 +466,9 @@ export const CONTROL = {
 	 *  It carries no content and is hidden from assistive tech; the id exists so a
 	 *  test can measure the two sides against each other. */
 	sidebarNotificationsSpacer: "sidebar-notifications-spacer",
+	/** The label's own measuring stand-in: out of flow, unpainted, and only there so
+	 *  the row can compare the label's natural width with the space it has (D23). */
+	sidebarNotificationsMeasure: "notifications-label-measure",
 	inboxBack: "notifications-back",
 	inboxList: "notifications-list",
 	inboxLoadMore: "notifications-load-more",

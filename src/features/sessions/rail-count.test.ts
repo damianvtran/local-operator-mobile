@@ -44,12 +44,19 @@ describe("the rail's inbox count", () => {
 		const rail = railSection();
 		// Both sides come from the same component…
 		expect(rail.match(/<RailCount /g) ?? []).toHaveLength(2);
-		// …and exactly one of them is the invisible mirror that reserves the width.
+		// …and exactly one is the invisible mirror, which the row renders only while
+		// its own measurement says the label and both pills fit (D23).
+		expect(rail).toContain(
+			'placement === "symmetric" ? (\n\t\t\t\t\t\t\t<RailCount count={inboxCount} hidden />',
+		);
 		expect(
 			rail.match(/<RailCount count=\{inboxCount\} hidden \/>/g) ?? [],
 		).toHaveLength(1);
+		// The visible pill measures itself for that decision.
 		expect(
-			rail.match(/<RailCount count=\{inboxCount\} \/>/g) ?? [],
+			rail.match(
+				/<RailCount count=\{inboxCount\} onWidth=\{measurePill\} \/>/g,
+			) ?? [],
 		).toHaveLength(1);
 	});
 
