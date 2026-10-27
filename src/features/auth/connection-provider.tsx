@@ -137,6 +137,11 @@ export const useListState = <T,>(selector: (state: ListSnapshot) => T): T =>
  *  end-of-body is NOT this path — the connection layer rotates on its own. */
 const RESTART_MS = 2_000;
 
+/** The body of a pick that never reached Radient (U5/D11): about THIS phone's
+ *  connection, because that is the one thing the failure tells us. */
+export const PICK_UNREACHABLE_DETAIL =
+	"This phone could not reach Radient. Check its connection, then try again.";
+
 /** What the connection pill shows, derived from the stream's own status. */
 export type StreamHealth =
 	| "idle"
@@ -279,6 +284,8 @@ export const ConnectionProvider = ({
 }) => {
 	const [busy, setBusy] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
+	/* The latest discovery pass, so only it lowers `discovering` (R2-m1). */
+	const discoveryPassRef = useRef(0);
 	/* See `Connection.coldStartSettled`. */
 	const [coldStartSettled, setColdStartSettled] = useState(false);
 	const cancelledRef = useRef(false);
@@ -736,6 +743,7 @@ export const ConnectionProvider = ({
 		/* Discovery answers an ACCOUNT question before a tunnel exists. The store's
 		 * phases describe a route, so the in-flight flag lives beside it instead of
 		 * inventing a route to hang a phase on. */
+		const pass = ++discoveryPassRef.current;
 		setDiscovering(true);
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const tokens = tokensRef.current;
@@ -790,7 +798,15 @@ export const ConnectionProvider = ({
 					return;
 			}
 		} finally {
-			if (isCurrent()) setDiscovering(false);
+			/* Keyed on the PASS, not on `isCurrent()`. A pick or a route start during an
+			 *  in-flight Refresh suspends the authorization revision, so this pass stops
+			 *  being current and its result is rightly dropped — but the flag it raised
+			 *  must still come down, or the banner's Try now and the header Refresh stay
+			 *  spinning (and inert) and an empty list paints the skeleton forever (PR
+			 *  #121 review round 2, R2-m1). Only the latest pass may lower it, so an
+			 *  older pass finishing late cannot hide a newer one still running. */
+			if (mountedRef.current && pass === discoveryPassRef.current)
+				setDiscovering(false);
 		}
 	}, [revokeAuthorization]);
 
@@ -905,14 +921,28 @@ export const ConnectionProvider = ({
 					noteError(
 						error instanceof RelayError
 							? error
-							: /* A control-plane refusal has no HTTP client error to carry it: it is
-								 * typed here so the surface stays the taxonomy's decision and never the
-								 * caller's. `console` because every `TunnelSessionError` this can be
-								 * is fixed on the computer or in the console. */
-								new RelayError("rejected", error.message, {
-									surface: "console",
-									detail: error.message,
-								}),
+							: error.failure === "network"
+								? /* The phone could not reach Radient at all: nothing on the
+									 * computer or in the console is wrong, and the `console` surface
+									 * sent an offline reader to the Radient console and a terminal
+									 * command (PR #121 UX round 1, U5; design D11). `retry` is the
+									 * surface whose button re-runs this pick. The sentence is ours,
+									 * not the session client's developer string, and it is passed as
+									 * `detail` because `transport`'s fixed copy names the relay, which
+									 * this request never reached. */
+									new RelayError("rejected", error.message, {
+										surface: "retry",
+										detail: PICK_UNREACHABLE_DETAIL,
+									})
+								: /* A control-plane refusal has no HTTP client error to carry it: it
+									 * is typed here so the surface stays the taxonomy's decision and
+									 * never the caller's. `console` because every other
+									 * `TunnelSessionError` this can be is fixed on the computer or in
+									 * the console. */
+									new RelayError("rejected", error.message, {
+										surface: "console",
+										detail: error.message,
+									}),
 						() => selectComputer(computer),
 					);
 					return;

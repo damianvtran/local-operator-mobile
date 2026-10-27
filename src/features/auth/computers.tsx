@@ -4,7 +4,9 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { ComputerStatus, DiscoveredComputer } from "@/connection";
 import {
+	backAction,
 	computersView,
+	landingAfterPick,
 	type RowState,
 	rowState,
 } from "@/features/auth/computers-view";
@@ -19,6 +21,7 @@ import {
 	useConnectorWait,
 } from "@/features/auth/connector-wait";
 import { SetupComputer } from "@/features/auth/setup-computer";
+import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -305,13 +308,15 @@ export default function Computers() {
 		discovering,
 		selectComputer,
 		retry,
-		busy,
 		refusal,
+		signInWithRadient,
+		signInState,
 	} = useConnection();
 
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
+	const route = useConnectionState((state) => state.route);
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
 	);
@@ -320,9 +325,43 @@ export default function Computers() {
 	 *  can assert it: the set-up path (F-2) only for an account Radient said is
 	 *  empty, the skeleton on the provider's `discovering` flag, and the rows
 	 *  whenever there are any. */
-	const view = computersView({ computers, discovering, discoveryFailure });
+	/* Signed out is the `sign-in` refusal, or the browser hand-off its button
+	 *  started: `signInWithRadient` ends the route (clearing the refusal) before
+	 *  the browser opens, and an empty list then read as an empty account until
+	 *  the new grant's discovery answered (QA round 2, Q-r2-1/Q-r2-2). */
+	const signInPending = signInState.kind !== "idle";
+	const signedOut = refusal?.kind === "sign-in" || signInPending;
+	const view = computersView({
+		computers,
+		discovering,
+		discoveryFailure,
+		signedOut,
+	});
 	const empty = view.setup;
 	const [waiting, setWaiting] = useState(false);
+	/* The tunnel tapped on THIS screen, so arriving with a route already live is
+	 *  not mistaken for a pick that just landed (U1). */
+	const [picked, setPicked] = useState<string | null>(null);
+	const pick = useCallback(
+		(computer: DiscoveredComputer) => {
+			setPicked(computer.tunnelId);
+			void selectComputer(computer);
+		},
+		[selectComputer],
+	);
+	/* Read per render: the stack does not change under this screen while it is
+	 *  mounted, and the decision is re-taken whenever the phase moves. */
+	const canGoBack = router.canGoBack();
+
+	/* A pick made on the cold-start root lands on Home (U1, `landingAfterPick`).
+	 *  `replace`, not `push`: Computers was the root, and leaving it underneath
+	 *  would put the reader back on the list with the platform back. */
+	useEffect(() => {
+		if (landingAfterPick({ picked, tunnelId, phase, canGoBack }) === "home")
+			router.replace("/");
+	}, [canGoBack, phase, picked, router, tunnelId]);
+
+	const back = backAction({ canGoBack, routed: route !== null });
 	const [reachability, setReachability] = useState<
 		Record<string, Reachability>
 	>({});
@@ -374,23 +413,35 @@ export default function Computers() {
 			 *  from Settings and from a refusal surface — arriving from any of them with
 			 *  no back control leaves the platform gesture as the only exit (D7). */
 			headerLeading={
-				<Button
-					testID={CONTROL.computersBack}
-					label="Back"
-					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
-				/>
+				/* As the cold-start root with no route there is nowhere to go back to
+				 *  (Home's landing effect returns a restored account here), so the
+				 *  control is absent rather than inert (U1, `backAction`). */
+				back ? (
+					<Button
+						testID={CONTROL.computersBack}
+						label="Back"
+						onPress={() =>
+							back === "pop" ? router.back() : router.replace("/")
+						}
+						variant="quiet"
+						size="sm"
+					/>
+				) : null
 			}
 			headerAction={
-				!empty ? (
+				/* Spins for a DISCOVERY only, never for a pick: the row's own marker
+				 *  carries a pick (D12), and `Button` ignores presses while `loading`,
+				 *  so a slow Refresh absorbs repeat taps instead of stacking requests
+				 *  (U4) — the banner's Try now already worked this way. Hidden while
+				 *  signed out: a listing with no grant can only be refused again. */
+				!empty && !signedOut ? (
 					<Button
 						testID={CONTROL.computersRefresh}
 						label="Refresh"
 						onPress={() => void refreshComputers()}
 						variant="quiet"
 						size="sm"
-						loading={busy}
+						loading={discovering}
 					/>
 				) : null
 			}
@@ -403,7 +454,21 @@ export default function Computers() {
 					remedy={refusal.remedy}
 					retryAfterMs={refusal.retryAfterMs}
 					onRetry={() => void retry()}
+					/* The existing sign-in action, in place: it ends the refused route,
+					 *  hands off to the browser, and lists this account's computers when
+					 *  it returns (Q-r2-2). */
+					onSignIn={() => void signInWithRadient()}
 					onUseAnotherAddress={() => router.push("/custom")}
+				/>
+			) : null}
+
+			{/* The hand-off's progress, where the button that started it was. Without
+			 *  it the screen went blank while the browser was open. */}
+			{signInPending ? (
+				<SignInPanel
+					state={signInState}
+					onStart={() => void signInWithRadient()}
+					onUseAddress={() => undefined}
 				/>
 			) : null}
 
@@ -445,7 +510,7 @@ export default function Computers() {
 							computer={computer}
 							state={rowState(computer, { tunnelId, phase })}
 							reachability={reachability[computer.hostname] ?? "checking"}
-							onPress={() => void selectComputer(computer)}
+							onPress={() => pick(computer)}
 							onRemove={() => setRemoveTarget(computer)}
 						/>
 					))}
@@ -483,7 +548,7 @@ export default function Computers() {
 							<WaitPanel
 								state={wait.state}
 								appeared={appeared}
-								onUse={() => appeared && void selectComputer(appeared)}
+								onUse={() => appeared && pick(appeared)}
 								onStop={() => setWaiting(false)}
 							/>
 						</View>

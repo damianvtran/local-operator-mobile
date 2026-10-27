@@ -5,7 +5,10 @@ import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
-import { discoveryFailureMessage } from "@/features/auth/computers-view";
+import {
+	discoveryFailureMessage,
+	rowState,
+} from "@/features/auth/computers-view";
 import {
 	useConnection,
 	useConnectionState,
@@ -64,11 +67,12 @@ export default function Settings() {
 		refusal,
 		streamHealth,
 		lastError,
-		busy,
+		discovering,
 	} = useConnection();
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
+	const phase = useConnectionState((state) => state.phase);
 	const accountLabel = useConnectionState((state) => state.accountLabel);
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
@@ -93,6 +97,7 @@ export default function Settings() {
 		health: streamHealth,
 		refused: refusal !== null,
 		routed: route !== null,
+		minting: phase === "minting",
 	});
 
 	const doSignOut = useCallback(async () => {
@@ -198,8 +203,14 @@ export default function Settings() {
 									>
 										{computer.name}
 									</Text>
-									{computer.tunnelId === tunnelId ? (
+									{/* The picker's own row state, so a pick still minting or
+									 *  refused is not badged "active" here while the store says
+									 *  otherwise (PR #121 UX round 1, U3). */}
+									{rowState(computer, { tunnelId, phase }) === "active" ? (
 										<Badge label="active" tone="success" mono />
+									) : rowState(computer, { tunnelId, phase }) ===
+										"connecting" ? (
+										<Badge label="connecting" tone="info" mono />
 									) : (
 										<Button
 											testID={CONTROL.settingsUseComputer}
@@ -239,7 +250,10 @@ export default function Settings() {
 							onPress={() => void refreshComputers()}
 							variant="outline"
 							size="sm"
-							loading={busy}
+							/* A discovery, not a pick: the same flag the Computers header
+							 *  uses, which also absorbs repeat taps while one is in flight
+							 *  (U4). */
+							loading={discovering}
 						/>
 						<Button
 							testID={CONTROL.settingsAddComputer}
@@ -443,12 +457,17 @@ function statusFor(input: {
 	health: ReturnType<typeof useConnection>["streamHealth"];
 	refused: boolean;
 	routed: boolean;
+	/** A computer was picked and its session is still being minted. */
+	minting: boolean;
 }): {
 	state: ConnectionPillState;
 	message: string;
 } {
 	if (!input.routed) return { state: "inactive", message: "No connection yet" };
 	if (input.refused) return { state: "offline", message: "Not connected" };
+	/* No stream exists yet while a session is minted, and an idle stream fell
+	 *  through to "Connected" (U3). */
+	if (input.minting) return { state: "reconnecting", message: "Connecting…" };
 	switch (input.health) {
 		case "connecting":
 			return { state: "reconnecting", message: "Connecting…" };

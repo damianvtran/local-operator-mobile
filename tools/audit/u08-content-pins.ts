@@ -182,14 +182,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * on top of it keeps that list through a pick and a failed Refresh (the store,
 	 * `computers.tsx` + new `computers-view.ts`, the provider's discovery arms and
 	 * refusal subject, Settings' failure line, the `retry` refusal's copy). Picker
-	 * and refusal screens only; nothing on the U-08 proofs' measured scenes. */
+	 * and refusal screens only; nothing on the U-08 proofs' measured scenes.
+	 * Again, `src` only, for the PR's round-2 remediation: a cold-start pick lands
+	 * on Home, the 401 sign-in state and its button, the generation-fenced
+	 * `discovering` flag, network mint failures on `retry`, and Settings' row
+	 * state (`computers.tsx`, `computers-view.ts`, the provider, `settings.tsx`,
+	 * a store comment). Same screens; no U-08 scene. */
 	app: "e8924ef20031d42a928a92143d25950464c21790bddf89730f8c71a282ce4279",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "953800ab4ec91fa61d0fd2e0ca9db62bd7dba95281390a68aa6c5a71af3fb589",
+	src: "b3273d2005baf657c15e641bffe236d2a54cc4bbef55b99d4f46009a6bf572ac",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

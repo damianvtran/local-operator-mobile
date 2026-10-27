@@ -76,12 +76,24 @@ export function computersView(input: {
 	computers: readonly DiscoveredComputer[];
 	discovering: boolean;
 	discoveryFailure: DiscoveryFailure | null;
+	/** The `sign-in` refusal is on screen: Radient refused the grant. The rows went
+	 *  with it (R1-m1), so an empty list here means "signed out", not "empty
+	 *  account". */
+	signedOut?: boolean;
 }): ComputersView {
 	const rows = input.computers.length > 0;
 	/* "Set up a computer" is an ANSWER — Radient listed none — so it needs a
-	 *  discovery that finished and did not fail. Stacking it under an error showed
-	 *  a reader on a flaky connection "create a tunnel" instructions (D3). */
-	const setup = !rows && !input.discovering && input.discoveryFailure === null;
+	 *  discovery that finished, did not fail, and was asked with a grant Radient
+	 *  still accepts. Stacking it under an error showed a reader on a flaky
+	 *  connection "create a tunnel" instructions (D3); a 401 on Refresh empties the
+	 *  rows and records a refusal, not a discovery failure, so without the last term
+	 *  a signed-out reader got the tutorial under "Sign in again" (PR #121 QA
+	 *  round 2, Q-r2-1). */
+	const setup =
+		!rows &&
+		!input.discovering &&
+		input.discoveryFailure === null &&
+		!input.signedOut;
 	return {
 		title: setup ? "Set up a computer" : "Computers",
 		/* Gated on the provider's `discovering` flag, which every discovery pass sets.
@@ -96,4 +108,51 @@ export function computersView(input: {
 				: discoveryFailureMessage(input.discoveryFailure, rows),
 		setup,
 	};
+}
+
+/**
+ * Where a pick made on this screen lands once its route is usable (PR #121 UX
+ * round 1, U1).
+ *
+ * The cold start REPLACES Home with Computers (`home.tsx`: a restored account
+ * with no route goes to `/tunnels`), so Computers is the root of its stack there:
+ * nothing to pop, a Back that did nothing, and a browser or Android back that
+ * left the app. Before this PR that screen listed no rows on that path, so the
+ * dead end was unreachable; now a pick goes live in ~100 ms and strands the
+ * reader on the list. Home is where a connected reader works, and `own-tunnel`'s
+ * `saveAndConnect` already does `router.replace("/")` once connected.
+ *
+ * Opened FROM somewhere (Home, Settings, a refusal), the stack has a way back and
+ * the screen keeps today's behaviour: the reader stays, sees the row turn active,
+ * and pops back themselves — an automatic pop would yank a Settings reader to a
+ * screen they did not come from.
+ *
+ * `picked` is the tunnel tapped on THIS screen: a route that was already live
+ * when the screen opened is not a reason to leave it.
+ */
+export function landingAfterPick(input: {
+	picked: string | null;
+	tunnelId: string | null;
+	phase: ConnectionPhase;
+	canGoBack: boolean;
+}): "home" | "stay" {
+	if (input.canGoBack) return "stay";
+	if (input.picked === null || input.picked !== input.tunnelId) return "stay";
+	return input.phase === "live" ? "home" : "stay";
+}
+
+/**
+ * What the header's Back does (U1). With a screen underneath, it pops. As the
+ * stack's root it goes Home — but only once a route exists: with none, Home's
+ * landing effect sends a restored account straight back here, so the control
+ * would bounce, and it is hidden (`null`) instead of offering a way out that is
+ * not one. During a mint the route already exists, so Back on the cold-start path
+ * lands on Home, which shows the connection coming up or its refusal.
+ */
+export function backAction(input: {
+	canGoBack: boolean;
+	routed: boolean;
+}): "pop" | "home" | null {
+	if (input.canGoBack) return "pop";
+	return input.routed ? "home" : null;
 }

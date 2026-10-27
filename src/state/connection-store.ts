@@ -145,7 +145,11 @@ export function createConnectionStore() {
 				 *  "Set up a computer" while minting and stayed there if the mint failed
 				 *  (PR #121 review round 1, R1-M1; design D1). The account did not change,
 				 *  so its list and its last discovery outcome carry over. A custom route is
-				 *  a different identity entirely and must not inherit Radient's rows. */
+				 *  a different identity, so STARTING one does not inherit Radient's rows.
+				 *  A later Refresh may still list them: connecting a custom address keeps
+				 *  the Radient grant (it is not a sign-out), and those rows are how the
+				 *  reader switches back to a Radient computer from Settings (PR #121 review
+				 *  round 2, R2-m2). */
 				...(route.mode === "radient"
 					? {
 							computers: state.computers,

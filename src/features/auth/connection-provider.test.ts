@@ -17,6 +17,7 @@ import { memorySecureStore, SecureStorage } from "@/connection/storage";
 import {
 	ConnectionProvider,
 	connectionStore,
+	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { sessions as sessionProjections } from "@/features/session/runtime";
@@ -228,6 +229,8 @@ async function relay(
 		holdCode?: boolean;
 		/** Answers the session code request with a 500: a failed mint. */
 		failCode?: boolean;
+		/** Drops the session code request's connection: a pick made offline. */
+		dropCode?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -245,6 +248,11 @@ async function relay(
 	/* What `GET /v1/tunnels` answers next: the listed tunnels, or a status a test
 	 *  switches to mid-run to fail a Refresh and then recover it. */
 	let tunnelsAnswer: "list" | 500 | 401 = "list";
+	/* Holds the NEXT `GET /v1/tunnels` only, so a test can sign in normally and
+	 *  then keep a Refresh in flight (R2-m1). */
+	let holdNext = false;
+	const nextTunnelsReceived = deferred();
+	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
@@ -264,6 +272,11 @@ async function relay(
 		if (path === "/v1/tunnels") {
 			tunnelsReceived.resolve();
 			if (options.holdTunnels) await releaseTunnels.promise;
+			if (holdNext) {
+				holdNext = false;
+				nextTunnelsReceived.resolve();
+				await releaseNextTunnels.promise;
+			}
 			if (tunnelsAnswer === 500) {
 				response.writeHead(500, { "content-type": "text/plain" });
 				response.end("Synthetic control-plane failure");
@@ -279,6 +292,10 @@ async function relay(
 		if (path === "/v1/tunnels/session/code") {
 			codeReceived.resolve();
 			if (options.holdCode) await releaseCode.promise;
+			if (options.dropCode) {
+				request.socket.destroy();
+				return;
+			}
 			if (options.failCode) {
 				json({ msg: "synthetic mint failure" }, 500);
 				return;
@@ -454,6 +471,11 @@ async function relay(
 		answerTunnels: (answer: "list" | 500 | 401) => {
 			tunnelsAnswer = answer;
 		},
+		holdNextTunnels: () => {
+			holdNext = true;
+		},
+		nextTunnelsReceived,
+		releaseNextTunnels,
 		allowLogout: () => {
 			failLogout = false;
 		},
@@ -1699,5 +1721,77 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		});
 		expect(connectionStore.getState().computers).toEqual([]);
 		expect(connectionStore.getState().surface).toBe("sign-in");
+		/* The screen reads this kind to show a sign-in state, not an empty
+		 *  account (QA round 2, Q-r2-1). */
+		expect(latest.refusal?.kind).toBe("sign-in");
+	});
+});
+
+/* The account-problem copy a network failure must never borrow (U5, D11). */
+const CONSOLE_COPY = /console|lop login/i;
+
+describe("a pick and a Refresh do not leave each other's state behind (PR #121 round 2)", () => {
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		return mock;
+	}
+
+	it("lowers `discovering` when a pick retires an in-flight Refresh (R2-m1)", async () => {
+		const mock = await signedIn({});
+		mock.holdNextTunnels();
+		let refreshing!: Promise<void>;
+		await act(async () => {
+			refreshing = latest.refreshComputers();
+		});
+		await mock.nextTunnelsReceived.promise;
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		try {
+			expect(latest.discovering).toBe(true);
+			/* The pick suspends the authorization revision, so the held pass is no
+			 *  longer current when it lands. */
+			await act(async () => {
+				await latest.selectComputer(second);
+			});
+			await until(() => connectionStore.getState().phase === "live");
+		} finally {
+			mock.releaseNextTunnels.resolve();
+		}
+		await act(async () => {
+			await refreshing;
+		});
+		/* Stuck `true` here was an inert Try now and an endless skeleton. */
+		expect(latest.discovering).toBe(false);
+	});
+
+	it("offers Try again, not the Radient console, for a pick made offline (U5, D11)", async () => {
+		await signedIn({ dropCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(latest.refusal).toMatchObject({
+			kind: "retry",
+			subject: "Synthetic computer 2",
+			detail: PICK_UNREACHABLE_DETAIL,
+			remedy: null,
+		});
+		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
 	});
 });
