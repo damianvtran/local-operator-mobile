@@ -98,6 +98,7 @@ import {
 	regionOrder,
 	sessionStatusLayout,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -968,7 +969,15 @@ export default function Session() {
 				caveat={runtime.olderThanLoaded}
 			/>
 			{tray ? (
-				<StatusTray facts={trayFacts} onOpen={() => setStatusSheetOpen(true)} />
+				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
+				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
+				 *  under the composer at 135-200 % text. */
+				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
+					<StatusTray
+						facts={trayFacts}
+						onOpen={() => setStatusSheetOpen(true)}
+					/>
+				) : null
 			) : (
 				statusStrip
 			)}

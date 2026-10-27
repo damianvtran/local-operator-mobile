@@ -98,4 +98,17 @@ describe("phone status surface wiring (D2 final)", () => {
 		expect(screen).toContain('inlineSecondary ? {} : { display: "none"');
 		expect(screen).toContain("const regionItems = !inlineSecondary");
 	});
+
+	it("renders the tray only through statusTrayVisible, so a pending decision displaces it", () => {
+		const screen = readFileSync(
+			new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+			"utf8",
+		);
+		// The unconditional `{tray ? <StatusTray …` is what put 48 pt between the pinned
+		// Approve/Deny and the composer in short landscape (audit U-08, S8 landscape).
+		expect(screen).toContain(
+			"statusTrayVisible(tray, compact, pendingViewProps !== null)",
+		);
+		expect(screen).not.toContain("{tray ? (\n\t\t\t\t<StatusTray");
+	});
 });
