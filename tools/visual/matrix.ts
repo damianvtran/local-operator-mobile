@@ -733,6 +733,18 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 			},
 		},
 	],
+	/* --- the session-health explanation sheet (the header's status dot) ---
+	 *
+	 * `S5/health-sheet` declares the sheet OPEN over the ended session, and had no
+	 * opener: it rendered byte-identical to `S5/health-ended` and the harness
+	 * reported it NOT MEASURABLE (measured on this head: 7 of 31 cells, both
+	 * themes on every device). The press is the reader's own — tap the title
+	 * block — so a sheet that stops opening fails its cell by marker rather than
+	 * by a staged overlay. */
+	"S5/health-sheet": [{ click: CONTROL.sessionHealth }],
+	/* The dropped-cause sheet is the same surface with the other yellow cause's
+	 * copy; it borrows this opener for the same reason it borrows the marker. */
+	"S5/health-dropped-sheet": [{ click: CONTROL.sessionHealth }],
 	/* --- the conversation-tags sheet (LOH-11 S3) ---
 	 *
 	 * All four open the same way a reader does: hold the tagged row, press
