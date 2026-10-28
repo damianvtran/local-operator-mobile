@@ -1,0 +1,44 @@
+{
+	"provenance": {
+		"kind": "synthetic",
+		"relay_ref": "local-operator ce18afbf",
+		"modelled_on": "the core producer's own question mapping: options are {label, description?} MAPPINGS, not strings \u2014 the shape QA round 3 Q9 measured against the real relay",
+		"why": "So mock-built design and QA passes can reach the Answer surface with labelled options, in the shape asks/queue.py::_question_shape emits (options as {label, description?} mappings, never bare strings). One option carries no description because the producer may omit it and the picker must not read `.length` off undefined."
+	},
+	"asks": [
+		{
+			"ask_id": "ask_1",
+			"session_id": "3f2a9c1b",
+			"cwd": "/synthetic/payments",
+			"created_at": 1792930500000,
+			"expires_at": 1792934100000,
+			"timeout_s": 3600,
+			"urgent": true,
+			"status": "open",
+			"delivered": true,
+			"questions": [
+				{
+					"id": "q1",
+					"question": "Which payment provider should the migration target?",
+					"options": [
+						{
+							"label": "Yes",
+							"description": "Send the synthetic report"
+						},
+						{
+							"label": "No",
+							"description": "Keep it local"
+						},
+						{
+							"label": "Ask me later"
+						}
+					],
+					"multi": false,
+					"recommended": 0,
+					"secret": false,
+					"persist": false
+				}
+			]
+		}
+	]
+}

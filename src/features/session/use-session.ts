@@ -125,6 +125,17 @@ export interface SessionRuntime {
 const isTransient = (error: RelayError): boolean =>
 	error.kind === "transport" || error.kind === "ambiguous-delivery";
 
+/** Whether a session id names anything.
+ *
+ *  `""` is NOT an id: it builds `/api/sessions//events` and `//history`, which the
+ *  relay answers 404 and the browser logs as two failed loads on every mount. The
+ *  inbox and its detail read the runtime for a conversation they may not have yet
+ *  (no answer sheet open, an item whose source conversation is unknown), so they
+ *  pass `""` — QA round 5, Q10. Every reader below skips an unnamed session rather
+ *  than asking the relay about nothing. */
+export const hasSessionId = (sessionId: string): boolean =>
+	sessionId.trim() !== "";
+
 export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const providerConnection = useConnection();
 	const snapshot = useConnectionState((state) => state);
@@ -208,6 +219,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
+		// An unnamed session has no stream to open (Q10).
+		if (!hasSessionId(sessionId)) return;
 		let active = true;
 		const owner: ProjectionOwner = {
 			revision: snapshot.revision,
@@ -393,6 +406,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	useEffect(() => {
 		const owner = identity;
 		const read = () => {
+			// Nothing to read, and nothing to ask the relay about (Q10).
+			if (!hasSessionId(sessionId)) return;
 			if (
 				endpoints === null ||
 				!sameProjectionOwner(owner, currentIdentity.current)

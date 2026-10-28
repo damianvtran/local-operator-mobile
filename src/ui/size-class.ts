@@ -94,12 +94,72 @@ export const sidebarWidthFor = (viewportWidth: number): number =>
 		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
 	);
 
-/** In short landscape the stacked secondary routes cannot stay pinned without
- * taking the conversation list's height. Use the same height policy that rejects
- * a split pane there; portrait and roomy tablet layouts keep their pinned footer.
- * Scrolling the routes with the list preserves text scaling and target sizes. */
-export const sidebarFooterScrolls = (layout: Layout): boolean =>
-	layout.orientation === "landscape" && !layout.split;
+/** The FIVE-destination pane height below which the pinned routes starve the list.
+ *
+ * MEASURED, not chosen. At 320 × 568 / 200 % with the inbox as a sixth
+ * destination the sidebar's own chrome is 140 pt above the list and the pinned
+ * routes are 368 pt, so the list was left 60 pt against its own 185 pt of content
+ * — a 46 pt section header plus a 139 pt row — and the first row sat entirely
+ * below the list's viewport. The consequence was not cosmetic: `S15/ended` and
+ * `S15/populated` are distinguished ONLY by that row's meta line, so both cells
+ * photographed identically and the capture refused the run (`iPhone SE`,
+ * 2026-10-27, run 40438251913; the same cells are distinct on main, which has one
+ * destination fewer).
+ *
+ * 568 IS THE FIVE-ROUTE FLOOR, i.e. main's own behaviour: 140 + 185 + the five
+ * destinations' 243 pt of routes fit 568 exactly. The six-route floor is 628
+ * (`PINNED_ROUTE_ROW` adds the sixth), not the 693 the six-route arithmetic gives
+ * — the list needs ONE row, and 628 leaves it the 136 pt a section header plus a
+ * row measures, which is the same standard main is held to. The 693 figure in the
+ * paragraphs above is the sum the measurement produced, not a threshold.
+ */
+export const PINNED_ROUTES_BASE_FLOOR = 568;
+
+/** One destination row at the 200 % step: the rail's six destinations measured
+ *  368 pt, about 61 pt each including the grid's gaps. */
+const PINNED_ROUTE_ROW = 60;
+
+/** The pane height the pinned routes need with `routes` destinations at large text.
+ *
+ *  THE FLOOR FOLLOWS THE COUNT, deliberately: the sixth destination is what starved
+ *  the list (measured above), so a relay that does not advertise the inbox has five
+ *  and must see NO change — a rule that fired at five would take the pinned routes
+ *  away from every short portrait phone on an older relay, which is the regression
+ *  review round 7 named (R7-01).
+ *
+ *  `layout.height` is the VIEWPORT height, not the pane's. On native the safe-area
+ *  insets come out of the pane, so a phone a little above the floor (780 with a
+ *  large top inset, say) can still be short of the height the derivation needs. The
+ *  floor is therefore a LOWER BOUND, and the margin it leaves is the inset budget
+ *  rather than slack (code review round 7, R7-03).
+ */
+export const pinnedRoutesPaneFloor = (routes: number): number =>
+	PINNED_ROUTES_BASE_FLOOR + Math.max(0, routes - 5) * PINNED_ROUTE_ROW;
+
+/** Whether the stacked secondary routes scroll WITH the list instead of being
+ *  pinned beneath it.
+ *
+ * Two cases cannot keep them pinned: short landscape, where the pane is shorter
+ * than its own chrome (the rule that also rejects a split pane there), and large
+ * text in a short portrait pane, where the routes grow with the reader's text
+ * size and would take the list's height — the same reasoning the landscape rule
+ * records, applied to the axis the text scale stretches.
+ *
+ * A PREDICATE, deliberately: switching this after measuring the list would move
+ * the footer on the second paint, and the capture's own check ("frames that
+ * changed after first paint") would then be measuring a layout that is no
+ * longer the one the reader saw first. Portrait and roomy tablet layouts keep
+ * their pinned footer; scrolling the routes with the list preserves text scaling
+ * and target sizes. */
+export const sidebarFooterScrolls = (
+	layout: Layout,
+	options: { largeText?: boolean; routes: number },
+): boolean => {
+	if (layout.split) return false;
+	if (layout.orientation === "landscape") return true;
+	if (options.largeText !== true) return false;
+	return layout.height < pinnedRoutesPaneFloor(options.routes);
+};
 
 /**
  * COMPACT SESSION CHROME: a phone held on its side, where the screen is shorter

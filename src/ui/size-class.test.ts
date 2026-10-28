@@ -10,6 +10,7 @@ import {
 	headerStacks,
 	headerStackWidth,
 	layoutFor,
+	pinnedRoutesPaneFloor,
 	regionOrder,
 	SPLIT_MIN_HEIGHT,
 	sessionStatusLayout,
@@ -33,16 +34,72 @@ import { FIELD_BORDER_Y } from "@/ui/variants";
  */
 
 describe("sidebarFooterScrolls", () => {
+	it("scrolls the routes when large text would take the list's height", () => {
+		/* The measured case: 320 × 568 at 200 % left the list 60 pt, so the first
+		 *  row sat below the fold and two distinct states photographed as one. */
+		expect(
+			sidebarFooterScrolls(layoutFor(320, 568), { largeText: true, routes: 6 }),
+		).toBe(true);
+		/* Roomy panes keep the pinned footer even at large text. */
+		expect(
+			sidebarFooterScrolls(layoutFor(390, 844), { largeText: true, routes: 6 }),
+		).toBe(false);
+		expect(
+			sidebarFooterScrolls(layoutFor(834, 1112), {
+				largeText: true,
+				routes: 6,
+			}),
+		).toBe(false);
+		/* And ordinary text changes nothing, whatever the height. */
+		expect(
+			sidebarFooterScrolls(layoutFor(320, 568), {
+				largeText: false,
+				routes: 6,
+			}),
+		).toBe(false);
+	});
+
+	it("leaves a relay without the inbox on the routes it pinned before (R7-01)", () => {
+		/* Five destinations are the shape main ships, and they fit a 568 pt pane at
+		 *  large text (measured: the list keeps 116 pt and the row is visible), so a
+		 *  relay that does not advertise the inbox must see NO change. */
+		expect(
+			sidebarFooterScrolls(layoutFor(320, 568), { largeText: true, routes: 5 }),
+		).toBe(false);
+		for (const height of [640, 667, 700, 844]) {
+			expect(
+				sidebarFooterScrolls(layoutFor(320, height), {
+					largeText: true,
+					routes: 5,
+				}),
+			).toBe(false);
+		}
+		/* The sixth destination is what crosses the floor on the same pane, and the
+		 *  floor is one row per destination above five. */
+		expect(pinnedRoutesPaneFloor(5)).toBe(568);
+		expect(pinnedRoutesPaneFloor(6)).toBe(628);
+		expect(
+			sidebarFooterScrolls(layoutFor(320, 640), { largeText: true, routes: 6 }),
+		).toBe(false);
+	});
+
 	it("preserves rows in short landscape without changing portrait or tablet flow", () => {
-		expect(sidebarFooterScrolls(layoutFor(844, 390))).toBe(true);
-		expect(sidebarFooterScrolls(layoutFor(568, 320))).toBe(true);
-		for (const [width, height] of [
-			[390, 844],
-			[320, 568],
-			[834, 1112],
-			[1112, 834],
-		] as const) {
-			expect(sidebarFooterScrolls(layoutFor(width, height))).toBe(false);
+		/* `routes` is REQUIRED (code review round 8, R8-05): a default would let a
+		 *  stray call silently pick the strictest floor, which is the one case this
+		 *  rule exists to leave alone. */
+		for (const routes of [5, 6]) {
+			expect(sidebarFooterScrolls(layoutFor(844, 390), { routes })).toBe(true);
+			expect(sidebarFooterScrolls(layoutFor(568, 320), { routes })).toBe(true);
+			for (const [width, height] of [
+				[390, 844],
+				[320, 568],
+				[834, 1112],
+				[1112, 834],
+			] as const) {
+				expect(sidebarFooterScrolls(layoutFor(width, height), { routes })).toBe(
+					false,
+				);
+			}
 		}
 	});
 });

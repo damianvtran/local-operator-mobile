@@ -17,7 +17,17 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		environment: "node",
-		include: ["src/**/*.test.ts", "scripts/**/*.test.ts", "tools/**/*.test.ts"],
+		/* `*.test.tsx` is included even though no component test exists YET: the
+		 * round-1 blocker was a callback wired to nothing, and the day this repo
+		 * grows a DOM/renderer test it must be collected rather than silently
+		 * skipped (code review B1: "widen `vitest.config.ts` include if that is
+		 * what it takes"). */
+		include: [
+			"src/**/*.test.ts",
+			"src/**/*.test.tsx",
+			"scripts/**/*.test.ts",
+			"tools/**/*.test.ts",
+		],
 		globals: false,
 		// react-native-web ships untranspiled ESM; Node must go through Vite for it.
 		server: { deps: { inline: [/react-native-web/] } },

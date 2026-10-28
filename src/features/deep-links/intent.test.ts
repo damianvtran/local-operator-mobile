@@ -13,6 +13,7 @@ describe("nativeIntentFor", () => {
 		expect(nativeIntentFor("localoperator://s/6714def86197")).toEqual({
 			path: "/session/6714def86197",
 			sessionId: "6714def86197",
+			notificationId: null,
 		});
 	});
 
@@ -22,10 +23,12 @@ describe("nativeIntentFor", () => {
 		expect(nativeIntentFor("localoperator:s/abc123")).toEqual({
 			path: "/session/abc123",
 			sessionId: "abc123",
+			notificationId: null,
 		});
 		expect(nativeIntentFor("LocalOperator://s/abc123")).toEqual({
 			path: "/session/abc123",
 			sessionId: "abc123",
+			notificationId: null,
 		});
 	});
 
@@ -35,7 +38,43 @@ describe("nativeIntentFor", () => {
 		expect(nativeIntentFor("localoperator://s/a%2Bb")).toEqual({
 			path: "/session/a%2Bb",
 			sessionId: "a+b",
+			notificationId: null,
 		});
+	});
+
+	it("rewrites a notification link to the inbox detail route", () => {
+		// Design §10: a push tap (or any inbound link) opens the item, and the
+		// route is the inbox's own child — never the session screen.
+		expect(nativeIntentFor("localoperator://n/n_audit")).toEqual({
+			path: "/notifications/n_audit",
+			sessionId: null,
+			notificationId: "n_audit",
+		});
+	});
+
+	it("decodes and re-escapes a notification id, including an ask's colons", () => {
+		// An ask row's id is `ask:<session>:<ask_id>`; the colon is legal in a
+		// route segment, and a percent-encoded spelling decodes once.
+		expect(nativeIntentFor("localoperator://n/ask%3A3f2a9c1b%3Aa1")).toEqual({
+			path: `/notifications/${encodeURIComponent("ask:3f2a9c1b:a1")}`,
+			sessionId: null,
+			notificationId: "ask:3f2a9c1b:a1",
+		});
+	});
+
+	it("refuses a notification id that is a dot segment or carries a slash", () => {
+		for (const path of [
+			"localoperator://n/..",
+			"localoperator://n/%2e%2e",
+			"localoperator://n/a%2Fb",
+			"localoperator://n/",
+		]) {
+			expect(nativeIntentFor(path)).toEqual({
+				path,
+				sessionId: null,
+				notificationId: null,
+			});
+		}
 	});
 
 	it("passes every non-link through unchanged", () => {
@@ -52,7 +91,11 @@ describe("nativeIntentFor", () => {
 			"not a url at all",
 		];
 		for (const path of passthrough) {
-			expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+			expect(nativeIntentFor(path)).toEqual({
+				path,
+				sessionId: null,
+				notificationId: null,
+			});
 		}
 	});
 
@@ -69,7 +112,11 @@ describe("nativeIntentFor", () => {
 			"localoperator://s/%2e%2e",
 		];
 		for (const path of passthrough) {
-			expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+			expect(nativeIntentFor(path)).toEqual({
+				path,
+				sessionId: null,
+				notificationId: null,
+			});
 		}
 	});
 
@@ -84,7 +131,11 @@ describe("nativeIntentFor", () => {
 			"localoperator://s/a\uDC00b",
 		];
 		for (const path of passthrough) {
-			expect(nativeIntentFor(path)).toEqual({ path, sessionId: null });
+			expect(nativeIntentFor(path)).toEqual({
+				path,
+				sessionId: null,
+				notificationId: null,
+			});
 		}
 	});
 });

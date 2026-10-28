@@ -128,9 +128,11 @@ function SessionCapture({ id }: { id: string }) {
 }
 function Capture() {
 	latest = useConnection();
-	return observedSession
-		? createElement(SessionCapture, { id: observedSession })
-		: null;
+	/* `null` means "no session screen"; `""` means "a screen with no conversation
+	 *  yet", which is the case Q10 measured and which must still mount the hook. */
+	return observedSession === null
+		? null
+		: createElement(SessionCapture, { id: observedSession });
 }
 async function mount() {
 	const doc = {
@@ -2131,5 +2133,72 @@ describe("PR #122 round-1 remediation: the provider's side of the switcher", () 
 		);
 		expect(radientEntry?.name).toBe("Synthetic computer 1");
 		expect(radientEntry?.name).not.toBe(tunnel.hostname);
+	});
+});
+
+describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
+	it('mounts the runtime for `""` and issues no request for it', async () => {
+		/* The inbox and its detail read the runtime for a conversation they may not
+		 * have yet, so they pass `""`. That is not an id: it built
+		 * `/api/sessions//events` and `//history`, two 404s and two console errors on
+		 * every mount. The hook must be MOUNTED here (this is a live screen with no
+		 * conversation, not an absent one) and must ask for nothing. */
+		const mock = await relay({});
+		observedSession = "";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// Give the effects the same settle the other cases get.
+		await act(async () => {
+			await new Promise<void>((resolve) => setImmediate(resolve));
+		});
+		// The two requests the empty id used to build, and nothing else for a session.
+		const asked = wire.filter((entry) =>
+			/\/api\/sessions\/\//.test(entry.path),
+		);
+		expect(asked).toEqual([]);
+		/* The shared session LIST stream (`/api/sessions/events`) is the provider's
+		 *  own subscription and opens on every screen; what must not appear is a
+		 *  request for a NAMED session, which is what `""` used to build. */
+		expect(
+			wire
+				.filter(
+					(entry) =>
+						entry.path.startsWith("/api/sessions/") &&
+						entry.path !== "/api/sessions/events",
+				)
+				.map((entry) => entry.path),
+		).toEqual([]);
+	});
+
+	it("still asks for a named session, so the guard is not a blanket mute", async () => {
+		const mock = await relay({});
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		expect(wire).toContainEqual({
+			method: "GET",
+			path: "/api/sessions/synthetic-session/history",
+			status: 200,
+		});
+		// The empty-id case CANNOT be the first assertion's mirror by accident: the
+		// exact request the empty id used to make is named here.
+		expect(
+			wire.filter((entry) => entry.path === "/api/sessions//history"),
+		).toEqual([]);
 	});
 });

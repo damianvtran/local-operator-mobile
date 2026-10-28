@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Menu, Settings } from "lucide-react-native";
+import { Bell, BellDot, Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
@@ -11,6 +11,10 @@ import {
 	useListState,
 } from "@/features/auth/connection-provider";
 import {
+	headerBellShowsCount,
+	headerBellShowsDot,
+} from "@/features/home/header-fit";
+import {
 	CONNECT_DISABLED_REASON,
 	FOLDERS_READ_FAILED,
 	REFUSED_START_FALLBACK,
@@ -20,6 +24,10 @@ import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -36,12 +44,16 @@ import { connectionView } from "@/features/session/connection-view";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
-import { unreadBadgeCount } from "@/features/sessions/session-projection";
+import {
+	inboxBadgeCount,
+	unreadBadgeCount,
+} from "@/features/sessions/session-projection";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
@@ -100,6 +112,21 @@ export type HomeProps = {
 	notice?: string | null;
 };
 
+/** The bell glyph inside the header's composite notifications control. Its ink is
+ *  the icon-only control's own role (`ink-muted`), read from the theme rather than
+ *  inherited, because an SVG takes colour as a prop. */
+function BellIcon({ waiting = false }: { waiting?: boolean }) {
+	const color = useTokenColor("ink-muted");
+	/* SHAPE, NOT COLOUR. Where the count pill yields (D24) a waiting inbox is
+	 *  signalled by the icon set's own bell-with-dot, in the control's normal ink:
+	 *  no separate painted node and no semantic colour, so the audit's U-03 rule
+	 *  (status carried by colour alone) has nothing to flag — the previous 6 pt
+	 *  dot was exactly that and failed 96 of 1212 cells. Size and ink are the
+	 *  plain bell's, so it also scales with the type step like every other glyph. */
+	const Glyph = waiting ? BellDot : Bell;
+	return <Glyph color={color} size={20} />;
+}
+
 export default function Home({
 	forcePanelOpen = false,
 	newSession = false,
@@ -123,6 +150,10 @@ export default function Home({
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
 	const unread = useListState((state) => state.unread);
+	const inbox = useListState((state) => state.notifications);
+	const inboxEnabled = notificationsEnabled(
+		useListState((state) => state.capabilities),
+	);
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
@@ -262,6 +293,9 @@ export default function Home({
 	 * never rendered as 0. The conversations pane's degraded banner is the
 	 * "says so". */
 	const badgeCount = unreadBadgeCount(unread);
+	/* The inbox's own number, from the same frame (contract §5.4). Same absence
+	 * rule: `null` draws no numeral, never a 0 the machine did not send. */
+	const inboxCount = inboxBadgeCount(inbox);
 
 	/* The banner: only the states the product has sentences for. A refusal renders
 	 * its own fuller surface below (and nothing here duplicates it); the
@@ -643,14 +677,22 @@ export default function Home({
 					<View className="min-w-0 flex-1 flex-row items-center gap-2">
 						{/* The computer this will run on, and the switcher: the same
 						 *  `listLabel` ladder the panel's row uses, so the two cannot
-						 *  name one machine differently. */}
+						 *  name one machine differently.
+						 *
+						 *  BOTH AXES carry the floor. `minHeight` alone left this the one
+						 *  control the flex row could shrink: beside a `99+` bell at 200 %
+						 *  text it measured 36.4 pt with the label "…1" (design round 9,
+						 *  D24; the four E2E U-01 rows at `S15/move-progress`). The width
+						 *  floor is only honourable because the BELL yields its pill at
+						 *  large text — see `headerBellShowsCount` — so nothing overflows
+						 *  the 320 pt row to escape it. */}
 						<Pressable
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
 							onPress={() => router.push("/tunnels")}
 							testID={CONTROL.computersButton}
 							className="min-w-0 flex-1 justify-center"
-							style={{ minHeight: TOUCH_FLOOR }}
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 						>
 							{/* ONE unbreakable line, pre-fitted with a middle ellipsis. A tail
 							 *  fit kept only "…0.0.1:49869"; a two-line middle let the platform
@@ -680,6 +722,55 @@ export default function Home({
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
 						 *  Settings. The gear says what the control does; the accessible name
 						 *  still comes from the caller's label. */}
+						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
+						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
+						 *  button's box — an inert fifth control the reader tries to tap
+						 *  (design review round 2 D10). An absolutely-positioned badge
+						 *  fixed the distance but OVERLAPPED the pressable's own box by
+						 *  94 pt² (audit U-08 on S4/idle), so the count is a trailing
+						 *  accessory INSIDE one pressable: a single 44 pt target, no
+						 *  overlap, and the number reads as part of the bell. */}
+						{inboxEnabled ? (
+							<Pressable
+								accessibilityRole={ROLE.button}
+								accessibilityLabel={
+									inboxCount === null
+										? "Notifications"
+										: `Notifications, ${inboxCount} unread`
+								}
+								onPress={() => router.push("/notifications")}
+								testID={CONTROL.homeNotifications}
+								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+								className="flex-row items-center justify-center gap-1 px-2"
+							>
+								<BellIcon
+									waiting={headerBellShowsDot(effectiveScale, inboxCount)}
+								/>
+								{/* THE PILL YIELDS FIRST, at and above 200 % text. The bell keeps
+								 *  its 44 pt target and its accessible name keeps the count
+								 *  ("Notifications, 120 unread"), while the ~55 pt the pill
+								 *  was taking goes to the computer switcher, which otherwise
+								 *  cannot hold its own floor (D24). Nothing is lost silently:
+								 *  the same number is on the rail's row inside the pane. */}
+								{inboxCount !== null &&
+								inboxCount > 0 &&
+								headerBellShowsCount(effectiveScale) ? (
+									<View testID={CONTROL.homeNotificationsCount}>
+										<Badge
+											/* THE APP'S ONE CAP: a four-digit count would widen the pill
+											 *  until it took width from the label (R7-02/D21). */
+											label={countLabel(inboxCount)}
+											/* The same 300 % step the rail's count passes (D25). */
+											scale={effectiveScale}
+											tone="warning"
+											emphasis
+											mono
+											accessibilityLabel={`${inboxCount} unread notifications`}
+										/>
+									</View>
+								) : null}
+							</Pressable>
+						) : null}
 						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}
