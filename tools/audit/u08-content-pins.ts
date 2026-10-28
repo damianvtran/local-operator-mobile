@@ -274,6 +274,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * switcher provider counting closes alongside dismissals, Settings revealing a
 	 * refusal once no dismissal is owed, and the Try now focus move owned by the
 	 * retry's start state. No U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-7 remediation, `src` only and a test
+	 * file only: `modal-dismissal-ledger.test.ts` types the Sheet's required
+	 * `children` (CI tsc) and adds the sibling-Sheet close-ordering case (R7-m1).
+	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
 	 * `--print` from the staged tree. */
 	app: "82e9fc3d4f1b5827be73f4a72ea7505808f121ffb9a32f1eb728be4b9ef28163",
 	"design/fonts":
@@ -281,7 +287,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "04850bd65de12739654a2dfbd6ecb2a77d6c2caf004cd685b48a3493f2038f76",
+	src: "eece356691f724d3df9d9f50a1e220fcc9b446216ca1a09b470bb97ec5e6502c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

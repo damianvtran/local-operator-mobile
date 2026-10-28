@@ -1,6 +1,7 @@
 import { act, createElement, Fragment, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SheetProps } from "@/ui/components/sheet";
 
 /**
  * THE KIT'S MODALS AND SETTINGS' REVEAL, together (PR #122 QA round 6, Q9 / A1;
@@ -100,6 +101,17 @@ type Scene = {
 let revealed = 0;
 let root: ReturnType<typeof createRoot> | null = null;
 
+/** The switcher Sheet's fixed props. `SheetProps.children` is required and
+ *  `createElement` types it as a PROP — a positional `null` child leaves it
+ *  missing (TS2769 in CI). Biome's noChildrenProp bars `children:` inside a
+ *  `createElement` call, so it lives here, typed against the real props. */
+const switcherSheet = {
+	onClose: () => {},
+	title: "Switch computer",
+	testID: SHEET,
+	children: null,
+} satisfies Omit<SheetProps, "visible">;
+
 /** Settings, reduced to what the reveal depends on. */
 function Screen({ refused, dialog, sheet }: Scene) {
 	useRefusalReveal(refused, sheet, () => {
@@ -118,20 +130,42 @@ function Screen({ refused, dialog, sheet }: Scene) {
 			destructive: true,
 			testID: DIALOG,
 		}),
-		createElement(
-			Sheet,
-			{
-				visible: sheet,
-				onClose: () => {},
-				title: "Switch computer",
-				testID: SHEET,
-			},
-			null,
-		),
+		createElement(Sheet, {
+			visible: sheet,
+			...switcherSheet,
+		}),
 	);
 }
 const show = (scene: Scene) =>
 	act(async () => root?.render(createElement(Screen, scene)));
+
+/** The hook's host, rendering nothing: in the real tree the hook does not own
+ *  the modals it waits on. */
+function RevealHost({ refused, sheet }: Pick<Scene, "refused" | "sheet">) {
+	useRefusalReveal(refused, sheet, () => {
+		revealed += 1;
+	});
+	return null;
+}
+/** `ComputerSwitcherProvider`'s shape (R7-m1): the hook lives in one component
+ *  and the switcher Sheet is a LATER SIBLING, not a child. Siblings' passive
+ *  effects run in tree order, so the hook's passive effect runs BEFORE the
+ *  Sheet's — only a close recorded in a LAYOUT effect is in the ledger by then.
+ *  `Screen` above cannot see that: there the modals are the hook's children,
+ *  and children's passive effects run before their parent's. */
+function SiblingScreen({ refused, sheet }: Pick<Scene, "refused" | "sheet">) {
+	return createElement(
+		Fragment,
+		null,
+		createElement(RevealHost, { refused, sheet }),
+		createElement(Sheet, {
+			visible: sheet,
+			...switcherSheet,
+		}),
+	);
+}
+const showSiblings = (scene: Pick<Scene, "refused" | "sheet">) =>
+	act(async () => root?.render(createElement(SiblingScreen, scene)));
 /** Fires the modal's dismissal the way RNW does once it stops rendering. A
  *  renderer that stopped forwarding one throws, and that IS the failure. */
 const dismiss = (testID: string) =>
@@ -212,6 +246,20 @@ describe("Settings reveals a refusal only once no modal owes its dismissal (Q9)"
 	it("a failed pick waits for the switcher Sheet's dismissal, then reveals once", async () => {
 		await show({ ...calm, sheet: true });
 		await show({ ...calm, sheet: false, refused: true });
+		expect(revealed).toBe(0);
+		await dismiss(SHEET);
+		expect(revealed).toBe(1);
+	});
+
+	it("a refusal armed while the sheet is up waits for its dismissal when the Sheet is a later sibling (R7-m1)", async () => {
+		await showSiblings({ refused: false, sheet: true });
+		/* The pick fails while the switcher is still up: armed, held by `sheetVisible`. */
+		await showSiblings({ refused: true, sheet: true });
+		expect(revealed).toBe(0);
+		/* The sheet closes. The hook re-checks in this commit's passive effects,
+		 *  ahead of the sibling Sheet's — the close must already be owed. */
+		await showSiblings({ refused: true, sheet: false });
+		expect(dismissalsOwed()).toBe(1);
 		expect(revealed).toBe(0);
 		await dismiss(SHEET);
 		expect(revealed).toBe(1);
