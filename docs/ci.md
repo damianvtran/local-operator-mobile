@@ -208,6 +208,42 @@ The manifest records resting pane/list/footer heights and list scroll extents,
 so a screenshot of clipped rows has explanatory numbers, not an inferred cause.
 Record each dispatch's exact SHA and run URL when comparing baseline and fix.
 
+## Inbox return-flow evidence in the existing web audit
+
+The normal `web-audit` job also runs one bounded inbox scenario, using the
+capture job's existing browser, relay, seeded `notifications-populated` fixture,
+phone profile and theme bootstrap. It does not add matrix cells or change U-08
+pins. `audit-frames/inbox-return/{before,after}/` contains `flow.json` and paired
+settled PNGs for light/dark iPhone 15 at 100% text:
+
+- All → unread update → detail → Back: the actual row loses its unread dot;
+  home bell and conversations rail agree on the reduced count.
+- Detail → dismiss all from the conversation → Back: all four scoped updates
+  disappear, while the other conversation remains.
+- A fresh journey → dismiss → Undo → Back: those updates return. Undo occurs
+  before popping the detail because that pop destroys its local receipt.
+
+Every in-journey transition uses real control input. Only fixture resets and
+initial navigation are setup. The unread-dot geometry is first verified on the
+seeded unread row; the after assertions fail on stale UI, rather than trusting
+only the relay's state. Baseline display differences are recorded as observations,
+not mistaken for successful after assertions. Driver/setup failures still fail.
+
+For PRs, the job exports the base SHA serially using shared dependencies only
+when its lockfile matches. Otherwise `baseline.txt` records the exact missing
+baseline condition. `source.txt` records base and checked-out build SHAs (the
+latter is GitHub's test merge on PR events). The driver and fixture remain the
+head versions for both legs, isolating app changes. Non-PR runs have only the
+after leg. Both flow legs are bounded at 180 seconds each, within the existing
+65-minute capture / 90-minute job budgets; the additional serial base export
+has a five-minute ceiling. Exports are removed at teardown; frames use the
+existing artifact upload.
+
+These are hosted **web** input/render captures, not native iOS/Android proof.
+An independent QA reviewer must inspect the artifact and its assertion journal;
+a green source test cannot certify these journeys. No new workflow or token is
+needed, and no whole-matrix expansion is implied.
+
 ## Third-party actions, and how they are pinned
 
 Two conventions, on purpose (ADR 0004, "Supply-chain hygiene"):
