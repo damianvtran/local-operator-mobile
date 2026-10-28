@@ -28,10 +28,61 @@
  * disagree about what the reader asked for.
  */
 
-/** The locale directories this build actually ships. Adding a catalogue
- *  directory is not enough: it must be listed here (and imported by
- *  `catalogues.ts`) or the client will not render it. */
-export const SHIPPED_LOCALES = ["en"] as const;
+/**
+ * Every language the programme will translate this app into — the manifest a
+ * contributor reads INSTEAD of inferring the set from the catalogue directories.
+ *
+ * WHAT "SUPPORTED" PROMISES: every key must reach this locale, not only English.
+ * A feature is not done until it is localized in all of them; "English first,
+ * translate later" is a missing feature, not a follow-up. The set is the
+ * programme's, not this client's invention — it mirrors the core repository's
+ * `i18n/languages.json` (`en` as `source`, the rest `supported`) because the
+ * relay resolves ONE language for the whole product, and a phone translating a
+ * different set would answer a French reader partly in French.
+ *
+ * WHY IT IS TYPED AND TESTED. Recognizing a language and shipping its copy are
+ * two different decisions, and `locales.test.ts` refuses a supported locale that
+ * is neither shipped nor explicitly pending — so adding a language here is the
+ * deliberate "the next copy needs it" moment rather than a silent one. Removing
+ * one is a product decision, never a code cleanup.
+ */
+export const SUPPORTED_LOCALES = [
+	"en",
+	"fr",
+	"es",
+	"zh-CN",
+	"ru",
+	"vi",
+	"ur",
+	"hi",
+] as const;
+
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+
+/**
+ * Supported locales this build has no catalogue for; English source stands in
+ * for them until their translation wave ships. `locales.test.ts` requires every
+ * supported locale to be listed here or in `SHIPPED_LOCALES`, so flipping one is
+ * a reviewed change rather than a forgotten one.
+ */
+export const NOT_YET_SHIPPED_LOCALES = [
+	"fr",
+	"es",
+	"zh-CN",
+	"ru",
+	"vi",
+	"ur",
+	"hi",
+] as const satisfies readonly SupportedLocale[];
+
+/** The locale directories this build actually ships. Being in this list is not
+ *  enough: the locale must also be reachable through `CATALOGUES` in
+ *  `catalogues.ts`, which is hand-written today and carries English only because
+ *  the generator projects the English source alone. A subset of
+ *  `SUPPORTED_LOCALES`, enforced by the type. */
+export const SHIPPED_LOCALES = [
+	"en",
+] as const satisfies readonly SupportedLocale[];
 
 export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];
 

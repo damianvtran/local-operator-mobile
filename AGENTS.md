@@ -102,6 +102,66 @@ For conversation, navigation, composer or sheet changes, read
 alongside the existing design kit. It records identity provenance, native
 geometry, draft/queue/privacy boundaries and the rendered-evidence gate.
 
+## Internationalization: mandatory policy
+
+**All user-facing copy is keyed, and no feature ships in English only.** These
+are gates, not aspirations: `npm run -s i18n:check` fails a pull request that
+adds copy no key owns.
+
+- **Look the copy up; never hardcode it.** Every user-facing string — JSX text,
+  `accessibilityLabel`, `placeholder`, `title`, toast, dialog, empty state,
+  error body — is a catalogue key rendered through `t()` from `src/i18n`.
+  English is just another catalogue; there is no direct-string path.
+- **Every key, every supported language.** `SUPPORTED_LOCALES` in
+  [`src/i18n/locale.ts`](src/i18n/locale.ts) is the machine-readable manifest of
+  languages: read it, do not infer the set from the catalogue directories. Every
+  new or changed key must exist in every locale there that is not in
+  `NOT_YET_SHIPPED_LOCALES`,
+  and a supported locale with no catalogue is listed in
+  `NOT_YET_SHIPPED_LOCALES` as a deliberate, reviewed decision —
+  `src/i18n/__tests__/locales.test.ts` fails a supported locale that is neither
+  shipped nor explicitly pending. A feature is not done until it is localized in
+  every shipped language; English-only is a missing feature, not a follow-up.
+- **The gate is two checks.** `npm run -s i18n:check` runs
+  `scripts/i18n/generate.ts --check` — the generated catalogue projection must
+  match the JSON authoring source, every message must parse, and every
+  non-English catalogue directory must define exactly the English keys,
+  namespace by namespace, so a key missing from ANY supported locale fails —
+  then `scripts/i18n/check-strings.ts`, which fails on a NEW user-facing literal
+  that no catalogue key owns. Its baseline is shrink-only: `--update` removes
+  entries and refuses to add any.
+- **An exemption is for what must NOT be translated.** Commands, flags, paths,
+  identifiers, developer diagnostics and tool or model names stay English by
+  design — that is the only legitimate exception. A baseline entry is not by
+  itself an exemption: the pull request must give the narrow reason, name an
+  owner and state the condition that removes it. An unreasoned exemption is not
+  an exemption, and the checker will not grow the baseline for you: `--update`
+  removes entries and refuses to add any, so an entry added by hand is a red
+  check that has to be justified in review.
+- **Where copy lives, and how keys are named.** One JSON file per namespace:
+  `src/i18n/catalogues/<locale>/mobile.<area>.json`, with translator context in
+  the sibling `mobile.<area>.context.json` sidecar. A key is
+  `<namespace>.<group>.<name>` — fully qualified, semantic and immutable
+  (`mobile.schedules.count.wakes`), because the namespace is a file-layout and
+  review-boundary decision, not a second argument to `t()`.
+- **Preserve the message exactly.** Placeholders, ICU plural/select arms and the
+  source text's structure survive translation unchanged; a message that drops an
+  argument or rewrites an arm fails generation.
+- **English is the floor, and it brings English rules.** A preference with no
+  shipped catalogue renders the English source — the sentence, never the key and
+  never an empty string — and that fallback is formatted with ENGLISH plural and
+  format rules, because the locale used to format a message is the one the text
+  came from, not the one the reader prefers.
+- **Technical and model-facing text stays English.** Prompts sent to the relay
+  or the model, command lines, flags, log lines and identifiers are English by
+  design.
+- **The agent's own conversation follows the reader by instruction, not by
+  catalogue.** The app translates its interface; it does not translate an
+  assistant's prose. The model answers in the user's language because its
+  instructions say so.
+
+HOWTO — adding a key, adding a locale, RTL: [`docs/i18n.md`](docs/i18n.md).
+
 ## Writing
 
 - Comment the **why** — the constraint, the context, the decision — not what the
