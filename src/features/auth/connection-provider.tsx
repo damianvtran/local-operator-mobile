@@ -498,6 +498,9 @@ export const ConnectionProvider = ({
 			admission: RouteAdmission,
 		) => {
 			stopStream();
+			// Capture before asynchronous delivery: a reset changes the inbox's
+			// watermark domain, even when a reconnect reuses the client object.
+			const listGeneration = listStore.getState().connectionGeneration;
 			let stopped = false;
 			let _attempt = 0;
 
@@ -529,18 +532,22 @@ export const ConnectionProvider = ({
 						}
 						if (frame.kind === "sessions") {
 							_attempt = 0;
-							listStore.getState().applyFrame({
-								sessions: frame.data.sessions,
-								degraded: frame.data.degraded,
-								capabilities: frame.data.capabilities,
-								/* THE INBOX COUNTS RIDE THIS SAME FRAME (contract §5.4) and
-								 * were dropped at all three application sites, so the badge on
-								 * the home bell and the conversations rail could never render
-								 * on any relay — the count the design leans on was always
-								 * null (design review D3; the mock relay was the other half). */
-								notifications: frame.data.notifications,
-								unread: frame.data.unread,
-							});
+							listStore.getState().applyFrame(
+								{
+									sessions: frame.data.sessions,
+									degraded: frame.data.degraded,
+									capabilities: frame.data.capabilities,
+									/* THE INBOX COUNTS RIDE THIS SAME FRAME (contract §5.4) and
+									 * were dropped at all three application sites, so the badge on
+									 * the home bell and the conversations rail could never render
+									 * on any relay — the count the design leans on was always
+									 * null (design review D3; the mock relay was the other half). */
+									notifications: frame.data.notifications,
+									unread: frame.data.unread,
+								},
+								undefined,
+								listGeneration,
+							);
 						}
 					},
 					onState: (status) => {
@@ -718,6 +725,7 @@ export const ConnectionProvider = ({
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
 			 * peers' rows exactly as the stream does — one list, one population. */
+			const listGeneration = listStore.getState().connectionGeneration;
 			const frame = await client.sessions({ includePeers: true }).catch(
 				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
 				 *  a cold-start answer the schema refused (or a transport that never
@@ -737,13 +745,17 @@ export const ConnectionProvider = ({
 				},
 			);
 			if (frame && admission.isCurrent()) {
-				listStore.getState().applyFrame({
-					sessions: frame.sessions,
-					degraded: frame.degraded,
-					capabilities: frame.capabilities,
-					notifications: frame.notifications,
-					unread: frame.unread,
-				});
+				listStore.getState().applyFrame(
+					{
+						sessions: frame.sessions,
+						degraded: frame.degraded,
+						capabilities: frame.capabilities,
+						notifications: frame.notifications,
+						unread: frame.unread,
+					},
+					undefined,
+					listGeneration,
+				);
 			}
 		},
 		[startStream, startConfig],
@@ -1101,16 +1113,21 @@ export const ConnectionProvider = ({
 	const refreshList = useCallback(async () => {
 		const client = clientRef.current;
 		if (!client) return;
+		const listGeneration = listStore.getState().connectionGeneration;
 		setBusy(true);
 		try {
 			const frame = await client.sessions({ includePeers: true });
-			listStore.getState().applyFrame({
-				sessions: frame.sessions,
-				degraded: frame.degraded,
-				capabilities: frame.capabilities,
-				notifications: frame.notifications,
-				unread: frame.unread,
-			});
+			listStore.getState().applyFrame(
+				{
+					sessions: frame.sessions,
+					degraded: frame.degraded,
+					capabilities: frame.capabilities,
+					notifications: frame.notifications,
+					unread: frame.unread,
+				},
+				undefined,
+				listGeneration,
+			);
 		} catch (error) {
 			if (error instanceof RelayError) {
 				noteError(error, refreshList);

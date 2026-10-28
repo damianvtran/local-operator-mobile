@@ -119,6 +119,9 @@ export default function Notifications() {
 	const client = relay();
 	const capabilities = useListState((state) => state.capabilities);
 	const frameCount = useListState((state) => state.frameCount);
+	const connectionGeneration = useListState(
+		(state) => state.connectionGeneration,
+	);
 	const enabled = notificationsEnabled(capabilities);
 	/* UNKNOWN IS NOT "NO". Before the first list frame, `capabilities` is an
 	 * empty bag: an absence there means "the relay has not spoken yet", so the
@@ -126,7 +129,11 @@ export default function Notifications() {
 	 * the flag earns the unsupported sentence — the contract's absence rule
 	 * (`libraryEnabled`'s, applied to a screen as well as an entry point). */
 	const unsupported = !enabled && frameCount > 0;
-	const inbox = useNotifications(client, enabled && client !== null);
+	const inbox = useNotifications(
+		client,
+		enabled && client !== null,
+		connectionGeneration,
+	);
 	const [answerSession, setAnswerSession] = useState<string | null>(null);
 	const runtime = useSessionRuntime(answerSession ?? "");
 	/* The row's "Dismiss all from <conversation>" accessibility action. It walks
@@ -207,14 +214,20 @@ export default function Notifications() {
 	 * scan tick; this answer carries the same unfiltered counts, so it updates
 	 * them now. The store refuses a block older than the one it holds. */
 	useEffect(() => {
-		if (response === null) return;
-		listStore.getState().applyInboxCounts({
-			unread_count: response.unread_count,
-			waiting_count: response.waiting_count,
-			waiting_unread_count: response.waiting_unread_count,
-			high_water: response.high_water,
-		});
-	}, [response]);
+		// The provider retires its live client before resetting the store. Check
+		// both identities here too: a reset can precede React's next render.
+		if (response === null || client === null || !enabled || relay() !== client)
+			return;
+		listStore.getState().applyInboxCounts(
+			{
+				unread_count: response.unread_count,
+				waiting_count: response.waiting_count,
+				waiting_unread_count: response.waiting_unread_count,
+				high_water: response.high_water,
+			},
+			connectionGeneration,
+		);
+	}, [response, client, enabled, relay, connectionGeneration]);
 	/* The footer's single control, decided in the model so it cannot be two. */
 	const footer = footerControl({
 		loadingMore: inbox.loadingMore,

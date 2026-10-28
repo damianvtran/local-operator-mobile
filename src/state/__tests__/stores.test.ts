@@ -514,7 +514,9 @@ describe("the inbox counts follow the freshest answer, never an older one", () =
 		store
 			.getState()
 			.applyFrame({ ...listFrame(), notifications: block(7, 40) });
-		store.getState().applyInboxCounts(block(6, 41));
+		store
+			.getState()
+			.applyInboxCounts(block(6, 41), store.getState().connectionGeneration);
 		expect(store.getState().notifications?.unread_count).toBe(6);
 	});
 
@@ -523,7 +525,9 @@ describe("the inbox counts follow the freshest answer, never an older one", () =
 		store
 			.getState()
 			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
-		store.getState().applyInboxCounts(block(7, 49));
+		store
+			.getState()
+			.applyInboxCounts(block(7, 49), store.getState().connectionGeneration);
 		expect(store.getState().notifications?.unread_count).toBe(5);
 	});
 
@@ -532,7 +536,9 @@ describe("the inbox counts follow the freshest answer, never an older one", () =
 		store
 			.getState()
 			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
-		store.getState().applyInboxCounts({});
+		store
+			.getState()
+			.applyInboxCounts({}, store.getState().connectionGeneration);
 		expect(store.getState().notifications?.unread_count).toBe(5);
 	});
 });

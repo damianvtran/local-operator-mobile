@@ -118,7 +118,8 @@ describe("the detail's explicit read", () => {
 /** The hook owns the request lifecycle; the screen only paints it. */
 /** Top-level, per the repo's lint rule: a regex literal in a test body is a
  *  allocation per run. */
-const MERGES_PAGE = /setResponse\(\s*mergePage\(held, answer\),?\s*\)/;
+const MERGES_PAGE =
+	/setReceived\(\{\s*generation,\s*answer: mergePage\(held, answer\),?\s*\}\)/;
 const FAILS_THE_WALK = /setPageWalk\(\s*pageWalkFailed\(/;
 
 const hook = readFileSync(

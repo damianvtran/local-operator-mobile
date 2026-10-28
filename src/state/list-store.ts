@@ -29,6 +29,8 @@ import type {
 } from "../contracts";
 
 export interface ListSnapshot {
+	/** Reset is an identity boundary, even when the same computer reconnects. */
+	connectionGeneration: number;
 	sessions: SessionSummary[];
 	/** The relay's own markers for the durable half of the listing. Empty means
 	 *  healthy; present means say so, because a partial list is not an empty one. */
@@ -60,10 +62,14 @@ export interface ListActions {
 				Pick<SessionListFrame, "capabilities" | "unread" | "notifications">
 			>,
 		at?: number,
+		connectionGeneration?: number,
 	) => void;
 	/** Applies the inbox counts a fresher `GET /api/notifications` answer carried,
 	 *  so the badge and the inbox's own count line agree at the same moment. */
-	applyInboxCounts: (block: NotificationsBlock) => void;
+	applyInboxCounts: (
+		block: NotificationsBlock,
+		connectionGeneration: number,
+	) => void;
 	/** Marks the rendered list as no longer live. Never clears it. */
 	markStale: () => void;
 	/** Discards everything. Used when a route ends: the rows belong to a different
@@ -74,6 +80,7 @@ export interface ListActions {
 export type ListStore = ListSnapshot & ListActions;
 
 const INITIAL: ListSnapshot = {
+	connectionGeneration: 0,
 	sessions: [],
 	degraded: [],
 	capabilities: {},
@@ -86,10 +93,28 @@ const INITIAL: ListSnapshot = {
 
 export function createListStore(deps: { now?: () => number } = {}) {
 	const now = deps.now ?? (() => Date.now());
+	// Keep freshness even while a degraded frame hides the badge. Otherwise an
+	// old healthy answer could revive a stale number after a newer unknown one.
+	let inboxWatermark: number | undefined;
+	const admitCounts = (
+		held: NotificationsBlock | null,
+		block: NotificationsBlock,
+	): NotificationsBlock | null => {
+		const known = notificationsOrNull(block);
+		if (known === null) return null;
+		if (
+			inboxWatermark !== undefined &&
+			(known.high_water === undefined || known.high_water < inboxWatermark)
+		)
+			return held;
+		inboxWatermark = known.high_water;
+		return known;
+	};
 	return createStore<ListStore>()((set, get) => ({
 		...INITIAL,
 
-		applyFrame(frame, at) {
+		applyFrame(frame, at, connectionGeneration = get().connectionGeneration) {
+			if (connectionGeneration !== get().connectionGeneration) return;
 			set({
 				/* Nothing is merged: the frame IS the list. */
 				sessions: frame.sessions,
@@ -114,41 +139,25 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				 * keeps the badge dark while the block is unreadable, and — because
 				 * the schema now accepts the empty block — the sessions frame this
 				 * list depends on is no longer dropped over it (NC5). */
-				notifications: notificationsOrNull(
-					frame.notifications ?? get().notifications,
-				),
+				// HTTP and SSE are unordered transports. Both must use the same
+				// watermark; absence retains, but a present empty block is unknown.
+				notifications:
+					frame.notifications === undefined
+						? get().notifications
+						: admitCounts(get().notifications, frame.notifications),
 				frameCount: get().frameCount + 1,
 				lastFrameAt: at ?? now(),
 				stale: false,
 			});
 		},
 
-		applyInboxCounts(block) {
-			/* WHY THE INBOX READ MAY MOVE THE BADGE. The badge rides the list
-			 * frame, and the relay re-sends that frame only when its scan tick sees
-			 * the inbox store move (`_refresh_notifications_if_changed`) — so for a
-			 * beat after a read or a dismiss the inbox screen showed the new count
-			 * while the bell and the rail still showed the old one. The page answer
-			 * carries the SAME unfiltered counts the frame does (`items.py`
-			 * `list_page` and `counts` both read `store.counts()`), so it may stand
-			 * in for the frame until the next one lands.
-			 *
-			 * ONLY IF IT IS NOT OLDER. `high_water` is the store's seq and every
-			 * write re-stamps a row, so it only grows: a page answer that left the
-			 * relay before the frame we hold must not roll the badge back. A block
-			 * the store already holds as unknown stays unknown only until a known
-			 * one arrives — that is the frame rule too. */
-			const held = get().notifications;
-			const known = notificationsOrNull(block);
-			if (known === null) return;
-			if (
-				held !== null &&
-				held.high_water !== undefined &&
-				(known.high_water === undefined || known.high_water < held.high_water)
-			) {
-				return;
-			}
-			set({ notifications: known });
+		applyInboxCounts(block, connectionGeneration) {
+			// A mounted inbox may finish IO after beginRoute resets this store.
+			// Requiring its captured generation prevents counts from crossing
+			// computers/accounts, including a return to the same client identity.
+			if (connectionGeneration !== get().connectionGeneration) return;
+			if (notificationsOrNull(block) === null) return;
+			set({ notifications: admitCounts(get().notifications, block) });
 		},
 
 		markStale() {
@@ -161,7 +170,8 @@ export function createListStore(deps: { now?: () => number } = {}) {
 		},
 
 		reset() {
-			set({ ...INITIAL });
+			inboxWatermark = undefined;
+			set({ ...INITIAL, connectionGeneration: get().connectionGeneration + 1 });
 		},
 	}));
 }
