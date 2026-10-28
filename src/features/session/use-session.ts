@@ -133,6 +133,11 @@ export interface SessionRuntime {
  * and reconnecting through it would both hide that sentence and fight a relay
  * that is refusing on purpose. `after-backoff` is true for a plain transport
  * drop AND for `authorization_deferred`; only the first is silent. */
+/** The relay's own outage grace, `OUTAGE_GRACE_MS` in `store.ts` at 24d328a1:
+ *  an outage is REPORTED only once it has stood this long, so a blip never
+ *  paints (or speaks) a state the reader would have to un-read. */
+const OUTAGE_GRACE_MS = 2500;
+
 const isTransient = (error: RelayError): boolean =>
 	error.kind === "transport" || error.kind === "ambiguous-delivery";
 
@@ -180,6 +185,40 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		identity,
 		INITIAL_STREAM_FACTS,
 	);
+	/* OUTAGE HYSTERESIS, the relay's own rule (`store.ts` at 24d328a1:
+	 * `OUTAGE_GRACE_MS = 2500`, with `STABLE_STREAM_MS = 2000` before it calls a
+	 * reconnect recovered). Without it the dot flipped Live ↔ Reconnecting every
+	 * 300–700 ms on a flapping link and re-announced each flip, moving the header
+	 * every time (review round 2 m-a, design D11).
+	 *
+	 * Applied to the DROP SIGNAL, not to the health verdict, so the dot, the
+	 * connection banner and the state markers cannot disagree about whether there
+	 * is an outage. A drop arms a 2.5 s grace; only a drop still standing when it
+	 * fires is reported. An accepted frame clears it immediately — recovery is
+	 * immediate, as the relay's `healthy()` is. */
+	const [droppedGrace, setDroppedGrace] = useSessionValue<boolean>(
+		identity,
+		false,
+	);
+	const dropGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (!facts.droppedSinceFrame) {
+			// Recovery: cancel any pending report and clear at once.
+			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current = null;
+			setDroppedGrace(false);
+			return;
+		}
+		if (dropGraceTimer.current !== null) return; // already armed
+		dropGraceTimer.current = setTimeout(() => {
+			dropGraceTimer.current = null;
+			setDroppedGrace(true);
+		}, OUTAGE_GRACE_MS);
+		return () => {
+			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current = null;
+		};
+	}, [facts.droppedSinceFrame, setDroppedGrace]);
 	const [history, setHistory] = useSessionValue<TranscriptEntry[]>(
 		identity,
 		[],
@@ -575,10 +614,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  `lastEnd: "error"`, and the transient arm above), cleared only by the
 		 *  next accepted frame — the relay's "outage until a fresh frame" rule.
 		 *  A clean EOF (the lease rotation, C1) never sets it. */
-		droppedSinceFrame: facts.droppedSinceFrame,
+		droppedSinceFrame: droppedGrace,
 		reopenOverdue: facts.overdue,
 		online: deviceOnline(),
-		stoppedOnError: error !== null,
+		/* The SAME terminal error the banner reads (`error ?? providerConnection.
+		 * lastError` below), not just this hook's own. A 401 or a gateway
+		 * `authorization_refused` is recorded by the PROVIDER, so reading only
+		 * `error` left the dot saying "Reconnecting — keeps trying" beside a
+		 * banner naming the remedy, after the phone had stopped retrying (UX
+		 * round 2, U4). */
+		stoppedOnError: (error ?? providerConnection.lastError) !== null,
 	});
 
 	const connection = useMemo((): ConnectionView => {

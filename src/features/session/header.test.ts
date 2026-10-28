@@ -9,7 +9,7 @@ import {
 	MIN_HEADER_NAME_CHARS,
 	middleTruncate,
 } from "@/features/session/projection";
-import { HEADER_STACK_WIDTH } from "@/ui/size-class";
+import { HEADER_STACK_WIDTH, headerStacks } from "@/ui/size-class";
 
 /**
  * The header's character budget, pinned at the numbers it was calibrated on.
@@ -41,7 +41,9 @@ describe("the header's title budget", () => {
 	 * reason `MEASURED_WIDEST_ADVANCE` is: the assertion is that the budget never
 	 * over-promises the row, and a constant read from the code under test cannot
 	 * fail. */
-	const CHROME = 32 + 48 + 8 + 48 + 8;
+	/* Includes #118's 28 pt `NavigationMark` and the leading cluster's 4 pt gap
+	 * (review round 2, R2-M1): the rendered leading slot is 80 pt, not 56. */
+	const CHROME = 32 + 48 + 4 + 28 + 8 + 48 + 8;
 	/* Below the stack floor the header stacks and the title owns its own row, so the
 	 * budget's available width is the viewport minus the `px-4` gutters alone — the
 	 * leg `header.ts` budgets with `width − 32` (QA round 1, Q1). */
@@ -51,11 +53,11 @@ describe("the header's title budget", () => {
 			: Math.min(width, cap ?? width) - CHROME;
 
 	it("gives a phone's whole row to the name", () => {
-		// 390 − 144 (gutters, the two 48 pt controls, both gaps) = 246 pt available.
-		expect(headerTitleChars(phone(390))).toBe(17);
-		expect(headerTitleChars(phone(430))).toBe(20);
-		// 360 keeps 15 (216 pt available); the landscape cap lands at 33 (476 pt).
-		expect(headerTitleChars(phone(360))).toBe(15);
+		// 390 − 176 (gutters, back + mark + their gap, find + its gap) = 214 pt.
+		expect(headerTitleChars(phone(390))).toBe(15);
+		expect(headerTitleChars(phone(430))).toBe(18);
+		// 360 keeps 13 (184 pt available); the landscape cap lands at 31 (444 pt).
+		expect(headerTitleChars(phone(360))).toBe(13);
 	});
 
 	it("gives the stacked header's title its own row below the stack floor", () => {
@@ -185,14 +187,16 @@ describe("the session-health chrome", () => {
 		const ended = headerTitleChars(phone(390), { menu: true });
 		expect(live).toBeLessThan(bare);
 		expect(ended).toBeLessThan(live);
-		/* 390 − 144 − 16 = 230 pt; 390 − 144 − 56 = 190 pt, at 14.06 pt/char. */
-		expect(live).toBe(Math.floor(230 / DISPLAY_ADVANCE_PT));
-		expect(ended).toBe(Math.floor(190 / DISPLAY_ADVANCE_PT));
+		/* 390 − 176 − 16 = 198 pt; 390 − 176 − 56 = 158 pt, at 14.06 pt/char.
+		 * 158 pt is the box QA measured on the ended header at this width, so the
+		 *  budget now promises exactly what the row has (R2-M1 / Q7). */
+		expect(live).toBe(Math.floor(198 / DISPLAY_ADVANCE_PT));
+		expect(ended).toBe(Math.floor(158 / DISPLAY_ADVANCE_PT));
 	});
 	it("never admits a name wider than the box the extras leave", () => {
 		for (const width of [360, 390, 430]) {
 			for (const extras of [{ dot: true }, { menu: true }]) {
-				const box = width - 144 - ("dot" in extras ? 16 : 56);
+				const box = width - 176 - ("dot" in extras ? 16 : 56);
 				expect(
 					headerTitleChars(phone(width), extras) * DISPLAY_ADVANCE_PT,
 				).toBeLessThanOrEqual(box);
@@ -236,5 +240,66 @@ describe("the title budget at large text", () => {
 		expect(
 			headerTitleChars(phone(320), { dot: true }, 2, true),
 		).toBeGreaterThan(headerTitleChars(phone(320), { dot: true }, 2));
+	});
+});
+
+/* Review round 2, R2-M1 / R2-M2 (design D1, QA Q7). Each row names the MEASURED
+ * geometry it is pinned to, so a budget that drifts off the row again fails by
+ * name rather than by an ellipsis the audit exempts. */
+describe("the round-2 budget regressions", () => {
+	const phone = (width: number) => ({ width, height: 844 });
+	it("ended at iphone-15 / 100%: the budget fits the measured 158 pt box, once", () => {
+		/* Rendered leading slot is 80 pt (back 48 + gap 4 + NavigationMark 28), so
+		 * the control starts at x 104; find starts at 270, less the 8 pt gap, and
+		 * the title box is 158 pt. Before this fix the budget assumed a 56 pt
+		 * leading slot and promised 13 characters (164 px) — the platform clipped
+		 * the tail a second time (`Hello …ovi…`). */
+		const chars = headerTitleChars(phone(390), { menu: true });
+		expect(chars * DISPLAY_ADVANCE_PT).toBeLessThanOrEqual(158);
+		expect(middleTruncate("Hello from the mock provider", chars)).not.toContain(
+			"……",
+		);
+	});
+	it("live at iphone-15 / 100%: the dot still fits the row it actually gets", () => {
+		const chars = headerTitleChars(phone(390), { dot: true });
+		expect(chars * DISPLAY_ADVANCE_PT).toBeLessThanOrEqual(198);
+	});
+	it("the dot costs the same in EVERY state, because it renders in every state", () => {
+		/* D11: the dot holds ONE slot before the name whether live, yellow or grey,
+		 * so the budget must charge it in every state. Charging it only on live
+		 * (the round-1 rule, when non-live states drew it on a line of its own)
+		 * made the ended budget 16 pt too generous — the second clip's last pixel. */
+		expect(headerTitleChars(phone(390), { dot: true })).toBe(
+			headerTitleChars(phone(390), { dot: true, menu: false }),
+		);
+		expect(
+			headerTitleChars(phone(390), { dot: true, menu: true }),
+		).toBeLessThan(headerTitleChars(phone(390), { dot: true }));
+	});
+	it("iphone-15 / 200%: the SCREEN's stacking predicate decides, not a width test", () => {
+		/* `headerStacks(2, 390)` is true on SCALE, so this phone stacks even though
+		 * 390 > HEADER_STACK_WIDTH. The inline formula used to run here with doubled
+		 * chrome and collapse the name to the 8-character floor (`Hell…der`, where
+		 * main gave 17). Stacked, the title row holds none of that inline chrome. */
+		expect(headerStacks(2, 390)).toBe(true);
+		const chars = headerTitleChars(phone(390), { menu: true }, 2);
+		expect(chars).toBeGreaterThan(MIN_HEADER_NAME_CHARS);
+		/* Two clamped lines at 2x in a 390 − 32×2 = 326 pt title row, less the wrap
+		 * slack: floor(326 / 28.12) = 11 per line, ×2 − 4 = 18. */
+		expect(chars).toBe(
+			2 * Math.floor((390 - 64) / (2 * DISPLAY_ADVANCE_PT)) - 4,
+		);
+	});
+	it("the tag-line header at 200% gets the same stacked budget", () => {
+		/* The tag line is `headerDetail`, not extra title-row chrome, so the budget
+		 * is the same one — it was collapsing to the floor identically. */
+		expect(headerTitleChars(phone(390), {}, 2)).toBe(
+			headerTitleChars(phone(390), { menu: true }, 2),
+		);
+	});
+	it("iphone-se / 200% stays inside its two clamped lines", () => {
+		const chars = headerTitleChars(phone(320), { menu: true }, 2);
+		const perLine = Math.floor((320 - 64) / (2 * DISPLAY_ADVANCE_PT));
+		expect(chars).toBe(2 * perLine - 4);
 	});
 });

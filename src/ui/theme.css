@@ -229,12 +229,22 @@
  * and must not be shortened, so the field says it on one line and shows that it
  * continues. Scoped to the composer's field by its stable test id; native
  * `TextInput` placeholders are single-line already.
+ *
+ * WHY THE FIELD IS AN `<input>` ON WEB (UX round 2, U9): Chrome computes
+ * `text-overflow: clip` on a textarea's `::placeholder` whatever the sheet
+ * says, and on the textarea ITSELF the declaration computes while the
+ * placeholder still wraps and clips — measured on this build, including a
+ * bare isolated textarea. An `<input>` with the same box ellipsizes
+ * correctly, so the empty one-placeholder-line field renders as one
+ * (`Textarea`). The selector is deliberately not scoped to `textarea`: the
+ * element changes. `:placeholder-shown` keeps it off any typed draft.
  */
 @layer base {
-	[data-testid="composer-input"]::placeholder {
-		white-space: nowrap;
+	[data-testid="composer-input"]:placeholder-shown {
+		white-space: pre;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		line-height: 1.5;
 	}
 }
 

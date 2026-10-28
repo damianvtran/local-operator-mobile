@@ -1221,11 +1221,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"health-drop",
 		'A session the phone HAD a frame for, whose stream is then torn mid-frame on every open (`sse-drop-mid-stream`): each reconnect seeds and tears again, so the phone\'s link keeps dropping after the first frame. The header\'s dot reads YELLOW "Reconnecting" with the word on its state line — never green beside a "connection dropped" band (UX round 1, U4).',
-		/* No registry cell, deliberately: one more S5 cell takes the `core` plan's
-		 *  derived deadline to 10,584 s = 176.4 min, past the core capture step's
-		 *  175-minute bound (`.github/workflows/e2e.yml`), and raising that bound is
-		 *  a CI-budget change outside this PR. The world is still served, so a
-		 *  local or QA capture can open it by name (`--scenario health-drop`). */
+		/* No registry cell, deliberately: the world needs a torn stream, which a
+		 *  single static frame cannot show — the evidence for it is a real-path
+		 *  probe over time, not a PNG. (It originally cited the core capture step's
+		 *  175-minute bound; this PR raised that bound to 180 for its own two cells,
+		 *  so the citation was stale — review round 2, m-d.) The world is still
+		 *  served, so a local or QA capture can open it by name
+		 *  (`--scenario health-drop`). */
 		[],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },

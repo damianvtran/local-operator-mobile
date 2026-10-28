@@ -554,15 +554,16 @@ export default function Session() {
 						? compactTitleChars(
 								{ width: viewportWidth, height: viewportHeight },
 								effectiveScale,
-								{ dot: health === "live", menu: ended },
+								{ menu: ended },
 								Platform.OS !== "web",
 							)
 						: headerTitleChars(
 								{ width: viewportWidth, height: viewportHeight },
-								/* The health control's own chrome on the title line: the
-								 *  inline dot (live only — other states put it on the state
-								 *  line) and the ⋮ (only while ended). Review M1. */
-								{ dot: health === "live", menu: ended },
+								/* The dot now holds ONE slot before the name in EVERY state
+								 *  (round 2 D11), so it is charged in every state rather than
+								 *  only on live — and the ⋮ only while it has an item (ended).
+								 *  Review M1, and round 2's D11 layout unification. */
+								{ dot: true, menu: ended },
 								effectiveScale,
 								Platform.OS !== "web",
 							),
@@ -994,6 +995,7 @@ export default function Session() {
 					menuOpen={sessionMenuOpen}
 					onMenuOpenChange={setSessionMenuOpen}
 					resumeBusy={resume.busy}
+					resumeGone={resume.gone}
 					onResume={() => {
 						setSessionMenuOpen(false);
 						setHealthSheetOpen(true);

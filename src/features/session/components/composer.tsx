@@ -765,7 +765,18 @@ export const Composer = ({
 					</Text>
 					<View className="pt-2">
 						<Button
-							label={COMPOSER_COPY.retryLabel}
+							/* On an ENDED session the card's sentence is the ended one, whose
+							 * verb is "Try again" — so the button under it must say that,
+							 * not "Retry earlier instruction" about the very text sitting
+							 * in the field. The primary stays disabled while the envelope
+							 * is unresolved (the duplicate hazard), so the retry is THE
+							 * way to try again and the copy now names it (UX round 2, U7 /
+							 * design D5). One control, one verb. */
+							label={
+								ended && error !== null
+									? COMPOSER_COPY.endedRetryLabel
+									: COMPOSER_COPY.retryLabel
+							}
 							variant="outline"
 							size="sm"
 							onPress={onRetry}

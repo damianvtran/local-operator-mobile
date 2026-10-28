@@ -82,6 +82,10 @@ export const COMPOSER_COPY = {
 	 *  button alone said nothing (UX round 1, U2). The same acceptance line the
 	 *  health sheet shows after Resume, so one act has one sentence. */
 	reopening: "Reopening — this can take a few seconds.",
+	/** The retry button under `endedSendFailed`: the sentence's own verb, so the
+	 *  reader is not told to "Try again" beside a button that says something
+	 *  else. The generic envelope case keeps `retryLabel`. */
+	endedRetryLabel: "Try again",
 	/** The resume affordance, driven by `stop_reason === "aborted"` (the wire
 	 *  fact), never by `streaming` — a turn that completes also stops streaming,
 	 *  and only an aborted one should offer to resume. */

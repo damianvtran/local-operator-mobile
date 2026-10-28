@@ -1,6 +1,6 @@
 import { MIN_HEADER_NAME_CHARS } from "@/features/session/projection";
 import { maxColumnWidth, type Viewport } from "@/ui/column";
-import { HEADER_STACK_WIDTH } from "@/ui/size-class";
+import { headerStacks } from "@/ui/size-class";
 
 /**
  * How many characters of the conversation name the session header can actually
@@ -43,7 +43,23 @@ import { HEADER_STACK_WIDTH } from "@/ui/size-class";
  * The samples and the defect: `docs/ux/audits/2026-10-11-full-surface-pass.md`.
  */
 const HEADER_GUTTERS_PT = 32;
-const HEADER_CHROME_PT = HEADER_GUTTERS_PT + 48 + 8 + 48 + 8;
+/* The leading cluster is `Screen`'s `headerLeading`, and the session screen's
+ * is `<View className="flex-row items-center gap-1">` holding the back
+ * `IconButton` and the `NavigationMark` from #118. The budget used to count only
+ * back + gap (48 + 8), so it promised ~32 pt the row does not have — slack the
+ * advance estimate used to absorb until the ⋮ arrived (review round 2 R2-M1,
+ * design D1, QA Q7: an ended title at 390 pt measured 164 px in a 158 px box and
+ * the platform clipped the tail the middle truncation had kept).
+ *
+ * These are the SAME constants the components render with, not a second copy of
+ * their values: `NAVIGATION_MARK_PT` is `NavigationMark`'s own default `size`,
+ * `LEADING_GAP_PT` is the `gap-1` on that cluster, and the 48s are the web
+ * `IconButton` box the find lever and the back control both take. If the cluster
+ * changes, this sum is the one place that must move with it. */
+const NAVIGATION_MARK_PT = 28;
+const LEADING_GAP_PT = 4;
+const HEADER_CHROME_PT =
+	HEADER_GUTTERS_PT + 48 + LEADING_GAP_PT + NAVIGATION_MARK_PT + 8 + 48 + 8;
 
 /**
  * **The session-health control's own chrome on the TITLE line** (review round 1
@@ -182,7 +198,15 @@ export const headerTitleChars = (
 	 * `headerStacks` (> 1.4) deliberately does NOT change the budget: that case
 	 * keeps the single-line arithmetic and the title wraps within its two permitted
 	 * lines — the 2x residue this module documents above. */
-	if (width < HEADER_STACK_WIDTH) {
+	/* The branch is the SCREEN's predicate, not a width check of our own. `Screen`
+	 * stacks on `headerStacks(effectiveScale, width)`, which fires on scale above
+	 * 140 % as well as on a narrow viewport. A 390 pt phone at 200 % therefore
+	 * STACKS — and the old `width < HEADER_STACK_WIDTH` test sent it down the
+	 * inline formula, which then doubled the whole inline chrome the stacked title
+	 * row does not even hold and collapsed the name to the 8-character floor
+	 * (`Hell…der` where main gave 17). Regression against main, review round 2
+	 * R2-M2 / design D1, and the tag-line header shares the same budget. */
+	if (headerStacks(effectiveScale, width)) {
 		/* Stacked, the ⋮ sits on the BACK row (`Screen`'s `stackedActionsBeside`),
 		 *  never beside the title, so only the inline dot narrows the title's own
 		 *  row. */
@@ -205,10 +229,7 @@ export const headerTitleChars = (
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
 	const chromeScale = nativeChrome ? 1 : effectiveScale;
 	const available =
-		row -
-		HEADER_GUTTERS_PT * chromeScale -
-		(48 + 8 + 48 + 8) * chromeScale -
-		extrasPt(extras, chromeScale);
+		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
 	return Math.max(
 		MIN_HEADER_NAME_CHARS,
 		Math.floor(available / (DISPLAY_ADVANCE_PT * effectiveScale)),

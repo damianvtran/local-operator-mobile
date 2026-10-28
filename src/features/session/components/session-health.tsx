@@ -51,6 +51,8 @@ import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * The documented resume affordance for an ENDED session, shared by the sheet
@@ -69,11 +71,16 @@ export function useResume(sessionId: string, ended: boolean) {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notice, setNotice] = useState<string | null>(null);
+	/* A relay 404 means the session is GONE, so Resume cannot work: the button is
+	 * disabled from then on rather than offering an act that always fails (UX
+	 * round 2, U12). Cleared when the session comes back, with the rest. */
+	const [gone, setGone] = useState(false);
 	useEffect(() => {
 		if (ended) return;
 		setBusy(false);
 		setError(null);
 		setNotice(null);
+		setGone(false);
 	}, [ended]);
 
 	const resume = useCallback(async () => {
@@ -102,10 +109,10 @@ export function useResume(sessionId: string, ended: boolean) {
 			   relay's client and this app's Past sessions screen both say so.
 			   `isRelayMissing`, not `status === 404`: an edge 404 is a dead
 			   tunnel, not a deleted conversation. Never the raw daemon string. */
+			const missing = isRelayMissing(failure);
+			if (missing) setGone(true);
 			setError(
-				isRelayMissing(failure)
-					? HEALTH_RESUME_COPY.noLongerSaved
-					: HEALTH_RESUME_COPY.refused,
+				missing ? HEALTH_RESUME_COPY.noLongerSaved : HEALTH_RESUME_COPY.refused,
 			);
 			setBusy(false);
 		}
@@ -120,7 +127,7 @@ export function useResume(sessionId: string, ended: boolean) {
 		return () => clearTimeout(t);
 	}, [notice]);
 
-	return { busy, error, notice, resume };
+	return { busy, error, notice, resume, gone };
 }
 
 /** The dot: a small filled circle in the state's tone, decorative only — the
@@ -159,6 +166,14 @@ function useReturnFocus(open: boolean, target: RefObject<View | null>) {
 		return undefined;
 	}, [open, target]);
 }
+
+/** The state line's reserved height, derived from the `meta` TYPE STEP it draws
+ *  (`tokens.gen`: 12 px at 1.4 line height) times the reader's text scale.
+ *  Reserved in EVERY state, live included, so the header's height does not change
+ *  when a word appears (D11). A fixed 20 pt here was the D8 residual: at 200 % the
+ *  real line box is 33.6 pt and the header grew to fit it anyway. */
+const stateLinePt = (effectiveScale: number): number =>
+	TYPE_STEPS.meta.size * TYPE_STEPS.meta.lineHeight * effectiveScale;
 
 export type SessionHealthControlProps = {
 	/** The header's reading. `null` (no frame yet, or the client stopped
@@ -222,14 +237,22 @@ export function SessionHealthControl({
 	useReturnFocus(sheetOpen, controlRef);
 	const titleClass = compact ? "text-title text-ink" : "text-display text-ink";
 	const titleLines = stacked ? 2 : 1;
+	const { effectiveScale } = useTextScale();
 	/* No reading: the plain heading the screen had before the dot, nothing to tap,
 	   nothing announced (review M3 / QA Q3 / UX U5 — the reference renders no
 	   health control while `!projection`). */
 	if (health === null)
 		return (
-			<Heading level={1} className={titleClass} numberOfLines={titleLines}>
-				{title}
-			</Heading>
+			/* The fallback takes the SAME slot the control will (`min-w-0 flex-1`,
+			 * `Screen`'s own heading classes): without it find packed right after the
+			 * word "session" and then jumped ~124 pt right when the first frame
+			 * landed (design round 2, D10). First paint changes the title TEXT and
+			 * nothing else. */
+			<View className="min-w-0 flex-1">
+				<Heading level={1} className={titleClass} numberOfLines={titleLines}>
+					{title}
+				</Heading>
+			</View>
 		);
 	const label = healthLabel(health);
 	const live = health === "live";
@@ -242,7 +265,18 @@ export function SessionHealthControl({
 			    shape that keeps both: the heading's name is the button's. On iOS a
 			    single element carries one role, so the button wins there and the
 			    name still leads with the title. */}
-			<View role="heading" aria-level={1} className="min-w-0 flex-1">
+			{/* `role` is the web channel and `accessibilityRole` the native one, and
+			    they are NOT additive on web (react-native-web prefers the ARIA prop
+			    over `role`), so each platform gets its own: the h1 survives on web,
+			    and iOS keeps the heading trait for rotor navigation (review round 2,
+			    m-c). The heading's LEVEL has no native channel (`Heading`). */}
+			<View
+				{...Platform.select({
+					web: { role: "heading", "aria-level": 1 },
+					default: { accessibilityRole: "header" },
+				})}
+				className="min-w-0 flex-1"
+			>
 				<Pressable
 					ref={controlRef}
 					accessibilityRole={ROLE.button}
@@ -254,8 +288,15 @@ export function SessionHealthControl({
 					className="min-w-0 justify-center"
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
+					{/* ONE LAYOUT FOR EVERY STATE (design round 2, D11). The dot holds ONE
+					 *  slot before the name in every state, so a transition never moves
+					 *  the title; the state line is a RESERVED meta-height row that is
+					 *  always present and only its WORD appears. The old swap — dot
+					 *  inline while live, dot-plus-word on a new line otherwise — moved
+					 *  the title 16 pt and changed the header height on every flip,
+					 *  which the `health-drop` world then did dozens of times a minute. */}
 					<View className="min-w-0 flex-row items-center gap-2">
-						{live ? <HealthDot health={health} /> : null}
+						<HealthDot health={health} />
 						<Text
 							className={`min-w-0 flex-1 ${titleClass}`}
 							numberOfLines={titleLines}
@@ -263,17 +304,17 @@ export function SessionHealthControl({
 							{title}
 						</Text>
 					</View>
-					{live ? null : (
-						<View
-							className="min-w-0 flex-row items-center gap-1.5"
-							testID={CONTROL.sessionHealthWord}
-						>
-							<HealthDot health={health} />
+					<View
+						className="min-w-0 flex-row items-center"
+						style={{ minHeight: stateLinePt(effectiveScale) }}
+						testID={CONTROL.sessionHealthWord}
+					>
+						{live ? null : (
 							<Text className="text-meta text-ink-dim" numberOfLines={1}>
 								{label}
 							</Text>
-						</View>
-					)}
+						)}
+					</View>
 				</Pressable>
 			</View>
 
@@ -310,7 +351,17 @@ export function SessionHealthControl({
  */
 export function HealthAnnouncer({ health }: { health: SessionHealth | null }) {
 	const previous = useRef<SessionHealth | null>(health);
-	const said = health === null || health === "live" ? "" : healthLabel(health);
+	/* ONE RULE ON EVERY PLATFORM (UX round 2, U11): only a CHANGE is announced,
+	 * never the first reading. The iOS branch already skipped it; the web/Android
+	 * live region was filled on the first non-null reading, so opening an old
+	 * conversation spoke "Ended" on Android and said nothing on iOS. Holding the
+	 * region empty until a previous reading exists makes the two agree and makes
+	 * this component's own "never on mount" comment true. */
+	const firstReading = previous.current === null;
+	const said =
+		firstReading || health === null || health === "live"
+			? ""
+			: healthLabel(health);
 	useEffect(() => {
 		const before = previous.current;
 		previous.current = health;
@@ -343,13 +394,17 @@ export function SessionHeaderActions({
 	onMenuOpenChange,
 	onResume,
 	resumeBusy,
+	resumeGone,
 }: {
 	findAction: ReactNode;
 	ended: boolean;
 	menuOpen: boolean;
 	onMenuOpenChange: (open: boolean) => void;
 	onResume: () => void;
+	/** The resume POST is in flight. */
 	resumeBusy: boolean;
+	/** The relay said the session is no longer saved, so Resume cannot work. */
+	resumeGone: boolean;
 }) {
 	const menuRef = useRef<View | null>(null);
 	useReturnFocus(menuOpen, menuRef);
@@ -387,7 +442,7 @@ export function SessionHeaderActions({
 								? HEALTH_RESUME_COPY.resuming
 								: HEALTH_RESUME_COPY.resume
 						}
-						disabled={resumeBusy}
+						disabled={resumeBusy || resumeGone}
 						onPress={onResume}
 					/>
 				</View>
@@ -409,7 +464,7 @@ export function ResumeBlock({
 				label={
 					resume.busy ? HEALTH_RESUME_COPY.resuming : HEALTH_RESUME_COPY.resume
 				}
-				disabled={resume.busy}
+				disabled={resume.busy || resume.gone}
 				onPress={() => void resume.resume()}
 			/>
 			{resume.notice ? (

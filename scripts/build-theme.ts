@@ -532,12 +532,38 @@ const css = (): string => {
 		" * continues. Scoped to the composer's field by its stable test id; native",
 	);
 	out.push(" * `TextInput` placeholders are single-line already.");
+	out.push(" *");
+	out.push(
+		" * WHY THE FIELD IS AN `<input>` ON WEB (UX round 2, U9): Chrome computes",
+	);
+	out.push(
+		" * `text-overflow: clip` on a textarea's `::placeholder` whatever the sheet",
+	);
+	out.push(
+		" * says, and on the textarea ITSELF the declaration computes while the",
+	);
+	out.push(
+		" * placeholder still wraps and clips — measured on this build, including a",
+	);
+	out.push(
+		" * bare isolated textarea. An `<input>` with the same box ellipsizes",
+	);
+	out.push(
+		" * correctly, so the empty one-placeholder-line field renders as one",
+	);
+	out.push(
+		" * (`Textarea`). The selector is deliberately not scoped to `textarea`: the",
+	);
+	out.push(
+		" * element changes. `:placeholder-shown` keeps it off any typed draft.",
+	);
 	out.push(" */");
 	out.push("@layer base {");
-	out.push('	[data-testid="composer-input"]::placeholder {');
-	out.push("		white-space: nowrap;");
+	out.push('\t[data-testid="composer-input"]:placeholder-shown {');
+	out.push("		white-space: pre;");
 	out.push("		overflow: hidden;");
 	out.push("		text-overflow: ellipsis;");
+	out.push("		line-height: 1.5;");
 	out.push("	}");
 	out.push("}");
 	out.push("");
