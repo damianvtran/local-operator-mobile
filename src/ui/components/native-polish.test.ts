@@ -64,13 +64,26 @@ describe("final design audit wiring", () => {
 	});
 
 	it("keeps the home header's computer on ONE fitted line", () => {
-		const source = readFileSync(
+		/* Since M2b the header's computer is `HeaderComputerChip`, mounted in the
+		 *  same slot, so the D3 rule is asserted where its Text now lives. */
+		const home = readFileSync(
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		// The rendered host Text, found by its own fitting call — the accessible-label
+		expect(home).toContain(
+			"<HeaderComputerChip testID={CONTROL.computersButton} />",
+		);
+		const chip = readFileSync(
+			new URL("../../features/auth/computer-entry-points.tsx", import.meta.url),
+			"utf8",
+		);
+		const source = chip.slice(
+			chip.indexOf("export function HeaderComputerChip"),
+			chip.indexOf("export function DrawerComputerRow"),
+		);
+		// The rendered name Text, found by its own fitting call — the accessible-label
 		// template above it is a different element.
-		const at = source.indexOf("hostWidth > 0");
+		const at = source.indexOf("nameWidth > 0");
 		const block = source.slice(
 			source.lastIndexOf("<Text", at),
 			source.indexOf("</Text>", at),

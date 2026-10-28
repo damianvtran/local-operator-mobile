@@ -286,7 +286,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 *
 	 * Re-pinned 2026-10-28 for M2b (the switcher's Home chip and drawer row), `src`
 	 * only: `computer-entry.ts`/`computer-entry-points.tsx`, the Home header slot,
-	 * the drawer footer, and the `CONTROL` doc comments. The proofs' scene is a
+	 * the drawer footer, the `CONTROL` doc comments, and `native-polish.test.ts`
+	 * following the D3 one-line rule into the chip. The proofs' scene is a
 	 * session transcript, which renders neither the Home header nor the drawer, so
 	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
 	 * staged tree. */
@@ -296,7 +297,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "57693d542cbaba6c5ae047ebb88164699724ed360597cfaa92f257410c6afa04",
+	src: "1d079cfd7c40234fa19d03d8563fa45e2a40d46d6a6bc6aec102615951af64b4",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
