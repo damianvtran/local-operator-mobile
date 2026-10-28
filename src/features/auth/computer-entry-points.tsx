@@ -1,18 +1,27 @@
 import { ChevronDown, ChevronsUpDown } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
+import { Path, Svg } from "react-native-svg";
 import type { RouteProfile } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import {
 	type ComputerEntry,
 	computerEntry,
 	ENTRY_DOT_TOKEN,
-	ENTRY_HEALTH_GLYPH,
 	entryHealthWord,
 	headerChipShowsChevron,
 } from "@/features/auth/computer-entry";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import { useConnectionState } from "@/features/auth/connection-provider";
+import {
+	ENTRY_HEALTH_MARK,
+	type EntryHealthMark,
+	MARK_BOX,
+	MARK_STROKE,
+	MARK_VIEW_BOX,
+	scaledMarkBox,
+	scaledMarkSize,
+} from "@/features/auth/entry-health-marks";
 import {
 	readSavedComputers,
 	readStoredRadientAccount,
@@ -49,6 +58,17 @@ export function useComputerEntry(): ComputerEntry {
 	// transition on the SAME route retains its label while refreshing metadata;
 	// clearing it on every re-mint would flash the raw address over the saved name.
 	// The sheet uses the same account-scoped switcherSections selector.
+	//
+	// WHY `phase` IS IN THE DEPENDENCY LIST, since it re-reads secure storage each
+	// time (review round 2, nit). It is not a refresh for its own sake: the guard
+	// below renders the saved list only while `registry.route === route` is the SAME
+	// object, and a re-mint REBUILDS that object, so without a read on the phase
+	// that follows it the snapshot would stop matching and the chip would fall back
+	// to the raw address mid-connect — the exact flash this comment warns about, and
+	// the one QA would see as a label change during connect. Two reads per connect
+	// on a body press is the price; `readSavedComputers` is one keychain read plus a
+	// JSON parse, and the alternative (caching a signature) re-reads anyway to learn
+	// the signature has not changed.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: route, phase, id and hidden are registry invalidation triggers.
 	useEffect(() => {
 		let live = true;
@@ -73,28 +93,105 @@ export function useComputerEntry(): ComputerEntry {
 	});
 }
 
-/** Decoration for assistive technology: the health WORD is in the control's
- * accessible name. Sighted readers also get a distinct shape (U-03). */
-const HealthGlyph = ({ entry }: { entry: ComputerEntry }) => {
+/**
+ * The mark's TYPE SIZE and SLOT at a text scale — one function, because the chip
+ * and the drawer row must not disagree about a status mark's geometry.
+ *
+ * The mark follows the text it sits beside: it was pinned at a fixed 12 pt in a
+ * 12 × 16 box while the name doubled, so at 200 % the status mark was half the
+ * name's step and the drawer row's health WORD — `text-meta`, a chrome step
+ * capped at 1.5x — barely moved (design round 2, D9). `meta` is the step both
+ * take at 100 %; the cap is deliberately not applied here, because this is
+ * status content rather than chrome.
+ */
+const markGeometry = (scale: number) => {
+	const fontSize = scaledMarkSize(
+		TYPE_STEPS.meta.size,
+		scale,
+		Platform.OS === "web",
+	);
+	return {
+		fontSize,
+		box: {
+			width: scaledMarkBox(MARK_BOX.width, scale),
+			height: scaledMarkBox(MARK_BOX.height, scale),
+		},
+	};
+};
+
+/**
+ * The visible status mark: a glyph the shipped face covers, or paths drawn here.
+ *
+ * Decoration for assistive technology: the health WORD is in the control's
+ * accessible name, and sighted readers get a distinct shape (U-03). Which kinds
+ * are drawn and why is in `entry-health-marks.ts` — the short version is that
+ * Figtree ships the Latin subset, and ✓ ↪ Ⅱ are not in it.
+ */
+const HealthMark = ({
+	entry,
+	fontSize,
+	box,
+}: {
+	entry: ComputerEntry;
+	fontSize: number;
+	box: { width: number; height: number };
+}) => {
 	const colour = useTokenColor(
 		entry.kind === "computer" ? ENTRY_DOT_TOKEN[entry.health.kind] : "ink-dim",
 	);
-	// U-03 deliberately rejects an accessible name as a visible carrier. Distinct
-	// glyphs preserve the compact header while keeping status legible without hue.
+	const mark: EntryHealthMark | null =
+		entry.kind === "computer" ? ENTRY_HEALTH_MARK[entry.health.kind] : null;
+	if (mark === null) return null;
+	// U-03 deliberately rejects an accessible name as a visible carrier: the mark
+	// itself has to differ in shape, not only in hue.
+	if (mark.form === "text")
+		return (
+			<Text
+				aria-hidden
+				style={{
+					color: colour,
+					width: box.width,
+					height: box.height,
+					fontSize,
+					lineHeight: box.height,
+					textAlign: "center",
+					flexShrink: 0,
+				}}
+			>
+				{mark.glyph}
+			</Text>
+		);
+	/* A drawn mark's carrier is the SHAPE: the audit's probe counts an `svg` child
+	 * as an image carrier, so the hue here is never the only signal. */
 	return (
-		<Text
+		<View
 			aria-hidden
 			style={{
-				color: colour,
-				width: 12,
-				fontSize: 12,
-				lineHeight: 16,
-				textAlign: "center",
+				width: box.width,
+				height: box.height,
+				alignItems: "center",
+				justifyContent: "center",
 				flexShrink: 0,
 			}}
 		>
-			{entry.kind === "computer" ? ENTRY_HEALTH_GLYPH[entry.health.kind] : ""}
-		</Text>
+			<Svg
+				width={box.width}
+				height={box.height}
+				viewBox={`0 0 ${MARK_VIEW_BOX} ${MARK_VIEW_BOX}`}
+			>
+				{mark.paths.map((d) => (
+					<Path
+						key={d}
+						d={d}
+						stroke={colour}
+						strokeWidth={MARK_STROKE}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						fill="none"
+					/>
+				))}
+			</Svg>
+		</View>
 	);
 };
 
@@ -117,16 +214,23 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
 	const [nameWidth, setNameWidth] = useState(0);
 	const ink = useTokenColor("ink-dim");
 	const label = entry.kind === "computer" ? entry.name : entry.label;
+	const geometry = markGeometry(effectiveScale);
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={entry.accessibilityLabel}
 			onPress={() => open()}
 			testID={testID}
-			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-panel-edge"
+			/* `border-control`, not `panel-edge`: in the LIGHT palette `panel-edge` IS
+			 *  `hairline` (#dad5cb), measured 1.25:1 on the canvas — no capsule at all.
+			 *  At 200 % the chevron is dropped, so this edge is the only affordance the
+			 *  chip has (D8). `border-control` is the kit's own control-edge pair (the
+			 *  role `input` and `Button` outline already use): 3.42:1 light on canvas,
+			 *  3.65:1 on `surface`; 3.93:1 and 3.58:1 dark. */
+			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"
 			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		>
-			{entry.kind === "computer" ? <HealthGlyph entry={entry} /> : null}
+			<HealthMark entry={entry} {...geometry} />
 			{/* The slot must stretch independently of its painted string: measuring
 			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}
 			<View
@@ -174,6 +278,7 @@ export function DrawerComputerRow({
 	const [nameWidth, setNameWidth] = useState(0);
 	const ink = useTokenColor("ink-dim");
 	const label = entry.kind === "computer" ? entry.name : entry.label;
+	const geometry = markGeometry(effectiveScale);
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -183,10 +288,14 @@ export function DrawerComputerRow({
 				open({ returnFocusTestID: CONTROL.computersButton });
 			}}
 			testID={testID}
-			className="w-full flex-row items-center gap-2 rounded-md border border-panel-edge bg-surface px-3"
+			/* The same control edge as the chip: one deliberate affordance pair for
+			 *  both entry points, and in the light palette the old `panel-edge` was
+			 *  `hairline` — 1.18:1 on this row's `surface` fill (D8). `border-control`
+			 *  measures 3.65:1 here. */
+			className="w-full flex-row items-center gap-2 rounded-md border border-border-control bg-surface px-3"
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
-			{entry.kind === "computer" ? <HealthGlyph entry={entry} /> : null}
+			<HealthMark entry={entry} {...geometry} />
 			{/* The slot must stretch independently of its painted string: measuring
 			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}
 			<View
@@ -205,7 +314,14 @@ export function DrawerComputerRow({
 				</Text>
 			</View>
 			{entry.kind === "computer" ? (
-				<Text className="shrink-0 text-meta text-ink-muted">
+				<Text
+					/* `text-meta` for the step's line box and weight, with the size taken
+					 *  from `markGeometry`: `meta` is a CHROME step, capped at 1.5x, so the
+					 *  word a low-vision reader needs stopped scaling while the name doubled
+					 *  (D9). The cap is about chrome labels, not status content. */
+					className="shrink-0 text-meta text-ink-muted"
+					style={{ fontSize: geometry.fontSize }}
+				>
 					{`· ${entryHealthWord(entry.health)}`}
 				</Text>
 			) : null}

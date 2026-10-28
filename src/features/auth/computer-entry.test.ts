@@ -4,12 +4,15 @@ import {
 	activeHealth,
 	computerEntry,
 	ENTRY_DOT_TOKEN,
-	ENTRY_HEALTH_GLYPH,
 	entryHealthWord,
 	headerChipShowsChevron,
 	NO_COMPUTER_LABEL,
 	REFUSED_WORD,
 } from "@/features/auth/computer-entry";
+import {
+	ENTRY_HEALTH_MARK,
+	type EntryHealthKind,
+} from "@/features/auth/entry-health-marks";
 import { headerBellShowsCount } from "@/features/home/header-fit";
 
 /**
@@ -208,6 +211,43 @@ describe("registry name source", () => {
 				}),
 			).toMatchObject({ kind: "computer", name: "Home relay" });
 	});
+	it("matches a saved address by the sheet's rule, trailing slash or not", () => {
+		/* Review round 2, m5: during a connect the chip painted the raw address for a
+		 * route saved as `https://host/`, because this module compared addresses
+		 * exactly while `switcherSections` — and so the sheet's row — used
+		 * `sameAddress`. One address rule, one place; this is the regression. */
+		const route = (baseUrl: string) => ({
+			mode: "custom" as const,
+			baseUrl,
+			allowInsecure: false,
+		});
+		const entry = {
+			id: "home",
+			transport: "custom" as const,
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+			name: "Home relay",
+			addedAt: 1,
+			lastUsedAt: 1,
+			hidden: false,
+			identity: null,
+		};
+		for (const baseUrl of [
+			"https://relay.example.com/",
+			"https://relay.example.com//",
+			"  https://relay.example.com  ",
+		])
+			expect(
+				computerEntry({
+					...base,
+					route: route(baseUrl),
+					phase: "minting",
+					tunnelId: null,
+					saved: [entry],
+				}),
+				baseUrl,
+			).toMatchObject({ kind: "computer", name: "Home relay" });
+	});
 	it("never gives no computer a health word or glyph", () => {
 		const entry = computerEntry({ ...base, route: null, tunnelId: null });
 		expect(entry.kind).toBe("none");
@@ -215,13 +255,36 @@ describe("registry name source", () => {
 		expect(entry.accessibilityLabel).not.toMatch(HEALTH_WORDS);
 	});
 	it("distinguishes every status by shape, not just its colour", () => {
-		const shapes = Object.values(ENTRY_HEALTH_GLYPH);
-		expect(new Set(shapes).size).toBe(shapes.length);
+		/* The mark set moved to an alias-free module so the frame audit's own test can
+		 * import the REAL marks (QA round 2, Q6). Two forms carry a status here: a
+		 * glyph the shipped Figtree subset covers, or paths drawn in the 12-unit
+		 * viewBox for the three codepoints it does not (↪ ↪ … see
+		 * `entry-health-marks.ts`). Both are distinct SHAPES, which is what U-03 asks
+		 * for — so the assertion covers whichever form each kind takes. */
+		const carriers = Object.values(ENTRY_HEALTH_MARK).map((mark) =>
+			mark.form === "text" ? mark.glyph : mark.paths.join(" "),
+		);
+		expect(new Set(carriers).size).toBe(carriers.length);
 		expect(
-			shapes.every(
-				(shape) => shape.length > 0 && !COLOUR_ONLY_DOTS.test(shape),
+			carriers.every(
+				(carrier) =>
+					carrier.trim().length > 0 && !COLOUR_ONLY_DOTS.test(carrier),
 			),
 		).toBe(true);
+	});
+	it("covers every health kind the switcher can report", () => {
+		/* The marks module cannot import the switcher's type and stay alias-free, so
+		 * the two lists are tied HERE: a new kind in `computer-switcher-view.ts` fails
+		 * this line until it has a mark. */
+		const kinds: EntryHealthKind[] = [
+			"online",
+			"asleep",
+			"refused",
+			"sign-in",
+			"paused",
+			"checking",
+		];
+		expect(Object.keys(ENTRY_HEALTH_MARK).sort()).toEqual([...kinds].sort());
 	});
 });
 

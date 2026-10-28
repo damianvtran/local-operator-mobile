@@ -480,7 +480,17 @@ export type SwitcherTap =
 	| { kind: "enter-password"; computerId: string };
 
 const TRAILING_SLASHES = /\/+$/;
-const sameAddress = (a: string, b: string) =>
+/**
+ * Whether two addresses name the same computer: trimmed, and with trailing
+ * slashes ignored.
+ *
+ * EXPORTED because the entry points matched a saved custom row with a stricter
+ * rule of their own (exact string), so `https://host/` in the route named the row
+ * in the sheet while the header chip painted the raw address during connect
+ * (review round 2, m5). One address rule, one place: a caller that needs it
+ * imports this rather than restating it.
+ */
+export const sameAddress = (a: string, b: string) =>
 	a.trim().replace(TRAILING_SLASHES, "") ===
 	b.trim().replace(TRAILING_SLASHES, "");
 

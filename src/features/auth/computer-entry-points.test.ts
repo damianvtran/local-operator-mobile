@@ -77,6 +77,16 @@ vi.mock("lucide-react-native", () => ({
 	Plus: () => null,
 	Server: () => null,
 }));
+/* The three drawn health marks are `react-native-svg` paths, so the module is in
+ * this graph directly rather than only through lucide. Nulled like every other
+ * native adapter here (the `modal-dismissal-ledger.test.ts` shape): this suite
+ * proves wiring and copy over react-dom, and the SVG module itself does not
+ * survive the node environment. */
+vi.mock("react-native-svg", () => ({
+	default: () => null,
+	Path: () => null,
+	Svg: () => null,
+}));
 vi.mock("expo-web-browser", () => ({ openBrowserAsync: async () => ({}) }));
 vi.mock("expo-router", () => ({
 	useRouter: () => ({ push: () => {} }),
@@ -332,7 +342,7 @@ describe("the chip in the Home header", () => {
 			CHIP_SOURCE.indexOf("export function DrawerComputerRow"),
 		);
 		expect(header).toContain(
-			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-panel-edge"',
+			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"',
 		);
 		expect(header).toContain(
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",

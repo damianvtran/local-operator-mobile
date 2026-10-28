@@ -5,6 +5,7 @@ import type { SwitcherHealth } from "@/features/auth/computer-switcher-view";
 import {
 	activeHealth,
 	healthLabel,
+	sameAddress,
 	switcherSections,
 } from "@/features/auth/computer-switcher-view";
 import { COMPACT_BELL_SCALE } from "@/features/home/header-fit";
@@ -114,9 +115,15 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
 			? rows.filter(
 					(row) =>
 						row.transport.kind === "custom" &&
-						row.transport.baseUrl ===
+						/* The SHEET's address rule, not a second stricter one: it already
+						 *  ignores a trailing slash, so a route saved as `https://host/` matched
+						 *  its row in the sheet while this comparison missed it, and the chip
+						 *  painted the raw address during connect (review round 2, m5). */
+						sameAddress(
+							row.transport.baseUrl,
 							(input.route as Extract<RouteProfile, { mode: "custom" }>)
 								.baseUrl,
+						),
 				)
 			: [];
 	const active =
@@ -175,13 +182,8 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
 export const headerChipShowsChevron = (scale: number): boolean =>
 	scale < COMPACT_BELL_SCALE;
 
-/** Shape carries the health independently of hue in narrow navigation slots.
- * U-03 intentionally does not accept an aria-label as a visible carrier. */
-export const ENTRY_HEALTH_GLYPH: Record<EntryHealth["kind"], string> = {
-	online: "✓",
-	asleep: "−",
-	refused: "!",
-	"sign-in": "↪",
-	paused: "Ⅱ",
-	checking: "…",
-};
+/** The visible health mark each entry point paints is NOT here: it lives in
+ * `entry-health-marks.ts`, an alias-free module, because the frame audit's own
+ * test has to import the real marks and the audit tooling cannot resolve this
+ * file's `@/` imports (QA round 2, Q6). `ENTRY_DOT_TOKEN` above still pairs a
+ * kind with its colour; that map stays here because only the app reads it. */

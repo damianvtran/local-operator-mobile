@@ -137,6 +137,8 @@ export const Sheet = ({
 	testID,
 }: SheetProps) => {
 	const titleRef = useRef<Text>(null);
+	/* The scrim's DOM node, read only by the web focus guard below. */
+	const scrimRef = useRef<View>(null);
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -260,6 +262,36 @@ export const Sheet = ({
 	const shown = visible && !covered;
 	const dismissed = useModalDismissal(shown, Platform.OS === "web");
 
+	/**
+	 * Keep the pointer-only scrim from taking focus from the sheet's title.
+	 *
+	 * `focusTitle` already removes the scrim from the accessibility tree and gives it
+	 * `tabIndex={-1}`, so nothing TABS to it — but focus can still be PLACED on it,
+	 * and one path does exactly that. Opening this sheet from the drawer's workspace
+	 * row closes the drawer in the same press: the pane's focused node unmounts, and
+	 * the modal's own trap re-enters at the first node it can focus, which is this
+	 * scrim. A keyboard or screen-reader reader then hears "Close" instead of the
+	 * title they just opened (QA round 2, Q7 — 3/3 reps at 390/100 and 320/200, while
+	 * the chip and Settings openers landed on the heading).
+	 *
+	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
+	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
+	 * pane header in split layout, which is `returnFocusTestID`'s `activeElement ===
+	 * body` guard for the same reason — is never robbed of focus by a blanket
+	 * refocus. The listener is web-only: native has no `<div>` and no focus trap.
+	 */
+	useEffect(() => {
+		if (!shown || !focusTitle || Platform.OS !== "web") return;
+		const scrim = scrimRef.current as unknown as HTMLElement | null;
+		const title = titleRef.current as unknown as HTMLElement | null;
+		if (!scrim || !title) return;
+		const onFocusIn = (event: Event) => {
+			if (event.target === scrim) title.focus({ preventScroll: true });
+		};
+		scrim.addEventListener("focusin", onFocusIn);
+		return () => scrim.removeEventListener("focusin", onFocusIn);
+	}, [shown, focusTitle]);
+
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
 		 *  inside it — the conversations pane's menu is the app's nested case. */
@@ -349,6 +381,7 @@ export const Sheet = ({
 							className="absolute inset-0"
 						>
 							<Pressable
+								ref={scrimRef}
 								className="flex-1"
 								style={{
 									backgroundColor: drawsDim ? scrimColour : "transparent",

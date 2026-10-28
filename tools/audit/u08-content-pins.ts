@@ -299,14 +299,27 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * middleFit preserves its mono default (26 focused fit tests). This is a source
 	 * identity update, NOT a claim of new rendered proof; independent visual/QA
 	 * validation remains required on this head. app/instrument/input pins unchanged.
-	 * Recomputed with --print after staging the complete remediation. */
+	 * Recomputed with --print after staging the complete remediation.
+	 *
+	 * Re-pinned 2026-10-28 for the M2b round-2 remediation on PR #126, deliberately:
+	 * the switcher's two navigation entry points moved their health marks into an
+	 * alias-free module (`src/features/auth/entry-health-marks.ts`, which the frame
+	 * audit's own test must import so `tools/tsconfig.json` stops failing on `@/`),
+	 * put the kit's control-edge role on both affordances, and made the mark and the
+	 * drawer row's health word follow the text scale. `design/tokens` moves with them
+	 * because two CONTROLS rows were added to `contrast-contract.mjs` for that edge.
+	 * `app/` keeps its previous digest - no route, layout or shell changed. This pin
+	 * is content identity, not a geometry claim: the U-08 cell rows are re-measured
+	 * when the proof runs, and it refuses on its own findings on this number.
+	 *
+	 */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
+		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "56afdca91681ea30a21730d31f8db7b41443af361452e7742f5de459c3d0d21b",
+	src: "0ce591ff887710552099bd967001d2b1d2b67f0370c0f59756af7245d31c0af4",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
