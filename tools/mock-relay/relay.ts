@@ -509,6 +509,12 @@ export interface RelayState {
 	 */
 	transferDials: number;
 	transferJournal: Map<string, { body: string; status: number; payload: Json }>;
+	/** A one-request, route-scoped refusal for a return/readback proof. Unlike the
+	 * persistent gateway fault it cannot poison the next fixture or control call. */
+	failNextNotificationList: boolean;
+	/** All public requests held in memory, so a return proof can count actual
+	 * GETs. Off until a proof arms it: a full matrix must not grow this array. */
+	journalAll: boolean;
 	/** Origins a mutation may come from; unset means the same-origin rule is off. */
 	allowedOrigins?: string[];
 	submittedAt: number | null;
@@ -713,6 +719,8 @@ export function createRelay(options: RelayOptions = {}) {
 		startedAt: Date.now(),
 		seq: 0,
 		recorded: [],
+		journalAll: false,
+		failNextNotificationList: false,
 		requestsServed: 0,
 		approvalsAnswered: 0,
 		admitted: new Map(),
@@ -2892,6 +2900,22 @@ export function createRelay(options: RelayOptions = {}) {
 		/* ------------------------------------------------------- notifications -- */
 
 		if (pathname === "/api/notifications" && method === "GET") {
+			/* THE ARMED RETURN-PROOF REFUSAL, checked before this branch's own
+			 * `filterState` shadow, so it reads the relay's state and not the query.
+			 *
+			 * SCOPED TO THE LIST'S OWN PAGE READ — no `session_id`, no `cursor`. The
+			 * detail's conversation count walks this same route with `session_id`, and a
+			 * refusal that ignored that would be consumed by the detail while the cell
+			 * under test (the RETURN's re-read) was never refused at all. */
+			if (
+				state.failNextNotificationList &&
+				!url.searchParams.has("session_id") &&
+				!url.searchParams.has("cursor")
+			) {
+				state.failNextNotificationList = false;
+				sendJson(res, 503, errorBody("synthetic inbox return read failure"));
+				return;
+			}
 			/* The inbox read. A scenario may pin the whole body (a bare body or a
 			 * recorded answer); otherwise the STORE answers, so a dismiss or a read
 			 * taken earlier in the same capture is visible here — a canned body
@@ -2901,7 +2925,10 @@ export function createRelay(options: RelayOptions = {}) {
 				sendJson(res, pinned.status, pinned.json ?? {}, pinned.headers);
 				return;
 			}
-			const state = url.searchParams.get("state") ?? "unread";
+			/* `filterState`, not `state`: `state` is the relay's own mutable state, and a
+			 *  same-named local for the query parameter put the route's earlier reads of
+			 *  the relay state behind this declaration's temporal dead zone. */
+			const filterState = url.searchParams.get("state") ?? "unread";
 			const rawLimit = Number(url.searchParams.get("limit") ?? "");
 			const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50;
 			/* The live route's narrowing parameters, passed through so a client
@@ -2912,7 +2939,7 @@ export function createRelay(options: RelayOptions = {}) {
 			sendJson(
 				res,
 				200,
-				notificationsStore.page(state, limit, {
+				notificationsStore.page(filterState, limit, {
 					sessionId: url.searchParams.get("session_id") ?? undefined,
 					throughSeq: Number.isFinite(through) ? through : undefined,
 					cursor: url.searchParams.get("cursor") ?? undefined,
@@ -3040,14 +3067,13 @@ export function createRelay(options: RelayOptions = {}) {
 					const refusal = gatewayRefusalFor(key);
 					if (refusal === null)
 						throw new Error(`no such gateway refusal: ${key}`);
-					if (state.record) {
+					if (state.record || state.journalAll)
 						recordRequest({
 							method,
 							path: pathname + (url.search || ""),
 							status: refusal.status,
 							note: `stream:gateway:${refusal.tag}`,
 						});
-					}
 					return sendJson(res, refusal.status, refusal.json, refusal.headers);
 				}
 				if (!projection) {
@@ -3697,7 +3723,7 @@ export function createRelay(options: RelayOptions = {}) {
 			state.pinnedAt = started;
 
 		const finish = (status: number, note = ""): void => {
-			if (state.record) {
+			if (state.record || state.journalAll) {
 				recordRequest({
 					method,
 					path: pathname + (url.search || ""),
@@ -3778,6 +3804,15 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				if (pathname === "/__mock/record" && method === "GET") {
 					sendJson(res, 200, { requests: state.recorded });
+					return;
+				}
+				if (pathname === "/__mock/inbox-return" && method === "POST") {
+					/* ARMS THE RETURN PROOF: one refusal for the next list read, and the
+					 * request ledger the proof counts. Both are off in an ordinary matrix
+					 * run, where neither a scoped refusal nor a per-request array belongs. */
+					state.failNextNotificationList = true;
+					state.journalAll = true;
+					sendJson(res, 200, { failNextNotificationList: true });
 					return;
 				}
 				if (pathname === "/__mock/scenario" && method === "POST") {
