@@ -56,6 +56,18 @@ export interface ConnectionSnapshot {
 	 *  `startRoute` (picking a computer) and is emptied only by `endRoute`
 	 *  (sign-out, sign-in), or by the provider on an `unauthorized` discovery. */
 	computers: DiscoveredComputer[];
+	/** The last discovery result BEFORE the removed-set filter. Only the computer
+	 *  switcher reads it: a removed computer drops into its "On your Radient
+	 *  account, not connected" section instead of vanishing, and that section needs
+	 *  to know the account still lists it. Every other reader keeps `computers`, so a
+	 *  removed computer stays removed everywhere else. Same lifetime as `computers`. */
+	discoveredComputers: DiscoveredComputer[];
+	/** The saved-computers registry id of the computer the live route reaches, once
+	 *  the provider has recorded it (`rememberLiveRoute`). Identity is this id, never
+	 *  the address (operator decision a-2a8b): two saved entries may share an address,
+	 *  and only the id says which one is in use. `null` until recorded, and reset by
+	 *  every route change like the rest of the route's state. */
+	computerId: string | null;
 	/** Why the last discovery pass failed, or `null` once one succeeds. Kept apart
 	 *  from `surface` on purpose: listing an account's computers is not a ROUTE, so
 	 *  its failure must not flip a live route to `refused`, hide the rows it failed
@@ -107,8 +119,12 @@ export interface ConnectionActions {
 	/** The reader removed this computer: out of the list now and after every
 	 *  later discovery refresh. Persisting it is the caller's job. */
 	hideComputer: (tunnelId: string) => void;
-	/** The way back. The computer returns on the next discovery refresh. */
+	/** The way back. The computer returns at once when the last discovery listed
+	 *  it, and otherwise on the next refresh. */
 	unhideComputer: (tunnelId: string) => void;
+	/** Records which saved computer the live route reaches. The caller fences it on
+	 *  the route's admission, so a late write cannot label another route. */
+	noteComputer: (computerId: string) => void;
 	/** Picks a computer and moves to `minting`. */
 	selectComputer: (computer: DiscoveredComputer) => void;
 	/** The tunnel session exists and the relay answered: the route is usable. */
@@ -141,6 +157,8 @@ const INITIAL: ConnectionSnapshot = {
 	route: null,
 	accountLabel: null,
 	computers: [],
+	discoveredComputers: [],
+	computerId: null,
 	discoveryFailure: null,
 	hiddenTunnelIds: [],
 	tunnelId: null,
@@ -173,6 +191,7 @@ export function createConnectionStore() {
 				...(route.mode === "radient"
 					? {
 							computers: state.computers,
+							discoveredComputers: state.discoveredComputers,
 							discoveryFailure: state.discoveryFailure,
 						}
 					: {}),
@@ -202,6 +221,7 @@ export function createConnectionStore() {
 			 *  luck the kit's banner rule forbids (design round 1, D2). */
 			set({
 				computers: withoutHidden(computers, get().hiddenTunnelIds),
+				discoveredComputers: computers,
 				discoveryFailure: null,
 				phase: get().phase === "discovering" ? "discovering" : get().phase,
 			});
@@ -228,9 +248,20 @@ export function createConnectionStore() {
 		},
 
 		unhideComputer(tunnelId) {
+			const hiddenTunnelIds = get().hiddenTunnelIds.filter(
+				(id) => id !== tunnelId,
+			);
+			/* Re-filtered from the last discovery so a computer the switcher brings back
+			 *  is listed now, not after a refresh the reader never asked for. */
 			set({
-				hiddenTunnelIds: get().hiddenTunnelIds.filter((id) => id !== tunnelId),
+				hiddenTunnelIds,
+				computers: withoutHidden(get().discoveredComputers, hiddenTunnelIds),
 			});
+		},
+
+		noteComputer(computerId) {
+			if (get().route === null) return;
+			set({ computerId });
 		},
 
 		selectComputer(computer) {

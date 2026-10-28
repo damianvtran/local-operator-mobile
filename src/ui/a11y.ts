@@ -228,6 +228,13 @@ export const CONTROL = {
 	computersStartAgain: "computers-start-again",
 	computersBack: "computers-back",
 	computersRefresh: "computers-refresh",
+	/** The computer switcher's entry points in this slice (M2a): the Computers
+	 *  header's Switch and Settings' "Switch computer". The Home chip and the
+	 *  drawer row (M2b) will open the same sheet under their own names. */
+	computersSwitch: "computers-switch",
+	settingsSwitchComputer: "settings-switch-computer",
+	/** The sheet's own footer action, routing to the own-address and set-up flows. */
+	switcherAddComputer: "switcher-add-computer",
 	ownTunnelBack: "own-tunnel-back",
 	setupCreateTunnel: "setup-create-tunnel",
 	setupTunnelId: "setup-tunnel-id",
@@ -295,7 +302,6 @@ export const CONTROL = {
 	settingsRefresh: "settings-refresh",
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
-	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
@@ -557,6 +563,9 @@ export const SURFACE = {
 	libraryDetailLoading: "library-detail-loading",
 	libraryDetailPopulated: "library-detail-populated",
 	libraryFilterSheet: "library-filter-sheet",
+	/** The computer switcher sheet (ux-flows F5). Its rows are the
+	 *  `switcher-row-` family and its two sections are regions below. */
+	computerSwitcherSheet: "computer-switcher-sheet",
 	librarySortSheet: "library-sort-sheet",
 	libraryMoreSheet: "library-more-sheet",
 	libraryEditorSheet: "library-editor-sheet",
@@ -880,6 +889,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"computer-row-",
 	"computer-row-status-",
 	"computer-row-reachability-",
+	/* The computer switcher: one row per computer, and its health word, keyed by
+	 *  the row's stable key (a registry id, or `radient-<tunnelId>`) — never by an
+	 *  address, which is not a computer's identity (decision a-2a8b). */
+	"switcher-row-",
+	"switcher-row-health-",
 	"tunnel-copy-",
 	"session-empty-",
 	"command-",
@@ -1052,6 +1066,10 @@ export const REGION = {
 	searchBodyMatch: "search-result-body-match-marker",
 
 	computersList: "computers-list",
+	/** The switcher's two sections: "On this phone" and "On your Radient account,
+	 *  not connected". */
+	switcherOnPhone: "switcher-on-phone",
+	switcherNotConnected: "switcher-not-connected",
 
 	/** The system-browser hand-off, asserted instead of the browser itself:
 	 *  Maestro cannot drive a system browser (`docs/adr/0003` §"What the harness
@@ -1655,6 +1673,16 @@ export const commandCopyId = (label: string): string =>
 
 export const tunnelCommandCopyId = (label: string): string =>
 	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+/** A switcher row and its health word. The key is the row's stable key
+ *  (`SwitcherRow.key`); `:` is not in the id alphabet a flow can type, so a
+ *  discovery-only key is spelled with a dash. */
+export const switcherRowIds = (
+	key: string,
+): { row: string; health: string } => {
+	const safe = key.replace(/[^A-Za-z0-9_-]/g, "-");
+	return { row: `switcher-row-${safe}`, health: `switcher-row-health-${safe}` };
+};
 
 export const computerRowIds = (
 	hostname: string,

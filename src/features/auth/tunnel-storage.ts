@@ -13,8 +13,10 @@ import {
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
+import type { RouteProfile } from "@/connection/profile";
 import {
 	type RadientComputerInput,
+	type SavedComputer,
 	SavedComputers,
 } from "@/connection/saved-computers";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
@@ -177,6 +179,14 @@ export async function readStoredOauth(): Promise<RadientTokens | null> {
 	}
 }
 
+/** The Radient account id of the stored grant (`RadientTokens.account_id`), or
+ *  `null` when there is none or it predates the field. The computer switcher reads
+ *  it to scope saved Radient computers to the account that used them; a keystore
+ *  that refuses the read reports none, which lists them (the "unknown" rule). */
+export async function readStoredRadientAccount(): Promise<string | null> {
+	return (await readStoredOauth())?.account_id ?? null;
+}
+
 /** Persists the grant. Returns whether it can survive a restart, so a caller can tell
  *  "signed in and remembered" from "signed in for this run" instead of implying the
  *  first. */
@@ -319,8 +329,87 @@ export async function hideRadientComputer(
 	}
 }
 
-/** The way back from a removal, by tunnel id. No screen calls it yet; the
- *  switcher slice adds the surface. */
+/** Every saved computer, hidden ones included, most recently used first: what the
+ *  computer switcher sorts into its two sections. A keystore that refuses the read
+ *  reports none, like `readHiddenTunnelIds` — the switcher then lists only what
+ *  discovery reports, and nothing is lost on disk. */
+export async function readSavedComputers(): Promise<SavedComputer[]> {
+	try {
+		return await (await savedComputers()).list();
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Records that this phone reached a computer: remembered (added or refreshed) and
+ * then `markUsed`, so the switcher lists it under "On this phone" and orders it by
+ * use. Called by the provider once a route is LIVE — never on a pick, because a
+ * computer that refused or never answered is not one this phone has used.
+ *
+ * Radient computers are keyed by tunnel id; custom ones by their registry id when
+ * the caller knows it (`computerId`, a tap on a switcher row), else by address,
+ * which is `rememberCustom`'s own stopgap for the single custom slot. The address
+ * never becomes the identity (operator decision a-2a8b): it only finds the entry.
+ *
+ * Returns the entry, or `null` when nothing could be stored — the route works
+ * either way, and the switcher simply has nothing new to list.
+ */
+export async function rememberLiveComputer(
+	route: RouteProfile,
+	input: {
+		name?: string;
+		computerId?: string;
+		account?: string;
+		onlyIf?: () => boolean;
+	} = {},
+): Promise<SavedComputer | null> {
+	try {
+		const store = await savedComputers();
+		const options = { onlyIf: input.onlyIf };
+		const entry =
+			route.mode === "radient"
+				? await store.rememberRadient(
+						{
+							tunnelId: route.tunnelId,
+							hostname: route.hostname,
+							/* No name → the registry keeps the saved one (a never-named
+							 *  computer still falls back to its hostname there). */
+							...(input.name !== undefined ? { name: input.name } : {}),
+							...(input.account !== undefined
+								? { account: input.account }
+								: {}),
+						},
+						options,
+					)
+				: await store.rememberCustom(
+						{
+							id: input.computerId,
+							baseUrl: route.baseUrl,
+							allowInsecure: route.allowInsecure,
+						},
+						options,
+					);
+		if (input.onlyIf && !input.onlyIf()) return null;
+		return (await store.markUsed(entry.id)) ?? entry;
+	} catch {
+		return null;
+	}
+}
+
+/** The switcher's way back for a computer in its "not connected" section, by
+ *  registry id. Best effort, like the other registry writes here: the store's
+ *  hidden set is what the screens read, and the caller updates it first. */
+export async function unhideSavedComputer(id: string): Promise<void> {
+	try {
+		await (await savedComputers()).unhide(id);
+	} catch {
+		/* Nothing that can store it: the un-hide lasts for this run. */
+	}
+}
+
+/** The way back from a removal, by tunnel id: the computer switcher's
+ *  not-connected rows, for a removed computer it reached through discovery. */
 export async function unhideRadientComputer(tunnelId: string): Promise<void> {
 	try {
 		const store = await savedComputers();

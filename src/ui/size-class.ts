@@ -326,6 +326,54 @@ export function headerStackWidth(
 	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
 }
 
+/**
+ * The width below which the COMPUTERS header stacks, for the controls it carries.
+ *
+ * PR #122 gave the header "Switch computer" (U5: a bare "Switch" beside "Refresh"
+ * did not say what it switches), and at the kit floor the cluster then out-grew
+ * the line: at 390 pt with Back, the title measured 99 px of box for 138 px of
+ * text and rendered "Comp…", and every width from the 354 floor to ~430 clipped it
+ * the same way (design round 2, D10; UX U13). The sessions screen solved the same
+ * failure with a measured fit (`headerStackWidth`), so this is that pattern for
+ * this cluster rather than a shorter label (the label is the U5 fix).
+ *
+ * The pieces are the round-2 frames' readings at 100 % text:
+ *
+ * | piece                                         | measured |
+ * |-----------------------------------------------|----------|
+ * | row paddings (16 + 16)                        | 32       |
+ * | each 8 dp gap between the header's children   | 8        |
+ * | Back (`sm`)                                   | 52       |
+ * | "Switch computer" (`sm`)                      | 119      |
+ * | Refresh (`sm`) plus its 4 dp cluster gap      | 72       |
+ * | "Computers" at the `display` step             | 138      |
+ * | "Set up a computer" at the `display` step     | 227      |
+ *
+ * Consistency checks against the same frames: with Back, Switch and Refresh the
+ * fit is 32 + 52 + 8 + 138 + 8 + 119 + 72 = 429, and the title measured 99 of 138
+ * at 390 (390 − 291) and 139 of 139 at 430 — both reproduced; under a 401, with
+ * Refresh hidden, 390 measured 170 of 170 (fit 357). "Set up a computer" was not
+ * in a frame: its 227 is the bundled Figtree SemiBold's advance widths at 28 dp
+ * with the step's −0.02 em tracking, the same computation that gives "Computers"
+ * 137.8 against its measured 138. The kit floor still applies beneath, so no
+ * lighter header stacks earlier than the reviewed behaviour.
+ */
+export function computersHeaderStackWidth(input: {
+	title: "Computers" | "Set up a computer";
+	back: boolean;
+	switcher: boolean;
+	refresh: boolean;
+}): number {
+	const GAP = 8;
+	let width = 32 + (input.title === "Computers" ? 138 : 227);
+	if (input.back) width += 52 + GAP;
+	/* The cluster, when it renders, is one more header child: one more gap. */
+	if (input.switcher || input.refresh) width += GAP;
+	if (input.switcher) width += 119;
+	if (input.refresh) width += input.switcher ? 72 : 68;
+	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
+}
+
 /** The pure decision, so it is testable and is not a rendering side effect. */
 export function layoutFor(width: number, height: number): Layout {
 	const orientation: Orientation = width > height ? "landscape" : "portrait";

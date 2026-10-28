@@ -1,5 +1,6 @@
 import {
 	Modal,
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -19,6 +20,7 @@ import {
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
+import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
 
@@ -93,14 +95,21 @@ export const Dialog = ({
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
 	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
+	/* A dialog returns focus to its opener when its ~250 ms web fade ENDS, and that
+	 *  focus scrolls the opener into view: a failed Sign out revealed its refusal,
+	 *  then lost it to "Sign out" (PR #122 QA round 6, Q9). Reporting the close and
+	 *  the dismissal to the ledger is what lets a screen wait for it. */
+	const shown = visible && !covered;
+	const dismissed = useModalDismissal(shown, Platform.OS === "web");
 
 	return (
 		<ModalScopeContext.Provider value={scope}>
 			<Modal
-				visible={visible && !covered}
+				visible={shown}
 				transparent
 				animationType="fade"
 				onRequestClose={onCancel}
+				onDismiss={Platform.OS === "web" ? dismissed : undefined}
 				accessibilityViewIsModal
 				testID={testID}
 			>

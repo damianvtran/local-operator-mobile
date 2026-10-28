@@ -1,12 +1,22 @@
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import {
+	type ComputerStatus,
+	type DiscoveredComputer,
+	RADIENT_CONSOLE_TUNNELS_URL,
+} from "@/connection";
+import {
+	useComputerSwitcher,
+	usePhoneKnowsComputers,
+} from "@/features/auth/computer-switcher-sheet";
 import {
 	backAction,
 	computersView,
 	landingAfterPick,
+	newlyListed,
 	type RowState,
 	rowState,
 } from "@/features/auth/computers-view";
@@ -35,6 +45,7 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
+import { computersHeaderStackWidth } from "@/ui/size-class";
 
 /**
  * Computers: discovery, the picker, and the set-up path (docs/ux/flows.md § 2 and
@@ -256,16 +267,19 @@ const WaitPanel = ({
 				</>
 			) : null}
 			{state.kind === "w3" ? (
-				<>
-					<Text className="text-body text-ink">Your computer answered.</Text>
-					<Text className="text-body-sm text-ink-muted">
-						Its relay reports protocol version {state.version ?? "unknown"}
-						{state.sessions !== null
-							? ` and ${state.sessions} running session${state.sessions === 1 ? "" : "s"}`
-							: ""}
-						.
-					</Text>
-				</>
+				<Text className="text-body text-ink">Your computer answered.</Text>
+			) : null}
+			{state.kind === "w3" &&
+			(state.version !== null || state.sessions !== null) ? (
+				<Text className="text-body-sm text-ink-muted">
+					{state.version !== null
+						? `Its relay reports protocol version ${state.version}`
+						: "Its relay reports"}
+					{state.sessions !== null
+						? `${state.version !== null ? " and" : ""} ${state.sessions} running session${state.sessions === 1 ? "" : "s"}`
+						: ""}
+					.
+				</Text>
 			) : null}
 			{state.kind === "w4" ? (
 				<>
@@ -314,6 +328,8 @@ export default function Computers() {
 		signInState,
 	} = useConnection();
 
+	const switcher = useComputerSwitcher();
+	const phoneKnowsComputers = usePhoneKnowsComputers();
 	const computers = useConnectionState((state) => state.computers);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -332,14 +348,17 @@ export default function Computers() {
 	 *  the new grant's discovery answered (QA round 2, Q-r2-1/Q-r2-2). */
 	const signInPending = signInState.kind !== "idle";
 	const signedOut = refusal?.kind === "sign-in" || signInPending;
+	const [waiting, setWaiting] = useState(false);
+	/* `?add=1` is the "Add a computer" hand-off (`ADD_COMPUTER_HREF`). */
+	const { add } = useLocalSearchParams<{ add?: string }>();
 	const view = computersView({
 		computers,
 		discovering,
 		discoveryFailure,
 		signedOut,
+		adding: add === "1",
 	});
 	const empty = view.setup;
-	const [waiting, setWaiting] = useState(false);
 	/* The tunnel tapped on THIS screen, so arriving with a route already live is
 	 *  not mistaken for a pick that just landed (U1). */
 	const [picked, setPicked] = useState<string | null>(null);
@@ -363,6 +382,9 @@ export default function Computers() {
 	}, [canGoBack, phase, picked, router, tunnelId]);
 
 	const back = backAction({ canGoBack, routed: route !== null });
+	/* Named once: the header renders them AND sizes its stacking point from them. */
+	const showSwitch = !empty || phoneKnowsComputers;
+	const showRefresh = !empty && !signedOut;
 	const [reachability, setReachability] = useState<
 		Record<string, Reachability>
 	>({});
@@ -394,14 +416,40 @@ export default function Computers() {
 		};
 	}, [computers, reachability]);
 
+	/* The computers listed when the wait started. "Add a computer" opens the set-up
+	 *  path over an account that already has some (U12), and the wait is for the
+	 *  NEW one: the first listed computer would otherwise be offered as the one that
+	 *  just appeared. Empty for an empty account, so that path is unchanged. */
+	const listedAtWait = useRef<ReadonlySet<string>>(new Set());
+	/* Lists again, then answers with the computer that appeared since the wait
+	 *  started — the hook's only way past W1 (R3-M1/U17, `newlyListed`). Read from
+	 *  the store, not the render's `computers`: the refresh has just written it, and
+	 *  this closure predates that render. `rawStatus` is Radient's own word, which
+	 *  W2 shows verbatim. */
 	const acquire = useCallback(async () => {
 		await refreshComputers();
-		return null;
+		const found = newlyListed(
+			connectionStore.getState().computers,
+			listedAtWait.current,
+		);
+		return found ? { hostname: found.hostname, status: found.rawStatus } : null;
 	}, [refreshComputers]);
 
 	const wait = useConnectorWait({ acquire, enabled: waiting });
+	/* Add mode has no landing navigation (it is a pushed route, `landingAfterPick`),
+	 *  so once THIS pick is live the answered panel with its mint action is replaced
+	 *  by a plain confirmation: leaving an actionable "Use this computer" over a live
+	 *  connection invited a second mint (QA round 4 Q8, UX U19). */
+	const addedComputerLive =
+		add === "1" && picked !== null && tunnelId === picked && phase === "live";
+	const startWaiting = useCallback(() => {
+		listedAtWait.current = new Set(
+			connectionStore.getState().computers.map((computer) => computer.tunnelId),
+		);
+		setWaiting(true);
+	}, []);
 	const appeared = useMemo(
-		() => computers.find((computer) => computer.supportsLocalOperator) ?? null,
+		() => newlyListed(computers, listedAtWait.current),
 		[computers],
 	);
 
@@ -409,6 +457,16 @@ export default function Computers() {
 		<Screen
 			title={view.title}
 			testID={SCREEN.computers}
+			/* This header's own fit, from the controls it is rendering now: "Switch
+			 *  computer" made the cluster heavier than the kit floor allows for, and the
+			 *  title clipped to "Comp…" at 390 pt (PR #122 design round 2, D10; UX U13).
+			 *  `computersHeaderStackWidth` holds the measured pieces. */
+			stackBelowWidth={computersHeaderStackWidth({
+				title: view.title,
+				back: back !== null,
+				switcher: showSwitch,
+				refresh: showRefresh,
+			})}
 			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
 			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
 			 *  from Settings and from a refusal surface — arriving from any of them with
@@ -433,17 +491,39 @@ export default function Computers() {
 				/* Spins for a DISCOVERY only, never for a pick: the row's own marker
 				 *  carries a pick (D12), and `Button` ignores presses while `loading`,
 				 *  so a slow Refresh absorbs repeat taps instead of stacking requests
-				 *  (U4) — the banner's Try now already worked this way. Hidden while
-				 *  signed out: a listing with no grant can only be refused again. */
-				!empty && !signedOut ? (
-					<Button
-						testID={CONTROL.computersRefresh}
-						label="Refresh"
-						onPress={() => void refreshComputers()}
-						variant="quiet"
-						size="sm"
-						loading={discovering}
-					/>
+				 *  (U4) — the banner's Try now already worked this way. Refresh is
+				 *  hidden while signed out: a listing with no grant can only be refused
+				 *  again. */
+				showSwitch || showRefresh ? (
+					<View className="flex-row flex-wrap items-center gap-1">
+						{/* The switcher beside Refresh: this screen lists only the account's
+						 *  Radient computers, and the switcher is the one place that also
+						 *  holds the reader's own-address computers and the removed ones.
+						 *  So it stays visible exactly where this list cannot help — an
+						 *  empty or set-up list, or signed out — whenever this phone knows
+						 *  a computer (PR #122 QA round 1, Q3; review n2; UX round 1, U5).
+						 *  Labelled as in Settings: a bare "Switch" beside "Refresh" did
+						 *  not say what it switches (U5). */}
+						{showSwitch ? (
+							<Button
+								testID={CONTROL.computersSwitch}
+								label="Switch computer"
+								onPress={switcher.open}
+								variant="quiet"
+								size="sm"
+							/>
+						) : null}
+						{showRefresh ? (
+							<Button
+								testID={CONTROL.computersRefresh}
+								label="Refresh"
+								onPress={() => void refreshComputers()}
+								variant="quiet"
+								size="sm"
+								loading={discovering}
+							/>
+						) : null}
+					</View>
 				) : null
 			}
 		>
@@ -459,6 +539,13 @@ export default function Computers() {
 					 *  hands off to the browser, and lists this account's computers when
 					 *  it returns (Q-r2-2). */
 					onSignIn={() => void signInWithRadient()}
+					/* The console-side causes' one remedy, as Settings offers it: the
+					 *  surface tells the reader to open the console, so a screen that
+					 *  passes no handler printed the instruction with no way to follow it
+					 *  (PR #122 QA round 3, Q7). */
+					onOpenConsole={() =>
+						void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
+					}
 					onUseAnotherAddress={() => router.push("/custom")}
 				/>
 			) : null}
@@ -539,19 +626,34 @@ export default function Computers() {
 						<TunnelPaths onOwnTunnel={() => router.push("/own-tunnel")}>
 							<SetupComputer
 								billing={billing}
-								onWaitForConnector={() => setWaiting(true)}
+								onWaitForConnector={startWaiting}
 								waiting={false}
 							/>
 						</TunnelPaths>
 					)}
-					{waiting ? (
+					{waiting && !addedComputerLive ? (
 						<View className="gap-3 pt-2">
 							<WaitPanel
 								state={wait.state}
 								appeared={appeared}
-								onUse={() => appeared && pick(appeared)}
+								/* Unreachable once the pick is live, and guarded anyway: a second
+								 *  mint from a stale control would retire a working route (Q8/U19). */
+								onUse={() => {
+									if (!addedComputerLive && appeared) pick(appeared);
+								}}
 								onStop={() => setWaiting(false)}
 							/>
+						</View>
+					) : null}
+					{addedComputerLive ? (
+						<View className="gap-1 rounded-sm border border-hairline bg-surface p-4">
+							<Text className="text-body text-ink">
+								Connected to {appeared?.name ?? "your computer"}.
+							</Text>
+							<Text className="text-body-sm text-ink-muted">
+								It stays listed on this phone, so you can switch back from the
+								computer list.
+							</Text>
 						</View>
 					) : null}
 				</>

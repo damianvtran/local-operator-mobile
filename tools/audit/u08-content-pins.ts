@@ -215,6 +215,41 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * staged merge tree. `app` is #120's, which #121 never touched. Store and its
 	 * tests only; nothing renders differently.
 	 *
+	 * Re-pinned 2026-10-27 for the computer switcher (M2a), deliberately, `app` and
+	 * `src`: `app/_layout.tsx` mounts the one switcher sheet's provider around the
+	 * stack, and `src` adds the sheet and its view model, the store's unfiltered
+	 * discovery list and live computer id, the provider's remember-on-live, the
+	 * probe-at-origin, the own-address `?url=` prefill, and the Switch entry points
+	 * on Computers and Settings. Computer screens and an overlay that is closed by
+	 * default; no U-08 scene. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-1 remediation, `src` only: the
+	 * switcher's probe lifecycle, failed-pick close, account-scoped Radient entries
+	 * (the grant's account id), kept names, the stored-grant load before a pick,
+	 * the registry-id own-address hand-off and its password-first entry, the active
+	 * row's accent bar, and the Computers header's "Switch computer". Same screens;
+	 * no U-08 scene. `app` unchanged. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-2 remediation, `src` only: Settings'
+	 * refusal surface, the refusal surface's live region, the Computers header's
+	 * measured stack width and add mode, the switcher's per-open account state and
+	 * Add a computer target, and the password-entry copy. No U-08 scene changes;
+	 * `app` unchanged. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-3 remediation, `src` only: the
+	 * Computers add-mode wait finding the new computer, Settings scrolling its
+	 * refusal into view and dropping the Diagnostics retry, the sheet's Add a
+	 * computer deciding from `computersView`, and the Computers console remedy. No
+	 * U-08 scene changes; `app` unchanged. Recomputed with `--print` from the staged
+	 * tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-4 remediation, `src` only: the sheet
+	 * primitive forwarding the web modal's completed dismissal, Settings revealing
+	 * its refusal on that dismissal and disarming its retry on failure, and Computers
+	 * replacing the answered panel with a connected confirmation once the pick is
+	 * live. No U-08 scene changes; `app` unchanged. Recomputed with `--print` from
+	 * the staged tree.
+	 *
 	 * Re-pinned 2026-10-27 for the S8 short-landscape overlap fix (BOTH trees move):
 	 * `statusTrayVisible` in `src/ui/size-class.ts` and its one use in
 	 * `app/(app)/session/[id].tsx` hide the one-row status tray while a pending
@@ -224,14 +259,35 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `long-transcript` cell with no pending decision (`tray` stays visible there,
 	 * `compact` is false), so nodes 64/65/66 of the four original cells measure what
 	 * they measured before. Re-pinned a second time in the same PR for that round-1
-	 * remediation, after the LAST `src`/`app` edit (`native-polish.test.ts`). */
-	app: "9ca98d858daab08a3140dde400de3beafc4d955b2645e80be30456df87ae3633",
+	 * remediation, after the LAST `src`/`app` edit (`native-polish.test.ts`).
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#123) into PR #122: the two branches'
+	 * digests are both stale on the merge, because `src` now carries PR #122's
+	 * round-4 Settings/Computers changes AND PR #123's `statusTrayVisible`, and
+	 * `app` carries #123's `app/(app)/session/[id].tsx` tray wiring. Both are
+	 * recomputed here from the merged tree with `--print`. Neither proof's scene
+	 * moves: PR #122 renders computer screens and an overlay that is closed by
+	 * default, and #123's tray is visible in every captured combination (its own
+	 * note below records the same reading).
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-5 remediation, `src` only: the
+	 * switcher provider counting closes alongside dismissals, Settings revealing a
+	 * refusal once no dismissal is owed, and the Try now focus move owned by the
+	 * retry's start state. No U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-7 remediation, `src` only and a test
+	 * file only: `modal-dismissal-ledger.test.ts` types the Sheet's required
+	 * `children` (CI tsc) and adds the sibling-Sheet close-ordering case (R7-m1).
+	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree. */
+	app: "82e9fc3d4f1b5827be73f4a72ea7505808f121ffb9a32f1eb728be4b9ef28163",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "7b162812b77bfc7160fe263b21b773084235a36474d75602921b17911d7d71b5",
+	src: "eece356691f724d3df9d9f50a1e220fcc9b446216ca1a09b470bb97ec5e6502c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

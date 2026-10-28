@@ -70,6 +70,7 @@ import {
 	readSavedTunnel,
 	readStoredOauth,
 	readStoredTunnelSession,
+	rememberLiveComputer,
 	removeSavedTunnel,
 	type SavedTunnel,
 	writeSavedTunnel,
@@ -154,6 +155,10 @@ export type ConnectCustomInput = {
 	url: string;
 	password: string;
 	allowInsecure: boolean;
+	/** The saved computer being reconnected, when the caller knows it (a tap on a
+	 *  computer switcher row). Recording the live route by this id, not by address,
+	 *  is what keeps two saved computers at one address apart (decision a-2a8b). */
+	computerId?: string;
 };
 
 export type Connection = {
@@ -262,6 +267,54 @@ function routeForComputer(computer: DiscoveredComputer): RouteProfile | null {
 	const result = validateRadientHostname(computer.hostname, computer.tunnelId);
 	return result.ok ? result.route : null;
 }
+
+/**
+ * Remembers the computer a route just reached, for the computer switcher: once the
+ * route is LIVE, never on a pick, because a computer that refused or never answered
+ * is not one this phone has used. Fire-and-forget: the registry is a keystore
+ * write, and a route must not wait on it or fail with it. The id lands in the store
+ * only while the same route is still current, so a slow write cannot label the
+ * next one. Module scope for the same reason as `verifiedRetirement`.
+ */
+const rememberLiveRoute = (
+	admission: RouteAdmission,
+	computerId: string | undefined,
+	radientAccount: string | null,
+): void => {
+	const state = connectionStore.getState();
+	const route = state.route;
+	if (!route || !admission.isCurrent()) return;
+	/* Discovery's name when it has one; otherwise NONE, so the registry keeps the
+	 *  name it already holds. A custom route clears discovery, so switching back to a
+	 *  Radient computer from one passed `undefined` here and the hostname overwrote
+	 *  the reader's name for it (PR #122 QA round 1, Q2; review m2). */
+	const name =
+		route.mode === "radient"
+			? state.discoveredComputers.find(
+					(computer) => computer.tunnelId === route.tunnelId,
+				)?.name
+			: undefined;
+	void rememberLiveComputer(route, {
+		name,
+		computerId,
+		/* The account the route was minted under, so the switcher lists this computer
+		 *  for that account only (review M2). Omitted when unknown, which keeps a key
+		 *  the entry already has instead of erasing it. */
+		...(route.mode === "radient" && radientAccount !== null
+			? { account: radientAccount }
+			: {}),
+		/* Re-checked INSIDE the registry's serialised write: a sign-out that cleared
+		 *  the registry while this write was queued ended the route, so the write is
+		 *  dropped instead of putting a hostname back into a wiped list (review m3). */
+		onlyIf: admission.isCurrent,
+	}).then((entry) => {
+		if (entry && admission.isCurrent())
+			connectionStore.getState().noteComputer(entry.id);
+	});
+};
+
+/** A Radient pick with no stored grant at all: the sign-in surface's sentence. */
+const RADIENT_PICK_SIGNED_OUT = "Sign in with Radient to use this computer.";
 
 /** Turns an unverified purge into the typed refusal the surfaces already know,
  *  so a sign-out reports `false` rather than pretending the device is clean.
@@ -599,6 +652,7 @@ export const ConnectionProvider = ({
 		async (
 			client: ReturnType<typeof createRelayClient>,
 			admission: StartupRouteAdmission,
+			computerId?: string,
 		): Promise<void> => {
 			if (
 				!admission.isCurrent() ||
@@ -613,6 +667,11 @@ export const ConnectionProvider = ({
 				})
 			)
 				return;
+			rememberLiveRoute(
+				admission,
+				computerId,
+				tokensRef.current?.account_id ?? null,
+			);
 			startStream(client, admission);
 			startConfig(client);
 			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
@@ -678,7 +737,7 @@ export const ConnectionProvider = ({
 
 	const connectCustom = useCallback(
 		async (
-			{ url, password, allowInsecure }: ConnectCustomInput,
+			{ url, password, allowInsecure, computerId }: ConnectCustomInput,
 			restoring = false,
 		) => {
 			setBusy(true);
@@ -721,12 +780,12 @@ export const ConnectionProvider = ({
 					},
 				});
 
-				await goLive(client, admission);
+				await goLive(client, admission, computerId);
 			} catch (error) {
 				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>
-						connectCustom({ url, password, allowInsecure }),
+						connectCustom({ url, password, allowInsecure, computerId }),
 					);
 					return;
 				}
@@ -852,6 +911,55 @@ export const ConnectionProvider = ({
 		}
 	}, [refreshComputers, retireAuthorization, stopStream, stopConfig]);
 
+	/**
+	 * The stored Radient grant for a pick that has none in memory — `carryOutRestore`
+	 * with no discovery, because the pick already knows its computer. Accepted
+	 * tokens land in `tokensRef` only while the pick's route is still current. A
+	 * refusal is returned in the restore's own shape (`sign-in` for a grant that is
+	 * gone, `retry` for an unreachable Radient, which must NOT discard it).
+	 */
+	const loadStoredRadient = useCallback(
+		async (
+			admission: StartupRouteAdmission,
+		): Promise<{
+			tokens: RadientTokens | null;
+			refusal: {
+				surface: "sign-in" | "retry";
+				displayableMessage: string;
+			} | null;
+		}> => {
+			const outcome = await carryOutRestore({
+				readOauth: readStoredOauth,
+				writeOauth: async (tokens) => {
+					if (admission.isCurrent())
+						await startupAuthorizationLifecycle.runIfCurrent(
+							admission.authorizationRevision,
+							() => writeStoredOauth(tokens),
+						);
+				},
+				clearOauth: async () => {
+					if (admission.isCurrent())
+						await revokeAuthorization(clearStoredOauth);
+				},
+				refresh: (tokens) => refreshRadientTokens(tokens),
+				discover: async (tokens) => {
+					if (admission.isCurrent()) tokensRef.current = tokens;
+				},
+				isCancelled: () => !admission.isCurrent(),
+			});
+			return {
+				tokens: outcome.tokens,
+				refusal: outcome.refusal
+					? {
+							surface: outcome.refusal.surface,
+							displayableMessage: outcome.refusal.message,
+						}
+					: null,
+			};
+		},
+		[revokeAuthorization],
+	);
+
 	const selectComputer = useCallback(
 		async (computer: DiscoveredComputer) => {
 			setBusy(true);
@@ -870,6 +978,26 @@ export const ConnectionProvider = ({
 				connectionStore.getState().selectComputer(computer);
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return;
+				/* A cold start on the reader's own address dials that address and never
+				 *  loads the Radient grant (the cold start's order, below), so a pick made
+				 *  from the computer switcher afterwards minted with no token and ended on
+				 *  "needs attention in Radient… sign in with Radient again" (PR #122 UX
+				 *  round 1, U3). The stored grant is loaded here, through the same restore
+				 *  the cold start uses, so an expired one is refreshed and a refused one is
+				 *  discarded by the same rules. */
+				if (tokensRef.current === null) {
+					const loaded = await loadStoredRadient(admission);
+					if (!admission.isCurrent()) return;
+					if (loaded.refusal || loaded.tokens === null) {
+						connectionStore.getState().noteFailure(
+							loaded.refusal ?? {
+								surface: "sign-in",
+								displayableMessage: RADIENT_PICK_SIGNED_OUT,
+							},
+						);
+						return;
+					}
+				}
 				const adopted = adoptableSession(
 					await readStoredTunnelSession(),
 					computer,
@@ -953,7 +1081,7 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, noteError, revokeAuthorization],
+		[beginRoute, goLive, loadStoredRadient, noteError, revokeAuthorization],
 	);
 
 	const refreshList = useCallback(async () => {

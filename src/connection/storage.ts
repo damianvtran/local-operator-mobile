@@ -73,6 +73,9 @@ export interface RadientOAuthSet {
 	expires_at: number;
 	/** The account label only — never an email address in a log line. */
 	account_label: string | null;
+	/** The opaque Radient account id (`RadientTokens.account_id`). Optional so a
+	 *  set stored before it existed still parses. */
+	account_id?: string | null;
 	scope: string;
 	token_type: string;
 }
@@ -356,6 +359,11 @@ function parseOauth(value: unknown): RadientOAuthSet | null {
 			typeof candidate.account_label === "string"
 				? candidate.account_label
 				: null,
+		account_id:
+			typeof candidate.account_id === "string" &&
+			candidate.account_id.length > 0
+				? candidate.account_id
+				: null,
 		scope: typeof candidate.scope === "string" ? candidate.scope : "",
 		token_type:
 			typeof candidate.token_type === "string"
@@ -503,6 +511,8 @@ export function oauthSetFromTokens(tokens: RadientTokens): RadientOAuthSet {
 		refresh: tokens.refresh,
 		expires_at: tokens.expires_at,
 		account_label: tokens.account_label,
+		/* Only when known: a lossless round trip (an absent id stays absent). */
+		...(tokens.account_id != null ? { account_id: tokens.account_id } : {}),
 		scope: tokens.scope,
 		token_type: tokens.token_type,
 	};
@@ -514,6 +524,7 @@ export function tokensFromOauthSet(set: RadientOAuthSet): RadientTokens {
 		refresh: set.refresh,
 		expires_at: set.expires_at,
 		account_label: set.account_label,
+		...(set.account_id != null ? { account_id: set.account_id } : {}),
 		scope: set.scope,
 		token_type: set.token_type,
 	};

@@ -5,6 +5,7 @@ import {
 	compactChromeShare,
 	composerBudget,
 	composerLimit,
+	computersHeaderStackWidth,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
@@ -451,6 +452,60 @@ describe("session status layout", () => {
 		expect(landscape.tray).toBe(true);
 		expect(landscape.inlineSecondary).toBe(false);
 		expect(landscape.statusSheet).toBe(true);
+	});
+});
+
+describe("the Computers header stacks before its title clips (PR #122 D10/U13)", () => {
+	/* Measured on the round-2 head with Back, "Switch computer" and Refresh: the
+	 *  title clipped at 360 (69/138) and 390 (99/138) and fit by 1 px at 430. */
+	const full = computersHeaderStackWidth({
+		title: "Computers",
+		back: true,
+		switcher: true,
+		refresh: true,
+	});
+
+	it("reproduces the frames' measured fit", () => {
+		expect(full).toBe(429);
+		/* The title's box at 390 is the viewport minus the rest of the line. */
+		expect(390 - (full - 138)).toBe(99);
+		expect(430 - (full - 138)).toBe(139);
+	});
+
+	it("stacks at every phone width the title clipped at, and not at 430", () => {
+		for (const width of [354, 360, 375, 390, 414, 428])
+			expect(headerStacks(1, width, full)).toBe(true);
+		expect(headerStacks(1, 430, full)).toBe(false);
+	});
+
+	it("moves with the controls actually rendered", () => {
+		/* Under a 401 Refresh is hidden: 390 measured 170/170, single line. */
+		const signedOut = computersHeaderStackWidth({
+			title: "Computers",
+			back: true,
+			switcher: true,
+			refresh: false,
+		});
+		expect(signedOut).toBe(357);
+		expect(headerStacks(1, 390, signedOut)).toBe(false);
+		/* The longer set-up title needs more line. */
+		expect(
+			computersHeaderStackWidth({
+				title: "Set up a computer",
+				back: true,
+				switcher: true,
+				refresh: false,
+			}),
+		).toBeGreaterThan(390);
+		/* No controls and no Back: the kit floor, never lower. */
+		expect(
+			computersHeaderStackWidth({
+				title: "Computers",
+				back: false,
+				switcher: false,
+				refresh: false,
+			}),
+		).toBe(HEADER_STACK_WIDTH);
 	});
 });
 

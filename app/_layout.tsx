@@ -9,6 +9,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
 import { ConnectionProvider } from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
@@ -46,7 +47,13 @@ export default function RootLayout() {
 							<SavedComputersHydration />
 							<DeepLinkResolution />
 							<NotificationTapRouting />
-							<Stack screenOptions={{ headerShown: false }} />
+							{/* The ONE computer switcher sheet, above every route so any screen
+							 *  can open it with `useComputerSwitcher().open()` and two screens
+							 *  can never show two lists. Inside the providers it reads (the
+							 *  connection, the text scale) and below the router's context. */}
+							<ComputerSwitcherProvider>
+								<Stack screenOptions={{ headerShown: false }} />
+							</ComputerSwitcherProvider>
 							<ToastHost />
 						</View>
 					</TextScaleProvider>

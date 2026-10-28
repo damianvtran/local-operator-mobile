@@ -11,6 +11,7 @@ import { createConnectionStore } from "../../state";
 import type { DiscoveredComputer } from "../discovery";
 import {
 	MAX_SAVED_COMPUTERS,
+	RegistryWriteFenced,
 	SAVED_COMPUTER_KEY_PREFIX,
 	SAVED_COMPUTERS_INDEX_KEY,
 	SavedComputers,
@@ -25,6 +26,7 @@ import {
 const HOST_A = "0123456789abcdef0123456789abcdef-lop.example.com";
 const HOST_B = "fedcba9876543210fedcba9876543210-lop.example.com";
 const SECRET_FIELD = /password|grant|refresh|access/;
+const EMAIL_SHAPED = /@/;
 
 /** The adapter a fixture's registry was built over, for a "restart" read. */
 const adapters = new WeakMap<
@@ -630,5 +632,105 @@ describe("a removed Radient computer stays removed (B4)", () => {
 		store.getState().setComputers([discovered("t1", HOST_A)]);
 		expect(store.getState().computers.map((c) => c.tunnelId)).toEqual(["t1"]);
 		expect(await registry.hiddenTunnelIds()).toEqual([]);
+	});
+});
+
+describe("PR #122 round-1 remediation", () => {
+	it("keeps the saved name when a remember carries none, never overwriting it with the hostname (Q2/m2)", async () => {
+		const { registry } = fixture();
+		await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+			name: "Studio Mac",
+		});
+		const again = await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+		});
+		expect(again.name).toBe("Studio Mac");
+		/* A computer never named still gets its hostname, the one name it has. */
+		const fresh = await registry.rememberRadient({
+			tunnelId: "t2",
+			hostname: HOST_B,
+		});
+		expect(fresh.name).toBe(HOST_B);
+		/* And a real new name still wins. */
+		expect(
+			(
+				await registry.rememberRadient({
+					tunnelId: "t1",
+					hostname: HOST_A,
+					name: "Renamed",
+				})
+			).name,
+		).toBe("Renamed");
+	});
+
+	it("stamps a Radient entry with its account, keeps the stamp when the caller does not know it, and survives a restart (M2)", async () => {
+		const { registry, adapter } = fixture();
+		await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+			name: "a",
+			account: "acct-A",
+		});
+		const kept = await registry.rememberRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+		});
+		expect(kept).toMatchObject({ account: "acct-A" });
+		/* A Remove carries no account either, and must not erase it. */
+		await registry.hideRadient({ tunnelId: "t1", hostname: HOST_A, name: "a" });
+		const restarted = new SavedComputers(adapter);
+		expect((await restarted.list())[0]).toMatchObject({
+			account: "acct-A",
+			hidden: true,
+		});
+		/* The stamp is the opaque id, never anything that looks like an email. */
+		expect(JSON.stringify(await restarted.list())).not.toMatch(EMAIL_SHAPED);
+	});
+
+	it("reads an entry written before the account key existed as account null", async () => {
+		const { adapter } = fixture({
+			[SAVED_COMPUTERS_INDEX_KEY]: JSON.stringify({ v: 1, ids: ["old1"] }),
+			[`${SAVED_COMPUTER_KEY_PREFIX}old1`]: JSON.stringify({
+				v: 1,
+				id: "old1",
+				transport: "radient",
+				tunnelId: "t1",
+				hostname: HOST_A,
+				name: "Legacy",
+				addedAt: 1,
+				lastUsedAt: 1,
+				hidden: false,
+				identity: null,
+			}),
+		});
+		const entries = await new SavedComputers(adapter).list();
+		expect(entries[0]).toMatchObject({ name: "Legacy", account: null });
+	});
+
+	it("drops a remember whose route ended while its write was queued, as sign-out ends it (m3)", async () => {
+		const { registry } = fixture();
+		let routeCurrent = true;
+		/* Called while the route is current — the old fence checked here, and passed. */
+		const remembered = registry.rememberRadient(
+			{ tunnelId: "t1", hostname: HOST_A, name: "a" },
+			{ onlyIf: () => routeCurrent },
+		);
+		/* Sign-out ends the route synchronously, then clears the registry. */
+		routeCurrent = false;
+		const cleared = registry.clear();
+		await expect(remembered).rejects.toBeInstanceOf(RegistryWriteFenced);
+		await cleared;
+		expect(await registry.list()).toEqual([]);
+		/* The same for an own address. */
+		await expect(
+			registry.rememberCustom(
+				{ baseUrl: "https://home.example.com", allowInsecure: false },
+				{ onlyIf: () => false },
+			),
+		).rejects.toBeInstanceOf(RegistryWriteFenced);
+		expect(await registry.list()).toEqual([]);
 	});
 });
