@@ -161,7 +161,11 @@ export function useNotifications(
 				setNowMs(Date.now());
 			} catch (error) {
 				if (ticket !== ticketRef.current) return;
-				if (options?.silent === true) return;
+				/* A silent refresh keeps quiet only when there are rows to keep. With
+				 * nothing on screen (a focus or settled-write re-read that took the
+				 * ticket from the first read), staying silent would leave a blank
+				 * list that reads as "All caught up" — rule 3. */
+				if (options?.silent === true && responseRef.current !== null) return;
 				const sentence = refusalSentence(error);
 				if (sentence !== null) setRefused(sentence);
 				else setUnreachable(true);
@@ -169,9 +173,12 @@ export function useNotifications(
 				 * that blanked its rows on a failed refresh would look like an inbox
 				 * that was emptied. */
 			} finally {
-				if (ticket === ticketRef.current && options?.silent !== true) {
-					setLoading(false);
-				}
+				/* Whoever holds the newest ticket clears `loading`, silent or not: a
+				 * silent re-read (focus, a settled write elsewhere) can supersede the
+				 * visible first read, and that read's own `finally` may then never
+				 * run this line — the skeleton would stay up over a landed answer.
+				 * Clearing an already-false flag is a no-op. */
+				if (ticket === ticketRef.current) setLoading(false);
 			}
 		},
 		[client, enabled],

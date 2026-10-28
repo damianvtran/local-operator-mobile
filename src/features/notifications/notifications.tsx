@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { CheckCheck, ChevronLeft, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,6 +12,7 @@ import {
 
 import type { NotificationItem } from "@/contracts";
 import {
+	listStore,
 	useConnection,
 	useListState,
 } from "@/features/auth/connection-provider";
@@ -22,6 +23,7 @@ import {
 	dismissAllActionLabel,
 } from "@/features/notifications/conversation-dismiss";
 import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import { onInboxWrite } from "@/features/notifications/inbox-writes";
 import type { InboxEntry } from "@/features/notifications/notifications-model";
 import {
 	ALL_CAUGHT_UP_BODY,
@@ -136,6 +138,42 @@ export default function Notifications() {
 		reload({ silent: true }),
 	);
 
+	/*
+	 * THE LIST RE-READS WHEN IT IS RETURNED TO (QA round 7 O2; the audit scout).
+	 * The list stays mounted under the detail route, so a read the detail made
+	 * or a "dismiss all from conversation" it ran left this screen painting the
+	 * rows and the count from before — the store was right, the list was not,
+	 * until a reload. Re-reading on focus is the cheapest honest correction, and
+	 * it is SILENT so a reader returning to a good list sees no skeleton flash.
+	 *
+	 * THE FIRST FOCUS IS SKIPPED. `useFocusEffect` also fires on mount, where the
+	 * effect inside `useNotifications` has just issued the visible first read; a
+	 * silent read stacked on it would take the newer ticket, and the first read's
+	 * `finally` (which only the ticket holder may run) would then never clear
+	 * `loading`. One read on mount, one per return — never per render: the
+	 * callback's identity follows `reload`, which follows the client.
+	 *
+	 * The ticket guard in the hook (rule 1) is what keeps this from racing a
+	 * write: a write on THIS screen re-reads after it settles, with a newer
+	 * ticket than any focus read issued before it.
+	 */
+	const focusedOnce = useRef(false);
+	useFocusEffect(
+		useCallback(() => {
+			if (!focusedOnce.current) {
+				focusedOnce.current = true;
+				return;
+			}
+			reload({ silent: true });
+		}, [reload]),
+	);
+	/* A WRITE THAT SETTLES AFTER THE RETURN. The detail's read and its
+	 * dismiss-all batches are awaited; a reader who presses Back before they land
+	 * makes the focus read above answer with the pre-write store. The detail
+	 * announces every settled write (`inbox-writes.ts`), and the re-read it earns
+	 * takes a newer ticket, so the post-write answer is the one that paints. */
+	useEffect(() => onInboxWrite(() => reload({ silent: true })), [reload]);
+
 	/** Multi-select mode. Off by default: the list is for reading, and a screen
 	 *  that opened in selection mode would make the first tap mean the wrong
 	 *  thing. */
@@ -164,6 +202,19 @@ export default function Notifications() {
 	 */
 
 	const response = inbox.response;
+	/* THE BADGE AGREES WITH THIS SCREEN AT THE SAME MOMENT. The bell and the rail
+	 * read the list frame's counts, which the relay re-sends only on its next
+	 * scan tick; this answer carries the same unfiltered counts, so it updates
+	 * them now. The store refuses a block older than the one it holds. */
+	useEffect(() => {
+		if (response === null) return;
+		listStore.getState().applyInboxCounts({
+			unread_count: response.unread_count,
+			waiting_count: response.waiting_count,
+			waiting_unread_count: response.waiting_unread_count,
+			high_water: response.high_water,
+		});
+	}, [response]);
 	/* The footer's single control, decided in the model so it cannot be two. */
 	const footer = footerControl({
 		loadingMore: inbox.loadingMore,

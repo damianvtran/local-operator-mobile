@@ -61,6 +61,9 @@ export interface ListActions {
 			>,
 		at?: number,
 	) => void;
+	/** Applies the inbox counts a fresher `GET /api/notifications` answer carried,
+	 *  so the badge and the inbox's own count line agree at the same moment. */
+	applyInboxCounts: (block: NotificationsBlock) => void;
 	/** Marks the rendered list as no longer live. Never clears it. */
 	markStale: () => void;
 	/** Discards everything. Used when a route ends: the rows belong to a different
@@ -118,6 +121,34 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				lastFrameAt: at ?? now(),
 				stale: false,
 			});
+		},
+
+		applyInboxCounts(block) {
+			/* WHY THE INBOX READ MAY MOVE THE BADGE. The badge rides the list
+			 * frame, and the relay re-sends that frame only when its scan tick sees
+			 * the inbox store move (`_refresh_notifications_if_changed`) — so for a
+			 * beat after a read or a dismiss the inbox screen showed the new count
+			 * while the bell and the rail still showed the old one. The page answer
+			 * carries the SAME unfiltered counts the frame does (`items.py`
+			 * `list_page` and `counts` both read `store.counts()`), so it may stand
+			 * in for the frame until the next one lands.
+			 *
+			 * ONLY IF IT IS NOT OLDER. `high_water` is the store's seq and every
+			 * write re-stamps a row, so it only grows: a page answer that left the
+			 * relay before the frame we hold must not roll the badge back. A block
+			 * the store already holds as unknown stays unknown only until a known
+			 * one arrives — that is the frame rule too. */
+			const held = get().notifications;
+			const known = notificationsOrNull(block);
+			if (known === null) return;
+			if (
+				held !== null &&
+				held.high_water !== undefined &&
+				(known.high_water === undefined || known.high_water < held.high_water)
+			) {
+				return;
+			}
+			set({ notifications: known });
 		},
 
 		markStale() {

@@ -14,6 +14,7 @@ import {
 	dismissAllPendingLabel,
 } from "@/features/notifications/conversation-dismiss";
 import { DismissReceipt } from "@/features/notifications/dismiss-receipt";
+import { noteInboxWrite } from "@/features/notifications/inbox-writes";
 import {
 	conversationName,
 	OPEN_LABEL,
@@ -101,7 +102,13 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 	/* Re-walk after every write, so the card's number is the relay's state and
 	 *  never this screen's arithmetic on a receipt. */
 	const rewalkRef = useRef<() => void>(() => undefined);
-	const dismissAll = useConversationDismiss(client, () => rewalkRef.current());
+	/* Every settled dismiss (and its Undo) is announced to the inbox list under
+	 *  this route, which re-reads on it: the list is still mounted and would
+	 *  otherwise keep the dismissed rows (QA round 7 O2, `inbox-writes.ts`). */
+	const dismissAll = useConversationDismiss(client, () => {
+		noteInboxWrite();
+		rewalkRef.current();
+	});
 	const { observe, reportCountFailed } = dismissAll;
 	const runtime = useSessionRuntime(
 		state.kind === "ready" ? state.detail.session.id : "",
@@ -180,6 +187,12 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 						},
 						{ timeoutMs: READ_CONFIRM_TIMEOUT_MS },
 					);
+					/* The list under this route still shows the row as unread; tell it
+					 *  the read settled, even when this load was superseded — the write
+					 *  happened either way (the audit scout's "read via detail"). */
+					if (!detail.item.read && detail.item.source === "notify") {
+						noteInboxWrite();
+					}
 					if (ticket !== ticketRef.current) return;
 					if (shown !== detail) setState({ kind: "ready", detail: shown });
 					/* Count AFTER the read settles: the read re-stamps this item's seq,
