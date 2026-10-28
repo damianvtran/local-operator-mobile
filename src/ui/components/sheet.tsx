@@ -23,6 +23,7 @@ import {
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
+import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -242,17 +243,29 @@ export const Sheet = ({
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
 	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
+	/* Owes a dismissal from the close until RNW's `onDismiss`, so a screen that
+	 *  moves the reader waits out this sheet's focus return (`@/ui/modal-dismissal-
+	 *  ledger`; PR #122 QA round 6, Q9). Keyed on what the Modal is given. */
+	const shown = visible && !covered;
+	const dismissed = useModalDismissal(shown, Platform.OS === "web");
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
 		 *  inside it — the conversations pane's menu is the app's nested case. */
 		<ModalScopeContext.Provider value={scope}>
 			<Modal
-				visible={visible && !covered}
+				visible={shown}
 				transparent
 				animationType="none"
 				onRequestClose={onClose}
-				onDismiss={Platform.OS === "web" ? onDismiss : undefined}
+				onDismiss={
+					Platform.OS === "web"
+						? () => {
+								dismissed();
+								onDismiss?.();
+							}
+						: undefined
+				}
 				// The covered application is inert while the sheet is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal

@@ -46,14 +46,13 @@ import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 import {
-	refusalAppeared,
 	refusalOutOfView,
-	refusalRevealReady,
 	refusalScrollY,
 	retryLanded,
 	retryStillOwned,
 	retryTargetMatches,
 } from "./refusal-in-view";
+import { useRefusalReveal } from "./use-refusal-reveal";
 
 /**
  * Settings (docs/ux/flows.md § 10, F-10).
@@ -122,36 +121,18 @@ export default function Settings() {
 		minting: phase === "minting",
 	});
 
-	/* U16: a refusal that appears scrolls into view, once — AFTER the switcher's
-	 *  web dismissal, not just `visible=false`. RNW restores focus to the opener
-	 *  during the later modal unmount, and that focus can scroll an apparently
-	 *  visible refusal off-screen. Measuring on dismissal is the ordering contract;
-	 *  no timer can provide it. Native has no dismissal event and uses close. */
+	/* U16: a refusal that appears scrolls into view, once — AFTER every closing
+	 *  modal's web dismissal (the switcher's and the sign-out Dialog's, Q9), not
+	 *  just `visible=false`. RNW restores focus to the opener during the later
+	 *  modal unmount, and that focus can scroll an apparently visible refusal
+	 *  off-screen. Measuring on dismissal is the ordering contract; no timer can
+	 *  provide it. Native has no dismissal event and uses close. */
 	const scrollRef = useRef<ScrollView | null>(null);
 	const refusalRef = useRef<View | null>(null);
 	const statusRef = useRef<View | null>(null);
-	const wasRefused = useRef(refusal !== null);
-	const [bringRefusalIntoView, setBringRefusalIntoView] = useState(false);
-	useEffect(() => {
-		if (refusalAppeared(wasRefused.current, refusal !== null))
-			setBringRefusalIntoView(true);
-		/* A cleared refusal disarms its pending reveal, so nothing armed survives to
-		 *  fire on a later, unrelated sheet close (R5-M1). */
-		if (refusal === null) setBringRefusalIntoView(false);
-		wasRefused.current = refusal !== null;
-	}, [refusal]);
-	useEffect(() => {
-		if (
-			!bringRefusalIntoView ||
-			!refusalRevealReady({
-				platform: Platform.OS,
-				sheetVisible: switcher.visible,
-				sheetCloses: switcher.closes,
-				sheetDismissals: switcher.dismissals,
-			})
-		)
-			return;
-		setBringRefusalIntoView(false);
+	/* The arm / disarm / dismissal wait lives in `useRefusalReveal`, so the Node
+	 *  suite drives it beside the real kit modals; this is only the measuring. */
+	useRefusalReveal(refusal !== null, switcher.visible, () => {
 		const scroller = scrollRef.current;
 		const panel = refusalRef.current;
 		const content = scroller?.getInnerViewNode?.();
@@ -172,12 +153,7 @@ export default function Settings() {
 				});
 			});
 		});
-	}, [
-		bringRefusalIntoView,
-		switcher.visible,
-		switcher.closes,
-		switcher.dismissals,
-	]);
+	});
 
 	/* U18: after THIS screen's Try now works, focus goes to the Status row that now
 	 *  says so — the button it was on unmounted with the refusal, and focus fell to

@@ -29,10 +29,10 @@ const host = vi.hoisted(() => ({
 	saved: [] as SavedComputer[],
 	account: null as string | null,
 	closed: 0,
-	dismissed: 0,
-	/* The props the stub Sheet last received, so a test can fire its close and
-	 *  dismissal the way the real modal does (R5-m1). */
+	/* The props the stub Sheet last received, so a test can fire its close the way
+	 *  the real modal does (R5-m1), and every `visible` it was given (R6-m2). */
 	sheet: null as Props | null,
+	sheetVisibles: [] as unknown[],
 	pushed: [] as unknown[],
 	pathname: "/settings",
 	params: {} as Record<string, string>,
@@ -101,6 +101,7 @@ vi.mock("@/ui/components/section-header", () => ({
 vi.mock("@/ui/components/sheet", () => ({
 	Sheet: (props: Props) => {
 		host.sheet = props;
+		host.sheetVisibles.push(props.visible);
 		return (
 			props.visible ? [props.children, props.footer] : null
 		) as import("react").ReactNode;
@@ -211,11 +212,6 @@ async function render() {
 				onClose: () => {
 					host.closed += 1;
 				},
-				/* The real provider counts completed dismissals; this host records them
-				 *  so a test can assert the sheet reported one. */
-				onDismiss: () => {
-					host.dismissed += 1;
-				},
 			}),
 		),
 	);
@@ -236,8 +232,8 @@ beforeEach(() => {
 	];
 	host.account = null;
 	host.closed = 0;
-	host.dismissed = 0;
 	host.sheet = null;
+	host.sheetVisibles.length = 0;
 	host.pushed.length = 0;
 	host.pathname = "/settings";
 	host.params = {};
@@ -469,49 +465,52 @@ describe("reopening after an account switch shows and probes only the new accoun
 	});
 });
 
-describe("the provider counts the dismissals Settings waits on (review round 5, R5-m1)", () => {
-	/* Settings reveals a refusal only once no dismissal is owed (`dismissals >=
-	 *  closes`). That contract holds only if the provider counts BOTH and the Sheet's
-	 *  `onDismiss` is wired through to it: removing the forwarding would leave a web
-	 *  close owed forever and every switcher-caused refusal unrevealed. */
-	it("counts a close when the sheet goes down and a dismissal when the Sheet reports one", async () => {
+describe("the provider opens and closes the one sheet (review rounds 5–6)", () => {
+	/* The web dismissal a close owes is recorded by the kit's `Sheet` in
+	 *  `@/ui/modal-dismissal-ledger` (QA round 6, Q9; proved against the real Sheet in
+	 *  `modal-dismissal-ledger.test.ts`), so the provider owns only up/down. What it
+	 *  must still get right is that a close is a real true→false: the ledger keys a
+	 *  debt on exactly that edge. */
+	it("hands the Sheet its close, and a close fired while the sheet is down records no close (R6-m2)", async () => {
 		let seen: ReturnType<typeof useComputerSwitcher> | null = null;
 		const Probe = () => {
 			seen = useComputerSwitcher();
 			return null;
 		};
-		const snap = () => {
-			const s = seen as ReturnType<typeof useComputerSwitcher> | null;
-			return {
-				visible: s?.visible,
-				closes: s?.closes,
-				dismissals: s?.dismissals,
-			};
-		};
-		/* Fires a handler the provider handed the (stubbed) Sheet; a missing one throws,
+		const isUp = () =>
+			(seen as ReturnType<typeof useComputerSwitcher> | null)?.visible;
+		/* Fires the close the provider handed the (stubbed) Sheet; a missing one throws,
 		 *  which is the failure removing the wiring must produce. */
-		const fire = (name: "onClose" | "onDismiss") => {
-			const handler = host.sheet?.[name];
+		const close = () => {
+			const handler = host.sheet?.onClose;
 			if (typeof handler !== "function")
-				throw new Error(`the provider passed the Sheet no ${name}`);
+				throw new Error("the provider passed the Sheet no onClose");
 			handler();
 		};
+		/* Every true→false the Sheet was given: the edge a close is counted on. */
+		const closes = () =>
+			host.sheetVisibles.filter(
+				(v, i) => i > 0 && host.sheetVisibles[i - 1] === true && v === false,
+			).length;
 		await act(async () =>
 			root?.render(
 				createElement(ComputerSwitcherProvider, null, createElement(Probe)),
 			),
 		);
-		expect(snap()).toEqual({ visible: false, closes: 0, dismissals: 0 });
+		expect(isUp()).toBe(false);
+		/* The failed-pick `.then(() => onClose())` can land after the reader already
+		 *  closed the sheet: down, so nothing is closed and nothing becomes owed. */
+		await act(async () => close());
+		await act(async () => close());
+		expect(isUp()).toBe(false);
+		expect(closes()).toBe(0);
 		await act(async () => (seen as unknown as { open: () => void }).open());
-		expect(snap()).toEqual({ visible: true, closes: 0, dismissals: 0 });
-		await act(async () => fire("onClose"));
-		/* Down but not yet dismissed: one dismissal owed. */
-		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 0 });
-		expect(typeof host.sheet?.onDismiss).toBe("function");
-		await act(async () => fire("onDismiss"));
-		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 1 });
-		/* A stray dismissal never runs ahead of the closes it settles. */
-		await act(async () => fire("onDismiss"));
-		expect(snap()).toEqual({ visible: false, closes: 1, dismissals: 1 });
+		expect(isUp()).toBe(true);
+		await act(async () => close());
+		expect(isUp()).toBe(false);
+		expect(closes()).toBe(1);
+		/* ...and a second close after it is still one. */
+		await act(async () => close());
+		expect(closes()).toBe(1);
 	});
 });

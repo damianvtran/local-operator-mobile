@@ -29,26 +29,24 @@ export function refusalAppeared(before: boolean, now: boolean): boolean {
 }
 
 /**
- * Whether a refusal may be scrolled to NOW (U16; review round 5, R5-M1).
+ * Whether a refusal may be scrolled to NOW (U16; review round 5, R5-M1; QA round
+ * 6, Q9).
  *
- * Ordering constraint: on web a closing sheet's `visible=false` comes BEFORE RNW
- * restores focus to its opener, and that focus scrolls the opener ("Switch
- * computer", below the panel) back into view — undoing a reveal measured too early.
- * So a reveal waits for the dismissal, but only one that is OWED: a sheet closed
- * and not yet dismissed (`dismissals < closes`). A refusal no sheet caused — a
- * failed Sign out behind a Dialog, a Try now that fails again, a background
+ * Ordering constraint: on web a closing modal's `visible=false` comes BEFORE RNW
+ * restores focus to its opener, and that focus scrolls the opener back into view —
+ * undoing a reveal measured too early. The switcher's opener ("Switch computer")
+ * and the sign-out Dialog's ("Sign out", at the bottom) both did it. So a reveal
+ * waits while ANY modal owes its dismissal (`@/ui/modal-dismissal-ledger`), and
+ * only then: a refusal no modal caused — a Try now that fails again, a background
  * restore — owes nothing and reveals at once; waiting on "a dismissal since the
- * refusal" would hang it until some later, unrelated close. Native has no
- * dismissal event, so it reveals once the sheet is down.
+ * refusal" would hang it until some later, unrelated close. Native records no
+ * debt (it has no dismissal event), so it reveals once the sheet is down.
  */
 export function refusalRevealReady(input: {
-	platform: string;
 	sheetVisible: boolean;
-	sheetCloses: number;
-	sheetDismissals: number;
+	dismissalsOwed: number;
 }): boolean {
-	if (input.sheetVisible) return false;
-	return input.platform !== "web" || input.sheetDismissals >= input.sheetCloses;
+	return !input.sheetVisible && input.dismissalsOwed === 0;
 }
 
 /** A vertical extent in window coordinates, as `measureInWindow` reports it. */

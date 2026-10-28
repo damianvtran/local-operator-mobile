@@ -21,10 +21,20 @@ const SETTINGS = readFileSync(
 	fileURLToPath(new URL("./settings.tsx", import.meta.url)),
 	"utf8",
 );
+const HOOK = readFileSync(
+	fileURLToPath(new URL("./use-refusal-reveal.ts", import.meta.url)),
+	"utf8",
+);
 /* The surface sits inside the wrapper Settings measures and scrolls to (U16). */
 const SURFACE_BLOCK =
 	/\{refusal \? \([\s\S]*?<RefusalSurface([\s\S]*?)\/>\s*<\/View>\s*\) : null\}/;
-const SCROLL_WAITS_FOR_SHEET = /refusalRevealReady\(\{/;
+/* The reveal is the hook the ledger test drives beside the real kit modals, fed
+ *  the refusal and the switcher's `visible` (Q9, R6-m1). */
+const HOOK_DEPS = /\}, \[armed, sheetVisible, owed\]\);/;
+const ADOPTS_RETRY_TARGET =
+	/if \(\s*retryTarget\.current === null &&\s*tunnelId !== null &&\s*!retrySettled\.current\s*\)\s*retryTarget\.current = tunnelId;/;
+const SCROLL_WAITS_FOR_SHEET =
+	/useRefusalReveal\(refusal !== null, switcher\.visible, \(\) => \{/;
 
 describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 	const block = SURFACE_BLOCK.exec(SETTINGS);
@@ -67,6 +77,35 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 			"scroller.scrollTo({ y: refusalScrollY(layoutY), animated: false })",
 		);
 		expect(SETTINGS).toContain("refusalOutOfView(");
+	});
+
+	it("arms, disarms and waits through the hook the ledger test drives (R5-M1, Q9, R6-m1)", () => {
+		/* Settings owns no second copy of the arm/disarm/wait: if it did, the
+		 *  behavioural proof in `modal-dismissal-ledger.test.ts` would prove the hook
+		 *  while the screen shipped something else. */
+		expect(SETTINGS.match(/useRefusalReveal\(/g)).toHaveLength(1);
+		expect(SETTINGS).not.toContain("refusalAppeared(");
+		expect(SETTINGS).not.toContain("refusalRevealReady(");
+		expect(SETTINGS).not.toContain("setBringRefusalIntoView");
+		/* The hook disarms on clear and waits on the LIVE ledger. */
+		expect(HOOK).toContain("if (!refused) setArmed(false);");
+		expect(HOOK).toContain(
+			"refusalRevealReady({ sheetVisible, dismissalsOwed: dismissalsOwed() })",
+		);
+		expect(HOOK).toMatch(HOOK_DEPS);
+	});
+
+	it("adopts an account-side retry's landing computer as its target (R5-m2, R6-m1)", () => {
+		/* A Try now begun with no computer owns the one its restore lands on, while
+		 *  still in flight, so a later pick of another computer disarms the focus move. */
+		expect(SETTINGS).toMatch(ADOPTS_RETRY_TARGET);
+		/* Both the settle path and the effect key ownership on that target. */
+		expect(SETTINGS).toContain(
+			"sameTarget: retryTargetMatches(retryTarget.current, now.tunnelId)",
+		);
+		expect(SETTINGS).toContain(
+			"const sameTarget = retryTargetMatches(retryTarget.current, tunnelId);",
+		);
 	});
 
 	it("offers ONE retry for one refusal: no Diagnostics duplicate (R3-m1)", () => {
