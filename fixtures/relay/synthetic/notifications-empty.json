@@ -1,0 +1,14 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 634471def",
+    "modelled_on": "the wire measured at origin/feat/notifications-banner-relay, pinned in src/contracts/__tests__/notifications-live.test.ts",
+    "why": "Synthetic fixture aligned to the real relay wire: epoch-ms notification clocks, lenient stored ask rows, nested session with live+cwd, and body_md/links on the detail."
+  },
+  "items": [],
+  "waiting": [],
+  "next_cursor": null,
+  "unread_count": 0,
+  "waiting_count": 0,
+  "high_water": 0
+}

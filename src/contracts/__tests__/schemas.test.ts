@@ -323,6 +323,28 @@ function classifyFixture(rel: string, value: unknown): Classification {
 		}
 	}
 
+	/* The inbox corpus (synthetic until the relay routes land with core PR L1b):
+	 *  the two read bodies and the detail body are each validated by the SAME
+	 *  schema that parses them at the boundary, so a hand-built sample cannot
+	 *  drift from the contract without failing here. */
+	if (rel === "synthetic/notifications-populated.json") {
+		return { kind: "schema", schema: "notifications", value };
+	}
+	if (rel === "synthetic/notifications-empty.json") {
+		return { kind: "schema", schema: "notifications", value };
+	}
+	if (rel === "synthetic/notifications-detail.json") {
+		return { kind: "schema", schema: "notificationDetail", value };
+	}
+	/* The Answer surface's read: the CORE PRODUCER's question mapping (options as
+	 * `{label, description?}` objects, one of them without a description), which
+	 * the mock serves at `/api/asks` so a mock-built pass can reach the picker
+	 * (QA round 3, Q9). It is a payload this boundary parses, so it is classified
+	 * rather than excused. */
+	if (rel === "synthetic/asks-populated.json") {
+		return { kind: "schema", schema: "asks", value };
+	}
+
 	if (rel === "gateway/gateway-refusal-constants.json") {
 		return {
 			kind: "skip",

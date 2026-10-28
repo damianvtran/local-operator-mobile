@@ -191,6 +191,17 @@ export interface ScenarioWorld {
 	 */
 	schedules?: Json | FixtureOverride;
 	/**
+	 * The inbox (`GET /api/notifications`, contract §5.4). A bare body seeds the
+	 * mock's notification STORE, so the write routes move it; a recorded answer
+	 * (`FixtureOverride`) pins the response instead — the refusal case, where the
+	 * store must never be consulted.
+	 *
+	 * A scenario silent about notifications serves the synthetic
+	 * `notifications-populated` corpus: a machine with an inbox, which is what a
+	 * capture of the screen is for.
+	 */
+	notifications?: Json | FixtureOverride;
+	/**
 	 * The checkpoint rail's manifest (S5): the whole
 	 * `GET /api/sessions/{id}/checkpoints` body, or a RECORDED RESPONSE
 	 * (`FixtureOverride`) when a cell needs a status the route does not
@@ -350,7 +361,20 @@ export function capabilityBlock(
 	 *  otherwise the app's footer entry is hidden against the only relay this
 	 *  harness can drive. This is the mock's own claim, not a corpus field: the
 	 *  captured `/api/sessions` predates the Library. */
-	next.features = { ...(next.features ?? {}), library: 1 };
+	next.features = {
+		...(next.features ?? {}),
+		library: 1,
+		/* The mock serves the inbox routes, so it must advertise the capability
+		 * the phone gates both entry points on. Without this the desktop and
+		 * relay agree and the harness hides the feature it exists to capture. */
+		notifications: 1,
+		/* The relay's receipt door, advertised as the real build does
+		 * (`3cacd0cad01`: `notifications_seen`). No screen keys on it yet — the
+		 * app ships explicit-read only (D11) — but a mock that stayed silent
+		 * about a door the production relay advertises is the divergence this
+		 * block exists to prevent. */
+		notifications_seen: 1,
+	};
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {
@@ -596,6 +620,71 @@ const ANSWERS: readonly string[] = [
  * `fix` is the object `loadFixtures()` returns.
  */
 export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
+	/**
+	 * One inbox fixture's BODY, without its provenance marker.
+	 *
+	 * The corpus files state their own origin in `provenance`, and that field must
+	 * never reach a client: it describes the FILE, not a relay response. The relay
+	 * strips it again for the default world; doing it here means a scenario that
+	 * pins a body cannot leak it either.
+	 */
+	const inboxBody = (name: string): Json => {
+		const value = fix.payload(name);
+		if (typeof value !== "object" || value === null) return {};
+		const record = { ...(value as Record<string, Json>) };
+		delete record.provenance;
+		return record;
+	};
+
+	/**
+	 * A BUSY INBOX: the same corpus with enough unread updates that the rail's
+	 * count renders as `99+`.
+	 *
+	 * WHY IT EXISTS. The rail's count placement (D22/D23) has two states, and the
+	 * widest count in any fixture was 7 — `countLabel` caps at `99+`, so no captured
+	 * cell could ever leave the symmetric one: of 1200 cells, the 270 that mount the
+	 * count all mounted its mirror too (code review round 10, m-4). A designed state
+	 * that no frame renders cannot be reviewed, so one cell now renders it.
+	 *
+	 * HONEST, not a count bolted onto a short list: the rows are the same synthetic
+	 * updates repeated under distinct ids, all unread, and the counts are DERIVED
+	 * from those rows — so the badge, the inbox screen and the frame agree.
+	 */
+	const floodInbox = (name: string, unread: number): Json => {
+		const body = inboxBody(name) as unknown as {
+			items?: Array<Record<string, Json>>;
+			counts?: Record<string, Json>;
+		};
+		const seed = Array.isArray(body.items) ? body.items : [];
+		if (seed.length === 0) return body as unknown as Json;
+		const items = Array.from({ length: unread }, (_, index) => {
+			const row = seed[index % seed.length] as Record<string, Json>;
+			return {
+				...row,
+				id: `n_flood_${String(index).padStart(3, "0")}`,
+				// DISTINCT KEYS AND ORDER: the store orders by `seq` and keys rows by
+				// id, so repeated seed rows would collide on both (review round 11, m-1).
+				seq: index + 1,
+				revision: index + 1,
+				read: false,
+				read_via: null,
+				dismissed: false,
+				created_at: Number(row.created_at ?? 0) - index * 1000,
+			};
+		});
+		/* NO `counts` BLOCK. The store DERIVES `unread_count` and
+		 *  `waiting_unread_count` from the rows it serves (`notifications.ts`
+		 *  `unreadCount`/`waitingUnreadCount`), so a hand-written block here would be
+		 *  ignored at best and a lie at worst — it said zero waiting while the seed's
+		 *  pinned ask is still served (review round 11, m-1). The badge then reads
+		 *  `120 unread + 1 waiting`, which is what the page and the rail will show. */
+		return {
+			...body,
+			items,
+			high_water: unread,
+		} as unknown as Json;
+	};
+
 	const capabilities = fix.list("sessions-empty").capabilities;
 	const emptyList = () => ({ sessions: [], degraded: [] });
 
@@ -2328,6 +2417,55 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		},
 	);
 
+	/* ----------------------------------------------------------- notifications -- */
+
+	add(
+		"notifications-empty",
+		"An inbox with nothing in it: no unread updates, no pinned asks. The screen must say it is all caught up rather than showing an empty frame.",
+		["S18/empty"],
+		() => ({ notifications: inboxBody("notifications-empty") }),
+	);
+
+	add(
+		"notifications-loading",
+		"No inbox read has been answered yet: the routes hold their responses open and the streams stay silent with keepalives only.",
+		["S18/loading"],
+		() => ({ hold: { api: "forever" }, stream: { mode: "keepalive-only" } }),
+	);
+
+	add(
+		"notifications-populated",
+		"The synthetic populated inbox: five updates across today, yesterday and earlier, one of them already read, and one pinned open ask from a live runtime.",
+		["S18/populated", "S18/multi-select", "S18-detail/populated"],
+		() => ({ notifications: inboxBody("notifications-populated") }),
+	);
+
+	add(
+		"notifications-busy",
+		"A machine with a busy inbox and NOTHING OVER IT: the conversations pane's own rail footer is in view, so the count's two placements are photographed — symmetric at 100/135 %, grouped at 200 % where a mirror on each side would push the label under the count.",
+		["S15/notifications-busy"],
+		() => ({
+			...meshWorld(),
+			notifications: floodInbox("notifications-populated", 120),
+		}),
+	);
+
+	add(
+		"notifications-refused",
+		"The inbox store could not be read: the route answers 503 with its own sentence, so the screen must render the refusal rather than an empty inbox.",
+		["S18/error"],
+		() => ({
+			notifications: {
+				status: 503,
+				headers: { "content-type": "application/json; charset=utf-8" },
+				json: {
+					error: "The notification store is busy; try again in a moment.",
+					code: "notification_store_busy",
+				},
+			},
+		}),
+	);
+
 	/* -------------------------------------------------------------- schedules -- */
 
 	add(
@@ -2672,7 +2810,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"mesh-move-hold",
 		"A move under way: the transfer route holds its answer, so the sheet's in-flight state is the one a person sees rather than a fabricated one.",
 		["S15/move-progress"],
-		() => ({ ...meshWorld(), transfer: { kind: "receipt", delayMs: 30_000 } }),
+		() => ({
+			...meshWorld(),
+			transfer: { kind: "receipt", delayMs: 30_000 },
+			/* THE CELL THAT FORCES THE GROUPED PLACEMENT (review round 10, m-4): its
+			 *  iphone-se frames are the 247 pt rail pane at 200 % text, where a `99+`
+			 *  count cannot sit beside the label with a mirror on both sides. */
+			notifications: floodInbox("notifications-populated", 120),
+		}),
 	);
 
 	add(

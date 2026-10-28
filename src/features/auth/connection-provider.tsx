@@ -533,6 +533,12 @@ export const ConnectionProvider = ({
 								sessions: frame.data.sessions,
 								degraded: frame.data.degraded,
 								capabilities: frame.data.capabilities,
+								/* THE INBOX COUNTS RIDE THIS SAME FRAME (contract §5.4) and
+								 * were dropped at all three application sites, so the badge on
+								 * the home bell and the conversations rail could never render
+								 * on any relay — the count the design leans on was always
+								 * null (design review D3; the mock relay was the other half). */
+								notifications: frame.data.notifications,
 								unread: frame.data.unread,
 							});
 						}
@@ -735,6 +741,7 @@ export const ConnectionProvider = ({
 					sessions: frame.sessions,
 					degraded: frame.degraded,
 					capabilities: frame.capabilities,
+					notifications: frame.notifications,
 					unread: frame.unread,
 				});
 			}
@@ -1101,6 +1108,7 @@ export const ConnectionProvider = ({
 				sessions: frame.sessions,
 				degraded: frame.degraded,
 				capabilities: frame.capabilities,
+				notifications: frame.notifications,
 				unread: frame.unread,
 			});
 		} catch (error) {

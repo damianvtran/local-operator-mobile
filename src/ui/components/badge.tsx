@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import {
 	badgeClasses,
 	badgeInkClasses,
+	badgeLineClass,
 	type SemanticTone,
 } from "@/ui/variants";
 
@@ -20,6 +21,9 @@ import {
 export type BadgeProps = {
 	label: string;
 	tone?: SemanticTone;
+	/** Filled accent/on-accent, for a count that must read against the page
+	 *  rather than against a tinted badge (the desktop emphasis pill). */
+	emphasis?: boolean;
 	/** `mono-label` for a machine string (a version, an id), so the machine voice is
 	 * the same as every other machine string here. The label's CASE is preserved:
 	 * a badge that uppercased it rendered an identifier wrong (`v0.62.0` became
@@ -31,26 +35,44 @@ export type BadgeProps = {
 	 *  (a bare count). The label stays the rendering; this is what assistive
 	 *  tech is told instead of the numeral. */
 	accessibilityLabel?: string;
+	/** Rendered but not seen: a SPACER built from the badge's own metrics.
+	 *
+	 *  `opacity` on the badge ITSELF, not on a wrapper, because a wrapper would
+	 *  leave the badge inside it a painted node the audit still judges — the
+	 *  rail's mirrored count read as a colour-only status (U-03) exactly that way.
+	 *  Nothing is announced either: the call site also hides the subtree. */
+	hidden?: boolean;
+	/** The text scale this badge renders at, when the CALLER knows it. Defaults to
+	 *  1, so every call site that passes nothing keeps the geometry it was measured
+	 *  with; the count pills that can reach the 300 % step pass their own. */
+	scale?: number;
 };
 
 export const Badge = ({
 	label,
 	tone = "neutral",
+	emphasis = false,
 	mono = false,
 	testID,
 	accessibilityLabel,
+	hidden = false,
+	scale = 1,
 }: BadgeProps) => (
 	<View
-		className={badgeClasses(tone)}
+		className={`${
+			emphasis
+				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
+				: badgeClasses(tone)
+		}${hidden ? " opacity-0" : ""}`}
 		testID={testID}
 		accessible={accessibilityLabel !== undefined}
 		accessibilityLabel={accessibilityLabel}
 	>
 		<Text
-			// `leading-4` on BOTH variants, because the two steps' own line heights
-			// differ by 3.6 px and the kit caps a badge at 22: the label box has to be
-			// bound once (16 px) for the mono and the sans badge to be the same height.
-			className={`leading-4 ${mono ? "text-mono-label" : "text-meta"} ${badgeInkClasses(tone)}`}
+			/* The line box is the FIXED one at every scale a caller was measured at,
+			 *  and only the 300 % step lets the type carry its own — the ordering
+			 *  matters, because the reverse changed 672 of 1200 frames (F-1 / D28). */
+			className={`${badgeLineClass(scale)} ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
 			// When the call site names the badge, the visible label is a rendering of
 			// that name, not a second name: hidden from assistive tech on every
 			// platform (the same shape as `Avatar`'s initials).

@@ -1,0 +1,96 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 634471def",
+    "modelled_on": "the wire measured at origin/feat/notifications-banner-relay, pinned in src/contracts/__tests__/notifications-live.test.ts",
+    "why": "Synthetic fixture aligned to the real relay wire: epoch-ms notification clocks, lenient stored ask rows, nested session with live+cwd, and body_md/links on the detail."
+  },
+  "item": {
+    "id": "n_audit",
+    "source": "notify",
+    "priority": "normal",
+    "title": "Nightly audit found 2 broken links",
+    "excerpt": "Two internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.",
+    "created_at": 1792926900000,
+    "updated_at": 1792926900000,
+    "seq": 9,
+    "revision": 2,
+    "read": false,
+    "read_via": null,
+    "dismissed": false,
+    "repeat_count": 2,
+    "session": {
+      "id": "s_0001",
+      "title": "Aida",
+      "agent_id": "aida",
+      "live": true
+    },
+    "projects": [
+      {
+        "key": "local-operator",
+        "name": "Local Operator",
+        "status": "active"
+      }
+    ],
+    "ask": null,
+    "actions": {
+      "dismiss": true,
+      "answer": false,
+      "read": true
+    },
+    "key": "audit",
+    "body_md": "Two internal links in `docs/relay/contract.md` now return **404**. See the repair checklist below.",
+    "links": [
+      {
+        "label": "Relay contract",
+        "url": "https://example.invalid/relay-contract"
+      }
+    ],
+    "anchor_id": "toolu_01J8z2"
+  },
+  "history": [
+    {
+      "revision": 1,
+      "at": 1792840500000,
+      "title": "Nightly audit found 1 broken link",
+      "excerpt": "One internal link in docs/relay/contract.md now 404."
+    }
+  ],
+  "session": {
+    "id": "s_0001",
+    "title": "Aida",
+    "agent_id": "aida",
+    "cwd": "~/minervaai",
+    "live": true
+  },
+  "anchor": {
+    "id": "toolu_01J8z2",
+    "excerpt": "I checked every internal link in the relay docs this morning: two are broken, both in contract.md."
+  },
+  "projects": [
+    {
+      "key": "local-operator",
+      "name": "Local Operator",
+      "status": "active"
+    }
+  ],
+  "asks": [
+    {
+      "ask_id": "a0",
+      "session_id": "s_0001",
+      "created_at": 1792746900000,
+      "status": "answered",
+      "questions": [
+        {
+          "id": "q0",
+          "question": "Should I open a follow-up PR for the broken links?"
+        }
+      ],
+      "answers": {
+        "q0": [
+          "Yes"
+        ]
+      }
+    }
+  ]
+}

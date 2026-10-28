@@ -349,6 +349,37 @@ const BADGE_TONES: Record<SemanticTone, string> = {
 export const badgeClasses = (tone: SemanticTone = "neutral"): string =>
 	cx("self-start rounded-sm border px-2 py-0.5 text-meta", BADGE_TONES[tone]);
 
+/**
+ * The badge's LABEL line box, which is the whole of its height above the type.
+ *
+ * WHY IT IS CHOSEN BY SCALE RATHER THAN FIXED. A pinned `leading-4` (16 pt) is
+ * what holds the two variants to one height at 100 %, and it is what every
+ * caller's geometry was measured against — but at 300 % text the digits are 33 px
+ * on that 16 pt line, so the ink ran 3.4 pt above and 1.1 pt below the pill and
+ * the tops of the 9s vanished (design round 9, D25).
+ *
+ * Leaving `leading-none` on everywhere "fixed" 300 % by changing EVERY badge:
+ * the bordered and sans badges fell 22 -> 18 pt, outside components.md § 6's
+ * 20-22, and the mono family landed at 17 pt so the two no longer matched. 672
+ * of 1200 frames moved (round 12, F-1 / D28). So the fixed line box is the
+ * DEFAULT, and the late-bound one is the exception, taken only at the step where
+ * the type actually overruns it.
+ *
+ * 2.3 is measured, not picked. The ink is 6 pt tall at 100 % and 16 pt at 200 %,
+ * both inside the 20 pt pill — but the growth is linear, so it reaches ~18.4 pt
+ * at 2.3x and ~19 pt at 2.35x, where iOS's largest accessibility step (AX3,
+ * about 2.35x) sits: the fixed box overruns from there, and by 2.5x the ink is
+ * as tall as the pill itself. The earlier claim that the box "holds through
+ * 250 %" was wrong at exactly the size the largest Dynamic Type step uses
+ * (QA round 8, Q12). Everything below 2.3x keeps the geometry it was measured
+ * with, which is what F-1/D28 restored. */
+export const BADGE_LINE_FOLLOWS_SCALE = 2.3;
+
+/** The label's line class at a text scale: the fixed box below the step, the
+ *  type's own above it. */
+export const badgeLineClass = (scale: number): string =>
+	scale >= BADGE_LINE_FOLLOWS_SCALE ? "leading-none" : "leading-4";
+
 /** The ink a badge's tone uses. Kept beside the fills so a new tone cannot be
  * added with a half-specified pair. */
 export const badgeInkClasses = (tone: SemanticTone = "neutral"): string => {
