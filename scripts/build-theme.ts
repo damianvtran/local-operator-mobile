@@ -502,6 +502,45 @@ const css = (): string => {
 	out.push("\t}");
 	out.push("}");
 	out.push("");
+	out.push("/*");
+	out.push(
+		" * The composer's placeholder, on the web build: ONE line, ellipsized.",
+	);
+	out.push(" *");
+	out.push(
+		" * A `<textarea>`'s `::placeholder` wraps, and the composer holds its empty",
+	);
+	out.push(
+		" * field to one body line (`placeholderMaxLines={1}`, §2.5 D1) — so a placeholder",
+	);
+	out.push(
+		" * longer than the line was cut THROUGH the glyphs of its second line at 320 pt",
+	);
+	out.push(
+		' * ("folder" half visible) and silently lost its tail at 200 % ("Send to reopen",',
+	);
+	out.push(
+		" * no ellipsis), losing exactly the words that say WHERE a send reopens an ended",
+	);
+	out.push(
+		" * session (design round 1 D4, UX round 1 U9). The copy is verbatim safety copy",
+	);
+	out.push(
+		" * and must not be shortened, so the field says it on one line and shows that it",
+	);
+	out.push(
+		" * continues. Scoped to the composer's field by its stable test id; native",
+	);
+	out.push(" * `TextInput` placeholders are single-line already.");
+	out.push(" */");
+	out.push("@layer base {");
+	out.push('	[data-testid="composer-input"]::placeholder {');
+	out.push("		white-space: nowrap;");
+	out.push("		overflow: hidden;");
+	out.push("		text-overflow: ellipsis;");
+	out.push("	}");
+	out.push("}");
+	out.push("");
 	out.push(
 		"/* Each step names its own face, from that step's own `face` token. */",
 	);
