@@ -84,6 +84,7 @@ import {
 	PRE_PAINT_PROBE,
 	READINESS_PROBE,
 	SCREEN_ROOTS,
+	textScaleFactor,
 } from "../visual/matrix.ts";
 import type { AuditState, CheckRow } from "./checks.ts";
 import { runChecks, SUB_RULE_TEXT } from "./checks.ts";
@@ -506,9 +507,7 @@ export function cellUrl(origin: string, path: string, query: string): string {
 function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 	const query = new URLSearchParams({
 		"lo-theme": record.theme,
-		"lo-text-scale": String(
-			record.scale === "100" ? 1 : record.scale === "150" ? 1.5 : 2,
-		),
+		"lo-text-scale": String(textScaleFactor(record.scale)),
 	});
 	const insetsBeforeOverride = record.insets ?? {
 		top: 0,
@@ -545,6 +544,16 @@ function cellQuery(record: AuditRecord, seed: ResolvedSeed): string {
 		query.set(key, value);
 	}
 	return query.toString();
+}
+
+/** The complete re-drive URL, separated from navigation so a test can assert the
+ * scale without a browser. It is the exact string `auditCell` sends to Chrome. */
+export function auditCellUrl(
+	origin: string,
+	record: AuditRecord,
+	seed: ResolvedSeed,
+): string {
+	return cellUrl(origin, record.path, cellQuery(record, seed));
 }
 
 export async function auditCell(
@@ -598,7 +607,7 @@ export async function auditCell(
 		source: PRE_PAINT_PROBE,
 	});
 	await pinCellScenario(record, relay, cellTimeoutMs);
-	const url = cellUrl(origin, record.path, cellQuery(record, seed));
+	const url = auditCellUrl(origin, record, seed);
 	await page.send("Page.navigate", { url });
 	await sleep(settleMs);
 	/*
@@ -767,6 +776,24 @@ export async function runAudit(options: AuditOptions) {
 		throw new AuditRefused(
 			`${manifestPath} has ${allRecords.length} records and none with a path: nothing to audit`,
 		);
+	}
+	/*
+	 * EVERY RECORD'S SCALE MUST RESOLVE BEFORE ANY CELL RENDERS. The re-drive asks
+	 * `matrix.ts` for the factor the capture used, and the id is the only thing the
+	 * record carries. A partial mapping here used to fall through to 200%, so an
+	 * id the table does not declare would render a state the cell never named and
+	 * the run would report it under the cell's scale. Refused up front, naming the
+	 * cell and the scale, so the failure is a manifest problem rather than a
+	 * measurement of the wrong page.
+	 */
+	for (const record of records) {
+		try {
+			textScaleFactor(record.scale);
+		} catch {
+			throw new AuditRefused(
+				`${record.cell ?? record.path} records scale "${record.scale}", which the capture's scale table never defines — refusing to render it at some other size`,
+			);
+		}
 	}
 	if (typeof meta.buildDir !== "string")
 		throw new AuditRefused(

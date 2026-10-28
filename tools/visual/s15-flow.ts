@@ -9,7 +9,7 @@ import { applySafeAreaInsets, freshPage } from "../lib/page.ts";
 import { seedQuery } from "../lib/readiness.ts";
 import { selectScenario } from "../lib/relay.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
-import { DEVICES, MEASURE_PROBE } from "./matrix.ts";
+import { DEVICES, MEASURE_PROBE, textScaleFactor } from "./matrix.ts";
 
 export const FOOTER_DESTINATIONS = [
 	{ control: CONTROL.sidebarPast, root: SCREEN.past, back: CONTROL.pastBack },
@@ -81,7 +81,9 @@ export const s15FlowQuery = (
 	assert(device, "unknown flow device");
 	const query = new URLSearchParams({
 		"lo-theme": theme,
-		"lo-text-scale": "2",
+		// The flow is the 200% case; keep it tied to the matrix rather than
+		// re-declaring the factor independently of the capture's scale table.
+		"lo-text-scale": String(textScaleFactor("200")),
 		"lo-reduce-motion": "0",
 		"lo-inset-top": String(device.insets.top),
 		"lo-inset-bottom": String(device.insets.bottom),

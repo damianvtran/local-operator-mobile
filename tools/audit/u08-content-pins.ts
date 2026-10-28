@@ -69,7 +69,7 @@ const sha256 = (content: string | Uint8Array) =>
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
-		"a6d619015bc78c7e5f753f452e326a722b172c18150371c3414c77fd8b4b2ebf",
+		"1d9076ea91172d4eddb899eb458e2499aa1f98d36e46ca6be7442aa002db7f6f",
 	"tools/audit/checks.ts":
 		"061e0c2aa32ed792aa707733e515f82dc84754526e0b5c97290d215b60bf8984",
 	"tools/audit/color.ts":
@@ -134,7 +134,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"172b9fe4007edcee68ded3dba4d93f584c9b1d848b3d05e6d68a12e942c35f44",
+		"fa2b6eacc769032b914452c752523ac987d72e7a6da7593757914e685952e050",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
