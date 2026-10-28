@@ -12,12 +12,18 @@ import {
 } from "@/i18n";
 import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.context.json";
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
+import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
+import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
 import home from "@/i18n/catalogues/en/mobile.home.json";
+import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.context.json";
+import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
+import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
+import session from "@/i18n/catalogues/en/mobile.session.json";
 
 const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 
@@ -31,7 +37,7 @@ const NAMESPACES = [
 		name: "mobile.home",
 		messages: home,
 		context: homeContext,
-		expected: 14,
+		expected: 27,
 	},
 	{
 		name: "mobile.projects",
@@ -50,6 +56,24 @@ const NAMESPACES = [
 		messages: accountRouting,
 		context: accountRoutingContext,
 		expected: 14,
+	},
+	{
+		name: "mobile.computers",
+		messages: computers,
+		context: computersContext,
+		expected: 10,
+	},
+	{
+		name: "mobile.notifications",
+		messages: notifications,
+		context: notificationsContext,
+		expected: 14,
+	},
+	{
+		name: "mobile.session",
+		messages: session,
+		context: sessionContext,
+		expected: 1,
 	},
 ] as const;
 
@@ -93,7 +117,24 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(78);
+		expect(total).toBe(116);
+	});
+
+	it("lists every catalogue file this suite checks", () => {
+		/* A namespace added on disk but not above would dodge every invariant here,
+		 * so the directory is the oracle for the list. */
+		const root = fileURLToPath(
+			new URL("../../i18n/catalogues/en", import.meta.url),
+		);
+		const onDisk = readdirSync(root)
+			.filter(
+				(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
+			)
+			.map((name) => name.replace(/\.json$/, ""))
+			.sort();
+		expect(NAMESPACES.map((namespace) => namespace.name).sort()).toEqual(
+			onDisk,
+		);
 	});
 
 	it("ships no locale the runtime cannot render", () => {

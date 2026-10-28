@@ -148,8 +148,9 @@ export function startupQueueState(
 	if (phase === "starting") return null;
 	if (sessionId !== null)
 		return phase === "blocked"
-			? "Retry to send queued messages"
-			: "Sending queued messages…";
-	if (phase === "unconfirmed") return "Start not confirmed";
-	return "Not started";
+			? t("mobile.home.startup_queue.blocked")
+			: t("mobile.home.startup_queue.sending");
+	if (phase === "unconfirmed")
+		return t("mobile.home.startup_queue.unconfirmed");
+	return t("mobile.home.startup_queue.not_started");
 }

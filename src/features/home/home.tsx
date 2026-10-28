@@ -48,6 +48,7 @@ import {
 	inboxBadgeCount,
 	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
+import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
@@ -515,7 +516,7 @@ export default function Home({
 					) : null}
 					{startup.snapshot.queue.length > 0 ? (
 						<Button
-							label="View queued messages"
+							label={t("mobile.home.queue.view")}
 							variant="quiet"
 							size="sm"
 							testID={CONTROL.startupViewQueue}
@@ -795,12 +796,12 @@ export default function Home({
 			<Sheet
 				visible={optionsOpen}
 				onClose={() => setOptionsOpen(false)}
-				title="Conversation options"
+				title={t("mobile.home.options.title")}
 				testID={CONTROL.startupOptions}
 			>
 				<View className="gap-3 py-2">
 					<Input
-						label="Folder on this computer"
+						label={t("mobile.home.options.folder")}
 						value={optionPath}
 						onChangeText={setOptionPath}
 						disabled={!selectionEditable}
@@ -819,7 +820,7 @@ export default function Home({
 						/>
 					))}
 					<Button
-						label="Use these options"
+						label={t("mobile.home.options.apply")}
 						disabled={!selectionEditable || optionPath.trim() === ""}
 						onPress={() => {
 							setHomeDirectory(optionPath.trim());
@@ -839,8 +840,7 @@ export default function Home({
 					/>
 					{!selectionEditable ? (
 						<Text className="text-body-sm text-ink-muted">
-							This conversation's starting options are fixed. Use Conversation
-							details for its live controls.
+							{t("mobile.home.options.fixed")}
 						</Text>
 					) : null}
 				</View>
@@ -849,7 +849,7 @@ export default function Home({
 			<Sheet
 				visible={queueOpen}
 				onClose={() => setQueueOpen(false)}
-				title="Queued messages"
+				title={t("mobile.home.queue.sheet_title")}
 				testID={CONTROL.startupQueueSheet}
 			>
 				<View className="gap-4 py-2">
@@ -873,7 +873,7 @@ export default function Home({
 					    away on an explicit word, and neither happens behind their back. */}
 					<View className="gap-2">
 						<Button
-							label="Move queued messages to draft"
+							label={t("mobile.home.queue.restore")}
 							variant="quiet"
 							testID={CONTROL.startupQueueRestore}
 							onPress={() => {
@@ -883,7 +883,7 @@ export default function Home({
 							}}
 						/>
 						<Button
-							label="Discard queued messages"
+							label={t("mobile.home.queue.discard")}
 							variant="quiet"
 							testID={CONTROL.startupQueueDiscard}
 							onPress={() => {

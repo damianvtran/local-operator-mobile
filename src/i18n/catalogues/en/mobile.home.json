@@ -2,8 +2,20 @@
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
 	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.options.apply": "Use these options",
+	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
+	"mobile.home.options.folder": "Folder on this computer",
+	"mobile.home.options.title": "Conversation options",
+	"mobile.home.queue.discard": "Discard queued messages",
+	"mobile.home.queue.restore": "Move queued messages to draft",
+	"mobile.home.queue.sheet_title": "Queued messages",
+	"mobile.home.queue.view": "View queued messages",
 	"mobile.home.refused_start_fallback": "That folder doesn't exist on this computer.",
 	"mobile.home.starting": "Starting…",
+	"mobile.home.startup_queue.blocked": "Retry to send queued messages",
+	"mobile.home.startup_queue.not_started": "Not started",
+	"mobile.home.startup_queue.sending": "Sending queued messages…",
+	"mobile.home.startup_queue.unconfirmed": "Start not confirmed",
 	"mobile.home.suggestion.last_turn": "Show me the last turn",
 	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
 	"mobile.home.suggestion.phone_access": "Turn on phone access",
@@ -12,5 +24,6 @@
 	"mobile.home.suggestion.wake_summary": "Wake me with a summary",
 	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
-	"mobile.home.tip.search": "search past conversations to reopen a session"
+	"mobile.home.tip.search": "search past conversations to reopen a session",
+	"mobile.home.transcript.waiting": "Waiting for the conversation…"
 }

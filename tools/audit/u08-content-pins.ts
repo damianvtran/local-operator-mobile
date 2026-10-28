@@ -291,14 +291,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * modules resolve to the same English bytes they carried as literals (their
 	 * tests assert the sentences verbatim), so no scene's paint or geometry
 	 * moves; `app`, the design inputs and the proof's fixtures keep their
-	 * digests. Recomputed with `--print` from the merged tree. */
+	 * digests. Recomputed with `--print` from the merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #112's round-1 remediation, `src` and
+	 * `package.json`: the 40 literals main introduced are keyed (same English
+	 * bytes, rendered through `t()`), the ICU apostrophe/plural-count guards in
+	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
+	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
+	 * `app` and the design inputs keep their digests. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "1245e6b44f3f33e4f4eb2ffdb937cf8297b400a211e2ad1a37e9aec04a7e7a57",
+	src: "05e3d3bfea73ed8e1060d8b71d92504c85c9591620926dada1d2f2945ea0bea5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -314,7 +321,7 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"766ef74869e325f6e0b1b0ace856b0359e894205b03f8eb1b77244bcd7c786de",
+		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
 	"pnpm-lock.yaml":
 		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
 	"pnpm-workspace.yaml":

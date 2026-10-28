@@ -1,0 +1,42 @@
+{
+	"mobile.computers.add": {
+		"role": "button",
+		"note": "Button that starts setting up another computer. Sentence case, no final full stop."
+	},
+	"mobile.computers.added.stays_listed": {
+		"role": "help",
+		"note": "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed."
+	},
+	"mobile.computers.badge.active": {
+		"role": "status",
+		"note": "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge."
+	},
+	"mobile.computers.badge.connecting": {
+		"role": "status",
+		"note": "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge."
+	},
+	"mobile.computers.connecting": {
+		"role": "status",
+		"note": "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis."
+	},
+	"mobile.computers.none_on_phone": {
+		"role": "status",
+		"note": "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop."
+	},
+	"mobile.computers.password_placeholder": {
+		"role": "help",
+		"note": "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language."
+	},
+	"mobile.computers.section.not_connected": {
+		"role": "heading",
+		"note": "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate."
+	},
+	"mobile.computers.section.on_phone": {
+		"role": "heading",
+		"note": "Section header for computers already paired on this phone."
+	},
+	"mobile.computers.switch": {
+		"role": "button",
+		"note": "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop."
+	}
+}

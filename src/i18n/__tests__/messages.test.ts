@@ -72,6 +72,30 @@ describe("the ICU subset", () => {
 		);
 	});
 
+	it.each(["it''s {x}", "'{x}' ok", "a '} b"])(
+		"rejects ICU apostrophe quoting instead of rendering it differently: %s",
+		(source) => {
+			expect(() => parseMessage(source)).toThrow(/apostrophe quoting/);
+		},
+	);
+
+	it("rejects `'#` only where `#` is a plural count", () => {
+		expect(parseMessage("Item '#1").params.size).toBe(0);
+		expect(() => parseMessage("{n, plural, other {'# left}}")).toThrow(
+			/apostrophe quoting/,
+		);
+	});
+
+	it("refuses a string where a plural count is required", () => {
+		const message = parseMessage(
+			"{count, plural, one {# wake} other {# wakes}}",
+		);
+		expect(() => formatMessage(message, { count: "1" }, "en")).toThrow(
+			RangeError,
+		);
+		expect(formatMessage(message, { count: 1 }, "en")).toBe("1 wake");
+	});
+
 	it("renders the same parsed message for every call", () => {
 		/* The cache is what makes a per-call lookup cheap; this pins that it is a
 		 * cache of a PURE parse, not a cache of rendered output (which would carry

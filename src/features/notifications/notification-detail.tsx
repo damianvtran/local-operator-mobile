@@ -31,6 +31,7 @@ import { refusalSentence } from "@/features/notifications/use-notifications";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { Markdown } from "@/features/session/components/markdown";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { t } from "@/i18n";
 import { isRelayError, isRelayMissing } from "@/relay";
 import {
 	CONTROL,
@@ -432,7 +433,7 @@ function DetailBody({
 			) : null}
 			{item.source === "ask" ? (
 				<Button
-					label="Answer in conversation"
+					label={t("mobile.notifications.detail.answer_in_conversation")}
 					onPress={onAnswer}
 					variant="primary"
 					testID={CONTROL.inboxDetailOpen}
@@ -457,7 +458,7 @@ function DetailBody({
 			/>
 			{projects.length > 0 ? (
 				<View className="gap-2">
-					<SectionHeader label="Projects" />
+					<SectionHeader label={t("mobile.notifications.detail.projects")} />
 					{projects.map((project) => (
 						<Button
 							key={project.key}
@@ -471,7 +472,9 @@ function DetailBody({
 			) : null}
 			{history.length > 0 ? (
 				<View className="gap-2">
-					<SectionHeader label="Earlier updates" />
+					<SectionHeader
+						label={t("mobile.notifications.detail.earlier_updates")}
+					/>
 					{history.map((entry) => (
 						<View key={entry.revision} className="gap-1">
 							<Text className="text-body text-ink">{entry.title}</Text>
@@ -481,10 +484,12 @@ function DetailBody({
 				</View>
 			) : null}
 			<View className="gap-2" testID={CONTROL.inboxDetailAsks}>
-				<SectionHeader label="This conversation's asks" />
+				<SectionHeader
+					label={t("mobile.notifications.detail.conversation_asks")}
+				/>
 				{asks.length === 0 ? (
 					<Text className="text-meta text-ink-dim">
-						No asks in this conversation.
+						{t("mobile.notifications.detail.no_asks")}
 					</Text>
 				) : (
 					asks.map((ask) => <AskLine key={ask.ask_id} ask={ask} />)
@@ -521,12 +526,12 @@ function FromCard({
 	const empty = scope !== null && scope.tokens.length === 0;
 	return (
 		<View className="gap-2" testID={SURFACE.inboxDetailFrom}>
-			<SectionHeader label="From" />
+			<SectionHeader label={t("mobile.notifications.detail.from")} />
 			<View className="gap-3 rounded-md border-hairline bg-elevated p-3">
 				<Text className="text-body text-ink">{`${title} · ${liveState}`}</Text>
 				{empty ? (
 					<Text className="text-meta text-ink-dim">
-						No updates from this conversation to dismiss.
+						{t("mobile.notifications.detail.nothing_to_dismiss")}
 					</Text>
 				) : (
 					<Button

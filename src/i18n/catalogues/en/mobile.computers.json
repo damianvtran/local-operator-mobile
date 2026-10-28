@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "Add a computer",
+	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
+	"mobile.computers.badge.active": "active",
+	"mobile.computers.badge.connecting": "connecting",
+	"mobile.computers.connecting": "Connecting…",
+	"mobile.computers.none_on_phone": "No computers on this phone yet.",
+	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.section.not_connected": "On your Radient account, not connected",
+	"mobile.computers.section.on_phone": "On this phone",
+	"mobile.computers.switch": "Switch computer"
+}

@@ -17,6 +17,7 @@ import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import { t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -244,7 +245,7 @@ export default function OwnTunnel() {
 						label="Relay password"
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password from lop mobile"
+						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
 						autoFocus
@@ -327,7 +328,7 @@ export default function OwnTunnel() {
 						label="Relay password"
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password from lop mobile"
+						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}

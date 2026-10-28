@@ -42,11 +42,33 @@ export type CatalogueKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.computers.add"
+	| "mobile.computers.added.stays_listed"
+	| "mobile.computers.badge.active"
+	| "mobile.computers.badge.connecting"
+	| "mobile.computers.connecting"
+	| "mobile.computers.none_on_phone"
+	| "mobile.computers.password_placeholder"
+	| "mobile.computers.section.not_connected"
+	| "mobile.computers.section.on_phone"
+	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.greeting"
+	| "mobile.home.options.apply"
+	| "mobile.home.options.fixed"
+	| "mobile.home.options.folder"
+	| "mobile.home.options.title"
+	| "mobile.home.queue.discard"
+	| "mobile.home.queue.restore"
+	| "mobile.home.queue.sheet_title"
+	| "mobile.home.queue.view"
 	| "mobile.home.refused_start_fallback"
 	| "mobile.home.starting"
+	| "mobile.home.startup_queue.blocked"
+	| "mobile.home.startup_queue.not_started"
+	| "mobile.home.startup_queue.sending"
+	| "mobile.home.startup_queue.unconfirmed"
 	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
 	| "mobile.home.suggestion.phone_access"
@@ -56,6 +78,21 @@ export type CatalogueKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.waiting"
+	| "mobile.notifications.answer"
+	| "mobile.notifications.back"
+	| "mobile.notifications.detail.answer_in_conversation"
+	| "mobile.notifications.detail.conversation_asks"
+	| "mobile.notifications.detail.earlier_updates"
+	| "mobile.notifications.detail.from"
+	| "mobile.notifications.detail.no_asks"
+	| "mobile.notifications.detail.nothing_to_dismiss"
+	| "mobile.notifications.detail.projects"
+	| "mobile.notifications.dismiss"
+	| "mobile.notifications.filter_label"
+	| "mobile.notifications.load_failed"
+	| "mobile.notifications.priority_high"
+	| "mobile.notifications.title"
 	| "mobile.projects.delete_body"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
@@ -105,7 +142,8 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
-	| "mobile.schedules.truncated";
+	| "mobile.schedules.truncated"
+	| "mobile.session.status_tray.hint";
 
 /** Keys with no placeholders: `t()` takes no second argument for these. */
 export type NoParamKey =
@@ -123,11 +161,33 @@ export type NoParamKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.computers.add"
+	| "mobile.computers.added.stays_listed"
+	| "mobile.computers.badge.active"
+	| "mobile.computers.badge.connecting"
+	| "mobile.computers.connecting"
+	| "mobile.computers.none_on_phone"
+	| "mobile.computers.password_placeholder"
+	| "mobile.computers.section.not_connected"
+	| "mobile.computers.section.on_phone"
+	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.greeting"
+	| "mobile.home.options.apply"
+	| "mobile.home.options.fixed"
+	| "mobile.home.options.folder"
+	| "mobile.home.options.title"
+	| "mobile.home.queue.discard"
+	| "mobile.home.queue.restore"
+	| "mobile.home.queue.sheet_title"
+	| "mobile.home.queue.view"
 	| "mobile.home.refused_start_fallback"
 	| "mobile.home.starting"
+	| "mobile.home.startup_queue.blocked"
+	| "mobile.home.startup_queue.not_started"
+	| "mobile.home.startup_queue.sending"
+	| "mobile.home.startup_queue.unconfirmed"
 	| "mobile.home.suggestion.last_turn"
 	| "mobile.home.suggestion.linear_mcp"
 	| "mobile.home.suggestion.phone_access"
@@ -137,6 +197,21 @@ export type NoParamKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.waiting"
+	| "mobile.notifications.answer"
+	| "mobile.notifications.back"
+	| "mobile.notifications.detail.answer_in_conversation"
+	| "mobile.notifications.detail.conversation_asks"
+	| "mobile.notifications.detail.earlier_updates"
+	| "mobile.notifications.detail.from"
+	| "mobile.notifications.detail.no_asks"
+	| "mobile.notifications.detail.nothing_to_dismiss"
+	| "mobile.notifications.detail.projects"
+	| "mobile.notifications.dismiss"
+	| "mobile.notifications.filter_label"
+	| "mobile.notifications.load_failed"
+	| "mobile.notifications.priority_high"
+	| "mobile.notifications.title"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
 	| "mobile.projects.milestones.none"
@@ -164,7 +239,8 @@ export type NoParamKey =
 	| "mobile.schedules.state.waiting"
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
-	| "mobile.schedules.supervisor.unverifiable";
+	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.status_tray.hint";
 
 /** Keys that take one argument object, typed by `MessageParams`. */
 export type ParamKey = Exclude<CatalogueKey, NoParamKey>;
@@ -185,11 +261,33 @@ export type MessageParams = {
 	"mobile.account_routing.title": NoParams;
 	"mobile.account_routing.unavailable": NoParams;
 	"mobile.account_routing.unsaved": NoParams;
+	"mobile.computers.add": NoParams;
+	"mobile.computers.added.stays_listed": NoParams;
+	"mobile.computers.badge.active": NoParams;
+	"mobile.computers.badge.connecting": NoParams;
+	"mobile.computers.connecting": NoParams;
+	"mobile.computers.none_on_phone": NoParams;
+	"mobile.computers.password_placeholder": NoParams;
+	"mobile.computers.section.not_connected": NoParams;
+	"mobile.computers.section.on_phone": NoParams;
+	"mobile.computers.switch": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
 	"mobile.home.greeting": NoParams;
+	"mobile.home.options.apply": NoParams;
+	"mobile.home.options.fixed": NoParams;
+	"mobile.home.options.folder": NoParams;
+	"mobile.home.options.title": NoParams;
+	"mobile.home.queue.discard": NoParams;
+	"mobile.home.queue.restore": NoParams;
+	"mobile.home.queue.sheet_title": NoParams;
+	"mobile.home.queue.view": NoParams;
 	"mobile.home.refused_start_fallback": NoParams;
 	"mobile.home.starting": NoParams;
+	"mobile.home.startup_queue.blocked": NoParams;
+	"mobile.home.startup_queue.not_started": NoParams;
+	"mobile.home.startup_queue.sending": NoParams;
+	"mobile.home.startup_queue.unconfirmed": NoParams;
 	"mobile.home.suggestion.last_turn": NoParams;
 	"mobile.home.suggestion.linear_mcp": NoParams;
 	"mobile.home.suggestion.phone_access": NoParams;
@@ -199,6 +297,21 @@ export type MessageParams = {
 	"mobile.home.tip.parallel": NoParams;
 	"mobile.home.tip.schedule": NoParams;
 	"mobile.home.tip.search": NoParams;
+	"mobile.home.transcript.waiting": NoParams;
+	"mobile.notifications.answer": NoParams;
+	"mobile.notifications.back": NoParams;
+	"mobile.notifications.detail.answer_in_conversation": NoParams;
+	"mobile.notifications.detail.conversation_asks": NoParams;
+	"mobile.notifications.detail.earlier_updates": NoParams;
+	"mobile.notifications.detail.from": NoParams;
+	"mobile.notifications.detail.no_asks": NoParams;
+	"mobile.notifications.detail.nothing_to_dismiss": NoParams;
+	"mobile.notifications.detail.projects": NoParams;
+	"mobile.notifications.dismiss": NoParams;
+	"mobile.notifications.filter_label": NoParams;
+	"mobile.notifications.load_failed": NoParams;
+	"mobile.notifications.priority_high": NoParams;
+	"mobile.notifications.title": NoParams;
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
@@ -249,6 +362,7 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: string | number };
 	"mobile.schedules.truncated": { shown: string | number; total: string | number; family: string };
+	"mobile.session.status_tray.hint": NoParams;
 };
 
 export type ContextRole =
@@ -282,11 +396,33 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.title": "Account routing",
 	"mobile.account_routing.unavailable": "Account routing settings are unavailable on this relay. Update Local Operator on this computer.",
 	"mobile.account_routing.unsaved": "Not saved yet.",
+	"mobile.computers.add": "Add a computer",
+	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
+	"mobile.computers.badge.active": "active",
+	"mobile.computers.badge.connecting": "connecting",
+	"mobile.computers.connecting": "Connecting…",
+	"mobile.computers.none_on_phone": "No computers on this phone yet.",
+	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.section.not_connected": "On your Radient account, not connected",
+	"mobile.computers.section.on_phone": "On this phone",
+	"mobile.computers.switch": "Switch computer",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
 	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.options.apply": "Use these options",
+	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
+	"mobile.home.options.folder": "Folder on this computer",
+	"mobile.home.options.title": "Conversation options",
+	"mobile.home.queue.discard": "Discard queued messages",
+	"mobile.home.queue.restore": "Move queued messages to draft",
+	"mobile.home.queue.sheet_title": "Queued messages",
+	"mobile.home.queue.view": "View queued messages",
 	"mobile.home.refused_start_fallback": "That folder doesn't exist on this computer.",
 	"mobile.home.starting": "Starting…",
+	"mobile.home.startup_queue.blocked": "Retry to send queued messages",
+	"mobile.home.startup_queue.not_started": "Not started",
+	"mobile.home.startup_queue.sending": "Sending queued messages…",
+	"mobile.home.startup_queue.unconfirmed": "Start not confirmed",
 	"mobile.home.suggestion.last_turn": "Show me the last turn",
 	"mobile.home.suggestion.linear_mcp": "Set up Linear MCP",
 	"mobile.home.suggestion.phone_access": "Turn on phone access",
@@ -296,6 +432,21 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
+	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.notifications.answer": "Answer",
+	"mobile.notifications.back": "Back",
+	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
+	"mobile.notifications.detail.conversation_asks": "This conversation's asks",
+	"mobile.notifications.detail.earlier_updates": "Earlier updates",
+	"mobile.notifications.detail.from": "From",
+	"mobile.notifications.detail.no_asks": "No asks in this conversation.",
+	"mobile.notifications.detail.nothing_to_dismiss": "No updates from this conversation to dismiss.",
+	"mobile.notifications.detail.projects": "Projects",
+	"mobile.notifications.dismiss": "Dismiss",
+	"mobile.notifications.filter_label": "Show",
+	"mobile.notifications.load_failed": "Couldn't load notifications",
+	"mobile.notifications.priority_high": "High",
+	"mobile.notifications.title": "Notifications",
 	"mobile.projects.delete_body": "Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.",
 	"mobile.projects.draft_kept_note": "Kept from your last visit. Clear the fields to start something new.",
 	"mobile.projects.milestone_slash_note": "Milestone names can't contain a slash. A milestone with one could never be removed.",
@@ -346,6 +497,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 };
 
 /** Translator context for every key above. */
@@ -364,11 +516,33 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.title": { role: "heading", note: "Section heading in computer settings; not a provider/model picker." },
 	"mobile.account_routing.unavailable": { role: "status", note: "Confirmed missing relay route only; never use for an offline/unknown tunnel." },
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
+	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
+	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
+	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
+	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
+	"mobile.computers.connecting": { role: "status", note: "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis." },
+	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
+	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
+	"mobile.computers.section.not_connected": { role: "heading", note: "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate." },
+	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
+	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
+	"mobile.home.options.apply": { role: "button", note: "Button that applies the starting options. Sentence case, no final full stop." },
+	"mobile.home.options.fixed": { role: "help", note: "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
+	"mobile.home.options.folder": { role: "meta", note: "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone." },
+	"mobile.home.options.title": { role: "heading", note: "Title of the sheet that edits the starting options of a conversation that has not been sent yet." },
+	"mobile.home.queue.discard": { role: "button", note: "Button in the queued-messages sheet: deletes the unsent messages. Destructive; keep it clearly distinct from the move-to-draft button." },
+	"mobile.home.queue.restore": { role: "button", note: "Button in the queued-messages sheet: puts the unsent messages back into the composer as a draft. Sentence case, no final full stop." },
+	"mobile.home.queue.sheet_title": { role: "heading", note: "Title of the sheet listing messages that have not left the phone yet. Plural noun phrase; matches the \"View queued messages\" button that opens it." },
+	"mobile.home.queue.view": { role: "button", note: "Quiet button on the home queue row that opens the queued-messages sheet. Sentence case, no final full stop." },
 	"mobile.home.refused_start_fallback": { role: "status", note: "Used only when the relay sent no refusal sentence of its own for a start request. States the missing folder; does not blame the reader." },
 	"mobile.home.starting": { role: "status", note: "Replaces the greeting while the first send is in flight. Must stay on ONE line: a second line moves the composer." },
+	"mobile.home.startup_queue.blocked": { role: "status", note: "Queue-row state while delivery is blocked on a started conversation. An instruction to retry, not a claim that sending is under way. No placeholder." },
+	"mobile.home.startup_queue.not_started": { role: "status", note: "Queue-row state when the conversation never started (refused or drafting). Two words at most; it sits beside the queued-messages button." },
+	"mobile.home.startup_queue.sending": { role: "status", note: "Queue-row state while a started conversation drains its queue. Present continuous; keep the ellipsis character. Never repeat the count: the composer chip owns it." },
+	"mobile.home.startup_queue.unconfirmed": { role: "status", note: "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting." },
 	"mobile.home.suggestion.last_turn": { role: "button", note: "Suggestion chip. Sentence case, no final full stop, at most 24 characters at the source locale, and it must not begin with a verb another chip in the pool already uses." },
 	"mobile.home.suggestion.linear_mcp": { role: "button", note: "Suggestion chip. 'Linear MCP' is a product name and a protocol name: do not translate either word. No final full stop, at most 24 characters at the source locale." },
 	"mobile.home.suggestion.phone_access": { role: "button", note: "Suggestion chip. 'phone access' is the feature name used across the product. No final full stop, at most 24 characters at the source locale." },
@@ -378,6 +552,21 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.parallel": { role: "help", note: "Rotating tip fragment, lower case by design. A fragment, not a sentence: no final full stop, at most 48 characters at the source locale." },
 	"mobile.home.tip.schedule": { role: "help", note: "Rotating tip fragment, lower case by design. 'prompt' is the product's word for what a wake sends. No final full stop, at most 48 characters." },
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
+	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
+	"mobile.notifications.answer": { role: "button", note: "Button on an ask in the inbox list that opens it to be answered. One word, imperative." },
+	"mobile.notifications.back": { role: "button", note: "Accessibility label of the icon-only back button in the inbox header." },
+	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
+	"mobile.notifications.detail.conversation_asks": { role: "heading", note: "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader." },
+	"mobile.notifications.detail.earlier_updates": { role: "heading", note: "Section header listing earlier revisions of the same notification." },
+	"mobile.notifications.detail.from": { role: "heading", note: "Section header naming the conversation a notification came from. One word." },
+	"mobile.notifications.detail.no_asks": { role: "status", note: "Empty state under the asks header. Ends with a full stop." },
+	"mobile.notifications.detail.nothing_to_dismiss": { role: "status", note: "Empty state of the dismiss dialog when the conversation has no dismissable updates. Ends with a full stop." },
+	"mobile.notifications.detail.projects": { role: "heading", note: "Section header listing the projects a notification relates to." },
+	"mobile.notifications.dismiss": { role: "button", note: "Accessibility label of the icon-only button that clears a notification from the inbox. Imperative." },
+	"mobile.notifications.filter_label": { role: "meta", note: "Accessible label of the segmented control that chooses which notifications are listed (unread or all). One word; a verb used as a label." },
+	"mobile.notifications.load_failed": { role: "heading", note: "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body." },
+	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
+	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
@@ -428,4 +617,5 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 };

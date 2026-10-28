@@ -95,10 +95,6 @@
 		},
 		{
 			"file": "src/features/auth/own-tunnel.tsx",
-			"text": "The password `lop mobile` asked for"
-		},
-		{
-			"file": "src/features/auth/own-tunnel.tsx",
 			"text": "The relay binds loopback only, so this is the machine that has to"
 		},
 		{
@@ -440,54 +436,6 @@
 		{
 			"file": "src/features/library/library-screen.tsx",
 			"text": "Try again"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "/Users/you/projects"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Back"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Could not start"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "First message (optional)"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Folder"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Home"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Model"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "New session"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "Path on the computer"
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "The folder must be inside your home directory on that computer."
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "The session takes its name from what you say in it."
-		},
-		{
-			"file": "src/features/new-session/new-session.tsx",
-			"text": "What should it do?"
 		},
 		{
 			"file": "src/features/past/past.tsx",
@@ -1103,19 +1051,11 @@
 		},
 		{
 			"file": "src/features/settings/settings.tsx",
-			"text": "Try the last action again"
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
 			"text": "Use"
 		},
 		{
 			"file": "src/features/settings/settings.tsx",
 			"text": "Version"
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "active"
 		},
 		{
 			"file": "src/ui/components/dialog.tsx",

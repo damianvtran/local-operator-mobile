@@ -11,6 +11,38 @@
 		"role": "heading",
 		"note": "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself."
 	},
+	"mobile.home.options.apply": {
+		"role": "button",
+		"note": "Button that applies the starting options. Sentence case, no final full stop."
+	},
+	"mobile.home.options.fixed": {
+		"role": "help",
+		"note": "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title."
+	},
+	"mobile.home.options.folder": {
+		"role": "meta",
+		"note": "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone."
+	},
+	"mobile.home.options.title": {
+		"role": "heading",
+		"note": "Title of the sheet that edits the starting options of a conversation that has not been sent yet."
+	},
+	"mobile.home.queue.discard": {
+		"role": "button",
+		"note": "Button in the queued-messages sheet: deletes the unsent messages. Destructive; keep it clearly distinct from the move-to-draft button."
+	},
+	"mobile.home.queue.restore": {
+		"role": "button",
+		"note": "Button in the queued-messages sheet: puts the unsent messages back into the composer as a draft. Sentence case, no final full stop."
+	},
+	"mobile.home.queue.sheet_title": {
+		"role": "heading",
+		"note": "Title of the sheet listing messages that have not left the phone yet. Plural noun phrase; matches the \"View queued messages\" button that opens it."
+	},
+	"mobile.home.queue.view": {
+		"role": "button",
+		"note": "Quiet button on the home queue row that opens the queued-messages sheet. Sentence case, no final full stop."
+	},
 	"mobile.home.refused_start_fallback": {
 		"role": "status",
 		"note": "Used only when the relay sent no refusal sentence of its own for a start request. States the missing folder; does not blame the reader."
@@ -18,6 +50,22 @@
 	"mobile.home.starting": {
 		"role": "status",
 		"note": "Replaces the greeting while the first send is in flight. Must stay on ONE line: a second line moves the composer."
+	},
+	"mobile.home.startup_queue.blocked": {
+		"role": "status",
+		"note": "Queue-row state while delivery is blocked on a started conversation. An instruction to retry, not a claim that sending is under way. No placeholder."
+	},
+	"mobile.home.startup_queue.not_started": {
+		"role": "status",
+		"note": "Queue-row state when the conversation never started (refused or drafting). Two words at most; it sits beside the queued-messages button."
+	},
+	"mobile.home.startup_queue.sending": {
+		"role": "status",
+		"note": "Queue-row state while a started conversation drains its queue. Present continuous; keep the ellipsis character. Never repeat the count: the composer chip owns it."
+	},
+	"mobile.home.startup_queue.unconfirmed": {
+		"role": "status",
+		"note": "Queue-row state when the create may or may not have happened and no automatic retry is possible. Must not imply anything is waiting."
 	},
 	"mobile.home.suggestion.last_turn": {
 		"role": "button",
@@ -54,5 +102,9 @@
 	"mobile.home.tip.search": {
 		"role": "help",
 		"note": "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale."
+	},
+	"mobile.home.transcript.waiting": {
+		"role": "status",
+		"note": "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character."
 	}
 }

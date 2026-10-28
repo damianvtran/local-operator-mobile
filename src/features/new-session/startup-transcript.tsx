@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { t } from "@/i18n";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 
@@ -47,7 +48,7 @@ export function StartupTranscript({
 				<Button
 					label={
 						runtime.projection?.pending
-							? "Answer in conversation"
+							? t("mobile.notifications.detail.answer_in_conversation")
 							: "Conversation details"
 					}
 					variant="quiet"
@@ -70,7 +71,7 @@ export function StartupTranscript({
 				testID={SURFACE.startupTranscript}
 				empty={
 					<Text className="px-4 py-3 text-body-sm text-ink-muted">
-						Waiting for the conversation…
+						{t("mobile.home.transcript.waiting")}
 					</Text>
 				}
 			/>

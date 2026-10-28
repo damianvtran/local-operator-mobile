@@ -1,0 +1,58 @@
+{
+	"mobile.notifications.answer": {
+		"role": "button",
+		"note": "Button on an ask in the inbox list that opens it to be answered. One word, imperative."
+	},
+	"mobile.notifications.back": {
+		"role": "button",
+		"note": "Accessibility label of the icon-only back button in the inbox header."
+	},
+	"mobile.notifications.detail.answer_in_conversation": {
+		"role": "button",
+		"note": "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop."
+	},
+	"mobile.notifications.detail.conversation_asks": {
+		"role": "heading",
+		"note": "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader."
+	},
+	"mobile.notifications.detail.earlier_updates": {
+		"role": "heading",
+		"note": "Section header listing earlier revisions of the same notification."
+	},
+	"mobile.notifications.detail.from": {
+		"role": "heading",
+		"note": "Section header naming the conversation a notification came from. One word."
+	},
+	"mobile.notifications.detail.no_asks": {
+		"role": "status",
+		"note": "Empty state under the asks header. Ends with a full stop."
+	},
+	"mobile.notifications.detail.nothing_to_dismiss": {
+		"role": "status",
+		"note": "Empty state of the dismiss dialog when the conversation has no dismissable updates. Ends with a full stop."
+	},
+	"mobile.notifications.detail.projects": {
+		"role": "heading",
+		"note": "Section header listing the projects a notification relates to."
+	},
+	"mobile.notifications.dismiss": {
+		"role": "button",
+		"note": "Accessibility label of the icon-only button that clears a notification from the inbox. Imperative."
+	},
+	"mobile.notifications.filter_label": {
+		"role": "meta",
+		"note": "Accessible label of the segmented control that chooses which notifications are listed (unread or all). One word; a verb used as a label."
+	},
+	"mobile.notifications.load_failed": {
+		"role": "heading",
+		"note": "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body."
+	},
+	"mobile.notifications.priority_high": {
+		"role": "status",
+		"note": "Badge on a notification the sender marked high priority. One word."
+	},
+	"mobile.notifications.title": {
+		"role": "heading",
+		"note": "Title of the notifications inbox screen."
+	}
+}

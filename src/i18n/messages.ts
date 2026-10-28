@@ -19,14 +19,17 @@
  * - `{kind, select, wakes {…} other {…}}`
  * - nesting: a `select` inside a `plural` (and vice versa) renders recursively;
  *   `#` always means the innermost enclosing plural's count, as ICU specifies
- * - `''`-free apostrophes: `'` is always a literal character here
+ * - apostrophes: a lone `'` is a literal character (`doesn't`). The ICU quoting
+ *   forms `''`, `'{`, `'}` (and `'#` inside a plural) are REJECTED at parse time
+ *   rather than rendered differently from what a translator meant by them
  *
  * NOT SUPPORTED — stated so nobody assumes otherwise:
  *
  * - argument formats other than `plural` and `select`: no `number`, `date`,
  *   `time`, `duration`, `list`, `spellout` or `selectordinal`
  * - `offset:` in a plural
- * - ICU apostrophe quoting (`''` and `'{literal}'`); `{` and `}` always delimit
+ * - ICU apostrophe quoting (`''` and `'{literal}'`); `{` and `}` always delimit,
+ *   and a message that tries to quote them fails to parse (see above)
  * - locale number formatting: `#` and plain numeric arguments render through
  *   `String(n)`, so there are no grouping separators, no localized digits and no
  *   decimal-separator choice. A locale that needs those needs this renderer
@@ -257,6 +260,23 @@ function parseUncached(source: string): ParsedMessage {
 		};
 		while (position < source.length) {
 			const character = source.charAt(position);
+			/* Genuine ICU treats `''` as one apostrophe and `'{…}'` as literal braces;
+			 * this parser does neither, so a translator writing real ICU would ship
+			 * text that renders differently from what they wrote (review m1). Failing
+			 * at generation is the loud alternative. A lone `'` stays literal. */
+			if (character === "'") {
+				const following = source.charAt(position + 1);
+				if (
+					following === "'" ||
+					following === "{" ||
+					following === "}" ||
+					(following === "#" && inPlural)
+				) {
+					fail(
+						`ICU apostrophe quoting ('${following}) is not supported; a lone ' is already literal`,
+					);
+				}
+			}
 			if (character === "}") break;
 			if (character === "{") {
 				flush();
@@ -308,7 +328,11 @@ function numericValue(
 	message: ParsedMessage,
 ): number {
 	const value = argumentValue(name, args, message);
-	const numeric = typeof value === "number" ? value : Number(value);
+	/* A plural count must BE a number: `Number("1")` used to let `renderFor` render
+	 * "1 wake" for a string, a door the typed `t()` surface already closes (review
+	 * m3). Negative and fractional counts stay accepted — they are valid ICU input
+	 * and select a category through `Intl.PluralRules` like any other number. */
+	const numeric = typeof value === "number" ? value : Number.NaN;
 	if (!Number.isFinite(numeric)) {
 		throw new RangeError(
 			`Message ${JSON.stringify(message.source)} needs a number for ${JSON.stringify(name)}, received ${JSON.stringify(value)}`,

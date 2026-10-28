@@ -178,6 +178,45 @@ for (const file of namespaces) {
 
 const keys = [...messages.keys()].sort(compare);
 
+/**
+ * LOCALE PARITY. Every other locale directory next to `en/` must define exactly
+ * the English keys, namespace by namespace: a key missing from a locale would
+ * render the English fallback for that reader without anyone having decided it
+ * should, and a key the source does not have is a message nothing can ask for.
+ * The programme's gate is "missing keys in any supported locale fail CI"; with
+ * only `en` shipped today the loop has nothing to compare, and the moment a
+ * translation directory lands this check is already armed. Placeholders are not
+ * compared here — that is the translation wave's audit, not this slice's.
+ */
+for (const locale of readdirSync(join(CATALOGUE_DIR, ".."), {
+	withFileTypes: true,
+})) {
+	if (!locale.isDirectory() || locale.name === "en") continue;
+	const directory = join(CATALOGUE_DIR, "..", locale.name);
+	for (const file of namespaces) {
+		let translated: Record<string, unknown>;
+		try {
+			translated = readObject(join(directory, file), `${locale.name}/${file}`);
+		} catch {
+			fail(
+				`${locale.name}/${file} is missing; every locale needs every namespace`,
+			);
+		}
+		const source = Object.keys(readObject(join(CATALOGUE_DIR, file), file));
+		const missing = source.filter((key) => !(key in translated));
+		const extra = Object.keys(translated).filter(
+			(key) => !source.includes(key),
+		);
+		if (missing.length > 0 || extra.length > 0) {
+			fail(
+				`${locale.name}/${file} disagrees with the English source — missing: ${
+					missing.join(", ") || "none"
+				}; unknown: ${extra.join(", ") || "none"}`,
+			);
+		}
+	}
+}
+
 /** Split by shape: `t()` uses these two unions as its overload domains, so a
  *  parameterless key cannot be called with arguments and a parameterised key
  *  cannot be called without them. */

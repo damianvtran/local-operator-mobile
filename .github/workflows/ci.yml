@@ -164,6 +164,21 @@ jobs:
       - name: Typecheck (tsc --noEmit)
         run: pnpm typecheck
 
+      # THE i18N RATCHET, enforced where the programme's claim is made. Two
+      # separate steps so a red run names which half failed:
+      #   1. the generated catalogue projection and typed key surface match the
+      #      English JSON (a key added or removed without regenerating is red);
+      #   2. no NEW hardcoded user-facing literal has appeared outside the
+      #      catalogues (`scripts/i18n/check-strings.ts`, shrink-only baseline).
+      # Both run before the unit tests: they are cheap and fail with a precise
+      # file:line, and nothing else in this job would notice a new English
+      # sentence — it typechecks, passes its tests and ships untranslatable.
+      - name: i18n catalogue is current (generate --check)
+        run: pnpm i18n:catalogue:check
+
+      - name: i18n strings ratchet (no new hardcoded user-facing text)
+        run: pnpm i18n:strings:check
+
       - name: Unit tests (vitest, Node environment)
         run: pnpm test
 

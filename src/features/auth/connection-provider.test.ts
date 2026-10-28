@@ -16,6 +16,7 @@ import {
 import { memorySecureStore, SecureStorage } from "@/connection/storage";
 import {
 	ConnectionProvider,
+	configStore,
 	connectionStore,
 	PICK_UNREACHABLE_DETAIL,
 	useConnection,
@@ -26,6 +27,7 @@ import {
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { activeLocale, preferredLocale } from "@/i18n";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 import {
 	performSwitcherTap,
@@ -2200,5 +2202,45 @@ describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
 		expect(
 			wire.filter((entry) => entry.path === "/api/sessions//history"),
 		).toEqual([]);
+	});
+});
+
+/**
+ * The one line that connects the backend's language to `t()`.
+ *
+ * `setLocaleSource(() => configStore.getState().language)` at the top of
+ * `connection-provider.tsx` is the sole link between the relay's resolved
+ * language and the i18n runtime. `runtime.test.ts` exercises the runtime with
+ * stubs and `config-store` has its own tests, so without THIS test deleting the
+ * registration left every file green while the app silently stayed on the
+ * "no frame yet" default. It drives the real provider module's registration, not
+ * a re-statement of it: the only thing applied is a config frame to the store the
+ * provider exports.
+ */
+describe("the i18n runtime reads the provider's config store", () => {
+	afterEach(() => {
+		configStore.getState().reset();
+	});
+
+	it("follows the relay's resolved language frame", () => {
+		expect(preferredLocale()).toBeNull();
+		configStore
+			.getState()
+			.applyFrame({ changed_keys: ["language"], language: "pt_BR" });
+		/* Normalized once by the runtime (`pt_BR` → `pt-BR`); the value arriving at
+		 * all is what proves the registration. */
+		expect(preferredLocale()).toBe("pt-BR");
+		/* Only `en` ships today, so an unshipped preference still renders English
+		 * source rather than the key. */
+		expect(activeLocale()).toBe("en");
+	});
+
+	it("returns to no preference when the store is reset", () => {
+		configStore
+			.getState()
+			.applyFrame({ changed_keys: ["language"], language: "en-GB" });
+		expect(preferredLocale()).toBe("en-GB");
+		configStore.getState().reset();
+		expect(preferredLocale()).toBeNull();
 	});
 });

@@ -36,5 +36,10 @@ export type {
 	MessageArguments,
 	ParsedMessage,
 } from "./messages";
+/* `formatMessage` is likewise test/generator-only: it renders a parsed message
+ * with no key lookup and no English fallback. */
 export { formatMessage, parseMessage, pluralCategory } from "./messages";
+/* `renderFor` is the UNTYPED door (any key string, any argument bag): it exists
+ * for the generator and for tests that drive a locale directly. Screens call
+ * `t()`, whose key and argument types come from the catalogues. */
 export { renderFor, t } from "./runtime";

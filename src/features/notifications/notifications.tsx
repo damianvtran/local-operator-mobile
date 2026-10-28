@@ -63,6 +63,7 @@ import {
 } from "@/features/notifications/use-notifications";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { t } from "@/i18n";
 import {
 	CONTROL,
 	EMPTY,
@@ -365,7 +366,7 @@ export default function Notifications() {
 		if (inbox.refused !== null) {
 			return (
 				<View className="gap-3 px-4 pt-4" testID={SURFACE.inboxError}>
-					<Alert severity="error" title="Couldn't load notifications">
+					<Alert severity="error" title={t("mobile.notifications.load_failed")}>
 						{inbox.refused}
 					</Alert>
 					<Button
@@ -427,13 +428,13 @@ export default function Notifications() {
 
 	return (
 		<Screen
-			title="Notifications"
+			title={t("mobile.notifications.title")}
 			titleLines={1}
 			testID={SCREEN.notifications}
 			scroll={false}
 			headerLeading={
 				<IconButton
-					accessibilityLabel="Back"
+					accessibilityLabel={t("mobile.notifications.back")}
 					onPress={() => router.back()}
 					icon={({ color, size }) => <ChevronLeft color={color} size={size} />}
 					testID={CONTROL.inboxBack}
@@ -712,7 +713,7 @@ function SegmentedFilter({
 }) {
 	return (
 		<Segmented
-			label="Show"
+			label={t("mobile.notifications.filter_label")}
 			options={[
 				{
 					value: "unread",
@@ -856,7 +857,7 @@ function InboxRow({
 						) : null}
 						{item.priority === "high" ? (
 							<Badge
-								label="High"
+								label={t("mobile.notifications.priority_high")}
 								tone="warning"
 								testID={notificationPriorityId(item.id)}
 							/>
@@ -910,7 +911,7 @@ function InboxRow({
 						) : null}
 						{isAsk ? (
 							<Button
-								label="Answer"
+								label={t("mobile.notifications.answer")}
 								onPress={onAnswer}
 								variant="outline"
 								size="sm"
@@ -918,7 +919,7 @@ function InboxRow({
 							/>
 						) : canDismiss(item) && !selecting ? (
 							<IconButton
-								accessibilityLabel="Dismiss"
+								accessibilityLabel={t("mobile.notifications.dismiss")}
 								onPress={onDismiss}
 								icon={({ color, size }) => <X color={color} size={size} />}
 								size={14}
