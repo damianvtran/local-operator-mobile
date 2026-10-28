@@ -4,6 +4,7 @@ import {
 	activeHealth,
 	computerEntry,
 	ENTRY_DOT_TOKEN,
+	ENTRY_HEALTH_GLYPH,
 	entryHealthWord,
 	headerChipShowsChevron,
 	NO_COMPUTER_LABEL,
@@ -19,6 +20,8 @@ import { headerBellShowsCount } from "@/features/home/header-fit";
  */
 
 /* Placeholder host only (AGENTS.md: never a real tunnel hostname). */
+const HEALTH_WORDS = /Online|Not connected|Asleep/;
+const COLOUR_ONLY_DOTS = /[●•]/;
 const HOST = "0123456789abcdef0123456789abcdef-lop.example.com";
 const mac = (eligible: boolean | null = true): DiscoveredComputer => ({
 	tunnelId: "t1",
@@ -140,4 +143,97 @@ describe("the header chip at large text", () => {
 		for (const scale of [1, 1.35, 1.99, 2, 3])
 			expect(headerChipShowsChevron(scale)).toBe(headerBellShowsCount(scale));
 	});
+});
+
+describe("registry name source", () => {
+	const base = {
+		computers: [],
+		tunnelId: "t1",
+		route: radientRoute,
+		phase: "live" as const,
+		surface: null,
+	};
+	const saved = {
+		id: "saved-t1",
+		transport: "radient" as const,
+		tunnelId: "t1",
+		hostname: HOST,
+		name: "QA Laptop",
+		account: "account-a",
+		addedAt: 1,
+		lastUsedAt: 1,
+		hidden: false,
+		identity: null,
+	};
+	it("uses the sheet's saved name with empty discovery, not Choose a computer", () => {
+		const entry = computerEntry({
+			...base,
+			saved: [saved],
+			radientAccount: "account-a",
+		});
+		expect(entry).toMatchObject({ kind: "computer", name: "QA Laptop" });
+		expect(entry.accessibilityLabel).not.toContain(NO_COMPUTER_LABEL);
+	});
+	it("does not expose another account's saved label (negative control)", () => {
+		expect(
+			computerEntry({ ...base, saved: [saved], radientAccount: "account-b" })
+				.accessibilityLabel,
+		).not.toContain("QA Laptop");
+	});
+	it("names an own-address route Home relay, not the host, even before first live", () => {
+		const route = {
+			mode: "custom" as const,
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+		};
+		const entry = {
+			id: "home",
+			transport: "custom" as const,
+			baseUrl: route.baseUrl,
+			allowInsecure: false,
+			name: "Home relay",
+			addedAt: 1,
+			lastUsedAt: 1,
+			hidden: false,
+			identity: null,
+		};
+		for (const phase of ["live", "minting", "refused"] as const)
+			expect(
+				computerEntry({
+					...base,
+					route,
+					phase,
+					tunnelId: null,
+					saved: [entry],
+				}),
+			).toMatchObject({ kind: "computer", name: "Home relay" });
+	});
+	it("never gives no computer a health word or glyph", () => {
+		const entry = computerEntry({ ...base, route: null, tunnelId: null });
+		expect(entry.kind).toBe("none");
+		expect(entry).not.toHaveProperty("health");
+		expect(entry.accessibilityLabel).not.toMatch(HEALTH_WORDS);
+	});
+	it("distinguishes every status by shape, not just its colour", () => {
+		const shapes = Object.values(ENTRY_HEALTH_GLYPH);
+		expect(new Set(shapes).size).toBe(shapes.length);
+		expect(
+			shapes.every(
+				(shape) => shape.length > 0 && !COLOUR_ONLY_DOTS.test(shape),
+			),
+		).toBe(true);
+	});
+});
+
+it("does not choose the first unsaved discovery row when both saved ids are null", () => {
+	expect(
+		computerEntry({
+			computers: [mac()],
+			route: radientRoute,
+			tunnelId: null,
+			computerId: null,
+			phase: "discovering",
+			surface: null,
+		}),
+	).toMatchObject({ kind: "none" });
 });

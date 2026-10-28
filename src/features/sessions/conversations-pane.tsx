@@ -9,9 +9,12 @@ import {
 	Text,
 	View,
 } from "react-native";
-
 import type { SessionSummary } from "@/contracts";
-import { DrawerComputerRow } from "@/features/auth/computer-entry-points";
+import {
+	DrawerComputerRow,
+	useComputerEntry,
+} from "@/features/auth/computer-entry-points";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	useConnection,
 	useConnectionState,
@@ -48,7 +51,6 @@ import {
 } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
-import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
 import {
 	CONTROL,
@@ -246,8 +248,6 @@ export const ConversationsPane = ({
 	 * numeral — an older relay's omission is unknown, never a zero. */
 	const inboxBlock = useListState((state) => state.notifications);
 	const inboxCount = inboxBadgeCount(inboxBlock);
-	const computers = useConnectionState((state) => state.computers);
-	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 
 	/* THE INBOX ROW'S PLACEMENT (D23), and the rule is about the UNMEASURED state:
@@ -367,7 +367,12 @@ export const ConversationsPane = ({
 	 *  address ("127.0.0.1:49" over "892") at 320 pt and 200 % text. react-native-web
 	 *  ignores `ellipsizeMode`, so the painted string is pre-fitted rather than
 	 *  wrapped; the button's accessible label still carries it unbroken. */
-	const switcherLabel = listLabel(computers, tunnelId, route);
+	const computerEntry = useComputerEntry();
+	const { open: openComputerSwitcher } = useComputerSwitcher();
+	const switcherLabel =
+		computerEntry.kind === "computer"
+			? computerEntry.name
+			: computerEntry.label;
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -618,10 +623,13 @@ export const ConversationsPane = ({
 				<NavigationMark size={32} />
 				<Pressable
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${switcherLabel} — choose a computer`}
+					accessibilityLabel={computerEntry.accessibilityLabel}
 					onPress={() => {
 						onNavigate?.();
-						router.push("/tunnels");
+						// Both name controls choose a computer; management remains in Settings.
+						openComputerSwitcher({
+							returnFocusTestID: CONTROL.computersButton,
+						});
 					}}
 					testID={CONTROL.sidebarSwitcher}
 					className="min-w-0 flex-1 justify-center px-2"
@@ -895,7 +903,10 @@ export const ConversationsPane = ({
 							}}
 							onConnect={() => {
 								onNavigate?.();
-								router.push("/tunnels");
+								// Both name controls choose a computer; management remains in Settings.
+								openComputerSwitcher({
+									returnFocusTestID: CONTROL.computersButton,
+								});
 							}}
 						/>
 					</View>

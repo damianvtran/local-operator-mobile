@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { Text } from "react-native";
 
 /**
@@ -27,6 +27,8 @@ export type HeadingProps = {
 	children: ReactNode;
 	numberOfLines?: number;
 	testID?: string;
+	ref?: Ref<Text>;
+	tabIndex?: 0 | -1;
 };
 
 export const Heading = ({
@@ -35,8 +37,12 @@ export const Heading = ({
 	children,
 	numberOfLines,
 	testID,
+	ref,
+	tabIndex,
 }: HeadingProps) => (
 	<Text
+		ref={ref}
+		{...{ tabIndex }}
 		role="heading"
 		aria-level={level}
 		className={className}

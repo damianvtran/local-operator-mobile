@@ -1,8 +1,19 @@
 import type { DiscoveredComputer, RouteProfile } from "@/connection";
+import { routeLabel } from "@/connection";
+import type { SavedComputer } from "@/connection/saved-computers";
 import type { SwitcherHealth } from "@/features/auth/computer-switcher-view";
-import { healthLabel } from "@/features/auth/computer-switcher-view";
+import {
+	activeHealth,
+	healthLabel,
+	switcherSections,
+} from "@/features/auth/computer-switcher-view";
 import { COMPACT_BELL_SCALE } from "@/features/home/header-fit";
-import { listLabel } from "@/lib/route-label";
+
+export {
+	activeHealth,
+	REFUSED_WORD,
+} from "@/features/auth/computer-switcher-view";
+
 import type { ErrorSurface } from "@/relay";
 import type { ConnectionPhase } from "@/state/connection-store";
 
@@ -40,25 +51,13 @@ export const SWITCH_COMPUTER_ACTION = "Switch computer";
 /** The active computer's health, beyond the switcher's own probe words. A refused
  *  route the reader must fix (a password, an address, a removed tunnel) is not
  *  "Asleep" — the computer may be fine — so it gets its own honest word. */
-export type EntryHealth = SwitcherHealth | { kind: "refused" };
-
-export const REFUSED_WORD = "Can't connect";
-
-/** The phases in which the route in use has answered this phone. The switcher's
- *  "Online" means its own `/healthz` probe answered; a live route is the same
- *  fact, observed by the requests the app already made. */
-const ANSWERED: readonly ConnectionPhase[] = ["live", "re-minting"];
-
-/** Refusals that mean "the computer did not answer", which the switcher calls
- *  Asleep; every other refusal is about the route, not the machine. */
-const SILENT_SURFACES: readonly ErrorSurface[] = [
-	"computer-offline",
-	"relay-stopped",
-	"retry",
-];
+export type EntryHealth = SwitcherHealth;
 
 export type ComputerEntryInput = {
 	computers: readonly DiscoveredComputer[];
+	saved?: readonly SavedComputer[];
+	computerId?: string | null;
+	radientAccount?: string | null;
 	tunnelId: string | null;
 	route: RouteProfile | null;
 	phase: ConnectionPhase;
@@ -74,32 +73,10 @@ export type ComputerEntry =
 			accessibilityLabel: string;
 	  };
 
-/** The active computer's health, from the route's state. `null` input never
- *  reaches here: no route, or a Radient account with nothing picked, is "none". */
-export function activeHealth(input: {
-	phase: ConnectionPhase;
-	surface: ErrorSurface | null;
-	billingEligible: boolean | null;
-	radient: boolean;
-}): EntryHealth {
-	if (input.radient && input.surface === "sign-in") return { kind: "sign-in" };
-	if (input.radient && input.billingEligible === false)
-		return { kind: "paused" };
-	if (ANSWERED.includes(input.phase)) return { kind: "online" };
-	/* Degraded: live, but the relay stopped answering — the switcher's probe would
-	 *  call that silence Asleep, so the entry points do too. */
-	if (input.phase === "degraded") return { kind: "asleep", lastSeenAt: null };
-	if (input.phase === "refused")
-		return input.surface !== null && SILENT_SURFACES.includes(input.surface)
-			? { kind: "asleep", lastSeenAt: null }
-			: { kind: "refused" };
-	return { kind: "checking" };
-}
-
 /** The health word an entry point shows and speaks. `now` only matters for an
  *  "Asleep · 2 h ago", which the entry points never carry (no last-seen time). */
 export function entryHealthWord(health: EntryHealth, now = 0): string {
-	return health.kind === "refused" ? REFUSED_WORD : healthLabel(health, now);
+	return healthLabel(health, now);
 }
 
 /** The dot's token role per health, the sheet's own mapping (`DOT_TOKEN` in
@@ -117,30 +94,59 @@ export const ENTRY_DOT_TOKEN: Record<
 	refused: "warning",
 };
 
-/** Decides what both entry points say. The name comes from `listLabel`, the one
- *  ladder every surface that names the computer reads, so the chip, the row and
- *  the avatar cannot disagree. */
+/** Both entry points read the sheet's account-scoped row names, not discovery
+ * alone: discovery may be empty after switching from an own-address route. */
 export function computerEntry(input: ComputerEntryInput): ComputerEntry {
+	const sections = switcherSections({
+		saved: input.saved ?? [],
+		discovered: input.computers,
+		probes: {},
+		route: { phase: input.phase, tunnelId: input.tunnelId },
+		routeProfile: input.route,
+		activeComputerId: input.computerId ?? null,
+		pendingKey: null,
+		radientSignedOut: input.surface === "sign-in",
+		radientAccount: input.radientAccount,
+	});
+	const rows = [...sections.onPhone, ...sections.notConnected];
+	const matchingCustom =
+		input.route?.mode === "custom"
+			? rows.filter(
+					(row) =>
+						row.transport.kind === "custom" &&
+						row.transport.baseUrl ===
+							(input.route as Extract<RouteProfile, { mode: "custom" }>)
+								.baseUrl,
+				)
+			: [];
 	const active =
-		input.computers.find((computer) => computer.tunnelId === input.tunnelId) ??
-		null;
-	/* A computer is "in use" when the Radient route names one the account lists,
-	 *  or when a custom route exists at all (its address IS the computer). */
+		rows.find(
+			(row) =>
+				row.active ||
+				(input.computerId != null && row.savedId === input.computerId) ||
+				(input.route?.mode === "radient" &&
+					row.transport.kind === "radient" &&
+					row.transport.tunnelId === input.tunnelId),
+		) ?? (matchingCustom.length === 1 ? matchingCustom[0] : undefined);
 	const inUse =
-		active !== null ||
-		input.route?.mode === "custom" ||
-		(input.route?.mode === "radient" && input.tunnelId !== null);
+		input.route !== null &&
+		(active !== undefined ||
+			input.route.mode === "custom" ||
+			input.tunnelId !== null);
 	if (!inUse)
 		return {
 			kind: "none",
 			label: NO_COMPUTER_LABEL,
 			accessibilityLabel: `No computer chosen. ${NO_COMPUTER_LABEL}`,
 		};
-	const name = listLabel(input.computers, input.tunnelId, input.route);
+	// Reuse the sheet's account-scoped name selector, including saved labels when
+	// discovery is empty. A not-yet-saved route still has an honest address.
+	const name =
+		active?.name ?? (input.route ? routeLabel(input.route) : NO_COMPUTER_LABEL);
 	const health = activeHealth({
 		phase: input.phase,
 		surface: input.surface,
-		billingEligible: active?.billing.eligible ?? null,
+		billingEligible: active?.discovered?.billing.eligible ?? null,
 		radient: input.route?.mode === "radient",
 	});
 	return {
@@ -168,3 +174,14 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
  */
 export const headerChipShowsChevron = (scale: number): boolean =>
 	scale < COMPACT_BELL_SCALE;
+
+/** Shape carries the health independently of hue in narrow navigation slots.
+ * U-03 intentionally does not accept an aria-label as a visible carrier. */
+export const ENTRY_HEALTH_GLYPH: Record<EntryHealth["kind"], string> = {
+	online: "✓",
+	asleep: "−",
+	refused: "!",
+	"sign-in": "↪",
+	paused: "Ⅱ",
+	checking: "…",
+};

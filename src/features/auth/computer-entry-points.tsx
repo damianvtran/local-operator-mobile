@@ -1,20 +1,28 @@
 import { ChevronDown, ChevronsUpDown } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import type { RouteProfile } from "@/connection";
+import type { SavedComputer } from "@/connection/saved-computers";
 import {
 	type ComputerEntry,
 	computerEntry,
 	ENTRY_DOT_TOKEN,
+	ENTRY_HEALTH_GLYPH,
 	entryHealthWord,
 	headerChipShowsChevron,
 } from "@/features/auth/computer-entry";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import { useConnectionState } from "@/features/auth/connection-provider";
-import { ROLE } from "@/ui/a11y";
+import {
+	readSavedComputers,
+	readStoredRadientAccount,
+} from "@/features/auth/tunnel-storage";
+import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { middleFit } from "@/ui/components/list-row-meta";
+import { middleFit, sansTextWidthDp } from "@/ui/components/list-row-meta";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * The switcher's two navigation entry points — the Home header chip and the
@@ -24,27 +32,69 @@ import { useTextScale } from "@/ui/text-scale-provider";
  */
 
 /** The entry state from the store, read the way every other surface reads it. */
-function useComputerEntry(): ComputerEntry {
-	const computers = useConnectionState((state) => state.computers);
+export function useComputerEntry(): ComputerEntry {
+	const computers = useConnectionState((state) => state.discoveredComputers);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
 	const surface = useConnectionState((state) => state.surface);
-	return computerEntry({ computers, tunnelId, route, phase, surface });
+	const computerId = useConnectionState((state) => state.computerId);
+	const hidden = useConnectionState((state) => state.hiddenTunnelIds);
+	const [registry, setRegistry] = useState<{
+		saved: SavedComputer[];
+		account: string | null;
+		route: RouteProfile | null;
+	}>({ saved: [], account: null, route: null });
+	// Scope snapshots to the route before rendering, and fence late reads. A health
+	// transition on the SAME route retains its label while refreshing metadata;
+	// clearing it on every re-mint would flash the raw address over the saved name.
+	// The sheet uses the same account-scoped switcherSections selector.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: route, phase, id and hidden are registry invalidation triggers.
+	useEffect(() => {
+		let live = true;
+		void Promise.all([readSavedComputers(), readStoredRadientAccount()]).then(
+			([saved, account]) => {
+				if (live) setRegistry({ saved, account, route });
+			},
+		);
+		return () => {
+			live = false;
+		};
+	}, [route, phase, computerId, hidden]);
+	return computerEntry({
+		computers,
+		tunnelId,
+		route,
+		phase,
+		surface,
+		saved: registry.route === route ? registry.saved : [],
+		computerId,
+		radientAccount: registry.route === route ? registry.account : null,
+	});
 }
 
-/** Decoration: the health WORD is always in the control's accessible name, and on
- *  the drawer row it is painted too — never colour alone (U-03). */
-const HealthDot = ({ entry }: { entry: ComputerEntry }) => {
+/** Decoration for assistive technology: the health WORD is in the control's
+ * accessible name. Sighted readers also get a distinct shape (U-03). */
+const HealthGlyph = ({ entry }: { entry: ComputerEntry }) => {
 	const colour = useTokenColor(
 		entry.kind === "computer" ? ENTRY_DOT_TOKEN[entry.health.kind] : "ink-dim",
 	);
+	// U-03 deliberately rejects an accessible name as a visible carrier. Distinct
+	// glyphs preserve the compact header while keeping status legible without hue.
 	return (
-		<View
-			className="h-2 w-2 shrink-0 rounded-full"
-			style={{ backgroundColor: colour }}
+		<Text
 			aria-hidden
-		/>
+			style={{
+				color: colour,
+				width: 12,
+				fontSize: 12,
+				lineHeight: 16,
+				textAlign: "center",
+				flexShrink: 0,
+			}}
+		>
+			{entry.kind === "computer" ? ENTRY_HEALTH_GLYPH[entry.health.kind] : ""}
+		</Text>
 	);
 };
 
@@ -71,22 +121,22 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={entry.accessibilityLabel}
-			onPress={open}
+			onPress={() => open()}
 			testID={testID}
-			className="min-w-0 flex-1 flex-row items-center gap-1.5"
+			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-panel-edge"
 			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		>
-			{entry.kind === "computer" ? <HealthDot entry={entry} /> : null}
-			<Text
-				className="text-mono-sm text-ink-muted"
-				numberOfLines={1}
-				onLayout={(event) =>
-					setNameWidth(Math.floor(event.nativeEvent.layout.width))
-				}
-				style={{ flexShrink: 1 }}
+			{entry.kind === "computer" ? <HealthGlyph entry={entry} /> : null}
+			{/* The slot must stretch independently of its painted string: measuring
+			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}
+			<View
+				className="min-w-0 flex-1"
+				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
-				{nameWidth > 0 ? middleFit(label, nameWidth, effectiveScale) : label}
-			</Text>
+				<Text className="text-mono-sm text-ink-muted" numberOfLines={1}>
+					{nameWidth > 0 ? middleFit(label, nameWidth, effectiveScale) : label}
+				</Text>
+			</View>
 			{headerChipShowsChevron(effectiveScale) ? (
 				<ChevronDown size={14} strokeWidth={2.5} color={ink} aria-hidden />
 			) : null}
@@ -105,7 +155,9 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
  *
  * The health WORD is painted here, not only spoken: the drawer has the width the
  * header does not. The name pre-fits to one line like the header's, and the word
- * never shrinks, so a long name gives way first.
+ * never shrinks, so a long name gives way first. The name uses Figtree Medium:
+ * that is the shipped face the shared sans advance table was measured from,
+ * scaled from its meta size to body-sm rather than charged the mono advance.
  */
 export function DrawerComputerRow({
 	testID,
@@ -128,29 +180,36 @@ export function DrawerComputerRow({
 			accessibilityLabel={entry.accessibilityLabel}
 			onPress={() => {
 				onNavigate?.();
-				open();
+				open({ returnFocusTestID: CONTROL.computersButton });
 			}}
 			testID={testID}
-			className="w-full flex-row items-center gap-2 rounded-md border border-hairline bg-surface px-3"
-			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+			className="w-full flex-row items-center gap-2 rounded-md border border-panel-edge bg-surface px-3"
+			style={{ minHeight: TOUCH_FLOOR }}
 		>
-			{entry.kind === "computer" ? <HealthDot entry={entry} /> : null}
-			<Text
-				className="text-body-sm text-ink"
-				numberOfLines={1}
-				onLayout={(event) =>
-					setNameWidth(Math.floor(event.nativeEvent.layout.width))
-				}
-				style={{ flexShrink: 1 }}
+			{entry.kind === "computer" ? <HealthGlyph entry={entry} /> : null}
+			{/* The slot must stretch independently of its painted string: measuring
+			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}
+			<View
+				className="min-w-0 flex-1"
+				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
-				{nameWidth > 0 ? middleFit(label, nameWidth, effectiveScale) : label}
-			</Text>
+				<Text className="text-body-sm font-medium text-ink" numberOfLines={1}>
+					{nameWidth > 0
+						? middleFit(label, nameWidth, effectiveScale, (text, scale) =>
+								sansTextWidthDp(
+									text,
+									(scale * TYPE_STEPS["body-sm"].size) / TYPE_STEPS.meta.size,
+								),
+							)
+						: label}
+				</Text>
+			</View>
 			{entry.kind === "computer" ? (
 				<Text className="shrink-0 text-meta text-ink-muted">
 					{`· ${entryHealthWord(entry.health)}`}
 				</Text>
 			) : null}
-			<View className="flex-1" />
+
 			<ChevronsUpDown size={16} strokeWidth={2} color={ink} aria-hidden />
 		</Pressable>
 	);

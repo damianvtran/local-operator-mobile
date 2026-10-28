@@ -20,6 +20,7 @@ const host = vi.hoisted(() => ({
 	labels: new Map<string, string>(),
 	presses: new Map<string, () => void>(),
 	sheetVisible: [] as unknown[],
+	saved: [] as import("@/connection/saved-computers").SavedComputer[],
 	scale: 1,
 	chevrons: 0,
 	navigated: 0,
@@ -37,18 +38,21 @@ vi.mock("react-native", async () => {
 				: "";
 	return {
 		Platform: { OS: "web" },
-		View: (props: Props) => (props.children ?? null) as ReactNode,
-		Text: (props: Props) => {
-			/* Fire the measured width once, as `onLayout` does after first paint. */
+		View: (props: Props) => {
 			if (host.layoutWidth > 0 && typeof props.onLayout === "function") {
 				const width = host.layoutWidth;
 				host.layoutWidth = 0;
 				queueMicrotask(() =>
-					(props.onLayout as (e: unknown) => void)({
+					(props.onLayout as (event: unknown) => void)({
 						nativeEvent: { layout: { width } },
 					}),
 				);
 			}
+			return (props.children ?? null) as ReactNode;
+		},
+		Text: (props: Props) => {
+			// Negative control: a Text measurement would recreate the shrink loop.
+			expect(props.onLayout).toBeUndefined();
 			host.texts.push(flatten(props.children));
 			return null;
 		},
@@ -99,7 +103,7 @@ vi.mock("@/features/auth/connector-wait", () => ({
 	probeHealthAt: () => new Promise(() => {}),
 }));
 vi.mock("@/features/auth/tunnel-storage", () => ({
-	readSavedComputers: async () => [],
+	readSavedComputers: async () => host.saved,
 	readStoredRadientAccount: async () => null,
 	unhideRadientComputer: async () => {},
 	unhideSavedComputer: async () => {},
@@ -182,6 +186,7 @@ beforeEach(() => {
 	host.presses.clear();
 	host.sheetVisible.length = 0;
 	host.scale = 1;
+	host.saved = [];
 	host.chevrons = 0;
 	host.navigated = 0;
 	host.layoutWidth = 0;
@@ -327,7 +332,7 @@ describe("the chip in the Home header", () => {
 			CHIP_SOURCE.indexOf("export function DrawerComputerRow"),
 		);
 		expect(header).toContain(
-			'className="min-w-0 flex-1 flex-row items-center gap-1.5"',
+			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-panel-edge"',
 		);
 		expect(header).toContain(
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",
@@ -335,4 +340,73 @@ describe("the chip in the Home header", () => {
 		expect(header).toContain("numberOfLines={1}");
 		expect(header).toContain("middleFit(label, nameWidth, effectiveScale)");
 	});
+});
+
+describe("slot fitting regression", () => {
+	for (const Component of [HeaderComputerChip, DrawerComputerRow]) {
+		for (const [name, width, scale] of [
+			["Mac mini", 160, 1],
+			["Choose a computer", 194, 1],
+			["Connect a computer", 194, 1],
+			["127.0.0.1:65423", 180, 1],
+			["QA Studio Mac", 200, 2],
+		] as const) {
+			it(`${Component.name} keeps ${name} whole at ${scale}x and is a layout fixed point`, async () => {
+				host.scale = scale;
+				await mount(createElement(Component, { testID: CHIP }));
+				await live(name);
+				for (let i = 0; i < 4; i++) {
+					host.texts = [];
+					host.layoutWidth = width;
+					await mount(createElement(Component, { testID: CHIP }));
+					await act(async () => {
+						await new Promise<void>((resolve) => setImmediate(resolve));
+					});
+					expect(host.texts).toContain(name);
+					expect(
+						host.texts.filter((text) => text.includes("…") && text !== "…"),
+					).toEqual([]);
+				}
+			});
+		}
+	}
+});
+
+it("updates both mounted entry points to the saved Radient label after a custom-to-Radient switch with no discovery", async () => {
+	host.saved = [
+		{
+			id: "saved-t1",
+			transport: "radient",
+			tunnelId: "t1",
+			hostname: HOST,
+			name: "QA Laptop",
+			account: null,
+			addedAt: 1,
+			lastUsedAt: 1,
+			hidden: false,
+			identity: null,
+		},
+	];
+	await mount([
+		createElement(HeaderComputerChip, { key: "chip", testID: CHIP }),
+		createElement(DrawerComputerRow, { key: "row", testID: ROW }),
+	]);
+	await act(async () => {
+		const state = store.api?.getState();
+		if (!state) throw new Error("missing store");
+		state.startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example.com",
+			allowInsecure: false,
+		});
+		state.startRoute({ mode: "radient", tunnelId: "t1", hostname: HOST });
+		state.selectComputer(listed("Discovery is not populated"));
+		state.markLive();
+		state.noteComputer("saved-t1");
+	});
+	expect(store.api?.getState().discoveredComputers).toEqual([]);
+	expect(host.labels.get(CHIP)).toBe(
+		"Computer: QA Laptop, Online. Switch computer",
+	);
+	expect(host.labels.get(ROW)).toBe(host.labels.get(CHIP));
 });

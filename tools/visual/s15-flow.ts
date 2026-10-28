@@ -28,6 +28,12 @@ export const FOOTER_DESTINATIONS = [
 		back: CONTROL.schedulesBack,
 	},
 ] as const;
+// The workspace row opens a modal rather than a route, but is still the tail
+// target most exposed to clipping. Keep it in reachability and first-tap coverage.
+export const FOOTER_TAIL_CONTROLS = [
+	...FOOTER_DESTINATIONS.map((destination) => destination.control),
+	CONTROL.sidebarComputers,
+];
 const selector = (id: string) => `[data-testid=${JSON.stringify(id)}]`;
 
 export interface ScrollReading {
@@ -348,18 +354,18 @@ export async function runS15FlowProof({
 				const listBounds = (await page.evaluate(
 					`(() => { const r = document.querySelector('[data-testid="conversations-list"]').getBoundingClientRect(); return {top:r.top,bottom:r.bottom}; })()`,
 				)) as { top: number; bottom: number };
-				for (const control of FOOTER_DESTINATIONS) {
-					const rect = await rectFor(selector(control.control));
+				for (const control of FOOTER_TAIL_CONTROLS) {
+					const rect = await rectFor(selector(control));
 					assert(
 						rect.hit && rect.height >= 44,
-						`${control.control} tail target unavailable`,
+						`${control} tail target unavailable`,
 					);
 					assert(
 						rect.top >= listBounds.top - 1 &&
 							rect.bottom <= listBounds.bottom + 1,
-						`${control.control} not fully inside list clip`,
+						`${control} not fully inside list clip`,
 					);
-					journal.push({ tailControl: control.control, rect, listBounds });
+					journal.push({ tailControl: control, rect, listBounds });
 				}
 				await record(`tail-before-${destination.control}`);
 				await press(selector(destination.control));
@@ -380,6 +386,19 @@ export async function runS15FlowProof({
 				await press(selector(CONTROL.sessionBack));
 				await returnPane();
 			}
+			await wheel(true);
+			await press(selector(CONTROL.sidebarComputers));
+			await wait(
+				`Boolean(${present(SURFACE.computerSwitcherSheet)}) && !${present(SURFACE.sidebar)}`,
+				"workspace row did not open sheet on first tap",
+			);
+			await record("workspace-first-tap-sheet");
+			await dismissWithEscape();
+			await wait(
+				`!${present(SURFACE.computerSwitcherSheet)}`,
+				"workspace sheet did not close",
+			);
+			await returnPane();
 			const row = '[data-testid^="session-row-"]';
 			await press(row);
 			await wait(

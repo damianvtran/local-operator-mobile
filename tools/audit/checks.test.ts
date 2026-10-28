@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ENTRY_HEALTH_GLYPH } from "../../src/features/auth/computer-entry";
 
 import {
 	type AuditNode,
@@ -1096,5 +1097,25 @@ describe("U-06 — an overrunning run inside a single-line ellipsis clip", () =>
 		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "EXCEPTION"]);
 		expect(rows[0]?.detail).toContain("single-line ellipsis");
 		expect(rows[1]?.detail).toContain("overflow-x: auto|scroll");
+	});
+});
+
+describe("U-03 navigation status shape", () => {
+	const audit = (ownText: string) =>
+		runChecks(
+			state({ nodes: [node({ semanticColour: "rgb(25,118,74)", ownText })] }),
+			{
+				floors,
+				semantic: new Set(["25,118,74"]),
+				checks: ["U-03"],
+				scaleIsLive: true,
+			},
+		);
+	it("accepts the actual distinct entry glyphs as non-colour carriers", () => {
+		for (const glyph of Object.values(ENTRY_HEALTH_GLYPH))
+			expect(audit(glyph).some((row) => row.verdict === "FAIL")).toBe(false);
+	});
+	it("still rejects the original bare coloured dot (negative control)", () => {
+		expect(audit("").some((row) => row.verdict === "FAIL")).toBe(true);
 	});
 });

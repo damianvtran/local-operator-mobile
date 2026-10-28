@@ -1,9 +1,10 @@
-import type { DiscoveredComputer } from "@/connection";
+import type { DiscoveredComputer, RouteProfile } from "@/connection";
 import type {
 	SavedComputer,
 	SavedCustomComputer,
 } from "@/connection/saved-computers";
 import { computersView } from "@/features/auth/computers-view";
+import type { ErrorSurface } from "@/relay";
 import type { ConnectionPhase } from "@/state/connection-store";
 
 /**
@@ -49,7 +50,8 @@ export type SwitcherHealth =
 	/** Radient reports billing for this computer as not eligible. Only from an
 	 *  explicit `false`: an absent field is unknown, never "paused". */
 	| { kind: "paused" }
-	| { kind: "checking" };
+	| { kind: "checking" }
+	| { kind: "refused"; surface?: ErrorSurface | null };
 
 export type SwitcherTransport =
 	| { kind: "radient"; tunnelId: string; hostname: string }
@@ -102,6 +104,10 @@ export type SwitcherInput = {
 	/** When this phone last saw each origin answer during this app run. */
 	answeredAt?: Readonly<Record<string, number>>;
 	route: { phase: ConnectionPhase; tunnelId: string | null };
+	/** The configured route also names an own-address attempt before it has ever
+	 * gone live. A unique registry match is a fallback, never an identity merge. */
+	routeProfile?: RouteProfile | null;
+	surface?: ErrorSurface | null;
 	/** The registry id of the computer the live route reaches (store
 	 *  `computerId`), or `null` before the provider has recorded it. */
 	activeComputerId: string | null;
@@ -194,6 +200,10 @@ export function relativeAgo(then: number, now: number): string {
 
 /** The health word a row shows. Never colour alone: the dot beside it is
  *  decoration and this is the content. */
+// Settings already uses this word for a refused route. The unauthenticated
+// /healthz probe cannot override the phone's failed authentication.
+export const REFUSED_WORD = "Not connected";
+
 export function healthLabel(health: SwitcherHealth, now: number): string {
 	switch (health.kind) {
 		case "online":
@@ -208,6 +218,8 @@ export function healthLabel(health: SwitcherHealth, now: number): string {
 			return "Paused";
 		case "checking":
 			return "Checking…";
+		case "refused":
+			return REFUSED_WORD;
 	}
 }
 
@@ -235,7 +247,21 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 		input.discovered.map((computer) => [computer.tunnelId, computer]),
 	);
 	const savedTunnels = new Set<string>();
-	const phaseUsable = USABLE.includes(input.route.phase);
+	const phaseUsable =
+		USABLE.includes(input.route.phase) ||
+		input.route.phase === "refused" ||
+		input.route.phase === "signed-out";
+	const customRoute =
+		input.routeProfile?.mode === "custom" ? input.routeProfile : null;
+	const matching = customRoute
+		? input.saved.filter(
+				(entry) =>
+					entry.transport === "custom" &&
+					sameAddress(entry.baseUrl, customRoute.baseUrl),
+			)
+		: [];
+	const customId =
+		input.activeComputerId ?? (matching.length === 1 ? matching[0]?.id : null);
 	const onPhone: SwitcherRow[] = [];
 	const notConnected: SwitcherRow[] = [];
 
@@ -300,7 +326,7 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 				billingEligible: null,
 				lastSeenAt: latest(entry.lastUsedAt, input.answeredAt?.[origin]),
 			}),
-			active: phaseUsable && input.activeComputerId === entry.id,
+			active: phaseUsable && customId === entry.id,
 			connecting:
 				input.pendingKey === entry.id &&
 				input.route.phase === "minting" &&
@@ -340,6 +366,19 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 		});
 	}
 
+	// The in-use route is stronger evidence than an unauthenticated health probe:
+	// a healthy relay with a refused password is not a usable connection.
+	if (input.surface !== undefined) {
+		for (const row of [...onPhone, ...notConnected]) {
+			if (row.active)
+				row.health = activeHealth({
+					phase: input.route.phase,
+					surface: input.surface,
+					billingEligible: row.discovered?.billing.eligible ?? null,
+					radient: row.transport.kind === "radient",
+				});
+		}
+	}
 	return { onPhone: sortRows(onPhone), notConnected: sortRows(notConnected) };
 }
 
@@ -413,6 +452,7 @@ export type CustomSlot = {
 export type SwitcherTap =
 	/** Already in use: the sheet just closes. */
 	| { kind: "close" }
+	| { kind: "settings" }
 	/** In use AND removed from this phone: brought back, then the sheet closes. The
 	 *  row promises "Tap to bring it back", and a bare close left it removed (PR
 	 *  #122 QA round 1, Q4). */
@@ -458,7 +498,20 @@ export function switcherTap(row: SwitcherRow, slot: CustomSlot): SwitcherTap {
 			kind: "unhide",
 			target: { savedId: row.savedId, tunnelId: row.transport.tunnelId },
 		};
-	if (row.active) return { kind: "close" };
+	// Refused in-use rows must lead to a remedy, not close back onto the same error.
+	if (row.active && row.health.kind === "refused")
+		return row.health.surface === "password" &&
+			row.transport.kind === "custom" &&
+			row.savedId !== null
+			? { kind: "enter-password", computerId: row.savedId }
+			: { kind: "settings" };
+	if (
+		row.active &&
+		row.health.kind !== "sign-in" &&
+		row.health.kind !== "paused" &&
+		row.health.kind !== "asleep"
+	)
+		return { kind: "close" };
 	if (row.health.kind === "sign-in") return { kind: "sign-in" };
 	if (row.health.kind === "paused") return { kind: "open-console" };
 	if (row.transport.kind === "custom") {
@@ -509,6 +562,7 @@ export function pendingLanded(
 	return [...sections.onPhone, ...sections.notConnected].some(
 		(row) =>
 			row.active &&
+			row.health.kind !== "refused" &&
 			(row.transport.kind === "radient"
 				? row.transport.tunnelId === pendingKey
 				: row.savedId === pendingKey),
@@ -549,6 +603,7 @@ export type SwitcherDeps = {
 	signInWithRadient: () => Promise<void>;
 	unhide: (target: { savedId: string | null; tunnelId: string }) => void;
 	enterPassword: (computerId: string) => void;
+	openSettings: () => void;
 	openConsole: () => void;
 	close: () => void;
 };
@@ -560,6 +615,10 @@ export async function performSwitcherTap(
 	deps: SwitcherDeps,
 ): Promise<void> {
 	switch (tap.kind) {
+		case "settings":
+			deps.close();
+			deps.openSettings();
+			return;
 		case "close":
 			deps.close();
 			return;
@@ -615,6 +674,10 @@ export function rowHint(
 	section: "on-phone" | "not-connected",
 ): string | null {
 	if (row.connecting) return null;
+	if (row.health.kind === "refused")
+		return row.health.surface === "password" && row.transport.kind === "custom"
+			? "Enter the password again"
+			: "Open Settings to fix the connection";
 	if (row.hidden) return "Removed from this phone. Tap to bring it back.";
 	if (row.health.kind === "paused") return "Add credit in Radient";
 	return section === "not-connected" ? "Tap to connect" : null;
@@ -709,4 +772,39 @@ export function ownTunnelPrefill(
 		allowInsecure: entry.allowInsecure,
 		password: sameSlot ? (slot?.password ?? "") : "",
 	};
+}
+
+/** The phases in which the route in use has answered this phone. The switcher's
+ *  "Online" means its own `/healthz` probe answered; a live route is the same
+ *  fact, observed by the requests the app already made. */
+const ANSWERED: readonly ConnectionPhase[] = ["live", "re-minting"];
+
+/** Refusals that mean "the computer did not answer", which the switcher calls
+ *  Asleep; every other refusal is about the route, not the machine. */
+const SILENT_SURFACES: readonly ErrorSurface[] = [
+	"computer-offline",
+	"relay-stopped",
+	"retry",
+];
+
+/** The active computer's health, from the route's state. `null` input never
+ *  reaches here: no route, or a Radient account with nothing picked, is "none". */
+export function activeHealth(input: {
+	phase: ConnectionPhase;
+	surface: ErrorSurface | null;
+	billingEligible: boolean | null;
+	radient: boolean;
+}): SwitcherHealth {
+	if (input.radient && input.surface === "sign-in") return { kind: "sign-in" };
+	if (input.radient && input.billingEligible === false)
+		return { kind: "paused" };
+	if (ANSWERED.includes(input.phase)) return { kind: "online" };
+	/* Degraded: live, but the relay stopped answering — the switcher's probe would
+	 *  call that silence Asleep, so the entry points do too. */
+	if (input.phase === "degraded") return { kind: "asleep", lastSeenAt: null };
+	if (input.phase === "refused")
+		return input.surface !== null && SILENT_SURFACES.includes(input.surface)
+			? { kind: "asleep", lastSeenAt: null }
+			: { kind: "refused", surface: input.surface };
+	return { kind: "checking" };
 }

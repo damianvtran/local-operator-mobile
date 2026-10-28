@@ -478,6 +478,7 @@ describe("what a tap does", () => {
 			signInWithRadient: vi.fn(async () => {}),
 			unhide: vi.fn(),
 			enterPassword: vi.fn(),
+			openSettings: vi.fn(),
 			openConsole: vi.fn(),
 			close: vi.fn(),
 		};
@@ -606,6 +607,7 @@ describe("a removed computer that is in use (QA Q4)", () => {
 			signInWithRadient: vi.fn(async () => {}),
 			unhide: vi.fn(),
 			enterPassword: vi.fn(),
+			openSettings: vi.fn(),
 			openConsole: vi.fn(),
 			close: vi.fn(),
 		};
@@ -760,5 +762,48 @@ describe("the sheet's Add a computer reaches an add path (UX U6, U12)", () => {
 			expect(
 				addComputerTarget({ pathname: "/tunnels", view: view(0, extra) }),
 			).toBe("push");
+	});
+});
+
+describe("in-use refusal is not an online probe", () => {
+	const refusedInput = () =>
+		input({
+			saved: [custom("home", HOME, { name: "Home relay" })],
+			probes: { [HOME]: "answered" },
+			route: { phase: "refused", tunnelId: null },
+			routeProfile: { mode: "custom", baseUrl: HOME, allowInsecure: false },
+			surface: "password",
+		});
+	it("marks the cold-start password refusal in use, names it consistently, and opens re-entry", () => {
+		const row = switcherSections(refusedInput()).onPhone[0];
+		expect(row).toMatchObject({
+			name: "Home relay",
+			active: true,
+			health: { kind: "refused" },
+		});
+		if (!row) throw new Error("missing row");
+		expect(healthLabel(row.health, NOW)).toBe("Not connected");
+		expect(
+			switcherTap(row, {
+				baseUrl: HOME,
+				password: "wrong",
+				allowInsecure: false,
+			}),
+		).toEqual({ kind: "enter-password", computerId: "home" });
+	});
+	it("does not call a refused pick landed, or conflate two saved computers sharing an address", () => {
+		const one = refusedInput();
+		expect(pendingLanded(switcherSections(one), "home")).toBe(false);
+		const ambiguous = switcherSections({
+			...one,
+			saved: [...one.saved, custom("other", HOME)],
+		});
+		expect(ambiguous.onPhone.some((row) => row.active)).toBe(false);
+	});
+	it("sends a certificate/route refusal to Settings, not password re-entry", () => {
+		const row = switcherSections({ ...refusedInput(), surface: "connection" })
+			.onPhone[0];
+		if (!row) throw new Error("missing row");
+		expect(switcherTap(row, null)).toEqual({ kind: "settings" });
 	});
 });

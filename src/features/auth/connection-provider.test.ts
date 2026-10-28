@@ -1987,6 +1987,7 @@ describe("the computer switcher's registry (M2a)", () => {
 				signInWithRadient: latest.signInWithRadient,
 				unhide: () => {},
 				enterPassword: () => {},
+				openSettings: () => {},
 				openConsole: () => {},
 				close: () => {},
 			});
@@ -2117,6 +2118,7 @@ describe("PR #122 round-1 remediation: the provider's side of the switcher", () 
 				signInWithRadient: latest.signInWithRadient,
 				unhide: () => {},
 				enterPassword: () => {},
+				openSettings: () => {},
 				openConsole: () => {},
 				close: () => {},
 			});

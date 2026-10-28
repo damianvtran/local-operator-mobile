@@ -1,12 +1,15 @@
 import { X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	Animated,
 	Easing,
+	findNodeHandle,
 	Modal,
 	Platform,
 	Pressable,
 	ScrollView,
+	type Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
@@ -96,6 +99,11 @@ export type SheetProps = {
 	onDismiss?: () => void;
 	/** The sheet's accessible name; also its visible title. */
 	title: string;
+	/** Opt-in for a picker whose first announcement is its purpose, not Close. */
+	focusTitle?: boolean;
+	/** Drawer openers unmount; return to the persistent Home chip after RNW has
+	 * completed its own focus return, never during the closing animation. */
+	returnFocusTestID?: string;
 	detent?: SheetDetent;
 	children: React.ReactNode;
 	/**
@@ -121,11 +129,14 @@ export const Sheet = ({
 	onClose,
 	onDismiss,
 	title,
+	focusTitle = false,
+	returnFocusTestID,
 	detent = "content",
 	children,
 	footer,
 	testID,
 }: SheetProps) => {
+	const titleRef = useRef<Text>(null);
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -258,9 +269,35 @@ export const Sheet = ({
 				transparent
 				animationType="none"
 				onRequestClose={onClose}
+				onShow={() => {
+					if (!focusTitle || !titleRef.current) return;
+					if (Platform.OS === "web")
+						(titleRef.current as unknown as HTMLElement).focus({
+							preventScroll: true,
+						});
+					else {
+						const handle = findNodeHandle(titleRef.current);
+						if (handle !== null)
+							AccessibilityInfo.setAccessibilityFocus(handle);
+					}
+				}}
 				onDismiss={
 					Platform.OS === "web"
 						? () => {
+								// Settle the fallback before publishing the ledger transition; Settings'
+								// refusal reveal must run after ALL focus-return work (#122).
+								if (
+									!visible &&
+									returnFocusTestID &&
+									(document.activeElement === document.body ||
+										document.activeElement === null)
+								) {
+									document
+										.querySelector<HTMLElement>(
+											`[data-testid="${returnFocusTestID}"]`,
+										)
+										?.focus({ preventScroll: true });
+								}
 								dismissed();
 								onDismiss?.();
 							}
@@ -318,6 +355,14 @@ export const Sheet = ({
 								}}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"
+								// The labelled close button remains available; a picker's scrim is
+								// pointer-only so initial focus never starts on a duplicate Close.
+								accessible={!focusTitle}
+								accessibilityElementsHidden={focusTitle}
+								importantForAccessibility={
+									focusTitle ? "no-hide-descendants" : "auto"
+								}
+								tabIndex={focusTitle ? -1 : 0}
 								testID={CONTROL.sheetScrim}
 								onPress={onClose}
 							/>
@@ -368,6 +413,8 @@ export const Sheet = ({
 								}
 							>
 								<Heading
+									ref={titleRef}
+									tabIndex={focusTitle ? -1 : undefined}
 									level={2}
 									className="flex-1 text-title text-ink"
 									/* ONE LINE, the app's truncation idiom (36 call sites, the rows

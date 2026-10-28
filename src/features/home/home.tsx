@@ -676,8 +676,8 @@ export default function Home({
 						 *  point (ux-flows F5): `● Mac mini ▾`, opening the ONE sheet rather
 						 *  than navigating away. It keeps this slot's `min-w-0 flex-1` and
 						 *  its both-axis TOUCH_FLOOR (design round 9, D24) — see
-						 *  `HeaderComputerChip`; the name comes from the same `listLabel`
-						 *  ladder the panel's row uses. The width floor is only honourable
+						 *  `HeaderComputerChip`; the name comes from the same saved/account-scoped
+						 *  selector the switcher sheet uses. The width floor is only honourable
 						 *  because the BELL yields its pill at large text (and the chip its
 						 *  chevron at the same step), so nothing overflows the 320 pt row. */}
 						<HeaderComputerChip testID={CONTROL.computersButton} />

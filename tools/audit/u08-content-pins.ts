@@ -290,14 +290,23 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * following the D3 one-line rule into the chip. The proofs' scene is a
 	 * session transcript, which renders neither the Home header nor the drawer, so
 	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
-	 * staged tree. */
+	 * staged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #126 round-1 remediation: registry-backed entry
+	 * names, slot fitting, refusal remedies and opt-in picker focus, plus tests.
+	 * The transcript proofs do not render these navigation entry points. Sheet's
+	 * new focus behavior is opt-in (only the computer picker enables it), and
+	 * middleFit preserves its mono default (26 focused fit tests). This is a source
+	 * identity update, NOT a claim of new rendered proof; independent visual/QA
+	 * validation remains required on this head. app/instrument/input pins unchanged.
+	 * Recomputed with --print after staging the complete remediation. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "1d079cfd7c40234fa19d03d8563fa45e2a40d46d6a6bc6aec102615951af64b4",
+	src: "56afdca91681ea30a21730d31f8db7b41443af361452e7742f5de459c3d0d21b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
