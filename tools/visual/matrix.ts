@@ -1067,6 +1067,21 @@ export interface IdenticalFrameClass {
 
 export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 	{
+		cells: ["S15/mesh-remote", "S15/notifications-busy"],
+		reason:
+			"below-the-fold at iphone-se: the pane's destination rail (the row this cell exists to " +
+			"photograph, with its count pill) starts under the session list, and at 320 pt the list " +
+			"at 135 %/200 % text fills the column before the rail is reached, so both cells' PNGs " +
+			"are the same list chrome. The content differs — each cell reaches its own marker, " +
+			"`session-remote-` / `sidebar-notifications-count` — and the manifest records the pill " +
+			"MOUNTING without its mirror at 200 % (the grouped placement), which is what makes this " +
+			"a limit of the camera rather than a collapse. The rail is in the pixels at 100 % on " +
+			"iphone-se and at tablet-landscape (both frames looked at, and the pair differs there — " +
+			"the identity is reported on iphone-se only), so the uncovered-rail claim this cell was " +
+			"created for IS photographed where the viewport reaches it; D26 records the " +
+			"narrow-column gap rather than hiding it here.",
+	},
+	{
 		cells: ["S16/populated", "S16/unknown-status"],
 		reason:
 			"below-the-fold at iphone-se / 200 %: the 320 px column at 200 % text is filled by the " +

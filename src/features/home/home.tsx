@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Bell, Menu, Settings } from "lucide-react-native";
+import { Bell, BellDot, Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
@@ -10,7 +10,10 @@ import {
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
-import { headerBellShowsCount } from "@/features/home/header-fit";
+import {
+	headerBellShowsCount,
+	headerBellShowsDot,
+} from "@/features/home/header-fit";
 import {
 	CONNECT_DISABLED_REASON,
 	FOLDERS_READ_FAILED,
@@ -112,9 +115,16 @@ export type HomeProps = {
 /** The bell glyph inside the header's composite notifications control. Its ink is
  *  the icon-only control's own role (`ink-muted`), read from the theme rather than
  *  inherited, because an SVG takes colour as a prop. */
-function BellIcon() {
+function BellIcon({ waiting = false }: { waiting?: boolean }) {
 	const color = useTokenColor("ink-muted");
-	return <Bell color={color} size={20} />;
+	/* SHAPE, NOT COLOUR. Where the count pill yields (D24) a waiting inbox is
+	 *  signalled by the icon set's own bell-with-dot, in the control's normal ink:
+	 *  no separate painted node and no semantic colour, so the audit's U-03 rule
+	 *  (status carried by colour alone) has nothing to flag — the previous 6 pt
+	 *  dot was exactly that and failed 96 of 1212 cells. Size and ink are the
+	 *  plain bell's, so it also scales with the type step like every other glyph. */
+	const Glyph = waiting ? BellDot : Bell;
+	return <Glyph color={color} size={20} />;
 }
 
 export default function Home({
@@ -733,7 +743,9 @@ export default function Home({
 								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 								className="flex-row items-center justify-center gap-1 px-2"
 							>
-								<BellIcon />
+								<BellIcon
+									waiting={headerBellShowsDot(effectiveScale, inboxCount)}
+								/>
 								{/* THE PILL YIELDS FIRST, at and above 200 % text. The bell keeps
 								 *  its 44 pt target and its accessible name keeps the count
 								 *  ("Notifications, 120 unread"), while the ~55 pt the pill
@@ -748,6 +760,8 @@ export default function Home({
 											/* THE APP'S ONE CAP: a four-digit count would widen the pill
 											 *  until it took width from the label (R7-02/D21). */
 											label={countLabel(inboxCount)}
+											/* The same 300 % step the rail's count passes (D25). */
+											scale={effectiveScale}
 											tone="warning"
 											emphasis
 											mono

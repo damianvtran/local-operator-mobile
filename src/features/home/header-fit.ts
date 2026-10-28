@@ -46,3 +46,21 @@ export const COMPACT_BELL_SCALE = 2;
 /** Whether the bell paints its count pill at this text scale. */
 export const headerBellShowsCount = (scale: number): boolean =>
 	scale < COMPACT_BELL_SCALE;
+
+/**
+ * Whether the bell paints the icon set's BELL-WITH-DOT rather than the plain
+ * bell: the count pill has yielded (D24), and there is still something waiting.
+ *
+ * WHY A GLYPH AND NOT A MARKER. A small accent dot beside the bell was exactly
+ * the "status carried by colour alone" the audit forbids (U-03, 96 of 1212 cells
+ * on 5a64243..f8acc4c), and a U-03 exception is not an option. Swapping the
+ * glyph says the same thing with SHAPE, in the control's normal ink, at the same
+ * size — so no rule has anything to flag, and the exact number stays in the
+ * control's accessible name and on the rail row. It also resolves the size
+ * question: the variant is drawn at the plain bell's size and scales with the
+ * type step like every other glyph (design round 11, D33).
+ */
+export const headerBellShowsDot = (
+	scale: number,
+	count: number | null,
+): boolean => count !== null && count > 0 && !headerBellShowsCount(scale);

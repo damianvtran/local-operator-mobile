@@ -178,37 +178,48 @@ const RailCount = ({
 	/** Reports the pill's own width, so the row can decide its placement from a
 	 *  measurement rather than from a guess about the text scale (D23). */
 	onWidth?: (width: number) => void;
-}) => (
-	<View
-		className="items-center"
-		testID={
-			hidden === true
-				? CONTROL.sidebarNotificationsSpacer
-				: CONTROL.sidebarNotificationsCount
-		}
-		aria-hidden={hidden}
-		accessibilityElementsHidden={hidden}
-		importantForAccessibility={hidden === true ? "no-hide-descendants" : "auto"}
-		pointerEvents={hidden === true ? "none" : "auto"}
-		onLayout={
-			onWidth === undefined
-				? undefined
-				: (event) => onWidth(event.nativeEvent.layout.width)
-		}
-	>
-		<Badge
-			/* The app's one cap, as the home bell uses (R7-02/D21). */
-			label={countLabel(count)}
-			tone="warning"
-			emphasis
-			mono
-			hidden={hidden}
-			accessibilityLabel={
-				hidden === true ? undefined : `Notifications, ${count} unread`
+}) => {
+	// The count's own line box is the one thing here that depends on the text
+	// scale: at 300 % its digits outgrow the fixed 16 pt box (D25), and below that
+	// step passing the scale is a no-op.
+	const { effectiveScale } = useTextScale();
+	return (
+		<View
+			className="items-center"
+			testID={
+				hidden === true
+					? CONTROL.sidebarNotificationsSpacer
+					: CONTROL.sidebarNotificationsCount
 			}
-		/>
-	</View>
-);
+			aria-hidden={hidden}
+			accessibilityElementsHidden={hidden}
+			importantForAccessibility={
+				hidden === true ? "no-hide-descendants" : "auto"
+			}
+			pointerEvents={hidden === true ? "none" : "auto"}
+			onLayout={
+				onWidth === undefined
+					? undefined
+					: (event) => onWidth(event.nativeEvent.layout.width)
+			}
+		>
+			<Badge
+				/* The app's one cap, as the home bell uses (R7-02/D21). */
+				label={countLabel(count)}
+				/* The 300 % step is where a count's digits outgrow the fixed line box
+				 *  (D25); below it this is a no-op, which is why only the count passes it. */
+				scale={effectiveScale}
+				tone="warning"
+				emphasis
+				mono
+				hidden={hidden}
+				accessibilityLabel={
+					hidden === true ? undefined : `Notifications, ${count} unread`
+				}
+			/>
+		</View>
+	);
+};
 
 export const ConversationsPane = ({
 	onClose,

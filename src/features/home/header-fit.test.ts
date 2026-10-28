@@ -15,6 +15,11 @@ const SOURCE = readFileSync(
 	"utf8",
 ).replace(/\s+/g, " ");
 
+/** A count-only gate on the bell's pill — the shape this round replaces.
+ *  Hoisted, as the kit's own modules do, so a callback does not re-compile it
+ *  (biome `useTopLevelRegex`). */
+const COUNT_ONLY_GATE = /inboxCount !== null && inboxCount > 0 \?/;
+
 /** The offset of a control's declared id, or a failure that names it. */
 const atId = (id: string): number => {
 	const at = SOURCE.indexOf(`testID={CONTROL.${id}}`);
@@ -52,6 +57,28 @@ describe("the home header at large text", () => {
 		expect(headerBellShowsCount(1.35)).toBe(true);
 		expect(headerBellShowsCount(COMPACT_BELL_SCALE)).toBe(false);
 		expect(headerBellShowsCount(3)).toBe(false);
+		// The band's lower edge, one step below: 1.99 is still a pill. A threshold
+		// compared with `<=` would move the yield a whole scale early, which no
+		// measured cell would show (code review round 12, n-1).
+		expect(headerBellShowsCount(1.99)).toBe(true);
+	});
+
+	it("swaps the bell glyph for the dot variant when the pill has yielded", () => {
+		// Shape, not colour: a painted accent dot was U-03 in 96 of 1212 cells, so
+		// the signal is the icon set's own bell-with-dot, drawn in the control's
+		// normal ink at the plain bell's size. Removing the swap from `home.tsx`
+		// turns this red.
+		const bell = SOURCE.slice(
+			atId("homeNotifications"),
+			SOURCE.indexOf("</Pressable>", atId("homeNotifications")),
+		);
+		expect(bell).toContain(
+			"waiting={headerBellShowsDot(effectiveScale, inboxCount)}",
+		);
+		expect(SOURCE).toContain("const Glyph = waiting ? BellDot : Bell;");
+		expect(SOURCE).toContain("<Glyph color={color} size={20} />");
+		// The glyph keeps the plain bell's ink and size rather than a semantic colour.
+		expect(SOURCE).not.toContain("bg-accent");
 	});
 
 	it("gates the pill on that rule rather than on the count alone", () => {
@@ -60,6 +87,6 @@ describe("the home header at large text", () => {
 		const from = atId("homeNotifications");
 		const bell = SOURCE.slice(from, SOURCE.indexOf("</Pressable>", from));
 		expect(bell).toContain("headerBellShowsCount(effectiveScale)");
-		expect(bell).not.toMatch(/inboxCount !== null && inboxCount > 0 \?/);
+		expect(bell).not.toMatch(COUNT_ONLY_GATE);
 	});
 });

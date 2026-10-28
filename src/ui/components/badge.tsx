@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import {
 	badgeClasses,
 	badgeInkClasses,
+	badgeLineClass,
 	type SemanticTone,
 } from "@/ui/variants";
 
@@ -41,6 +42,10 @@ export type BadgeProps = {
 	 *  rail's mirrored count read as a colour-only status (U-03) exactly that way.
 	 *  Nothing is announced either: the call site also hides the subtree. */
 	hidden?: boolean;
+	/** The text scale this badge renders at, when the CALLER knows it. Defaults to
+	 *  1, so every call site that passes nothing keeps the geometry it was measured
+	 *  with; the count pills that can reach the 300 % step pass their own. */
+	scale?: number;
 };
 
 export const Badge = ({
@@ -51,11 +56,12 @@ export const Badge = ({
 	testID,
 	accessibilityLabel,
 	hidden = false,
+	scale = 1,
 }: BadgeProps) => (
 	<View
 		className={`${
 			emphasis
-				? "self-start min-h-5 rounded-full border-0 bg-accent px-2 py-0.5"
+				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
 				: badgeClasses(tone)
 		}${hidden ? " opacity-0" : ""}`}
 		testID={testID}
@@ -63,15 +69,10 @@ export const Badge = ({
 		accessibilityLabel={accessibilityLabel}
 	>
 		<Text
-			/* THE LINE BOX FOLLOWS THE TYPE STEP, because a fixed one cannot. A pinned
-			 *  `leading-4` (16 pt) held the two variants to one height at 100 %, but at
-			 *  300 % text the digits are 33 pt on that 16 pt line and the ink ran 3.4 pt
-			 *  above and 1.1 pt below the pill — the tops of the 9s effectively vanished
-			 *  (design round 9, D25). `leading-none` lets each step carry its own line
-			 *  box; the container's `min-h-5` keeps the 20 pt pill every existing caller
-			 *  paints at 100 %, so the kit's own geometry is unchanged and only the
-			 *  large-text case grows. */
-			className={`leading-none ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
+			/* The line box is the FIXED one at every scale a caller was measured at,
+			 *  and only the 300 % step lets the type carry its own — the ordering
+			 *  matters, because the reverse changed 672 of 1200 frames (F-1 / D28). */
+			className={`${badgeLineClass(scale)} ${mono ? "text-mono-label" : "text-meta"} ${emphasis ? "text-on-accent" : badgeInkClasses(tone)}`}
 			// When the call site names the badge, the visible label is a rendering of
 			// that name, not a second name: hidden from assistive tech on every
 			// platform (the same shape as `Avatar`'s initials).

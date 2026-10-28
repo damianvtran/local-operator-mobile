@@ -71,13 +71,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"1d9076ea91172d4eddb899eb458e2499aa1f98d36e46ca6be7442aa002db7f6f",
 	"tools/audit/checks.ts":
-		"061e0c2aa32ed792aa707733e515f82dc84754526e0b5c97290d215b60bf8984",
+		"41300ff403a6e295fdafae1bdc49efd36328ad30dddded10c8773d4976f72f1c",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
 		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
 	"tools/audit/probe.ts":
-		"4083769831f6d34b5c0db4fd7c432fa94317ac00db4fa05eb947947c4ec677ba",
+		"4ed608393c78474ce7dd152a7c57637fdacb8ec23fbb9b3abfd9879330c0ab66",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
@@ -95,7 +95,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"663b0da6d58769a3ca32f8983901485c6ad5ff07992939a68534d44a3509fcc6",
+		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
 	"tools/lib/relay.ts":
 		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
 	"tools/lib/static-server.ts":
@@ -112,12 +112,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"1641e6e2b3b424a2143ea6c3b8e69f3f2fc5ca02f8418429ca0835e54cf8bb4e",
 	"tools/mock-relay/library.ts":
 		"e33cd28ff3c0fb72bc8088cb06c0290993c115ceaf3b4d6bb2773ec89b3fd304",
+	"tools/mock-relay/notifications.ts":
+		"33712084ac78c1b2cfb489861d19b8586327a5916f5d453f79589013e140d532",
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"ababd96948daf1a1f55b63d8a7cf6fb95dbda8c7386e71aa1765d169bf4970e6",
+		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
 	"tools/mock-relay/scenarios.ts":
-		"530b6e922af122dcaf62180eed49923e7f0ed671d630c1da904dd8bbdc5c8c96",
+		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -134,7 +136,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"fa2b6eacc769032b914452c752523ac987d72e7a6da7593757914e685952e050",
+		"b68452107a0f2d4721caa3ebfafac20d320d5d945bf2e59c50b3092433b2216e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -281,18 +283,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `children` (CI tsc) and adds the sibling-Sheet close-ordering case (R7-m1).
 	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
 	 * `--print` from the staged tree. */
-	app: "82e9fc3d4f1b5827be73f4a72ea7505808f121ffb9a32f1eb728be4b9ef28163",
+	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "eece356691f724d3df9d9f50a1e220fcc9b446216ca1a09b470bb97ec5e6502c",
+	src: "45b8fcaeb1b737bc5cde3fb3f08961d9d5d8f7268ca1ea09e3bdf35220d24fdc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 	"fixtures/relay":
-		"c1b9c2bc12fdae19972252bd6ecedd5585d98f4b22865656f7938c37f92914cb",
+		"c4c1d6f26a45764241473a0b9a4491763697f976ca2c1cf349f8ab9c9adec5ab",
 	"fixtures/supplements":
 		"29bad98e91e6e29bd8148505f06058c24ff6682b3b4ba62bd43575a6a94d19cc",
 };

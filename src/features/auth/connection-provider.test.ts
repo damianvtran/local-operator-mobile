@@ -1904,17 +1904,6 @@ describe("the computer switcher's registry (M2a)", () => {
 		transport();
 		await mount();
 		const before = Date.now();
-describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
-	it('mounts the runtime for `""` and issues no request for it', async () => {
-		/* The inbox and its detail read the runtime for a conversation they may not
-		 * have yet, so they pass `""`. That is not an id: it built
-		 * `/api/sessions//events` and `//history`, two 404s and two console errors on
-		 * every mount. The hook must be MOUNTED here (this is a live screen with no
-		 * conversation, not an absent one) and must ask for nothing. */
-		const mock = await relay({});
-		observedSession = "";
-		transport();
-		await mount();
 		await act(async () => {
 			await latest.connectCustom({
 				url: mock.origin,
@@ -2102,35 +2091,6 @@ describe("PR #122 round-1 remediation: the provider's side of the switcher", () 
 		expect((await saved())[0]?.name).toBe("Synthetic computer 1");
 		/* Own address: a custom startRoute empties discovery. */
 		await act(async () => {
-		// Give the effects the same settle the other cases get.
-		await act(async () => {
-			await new Promise<void>((resolve) => setImmediate(resolve));
-		});
-		// The two requests the empty id used to build, and nothing else for a session.
-		const asked = wire.filter((entry) =>
-			/\/api\/sessions\/\//.test(entry.path),
-		);
-		expect(asked).toEqual([]);
-		/* The shared session LIST stream (`/api/sessions/events`) is the provider's
-		 *  own subscription and opens on every screen; what must not appear is a
-		 *  request for a NAMED session, which is what `""` used to build. */
-		expect(
-			wire
-				.filter(
-					(entry) =>
-						entry.path.startsWith("/api/sessions/") &&
-						entry.path !== "/api/sessions/events",
-				)
-				.map((entry) => entry.path),
-		).toEqual([]);
-	});
-
-	it("still asks for a named session, so the guard is not a blanket mute", async () => {
-		const mock = await relay({});
-		observedSession = "synthetic-session";
-		transport();
-		await mount();
-		await act(async () => {
 			await latest.connectCustom({
 				url: mock.origin,
 				password: "test-only",
@@ -2173,6 +2133,62 @@ describe("PR #122 round-1 remediation: the provider's side of the switcher", () 
 		);
 		expect(radientEntry?.name).toBe("Synthetic computer 1");
 		expect(radientEntry?.name).not.toBe(tunnel.hostname);
+	});
+});
+
+describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
+	it('mounts the runtime for `""` and issues no request for it', async () => {
+		/* The inbox and its detail read the runtime for a conversation they may not
+		 * have yet, so they pass `""`. That is not an id: it built
+		 * `/api/sessions//events` and `//history`, two 404s and two console errors on
+		 * every mount. The hook must be MOUNTED here (this is a live screen with no
+		 * conversation, not an absent one) and must ask for nothing. */
+		const mock = await relay({});
+		observedSession = "";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// Give the effects the same settle the other cases get.
+		await act(async () => {
+			await new Promise<void>((resolve) => setImmediate(resolve));
+		});
+		// The two requests the empty id used to build, and nothing else for a session.
+		const asked = wire.filter((entry) =>
+			/\/api\/sessions\/\//.test(entry.path),
+		);
+		expect(asked).toEqual([]);
+		/* The shared session LIST stream (`/api/sessions/events`) is the provider's
+		 *  own subscription and opens on every screen; what must not appear is a
+		 *  request for a NAMED session, which is what `""` used to build. */
+		expect(
+			wire
+				.filter(
+					(entry) =>
+						entry.path.startsWith("/api/sessions/") &&
+						entry.path !== "/api/sessions/events",
+				)
+				.map((entry) => entry.path),
+		).toEqual([]);
+	});
+
+	it("still asks for a named session, so the guard is not a blanket mute", async () => {
+		const mock = await relay({});
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
 		await until(() => sessionReading.projection !== null);
 		expect(wire).toContainEqual({
 			method: "GET",

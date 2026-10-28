@@ -67,12 +67,6 @@ export const railCountPlacement = ({
 		? "symmetric"
 		: "grouped";
 
-/** No count at all: nothing to place, and the label takes the whole row — a row
- *  with no pill must look like every sibling destination rather than sitting in
- *  the grouped pair for the rest of its life (code review round 11, m-3). */
-export const railRowHasCount = (pillWidth: number | undefined): boolean =>
-	pillWidth !== undefined;
-
 /** The label's box under a placement, and whether the row had to shorten it.
  *
  *  These two functions are the MODEL the tests and the code comments reason with;
