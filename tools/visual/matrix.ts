@@ -457,6 +457,15 @@ export const SCALES = [
 	{ id: "200", factor: 2 },
 ];
 
+/** Resolve a recorded scale id through the capture's table. A second, partial
+ * mapping silently rendered the audit's 135 cells at 200%, so an unknown id must
+ * stop the cell rather than produce a measurement under the wrong scale. */
+export function textScaleFactor(scaleId: string): number {
+	const scale = SCALES.find((entry) => entry.id === scaleId);
+	if (!scale) throw new Error(`unknown text scale '${scaleId}'`);
+	return scale.factor;
+}
+
 /**
  * Screens, by the audit rubric's ids (`docs/ux/audit-rubric.md` §1), each with
  * the Expo Router path that renders it. Group segments — `(auth)`, `(app)` —

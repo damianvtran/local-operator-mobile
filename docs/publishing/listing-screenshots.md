@@ -1,9 +1,16 @@
 # Store listing screenshots — the intended set
 
-**Status: PARKED at the operator's call** (2026-10-09; see
-`submission-runbook.md`). This file is the set to approve: which screenshots each
-listing carries, how many, in what order, in which theme, and how the final
-assets are made. Nothing here runs until the operator says go.
+**Status: the verified set is committed (2026-10-25); a refresh is STAGED, not
+committed over it (2026-10-26).** The App Store 6.9-inch
+frames — all nine — are committed in `design/store-screenshots/appstore-iphone-6.9/`,
+the App Store 13-inch iPad frames — all nine — in
+`design/store-screenshots/appstore-ipad-13/`, and Google Play's phone frames —
+all eight — in `design/store-screenshots/play-phone/`, each composed from the raw
+app captures beside it in `design/store-screenshots/app-captures/`. This file
+remains the plan: which screenshots each listing carries, how many, in what
+order, in which theme, and how the final assets are made.
+`design/store-screenshots/README.md` holds each set's own table, the regeneration
+commands, and what these frames deliberately leave to the pre-upload content pass.
 
 The nine shots below are the listing assets. The repository README's screens
 (`docs/assets/screenshots/`) are **not** this set — they are documentation
@@ -40,9 +47,9 @@ must stand alone.
 
 | Surface | Template | Rendered dir | Count | Order |
 | --- | --- | --- | --- | --- |
-| App Store, iPhone 6.9" | `design/store-screenshots/iphone-6.9.html` | `appstore-iphone-6.9/` | **9** (cap 1–10) | 01 → 09 |
-| App Store, iPad 13" | `design/store-screenshots/ipad-13.html` | `appstore-ipad-13/` | **9** (cap 1–10) | 01 → 09 |
-| Google Play, phone | `design/store-screenshots/play-phone.html` | `play-phone/` | **8** (cap 8 per device type) | 01 → 08 |
+| App Store, iPhone 6.9" | `design/store-screenshots/iphone-6.9.html` | `design/store-screenshots/appstore-iphone-6.9/` | **9** (cap 1–10) | 01 → 09 |
+| App Store, iPad 13" | `design/store-screenshots/ipad-13.html` | `design/store-screenshots/appstore-ipad-13/` | **9** (cap 1–10) | 01 → 09 |
+| Google Play, phone | `design/store-screenshots/play-phone.html` | `design/store-screenshots/play-phone/` | **8** (cap 8 per device type) | 01 → 08 |
 
 - **09 is App Store only**: Play's per-device cap is 8 and the eight feature
   states carry the listing; sign-in stays in the App Store sets.
@@ -84,29 +91,74 @@ The flow the current files were made with — repeat it on the frozen
 pre-submission build (step 1 is provisional until the capture-method item under
 "Open at resume" is decided):
 
-1. **Capture** from the app's web export on current `main`, driven in installed
-   headless Chrome against the mock relay (`tools/mock-relay/`), one run covering
-   the three device classes: `--devices iphone-max,tablet-pro,android-small
-   --themes dark --scales 100`.
-2. **Drop each capture into its template's slot** — keep the slot shell (radius
-   and clip) and replace its contents; the eyebrow and headline keep their band.
-3. **Render** with `node design/preview/capture.mjs --target frames`, which
-   asserts every canvas against the store's spec.
+1. **Capture** the app's web export against the mock relay (`tools/mock-relay/`)
+   through `tools/visual/capture.ts` — `design/store-screenshots/capture-frames.mjs`
+   drives it from `frames.json`, one PNG per frame, and names the world each capture
+   needs. The three capture profiles are `iphone-max` (430 × 932 at 3x: 1290 × 2796),
+   `tablet-pro` (1024 × 1366 at 2x: 2048 × 2732) and `android-small` (360 × 780 at
+   3x: 1080 × 2340), and each is named in the same file.
+2. **Fill the template's slot** — the frame is DATA, not a pasted image: the
+   capture's path, the eyebrow and the headline arrive as query parameters from
+   `frames.json`, and the slot's shell (radius, clip, shadow) is kept.
+3. **Render** with `node design/preview/capture.mjs --target frames`, which asserts
+   every canvas against the store's spec, every slot's image against the capture's
+   own pixels, and that the composed frame carries no build metadata (a spec block
+   shipped inside every listing until review round 1 removed it).
 4. **Verify before upload**: no alpha (Play wants 24-bit PNG; App Store Connect
    rejects transparency), no secret or harness-world text on any frame, and view
    every frame once — a size check is not visual evidence.
 
-The 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
-`play-phone/` ×8), the raw captures and `MANIFEST.sha256` survive in the parity
-lane's scratchpad mirror —
-`~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/`, its
-`MANIFEST.sha256` re-verified 26/26 (the lane's report and compose pipeline sit
-one level up in `appcaps/`) — after the `store-shots` worktree that rendered
-them (`design/store-screenshots/out/`, gitignored by design) was pruned.
-They were rendered off the `02da0334` tree; main has since moved on, and the
-pre-upload content pass (13 of 26 frames carry harness-world text) is the
-standing gate before submission — `submission-runbook.md`, "Store assets —
-produced, parked with the work".
+The verified 26 rendered files (`appstore-iphone-6.9/` ×9, `appstore-ipad-13/` ×9,
+`play-phone/` ×8, each at its store canvas: 1320 × 2868, 2064 × 2752, 1080 × 1920,
+24-bit RGB, no alpha) and the 26 raw captures they are composed from
+(`design/store-screenshots/app-captures/`, 1290 × 2796 / 2048 × 2732 / 1080 × 2340,
+RGB) are committed in `design/store-screenshots/`, produced by the standard headless
+pipeline. That set stays as it is: it is what `capture.mjs --check` verifies in CI.
+
+**Staged refresh, pending approval (2026-10-26).** The native-polish design pass
+produced a refreshed set through a different route: the app's own web export embedded
+in a fixed-viewport harness page in the installed browser (same-origin iframe) against
+the mock relay, composed by the same three templates. Those bytes are not what the
+headless renderer emits, so replacing the committed set would fail the design-kit
+`capture.mjs --check` byte gate — which is correct, and is why the refresh lives in
+`design/store-screenshots/staged/native-polish-1026/` instead: 26 raw captures and 26
+frames at the same canvases, with a `manifest.json` of sizes and hashes. Portrait and
+phone frames were recaptured at product head `94b3fc2` (the compact-status-row
+change); iPad 01–09, iPhone 06/08/09 and Play 06/08 were retained from `3b0e048` with
+a source-diff and pixel-compatibility argument, not by assumption. `46bd248` — the
+current code head — changes only the New-chat callback identity and its tests, with no
+pixel change. The staged set replaces nothing until design sign-off on the frames,
+caption wording for 02–09, the submission capture-method decision, and the pre-upload
+content pass all land. Nothing has been submitted to either store.
+
+The README's documentation images in `docs/assets/screenshots/` are a SEPARATE set:
+13 of them were refreshed in this pass (390 pt, 780 × 1688) and `sign-in-light.png`
+is unchanged because that theme could not be persisted in the capture browser.
+
+The verified set carries no committed hash manifest, and that is
+deliberate: the PNG bytes depend on the Chrome that encoded them (the CI runner's
+differs from a developer's, and for the iPad set also in resampled pixels), so a
+committed `sha256` list would go stale on every other host while saying nothing
+about the content. Freshness is proved by `node design/preview/capture.mjs
+--target frames --check` instead — it re-renders each frame from its own page and
+compares, bytes first and then pixels within that surface's `compareFuzz`, and CI
+runs it as a hard step. An earlier parity lane's copy of the same 26 survives in
+its scratchpad mirror —
+`~/.local-operator/sessions/0fb6ba9da093/scratchpad/appcaps/deliverable/` (its
+`MANIFEST.sha256` verified 26/26 when the lane wrote it; the lane's report and
+compose pipeline sit one level up in `appcaps/`) — after the `store-shots`
+worktree that rendered them (`design/store-screenshots/out/`, gitignored by
+design) was pruned. That
+mirror was rendered off the `02da0334` tree; the committed sets are rendered
+from the current tree and reproducible in place. The pre-upload content pass
+(13 of 26 of the earlier files carry harness-world text) stays the standing gate
+before submission — `submission-runbook.md`, "Store assets — produced, parked
+with the work".
+
+The committed frames are the ones each listing takes, and they are not exempt
+from that content pass — `design/store-screenshots/README.md` names exactly what
+they still carry (a seeded web build's `127.0.0.1` route label, and the app's own
+middle-ellipsis title) rather than leaving it to be discovered at upload.
 
 ## Related captures: the README screenshots are not this set
 
@@ -131,10 +183,11 @@ analysis against `main` @ `6628f26` (not re-rendered):
 
 - **Caption wording 02–09** — authored for this set, editable with one
   re-render each; approve or edit before the final render.
-- **Capture method for the submission files** — the produced files are
-  web-export renders; `apple-app-store.md` § 9.2 describes captures from CI (a
-  simulator job) or a Mac. Reconcile at the frozen-build re-shoot so the
-  submission method is a decision, not a drift.
+- **Capture method for the submission files** — the staged files are web-export
+  renders from the installed-browser harness (not the headless pipeline);
+  `apple-app-store.md` § 9.2 describes captures from CI (a simulator job) or a Mac.
+  Reconcile at the frozen-build re-shoot so the submission method is a decision,
+  not a drift. **Nothing in this pass was submitted to either store.**
 - Everything else — counts, order, the single theme, the template mapping — is
   approval-only.
 

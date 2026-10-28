@@ -190,6 +190,9 @@ export const CONTROL = {
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
 	 *  state rather than inferred from a colour. */
 	computerSelectedMarker: "computer-selected-marker",
+	/** Set on the row being connected while its session is minted: the list stays
+	 *  and the tapped row carries the pending state (PR #121, D1). */
+	computerConnectingMarker: "computer-connecting-marker",
 
 	settingsSignOut: "settings-sign-out",
 	settingsThemeDark: "settings-theme-dark",
@@ -206,7 +209,6 @@ export const CONTROL = {
 	 * would pick arbitrarily), and `e2e/maestro/**` addresses the flow vocabulary
 	 * declared above. --- */
 	setupUseThisComputer: "setup-use-this-computer",
-	newSessionCreate: "new-session-create",
 	computersRetryAction: "computers-retry-action",
 	settingsThemeGroup: "settings-theme-group",
 	computersBanner: "computers-banner",
@@ -219,10 +221,6 @@ export const CONTROL = {
 	splitBody: "split-body",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
-	newSessionModel: "new-session-model",
-	newSessionModelDefault: "new-session-model-default",
-	newSessionPrompt: "new-session-prompt",
-	newSessionStart: "new-session-start",
 	sessionsSplit: "sessions-split",
 	sessionsNoRoute: "sessions-no-route",
 
@@ -230,6 +228,13 @@ export const CONTROL = {
 	computersStartAgain: "computers-start-again",
 	computersBack: "computers-back",
 	computersRefresh: "computers-refresh",
+	/** The computer switcher's entry points in this slice (M2a): the Computers
+	 *  header's Switch and Settings' "Switch computer". The Home chip and the
+	 *  drawer row (M2b) will open the same sheet under their own names. */
+	computersSwitch: "computers-switch",
+	settingsSwitchComputer: "settings-switch-computer",
+	/** The sheet's own footer action, routing to the own-address and set-up flows. */
+	switcherAddComputer: "switcher-add-computer",
 	ownTunnelBack: "own-tunnel-back",
 	setupCreateTunnel: "setup-create-tunnel",
 	setupTunnelId: "setup-tunnel-id",
@@ -237,9 +242,18 @@ export const CONTROL = {
 	signInUseAddress: "sign-in-use-address",
 	signInTryAnyway: "sign-in-try-anyway",
 	signInBack: "sign-in-back",
-	newSessionBack: "new-session-back",
-	newSessionHomeChip: "new-session-home-chip",
-	newSessionPathChip: "new-session-path-chip",
+	/** The provisional conversation's own controls. They live on the home and
+	 *  `/new` (one shared editor), so they are named once here rather than typed
+	 *  as literals at three call sites — the a11y contract rejects literals so a
+	 *  capture cell cannot invent an id the contract never declared. */
+	startupOptions: "startup-options",
+	startupOptionsApply: "startup-options-apply",
+	startupViewQueue: "startup-view-queue",
+	startupQueueSheet: "startup-queue-sheet",
+	startupQueueRestore: "startup-queue-restore",
+	startupQueueDiscard: "startup-queue-discard",
+	startupOpenConversation: "startup-open-conversation",
+	startupModelOption: "startup-model-option",
 	pastBack: "past-back",
 	pastSearchField: "past-search-field",
 	pastSearch: "past-search",
@@ -288,7 +302,6 @@ export const CONTROL = {
 	settingsRefresh: "settings-refresh",
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
-	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
@@ -335,6 +348,8 @@ export const CONTROL = {
 	 *  controls on different surfaces and a flow reaching for one must not be able
 	 *  to land on the other. */
 	sessionSubagents: "session-subagents-chip",
+	/** The compact status row: the one control that opens working/tasks/agents. */
+	sessionStatusTray: "session-status-tray",
 	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
 	 * secondary region and drops this chip, because the roster header carries the same
 	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
@@ -517,6 +532,12 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The provisional conversation's own surfaces: its queued-count line and the
+	 *  transcript it adopts once the relay has returned a real session. */
+	/** The sheet the compact status row opens. */
+	sessionStatusSheet: "session-status-sheet",
+	startupPending: "startup-pending",
+	startupTranscript: "startup-transcript",
 	/** The Schedules screen's loading skeleton (S17). Its own id because the
 	 *  loading state must be distinguishable from the empty state — and on a
 	 *  320 pt phone the two frames once came out byte-identical on the
@@ -542,6 +563,9 @@ export const SURFACE = {
 	libraryDetailLoading: "library-detail-loading",
 	libraryDetailPopulated: "library-detail-populated",
 	libraryFilterSheet: "library-filter-sheet",
+	/** The computer switcher sheet (ux-flows F5). Its rows are the
+	 *  `switcher-row-` family and its two sections are regions below. */
+	computerSwitcherSheet: "computer-switcher-sheet",
 	librarySortSheet: "library-sort-sheet",
 	libraryMoreSheet: "library-more-sheet",
 	libraryEditorSheet: "library-editor-sheet",
@@ -865,6 +889,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"computer-row-",
 	"computer-row-status-",
 	"computer-row-reachability-",
+	/* The computer switcher: one row per computer, and its health word, keyed by
+	 *  the row's stable key (a registry id, or `radient-<tunnelId>`) — never by an
+	 *  address, which is not a computer's identity (decision a-2a8b). */
+	"switcher-row-",
+	"switcher-row-health-",
 	"tunnel-copy-",
 	"session-empty-",
 	"command-",
@@ -1037,6 +1066,10 @@ export const REGION = {
 	searchBodyMatch: "search-result-body-match-marker",
 
 	computersList: "computers-list",
+	/** The switcher's two sections: "On this phone" and "On your Radient account,
+	 *  not connected". */
+	switcherOnPhone: "switcher-on-phone",
+	switcherNotConnected: "switcher-not-connected",
 
 	/** The system-browser hand-off, asserted instead of the browser itself:
 	 *  Maestro cannot drive a system browser (`docs/adr/0003` §"What the harness
@@ -1046,6 +1079,9 @@ export const REGION = {
 	welcomeHeadline: "welcome-headline",
 
 	settingsConnection: "settings-section-connection",
+	/** The Settings Refresh's failure line: discovery failures are account state,
+	 *  not a route refusal (PR #121, D2). */
+	settingsDiscoveryFailure: "settings-discovery-failure",
 	settingsAppearance: "settings-section-appearance",
 	settingsDiagnostics: "settings-section-diagnostics",
 	/** Notifications: the permission state and the honest machine line
@@ -1637,6 +1673,16 @@ export const commandCopyId = (label: string): string =>
 
 export const tunnelCommandCopyId = (label: string): string =>
 	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+/** A switcher row and its health word. The key is the row's stable key
+ *  (`SwitcherRow.key`); `:` is not in the id alphabet a flow can type, so a
+ *  discovery-only key is spelled with a dash. */
+export const switcherRowIds = (
+	key: string,
+): { row: string; health: string } => {
+	const safe = key.replace(/[^A-Za-z0-9_-]/g, "-");
+	return { row: `switcher-row-${safe}`, health: `switcher-row-health-${safe}` };
+};
 
 export const computerRowIds = (
 	hostname: string,

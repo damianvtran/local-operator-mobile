@@ -127,30 +127,30 @@ signing. A signed APK, AAB or IPA exists only once those are in place.
 
 ## Screenshots
 
-Captured from the app's own web export (`pnpm export:web`), driven in installed
-headless Chrome, against the mock relay in
-[`tools/mock-relay/`](./tools/mock-relay/). Every frame is the app driven against
-that relay's **fixture data**: the conversations, session names and model labels
-are fixtures, not anyone's real sessions — and `nope/nope` in the session list is
-the captured corpus's own placeholder label, sitting beside the realistic
-`anthropic/claude-opus-5` that the synthetic fixtures carry. The light and dark
-frames are the same cell with the theme overridden, and the session view and the
-approvals card are the same screen in two of its states.
+Captured from the app's own web export (`pnpm export:web`) in the **installed
+browser**, in a fixed-viewport harness page that embeds the export in a same-origin
+iframe and pins the CSS viewport to a phone, against the mock relay in
+[`tools/mock-relay/`](./tools/mock-relay/). No headless-Chrome driver and no
+committed capture engine are involved in these images. Every frame is the app
+driven against that relay's **fixture data**: the conversations, session names and
+model labels are fixtures, not anyone's real sessions — and `nope/nope` in the
+session list is the captured corpus's own placeholder label, sitting beside the
+realistic `anthropic/claude-opus-5` that the [redacted] fixtures carry. The light
+and dark frames are the same state under each theme; the transcript and the
+pending-turn banner are the same session at two moments.
 
-The frames are a 390 pt phone at 2× — 780 px wide, downsampled from a 3× capture.
-The refusal pair is a 430 pt phone instead, which its 780 × 1691 shape confirms,
-and the taller device is less a fix than a relocation: that screen's 34 pt
-home-indicator inset ends its content viewport at 810 pt of 844 (898 pt of 932 on
-the taller phone), so an uncropped frame of it always cuts whatever lands on that
-line — the card heading `Create one on the computer` on the smaller phone, the
-terminal block's last line on the taller one.
+All seven views are captured at the SAME size: a 390 pt phone at 2x — 780 x 1688
+px, downsampled from a 3x capture. The earlier refusal pair, taken on a 430 pt
+phone (780 x 1691), was retired when that screen was re-captured on the same
+390 pt viewport as the rest: the screen's home-indicator inset cut whatever landed
+on the last visible line, and moving the device was a relocation rather than a fix.
 
 | Screen | Light | Dark |
 | --- | --- | --- |
 | **Welcome** — the first run, and the two ways in. | <img alt="The welcome screen: the app's promise that your agent runs on your computer, with Sign in with Radient and Set up your own tunnel." src="./docs/assets/screenshots/welcome-light.png" width="260"> | <img alt="The welcome screen in dark theme: the same promise and the same two ways in." src="./docs/assets/screenshots/welcome-dark.png" width="260"> |
 | **Sign in** — Radient, or an address and the relay password. | <img alt="The sign-in screen: Sign in with Radient, or use an address and password." src="./docs/assets/screenshots/sign-in-light.png" width="260"> | <img alt="The sign-in screen in dark theme: the same two ways to sign in." src="./docs/assets/screenshots/sign-in-dark.png" width="260"> |
 | **Session list** — active and previous, with what each one is doing right now. | <img alt="The session list: a running session with its subagent count, one session waiting on approval, and a previous one, above the New session, Past and Computers controls." src="./docs/assets/screenshots/session-list-light.png" width="260"> | <img alt="The session list in dark theme: the same active and previous sessions." src="./docs/assets/screenshots/session-list-dark.png" width="260"> |
-| **Session view** — the transcript, a running tool row, the to-do and subagent strips. | <img alt="A session's transcript: user turns, a bash tool row with its duration, a diff, two markdown tables, the to-dos and subagent strips, and the composer with its model and effort chips." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="The same transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
+| **Session view** — the transcript, a running tool row, and one compact status row. | <img alt="A session's transcript: user turns, a bash tool row with its duration, a diff, two markdown tables, a single compact status row that opens the task list and the subagent roster, and the composer with its model and effort chips." src="./docs/assets/screenshots/session-view-light.png" width="260"> | <img alt="The same transcript in dark theme." src="./docs/assets/screenshots/session-view-dark.png" width="260"> |
 | **Approvals** — a step the agent wants to run, and the two ways to answer it. | <img alt="A pending approval in the transcript: the bash command the agent wants to run, the folder it runs in, an Approve and a Deny button, and an always-allow control." src="./docs/assets/screenshots/approval-light.png" width="260"> | <img alt="The same pending approval in dark theme." src="./docs/assets/screenshots/approval-dark.png" width="260"> |
 | **Settings** — the connected computer, appearance, diagnostics. | <img alt="The settings screen: the connected computer and its status, the theme and text-size controls, and diagnostics." src="./docs/assets/screenshots/settings-light.png" width="260"> | <img alt="The settings screen in dark theme: the same connection, appearance and diagnostics sections." src="./docs/assets/screenshots/settings-dark.png" width="260"> |
 | **A refusal** — Radient refused the computer's relay authorization, and signing in on this phone will not change it. | <img alt="The refusal surface: a tunnel that needs attention in Radient, the command to run on that computer, and the other ways to connect." src="./docs/assets/screenshots/refusal-light.png" width="260"> | <img alt="The refusal surface in dark theme: the same refusal and the same remedies." src="./docs/assets/screenshots/refusal-dark.png" width="260"> |

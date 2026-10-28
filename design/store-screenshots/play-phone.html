@@ -94,6 +94,20 @@
 				color: #b5afa2;
 			}
 
+			/* A real capture fills the slot edge to edge. The slot's aspect (0.635)
+			 * is taller than a phone screen's, so `cover` crops the capture
+			 * vertically instead of letterboxing it; the anchor is the frame's own
+			 * (`frames.json` names top or bottom per shot) and the script below sets
+			 * it on the image. `flex: none` keeps the flex parent from shrinking it. */
+			.slot img {
+				flex: none;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				object-position: center top;
+				display: block;
+			}
+
 			.slot.empty {
 				background: repeating-linear-gradient(
 					45deg,
@@ -121,33 +135,59 @@
 				background: #14110c;
 			}
 
+			.caption-copy {
+				flex: 1;
+				min-width: 0;
+			}
+
+			.eyebrow {
+				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 20px;
+				font-weight: 500;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: #b5afa2;
+				line-height: 1.4;
+			}
+
+			.caption-text {
+				margin-top: 4px;
+				font-size: 38px;
+				line-height: 1.14;
+				font-weight: 600;
+				letter-spacing: -0.012em;
+			}
+
 			.mark {
 				color: #f1eee6;
 				flex: none;
 			}
 
-			.caption-text {
-				font-size: 46px;
+			.wordmark {
+				margin-left: auto;
+				flex: none;
+				font-size: 26px;
 				font-weight: 600;
 				letter-spacing: -0.012em;
-			}
-
-			.spec {
-				margin-left: auto;
-				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 24px;
 				color: #b5afa2;
-				text-align: right;
-				line-height: 1.5;
 			}
 		</style>
 	</head>
 	<body>
 		<div class="frame">
-			<!-- Replace with <img src="…" width="1080" height="1700"> once a real
-			     capture exists, and drop the `empty` class. -->
-			<div class="slot empty">
-				<div class="slot-label">
+			<!-- The slot is filled from the query string, so a capture is a PATH rather
+			     than a base64 paste and the caption travels with it — one render per
+			     frame, all eight driven by `frames.json`:
+
+			       play-phone.html?eyebrow=01+·+Sessions
+			                     &headline=Every+session+on+your+machine,+in+your+pocket.
+			                     &crop=top
+			                     &capture=app-captures/play-phone/01-session-transcript.png
+
+			     With no query at all the file stays what its name says: a TEMPLATE,
+			     showing the empty slot and the copy frame 01 carries. -->
+			<div class="slot empty" id="slot">
+				<div class="slot-label" id="slot-label">
 					app capture<br />
 					1080 × 1700 (3x: 3240 × 5100)<br />
 					required: ≥ 2 shots, ≥ 1080 short side, 9:16,<br />
@@ -166,12 +206,39 @@
 					<path d="M590 498 V750" stroke-width="33" />
 					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
 				</svg>
-				<span class="caption-text">Local Operator</span>
-				<span class="spec">
-					Play · phone<br />
-					1080 × 1920 @1x
-				</span>
+				<div class="caption-copy">
+					<p class="eyebrow" id="eyebrow">01 · Sessions</p>
+					<p class="caption-text" id="headline">Every session on your machine, in your pocket.</p>
+				</div>
+				<span class="wordmark">Local Operator</span>
 			</div>
 		</div>
+
+		<!-- Fills the slot, and nothing else, when a frame is asked for. It runs during
+		     parsing, so the <img> is in the document before the load event and the
+		     capture script's screenshot cannot race the image: that script also asserts
+		     the file's own pixel dimensions, which is what fails when a path is wrong.
+		     `crop` anchors the capture to an edge of the taller slot; anything but
+		     `bottom` keeps the top, which is what the template itself shows. -->
+		<script>
+			(() => {
+				const params = new URLSearchParams(location.search);
+				const capture = params.get("capture");
+				if (capture === null || capture === "") return;
+				const eyebrow = params.get("eyebrow");
+				const headline = params.get("headline");
+				if (eyebrow) document.getElementById("eyebrow").textContent = eyebrow;
+				if (headline) document.getElementById("headline").textContent = headline;
+				const slot = document.getElementById("slot");
+				slot.classList.remove("empty");
+				document.getElementById("slot-label").remove();
+				const img = document.createElement("img");
+				img.id = "capture";
+				img.alt = "";
+				img.src = capture;
+				if (params.get("crop") === "bottom") img.style.objectPosition = "center bottom";
+				slot.append(img);
+			})();
+		</script>
 	</body>
 </html>

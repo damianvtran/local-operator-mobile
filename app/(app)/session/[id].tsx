@@ -9,7 +9,9 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import type { PromptImage } from "@/contracts";
 import { useListState } from "@/features/auth/connection-provider";
+import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
 import {
@@ -33,6 +35,10 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
+import {
+	StatusTray,
+	type StatusTrayFacts,
+} from "@/features/session/components/status-tray";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
@@ -79,15 +85,20 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { NavigationMark } from "@/ui/components/navigation-mark";
+import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
 	COMPACT_OPEN_PANEL_SHARE,
 	COMPACT_PENDING_SHARE,
 	compactChromeShare,
+	composerLimit,
 	type RegionKey,
 	regionOrder,
+	sessionStatusLayout,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -134,6 +145,18 @@ export default function Session() {
 	const [tagsOpen, setTagsOpen] = useState(false);
 
 	const runtime = useSessionRuntime(sessionId);
+	const provisional = useStartup(null, sessionId);
+	const provisionalEditor =
+		provisional.coordinator === null
+			? undefined
+			: {
+					draft: provisional.snapshot.draft.text,
+					images: provisional.snapshot.draft.images,
+					setDraft: (text: string) => provisional.setText(text),
+					setImages: (
+						next: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+					) => provisional.setImages(next),
+				};
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);
@@ -152,6 +175,7 @@ export default function Session() {
 		streaming: runtime.streaming,
 		ended: runtime.projection?.ended === true,
 		capabilities,
+		editor: provisionalEditor,
 	});
 
 	/* The supplement block's host calls: one session-scoped client, built here
@@ -174,6 +198,9 @@ export default function Session() {
 	const [openPanel, setOpenPanel] = useState<null | "todos" | "subagents">(
 		null,
 	);
+	/** The compact status sheet. The tray's one row opens it; on a wide column
+	 *  the panels stay inline, so this is never true there. */
+	const [statusSheetOpen, setStatusSheetOpen] = useState(false);
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
@@ -420,12 +447,28 @@ export default function Session() {
 	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
 	 *  shortened portrait window never takes this branch (`compactChromeFor`). */
 	const compact = useCompactChrome();
+	/* ONE decision, three consumers (tray, sheet, inline region), so the surfaces
+	 * cannot disagree — see `sessionStatusLayout`. `phone` is a WIDTH question, not
+	 * `compact`: gating on `compact` left the old task/subagent bands on portrait
+	 * phones, which is exactly what D2 fixed. */
+	const { tray, inlineSecondary, statusSheet } = sessionStatusLayout(
+		viewportWidth,
+		compact,
+	);
 	const { effectiveScale } = useTextScale();
 	/* The secondary region's own scroller, and what it needs to behave: each child's
 	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
 	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
 	 *  yet", and the region then uses its plain cap for one frame. */
 	const regionRef = useRef<ScrollView | null>(null);
+	/* The composer's top in WINDOW coordinates, for `composerLimit`: portrait has no
+	 *  short-landscape budget, and this is the only honest ceiling for a long draft at
+	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
+	 *  would reparent the field, which the footer contract forbids. */
+	const [composerBox, setComposerBox] = useState<{
+		top: number;
+		height: number;
+	} | null>(null);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
 	>({});
@@ -482,8 +525,10 @@ export default function Session() {
 		<TodosPanel
 			testID={SURFACE.todosPanel}
 			todos={todos}
-			open={openPanel === "todos"}
-			onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
+			open={statusSheet ? statusSheetOpen : openPanel === "todos"}
+			onToggle={() =>
+				statusSheet || openPanel !== "todos" ? undefined : setOpenPanel(null)
+			}
 			heldShut={pending !== null}
 			compact={compact}
 		/>
@@ -494,9 +539,11 @@ export default function Session() {
 			subagents={subagents}
 			viewportHeight={viewportHeight}
 			compact={compact}
-			open={openPanel === "subagents"}
+			open={statusSheet ? statusSheetOpen : openPanel === "subagents"}
 			onToggle={() =>
-				setOpenPanel(openPanel === "subagents" ? null : "subagents")
+				statusSheet || openPanel !== "subagents"
+					? undefined
+					: setOpenPanel(null)
 			}
 			onOpenAgent={openAgent}
 		/>
@@ -657,6 +704,24 @@ export default function Session() {
 	 *  panel directly below carries the same lever and the same counts in its own
 	 *  header, so nothing becomes unreachable — it is one control, not two. */
 	const showChip = !compact && subagents.total > 0;
+	/* The compact tray's facts, taken from the SAME projections the panels read:
+	 *  a row that counted its own way would be able to disagree with the sheet it
+	 *  opens. `null` means "nothing to say", never zero. */
+	const trayFacts: StatusTrayFacts = {
+		working: working === null ? null : working.activity,
+		tasks: todos.empty
+			? null
+			: { open: todos.total - todos.done, total: todos.total },
+		agents:
+			subagents.total > 0
+				? { running: subagents.running, total: subagents.total }
+				: null,
+		context:
+			projection?.context_tokens != null && projection?.context_window != null
+				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
+				: null,
+	};
+
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
 			<View
@@ -725,12 +790,15 @@ export default function Session() {
 		todos: todosPanel,
 		strip: compact ? statusStrip : null,
 	};
-	const regionItems = regionOrder(
-		compact,
-		rosterNeedsAttention(subagents.clauses),
-	)
-		.map((key) => ({ key, node: regionNodes[key] }))
-		.filter((item) => item.node !== null);
+	/* Compact: the tray is the whole of the secondary status, so the clipped stack
+	 *  (and the cue that explained the cut) is not rendered at all. Wide keeps the
+	 *  inline panels — a tablet column has the room, and a reader there can see the
+	 *  list and the roster at once. */
+	const regionItems = !inlineSecondary
+		? []
+		: regionOrder(compact, rosterNeedsAttention(subagents.clauses))
+				.map((key) => ({ key, node: regionNodes[key] }))
+				.filter((item) => item.node !== null);
 	const panelOpen = openPanel !== null;
 	const regionCap = compact
 		? Math.round(
@@ -804,7 +872,13 @@ export default function Session() {
 					? "none"
 					: "flex") as "none" | "flex",
 			}
-		: ({ flexGrow: 0, flexShrink: 0 } as const);
+		: ({
+				flexGrow: 0,
+				flexShrink: 0,
+				/* A portrait phone shows the tray instead, so the old stack keeps its place in
+				 *  the tree (rotation must not remount the panels) but is not painted. */
+				...(inlineSecondary ? {} : { display: "none" as const }),
+			} as const);
 
 	/* Opening a panel scrolls the region to that panel's header, so the rows the
 	 *  reader asked for are the thing on screen — before this, the roster opened below
@@ -831,12 +905,15 @@ export default function Session() {
 			scroll={false}
 			testID={SCREEN.session}
 			headerLeading={
-				<IconButton
-					accessibilityLabel="Back to sessions"
-					testID={CONTROL.sessionBack}
-					onPress={() => router.back()}
-					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
-				/>
+				<View className="flex-row items-center gap-1">
+					<IconButton
+						accessibilityLabel="Back to sessions"
+						testID={CONTROL.sessionBack}
+						onPress={() => router.back()}
+						icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
+					/>
+					<NavigationMark />
+				</View>
 			}
 			headerAction={
 				/* The find lever. It is the kit's own header control (`IconButton`) — 48 pt on
@@ -848,6 +925,7 @@ export default function Session() {
 				<IconButton
 					accessibilityLabel="Search this conversation"
 					accessibilityHint="Finds messages in the transcript loaded on this device"
+					size={22}
 					testID={CONTROL.sessionFind}
 					onPress={find.open}
 					icon={({ color, size }) => <Search color={color} size={size} />}
@@ -890,7 +968,19 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
-			{compact ? null : statusStrip}
+			{tray ? (
+				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
+				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
+				 *  under the composer at 135-200 % text. */
+				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
+					<StatusTray
+						facts={trayFacts}
+						onOpen={() => setStatusSheetOpen(true)}
+					/>
+				) : null
+			) : (
+				statusStrip
+			)}
 
 			{/* The transcript, the panels and the composer, in one measure-capped
 			    column. `Screen` applies the cap (`src/ui/column.ts`): a 1366 pt tablet
@@ -902,6 +992,18 @@ export default function Session() {
 			<View className="flex-1 min-h-0">
 				<View
 					className="flex-1 min-h-0"
+					/* Short landscape: a pending decision collapses the transcript and hides the
+					 * secondary region, so the column's remaining children no longer fill it.
+					 * Anchor that cluster to the BOTTOM rather than letting the slack fall
+					 * below the composer: otherwise the composer jumps up when a decision
+					 * arrives and drops back after it is answered (the floating-composer
+					 * defect design D18 fixed for the loading state). Portrait and tablet
+					 * keep the normal column flow. */
+					style={
+						compact && pendingViewProps !== null
+							? { justifyContent: "flex-end" as const }
+							: undefined
+					}
 					testID={SURFACE.sessionColumn}
 					onLayout={(event) =>
 						measureRecovery("column", event.nativeEvent.layout.height)
@@ -1119,6 +1221,13 @@ export default function Session() {
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
+						limit={composerLimit(
+							viewportHeight,
+							composerBox?.top ?? null,
+							composerBox?.height ?? null,
+						)}
+						onMeasure={setComposerBox}
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
 						compact={
 							compact
 								? {
@@ -1168,6 +1277,30 @@ export default function Session() {
 					/>
 				</View>
 			</View>
+
+			{/* One row in the column, the same panels one tap away. The panels keep
+			    their own testIDs and their own content; only the clip is gone, because
+			    inside a sheet the list can be as tall as it is. */}
+			<Sheet
+				visible={statusSheetOpen}
+				onClose={() => setStatusSheetOpen(false)}
+				title="status"
+				testID={SURFACE.sessionStatusSheet}
+			>
+				<View className="gap-2 pb-2">
+					{workingLineView}
+					{subagents.total > 0 ? subagentsPanel : null}
+					{todos.empty ? null : todosPanel}
+					{projection?.context_tokens != null ? (
+						<Text className="px-4 text-mono-sm text-ink-dim">
+							{trayFacts.context}
+							{projection.cumulative_parent_cost != null
+								? ` · $${projection.cumulative_parent_cost.toFixed(2)}`
+								: ""}
+						</Text>
+					) : null}
+				</View>
+			</Sheet>
 
 			<ModelSheet
 				visible={modelsOpen}

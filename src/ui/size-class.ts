@@ -1,6 +1,7 @@
 import { maxColumnWidth } from "@/ui/column";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
-import { LAYOUT } from "@/ui/tokens.gen";
+import { LAYOUT, TOUCH_TARGET } from "@/ui/tokens.gen";
+import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
  * The adaptive layout vocabulary, in ONE place, and FREE OF `react-native`.
@@ -325,6 +326,54 @@ export function headerStackWidth(
 	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
 }
 
+/**
+ * The width below which the COMPUTERS header stacks, for the controls it carries.
+ *
+ * PR #122 gave the header "Switch computer" (U5: a bare "Switch" beside "Refresh"
+ * did not say what it switches), and at the kit floor the cluster then out-grew
+ * the line: at 390 pt with Back, the title measured 99 px of box for 138 px of
+ * text and rendered "Comp…", and every width from the 354 floor to ~430 clipped it
+ * the same way (design round 2, D10; UX U13). The sessions screen solved the same
+ * failure with a measured fit (`headerStackWidth`), so this is that pattern for
+ * this cluster rather than a shorter label (the label is the U5 fix).
+ *
+ * The pieces are the round-2 frames' readings at 100 % text:
+ *
+ * | piece                                         | measured |
+ * |-----------------------------------------------|----------|
+ * | row paddings (16 + 16)                        | 32       |
+ * | each 8 dp gap between the header's children   | 8        |
+ * | Back (`sm`)                                   | 52       |
+ * | "Switch computer" (`sm`)                      | 119      |
+ * | Refresh (`sm`) plus its 4 dp cluster gap      | 72       |
+ * | "Computers" at the `display` step             | 138      |
+ * | "Set up a computer" at the `display` step     | 227      |
+ *
+ * Consistency checks against the same frames: with Back, Switch and Refresh the
+ * fit is 32 + 52 + 8 + 138 + 8 + 119 + 72 = 429, and the title measured 99 of 138
+ * at 390 (390 − 291) and 139 of 139 at 430 — both reproduced; under a 401, with
+ * Refresh hidden, 390 measured 170 of 170 (fit 357). "Set up a computer" was not
+ * in a frame: its 227 is the bundled Figtree SemiBold's advance widths at 28 dp
+ * with the step's −0.02 em tracking, the same computation that gives "Computers"
+ * 137.8 against its measured 138. The kit floor still applies beneath, so no
+ * lighter header stacks earlier than the reviewed behaviour.
+ */
+export function computersHeaderStackWidth(input: {
+	title: "Computers" | "Set up a computer";
+	back: boolean;
+	switcher: boolean;
+	refresh: boolean;
+}): number {
+	const GAP = 8;
+	let width = 32 + (input.title === "Computers" ? 138 : 227);
+	if (input.back) width += 52 + GAP;
+	/* The cluster, when it renders, is one more header child: one more gap. */
+	if (input.switcher || input.refresh) width += GAP;
+	if (input.switcher) width += 119;
+	if (input.refresh) width += input.switcher ? 72 : 68;
+	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
+}
+
 /** The pure decision, so it is testable and is not a rendering side effect. */
 export function layoutFor(width: number, height: number): Layout {
 	const orientation: Orientation = width > height ? "landscape" : "portrait";
@@ -382,5 +431,99 @@ export const composerBudget = (
 		maxHeight - receiptHeight - padding - dictationReserve,
 	);
 	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
-	return { field: Math.max(touchFloor, room - extras), extras };
+	const fieldBox = Math.max(touchFloor, room - extras);
+	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
+	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
+	 *  Returning the box here made the composer overspend its share by the border, so
+	 *  the paint budget is converted once, here, where it is decided — the caller and
+	 *  the component then agree without either subtracting a constant of its own. */
+	return { field: fieldBox - FIELD_BORDER_Y, extras };
+};
+
+/**
+ * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
+ *
+ * Portrait phones have no short-landscape budget, so a six-line draft at 200 %
+ * text grew the composer past the window bottom (design recheck D-c: surface
+ * [12, 314.4, 296, 424.8], bottom 739 against a 568 pt window) — the field, the
+ * chips and the action row were all unreachable.
+ *
+ * The rule is deliberately "overflow OR already at the window", not "always
+ * window - top": the composer is bottom-anchored while it fits, so `top =
+ * bottom - height` makes `window - top` an identity that can never let it grow,
+ * and measuring it while EMPTY froze a long draft at two lines (observed at
+ * 320 pt / 100 %: field 60 px against a 132 px cap). Here an unbounded pass may
+ * grow until its painted bottom reaches the window; only then does the ceiling
+ * bind, and `>=` keeps it bound while the capped box sits exactly on the edge. A
+ * one-pixel tolerance absorbs the integer rounding of both numbers.
+ */
+export const composerLimit = (
+	viewportHeight: number,
+	top: number | null,
+	height: number | null,
+): number | null => {
+	if (top === null || height === null) return null;
+	const overflows = top + height >= viewportHeight - 1;
+	if (!overflows) return null;
+	/* The floor is the SMALLEST target the kit allows, not a share: a limit below
+	 *  one control would collapse the composer rather than bound it. */
+	return Math.max(TOUCH_TARGET.ios, Math.round(viewportHeight - top));
+};
+
+/**
+ * Whether the one-row status tray is painted. In short landscape it yields to a
+ * pending approval or ask: that surface is pinned beside the composer and its
+ * Approve/Deny (or Submit) controls are `shrink-0` at the touch floor, so the card
+ * can only give up its scrolling body. At 844x390 the column is 338 pt without the
+ * tray (header 52); the composer (125) + the card's pinned header, 56 pt body floor
+ * and controls (205) + the wrapper's 4 leave nothing, so the 48 pt tray row #118
+ * added pushed the pinned controls UNDER the composer at 200 % text (measured: the
+ * Approve/Deny boxes at y 246-294 beneath a composer starting at y 260).
+ *
+ * The old inline region was already hidden for the same reason (UX U12: "a whole
+ * region or none; the roster comes back the moment the decision is made") — the tray
+ * replaced it without inheriting that rule. A portrait phone is tall enough to keep
+ * the tray beside the card, so only `compact` yields.
+ */
+export const statusTrayVisible = (
+	tray: boolean,
+	compact: boolean,
+	decisionPending: boolean,
+): boolean => tray && !(compact && decisionPending);
+
+/**
+ * Which secondary-status surface a session screen uses — ONE decision, three
+ * consumers, so the tray, the sheet and the inline region cannot disagree (design D2,
+ * final visual audit).
+ *
+ * `phone` is a WIDTH question (`< tabletBreakpoint`), not `compact`: 430/390/360 are
+ * phones, 1024 is not, and `compact` means short-landscape chrome. Gating the tray on
+ * `compact` was the defect — a portrait phone is not short, so the old persistent
+ * task/subagent bands stayed on the very screen the design fixed.
+ *
+ * `inlineSecondary` keeps the capped scroller exactly where it was designed: short
+ * landscape (its rows and cue) and tablet (plain siblings). A portrait phone shows
+ * the tray instead and must not ALSO render the old stack.
+ */
+export const sessionStatusLayout = (
+	width: number,
+	compact: boolean,
+): {
+	phone: boolean;
+	tray: boolean;
+	inlineSecondary: boolean;
+	statusSheet: boolean;
+} => {
+	const phone = width < LAYOUT.tabletBreakpoint;
+	return {
+		phone,
+		/* Short landscape ALREADY had the tray (that is where it was designed), so it
+		 * keeps it: `tray` is phone-or-compact, and the sheet follows the tray. The
+		 * inline stack belongs only where neither holds — a tablet column. Gating the
+		 * tray on `phone` alone regressed landscape into a tray plus a live inline
+		 * region plus a sheet nothing could open (review R8-1). */
+		tray: phone || compact,
+		inlineSecondary: !phone && !compact,
+		statusSheet: phone || compact,
+	};
 };

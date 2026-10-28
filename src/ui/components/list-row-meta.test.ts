@@ -5,6 +5,7 @@ import {
 	META_PATH_FLOOR_CHARS,
 	MODEL_MIN_CHARS,
 	metaLineFor,
+	middleFit,
 	tailFit,
 	textWidthDp,
 } from "./list-row-meta";
@@ -268,5 +269,47 @@ describe("tailFit (the conversations pane's switcher)", () => {
 		// home header's box — the fit engages only where the box runs out.
 		expect(tailFit("127.0.0.1:51078", 143, 1)).toBe("127.0.0.1:51078");
 		expect(tailFit("127.0.0.1:51078", 250, 2)).toBe("127.0.0.1:51078");
+	});
+});
+
+/**
+ * D3: a host is ONE token. The earlier shapes each failed visibly — a tail fit
+ * dropped the machine name, a two-line middle let the platform break inside the
+ * port — so these pin the arithmetic at the widths the design round measures.
+ */
+describe("middleFit keeps a host on one line", () => {
+	const host = "127.0.0.1:49892";
+	const budgets = [
+		["390 pt", 250],
+		["320 pt", 170],
+	] as const;
+	const scales = [1, 1.5, 2];
+
+	it.each(
+		budgets.flatMap(([label, budget]) =>
+			scales.map((scale) => [label, budget, scale] as const),
+		),
+	)(
+		"fits %s at %sx into %s dps without wrapping or losing the port",
+		(_label, budget, scale) => {
+			const painted = middleFit(host, budget, scale);
+			expect(painted).not.toContain("\n");
+			// The port survives whole; nothing can end with a truncated ":49".
+			expect(painted.endsWith(":49892") || painted.endsWith("…")).toBe(true);
+			// And it fits the box it was given, by the same glyph widths the row uses.
+			expect(painted.length).toBeLessThanOrEqual(host.length);
+			if (painted !== host) expect(painted).toContain("…");
+		},
+	);
+
+	it("keeps both ends of a long identity", () => {
+		const painted = middleFit("tunnel-name.example.dev:51078", 140, 2);
+		expect(painted.startsWith("t")).toBe(true);
+		expect(painted).toContain("…");
+		expect(painted.endsWith(":51078")).toBe(true);
+	});
+
+	it("returns the string whole when it fits", () => {
+		expect(middleFit("host:1", 400, 1)).toBe("host:1");
 	});
 });

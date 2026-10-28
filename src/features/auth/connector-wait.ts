@@ -82,6 +82,20 @@ export async function probeHealth(
 	hostname: string,
 	options: { timeoutMs?: number; fetchImpl?: typeof globalThis.fetch } = {},
 ): Promise<HealthPayload | null> {
+	return probeHealthAt(`https://${hostname}`, options);
+}
+
+/**
+ * The same probe against a full origin. The computer switcher needs it for an
+ * own-address computer, whose origin may be `http://` on a private network (the
+ * reader opted in) — a Radient hostname is always https, which is all
+ * `probeHealth` has to assume. One probe, one parser: "Online" must mean the same
+ * thing for both kinds of computer.
+ */
+export async function probeHealthAt(
+	origin: string,
+	options: { timeoutMs?: number; fetchImpl?: typeof globalThis.fetch } = {},
+): Promise<HealthPayload | null> {
 	const fetchImpl = options.fetchImpl ?? globalThis.fetch;
 	const controller = new AbortController();
 	const timer = setTimeout(
@@ -89,7 +103,7 @@ export async function probeHealth(
 		options.timeoutMs ?? CONNECTOR_WAIT.probeTimeoutMs,
 	);
 	try {
-		const response = await fetchImpl(`https://${hostname}/healthz`, {
+		const response = await fetchImpl(`${origin}/healthz`, {
 			method: "GET",
 			headers: { accept: "application/json" },
 			credentials: "omit",

@@ -1,14 +1,19 @@
-import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { isPrivateHost } from "@/connection";
+import {
+	ownTunnelPrefill,
+	passwordEntryExplanation,
+} from "@/features/auth/computer-switcher-view";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
 	COMPUTER_COMMANDS,
 	TUNNEL_COMMANDS,
 	TUNNEL_RULE,
 } from "@/features/auth/tunnel-commands";
+import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
@@ -70,12 +75,61 @@ export default function OwnTunnel() {
 	const router = useRouter();
 	const { saveCustomRoute, connectCustom } = useConnection();
 	const { savedTunnel: saved } = useConnection();
+	/* `?computer=<registry id>` is the computer switcher's hand-off for an
+	 *  own-address computer with no stored password: only one password slot exists
+	 *  until per-phone keys arrive with pairing, so a second saved address opens
+	 *  here, pre-filled, rather than in a password store this app does not have.
+	 *
+	 *  The id ONLY: the address and the plain-http opt-in are read from the
+	 *  registry. A `?url=` and `?insecure=1` this screen trusted could be set by any
+	 *  link that opens it (review round 1, m1). An unknown id is ignored and the
+	 *  screen is the ordinary set-up guide. */
+	const { computer: computerParam } = useLocalSearchParams<{
+		computer?: string;
+	}>();
+	const computerId =
+		typeof computerParam === "string" && computerParam.length > 0
+			? computerParam
+			: null;
+	const [known, setKnown] = useState<{ id: string; name: string } | null>(null);
 
-	const [url, setUrl] = useState(saved?.baseUrl ?? "");
-	const [password, setPassword] = useState(saved?.password ?? "");
-	const [allowInsecure, setAllowInsecure] = useState(
-		saved?.allowInsecure ?? false,
+	const [url, setUrl] = useState(computerId ? "" : (saved?.baseUrl ?? ""));
+	const [password, setPassword] = useState(
+		computerId ? "" : (saved?.password ?? ""),
 	);
+	const [allowInsecure, setAllowInsecure] = useState(
+		computerId ? false : (saved?.allowInsecure ?? false),
+	);
+	useEffect(() => {
+		if (computerId === null) return;
+		let live = true;
+		void readSavedComputers().then((entries) => {
+			if (!live) return;
+			const prefill = ownTunnelPrefill(
+				entries,
+				computerId,
+				saved
+					? {
+							baseUrl: saved.baseUrl,
+							password: saved.password,
+							allowInsecure: saved.allowInsecure,
+						}
+					: null,
+			);
+			if (!prefill) return;
+			setKnown({ id: prefill.computerId, name: prefill.name });
+			setUrl(prefill.url);
+			/* The slot's password only when the slot IS this address — never another
+			 *  computer's (`ownTunnelPrefill`). */
+			setPassword(prefill.password);
+			/* The plain-http opt-in the reader already gave THIS address, as the
+			 *  registry recorded it; never inferred from the host. */
+			setAllowInsecure(prefill.allowInsecure);
+		});
+		return () => {
+			live = false;
+		};
+	}, [computerId, saved]);
 	const [testing, setTesting] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [verdict, setVerdict] = useState<TunnelTestVerdict | null>(null);
@@ -92,17 +146,115 @@ export default function OwnTunnel() {
 		setSaving(true);
 		try {
 			await saveCustomRoute({ url, password, allowInsecure });
-			await connectCustom({ url, password, allowInsecure });
+			/* A known computer reconnects as ITSELF: the registry id goes through, so
+			 *  the live route is recorded against this entry, not forked by address. */
+			await connectCustom({
+				url,
+				password,
+				allowInsecure,
+				...(known ? { computerId: known.id } : {}),
+			});
 			router.replace("/");
 		} finally {
 			setSaving(false);
 		}
-	}, [allowInsecure, connectCustom, password, router, saveCustomRoute, url]);
+	}, [
+		allowInsecure,
+		connectCustom,
+		known,
+		password,
+		router,
+		saveCustomRoute,
+		url,
+	]);
 
 	/* The password is optional only where the relay genuinely does not ask for one:
 	 * a route that requires it cannot be saved with an empty field, and the disabled
 	 * state says which field is missing rather than going grey silently. */
 	const canSave = url.trim().length > 0 && verdict?.kind === "ok";
+
+	const testAndSave = (
+		<>
+			<Button
+				label={testing ? "Testing…" : "Test the connection"}
+				onPress={() => void test()}
+				loading={testing}
+				disabled={testing || url.trim().length === 0}
+				testID={CONTROL.ownTunnelTest}
+			/>
+			{verdict ? <VerdictBlock verdict={verdict} /> : null}
+			<Button
+				label={saving ? "Saving…" : "Save and connect"}
+				onPress={() => void saveAndConnect()}
+				disabled={!canSave || saving}
+				/* `custom-connect` rather than a new name: this IS the act the
+				 *  wave-1 flow `01-first-run-sign-in.yaml` performs on this screen,
+				 *  and a second identifier for one action is a second way to do it. */
+				testID={CONTROL.customConnect}
+			/>
+			{!canSave ? (
+				<Text className="text-body-sm text-ink-dim">
+					{url.trim().length === 0
+						? "Paste your tunnel's address to continue."
+						: "Test the connection first — a tunnel that has not answered once is not one to save."}
+				</Text>
+			) : null}
+		</>
+	);
+
+	/* A computer the phone already knows, handed over by the switcher: only its
+	 *  password is missing, so the screen is that one field, focused, with the same
+	 *  Test → Save order the set-up guide keeps (a tunnel that has not answered once
+	 *  is not one to save). The guide put the field at y≈1480 under three set-up
+	 *  steps the reader had already done, and named nothing, so the tap read as the
+	 *  wrong page (UX round 1, U4). */
+	if (known) {
+		return (
+			<Screen
+				title="Your own tunnel"
+				testID={SCREEN.ownTunnel}
+				headerLeading={
+					<Button
+						testID={CONTROL.ownTunnelBack}
+						label="Back"
+						onPress={() => router.back()}
+						variant="quiet"
+						size="sm"
+					/>
+				}
+			>
+				<View className="gap-4 pt-2">
+					<Text
+						className="text-heading text-ink"
+						accessibilityRole={ROLE.header}
+					>
+						{`Enter the password for ${known.name}`}
+					</Text>
+					<Text className="text-body-sm text-ink-muted">
+						{passwordEntryExplanation(saved?.baseUrl ?? null, url)}
+					</Text>
+					<Text
+						className="text-mono-sm text-ink-dim"
+						numberOfLines={1}
+						ellipsizeMode="middle"
+					>
+						{url}
+					</Text>
+					<Input
+						label="Relay password"
+						value={password}
+						onChangeText={setPassword}
+						placeholder="The password from lop mobile"
+						secureTextEntry
+						autoCapitalize="none"
+						autoFocus
+						testID={CONTROL.customPasswordField}
+					/>
+					{testAndSave}
+				</View>
+			</Screen>
+		);
+	}
 
 	return (
 		<Screen
@@ -175,7 +327,7 @@ export default function OwnTunnel() {
 						label="Relay password"
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password `lop mobile` asked for"
+						placeholder="The password from lop mobile"
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}
@@ -223,30 +375,7 @@ export default function OwnTunnel() {
 						This makes a real request through your tunnel before anything is
 						saved.
 					</Text>
-					<Button
-						label={testing ? "Testing…" : "Test the connection"}
-						onPress={() => void test()}
-						loading={testing}
-						disabled={testing || url.trim().length === 0}
-						testID={CONTROL.ownTunnelTest}
-					/>
-					{verdict ? <VerdictBlock verdict={verdict} /> : null}
-					<Button
-						label={saving ? "Saving…" : "Save and connect"}
-						onPress={() => void saveAndConnect()}
-						disabled={!canSave || saving}
-						/* `custom-connect` rather than a new name: this IS the act the
-						 *  wave-1 flow `01-first-run-sign-in.yaml` performs on this screen,
-						 *  and a second identifier for one action is a second way to do it. */
-						testID={CONTROL.customConnect}
-					/>
-					{!canSave ? (
-						<Text className="text-body-sm text-ink-dim">
-							{url.trim().length === 0
-								? "Paste your tunnel's address to continue."
-								: "Test the connection first — a tunnel that has not answered once is not one to save."}
-						</Text>
-					) : null}
+					{testAndSave}
 				</View>
 
 				<Divider />

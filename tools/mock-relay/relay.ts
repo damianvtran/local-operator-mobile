@@ -61,6 +61,7 @@ import {
 	rowFrom,
 	scenarioNames,
 } from "./scenarios.ts";
+import { createStartupEvidence } from "./startup.ts";
 import { declaredLengthOf, transcribeResponse } from "./transcribe.ts";
 import {
 	authVerdict,
@@ -77,6 +78,7 @@ import {
 	SSE_KEEPALIVE_S,
 	setCookieHeader,
 	sseFrame,
+	syntheticSessionId,
 	verifyCookie,
 } from "./wire.ts";
 
@@ -364,6 +366,7 @@ export interface RecordedRequest {
 }
 
 const ACCOUNT_POLICY_ROUTE = /^\/api\/settings\/account-routing$/;
+const MOCK_BARRIER_RELEASE_ROUTE = /^\/__mock\/barriers\/[^/]+\/release$/;
 
 /** Everything `createRelay` accepts. */
 export interface RelayOptions {
@@ -599,6 +602,10 @@ export function createRelay(options: RelayOptions = {}) {
 	 *  performs. Reset with the world so a tag/patch in one cell cannot leak into
 	 *  the next. */
 	const library = createLibraryStore(fix);
+	const startup = createStartupEvidence();
+	// Never reuse a created identity across scenario resets: a stale client must
+	// not accidentally address the next world's new conversation.
+	let createdSequence = 0;
 	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
 	 * holds no captures of these routes — they shipped after the last drain — so
 	 * the mock models them from the core's own source (`push_devices.py`: the
@@ -687,6 +694,7 @@ export function createRelay(options: RelayOptions = {}) {
 		record: false,
 	};
 	const resetWorld = (): void => {
+		startup.reset();
 		state.world = scenarios[state.scenario]?.world() ?? {};
 		/* The store is part of the WORLD, not of the process: a cell that creates
 		 *  or deletes a row must not leave it behind for the next cell's own
@@ -889,6 +897,7 @@ export function createRelay(options: RelayOptions = {}) {
 		projection: SessionProjection,
 		commandId: string,
 		text: unknown,
+		images: SessionProjection["transcript"][number]["images"],
 	): void => {
 		projection.version =
 			(typeof projection.version === "number" ? projection.version : 1) + 1;
@@ -908,7 +917,7 @@ export function createRelay(options: RelayOptions = {}) {
 				elapsed_s: 0,
 				error: "",
 				details: {},
-				images: [],
+				images,
 				final: true,
 				text_complete: true,
 			},
@@ -1508,12 +1517,13 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 	};
 
-	const handleCommand = (
+	const handleCommand = async (
 		req: IncomingMessage,
 		res: ServerResponse,
 		sessionId: string,
 		body: Record<string, unknown>,
-	): void => {
+		rawBody: string,
+	): Promise<void> => {
 		const world = state.world;
 		if (world.commandOverride) {
 			sendFixture(res, world.commandOverride);
@@ -1654,17 +1664,38 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "command-prompt-duplicate");
 				return;
 			}
-			if (faults.noAckForever) {
-				// Accepted and never acknowledged — but the identity IS reserved before the
-				// ack, exactly as production reserves it (`command_reservation.py:82`
-				// writes `self._commands[command_id]` at reserve time, before the wait).
-				// A mock that forgot the command on the way out would hang the *retry* too,
-				// which models a relay that never saw it rather than the ambiguity this
-				// fault exists for: admitted, unacknowledged, and a retry answered
-				// `already admitted`.
-				state.admitted.set(commandId, { op, at: Date.now() });
+			// Admission is the effect, not the HTTP acknowledgment. Every ack-loss
+			// path must leave the same immutable evidence and exactly one user row.
+			if (!startup.admit(sessionId, commandId, body, rawBody)) {
+				sendJson(
+					res,
+					507,
+					errorBody(
+						"mock admission evidence capacity reached; reset the scenario",
+					),
+				);
 				return;
 			}
+			state.admitted.set(commandId, { op, at: Date.now() });
+			startup.trackReply(res);
+			const projection = projectionFor(sessionId);
+			if (projection)
+				appendUserRow(
+					projection,
+					commandId,
+					body.text,
+					startup.imageRefs(commandId),
+				);
+			if (faults.duplicateDelivery) state.duplicateFramePending = true;
+			if (
+				!(await startup.wait(
+					"command-ack",
+					{ path: `/api/sessions/${sessionId}/command`, sessionId, commandId },
+					res,
+				))
+			)
+				return;
+			if (faults.noAckForever) return;
 			// A command to a runtime that is up but not answering (the `degraded`
 			// scenario): the relay holds the request for its own reply window and then
 			// answers the same 504 the timed fault does. Without this the scenario
@@ -1672,27 +1703,17 @@ export function createRelay(options: RelayOptions = {}) {
 			// forever would have passed.
 			const commandWindowMs = world.hold?.commands;
 			if (typeof commandWindowMs === "number") {
-				state.admitted.set(commandId, { op, at: Date.now() });
-				setTimeout(() => {
+				startup.trackReply(res, commandWindowMs, () => {
 					sendJson(res, 504, errorBody("session did not answer"));
-				}, commandWindowMs);
+				});
 				return;
 			}
 			if (faults.noAck) {
-				state.admitted.set(commandId, { op, at: Date.now() });
-				setTimeout(() => {
+				startup.trackReply(res, faults.noAckAfterMs, () => {
 					sendJson(res, 504, errorBody("session did not answer"));
-				}, faults.noAckAfterMs);
+				});
 				return;
 			}
-			state.admitted.set(commandId, { op, at: Date.now() });
-			// The runtime appends the user's row to the transcript when it admits a
-			// command, so the effect of a duplicated delivery is observable as ONE row
-			// after TWO identical frames — which is what makes the fault falsifiable by
-			// a client rather than by this process's own counter.
-			const projection = projectionFor(sessionId);
-			if (projection) appendUserRow(projection, commandId, body.text);
-			if (faults.duplicateDelivery) state.duplicateFramePending = true;
 			if (op === "steer") sendFixture(res, "command-steer-queued");
 			else sendFixture(res, "command-prompt-ok");
 			return;
@@ -1993,6 +2014,15 @@ export function createRelay(options: RelayOptions = {}) {
 			return res.end(JSON.stringify(reply.body));
 		}
 
+		// Selective configuration holds run AFTER the actual auth/origin gates.
+		// The control namespace must never turn an unauthenticated API into a hang.
+		if (
+			method === "GET" &&
+			(pathname === "/api/models" || pathname === "/api/directories")
+		) {
+			if (!(await startup.wait("config", { path: pathname }, res))) return;
+		}
+
 		/* ------------------------------------------------------------- public -- */
 
 		if (pathname === "/healthz") {
@@ -2185,9 +2215,56 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "start-bad-cwd");
 				return;
 			}
-			const fixture = fix.record("start-session");
-			const id = asString(fixture.session_id) ?? "";
-			sendJson(res, 200, { ...fixture, session_id: id });
+			if (!(await startup.wait("start", { path: pathname }, res))) return;
+			// Legacy create is deliberately NOT idempotent. A static fixture hid
+			// duplicate POSTs by returning an already-existing session both times.
+			const id = syntheticSessionId(`mock-start-${++createdSequence}`);
+			if (!startup.create(id, body, rawBody ?? "")) {
+				sendJson(
+					res,
+					507,
+					errorBody(
+						"mock creation evidence capacity reached; reset the scenario",
+					),
+				);
+				return;
+			}
+			const projection = fix.projection("sse-projection-live-idle");
+			Object.assign(projection, {
+				session_id: id,
+				conversation_name: "",
+				transcript: [],
+				todos: [],
+				subagents: [],
+				pending: null,
+				pending_count: 0,
+				asks: [],
+				asks_open: 0,
+				streaming: false,
+				activity: "",
+				activity_started_s: null,
+				stop_reason: "",
+				cut_off: false,
+				queued_count: 0,
+				ended: false,
+				degraded: false,
+				version: 1,
+				...(typeof body.cwd === "string" ? { cwd: body.cwd } : {}),
+				...(typeof body.model === "string"
+					? { model_selector: body.model, model_label: body.model }
+					: {}),
+			});
+			world.projections ??= {};
+			world.projections[id] = projection;
+			if (
+				!(await startup.wait(
+					"start-ack",
+					{ path: pathname, sessionId: id },
+					res,
+				))
+			)
+				return;
+			sendJson(res, 200, { ...fix.record("start-session"), session_id: id });
 			return;
 		}
 
@@ -2926,6 +3003,23 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 400, errorBody("bad image index"));
 					return;
 				}
+				const admittedImage = startup.image(
+					sessionId,
+					entry,
+					Number(index ?? 0),
+				);
+				if (admittedImage === null) {
+					sendFixture(res, "image-unknown-entry");
+					return;
+				}
+				if (admittedImage) {
+					res.writeHead(200, {
+						"content-type": admittedImage.mimeType,
+						"content-length": admittedImage.data.length,
+						"cache-control": "no-store",
+					});
+					return res.end(admittedImage.data);
+				}
 				// The captured (session, entry, index) triple is served from the
 				// corpus, which is what makes the capture's own URL resolve. Anything
 				// else needs a live generation for this session.
@@ -3239,7 +3333,7 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 
 			if (rest === "/command" && method === "POST")
-				return handleCommand(req, res, sessionId, body ?? {});
+				return handleCommand(req, res, sessionId, body ?? {}, rawBody ?? "");
 
 			const agentMatch = /^\/agents\/([^/]+)(\/history)?$/.exec(rest);
 			if (agentMatch && method === "GET") {
@@ -3466,6 +3560,31 @@ export function createRelay(options: RelayOptions = {}) {
 		// asserts what the run did.
 		if (pathname.startsWith("/__mock")) {
 			try {
+				if (pathname === "/__mock/startup" && method === "GET") {
+					return sendJson(res, 200, startup.snapshot());
+				}
+				if (
+					method === "POST" &&
+					(pathname === "/__mock/barriers" ||
+						MOCK_BARRIER_RELEASE_ROUTE.test(pathname))
+				) {
+					try {
+						const input: unknown = JSON.parse(await readBody(req));
+						if (!isRecord(input))
+							throw new Error("barrier body must be an object");
+						const result =
+							pathname === "/__mock/barriers"
+								? startup.arm(input)
+								: startup.release(pathname.split("/")[3] ?? "", input.outcome);
+						return sendJson(
+							res,
+							pathname === "/__mock/barriers" ? 201 : 200,
+							result,
+						);
+					} catch (error) {
+						return sendJson(res, 400, errorBody(String(error)));
+					}
+				}
 				if (pathname === "/__mock/state" && method === "GET") {
 					return sendJson(res, 200, {
 						scenario: state.scenario,
@@ -3697,6 +3816,7 @@ export function createRelay(options: RelayOptions = {}) {
 	state.record = record || false;
 
 	const shutdown = async (): Promise<void> => {
+		startup.reset();
 		// The record goes first. `server.close()` only calls back once every
 		// connection has ended, and a client holding a keep-alive connection would
 		// keep this function parked past the caller's own SIGTERM deadline — which

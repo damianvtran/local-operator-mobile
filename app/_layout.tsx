@@ -9,7 +9,9 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
 import { ConnectionProvider } from "@/features/auth/connection-provider";
+import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
@@ -42,9 +44,16 @@ export default function RootLayout() {
 					<TextScaleProvider>
 						<View className="flex-1 bg-canvas">
 							<ThemedStatusBar />
+							<SavedComputersHydration />
 							<DeepLinkResolution />
 							<NotificationTapRouting />
-							<Stack screenOptions={{ headerShown: false }} />
+							{/* The ONE computer switcher sheet, above every route so any screen
+							 *  can open it with `useComputerSwitcher().open()` and two screens
+							 *  can never show two lists. Inside the providers it reads (the
+							 *  connection, the text scale) and below the router's context. */}
+							<ComputerSwitcherProvider>
+								<Stack screenOptions={{ headerShown: false }} />
+							</ComputerSwitcherProvider>
 							<ToastHost />
 						</View>
 					</TextScaleProvider>
@@ -66,6 +75,16 @@ export default function RootLayout() {
  */
 const DeepLinkResolution = () => {
 	useDeepLinkResolution();
+	return null;
+};
+
+/**
+ * Removed computers, loaded once at the root so no screen shows one after a cold
+ * start (see the hook). Renders nothing; private for the same reason as
+ * `ThemedStatusBar`.
+ */
+const SavedComputersHydration = () => {
+	useSavedComputersHydration();
 	return null;
 };
 

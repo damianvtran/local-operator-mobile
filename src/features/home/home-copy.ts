@@ -14,6 +14,7 @@
  * splash and their tests read them; they therefore resolve at IMPORT, which is
  * the stated limit of this first slice (see `src/i18n/runtime.ts`).
  */
+import type { StartupPhase } from "@/features/new-session/startup-coordinator";
 import { t } from "@/i18n";
 
 export const GREETING = t("mobile.home.greeting");
@@ -126,3 +127,29 @@ export const HOME_TIP_ROTATE_MS = 12_000;
 
 export const tipAt = (index: number): string =>
 	HOME_TIPS[index % HOME_TIPS.length] ?? HOME_TIPS[0];
+
+/**
+ * What Home says about work that has not left the device — state only, never the
+ * count: the composer's own chip already says "1 queued", and saying it twice on
+ * one screen was UX U2. `null` means this row has nothing to add.
+ *
+ * The important case is `unconfirmed`: the create may or may not have happened,
+ * no session id exists, and no automatic retry is possible. "Waiting to start…"
+ * was a lie there — nothing was waiting and nothing would start — so the copy
+ * names the state instead and the row keeps the queued sheet one tap away.
+ */
+export function startupQueueState(
+	phase: StartupPhase,
+	sessionId: string | null,
+): string | null {
+	/* `null` for `starting`: the splash already paints "Starting…" on the same
+	 * screen, and the row existed twice for one state (UX U2). The row still
+	 * renders there — it keeps the queued sheet reachable — it just adds no words. */
+	if (phase === "starting") return null;
+	if (sessionId !== null)
+		return phase === "blocked"
+			? "Retry to send queued messages"
+			: "Sending queued messages…";
+	if (phase === "unconfirmed") return "Start not confirmed";
+	return "Not started";
+}

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -66,6 +66,11 @@ export type ScreenProps = {
 	 *  only the step changes, never the preference. Opt-in: every other screen is
 	 *  byte-for-byte unchanged. */
 	compact?: boolean;
+	/** The screen's own ScrollView, for a screen that must bring something into
+	 *  view itself — Settings scrolls a refusal that appeared above the reader's
+	 *  position to where they can read it (PR #122 UX round 3, U16). Optional, and
+	 *  ignored with `scroll={false}`: every other screen is unchanged. */
+	scrollRef?: RefObject<ScrollView | null>;
 	testID?: string;
 };
 
@@ -90,6 +95,7 @@ export const Screen = ({
 	capColumn = true,
 	stackBelowWidth,
 	compact = false,
+	scrollRef,
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
@@ -236,6 +242,7 @@ export const Screen = ({
 			</View>
 			{scroll ? (
 				<ScrollView
+					ref={scrollRef}
 					className="flex-1"
 					// `grow` on the CONTENT container, not the ScrollView: without it a screen
 					// whose only content is an empty state renders it pinned under the header

@@ -4,16 +4,22 @@ import {
 	compactChromeFor,
 	compactChromeShare,
 	composerBudget,
+	composerLimit,
+	computersHeaderStackWidth,
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
 	layoutFor,
 	regionOrder,
 	SPLIT_MIN_HEIGHT,
+	sessionStatusLayout,
 	sidebarFooterScrolls,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { TOUCH_TARGET } from "@/ui/tokens.gen";
+import { FIELD_BORDER_Y } from "@/ui/variants";
 
 /**
  * The layout thresholds, and only the thresholds.
@@ -329,38 +335,203 @@ describe("regionOrder", () => {
 	});
 });
 
+describe("composerLimit (D-c: portrait is bounded by the window too)", () => {
+	it("answers only when the composer reaches the window's bottom", () => {
+		// The recheck's exact frame: 320x568, composer 314.4 + 424.8 = 739.2
+		expect(composerLimit(568, 314, 425)).toBe(254);
+		expect(composerLimit(844, 470, 400)).toBe(374);
+	});
+
+	it("has no answer before the first measurement, or while it still fits", () => {
+		expect(composerLimit(568, null, null)).toBe(null);
+		// 100 % portrait: the composer still sits inside the window — old behaviour
+		expect(composerLimit(568, 380, 60)).toBe(null);
+		// 320/200% long draft: 314 + 424 is over the bottom, and stays capped at it
+		expect(composerLimit(568, 314, 254)).toBe(254);
+	});
+
+	it("never returns less than one control target", () => {
+		expect(composerLimit(568, 560, 40)).toBe(TOUCH_TARGET.ios);
+		expect(composerLimit(568, 700, 10)).toBe(TOUCH_TARGET.ios);
+	});
+});
+
 describe("composerBudget (UX U1: the actions never scroll away)", () => {
 	it("on a tight screen the field gets everything and the extras scroll in what is left", () => {
 		// 390 pt screen at 200 %: composer share 0.45 -> 175 pt; receipt line 52; padding 8.
 		// An error line (40 pt) is above the field.
 		const budget = composerBudget(175, 52, 40, 48, 8);
-		expect(budget).toEqual({ extras: 40, field: 75 });
-		// the controls (field row + receipt) never exceed the budget
-		expect(budget.field + budget.extras + 52 + 8).toBeLessThanOrEqual(175);
+		// `field` is the CONTENT cap; the field paints cap + its 1px border top and
+		// bottom, which is the box the composer's share has to pay for.
+		expect(budget).toEqual({ extras: 40, field: 73 });
+		const painted = budget.field + FIELD_BORDER_Y + budget.extras + 52 + 8;
+		if (painted > 175) throw new Error(`over budget: ${painted} > 175`);
+		expect(painted).toBe(175);
 	});
 
 	it("never takes the field's touch floor for the extras: they scroll instead", () => {
 		// 150 pt of attachments in 115 pt of room: the extras are capped, the field keeps 48
 		const budget = composerBudget(175, 52, 150, 48, 8);
-		expect(budget.field).toBe(48);
+		// 46 content + 2 border = the 48 pt touch floor, in the box the screen spends
+		expect(budget.field).toBe(48 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y).toBe(48);
 		expect(budget.extras).toBe(115 - 48);
 	});
 
 	it("with nothing above the field the field takes the whole remainder", () => {
 		expect(composerBudget(175, 52, 0, 48, 8)).toEqual({
 			extras: 0,
-			field: 115,
+			field: 115 - FIELD_BORDER_Y,
 		});
 	});
 
 	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
 		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
 		const budget = composerBudget(175, 52, 0, 48, 8, 57);
-		expect(budget.field).toBe(58);
-		expect(budget.field + 52 + 8 + 57).toBeLessThanOrEqual(175);
+		expect(budget.field).toBe(58 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y + 52 + 8 + 57).toBeLessThanOrEqual(
+			175,
+		);
+	});
+
+	it("spends a portrait column budget without overspending it", () => {
+		// 320x568 / 200 %: limit 254, receipt wrapped to 112, root pad 16, no extras.
+		const budget = composerBudget(254, 112, 0, 48, 16);
+		const painted = budget.field + FIELD_BORDER_Y + 112 + 16;
+		if (painted > 254) throw new Error(`over column: ${painted} > 254`);
+		expect(painted).toBe(254);
+		expect(budget.field).toBe(254 - 112 - 16 - FIELD_BORDER_Y);
+	});
+
+	it("gives the extras their share before the field on a narrow column", () => {
+		const budget = composerBudget(254, 112, 80, 48, 16);
+		// 126 of room, of which the field's 48 pt floor is reserved: the extras get 78
+		expect(budget.extras).toBe(78);
+		expect(budget.field).toBe(48 - FIELD_BORDER_Y);
+		expect(budget.field + FIELD_BORDER_Y + 112 + 16 + budget.extras).toBe(254);
 	});
 
 	it("never shrinks the field below its touch floor, even if the budget is smaller", () => {
-		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48);
+		// The floor is a PAINTED floor (min-height on the field's box), so the content
+		// cap it translates to is one border shorter.
+		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48 - FIELD_BORDER_Y);
+	});
+});
+
+/**
+ * D2, final visual audit: the tray is a PHONE surface, and the old inline bands must
+ * not survive on a portrait phone. These are the exact widths the store/README
+ * captures use, plus the tablet and short-landscape cases that must NOT change.
+ */
+describe("session status layout", () => {
+	it("is a phone at the capture widths and not at tablet", () => {
+		for (const width of [360, 390, 430]) {
+			expect(sessionStatusLayout(width, false)).toEqual({
+				phone: true,
+				tray: true,
+				inlineSecondary: false,
+				statusSheet: true,
+			});
+		}
+		expect(sessionStatusLayout(1024, false).phone).toBe(false);
+		// Tablet: inline panels, per-panel open state, no tray.
+		expect(sessionStatusLayout(1024, false)).toEqual({
+			phone: false,
+			tray: false,
+			inlineSecondary: true,
+			statusSheet: false,
+		});
+	});
+
+	it("keeps short landscape exactly as it was", () => {
+		// Before the phone flag, compact rendered the TRAY, no inline region and the
+		// sheet — the tray was designed here. Encoding the opposite turned landscape
+		// into a duplicate band with dead panel buttons (R8-1).
+		const landscape = sessionStatusLayout(844, true);
+		expect(landscape.phone).toBe(false);
+		expect(landscape.tray).toBe(true);
+		expect(landscape.inlineSecondary).toBe(false);
+		expect(landscape.statusSheet).toBe(true);
+	});
+});
+
+describe("the Computers header stacks before its title clips (PR #122 D10/U13)", () => {
+	/* Measured on the round-2 head with Back, "Switch computer" and Refresh: the
+	 *  title clipped at 360 (69/138) and 390 (99/138) and fit by 1 px at 430. */
+	const full = computersHeaderStackWidth({
+		title: "Computers",
+		back: true,
+		switcher: true,
+		refresh: true,
+	});
+
+	it("reproduces the frames' measured fit", () => {
+		expect(full).toBe(429);
+		/* The title's box at 390 is the viewport minus the rest of the line. */
+		expect(390 - (full - 138)).toBe(99);
+		expect(430 - (full - 138)).toBe(139);
+	});
+
+	it("stacks at every phone width the title clipped at, and not at 430", () => {
+		for (const width of [354, 360, 375, 390, 414, 428])
+			expect(headerStacks(1, width, full)).toBe(true);
+		expect(headerStacks(1, 430, full)).toBe(false);
+	});
+
+	it("moves with the controls actually rendered", () => {
+		/* Under a 401 Refresh is hidden: 390 measured 170/170, single line. */
+		const signedOut = computersHeaderStackWidth({
+			title: "Computers",
+			back: true,
+			switcher: true,
+			refresh: false,
+		});
+		expect(signedOut).toBe(357);
+		expect(headerStacks(1, 390, signedOut)).toBe(false);
+		/* The longer set-up title needs more line. */
+		expect(
+			computersHeaderStackWidth({
+				title: "Set up a computer",
+				back: true,
+				switcher: true,
+				refresh: false,
+			}),
+		).toBeGreaterThan(390);
+		/* No controls and no Back: the kit floor, never lower. */
+		expect(
+			computersHeaderStackWidth({
+				title: "Computers",
+				back: false,
+				switcher: false,
+				refresh: false,
+			}),
+		).toBe(HEADER_STACK_WIDTH);
+	});
+});
+
+describe("status tray beside a pending decision", () => {
+	// Measured at 844x390, 200 % text (nightly 2026-10-27, S8 approval/populated-long,
+	// U-08): the tray's 48 pt row took the column from 338 pt to 290 pt, and the card's
+	// pinned Approve/Deny (46-48 pt, shrink-0) ended UNDER the composer. The tray has to
+	// yield in short landscape, exactly as the inline region it replaced did (UX U12).
+	it("yields to a pending approval or ask in short landscape", () => {
+		const landscape = sessionStatusLayout(844, true);
+		expect(statusTrayVisible(landscape.tray, true, true)).toBe(false);
+	});
+
+	it("returns the moment the decision is answered", () => {
+		const landscape = sessionStatusLayout(844, true);
+		expect(statusTrayVisible(landscape.tray, true, false)).toBe(true);
+	});
+
+	it("stays beside the card on a tall phone, which has the room", () => {
+		const portrait = sessionStatusLayout(390, false);
+		expect(statusTrayVisible(portrait.tray, false, true)).toBe(true);
+	});
+
+	it("never paints where the layout has no tray (tablet)", () => {
+		const tablet = sessionStatusLayout(1024, false);
+		expect(statusTrayVisible(tablet.tray, false, false)).toBe(false);
+		expect(statusTrayVisible(tablet.tray, false, true)).toBe(false);
 	});
 });

@@ -37,8 +37,25 @@ on:
   pull_request:
   workflow_dispatch:
 
+# THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
+# length and has the measurement for: GitHub keeps one pending run per concurrency
+# group, so a run that queues behind an already-pending one replaces it and is
+# `cancelled` with no job ever created — there, push run 39543983044 was cancelled
+# one second after dispatch 39544082930 was created in the lane the old key shared.
+# Keyed on workflow + ref alone, a `workflow_dispatch` queued behind a running push
+# run on `main` HERE would join the next push's lane, and that push's queued run
+# would drop the dispatch silently.
+#
+# THIS WORKFLOW HAS NO RECORDED INSTANCE OF IT. Every cancellation in this
+# workflow's last 100 runs (checked 2026-10-25) is a `pull_request` supersede on a
+# branch — none on `main` — so this key is prevention, not a repair: the mechanism
+# is proven on e2e.yml, and applying it here keeps the first occurrence from
+# happening rather than diagnosing it afterwards.
+#
+# `github.event_name` gives each trigger its own lane; `cancel-in-progress` is
+# untouched, so a running run on `main` is still never cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:

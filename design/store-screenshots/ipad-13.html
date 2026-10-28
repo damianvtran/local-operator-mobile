@@ -106,6 +106,20 @@
 				color: #b5afa2;
 			}
 
+			/* A real capture fills the slot edge to edge. `object-fit: cover`
+			 * rather than `contain`: the slot's aspect is 0.7499 and the 13-inch
+			 * tablet capture's (2048 x 2732) is 0.7496, so covering costs well under
+			 * one device pixel at each side, while letterboxing — the thing the inset
+			 * exists to avoid — would put two bars of canvas colour inside the device.
+			 * `flex: none` keeps the flex parent from shrinking the image. */
+			.slot img {
+				flex: none;
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+				display: block;
+			}
+
 			.slot.empty {
 				background: repeating-linear-gradient(
 					45deg,
@@ -142,28 +156,33 @@
 				letter-spacing: -0.012em;
 			}
 
-			.spec {
-				margin-left: auto;
-				font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 40px;
-				color: #656056;
-				text-align: right;
-				line-height: 1.5;
-				white-space: nowrap;
-			}
+			/* No spec block. The frame used to carry one (`App Store · 13"` /
+			 * `2064 × 2752 @1x` / `alt: …`) beside the wordmark, and that is build
+			 * metadata: it describes the file to a maintainer, not the product to a
+			 * shopper, and every frame here is an asset that goes to a store. The
+			 * canvas size is asserted by the renderer instead
+			 * (`design/preview/capture.mjs`), and that assertion is the record. */
 		</style>
 	</head>
 	<body>
 		<div class="frame">
 			<div class="band">
-				<p class="eyebrow">01 · Sessions</p>
-				<h1>Every session, on a bigger screen.</h1>
+				<p class="eyebrow" id="eyebrow">01 · Sessions</p>
+				<h1 id="headline">Every session, on a bigger screen.</h1>
 			</div>
 
-			<!-- Replace with <img src="…" width="1400" height="1867"> once a real
-			     iPad capture exists, and drop the `empty` class. -->
-			<div class="slot empty">
-				<div class="slot-label">
+			<!-- The slot is filled from the query string, so a capture is a PATH rather
+			     than a base64 paste and the caption travels with it — one render per
+			     frame, all nine driven by `frames.json`:
+
+			       ipad-13.html?eyebrow=01+·+Sessions
+			                   &headline=Every+session,+on+a+bigger+screen.
+			                   &capture=app-captures/ipad-13/01-session-transcript.png
+
+			     With no query at all the file stays what its name says: a TEMPLATE,
+			     showing the empty slot and the copy frame 01 carries. -->
+			<div class="slot empty" id="slot">
+				<div class="slot-label" id="slot-label">
 					app capture<br />
 					1400 × 1867 (2x: 2800 × 3734)<br />
 					aspect 0.7499 = 2064 / 2752
@@ -180,12 +199,31 @@
 					<path d="M600 492 C 646 512 686 480 706 400 L 712 378" stroke-width="33" />
 				</svg>
 				<span class="wordmark">Local Operator</span>
-				<span class="spec">
-					App Store · 13"<br />
-					2064 × 2752 @1x<br />
-					alt: 2048 × 2732
-				</span>
 			</footer>
 		</div>
+
+		<!-- Fills the slot, and nothing else, when a frame is asked for. It runs during
+		     parsing, so the <img> is in the document before the load event and the
+		     capture script's screenshot cannot race the image: that script also asserts
+		     the file's own pixel dimensions, which is what fails when a path is wrong. -->
+		<script>
+			(() => {
+				const params = new URLSearchParams(location.search);
+				const capture = params.get("capture");
+				if (capture === null || capture === "") return;
+				const eyebrow = params.get("eyebrow");
+				const headline = params.get("headline");
+				if (eyebrow) document.getElementById("eyebrow").textContent = eyebrow;
+				if (headline) document.getElementById("headline").textContent = headline;
+				const slot = document.getElementById("slot");
+				slot.classList.remove("empty");
+				document.getElementById("slot-label").remove();
+				const img = document.createElement("img");
+				img.id = "capture";
+				img.alt = "";
+				img.src = capture;
+				slot.append(img);
+			})();
+		</script>
 	</body>
 </html>
