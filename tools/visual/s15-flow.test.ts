@@ -76,17 +76,12 @@ describe("bounded S15 interaction contract", () => {
 		expect(query.get("lo-inset-left")).toBe("59");
 		expect(query.get("lo-text-scale")).toBe("2");
 	});
-	it("pairs all four app destinations with their actual return controls", () => {
+	it("pairs every footer ROUTE with their actual return controls", () => {
 		expect(FOOTER_DESTINATIONS).toEqual([
 			{
 				control: CONTROL.sidebarPast,
 				root: SCREEN.past,
 				back: CONTROL.pastBack,
-			},
-			{
-				control: CONTROL.sidebarComputers,
-				root: SCREEN.computers,
-				back: CONTROL.computersBack,
 			},
 			{
 				control: CONTROL.sidebarProjects,

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import type { SessionSummary } from "@/contracts";
+import { DrawerComputerRow } from "@/features/auth/computer-entry-points";
 import {
 	useConnection,
 	useConnectionState,
@@ -447,31 +448,17 @@ export const ConversationsPane = ({
 			className="gap-2 bg-sunken px-2 pb-2 pt-3"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		>
-			<View className="flex-row flex-wrap gap-2">
-				<View className="flex-auto">
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
-				</View>
-				<View className="flex-auto">
-					<Button
-						label="Computers"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/tunnels");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarComputers}
-					/>
-				</View>
+			<View className="w-full">
+				<Button
+					label="Past sessions"
+					onPress={() => {
+						onNavigate?.();
+						router.push("/past");
+					}}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.sidebarPast}
+				/>
 			</View>
 			<View className="w-full">
 				<Button
@@ -489,8 +476,7 @@ export const ConversationsPane = ({
 			 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
 			 *  view of what is running on the machine, not a row in Settings —
 			 *  and the desktop sidebar carries Schedules as a top-level
-			 *  destination beside them. Full-width beneath the pair, like Projects,
-			 *  so the wrap band stays 2+1+1. */}
+			 *  destination beside them. Full-width, like Projects. */}
 			<View className="w-full">
 				<Button
 					label="Schedules"
@@ -608,6 +594,20 @@ export const ConversationsPane = ({
 					/>
 				</View>
 			) : null}
+			{/* THE BOTTOM OF THE NAVIGATION: the computer in use, and the switcher.
+			 *  The operator asked for the switcher "at the bottom of the navigation";
+			 *  this app is a Stack with a drawer and no tab bar, so this footer is
+			 *  that place, and the row takes the shape Slack gives its workspace row
+			 *  (ux-flows F5). It replaced the "Computers" route that sat beside Past
+			 *  sessions: it opens the ONE switcher sheet, whose "Add a computer" and
+			 *  Settings keep the management paths. Last and full-width, as the design
+			 *  frame draws it. */}
+			<View className="w-full pt-1">
+				<DrawerComputerRow
+					testID={CONTROL.sidebarComputers}
+					onNavigate={onNavigate}
+				/>
+			</View>
 		</View>
 	);
 

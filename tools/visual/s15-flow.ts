@@ -11,13 +11,12 @@ import { selectScenario } from "../lib/relay.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { DEVICES, MEASURE_PROBE, textScaleFactor } from "./matrix.ts";
 
+/* The footer's ROUTES — each pushes a screen with its own back control. The
+ *  computer row (`sidebarComputers`) is not one any more: since M2b it opens the
+ *  switcher SHEET over Home (ux-flows F5), so a navigate-and-return walk would
+ *  wait for a screen that never comes. */
 export const FOOTER_DESTINATIONS = [
 	{ control: CONTROL.sidebarPast, root: SCREEN.past, back: CONTROL.pastBack },
-	{
-		control: CONTROL.sidebarComputers,
-		root: SCREEN.computers,
-		back: CONTROL.computersBack,
-	},
 	{
 		control: CONTROL.sidebarProjects,
 		root: SCREEN.projects,

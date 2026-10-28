@@ -282,14 +282,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * file only: `modal-dismissal-ledger.test.ts` types the Sheet's required
 	 * `children` (CI tsc) and adds the sibling-Sheet close-ordering case (R7-m1).
 	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
-	 * `--print` from the staged tree. */
+	 * `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-28 for M2b (the switcher's Home chip and drawer row), `src`
+	 * only: `computer-entry.ts`/`computer-entry-points.tsx`, the Home header slot,
+	 * the drawer footer, and the `CONTROL` doc comments. The proofs' scene is a
+	 * session transcript, which renders neither the Home header nor the drawer, so
+	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
+	 * staged tree. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "45b8fcaeb1b737bc5cde3fb3f08961d9d5d8f7268ca1ea09e3bdf35220d24fdc",
+	src: "57693d542cbaba6c5ae047ebb88164699724ed360597cfaa92f257410c6afa04",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
