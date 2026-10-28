@@ -355,3 +355,20 @@ describe("an ended session is not a connection state", () => {
 		expect(connectionView(input({ ended: true, ageS: 400 })).id).toBeNull();
 	});
 });
+
+/* UX round 1 U6 / design D6: the session header's dot reports the session's
+ * liveness, so C3's band would say the same thing twice — and on a history
+ * rebuild or a green session it said a different thing. */
+describe("C3 behind the session-health dot", () => {
+	it("draws no C3 band while the dot is shown", () => {
+		expect(connectionView(input({ stale: true, ageS: 90 })).id).toBe("C3");
+		expect(
+			connectionView(input({ stale: true, ageS: 90, healthDotShown: true })).id,
+		).toBeNull();
+	});
+	it("keeps the real loss (C2) in front of the dot", () => {
+		expect(
+			connectionView(input({ lastEnd: "error", healthDotShown: true })).id,
+		).toBe("C2");
+	});
+});

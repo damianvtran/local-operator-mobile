@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { compactTitleChars, headerTitleChars } from "@/features/session/header";
+import {
+	compactTitleChars,
+	DISPLAY_ADVANCE_PT,
+	headerTitleChars,
+} from "@/features/session/header";
 import {
 	MIN_HEADER_NAME_CHARS,
 	middleTruncate,
@@ -60,8 +64,8 @@ describe("the header's title budget", () => {
 		// the single-line arithmetic over-truncated a 13-character name the PRE-FIX
 		// frames rendered whole (`Releas…sweep` where `Release sweep` fits — QA
 		// round 1, Q1).
-		expect(headerTitleChars(phone(320))).toBe(16);
-		expect(headerTitleChars(phone(353))).toBe(18);
+		expect(headerTitleChars(phone(320))).toBe(36);
+		expect(headerTitleChars(phone(353))).toBe(40);
 		expect(middleTruncate("Release sweep", headerTitleChars(phone(320)))).toBe(
 			"Release sweep",
 		);
@@ -76,24 +80,30 @@ describe("the header's title budget", () => {
 		// box`, `S5/populated`, `iphone-se` 200 %). The render-time guarantee is the
 		// audit's U-07 over the se cells at every scale; this pins the arithmetic
 		// that produced the audited value and the shortened string itself.
-		const perLineAt2x = Math.floor((320 - 32) / (2 * MEASURED_WIDEST_ADVANCE));
-		expect(perLineAt2x).toBe(10);
-		expect(headerTitleChars(phone(320))).toBe(2 * perLineAt2x - 4);
+		/* At the DEFAULT scale the stacked title gets two lines at 1x advance,
+		 * not a hard-coded 2x: 288/14.06 = 20 per line, less the wrap slack. The
+		 * 2x case is asserted in "the title budget at large text" below. */
+		const perLine = Math.floor((320 - 32) / MEASURED_WIDEST_ADVANCE);
+		expect(perLine).toBe(20);
+		expect(headerTitleChars(phone(320))).toBe(2 * perLine - 4);
 		expect(
 			middleTruncate(
 				"Hello from the mock provider",
 				headerTitleChars(phone(320)),
 			),
-		).toBe("Hello fr…rovider");
+		).toBe("Hello from the mock provider");
 	});
 
-	it("never admits a name wider than the row, at any phone width", () => {
+	it("never admits a name wider than its lines, at any phone width", () => {
 		for (const width of [320, 360, 375, 390, 414, 430, 480]) {
 			const budget = headerTitleChars(phone(width));
+			/* Below the stack width the title is allowed TWO lines, so the budget
+			 * is measured against twice the row, not one. */
+			const lines = width < HEADER_STACK_WIDTH ? 2 : 1;
 			expect(
 				budget * MEASURED_WIDEST_ADVANCE,
 				`${width}px`,
-			).toBeLessThanOrEqual(available(width));
+			).toBeLessThanOrEqual(available(width) * lines);
 		}
 	});
 
@@ -161,5 +171,70 @@ describe("compactTitleChars", () => {
 		const chars = compactTitleChars(viewport, 2);
 		const advance = 14.06 * (20 / 28) * 2;
 		expect(chars * advance).toBeLessThanOrEqual(620 - 32 - 48 - 8 - 48 - 8);
+	});
+});
+
+/* Review round 1 M1 / design D1 / QA Q7: the health control's dot and the ⋮
+ * are chrome on the title line, and a budget that ignores them is the D2
+ * double truncation again. */
+describe("the session-health chrome", () => {
+	const phone = (width: number) => ({ width, height: 844 });
+	it("narrows the inline budget by the dot and the menu it is told about", () => {
+		const bare = headerTitleChars(phone(390));
+		const live = headerTitleChars(phone(390), { dot: true });
+		const ended = headerTitleChars(phone(390), { menu: true });
+		expect(live).toBeLessThan(bare);
+		expect(ended).toBeLessThan(live);
+		/* 390 − 144 − 16 = 230 pt; 390 − 144 − 56 = 190 pt, at 14.06 pt/char. */
+		expect(live).toBe(Math.floor(230 / DISPLAY_ADVANCE_PT));
+		expect(ended).toBe(Math.floor(190 / DISPLAY_ADVANCE_PT));
+	});
+	it("never admits a name wider than the box the extras leave", () => {
+		for (const width of [360, 390, 430]) {
+			for (const extras of [{ dot: true }, { menu: true }]) {
+				const box = width - 144 - ("dot" in extras ? 16 : 56);
+				expect(
+					headerTitleChars(phone(width), extras) * DISPLAY_ADVANCE_PT,
+				).toBeLessThanOrEqual(box);
+			}
+		}
+	});
+	it("stacked, only the dot narrows the title row: the menu sits on the back row", () => {
+		expect(headerTitleChars(phone(320), { menu: true })).toBe(
+			headerTitleChars(phone(320)),
+		);
+		expect(headerTitleChars(phone(320), { dot: true })).toBeLessThanOrEqual(
+			headerTitleChars(phone(320)),
+		);
+	});
+	it("narrows the compact budget the same way", () => {
+		const viewport = { width: 844, height: 390 };
+		expect(compactTitleChars(viewport, 1, { menu: true })).toBeLessThan(
+			compactTitleChars(viewport, 1),
+		);
+	});
+});
+
+/* Review round 1 M1's scale half, measured on the live 200% frame: the dot's
+ * 8pt and the gutters are rem-spaced, so at 2x they cost twice as much. */
+describe("the title budget at large text", () => {
+	const phone = (width: number) => ({ width, height: 844 });
+	it("stacked at 200%, the dot and gutters cost twice as much", () => {
+		const bare = headerTitleChars(phone(320), {}, 2);
+		const withDot = headerTitleChars(phone(320), { dot: true }, 2);
+		expect(withDot).toBeLessThan(bare);
+		/* 320 − 64 − 32 = 224 pt per line at 2x14.06 → 7 chars/line, two lines
+		 * less the wrap slack = 10. */
+		expect(withDot).toBe(10);
+	});
+	it("the inline branch scales chrome and advance together", () => {
+		expect(
+			headerTitleChars(phone(390), { dot: true, menu: true }, 2),
+		).toBeLessThanOrEqual(headerTitleChars(phone(390), { dot: true }, 2));
+	});
+	it("native chrome is pt-based: only the advance scales", () => {
+		expect(
+			headerTitleChars(phone(320), { dot: true }, 2, true),
+		).toBeGreaterThan(headerTitleChars(phone(320), { dot: true }, 2));
 	});
 });

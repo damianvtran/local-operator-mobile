@@ -60,6 +60,17 @@ export type ScreenProps = {
 	 * (`headerStacks`) reads whether a title exists.
 	 */
 	titleNode?: ReactNode;
+	/**
+	 * Stacked only: put `headerAction` on the BACK row, right-aligned, instead of
+	 * on a third row under the title. The session header's cluster is two icon
+	 * controls at most (find, and ⋮ while ended); a third row for them cost
+	 * ~56 pt of a 568 pt phone at 135/200 % and pushed the transcript's first
+	 * rows into each other (`S5/supplement-preparing`, iphone-se — U-08, QA round
+	 * 1 Q2 / design D8), and left ⋮ under the title, away from the edge where it
+	 * sits at every other size. A screen whose cluster can outgrow the back row
+	 * (the sessions list's badges) leaves this off and keeps the wrapping row.
+	 */
+	stackedActionsBeside?: boolean;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
@@ -110,6 +121,7 @@ export const Screen = ({
 	titleLines = 2,
 	headerDetail,
 	titleNode,
+	stackedActionsBeside = false,
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
@@ -192,7 +204,14 @@ export const Screen = ({
 						 *  own row and may use TWO lines — a cap, not a truncation point, for
 						 *  the longest title in the app ("Your own tunnel" fits in one at 2×
 						 *  on 390 pt and two at 320). */}
-						<View className="flex-row items-center gap-2">{headerLeading}</View>
+						<View className="flex-row items-center gap-2">
+							{headerLeading}
+							{stackedActionsBeside ? (
+								<View className="ml-auto flex-row items-center gap-2">
+									{headerAction}
+								</View>
+							) : null}
+						</View>
 						{title !== undefined ? (
 							headerDetail === undefined ? (
 								(titleNode ?? (
@@ -224,9 +243,11 @@ export const Screen = ({
 						 *  the three do not fit on one line — with the default shrink they
 						 *  OVERLAP each other rather than wrapping (`U-08`, measured: the
 						 *  badge landed 8 pt into the search control). */}
-						<View className="flex-row flex-wrap items-center gap-2">
-							{headerAction}
-						</View>
+						{stackedActionsBeside ? null : (
+							<View className="flex-row flex-wrap items-center gap-2">
+								{headerAction}
+							</View>
+						)}
 					</>
 				) : (
 					<>

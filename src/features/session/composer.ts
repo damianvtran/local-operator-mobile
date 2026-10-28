@@ -66,11 +66,9 @@ export const COMPOSER_COPY = {
 	/** An ended session is NOT a dead composer: a send REOPENS it (the daemon
 	 *  wakes a host for a prompt with no live entry), so the primary stays
 	 *  enabled. The placeholder and the failure sentence below are the web
-	 *  client's own `relay.health.*` strings (#3008), kept verbatim via
-	 *  `health-copy.ts`. `endedSession` is retained only as the disabled reason
-	 *  for a state that no longer disables — see `composerControls`. */
-	endedSession:
-		"This session has ended. Start a new one from the sessions list.",
+	 *  client's own `relay.health.*` strings (#3008), kept verbatim. The old
+	 *  "Start a new one from the sessions list" sentence is gone: nothing reads
+	 *  it once the ended state stopped disabling (review round 1, n1). */
 	/** Placeholder for an ENDED conversation: sending reopens it in the home
 	 *  folder. Verbatim from the web client's `relay.health.ended_placeholder`. */
 	endedPlaceholder: "Send to reopen in your home folder…",
@@ -79,6 +77,11 @@ export const COMPOSER_COPY = {
 	 *  Verbatim from `relay.health.ended_send_failed`. */
 	endedSendFailed:
 		"This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
+	/** Under the composer while a send to an ENDED session is in flight: the
+	 *  send IS the reopen and the daemon's engage takes seconds, so "…" on the
+	 *  button alone said nothing (UX round 1, U2). The same acceptance line the
+	 *  health sheet shows after Resume, so one act has one sentence. */
+	reopening: "Reopening — this can take a few seconds.",
 	/** The resume affordance, driven by `stop_reason === "aborted"` (the wire
 	 *  fact), never by `streaming` — a turn that completes also stops streaming,
 	 *  and only an aborted one should offer to resume. */
@@ -198,7 +201,12 @@ export const composerControls = (
 		},
 		stopVisible: input.streaming && input.connected !== false,
 		sending: input.sending,
-		disabledReason: blocked ? COMPOSER_COPY.retryDisabledHint : null,
+		/* On an ENDED session the retained card already carries the one sentence
+		 *  (the ended one) and its Retry; a third line saying "resolve the
+		 *  earlier instruction first" under it was the stack UX U7 / design D5
+		 *  measured. */
+		disabledReason:
+			blocked && !input.ended ? COMPOSER_COPY.retryDisabledHint : null,
 		ended: input.ended,
 	};
 };

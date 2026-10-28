@@ -121,10 +121,12 @@ describe("the send/steer morph", () => {
 		expect(ended.disabledReason).toBeNull();
 	});
 
-	it("an ended session with an unresolved instruction still blocks on the instruction, not the death", () => {
+	it("an ended session with an unresolved instruction still blocks on the instruction, without a third sentence", () => {
 		// Both can be true at once. The retained instruction is the thing that
-		// blocks a second send (the duplicate hazard), and its reason is the one
-		// the reader needs — ended no longer supplies a disabled reason at all.
+		// blocks a second send (the duplicate hazard), so the primary stays
+		// disabled. But on an ended session the retained card already carries the
+		// ended sentence and the one Retry; "Resolve the earlier instruction first"
+		// under it was the third stacked message UX U7 / design D5 measured.
 		const both = composerControls({
 			streaming: false,
 			hasDraft: true,
@@ -134,7 +136,19 @@ describe("the send/steer morph", () => {
 			ended: true,
 		});
 		expect(both.primary.disabled).toBe(true);
-		expect(both.disabledReason).toBe(COMPOSER_COPY.retryDisabledHint);
+		expect(both.disabledReason).toBeNull();
+		// A live session keeps the hint: there it is the only sentence that says
+		// why the primary is dead.
+		expect(
+			composerControls({
+				streaming: false,
+				hasDraft: true,
+				hasImages: false,
+				sending: false,
+				envelopePending: true,
+				ended: false,
+			}).disabledReason,
+		).toBe(COMPOSER_COPY.retryDisabledHint);
 	});
 });
 

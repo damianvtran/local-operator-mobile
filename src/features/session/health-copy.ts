@@ -9,8 +9,10 @@
  * SOURCE fallback only, in the shape this repo already uses
  * (`account-routing-copy.ts`): native main has no qualified catalogue runtime
  * (the i18n runtime is still an open PR), so these are finite, stable keys
- * with per-key translator context carried from the core's
- * `relay.health.context.json`. No other locales ship on native main yet; when
+ * with per-key translator context CONDENSED from the core's
+ * `relay.health.context.json` notes — the `source` strings are byte-identical
+ * to the catalogue, the `context` fields are shortened paraphrases of its
+ * `note` (meaning kept, wording not; QA round 1). No other locales ship on native main yet; when
  * the catalogue runtime lands, the core's seven audited locale catalogues
  * (fr, es, ru, vi, zh-CN, hi, ur) are the translations to adopt, unchanged.
  */
@@ -99,5 +101,31 @@ export const HEALTH_STATE_WORDS: Record<
 	/* `relay.chrome.session.subtitle.ended` in the relay's catalogue. */
 	ended: "Ended",
 };
+
+/**
+ * The words around the health sheet's Resume and the reopen-on-send line —
+ * outside the nine keys, so not catalogue copy, but each is the relay client's
+ * own sentence (`components/session-health.tsx` and `lib/refusal.ts` at
+ * #3008) or this app's existing one, so the two clients still say one thing:
+ *
+ * - `reopening` / `stillReopening` — the acceptance line after a Resume (and
+ *   now under the composer while a send to an ended session is in flight, UX
+ *   round 1, U2: a send there IS a reopen, and the daemon's engage takes
+ *   seconds, so "…" alone said nothing). 20 s is the reference's cap.
+ * - `noLongerSaved` — a 404 from `POST /api/sessions/resume`: the session is
+ *   gone, and "try again" would invite a retry that can never work (UX round
+ *   1, U8). Same sentence as this app's Past sessions screen (`past.tsx`).
+ */
+export const HEALTH_RESUME_COPY = {
+	resume: "Resume",
+	resuming: "Resuming…",
+	reopening: "Reopening — this can take a few seconds.",
+	stillReopening: "Still reopening — it has not come up yet.",
+	reopenReportMs: 20_000,
+	refusedTitle: "Could not resume",
+	refused: "This session could not be reopened just now. Try again.",
+	noLongerSaved: "This session is no longer saved.",
+	noRoute: "Connect to a computer to resume this session.",
+} as const;
 
 export type HealthCopyKey = keyof typeof HEALTH_COPY;

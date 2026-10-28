@@ -46,6 +46,33 @@ const HEADER_GUTTERS_PT = 32;
 const HEADER_CHROME_PT = HEADER_GUTTERS_PT + 48 + 8 + 48 + 8;
 
 /**
+ * **The session-health control's own chrome on the TITLE line** (review round 1
+ * M1, design D1, QA Q7 — the same D2 relapse this module exists to prevent:
+ * the header gained the dot and the ⋮ and this sum did not move, so the title
+ * was middle-truncated for a box ~72 pt wider than it had and the platform
+ * clipped the tail again).
+ *
+ * - `dot` — the LIVE state draws its dot inline before the name: an 8 pt dot
+ *   plus the control's 8 pt gap. Every other state draws its dot on the state
+ *   line UNDER the name (beside the state word), which costs height, not width.
+ * - `menu` — the ⋮ renders only while it has an item (Resume, so: ended): the
+ *   kit's 48 pt `IconButton` plus the cluster's 8 pt gap.
+ *
+ * Both default to absent, so every caller that passes no extras — and every
+ * figure `header.test.ts` pinned before the dot — is unchanged.
+ */
+export type HeaderExtras = { dot?: boolean; menu?: boolean };
+/* Chrome is rem-spaced, so on web BOTH its width and the glyph advance scale
+ * with the reader. On native the chrome is in pt and only the advance scales;
+ * the caller passes `Platform.OS !== "web"` for that case. */
+const HEALTH_DOT_PT = 8 + 8;
+const HEADER_MENU_PT = 48 + 8;
+const extrasPt = (
+	{ dot = false, menu = false }: HeaderExtras = {},
+	scale = 1,
+): number => ((dot ? HEALTH_DOT_PT : 0) + (menu ? HEADER_MENU_PT : 0)) * scale;
+
+/**
  * The wrap margin the stacked case keeps back from the two-line clamp's
  * break-free capacity — two characters per line.
  *
@@ -120,7 +147,12 @@ export const DISPLAY_ADVANCE_PT = 14.06;
  * `MIN_HEADER_NAME_CHARS` characters so both ends of a name survive, so a budget
  * computed below it is raised to it rather than to zero.
  */
-export const headerTitleChars = ({ width, height }: Viewport): number => {
+export const headerTitleChars = (
+	{ width, height }: Viewport,
+	extras: HeaderExtras = {},
+	effectiveScale = 1,
+	nativeChrome = false,
+): number => {
 	/* **Below the stack floor the header STACKS, and the title gets its own
 	 * budget — bounded by the two lines it is allowed to draw.** `Screen` stacks
 	 * when `headerStacks` says so (`src/ui/size-class.ts`); the width half of that
@@ -151,19 +183,35 @@ export const headerTitleChars = ({ width, height }: Viewport): number => {
 	 * keeps the single-line arithmetic and the title wraps within its two permitted
 	 * lines — the 2x residue this module documents above. */
 	if (width < HEADER_STACK_WIDTH) {
-		const perLineAtLargestScale = Math.floor(
-			(width - HEADER_GUTTERS_PT) / (DISPLAY_ADVANCE_PT * 2),
+		/* Stacked, the ⋮ sits on the BACK row (`Screen`'s `stackedActionsBeside`),
+		 *  never beside the title, so only the inline dot narrows the title's own
+		 *  row. */
+		const chromeScale = nativeChrome ? 1 : effectiveScale;
+		const titleRow =
+			width -
+			HEADER_GUTTERS_PT * chromeScale -
+			extrasPt({ dot: extras.dot }, chromeScale);
+		/* Two clamped lines at the ACTUAL scale, less the same wrap slack. The
+		 *  previous budget hard-coded 2x and ignored the scaled dot/gutters; at
+		 *  320/200% it promised 16 chars (2x14.06) while the dot row was left
+		 *  with 16 fewer points than that, so the dot was pushed onto its own
+		 *  line. The kit's 8-char floor still preserves both ends. */
+		const perLine = Math.max(
+			1,
+			Math.floor(titleRow / (DISPLAY_ADVANCE_PT * effectiveScale)),
 		);
-		return Math.max(
-			MIN_HEADER_NAME_CHARS,
-			perLineAtLargestScale * 2 - STACKED_WRAP_SLACK,
-		);
+		return Math.max(MIN_HEADER_NAME_CHARS, perLine * 2 - STACKED_WRAP_SLACK);
 	}
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
-	const available = row - HEADER_CHROME_PT;
+	const chromeScale = nativeChrome ? 1 : effectiveScale;
+	const available =
+		row -
+		HEADER_GUTTERS_PT * chromeScale -
+		(48 + 8 + 48 + 8) * chromeScale -
+		extrasPt(extras, chromeScale);
 	return Math.max(
 		MIN_HEADER_NAME_CHARS,
-		Math.floor(available / DISPLAY_ADVANCE_PT),
+		Math.floor(available / (DISPLAY_ADVANCE_PT * effectiveScale)),
 	);
 };
 
@@ -183,9 +231,13 @@ const TITLE_TO_DISPLAY = 20 / 28;
 export const compactTitleChars = (
 	{ width, height }: Viewport,
 	effectiveScale: number,
+	extras: HeaderExtras = {},
+	nativeChrome = false,
 ): number => {
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
-	const available = row - HEADER_CHROME_PT;
+	const chromeScale = nativeChrome ? 1 : effectiveScale;
+	const available =
+		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
 	const advance =
 		DISPLAY_ADVANCE_PT * TITLE_TO_DISPLAY * Math.max(1, effectiveScale);
 	return Math.max(MIN_HEADER_NAME_CHARS, Math.floor(available / advance));

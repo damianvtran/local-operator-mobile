@@ -734,6 +734,19 @@ export const Composer = ({
 				</View>
 			) : null}
 
+			{/* While a send to an ENDED session is in flight, say that it is a reopen
+			    and that it takes seconds (UX round 1, U2): the button's "…" alone
+			    looked like a stuck send for the length of the daemon's engage. */}
+			{ended && controls.sending ? (
+				<Text
+					className="pb-2 text-meta text-ink-dim"
+					accessibilityLiveRegion="polite"
+					testID={SURFACE.composerReopening}
+				>
+					{COMPOSER_COPY.reopening}
+				</Text>
+			) : null}
+
 			{retainedMessage !== null ? (
 				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
@@ -742,7 +755,13 @@ export const Composer = ({
 						accessibilityLiveRegion="assertive"
 						testID={SURFACE.composerRetained}
 					>
-						{retainedMessage}
+						{/* ONE message on an ended session (UX U7, design D5): a failed
+						    reopen used to stack the generic "an earlier instruction may
+						    have been delivered" card, the ended sentence and a disabled
+						    hint — three remedies, one of them pointing at a send button
+						    the screen had just disabled. The ended sentence REPLACES the
+						    card's, and its Retry stays the one retry. */}
+						{ended && error !== null ? error : retainedMessage}
 					</Text>
 					<View className="pt-2">
 						<Button
@@ -756,7 +775,7 @@ export const Composer = ({
 				</View>
 			) : null}
 
-			{error !== null ? (
+			{error !== null && !(ended && retainedMessage !== null) ? (
 				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-danger"

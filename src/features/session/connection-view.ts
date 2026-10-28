@@ -191,6 +191,19 @@ export interface ConnectionViewInput {
 	phaseSurface?: ErrorSurface | null;
 	/** The session ended: terminal, and NOT the same thing as not-answering. */
 	ended: boolean;
+	/**
+	 * The session header's status dot is reporting this session's liveness, so
+	 * `C3` ("Not answering") is not drawn as a band as well. The relay retired
+	 * its degraded band with the dot (#3008) for exactly this reason, and native
+	 * kept both: the band said "Not answering — last update 1m ago" beside a
+	 * GREEN dot on an idle session and beside a GREY "Ended" one on a history
+	 * rebuild (UX round 1 U6, design D6) — two words for one state, and one of
+	 * them false. The dot reads the relay's own measurements (`degraded`,
+	 * `heartbeat_stale`); a quiet SOCKET is the SSE layer's silence watchdog's
+	 * job, which reopens it and lands in `C2`. Optional and off by default, so
+	 * every other caller (the home screen) keeps `C3`.
+	 */
+	healthDotShown?: boolean;
 }
 
 /**
@@ -344,6 +357,7 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 	}
 
 	/* ---- C3: an open stream that has gone quiet, or a snapshot that is old ---- */
+	if (input.healthDotShown === true) return NOTHING_VISIBLE;
 	const quietFor =
 		input.ageS !== null && input.ageS >= KEEPALIVE_GRACE_S ? input.ageS : null;
 	if (quietFor !== null || input.stale) {

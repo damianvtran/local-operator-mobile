@@ -483,7 +483,7 @@ export interface SessionProjection {
    *  for a `None` verdict, so a durable frame stays byte-identical to what it
    *  was before the field existed). Absence is "not reported": a client paints
    *  nothing from it, never yellow. */
-  heartbeat_stale?: boolean;
+  heartbeat_stale?: boolean | null;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from

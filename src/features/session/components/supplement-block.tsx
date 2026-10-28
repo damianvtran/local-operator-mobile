@@ -796,13 +796,27 @@ function SummaryFilesLine({
 
 	return (
 		<View className="flex-col gap-1" testID={SURFACE.supplementFilesSummary}>
-			<Text className="text-meta text-ink-muted">
-				{`${countClause(entries.length, "file")}: `}
+			{/* The names are SIBLING inline runs on one wrapping line, not a
+			    pressable <Text> nested inside the wrapping one. On web the nested
+			    pressable gets its own box COINCIDENT with its sibling text run, so
+			    the pair measured as a 119x29 pt overlap at 200 % once the header
+			    stopped pushing this line off screen (QA round 1, Q2). A sibling
+			    `View` in a flex-row wrap is one run of the same sentence and paints
+			    exactly where its text is. */}
+			<View className="flex-row flex-wrap items-baseline">
+				<Text className="text-meta text-ink-muted">
+					{`${countClause(entries.length, "file")}: `}
+				</Text>
 				{entries.map((entry, at) => (
-					<Text key={`${entry.index ?? "tail"}:${entry.name}`}>
-						{at > 0 ? ", " : ""}
+					<Text
+						key={`${entry.index ?? "tail"}:${entry.name}`}
+						className="text-meta text-ink-muted"
+					>
+						{/* The separator trails the PRECEDING name: a leading ", " wraps
+						    onto the next line on its own at 200 %. */}
 						{previewable(entry) ? (
 							<Text
+								className="text-meta text-ink-muted"
 								onPress={() => void toggle(at)}
 								style={{ textDecorationLine: "underline" }}
 							>
@@ -811,9 +825,10 @@ function SummaryFilesLine({
 						) : (
 							entry.name
 						)}
+						{at < entries.length - 1 ? ", " : ""}
 					</Text>
 				))}
-			</Text>
+			</View>
 			{openAt !== null && preview !== null && openEntry !== null ? (
 				<PreviewPanel preview={preview} label={openEntry.name} />
 			) : null}

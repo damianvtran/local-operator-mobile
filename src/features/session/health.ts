@@ -74,6 +74,78 @@ export function sessionHealth(
 	return "live";
 }
 
+/**
+ * The phone's own link to the relay, as the dot reads it — three values, not a
+ * boolean, because the sheet's reconnecting sentence promises the phone "keeps
+ * trying", and that is only true while it does.
+ *
+ * - `up` — the stream is open and has not dropped since its last frame.
+ * - `retrying` — the link that WAS up has dropped and the client is reopening
+ *   it: a transport error since the last frame (any drop, the relay's rule —
+ *   its store sets `connected: false` on every outage report, `store.ts` at
+ *   #3008), a reopen that produced no frame inside `RECONNECT_DEADLINE_MS`, the
+ *   platform saying the phone is offline, or a stream the store marked closed.
+ *   A clean EOF (the gateway's 60 s lease rotation) is NOT a drop: it is the
+ *   connection layer's invisible `C1`, and a dot that flashed yellow once a
+ *   minute would teach the reader to ignore it.
+ * - `stopped` — the client gave up: a failure the reader must resolve (a 401, a
+ *   typed gateway refusal) ended the stream and nothing is reopening it. The
+ *   banner names that failure and its remedy; the dot says nothing rather than
+ *   "keeps trying" (UX round 1, U4).
+ */
+export type HealthLink = "up" | "retrying" | "stopped";
+
+/** The stream facts {@link healthLink} reads — each one a fact the session
+    runtime already holds for the connection banner, so the dot and the banner
+    are fed by the same readings and cannot disagree about a drop. */
+export type LinkInput = {
+	/** The store's flag: false once the stream has closed. */
+	entryConnected: boolean;
+	/** A transport error has ended an open since the last accepted frame. */
+	droppedSinceFrame: boolean;
+	/** A reopen is in flight and has outlived the reconnect deadline. */
+	reopenOverdue: boolean;
+	/** The platform says there is no network (`null`, unknown, is not offline). */
+	online: boolean | null;
+	/** The stream stopped on a failure the client will not retry. */
+	stoppedOnError: boolean;
+};
+
+export function healthLink(input: LinkInput): HealthLink {
+	if (input.stoppedOnError) return "stopped";
+	if (
+		!input.entryConnected ||
+		input.droppedSinceFrame ||
+		input.reopenOverdue ||
+		input.online === false
+	)
+		return "retrying";
+	return "up";
+}
+
+/**
+ * What the HEADER shows: {@link sessionHealth}, or `null` for "no reading", in
+ * which case the header draws the plain title with no dot and announces
+ * nothing.
+ *
+ * - No projection yet (the first frame has not arrived): the reference renders
+ *   no health control at all while `!projection` (`session-view.tsx` at
+ *   #3008). "Reconnecting" says a link that WAS up has dropped, and on a first
+ *   open nothing has dropped — a yellow dot and a spoken "Reconnecting" on
+ *   every open was a false safety claim (review M3, QA Q3, UX U5).
+ * - The client has stopped retrying: see {@link HealthLink}. `ended` still
+ *   shows, because it is a receipt that holds however old the frame is.
+ */
+export function headerHealth(
+	projection: HealthInput | null | undefined,
+	link: HealthLink,
+): SessionHealth | null {
+	if (projection == null) return null;
+	if (projection.ended === true) return "ended";
+	if (link === "stopped") return null;
+	return sessionHealth(projection, link === "up");
+}
+
 /** The state's own word: the sheet's title, the dot's accessibility label and
     what the announcement region says on a transition — colour is never the
     only signal. `not_answering` and `ended` are the web client's own words

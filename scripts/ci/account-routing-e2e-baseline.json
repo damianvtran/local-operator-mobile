@@ -16,7 +16,11 @@
 		},
 		"web-audit": {
 			"condition": "inputs.proof_mode != 's15-proof'",
-			"bodyWithoutConditionSha256": "7a34a024f0f21226b56ff1ec5ec407358764faff47c3308787392314f963b253"
+<<<<<<< HEAD
+			"bodyWithoutConditionSha256": "86d6113013a03debbbe864aa69e9fb1d9561e0e135554487eff0b47e5c2afafc"
+=======
+			"bodyWithoutConditionSha256": "a9208d93dce89b5aa7163814a6e0af8787dff372349815307c2c23a080a57132"
+>>>>>>> 986fd41 (fix(session): remediate the health dot's first paint, header layout and failures)
 		},
 		"s15-proof": {
 			"condition": "github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'",
@@ -24,7 +28,11 @@
 		},
 		"web-audit-core": {
 			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",
+<<<<<<< HEAD
 			"bodyWithoutConditionSha256": "daaf0249b76e4f940ec4db01905a3843ffbdee38521c1f273e68bd5fbbdd6fdb"
+=======
+			"bodyWithoutConditionSha256": "952304edfd746c022f21de152094761dd21ceb44222247008b493a5755e88821"
+>>>>>>> 986fd41 (fix(session): remediate the health dot's first paint, header layout and failures)
 		},
 		"maestro-android": {
 			"condition": "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && inputs.proof_mode != 's15-proof'",

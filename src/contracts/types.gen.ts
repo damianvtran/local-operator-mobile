@@ -388,7 +388,7 @@ export interface SessionProjection {
 	 * live owner to measure). Absence therefore reads as NO signal, never as
 	 * stale, and never as live either — `pid: 0` still says a disk rebuild.
 	 */
-	heartbeat_stale?: boolean;
+	heartbeat_stale?: boolean | null;
 	transcript: TranscriptEntry[];
 	todos: TodoPhase[];
 	subagents: SubagentRow[];

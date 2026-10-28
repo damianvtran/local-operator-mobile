@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TextInput } from "react-native";
 import {
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
+	type TextInput,
 	useWindowDimensions,
 	View,
 } from "react-native";
@@ -31,6 +32,9 @@ import {
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
 import {
+	HealthAnnouncer,
+	ResumeBlock,
+	SessionHeaderActions,
 	SessionHealthControl,
 	useResume,
 } from "@/features/session/components/session-health";
@@ -50,7 +54,7 @@ import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
-import { sessionHealth } from "@/features/session/health";
+import { headerHealth } from "@/features/session/health";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
@@ -99,6 +103,7 @@ import {
 	COMPACT_PENDING_SHARE,
 	compactChromeShare,
 	composerLimit,
+	headerStacks,
 	type RegionKey,
 	regionOrder,
 	sessionStatusLayout,
@@ -178,10 +183,10 @@ export default function Session() {
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
-		/* The ended verdict comes FROM THE DOT (`sessionHealth`), not
+		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
 		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
 		 *  too, and a send to either REOPENS it. */
-		ended: sessionHealth(runtime.projection, runtime.connected) === "ended",
+		ended: headerHealth(runtime.projection, runtime.link) === "ended",
 		capabilities,
 		editor: provisionalEditor,
 	});
@@ -358,6 +363,8 @@ export default function Session() {
 	 *  marker and the sheet it claims cannot disagree. */
 	const [healthSheetOpen, setHealthSheetOpen] = useState(false);
 	const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+	/* Focus goes back to the header control when its sheet closes (UX U10). */
+	const healthControlRef = useRef<View | null>(null);
 
 	/* The state markers the design audit reads, from the same facts the screen renders
 	 *  from — a marker is a claim about the state the reader is in, so it may only be
@@ -384,7 +391,7 @@ export default function Session() {
 				/* The dot's verdict, from the same call the dot renders — so the
 				 * `S5/health-quiet` marker cannot claim a yellow the header is not
 				 * showing. */
-				health: sessionHealth(projection, runtime.connected),
+				health: headerHealth(projection, runtime.link),
 				healthSheetOpen,
 			}),
 		[
@@ -396,7 +403,7 @@ export default function Session() {
 			runtime.projectionPid,
 			subagents.total,
 			composer.voice.micVisible,
-			runtime.connected,
+			runtime.link,
 			healthSheetOpen,
 		],
 	);
@@ -408,9 +415,12 @@ export default function Session() {
 	/* The header's status dot: ONE verdict, read by the dot, the composer's
 	 *  placeholder and the ended send-failure sentence. From runtime signals the
 	 *  relay publishes (ended / degraded / heartbeat_stale / pid) plus the phone's
-	 *  own link, never from the last message — `health.ts` owns the ladder. */
-	const health = sessionHealth(projection, runtime.connected);
-	const resume = useResume(sessionId, health === "ended");
+	 *  own link, never from the last message — `health.ts` owns the ladder.
+	 *  `null` before the first frame and after the client stops retrying: no
+	 *  dot, no announcement (review M3, UX U4/U5). */
+	const health = headerHealth(projection, runtime.link);
+	const ended = health === "ended";
+	const resume = useResume(sessionId, ended);
 
 	const pendingViewProps = useMemo(
 		() =>
@@ -530,6 +540,12 @@ export default function Session() {
 	const [regionHeights, setRegionHeights] = useState<
 		Partial<Record<RegionKey, number>>
 	>({});
+	/* The same predicate `Screen` stacks on (it passes no `stackBelowWidth`
+	 *  here), so the title's line clamp and its budget agree: stacked, the
+	 *  budget assumes TWO lines (`headerTitleChars`' stacked branch) and the
+	 *  control draws two (review M1 — a one-line clamp under a two-line budget
+	 *  cut every stacked name twice). Compact never stacks. */
+	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
 	const headerTitle =
 		title.length > 0
 			? middleTruncate(
@@ -538,11 +554,18 @@ export default function Session() {
 						? compactTitleChars(
 								{ width: viewportWidth, height: viewportHeight },
 								effectiveScale,
+								{ dot: health === "live", menu: ended },
+								Platform.OS !== "web",
 							)
-						: headerTitleChars({
-								width: viewportWidth,
-								height: viewportHeight,
-							}),
+						: headerTitleChars(
+								{ width: viewportWidth, height: viewportHeight },
+								/* The health control's own chrome on the title line: the
+								 *  inline dot (live only — other states put it on the state
+								 *  line) and the ⋮ (only while ended). Review M1. */
+								{ dot: health === "live", menu: ended },
+								effectiveScale,
+								Platform.OS !== "web",
+							),
 				)
 			: "session";
 
@@ -943,21 +966,43 @@ export default function Session() {
 					<NavigationMark />
 				</View>
 			}
-			/* The title block is a CONTROL: the status dot + the conversation name,
-			 *  a tap on which opens the health sheet (with Resume when grey). The
-			 *  control also renders the header's action cluster — the find lever and
-			 *  the overflow menu, which carries Resume too — so `headerAction` is not
-			 *  set separately. `title` stays for the stacking trigger. */
+			/* The title block is a CONTROL inside the h1: the conversation name
+			 *  plus the status dot (and, when not live, the state word), a tap on
+			 *  which opens the health sheet. Before the first frame `health` is
+			 *  null and the title renders bare. The action cluster goes through
+			 *  `headerAction` like every other screen's, so a tag line under the
+			 *  title cannot pull it into the title column (review M2), and stacked
+			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
 			titleNode={
 				<SessionHealthControl
 					health={health}
 					projection={projection}
+					title={headerTitle}
+					compact={compact}
+					stacked={headerStacked}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
-					resume={resume}
+					controlRef={healthControlRef}
+				>
+					{ended ? <ResumeBlock resume={resume} /> : null}
+				</SessionHealthControl>
+			}
+			stackedActionsBeside
+			headerAction={
+				<SessionHeaderActions
+					ended={ended}
 					menuOpen={sessionMenuOpen}
 					onMenuOpenChange={setSessionMenuOpen}
+					resumeBusy={resume.busy}
+					onResume={() => {
+						setSessionMenuOpen(false);
+						setHealthSheetOpen(true);
+						void resume.resume();
+					}}
 					findAction={
+						/* The find lever. It is the kit's own header control (`IconButton`) —
+						   48 pt on the web/audit build, 44 on iOS — and it IS header chrome:
+						   `header.ts` counts it and its gap in the title budget. */
 						<IconButton
 							accessibilityLabel="Search this conversation"
 							accessibilityHint="Finds messages in the transcript loaded on this device"
@@ -967,16 +1012,7 @@ export default function Session() {
 							icon={({ color, size }) => <Search color={color} size={size} />}
 						/>
 					}
-				>
-					<Text
-						className={
-							compact ? "text-title text-ink" : "text-display text-ink"
-						}
-						numberOfLines={1}
-					>
-						{headerTitle}
-					</Text>
-				</SessionHealthControl>
+				/>
 			}
 			/* The conversation's tags, in the header's own column. The line is a
 			 *  disclosure on a LOCAL conversation whose relay advertises the routes
@@ -1003,6 +1039,7 @@ export default function Session() {
 			}
 		>
 			<SessionStateMarkers facts={stateFacts} />
+			<HealthAnnouncer health={health} />
 			{/* The find states, asserted by the capture cells that declare them
 			    (`S5/find-results`, `S5/find-empty`, `S5/find-hit`, `S5/find-caveat`):
 			    each marker is present ONLY in the state it names, so a frame that
@@ -1303,7 +1340,7 @@ export default function Session() {
 						onRetry={composer.retry}
 						showResume={aborted}
 						onResume={composer.send}
-						ended={health === "ended"}
+						ended={ended}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
 						modelChip={chipLabels.model}

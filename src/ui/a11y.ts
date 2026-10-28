@@ -388,6 +388,10 @@ export const CONTROL = {
 	 *  — the control's accessible name carries the state word, so colour is never
 	 *  the only signal. --- */
 	sessionHealth: "session-health",
+	/** The state line under the session title (dot + word) when not live. A
+	 *  frame can assert the word is VISIBLE, not just in the accessible name
+	 *  (UX round 1 U1 / design D3). */
+	sessionHealthWord: "session-health-word",
 	sessionHealthSheet: "session-health-sheet",
 	sessionHealthResume: "session-health-resume",
 	sessionMenu: "session-menu",
@@ -917,6 +921,9 @@ export const SURFACE = {
 	 * invisible to every gate because no action could hold a press).
 	 */
 	sessionMenuSheet: "session-menu-sheet",
+	/** The composer's "Reopening —…" line while a send to an ENDED session is in
+	 *  flight (UX round 1, U2). */
+	composerReopening: "composer-reopening",
 	/* --- the conversation-tags sheet (LOH-11 S3). One marker per state, because
 	 *  a frame asserting "the catalogue is empty" must not also satisfy "the
 	 *  catalogue is loading" or "the write was refused". */
@@ -1411,6 +1418,10 @@ export const STATE_MARKER = {
 		/* The dot's sheet OPEN (S5/health-sheet): the surface itself is the marker,
 		 *  the way the status sheet and the session menu are. */
 		"health-sheet": CONTROL.sessionHealthSheet,
+		/* The dot's YELLOW "Reconnecting" reading: the phone's link dropped AFTER
+		 *  a frame (the `health-drop` world). Present only in that verdict, so a
+		 *  frame cannot pass on a green dot beside a banner (UX round 1, U4). */
+		"health-reconnecting": "session-health-reconnecting",
 		/* The in-conversation find (this slice): one marker per state a cell
 		 *  declares. `find-results` — the sheet open with a query typed and at
 		 *  least one match; `find-related` — the same sheet whose matches include

@@ -1219,9 +1219,25 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
+		"health-drop",
+		'A session the phone HAD a frame for, whose stream is then torn mid-frame on every open (`sse-drop-mid-stream`): each reconnect seeds and tears again, so the phone\'s link keeps dropping after the first frame. The header\'s dot reads YELLOW "Reconnecting" with the word on its state line — never green beside a "connection dropped" band (UX round 1, U4).',
+		/* No registry cell, deliberately: one more S5 cell takes the `core` plan's
+		 *  derived deadline to 10,584 s = 176.4 min, past the core capture step's
+		 *  175-minute bound (`.github/workflows/e2e.yml`), and raising that bound is
+		 *  a CI-budget change outside this PR. The world is still served, so a
+		 *  local or QA capture can open it by name (`--scenario health-drop`). */
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: { mode: "idle" },
+			faults: ["sse-drop-mid-stream"],
+		}),
+	);
+
+	add(
 		"degraded",
 		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
-		["S15/degraded-row", "S5/degraded"],
+		["S15/degraded-row", "S5/degraded", "S5/health-dropped-sheet"],
 		() => ({
 			/* BOTH signals, and they are not alternatives. #23 added the ROW's own
 			 * receipt (`SessionSummary.degraded`), which is what the list row reads;

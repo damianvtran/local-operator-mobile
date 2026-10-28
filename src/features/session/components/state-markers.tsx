@@ -41,6 +41,9 @@ export const SessionStateMarkers = ({
 			{flags.healthQuiet ? (
 				<View testID={STATE_MARKER.session["health-quiet"]} />
 			) : null}
+			{flags.healthReconnecting ? (
+				<View testID={STATE_MARKER.session["health-reconnecting"]} />
+			) : null}
 			{flags.healthSheet ? (
 				<View testID={STATE_MARKER.session["health-sheet"]} />
 			) : null}

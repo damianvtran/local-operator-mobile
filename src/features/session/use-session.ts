@@ -21,6 +21,11 @@ import {
 	relaySentence,
 } from "@/features/session/connection-view";
 import {
+	type HealthLink,
+	headerHealth,
+	healthLink,
+} from "@/features/session/health";
+import {
 	relaySource,
 	type SessionRelaySource,
 } from "@/features/session/relay-source";
@@ -72,8 +77,12 @@ export interface SessionRuntime {
 	streaming: boolean;
 	streamingRowId: string | null;
 	connection: ConnectionView;
-	/** The session stream's own liveness, for the header's status dot. */
+	/** The session stream's own liveness (the store's flag). */
 	connected: boolean;
+	/** The phone's link as the header's status dot reads it (`healthLink`):
+	 *  `retrying` the moment a link that was up drops, `stopped` once the
+	 *  client has given up — fed by the same facts as the connection banner. */
+	link: HealthLink;
 	commands: SlashCommand[];
 	models: ModelEntry[];
 	loading: boolean;
@@ -274,6 +283,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						// The drop is over the moment a frame lands: without this, C2's
 						// "Reconnecting…" would outlive the reconnect it announced.
 						lastEnd: current.lastEnd === "error" ? undefined : current.lastEnd,
+						droppedSinceFrame: false,
 					}));
 				},
 				onState: (status) => {
@@ -283,6 +293,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						...current,
 						state: status.state,
 						lastEnd: status.lastEnd,
+						droppedSinceFrame:
+							current.droppedSinceFrame || status.lastEnd === "error",
 						// A rotation is a clean EOF: the lease is over, nothing is wrong, and
 						// `overdue` is reset here so a previous loss cannot leak through it.
 						overdue: status.lastEnd === "error" ? current.overdue : false,
@@ -309,6 +321,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							state: "connecting",
 							lastEnd: "error",
 							overdue: false,
+							droppedSinceFrame: true,
 						}));
 						const delay = reconnectDelay(
 							retries.current,
@@ -554,6 +567,20 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		],
 	);
 
+	/* The phone's link as the header dot reads it — computed once, here, so the
+	 *  dot and the connection banner read the same facts (`healthLink`). */
+	const link = healthLink({
+		entryConnected: entry.connected,
+		/* Set by any transport drop (`sse.ts`'s `stalled`/`closed` with
+		 *  `lastEnd: "error"`, and the transient arm above), cleared only by the
+		 *  next accepted frame — the relay's "outage until a fresh frame" rule.
+		 *  A clean EOF (the lease rotation, C1) never sets it. */
+		droppedSinceFrame: facts.droppedSinceFrame,
+		reopenOverdue: facts.overdue,
+		online: deviceOnline(),
+		stoppedOnError: error !== null,
+	});
+
 	const connection = useMemo((): ConnectionView => {
 		const factsForView = {
 			// Authentication failures belong to the provider even though this screen
@@ -570,7 +597,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			online: deviceOnline(),
 			error: error ?? providerConnection.lastError,
 			entry,
-			ended: projection?.ended === true,
+			/* The DOT's ended verdict (pid 0 included), not `projection.ended`
+			 *  alone: a history rebuild is ended too, and a band saying "Not
+			 *  answering" over it contradicted the grey dot (UX round 1, U6). */
+			ended: headerHealth(projection, link) === "ended",
+			healthDotShown: headerHealth(projection, link) !== null,
 			stale: entry.connected && projection?.degraded === true,
 			ageS:
 				facts.ageMs === null
@@ -594,6 +625,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		facts,
 		entry,
 		projection,
+		link,
 		route,
 		providerConnection.lastError,
 		snapshot.detail,
@@ -720,6 +752,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 *  reading below it is stale). `entry.connected`, not the route's phase —
 		 *  a stale frame kept on screen still counts as a reading. */
 		connected: entry.connected,
+		link,
 		commands: ownsProjection ? commands : [],
 		models: ownsProjection ? models : [],
 		loading,

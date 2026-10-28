@@ -90,6 +90,8 @@ export interface SessionStateFacts {
 	supplementPid: number;
 	/** The dot's YELLOW "quiet" reading, derived from the screen's own verdict. */
 	healthQuiet: boolean;
+	/** The dot's YELLOW "reconnecting" reading (the link dropped after a frame). */
+	healthReconnecting: boolean;
 	/** The dot's explanation sheet is open. */
 	healthSheet: boolean;
 }
@@ -116,6 +118,9 @@ export interface SessionStateFlags {
 	 *  already has its own marker and cell. Present only when the sheet would say
 	 *  "quiet", so a frame cannot affirm the wrong yellow. */
 	healthQuiet: boolean;
+	/** The YELLOW dot's "reconnecting" reading: the phone's link dropped after
+	 *  a frame. Present only in that verdict (UX round 1, U4). */
+	healthReconnecting: boolean;
 	/** The dot's explanation sheet is OPEN. */
 	healthSheet: boolean;
 	/** The turn-supplement block's states, one per capture cell. Each is true
@@ -146,6 +151,7 @@ const NOTHING: SessionStateFlags = {
 	idle: false,
 	voice: false,
 	healthQuiet: false,
+	healthReconnecting: false,
 	healthSheet: false,
 	supplementPreparing: false,
 	supplementPopulated: false,
@@ -242,6 +248,7 @@ export const sessionFactsFrom = (
 	supplementPid: input.supplementPid ?? 0,
 	healthQuiet:
 		input.health === "not_answering" && input.projection?.degraded !== true,
+	healthReconnecting: input.health === "reconnecting",
 	healthSheet: input.healthSheetOpen === true,
 });
 
@@ -345,6 +352,7 @@ export const sessionStateFlags = (
 		idle: false,
 		voice: facts.voice,
 		healthQuiet: facts.healthQuiet,
+		healthReconnecting: facts.healthReconnecting,
 		healthSheet: facts.healthSheet,
 		...supplementStateFlags(facts.supplements, facts.supplementPid),
 	};
@@ -359,6 +367,7 @@ export const sessionStateFlags = (
 			key !== "idle" &&
 			key !== "voice" &&
 			key !== "healthQuiet" &&
+			key !== "healthReconnecting" &&
 			key !== "healthSheet" &&
 			value,
 	);
