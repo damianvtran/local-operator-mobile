@@ -27,7 +27,11 @@ re-derived.
   in the console.** An APNs `.p8` key and an FCM service account, an always-on fan-out service with
   an owner and an on-call story, and a way for a user to revoke a device without access to the
   device (ADR 0006 §4, the stolen-phone case). This is a *runtime* commitment, unlike A8, and it is
-  the critical path.
+  the critical path. **Where its state lives (operator decision, 2026-10-28):** the fan-out
+  service's rows — devices, the delivery record, the grant, the durable queue — go in **MongoDB
+  Atlas**, the managed database the rest of Radient runs on, and **not** in any Firebase data
+  product. FCM is the Android delivery rail only (ADR 0006 §5), so this plan adds no Firestore, no
+  Firebase Auth and no Firebase-hosted store.
 
 ---
 

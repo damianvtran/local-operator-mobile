@@ -45,7 +45,12 @@ table (`extra="forbid"`), and the machine's builder composes only house sentence
 field table is the contract; a new field is an ADR amendment.**
 
 **2. Who hosts it.** *Decided:* the Radient control plane (agent-server behind `api.radienthq.com`),
-where the connector already authenticates and `account_id` resolves. The design is ingest route →
+where the connector already authenticates and `account_id` resolves. **Where its state lives
+(operator decision, 2026-10-28):** everything this service holds — the durable queue, the device
+rows, the delivery record, the per-device grant — is in **MongoDB Atlas**, the managed database the
+rest of Radient runs on. **No Firebase data product is involved**: FCM is the Android delivery rail
+and nothing more (ADR §5), so there is no Firestore, no Firebase Auth and no Firebase-hosted store
+behind this service. The design is ingest route →
 durable queue → worker → providers: one route (`POST /v1/tunnels/{id}/push/events`) that validates
 and enqueues, a queue-consuming worker doing all provider traffic — no new public host, no inbound
 path to machines. The standalone alternative (a Cloudflare Worker plus Queue) is **considered and

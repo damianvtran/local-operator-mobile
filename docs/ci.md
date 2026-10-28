@@ -236,7 +236,7 @@ release → Environment secrets) — see "Where they live, and why" below.
 
 | Secret | Used by | What it is |
 |---|---|---|
-| `ANDROID_KEYSTORE_BASE64` | `android.yml` `internal`, `release.yml` | The release keystore, base64-encoded. Decoded to a temp path at build time and removed afterwards. |
+| `ANDROID_KEYSTORE_BASE64` | `android.yml` `internal`, `release.yml` | The **upload key** keystore, base64-encoded — Play App Signing holds the app signing key, so this is not the key users' devices verify (`docs/publishing/google-play.md` § 3). Decoded to a temp path at build time and removed afterwards. |
 | `ANDROID_KEYSTORE_PASSWORD` | same | Keystore password. Passed to Gradle **in the environment**, never as `-P`: a Gradle property lands in `ps` and in the log. |
 | `ANDROID_KEY_ALIAS` | same | Key alias. |
 | `ANDROID_KEY_PASSWORD` | same | Key password. |
