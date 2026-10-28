@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-
+import { t } from "@/i18n";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 
@@ -76,7 +76,7 @@ export const StatusTray = ({
 			 *  row paints, rather than a bare "status" that hides them behind a
 			 *  second gesture. */
 			accessibilityLabel={`${summary} — show status`}
-			accessibilityHint="Opens the working line, tasks and subagents"
+			accessibilityHint={t("mobile.session.status_tray.hint")}
 			onPress={onOpen}
 			testID={CONTROL.sessionStatusTray}
 			style={{ minHeight: TOUCH_FLOOR }}

@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.",
+	"mobile.projects.draft_kept_note": "Kept from your last visit. Clear the fields to start something new.",
+	"mobile.projects.milestone_slash_note": "Milestone names can't contain a slash. A milestone with one could never be removed.",
+	"mobile.projects.milestones.count": "{completed} of {total} milestones",
+	"mobile.projects.milestones.none": "no milestones",
+	"mobile.projects.project_name_hint": "1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.",
+	"mobile.projects.remove_milestone_body": "Remove {name} from this project? The milestone goes for good. The project's sessions and its progress line are not touched.",
+	"mobile.projects.session_state.filed_by": "filed by",
+	"mobile.projects.session_state.missing": "missing",
+	"mobile.projects.session_state.not_running": "not running",
+	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
+	"mobile.projects.sessions.live": "{base} · {live} live",
+	"mobile.projects.stale_badge": "progress stale",
+	"mobile.projects.write_receipt": "{action} {subject}.",
+	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again."
+}

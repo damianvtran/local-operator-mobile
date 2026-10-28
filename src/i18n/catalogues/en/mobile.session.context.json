@@ -1,0 +1,6 @@
+{
+	"mobile.session.status_tray.hint": {
+		"role": "help",
+		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."
+	}
+}

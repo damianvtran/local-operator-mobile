@@ -1,0 +1,62 @@
+{
+	"mobile.projects.delete_body": {
+		"role": "confirm",
+		"note": "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone."
+	},
+	"mobile.projects.draft_kept_note": {
+		"role": "help",
+		"note": "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor."
+	},
+	"mobile.projects.milestone_slash_note": {
+		"role": "help",
+		"note": "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding."
+	},
+	"mobile.projects.milestones.count": {
+		"role": "meta",
+		"note": "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers; no plural agreement is needed because the noun is fixed to the count phrase."
+	},
+	"mobile.projects.milestones.none": {
+		"role": "meta",
+		"note": "Lower-case fragment shown where a milestone count would go when the relay reports zero total milestones. It is joined with a session count, so it carries no final full stop."
+	},
+	"mobile.projects.project_name_hint": {
+		"role": "help",
+		"note": "The complete project-name grammar stated before the tap. Length range and allowed characters must stay exact: this sentence is the reader's only warning before a refusal."
+	},
+	"mobile.projects.remove_milestone_body": {
+		"role": "confirm",
+		"note": "Destructive confirmation. Placeholder {name} is the milestone name (user text, may contain spaces). Says what goes and what stays."
+	},
+	"mobile.projects.session_state.filed_by": {
+		"role": "status",
+		"note": "Lower-case two-word fragment marking a coordination row: the session filed the work rather than doing it. Never imply the row is a worker."
+	},
+	"mobile.projects.session_state.missing": {
+		"role": "status",
+		"note": "Lower-case word for a linked session whose directory is gone. The link is still listed; this names its state."
+	},
+	"mobile.projects.session_state.not_running": {
+		"role": "status",
+		"note": "Lower-case replacement for the relay's 'stopped' runtime state. The ordinary end of a session, not an error."
+	},
+	"mobile.projects.sessions.count": {
+		"role": "meta",
+		"note": "Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English."
+	},
+	"mobile.projects.sessions.live": {
+		"role": "meta",
+		"note": "Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live."
+	},
+	"mobile.projects.stale_badge": {
+		"role": "status",
+		"note": "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name."
+	},
+	"mobile.projects.write_receipt": {
+		"role": "status",
+		"note": "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop."
+	},
+	"mobile.projects.write_unknown_note": {
+		"role": "status",
+		"note": "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved."
+	}
+}

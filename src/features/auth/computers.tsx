@@ -34,6 +34,7 @@ import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
+import { t } from "@/i18n";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
@@ -180,7 +181,9 @@ const ComputerRow = ({
 									accessibilityElementsHidden
 									importantForAccessibility="no"
 								/>
-								<Text className="text-meta text-ink-muted">Connecting…</Text>
+								<Text className="text-meta text-ink-muted">
+									{t("mobile.computers.connecting")}
+								</Text>
 							</View>
 						) : null}
 					</View>
@@ -507,7 +510,7 @@ export default function Computers() {
 						{showSwitch ? (
 							<Button
 								testID={CONTROL.computersSwitch}
-								label="Switch computer"
+								label={t("mobile.computers.switch")}
 								onPress={switcher.open}
 								variant="quiet"
 								size="sm"
@@ -651,8 +654,7 @@ export default function Computers() {
 								Connected to {appeared?.name ?? "your computer"}.
 							</Text>
 							<Text className="text-body-sm text-ink-muted">
-								It stays listed on this phone, so you can switch back from the
-								computer list.
+								{t("mobile.computers.added.stays_listed")}
 							</Text>
 						</View>
 					) : null}
