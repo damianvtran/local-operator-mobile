@@ -41,7 +41,7 @@ import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import type { ComposerControls } from "@/features/session/composer";
-import { COMPOSER_COPY } from "@/features/session/composer";
+import { composerCopy } from "@/features/session/composer";
 import { connectionView } from "@/features/session/connection-view";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
@@ -354,11 +354,11 @@ export default function Home({
 					} else if (source === "paste") {
 						/* A press with no outcome reads as a broken control — the same rule
 						 *  `attachError` follows in the other direction. */
-						setComposerError(COMPOSER_COPY.pasteEmpty);
+						setComposerError(composerCopy().pasteEmpty);
 					}
 				} catch {
 					/* Said, never swallowed — the composer's own error line. */
-					setComposerError(COMPOSER_COPY.attachError);
+					setComposerError(composerCopy().attachError);
 				} finally {
 					setAttaching(false);
 				}
@@ -379,7 +379,7 @@ export default function Home({
 					const image = await readWebImageFile(file);
 					setImages((current) => [...current, image]);
 				} catch {
-					setComposerError(COMPOSER_COPY.attachError);
+					setComposerError(composerCopy().attachError);
 				} finally {
 					setAttaching(false);
 				}

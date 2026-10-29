@@ -22,8 +22,8 @@ import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
-	COMPOSER_COPY,
 	type ComposerControls,
+	composerCopy,
 } from "@/features/session/composer";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
@@ -713,7 +713,7 @@ export const Composer = ({
 			{showResume && !ended ? (
 				<View className="pb-2">
 					<Button
-						label={COMPOSER_COPY.resumeLabel}
+						label={composerCopy().resumeLabel}
 						variant="outline"
 						size="sm"
 						onPress={onResume}
@@ -743,7 +743,7 @@ export const Composer = ({
 					accessibilityLiveRegion="polite"
 					testID={SURFACE.composerReopening}
 				>
-					{COMPOSER_COPY.reopening}
+					{composerCopy().reopening}
 				</Text>
 			) : null}
 
@@ -774,8 +774,8 @@ export const Composer = ({
 							 * design D5). One control, one verb. */
 							label={
 								ended && error !== null
-									? COMPOSER_COPY.endedRetryLabel
-									: COMPOSER_COPY.retryLabel
+									? composerCopy().endedRetryLabel
+									: composerCopy().retryLabel
 							}
 							variant="outline"
 							size="sm"
@@ -895,7 +895,9 @@ export const Composer = ({
 						value={draft}
 						onChangeText={onDraftChange}
 						placeholder={
-							ended ? COMPOSER_COPY.endedPlaceholder : COMPOSER_COPY.placeholder
+							ended
+								? composerCopy().endedPlaceholder
+								: composerCopy().placeholder
 						}
 						maxLines={6}
 						maxHeightPx={fieldMaxHeight}

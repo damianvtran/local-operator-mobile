@@ -33,7 +33,7 @@ import type { ContinuationOp, RelayError } from "@/relay";
  * three places a retained instruction is named — the alert, the retry button and
  * the delivered acknowledgement — rather than "previous"/"pending"/"last".
  */
-export const COMPOSER_COPY = {
+export const composerCopy = () => ({
 	/* The web client's sentence here is `Message Local Operator…`, and this port
 	 * shortens it ON PURPOSE: the field's content box is 166 pt on the 320 pt phone
 	 * and a placeholder is one line, so the sentence renders 184 pt at 100 % text and
@@ -108,7 +108,7 @@ export const COMPOSER_COPY = {
 	 *  (`attach.ts`), so a sentence about the clipboard's CONTENTS would be false
 	 *  for the denial arm. */
 	pasteEmpty: "No image was pasted. Copy an image, then try again.",
-} as const;
+});
 
 /* ------------------------------------------------------------------- the op */
 
@@ -217,7 +217,7 @@ export const composerControls = (
 		 *  earlier instruction first" under it was the stack UX U7 / design D5
 		 *  measured. */
 		disabledReason:
-			blocked && !input.ended ? COMPOSER_COPY.retryDisabledHint : null,
+			blocked && !input.ended ? composerCopy().retryDisabledHint : null,
 		ended: input.ended,
 	};
 };
@@ -275,8 +275,8 @@ export const receiptForError = (error: RelayError): SendReceipt => {
 			.map((value) => value?.trim() ?? "")
 			.find((value) => value !== "" && !value.startsWith("<")) ??
 		(error.kind === "ambiguous-delivery"
-			? COMPOSER_COPY.steerError
-			: COMPOSER_COPY.continuationError);
+			? composerCopy().steerError
+			: composerCopy().continuationError);
 	if (error.envelope === "clear-all") return { kind: "sign-out", message };
 	if (error.envelope === "keep") return { kind: "ambiguous", message };
 	return { kind: "rejected", message };
@@ -298,7 +298,7 @@ export const receiptForError = (error: RelayError): SendReceipt => {
  *  "couldn't send this instruction" and "couldn't continue this conversation" are
  *  two different expectations about what the session was doing. */
 export const ambiguousMessage = (streaming: boolean): string =>
-	streaming ? COMPOSER_COPY.steerError : COMPOSER_COPY.continuationError;
+	streaming ? composerCopy().steerError : composerCopy().continuationError;
 
 /* ------------------------------------------------------- the draft after an ack */
 
