@@ -34,10 +34,13 @@ re-derived.
   costs "a managed queue"). FCM is the Android delivery rail only (ADR 0006 §5), and no
   Firebase-hosted store is part of any of this. **Android background push via FCM requires adding
   Firebase to a Google Cloud project** — the same project, which gains a `firebase:enabled` label,
-  shares its IAM with Firebase, and moves to the Blaze plan once it is billed. **Radient does not use
-  Firebase** (operator decision, 2026-10-28), and as written that decision rules out Android
-  background push. The choice is open with the operator, and it gates the runtime commitment this
-  bullet describes.
+  shares its IAM with Firebase, and moves to the Blaze plan once it is billed. Radient's prior "does
+  not use Firebase" decision (2026-10-28) therefore ruled out Android background push; **the
+  operator resolved that on 2026-10-29 by allowing FCM only on the existing Google Cloud project**
+  (ADR 0006 Status, §5), which unblocks the runtime commitment this bullet describes without
+  unblocking any of its slices. **The operator steps that decision leaves, and the slices that
+  follow, are in [`docs/publishing/push-setup.md`](publishing/push-setup.md)** — no slice below is
+  implemented.
 
 ---
 

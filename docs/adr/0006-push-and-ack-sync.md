@@ -1,16 +1,21 @@
 # ADR 0006 — Push notifications and cross-surface acknowledgement
 
-- **Status:** Proposed (for implementation) — **and the decision this record exists to serve is
-  still open: whether v1 ships push notifications at all.** A `Proposed` status here means
-  "designed, not built": this ADR authorises no implementation work, no cloud-side schema, and no
-  dependency addition until that call is made. Every cloud-side statement below stays marked
-  *(proposal)* for the separate reason that this repository has no access to that code.
-- **The constraint that makes "whether v1 ships push" a real question, stated up front:**
+- **Status:** **Accepted (2026-10-29) — implementation not started.** A `Status` change settles the
+  transport, not the build: **no implementation work, no cloud-side schema and no dependency
+  addition exist yet**, and every cloud-side statement below stays marked *(proposal)* for the
+  separate reason that this repository has no access to that code.
+- **Decision record (operator, 2026-10-29): allow FCM only — add Firebase to the EXISTING Radient
+  Google Cloud project for push, and to nothing else.** What that registers is the constraint
+  stated in the next bullet; what it does not permit — no Firebase database, auth or hosting — is
+  §5, "What FCM is here, and what it is not". The operator's own console steps and the slices that
+  follow are in [`docs/publishing/push-setup.md`](../publishing/push-setup.md).
+- **The constraint the present decision answers, stated up front:**
   **Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
   project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
-  Blaze plan once it is billed. **Radient does not use Firebase** (operator decision, 2026-10-28),
-  and as written that decision rules out Android background push. The choice is open with the
-  operator and is not resolved in this document (§5 sets both sides out).
+  Blaze plan once it is billed. Radient's prior **"Radient does not use Firebase"** decision
+  (2026-10-28) therefore ruled out Android background push, and the operator resolved that
+  collision on **2026-10-29** by allowing the registration and nothing further (§5 sets out what it
+  changes and what it does not).
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,
@@ -602,9 +607,10 @@ is an Atlas collection.
 **Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
 project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
 Blaze plan once it is billed ([Understand Firebase
-projects](https://firebase.google.com/docs/projects/learn-more), read 2026-10-28). **Radient does
-not use Firebase** (operator decision, 2026-10-28), and as written that decision rules out Android
-background push. The choice is open with the operator and is not resolved in this document (§5).
+projects](https://firebase.google.com/docs/projects/learn-more), read 2026-10-28). **That
+registration is the operator's decision of 2026-10-29, allowed for the FCM send API only**
+([`docs/publishing/push-setup.md`](../publishing/push-setup.md)); the data layer does not move with
+it, and §5 says exactly where the permission stops.
 
 What the design does use, so that "no Firebase" is not read as more than it is: app state in Atlas,
 Google identity in the Google Cloud project + Identity Toolkit, Microsoft identity in the Azure
@@ -633,9 +639,8 @@ what it does learn, honestly, including the residue.
 
 **Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
 project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
-Blaze plan once it is billed. **Radient does not use Firebase** (operator decision, 2026-10-28), and
-as written that decision rules out Android background push. The choice is open with the operator and
-is not resolved in this document (§5).
+Blaze plan once it is billed. **Registered, for the FCM send API only** (operator decision,
+2026-10-29), which is the decision this ADR implements and not a licence to keep anything there.
 
 **Two retention rules this ADR adopts, and one honest gap** (designed in the cloud ops note,
 [`docs/push-cloud-ops.md`](../push-cloud-ops.md), PR #15 — the note stays the operational runbook;
@@ -1672,16 +1677,21 @@ nothing is marked or acked that the machine does not already say.
   send credential and the `google-services.json` build input are issued: the v1 access token "is
   associated with a service account that belongs to your Firebase project" ([Your server environment
   and FCM](https://firebase.google.com/docs/cloud-messaging/server-environment)).
-- **The collision, stated rather than smoothed.** **Radient does not use Firebase** (operator
-  decision, 2026-10-28), and as written that decision rules out Android background push. This
-  document does not resolve it. The choice between "no Firebase, and therefore no Android push" and
-  "Firebase registered on the existing Google Cloud project for the FCM API alone" is open with the
-  operator, and it is an input to whether v1 ships push at all.
+- **The collision, resolved by the operator on 2026-10-29.** **Radient does not use Firebase**
+  (operator decision, 2026-10-28), and as written that decision ruled out Android background push.
+  The choice was between "no Firebase, and therefore no Android push" and "Firebase registered on
+  the existing Google Cloud project for the FCM API alone", and **the operator took the second** —
+  FCM only, on the existing Radient Google Cloud project, with no Firebase database, auth or hosting
+  ([`docs/publishing/push-setup.md`](../publishing/push-setup.md)). That settles the transport this
+  ADR describes; it does not build it (Status), and the remaining gates are the console steps the
+  operator must take and the core/cloud slices in [`docs/push-plan.md`](../push-plan.md).
 - **What using FCM does not require.** No Firebase data product is part of this design — no Cloud
   Firestore, no Realtime Database, no Firebase Auth, no Hosting, no Cloud Functions, no Analytics.
   Google identity stays the Google Cloud project + Identity Toolkit, and app state stays Atlas
-  (§2.2). That is a statement about this design's data layer; it is **not** a reading of the
-  operator's decision, which is the bullet above and is not softened by this one.
+  (§2.2). That is a statement about this design's data layer, **and the operator's 2026-10-29
+  decision draws the same boundary**: "allow FCM only" was taken with state in Atlas and the
+  existing identity in place, so this bullet and that decision now say the same thing rather than
+  the decision arriving later and separately.
 - **Where the constraint is narrower than "only FCM".** Two cases sit outside it, and both are
   already in this design rather than discovered later. *(a)* What FCM needs is **Play services on the
   device, not Play as the distribution channel** — the same page says "you are not limited to
