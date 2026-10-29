@@ -96,6 +96,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
 		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
+	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
+	 * onto its new head: the base owns the render and package identities, while
+	 * this PR adds only the relay driver's scoped fault and request-ledger
+	 * controls. Recomputed with `--print`; no U-03 exemption or skipped check. */
 	"tools/lib/relay.ts":
 		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
@@ -142,12 +146,6 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
-	/* Re-pinned 2026-10-28 on the convergence onto 8b384da5 (#112): the `app` and
-	 * `src` trees carry the session-health dot, its sheet and the composer's
-	 * reopen-on-send, and the rebase re-derived both against the merged base. The
-	 * health copy moved from a feature table onto #112's catalogue, so `src` moved
-	 * for that too. No other tree moved: the fixtures, tokens and fonts are
-	 * untouched by this PR. */
 	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
 	 * polish work itself (new status-tray module, one-row session chrome, Home splash
 	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
@@ -290,6 +288,34 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
 	 * `--print` from the staged tree.
 	 *
+	 * Re-pinned 2026-10-28 for M2b (the switcher's Home chip and drawer row), `src`
+	 * only: `computer-entry.ts`/`computer-entry-points.tsx`, the Home header slot,
+	 * the drawer footer, the `CONTROL` doc comments, and `native-polish.test.ts`
+	 * following the D3 one-line rule into the chip. The proofs' scene is a
+	 * session transcript, which renders neither the Home header nor the drawer, so
+	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
+	 * staged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #126 round-1 remediation: registry-backed entry
+	 * names, slot fitting, refusal remedies and opt-in picker focus, plus tests.
+	 * The transcript proofs do not render these navigation entry points. Sheet's
+	 * new focus behavior is opt-in (only the computer picker enables it), and
+	 * middleFit preserves its mono default (26 focused fit tests). This is a source
+	 * identity update, NOT a claim of new rendered proof; independent visual/QA
+	 * validation remains required on this head. app/instrument/input pins unchanged.
+	 * Recomputed with --print after staging the complete remediation.
+	 *
+	 * Re-pinned 2026-10-28 for the M2b round-2 remediation on PR #126, deliberately:
+	 * the switcher's two navigation entry points moved their health marks into an
+	 * alias-free module (`src/features/auth/entry-health-marks.ts`, which the frame
+	 * audit's own test must import so `tools/tsconfig.json` stops failing on `@/`),
+	 * put the kit's control-edge role on both affordances, and made the mark and the
+	 * drawer row's health word follow the text scale. `design/tokens` moves with them
+	 * because two CONTROLS rows were added to `contrast-contract.mjs` for that edge.
+	 * `app/` keeps its previous digest - no route, layout or shell changed. This pin
+	 * is content identity, not a geometry claim: the U-08 cell rows are re-measured
+	 * when the proof runs, and it refuses on its own findings on this number.
+	 *
 	 * Re-pinned 2026-10-28 by the merge refresh of PR #112 (`feat/i18n`), `src`
 	 * only: the branch's runtime, its four keyed copy modules, its generated
 	 * projection and its strings baseline all live under `src/i18n/**` and
@@ -304,14 +330,54 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * bytes, rendered through `t()`), the ICU apostrophe/plural-count guards in
 	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
 	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
-	 * `app` and the design inputs keep their digests. */
+	 * `app` and the design inputs keep their digests.
+	 *
+	 * Re-pinned 2026-10-28 for merging main's i18n extraction into PR #126, `src`
+	 * only: the merged tree now contains both the runtime/catalogue extraction and
+	 * the switcher's Home and drawer entry points. The ratchet removed the replaced
+	 * drawer literal and added no baseline entries; existing switcher copy is
+	 * already keyed. Neither proof renders those navigation entry points, and `app`,
+	 * `design/tokens`, fixtures and package identity keep their existing digests.
+	 * Recomputed with `--print` from the staged merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #127 (inbox re-reads on return), `src` only: the
+	 * notifications inbox refetches on focus and fences writes by route
+	 * (`src/features/notifications/*`), the list store's `applyFrame` takes the
+	 * connection generation it was read under so a stale frame cannot land
+	 * (`src/state/list-store.ts`, `src/features/auth/connection-provider.tsx`), and
+	 * their tests. The U-08 scene is a `long-transcript` session cell: it renders no
+	 * inbox, and the generation fence only drops frames from a retired connection,
+	 * which the proof's single mock-relay connection never produces. `app` unchanged.
+	 * Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-29 for rebasing PR #127 onto main (`8eedcb6`, carrying
+	 * PR #112's i18n extraction and PR #126's switcher entry points), `src` only:
+	 * main keyed the copy under `src/features/notifications/*` that PR #127 also
+	 * rewrites, so the rebased `src` digest is neither side's; recomputed with
+	 * `--print` from the rebased tree and no U-08 scene changes. `design/tokens` is
+	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
+	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
+	 * their digests. */
+	/* Re-pinned 2026-10-29 for the convergence merge onto main `3427c8e` (PR #128,
+	 * the i18n policy, on top of #127/#129): main moved `app`, `src` and three
+	 * instrument files under this branch, whose own change in the same trees is
+	 * the session header's stacked-budget fix. No U-08 scene changes — the proof
+	 * measures the same four screens — so these are digest moves, not new coverage.
+	 * Recomputed with `--print` from the staged merged tree, after the merge. */
 	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "59f9258e922644015fee33bac2a66d3c27ca6c039283a9a082a6d2589307063d",
+	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
+	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
+	 * and `src/i18n/__tests__/locales.test.ts`, so `src` MUST move and the guard is
+	 * working. The same digest also covers main's advances merged in to resolve this
+	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
+	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
+	 * construction — so only `src` was re-pinned. */
+	src: "55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
