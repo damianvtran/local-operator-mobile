@@ -7,6 +7,7 @@ import {
 	directionFor,
 	normalizeLocaleTag,
 	preferredLocale,
+	renderFor,
 	resetLocaleSource,
 	SHIPPED_LOCALES,
 	setLocaleSource,
@@ -125,6 +126,76 @@ describe("a shipped translation", () => {
 		);
 		/* A message with no plural still comes from the French catalogue. */
 		expect(t("mobile.schedules.state.waiting")).toBe("en attente");
+	});
+
+	it("agrees each count with the number its French sentence is about", () => {
+		setLocaleSource(() => "fr");
+		/* TWO SENTENCES, ONE RULE. French noun agreement follows the number the
+		 * sentence STARTS with, not the total after "sur": « 1 jalon sur 3 », not
+		 * « 1 jalons sur 3 ». Both of these shipped ungrammatical at 1 and 0 —
+		 * milestones.count had no plural machinery at all, and truncated pluralized
+		 * nothing while printing the bare noun — so each now pluralizes the count it
+		 * actually agrees with, with French `one`/`many`/`other` (0 and 1 are `one`
+		 * in French CLDR, 10^6 is `many`). Every parameter survives the change. */
+		expect(
+			t("mobile.projects.milestones.count", { completed: 0, total: 3 }),
+		).toBe("0 jalon sur 3");
+		expect(
+			t("mobile.projects.milestones.count", { completed: 1, total: 3 }),
+		).toBe("1 jalon sur 3");
+		expect(
+			t("mobile.projects.milestones.count", { completed: 2, total: 3 }),
+		).toBe("2 jalons sur 3");
+		expect(
+			t("mobile.projects.milestones.count", {
+				completed: 1_000_000,
+				total: 3,
+			}),
+		).toBe("1000000 de jalons sur 3");
+		expect(
+			t("mobile.schedules.truncated", {
+				shown: 1,
+				total: 3,
+				family: "wakes",
+			}),
+		).toBe("Affichage de 1 conversation sur 3 avec des réveils.");
+		expect(
+			t("mobile.schedules.truncated", {
+				shown: 2,
+				total: 3,
+				family: "monitors",
+			}),
+		).toBe("Affichage de 2 conversations sur 3 avec des surveillances.");
+	});
+
+	it("leaves the English source byte-identical for the same keys", () => {
+		/* The per-locale work must not touch English. Compared through `renderFor`
+		 *  with a null preference, so the assertion cannot drift with the active
+		 *  locale of whatever test ran before it. */
+		expect(
+			renderFor(
+				"mobile.projects.milestones.count",
+				{ completed: 1, total: 3 },
+				null,
+			),
+		).toBe("1 of 3 milestones");
+		expect(
+			renderFor(
+				"mobile.projects.milestones.count",
+				{ completed: 2, total: 3 },
+				null,
+			),
+		).toBe("2 of 3 milestones");
+		expect(
+			renderFor(
+				"mobile.schedules.truncated",
+				{ shown: 1, total: 3, family: "wakes" },
+				null,
+			),
+		).toBe("Showing 1 of 3 conversations with wakes.");
+		expect(
+			renderFor("mobile.schedules.count.monitors", { count: 2 }, null),
+		).toBe("2 monitors");
 	});
 });
 

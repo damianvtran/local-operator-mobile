@@ -3855,9 +3855,22 @@ export function createRelay(options: RelayOptions = {}) {
 				if (pathname === "/__mock/scenario" && method === "POST") {
 					const raw = await readBody(req);
 					const body = JSON.parse(raw || "{}");
+					/* VALIDATE EVERY FIELD BEFORE ANY STATE MOVES (review m8). The language
+					 *  check used to sit AFTER the world was pinned, so `{scenario:"idle",
+					 *  language: 42}` answered 400 having already applied the scenario and taken
+					 *  the pin — a rejected request that changed two pieces of state, which the
+					 *  rig that sent it would then have to undo by hand. A request either applies
+					 *  whole or changes nothing. */
 					const next = body.scenario;
 					if (!next || !scenarios[next]) {
 						sendJson(res, 400, errorBody(`unknown scenario: '${next}'`));
+						return;
+					}
+					if (
+						body.language !== undefined &&
+						typeof body.language !== "string"
+					) {
+						sendJson(res, 400, errorBody("language must be a string tag"));
 						return;
 					}
 					const quietFor = Date.now() - state.pinnedAt;
@@ -3891,10 +3904,6 @@ export function createRelay(options: RelayOptions = {}) {
 					 * because it is run-level): a rig sets both before it loads the app,
 					 * so one request describes the whole frame it is about to capture. */
 					if (body.language !== undefined) {
-						if (typeof body.language !== "string") {
-							sendJson(res, 400, errorBody("language must be a string tag"));
-							return;
-						}
 						state.language = resolveHarnessLanguage(body.language);
 					}
 					resetWorld();

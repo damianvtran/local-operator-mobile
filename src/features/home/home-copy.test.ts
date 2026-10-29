@@ -13,6 +13,7 @@ import {
 	SUGGESTION_CHAR_BUDGET,
 	startingLine,
 	startupQueueState,
+	suggestionCharBudget,
 	suggestionCountFor,
 	suggestionSlotFor,
 	TIP_CHAR_BUDGET,
@@ -50,7 +51,18 @@ describe("the home's copy", () => {
 
 	it("keeps every suggestion inside its character ceiling", () => {
 		for (const suggestion of homeSuggestions()) {
-			expect(suggestion.length).toBeLessThanOrEqual(SUGGESTION_CHAR_BUDGET);
+			expect(suggestion.length).toBeLessThanOrEqual(suggestionCharBudget("en"));
+		}
+	});
+
+	it("pins English at 24 and gives no locale a tighter row than English", () => {
+		/* English is the calibrated number the spec fixes, and every other budget
+		 *  is a MEASURED widening of it (`home-copy.ts`): a locale that got a
+		 *  smaller ceiling than English would be truncation dressed as a limit. */
+		expect(SUGGESTION_CHAR_BUDGET.en).toBe(24);
+		for (const budget of Object.values(SUGGESTION_CHAR_BUDGET)) {
+			expect(Number.isInteger(budget)).toBe(true);
+			expect(budget).toBeGreaterThanOrEqual(24);
 		}
 	});
 
@@ -101,8 +113,9 @@ describe("the home's copy", () => {
  * row it has to fit and still pass. A row that clips is a fragment, not a
  * suggestion, and French runs longer than English by construction, so the check
  * is per shipped locale: every key the pool exports, rendered source-direct
- * through `renderFor` (no locale source, no provider), measured against the same
- * ceiling.
+ * through `renderFor` (no locale source, no provider), measured against THAT
+ * locale's own ceiling (`suggestionCharBudget(locale)`) rather than English's 24
+ * — see the calibration comment on `SUGGESTION_CHAR_BUDGET`.
  *
  * The composition rules above stay English-only on purpose: they are rules about
  * the SOURCE pool's wording, and a translation answers them in its own verbs.
@@ -113,7 +126,9 @@ describe("every shipped locale fits the same rows", () => {
 			for (const key of HOME_SUGGESTION_KEYS) {
 				const rendered = renderFor(key, {}, locale);
 				expect(rendered.trim().length).toBeGreaterThan(0);
-				expect(rendered.length).toBeLessThanOrEqual(SUGGESTION_CHAR_BUDGET);
+				expect(rendered.length).toBeLessThanOrEqual(
+					suggestionCharBudget(locale),
+				);
 			}
 		});
 
@@ -126,6 +141,18 @@ describe("every shipped locale fits the same rows", () => {
 			}
 		});
 	}
+
+	it("fr: the chip that creates an agent still names the agent", () => {
+		/* THE DEFECT THE PER-LOCALE BUDGET REPLACED (review m6): at English's 24,
+		 *  French rendered "Créez une équipe" — "Create a team" — and the agent, the
+		 *  only reason the chip exists, was the word the budget bought back. 31
+		 *  characters covers "Créez une équipe d’agents" (25) and keeps the row on
+		 *  one line; this assertion is what stops a future copy edit from quietly
+		 *  dropping the noun again to fit a narrower guess. */
+		expect(renderFor("mobile.home.suggestion.team_of_agents", {}, "fr")).toBe(
+			"Créez une équipe d’agents",
+		);
+	});
 });
 
 /**

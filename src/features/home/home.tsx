@@ -10,6 +10,7 @@ import {
 	useConnection,
 	useConnectionState,
 	useListState,
+	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import {
 	headerBellShowsCount,
@@ -152,6 +153,12 @@ export default function Home({
 	const phase = useConnectionState((state) => state.phase);
 	const unread = useListState((state) => state.unread);
 	const inbox = useListState((state) => state.notifications);
+	/* The resolved language, subscribed so a config frame re-renders this screen.
+	 * It is not read here as a string — `t()` resolves the locale itself — but it is
+	 * a DEPENDENCY of every memo below that caches rendered copy (review M3): a memo
+	 * whose list omits it keeps the previous language's sentences for as long as the
+	 * language is the only thing that changed. */
+	const language = useLocaleFrame();
 	const inboxEnabled = notificationsEnabled(
 		useListState((state) => state.capabilities),
 	);
@@ -381,6 +388,17 @@ export default function Home({
 		[setImages],
 	);
 
+	/* `language` is a dependency here because this memo holds RENDERED COPY: the
+	 * disabled sentence is a `t()` reading, resolved at call time. Without it a
+	 * language frame repaints this screen and the memo hands back the sentence of
+	 * the locale it was last computed in (review M3).
+	 *
+	 * The lint rule cannot see that link: `t()` reads the preference from the
+	 * module-level source in `src/i18n/locale.ts`, so the body never MENTIONS
+	 * `language` and biome calls the dependency unnecessary. It is a TRIGGER — the
+	 * same shape as `use-refusal-reveal.ts`'s `owed` — so the rule is silenced with
+	 * the reason here rather than satisfied by deleting a dependency that matters. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: the copy readers read the locale live, so it must re-run the memo (see above)
 	const controls: ComposerControls = useMemo(
 		() => ({
 			primary: {
@@ -399,9 +417,17 @@ export default function Home({
 			 * the self-evident reason and says nothing. */
 			disabledReason: connected ? null : connectDisabledReason(),
 		}),
-		[connected, draft, images.length, starting, running],
+		/* See the trigger note above: `t()` reads the locale live, so the rendered
+		 * sentence must be recomputed when `language` changes. */
+		[connected, draft, images.length, starting, running, language],
 	);
 
+	/* NO locale dependency here, and that is deliberate rather than an oversight:
+	 * `composerChipLabels` (`src/features/session/chip-labels.ts`) renders no
+	 * catalogue text — its strings are the model's own name, `n/a` and the English
+	 * accessibility labels — so nothing in this memo goes stale with the language.
+	 * The day those labels are keyed, this list gains `language` for the same
+	 * reason the controls' list has it. */
 	const chips = useMemo(
 		() =>
 			composerChipLabels({

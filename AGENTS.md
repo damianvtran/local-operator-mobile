@@ -105,7 +105,7 @@ geometry, draft/queue/privacy boundaries and the rendered-evidence gate.
 ## Internationalization: mandatory policy
 
 **No NEW hardcoded user-facing copy ships, and no feature ships in English only.**
-The tree is not clean yet: `i18n:check` reports 285 literals (271 distinct entries) baselined in
+The tree is not clean yet: `i18n:check` reports 284 literals (270 distinct entries) baselined in
 `scripts/i18n/strings-baseline.json` that predate the runtime, and six of the
 eight supported languages have no catalogue. The gate is a ratchet — it fails a
 pull request that adds copy no key owns and cannot be made to grow — not a claim
@@ -155,7 +155,7 @@ that everything is already keyed.
   entry, so a literal that genuinely must stay English is handled by changing the
   scanner rule deliberately (`scan-strings.ts`, in review) rather than by
   appending to the baseline. Every entry that exists carries an `owner` and a
-  `payoff` (the condition that removes it), enforced by the check. The 271 entries
+  `payoff` (the condition that removes it), enforced by the check. The 270 entries
   that predate this rule carry one owner for the whole set — `damianvtran`,
   recorded as a group, not researched per literal — and one shared payoff; the
   owner of an entry is whoever keys it.

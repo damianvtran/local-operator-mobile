@@ -9,9 +9,12 @@
  *
  * 1. The typed surface has to be a consequence of the catalogues, not a second
  *    list beside them. `CatalogueKey` and `MessageParams` are derived here from
- *    the same parse the renderer performs, so an unknown key, a misspelled one, a
- *    missing argument or a wrongly typed argument fails `tsc` instead of
- *    rendering `undefined` at run time.
+ *    the same parse the renderer performs, so a key that is missing, misspelled
+ *    or mistyped fails the build rather than rendering a wrong sentence. Both
+ *    are read from the STRICTEST kind across the shipped locales (see the
+ *    parity block in `scripts/i18n/generate.ts`): a French plural tightens an
+ *    English plain placeholder to `number` here, so the one call site cannot
+ *    pass a string that renders in English and throws in French.
  * 2. Part of this app is loaded by plain Node scripts (`scripts/ci/account-routing-*`
  *    reach the runtime through a feature module), and Node cannot resolve `src/`'s
  *    extensionless imports or a JSON import without an import attribute. A single
@@ -323,7 +326,7 @@ export type MessageParams = {
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
-	"mobile.projects.milestones.count": { completed: string | number; total: string | number };
+	"mobile.projects.milestones.count": { total: string | number; completed: number };
 	"mobile.projects.milestones.none": NoParams;
 	"mobile.projects.project_name_hint": NoParams;
 	"mobile.projects.remove_milestone_body": { name: string | number };
@@ -336,7 +339,7 @@ export type MessageParams = {
 	"mobile.projects.write_receipt": { action: string | number; subject: string | number };
 	"mobile.projects.write_unknown_note": NoParams;
 	"mobile.schedules.cadence.every": { duration: string | number };
-	"mobile.schedules.cadence.left": { cadence: string | number; remaining: string | number };
+	"mobile.schedules.cadence.left": { cadence: string | number; remaining: number };
 	"mobile.schedules.cadence.once": NoParams;
 	"mobile.schedules.cadence.spent": { cadence: string | number };
 	"mobile.schedules.count.monitors": { count: number };
@@ -365,14 +368,14 @@ export type MessageParams = {
 	"mobile.schedules.state.expired": NoParams;
 	"mobile.schedules.state.stale": NoParams;
 	"mobile.schedules.state.waiting": NoParams;
-	"mobile.schedules.summary.monitors_armed": { count: string | number };
+	"mobile.schedules.summary.monitors_armed": { count: number };
 	"mobile.schedules.summary.monitors_attention": { broken: string | number; total: string | number };
-	"mobile.schedules.summary.wakes": { count: string | number };
+	"mobile.schedules.summary.wakes": { count: number };
 	"mobile.schedules.supervisor.not_running": NoParams;
 	"mobile.schedules.supervisor.unsupported": NoParams;
 	"mobile.schedules.supervisor.unverifiable": NoParams;
-	"mobile.schedules.tail.failed": { count: string | number };
-	"mobile.schedules.truncated": { shown: string | number; total: string | number; family: string };
+	"mobile.schedules.tail.failed": { count: number };
+	"mobile.schedules.truncated": { total: string | number; shown: number; family: string };
 	"mobile.session.conversation_details": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 };
@@ -586,7 +589,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
-	"mobile.projects.milestones.count": { role: "meta", note: "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers; no plural agreement is needed because the noun is fixed to the count phrase." },
+	"mobile.projects.milestones.count": { role: "meta", note: "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers and both must survive translation. ENGLISH needs no plural agreement because its noun is fixed to the count phrase; a locale whose noun agrees with the completed count must pluralize on {completed} (French: one/many/other) and keep {total} a plain placeholder inside every branch — the generator fails a translation that drops or retypes either name." },
 	"mobile.projects.milestones.none": { role: "meta", note: "Lower-case fragment shown where a milestone count would go when the relay reports zero total milestones. It is joined with a session count, so it carries no final full stop." },
 	"mobile.projects.project_name_hint": { role: "help", note: "The complete project-name grammar stated before the tap. Length range and allowed characters must stay exact: this sentence is the reader's only warning before a refusal." },
 	"mobile.projects.remove_milestone_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the milestone name (user text, may contain spaces). Says what goes and what stays." },
@@ -684,7 +687,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 		"mobile.home.options.apply": "Utiliser ces options",
-		"mobile.home.options.fixed": "Les options initiales de cette conversation sont fixes. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
+		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
 		"mobile.home.options.title": "Options de la conversation",
 		"mobile.home.queue.discard": "Supprimer les messages en attente",
@@ -701,7 +704,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
 		"mobile.home.suggestion.phone_access": "Activez l’accès mobile",
 		"mobile.home.suggestion.review_repo": "Examinez ce repo",
-		"mobile.home.suggestion.team_of_agents": "Créez une équipe",
+		"mobile.home.suggestion.team_of_agents": "Créez une équipe d’agents",
 		"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
 		"mobile.home.tip.parallel": "demandez plusieurs sous-agents en parallèle",
 		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
@@ -724,12 +727,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
 		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
 		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
-		"mobile.projects.milestones.count": "{completed} jalons sur {total}",
+		"mobile.projects.milestones.count": "{completed, plural, one {# jalon sur {total}} many {# de jalons sur {total}} other {# jalons sur {total}}}",
 		"mobile.projects.milestones.none": "aucun jalon",
 		"mobile.projects.project_name_hint": "1 à 64 caractères : lettres, chiffres, point, tiret bas ou tiret. Aucun espace, et le nom ne peut pas commencer par un tiret.",
 		"mobile.projects.remove_milestone_body": "Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.",
-		"mobile.projects.session_state.filed_by": "classé par",
-		"mobile.projects.session_state.missing": "manquant",
+		"mobile.projects.session_state.filed_by": "classée par",
+		"mobile.projects.session_state.missing": "manquante",
 		"mobile.projects.session_state.not_running": "arrêtée",
 		"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
 		"mobile.projects.sessions.live": "{base} · {live} en cours",
@@ -773,7 +776,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unsupported": "Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute.",
 		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
-		"mobile.schedules.truncated": "Affichage de {shown} conversations sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
 		"mobile.session.conversation_details": "Détails de la conversation",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 	},

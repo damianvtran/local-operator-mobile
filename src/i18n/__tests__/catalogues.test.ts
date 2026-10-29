@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+	CATALOGUES,
 	ENGLISH_CATALOGUE,
 	ENGLISH_CONTEXT,
 	ENGLISH_MESSAGES,
@@ -150,6 +151,58 @@ describe("the English catalogues", () => {
 			.map((entry) => entry.name)
 			.sort();
 		expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+	});
+});
+
+/**
+ * A SHIPPED LOCALE IS STILL TRANSLATED.
+ *
+ * The gap this closes: every other check in the programme answers "does the key
+ * exist", and a translation REVERTED to its English text — the ordinary way a
+ * value is lost in a rebase or a hand-merge — passes all of them. The key is
+ * present, the message parses, the parameter names still match (English's own
+ * do), and the screen renders a sentence. Nothing says the reader asked for
+ * French and got English back.
+ *
+ * So: no shipped locale may carry a value equal to the English source unless it
+ * is on a short, reasoned allowlist. `CATALOGUES` is read rather than the JSON
+ * files, so the check is against the map the RUNTIME reads — a locale that
+ * exists on disk but is not shipped is somebody's draft, and its own audit is
+ * where that is judged.
+ *
+ * The allowlist is checked in BOTH directions: a newly identical value fails as
+ * untranslated, and an entry that is no longer identical fails as stale, so an
+ * exemption cannot quietly become permanent.
+ */
+const IDENTICAL_BY_DESIGN: Readonly<Record<string, string>> = {
+	"mobile.notifications.title":
+		"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
+	"mobile.projects.write_receipt":
+		"Placeholder-only template, `{action} {subject}.` — both words arrive already rendered, so there is nothing in it to translate.",
+	"mobile.schedules.head.overdue":
+		"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
+};
+
+describe("a shipped translation is still translated", () => {
+	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");
+	const allowlisted = Object.keys(IDENTICAL_BY_DESIGN).sort();
+
+	it.each(shipped)("%s: no value falls back to the English text", (locale) => {
+		const catalogue = CATALOGUES[locale] as Readonly<Record<string, string>>;
+		const source = ENGLISH_MESSAGES as Readonly<Record<string, string>>;
+		const identical = Object.keys(source)
+			.filter((key) => catalogue[key] === source[key])
+			.sort();
+		expect(identical).toEqual(allowlisted);
+	});
+
+	it("gives every allowlisted value its reason", () => {
+		/* The reason is the reviewable part: an entry without one is a blanket
+		 *  exemption, and the point of the list is that each case was judged. */
+		for (const [key, reason] of Object.entries(IDENTICAL_BY_DESIGN)) {
+			expect(reason.trim().length).toBeGreaterThan(20);
+			expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);
+		}
 	});
 });
 

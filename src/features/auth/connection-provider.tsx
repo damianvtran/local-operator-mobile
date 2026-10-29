@@ -85,7 +85,7 @@ import {
 	type RelayStream,
 	type StreamStatus,
 } from "@/relay";
-import { createConfigStore } from "@/state/config-store";
+import { type ConfigSnapshot, createConfigStore } from "@/state/config-store";
 import {
 	type ConnectionSnapshot,
 	createConnectionStore,
@@ -138,6 +138,24 @@ export const useConnectionState = <T,>(
 
 export const useListState = <T,>(selector: (state: ListSnapshot) => T): T =>
 	useStore(listStore, selector);
+
+/**
+ * Subscribe to the config stream's snapshot — today, the resolved LANGUAGE.
+ *
+ * WHY IT IS EXPORTED RATHER THAN READ THROUGH `getState()`. `t()` reads the
+ * locale at CALL time, which is what keeps a copy module from freezing the
+ * language it was first imported in — but it cannot make an already-painted
+ * screen repaint. A screen that keeps its copy in a `useMemo` therefore needs
+ * BOTH: a subscription that re-renders it when a frame changes the language, and
+ * the language in the memo's dependency list so the memo re-runs. Home's composer
+ * is the surface that needed this (review M3): its controls and chips are memoised
+ * over pure copy readers, so a language change while mounted kept the old
+ * sentences until some unrelated state moved. `home.tsx` calls `useLocaleFrame()`
+ * and lists the value in those memos' dependency arrays; nothing else reads the
+ * config store directly.
+ */
+export const useLocaleFrame = (): string | null =>
+	useStore(configStore, (state: ConfigSnapshot) => state.language);
 
 /** How long the list stream waits before reopening after a transport failure.
  *  Long enough that a phone coming out of a tunnel does not hammer the relay,

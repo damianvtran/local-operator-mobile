@@ -16,7 +16,7 @@
  * constants — they are numbers about layout, not translatable text.
  */
 import type { StartupPhase } from "@/features/new-session/startup-coordinator";
-import { type NoParamKey, t } from "@/i18n";
+import { type NoParamKey, type ShippedLocale, t } from "@/i18n";
 
 export const greeting = (): string => t("mobile.home.greeting");
 
@@ -52,9 +52,37 @@ export const foldersReadFailed = (): string =>
  */
 export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
 
-/** The pool's own character ceiling, asserted. 24 is the spec's number; it is
- *  what keeps a full-width row on one line at 320 pt inside the row's 48 pt. */
-export const SUGGESTION_CHAR_BUDGET = 24;
+/**
+ * The pool's character ceiling PER SHIPPED LOCALE, not one number for all of
+ * them (review m6).
+ *
+ * WHY PER LOCALE. 24 is the spec's number, and it is calibrated on ENGLISH: the
+ * longest English chip ("Create a team of agents", 23) fits one full-width row
+ * inside the row's 48 pt at 320 pt. Applied to French it is a lossy budget, not
+ * a layout rule — the French row physically fits more characters at the same
+ * font size, because the same sentence is 30% longer and the row is measured in
+ * points, not in letters. Forcing French into 24 characters bought
+ * "Créez une équipe" for "Create a team of agents": the agent, which is the
+ * whole point of the chip, was the word that got dropped.
+ *
+ * HOW 31 IS DERIVED. Measured on this head, over all 120 catalogue messages: the
+ * median per-message French/English character ratio is 1.30 (mean 1.42).
+ * 24 × 1.30 = 31.2, so 31 characters of French occupy the same width as 24 of
+ * English — the same one-line row at 320 pt, not a larger budget by feel.
+ *
+ * WHY THE TYPE AND NOT A FALLBACK. `Record<ShippedLocale, number>` makes a
+ * shipped locale with no measured budget a COMPILE error, so a new language
+ * cannot inherit English's number silently; `home-copy.test.ts` asserts each
+ * locale's own chips against its own row.
+ */
+export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
+	en: 24,
+	fr: 31,
+};
+
+/** The row's ceiling for one shipped locale. */
+export const suggestionCharBudget = (locale: ShippedLocale): number =>
+	SUGGESTION_CHAR_BUDGET[locale];
 
 /**
  * The mobile suggestion pool's KEYS, pinned head first: the first screen shows

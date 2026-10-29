@@ -36,5 +36,5 @@
 	"mobile.schedules.supervisor.unsupported": "Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute.",
 	"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 	"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
-	"mobile.schedules.truncated": "Affichage de {shown} conversations sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}."
+	"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}."
 }
