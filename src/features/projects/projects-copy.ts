@@ -307,7 +307,9 @@ export const writeUnknownNote = (): string =>
  *  English reader the same English word this screen used to pass in directly.
  *  A rendered word passed as `action` would be printed verbatim in every locale —
  *  the defect this key was shaped to close. Adding a write means adding a code
- *  here AND an arm to `mobile.projects.write_receipt` in every catalogue. */
+ *  here AND an arm to the action select of `mobile.projects.write_receipt` in
+ *  every catalogue — in EVERY `kind` arm, because each locale places the verb
+ *  where its own grammar wants it. */
 export type ReceiptAction =
 	| "created"
 	| "completed"
@@ -317,10 +319,31 @@ export type ReceiptAction =
 	| "removed"
 	| "deleted";
 
-/** The one-line receipt a successful write leaves. `action` is a code, never
- *  copy: the catalogue owns the verb (`deleted` → `Deleted` / `Supprimé`). */
-export function writeReceipt(action: ReceiptAction, subject: string): string {
-	return t("mobile.projects.write_receipt", { action, subject });
+/**
+ * What the action was performed ON, as a CODE — the other half of the same
+ * lesson, and the defect this third parameter closes.
+ *
+ * The screen used to hand the catalogue a composed ENGLISH phrase (`milestone
+ * X`) as the subject. A phrase built in one language cannot be ordered or
+ * inflected by another: a French reader saw « Ajouté milestone X. », an English
+ * noun inside a French sentence. The KIND travels as a code instead and the
+ * catalogue supplies both the noun and its position — English `Removed milestone
+ * X.`, French « Jalon X retiré. » — while `subject` stays the bare name the relay
+ * stores. `other` is the fallback for a subject this build cannot classify: it
+ * renders the name with no noun at all rather than guessing one.
+ */
+export type ReceiptKind = "project" | "milestone" | "other";
+
+/** The one-line receipt a successful write leaves. Every argument is a CODE
+ *  except `subject`: the catalogue owns the verb, the noun and the word order
+ *  (`deleted` + `payments-migration` + `project` → `Deleted payments-migration.`
+ *  / « Projet payments-migration supprimé. »). */
+export function writeReceipt(
+	action: ReceiptAction,
+	subject: string,
+	kind: ReceiptKind,
+): string {
+	return t("mobile.projects.write_receipt", { action, subject, kind });
 }
 
 /**

@@ -260,7 +260,7 @@ describe("the write helpers", () => {
 	});
 
 	it("leaves a receipt that names the action and its subject", () => {
-		expect(writeReceipt("created", "payments-migration")).toBe(
+		expect(writeReceipt("created", "payments-migration", "project")).toBe(
 			"Created payments-migration.",
 		);
 	});
@@ -275,64 +275,105 @@ describe("the write helpers", () => {
 		expect(
 			renderFor(
 				"mobile.projects.write_receipt",
-				{ action: "deleted", subject: "Projet X" },
+				{ action: "deleted", subject: "payments-migration", kind: "project" },
 				"en",
 			),
-		).toBe("Deleted Projet X.");
+		).toBe("Deleted payments-migration.");
 		const french = renderFor(
 			"mobile.projects.write_receipt",
-			{ action: "deleted", subject: "Projet X" },
+			{ action: "deleted", subject: "payments-migration", kind: "project" },
 			"fr",
 		);
-		expect(french).toContain("Supprimé");
+		expect(french).toContain("supprimé");
 		expect(french).not.toContain("Deleted");
-		expect(french).toBe("Supprimé Projet X.");
+		expect(french).toBe("Projet payments-migration supprimé.");
 	});
 
-	it("renders the same English sentence for every action code", () => {
-		/* One row per code, and the English verb it must keep producing: the fix
-		 *  moves the verb into the catalogue and may not change a single English
-		 *  rendering. */
-		const english: ReadonlyArray<readonly [ReceiptAction, string]> = [
-			["created", "Created"],
-			["completed", "Completed"],
-			["reopened", "Reopened"],
-			["added", "Added"],
-			["updated", "Updated"],
-			["removed", "Removed"],
-			["deleted", "Deleted"],
+	/* The one row per action code, in both locales: the verb the CODE must
+	 *  produce (English capitalised as a sentence opener, French an invariant
+	 *  participle that the French sentence puts last). */
+	const RECEIPT_VERBS: ReadonlyArray<readonly [ReceiptAction, string, string]> =
+		[
+			["created", "Created", "créé"],
+			["completed", "Completed", "terminé"],
+			["reopened", "Reopened", "rouvert"],
+			["added", "Added", "ajouté"],
+			["updated", "Updated", "mis à jour"],
+			["removed", "Removed", "retiré"],
+			["deleted", "Deleted", "supprimé"],
 		];
-		for (const [action, verb] of english) {
-			expect(writeReceipt(action, "payments-migration")).toBe(
+
+	it("keeps the English project receipt byte-identical and names a milestone", () => {
+		/* English is the floor: the project shape is the exact sentence the screen
+		 *  produced before this key existed, and a milestone names its NOUN between
+		 *  the verb and the name — the two halves of what used to be a composed
+		 *  phrase (`milestone X`), now supplied by the catalogue from `kind`. */
+		for (const [action, verb] of RECEIPT_VERBS) {
+			expect(writeReceipt(action, "payments-migration", "project")).toBe(
 				`${verb} payments-migration.`,
 			);
+			expect(writeReceipt(action, "beta cut", "milestone")).toBe(
+				`${verb} milestone beta cut.`,
+			);
 		}
 	});
 
-	it("renders a French verb for every action code, never an English one", () => {
-		/* The discriminating check, per code: a translated verb is present and the
-		 *  English verb that used to be interpolated is not. A French value reverted
-		 *  to its English text, or a screen slipping a rendered word back in as the
-		 *  code, fails here rather than shipping an English fragment in a French
-		 *  sentence. */
-		const french: ReadonlyArray<readonly [ReceiptAction, string]> = [
-			["created", "Créé"],
-			["completed", "Terminé"],
-			["reopened", "Rouvert"],
-			["added", "Ajouté"],
-			["updated", "Mis à jour"],
-			["removed", "Retiré"],
-			["deleted", "Supprimé"],
-		];
-		for (const [action, verb] of french) {
-			const rendered = renderFor(
+	it("puts the French verb last and borrows no English noun", () => {
+		/* The defect P3-01, per code and per kind: French names the thing first
+		 *  (« Projet X supprimé. », « Jalon X retiré. ») and closes with an invariant
+		 *  participle. Neither the English noun `milestone` nor an English verb may
+		 *  survive anywhere in the sentence — the two halves that used to be
+		 *  interpolated from the screen. */
+		for (const [action, verb, participle] of RECEIPT_VERBS) {
+			const project = renderFor(
 				"mobile.projects.write_receipt",
-				{ action, subject: "Projet X" },
+				{ action, subject: "payments-migration", kind: "project" },
 				"fr",
 			);
-			expect(rendered).toBe(`${verb} Projet X.`);
-			expect(rendered).not.toMatch(ENGLISH_RECEIPT_VERBS);
+			expect(project).toBe(`Projet payments-migration ${participle}.`);
+			const milestone = renderFor(
+				"mobile.projects.write_receipt",
+				{ action, subject: "X", kind: "milestone" },
+				"fr",
+			);
+			expect(milestone).toBe(`Jalon X ${participle}.`);
+			expect(milestone).not.toContain("milestone");
+			expect(`${project} ${milestone}`).not.toMatch(ENGLISH_RECEIPT_VERBS);
+			expect(`${project} ${milestone}`).not.toContain(verb);
 		}
+	});
+
+	it("falls back to `other` for an unknown code and an unclassified subject", () => {
+		/* A code this build has never heard of, and a subject it cannot classify:
+		 *  both arms must still say something true rather than print the code. */
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "archived", subject: "X", kind: "milestone" },
+				"en",
+			),
+		).toBe("Updated milestone X.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "archived", subject: "X", kind: "milestone" },
+				"fr",
+			),
+		).toBe("Jalon X mis à jour.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "X", kind: "other" },
+				"en",
+			),
+		).toBe("Deleted X.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "X", kind: "other" },
+				"fr",
+			),
+		).toBe("X supprimé.");
 	});
 
 	it("recognises the row vanishing under a write, and nothing else", () => {
