@@ -77,13 +77,20 @@ export type HomeSplashProps = {
  * what these rows do now — text at rest, a `bg-elevated` surface on the row under
  * the pointer — and the kit's `quiet` variant already paints the pressed surface
  * from the same token. The row stays full-bleed with its 44 pt floor, so the whole
- * width is still the target and no boundary is needed to find it. */
+ * width is still the target and no boundary is needed to find it.
+ *
+ * The one-line cap was calibrated at 100 % text scale. Large text instead gets
+ * two centred lines, matching the tip's rule, so longer localized labels remain
+ * readable rather than ending in an ellipsis. The minimum touch height stays a
+ * floor: the row and its pressed surface grow with the wrapped label. */
 const SuggestionRow = ({
 	label,
+	largeText,
 	onPress,
 	testID,
 }: {
 	label: string;
+	largeText: boolean;
 	onPress: () => void;
 	/** Set on the offline state's Connect row (`homeConnect`); the suggestion
 	 *  rows themselves carry no ids — they are content, and a flow presses them
@@ -128,8 +135,9 @@ const SuggestionRow = ({
 						className={cx(
 							"text-body-sm",
 							pressed ? "text-ink" : "text-ink-muted",
+							largeText && "text-center",
 						)}
-						numberOfLines={1}
+						numberOfLines={largeText ? 2 : 1}
 					>
 						{label}
 					</Text>
@@ -270,6 +278,7 @@ export const HomeSplash = ({
 								<SuggestionRow
 									key={label}
 									label={label}
+									largeText={largeText}
 									onPress={() => onPick(label)}
 								/>
 							))}
@@ -281,6 +290,7 @@ export const HomeSplash = ({
 						 *  nothing); only the suggestions hide — see `suggestionSlotFor`. */
 						<SuggestionRow
 							label="Connect a computer"
+							largeText={largeText}
 							onPress={onConnect}
 							testID={CONTROL.homeConnect}
 						/>
