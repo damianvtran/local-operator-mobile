@@ -1542,10 +1542,17 @@ function u08Overlap(state: AuditState): CheckRow[] {
 		 * The COUNT STAYS in `measured` even with no pair to pair: a reader comparing two
 		 * runs needs the number that moved, and "0 text/control boxes" is that number.
 		 */
-		if (meaningful.length === 0) {
-			/* A cell the MATRIX declares contentless is a different statement: the
-			 * emptiness is the state, so the rule does not apply (and must not read as a
-			 * measurement gap, which would make a by-design cell fail the run). */
+		/*
+		 * A cell the MATRIX declares contentless is a different statement from a failed
+		 * render: the emptiness IS the state, so the rule does not apply and must not read
+		 * as a measurement gap.
+		 *
+		 * AND BOTH BRANCHES READ THE SHARED PREDICATE, not a second spelling of it: this
+		 * block used to re-derive `paintedNothing && !designEmpty` beside the helper that
+		 * says exactly that, which is the drift the note above `textAndControlBoxes` warns
+		 * about (review round 1, F3).
+		 */
+		if (designEmpty(state) || frameHasNothingToMeasure(state)) {
 			if (designEmpty(state)) {
 				return [
 					{
@@ -1603,9 +1610,16 @@ function u09AccessibleName(state: AuditState): CheckRow[] {
 			{
 				check: "U-09",
 				verdict: "BLOCKED",
-				blockedKind: "unmeasurable",
+				/* A cell the MATRIX declares contentless has no control by DESIGN, so this rule
+				 * does not apply to it — the same distinction `U-08` draws, and the reason the
+				 * exemption can mean what its name says: `unmeasurable` here would make the
+				 * first legitimately contentless cell fail the run through this rule alone
+				 * (review round 1, F2). */
+				blockedKind: designEmpty(state) ? "not-applicable" : "unmeasurable",
 				measured: "0 interactive AX nodes",
-				detail: "no interactive nodes to name",
+				detail: designEmpty(state)
+					? "this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so it has no control to name"
+					: "no interactive nodes to name",
 			},
 		];
 	}
@@ -1648,9 +1662,13 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 			{
 				check: "U-10",
 				verdict: "BLOCKED",
-				blockedKind: "unmeasurable",
+				// `not-applicable` for a cell declared contentless by design, for the reason
+				// `U-09` gives beside it.
+				blockedKind: designEmpty(state) ? "not-applicable" : "unmeasurable",
 				measured: "0 interactive nodes in this frame",
-				detail: "",
+				detail: designEmpty(state)
+					? "this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so it has no label to compare"
+					: "",
 			},
 		];
 	}

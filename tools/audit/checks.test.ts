@@ -1186,6 +1186,9 @@ describe("the painted-nothing rule over an empty text/control set", () => {
 		 * Shipping a fake cell in the registry to reach the branch would put a lie in the
 		 * matrix; mutating the table here puts it in the test that owns the claim. */
 		const declared = DESIGN_EMPTY_CELLS as string[];
+		// Remember what was there: `declared.length = 0` assumes the table starts empty,
+		// and would wipe a real entry the day one is committed (review round 1, N3).
+		const before = [...declared];
 		declared.push("S9/spinner");
 		try {
 			const empty = state({ screen: "S9", state: "spinner" });
@@ -1197,8 +1200,19 @@ describe("the painted-nothing rule over an empty text/control set", () => {
 			// `not-applicable` is the kind that does NOT count as a gap: a cell whose
 			// emptiness is its state cannot make a run incomplete.
 			expect(rows[0]?.blockedKind).toBe("not-applicable");
+
+			/* AND THE EXEMPTION HAS TO MEAN THAT FOR THE OTHER TWO RULES that
+			 * short-circuit on an empty set, or the first by-design cell still fails the
+			 * run through them (review round 1, F2: U-09 and U-10 came out
+			 * `unmeasurable`, which IS a gap, and exit 3). */
+			for (const check of ["U-09", "U-10"]) {
+				const row = run(check, state({ screen: "S9", state: "spinner" }))[0];
+				expect(row?.verdict).toBe("BLOCKED");
+				expect(row?.blockedKind).toBe("not-applicable");
+			}
 		} finally {
 			declared.length = 0;
+			declared.push(...before);
 		}
 	});
 });

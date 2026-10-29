@@ -793,8 +793,9 @@ export function admitRecordScales(
  * its 65-character name in `long-names` and nowhere else, and `S5/populated-long` renders
  * the 520-row transcript in `long-transcript`. The capture records the world it pinned
  * (`records[].pinnedScenario`) and the audit replays that name; when the name is a world
- * that does NOT declare this cell — a manifest from an older head, a hand-edited one, a
- * `--scenario` pin — the replay faithfully renders a page the cell never named, and the
+ * that does NOT declare this cell — a manifest from an older head or a hand-edited one;
+ * `capture.ts` refuses a `--scenario` pin that does not declare the cell, so a same-head
+ * capture cannot record one — the replay faithfully renders a page the cell never named, and the
  * rows it produces are readings about that other page wearing this cell's name. Nothing in
  * the frame afterwards can tell the two apart, which is why the check belongs here.
  *
@@ -832,6 +833,51 @@ export function admitRecordWorlds(
 			`${cell} pins the relay world "${pinned}", which does not declare it — the worlds that do are ${named.length > 0 ? named.join(", ") : "none"}`,
 		);
 	}
+}
+
+/**
+ * The painted-nothing rewrite, or the rows exactly as they came.
+ *
+ * A cell that painted nothing produced no measurement of its own, so its PASS rows are
+ * statements about an empty page — the false green measured in the tier ("`0 text/control
+ * boxes`, PASS") — and they become BLOCKED/unmeasurable, counted as a gap.
+ *
+ * EXCEPT WHEN A RULE MEASURED SOMETHING. A `FAIL` is a defect a rule READ, and an
+ * `EXCEPTION` is a pair the rule recorded with its reason; rewriting either would trade a
+ * real finding for an instrumentation gap, which is the same class of false verdict this
+ * gate exists to remove, pointing the other way. Review round 1 (F1) reproduced two
+ * reachable shapes where that happened: a frame whose only text node is clipped away by an
+ * ancestor (the text/control set is empty because `isGhost` drops it, and `U-07` reported
+ * `content 48px in a 20px box (overflow-y: hidden)`), and a frame with no boxes at all whose
+ * document overflows the viewport (`U-06` reported `document 511px wide in a 320px
+ * viewport`). Both left `frameHasNothingToMeasure` true, so both FAILs were overwritten: the
+ * report's `failures` fell to 0 and the exit became 3 (a gap) — and under `--allow-blocked`
+ * the run exited 0 over a real clipping defect.
+ *
+ * So the gate fires only when NOTHING on the frame measured anything. The rows it rewrites
+ * say what is true of them: a row about an empty page is not a measurement of the cell.
+ *
+ * Exported so both directions are testable without a browser (`tools/audit/unpainted-frame
+ * .test.ts`): a blank frame's PASS rows become a gap, and a frame that produced a FAIL keeps
+ * every row it produced.
+ */
+export function blockUnpaintedFrame(
+	produced: CheckRow[],
+	state: AuditState,
+): CheckRow[] {
+	if (!frameHasNothingToMeasure(state)) return produced;
+	const measuredSomething = produced.some(
+		(row) => row.verdict === "FAIL" || row.verdict === "EXCEPTION",
+	);
+	if (measuredSomething) return produced;
+	return produced.map((row) => ({
+		...row,
+		verdict: "BLOCKED" as const,
+		blockedKind: "unmeasurable" as const,
+		detail:
+			`${row.detail ?? ""} — the frame painted nothing: 0 text/control boxes, ` +
+			"so this row describes an empty page and is not a measurement of the cell",
+	}));
 }
 
 export async function runAudit(options: AuditOptions) {
@@ -1170,34 +1216,7 @@ export async function runAudit(options: AuditOptions) {
 									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
 									`re-drive does not reach the state it names, so the row describes another screen: ${gap}`,
 							}))
-						: frameHasNothingToMeasure(state)
-							? /*
-								 * THE FRAME PAINTED NOTHING, SO EVERY RULE ON IT IS BLOCKED, not passed.
-								 *
-								 * The cell reached its route, root and state marker — the readiness half is
-								 * satisfied — and then painted an empty page. Nothing about such a frame is a
-								 * measurement: `U-08` has no boxes to pair, `U-09` no control to name, `U-01`
-								 * no text to contrast, and a "PASS" from any of them is a statement about a
-								 * page nobody can see. This is the false green that made two identical runs of
-								 * one manifest disagree at 150 % text (10 boxes in one, 0 in the other, three
-								 * of four `U-08` rows moving), so the whole cell is BLOCKED by name and counted
-								 * as a gap — the same outcome as a re-drive that reached another screen,
-								 * because the run equally has nothing to report.
-								 *
-								 * Last in the chain, deliberately: a declared skip, a cell the capture already
-								 * called unready and a re-drive that missed the state each have a MORE specific
-								 * sentence, and the reader should get that one. A cell the matrix declares
-								 * contentless never reaches here (`frameHasNothingToMeasure`).
-								 */
-								produced.map((row) => ({
-									...row,
-									verdict: "BLOCKED" as const,
-									blockedKind: "unmeasurable" as const,
-									detail:
-										`${row.detail ?? ""} — the frame painted nothing: 0 text/control boxes, ` +
-										"so no rule on it could measure anything and none of these rows is a pass",
-								}))
-							: produced;
+						: blockUnpaintedFrame(produced, state);
 			const blinded = measured.map((row) => {
 				const spec = options.blind.find((candidate) =>
 					matchesBlind(row, [candidate]),

@@ -2352,8 +2352,9 @@ export async function runCapture(options: CaptureOptions) {
 			 * 520-row transcript only in `long-transcript`. The capture records the world it
 			 * pinned per cell (`records[].pinnedScenario`) and the audit replays it — but nothing
 			 * carried the registry's own answer, so a pin that names a world which does NOT
-			 * declare that cell (a manifest from an older head, a hand-edited one, a `--scenario`
-			 * pin) could only be discovered by noticing the page looked wrong. This map is what
+			 * declare that cell (a manifest from an older head, or a hand-edited one — this run
+			 * refuses a `--scenario` that does not declare the cell, so a same-head capture cannot
+			 * record one) could only be discovered by noticing the page looked wrong. This map is what
 			 * lets the audit refuse it by name, from the manifest alone, with no relay running.
 			 *
 			 * `null` for a run with no relay: an ad-hoc `path:` matrix declares no worlds, and
@@ -2911,11 +2912,6 @@ function hasApprox(map: Map<number, number>, value: number) {
 	return false;
 }
 
-/**
- * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
- * whole-page inert case. Compares in px (each scale's own root), so a page whose
- * every role stayed put is recognised as one fact rather than as per-role diffs.
- */
 /**
  * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
  * whole-page inert case. Compares in px (each scale's own root), so a page whose
