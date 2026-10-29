@@ -85,9 +85,9 @@ describe("the inbox return failure door", () => {
 		const rig = await start();
 		/* A one-shot latch could only ever let Try again succeed, and the state worth
 		 * proving — what a FAILED retry shows — would be unreachable. */
-		expect((await rig.control("/__mock/inbox-return", { failures: 2 })).status).toBe(
-			200,
-		);
+		expect(
+			(await rig.control("/__mock/inbox-return", { failures: 2 })).status,
+		).toBe(200);
 		expect((await rig.get("/api/notifications?state=all")).status).toBe(503);
 		expect((await rig.get("/api/notifications?state=all")).status).toBe(503);
 		expect((await rig.get("/api/notifications?state=all")).status).toBe(200);
