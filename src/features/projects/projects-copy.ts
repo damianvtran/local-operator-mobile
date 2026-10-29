@@ -1,4 +1,5 @@
 import type { LinkedSession, ProjectSummary } from "@/contracts";
+import { t } from "@/i18n";
 import { isRelayError } from "@/relay";
 import type { SemanticTone } from "@/ui/variants";
 
@@ -58,8 +59,11 @@ export function milestoneCountLabel(
 	milestonesCompleted: number,
 	milestonesTotal: number,
 ): string {
-	if (milestonesTotal <= 0) return "no milestones";
-	return `${milestonesCompleted} of ${milestonesTotal} milestones`;
+	if (milestonesTotal <= 0) return t("mobile.projects.milestones.none");
+	return t("mobile.projects.milestones.count", {
+		completed: milestonesCompleted,
+		total: milestonesTotal,
+	});
 }
 
 /**
@@ -76,9 +80,9 @@ export function sessionCountLabel(
 	sessions: number,
 	liveSessions: number,
 ): string {
-	const base = sessions === 1 ? "1 session" : `${sessions} sessions`;
+	const base = t("mobile.projects.sessions.count", { count: sessions });
 	if (liveSessions <= 0) return base;
-	return `${base} · ${liveSessions} live`;
+	return t("mobile.projects.sessions.live", { base, live: liveSessions });
 }
 
 /** The row's one-line summary: milestones, then sessions, then the stale word. */
@@ -102,7 +106,7 @@ export function projectRowMeta(project: ProjectSummary): string {
  * line that exists (`showsStaleMark`) — and ONE constant is what stops the two
  * surfaces drifting into two spellings of one fact again.
  */
-export const STALE_BADGE_LABEL = "progress stale";
+export const STALE_BADGE_LABEL = t("mobile.projects.stale_badge");
 
 /**
  * Whether to show the stale mark, which is NOT the same question as
@@ -183,11 +187,15 @@ export function linkedSessionLabel(link: LinkedSession): string {
  * must not paint a filing as a worker that has stopped.
  */
 export function linkedSessionState(link: LinkedSession): string | null {
-	if (link.role === "coordination") return "filed by";
-	if (!link.exists) return "missing";
+	if (link.role === "coordination") {
+		return t("mobile.projects.session_state.filed_by");
+	}
+	if (!link.exists) return t("mobile.projects.session_state.missing");
 	const state = link.runtime?.state;
 	if (typeof state !== "string" || state === "") return null;
-	return state === "stopped" ? "not running" : state;
+	return state === "stopped"
+		? t("mobile.projects.session_state.not_running")
+		: state;
 }
 
 /* ---------------------------------------------------------------- writes --- */
@@ -211,8 +219,7 @@ export function linkedSessionState(link: LinkedSession): string | null {
  * happens). What the reader needs is above the line; the paragraph you are
  * reading is where the why for the next maintainer lives.
  */
-export const MILESTONE_SLASH_NOTE =
-	"Milestone names can't contain a slash. A milestone with one could never be removed.";
+export const MILESTONE_SLASH_NOTE = t("mobile.projects.milestone_slash_note");
 
 /** Whether a typed milestone name is one this build will send. */
 export function milestoneNameUsable(name: string): boolean {
@@ -236,8 +243,7 @@ export function milestoneUnremovable(name: string): boolean {
  * which still cost a round trip for a 65-character name or a leading hyphen
  * (U4). The wording stays in the reader's terms rather than the store's.
  */
-export const PROJECT_NAME_HINT =
-	"1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.";
+export const PROJECT_NAME_HINT = t("mobile.projects.project_name_hint");
 
 /**
  * What a form says when it reopens holding the reader's unfinished work.
@@ -249,8 +255,7 @@ export const PROJECT_NAME_HINT =
  * the worse of the two failures — and the form says so, so a reader opening the
  * sheet to start something else is not silently handed the last attempt.
  */
-export const DRAFT_KEPT_NOTE =
-	"Kept from your last visit. Clear the fields to start something new.";
+export const DRAFT_KEPT_NOTE = t("mobile.projects.draft_kept_note");
 
 /**
  * The tags a reader typed, split the way a list is typed.
@@ -269,12 +274,12 @@ export function parseTags(text: string): string[] {
 
 /** The deletion's confirmation sentence, naming what is lost and what is not. */
 export function deleteProjectBody(displayName: string): string {
-	return `Delete ${displayName}? The project row goes for good. Its linked sessions and their transcripts are not touched.`;
+	return t("mobile.projects.delete_body", { name: displayName });
 }
 
 /** The milestone removal's confirmation sentence, the same two halves. */
 export function removeMilestoneBody(name: string): string {
-	return `Remove ${name} from this project? The milestone goes for good. The project's sessions and its progress line are not touched.`;
+	return t("mobile.projects.remove_milestone_body", { name });
 }
 
 /**
@@ -286,12 +291,13 @@ export function removeMilestoneBody(name: string): string {
  * client cannot make. A definitive refusal never reaches here — it carries the
  * relay's own words (`projectRefusalSentence`).
  */
-export const WRITE_UNKNOWN_NOTE =
-	"We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.";
+export const WRITE_UNKNOWN_NOTE = t("mobile.projects.write_unknown_note");
 
-/** The one-line receipt a successful write leaves. */
+/** The one-line receipt a successful write leaves. The past-tense verb is the
+ *  SCREEN's (`Created`, `Renamed`, …): it is a parameter, not copy owned here,
+ *  and keying the verbs would mean changing the screens that choose them. */
 export function writeReceipt(action: string, subject: string): string {
-	return `${action} ${subject}.`;
+	return t("mobile.projects.write_receipt", { action, subject });
 }
 
 /**

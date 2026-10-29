@@ -78,7 +78,11 @@ describe("the detail keeps read-only ask context separate from answering", () =>
 			"utf8",
 		);
 		expect(detail).toContain("AsksSheet");
-		expect(detail).toContain("Answer in conversation");
+		/* The label is keyed now; the wiring this asserts is that the detail's button
+		 * still comes from the key whose English source is the sentence. */
+		expect(detail).toContain(
+			"mobile.notifications.detail.answer_in_conversation",
+		);
 	});
 });
 

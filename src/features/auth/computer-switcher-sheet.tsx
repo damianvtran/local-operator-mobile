@@ -43,6 +43,7 @@ import {
 	unhideRadientComputer,
 	unhideSavedComputer,
 } from "@/features/auth/tunnel-storage";
+import { t } from "@/i18n";
 import { CONTROL, REGION, ROLE, SURFACE, switcherRowIds } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
@@ -280,7 +281,9 @@ const SwitcherRowView = ({
 										accessibilityElementsHidden
 										importantForAccessibility="no"
 									/>
-									<Text className="text-meta text-ink-muted">Connecting…</Text>
+									<Text className="text-meta text-ink-muted">
+										{t("mobile.computers.connecting")}
+									</Text>
 								</View>
 							) : (
 								<HealthWord row={row} now={now} testID={ids.health} />
@@ -556,11 +559,11 @@ export function ComputerSwitcherSheet({
 			onClose={onClose}
 			/* Echoes the control that opened it ("Switch computer"); "Computers" sat
 			 *  over the Computers screen's own title (design round 1, D6). */
-			title="Switch computer"
+			title={t("mobile.computers.switch")}
 			testID={SURFACE.computerSwitcherSheet}
 			footer={
 				<Button
-					label="Add a computer"
+					label={t("mobile.computers.add")}
 					leadingIcon={({ color, size }) => <Plus color={color} size={size} />}
 					onPress={() => {
 						onClose();
@@ -596,12 +599,12 @@ export function ComputerSwitcherSheet({
 		>
 			{empty ? (
 				<Text className="py-4 text-body text-ink-muted">
-					No computers on this phone yet.
+					{t("mobile.computers.none_on_phone")}
 				</Text>
 			) : null}
 			{sections.onPhone.length > 0 ? (
 				<View testID={REGION.switcherOnPhone}>
-					<SectionHeader label="On this phone" />
+					<SectionHeader label={t("mobile.computers.section.on_phone")} />
 					{sections.onPhone.map((row) => (
 						<SwitcherRowView
 							key={row.key}
@@ -615,7 +618,7 @@ export function ComputerSwitcherSheet({
 			) : null}
 			{sections.notConnected.length > 0 ? (
 				<View testID={REGION.switcherNotConnected}>
-					<SectionHeader label="On your Radient account, not connected" />
+					<SectionHeader label={t("mobile.computers.section.not_connected")} />
 					{sections.notConnected.map((row) => (
 						<SwitcherRowView
 							key={row.key}

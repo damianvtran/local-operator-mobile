@@ -312,14 +312,36 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is content identity, not a geometry claim: the U-08 cell rows are re-measured
 	 * when the proof runs, and it refuses on its own findings on this number.
 	 *
-	 */
+	 * Re-pinned 2026-10-28 by the merge refresh of PR #112 (`feat/i18n`), `src`
+	 * only: the branch's runtime, its four keyed copy modules, its generated
+	 * projection and its strings baseline all live under `src/i18n/**` and
+	 * `src/features/**`, so the merged `src` digest is neither side's. The keyed
+	 * modules resolve to the same English bytes they carried as literals (their
+	 * tests assert the sentences verbatim), so no scene's paint or geometry
+	 * moves; `app`, the design inputs and the proof's fixtures keep their
+	 * digests. Recomputed with `--print` from the merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #112's round-1 remediation, `src` and
+	 * `package.json`: the 40 literals main introduced are keyed (same English
+	 * bytes, rendered through `t()`), the ICU apostrophe/plural-count guards in
+	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
+	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
+	 * `app` and the design inputs keep their digests.
+	 *
+	 * Re-pinned 2026-10-28 for merging main's i18n extraction into PR #126, `src`
+	 * only: the merged tree now contains both the runtime/catalogue extraction and
+	 * the switcher's Home and drawer entry points. The ratchet removed the replaced
+	 * drawer literal and added no baseline entries; existing switcher copy is
+	 * already keyed. Neither proof renders those navigation entry points, and `app`,
+	 * `design/tokens`, fixtures and package identity keep their existing digests.
+	 * Recomputed with `--print` from the staged merged tree. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "0ce591ff887710552099bd967001d2b1d2b67f0370c0f59756af7245d31c0af4",
+	src: "64676ae1c0e6a1c09b237fafccc44babe3d1ef1f4f4528ec34c4e8c09e33d968",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -335,7 +357,7 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"766ef74869e325f6e0b1b0ace856b0359e894205b03f8eb1b77244bcd7c786de",
+		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
 	"pnpm-lock.yaml":
 		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
 	"pnpm-workspace.yaml":

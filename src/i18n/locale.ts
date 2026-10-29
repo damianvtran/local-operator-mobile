@@ -1,0 +1,127 @@
+/**
+ * Where the client's locale comes from — and the ONLY place that answers that.
+ *
+ * THE BACKEND OWNS THE LANGUAGE. There is no phone-local language preference in
+ * this app, and this module deliberately cannot create one: the relay resolves
+ * the operator's single `language` setting (`auto` → `LOP_LANG` → OS → `en`, then
+ * filters it through its shipped set) and pushes the RESULT down
+ * `/api/config/events`, which the app already stores:
+ *
+ *   `configStore.language` in `src/state/config-store.ts` — "The RESOLVED locale
+ *   tag the last frame carried… Never the raw setting: the relay resolves `auto`
+ *   before it is sent, and an unshipped configured tag arrives as `en`."
+ *
+ * `src/features/auth/connection-provider.tsx` owns that store as a process-wide
+ * singleton and registers it here with one line. This module holds a FUNCTION
+ * rather than the store itself so the runtime stays importable from a Node test
+ * (the provider imports `react-native`; a copy module must not).
+ *
+ * WHAT THE CLIENT DOES WITH THE TAG. It filters it through its OWN shipped set
+ * before rendering, rather than trusting the relay: a newer relay may recognize a
+ * locale this build has no catalogue for, and the programme's rule is that an
+ * unshipped candidate renders ENGLISH SOURCE — not the next preference, and never
+ * the key. With only `en` shipped today, every preference resolves to English
+ * source, which is why this slice changes no rendered byte.
+ *
+ * The tag is normalized once, here: `en_us`, `EN-US` and `en-US` are one locale,
+ * so a catalogue lookup, a plural-rule lookup and a direction lookup cannot
+ * disagree about what the reader asked for.
+ */
+
+/** The locale directories this build actually ships. Adding a catalogue
+ *  directory is not enough: it must be listed here (and imported by
+ *  `catalogues.ts`) or the client will not render it. */
+export const SHIPPED_LOCALES = ["en"] as const;
+
+export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];
+
+/** A process-wide reader for the relay's resolved language. Returns `null`
+ *  before the first config frame (and on a relay too old to serve the route). */
+export type LocaleSource = () => string | null;
+
+let source: LocaleSource = () => null;
+
+/**
+ * Point the runtime at the app's config store. Called once from
+ * `connection-provider.tsx`; tests call it with a stub, and `null` puts the
+ * runtime back to "no frame yet" (English).
+ */
+export function setLocaleSource(next: LocaleSource | null): void {
+	source = next ?? (() => null);
+}
+
+export function resetLocaleSource(): void {
+	source = () => null;
+}
+
+const LANGUAGE = /^[A-Za-z]{2,3}$/;
+const REGION = /^[A-Za-z]{2}$/;
+const SCRIPT = /^[A-Za-z]{4}$/;
+
+/**
+ * Canonicalize a BCP-47-ish tag: `en_us` → `en-US`, `EN` → `en`, `zh_hans` →
+ * `zh-Hans`. `null` when the input is absent, blank or not a language tag.
+ *
+ * Only shape is canonicalized. Whether the locale is SHIPPED is a separate
+ * question (`catalogueLocaleFor`), because "this is Urdu" and "this build has
+ * Urdu copy" must stay two different answers.
+ */
+export function normalizeLocaleTag(
+	tag: string | null | undefined,
+): string | null {
+	if (typeof tag !== "string") return null;
+	const parts = tag.trim().replace(/_/g, "-").split("-").filter(Boolean);
+	const language = parts[0];
+	if (language === undefined || !LANGUAGE.test(language)) return null;
+	const normalized = [language.toLowerCase()];
+	for (const part of parts.slice(1)) {
+		if (REGION.test(part)) {
+			normalized.push(part.toUpperCase());
+		} else if (SCRIPT.test(part)) {
+			normalized.push(
+				part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+			);
+		} else {
+			normalized.push(part.toLowerCase());
+		}
+	}
+	return normalized.join("-");
+}
+
+/** The relay's resolved tag as the app last received it, normalized; `null`
+ *  before any config frame. */
+export function preferredLocale(): string | null {
+	return normalizeLocaleTag(source());
+}
+
+/**
+ * The catalogue locale that will actually be rendered for `tag`, or `null` when
+ * the tag is not shipped (the caller then uses English source).
+ *
+ * `en-GB` finds the `en` catalogue, because English variants share one source;
+ * a shipped locale that carried its own region (`pt-BR`) would be matched
+ * exactly first, so this does not flatten a future region-specific catalogue.
+ */
+export function catalogueLocaleFor(
+	tag: string | null | undefined,
+): ShippedLocale | null {
+	const normalized = normalizeLocaleTag(tag);
+	if (normalized === null) return null;
+	if ((SHIPPED_LOCALES as readonly string[]).includes(normalized)) {
+		return normalized as ShippedLocale;
+	}
+	const primary = normalized.split("-")[0];
+	if (primary === undefined) return null;
+	return (SHIPPED_LOCALES as readonly string[]).includes(primary)
+		? (primary as ShippedLocale)
+		: null;
+}
+
+/**
+ * The locale the runtime renders in: the shipped catalogue for the relay's
+ * preference, else English. This is the value `t()` reads, so a missing frame,
+ * an absent relay route and an unshipped tag all land on English source.
+ */
+export function activeLocale(): ShippedLocale {
+	return catalogueLocaleFor(preferredLocale()) ?? "en";
+}

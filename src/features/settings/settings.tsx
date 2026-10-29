@@ -23,6 +23,7 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
@@ -379,10 +380,18 @@ export default function Settings() {
 									 *  refused is not badged "active" here while the store says
 									 *  otherwise (PR #121 UX round 1, U3). */}
 									{rowState(computer, { tunnelId, phase }) === "active" ? (
-										<Badge label="active" tone="success" mono />
+										<Badge
+											label={t("mobile.computers.badge.active")}
+											tone="success"
+											mono
+										/>
 									) : rowState(computer, { tunnelId, phase }) ===
 										"connecting" ? (
-										<Badge label="connecting" tone="info" mono />
+										<Badge
+											label={t("mobile.computers.badge.connecting")}
+											tone="info"
+											mono
+										/>
 									) : (
 										<Button
 											testID={CONTROL.settingsUseComputer}
@@ -431,7 +440,7 @@ export default function Settings() {
 						 *  rows above are only the account's Radient computers. */}
 						<Button
 							testID={CONTROL.settingsSwitchComputer}
-							label="Switch computer"
+							label={t("mobile.computers.switch")}
 							onPress={switcher.open}
 							variant="quiet"
 							size="sm"
