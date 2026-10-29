@@ -728,6 +728,112 @@ export interface AuditOptions {
 /** Refused-audit: the exit code 2 path, thrown so the CLI and the API agree. */
 export class AuditRefused extends Error {}
 
+/** The scale table a manifest recorded, keyed by id, or an empty map. */
+function recordedScaleFactors(
+	meta: Record<string, unknown>,
+): Map<string, number> {
+	const out = new Map<string, number>();
+	const table = meta.scaleProfile;
+	if (!Array.isArray(table)) return out;
+	for (const entry of table) {
+		const record = asRecord(entry);
+		if (record === undefined) continue;
+		const { id, factor } = record;
+		// A malformed row is SKIPPED rather than refused: this table is a record of
+		// what a run used, and a row without a usable id/factor simply cannot
+		// contradict anything. Refusing it would make an old artifact unusable over a
+		// field whose absence is already handled.
+		if (typeof id === "string" && typeof factor === "number")
+			out.set(id, factor);
+	}
+	return out;
+}
+
+/**
+ * Refuse a manifest whose records name a scale this head cannot render at the size the
+ * capture rendered it.
+ *
+ * Two refusals, one place: an id the table does not declare, and an id whose recorded
+ * factor is not the factor the table declares today. The rationale for both is at the
+ * call site in `runAudit`, which is the path CI and the CLI take; this is exported so
+ * the ADMISSION is testable directly, without a browser, a build or a page.
+ */
+export function admitRecordScales(
+	records: ReadonlyArray<{
+		scale: string;
+		cell?: string | undefined;
+		path: string;
+	}>,
+	meta: Record<string, unknown>,
+): void {
+	const recorded = recordedScaleFactors(meta);
+	for (const record of records) {
+		const cell = record.cell ?? record.path;
+		let factor: number;
+		try {
+			factor = textScaleFactor(record.scale);
+		} catch {
+			throw new AuditRefused(
+				`${cell} records scale "${record.scale}", which the capture's scale table never defines — refusing to render it at some other size`,
+			);
+		}
+		const at = recorded.get(record.scale);
+		if (at !== undefined && at !== factor) {
+			throw new AuditRefused(
+				`${cell} records scale "${record.scale}" at factor ${at}, but this head's scale table declares ${factor} — the frames were captured at ${at}, so re-driving at ${factor} would measure a size the capture never saw`,
+			);
+		}
+	}
+}
+
+/**
+ * Refuse a manifest whose record pins a relay WORLD that does not declare the cell.
+ *
+ * A cell's state is a property of a world, not only of a URL: `S8/populated-long` renders
+ * its 65-character name in `long-names` and nowhere else, and `S5/populated-long` renders
+ * the 520-row transcript in `long-transcript`. The capture records the world it pinned
+ * (`records[].pinnedScenario`) and the audit replays that name; when the name is a world
+ * that does NOT declare this cell — a manifest from an older head, a hand-edited one, a
+ * `--scenario` pin — the replay faithfully renders a page the cell never named, and the
+ * rows it produces are readings about that other page wearing this cell's name. Nothing in
+ * the frame afterwards can tell the two apart, which is why the check belongs here.
+ *
+ * The registry's own answer travels in the manifest (`meta.cellWorlds`, written by the
+ * capture), so this needs no relay running: it is a map lookup against what the run that
+ * MADE the frames was told.
+ *
+ * Absent inputs are not disagreements, for the reason `admitRecordScales` gives: an artifact
+ * from before this field existed carries nothing to compare against, and a record that pins
+ * nothing (an ad-hoc `path:` page) claims no world at all.
+ */
+export function admitRecordWorlds(
+	records: ReadonlyArray<{
+		cell?: string | undefined;
+		path: string;
+		pinnedScenario?: string | null;
+	}>,
+	meta: Record<string, unknown>,
+): void {
+	const worlds = asRecord(meta.cellWorlds);
+	if (worlds === undefined) return;
+	for (const record of records) {
+		const cell = record.cell ?? record.path;
+		const pinned = record.pinnedScenario;
+		if (typeof pinned !== "string" || pinned === "") continue;
+		const declaring = worlds[cell];
+		// A cell the registry never described is not this check's business: an ad-hoc
+		// `path:` record's key is a route, and the map has no entry for it.
+		if (!Array.isArray(declaring)) continue;
+		if (declaring.includes(pinned)) continue;
+		const named = declaring.filter(
+			(world): world is string => typeof world === "string",
+		);
+		throw new AuditRefused(
+			`${cell} pins the relay world "${pinned}", which does not declare it — the worlds that do are ${named.length > 0 ? named.join(", ") : "none"}`,
+		);
+	}
+}
+
 export async function runAudit(options: AuditOptions) {
 	/**
 	 * Every row as produced, before any blinding, so the specs can be judged once
@@ -782,23 +888,40 @@ export async function runAudit(options: AuditOptions) {
 		);
 	}
 	/*
-	 * EVERY RECORD'S SCALE MUST RESOLVE BEFORE ANY CELL RENDERS. The re-drive asks
-	 * `matrix.ts` for the factor the capture used, and the id is the only thing the
-	 * record carries. A partial mapping here used to fall through to 200%, so an
-	 * id the table does not declare would render a state the cell never named and
-	 * the run would report it under the cell's scale. Refused up front, naming the
-	 * cell and the scale, so the failure is a manifest problem rather than a
-	 * measurement of the wrong page.
+	 * EVERY RECORD'S SCALE MUST RESOLVE — AND AGREE WITH THE FACTOR THE MANIFEST
+	 * RECORDED — BEFORE ANY CELL RENDERS. The re-drive asks `matrix.ts` for the
+	 * factor the capture used, and the id is the only thing the record carries. A
+	 * partial mapping here used to fall through to 200%, so an id the table does
+	 * not declare would render a state the cell never named and the run would
+	 * report it under the cell's scale. Refused up front, naming the cell and the
+	 * scale, so the failure is a manifest problem rather than a measurement of the
+	 * wrong page.
+	 *
+	 * THE ID ALONE IS NOT ENOUGH, and that is the second half of this refusal. The
+	 * capture writes its own scale table into the manifest (`meta.scaleProfile`,
+	 * the `SCALES` table as that run read it), and a record's factor is only the
+	 * table's IF THE TABLE HAS NOT MOVED since. It has moved: `135` was declared at
+	 * 1.35 and is 1.3529411765 — the exact iOS `xxxLarge` step — so a manifest
+	 * captured either side of that edit names the same id at two different sizes.
+	 * Resolving the id against TODAY's table silently re-drives an old manifest at
+	 * the new factor: the cells render a size their frames were never captured at,
+	 * every row is then a reading about a page the capture did not see, and nothing
+	 * in the report says so. So a record whose recorded factor disagrees with the
+	 * table is refused BY NAME, with both numbers, and the message says which is
+	 * which — the reader has to be able to tell a stale manifest from a changed
+	 * table without opening either.
+	 *
+	 * AN ABSENT RECORDED FACTOR IS NOT A DISAGREEMENT: a manifest written before
+	 * this field existed carries no table to compare against, and inventing a
+	 * refusal for it would retire every artifact already on disk. What it cannot do
+	 * is claim a factor it did not record.
 	 */
-	for (const record of records) {
-		try {
-			textScaleFactor(record.scale);
-		} catch {
-			throw new AuditRefused(
-				`${record.cell ?? record.path} records scale "${record.scale}", which the capture's scale table never defines — refusing to render it at some other size`,
-			);
-		}
-	}
+	admitRecordScales(records, meta);
+	/* The world each record pins, checked against the registry that made the frames: a
+	 * record whose pin names a world which does not declare that cell is the one way a
+	 * re-drive can measure a page the cell never named while every row still carries the
+	 * cell's name (`admitRecordWorlds`). */
+	admitRecordWorlds(records, meta);
 	if (typeof meta.buildDir !== "string")
 		throw new AuditRefused(
 			`${manifestPath} has no meta.buildDir: cannot serve the build`,

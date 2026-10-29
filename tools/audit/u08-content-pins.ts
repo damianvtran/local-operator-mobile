@@ -69,9 +69,9 @@ const sha256 = (content: string | Uint8Array) =>
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
-		"1d9076ea91172d4eddb899eb458e2499aa1f98d36e46ca6be7442aa002db7f6f",
+		"dab974e72f76ab3da8ff1c7453ca424b141e5fcc9221bfba0ca56bd0cbb747a4",
 	"tools/audit/checks.ts":
-		"41300ff403a6e295fdafae1bdc49efd36328ad30dddded10c8773d4976f72f1c",
+		"b814df1c6d0db799286ce40a568cf2235cad8847d932e64a1b42b44bfc46d0bc",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
