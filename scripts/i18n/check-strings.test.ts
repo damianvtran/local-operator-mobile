@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBaseline, ratchet } from "./ratchet.ts";
+import {
+	type BaselineEntry,
+	baselineGrowth,
+	buildBaseline,
+	ratchet,
+	unaccountable,
+} from "./ratchet.ts";
 import { scanSource } from "./scan-strings.ts";
 
 /**
@@ -10,6 +16,7 @@ import { scanSource } from "./scan-strings.ts";
  * make the baseline grow for reasons that have nothing to do with copy, and a
  * ratchet that can grow is not a ratchet. Both are asserted here.
  */
+const ACCOUNTABLE = () => ({ owner: "o", payoff: "p" });
 const FILE = "src/features/example/example.tsx";
 const COPY_FILE = "src/features/example/example-copy.ts";
 
@@ -141,14 +148,14 @@ describe("the ratchet", () => {
 	});
 
 	it("accepts a baselined finding", () => {
-		const baseline = buildBaseline([finding]);
+		const baseline = buildBaseline([finding], ACCOUNTABLE);
 		const result = ratchet(baseline, [finding]);
 		expect(result.added).toHaveLength(0);
 		expect(result.stale).toHaveLength(0);
 	});
 
 	it("reports a baselined finding that is gone as stale", () => {
-		const baseline = buildBaseline([finding]);
+		const baseline = buildBaseline([finding], ACCOUNTABLE);
 		const result = ratchet(baseline, []);
 		expect(result.added).toHaveLength(0);
 		expect(result.stale).toHaveLength(1);
@@ -156,6 +163,41 @@ describe("the ratchet", () => {
 
 	it("deduplicates repeated literals so the baseline is a set", () => {
 		const repeated = [finding, { ...finding, line: 99 }];
-		expect(buildBaseline(repeated)).toHaveLength(1);
+		expect(buildBaseline(repeated, ACCOUNTABLE)).toHaveLength(1);
+	});
+});
+
+describe("the baseline's growth check", () => {
+	const entry = (file: string, text: string): BaselineEntry => ({
+		file,
+		text,
+		owner: "o",
+		payoff: "p",
+	});
+
+	it("reports an entry the base does not have", () => {
+		const base = [entry("a.tsx", "One")];
+		const head = [entry("a.tsx", "One"), entry("b.tsx", "Two")];
+		expect(baselineGrowth(base, head).map((added) => added.text)).toEqual([
+			"Two",
+		]);
+	});
+
+	it("allows shrinking and ignores an edited owner or payoff", () => {
+		const base = [entry("a.tsx", "One"), entry("b.tsx", "Two")];
+		const head = [{ ...entry("a.tsx", "One"), owner: "someone else" }];
+		expect(baselineGrowth(base, head)).toEqual([]);
+	});
+
+	it("flags an entry with a blank owner or payoff", () => {
+		const bad = [
+			{ file: "a.tsx", text: "One", owner: "o" },
+			{ file: "b.tsx", text: "Two", owner: " ", payoff: "p" },
+			entry("c.tsx", "Three"),
+		];
+		expect(unaccountable(bad).map((found) => found.file)).toEqual([
+			"a.tsx",
+			"b.tsx",
+		]);
 	});
 });

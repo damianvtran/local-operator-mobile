@@ -21,14 +21,16 @@ export type { Catalogue } from "./catalogues";
 export { CATALOGUES, ENGLISH_CATALOGUE } from "./catalogues";
 export type { TextDirection } from "./direction";
 export { activeDirection, directionFor } from "./direction";
-export type { LocaleSource, ShippedLocale } from "./locale";
+export type { LocaleSource, ShippedLocale, SupportedLocale } from "./locale";
 export {
 	activeLocale,
 	catalogueLocaleFor,
+	NOT_YET_SHIPPED_LOCALES,
 	normalizeLocaleTag,
 	preferredLocale,
 	resetLocaleSource,
 	SHIPPED_LOCALES,
+	SUPPORTED_LOCALES,
 	setLocaleSource,
 } from "./locale";
 export type {
