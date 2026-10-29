@@ -87,7 +87,11 @@ import {
 	textScaleFactor,
 } from "../visual/matrix.ts";
 import type { AuditState, CheckRow } from "./checks.ts";
-import { runChecks, SUB_RULE_TEXT } from "./checks.ts";
+import {
+	frameHasNothingToMeasure,
+	runChecks,
+	SUB_RULE_TEXT,
+} from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { EXTRACT_PROBE, flattenAxTree } from "./probe.ts";
 
@@ -1043,7 +1047,34 @@ export async function runAudit(options: AuditOptions) {
 									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
 									`re-drive does not reach the state it names, so the row describes another screen: ${gap}`,
 							}))
-						: produced;
+						: frameHasNothingToMeasure(state)
+							? /*
+								 * THE FRAME PAINTED NOTHING, SO EVERY RULE ON IT IS BLOCKED, not passed.
+								 *
+								 * The cell reached its route, root and state marker — the readiness half is
+								 * satisfied — and then painted an empty page. Nothing about such a frame is a
+								 * measurement: `U-08` has no boxes to pair, `U-09` no control to name, `U-01`
+								 * no text to contrast, and a "PASS" from any of them is a statement about a
+								 * page nobody can see. This is the false green that made two identical runs of
+								 * one manifest disagree at 150 % text (10 boxes in one, 0 in the other, three
+								 * of four `U-08` rows moving), so the whole cell is BLOCKED by name and counted
+								 * as a gap — the same outcome as a re-drive that reached another screen,
+								 * because the run equally has nothing to report.
+								 *
+								 * Last in the chain, deliberately: a declared skip, a cell the capture already
+								 * called unready and a re-drive that missed the state each have a MORE specific
+								 * sentence, and the reader should get that one. A cell the matrix declares
+								 * contentless never reaches here (`frameHasNothingToMeasure`).
+								 */
+								produced.map((row) => ({
+									...row,
+									verdict: "BLOCKED" as const,
+									blockedKind: "unmeasurable" as const,
+									detail:
+										`${row.detail ?? ""} — the frame painted nothing: 0 text/control boxes, ` +
+										"so no rule on it could measure anything and none of these rows is a pass",
+								}))
+							: produced;
 			const blinded = measured.map((row) => {
 				const spec = options.blind.find((candidate) =>
 					matchesBlind(row, [candidate]),

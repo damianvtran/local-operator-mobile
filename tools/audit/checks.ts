@@ -1094,6 +1094,75 @@ function isGhost(node: AuditNode): boolean {
 }
 
 /**
+ * The frame's TEXT AND CONTROL BOXES — the set every "did this frame paint anything?"
+ * question reads, and the set `U-08` pairs.
+ *
+ * ONE DEFINITION, because there are now two questions over it: whether two boxes collide
+ * (`u08Overlap`) and whether there is anything to measure at all (`paintedNothing`). A
+ * second spelling here is how the two would disagree about a frame the instrument is
+ * already unsure of.
+ *
+ * The members are what the rubric's rules are over: a node that carries its OWN text (a
+ * container holding a child's text is measured through the child) or that the user can
+ * operate. Ghosts are excluded first — a node clipped to nothing by an ancestor, or an
+ * `aria-hidden` node painting no ink, is not a box the user can see (see `isGhost`).
+ */
+export function textAndControlBoxes(state: AuditState): AuditNode[] {
+	return state.nodes.filter((n) => !isGhost(n) && (n.ownText || n.interactive));
+}
+
+/**
+ * Whether a frame PAINTED NOTHING: no text box, no control box, nowhere for a rule to
+ * read. Named as its own predicate because the checks that short-circuit on an empty set
+ * have to say this out loud rather than return their cleanest verdict.
+ */
+export function paintedNothing(state: AuditState): boolean {
+	return textAndControlBoxes(state).length === 0;
+}
+
+/**
+ * Cells that legitimately render NO text and NO control, exempted from the
+ * painted-nothing rule BY NAME.
+ *
+ * EMPTY, and that is a measured statement rather than an unconsidered one: every cell the
+ * matrix declares draws at least one text or control box on the ci tier (the smallest set
+ * any cell produced is recorded in the PR that added this rule, and the audit's own
+ * `0 text/control boxes` rows were the frames that painted nothing by ACCIDENT — the
+ * 150 %-text variance this rule exists to catch, not a state without content). A screen
+ * that is honestly contentless would be a placeholder or a spinner-only state, and this
+ * matrix does not have one.
+ *
+ * It stays as the ONE place to say otherwise. An entry here is a claim that a cell's
+ * emptiness is the state rather than a failed render, so it needs the same comment a
+ * `PENDING_CELLS` entry needs — and it is deliberately narrower than weakening the rule: a
+ * blanket "a cell with no boxes passes" is exactly the green this rule removes.
+ */
+export const DESIGN_EMPTY_CELLS: readonly string[] = [];
+
+/**
+ * Whether this CELL is one the matrix declares as contentless by design.
+ *
+ * The key is the harness's own cell name (`S8/populated-long`), the same one `PENDING_CELLS`
+ * and the manifest's `declaredSkips` use, so an exemption is addressable in the vocabulary a
+ * reviewer already reads.
+ */
+export function designEmpty(state: AuditState): boolean {
+	if (state.screen === undefined || state.state === undefined) return false;
+	return DESIGN_EMPTY_CELLS.includes(`${state.screen}/${state.state}`);
+}
+
+/**
+ * Whether this frame has nothing to measure AND was not declared contentless by design.
+ *
+ * The one predicate both halves read — the per-rule row (`u08Overlap`) and the cell-level
+ * gate (`audit.ts`, which blocks every row of such a cell) — so a frame the instrument
+ * cannot measure cannot be measured by one half and passed by the other.
+ */
+export function frameHasNothingToMeasure(state: AuditState): boolean {
+	return paintedNothing(state) && !designEmpty(state);
+}
+
+/**
  * The box a rule about PAINTED geometry measures, or `null` when nothing is painted.
  *
  * A check that measures a layout box measures a claim about a drawing that may not
@@ -1250,9 +1319,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 	//
 	// The rule is over boxes the user can SEE, which is `visibleRect` and not `rect`:
 	// see `AuditNode.visibleRect` for why a layout box is the wrong question.
-	const meaningful = state.nodes.filter(
-		(n) => !isGhost(n) && (n.ownText || n.interactive),
-	);
+	const meaningful = textAndControlBoxes(state);
 	const failures: CheckRow[] = [];
 	/**
 	 * Pairs the layout geometry would report, whose PAINTED regions do not overlap.
@@ -1457,6 +1524,51 @@ function u08Overlap(state: AuditState): CheckRow[] {
 		}
 	}
 	if (failures.length === 0 && suppressed.length === 0) {
+		/*
+		 * A FRAME WITH NOTHING IN IT IS NOT A CLEAN FRAME.
+		 *
+		 * This branch used to return the rule's best verdict over an EMPTY set —
+		 * `0 text/control boxes, no pair overlapping >25%`, PASS — and that row is the
+		 * false green of this whole slice: it is what the report says when a render
+		 * painted nothing at all. Measured, not supposed: two runs of the SAME ci
+		 * manifest at 150 % text measured 10 boxes for a cell in one and 0 in the other,
+		 * three of four U-08 rows differing between the runs, and the run that painted
+		 * nothing reported PASS on a page with nothing on it. A rule that cannot fail
+		 * because it has nothing to measure is the vacuity this instrument exists to
+		 * remove, so the empty set is reported as what it is — the check could not
+		 * measure, and the row says so by name. `U-09` has always taken this branch for
+		 * `0 interactive AX nodes`; this is the same statement about a smaller set.
+		 *
+		 * The COUNT STAYS in `measured` even with no pair to pair: a reader comparing two
+		 * runs needs the number that moved, and "0 text/control boxes" is that number.
+		 */
+		if (meaningful.length === 0) {
+			/* A cell the MATRIX declares contentless is a different statement: the
+			 * emptiness is the state, so the rule does not apply (and must not read as a
+			 * measurement gap, which would make a by-design cell fail the run). */
+			if (designEmpty(state)) {
+				return [
+					{
+						check: "U-08",
+						verdict: "BLOCKED",
+						blockedKind: "not-applicable",
+						measured: "0 text/control boxes",
+						detail:
+							"this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so there are no boxes for this rule",
+					},
+				];
+			}
+			return [
+				{
+					check: "U-08",
+					verdict: "BLOCKED",
+					blockedKind: "unmeasurable",
+					measured: "0 text/control boxes",
+					detail:
+						"the frame painted nothing: no text box and no control box, so this rule had no pair to measure — that is not a pass",
+				},
+			];
+		}
 		return [
 			{
 				check: "U-08",
