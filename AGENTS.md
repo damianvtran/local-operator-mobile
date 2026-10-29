@@ -106,7 +106,7 @@ geometry, draft/queue/privacy boundaries and the rendered-evidence gate.
 
 **No NEW hardcoded user-facing copy ships, and no feature ships in English only.**
 The tree is not clean yet: `i18n:check` reports 285 literals (271 distinct entries) baselined in
-`scripts/i18n/strings-baseline.json` that predate the runtime, and seven of the
+`scripts/i18n/strings-baseline.json` that predate the runtime, and six of the
 eight supported languages have no catalogue. The gate is a ratchet — it fails a
 pull request that adds copy no key owns and cannot be made to grow — not a claim
 that everything is already keyed.
@@ -131,7 +131,7 @@ that everything is already keyed.
   non-English catalogue directory must define exactly the English keys,
   namespace by namespace, so a key missing from any locale THAT HAS A DIRECTORY
   fails. A supported locale with no directory is not compared at all (today:
-  every supported locale but `en`), so a key added to `en` alone is green; that
+  `es`, `zh-CN`, `ru`, `vi`, `ur`, `hi`), so a key added to `en` alone is green; that
   is the deliberate ship-wave decision, and it is why the app is not held to
   core's "every key in every language in `languages.json`" rule yet. Then
   `scripts/i18n/check-strings.ts`, which fails on a NEW user-facing literal that
