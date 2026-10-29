@@ -49,6 +49,28 @@ export type ScreenProps = {
 	 * the header already allows (`min-h-14`, never `h-14`).
 	 */
 	headerDetail?: ReactNode;
+	/**
+	 * A replacement for the title's `<Heading>` — used by the session header,
+	 * whose title block is a CONTROL (the status dot + name, a tap opens the
+	 * health sheet). When set, it renders wherever the Heading would, in both the
+	 * stacked and inline branches and with or without `headerDetail`; the caller
+	 * owns the text, the truncation and the press target. Optional and absent on
+	 * every other screen, so those render byte-for-byte as before. The `title`
+	 * string is STILL required alongside it: the stacking trigger
+	 * (`headerStacks`) reads whether a title exists.
+	 */
+	titleNode?: ReactNode;
+	/**
+	 * Stacked only: put `headerAction` on the BACK row, right-aligned, instead of
+	 * on a third row under the title. The session header's cluster is two icon
+	 * controls at most (find, and ⋮ while ended); a third row for them cost
+	 * ~56 pt of a 568 pt phone at 135/200 % and pushed the transcript's first
+	 * rows into each other (`S5/supplement-preparing`, iphone-se — U-08, QA round
+	 * 1 Q2 / design D8), and left ⋮ under the title, away from the edge where it
+	 * sits at every other size. A screen whose cluster can outgrow the back row
+	 * (the sessions list's badges) leaves this off and keeps the wrapping row.
+	 */
+	stackedActionsBeside?: boolean;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
@@ -98,6 +120,8 @@ export const Screen = ({
 	headerLeading,
 	titleLines = 2,
 	headerDetail,
+	titleNode,
+	stackedActionsBeside = false,
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
@@ -180,18 +204,17 @@ export const Screen = ({
 						 *  own row and may use TWO lines — a cap, not a truncation point, for
 						 *  the longest title in the app ("Your own tunnel" fits in one at 2×
 						 *  on 390 pt and two at 320). */}
-						<View className="flex-row items-center gap-2">{headerLeading}</View>
+						<View className="flex-row items-center gap-2">
+							{headerLeading}
+							{stackedActionsBeside ? (
+								<View className="ml-auto flex-row items-center gap-2">
+									{headerAction}
+								</View>
+							) : null}
+						</View>
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className="text-display text-ink"
-									numberOfLines={titleLines}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="gap-1">
+								(titleNode ?? (
 									<Heading
 										level={1}
 										className="text-display text-ink"
@@ -199,6 +222,18 @@ export const Screen = ({
 									>
 										{title}
 									</Heading>
+								))
+							) : (
+								<View className="gap-1">
+									{titleNode ?? (
+										<Heading
+											level={1}
+											className="text-display text-ink"
+											numberOfLines={titleLines}
+										>
+											{title}
+										</Heading>
+									)}
 									{headerDetail}
 								</View>
 							)
@@ -208,37 +243,45 @@ export const Screen = ({
 						 *  the three do not fit on one line — with the default shrink they
 						 *  OVERLAP each other rather than wrapping (`U-08`, measured: the
 						 *  badge landed 8 pt into the search control). */}
-						<View className="flex-row flex-wrap items-center gap-2">
-							{headerAction}
-						</View>
+						{stackedActionsBeside ? null : (
+							<View className="flex-row flex-wrap items-center gap-2">
+								{headerAction}
+							</View>
+						)}
 					</>
 				) : (
 					<>
 						{headerLeading}
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className={
-										compact
-											? "flex-1 text-title text-ink"
-											: "flex-1 text-display text-ink"
-									}
-									numberOfLines={1}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="min-w-0 flex-1 gap-1">
+								(titleNode ?? (
 									<Heading
 										level={1}
 										className={
-											compact ? "text-title text-ink" : "text-display text-ink"
+											compact
+												? "flex-1 text-title text-ink"
+												: "flex-1 text-display text-ink"
 										}
 										numberOfLines={1}
 									>
 										{title}
 									</Heading>
+								))
+							) : (
+								<View className="min-w-0 flex-1 gap-1">
+									{titleNode ?? (
+										<Heading
+											level={1}
+											className={
+												compact
+													? "text-title text-ink"
+													: "text-display text-ink"
+											}
+											numberOfLines={1}
+										>
+											{title}
+										</Heading>
+									)}
 									{headerDetail}
 								</View>
 							)

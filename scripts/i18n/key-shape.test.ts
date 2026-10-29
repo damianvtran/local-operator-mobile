@@ -25,8 +25,23 @@ describe("keyShapeError", () => {
 		expect(keyShapeError(ns, "mobile.schedules")).toContain("namespace");
 	});
 
-	it("rejects more than one group and non lower_snake_case segments", () => {
-		expect(keyShapeError(ns, "mobile.schedules.a.b.c")).toContain("segments");
+	it("accepts a path as deep as the shared vocabulary needs, rejects deeper", () => {
+		/* The bound is derived from core's shipped keys, not from a preference:
+		 * `relay.chrome.session.subtitle.not_answering` is five segments under its
+		 * namespace and is shared with the core client byte-for-byte. */
+		expect(
+			keyShapeError(
+				"relay.chrome",
+				"relay.chrome.session.subtitle.not_answering",
+			),
+		).toBeUndefined();
+		expect(keyShapeError(ns, "mobile.schedules.a.b.c")).toBeUndefined();
+		expect(keyShapeError(ns, "mobile.schedules.a.b.c.d.e.f")).toContain(
+			"segments",
+		);
+	});
+
+	it("rejects non lower_snake_case segments", () => {
 		expect(keyShapeError(ns, "mobile.schedules.Title")).toContain("segment");
 		expect(keyShapeError(ns, "mobile.schedules.a..b")).toContain("segment");
 	});

@@ -163,11 +163,15 @@ that everything is already keyed.
   `src/i18n/catalogues/<locale>/mobile.<area>.json`, with translator context in
   the sibling `mobile.<area>.context.json` sidecar. **The namespace is the file
   stem** (`mobile.schedules`). A key is `<namespace>.<name>` or
-  `<namespace>.<group>.<name>`: it MUST begin with its namespace and a dot, the
-  remainder is one or two non-empty lower_snake_case segments, and the group is
-  OPTIONAL — a flat key is legal (`mobile.account_routing.reload`), as is a
-  grouped one (`mobile.schedules.count.wakes`). Use a group when a namespace has
-  clusters of related keys, not otherwise. Keys are fully qualified, semantic and
+  any deeper lower_snake_case path under it, up to **FIVE segments after the
+  namespace**: it MUST begin with its namespace and a dot, and every segment is
+  non-empty lower_snake_case. The bound is derived from the vocabulary this app
+  SHARES with the core client — `relay.chrome.session.subtitle.not_answering`
+  carries core's audited safety copy and is adopted byte-for-byte, because
+  renaming it would hide that two clients name one state the same way — not from
+  a stylistic preference. A flat key remains legal
+  (`mobile.account_routing.reload`), as does a grouped one
+  (`mobile.schedules.count.wakes`). Keys are fully qualified, semantic and
   immutable, because the namespace is a file-layout and review-boundary decision,
   not a second argument to `t()`. `generate.ts` enforces this
   (`scripts/i18n/key-shape.ts`): a key that violates it fails generation.

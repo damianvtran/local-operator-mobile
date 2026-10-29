@@ -95,7 +95,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
+		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
 	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
 	 * onto its new head: the base owns the render and package identities, while
 	 * this PR adds only the relay driver's scoped fault and request-ledger
@@ -128,8 +128,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
 		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
+	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
+	 * wave: `src` and `app` carry that surface plus the French catalogues and the
+	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
+	 * it. All are content the proof measures, so the pins follow the reviewed
+	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"705d13c600e95dd8d539b3220a4f0497d57d4600be930eb98f05ab812cafd49c",
+		"50d67b1f0951d36793dcaa4b2d961a1031b5bda2eb4a6bb46f08a35a07b2b70b",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -146,7 +151,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"b68452107a0f2d4721caa3ebfafac20d320d5d945bf2e59c50b3092433b2216e",
+		"dcd96584cb631e6aeb8dfc92a2ad0cb8187db3db9966fcb64f73bcd35102e098",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -364,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
+	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -377,7 +382,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "8a6f5da5972ce4016d86e23bfc2ec1e66bafc4fd45cbf202b8dd7c1653f28c0b",
+	src: "48030408603365f619ad3b17673e8297739be9858c57b6594f5f96dc768398bc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

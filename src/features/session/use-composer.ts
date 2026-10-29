@@ -455,10 +455,16 @@ export const useComposer = (input: {
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(receipt.message);
+					/* On an ENDED session the generic "try again" is not the whole story:
+					 * a send is resume-then-send (the daemon wakes a host for a prompt with
+					 * no live entry), so a failure here means that WAKE failed, and the
+					 * honest remedies are send again or Resume from the status sheet. */
+					setError(ended ? COMPOSER_COPY.endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
-					setError(ambiguousMessage(streaming));
+					setError(
+						ended ? COMPOSER_COPY.endedSendFailed : ambiguousMessage(streaming),
+					);
 				}
 			} finally {
 				inFlight.current = false;
@@ -468,7 +474,8 @@ export const useComposer = (input: {
 		// `streaming` is a real dependency, not a lint appeasement: `ambiguousMessage`
 		// and `chooseOp` both read it, so a stale closure here would ask the reader
 		// "couldn't continue this conversation" about a live turn — or send a second
-		// prompt into a streaming session where a steer was meant.
+		// prompt into a streaming session where a steer was meant. `ended` selects
+		// the reopen-failure sentence.
 		[
 			endpoints,
 			sessionId,
@@ -477,6 +484,7 @@ export const useComposer = (input: {
 			setImages,
 			onSent,
 			streaming,
+			ended,
 			cancelDictationForSend,
 		],
 	);
@@ -519,9 +527,30 @@ export const useComposer = (input: {
 				});
 				void result;
 				setRetained(null);
-				// The replayed instruction is the ENVELOPE's, so the visible draft is
-				// never the thing that was delivered: it stays for the reader to send.
-				setNotice(COMPOSER_COPY.retryAckNotice);
+				/* The replayed instruction is the ENVELOPE's. When the visible draft is
+				 * BYTE-IDENTICAL to it, the draft IS what was just delivered — the
+				 * failed send left the text in the box and the reader pressed Retry
+				 * without touching it. Leaving it there under "your edited draft is
+				 * ready to send" invited a duplicate send of a delivered message (UX
+				 * round 1, U7). Same comparison the send's acknowledgement uses; an
+				 * edited draft still stays, as the next command. */
+				if (
+					acknowledgedCurrentDraft(
+						{
+							text: held.text,
+							...(held.images ? { images: held.images } : {}),
+						},
+						{
+							text: draftRef.current.trim(),
+							...(held.images ? { images: imagesRef.current } : {}),
+						},
+					)
+				) {
+					setDraft("");
+					setImages([]);
+				} else {
+					setNotice(COMPOSER_COPY.retryAckNotice);
+				}
 			} catch (failure) {
 				if (isRelayError(failure)) {
 					const receipt = receiptForError(failure);
@@ -530,17 +559,28 @@ export const useComposer = (input: {
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(receipt.message);
+					setError(ended ? COMPOSER_COPY.endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
-					setError(ambiguousMessage(streaming));
+					setError(
+						ended ? COMPOSER_COPY.endedSendFailed : ambiguousMessage(streaming),
+					);
 				}
 			} finally {
 				inFlight.current = false;
 				setSending(false);
 			}
 		})();
-	}, [endpoints, envelopeStore, sessionId, streaming, cancelDictationForSend]);
+	}, [
+		endpoints,
+		envelopeStore,
+		sessionId,
+		streaming,
+		cancelDictationForSend,
+		setDraft,
+		setImages,
+		ended,
+	]);
 
 	/**
 	 * The turn interrupt — the stop button's action, and the whole cancel

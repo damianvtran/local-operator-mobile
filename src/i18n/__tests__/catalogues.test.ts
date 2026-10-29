@@ -25,6 +25,12 @@ import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
 import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
 import session from "@/i18n/catalogues/en/mobile.session.json";
+import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
+import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
+import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
+import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
+import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
+import health from "@/i18n/catalogues/en/relay.health.json";
 
 const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 
@@ -76,6 +82,34 @@ const NAMESPACES = [
 		context: sessionContext,
 		expected: 2,
 	},
+	{
+		/* The relay's own two namespaces, under its own keys. They are here rather
+		 * than renamed into `mobile.*` because the strings are AUDITED SAFETY COPY
+		 * from the web client (`local_operator/i18n/catalogues/en/relay.health.json`
+		 * at 24d328a19a): sharing the key means one state cannot be named two ways,
+		 * and a renamed key would hide that the two clients say the same thing. */
+		name: "relay.health",
+		messages: health,
+		context: healthContext,
+		expected: 8,
+	},
+	{
+		/* This app's own chrome for the health surface: the control's labels, the
+		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
+		 *  `mobile.*` convention #112 established, because a later adoption of the
+		 *  core's locale files must not silently overwrite or orphan them (review
+		 *  round 3 m1 / UX U15 / design D13). */
+		name: "mobile.session_health",
+		messages: sessionHealth,
+		context: sessionHealthContext,
+		expected: 11,
+	},
+	{
+		name: "relay.chrome",
+		messages: relayChrome,
+		context: relayChromeContext,
+		expected: 4,
+	},
 ] as const;
 
 describe("the English catalogues", () => {
@@ -118,7 +152,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(120);
+		expect(total).toBe(143);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -177,6 +211,10 @@ describe("the English catalogues", () => {
 const IDENTICAL_BY_DESIGN: Readonly<Record<string, string>> = {
 	"mobile.notifications.title":
 		"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
+	/* French « session » is the same word as English "session": identical bytes
+	 * here are the correct translation, not a value nobody translated. */
+	"mobile.session_health.menu_title":
+		"French spells “session” the same way; equality is correct here, not a fallback.",
 	"mobile.schedules.head.overdue":
 		"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
 };

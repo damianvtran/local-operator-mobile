@@ -1172,9 +1172,77 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
+		"health-quiet",
+		'The session is running but its owner has gone quiet: `heartbeat_stale: true` with a live pid, so the header\'s status dot reads YELLOW "Not answering" and its sheet says the QUIET sentence (a send can fail and still arrive once the session catches up) — not the degraded one.',
+		/* `S5/health-quiet-sheet` is the same world with the dot\'s sheet OPEN: the
+		 *  quiet sentence is safety copy and until now no frame carried it (review
+		 *  round 4, m3 — the dropped cause had a sheet cell, the quiet one did). */
+		["S5/health-quiet", "S5/health-quiet-sheet"],
+		() => ({
+			projections: {
+				[liveIdle.session_id]: projectionFrom(liveIdle, {
+					heartbeat_stale: true,
+				}),
+			},
+			/* The stream goes silent on purpose: a session that keeps pushing frames
+			 *  cannot be quiet, and the frame that carries `heartbeat_stale` is the
+			 *  last reading before the silence. */
+			stream: { mode: "silent" },
+		}),
+	);
+
+	add(
+		"health-ended",
+		"A conversation opened from history: the projection is a durable rebuild (`pid: 0`, `ended: false`), which the header's dot reads GREY \"Ended\", the composer shows the reopen placeholder, and the dot's sheet offers Resume.",
+		["S5/health-ended", "S5/health-sheet"],
+		() => {
+			const projection = structuredClone(afterDeath);
+			return {
+				projections: { [projection.session_id]: projection },
+				rowOverrides: {
+					section: "previous",
+					streaming: false,
+					ended: true,
+					subagents_running: null,
+					subagents_queued: null,
+				},
+				/* A resumable conversation, so the dot's Resume route has a row the
+				 *  relay will accept: `POST /api/sessions/resume` refuses an id past
+				 *  this list with `resume-unknown`. */
+				past: [
+					{
+						id: projection.session_id,
+						name: projection.conversation_name,
+						mtime: Math.floor(Date.now() / 1000) - 3600,
+						forked: false,
+					},
+				],
+			};
+		},
+	);
+
+	add(
+		"health-drop",
+		'A session the phone HAD a frame for, whose stream is then torn mid-frame on every open (`sse-drop-mid-stream`): each reconnect seeds and tears again, so the phone\'s link keeps dropping after the first frame. The header\'s dot reads YELLOW "Reconnecting" with the word on its state line — never green beside a "connection dropped" band (UX round 1, U4).',
+		/* No registry cell, deliberately: the world needs a torn stream, which a
+		 *  single static frame cannot show — the evidence for it is a real-path
+		 *  probe over time, not a PNG. (It originally cited the core capture step's
+		 *  195-minute bound (the merged plan's derived deadline is 189 min),
+		 *  so the citation was stale — review round 2, m-d.) The world is still
+		 *  served, so a local or QA capture can open it by name
+		 *  (`--scenario health-drop`). */
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: { mode: "idle" },
+			faults: ["sse-drop-mid-stream"],
+		}),
+	);
+
+	add(
 		"degraded",
 		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
-		["S15/degraded-row", "S5/degraded"],
+		["S15/degraded-row", "S5/degraded", "S5/health-dropped-sheet"],
 		() => ({
 			/* BOTH signals, and they are not alternatives. #23 added the ROW's own
 			 * receipt (`SessionSummary.degraded`), which is what the list row reads;

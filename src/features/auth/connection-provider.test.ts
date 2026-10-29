@@ -21,6 +21,7 @@ import {
 	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
+import { headerHealth } from "@/features/session/health";
 import { sessions as sessionProjections } from "@/features/session/runtime";
 import {
 	sessionFactsFrom,
@@ -227,6 +228,9 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		/** Seed one session frame, tear the stream, then refuse every reopen 401 —
+		 *  the round-4 shape (review N1). */
+		refuseSessionStream?: boolean;
 		holdFrame?: boolean;
 		holdHistory?: boolean;
 		holdReloadHistory?: boolean;
@@ -279,6 +283,7 @@ async function relay(
 	/* Whether the session code request fails NOW: starts at `options.failCode`, and a
 	 *  test can lift it to retry the same pick against a recovered control plane. */
 	let failCode = options.failCode ?? false;
+	let sessionStreams = 0;
 	let failedStream = false;
 	const server = createServer(async (request, response) => {
 		const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -404,6 +409,22 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions/") && path.endsWith("/events")) {
+			/* The round-4 shape (review N1 / QA Q10 / UX U17): a frame lands, the
+			 *  session stream is torn, and the REOPEN is refused 401. The route
+			 *  client records that refusal on the shared route, which is the fact
+			 *  the header must read — the stream's own terminal report does not
+			 *  survive the effect teardown in this shape. */
+			if (options.refuseSessionStream) {
+				sessionStreams += 1;
+				if (sessionStreams > 1) {
+					response.writeHead(401, {
+						"content-type": "application/json",
+						"x-radient-login": "required",
+					});
+					response.end(JSON.stringify({ detail: "Authentication required" }));
+					return;
+				}
+			}
 			// Keep the wire open but deliver no frame: cache presence alone must
 			// not authorize a retained transcript for this new screen/identity.
 			if (options.holdFrame) return;
@@ -422,6 +443,11 @@ async function relay(
 			response.write(
 				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
 			);
+			if (options.refuseSessionStream) {
+				/* Torn mid-stream, exactly as `sse-drop-mid-stream` does on the
+				 *  mock relay: the hook sees a transport error and reopens. */
+				setTimeout(() => response.destroy(), 50);
+			}
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
@@ -1437,6 +1463,52 @@ describe("session runtime shared-route refusal", () => {
 			expect(wire[0]).toEqual({ method: "POST", path: "/login", status: 303 });
 		},
 	);
+});
+
+describe("a 401 on the session stream alone reaches the header", () => {
+	/* REVIEW ROUND 4, N1 / QA Q10 / UX U17. The filed defect: after a frame, a
+	 * 401 on this session's own event stream ends every retry (no request for a
+	 * minute) while the dot still says "Reconnecting — keeps trying".
+	 *
+	 * WHY THIS TEST EXISTS IN THIS SHAPE. The round-3 fix added `streamClosed`
+	 * and its table rows, but those rows assign the flag directly — nothing drove
+	 * the stream's 401 through the hook, so the suite was green while the shipped
+	 * bundle still read `state: "connecting"`. On this path the route client's
+	 * `onResponse` 401 hook records the refusal and flips the source to
+	 * `refused` while `http.open` unwinds, and the session effect's guards drop
+	 * the stream's own terminal report. So this mounts the real hook against a
+	 * relay that seeds a frame, tears the stream and refuses the reopen 401, and
+	 * asserts the reading the header consumes. */
+	it("reads the refused route as a stop, with no request left to make", async () => {
+		const mock = await relay({ refuseSessionStream: true });
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		/* The reopen is refused: the route is refused and the hook's link is a
+		 * stop, which is what `headerHealth` turns into "no dot". */
+		await until(() => sessionReading.link === "stopped");
+		expect(sessionReading.source.reason).toBe("refused");
+		expect(
+			headerHealth(sessionReading.projection, sessionReading.link),
+		).toBeNull();
+		/* And nothing is retrying behind that reading — the false promise the
+		 * dot used to make. */
+		const before = wire.length;
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 300));
+		});
+		expect(
+			wire.slice(before).filter((entry) => entry.path.endsWith("/events")),
+		).toEqual([]);
+	});
 });
 
 describe("session recovery without an owned frame", () => {

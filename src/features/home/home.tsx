@@ -416,6 +416,9 @@ export default function Home({
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
 			disabledReason: connected ? null : connectDisabledReason(),
+			/* The home has no session and no health dot, so it can never be ended:
+			 *  the placeholder never switches to the reopen hint here. */
+			ended: false,
 		}),
 		/* See the trigger note above: `t()` reads the locale live, so the rendered
 		 * sentence must be recomputed when `language` changes. */

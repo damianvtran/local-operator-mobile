@@ -1,0 +1,13 @@
+{
+	"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
+	"mobile.session_health.menu_label": "Actions de la session",
+	"mobile.session_health.menu_hint": "Ouvre le menu de la session",
+	"mobile.session_health.menu_title": "Session",
+	"mobile.session_health.reopening": "Réouverture — cela peut prendre quelques secondes.",
+	"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+	"mobile.session_health.resume_refused_title": "Reprise impossible",
+	"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
+	"mobile.session_health.resume_gone": "Cette session n’est plus enregistrée.",
+	"mobile.session_health.resume_no_route": "Connectez un ordinateur pour reprendre cette session.",
+	"mobile.session_health.ended_placeholder": "Rouvre dans votre dossier personnel…"
+}

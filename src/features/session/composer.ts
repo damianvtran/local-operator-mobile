@@ -19,6 +19,7 @@
  */
 
 import type { PromptImage } from "@/contracts";
+import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import type { ContinuationOp, RelayError } from "@/relay";
 
 /* ------------------------------------------------------------------- copy */
@@ -63,12 +64,35 @@ export const COMPOSER_COPY = {
 		"An earlier message was still unsent, so it went first. Your new text was not sent — it is below, ready when you are.",
 	retryAckNotice:
 		"Earlier instruction delivered. Your edited draft is ready to send.",
-	/** A session whose process the daemon watched die (`projection.ended`, the
-	 *  session-state receipt). Nothing can be sent to it, and the reader is told
-	 *  what they can do instead — a dead control with no explanation is the
-	 *  "control that cannot work" pattern this feature exists to avoid. */
-	endedSession:
-		"This session has ended. Start a new one from the sessions list.",
+	/** An ended session is NOT a dead composer: a send REOPENS it (the daemon
+	 *  wakes a host for a prompt with no live entry), so the primary stays
+	 *  enabled. The placeholder and the failure sentence below are the web
+	 *  client's own `relay.health.*` strings (#3008), kept verbatim. The old
+	 *  "Start a new one from the sessions list" sentence is gone: nothing reads
+	 *  it once the ended state stopped disabling (review round 1, n1). */
+	/** Placeholder for an ENDED conversation: sending reopens it in the home
+	 *  folder. READ FROM THE CATALOGUE, not restated (review round 3, M2 / QA
+	 *  Q12 / UX U14 / design D12): this file used to hold literal copies of the
+	 *  same three sentences, and the copies were what rendered — so a locale wave
+	 *  would have missed the two relay strings the composer actually shows, and
+	 *  "nothing is duplicated" was false. `check-strings` could not catch it
+	 *  either: it treats an exact mirror of a catalogue value as a deliberate
+	 *  one, and it scans only `-copy.ts` modules. Reading the value makes
+	 *  divergence impossible rather than merely detectable. */
+	endedPlaceholder: healthCopy()["mobile.session_health.ended_placeholder"],
+	/** The send-failure sentence when reopening an ended session failed. The two
+	 *  honest remedies are send again, or Resume from the header's status sheet —
+	 *  the same sentence the sheet's own failure uses. */
+	endedSendFailed: healthCopy()["relay.health.ended_send_failed"],
+	/** Under the composer while a send to an ENDED session is in flight: the
+	 *  send IS the reopen and the daemon's engage takes seconds, so "…" on the
+	 *  button alone said nothing (UX round 1, U2). The same acceptance line the
+	 *  health sheet shows after Resume, so one act has one sentence. */
+	reopening: healthResumeCopy().reopening,
+	/** The retry button under `endedSendFailed`: the sentence's own verb, so the
+	 *  reader is not told to "Try again" beside a button that says something
+	 *  else. The generic envelope case keeps `retryLabel`. */
+	endedRetryLabel: "Try again",
 	/** The resume affordance, driven by `stop_reason === "aborted"` (the wire
 	 *  fact), never by `streaming` — a turn that completes also stops streaming,
 	 *  and only an aborted one should offer to resume. */
@@ -116,6 +140,11 @@ export interface ComposerControls {
 	/** Why the primary is disabled, when the reason is one the reader must be
 	 *  told. `null` when it is disabled for the self-evident reason (no draft). */
 	disabledReason: string | null;
+	/** The session's health verdict is ENDED. Carried explicitly because the
+	 *  primary stays ENABLED (a send reopens the session), so a reader of these
+	 *  controls cannot infer it from `disabledReason` any more — the composer's
+	 *  own state marker and the placeholder both read this field. */
+	ended: boolean;
 }
 
 export interface ComposerControlInput {
@@ -128,7 +157,11 @@ export interface ComposerControlInput {
 	sending: boolean;
 	/** An instruction is retained whose delivery is unknown. */
 	envelopePending: boolean;
-	/** The session has ended, so nothing can be sent to it. */
+	/** The session's health verdict is ENDED (from the dot, not just
+	 *  `projection.ended`): a send REOPENS it, so the primary is NOT disabled
+	 *  for this. Retained in the input because the placeholder and the send-
+	 *  failure sentence read it, and because an ended session suppresses the
+	 *  aborted-turn Resume affordance (the health sheet owns Resume now). */
 	ended: boolean;
 }
 
@@ -155,12 +188,12 @@ export const composerControls = (
 	 * `!hasContent`: but the primary is deliberately NOT that control. The retry
 	 * lives on its own control in the alert, so the primary stays disabled and its
 	 * hint says which act resolves it — one control, one meaning. */
+	/* An ended session is deliberately NOT in this sum: a send reopens it (the
+	 *  daemon's prompt-wake path), so disabling the primary would refuse the one
+	 *  action that brings the session back. The reader is told what a send does
+	 *  by the placeholder, not by a dead control. */
 	const disabled =
-		input.connected === false ||
-		input.sending ||
-		blocked ||
-		input.ended ||
-		!hasContent;
+		input.connected === false || input.sending || blocked || !hasContent;
 	return {
 		primary: {
 			kind: input.streaming ? "steer" : "send",
@@ -179,11 +212,13 @@ export const composerControls = (
 		},
 		stopVisible: input.streaming && input.connected !== false,
 		sending: input.sending,
-		disabledReason: input.ended
-			? COMPOSER_COPY.endedSession
-			: blocked
-				? COMPOSER_COPY.retryDisabledHint
-				: null,
+		/* On an ENDED session the retained card already carries the one sentence
+		 *  (the ended one) and its Retry; a third line saying "resolve the
+		 *  earlier instruction first" under it was the stack UX U7 / design D5
+		 *  measured. */
+		disabledReason:
+			blocked && !input.ended ? COMPOSER_COPY.retryDisabledHint : null,
+		ended: input.ended,
 	};
 };
 
