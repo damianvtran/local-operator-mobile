@@ -1,0 +1,93 @@
+#!/bin/bash
+# Auditor tooling (read-only). Prints, for one namespace, the commands this audit
+# ran and their ACTUAL output. Lines starting with "# note:" are explanation, not
+# command output. No translation API, SDK or MT service is used anywhere.
+set -uo pipefail
+NS="${1:?home|projects}"
+REPO=/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$REPO" || exit 1
+
+AID=$([ "$NS" = "home" ] && echo fr29h4 || echo fr29p3)
+echo "audit ${AID} — mobile.${NS} — fr — 2026-10-29"
+echo "audited head: $(git rev-parse HEAD)"
+echo "worktree: $REPO"
+echo "tracked tree: $(git status --porcelain | grep -v '^?? i18n/audits' | wc -l | tr -d ' ') modified tracked path(s) outside the untracked evidence bundles"
+echo "auditor: i18n-auditor (lopdev team child session 78c640379596), ACTUAL model radient/auto"
+echo "model provenance: harness model-switch notices in this transcript — anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,"
+echo "                  each reported as 'provider failure: quota'. The pinned Sonnet model did not run this audit."
+echo "independence: different agent and session from the translator; this audit proposed neither the home wording nor the French receipt arms."
+echo "# note: every line after a '\$ ' prompt is a command actually run; the lines below it are that command's output."
+echo "# note: no native-speaker review, no rendered frame, and no translation service is claimed or used."
+echo
+
+echo "=== §1 repository i18n gate (generate --check + strings check) ==="
+echo '$ npm run -s i18n:check'
+npm run -s i18n:check 2>&1 | grep -v MODULE_TYPELESS_PACKAGE_JSON | grep -v "Reparsing as ES module" | grep -v "To eliminate this warning" | grep -v "trace-warnings" | grep -v "^(node:"
+echo "exit=$?"
+echo
+
+echo "=== §2 targeted tests (i18n runtime + projects copy) ==="
+echo '$ npx vitest run src/i18n src/features/projects'
+npx vitest run src/i18n src/features/projects 2>&1 | grep -E "Test Files|Tests |FAIL|✗" 
+echo
+
+if [ "$NS" = "home" ]; then
+  echo "=== §3 app-runtime render + parser + typography (mobile.home) ==="
+  echo '# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.'
+  echo '# note: loader.mjs only teaches plain Node the app'"'"'s extensionless relative imports so src/i18n/runtime.ts runs UNMODIFIED.'
+  echo '$ node --import ./loader.mjs render.mjs | awk "/=== 1\\. mobile.home.options.fixed/{p=1} /=== 5\\. mobile.projects.write_receipt/{p=0} p"'
+  node --import "$HERE/loader.mjs" "$HERE/render.mjs" 2>/dev/null | awk '/=== 1\. mobile.home.options.fixed/{p=1} /=== 5\. mobile.projects.write_receipt/{p=0} p'
+  echo
+  echo "=== §4 delta proof: exactly one substring changed since the round-3 bundle (fr29h3) ==="
+  echo '$ python3 revert-one-substring.py'
+  python3 "$HERE/home-delta.py"
+  echo
+  echo "=== §5 the prior-round bytes this delta departs from ==="
+  echo '$ git show daa46f6:src/i18n/catalogues/fr/mobile.home.json | shasum -a 256'
+  git show daa46f6:src/i18n/catalogues/fr/mobile.home.json | shasum -a 256
+  echo '$ git diff --stat daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json'
+  git diff --stat daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json
+  echo '$ git diff daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json'
+  git diff daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json
+  echo
+  echo "=== §6 English inputs unchanged since round 2/3 ==="
+  echo '$ shasum -a 256 src/i18n/catalogues/en/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json'
+  shasum -a 256 src/i18n/catalogues/en/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json
+  echo '# note: round 2 and round 3 both recorded en 4ebba126… and context db18b25d… — identical today.'
+  echo
+  echo "=== §7 the referenced destination label, byte for byte ==="
+  echo '$ python3 label-check.py'
+  python3 "$HERE/label-check.py"
+else
+  echo "=== §3 app-runtime render, all codes, both locales (mobile.projects) ==="
+  echo '# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.'
+  echo '$ node --import ./loader.mjs render.mjs | awk "/=== 5\\. mobile.projects.write_receipt/{p=1} /=== 11\\. CLDR/{p=0} p"'
+  node --import "$HERE/loader.mjs" "$HERE/render.mjs" 2>/dev/null | awk '/=== 5\. mobile.projects.write_receipt/{p=1} /=== 11\. CLDR/{p=0} p'
+  echo
+  echo "=== §4 delta proof: exactly the three recorded substrings changed since the round-2 bundle (fr29p2) ==="
+  echo '$ python3 projects-delta.py'
+  python3 "$HERE/projects-delta.py"
+  echo
+  echo "=== §5 call sites (current head) ==="
+  echo '$ grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx'
+  grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx
+  echo '$ git show 79b3fad:src/features/projects/project-detail.tsx | grep -n "writeReceipt"'
+  git show 79b3fad:src/features/projects/project-detail.tsx | grep -n "writeReceipt"
+  echo '$ git show 79b3fad:src/features/projects/project-create.tsx | grep -n "writeReceipt"'
+  git show 79b3fad:src/features/projects/project-create.tsx | grep -n "writeReceipt"
+  echo
+  echo "=== §6 the French catalogue's own word for the milestone object ==="
+  echo '$ grep -o "jalon" src/i18n/catalogues/fr/mobile.projects.json | wc -l'
+  grep -o "jalon" src/i18n/catalogues/fr/mobile.projects.json | wc -l
+  echo '$ grep -n "milestone ${name}" src/features/projects/project-detail.tsx'
+  grep -n 'milestone ${name}' src/features/projects/project-detail.tsx
+  echo
+  echo "=== §7 English rendering unchanged against the pre-change mechanism ==="
+  echo '# note: the old call sites passed the rendered English verb; §5 above prints them from git.'
+  echo '$ node --import ./loader.mjs render.mjs | awk "/=== 8\\. English rendering unchanged/{p=1} /=== 9\\. French arms/{p=0} p"'
+  node --import "$HERE/loader.mjs" "$HERE/render.mjs" 2>/dev/null | sed -n '/=== 8. English rendering unchanged/,/=== 9. French arms/p'
+fi
+echo
+echo "=== §8 evidence-bundle files (hashes computed after writing) ==="
+echo '# note: recorded in record.json artifacts; this section is written by the bundling step, see report.md.'

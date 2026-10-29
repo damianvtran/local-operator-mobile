@@ -1,0 +1,19 @@
+// Resolve the app's extensionless relative imports (Metro/vitest style) so plain
+// Node can import src/i18n/runtime.ts UNMODIFIED. Nothing else is patched.
+import { registerHooks } from "node:module";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+registerHooks({
+	resolve(specifier, context, nextResolve) {
+		if (specifier.startsWith(".") && context.parentURL?.endsWith(".ts")) {
+			const base = new URL(specifier, context.parentURL);
+			for (const candidate of [`${base.href}.ts`, `${base.href}/index.ts`]) {
+				if (existsSync(fileURLToPath(candidate))) {
+					return { url: candidate, shortCircuit: true, format: "module-typescript" };
+				}
+			}
+		}
+		return nextResolve(specifier, context);
+	},
+});

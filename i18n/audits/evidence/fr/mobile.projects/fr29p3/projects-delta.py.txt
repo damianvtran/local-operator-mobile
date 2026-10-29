@@ -1,0 +1,26 @@
+import hashlib
+def sha(b):
+    return hashlib.sha256(b).hexdigest()
+rows = [
+    ("src/i18n/catalogues/en/mobile.projects.json",
+     '{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.'.encode(),
+     b'{action} {subject}.',
+     "8218f1fcea96270ce2f9df4431e1eb0c749475305a9656b03d2c34a71c88bb93"),
+    ("src/i18n/catalogues/fr/mobile.projects.json",
+     '{action, select, created {Créé} completed {Terminé} reopened {Rouvert} added {Ajouté} updated {Mis à jour} removed {Retiré} deleted {Supprimé} other {Mis à jour}} {subject}.'.encode(),
+     b'{action} {subject}.',
+     "58b738859d329b48c018cb9f379c778aa73ad0244546b759012f2597297128f6"),
+    ("src/i18n/catalogues/en/mobile.projects.context.json",
+     "One-line success receipt. {action} is a stable CODE the screen selects — created, completed, reopened, added, updated, removed or deleted — and never a rendered word: the catalogue turns the code into the verb, so each locale supplies its own. other catches an unknown code as Updated. {subject} is the thing acted on. Ends with a full stop.".encode(),
+     "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop.".encode(),
+     "b8657428b40efc740196a6a289656cabc41f047a20ee72ccf5e5ed514ce3a68e"),
+]
+for path, new, old, prior in rows:
+    cur = open(path, "rb").read()
+    assert cur.count(new) == 1, (path, cur.count(new))
+    rev = cur.replace(new, old)
+    print(path)
+    print("  current bytes", sha(cur), len(cur))
+    print("  round-2 recorded value, after reverting the one changed string:", sha(rev), len(rev))
+    print("  reconstruction matches round 2:", sha(rev) == prior)
+    print("  occurrences of the new string:", cur.count(new))
