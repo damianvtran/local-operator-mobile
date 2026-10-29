@@ -166,7 +166,13 @@ that everything is already keyed.
   `<namespace>.<group>.<name>`: it MUST begin with its namespace and a dot, the
   remainder is one or two non-empty lower_snake_case segments, and the group is
   OPTIONAL — a flat key is legal (`mobile.account_routing.reload`), as is a
-  grouped one (`mobile.schedules.count.wakes`). Use a group when a namespace has
+  grouped one (`mobile.schedules.count.wakes`). **Mirrored copy is the one
+  exception:** the `relay.*` catalogues are the desktop relay's own strings,
+  copied key for key so a later adoption of the core locale files is a file copy
+  rather than a translation pass, and the core's shape is deeper than one group
+  (`relay.chrome.session.subtitle.not_answering`). Their depth is free; their
+  prefix, segment syntax and non-empty remainder are still enforced, and the
+  exemption cannot leak into an ordinary namespace. Use a group when a namespace has
   clusters of related keys, not otherwise. Keys are fully qualified, semantic and
   immutable, because the namespace is a file-layout and review-boundary decision,
   not a second argument to `t()`. `generate.ts` enforces this
