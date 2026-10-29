@@ -63,7 +63,7 @@ import { Sheet } from "@/ui/components/sheet";
  */
 
 type SwitcherContextValue = {
-	open: () => void;
+	open: (options?: { returnFocusTestID?: string }) => void;
 	/** Whether the sheet is up. A screen that reacts to what a pick left behind
 	 *  waits for it to go down: Settings scrolls a refusal into view only after the
 	 *  sheet closed, because the close returns focus to the opener, and on the web
@@ -95,15 +95,28 @@ export function ComputerSwitcherProvider({
 	 *  with every other modal's, so a screen waits on all of them in one place
 	 *  (PR #122 QA round 6, Q9) rather than on this provider's count alone. */
 	const [visible, setVisible] = useState(false);
+	const [returnFocusTestID, setReturnFocusTestID] = useState<
+		string | undefined
+	>();
 	const close = useCallback(() => setVisible(false), []);
 	const value = useMemo(
-		() => ({ open: () => setVisible(true), visible }),
+		() => ({
+			open: (options?: { returnFocusTestID?: string }) => {
+				setReturnFocusTestID(options?.returnFocusTestID);
+				setVisible(true);
+			},
+			visible,
+		}),
 		[visible],
 	);
 	return (
 		<SwitcherContext.Provider value={value}>
 			{children}
-			<ComputerSwitcherSheet visible={visible} onClose={close} />
+			<ComputerSwitcherSheet
+				visible={visible}
+				onClose={close}
+				returnFocusTestID={returnFocusTestID}
+			/>
 		</SwitcherContext.Provider>
 	);
 }
@@ -143,6 +156,7 @@ const DOT_TOKEN: Record<
 	"sign-in": "warning",
 	paused: "warning",
 	checking: "ink-dim",
+	refused: "warning",
 };
 
 const WORD_CLASS: Record<SwitcherHealth["kind"], string> = {
@@ -151,6 +165,7 @@ const WORD_CLASS: Record<SwitcherHealth["kind"], string> = {
 	"sign-in": "text-warning",
 	paused: "text-warning",
 	checking: "text-ink-muted",
+	refused: "text-warning",
 };
 
 const HealthWord = ({
@@ -292,9 +307,11 @@ const SwitcherRowView = ({
 export function ComputerSwitcherSheet({
 	visible,
 	onClose,
+	returnFocusTestID,
 }: {
 	visible: boolean;
 	onClose: () => void;
+	returnFocusTestID?: string;
 }) {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -309,6 +326,8 @@ export function ComputerSwitcherSheet({
 		signInState,
 	} = useConnection();
 	const discovered = useConnectionState((state) => state.discoveredComputers);
+	const routeProfile = useConnectionState((state) => state.route);
+	const surface = useConnectionState((state) => state.surface);
 	const phase = useConnectionState((state) => state.phase);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const computerId = useConnectionState((state) => state.computerId);
@@ -385,6 +404,8 @@ export function ComputerSwitcherSheet({
 		probes,
 		answeredAt,
 		route: { phase, tunnelId },
+		routeProfile,
+		surface,
 		activeComputerId: computerId,
 		pendingKey,
 		radientSignedOut,
@@ -466,6 +487,11 @@ export function ComputerSwitcherSheet({
 				connectCustom,
 				signInWithRadient,
 				close: onClose,
+				openSettings: () => {
+					// Settings already paints this refusal; do not stack a duplicate
+					// screen when the picker was opened from its own Switch control.
+					if (pathname !== "/settings") router.push("/settings");
+				},
 				unhide: ({ savedId, tunnelId: hiddenTunnel }) => {
 					/* The store first, so the computer is back in every list at once;
 					 *  the registry write is best effort (see `unhideSavedComputer`). */
@@ -500,7 +526,15 @@ export function ComputerSwitcherSheet({
 				onClose();
 			});
 		},
-		[connectCustom, onClose, router, selectComputer, signInWithRadient, slot],
+		[
+			connectCustom,
+			onClose,
+			pathname,
+			router,
+			selectComputer,
+			signInWithRadient,
+			slot,
+		],
 	);
 
 	/* Closes once the tapped computer is in use: the reader picked it, and the
@@ -519,6 +553,8 @@ export function ComputerSwitcherSheet({
 
 	return (
 		<Sheet
+			focusTitle
+			returnFocusTestID={returnFocusTestID}
 			visible={visible}
 			onClose={onClose}
 			/* Echoes the control that opened it ("Switch computer"); "Computers" sat

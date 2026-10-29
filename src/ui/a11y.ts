@@ -198,8 +198,9 @@ export const CONTROL = {
 	customPasswordField: "custom-password-field",
 	customConnect: "custom-connect",
 	customInsecureOptIn: "custom-insecure-opt-in",
-	/** The computer switcher (the home header's name, and the panel's own row —
-	 *  two controls, two ids: `computersButton` here and `sidebarSwitcher`). */
+	/** The home header's computer chip (`● Mac mini ▾`), opening the switcher
+	 *  sheet. The panel's header row is `sidebarSwitcher`, its footer row
+	 *  `sidebarComputers`: separate controls, separate ids. */
 	computersButton: "computers-button",
 	settingsButton: "settings-button",
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
@@ -438,6 +439,9 @@ export const CONTROL = {
 	sidebarSearchField: "sidebar-search-field",
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
+	/** The drawer footer's workspace row: the computer in use, opening the
+	 *  switcher sheet (M2b; ux-flows F5). Same id as the route button it replaced,
+	 *  so a flow addressing "the footer's computer control" still finds it. */
 	sidebarComputers: "sidebar-computers",
 	/** The footer's third route (S16's entry point): `docs/ux/flows.md` draws the
 	 *  projects surface as a peer of `past` off the conversations panel, so it

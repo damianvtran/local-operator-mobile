@@ -443,9 +443,12 @@ export const middleFit = (
 	text: string,
 	budgetDp: number,
 	scale: number,
+	// A sans label must pay its own face's advances, not the mono header's.
+	// Default preserves every existing mono caller's arithmetic.
+	measure: (text: string, scale: number) => number = textWidthDp,
 ): string => {
-	if (fitsWhole(text, budgetDp, scale)) return text;
-	const room = budgetDp - charWidthDp(scale);
+	if (measure(text, scale) <= budgetDp) return text;
+	const room = budgetDp - measure("…", scale);
 	if (room <= 0) return ELLIPSIS;
 	const glyphs = [...text];
 	/* The tail starts at the last colon when there is one: that keeps `:49892` — the
@@ -454,18 +457,18 @@ export const middleFit = (
 	const tailStart =
 		colon > 0
 			? colon
-			: Math.max(0, glyphs.length - Math.ceil(room / charWidthDp(scale)));
+			: Math.max(0, glyphs.length - Math.ceil(room / measure("…", scale)));
 	/* The port is the priority: reserve ONE head glyph so the machine still has a
 	 * face, and give the port everything else. Reserving a share for the head first
 	 * starved `:51078` at 140 dp / 200 % and painted a bare ellipsis — the identity
 	 * was gone entirely, which is worse than a short head. */
-	const oneGlyph = charWidthDp(scale);
+	const oneGlyph = measure("…", scale);
 	let tail = "";
 	let tailSpent = 0;
 	const tailLimit = Math.max(oneGlyph, room - oneGlyph);
 	for (let index = glyphs.length - 1; index >= tailStart; index -= 1) {
 		const tailChar = glyphs[index] ?? "";
-		const width = glyphDp(tailChar, scale);
+		const width = measure(tailChar, scale);
 		if (tailSpent + width > tailLimit) break;
 		tailSpent += width;
 		tail = tailChar + tail;
@@ -474,7 +477,7 @@ export const middleFit = (
 	let headSpent = 0;
 	const headLimit = room - tailSpent;
 	for (let index = 0; index < glyphs.length - [...tail].length; index += 1) {
-		const width = glyphDp(glyphs[index] ?? "", scale);
+		const width = measure(glyphs[index] ?? "", scale);
 		if (headSpent + width > headLimit) break;
 		headSpent += width;
 		head += glyphs[index] ?? "";

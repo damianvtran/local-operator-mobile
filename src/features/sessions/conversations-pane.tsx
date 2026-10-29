@@ -9,8 +9,12 @@ import {
 	Text,
 	View,
 } from "react-native";
-
 import type { SessionSummary } from "@/contracts";
+import {
+	DrawerComputerRow,
+	useComputerEntry,
+} from "@/features/auth/computer-entry-points";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	useConnection,
 	useConnectionState,
@@ -47,7 +51,6 @@ import {
 } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
-import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
 import {
 	CONTROL,
@@ -245,8 +248,6 @@ export const ConversationsPane = ({
 	 * numeral — an older relay's omission is unknown, never a zero. */
 	const inboxBlock = useListState((state) => state.notifications);
 	const inboxCount = inboxBadgeCount(inboxBlock);
-	const computers = useConnectionState((state) => state.computers);
-	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 
 	/* THE INBOX ROW'S PLACEMENT (D23), and the rule is about the UNMEASURED state:
@@ -366,7 +367,12 @@ export const ConversationsPane = ({
 	 *  address ("127.0.0.1:49" over "892") at 320 pt and 200 % text. react-native-web
 	 *  ignores `ellipsizeMode`, so the painted string is pre-fitted rather than
 	 *  wrapped; the button's accessible label still carries it unbroken. */
-	const switcherLabel = listLabel(computers, tunnelId, route);
+	const computerEntry = useComputerEntry();
+	const { open: openComputerSwitcher } = useComputerSwitcher();
+	const switcherLabel =
+		computerEntry.kind === "computer"
+			? computerEntry.name
+			: computerEntry.label;
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -447,31 +453,17 @@ export const ConversationsPane = ({
 			className="gap-2 bg-sunken px-2 pb-2 pt-3"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		>
-			<View className="flex-row flex-wrap gap-2">
-				<View className="flex-auto">
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
-				</View>
-				<View className="flex-auto">
-					<Button
-						label="Computers"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/tunnels");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarComputers}
-					/>
-				</View>
+			<View className="w-full">
+				<Button
+					label="Past sessions"
+					onPress={() => {
+						onNavigate?.();
+						router.push("/past");
+					}}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.sidebarPast}
+				/>
 			</View>
 			<View className="w-full">
 				<Button
@@ -489,8 +481,7 @@ export const ConversationsPane = ({
 			 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
 			 *  view of what is running on the machine, not a row in Settings —
 			 *  and the desktop sidebar carries Schedules as a top-level
-			 *  destination beside them. Full-width beneath the pair, like Projects,
-			 *  so the wrap band stays 2+1+1. */}
+			 *  destination beside them. Full-width, like Projects. */}
 			<View className="w-full">
 				<Button
 					label="Schedules"
@@ -608,6 +599,20 @@ export const ConversationsPane = ({
 					/>
 				</View>
 			) : null}
+			{/* THE BOTTOM OF THE NAVIGATION: the computer in use, and the switcher.
+			 *  The operator asked for the switcher "at the bottom of the navigation";
+			 *  this app is a Stack with a drawer and no tab bar, so this footer is
+			 *  that place, and the row takes the shape Slack gives its workspace row
+			 *  (ux-flows F5). It replaced the "Computers" route that sat beside Past
+			 *  sessions: it opens the ONE switcher sheet, whose "Add a computer" and
+			 *  Settings keep the management paths. Last and full-width, as the design
+			 *  frame draws it. */}
+			<View className="w-full pt-1">
+				<DrawerComputerRow
+					testID={CONTROL.sidebarComputers}
+					onNavigate={onNavigate}
+				/>
+			</View>
 		</View>
 	);
 
@@ -618,10 +623,13 @@ export const ConversationsPane = ({
 				<NavigationMark size={32} />
 				<Pressable
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${switcherLabel} — choose a computer`}
+					accessibilityLabel={computerEntry.accessibilityLabel}
 					onPress={() => {
 						onNavigate?.();
-						router.push("/tunnels");
+						// Both name controls choose a computer; management remains in Settings.
+						openComputerSwitcher({
+							returnFocusTestID: CONTROL.computersButton,
+						});
 					}}
 					testID={CONTROL.sidebarSwitcher}
 					className="min-w-0 flex-1 justify-center px-2"
@@ -895,7 +903,10 @@ export const ConversationsPane = ({
 							}}
 							onConnect={() => {
 								onNavigate?.();
-								router.push("/tunnels");
+								// Both name controls choose a computer; management remains in Settings.
+								openComputerSwitcher({
+									returnFocusTestID: CONTROL.computersButton,
+								});
 							}}
 						/>
 					</View>

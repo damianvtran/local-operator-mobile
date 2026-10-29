@@ -24,6 +24,8 @@ type Props = Record<string, unknown>;
 const host = vi.hoisted(() => ({
 	/* The props each stub `Modal` last received, keyed by its testID. */
 	modals: new Map<string, Record<string, unknown>>(),
+	titleFocus: vi.fn(),
+	scrim: null as Props | null,
 }));
 
 vi.mock("react-native", async () => {
@@ -40,7 +42,10 @@ vi.mock("react-native", async () => {
 		/* No text nodes: the stub container has nowhere to put them. */
 		Text: () => null,
 		ScrollView: pass,
-		Pressable: pass,
+		Pressable: (props: Props) => {
+			if (props.testID === "sheet-scrim") host.scrim = props;
+			return pass(props);
+		},
 		Modal: (props: Props) => {
 			host.modals.set(String(props.testID), props);
 			return (props.visible ? props.children : null) as ReactNode;
@@ -79,7 +84,13 @@ vi.mock("@/ui/text-scale-provider", () => ({
 }));
 vi.mock("@/ui/components/button", () => ({ Button: () => null }));
 vi.mock("@/ui/components/icon-button", () => ({ IconButton: () => null }));
-vi.mock("@/ui/components/heading", () => ({ Heading: () => null }));
+vi.mock("@/ui/components/heading", () => ({
+	Heading: (props: Props) => {
+		if (props.ref)
+			(props.ref as { current: unknown }).current = { focus: host.titleFocus };
+		return null;
+	},
+}));
 
 const { Dialog } = await import("@/ui/components/dialog");
 const { Sheet } = await import("@/ui/components/sheet");
@@ -321,5 +332,59 @@ describe("Settings reveals a refusal only once no modal owes its dismissal (Q9)"
 		expect(dismissalsOwed()).toBe(1);
 		await show({ ...calm, sheet: true });
 		expect(dismissalsOwed()).toBe(0);
+	});
+});
+
+describe("picker focus across drawer dismissal", () => {
+	const picker = async (visible: boolean) =>
+		act(async () =>
+			root?.render(
+				createElement(Sheet, {
+					...switcherSheet,
+					visible,
+					focusTitle: true,
+					returnFocusTestID: "computers-button",
+				}),
+			),
+		);
+	it("focuses its title on show and removes the duplicate Close from traversal", async () => {
+		host.titleFocus.mockClear();
+		await picker(true);
+		const onShow = host.modals.get(SHEET)?.onShow;
+		if (typeof onShow !== "function") throw new Error("missing Modal.onShow");
+		onShow();
+		expect(host.titleFocus).toHaveBeenCalledWith({ preventScroll: true });
+		expect(host.scrim).toMatchObject({
+			tabIndex: -1,
+			accessible: false,
+			accessibilityElementsHidden: true,
+		});
+	});
+	it("returns to Home only after RNW dismissal, before settling its ledger debt", async () => {
+		const focus = vi.fn(() => expect(dismissalsOwed()).toBe(1));
+		const body = {};
+		Object.assign(document, {
+			body,
+			activeElement: body,
+			querySelector: vi.fn(() => ({ focus })),
+		});
+		await picker(true);
+		await picker(false);
+		expect(focus).not.toHaveBeenCalled();
+		await dismiss(SHEET);
+		expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+		expect(dismissalsOwed()).toBe(0);
+	});
+	it("does not steal an existing opener's or newly navigated screen's focus", async () => {
+		const focus = vi.fn();
+		Object.assign(document, {
+			body: {},
+			activeElement: {},
+			querySelector: vi.fn(() => ({ focus })),
+		});
+		await picker(true);
+		await picker(false);
+		await dismiss(SHEET);
+		expect(focus).not.toHaveBeenCalled();
 	});
 });
