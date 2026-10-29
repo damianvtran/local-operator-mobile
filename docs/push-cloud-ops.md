@@ -45,12 +45,16 @@ table (`extra="forbid"`), and the machine's builder composes only house sentence
 field table is the contract; a new field is an ADR amendment.**
 
 **2. Who hosts it.** *Decided:* the Radient control plane (agent-server behind `api.radienthq.com`),
-where the connector already authenticates and `account_id` resolves. **Where its state lives
-(operator decision, 2026-10-28):** everything this service holds — the durable queue, the device
-rows, the delivery record, the per-device grant — is in **MongoDB Atlas**, the managed database the
-rest of Radient runs on. **No Firebase data product is involved**: FCM is the Android delivery rail
-and nothing more (ADR §5), so there is no Firestore, no Firebase Auth and no Firebase-hosted store
-behind this service. The design is ingest route →
+where the connector already authenticates and `account_id` resolves. **Where its state lives:** the
+operator's 2026-10-28 decision puts state in **MongoDB Atlas**, the managed database the rest of
+Radient runs on, so the device rows, the delivery record and the per-device grant go there. The
+**durable queue** is this note's own proposal — §3 below still costs "a managed queue" — and no
+Firebase-hosted store is part of any of it: FCM is the Android delivery rail and nothing more (ADR
+§5). **Android background push via FCM requires adding Firebase to a Google Cloud project** — the
+same project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed. **Radient does not use Firebase** (operator decision, 2026-10-28), and
+as written that decision rules out Android background push; the choice is open with the operator.
+The design is ingest route →
 durable queue → worker → providers: one route (`POST /v1/tunnels/{id}/push/events`) that validates
 and enqueues, a queue-consuming worker doing all provider traffic — no new public host, no inbound
 path to machines. The standalone alternative (a Cloudflare Worker plus Queue) is **considered and
