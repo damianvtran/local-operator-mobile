@@ -382,7 +382,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "c66578d7f09b8965935348ebdfd448855113bd2b21176dfc267ad8bcbd54c8f8",
+	src: "d9e1867c70fd03eb7a24b83272c9251f9c7e08d8247d64920973a3e813ace5c3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -9,5 +9,5 @@
 	"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 	"mobile.session_health.resume_gone": "Cette session n’est plus enregistrée.",
 	"mobile.session_health.resume_no_route": "Connectez un ordinateur pour reprendre cette session.",
-	"mobile.session_health.ended_placeholder": "Rouvre dans votre dossier personnel…"
+	"mobile.session_health.ended_placeholder": "Envoyer rouvre…"
 }
