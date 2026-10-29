@@ -22,6 +22,10 @@ import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
+import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
+import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
+import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
+import health from "@/i18n/catalogues/en/relay.health.json";
 import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
 import session from "@/i18n/catalogues/en/mobile.session.json";
 
@@ -75,6 +79,23 @@ const NAMESPACES = [
 		context: sessionContext,
 		expected: 1,
 	},
+	{
+		/* The relay's own two namespaces, under its own keys. They are here rather
+		 * than renamed into `mobile.*` because the strings are AUDITED SAFETY COPY
+		 * from the web client (`local_operator/i18n/catalogues/en/relay.health.json`
+		 * at 24d328a19a): sharing the key means one state cannot be named two ways,
+		 * and a renamed key would hide that the two clients say the same thing. */
+		name: "relay.health",
+		messages: health,
+		context: healthContext,
+		expected: 21,
+	},
+	{
+		name: "relay.chrome",
+		messages: relayChrome,
+		context: relayChromeContext,
+		expected: 2,
+	},
 ] as const;
 
 describe("the English catalogues", () => {
@@ -117,7 +138,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(116);
+		expect(total).toBe(139);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

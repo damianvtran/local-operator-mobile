@@ -377,10 +377,10 @@ describe("the words", () => {
 		expect(healthLabel("not_answering")).toBe("Not answering");
 		expect(healthLabel("reconnecting")).toBe("Reconnecting");
 		expect(healthLabel("ended")).toBe("Ended");
-		expect(HEALTH_COPY["relay.health.ended_placeholder"].source).toBe(
+		expect(HEALTH_COPY["relay.health.ended_placeholder"]).toBe(
 			"Send to reopen in your home folder…",
 		);
-		expect(HEALTH_COPY["relay.health.ended_send_failed"].source).toContain(
+		expect(HEALTH_COPY["relay.health.ended_send_failed"]).toContain(
 			"couldn't be reopened",
 		);
 	});

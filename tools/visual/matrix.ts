@@ -1252,6 +1252,36 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
  */
 export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 	{
+		/* Declared on the convergence onto 8b384da5 after CI's capture step failed
+		 * this pair at all 12 ci-grid combinations (`S5/degraded = S5/health-quiet`,
+		 * 2 devices x 2 themes x 3 scales) — the count was exactly the grid, which
+		 * is what identified it as one pair and not a general collapse.
+		 *
+		 * WHY IT IS A COINCIDENCE AND NOT A DEFECT. The relay names ONE state for
+		 * both causes ("Not answering", `relay.chrome.session.subtitle
+		 * .not_answering`), and this PR removed the "Not answering" band that used
+		 * to make `degraded` taller (round-1 U6/D6 — the relay removed it too, so a
+		 * native band would have contradicted the dot and the reference). What is
+		 * left differs only in the SHEET's sentence: `relay.health.dropped_detail`
+		 * for `degraded`, `.quiet_detail` for a stale heartbeat. A screen-level
+		 * frame therefore CANNOT tell them apart, on either client.
+		 *
+		 * THE CAUSE IS STILL ASSERTED, just not by these bytes: `health.test.ts`
+		 * pins `healthDetailKey` per cause (degraded -> dropped, stale beat ->
+		 * quiet), and `health-dropped-sheet` opens that sheet in the `degraded`
+		 * world so the sentence is in a frame somewhere. The known gap, stated
+		 * rather than closed: the readiness alias lets either yellow sheet satisfy
+		 * `health-dropped-sheet` (review round 2, m-e), so a regression that showed
+		 * the quiet sentence under `degraded` would pass that cell. */
+		cells: ["S5/degraded", "S5/health-quiet"],
+		reason:
+			"one state, two causes, at every device and scale: the relay gives both the " +
+			"same word and the same dot, and the band that used to distinguish them was " +
+			"removed by both clients. The distinguishing copy is the sheet's, captured by " +
+			"S5/health-dropped-sheet and unit-tested per cause, so the identical frames are " +
+			"the correct rendering and each cell still reaches its own marker.",
+	},
+	{
 		cells: ["S15/empty", "S4/idle"],
 		reason:
 			"one view, two states at tablet-landscape: `/conversations` renders the same home " +

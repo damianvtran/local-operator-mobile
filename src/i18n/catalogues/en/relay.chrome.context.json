@@ -1,0 +1,10 @@
+{
+	"relay.chrome.session.subtitle.not_answering": {
+		"role": "status",
+		"note": "The relay SPA's own subtitle word for the YELLOW status dot: the session's process is alive but not answering (its runtime is unreachable or its heartbeat and frames have both been quiet past the relay's window). Reused here verbatim so the two clients cannot name one state two ways. Its explanation is relay.health.dropped_detail or relay.health.quiet_detail, depending on which cause won."
+	},
+	"relay.chrome.session.subtitle.ended": {
+		"role": "status",
+		"note": "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim."
+	}
+}

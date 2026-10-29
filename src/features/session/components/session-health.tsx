@@ -42,6 +42,7 @@ import {
 	HEALTH_COPY,
 	HEALTH_RESUME_COPY,
 } from "@/features/session/health-copy";
+import { t } from "@/i18n";
 import { isRelayMissing } from "@/relay";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -281,7 +282,7 @@ export function SessionHealthControl({
 					ref={controlRef}
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={`${title}, ${label}`}
-					accessibilityHint="Shows what this state means and what a send does now"
+					accessibilityHint={t("relay.health.control_hint")}
 					accessibilityState={{ expanded: sheetOpen }}
 					testID={CONTROL.sessionHealth}
 					onPress={() => onSheetOpenChange(true)}
@@ -327,7 +328,7 @@ export function SessionHealthControl({
 			>
 				<View className="gap-3 px-4 pb-4">
 					<Text className="text-body-sm text-ink-muted">
-						{HEALTH_COPY[healthDetailKey(health, projection)].source}
+						{HEALTH_COPY[healthDetailKey(health, projection)]}
 					</Text>
 					{children}
 				</View>
@@ -414,8 +415,8 @@ export function SessionHeaderActions({
 			{ended ? (
 				<View ref={menuRef}>
 					<IconButton
-						accessibilityLabel="Session actions"
-						accessibilityHint="Opens the session menu"
+						accessibilityLabel={t("relay.health.menu_label")}
+						accessibilityHint={t("relay.health.menu_hint")}
 						size={22}
 						testID={CONTROL.sessionMenu}
 						onPress={() => onMenuOpenChange(true)}
@@ -431,7 +432,7 @@ export function SessionHeaderActions({
 			<Sheet
 				visible={menuOpen && ended}
 				onClose={() => onMenuOpenChange(false)}
-				title="Session"
+				title={t("relay.health.menu_title")}
 				testID={CONTROL.sessionHeaderMenuSheet}
 			>
 				<View className="gap-2 px-4 pb-4">
