@@ -190,6 +190,10 @@ export type ComposerProps = {
 	/** The resume affordance, driven by the wire's `stop_reason === "aborted"`. */
 	showResume: boolean;
 	onResume: () => void;
+	/** The session's health verdict is ENDED (from the header's dot). Changes the
+	 *  placeholder to "send to reopen", and suppresses the aborted-turn Resume —
+	 *  an ended session yields to the header's Resume, which is the same act. */
+	ended?: boolean;
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
@@ -368,6 +372,7 @@ export const Composer = ({
 	onRetry,
 	showResume,
 	onResume,
+	ended = false,
 	error,
 	queuedCount,
 	leadingChip,
@@ -705,7 +710,7 @@ export const Composer = ({
 			{/* The resume affordance. Exactly ONE on the screen, and only for a turn that
 			    was aborted — a completed turn also stops streaming, and offering to
 			    "resume" a finished conversation is a control with no meaning. */}
-			{showResume ? (
+			{showResume && !ended ? (
 				<View className="pb-2">
 					<Button
 						label={COMPOSER_COPY.resumeLabel}
@@ -729,6 +734,19 @@ export const Composer = ({
 				</View>
 			) : null}
 
+			{/* While a send to an ENDED session is in flight, say that it is a reopen
+			    and that it takes seconds (UX round 1, U2): the button's "…" alone
+			    looked like a stuck send for the length of the daemon's engage. */}
+			{ended && controls.sending ? (
+				<Text
+					className="pb-2 text-meta text-ink-dim"
+					accessibilityLiveRegion="polite"
+					testID={SURFACE.composerReopening}
+				>
+					{COMPOSER_COPY.reopening}
+				</Text>
+			) : null}
+
 			{retainedMessage !== null ? (
 				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
@@ -737,11 +755,28 @@ export const Composer = ({
 						accessibilityLiveRegion="assertive"
 						testID={SURFACE.composerRetained}
 					>
-						{retainedMessage}
+						{/* ONE message on an ended session (UX U7, design D5): a failed
+						    reopen used to stack the generic "an earlier instruction may
+						    have been delivered" card, the ended sentence and a disabled
+						    hint — three remedies, one of them pointing at a send button
+						    the screen had just disabled. The ended sentence REPLACES the
+						    card's, and its Retry stays the one retry. */}
+						{ended && error !== null ? error : retainedMessage}
 					</Text>
 					<View className="pt-2">
 						<Button
-							label={COMPOSER_COPY.retryLabel}
+							/* On an ENDED session the card's sentence is the ended one, whose
+							 * verb is "Try again" — so the button under it must say that,
+							 * not "Retry earlier instruction" about the very text sitting
+							 * in the field. The primary stays disabled while the envelope
+							 * is unresolved (the duplicate hazard), so the retry is THE
+							 * way to try again and the copy now names it (UX round 2, U7 /
+							 * design D5). One control, one verb. */
+							label={
+								ended && error !== null
+									? COMPOSER_COPY.endedRetryLabel
+									: COMPOSER_COPY.retryLabel
+							}
 							variant="outline"
 							size="sm"
 							onPress={onRetry}
@@ -751,7 +786,7 @@ export const Composer = ({
 				</View>
 			) : null}
 
-			{error !== null ? (
+			{error !== null && !(ended && retainedMessage !== null) ? (
 				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-danger"
@@ -859,7 +894,9 @@ export const Composer = ({
 						integrated
 						value={draft}
 						onChangeText={onDraftChange}
-						placeholder={COMPOSER_COPY.placeholder}
+						placeholder={
+							ended ? COMPOSER_COPY.endedPlaceholder : COMPOSER_COPY.placeholder
+						}
 						maxLines={6}
 						maxHeightPx={fieldMaxHeight}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height

@@ -1,0 +1,42 @@
+{
+	"mobile.session_health.control_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer."
+	},
+	"mobile.session_health.menu_label": {
+		"role": "button",
+		"note": "Accessible name of the session header's overflow button (the ⋮). Present only when the menu has an item."
+	},
+	"mobile.session_health.menu_hint": {
+		"role": "button",
+		"note": "Accessibility hint for the same overflow button."
+	},
+	"mobile.session_health.menu_title": {
+		"role": "heading",
+		"note": "Title of the overflow menu's sheet. One short noun; not the conversation's name."
+	},
+	"mobile.session_health.reopening": {
+		"role": "status",
+		"note": "The acceptance line after Resume, and under the composer while a send to an ended session is reopening it. The daemon's engage takes seconds, so name the wait rather than showing a bare ellipsis."
+	},
+	"mobile.session_health.still_reopening": {
+		"role": "status",
+		"note": "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed."
+	},
+	"mobile.session_health.resume_refused_title": {
+		"role": "heading",
+		"note": "Title of the sheet's failure notice when Resume did not work."
+	},
+	"mobile.session_health.resume_refused": {
+		"role": "status",
+		"note": "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"."
+	},
+	"mobile.session_health.resume_gone": {
+		"role": "status",
+		"note": "A relay 404 on resume: the conversation is gone. Never invite a retry here — the same words this app's Past sessions screen uses for the same fact."
+	},
+	"mobile.session_health.resume_no_route": {
+		"role": "status",
+		"note": "Resume with no connected computer: names the missing prerequisite rather than blaming the session."
+	}
+}

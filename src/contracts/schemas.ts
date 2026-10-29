@@ -907,6 +907,18 @@ export const sessionProjectionSchema = z.looseObject({
 	ended: z.boolean(),
 	/** Same warning as `ended`. */
 	degraded: z.boolean(),
+	/** The relay's "owner has gone quiet" verdict (#3008). OPTIONAL and absent
+	 *  on an older daemon and on a durable rebuild — the daemon pops the key
+	 *  when it has nothing to report, so absence is "not reported" and must not
+	 *  default to `false` (which would claim a measurement nobody took) nor to
+	 *  `true` (which would paint every older relay yellow). Read by
+	 *  `features/session/health.ts`, which treats only `=== true` as a signal.
+	 *  `null` is accepted and read the same as absent: the daemon at #3008 pops
+	 *  `None` (`types.py::SessionProjection.to_json`), so null never arrives on
+	 *  the wire today, but the reference type is `boolean | null` and a frame
+	 *  must not be REJECTED whole — blanking the session — for a field whose
+	 *  only safe reading of null is "no signal" (QA round 1, Q5). */
+	heartbeat_stale: z.boolean().nullish(),
 	transcript: z.array(transcriptEntrySchema),
 	todos: z.array(todoPhaseSchema),
 	subagents: z.array(subagentRowSchema),

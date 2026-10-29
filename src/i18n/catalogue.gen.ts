@@ -143,7 +143,30 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
-	| "mobile.session.status_tray.hint";
+	| "mobile.session.status_tray.hint"
+	| "mobile.session_health.control_hint"
+	| "mobile.session_health.menu_hint"
+	| "mobile.session_health.menu_label"
+	| "mobile.session_health.menu_title"
+	| "mobile.session_health.reopening"
+	| "mobile.session_health.resume_gone"
+	| "mobile.session_health.resume_no_route"
+	| "mobile.session_health.resume_refused"
+	| "mobile.session_health.resume_refused_title"
+	| "mobile.session_health.still_reopening"
+	| "relay.chrome.session.resume"
+	| "relay.chrome.session.resuming"
+	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.health.dropped_detail"
+	| "relay.health.ended_detail"
+	| "relay.health.ended_placeholder"
+	| "relay.health.ended_send_failed"
+	| "relay.health.live"
+	| "relay.health.live_detail"
+	| "relay.health.quiet_detail"
+	| "relay.health.reconnecting"
+	| "relay.health.reconnecting_detail";
 
 /** Keys with no placeholders: `t()` takes no second argument for these. */
 export type NoParamKey =
@@ -240,7 +263,30 @@ export type NoParamKey =
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
-	| "mobile.session.status_tray.hint";
+	| "mobile.session.status_tray.hint"
+	| "mobile.session_health.control_hint"
+	| "mobile.session_health.menu_hint"
+	| "mobile.session_health.menu_label"
+	| "mobile.session_health.menu_title"
+	| "mobile.session_health.reopening"
+	| "mobile.session_health.resume_gone"
+	| "mobile.session_health.resume_no_route"
+	| "mobile.session_health.resume_refused"
+	| "mobile.session_health.resume_refused_title"
+	| "mobile.session_health.still_reopening"
+	| "relay.chrome.session.resume"
+	| "relay.chrome.session.resuming"
+	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.health.dropped_detail"
+	| "relay.health.ended_detail"
+	| "relay.health.ended_placeholder"
+	| "relay.health.ended_send_failed"
+	| "relay.health.live"
+	| "relay.health.live_detail"
+	| "relay.health.quiet_detail"
+	| "relay.health.reconnecting"
+	| "relay.health.reconnecting_detail";
 
 /** Keys that take one argument object, typed by `MessageParams`. */
 export type ParamKey = Exclude<CatalogueKey, NoParamKey>;
@@ -363,6 +409,29 @@ export type MessageParams = {
 	"mobile.schedules.tail.failed": { count: string | number };
 	"mobile.schedules.truncated": { shown: string | number; total: string | number; family: string };
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session_health.control_hint": NoParams;
+	"mobile.session_health.menu_hint": NoParams;
+	"mobile.session_health.menu_label": NoParams;
+	"mobile.session_health.menu_title": NoParams;
+	"mobile.session_health.reopening": NoParams;
+	"mobile.session_health.resume_gone": NoParams;
+	"mobile.session_health.resume_no_route": NoParams;
+	"mobile.session_health.resume_refused": NoParams;
+	"mobile.session_health.resume_refused_title": NoParams;
+	"mobile.session_health.still_reopening": NoParams;
+	"relay.chrome.session.resume": NoParams;
+	"relay.chrome.session.resuming": NoParams;
+	"relay.chrome.session.subtitle.ended": NoParams;
+	"relay.chrome.session.subtitle.not_answering": NoParams;
+	"relay.health.dropped_detail": NoParams;
+	"relay.health.ended_detail": NoParams;
+	"relay.health.ended_placeholder": NoParams;
+	"relay.health.ended_send_failed": NoParams;
+	"relay.health.live": NoParams;
+	"relay.health.live_detail": NoParams;
+	"relay.health.quiet_detail": NoParams;
+	"relay.health.reconnecting": NoParams;
+	"relay.health.reconnecting_detail": NoParams;
 };
 
 export type ContextRole =
@@ -498,6 +567,29 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
+	"mobile.session_health.menu_hint": "Opens the session menu",
+	"mobile.session_health.menu_label": "Session actions",
+	"mobile.session_health.menu_title": "Session",
+	"mobile.session_health.reopening": "Reopening — this can take a few seconds.",
+	"mobile.session_health.resume_gone": "This session is no longer saved.",
+	"mobile.session_health.resume_no_route": "Connect to a computer to resume this session.",
+	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
+	"mobile.session_health.resume_refused_title": "Could not resume",
+	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"relay.chrome.session.resume": "Resume",
+	"relay.chrome.session.resuming": "Resuming…",
+	"relay.chrome.session.subtitle.ended": "Ended",
+	"relay.chrome.session.subtitle.not_answering": "Not answering",
+	"relay.health.dropped_detail": "Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
+	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
+	"relay.health.ended_placeholder": "Send to reopen in your home folder…",
+	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
+	"relay.health.live": "Live",
+	"relay.health.live_detail": "Running on your computer — messages reach it right away",
+	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
+	"relay.health.reconnecting": "Reconnecting",
+	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
 };
 
 /** Translator context for every key above. */
@@ -618,4 +710,27 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
+	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
+	"mobile.session_health.menu_label": { role: "button", note: "Accessible name of the session header's overflow button (the ⋮). Present only when the menu has an item." },
+	"mobile.session_health.menu_title": { role: "heading", note: "Title of the overflow menu's sheet. One short noun; not the conversation's name." },
+	"mobile.session_health.reopening": { role: "status", note: "The acceptance line after Resume, and under the composer while a send to an ended session is reopening it. The daemon's engage takes seconds, so name the wait rather than showing a bare ellipsis." },
+	"mobile.session_health.resume_gone": { role: "status", note: "A relay 404 on resume: the conversation is gone. Never invite a retry here — the same words this app's Past sessions screen uses for the same fact." },
+	"mobile.session_health.resume_no_route": { role: "status", note: "Resume with no connected computer: names the missing prerequisite rather than blaming the session." },
+	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
+	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
+	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
+	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
+	"relay.chrome.session.subtitle.ended": { role: "status", note: "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim." },
+	"relay.chrome.session.subtitle.not_answering": { role: "status", note: "The relay SPA's own subtitle word for the YELLOW status dot: the session's process is alive but not answering (its runtime is unreachable or its heartbeat and frames have both been quiet past the relay's window). Reused here verbatim so the two clients cannot name one state two ways. Its explanation is relay.health.dropped_detail or relay.health.quiet_detail, depending on which cause won." },
+	"relay.health.dropped_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen." },
+	"relay.health.ended_detail": { role: "help", note: "Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder." },
+	"relay.health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
+	"relay.health.ended_send_failed": { role: "status", note: "Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume." },
+	"relay.health.live": { role: "status", note: "Accessible name and sheet title for the GREEN status dot: the session's process is running on the user's computer, its heartbeat is fresh and the phone's link is up. One short state word; avoid 'Connected' (the phone-link word) and 'Active' (whose negation is Idle). Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
+	"relay.health.live_detail": { role: "help", note: "Sheet body for the green dot. 'Your computer' is the machine running the agent session, not the phone. 'Right away' means delivered to the running session now, not queued for a restart — never promise an instant reply." },
+	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
+	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
+	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
 };

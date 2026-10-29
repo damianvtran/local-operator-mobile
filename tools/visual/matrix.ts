@@ -362,12 +362,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 3636 cells: the whole declared cell list (101 cells) x 2 themes x
+ * The `core` tier is 3816 cells: the whole declared cell list (106 cells) x 2 themes x
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 94 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 60 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
  * run needs ~126 minutes. The `core` job's own bound is 175 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 10908 s deadline its plan derives for itself. The
+ * `web-audit-core`), which is above the 11448 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -397,11 +397,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 101 cells x 2 themes x (2 profiles x 3 scales) = 1212 cells, ~45 minutes at
+ * That is 106 cells x 2 themes x (2 profiles x 3 scales) = 1272 cells, ~45 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` stay the
- * local and dispatched samples, so the full 3636-cell `core` matrix and the
- * 13332-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 3816-cell `core` matrix and the
+ * 13992-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -419,7 +419,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 1212 cells, +50 % over the two-scale 672, so the per-push capture
+ * both CI profiles is 1272 cells, +50 % over the two-scale 672, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
@@ -428,9 +428,11 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * index's five states), the mesh slice's seven cells (the S15 remote rows, the
  * tap-reveal and the move sheet's five states), the checkpoint rail's four more,
  * and the supplement slice's five S5 cells (the Highlights block's states),
- * folded from main: the cell list is 101 and the sample is 1212, both re-derived from
- * this head's own `--plan` rather than scaled — still inside the 55-minute capture bound
- * (1212 cells x 3 s = 61 min). A bound that fires every run stops being a signal, so
+ * folded from main: the cell list is 106 and the sample is 1272, both re-derived from
+ * this head's own `--plan` rather than scaled — and the quiet cause's sheet cell,
+ * which no frame carried until review round 4's m3, is the one that moved them
+ * (105 -> 106, 1260 -> 1272). Still inside the 65-minute capture bound
+ * (1272 cells x 3 s = 63.6 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -733,6 +735,21 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 			},
 		},
 	],
+	/* --- the session-health explanation sheet (the header's status dot) ---
+	 *
+	 * `S5/health-sheet` declares the sheet OPEN over the ended session, and had no
+	 * opener: it rendered byte-identical to `S5/health-ended` and the harness
+	 * reported it NOT MEASURABLE (measured on this head: 7 of 31 cells, both
+	 * themes on every device). The press is the reader's own — tap the title
+	 * block — so a sheet that stops opening fails its cell by marker rather than
+	 * by a staged overlay. */
+	"S5/health-sheet": [{ click: CONTROL.sessionHealth }],
+	/* The dropped-cause sheet is the same surface with the other yellow cause's
+	 * copy; it borrows this opener for the same reason it borrows the marker. */
+	"S5/health-dropped-sheet": [{ click: CONTROL.sessionHealth }],
+	/* And the QUIET cause's sheet, which no frame carried before (review round
+	 * 4, m3): same opener, same surface, the `.quiet_detail` sentence. */
+	"S5/health-quiet-sheet": [{ click: CONTROL.sessionHealth }],
 	/* --- the conversation-tags sheet (LOH-11 S3) ---
 	 *
 	 * All four open the same way a reader does: hold the tagged row, press
@@ -1239,6 +1256,36 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
  * on the phenomenon the class already states.
  */
 export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
+	{
+		/* Declared on the convergence onto 8b384da5 after CI's capture step failed
+		 * this pair at all 12 ci-grid combinations (`S5/degraded = S5/health-quiet`,
+		 * 2 devices x 2 themes x 3 scales) — the count was exactly the grid, which
+		 * is what identified it as one pair and not a general collapse.
+		 *
+		 * WHY IT IS A COINCIDENCE AND NOT A DEFECT. The relay names ONE state for
+		 * both causes ("Not answering", `relay.chrome.session.subtitle
+		 * .not_answering`), and this PR removed the "Not answering" band that used
+		 * to make `degraded` taller (round-1 U6/D6 — the relay removed it too, so a
+		 * native band would have contradicted the dot and the reference). What is
+		 * left differs only in the SHEET's sentence: `relay.health.dropped_detail`
+		 * for `degraded`, `.quiet_detail` for a stale heartbeat. A screen-level
+		 * frame therefore CANNOT tell them apart, on either client.
+		 *
+		 * THE CAUSE IS STILL ASSERTED, just not by these bytes: `health.test.ts`
+		 * pins `healthDetailKey` per cause (degraded -> dropped, stale beat ->
+		 * quiet), and `health-dropped-sheet` opens that sheet in the `degraded`
+		 * world so the sentence is in a frame somewhere. The known gap, stated
+		 * rather than closed: the readiness alias lets either yellow sheet satisfy
+		 * `health-dropped-sheet` (review round 2, m-e), so a regression that showed
+		 * the quiet sentence under `degraded` would pass that cell. */
+		cells: ["S5/degraded", "S5/health-quiet"],
+		reason:
+			"one state, two causes, at every device and scale: the relay gives both the " +
+			"same word and the same dot, and the band that used to distinguish them was " +
+			"removed by both clients. The distinguishing copy is the sheet's, captured by " +
+			"S5/health-dropped-sheet and unit-tested per cause, so the identical frames are " +
+			"the correct rendering and each cell still reaches its own marker.",
+	},
 	{
 		cells: ["S15/empty", "S4/idle"],
 		reason:

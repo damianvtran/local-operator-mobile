@@ -121,6 +121,12 @@ export type SheetProps = {
 	 * header, the scrolling body, and a pinned action region that never scrolls.
 	 */
 	footer?: React.ReactNode;
+	/** How many lines the title may wrap to. ONE by default (the app's
+	 *  truncation idiom, below); a sheet whose title IS its state — the session
+	 *  health sheet's "Not answering" — passes 2, because an ellipsis there cuts
+	 *  the one word the sheet exists to say ("Not answe…" at 320 pt / 200 %,
+	 *  design round 1 D7). */
+	titleLines?: 1 | 2;
 	testID?: string;
 };
 
@@ -134,6 +140,7 @@ export const Sheet = ({
 	detent = "content",
 	children,
 	footer,
+	titleLines = 1,
 	testID,
 }: SheetProps) => {
 	const titleRef = useRef<Text>(null);
@@ -455,7 +462,7 @@ export const Sheet = ({
 									 * title was the sheet's single biggest chrome block — 81 pt of a
 									 * 525 pt surface (design D63-1) — and a single-line title that
 									 * ellipsizes keeps its full accessible name. */
-									numberOfLines={1}
+									numberOfLines={titleLines}
 								>
 									{title}
 								</Heading>

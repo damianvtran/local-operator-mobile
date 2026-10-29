@@ -95,7 +95,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
+		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
 	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
 	 * onto its new head: the base owns the render and package identities, while
 	 * this PR adds only the relay driver's scoped fault and request-ledger
@@ -123,7 +123,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/relay.ts":
 		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
 	"tools/mock-relay/scenarios.ts":
-		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
+		"5cacc6af718133d094658e797b82342b125d515f30f5d293ba0d1242e60f1b57",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -140,7 +140,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"b68452107a0f2d4721caa3ebfafac20d320d5d945bf2e59c50b3092433b2216e",
+		"dcd96584cb631e6aeb8dfc92a2ad0cb8187db3db9966fcb64f73bcd35102e098",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -358,7 +358,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
+	/* Re-pinned 2026-10-29 for the convergence merge onto main `3427c8e` (PR #128,
+	 * the i18n policy, on top of #127/#129): main moved `app`, `src` and three
+	 * instrument files under this branch, whose own change in the same trees is
+	 * the session header's stacked-budget fix. No U-08 scene changes — the proof
+	 * measures the same four screens — so these are digest moves, not new coverage.
+	 * Recomputed with `--print` from the staged merged tree, after the merge. */
+	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -371,7 +377,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "1531a1548bee982152b1eb9548ba594930b50d4df0b1c500093c818045d6987a",
+	src: "55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

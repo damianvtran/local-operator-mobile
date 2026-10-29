@@ -21,6 +21,11 @@ import {
 	relaySentence,
 } from "@/features/session/connection-view";
 import {
+	type HealthLink,
+	headerHealth,
+	healthLink,
+} from "@/features/session/health";
+import {
 	relaySource,
 	type SessionRelaySource,
 } from "@/features/session/relay-source";
@@ -72,6 +77,12 @@ export interface SessionRuntime {
 	streaming: boolean;
 	streamingRowId: string | null;
 	connection: ConnectionView;
+	/** The session stream's own liveness (the store's flag). */
+	connected: boolean;
+	/** The phone's link as the header's status dot reads it (`healthLink`):
+	 *  `retrying` the moment a link that was up drops, `stopped` once the
+	 *  client has given up — fed by the same facts as the connection banner. */
+	link: HealthLink;
 	commands: SlashCommand[];
 	models: ModelEntry[];
 	loading: boolean;
@@ -122,6 +133,11 @@ export interface SessionRuntime {
  * and reconnecting through it would both hide that sentence and fight a relay
  * that is refusing on purpose. `after-backoff` is true for a plain transport
  * drop AND for `authorization_deferred`; only the first is silent. */
+/** The relay's own outage grace, `OUTAGE_GRACE_MS` in `store.ts` at 24d328a1:
+ *  an outage is REPORTED only once it has stood this long, so a blip never
+ *  paints (or speaks) a state the reader would have to un-read. */
+const OUTAGE_GRACE_MS = 2500;
+
 const isTransient = (error: RelayError): boolean =>
 	error.kind === "transport" || error.kind === "ambiguous-delivery";
 
@@ -169,6 +185,40 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		identity,
 		INITIAL_STREAM_FACTS,
 	);
+	/* OUTAGE HYSTERESIS, the relay's own rule (`store.ts` at 24d328a1:
+	 * `OUTAGE_GRACE_MS = 2500`, with `STABLE_STREAM_MS = 2000` before it calls a
+	 * reconnect recovered). Without it the dot flipped Live ↔ Reconnecting every
+	 * 300–700 ms on a flapping link and re-announced each flip, moving the header
+	 * every time (review round 2 m-a, design D11).
+	 *
+	 * Applied to the DROP SIGNAL, not to the health verdict, so the dot, the
+	 * connection banner and the state markers cannot disagree about whether there
+	 * is an outage. A drop arms a 2.5 s grace; only a drop still standing when it
+	 * fires is reported. An accepted frame clears it immediately — recovery is
+	 * immediate, as the relay's `healthy()` is. */
+	const [droppedGrace, setDroppedGrace] = useSessionValue<boolean>(
+		identity,
+		false,
+	);
+	const dropGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (!facts.droppedSinceFrame) {
+			// Recovery: cancel any pending report and clear at once.
+			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current = null;
+			setDroppedGrace(false);
+			return;
+		}
+		if (dropGraceTimer.current !== null) return; // already armed
+		dropGraceTimer.current = setTimeout(() => {
+			dropGraceTimer.current = null;
+			setDroppedGrace(true);
+		}, OUTAGE_GRACE_MS);
+		return () => {
+			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current = null;
+		};
+	}, [facts.droppedSinceFrame, setDroppedGrace]);
 	const [history, setHistory] = useSessionValue<TranscriptEntry[]>(
 		identity,
 		[],
@@ -272,6 +322,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						// The drop is over the moment a frame lands: without this, C2's
 						// "Reconnecting…" would outlive the reconnect it announced.
 						lastEnd: current.lastEnd === "error" ? undefined : current.lastEnd,
+						droppedSinceFrame: false,
 					}));
 				},
 				onState: (status) => {
@@ -281,6 +332,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 						...current,
 						state: status.state,
 						lastEnd: status.lastEnd,
+						droppedSinceFrame:
+							current.droppedSinceFrame || status.lastEnd === "error",
 						// A rotation is a clean EOF: the lease is over, nothing is wrong, and
 						// `overdue` is reset here so a previous loss cannot leak through it.
 						overdue: status.lastEnd === "error" ? current.overdue : false,
@@ -307,6 +360,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 							state: "connecting",
 							lastEnd: "error",
 							overdue: false,
+							droppedSinceFrame: true,
 						}));
 						const delay = reconnectDelay(
 							retries.current,
@@ -552,6 +606,32 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		],
 	);
 
+	/* The phone's link as the header dot reads it — computed once, here, so the
+	 *  dot and the connection banner read the same facts (`healthLink`). */
+	const link = healthLink({
+		entryConnected: entry.connected,
+		/* Set by any transport drop (`sse.ts`'s `stalled`/`closed` with
+		 *  `lastEnd: "error"`, and the transient arm above), cleared only by the
+		 *  next accepted frame — the relay's "outage until a fresh frame" rule.
+		 *  A clean EOF (the lease rotation, C1) never sets it. */
+		droppedSinceFrame: droppedGrace,
+		reopenOverdue: facts.overdue,
+		online: deviceOnline(),
+		/* The SAME terminal error the banner reads (`error ?? providerConnection.
+		 * lastError` below), not just this hook's own. A 401 or a gateway
+		 * `authorization_refused` is recorded by the PROVIDER, so reading only
+		 * `error` left the dot saying "Reconnecting — keeps trying" beside a
+		 * banner naming the remedy, after the phone had stopped retrying (UX
+		 * round 2, U4). */
+		stoppedOnError: (error ?? providerConnection.lastError) !== null,
+		/* The loop's own end, so a terminal failure the provider never saw still
+		 *  reads as stopped (QA round 3, Q10). */
+		streamClosed: facts.state === "closed",
+		/* The route's own refusal, which outlives the effect teardown that drops
+		 *  the stream's terminal report (review round 4, N1). */
+		routeRefused: source.reason === "refused",
+	});
+
 	const connection = useMemo((): ConnectionView => {
 		const factsForView = {
 			// Authentication failures belong to the provider even though this screen
@@ -564,11 +644,17 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				: ("live" as const),
 			stream: facts.state,
 			lastEnd: facts.lastEnd,
+			/* The graced drop — the dot's own input, so the two cannot disagree. */
+			droppedSinceFrame: droppedGrace,
 			reconnectExpired: facts.overdue,
 			online: deviceOnline(),
 			error: error ?? providerConnection.lastError,
 			entry,
-			ended: projection?.ended === true,
+			/* The DOT's ended verdict (pid 0 included), not `projection.ended`
+			 *  alone: a history rebuild is ended too, and a band saying "Not
+			 *  answering" over it contradicted the grey dot (UX round 1, U6). */
+			ended: headerHealth(projection, link) === "ended",
+			healthDotShown: headerHealth(projection, link) !== null,
 			stale: entry.connected && projection?.degraded === true,
 			ageS:
 				facts.ageMs === null
@@ -592,6 +678,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		facts,
 		entry,
 		projection,
+		link,
+		/* The graced drop the banner's C2 now reads — without it the memo would
+		 *  keep painting the previous outage state (QA round 3, Q11). */
+		droppedGrace,
 		route,
 		providerConnection.lastError,
 		snapshot.detail,
@@ -713,6 +803,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		streaming: projection?.streaming === true,
 		streamingRowId,
 		connection,
+		/** The session stream's own liveness, for the header's status dot
+		 *  (`sessionHealth`: a down link reads "reconnecting", and every frame
+		 *  reading below it is stale). `entry.connected`, not the route's phase —
+		 *  a stale frame kept on screen still counts as a reading. */
+		connected: entry.connected,
+		link,
 		commands: ownsProjection ? commands : [],
 		models: ownsProjection ? models : [],
 		loading,

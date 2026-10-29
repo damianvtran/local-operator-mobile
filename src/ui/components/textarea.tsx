@@ -93,6 +93,25 @@ const webFieldStyle = (
 	return style;
 };
 
+/**
+ * What an EMPTY web field needs for its placeholder to ELLIPSIZE rather than wrap
+ * and clip: `rows=1` plus one fixed line-height.
+ *
+ * Chrome does not ellipsize a `<textarea>`'s placeholder on the pseudo-element at
+ * all — `getComputedStyle(el, "::placeholder").textOverflow` stays `clip` no
+ * matter what the stylesheet says, and the round-2 isolation test showed a bare
+ * textarea with `white-space: pre; text-overflow: ellipsis` still cutting the
+ * tail through a glyph. On the ELEMENT it works, but only while the box is one
+ * line: the same declarations with no row constraint wrapped and clipped. Typed
+ * text is untouched — this applies only while `value === ""`, and the field goes
+ * back to its multiline growth the moment a character lands (UX round 2, U9).
+ */
+const webSingleLinePlaceholder = (
+	platform: string,
+	empty: boolean,
+	oneLinePlaceholder: boolean,
+): boolean => platform === "web" && empty && oneLinePlaceholder;
+
 const LINE_PX = 22;
 
 /** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
@@ -295,7 +314,22 @@ export const Textarea = ({
 						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
 						...webFieldStyle(Platform.OS, scrollable),
 					}}
-					multiline
+					/* On WEB, an EMPTY field whose placeholder is capped to one line is an
+					 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
+					 * placeholder — `text-overflow: ellipsis` computes fine on the element
+					 * and the tail is still clipped, measured on this build and against a
+					 * bare `<input>` with the identical box, which ellipsizes correctly
+					 * (UX round 2, U9). Multiline resumes the moment a character lands,
+					 * so a typed draft wraps exactly as before, and the single-line
+					 * element also gives Enter the submit semantics the composer already
+					 * handles on web. */
+					multiline={
+						!webSingleLinePlaceholder(
+							Platform.OS,
+							value === "",
+							placeholderMaxLines === 1,
+						)
+					}
 					// The transcript scrolls, not the page: the field clips its own
 					// overflow once it hits the cap.
 					scrollEnabled={scrollable}
