@@ -6,6 +6,7 @@ import {
 	MODEL_MIN_CHARS,
 	metaLineFor,
 	middleFit,
+	sansTextWidthDp,
 	tailFit,
 	textWidthDp,
 } from "./list-row-meta";
@@ -312,4 +313,17 @@ describe("middleFit keeps a host on one line", () => {
 	it("returns the string whole when it fits", () => {
 		expect(middleFit("host:1", 400, 1)).toBe("host:1");
 	});
+});
+
+it("fits the drawer's own sans face, and still elides a genuinely narrow slot", () => {
+	const sans = (text: string, scale: number) =>
+		sansTextWidthDp(text, (scale * 14) / 12);
+	// Thin sans glyphs discriminate the two faces; Mac mini happens to have
+	// almost equal total advances in mono-sm and 14pt sans.
+	const name = "ill mini";
+	const width = sans(name, 1) + 1;
+	expect(middleFit(name, width, 1, sans)).toBe(name);
+	// Negative controls: using the wrong face or a truly narrow slot must fail whole-fit.
+	expect(middleFit(name, width, 1)).not.toBe(name);
+	expect(middleFit(name, 24, 1, sans)).not.toBe(name);
 });

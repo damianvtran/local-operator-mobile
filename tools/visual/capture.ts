@@ -66,6 +66,7 @@ import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
 import { findIdenticalFrames } from "./identical-states.ts";
+import { runInboxReturnFlow } from "./inbox-return-flow.ts";
 import {
 	ALL_DEVICES,
 	CELL_OPENERS,
@@ -1424,6 +1425,9 @@ function rgbEquals(
 export interface CaptureOptions {
 	/** Optional CI interaction delta; shares this capture's browser and relay. */
 	s15FlowProof?: boolean;
+	/** One return-flow scenario, not a new audit matrix axis. */
+	inboxReturnProof?: boolean;
+	inboxBaselineDir?: string;
 	dir: string;
 	out: string;
 	relay?: string | undefined;
@@ -1581,7 +1585,10 @@ export interface CaptureRecord {
 export async function runCapture(options: CaptureOptions) {
 	// This optional proof is the CI path when an operator browser host cannot
 	// render the flow. It must not silently start a local interaction rig.
-	if (options.s15FlowProof && process.env.GITHUB_ACTIONS !== "true") {
+	if (
+		(options.s15FlowProof || options.inboxReturnProof) &&
+		process.env.GITHUB_ACTIONS !== "true"
+	) {
 		throw new Error("--s15-flow-proof is available only in GitHub Actions");
 	}
 	const outDir = options.out;
@@ -2044,6 +2051,49 @@ export async function runCapture(options: CaptureOptions) {
 			if (record.consoleErrors.length) {
 				for (const error of record.consoleErrors.slice(0, 3))
 					console.log(`      console: ${error.slice(0, 200)}`);
+			}
+		}
+		if (options.inboxReturnProof) {
+			if (!options.relay)
+				throw new Error("Inbox return proof requires the mock relay");
+			// Reuse this browser, fixture bootstrap, and final teardown. The base
+			// export changes only app bytes, never the driver or assertions.
+			for (const baseline of [true, false]) {
+				if (baseline && !options.inboxBaselineDir) continue;
+				const before =
+					baseline && options.inboxBaselineDir
+						? await serveDir(options.inboxBaselineDir, { proxy: options.relay })
+						: null;
+				try {
+					const flow = await withDeadline(
+						runInboxReturnFlow({
+							browser: chrome,
+							previous: page,
+							baseUrl: before?.url ?? server.url,
+							relay: options.relay,
+							out: join(
+								options.out,
+								"inbox-return",
+								baseline ? "before" : "after",
+							),
+							baseline,
+						}),
+						180_000,
+						`Inbox return proof ${baseline ? "before" : "after"}`,
+					);
+					if (flow.ok) page = flow.value;
+					else {
+						abandoned.push({
+							cell: `S18/return-${baseline ? "before" : "after"}`,
+							reason: flow.reason,
+						});
+						// A deadline must end this browser's work, not leave an orphan
+						// driver using it beside another journey. Outer finally reaps it.
+						break;
+					}
+				} finally {
+					await before?.close();
+				}
 			}
 		}
 		if (options.s15FlowProof) {
@@ -2912,6 +2962,8 @@ if (isMain) {
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
+				"  --inbox-return-proof  read/dismiss/Undo returns, both themes, same browser (CI only)",
+				"  --inbox-baseline-dir  optional base export for before frames with the same driver",
 				"  --s15-flow-proof    also prove S15 footer navigation/return on the same browser (CI only)",
 				"  --plan              print the frame list and exit without capturing",
 				"  --yes               allow a run above the confirmation threshold",
@@ -2963,6 +3015,8 @@ if (isMain) {
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
 		s15FlowProof: bool(flags, "s15-flow-proof"),
+		inboxReturnProof: bool(flags, "inbox-return-proof"),
+		inboxBaselineDir: str(flags, "inbox-baseline-dir", undefined),
 		// The web build's own relay-override parameters: the harness puts the app's
 		// `lo-relay*` names on the page, and #11's `webRelayOverride()` adopts them.
 		seed: {

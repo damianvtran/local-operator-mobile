@@ -1,12 +1,15 @@
 import { X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	Animated,
 	Easing,
+	findNodeHandle,
 	Modal,
 	Platform,
 	Pressable,
 	ScrollView,
+	type Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
@@ -96,6 +99,11 @@ export type SheetProps = {
 	onDismiss?: () => void;
 	/** The sheet's accessible name; also its visible title. */
 	title: string;
+	/** Opt-in for a picker whose first announcement is its purpose, not Close. */
+	focusTitle?: boolean;
+	/** Drawer openers unmount; return to the persistent Home chip after RNW has
+	 * completed its own focus return, never during the closing animation. */
+	returnFocusTestID?: string;
 	detent?: SheetDetent;
 	children: React.ReactNode;
 	/**
@@ -121,11 +129,16 @@ export const Sheet = ({
 	onClose,
 	onDismiss,
 	title,
+	focusTitle = false,
+	returnFocusTestID,
 	detent = "content",
 	children,
 	footer,
 	testID,
 }: SheetProps) => {
+	const titleRef = useRef<Text>(null);
+	/* The scrim's DOM node, read only by the web focus guard below. */
+	const scrimRef = useRef<View>(null);
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -249,6 +262,36 @@ export const Sheet = ({
 	const shown = visible && !covered;
 	const dismissed = useModalDismissal(shown, Platform.OS === "web");
 
+	/**
+	 * Keep the pointer-only scrim from taking focus from the sheet's title.
+	 *
+	 * `focusTitle` already removes the scrim from the accessibility tree and gives it
+	 * `tabIndex={-1}`, so nothing TABS to it — but focus can still be PLACED on it,
+	 * and one path does exactly that. Opening this sheet from the drawer's workspace
+	 * row closes the drawer in the same press: the pane's focused node unmounts, and
+	 * the modal's own trap re-enters at the first node it can focus, which is this
+	 * scrim. A keyboard or screen-reader reader then hears "Close" instead of the
+	 * title they just opened (QA round 2, Q7 — 3/3 reps at 390/100 and 320/200, while
+	 * the chip and Settings openers landed on the heading).
+	 *
+	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
+	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
+	 * pane header in split layout, which is `returnFocusTestID`'s `activeElement ===
+	 * body` guard for the same reason — is never robbed of focus by a blanket
+	 * refocus. The listener is web-only: native has no `<div>` and no focus trap.
+	 */
+	useEffect(() => {
+		if (!shown || !focusTitle || Platform.OS !== "web") return;
+		const scrim = scrimRef.current as unknown as HTMLElement | null;
+		const title = titleRef.current as unknown as HTMLElement | null;
+		if (!scrim || !title) return;
+		const onFocusIn = (event: Event) => {
+			if (event.target === scrim) title.focus({ preventScroll: true });
+		};
+		scrim.addEventListener("focusin", onFocusIn);
+		return () => scrim.removeEventListener("focusin", onFocusIn);
+	}, [shown, focusTitle]);
+
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
 		 *  inside it — the conversations pane's menu is the app's nested case. */
@@ -258,9 +301,35 @@ export const Sheet = ({
 				transparent
 				animationType="none"
 				onRequestClose={onClose}
+				onShow={() => {
+					if (!focusTitle || !titleRef.current) return;
+					if (Platform.OS === "web")
+						(titleRef.current as unknown as HTMLElement).focus({
+							preventScroll: true,
+						});
+					else {
+						const handle = findNodeHandle(titleRef.current);
+						if (handle !== null)
+							AccessibilityInfo.setAccessibilityFocus(handle);
+					}
+				}}
 				onDismiss={
 					Platform.OS === "web"
 						? () => {
+								// Settle the fallback before publishing the ledger transition; Settings'
+								// refusal reveal must run after ALL focus-return work (#122).
+								if (
+									!visible &&
+									returnFocusTestID &&
+									(document.activeElement === document.body ||
+										document.activeElement === null)
+								) {
+									document
+										.querySelector<HTMLElement>(
+											`[data-testid="${returnFocusTestID}"]`,
+										)
+										?.focus({ preventScroll: true });
+								}
 								dismissed();
 								onDismiss?.();
 							}
@@ -312,12 +381,21 @@ export const Sheet = ({
 							className="absolute inset-0"
 						>
 							<Pressable
+								ref={scrimRef}
 								className="flex-1"
 								style={{
 									backgroundColor: drawsDim ? scrimColour : "transparent",
 								}}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"
+								// The labelled close button remains available; a picker's scrim is
+								// pointer-only so initial focus never starts on a duplicate Close.
+								accessible={!focusTitle}
+								accessibilityElementsHidden={focusTitle}
+								importantForAccessibility={
+									focusTitle ? "no-hide-descendants" : "auto"
+								}
+								tabIndex={focusTitle ? -1 : 0}
 								testID={CONTROL.sheetScrim}
 								onPress={onClose}
 							/>
@@ -368,6 +446,8 @@ export const Sheet = ({
 								}
 							>
 								<Heading
+									ref={titleRef}
+									tabIndex={focusTitle ? -1 : undefined}
 									level={2}
 									className="flex-1 text-title text-ink"
 									/* ONE LINE, the app's truncation idiom (36 call sites, the rows

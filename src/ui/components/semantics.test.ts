@@ -114,3 +114,18 @@ describe("Badge", () => {
 		).toBe(true);
 	});
 });
+
+it("lets the picker title receive programmatic focus without adding a Tab stop", () => {
+	const [title] = withRole(
+		h(Heading, {
+			...{
+				level: 2 as const,
+				className: "",
+				tabIndex: -1 as const,
+				children: "Switch computer",
+			},
+		}),
+		"heading",
+	);
+	expect(title?.attrs.tabindex).toBe("-1");
+});

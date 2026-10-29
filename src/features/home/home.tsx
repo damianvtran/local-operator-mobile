@@ -5,6 +5,7 @@ import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry, PromptImage } from "@/contracts";
+import { HeaderComputerChip } from "@/features/auth/computer-entry-points";
 import {
 	useConnection,
 	useConnectionState,
@@ -63,7 +64,6 @@ import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { middleFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
@@ -193,9 +193,6 @@ export default function Home({
 		startup.snapshot.phase,
 		startup.snapshot.sessionId,
 	);
-	/* The header host is ONE token: measured so the painted string can be fitted
-	 * rather than wrapped (D3). */
-	const [hostWidth, setHostWidth] = useState(0);
 	const { effectiveScale } = useTextScale();
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
@@ -676,48 +673,15 @@ export default function Home({
 				}
 				headerAction={
 					<View className="min-w-0 flex-1 flex-row items-center gap-2">
-						{/* The computer this will run on, and the switcher: the same
-						 *  `listLabel` ladder the panel's row uses, so the two cannot
-						 *  name one machine differently.
-						 *
-						 *  BOTH AXES carry the floor. `minHeight` alone left this the one
-						 *  control the flex row could shrink: beside a `99+` bell at 200 %
-						 *  text it measured 36.4 pt with the label "…1" (design round 9,
-						 *  D24; the four E2E U-01 rows at `S15/move-progress`). The width
-						 *  floor is only honourable because the BELL yields its pill at
-						 *  large text — see `headerBellShowsCount` — so nothing overflows
-						 *  the 320 pt row to escape it. */}
-						<Pressable
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
-							onPress={() => router.push("/tunnels")}
-							testID={CONTROL.computersButton}
-							className="min-w-0 flex-1 justify-center"
-							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						>
-							{/* ONE unbreakable line, pre-fitted with a middle ellipsis. A tail
-							 *  fit kept only "…0.0.1:49869"; a two-line middle let the platform
-							 *  break at the string's own break opportunities, so the port
-							 *  split into "…:49" / "892" at 320 pt and 200 % (design D3). The
-							 *  full value stays in the accessible label above and the header's
-							 *  height is unchanged — one line, always. */}
-							<Text
-								className="text-mono-sm text-ink-muted"
-								numberOfLines={1}
-								onLayout={(event) =>
-									setHostWidth(Math.floor(event.nativeEvent.layout.width))
-								}
-								style={{ flexShrink: 1 }}
-							>
-								{hostWidth > 0
-									? middleFit(
-											listLabel(computers, tunnelId, route),
-											hostWidth,
-											effectiveScale,
-										)
-									: listLabel(computers, tunnelId, route)}
-							</Text>
-						</Pressable>
+						{/* The computer this will run on, and the switcher's primary entry
+						 *  point (ux-flows F5): `● Mac mini ▾`, opening the ONE sheet rather
+						 *  than navigating away. It keeps this slot's `min-w-0 flex-1` and
+						 *  its both-axis TOUCH_FLOOR (design round 9, D24) — see
+						 *  `HeaderComputerChip`; the name comes from the same saved/account-scoped
+						 *  selector the switcher sheet uses. The width floor is only honourable
+						 *  because the BELL yields its pill at large text (and the chip its
+						 *  chevron at the same step), so nothing overflows the 320 pt row. */}
+						<HeaderComputerChip testID={CONTROL.computersButton} />
 						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
 						 *  came from the same label as the computer name beside it, and a
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as

@@ -5,6 +5,7 @@ import { seedQuery } from "../lib/readiness.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import {
 	FOOTER_DESTINATIONS,
+	FOOTER_TAIL_CONTROLS,
 	s15FlowQuery,
 	scrollBoundarySettled,
 } from "./s15-flow.ts";
@@ -76,17 +77,12 @@ describe("bounded S15 interaction contract", () => {
 		expect(query.get("lo-inset-left")).toBe("59");
 		expect(query.get("lo-text-scale")).toBe("2");
 	});
-	it("pairs all four app destinations with their actual return controls", () => {
+	it("pairs every footer ROUTE with their actual return controls", () => {
 		expect(FOOTER_DESTINATIONS).toEqual([
 			{
 				control: CONTROL.sidebarPast,
 				root: SCREEN.past,
 				back: CONTROL.pastBack,
-			},
-			{
-				control: CONTROL.sidebarComputers,
-				root: SCREEN.computers,
-				back: CONTROL.computersBack,
 			},
 			{
 				control: CONTROL.sidebarProjects,
@@ -109,4 +105,10 @@ describe("bounded S15 interaction contract", () => {
 		expect(source).toContain("await press(row, 1200)");
 		expect(source).toContain('verdict: "FAIL"');
 	});
+});
+
+it("keeps the workspace row in tail geometry and first-tap sheet coverage", () => {
+	expect(FOOTER_TAIL_CONTROLS).toContain(CONTROL.sidebarComputers);
+	expect(source).toContain("workspace-first-tap-sheet");
+	expect(source).toContain("workspace sheet did not close");
 });

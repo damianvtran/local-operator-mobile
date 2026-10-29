@@ -25,6 +25,7 @@ type Props = Record<string, unknown>;
 const host = vi.hoisted(() => ({
 	texts: [] as string[],
 	presses: new Map<string, () => void>(),
+	labels: new Map<string, string>(),
 	probes: new Map<string, Array<(value: unknown) => void>>(),
 	saved: [] as SavedComputer[],
 	account: null as string | null,
@@ -62,6 +63,8 @@ vi.mock("react-native", async () => {
 		Pressable: (props: Props) => {
 			if (typeof props.testID === "string")
 				host.presses.set(props.testID, props.onPress as () => void);
+			if (typeof props.testID === "string")
+				host.labels.set(props.testID, String(props.accessibilityLabel));
 			const children = props.children as
 				| React.ReactNode
 				| ((state: { pressed: boolean }) => React.ReactNode);
@@ -513,4 +516,77 @@ describe("the provider opens and closes the one sheet (review rounds 5–6)", ()
 		await act(async () => close());
 		expect(closes()).toBe(1);
 	});
+});
+
+it("opens password re-entry from the in-use refused row, even when its health probe answers", async () => {
+	const url = "https://relay.example.com";
+	host.saved = [
+		{
+			id: "home",
+			transport: "custom",
+			baseUrl: url,
+			allowInsecure: false,
+			name: "Home relay",
+			addedAt: 1,
+			lastUsedAt: 1,
+			hidden: false,
+			identity: null,
+		},
+	];
+	await act(async () => {
+		store.api
+			?.getState()
+			.startRoute({ mode: "custom", baseUrl: url, allowInsecure: false });
+		store.api?.getState().noteFailure({
+			surface: "password",
+			displayableMessage: "Synthetic password refusal",
+		});
+	});
+	await render();
+	await flush();
+	await act(async () => {
+		for (const resolve of host.probes.get(url) ?? []) resolve({ ok: true });
+	});
+	await flush();
+	expect(host.labels.get(switcherRowIds("home").row)).toContain(
+		"Not connected, in use",
+	);
+	expect(words()).toContain("Not connected");
+	await act(async () => host.presses.get(switcherRowIds("home").row)?.());
+	expect(host.closed).toBe(1);
+	expect(host.pushed).toEqual([
+		{ pathname: "/own-tunnel", params: { computer: "home" } },
+	]);
+});
+
+it("reveals an existing Settings refusal instead of stacking the same screen", async () => {
+	const url = "https://relay.example.com";
+	host.pathname = "/settings";
+	host.saved = [
+		{
+			id: "home",
+			transport: "custom",
+			baseUrl: url,
+			allowInsecure: false,
+			name: "Home relay",
+			addedAt: 1,
+			lastUsedAt: 1,
+			hidden: false,
+			identity: null,
+		},
+	];
+	await act(async () => {
+		store.api
+			?.getState()
+			.startRoute({ mode: "custom", baseUrl: url, allowInsecure: false });
+		store.api?.getState().noteFailure({
+			surface: "connection",
+			displayableMessage: "Synthetic certificate refusal",
+		});
+	});
+	await render();
+	await flush();
+	await act(async () => host.presses.get(switcherRowIds("home").row)?.());
+	expect(host.closed).toBe(1);
+	expect(host.pushed).toEqual([]);
 });

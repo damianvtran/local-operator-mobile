@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ENTRY_HEALTH_MARK } from "../../src/features/auth/entry-health-marks";
 
 import {
 	type AuditNode,
@@ -1096,5 +1097,37 @@ describe("U-06 — an overrunning run inside a single-line ellipsis clip", () =>
 		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION", "EXCEPTION"]);
 		expect(rows[0]?.detail).toContain("single-line ellipsis");
 		expect(rows[1]?.detail).toContain("overflow-x: auto|scroll");
+	});
+});
+
+describe("U-03 navigation status shape", () => {
+	const audit = (over: { ownText?: string; childImages?: number }) =>
+		runChecks(
+			state({ nodes: [node({ semanticColour: "rgb(25,118,74)", ...over })] }),
+			{
+				floors,
+				semantic: new Set(["25,118,74"]),
+				checks: ["U-03"],
+				scaleIsLive: true,
+			},
+		);
+	it("accepts every entry mark as a non-colour carrier", () => {
+		/* The marks live in an alias-free module precisely so this test can import the
+		 * REAL set (QA round 2, Q6). Two carriers are legitimate and the audit reads
+		 * them differently: a glyph is the node's own text, a drawn mark is a SHAPE —
+		 * the probe records an `svg` child as an image carrier, which is why
+		 * `childImages` is what a drawn mark models. */
+		for (const mark of Object.values(ENTRY_HEALTH_MARK)) {
+			const rows =
+				mark.form === "text"
+					? audit({ ownText: mark.glyph })
+					: audit({ childImages: 1 });
+			expect(rows.some((row) => row.verdict === "FAIL")).toBe(false);
+		}
+	});
+	it("still rejects the original bare coloured dot (negative control)", () => {
+		expect(audit({ ownText: "" }).some((row) => row.verdict === "FAIL")).toBe(
+			true,
+		);
 	});
 });

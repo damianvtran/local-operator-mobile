@@ -509,6 +509,15 @@ export interface RelayState {
 	 */
 	transferDials: number;
 	transferJournal: Map<string, { body: string; status: number; payload: Json }>;
+	/** How many of the NEXT list page reads to refuse, route-scoped. A COUNT and
+	 * not a boolean because a proof has to be able to fail a retry as well as the
+	 * read before it — with a one-shot latch the Try again could only ever
+	 * succeed. Unlike the persistent gateway fault it cannot poison the next
+	 * fixture or control call. */
+	failNotificationListReads: number;
+	/** All public requests held in memory, so a return proof can count actual
+	 * GETs. Off until a proof arms it: a full matrix must not grow this array. */
+	journalAll: boolean;
 	/** Origins a mutation may come from; unset means the same-origin rule is off. */
 	allowedOrigins?: string[];
 	submittedAt: number | null;
@@ -713,6 +722,8 @@ export function createRelay(options: RelayOptions = {}) {
 		startedAt: Date.now(),
 		seq: 0,
 		recorded: [],
+		journalAll: false,
+		failNotificationListReads: 0,
 		requestsServed: 0,
 		approvalsAnswered: 0,
 		admitted: new Map(),
@@ -2892,6 +2903,22 @@ export function createRelay(options: RelayOptions = {}) {
 		/* ------------------------------------------------------- notifications -- */
 
 		if (pathname === "/api/notifications" && method === "GET") {
+			/* THE ARMED RETURN-PROOF REFUSAL, checked before this branch's own
+			 * `filterState` shadow, so it reads the relay's state and not the query.
+			 *
+			 * SCOPED TO THE LIST'S OWN PAGE READ — no `session_id`, no `cursor`. The
+			 * detail's conversation count walks this same route with `session_id`, and a
+			 * refusal that ignored that would be consumed by the detail while the cell
+			 * under test (the RETURN's re-read) was never refused at all. */
+			if (
+				state.failNotificationListReads > 0 &&
+				!url.searchParams.has("session_id") &&
+				!url.searchParams.has("cursor")
+			) {
+				state.failNotificationListReads -= 1;
+				sendJson(res, 503, errorBody("synthetic inbox return read failure"));
+				return;
+			}
 			/* The inbox read. A scenario may pin the whole body (a bare body or a
 			 * recorded answer); otherwise the STORE answers, so a dismiss or a read
 			 * taken earlier in the same capture is visible here — a canned body
@@ -2901,7 +2928,10 @@ export function createRelay(options: RelayOptions = {}) {
 				sendJson(res, pinned.status, pinned.json ?? {}, pinned.headers);
 				return;
 			}
-			const state = url.searchParams.get("state") ?? "unread";
+			/* `filterState`, not `state`: `state` is the relay's own mutable state, and a
+			 *  same-named local for the query parameter put the route's earlier reads of
+			 *  the relay state behind this declaration's temporal dead zone. */
+			const filterState = url.searchParams.get("state") ?? "unread";
 			const rawLimit = Number(url.searchParams.get("limit") ?? "");
 			const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50;
 			/* The live route's narrowing parameters, passed through so a client
@@ -2912,7 +2942,7 @@ export function createRelay(options: RelayOptions = {}) {
 			sendJson(
 				res,
 				200,
-				notificationsStore.page(state, limit, {
+				notificationsStore.page(filterState, limit, {
 					sessionId: url.searchParams.get("session_id") ?? undefined,
 					throughSeq: Number.isFinite(through) ? through : undefined,
 					cursor: url.searchParams.get("cursor") ?? undefined,
@@ -3040,14 +3070,13 @@ export function createRelay(options: RelayOptions = {}) {
 					const refusal = gatewayRefusalFor(key);
 					if (refusal === null)
 						throw new Error(`no such gateway refusal: ${key}`);
-					if (state.record) {
+					if (state.record || state.journalAll)
 						recordRequest({
 							method,
 							path: pathname + (url.search || ""),
 							status: refusal.status,
 							note: `stream:gateway:${refusal.tag}`,
 						});
-					}
 					return sendJson(res, refusal.status, refusal.json, refusal.headers);
 				}
 				if (!projection) {
@@ -3697,7 +3726,7 @@ export function createRelay(options: RelayOptions = {}) {
 			state.pinnedAt = started;
 
 		const finish = (status: number, note = ""): void => {
-			if (state.record) {
+			if (state.record || state.journalAll) {
 				recordRequest({
 					method,
 					path: pathname + (url.search || ""),
@@ -3744,9 +3773,26 @@ export function createRelay(options: RelayOptions = {}) {
 					}
 				}
 				if (pathname === "/__mock/state" && method === "GET") {
+					/* THE INBOX STORE'S OWN COUNTS, on the control surface. A proof that
+					 * asserts the bell/rail badge has to compare it against what the store
+					 * holds, not against a literal in the flow: an expectation written into
+					 * the driver proves only that the driver agrees with itself. This is the
+					 * same store `GET /api/notifications` answers from, read the same way. */
+					const inboxCounts = notificationsStore.page("all", 1) as unknown as {
+						unread_count?: number;
+						waiting_unread_count?: number;
+						high_water?: number;
+					};
 					return sendJson(res, 200, {
 						scenario: state.scenario,
 						faults: state.faults.applied,
+						inbox: {
+							unread_count: Number(inboxCounts.unread_count ?? 0),
+							waiting_unread_count: Number(
+								inboxCounts.waiting_unread_count ?? 0,
+							),
+							high_water: Number(inboxCounts.high_water ?? 0),
+						},
 						sessions: Object.keys(state.world.projections ?? {}).length,
 						admittedCommands: state.admitted.size,
 						supplementOps: state.supplementOps,
@@ -3778,6 +3824,22 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				if (pathname === "/__mock/record" && method === "GET") {
 					sendJson(res, 200, { requests: state.recorded });
+					return;
+				}
+				if (pathname === "/__mock/inbox-return" && method === "POST") {
+					/* ARMS THE RETURN PROOF: N refusals for the next list page reads
+					 * (default 1), and the request ledger the proof counts. Both are off
+					 * in an ordinary matrix run, where neither a scoped refusal nor a
+					 * per-request array belongs. `failures` exists so a proof can refuse
+					 * the retry too and measure what a FAILED retry shows — the state a
+					 * one-shot latch can never reach. */
+					const raw = await readBody(req);
+					const asked = Number(JSON.parse(raw || "{}").failures ?? 1);
+					const failures =
+						Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 1;
+					state.failNotificationListReads = failures;
+					state.journalAll = true;
+					sendJson(res, 200, { failNotificationListReads: failures });
 					return;
 				}
 				if (pathname === "/__mock/scenario" && method === "POST") {

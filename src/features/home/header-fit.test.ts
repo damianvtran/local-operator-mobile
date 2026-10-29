@@ -15,6 +15,12 @@ const SOURCE = readFileSync(
 	"utf8",
 ).replace(/\s+/g, " ");
 
+/** The chip that fills the switcher's slot (M2b), collapsed the same way. */
+const CHIP = readFileSync(
+	new URL("../auth/computer-entry-points.tsx", import.meta.url),
+	"utf8",
+).replace(/\s+/g, " ");
+
 /** A count-only gate on the bell's pill — the shape this round replaces.
  *  Hoisted, as the kit's own modules do, so a callback does not re-compile it
  *  (biome `useTopLevelRegex`). */
@@ -42,8 +48,15 @@ const atId = (id: string): number => {
 describe("the home header at large text", () => {
 	it("keeps the switcher above the touch floor on BOTH axes", () => {
 		expect(HEADER_SWITCHER_FLOOR).toBe(TOUCH_FLOOR);
-		const from = atId("computersButton");
-		const switcher = SOURCE.slice(from, SOURCE.indexOf("<Text", from));
+		/* Since M2b the slot holds `HeaderComputerChip`, so the floor is asserted
+		 *  on the chip's own Pressable — slicing home.tsx from the testID would now
+		 *  run into the BELL's markup and pass on the bell's floor. */
+		expect(SOURCE).toContain(
+			"<HeaderComputerChip testID={CONTROL.computersButton} />",
+		);
+		const from = CHIP.indexOf("export function HeaderComputerChip");
+		const switcher = CHIP.slice(from, CHIP.indexOf("<Text", from));
+		expect(switcher).toContain("min-w-0 flex-1");
 		expect(switcher).toContain(
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",
 		);
