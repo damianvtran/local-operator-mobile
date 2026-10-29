@@ -282,7 +282,7 @@ export function SessionHealthControl({
 					ref={controlRef}
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={`${title}, ${label}`}
-					accessibilityHint={t("relay.health.control_hint")}
+					accessibilityHint={t("mobile.session_health.control_hint")}
 					accessibilityState={{ expanded: sheetOpen }}
 					testID={CONTROL.sessionHealth}
 					onPress={() => onSheetOpenChange(true)}
@@ -304,18 +304,40 @@ export function SessionHealthControl({
 						>
 							{title}
 						</Text>
-					</View>
-					<View
-						className="min-w-0 flex-row items-center"
-						style={{ minHeight: stateLinePt(effectiveScale) }}
-						testID={CONTROL.sessionHealthWord}
-					>
-						{live ? null : (
-							<Text className="text-meta text-ink-dim" numberOfLines={1}>
+						{/* SHORT LANDSCAPE KEEPS THE HEADER ONE ROW (QA round 3, Q9). The
+						 *  reserved state line below costs 33.6 pt at 200 % text, and in
+						 *  `compact` that came out of the one row this form exists to be:
+						 *  the header control measured 86 pt tall, the approval card's
+						 *  Approve/Deny moved to y 232 while the composer starts at y 260,
+						 *  and a centre tap on Approve reached `session-column` instead of
+						 *  the button — a pending decision could not be answered (#123
+						 *  fixed the same class by hiding the status tray here). The word
+						 *  rides the row instead, after the title, so the row's HEIGHT is
+						 *  the same in every state and only the flex-1 title yields width
+						 *  — the title's own left edge still never moves (D11). */}
+						{compact && !live ? (
+							<Text
+								className="text-meta text-ink-dim"
+								numberOfLines={1}
+								testID={CONTROL.sessionHealthWord}
+							>
 								{label}
 							</Text>
-						)}
+						) : null}
 					</View>
+					{compact ? null : (
+						<View
+							className="min-w-0 flex-row items-center"
+							style={{ minHeight: stateLinePt(effectiveScale) }}
+							testID={CONTROL.sessionHealthWord}
+						>
+							{live ? null : (
+								<Text className="text-meta text-ink-dim" numberOfLines={1}>
+									{label}
+								</Text>
+							)}
+						</View>
+					)}
 				</Pressable>
 			</View>
 
@@ -351,7 +373,13 @@ export function SessionHealthControl({
  * `announceForAccessibility` (review round 1, m1).
  */
 export function HealthAnnouncer({ health }: { health: SessionHealth | null }) {
-	const previous = useRef<SessionHealth | null>(health);
+	/* SEEDED WITH `null`, NOT WITH `health` (UX round 3, U11). Seeding from the
+	 * current value made `firstReading` false on mount, so the web/Android region
+	 * was filled with the first state word ~20 ms after first paint — the exact
+	 * thing the rule below forbids — while iOS's effect skipped it. A ref that
+	 * starts empty is what makes "a first reading is not a change" true on every
+	 * platform, and the effect below records the reading once it has rendered. */
+	const previous = useRef<SessionHealth | null>(null);
 	/* ONE RULE ON EVERY PLATFORM (UX round 2, U11): only a CHANGE is announced,
 	 * never the first reading. The iOS branch already skipped it; the web/Android
 	 * live region was filled on the first non-null reading, so opening an old
@@ -415,8 +443,8 @@ export function SessionHeaderActions({
 			{ended ? (
 				<View ref={menuRef}>
 					<IconButton
-						accessibilityLabel={t("relay.health.menu_label")}
-						accessibilityHint={t("relay.health.menu_hint")}
+						accessibilityLabel={t("mobile.session_health.menu_label")}
+						accessibilityHint={t("mobile.session_health.menu_hint")}
 						size={22}
 						testID={CONTROL.sessionMenu}
 						onPress={() => onMenuOpenChange(true)}
@@ -432,7 +460,7 @@ export function SessionHeaderActions({
 			<Sheet
 				visible={menuOpen && ended}
 				onClose={() => onMenuOpenChange(false)}
-				title={t("relay.health.menu_title")}
+				title={t("mobile.session_health.menu_title")}
 				testID={CONTROL.sessionHeaderMenuSheet}
 			>
 				<View className="gap-2 px-4 pb-4">

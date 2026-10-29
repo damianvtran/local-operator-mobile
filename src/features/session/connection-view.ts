@@ -162,6 +162,11 @@ export interface ConnectionViewInput {
 	/** Why the last open ended, as `sse.ts` recorded it. A clean `eof` is never a
 	 *  fault, whatever its length. */
 	lastEnd: "eof" | "error" | "stopped" | undefined;
+	/** The SAME graced drop the dot reads (`droppedSinceFrame`, held behind
+	 *  `OUTAGE_GRACE_MS`): C2 fires on this, not on the raw `lastEnd`, so the
+	 *  banner and the dot cannot disagree — before QA round 3 (Q11) a blip under
+	 *  2.5 s painted "The connection dropped" beside a green `Live` dot. */
+	droppedSinceFrame?: boolean;
 	/** A reconnect has outlived `RECONNECT_DEADLINE_MS` without a snapshot. */
 	reconnectExpired: boolean;
 	/** The last failure the connection layer resolved, if any. It already carries
@@ -328,8 +333,8 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 		);
 	}
 
-	/* ---- C2: a transport error, or a reconnect that produced nothing ---- */
-	if (input.lastEnd === "error") {
+	/* ---- C2: the graced drop, or a reconnect that produced nothing ---- */
+	if (input.droppedSinceFrame === true) {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
 	if (input.stream === "connecting" && input.reconnectExpired) {

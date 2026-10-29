@@ -95,13 +95,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
-	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
-	 * onto its new head: the base owns the render and package identities, while
-	 * this PR adds only the relay driver's scoped fault and request-ledger
-	 * controls. Recomputed with `--print`; no U-03 exemption or skipped check. */
+		"3862c918443d5c574722baef7c31359bd5ce786613cda1ebdc18860b622b42ab",
 	"tools/lib/relay.ts":
-		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
+		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
 	"tools/lib/static-server.ts":
 		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
 	"tools/mock-relay/account-routing-gate.ts":
@@ -121,9 +117,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
+		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
 	"tools/mock-relay/scenarios.ts":
-		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
+		"54979836c826613a1856fb3090acd9f7319d9e80aa7d9f193f50eaceb4fd8b88",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -140,12 +136,18 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"b68452107a0f2d4721caa3ebfafac20d320d5d945bf2e59c50b3092433b2216e",
+		"990a06c3575043b8a24647ffe3f46557b5cb66e273baa54d01daa6222fdc5ab7",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-10-28 on the convergence onto 8b384da5 (#112): the `app` and
+	 * `src` trees carry the session-health dot, its sheet and the composer's
+	 * reopen-on-send, and the rebase re-derived both against the merged base. The
+	 * health copy moved from a feature table onto #112's catalogue, so `src` moved
+	 * for that too. No other tree moved: the fixtures, tokens and fonts are
+	 * untouched by this PR. */
 	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
 	 * polish work itself (new status-tray module, one-row session chrome, Home splash
 	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
@@ -288,34 +290,6 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
 	 * `--print` from the staged tree.
 	 *
-	 * Re-pinned 2026-10-28 for M2b (the switcher's Home chip and drawer row), `src`
-	 * only: `computer-entry.ts`/`computer-entry-points.tsx`, the Home header slot,
-	 * the drawer footer, the `CONTROL` doc comments, and `native-polish.test.ts`
-	 * following the D3 one-line rule into the chip. The proofs' scene is a
-	 * session transcript, which renders neither the Home header nor the drawer, so
-	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
-	 * staged tree.
-	 *
-	 * Re-pinned 2026-10-28 for PR #126 round-1 remediation: registry-backed entry
-	 * names, slot fitting, refusal remedies and opt-in picker focus, plus tests.
-	 * The transcript proofs do not render these navigation entry points. Sheet's
-	 * new focus behavior is opt-in (only the computer picker enables it), and
-	 * middleFit preserves its mono default (26 focused fit tests). This is a source
-	 * identity update, NOT a claim of new rendered proof; independent visual/QA
-	 * validation remains required on this head. app/instrument/input pins unchanged.
-	 * Recomputed with --print after staging the complete remediation.
-	 *
-	 * Re-pinned 2026-10-28 for the M2b round-2 remediation on PR #126, deliberately:
-	 * the switcher's two navigation entry points moved their health marks into an
-	 * alias-free module (`src/features/auth/entry-health-marks.ts`, which the frame
-	 * audit's own test must import so `tools/tsconfig.json` stops failing on `@/`),
-	 * put the kit's control-edge role on both affordances, and made the mark and the
-	 * drawer row's health word follow the text scale. `design/tokens` moves with them
-	 * because two CONTROLS rows were added to `contrast-contract.mjs` for that edge.
-	 * `app/` keeps its previous digest - no route, layout or shell changed. This pin
-	 * is content identity, not a geometry claim: the U-08 cell rows are re-measured
-	 * when the proof runs, and it refuses on its own findings on this number.
-	 *
 	 * Re-pinned 2026-10-28 by the merge refresh of PR #112 (`feat/i18n`), `src`
 	 * only: the branch's runtime, its four keyed copy modules, its generated
 	 * projection and its strings baseline all live under `src/i18n/**` and
@@ -330,41 +304,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * bytes, rendered through `t()`), the ICU apostrophe/plural-count guards in
 	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
 	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
-	 * `app` and the design inputs keep their digests.
-	 *
-	 * Re-pinned 2026-10-28 for merging main's i18n extraction into PR #126, `src`
-	 * only: the merged tree now contains both the runtime/catalogue extraction and
-	 * the switcher's Home and drawer entry points. The ratchet removed the replaced
-	 * drawer literal and added no baseline entries; existing switcher copy is
-	 * already keyed. Neither proof renders those navigation entry points, and `app`,
-	 * `design/tokens`, fixtures and package identity keep their existing digests.
-	 * Recomputed with `--print` from the staged merged tree.
-	 *
-	 * Re-pinned 2026-10-28 for PR #127 (inbox re-reads on return), `src` only: the
-	 * notifications inbox refetches on focus and fences writes by route
-	 * (`src/features/notifications/*`), the list store's `applyFrame` takes the
-	 * connection generation it was read under so a stale frame cannot land
-	 * (`src/state/list-store.ts`, `src/features/auth/connection-provider.tsx`), and
-	 * their tests. The U-08 scene is a `long-transcript` session cell: it renders no
-	 * inbox, and the generation fence only drops frames from a retired connection,
-	 * which the proof's single mock-relay connection never produces. `app` unchanged.
-	 * Recomputed with `--print` from the staged tree.
-	 *
-	 * Re-pinned 2026-10-29 for rebasing PR #127 onto main (`8eedcb6`, carrying
-	 * PR #112's i18n extraction and PR #126's switcher entry points), `src` only:
-	 * main keyed the copy under `src/features/notifications/*` that PR #127 also
-	 * rewrites, so the rebased `src` digest is neither side's; recomputed with
-	 * `--print` from the rebased tree and no U-08 scene changes. `design/tokens` is
-	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
-	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
-	 * their digests. */
-	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
+	 * `app` and the design inputs keep their digests. */
+	app: "9335932fbb7fd933d5c08f6f1cc8b2e9cc3086adb64733eec118b5c606f11477",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
+		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "4c29813baeceac33e0dc5108f43529071bc5f4a403a9bd720e1f02704f1d3fbe",
+	src: "7b938c82fefe2dfa4525d407eab7f7daf298e0ae83379f78f30f5e2dafc30325",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -6,5 +6,13 @@
 	"relay.chrome.session.subtitle.ended": {
 		"role": "status",
 		"note": "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim."
+	},
+	"relay.chrome.session.resume": {
+		"role": "button",
+		"note": "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder."
+	},
+	"relay.chrome.session.resuming": {
+		"role": "status",
+		"note": "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful."
 	}
 }

@@ -109,10 +109,20 @@ export type LinkInput = {
 	online: boolean | null;
 	/** The stream stopped on a failure the client will not retry. */
 	stoppedOnError: boolean;
+	/** The stream's OWN terminal state: `sse.ts`'s loop has ended and nothing
+	 *  will reopen it (`facts.state === "closed"`, set in exactly one place —
+	 *  the branch that stops the retry loop). Read as well as `stoppedOnError`
+	 *  because the error object is not the thing that stops the loop: QA round 3
+	 *  (Q10) measured a 401 on the session stream alone that ended every retry
+	 *  (no request in 90 s) while the dot still said "Reconnecting — keeps
+	 *  trying", because only the provider's `lastError` was consulted and that
+	 *  surface had not met the 401. The terminal state is the fact; the error is
+	 *  a copy of it that can go missing. */
+	streamClosed: boolean;
 };
 
 export function healthLink(input: LinkInput): HealthLink {
-	if (input.stoppedOnError) return "stopped";
+	if (input.stoppedOnError || input.streamClosed) return "stopped";
 	if (
 		!input.entryConnected ||
 		input.droppedSinceFrame ||

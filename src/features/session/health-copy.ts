@@ -84,15 +84,15 @@ export const HEALTH_STATE_WORDS: Record<
  *   1, U8). Same sentence as this app's Past sessions screen (`past.tsx`).
  */
 export const HEALTH_RESUME_COPY = {
-	resume: t("relay.health.resume"),
-	resuming: t("relay.health.resuming"),
-	reopening: t("relay.health.reopening"),
-	stillReopening: t("relay.health.still_reopening"),
+	resume: t("relay.chrome.session.resume"),
+	resuming: t("relay.chrome.session.resuming"),
+	reopening: t("mobile.session_health.reopening"),
+	stillReopening: t("mobile.session_health.still_reopening"),
 	reopenReportMs: 20_000,
-	refusedTitle: t("relay.health.resume_refused_title"),
-	refused: t("relay.health.resume_refused"),
-	noLongerSaved: t("relay.health.resume_gone"),
-	noRoute: t("relay.health.resume_no_route"),
+	refusedTitle: t("mobile.session_health.resume_refused_title"),
+	refused: t("mobile.session_health.resume_refused"),
+	noLongerSaved: t("mobile.session_health.resume_gone"),
+	noRoute: t("mobile.session_health.resume_no_route"),
 } as const;
 
 export type HealthCopyKey = keyof typeof HEALTH_COPY;

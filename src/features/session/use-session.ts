@@ -624,6 +624,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		 * banner naming the remedy, after the phone had stopped retrying (UX
 		 * round 2, U4). */
 		stoppedOnError: (error ?? providerConnection.lastError) !== null,
+		/* The loop's own end, so a terminal failure the provider never saw still
+		 *  reads as stopped (QA round 3, Q10). */
+		streamClosed: facts.state === "closed",
 	});
 
 	const connection = useMemo((): ConnectionView => {
@@ -638,6 +641,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				: ("live" as const),
 			stream: facts.state,
 			lastEnd: facts.lastEnd,
+			/* The graced drop — the dot's own input, so the two cannot disagree. */
+			droppedSinceFrame: droppedGrace,
 			reconnectExpired: facts.overdue,
 			online: deviceOnline(),
 			error: error ?? providerConnection.lastError,
@@ -671,6 +676,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		entry,
 		projection,
 		link,
+		/* The graced drop the banner's C2 now reads — without it the memo would
+		 *  keep painting the previous outage state (QA round 3, Q11). */
+		droppedGrace,
 		route,
 		providerConnection.lastError,
 		snapshot.detail,

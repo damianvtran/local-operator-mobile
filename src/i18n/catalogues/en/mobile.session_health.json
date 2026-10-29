@@ -1,0 +1,12 @@
+{
+	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
+	"mobile.session_health.menu_label": "Session actions",
+	"mobile.session_health.menu_hint": "Opens the session menu",
+	"mobile.session_health.menu_title": "Session",
+	"mobile.session_health.reopening": "Reopening — this can take a few seconds.",
+	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.session_health.resume_refused_title": "Could not resume",
+	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
+	"mobile.session_health.resume_gone": "This session is no longer saved.",
+	"mobile.session_health.resume_no_route": "Connect to a computer to resume this session."
+}

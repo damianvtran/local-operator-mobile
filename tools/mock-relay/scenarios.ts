@@ -1224,7 +1224,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		/* No registry cell, deliberately: the world needs a torn stream, which a
 		 *  single static frame cannot show — the evidence for it is a real-path
 		 *  probe over time, not a PNG. (It originally cited the core capture step's
-		 *  175-minute bound; this PR raised that bound to 180 for its own two cells,
+		 *  195-minute bound (the merged plan's derived deadline is 189 min),
 		 *  so the citation was stale — review round 2, m-d.) The world is still
 		 *  served, so a local or QA capture can open it by name
 		 *  (`--scenario health-drop`). */

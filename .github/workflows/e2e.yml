@@ -721,7 +721,7 @@ jobs:
     # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
     # with a derived deadline of 2574 s (85b2785), and
     # at THIS head it prints `3780 cells x 3 frame(s) = 11340 frames` and `deadline: 11340 s`
-    # (3000 ms/cell). The capture step's 175 is above both derived deadlines (so the step
+    # (3000 ms/cell). The capture step's 195 is above both derived deadlines (so the step
     # cannot cut short the budget the run computed for itself) and ~1.4x the ~126 min the
     # 3780 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
     # round 5: the fold's four extra cells took the derived deadline to 6264 s = 104.4 min,
@@ -835,11 +835,16 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        # 190 (was 180): the merged plan's own derived deadline is 11340 s = 189 min,
-        # which the old 180 no longer held — a step bound the plan's deadline can exceed
-        # would cut short the budget the run computes for itself, and the guard above
-        # fails on exactly that.
-        timeout-minutes: 190
+        # 195 (was 180, then 190): the merged plan's own derived deadline is
+        # 11340 s = 189 min, which 180 no longer held. 195 keeps ~3 % over that
+        # deadline — the smallest raise that clears it, by the 45->50 and 50->55
+        # precedent for a step whose cost is a ceiling and not a budget (QA round 3,
+        # Q13: 190 left only 60 s). NOTHING MACHINE-CHECKS THIS PAIR: no test
+        # compares this step's bound to the plan's derived deadline, so the sentence
+        # that used to claim "the guard above fails on exactly that" was false and is
+        # gone. The property is kept by hand, and the worst case still fits the job:
+        # 195 + the audit's ~93 min = 288 < the job's 290.
+        timeout-minutes: 195
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric

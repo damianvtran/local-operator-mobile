@@ -1,4 +1,6 @@
 {
 	"relay.chrome.session.subtitle.not_answering": "Not answering",
-	"relay.chrome.session.subtitle.ended": "Ended"
+	"relay.chrome.session.subtitle.ended": "Ended",
+	"relay.chrome.session.resume": "Resume",
+	"relay.chrome.session.resuming": "Resuming…"
 }

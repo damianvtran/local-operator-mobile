@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 import {
 	acknowledgedCurrentDraft,
@@ -6,6 +8,10 @@ import {
 	composerControls,
 	receiptForError,
 } from "@/features/session/composer";
+import {
+	HEALTH_COPY,
+	HEALTH_RESUME_COPY,
+} from "@/features/session/health-copy";
 import { RelayError } from "@/relay";
 
 /**
@@ -258,5 +264,35 @@ describe("attachment metadata shown before send", () => {
 		// which reads as a broken or empty attachment. Anything under 1 KB says so.
 		const image = { data_b64: "A".repeat(96), mime_type: "image/png" };
 		expect(attachmentLabel(image)).toBe("PNG · < 1 KB");
+	});
+});
+
+describe("the composer's ended copy has ONE source", () => {
+	/* Review round 3, M2 / QA Q12 / UX U14 / design D12: this file's module used
+	 * to hold literal copies of three catalogue sentences, and the copies were what
+	 * rendered. `check-strings` cannot see that shape — it treats an exact mirror of
+	 * a catalogue value as a deliberate one, and it scans only `-copy.ts` modules —
+	 * so the binding is asserted here instead. Reading the catalogue makes
+	 * divergence impossible; this test fails if a future edit re-inlines a literal. */
+	const source = readFileSync(
+		new URL("./composer.ts", import.meta.url),
+		"utf8",
+	);
+	it("reads the placeholder, the failure sentence and the reopening line from the catalogue", () => {
+		expect(COMPOSER_COPY.endedPlaceholder).toBe(
+			HEALTH_COPY["relay.health.ended_placeholder"],
+		);
+		expect(COMPOSER_COPY.endedSendFailed).toBe(
+			HEALTH_COPY["relay.health.ended_send_failed"],
+		);
+		expect(COMPOSER_COPY.reopening).toBe(HEALTH_RESUME_COPY.reopening);
+	});
+	it("carries none of those sentences as a literal", () => {
+		for (const sentence of [
+			HEALTH_COPY["relay.health.ended_placeholder"],
+			HEALTH_COPY["relay.health.ended_send_failed"],
+			HEALTH_RESUME_COPY.reopening,
+		])
+			expect(source).not.toContain(sentence);
 	});
 });

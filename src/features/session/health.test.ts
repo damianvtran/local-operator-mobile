@@ -292,6 +292,7 @@ describe("healthLink", () => {
 		reopenOverdue: false,
 		online: null,
 		stoppedOnError: false,
+		streamClosed: false,
 	};
 	it.each([
 		{ name: "an open stream with no drop is up", input: up, want: "up" },
@@ -327,6 +328,25 @@ describe("healthLink", () => {
 				entryConnected: false,
 				droppedSinceFrame: true,
 				stoppedOnError: true,
+			},
+			want: "stopped",
+		},
+		{
+			/* QA round 3, Q10: a 401 on the session's OWN stream ended every retry
+			 * and the dot still said "Reconnecting — keeps trying", because only the
+			 * provider's `lastError` was read. The loop's terminal state is the fact,
+			 * so it is read on its own — with no error anywhere. */
+			name: "the stream's own closed state is a stop even with no error recorded",
+			input: { ...up, streamClosed: true },
+			want: "stopped",
+		},
+		{
+			name: "the stream's closed state also beats a drop and a closed store",
+			input: {
+				...up,
+				entryConnected: false,
+				droppedSinceFrame: true,
+				streamClosed: true,
 			},
 			want: "stopped",
 		},

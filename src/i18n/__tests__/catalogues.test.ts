@@ -22,12 +22,14 @@ import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
+import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
+import session from "@/i18n/catalogues/en/mobile.session.json";
+import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
+import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
-import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
-import session from "@/i18n/catalogues/en/mobile.session.json";
 
 const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 
@@ -88,13 +90,24 @@ const NAMESPACES = [
 		name: "relay.health",
 		messages: health,
 		context: healthContext,
-		expected: 21,
+		expected: 9,
+	},
+	{
+		/* This app's own chrome for the health surface: the control's labels, the
+		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
+		 *  `mobile.*` convention #112 established, because a later adoption of the
+		 *  core's locale files must not silently overwrite or orphan them (review
+		 *  round 3 m1 / UX U15 / design D13). */
+		name: "mobile.session_health",
+		messages: sessionHealth,
+		context: sessionHealthContext,
+		expected: 10,
 	},
 	{
 		name: "relay.chrome",
 		messages: relayChrome,
 		context: relayChromeContext,
-		expected: 2,
+		expected: 4,
 	},
 ] as const;
 

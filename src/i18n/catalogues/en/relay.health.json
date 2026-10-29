@@ -7,17 +7,5 @@
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
 	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
-	"relay.health.ended_placeholder": "Send to reopen in your home folder…",
-	"relay.health.control_hint": "Shows what this state means and what a send does now",
-	"relay.health.menu_label": "Session actions",
-	"relay.health.menu_hint": "Opens the session menu",
-	"relay.health.menu_title": "Session",
-	"relay.health.resume": "Resume",
-	"relay.health.resuming": "Resuming…",
-	"relay.health.reopening": "Reopening — this can take a few seconds.",
-	"relay.health.still_reopening": "Still reopening — it has not come up yet.",
-	"relay.health.resume_refused_title": "Could not resume",
-	"relay.health.resume_refused": "This session could not be reopened just now. Try again.",
-	"relay.health.resume_gone": "This session is no longer saved.",
-	"relay.health.resume_no_route": "Connect to a computer to resume this session."
+	"relay.health.ended_placeholder": "Send to reopen in your home folder…"
 }

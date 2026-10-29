@@ -19,6 +19,10 @@
  */
 
 import type { PromptImage } from "@/contracts";
+import {
+	HEALTH_COPY,
+	HEALTH_RESUME_COPY,
+} from "@/features/session/health-copy";
 import type { ContinuationOp, RelayError } from "@/relay";
 
 /* ------------------------------------------------------------------- copy */
@@ -70,18 +74,24 @@ export const COMPOSER_COPY = {
 	 *  "Start a new one from the sessions list" sentence is gone: nothing reads
 	 *  it once the ended state stopped disabling (review round 1, n1). */
 	/** Placeholder for an ENDED conversation: sending reopens it in the home
-	 *  folder. Verbatim from the web client's `relay.health.ended_placeholder`. */
-	endedPlaceholder: "Send to reopen in your home folder…",
+	 *  folder. READ FROM THE CATALOGUE, not restated (review round 3, M2 / QA
+	 *  Q12 / UX U14 / design D12): this file used to hold literal copies of the
+	 *  same three sentences, and the copies were what rendered — so a locale wave
+	 *  would have missed the two relay strings the composer actually shows, and
+	 *  "nothing is duplicated" was false. `check-strings` could not catch it
+	 *  either: it treats an exact mirror of a catalogue value as a deliberate
+	 *  one, and it scans only `-copy.ts` modules. Reading the value makes
+	 *  divergence impossible rather than merely detectable. */
+	endedPlaceholder: HEALTH_COPY["relay.health.ended_placeholder"],
 	/** The send-failure sentence when reopening an ended session failed. The two
-	 *  honest remedies are send again, or Resume from the header's status sheet.
-	 *  Verbatim from `relay.health.ended_send_failed`. */
-	endedSendFailed:
-		"This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
+	 *  honest remedies are send again, or Resume from the header's status sheet —
+	 *  the same sentence the sheet's own failure uses. */
+	endedSendFailed: HEALTH_COPY["relay.health.ended_send_failed"],
 	/** Under the composer while a send to an ENDED session is in flight: the
 	 *  send IS the reopen and the daemon's engage takes seconds, so "…" on the
 	 *  button alone said nothing (UX round 1, U2). The same acceptance line the
 	 *  health sheet shows after Resume, so one act has one sentence. */
-	reopening: "Reopening — this can take a few seconds.",
+	reopening: HEALTH_RESUME_COPY.reopening,
 	/** The retry button under `endedSendFailed`: the sentence's own verb, so the
 	 *  reader is not told to "Try again" beside a button that says something
 	 *  else. The generic envelope case keeps `retryLabel`. */

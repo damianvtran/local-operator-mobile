@@ -481,8 +481,8 @@ describe("the audit step bound holds the plan it audits", () => {
 		/* NEGATIVE CONTROLS: the capture bound rising, the cap falling and the
 		 * cap missing must all be refused, or the margin is prose again. */
 		const capture170 = workflow.replace(
-			"timeout-minutes: 190",
-			"timeout-minutes: 220",
+			"timeout-minutes: 195",
+			"timeout-minutes: 225",
 		);
 		expect(capture170).not.toBe(workflow);
 		expect(coreJobHeadroomProblem(capture170, cells)).not.toBeNull();
