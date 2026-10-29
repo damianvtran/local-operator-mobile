@@ -334,14 +334,33 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * drawer literal and added no baseline entries; existing switcher copy is
 	 * already keyed. Neither proof renders those navigation entry points, and `app`,
 	 * `design/tokens`, fixtures and package identity keep their existing digests.
-	 * Recomputed with `--print` from the staged merged tree. */
+	 * Recomputed with `--print` from the staged merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #127 (inbox re-reads on return), `src` only: the
+	 * notifications inbox refetches on focus and fences writes by route
+	 * (`src/features/notifications/*`), the list store's `applyFrame` takes the
+	 * connection generation it was read under so a stale frame cannot land
+	 * (`src/state/list-store.ts`, `src/features/auth/connection-provider.tsx`), and
+	 * their tests. The U-08 scene is a `long-transcript` session cell: it renders no
+	 * inbox, and the generation fence only drops frames from a retired connection,
+	 * which the proof's single mock-relay connection never produces. `app` unchanged.
+	 * Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-29 for rebasing PR #127 onto main (`8eedcb6`, carrying
+	 * PR #112's i18n extraction and PR #126's switcher entry points), `src` only:
+	 * main keyed the copy under `src/features/notifications/*` that PR #127 also
+	 * rewrites, so the rebased `src` digest is neither side's; recomputed with
+	 * `--print` from the rebased tree and no U-08 scene changes. `design/tokens` is
+	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
+	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
+	 * their digests. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "64676ae1c0e6a1c09b237fafccc44babe3d1ef1f4f4528ec34c4e8c09e33d968",
+	src: "4c29813baeceac33e0dc5108f43529071bc5f4a403a9bd720e1f02704f1d3fbe",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

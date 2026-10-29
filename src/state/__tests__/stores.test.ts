@@ -498,6 +498,51 @@ describe("the list store replaces wholesale and keeps stale-but-labelled", () =>
 	});
 });
 
+describe("the inbox counts follow the freshest answer, never an older one", () => {
+	/* The bell and the rail read these; the inbox screen hands over its own
+	 * answer's counts so all three agree the moment a read or dismiss lands,
+	 * instead of a scan tick later (QA round 7 O2). */
+	const block = (unread: number, highWater: number) => ({
+		unread_count: unread,
+		waiting_count: 1,
+		waiting_unread_count: 1,
+		high_water: highWater,
+	});
+
+	it("takes a page answer's counts when they are as new or newer", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(7, 40) });
+		store
+			.getState()
+			.applyInboxCounts(block(6, 41), store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(6);
+	});
+
+	it("refuses a page answer older than the frame it holds", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
+		store
+			.getState()
+			.applyInboxCounts(block(7, 49), store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(5);
+	});
+
+	it("never turns a known count into unknown", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
+		store
+			.getState()
+			.applyInboxCounts({}, store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(5);
+	});
+});
+
 describe("the projection store fences per connection and keeps the last snapshot", () => {
 	it("accepts the first frame of a connection however its version compares", () => {
 		const store = createProjectionStore();
