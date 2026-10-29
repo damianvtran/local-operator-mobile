@@ -558,7 +558,11 @@ export default function Session() {
 								 *  the title, so it is charged — in EVERY state, live
 								 *  included, so the name's shape does not change when the
 								 *  dot changes colour (review round 4, D15 / QA N3). */
-								{ menu: ended, word: true },
+								/* The dot is ALWAYS inline in compact, so it is
+								 *  charged here too — the budget promised 356.83 pt
+								 *  into a 341 pt box without it (design round 6,
+								 *  D19). */
+								{ dot: true, menu: ended, word: true },
 								Platform.OS !== "web",
 							)
 						: headerTitleChars(

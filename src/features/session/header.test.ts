@@ -192,31 +192,41 @@ describe("compactTitleChars", () => {
 	 * (844x390, dark, 100 %: the 13-character "Not answering" run is 79.22 pt), and
 	 * reads the word itself from the catalogue-derived export rather than a list of
 	 * literals. A cheaper price or a longer future word fails here. */
-	it("prices the widest catalogue word at its RENDERED advance", () => {
-		const RENDERED_ADVANCE_PT = 6.09; // measured, see `META_ADVANCE_PT`
-		expect(WIDEST_STATE_WORD.length * RENDERED_ADVANCE_PT).toBeLessThanOrEqual(
-			STATE_WORD_PT,
-		);
-		/* And the gap is charged beside it, not swallowed by the word. */
-		expect(
-			STATE_WORD_PT - WIDEST_STATE_WORD.length * RENDERED_ADVANCE_PT,
-		).toBeGreaterThanOrEqual(8);
+	/* DESIGN ROUND 6, D18 / REVIEW M1. Two guards here could not fail: one
+	 * bounded against `width - 32` (812 pt) instead of the real 620 pt column, the
+	 * other recomputed the word's width with the same constant production used. A
+	 * guard that cannot fail is worse than none, so both now assert against
+	 * MEASURED numbers from the shipped frames and against the price's own band.
+	 *
+	 * The measured ink for the widest word ("Not answering", 13 characters) is
+	 * 79.22 pt at 100 %; the row adds its 8 pt gap, and one point of slack covers a
+	 * font-metric rounding. A doubled price or a wrong advance leaves the band. */
+	it("prices the widest word inside a tolerance of the measured ink", () => {
+		const INK_PT = 79.22;
+		const GAP_PT = 8;
+		expect(WIDEST_STATE_WORD.length).toBe(13);
+		expect(STATE_WORD_PT).toBeGreaterThanOrEqual(INK_PT + GAP_PT + 1);
+		expect(STATE_WORD_PT).toBeLessThanOrEqual(INK_PT + GAP_PT + 2);
 	});
 
-	it("leaves a usable title once the word, its gap and the chrome are charged", () => {
-		const RENDERED_ADVANCE_PT = 6.09;
-		for (const viewport of [
-			{ width: 844, height: 390 },
-			{ width: 915, height: 412 },
-		]) {
-			const chars = compactTitleChars(viewport, 1, { word: true });
-			expect(chars).toBeGreaterThan(MIN_HEADER_NAME_CHARS);
-			/* The title's own box is what the row leaves after the word: the budget
-			 *  times the title's advance must fit inside it, which is the arithmetic
-			 *  the frame measures as clientWidth against the run. */
-			const titleAdvance = DISPLAY_ADVANCE_PT * (20 / 28);
-			const row = Math.min(viewport.width, viewport.width) - 32;
-			expect(chars * titleAdvance + STATE_WORD_PT).toBeLessThanOrEqual(row);
+	it("never promises more title than the measured box holds", () => {
+		/* clientWidth of the title element in `S5/health-quiet` at 844x390 and
+		 *  915x412, dark and light (identical), 100/135/200 %: the box the run is
+		 *  painted into. A budget that promises more than this is the double cut. */
+		const TITLE_ADVANCE_PT = 9.4; // measured; see `COMPACT_TITLE_ADVANCE_PT`
+		for (const [box, scale] of [
+			[341, 1],
+			[313, 1.35],
+			[158, 2],
+		] as const) {
+			const chars = compactTitleChars({ width: 844, height: 390 }, scale, {
+				dot: true,
+				word: true,
+			});
+			expect(chars * TITLE_ADVANCE_PT * scale).toBeLessThanOrEqual(box);
+			/* And the budget is not so cheap that it starves the name: the 8-character
+			 *  floor is the kit's own minimum, and it is honoured at every scale. */
+			expect(chars).toBeGreaterThanOrEqual(MIN_HEADER_NAME_CHARS);
 		}
 	});
 

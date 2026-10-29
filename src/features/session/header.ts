@@ -172,6 +172,10 @@ const STATE_WORDS = [
 	healthLabel("ended"),
 ] as const;
 const STATE_WORD_GAP_PT = 8; // the row's `gap-2`
+/* One point of slack on top of the measured ink (design round 6, item 5): the
+ * frame measures 79.22 pt for "Not answering", and a font-metric rounding must
+ * not be able to eat the word's own price. The price is ceil((ink + 1) * 2)/2. */
+const STATE_WORD_SLACK_PT = 1;
 /* THE WORD'S OWN ADVANCE, MEASURED FROM A SHIPPED FRAME (design round 5, D16).
  * The previous price scaled the display step — `DISPLAY_ADVANCE_PT * 12/28 * 0.62`
  * = 3.74 pt per character — against a rendered 6.09: a 38 % under-charge, because
@@ -187,7 +191,12 @@ const STATE_WORD_GAP_PT = 8; // the row's `gap-2`
  * price cannot ship green again. */
 const META_ADVANCE_PT = 6.09;
 export const STATE_WORD_PT =
-	Math.max(...STATE_WORDS.map((word) => word.length)) * META_ADVANCE_PT +
+	Math.ceil(
+		(Math.max(...STATE_WORDS.map((word) => word.length)) * META_ADVANCE_PT +
+			STATE_WORD_SLACK_PT) *
+			2,
+	) /
+		2 +
 	STATE_WORD_GAP_PT;
 /** The widest state word the control can draw, for the guard that proves the
  *  price covers what renders. Exported so the test reads the SAME source the
@@ -294,6 +303,13 @@ export const headerTitleChars = (
  * advance scaled by the role ratio (20/28) and by the text scale.
  */
 const TITLE_TO_DISPLAY = 20 / 28;
+/* THE TITLE'S OWN ADVANCE IN THE COMPACT ROW, MEASURED (design round 6, D19).
+ * The model was `DISPLAY_ADVANCE_PT * 20/28` = 10.04 pt per character, but the
+ * shipped run renders 9.40: promising 10.04 while 9.40 is what paints promised
+ * ~5 more characters than the row can show at 135 %, which is the wide gap the
+ * frame measured. Same rule as `META_ADVANCE_PT`: a measurement, not a
+ * derivation — re-measure if the title step changes. */
+const COMPACT_TITLE_ADVANCE_PT = 9.4;
 export const compactTitleChars = (
 	{ width, height }: Viewport,
 	effectiveScale: number,
@@ -304,7 +320,6 @@ export const compactTitleChars = (
 	const chromeScale = nativeChrome ? 1 : effectiveScale;
 	const available =
 		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
-	const advance =
-		DISPLAY_ADVANCE_PT * TITLE_TO_DISPLAY * Math.max(1, effectiveScale);
+	const advance = COMPACT_TITLE_ADVANCE_PT * Math.max(1, effectiveScale);
 	return Math.max(MIN_HEADER_NAME_CHARS, Math.floor(available / advance));
 };

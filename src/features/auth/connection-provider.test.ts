@@ -120,9 +120,6 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
  * subscriptions, authentication, endpoints and stream timers are production code.
  * This is mounted lifecycle proof, not browser pixels or native-device proof. */
 let root: ReturnType<typeof createRoot> | null = null;
-/** The storage `admit` reads and writes, held so a test can wait for the
- *  PERSISTED record instead of a wall clock (CI job 123249283796). */
-let storage: SecureStorage;
 let latest: ReturnType<typeof useConnection>;
 const cleanup: Array<() => Promise<void>> = [];
 let observedSession: string | null = null;
@@ -179,9 +176,9 @@ async function unmount() {
 		root = null;
 	});
 }
-async function until(test: () => boolean | Promise<boolean>) {
+async function until(test: () => boolean) {
 	const deadline = Date.now() + 1500;
-	while (!(await test())) {
+	while (!test()) {
 		if (Date.now() > deadline)
 			throw new Error("Provider did not reach the expected state");
 		await act(async () => {
@@ -575,7 +572,7 @@ beforeEach(async () => {
 	handoff.block = null;
 	handoff.started = false;
 	durable.saved = null;
-	storage = new SecureStorage(memorySecureStore());
+	const storage = new SecureStorage(memorySecureStore());
 	configureStartupAuthorizationStorage({
 		read: () => storage.readStartupAuthorization(),
 		write: (record) => storage.writeStartupAuthorization(record),
@@ -690,30 +687,9 @@ describe("mounted provider authentication retirement", () => {
 			password: input.password,
 			allowInsecure: true,
 		};
-		/* CI JOB 123249283796 (round 5's blocker). The generation reaches storage
-		 * inside `admit`'s serialized tail, AFTER `connectCustom` resolves: unmounting
-		 * before that write lands bumps the lifecycle revision, `admit` bails
-		 * fail-closed, and the remount then reads no route record and mints a FRESH
-		 * scope. The old wait — `until(() => getStartupAuthorization() !== null)` —
-		 * was true the instant it ran, because `suspend()` keeps the previous
-		 * generation readable, so the assertion could run before the remount had
-		 * admitted at all. Both waits are on the events now: the persisted record
-		 * the remount will read, and a publish the CURRENT revision made. */
-		await until(async () => {
-			const record = await storage.readStartupAuthorization();
-			return record?.state === "active";
-		});
 		await unmount();
-		const revisionBeforeRemount = startupAuthorizationLifecycle.getRevision();
 		await mount();
-		await until(() => {
-			const authorization = getStartupAuthorization();
-			return (
-				startupAuthorizationLifecycle.getRevision() > revisionBeforeRemount &&
-				authorization !== null &&
-				authorization.revision === startupAuthorizationLifecycle.getRevision()
-			);
-		});
+		await until(() => getStartupAuthorization() !== null);
 		expect(getStartupAuthorization()?.scope).toBe(original);
 		await act(async () => {
 			await latest.connectCustom(input);

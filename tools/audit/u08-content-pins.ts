@@ -305,13 +305,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
 	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
 	 * `app` and the design inputs keep their digests. */
-	app: "ad65e8349be8713ca0b1c6a62402fbc786c2c63402fbe0b4e2eb3d14b4f40d90",
+	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "4f4f7217c2529c858ceefe235bb6cb588c21f4d924b3882b91654fcc94a5fc23",
+	src: "d75b168e7cd9528d9b7eb9828203634124575e4043eb4a6c31ca83073d9055f0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
