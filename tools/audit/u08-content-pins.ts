@@ -120,10 +120,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"33712084ac78c1b2cfb489861d19b8586327a5916f5d453f79589013e140d532",
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
+	/* Re-pinned 2026-10-29 by the French-locale wave, deliberately: `src` now carries the
+	 * French catalogues and the copy modules that resolve per render, and the mock relay and
+	 * its scenario registry gained `/api/config/events` plus a selectable language so a
+	 * browser run can render a non-English catalogue at all. Those are exactly the files
+	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
+	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
-		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
+		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
 	"tools/mock-relay/scenarios.ts":
-		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
+		"705d13c600e95dd8d539b3220a4f0497d57d4600be930eb98f05ab812cafd49c",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -371,7 +377,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "1531a1548bee982152b1eb9548ba594930b50d4df0b1c500093c818045d6987a",
+	src: "8a6f5da5972ce4016d86e23bfc2ec1e66bafc4fd45cbf202b8dd7c1653f28c0b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
