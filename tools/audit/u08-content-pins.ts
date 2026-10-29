@@ -97,7 +97,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/readiness.ts":
 		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
 	"tools/lib/relay.ts":
-		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
+		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
 		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
 	"tools/mock-relay/account-routing-gate.ts":
@@ -117,7 +117,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
+		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
 	"tools/mock-relay/scenarios.ts":
 		"5cacc6af718133d094658e797b82342b125d515f30f5d293ba0d1242e60f1b57",
 	"tools/mock-relay/shape.ts":
@@ -309,9 +309,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
+		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "d75b168e7cd9528d9b7eb9828203634124575e4043eb4a6c31ca83073d9055f0",
+	src: "59f9258e922644015fee33bac2a66d3c27ca6c039283a9a082a6d2589307063d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

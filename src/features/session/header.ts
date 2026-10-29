@@ -265,8 +265,18 @@ export const headerTitleChars = (
 		 *  never beside the title, so only the inline dot narrows the title's own
 		 *  row. */
 		const chromeScale = nativeChrome ? 1 : effectiveScale;
+		/* THE ROW IS THE COLUMN, NOT THE VIEWPORT (CI run 40823746854, job
+		 * 123288151628). The stacked title lives inside the content column, which
+		 * is capped at `maxColumnWidth` (620 pt on a landscape tablet) — budgeting
+		 * the raw viewport promised 68 characters where the rendered box holds 21
+		 * per line, so at `tablet-landscape` 200 % a 65-character name needed three
+		 * of its two permitted lines and the platform clipped the third
+		 * (`content 202px in a 134px box`, U-04/U-07). `compactTitleChars` already
+		 * caps; this branch did not. Below the cap the number is identical, so
+		 * every phone cell keeps the budget it was proved with. */
+		const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
 		const titleRow =
-			width -
+			row -
 			HEADER_GUTTERS_PT * chromeScale -
 			extrasPt({ dot: extras.dot }, chromeScale);
 		/* Two clamped lines at the ACTUAL scale, less the same wrap slack. The

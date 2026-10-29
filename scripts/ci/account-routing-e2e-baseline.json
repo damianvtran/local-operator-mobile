@@ -16,7 +16,7 @@
 		},
 		"web-audit": {
 			"condition": "inputs.proof_mode != 's15-proof'",
-			"bodyWithoutConditionSha256": "4a7532299e5a4d6bfb02379acabb144a268fcf48f6ce82c24c2aa95f44ab752a"
+			"bodyWithoutConditionSha256": "0604aee9f4abae9990605ad53eee40d53a6dbc286c8e17f48dc14fdb88662298"
 		},
 		"s15-proof": {
 			"condition": "github.event_name == 'workflow_dispatch' && inputs.proof_mode == 's15-proof'",
