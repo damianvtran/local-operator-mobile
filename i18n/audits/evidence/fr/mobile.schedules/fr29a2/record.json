@@ -1,0 +1,163 @@
+{
+	"schema": 1,
+	"audit_id": "fr29a2",
+	"audit_kind": "initial_translation_audit",
+	"locale": "fr",
+	"namespace": "mobile.schedules",
+	"audit_date": "2026-10-29",
+	"audited_revision": "956be6538bd32072afdaa38eae682d6da2d39de2",
+	"audited_revision_note": "Branch feat/i18n-mobile-locales. The French catalogue directory is untracked at this revision; target bytes are pinned by input_hashes.target.",
+	"key_count": {
+		"en": 35,
+		"target": 35,
+		"context": 35
+	},
+	"auditor": {
+		"agent": "i18n-auditor",
+		"session": "cd6e19e68327",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota/429 fallback",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the translator. Not model-diverse from the translator's served model kimi/k3.1-pro for part of the run; disclosed, not closed. No human native-speaker review and no rendered-frame proof are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "served via temporary fallback, as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.json",
+			"sha256": "bc08fca69542a22e301d1ce4e7311a69d04347fa2934f2abdca2b80c6c4b348f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+			"sha256": "16d7cc2d4dd50908feb94291db93d9cf8ff757e7b5c4172bf68ce30452e11bca"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/fr/mobile.schedules.json",
+			"sha256": "ac1d16109d61763957ea33e396725244fc59a7766ea45807ba6ded344ce670e3"
+		}
+	},
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 6,
+		"finding_ids": [
+			"S-01",
+			"S-02",
+			"S-03",
+			"S-04",
+			"S-05",
+			"S-06",
+			"S-07",
+			"S-08",
+			"N-1",
+			"N-2",
+			"N-3",
+			"N-4"
+		],
+		"blocker_ids": ["S-01"],
+		"major_ids": ["S-02", "S-03", "S-04", "S-05", "S-06"],
+		"minor_ids": ["S-07", "S-08"],
+		"nit_ids": ["N-1", "N-2", "N-3", "N-4"],
+		"verdict_reason": "Executed composition shows head.next rendering 'prochain dans dans 4m' (duplicated preposition, BLOCKER). Five numeric keys render plural-only forms at count 1 ('1 restantes', '1 actives', '1 planifiés', '1 échecs', '1 sur 1 nécessitent') because they carry no ICU plural. French CLDR one/many/other and all placeholders are otherwise intact."
+	},
+	"mechanical": {
+		"repo_validator": "npm run i18n:catalogue:check -> exit 0, 'src/i18n/catalogue.gen.ts is current (116 keys, 7 namespaces)'",
+		"repo_validator_scope": "key parity and message parse only; it does not compare placeholders between locales",
+		"scoped_checks": "valid JSON; 35/35/35 keys, no missing/extra; every message parsed with the app's parseMessage; placeholder names and argument order identical; select arms wakes/other identical; plural keys carry fr one/many/other; no bidi controls; U+2019 apostrophes; middle dot kept",
+		"false_positive_note": "The naive '#'-count check flags four plural keys because French legitimately adds a many branch; that is not a defect",
+		"renderer_note": "formatMessage renders '#' via String(n), so the many branch prints 1000000 without grouping; renderer limitation, not translation"
+	},
+	"executed_render_evidence": {
+		"command": "node <session-scratch>/fr-schedules-render.ts and fr-plural-zero.ts; full stdout in audit.log",
+		"samples": [
+			"3 réveils · prochain dans dans 4m",
+			"1 surveillance · prochain dans dans 30s",
+			"tous les 1h · 1 restantes",
+			"1 actives",
+			"1 planifiés",
+			"1 échecs",
+			"1 sur 1 nécessitent votre attention",
+			"0 réveil / 0 surveillance / 0 échecs",
+			"1000000 de réveils (many)"
+		],
+		"proposed_replacements_validated": {
+			"method": "parseMessage + formatMessage on each proposed value, French locale",
+			"result": "all six parse; four plural forms render one/one/other/many/other at 0/1/2/1000000/1500000; head.next renders without the duplicated preposition",
+			"log": "PROPOSED rows in audit.log"
+		}
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/fr/mobile.schedules/fr29a2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.schedules/fr29a2/report.md",
+			"sha256": "1ee35bfdd5478cb886b8ef2658682d687a0716b406269c1b8f8722045fadd4db"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.schedules/fr29a2/audit.log",
+			"sha256": "a444bb5145e693a51a9e500fc0d9c5db4fe03445eae4ea560256b28092475b52",
+			"state": "actual command output, not notes"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command; docs/i18n.md records the report in the pull request. No ledger row or keyed receipt is claimed."
+	},
+	"rendered_artifact": {
+		"captured": false,
+		"reason": "No frame was captured; fit claims are limited to executed string composition and character counts, never rendered proof."
+	},
+	"route_disclosure": {
+		"reads": "Ordinary local mobile git/worktree reads (files in this worktree, session model headers, the repository's own validator and message parser).",
+		"english_inputs_scan": "The requesting manager scanned the 14 English source/context inputs for this pair of namespaces with zero redaction-marker hits.",
+		"credentials": "No credential-shaped keys exist in mobile.schedules or its context sidecar.",
+		"context_sidecar_routing": "The English nested-JSON context sidecars are NOT routable through read_public_copy; they were read as ordinary worktree files.",
+		"receipts": "No keyed public-copy receipt is claimed.",
+		"translation_services": "No translation API, SDK, MT service or back-translation was used."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "07e08e5ac86c",
+		"agent": "reviewer",
+		"pinned_model": "anthropic/claude-opus-5-5",
+		"actual_model": "radient/auto",
+		"scope": "all 62 keys across mobile.home and mobile.schedules, without the primary auditor's findings",
+		"agreement": "independently reached the same head.next BLOCKER and the same count-agreement class; added the many-arm 'de' defect recorded as N-4",
+		"disagreement": "it classified summary.monitors_attention as part of its count-agreement MAJOR (this report now does too) and proposed different replacement wordings; its chip-truncation claim was not adopted (see the mobile.home N-1 reasoning)"
+	},
+	"source_level_gaps_outside_catalogue": [
+		{
+			"id": "X-1",
+			"where": "src/features/schedules/schedules-copy.ts:422-426 monitorSlot",
+			"issue": "raw dormant/disabled/expired state words render in English on a French screen; keyed stale/waiting are the only translated states",
+			"fix_owner": "source change, not a catalogue edit"
+		},
+		{
+			"id": "X-2",
+			"where": "en mobile.schedules.truncated",
+			"issue": "renders 'sur 1 conversations' at total = 1; inherited from the English source, not introduced by French",
+			"fix_owner": "English source"
+		}
+	],
+	"audit_notes_not_execution_log": {
+		"notes": "report.md and the prose fields of this record are the auditor's judgement, not command output.",
+		"execution_log": "audit.log contains the actual commands and their actual stdout/stderr for this bundle; nothing else here is an execution log.",
+		"not_observed": "Translator session/job/model provenance is as supplied by the requesting manager; this auditor did not observe the translator's run.",
+		"rendered_frames": "None captured; no pixel-level claim is made anywhere in this bundle."
+	}
+}

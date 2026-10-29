@@ -1,0 +1,87 @@
+/**
+ * Render the count-bearing mobile.* messages through the APP'S OWN runtime
+ * (src/i18n/runtime.ts -> renderFor -> messages.ts parser/plural rules).
+ *
+ * Independent auditor tooling: read-only, outside the repo. No MT/translation
+ * service is involved; this only prints what the shipped renderer produces.
+ */
+import { formatMessage, parseMessage, pluralCategory } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts";
+import { renderFor } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/runtime.ts";
+import { CATALOGUES, ENGLISH_CATALOGUE } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/catalogues.ts";
+
+const counts = [0, 1, 2, 1000000];
+const keys: Array<[string, (n: number) => Record<string, string | number>]> = [
+	["mobile.projects.milestones.count", (n) => ({ completed: n, total: 3 })],
+	["mobile.projects.sessions.count", (n) => ({ count: n })],
+];
+
+console.log("== resolved CLDR plural categories ==");
+for (const loc of ["en", "fr"]) {
+	console.log(`${loc}:`, JSON.stringify(new Intl.PluralRules(loc).resolvedOptions().pluralCategories));
+}
+
+console.log("\n== category per count (fr) ==");
+for (const n of counts) console.log(`${n} -> ${pluralCategory("fr", n)}`);
+
+console.log("\n== rendered messages (app runtime, preference=fr) ==");
+for (const [key, args] of keys) {
+	for (const n of counts) {
+		const fr = renderFor(key as never, args(n) as never, "fr");
+		const en = renderFor(key as never, args(n) as never, "en");
+		console.log(`${key} @${n}\n  fr: ${fr}\n  en: ${en}`);
+	}
+}
+
+console.log("\n== sessions.live composed with sessions.count (fr) ==");
+for (const n of counts) {
+	const base = renderFor("mobile.projects.sessions.count" as never, { count: n } as never, "fr");
+	for (const live of [1, 2, 1000000]) {
+		const out = renderFor("mobile.projects.sessions.live" as never, { base, live } as never, "fr");
+		console.log(`base=${JSON.stringify(base)} live=${live} -> ${out}`);
+	}
+}
+for (const n of counts) {
+	const base = renderFor("mobile.projects.sessions.count" as never, { count: n } as never, "en");
+	const out = renderFor("mobile.projects.sessions.live" as never, { base, live: 1 } as never, "en");
+	console.log(`EN base=${JSON.stringify(base)} live=1 -> ${out}`);
+}
+
+console.log("\n== milestones.none joined with sessions.count (fr) ==");
+const none = renderFor("mobile.projects.milestones.none" as never, {} as never, "fr");
+for (const n of counts) {
+	const s = renderFor("mobile.projects.sessions.count" as never, { count: n } as never, "fr");
+	console.log(`${JSON.stringify(none + " · " + s)}`);
+}
+
+console.log("\n== declared plural branches per locale ==");
+for (const [loc, cat] of Object.entries({ ...CATALOGUES, en: ENGLISH_CATALOGUE })) {
+	for (const key of ["mobile.projects.milestones.count", "mobile.projects.sessions.count"]) {
+		const src = (cat as Record<string, string>)[key];
+		if (!src) continue;
+		const parsed = parseMessage(src);
+		const kinds = [...parsed.params.entries()].map(([k, v]) => `${k}:${v}`).join(",");
+		console.log(`${loc} ${key} params=[${kinds}]`);
+	}
+}
+
+console.log("\n== every key in scope renders non-empty for fr ==");
+const scope = [
+	"mobile.computers.", "mobile.projects.", "mobile.session.",
+];
+for (const key of Object.keys(ENGLISH_CATALOGUE).filter((k) => scope.some((p) => k.startsWith(p)))) {
+	const parsed = parseMessage((CATALOGUES.fr as Record<string, string>)[key] ?? "");
+	const args: Record<string, string | number> = {};
+	for (const [name, kind] of parsed.params) args[name] = kind === "plural" ? 2 : "X";
+	const out = formatMessage(parsed, args, "fr");
+	console.log(`${key} -> ${out}`);
+}
+
+console.log("\n== composed project row meta (projectRowMeta: milestones · sessions [ · live]) ==");
+for (const [completed, total, sessions, live] of [[0,0,0,0],[0,3,2,1],[1,3,2,1],[2,3,4,0],[1000000,3,2,1]]) {
+	const milestones = total <= 0
+		? renderFor("mobile.projects.milestones.none" as never, {} as never, "fr")
+		: renderFor("mobile.projects.milestones.count" as never, { completed, total } as never, "fr");
+	const base = renderFor("mobile.projects.sessions.count" as never, { count: sessions } as never, "fr");
+	const sessionsPart = live <= 0 ? base : renderFor("mobile.projects.sessions.live" as never, { base, live } as never, "fr");
+	console.log(`  completed=${completed} total=${total} sessions=${sessions} live=${live} -> "${milestones} · ${sessionsPart}"`);
+}

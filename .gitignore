@@ -74,6 +74,10 @@ __pycache__/
 
 # Logs
 *.log
+# ...except the audit evidence bundles: their execution logs ARE the record.
+# A blanket `*.log` silently dropped every audit.log from a commit while
+# record.json and report.md landed, so the bundle was committed incomplete.
+!i18n/audits/evidence/**/audit.log
 npm-debug.log*
 
 # OS

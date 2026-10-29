@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Writes the round-3 audit.log from ACTUAL command executions.
+# Every "### CMD:" line below is the verbatim command; the text after it is that
+# command's real stdout/stderr, captured as it ran. No output is transcribed by hand.
+set -u
+ROOT=/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+SCRATCH=/Users/damian/.local-operator/sessions/4191880b0141/scratchpad/fr29h3
+OUT="$ROOT/i18n/audits/evidence/fr/mobile.home/fr29h3/audit.log"
+mkdir -p "$(dirname "$OUT")"
+: > "$OUT"
+
+run() {
+  local label="$1"; shift
+  {
+    echo "### CMD[$label]: $*"
+    echo "### CWD: $(pwd)"
+    echo "--- stdout/stderr begin ---"
+  } >> "$OUT"
+  ( "$@" 2>&1 ) >> "$OUT"
+  local rc=$?
+  {
+    echo "--- stdout/stderr end (exit $rc) ---"
+    echo
+  } >> "$OUT"
+}
+
+cd "$ROOT" || exit 1
+
+run 1-worktree git status --short
+run 2-head git rev-parse HEAD
+run 3-branch git rev-parse --abbrev-ref HEAD
+run 4-diffstat git diff --stat
+run 5-frdiff git diff -U0 -- src/i18n/catalogues/fr/mobile.home.json
+run 6-gendiff git diff -U0 -- src/i18n/catalogue.gen.ts
+run 7-sha256 shasum -a 256 \
+  src/i18n/catalogues/en/mobile.home.json \
+  src/i18n/catalogues/en/mobile.home.context.json \
+  src/i18n/catalogues/fr/mobile.home.json \
+  src/i18n/catalogues/fr/mobile.session.json \
+  src/i18n/catalogues/en/mobile.session.json
+
+# 8: repo validator (the CI gate for catalogue parity + generation freshness)
+{
+  echo "### CMD[8-validator]: npm run -s i18n:catalogue:check"
+  echo "### CWD: $ROOT"
+  echo "--- stdout/stderr begin ---"
+} >> "$OUT"
+( npm run -s i18n:catalogue:check 2>&1 | grep -v "MODULE_TYPELESS_PACKAGE_JSON\|Reparsing as ES module\|eliminate this warning\|trace-warnings" ) >> "$OUT"
+rc=${PIPESTATUS[0]}
+{
+  echo "--- stdout/stderr end (npm exit $rc) ---"
+  echo
+} >> "$OUT"
+
+# 9: the app's own parser + character inventory + round-2 byte reconstruction
+cd "$SCRATCH" || exit 1
+run 9-delta node delta.mjs
+run 10-render node --import ./register.mjs render.mjs
+# 12: the repository's own i18n test directory, on these bytes
+cd "$ROOT" || exit 1
+{
+  echo "### CMD[11-vitest]: npx vitest run src/i18n/__tests__"
+  echo "### CWD: $ROOT"
+  echo "--- stdout/stderr begin ---"
+} >> "$OUT"
+( npx vitest run src/i18n/__tests__ 2>&1 | tail -12 ) >> "$OUT"
+rc=${PIPESTATUS[0]}
+{
+  echo "--- stdout/stderr end (exit $rc) ---"
+  echo
+} >> "$OUT"
+
+echo "wrote $OUT"
+wc -l "$OUT"

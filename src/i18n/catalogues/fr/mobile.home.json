@@ -3,7 +3,7 @@
 	"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
 	"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 	"mobile.home.options.apply": "Utiliser ces options",
-	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
+	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.",
 	"mobile.home.options.folder": "Dossier sur cet ordinateur",
 	"mobile.home.options.title": "Options de la conversation",
 	"mobile.home.queue.discard": "Supprimer les messages en attente",
