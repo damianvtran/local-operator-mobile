@@ -103,8 +103,14 @@ export interface InboxState {
 export function useNotifications(
 	client: RelayEndpoints | null,
 	enabled: boolean,
+	connectionGeneration = 0,
 ): InboxState {
-	const [response, setResponse] = useState<NotificationsResponse | null>(null);
+	// Tag answers with their route generation; hiding an old answer happens during
+	// render, before a count-publication effect could admit it to the new route.
+	const [received, setReceived] = useState<{
+		generation: number;
+		answer: NotificationsResponse;
+	} | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
@@ -124,6 +130,29 @@ export function useNotifications(
 	);
 	/** The newest load's ticket. A response for an older ticket is dropped. */
 	const ticketRef = useRef(0);
+	const ownerRef = useRef({
+		client,
+		enabled,
+		connectionGeneration,
+		generation: 0,
+	});
+	if (
+		ownerRef.current.client !== client ||
+		ownerRef.current.enabled !== enabled ||
+		ownerRef.current.connectionGeneration !== connectionGeneration
+	) {
+		// Retirement also occurs for null/disabled clients, which issue no next
+		// request to invalidate the old ticket. Never let their late IO publish.
+		ownerRef.current = {
+			client,
+			enabled,
+			connectionGeneration,
+			generation: ownerRef.current.generation + 1,
+		};
+		++ticketRef.current;
+	}
+	const generation = ownerRef.current.generation;
+	const response = received?.generation === generation ? received.answer : null;
 	/** The newest answer, for `loadMore` to read without re-creating its callback
 	 *  on every page. */
 	const responseRef = useRef<NotificationsResponse | null>(null);
@@ -134,8 +163,16 @@ export function useNotifications(
 
 	const load = useCallback(
 		async (options?: { silent?: boolean }) => {
-			if (client === null || !enabled) return;
+			if (
+				client === null ||
+				!enabled ||
+				generation !== ownerRef.current.generation
+			)
+				return;
 			const ticket = ++ticketRef.current;
+			// Page one owns the cursor lifecycle now. Its superseded cursor's
+			// finally must remain fenced so it cannot clear a NEW cursor request.
+			setLoadingMore(false);
 			const asked = filterRef.current;
 			/* A REFRESH CLEARS THE FAILED-PAGE LINE (review round 4, m2). The error
 			 * belongs to the cursor walk it happened in; a new page-one answer means
@@ -155,13 +192,17 @@ export function useNotifications(
 					AbortSignal.timeout(READ_TIMEOUT_MS),
 				);
 				if (ticket !== ticketRef.current) return;
-				setResponse(answer);
+				setReceived({ generation, answer });
 				setRefused(null);
 				setUnreachable(false);
 				setNowMs(Date.now());
 			} catch (error) {
 				if (ticket !== ticketRef.current) return;
-				if (options?.silent === true) return;
+				/* A silent refresh keeps quiet only when there are rows to keep. With
+				 * nothing on screen (a focus or settled-write re-read that took the
+				 * ticket from the first read), staying silent would leave a blank
+				 * list that reads as "All caught up" — rule 3. */
+				if (options?.silent === true && responseRef.current !== null) return;
 				const sentence = refusalSentence(error);
 				if (sentence !== null) setRefused(sentence);
 				else setUnreachable(true);
@@ -169,16 +210,30 @@ export function useNotifications(
 				 * that blanked its rows on a failed refresh would look like an inbox
 				 * that was emptied. */
 			} finally {
-				if (ticket === ticketRef.current && options?.silent !== true) {
-					setLoading(false);
-				}
+				/* Whoever holds the newest ticket clears `loading`, silent or not: a
+				 * silent re-read (focus, a settled write elsewhere) can supersede the
+				 * visible first read, and that read's own `finally` may then never
+				 * run this line — the skeleton would stay up over a landed answer.
+				 * Clearing an already-false flag is a no-op. */
+				if (ticket === ticketRef.current) setLoading(false);
 			}
 		},
-		[client, enabled],
+		[client, enabled, generation],
 	);
 
 	useEffect(() => {
+		setLoading(true);
+		setLoadingMore(false);
+		setBusy(false);
+		setRefused(null);
+		setUnreachable(false);
+		setWriteError(null);
+		setSkipped([]);
+		setPageWalk(PAGE_WALK_IDLE);
 		void load();
+		return () => {
+			++ticketRef.current;
+		};
 	}, [load]);
 
 	/* The minute clock: relative labels and the "Today"/"Yesterday" buckets are
@@ -199,7 +254,12 @@ export function useNotifications(
 	const loadMore = useCallback(() => {
 		const held = responseRef.current;
 		const clientNow = client;
-		if (clientNow === null || !enabled) return;
+		if (
+			clientNow === null ||
+			!enabled ||
+			generation !== ownerRef.current.generation
+		)
+			return;
 		if (held === null || held.next_cursor === null) return;
 		const asking = filterRef.current;
 		const ticket = ++ticketRef.current;
@@ -212,7 +272,7 @@ export function useNotifications(
 					cursor: held.next_cursor ?? undefined,
 				});
 				if (ticket !== ticketRef.current) return;
-				setResponse(mergePage(held, answer));
+				setReceived({ generation, answer: mergePage(held, answer) });
 				setNowMs(Date.now());
 			} catch (error) {
 				/* A failed page is not a failed list — what is on screen stays — but it
@@ -228,7 +288,7 @@ export function useNotifications(
 				if (ticket === ticketRef.current) setLoadingMore(false);
 			}
 		})();
-	}, [client, enabled]);
+	}, [client, enabled, generation]);
 
 	const setFilter = useCallback(
 		(next: InboxFilter) => {
@@ -247,12 +307,18 @@ export function useNotifications(
 		async (
 			call: (client: RelayEndpoints) => Promise<NotificationWriteResponse>,
 		): Promise<InboxWriteOutcome> => {
-			if (client === null || !enabled) {
+			if (
+				client === null ||
+				!enabled ||
+				generation !== ownerRef.current.generation
+			) {
 				return { ok: false, changed: [], skipped: [] };
 			}
 			setBusy(true);
 			try {
 				const answer = await call(client);
+				if (generation !== ownerRef.current.generation)
+					return { ok: false, changed: [], skipped: [] };
 				setWriteError(null);
 				setSkipped(answer.skipped);
 				/* Re-read rather than patch the rows locally: the relay's answer is
@@ -261,16 +327,18 @@ export function useNotifications(
 				await load({ silent: true });
 				return { ok: true, changed: answer.changed, skipped: answer.skipped };
 			} catch (error) {
+				if (generation !== ownerRef.current.generation)
+					return { ok: false, changed: [], skipped: [] };
 				/* The rows stay (correct); the silence was the defect. An earlier
 				 * skip warning is NOT cleared here — it described a real answer this
 				 * write did not replace. */
 				setWriteError(refusalSentence(error) ?? WRITE_UNREACHABLE);
 				return { ok: false, changed: [], skipped: [] };
 			} finally {
-				setBusy(false);
+				if (generation === ownerRef.current.generation) setBusy(false);
 			}
 		},
-		[client, enabled, load],
+		[client, enabled, generation, load],
 	);
 
 	const write = useCallback(

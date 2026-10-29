@@ -118,7 +118,8 @@ describe("the detail's explicit read", () => {
 /** The hook owns the request lifecycle; the screen only paints it. */
 /** Top-level, per the repo's lint rule: a regex literal in a test body is a
  *  allocation per run. */
-const MERGES_PAGE = /setResponse\(\s*mergePage\(held, answer\),?\s*\)/;
+const MERGES_PAGE =
+	/setReceived\(\{\s*generation,\s*answer: mergePage\(held, answer\),?\s*\}\)/;
 const FAILS_THE_WALK = /setPageWalk\(\s*pageWalkFailed\(/;
 
 const hook = readFileSync(
@@ -175,5 +176,47 @@ describe("the failed-page state — behavioural, not source text (round 5, m5/m6
 		expect(wait).toBeLessThan(8_000);
 		/* And it is actually passed to the sequence, not merely defined. */
 		expect(detail).toContain("{ timeoutMs: READ_CONFIRM_TIMEOUT_MS }");
+	});
+});
+
+/**
+ * The list re-reads when it is returned to (QA round 7 O2; the audit scout).
+ *
+ * Static for the reason the top of this file gives — no renderer here — and
+ * paired with the behavioural halves in `inbox-writes.test.ts` (the signal) and
+ * `state/__tests__/stores.test.ts` (the badge's freshness rule). The real
+ * open → read → Back and dismiss-all → Back paths are the web capture's.
+ */
+const FOCUS_EFFECT = /useFocusEffect\(\s*useCallback\(/;
+const FIRST_FOCUS_SKIPPED =
+	/if \(!focusedOnce\.current\) \{\s*focusedOnce\.current = true;\s*return;\s*\}\s*reload\(\{ silent: true \}\);/;
+const SUBSCRIBES_TO_WRITES =
+	/useEffect\(\s*\(\) => onInboxWrite\(\(\) => reload\(\{ silent: true \}\)\),\s*\[reload\],?\s*\)/;
+
+describe("the inbox list re-reads on return", () => {
+	it("re-reads silently on every focus after the first", () => {
+		expect(FOCUS_EFFECT.test(source)).toBe(true);
+		expect(FIRST_FOCUS_SKIPPED.test(source)).toBe(true);
+	});
+
+	it("re-reads when a write made on the detail settles", () => {
+		const detail = readFileSync(
+			new URL("./notification-detail.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(SUBSCRIBES_TO_WRITES.test(source)).toBe(true);
+		/* Both of the detail's writes announce: the explicit read, and every
+		 * dismiss-all (and Undo) through the hook's `onSettled`. */
+		expect(detail.match(/noteInboxWrite\(\)/g)?.length).toBe(2);
+	});
+
+	it("hands the badge the counts the inbox is showing", () => {
+		expect(source).toContain("listStore.getState().applyInboxCounts(");
+	});
+
+	it("lets the newest ticket clear the skeleton, silent or not", () => {
+		expect(hook).toContain(
+			"if (ticket === ticketRef.current) setLoading(false);",
+		);
 	});
 });

@@ -96,8 +96,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
 		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
+	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
+	 * onto its new head: the base owns the render and package identities, while
+	 * this PR adds only the relay driver's scoped fault and request-ledger
+	 * controls. Recomputed with `--print`; no U-03 exemption or skipped check. */
 	"tools/lib/relay.ts":
-		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
+		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
 		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
 	"tools/mock-relay/account-routing-gate.ts":
@@ -117,7 +121,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
+		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
 	"tools/mock-relay/scenarios.ts":
 		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
 	"tools/mock-relay/shape.ts":
@@ -334,14 +338,40 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * drawer literal and added no baseline entries; existing switcher copy is
 	 * already keyed. Neither proof renders those navigation entry points, and `app`,
 	 * `design/tokens`, fixtures and package identity keep their existing digests.
-	 * Recomputed with `--print` from the staged merged tree. */
+	 * Recomputed with `--print` from the staged merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #127 (inbox re-reads on return), `src` only: the
+	 * notifications inbox refetches on focus and fences writes by route
+	 * (`src/features/notifications/*`), the list store's `applyFrame` takes the
+	 * connection generation it was read under so a stale frame cannot land
+	 * (`src/state/list-store.ts`, `src/features/auth/connection-provider.tsx`), and
+	 * their tests. The U-08 scene is a `long-transcript` session cell: it renders no
+	 * inbox, and the generation fence only drops frames from a retired connection,
+	 * which the proof's single mock-relay connection never produces. `app` unchanged.
+	 * Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-29 for rebasing PR #127 onto main (`8eedcb6`, carrying
+	 * PR #112's i18n extraction and PR #126's switcher entry points), `src` only:
+	 * main keyed the copy under `src/features/notifications/*` that PR #127 also
+	 * rewrites, so the rebased `src` digest is neither side's; recomputed with
+	 * `--print` from the rebased tree and no U-08 scene changes. `design/tokens` is
+	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
+	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
+	 * their digests. */
 	app: "dd396736ee335c41a8a1c425f2f6c1d3091c11a44ff1d01ebf9c1e1f97ccb6d7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "64676ae1c0e6a1c09b237fafccc44babe3d1ef1f4f4528ec34c4e8c09e33d968",
+	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
+	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
+	 * and `src/i18n/__tests__/locales.test.ts`, so `src` MUST move and the guard is
+	 * working. The same digest also covers main's advances merged in to resolve this
+	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
+	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
+	 * construction — so only `src` was re-pinned. */
+	src: "1531a1548bee982152b1eb9548ba594930b50d4df0b1c500093c818045d6987a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

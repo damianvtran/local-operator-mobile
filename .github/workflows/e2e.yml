@@ -421,11 +421,36 @@ jobs:
         timeout-minutes: 10
         run: pnpm e2e:typecheck
 
+      # The SAME driver runs against base and head app bytes. A differing lock
+      # cannot share dependencies honestly; record that reason rather than install
+      # a second tree. This adds one serial export, not another matrix or browser.
+      - name: Export the PR base for inbox return before frames
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 5
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          mkdir -p "$RUNNER_TEMP/frames/inbox-return"
+          git fetch --no-tags origin "$BASE_SHA"
+          git worktree add --detach .worktrees/inbox-before "$BASE_SHA"
+          trap 'git worktree remove --force .worktrees/inbox-before' EXIT
+          if ! cmp -s pnpm-lock.yaml .worktrees/inbox-before/pnpm-lock.yaml; then
+            echo 'BLOCKED: base lockfile differs; no shared-dependency baseline export' > "$RUNNER_TEMP/frames/inbox-return/baseline.txt"
+            exit 0
+          fi
+          ln -s ../../node_modules .worktrees/inbox-before/node_modules
+          (cd .worktrees/inbox-before && node_modules/.bin/expo export --platform web --clear --output-dir "$RUNNER_TEMP/inbox-before")
+          echo "INBOX_BASELINE_DIR=$RUNNER_TEMP/inbox-before" >> "$GITHUB_ENV"
+          printf 'base=%s\nhead=%s\n' "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/frames/inbox-return/source.txt"
+
       - name: Export the web target
         # The harness drives the EXPORT, not a dev server: the export is what a
         # reviewer's bundle would be, and a dev server's on-the-fly transform is a
         # second variable in a job whose whole point is reproducibility.
-        run: pnpm export:web
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: pnpm export:web --clear
 
       - name: Start the mock relay on an ephemeral port
         # One relay per job, on a port the OS picks (never the operator's own
@@ -507,7 +532,12 @@ jobs:
         #
         # Frames are written outside the repository and uploaded — never committed
         # (ADR 0003).
-        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
+        run: |
+          baseline=()
+          if [ -n "${INBOX_BASELINE_DIR:-}" ]; then
+            baseline=(--inbox-baseline-dir "$INBOX_BASELINE_DIR")
+          fi
+          pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes --inbox-return-proof "${baseline[@]}"
 
       - name: Audit the frames against the rubric
         timeout-minutes: 40
@@ -567,6 +597,7 @@ jobs:
             kill -9 "$pid" 2>/dev/null || true
           fi
           echo "relay stopped; any remaining listener on the port was never this job's"
+          rm -rf "$RUNNER_TEMP/inbox-before" dist
 
       - name: Upload the frames, the manifest and the audit report
         if: always()
