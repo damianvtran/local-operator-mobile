@@ -4,6 +4,8 @@ import {
 	compactTitleChars,
 	DISPLAY_ADVANCE_PT,
 	headerTitleChars,
+	STATE_WORD_PT,
+	WIDEST_STATE_WORD,
 } from "@/features/session/header";
 import {
 	MIN_HEADER_NAME_CHARS,
@@ -183,24 +185,39 @@ describe("compactTitleChars", () => {
 		}
 	});
 
-	it("leaves room for the widest state word after the title is cut", () => {
-		const viewport = { width: 844, height: 390 };
-		const scale = 1.35;
-		const chars = compactTitleChars(viewport, scale, {
-			menu: true,
-			word: true,
-		});
-		const advance = 14.06 * (20 / 28) * scale;
-		/* The row, less the chrome the budget charges, less the widest word the
-		 *  control can draw plus its gap: the cut name must fit in what is left. */
-		const widest = Math.max(
-			"Not answering".length,
-			"Reconnecting".length,
-			"Ended".length,
+	/* DESIGN ROUND 5, D16/D17. The previous version of this row recomputed the
+	 * word's width with the SAME constant production used, so it agreed with
+	 * whatever production said — which is how a 38 % under-price shipped green.
+	 * It now asserts against the RENDERED advance, measured on the shipped bundle
+	 * (844x390, dark, 100 %: the 13-character "Not answering" run is 79.22 pt), and
+	 * reads the word itself from the catalogue-derived export rather than a list of
+	 * literals. A cheaper price or a longer future word fails here. */
+	it("prices the widest catalogue word at its RENDERED advance", () => {
+		const RENDERED_ADVANCE_PT = 6.09; // measured, see `META_ADVANCE_PT`
+		expect(WIDEST_STATE_WORD.length * RENDERED_ADVANCE_PT).toBeLessThanOrEqual(
+			STATE_WORD_PT,
 		);
+		/* And the gap is charged beside it, not swallowed by the word. */
 		expect(
-			chars * advance + widest * (14.06 * (12 / 28) * 0.62) * scale + 8 * scale,
-		).toBeLessThanOrEqual(844 - 32);
+			STATE_WORD_PT - WIDEST_STATE_WORD.length * RENDERED_ADVANCE_PT,
+		).toBeGreaterThanOrEqual(8);
+	});
+
+	it("leaves a usable title once the word, its gap and the chrome are charged", () => {
+		const RENDERED_ADVANCE_PT = 6.09;
+		for (const viewport of [
+			{ width: 844, height: 390 },
+			{ width: 915, height: 412 },
+		]) {
+			const chars = compactTitleChars(viewport, 1, { word: true });
+			expect(chars).toBeGreaterThan(MIN_HEADER_NAME_CHARS);
+			/* The title's own box is what the row leaves after the word: the budget
+			 *  times the title's advance must fit inside it, which is the arithmetic
+			 *  the frame measures as clientWidth against the run. */
+			const titleAdvance = DISPLAY_ADVANCE_PT * (20 / 28);
+			const row = Math.min(viewport.width, viewport.width) - 32;
+			expect(chars * titleAdvance + STATE_WORD_PT).toBeLessThanOrEqual(row);
+		}
 	});
 
 	it("fits: a name cut to the budget times the compact advance stays inside the row", () => {

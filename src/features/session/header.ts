@@ -172,10 +172,29 @@ const STATE_WORDS = [
 	healthLabel("ended"),
 ] as const;
 const STATE_WORD_GAP_PT = 8; // the row's `gap-2`
-const META_ADVANCE_PT = DISPLAY_ADVANCE_PT * (12 / 28) * 0.62;
-const STATE_WORD_PT =
+/* THE WORD'S OWN ADVANCE, MEASURED FROM A SHIPPED FRAME (design round 5, D16).
+ * The previous price scaled the display step — `DISPLAY_ADVANCE_PT * 12/28 * 0.62`
+ * = 3.74 pt per character — against a rendered 6.09: a 38 % under-charge, because
+ * the small state word does not carry the display size's advance ratio. It left
+ * "Not answered"/"Reconnecting" 11-15 pt past the title's box at 100 %, where the
+ * middle ellipsis keeps the tail and the platform's own ellipsis then removes it
+ * again — the double-cut class D1 fixed.
+ *
+ * Measured on the shipped bundle (844x390, dark, 100 %): the 13-character run is
+ * 79.22 pt wide, i.e. 6.09 pt/char. This is a MEASUREMENT, not a derivation: if the
+ * meta step's size or tracking changes, re-measure rather than re-scale this.
+ * `header.test.ts` carries the same measured number as its guard, so a cheaper
+ * price cannot ship green again. */
+const META_ADVANCE_PT = 6.09;
+export const STATE_WORD_PT =
 	Math.max(...STATE_WORDS.map((word) => word.length)) * META_ADVANCE_PT +
 	STATE_WORD_GAP_PT;
+/** The widest state word the control can draw, for the guard that proves the
+ *  price covers what renders. Exported so the test reads the SAME source the
+ *  price derives from rather than re-listing the words. */
+export const WIDEST_STATE_WORD = STATE_WORDS.reduce((wide, word) =>
+	word.length > wide.length ? word : wide,
+);
 
 /**
  * The character budget for a viewport.

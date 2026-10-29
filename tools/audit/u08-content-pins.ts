@@ -311,7 +311,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "57b021f2f898a11272cdf07325a5a83aadbc677e0711602d0789c76667df0e2f",
+	src: "4f4f7217c2529c858ceefe235bb6cb588c21f4d924b3882b91654fcc94a5fc23",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
