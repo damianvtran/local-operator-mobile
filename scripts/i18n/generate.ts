@@ -35,6 +35,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { registerSourceResolver } from "../lib/load-src.ts";
+import { keyShapeError } from "./key-shape.ts";
 
 registerSourceResolver();
 
@@ -135,7 +136,10 @@ for (const file of namespaces) {
 		fail(`${file}: every key needs a context entry; the sidecars disagree`);
 	}
 
+	const namespace = file.replace(/\.json$/, "");
 	for (const key of keys) {
+		const shapeError = keyShapeError(namespace, key);
+		if (shapeError !== undefined) fail(`${file}: ${shapeError}`);
 		const value = catalogue[key];
 		if (typeof value !== "string") fail(`${file}: ${key} is not a string`);
 		const previous = owner.get(key);

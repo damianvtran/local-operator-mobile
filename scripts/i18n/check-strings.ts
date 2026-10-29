@@ -10,18 +10,27 @@
  * Usage:
  *   node scripts/i18n/check-strings.ts            # check (CI, and before a PR)
  *   node scripts/i18n/check-strings.ts --update   # drop entries that are gone
+ *   node scripts/i18n/check-strings.ts --base <ref>  # compare growth against <ref>
  *
  * The scan is heuristic — `scan-strings.ts` states exactly which three rules it
  * applies and what it cannot see. A finding is a prompt to look, not proof of a
  * defect; the baseline makes that judgement once, in review.
  */
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type BaselineEntry, buildBaseline, ratchet } from "./ratchet.ts";
-import { scanTree } from "./scan-strings.ts";
+import {
+	type BaselineEntry,
+	baselineGrowth,
+	buildBaseline,
+	entryKey,
+	ratchet,
+	unaccountable,
+} from "./ratchet.ts";
+import { findingKey, scanTree } from "./scan-strings.ts";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const BASELINE = join(ROOT, "scripts", "i18n", "strings-baseline.json");
@@ -29,7 +38,11 @@ const BASELINE = join(ROOT, "scripts", "i18n", "strings-baseline.json");
 const NOTE =
 	"Existing user-facing literals, recorded once so the checker can fail on NEW ones. " +
 	"Shrink-only: `node scripts/i18n/check-strings.ts --update` removes entries that are gone " +
-	"and refuses to add any. Keying a literal is the only way to remove one.";
+	"and refuses to add any, and the check fails when an entry appears that the merge base's copy does not have. " +
+	"Every entry names an owner and the payoff that removes it. Keying a literal is the only way to remove one.";
+
+const FULL_SHA = /^[0-9a-f]{40}$/;
+const BASELINE_PATH = "scripts/i18n/strings-baseline.json";
 
 function readBaseline(allowMissing: boolean): BaselineEntry[] {
 	let raw = "";
@@ -59,6 +72,83 @@ function readBaseline(allowMissing: boolean): BaselineEntry[] {
 		process.exit(1);
 	}
 	return findings as BaselineEntry[];
+}
+
+function git(...args: string[]): { ok: boolean; out: string } {
+	const result = spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
+	return { ok: result.status === 0, out: result.stdout ?? "" };
+}
+
+interface BaseCopy {
+	/** What was compared against, for the message. */
+	readonly ref: string;
+	readonly entries: readonly Pick<BaselineEntry, "file" | "text">[];
+}
+
+/**
+ * The baseline as the pull request's BASE has it, or why there is none.
+ *
+ * WHY. Comparing the tree with its own baseline cannot see a hand-appended entry
+ * (the entry makes its own literal "known"). Growth is only visible against a
+ * copy the author did not write. Resolution order:
+ *   1. `--base <ref>`;
+ *   2. a GitHub pull_request run: the event's base SHA. `actions/checkout`
+ *      checks out the PR *merge* commit, so base SHA..HEAD is exactly the PR's
+ *      effect; the SHA is fetched because the default checkout is one commit;
+ *   3. locally, `git merge-base origin/main HEAD` (falling back to origin/main).
+ * In a pull_request run an unresolvable base is a FAILURE — a gate that skips
+ * itself in the one place it exists to run is a described gate. Anywhere else
+ * (a push to main, a tarball, a fixture with no origin) it is skipped, loudly.
+ */
+function resolveBase(
+	explicit: string | undefined,
+): { copy: BaseCopy } | { skipped: string; required: boolean } {
+	let ref = explicit;
+	let required = explicit !== undefined;
+	if (ref === undefined && process.env.GITHUB_EVENT_NAME === "pull_request") {
+		required = true;
+		try {
+			const event = JSON.parse(
+				readFileSync(process.env.GITHUB_EVENT_PATH ?? "", "utf8"),
+			) as { pull_request?: { base?: { sha?: string } } };
+			ref = event.pull_request?.base?.sha;
+		} catch {
+			/* falls through to the unresolvable branch below */
+		}
+		if (ref === undefined) {
+			return { skipped: "pull_request event has no base SHA", required };
+		}
+	}
+	if (ref === undefined) {
+		const mergeBase = git("merge-base", "origin/main", "HEAD");
+		ref = mergeBase.ok ? mergeBase.out.trim() : "origin/main";
+	}
+	let shown = git("show", `${ref}:${BASELINE_PATH}`);
+	if (!shown.ok && FULL_SHA.test(ref)) {
+		/* A shallow checkout does not hold the base commit. One depth-1 fetch is
+		 * enough to read one file from it. */
+		if (git("fetch", "--no-tags", "--depth=1", "origin", ref).ok) {
+			shown = git("show", `FETCH_HEAD:${BASELINE_PATH}`);
+		}
+	}
+	if (!shown.ok) {
+		return { skipped: `cannot read ${BASELINE_PATH} at ${ref}`, required };
+	}
+	try {
+		const parsed = JSON.parse(shown.out) as { findings?: unknown };
+		if (!Array.isArray(parsed.findings)) throw new Error("no findings array");
+		return { copy: { ref, entries: parsed.findings as BaselineEntry[] } };
+	} catch (error) {
+		return {
+			skipped: `${BASELINE_PATH} at ${ref} is unreadable (${(error as Error).message})`,
+			required,
+		};
+	}
+}
+
+function flag(name: string): string | undefined {
+	const index = process.argv.indexOf(name);
+	return index === -1 ? undefined : process.argv[index + 1];
 }
 
 function writeBaseline(entries: readonly BaselineEntry[]): void {
@@ -126,7 +216,22 @@ function main(): void {
 			);
 			process.exit(1);
 		}
-		const next = buildBaseline(findings);
+		/* A surviving entry keeps the owner/payoff it already has; only CREATING a
+		 * baseline has none to keep, and then the caller must say who owns it. */
+		const known = new Map(baseline.map((entry) => [entryKey(entry), entry]));
+		const owner = flag("--owner");
+		const payoff = flag("--payoff");
+		const next = buildBaseline(findings, (finding) => {
+			const kept = known.get(findingKey(finding));
+			if (kept !== undefined) return kept;
+			if (owner === undefined || payoff === undefined) {
+				console.error(
+					"Creating a baseline needs --owner <who> --payoff <what removes each entry>.",
+				);
+				process.exit(1);
+			}
+			return { owner, payoff };
+		});
 		writeBaseline(next);
 		console.log(
 			created
@@ -134,6 +239,40 @@ function main(): void {
 				: `Baseline updated: ${baseline.length - next.length} removed, 0 added (${next.length} remain)`,
 		);
 		return;
+	}
+
+	const unowned = unaccountable(baseline);
+	if (unowned.length > 0) {
+		console.error(
+			`${unowned.length} baseline entr(ies) lack an owner or payoff; every exemption names who removes it and what removes it.\n${unowned
+				.map((entry) => `  ${entry.file}  ${JSON.stringify(entry.text)}`)
+				.join("\n")}`,
+		);
+		process.exit(1);
+	}
+
+	const base = resolveBase(flag("--base"));
+	let compared = "growth check SKIPPED";
+	if ("copy" in base) {
+		const grown = baselineGrowth(base.copy.entries, baseline);
+		if (grown.length > 0) {
+			console.error(
+				`The baseline gained ${grown.length} entr(ies) relative to ${base.copy.ref}. It may only shrink: key the literal instead of exempting it.\n${grown
+					.map(
+						(entry) => `  added: ${entry.file}  ${JSON.stringify(entry.text)}`,
+					)
+					.join("\n")}`,
+			);
+			process.exit(1);
+		}
+		compared = `no growth vs ${base.copy.ref.slice(0, 12)}`;
+	} else if (base.required) {
+		console.error(
+			`Cannot prove the baseline did not grow: ${base.skipped}. Failing closed, because this run is the pull request's gate.`,
+		);
+		process.exit(1);
+	} else {
+		compared = `growth check SKIPPED (${base.skipped})`;
 	}
 
 	if (added.length > 0) {
@@ -155,7 +294,7 @@ function main(): void {
 	}
 
 	console.log(
-		`check-strings: ${findings.length} finding(s), all baselined; 0 new`,
+		`check-strings: ${findings.length} finding(s), all baselined; 0 new; ${compared}`,
 	);
 }
 
