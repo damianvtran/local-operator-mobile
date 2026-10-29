@@ -20,7 +20,8 @@
 			"!design",
 			"!docs",
 			"!fixtures",
-			"!store"
+			"!store",
+			"!i18n/audits/evidence"
 		]
 	},
 	"formatter": {

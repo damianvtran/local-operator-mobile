@@ -149,7 +149,7 @@ export const ProjectCreateSheet = ({
 			/* The receipt names the row the RELAY created, not the text that was
 			 *  typed: a store that normalised something would otherwise be reported
 			 *  as the string this screen holds. */
-			showToast(writeReceipt("Created", answer.project.name));
+			showToast(writeReceipt("created", answer.project.name));
 			setName("");
 			setDescription("");
 			setStatus("active");

@@ -168,7 +168,7 @@ export default function ProjectDetail() {
 			});
 			setProject(answer.project);
 			showToast(
-				writeReceipt(completing ? "Completed" : "Reopened", milestone.name),
+				writeReceipt(completing ? "completed" : "reopened", milestone.name),
 			);
 		} catch (error) {
 			writeFailed(error);
@@ -225,7 +225,7 @@ export default function ProjectDetail() {
 			setProject(answer.project);
 			showToast(
 				writeReceipt(
-					editor.editingName === null ? "Added" : "Updated",
+					editor.editingName === null ? "added" : "updated",
 					`milestone ${name}`,
 				),
 			);
@@ -246,7 +246,7 @@ export default function ProjectDetail() {
 		try {
 			const answer = await client.removeProjectMilestone(project.id, name);
 			setProject(answer.project);
-			showToast(writeReceipt("Removed", `milestone ${name}`));
+			showToast(writeReceipt("removed", `milestone ${name}`));
 			setConfirmRemove(false);
 			setEditor(null);
 		} catch (error) {
@@ -270,7 +270,7 @@ export default function ProjectDetail() {
 			 *  is the title when there is one, so the two must not be conflated
 			 *  here. */
 			await client.deleteProject(project.id, project.name);
-			showToast(writeReceipt("Deleted", project.name));
+			showToast(writeReceipt("deleted", project.name));
 			setConfirmDelete(false);
 			router.back();
 		} catch (error) {

@@ -336,7 +336,7 @@ export type MessageParams = {
 	"mobile.projects.sessions.count": { count: number };
 	"mobile.projects.sessions.live": { base: string | number; live: string | number };
 	"mobile.projects.stale_badge": NoParams;
-	"mobile.projects.write_receipt": { action: string | number; subject: string | number };
+	"mobile.projects.write_receipt": { subject: string | number; action: string };
 	"mobile.projects.write_unknown_note": NoParams;
 	"mobile.schedules.cadence.every": { duration: string | number };
 	"mobile.schedules.cadence.left": { cadence: string | number; remaining: number };
@@ -475,7 +475,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
 	"mobile.projects.sessions.live": "{base} · {live} live",
 	"mobile.projects.stale_badge": "progress stale",
-	"mobile.projects.write_receipt": "{action} {subject}.",
+	"mobile.projects.write_receipt": "{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.",
 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.",
 	"mobile.schedules.cadence.every": "every {duration}",
 	"mobile.schedules.cadence.left": "{cadence} · {remaining} left",
@@ -599,7 +599,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.sessions.count": { role: "meta", note: "Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English." },
 	"mobile.projects.sessions.live": { role: "meta", note: "Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live." },
 	"mobile.projects.stale_badge": { role: "status", note: "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name." },
-	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop." },
+	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. {action} is a stable CODE the screen selects — created, completed, reopened, added, updated, removed or deleted — and never a rendered word: the catalogue turns the code into the verb, so each locale supplies its own. other catches an unknown code as Updated. {subject} is the thing acted on. Ends with a full stop." },
 	"mobile.projects.write_unknown_note": { role: "status", note: "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved." },
 	"mobile.schedules.cadence.every": { role: "meta", note: "Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice." },
 	"mobile.schedules.cadence.left": { role: "meta", note: "Cadence with a bounded delivery budget. {cadence} is the already-rendered 'every …' phrase; {remaining} is a positive integer. The middle dot is a separator, keep it." },
@@ -687,7 +687,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 		"mobile.home.options.apply": "Utiliser ces options",
-		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.",
+		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
 		"mobile.home.options.title": "Options de la conversation",
 		"mobile.home.queue.discard": "Supprimer les messages en attente",
@@ -737,7 +737,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
 		"mobile.projects.sessions.live": "{base} · {live} en cours",
 		"mobile.projects.stale_badge": "progression obsolète",
-		"mobile.projects.write_receipt": "{action} {subject}.",
+		"mobile.projects.write_receipt": "{action, select, created {Créé} completed {Terminé} reopened {Rouvert} added {Ajouté} updated {Mis à jour} removed {Retiré} deleted {Supprimé} other {Mis à jour}} {subject}.",
 		"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.",
 		"mobile.schedules.cadence.every": "tous les {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining, plural, one {# envoi restant} many {# d’envois restants} other {# envois restants}}",

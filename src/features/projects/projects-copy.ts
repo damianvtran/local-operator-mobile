@@ -300,10 +300,26 @@ export function removeMilestoneBody(name: string): string {
 export const writeUnknownNote = (): string =>
 	t("mobile.projects.write_unknown_note");
 
-/** The one-line receipt a successful write leaves. The past-tense verb is the
- *  SCREEN's (`Created`, `Renamed`, …): it is a parameter, not copy owned here,
- *  and keying the verbs would mean changing the screens that choose them. */
-export function writeReceipt(action: string, subject: string): string {
+/** The stable CODES a successful project write reports.
+ *
+ *  A union of CODES, deliberately not the words the reader sees: the catalogue
+ *  selects the verb from the code, so a French reader gets a French verb and an
+ *  English reader the same English word this screen used to pass in directly.
+ *  A rendered word passed as `action` would be printed verbatim in every locale —
+ *  the defect this key was shaped to close. Adding a write means adding a code
+ *  here AND an arm to `mobile.projects.write_receipt` in every catalogue. */
+export type ReceiptAction =
+	| "created"
+	| "completed"
+	| "reopened"
+	| "added"
+	| "updated"
+	| "removed"
+	| "deleted";
+
+/** The one-line receipt a successful write leaves. `action` is a code, never
+ *  copy: the catalogue owns the verb (`deleted` → `Deleted` / `Supprimé`). */
+export function writeReceipt(action: ReceiptAction, subject: string): string {
 	return t("mobile.projects.write_receipt", { action, subject });
 }
 

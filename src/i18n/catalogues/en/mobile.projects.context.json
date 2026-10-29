@@ -53,7 +53,7 @@
 	},
 	"mobile.projects.write_receipt": {
 		"role": "status",
-		"note": "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop."
+		"note": "One-line success receipt. {action} is a stable CODE the screen selects — created, completed, reopened, added, updated, removed or deleted — and never a rendered word: the catalogue turns the code into the verb, so each locale supplies its own. other catches an unknown code as Updated. {subject} is the thing acted on. Ends with a full stop."
 	},
 	"mobile.projects.write_unknown_note": {
 		"role": "status",

@@ -177,8 +177,6 @@ describe("the English catalogues", () => {
 const IDENTICAL_BY_DESIGN: Readonly<Record<string, string>> = {
 	"mobile.notifications.title":
 		"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
-	"mobile.projects.write_receipt":
-		"Placeholder-only template, `{action} {subject}.` — both words arrive already rendered, so there is nothing in it to translate.",
 	"mobile.schedules.head.overdue":
 		"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
 };

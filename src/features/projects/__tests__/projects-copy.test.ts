@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { LinkedSession, ProjectSummary } from "@/contracts";
+import type { ReceiptAction } from "@/features/projects/projects-copy";
 import {
 	deleteProjectBody,
 	isVanishRefusal,
@@ -22,7 +23,15 @@ import {
 	writeReceipt,
 	writeUnknownNote,
 } from "@/features/projects/projects-copy";
+import { renderFor } from "@/i18n";
 import { RelayError } from "@/relay";
+
+/** The English verbs the receipt codes used to be interpolated as. `write_receipt`
+ *  must never render one of these in a shipped non-English locale: that was the
+ *  defect — an English verb inside a French sentence — and this is the list that
+ *  makes a regression name itself in the failure message. */
+const ENGLISH_RECEIPT_VERBS =
+	/Created|Completed|Reopened|Added|Updated|Removed|Deleted/;
 
 const summary = (over: Partial<ProjectSummary>): ProjectSummary =>
 	({
@@ -251,9 +260,79 @@ describe("the write helpers", () => {
 	});
 
 	it("leaves a receipt that names the action and its subject", () => {
-		expect(writeReceipt("Created", "payments-migration")).toBe(
+		expect(writeReceipt("created", "payments-migration")).toBe(
 			"Created payments-migration.",
 		);
+	});
+
+	it("translates the action instead of printing the screen's own word", () => {
+		/* THE DEFECT THIS KEY WAS RESHAPED FOR: `action` used to arrive as a
+		 *  rendered English verb, so a French reader saw "Deleted Projet X." on a
+		 *  French screen — the catalogue had no word left to translate. It is a CODE
+		 *  now, and both ends are pinned here: the English sentence is byte-identical
+		 *  to what that screen rendered before, and the French one carries a French
+		 *  verb with no English verb in it. */
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "Projet X" },
+				"en",
+			),
+		).toBe("Deleted Projet X.");
+		const french = renderFor(
+			"mobile.projects.write_receipt",
+			{ action: "deleted", subject: "Projet X" },
+			"fr",
+		);
+		expect(french).toContain("Supprimé");
+		expect(french).not.toContain("Deleted");
+		expect(french).toBe("Supprimé Projet X.");
+	});
+
+	it("renders the same English sentence for every action code", () => {
+		/* One row per code, and the English verb it must keep producing: the fix
+		 *  moves the verb into the catalogue and may not change a single English
+		 *  rendering. */
+		const english: ReadonlyArray<readonly [ReceiptAction, string]> = [
+			["created", "Created"],
+			["completed", "Completed"],
+			["reopened", "Reopened"],
+			["added", "Added"],
+			["updated", "Updated"],
+			["removed", "Removed"],
+			["deleted", "Deleted"],
+		];
+		for (const [action, verb] of english) {
+			expect(writeReceipt(action, "payments-migration")).toBe(
+				`${verb} payments-migration.`,
+			);
+		}
+	});
+
+	it("renders a French verb for every action code, never an English one", () => {
+		/* The discriminating check, per code: a translated verb is present and the
+		 *  English verb that used to be interpolated is not. A French value reverted
+		 *  to its English text, or a screen slipping a rendered word back in as the
+		 *  code, fails here rather than shipping an English fragment in a French
+		 *  sentence. */
+		const french: ReadonlyArray<readonly [ReceiptAction, string]> = [
+			["created", "Créé"],
+			["completed", "Terminé"],
+			["reopened", "Rouvert"],
+			["added", "Ajouté"],
+			["updated", "Mis à jour"],
+			["removed", "Retiré"],
+			["deleted", "Supprimé"],
+		];
+		for (const [action, verb] of french) {
+			const rendered = renderFor(
+				"mobile.projects.write_receipt",
+				{ action, subject: "Projet X" },
+				"fr",
+			);
+			expect(rendered).toBe(`${verb} Projet X.`);
+			expect(rendered).not.toMatch(ENGLISH_RECEIPT_VERBS);
+		}
 	});
 
 	it("recognises the row vanishing under a write, and nothing else", () => {
