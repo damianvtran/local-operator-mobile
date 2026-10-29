@@ -6,9 +6,9 @@ import {
 	isVanishRefusal,
 	linkedSessionLabel,
 	linkedSessionState,
-	MILESTONE_SLASH_NOTE,
 	milestoneCountLabel,
 	milestoneNameUsable,
+	milestoneSlashNote,
 	milestoneUnremovable,
 	parseTags,
 	projectDisplayName,
@@ -16,11 +16,11 @@ import {
 	projectRowMeta,
 	projectStatusTone,
 	removeMilestoneBody,
-	STALE_BADGE_LABEL,
 	sessionCountLabel,
 	showsStaleMark,
-	WRITE_UNKNOWN_NOTE,
+	staleBadgeLabel,
 	writeReceipt,
+	writeUnknownNote,
 } from "@/features/projects/projects-copy";
 import { RelayError } from "@/relay";
 
@@ -131,7 +131,7 @@ describe("project copy", () => {
 		 *  `stale` reads as a verdict on the project — so the word names what has gone
 		 *  old, and BOTH surfaces plus the row's `accessibilityLabel` read it from this
 		 *  one constant rather than three literals that can drift apart. */
-		expect(STALE_BADGE_LABEL).toBe("progress stale");
+		expect(staleBadgeLabel()).toBe("progress stale");
 	});
 
 	it("names a linked session by its title, falling back to the id", () => {
@@ -218,7 +218,7 @@ describe("the write helpers", () => {
 		 *  rather than offering Remove. */
 		expect(milestoneUnremovable("ship/v2")).toBe(true);
 		expect(milestoneUnremovable("beta cut")).toBe(false);
-		expect(MILESTONE_SLASH_NOTE).toContain("slash");
+		expect(milestoneSlashNote()).toContain("slash");
 	});
 
 	it("splits tags the way a list is typed, and rewrites nothing", () => {
@@ -247,7 +247,7 @@ describe("the write helpers", () => {
 	it("says the outcome is UNKNOWN when a write got no answer", () => {
 		/* The one failure whose result this client cannot know: the request may have
 		 *  landed with its answer lost. The sentence must not claim nothing happened. */
-		expect(WRITE_UNKNOWN_NOTE).toContain("can't tell whether that was saved");
+		expect(writeUnknownNote()).toContain("can't tell whether that was saved");
 	});
 
 	it("leaves a receipt that names the action and its subject", () => {

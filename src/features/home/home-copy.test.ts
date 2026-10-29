@@ -1,21 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	CONNECT_DISABLED_REASON,
+	connectDisabledReason,
 	draftExistsFor,
-	FOLDERS_READ_FAILED,
-	GREETING,
-	HOME_SUGGESTIONS,
+	foldersReadFailed,
+	greeting,
+	HOME_SUGGESTION_KEYS,
+	HOME_TIP_KEYS,
 	HOME_TIP_ROTATE_MS,
-	HOME_TIPS,
-	STARTING,
+	homeSuggestions,
+	homeTips,
 	SUGGESTION_CHAR_BUDGET,
+	startingLine,
 	startupQueueState,
 	suggestionCountFor,
 	suggestionSlotFor,
 	TIP_CHAR_BUDGET,
 	tipAt,
 } from "@/features/home/home-copy";
+import { renderFor, SHIPPED_LOCALES } from "@/i18n";
 
 /** Hoisted so the check is compiled once (the same rule the kit's own modules
  *  follow — an inline regex in a callback is re-created per call). */
@@ -34,7 +37,7 @@ const AGENT_MAKER = /agent/i;
 describe("the home's copy", () => {
 	it("greets with the desktop's verbatim line", () => {
 		// Verbatim is the point: the two surfaces say the same first sentence.
-		expect(GREETING).toBe("What can I help you with today?");
+		expect(greeting()).toBe("What can I help you with today?");
 	});
 
 	it("shows 3 suggestions at 390 and 2 at 320", () => {
@@ -46,25 +49,25 @@ describe("the home's copy", () => {
 	});
 
 	it("keeps every suggestion inside its character ceiling", () => {
-		for (const suggestion of HOME_SUGGESTIONS) {
+		for (const suggestion of homeSuggestions()) {
 			expect(suggestion.length).toBeLessThanOrEqual(SUGGESTION_CHAR_BUDGET);
 		}
 	});
 
 	it("keeps the pool's two composition rules", () => {
-		const leadingVerbs = HOME_SUGGESTIONS.map((s) =>
+		const leadingVerbs = homeSuggestions().map((s) =>
 			s.split(" ")[0]?.toLowerCase(),
 		);
 		// No two entries open with the same verb: the rows are read as a set, and
 		// two "Create …"s read as one idea twice.
-		expect(new Set(leadingVerbs).size).toBe(HOME_SUGGESTIONS.length);
+		expect(new Set(leadingVerbs).size).toBe(homeSuggestions().length);
 		// At most one entry creates an agent, for the same reason.
-		const agentMakers = HOME_SUGGESTIONS.filter((s) => AGENT_MAKER.test(s));
+		const agentMakers = homeSuggestions().filter((s) => AGENT_MAKER.test(s));
 		expect(agentMakers.length).toBeLessThanOrEqual(1);
 	});
 
 	it("keeps every tip inside its line and rotates on the desktop's 12 s", () => {
-		for (const tip of HOME_TIPS) {
+		for (const tip of homeTips()) {
 			expect(tip.length).toBeLessThanOrEqual(TIP_CHAR_BUDGET);
 			// A tip is a fragment on purpose: a full stop reads as a closed thought
 			// and competes with the field for the eye.
@@ -72,22 +75,57 @@ describe("the home's copy", () => {
 		}
 		expect(HOME_TIP_ROTATE_MS).toBe(12_000);
 		// The ring wraps, so a long session never strands on the last entry.
-		expect(tipAt(HOME_TIPS.length)).toBe(HOME_TIPS[0]);
-		expect(tipAt(HOME_TIPS.length + 2)).toBe(HOME_TIPS[2]);
+		expect(tipAt(homeTips().length)).toBe(homeTips()[0]);
+		expect(tipAt(homeTips().length + 2)).toBe(homeTips()[2]);
 	});
 
 	it("states the fixed sentences", () => {
 		// The splash's one-line replacement while the first send is in flight: a
 		// second line would move the composer.
-		expect(STARTING).toBe("Starting…");
-		expect(STARTING.includes("\n")).toBe(false);
+		expect(startingLine()).toBe("Starting…");
+		expect(startingLine().includes("\n")).toBe(false);
 		// The disabled reason is the sentence the composer's own surface carries.
-		expect(CONNECT_DISABLED_REASON).toBe("Connect a computer to send.");
+		expect(connectDisabledReason()).toBe("Connect a computer to send.");
 		// The folders read's failure sentence, `/new`'s verbatim (review M2).
-		expect(FOLDERS_READ_FAILED).toBe(
+		expect(foldersReadFailed()).toBe(
 			"We couldn't read this computer's folders just now.",
 		);
 	});
+});
+
+/**
+ * THE SAME ROW, EVERY SHIPPED LANGUAGE.
+ *
+ * The budgets above read the ACTIVE catalogue, which in a test run is the
+ * English one — so a translation could ship a line three times the width of the
+ * row it has to fit and still pass. A row that clips is a fragment, not a
+ * suggestion, and French runs longer than English by construction, so the check
+ * is per shipped locale: every key the pool exports, rendered source-direct
+ * through `renderFor` (no locale source, no provider), measured against the same
+ * ceiling.
+ *
+ * The composition rules above stay English-only on purpose: they are rules about
+ * the SOURCE pool's wording, and a translation answers them in its own verbs.
+ */
+describe("every shipped locale fits the same rows", () => {
+	for (const locale of SHIPPED_LOCALES) {
+		it(`${locale}: every suggestion fits its one-line row`, () => {
+			for (const key of HOME_SUGGESTION_KEYS) {
+				const rendered = renderFor(key, {}, locale);
+				expect(rendered.trim().length).toBeGreaterThan(0);
+				expect(rendered.length).toBeLessThanOrEqual(SUGGESTION_CHAR_BUDGET);
+			}
+		});
+
+		it(`${locale}: every tip fits its line and stays a fragment`, () => {
+			for (const key of HOME_TIP_KEYS) {
+				const rendered = renderFor(key, {}, locale);
+				expect(rendered.trim().length).toBeGreaterThan(0);
+				expect(rendered.length).toBeLessThanOrEqual(TIP_CHAR_BUDGET);
+				expect(rendered.endsWith(".")).toBe(false);
+			}
+		});
+	}
 });
 
 /**
@@ -154,7 +192,7 @@ describe("the queue row says the state once", () => {
 	it("stays silent while starting — the splash already says it (UX U2)", () => {
 		expect(startupQueueState("starting", null)).toBeNull();
 		expect(startupQueueState("starting", "sid")).toBeNull();
-		expect(STARTING).toBe("Starting…");
+		expect(startingLine()).toBe("Starting…");
 	});
 
 	it("does not claim to be sending while delivery is blocked", () => {

@@ -12,8 +12,8 @@ import {
 	dueLabel,
 	familyState,
 	formatWakeDuration,
-	GONE_MONITORS_CLAUSE,
-	GONE_WAKES_CLAUSE,
+	goneMonitorsClause,
+	goneWakesClause,
 	type MonitorLineView,
 	monitorAlerting,
 	monitorEntryClause,
@@ -21,9 +21,9 @@ import {
 	monitorSectionSummary,
 	monitorSlot,
 	monitorTail,
-	NOTHING_ARMED_BODY,
-	PARKED_MONITORS_CLAUSE,
-	PARKED_WAKES_CLAUSE,
+	nothingArmedBody,
+	parkedMonitorsClause,
+	parkedWakesClause,
 	readErrorClause,
 	scheduleRefusalSentence,
 	schedulesEmpty,
@@ -281,7 +281,7 @@ describe("wake entry heads", () => {
 
 	it("replaces count and instant with the parked sentence", () => {
 		expect(wakeEntryClause(entry({ dormant: true }), NOW)).toBe(
-			PARKED_WAKES_CLAUSE,
+			parkedWakesClause(),
 		);
 	});
 
@@ -291,9 +291,9 @@ describe("wake entry heads", () => {
 		 *  conversation that no longer exists has no next turn — the
 		 *  supervisor and the CLI treat ghost as the stronger, distinct fact. */
 		expect(wakeEntryClause(entry({ ghost: true }), NOW)).toBe(
-			GONE_WAKES_CLAUSE,
+			goneWakesClause(),
 		);
-		expect(GONE_WAKES_CLAUSE).not.toBe(PARKED_WAKES_CLAUSE);
+		expect(goneWakesClause()).not.toBe(parkedWakesClause());
 	});
 
 	it("falls back to the count when no instant is knowable", () => {
@@ -384,10 +384,10 @@ describe("monitor row vocabulary", () => {
 			monitorEntryClause({ ...entry, next_due_at: NOW - 7_200_000 }, NOW),
 		).toBe("1 monitor · 2h overdue");
 		expect(monitorEntryClause({ ...entry, dormant: true }, NOW)).toBe(
-			PARKED_MONITORS_CLAUSE,
+			parkedMonitorsClause(),
 		);
 		expect(monitorEntryClause({ ...entry, ghost: true }, NOW)).toBe(
-			GONE_MONITORS_CLAUSE,
+			goneMonitorsClause(),
 		);
 	});
 });
@@ -580,7 +580,7 @@ describe("entry views", () => {
 			],
 		});
 		const [entry] = wakeEntryViews(listing, NOW);
-		expect(entry?.clause).toBe(PARKED_WAKES_CLAUSE);
+		expect(entry?.clause).toBe(parkedWakesClause());
 		expect(entry?.rows[0]?.due).toBe("");
 	});
 
@@ -669,13 +669,13 @@ describe("labels", () => {
 		expect(showMoreWakeLabel(3)).toBe("Show 3 more wakes");
 		expect(showMoreMonitorLabel(1)).toBe("Show 1 more monitor");
 		expect(showMoreMonitorLabel(3)).toBe("Show 3 more monitors");
-		expect(showLessWakeLabel).toBe("Show fewer wakes");
-		expect(showLessMonitorLabel).toBe("Show fewer monitors");
+		expect(showLessWakeLabel()).toBe("Show fewer wakes");
+		expect(showLessMonitorLabel()).toBe("Show fewer monitors");
 	});
 
 	it("keeps the empty state's copy honest about what wakes and monitors do", () => {
-		expect(NOTHING_ARMED_BODY).toContain("Wakes");
-		expect(NOTHING_ARMED_BODY).toContain("monitors");
+		expect(nothingArmedBody()).toContain("Wakes");
+		expect(nothingArmedBody()).toContain("monitors");
 	});
 });
 

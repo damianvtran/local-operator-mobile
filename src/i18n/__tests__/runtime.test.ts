@@ -45,18 +45,24 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` is a language this build RECOGNIZES (direction knows it) but does not
-		 * ship. The two questions must not collapse into one. */
+		/* `ur` and `es` are languages this build RECOGNIZES (direction knows Urdu;
+		 * both are in `SUPPORTED_LOCALES`) but does not ship. The two questions must
+		 * not collapse into one — and `fr`, which shipped with its own catalogue,
+		 * answers with a catalogue rather than with English source. */
 		expect(catalogueLocaleFor("ur")).toBeNull();
-		expect(catalogueLocaleFor("fr")).toBeNull();
+		expect(catalogueLocaleFor("es")).toBeNull();
+		expect(catalogueLocaleFor("fr")).toBe("fr");
+		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
 		expect(catalogueLocaleFor("en-US")).toBe("en");
-		expect(SHIPPED_LOCALES).toEqual(["en"]);
+		expect(SHIPPED_LOCALES).toEqual(["en", "fr"]);
 	});
 });
 
 describe("the English floor", () => {
 	it("renders English source for a preference with no shipped catalogue", () => {
-		setLocaleSource(() => "fr");
+		/* `es` is supported and pending, not shipped: the reader gets the English
+		 * sentence, not a key and not an empty string. */
+		setLocaleSource(() => "es");
 		expect(activeLocale()).toBe("en");
 		expect(t("mobile.home.greeting")).toBe("What can I help you with today?");
 		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 wakes");
@@ -68,6 +74,10 @@ describe("the English floor", () => {
 		setLocaleSource(() => "ru");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
+		/* The same rule for a pending locale with no catalogue at all: English
+		 * plural categories, because the TEXT is English. */
+		setLocaleSource(() => "es");
+		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 	});
 
 	it("never renders a key name or an empty string for a real key", () => {
@@ -83,6 +93,41 @@ describe("the English floor", () => {
 	});
 });
 
+describe("a shipped translation", () => {
+	it("renders the French catalogue for a French preference", () => {
+		setLocaleSource(() => "fr");
+		expect(activeLocale()).toBe("fr");
+		/* The French catalogue's own line, U+202F before the question mark
+		 * included — the typography is part of the translation, not a nicety
+		 * applied later. */
+		expect(t("mobile.home.greeting")).toBe(
+			"Comment puis-je vous aider aujourd’hui\u202f?",
+		);
+		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 réveils");
+		/* A `fr-FR` relay tag resolves to the same catalogue as `fr`. */
+		setLocaleSource(() => "fr-FR");
+		expect(activeLocale()).toBe("fr");
+	});
+
+	it("formats a French plural with FRENCH categories", () => {
+		setLocaleSource(() => "fr");
+		/* The categories the French style guide fixes: `one` covers 0 and 1, `many`
+		 * is the exact-multiple-of-10^6 case, `other` is everything else. English has
+		 * no `many` arm, so a message formatted with English rules would render the
+		 * `other` text for a million — this asserts the SOURCE locale is used, not
+		 * the reader's. `#` renders through `String(n)` (see `messages.ts`), so the
+		 * million has no grouping separator. */
+		expect(t("mobile.schedules.count.wakes", { count: 0 })).toBe("0 réveil");
+		expect(t("mobile.schedules.count.wakes", { count: 1 })).toBe("1 réveil");
+		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 réveils");
+		expect(t("mobile.schedules.count.wakes", { count: 1_000_000 })).toBe(
+			"1000000 de réveils",
+		);
+		/* A message with no plural still comes from the French catalogue. */
+		expect(t("mobile.schedules.state.waiting")).toBe("en attente");
+	});
+});
+
 describe("direction", () => {
 	it("is rtl for Urdu in every spelling the relay may send", () => {
 		expect(directionFor("ur")).toBe("rtl");
@@ -93,6 +138,7 @@ describe("direction", () => {
 
 	it("is ltr for every shipped locale and for an absent tag", () => {
 		expect(directionFor("en")).toBe("ltr");
+		expect(directionFor("fr")).toBe("ltr");
 		expect(directionFor("en-GB")).toBe("ltr");
 		expect(directionFor(null)).toBe("ltr");
 		expect(directionFor("")).toBe("ltr");

@@ -8,33 +8,37 @@
  * at most one entry creates an agent). The tips are the desktop pool's entries
  * whose move is true on a phone, shortened to the phone row's width.
  *
- * EVERY LINE BELOW NOW COMES FROM THE CATALOGUE (`src/i18n/`), and the copy
- * itself lives in `src/i18n/catalogues/en/mobile.home.json` with its translator
- * context beside it. The constants stay as constants because that is how the
- * splash and their tests read them; they therefore resolve at IMPORT, which is
- * the stated limit of this first slice (see `src/i18n/runtime.ts`).
+ * EVERY LINE BELOW COMES FROM THE CATALOGUE (`src/i18n/`), and the copy itself
+ * lives in `src/i18n/catalogues/en/mobile.home.json` with its translator context
+ * beside it. Each one is a FUNCTION rather than a constant: a `const` calls `t`
+ * once at import, so a screen already mounted when the relay's language arrives
+ * would keep the language this module was first evaluated in. The budgets stay
+ * constants — they are numbers about layout, not translatable text.
  */
 import type { StartupPhase } from "@/features/new-session/startup-coordinator";
-import { t } from "@/i18n";
+import { type NoParamKey, t } from "@/i18n";
 
-export const GREETING = t("mobile.home.greeting");
+export const greeting = (): string => t("mobile.home.greeting");
 
 /** The splash's replacement while the first send is in flight — one line, so
  *  the composer never moves when the splash changes height under it. */
-export const STARTING = t("mobile.home.starting");
+export const startingLine = (): string => t("mobile.home.starting");
 
 /** The refused-start sentence, verbatim from `/new` (the relay's own sentence
  *  is preferred when it has one — see `home.tsx`). */
-export const REFUSED_START_FALLBACK = t("mobile.home.refused_start_fallback");
+export const refusedStartFallback = (): string =>
+	t("mobile.home.refused_start_fallback");
 
 /** The composer's disabled reason when nothing is connected. Also the sentence
  *  the connect action's slot is named for in the spec. */
-export const CONNECT_DISABLED_REASON = t("mobile.home.connect_disabled_reason");
+export const connectDisabledReason = (): string =>
+	t("mobile.home.connect_disabled_reason");
 
 /** The folders read failed — the same sentence `/new` uses for the same failure
  *  (`new-session.tsx`), so one failure has one voice. Carried here because the
  *  home also has to clear it on a successful re-read (review M2). */
-export const FOLDERS_READ_FAILED = t("mobile.home.folders_read_failed");
+export const foldersReadFailed = (): string =>
+	t("mobile.home.folders_read_failed");
 
 /**
  * Whether the composer holds a draft at all.
@@ -53,19 +57,28 @@ export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
 export const SUGGESTION_CHAR_BUDGET = 24;
 
 /**
- * The mobile suggestion pool, pinned head first: the first screen shows the
- * head deterministically (a reproducible frame — the desktop's own device), and
- * a sampler over the tail is a follow-up rather than a reason for the first
+ * The mobile suggestion pool's KEYS, pinned head first: the first screen shows
+ * the head deterministically (a reproducible frame — the desktop's own device),
+ * and a sampler over the tail is a follow-up rather than a reason for the first
  * frame to differ per run.
+ *
+ * The KEYS are what is exported as the pool (with `homeSuggestions()` rendering
+ * them) because the pool is asserted per SHIPPED locale, not only in English:
+ * a check that could only see the active language would call a French row fine
+ * until someone ran the app in French.
  */
-export const HOME_SUGGESTIONS = [
-	t("mobile.home.suggestion.phone_access"),
-	t("mobile.home.suggestion.team_of_agents"),
-	t("mobile.home.suggestion.last_turn"),
-	t("mobile.home.suggestion.linear_mcp"),
-	t("mobile.home.suggestion.review_repo"),
-	t("mobile.home.suggestion.wake_summary"),
-] as const;
+export const HOME_SUGGESTION_KEYS = [
+	"mobile.home.suggestion.phone_access",
+	"mobile.home.suggestion.team_of_agents",
+	"mobile.home.suggestion.last_turn",
+	"mobile.home.suggestion.linear_mcp",
+	"mobile.home.suggestion.review_repo",
+	"mobile.home.suggestion.wake_summary",
+] as const satisfies readonly NoParamKey[];
+
+/** The pool as the reader's language renders it, resolved per call. */
+export const homeSuggestions = (): readonly string[] =>
+	HOME_SUGGESTION_KEYS.map((key) => t(key));
 
 /** How many rows the splash shows: 3 at 390 pt, 2 at 320 (`>=` keeps the
  *  spec's own pair exact; a 375 pt phone is nearer the 320 case's pressure). */
@@ -101,7 +114,7 @@ export const suggestionSlotFor = (input: {
 	if (draftExistsFor(input.draft)) return { kind: "none" };
 	return {
 		kind: "suggestions",
-		rows: HOME_SUGGESTIONS.slice(0, suggestionCountFor(input.width)),
+		rows: homeSuggestions().slice(0, suggestionCountFor(input.width)),
 	};
 };
 
@@ -116,17 +129,23 @@ export const TIP_CHAR_BUDGET = 48;
  * a control, never announced. The pool is short because the row is: an entry
  * that clips is a fragment, not a tip.
  */
-export const HOME_TIPS = [
-	t("mobile.home.tip.schedule"),
-	t("mobile.home.tip.parallel"),
-	t("mobile.home.tip.search"),
-] as const;
+export const HOME_TIP_KEYS = [
+	"mobile.home.tip.schedule",
+	"mobile.home.tip.parallel",
+	"mobile.home.tip.search",
+] as const satisfies readonly NoParamKey[];
+
+/** The pool as the reader's language renders it, resolved per call. */
+export const homeTips = (): readonly string[] =>
+	HOME_TIP_KEYS.map((key) => t(key));
 
 /** One tip's dwell time. `tipAt` wraps, so the ring's length is the pool's. */
 export const HOME_TIP_ROTATE_MS = 12_000;
 
-export const tipAt = (index: number): string =>
-	HOME_TIPS[index % HOME_TIPS.length] ?? HOME_TIPS[0];
+export const tipAt = (index: number): string => {
+	const tips = homeTips();
+	return tips[index % tips.length] ?? tips[0] ?? "";
+};
 
 /**
  * What Home says about work that has not left the device — state only, never the

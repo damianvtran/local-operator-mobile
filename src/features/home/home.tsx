@@ -16,9 +16,9 @@ import {
 	headerBellShowsDot,
 } from "@/features/home/header-fit";
 import {
-	CONNECT_DISABLED_REASON,
-	FOLDERS_READ_FAILED,
-	REFUSED_START_FALLBACK,
+	connectDisabledReason,
+	foldersReadFailed,
+	refusedStartFallback,
 	startupQueueState,
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
@@ -397,7 +397,7 @@ export default function Home({
 			/* The one sentence the composer says when it cannot send: with nothing
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
-			disabledReason: connected ? null : CONNECT_DISABLED_REASON,
+			disabledReason: connected ? null : connectDisabledReason(),
 		}),
 		[connected, draft, images.length, starting, running],
 	);
@@ -530,7 +530,7 @@ export default function Home({
 			{directoriesFailed && homeDirectory === null ? (
 				<Banner
 					tone="warning"
-					message={FOLDERS_READ_FAILED}
+					message={foldersReadFailed()}
 					action={{
 						label: "Retry",
 						onPress: retryDirectories,

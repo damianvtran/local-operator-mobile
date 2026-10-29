@@ -10,9 +10,9 @@ import {
 
 import {
 	draftExistsFor,
-	GREETING,
+	greeting,
 	HOME_TIP_ROTATE_MS,
-	STARTING,
+	startingLine,
 	suggestionSlotFor,
 	tipAt,
 } from "@/features/home/home-copy";
@@ -230,7 +230,7 @@ export const HomeSplash = ({
 					className="text-body text-ink-muted"
 					testID={SURFACE.homeStarting}
 				>
-					{STARTING}
+					{startingLine()}
 				</Text>
 			</View>
 		);
@@ -262,7 +262,7 @@ export const HomeSplash = ({
 						className="text-center text-title text-ink"
 						testID={SURFACE.homeGreeting}
 					>
-						{GREETING}
+						{greeting()}
 					</Text>
 					{slot.kind === "suggestions" ? (
 						<View className="w-full gap-3" testID={SURFACE.homeSuggestions}>

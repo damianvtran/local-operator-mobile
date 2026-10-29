@@ -103,10 +103,14 @@ export function projectRowMeta(project: ProjectSummary): string {
  * milestones and sessions and says nothing about progress, so a bare `stale` reads
  * as a verdict on the PROJECT (review round 1, D4). Naming what has gone old is
  * true in both places, because the condition is `progress_stale` over a progress
- * line that exists (`showsStaleMark`) — and ONE constant is what stops the two
+ * line that exists (`showsStaleMark`) — and ONE reader is what stops the two
  * surfaces drifting into two spellings of one fact again.
+ *
+ * A FUNCTION, not a constant: `t` at module scope freezes the language this
+ * module was first imported in, and this badge lives on screens that outlast a
+ * relay config change.
  */
-export const STALE_BADGE_LABEL = t("mobile.projects.stale_badge");
+export const staleBadgeLabel = (): string => t("mobile.projects.stale_badge");
 
 /**
  * Whether to show the stale mark, which is NOT the same question as
@@ -219,7 +223,8 @@ export function linkedSessionState(link: LinkedSession): string | null {
  * happens). What the reader needs is above the line; the paragraph you are
  * reading is where the why for the next maintainer lives.
  */
-export const MILESTONE_SLASH_NOTE = t("mobile.projects.milestone_slash_note");
+export const milestoneSlashNote = (): string =>
+	t("mobile.projects.milestone_slash_note");
 
 /** Whether a typed milestone name is one this build will send. */
 export function milestoneNameUsable(name: string): boolean {
@@ -243,7 +248,8 @@ export function milestoneUnremovable(name: string): boolean {
  * which still cost a round trip for a 65-character name or a leading hyphen
  * (U4). The wording stays in the reader's terms rather than the store's.
  */
-export const PROJECT_NAME_HINT = t("mobile.projects.project_name_hint");
+export const projectNameHint = (): string =>
+	t("mobile.projects.project_name_hint");
 
 /**
  * What a form says when it reopens holding the reader's unfinished work.
@@ -255,7 +261,7 @@ export const PROJECT_NAME_HINT = t("mobile.projects.project_name_hint");
  * the worse of the two failures — and the form says so, so a reader opening the
  * sheet to start something else is not silently handed the last attempt.
  */
-export const DRAFT_KEPT_NOTE = t("mobile.projects.draft_kept_note");
+export const draftKeptNote = (): string => t("mobile.projects.draft_kept_note");
 
 /**
  * The tags a reader typed, split the way a list is typed.
@@ -291,7 +297,8 @@ export function removeMilestoneBody(name: string): string {
  * client cannot make. A definitive refusal never reaches here — it carries the
  * relay's own words (`projectRefusalSentence`).
  */
-export const WRITE_UNKNOWN_NOTE = t("mobile.projects.write_unknown_note");
+export const writeUnknownNote = (): string =>
+	t("mobile.projects.write_unknown_note");
 
 /** The one-line receipt a successful write leaves. The past-tense verb is the
  *  SCREEN's (`Created`, `Renamed`, …): it is a parameter, not copy owned here,

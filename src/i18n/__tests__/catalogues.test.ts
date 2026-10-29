@@ -49,7 +49,7 @@ const NAMESPACES = [
 		name: "mobile.schedules",
 		messages: schedules,
 		context: schedulesContext,
-		expected: 35,
+		expected: 38,
 	},
 	{
 		name: "mobile.account_routing",
@@ -73,7 +73,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 1,
+		expected: 2,
 	},
 ] as const;
 
@@ -117,7 +117,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(116);
+		expect(total).toBe(120);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
