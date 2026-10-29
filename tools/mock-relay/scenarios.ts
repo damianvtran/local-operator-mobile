@@ -1174,7 +1174,10 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"health-quiet",
 		'The session is running but its owner has gone quiet: `heartbeat_stale: true` with a live pid, so the header\'s status dot reads YELLOW "Not answering" and its sheet says the QUIET sentence (a send can fail and still arrive once the session catches up) — not the degraded one.',
-		["S5/health-quiet"],
+		/* `S5/health-quiet-sheet` is the same world with the dot\'s sheet OPEN: the
+		 *  quiet sentence is safety copy and until now no frame carried it (review
+		 *  round 4, m3 — the dropped cause had a sheet cell, the quiet one did). */
+		["S5/health-quiet", "S5/health-quiet-sheet"],
 		() => ({
 			projections: {
 				[liveIdle.session_id]: projectionFrom(liveIdle, {

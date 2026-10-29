@@ -358,8 +358,8 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 1260 cells x
-    # 1.25 s = 1,575 s, which is DERIVED rather than taken from that run, whose capture
+    # whole measured wall time, plus the audit at its own measured rate — 1272 cells x
+    # 1.25 s = 1,590 s, which is DERIVED rather than taken from that run, whose capture
     # failed the identical-state gate before the audit step ran. That is ~2,722 s ≈ 45.4
     # min against the 90 below, so the bound is ~2.0x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
@@ -479,9 +479,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 3780 cells needs ~134 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 1260 cells, ~45 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 13860 cells, and
+        # plan of 3816 cells needs ~134 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 1272 cells, ~45 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 13992 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
@@ -706,24 +706,24 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3780 cells) and
-    # `full` (19 / 13860) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3816 cells) and
+    # `full` (19 / 13992) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
     # its own 55-minute capture bound rather than being stretched to fit a 120-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
     # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~113
-    # minutes: 3780 cells x 2.24 s = 8,467 s.
+    # minutes: 3,816 cells x 2.24 s = 8,548 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
     # with a derived deadline of 2574 s (85b2785), and
-    # at THIS head it prints `3780 cells x 3 frame(s) = 11340 frames` and `deadline: 11340 s`
+    # at THIS head it prints `3816 cells x 3 frame(s) = 11448 frames` and `deadline: 11448 s`
     # (3000 ms/cell). The capture step's 195 is above both derived deadlines (so the step
     # cannot cut short the budget the run computed for itself) and ~1.4x the ~126 min the
-    # 3780 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
+    # 3816 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
     # round 5: the fold's four extra cells took the derived deadline to 6264 s = 104.4 min,
     # ABOVE the 100 the job had carried, and a bound below its own deadline is the defect
     # this comment refuses one level up — the step would cut short the budget the run
@@ -744,8 +744,8 @@ jobs:
     # 60 against a derived 3600 s (60 min) and audit 28 against 1,200 x 1.25 s (25 min).
     # The per-push audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
     # in 312 s, run 37167390506) — but `core` is not that sample: its own audit measured
-    # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3,780 cells x
-    # 1.47 s = 5,557 s ≈ 93 min. On THIS merged head the caps are capture 190 and
+    # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3,816 cells x
+    # 1.47 s = 5,610 s ≈ 93.5 min. On THIS merged head the caps are capture 190 and
     # audit 115, and they deliberately no longer sum under the job's 290: the caps are
     # ceilings, and the REAL requirement is what the guard asserts — capture 190 + the
     # audit's measured ~93 = 283 < 290. Measured, the job is ~141 min of capture + ~93
@@ -836,7 +836,7 @@ jobs:
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
         # 195 (was 180, then 190): the merged plan's own derived deadline is
-        # 11340 s = 189 min, which 180 no longer held. 195 keeps ~3 % over that
+        # 11448 s = 189 min, which 180 no longer held. 195 keeps ~3 % over that
         # deadline — the smallest raise that clears it, by the 45->50 and 50->55
         # precedent for a step whose cost is a ceiling and not a budget (QA round 3,
         # Q13: 190 left only 60 s). NOTHING MACHINE-CHECKS THIS PAIR: no test
@@ -854,12 +854,12 @@ jobs:
         #   run 38530472075 (head 80ed4a35, job 115741848014) was killed at 70m12s
         #   (4,212 s) with `2870/3024 cells audited` — a steady 40.9 cells/min = 1.47
         #   s/cell (first third 40.3/min, last third 46.0/min, so not degrading), so
-        #   3780 cells x 1.47 s = 5,557 s ≈ 93 min. Killed, the audit never writes its
+        #   3,816 cells x 1.47 s = 5,610 s ≈ 93 min. Killed, the audit never writes its
         #   summary: the rubric rows it exists to report are not visible, which is the
         #   failure mode a bound below the work has.
         #
         # 115, not 110: the ~20% headroom is a FLOOR THE GUARD ENFORCES, and at the
-        # merged 3780-cell plan the audit needs ceil(92.46 x 1.2) = 111 min, which 110
+        # merged 3816-cell plan the audit needs ceil(92.46 x 1.2) = 111 min, which 110
         # does not clear. 115 sits above it — a bound that fires every run stops being
         # a signal. A step bound the audit's own cost can exceed would cut short the
         # audit itself — the defect the capture bound above refuses.

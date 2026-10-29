@@ -1,3 +1,4 @@
+import { healthLabel } from "@/features/session/health";
 import { MIN_HEADER_NAME_CHARS } from "@/features/session/projection";
 import { maxColumnWidth, type Viewport } from "@/ui/column";
 import { headerStacks } from "@/ui/size-class";
@@ -77,16 +78,20 @@ const HEADER_CHROME_PT =
  * Both default to absent, so every caller that passes no extras — and every
  * figure `header.test.ts` pinned before the dot — is unchanged.
  */
-export type HeaderExtras = { dot?: boolean; menu?: boolean };
+export type HeaderExtras = { dot?: boolean; menu?: boolean; word?: boolean };
 /* Chrome is rem-spaced, so on web BOTH its width and the glyph advance scale
  * with the reader. On native the chrome is in pt and only the advance scales;
  * the caller passes `Platform.OS !== "web"` for that case. */
 const HEALTH_DOT_PT = 8 + 8;
 const HEADER_MENU_PT = 48 + 8;
 const extrasPt = (
-	{ dot = false, menu = false }: HeaderExtras = {},
+	{ dot = false, menu = false, word = false }: HeaderExtras = {},
 	scale = 1,
-): number => ((dot ? HEALTH_DOT_PT : 0) + (menu ? HEADER_MENU_PT : 0)) * scale;
+): number =>
+	((dot ? HEALTH_DOT_PT : 0) +
+		(menu ? HEADER_MENU_PT : 0) +
+		(word ? STATE_WORD_PT : 0)) *
+	scale;
 
 /**
  * The wrap margin the stacked case keeps back from the two-line clamp's
@@ -150,6 +155,27 @@ const STACKED_WRAP_SLACK = 4;
  * cannot give this component without a canvas.
  */
 export const DISPLAY_ADVANCE_PT = 14.06;
+
+/* THE STATE WORD BESIDE THE TITLE IN SHORT LANDSCAPE (review round 4, D15 /
+ * QA N3). Since the Q9 fix the word rides the title's own row there, so it takes
+ * width from the flex-1 title — and the budget did not charge it, so a non-live
+ * compact title was middle-truncated to a length that did not fit and the
+ * platform clipped the tail (measured: clientWidth 313 against scrollWidth 351
+ * at 135 %). The price is the WIDEST word the control can say, charged in every
+ * compact state — live included, where no word is drawn — so the title's
+ * truncation is the same in every state and the name does not change shape when
+ * the dot changes colour (D11). Derived from the catalogue's own words rather
+ * than a magic number, and from the `meta` step the word is drawn in. */
+const STATE_WORDS = [
+	healthLabel("not_answering"),
+	healthLabel("reconnecting"),
+	healthLabel("ended"),
+] as const;
+const STATE_WORD_GAP_PT = 8; // the row's `gap-2`
+const META_ADVANCE_PT = DISPLAY_ADVANCE_PT * (12 / 28) * 0.62;
+const STATE_WORD_PT =
+	Math.max(...STATE_WORDS.map((word) => word.length)) * META_ADVANCE_PT +
+	STATE_WORD_GAP_PT;
 
 /**
  * The character budget for a viewport.

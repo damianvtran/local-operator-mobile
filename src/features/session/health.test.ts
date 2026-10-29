@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
 	type HealthInput,
 	headerHealth,
+	healthAnnouncement,
 	healthDetailKey,
 	healthIsEnded,
 	healthLabel,
@@ -293,6 +294,7 @@ describe("healthLink", () => {
 		online: null,
 		stoppedOnError: false,
 		streamClosed: false,
+		routeRefused: false,
 	};
 	it.each([
 		{ name: "an open stream with no drop is up", input: up, want: "up" },
@@ -341,6 +343,19 @@ describe("healthLink", () => {
 			want: "stopped",
 		},
 		{
+			/* Review round 4, N1: the shape QA and UX actually measured — the route
+			 * client refuses while the stream's own terminal report is dropped by
+			 * the effect's teardown, so `streamClosed` never becomes true. */
+			name: "a refused route is a stop even when the stream never reports closed",
+			input: {
+				...up,
+				entryConnected: false,
+				streamClosed: false,
+				routeRefused: true,
+			},
+			want: "stopped",
+		},
+		{
 			name: "the stream's closed state also beats a drop and a closed store",
 			input: {
 				...up,
@@ -353,6 +368,29 @@ describe("healthLink", () => {
 	] as const)("$name", ({ input, want }) => {
 		expect(healthLink(input)).toBe(want);
 	});
+});
+
+describe("what a live region announces", () => {
+	/* REVIEW ROUND 4, N2 / UX U11. Every row is a render sequence a reader
+	 *  produces: opening straight into a state, the age ticker re-rendering with
+	 *  the same reading, the first frame landing on a bare header, and real
+	 *  changes. The previous version filled the region on the second row. */
+	it.each([
+		{ before: null, next: "ended", want: "" },
+		{ before: "ended", next: "ended", want: "" },
+		{ before: null, next: "live", want: "" },
+		{ before: "live", next: "reconnecting", want: "Reconnecting" },
+		{ before: "reconnecting", next: "ended", want: "Ended" },
+		{ before: "ended", next: "not_answering", want: "Not answering" },
+		{ before: "ended", next: "live", want: "" },
+		{ before: "reconnecting", next: null, want: "" },
+		{ before: null, next: null, want: "" },
+	] as const)(
+		"$before -> $next announces '$want'",
+		({ before, next, want }) => {
+			expect(healthAnnouncement(before, next)).toBe(want);
+		},
+	);
 });
 
 describe("healthDetailKey", () => {

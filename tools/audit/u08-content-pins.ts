@@ -95,7 +95,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"3862c918443d5c574722baef7c31359bd5ce786613cda1ebdc18860b622b42ab",
+		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
 	"tools/lib/relay.ts":
 		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
 	"tools/lib/static-server.ts":
@@ -119,7 +119,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/relay.ts":
 		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
 	"tools/mock-relay/scenarios.ts":
-		"54979836c826613a1856fb3090acd9f7319d9e80aa7d9f193f50eaceb4fd8b88",
+		"5cacc6af718133d094658e797b82342b125d515f30f5d293ba0d1242e60f1b57",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -136,7 +136,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"990a06c3575043b8a24647ffe3f46557b5cb66e273baa54d01daa6222fdc5ab7",
+		"dcd96584cb631e6aeb8dfc92a2ad0cb8187db3db9966fcb64f73bcd35102e098",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -305,13 +305,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
 	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
 	 * `app` and the design inputs keep their digests. */
-	app: "9335932fbb7fd933d5c08f6f1cc8b2e9cc3086adb64733eec118b5c606f11477",
+	app: "ad65e8349be8713ca0b1c6a62402fbc786c2c63402fbe0b4e2eb3d14b4f40d90",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
 		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "7b938c82fefe2dfa4525d407eab7f7daf298e0ae83379f78f30f5e2dafc30325",
+	src: "57b021f2f898a11272cdf07325a5a83aadbc677e0711602d0789c76667df0e2f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

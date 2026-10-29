@@ -554,7 +554,11 @@ export default function Session() {
 						? compactTitleChars(
 								{ width: viewportWidth, height: viewportHeight },
 								effectiveScale,
-								{ menu: ended },
+								/* The word rides this row in compact and takes width from
+								 *  the title, so it is charged — in EVERY state, live
+								 *  included, so the name's shape does not change when the
+								 *  dot changes colour (review round 4, D15 / QA N3). */
+								{ menu: ended, word: true },
 								Platform.OS !== "web",
 							)
 						: headerTitleChars(

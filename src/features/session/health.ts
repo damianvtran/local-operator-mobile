@@ -119,10 +119,26 @@ export type LinkInput = {
 	 *  surface had not met the 401. The terminal state is the fact; the error is
 	 *  a copy of it that can go missing. */
 	streamClosed: boolean;
+	/** The ROUTE the session reads through is refused (`SessionRelaySource`'s
+	 *  `reason === "refused"`): the client hit an authentication refusal on this
+	 *  route and no request through it can succeed until the reader acts.
+	 *
+	 *  WHY BOTH THIS AND `streamClosed` (review round 4, N1; QA Q10, UX U17).
+	 *  On the session-stream-only path the route client's `onResponse` 401 hook
+	 *  (`connection-provider.tsx:1407`) records the refusal and flips the source
+	 *  to `refused` WHILE `http.open` is still unwinding, and the session effect's
+	 *  own guards then drop the stream's terminal report (`onState`/`onError`
+	 *  against the cleanup's `active = false`). Measured on the shipped bundle:
+	 *  the stream makes no request for 60 s, `facts.state` stays `connecting`, and
+	 *  `source.reason` goes `ok` -> `refused`. Reading the route's refusal is the
+	 *  fact that SURVIVES that teardown; `streamClosed` covers the case where the
+	 *  effect does see its own stop. Neither implies the other. */
+	routeRefused: boolean;
 };
 
 export function healthLink(input: LinkInput): HealthLink {
-	if (input.stoppedOnError || input.streamClosed) return "stopped";
+	if (input.stoppedOnError || input.streamClosed || input.routeRefused)
+		return "stopped";
 	if (
 		!input.entryConnected ||
 		input.droppedSinceFrame ||
@@ -146,6 +162,33 @@ export function healthLink(input: LinkInput): HealthLink {
  * - The client has stopped retrying: see {@link HealthLink}. `ended` still
  *   shows, because it is a receipt that holds however old the frame is.
  */
+/**
+ * WHAT A POLITE LIVE REGION SHOULD SAY when one reading replaces another.
+ *
+ * One rule on every platform: a CHANGE is announced, the first reading is not.
+ * A screen opening into "Ended" is not news to the reader who just opened it, and
+ * announcing it also filled a region that must stay empty on mount (review round
+ * 4, N2 / UX U11).
+ *
+ * WHY IT IS A PURE FUNCTION AND NOT A RENDER-TIME COMPARISON. The announcer asked
+ * "is this the first reading?" during render, from a ref its effect wrote — so the
+ * first SAME-VALUE re-render (the age ticker supplies one within half a second)
+ * read as a change and filled the region. Keeping the decision here pins every
+ * branch in a table; the component only decides WHEN to ask.
+ *
+ * `before === null` means "nothing was shown yet", so the reading after it is a
+ * first reading too — including after a stop cleared the dot.
+ */
+export function healthAnnouncement(
+	before: SessionHealth | null,
+	next: SessionHealth | null,
+): string {
+	if (before === null || before === next) return "";
+	/* Going quiet is not an announcement: a live or absent dot has no word. */
+	if (next === null || next === "live") return "";
+	return healthLabel(next);
+}
+
 export function headerHealth(
 	projection: HealthInput | null | undefined,
 	link: HealthLink,

@@ -34,6 +34,7 @@ import { useConnection } from "@/features/auth/connection-provider";
 import {
 	HEALTH_DOT_TONE,
 	type HealthInput,
+	healthAnnouncement,
 	healthDetailKey,
 	healthLabel,
 	type SessionHealth,
@@ -373,31 +374,35 @@ export function SessionHealthControl({
  * `announceForAccessibility` (review round 1, m1).
  */
 export function HealthAnnouncer({ health }: { health: SessionHealth | null }) {
-	/* SEEDED WITH `null`, NOT WITH `health` (UX round 3, U11). Seeding from the
-	 * current value made `firstReading` false on mount, so the web/Android region
-	 * was filled with the first state word ~20 ms after first paint — the exact
-	 * thing the rule below forbids — while iOS's effect skipped it. A ref that
-	 * starts empty is what makes "a first reading is not a change" true on every
-	 * platform, and the effect below records the reading once it has rendered. */
+	/* ONE RULE ON EVERY PLATFORM: announce a CHANGE, never a first reading.
+	 *
+	 * WHY THE REGION'S TEXT IS STATE AND NOT DERIVED IN RENDER (review round 4,
+	 * N2 / UX U11). The previous version computed `firstReading` during render
+	 * from a ref the effect wrote, so the first SAME-VALUE re-render — the age
+	 * ticker supplies one within half a second — read as a change and filled the
+	 * polite region with the first state word. Seeding the ref with `null` only
+	 * delayed that by one render (measured: `""` at +250 ms, `"Ended"` at +500 ms
+	 * on a cold open of an ended session).
+	 *
+	 * Now the ref only records what was last SEEN, the effect decides, and the
+	 * region renders what the effect decided. A mount therefore leaves it empty;
+	 * a same-value re-render leaves it empty; only a real change fills it, on
+	 * every platform, and iOS speaks it from the same decision.
+	 */
 	const previous = useRef<SessionHealth | null>(null);
-	/* ONE RULE ON EVERY PLATFORM (UX round 2, U11): only a CHANGE is announced,
-	 * never the first reading. The iOS branch already skipped it; the web/Android
-	 * live region was filled on the first non-null reading, so opening an old
-	 * conversation spoke "Ended" on Android and said nothing on iOS. Holding the
-	 * region empty until a previous reading exists makes the two agree and makes
-	 * this component's own "never on mount" comment true. */
-	const firstReading = previous.current === null;
-	const said =
-		firstReading || health === null || health === "live"
-			? ""
-			: healthLabel(health);
+	const [said, setSaid] = useState("");
 	useEffect(() => {
 		const before = previous.current;
 		previous.current = health;
-		if (Platform.OS !== "ios") return;
-		/* A first reading is not a change: the screen just opened into it. */
-		if (before === null || before === health || said === "") return;
-		AccessibilityInfo.announceForAccessibility(said);
+		/* The decision is `healthAnnouncement`'s (pure, table-tested); this effect
+		 *  only supplies the order of readings. The region's text is STATE, not a
+		 *  value derived in render, so a same-value re-render cannot fill it. */
+		const word = healthAnnouncement(before, health);
+		if (word === said) return;
+		setSaid(word);
+		if (word !== "" && Platform.OS === "ios") {
+			AccessibilityInfo.announceForAccessibility(word);
+		}
 	}, [health, said]);
 	return (
 		<Text
@@ -409,7 +414,6 @@ export function HealthAnnouncer({ health }: { health: SessionHealth | null }) {
 		</Text>
 	);
 }
-
 /**
  * The header's action cluster: the find lever and, ONLY while it has an item,
  * the overflow menu (UX U3 / design D9 / QA Q6: on a live or yellow session

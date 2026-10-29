@@ -168,6 +168,41 @@ describe("compactTitleChars", () => {
 		);
 	});
 
+	/* Review round 4, D15 / QA N3. The Q9 fix moved the state word onto this row,
+	 * where it takes width from the flex-1 title; a budget that ignored it
+	 * promised more than the row holds and the platform clipped the tail (measured
+	 * at 135 %: clientWidth 313 against scrollWidth 351). */
+	it.each([
+		{ width: 844, height: 390 },
+		{ width: 915, height: 412 },
+	])("charges the state word at $width, at every scale", (viewport) => {
+		for (const scale of [1, 1.35, 2]) {
+			const withWord = compactTitleChars(viewport, scale, { word: true });
+			const bare = compactTitleChars(viewport, scale);
+			expect(withWord).toBeLessThan(bare);
+		}
+	});
+
+	it("leaves room for the widest state word after the title is cut", () => {
+		const viewport = { width: 844, height: 390 };
+		const scale = 1.35;
+		const chars = compactTitleChars(viewport, scale, {
+			menu: true,
+			word: true,
+		});
+		const advance = 14.06 * (20 / 28) * scale;
+		/* The row, less the chrome the budget charges, less the widest word the
+		 *  control can draw plus its gap: the cut name must fit in what is left. */
+		const widest = Math.max(
+			"Not answering".length,
+			"Reconnecting".length,
+			"Ended".length,
+		);
+		expect(
+			chars * advance + widest * (14.06 * (12 / 28) * 0.62) * scale + 8 * scale,
+		).toBeLessThanOrEqual(844 - 32);
+	});
+
 	it("fits: a name cut to the budget times the compact advance stays inside the row", () => {
 		const viewport = { width: 915, height: 412 };
 		const chars = compactTitleChars(viewport, 2);

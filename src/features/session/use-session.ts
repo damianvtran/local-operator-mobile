@@ -627,6 +627,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		/* The loop's own end, so a terminal failure the provider never saw still
 		 *  reads as stopped (QA round 3, Q10). */
 		streamClosed: facts.state === "closed",
+		/* The route's own refusal, which outlives the effect teardown that drops
+		 *  the stream's terminal report (review round 4, N1). */
+		routeRefused: source.reason === "refused",
 	});
 
 	const connection = useMemo((): ConnectionView => {

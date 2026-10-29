@@ -126,6 +126,7 @@ export const STATE_MARKER_ALIASES: Record<string, string> = {
 	/* The dropped-cause sheet is the same surface as the quiet one: the sheet's
 	 * own id affirms it, while its copy distinguishes the two yellow causes. */
 	"health-dropped-sheet": "health-sheet",
+	"health-quiet-sheet": "health-sheet",
 	narrow: "populated",
 	scroll: "populated",
 	approval: "pending-approval",
