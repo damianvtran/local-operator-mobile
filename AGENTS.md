@@ -105,8 +105,8 @@ geometry, draft/queue/privacy boundaries and the rendered-evidence gate.
 ## Internationalization: mandatory policy
 
 **No NEW hardcoded user-facing copy ships, and no feature ships in English only.**
-The tree is not clean yet: `i18n:check` reports 284 literals (270 distinct entries) baselined in
-`scripts/i18n/strings-baseline.json` that predate the runtime, and six of the
+The tree is not clean yet: `i18n:check` reports 285 literals (271 distinct entries) baselined in
+`scripts/i18n/strings-baseline.json` that predate the runtime, and seven of the
 eight supported languages have no catalogue. The gate is a ratchet — it fails a
 pull request that adds copy no key owns and cannot be made to grow — not a claim
 that everything is already keyed.
@@ -131,7 +131,7 @@ that everything is already keyed.
   non-English catalogue directory must define exactly the English keys,
   namespace by namespace, so a key missing from any locale THAT HAS A DIRECTORY
   fails. A supported locale with no directory is not compared at all (today:
-  `es`, `zh-CN`, `ru`, `vi`, `ur`, `hi`), so a key added to `en` alone is green; that
+  every supported locale but `en`), so a key added to `en` alone is green; that
   is the deliberate ship-wave decision, and it is why the app is not held to
   core's "every key in every language in `languages.json`" rule yet. Then
   `scripts/i18n/check-strings.ts`, which fails on a NEW user-facing literal that
@@ -155,7 +155,7 @@ that everything is already keyed.
   entry, so a literal that genuinely must stay English is handled by changing the
   scanner rule deliberately (`scan-strings.ts`, in review) rather than by
   appending to the baseline. Every entry that exists carries an `owner` and a
-  `payoff` (the condition that removes it), enforced by the check. The 270 entries
+  `payoff` (the condition that removes it), enforced by the check. The 271 entries
   that predate this rule carry one owner for the whole set — `damianvtran`,
   recorded as a group, not researched per literal — and one shared payoff; the
   owner of an entry is whoever keys it.
@@ -163,15 +163,17 @@ that everything is already keyed.
   `src/i18n/catalogues/<locale>/mobile.<area>.json`, with translator context in
   the sibling `mobile.<area>.context.json` sidecar. **The namespace is the file
   stem** (`mobile.schedules`). A key is `<namespace>.<name>` or
-  any deeper lower_snake_case path under it, up to **FIVE segments after the
-  namespace**: it MUST begin with its namespace and a dot, and every segment is
-  non-empty lower_snake_case. The bound is derived from the vocabulary this app
-  SHARES with the core client — `relay.chrome.session.subtitle.not_answering`
-  carries core's audited safety copy and is adopted byte-for-byte, because
-  renaming it would hide that two clients name one state the same way — not from
-  a stylistic preference. A flat key remains legal
-  (`mobile.account_routing.reload`), as does a grouped one
-  (`mobile.schedules.count.wakes`). Keys are fully qualified, semantic and
+  `<namespace>.<group>.<name>`: it MUST begin with its namespace and a dot, the
+  remainder is one or two non-empty lower_snake_case segments, and the group is
+  OPTIONAL — a flat key is legal (`mobile.account_routing.reload`), as is a
+  grouped one (`mobile.schedules.count.wakes`). **Mirrored copy is the one
+  exception:** the `relay.*` catalogues are the desktop relay's own strings,
+  copied key for key so a later adoption of the core locale files is a file copy
+  rather than a translation pass, and the core's shape is deeper than one group
+  (`relay.chrome.session.subtitle.not_answering`). Their depth is free; their
+  prefix, segment syntax and non-empty remainder are still enforced, and the
+  exemption cannot leak into an ordinary namespace. Use a group when a namespace has
+  clusters of related keys, not otherwise. Keys are fully qualified, semantic and
   immutable, because the namespace is a file-layout and review-boundary decision,
   not a second argument to `t()`. `generate.ts` enforces this
   (`scripts/i18n/key-shape.ts`): a key that violates it fails generation.
