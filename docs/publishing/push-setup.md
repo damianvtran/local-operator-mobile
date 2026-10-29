@@ -37,7 +37,7 @@ Three artefacts come out of Part 1, and every later step depends on them:
 | Artefact | Comes from | Held by | Never in the repository |
 | --- | --- | --- | --- |
 | `firebase:enabled` on the project | Firebase registration | Google Cloud project | — (a label, no file) |
-| APNs `.p8` + its **key id** and **team id** | Apple developer console | the cloud's secret store | the `.p8` file, always |
+| APNs `.p8` **keys — one per environment** (Sandbox, Production) + each **key id**, and the **team id** | Apple developer console | the cloud's secret store | the `.p8` files, always |
 | FCM service-account **JSON key** | Google Cloud console | the cloud's secret store | the JSON, always |
 
 ### 1. Register Firebase on the existing Google Cloud project
@@ -74,33 +74,60 @@ the decision forbids, so treat any such prompt as a thing to decline.
 record in the change ticket *when* it was done and by whom, because the label is the only audit
 trail Google gives it.
 
-### 2. Create the APNs `.p8` key, and record its key id and team id
+### 2. Create the APNs `.p8` keys, and record each key id and the team id
 
 This is iOS's send credential. It is separate from FCM: **APNs is not routed through Firebase** in
-this design (ADR 0006 §5), so a project with no iOS traffic still needs this key the day iOS push
+this design (ADR 0006 §5), so a project with no iOS traffic still needs these keys the day iOS push
 ships.
 
 **Where.** Apple developer console → **Certificates, Identifiers & Profiles → Keys → the add
-button (+)**, then choose **Apple Push Notification service (APNs)** and configure the key
+button (+)**, then choose **Apple Push Notification service (APNs)**, click **Configure**, and choose
+the environment and the key type as set out below
 ([Create a private key to access a service](https://developer.apple.com/help/account/keys/create-a-private-key/),
 read 2026-10-29). The required role is **Account Holder or Admin** — a developer-role account
 cannot see the Keys section, which is the usual reason this step stalls.
 
-- **Key type: Team Scoped.** The ADR records why this is not a choice worth making the other way:
-  an APNs key "is **team-scoped by design** — one key sends to *any* app in that Apple Developer
-  team — so the only scoping is `apns-topic` fixed to the bundle id" (ADR 0006 §5;
-  [`docs/push-cloud-ops.md`](../push-cloud-ops.md) § 5). It is one key for the team, not one per app.
+- **Key type: Team Scoped — but one key *per environment*, which is two keys, not one.** Two axes
+  are easy to conflate here and the second is the trap:
+  - *Per app: no.* An APNs key "is **team-scoped by design** — one key sends to *any* app in that
+    Apple Developer team" ([`docs/push-cloud-ops.md`](../push-cloud-ops.md) § 5), so the app-level
+    scoping is `apns-topic` fixed to the bundle id rather than one key per app. That reasoning is
+    right and unchanged.
+  - *Per environment: yes.* The console asks for the environment while the key is configured, and
+    the key it issues serves one of them: team-scoped keys "restrict usage to either Sandbox or
+    Production … Each environment can have a maximum of two keys" ([Establishing a token-based
+    connection to APNs](https://developer.apple.com/documentation/usernotifications/establishing-a-token-based-connection-to-apns),
+    read 2026-10-29). Keys created before that scoping existed still work in both, which Apple keeps
+    as a grandfather clause rather than the recommended state ("it will continue to be supported.
+    However, it's recommended to use different, environment-specific keys"). **So create two keys —
+    one Sandbox, one Production — and record each Key ID separately.** One key is not a shortcut
+    here: it is one environment silently unsupported.
+  - **Why the second axis bites this app specifically.** These builds use both environments — the
+    Expo config plugin sets `aps-environment` to `development` and Xcode flips it to `production` in
+    an archive (below) — so a lone Production key fails every development-build device and a lone
+    Sandbox key fails every archive. The error is `BadEnvironmentKeyInToken`, which the ops note
+    already places in its environment-skew alert class
+    ([`docs/push-cloud-ops.md`](../push-cloud-ops.md) § 4); that alert exists to catch this mismatch,
+    and a runbook that walks the operator into it on purpose is a defect.
+  - **Who picks which key at send time.** The entitlement follows the build's provisioning profile —
+    an app-side fact, from the App ID's capability — while the key is selected by the cloud per
+    device from the `environment` that device registered with, `sandbox` or `production`, "only the
+    app knows which build it is" (ADR 0006 §2.2, Device row). The two have to agree, and nothing in
+    the app can make them.
 
-**What to name it.** A name that says what it is and who holds it, e.g. `Radient cloud push`. The
-name is cosmetic; the **Key ID** is not, and Apple shows it on the key's detail page.
+**What to name them.** Names that say what each is and who holds it, e.g. `Radient cloud push
+(sandbox)` and `Radient cloud push (production)`. Names are cosmetic; the **Key IDs** are not, and
+Apple shows each on its own key's detail page.
 
-**What artefact results.** A text file with a `.p8` extension, plus two identifiers that must be
-recorded beside it:
+**What artefacts result.** Two text files with a `.p8` extension — one per environment — plus the
+identifiers that must be recorded beside them:
 
-- the **Key ID** (from the key's detail page);
-- the **Team ID** (from **Membership details** in the same console).
+- a **Key ID** per key, from each key's detail page — the two are not interchangeable, and a
+  credential paired with the wrong one authenticates as the wrong environment;
+- the **Team ID**, one for the team (from **Membership details** in the same console), shared by both
+  keys and by every app in the team.
 
-Apple offers the file at creation. **Download it then, store it, and treat a lost key as a
+Apple offers each file at creation. **Download it then, store it, and treat a lost key as a
 rotation** rather than as a recoverable one: the console does not hand the same key out twice.
 
 **The capability and the entitlement are a different thing, and they belong to the app id.** The
