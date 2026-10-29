@@ -364,7 +364,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/tokens":
 		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "4c29813baeceac33e0dc5108f43529071bc5f4a403a9bd720e1f02704f1d3fbe",
+	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
+	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
+	 * and `src/i18n/__tests__/locales.test.ts`, so `src` MUST move and the guard is
+	 * working. The same digest also covers main's advances merged in to resolve this
+	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
+	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
+	 * construction — so only `src` was re-pinned. */
+	src: "1531a1548bee982152b1eb9548ba594930b50d4df0b1c500093c818045d6987a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
