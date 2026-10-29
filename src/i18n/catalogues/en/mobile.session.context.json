@@ -1,4 +1,8 @@
 {
+	"mobile.session.conversation_details": {
+		"role": "heading",
+		"note": "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop."
+	},
 	"mobile.session.status_tray.hint": {
 		"role": "help",
 		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."

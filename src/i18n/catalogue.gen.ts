@@ -133,6 +133,9 @@ export type CatalogueKey =
 	| "mobile.schedules.show_less.wakes"
 	| "mobile.schedules.show_more.monitors"
 	| "mobile.schedules.show_more.wakes"
+	| "mobile.schedules.state.disabled"
+	| "mobile.schedules.state.dormant"
+	| "mobile.schedules.state.expired"
 	| "mobile.schedules.state.stale"
 	| "mobile.schedules.state.waiting"
 	| "mobile.schedules.summary.monitors_armed"
@@ -143,6 +146,7 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.conversation_details"
 	| "mobile.session.status_tray.hint";
 
 /** Keys with no placeholders: `t()` takes no second argument for these. */
@@ -235,11 +239,15 @@ export type NoParamKey =
 	| "mobile.schedules.read_unreachable"
 	| "mobile.schedules.show_less.monitors"
 	| "mobile.schedules.show_less.wakes"
+	| "mobile.schedules.state.disabled"
+	| "mobile.schedules.state.dormant"
+	| "mobile.schedules.state.expired"
 	| "mobile.schedules.state.stale"
 	| "mobile.schedules.state.waiting"
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.conversation_details"
 	| "mobile.session.status_tray.hint";
 
 /** Keys that take one argument object, typed by `MessageParams`. */
@@ -352,6 +360,9 @@ export type MessageParams = {
 	"mobile.schedules.show_less.wakes": NoParams;
 	"mobile.schedules.show_more.monitors": { hidden: number };
 	"mobile.schedules.show_more.wakes": { hidden: number };
+	"mobile.schedules.state.disabled": NoParams;
+	"mobile.schedules.state.dormant": NoParams;
+	"mobile.schedules.state.expired": NoParams;
 	"mobile.schedules.state.stale": NoParams;
 	"mobile.schedules.state.waiting": NoParams;
 	"mobile.schedules.summary.monitors_armed": { count: string | number };
@@ -362,6 +373,7 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: string | number };
 	"mobile.schedules.truncated": { shown: string | number; total: string | number; family: string };
+	"mobile.session.conversation_details": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 };
 
@@ -487,6 +499,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.show_less.wakes": "Show fewer wakes",
 	"mobile.schedules.show_more.monitors": "{hidden, plural, one {Show # more monitor} other {Show # more monitors}}",
 	"mobile.schedules.show_more.wakes": "{hidden, plural, one {Show # more wake} other {Show # more wakes}}",
+	"mobile.schedules.state.disabled": "disabled",
+	"mobile.schedules.state.dormant": "dormant",
+	"mobile.schedules.state.expired": "expired",
 	"mobile.schedules.state.stale": "stale",
 	"mobile.schedules.state.waiting": "waiting",
 	"mobile.schedules.summary.monitors_armed": "{count} armed",
@@ -497,6 +512,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 };
 
@@ -607,6 +623,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.show_less.wakes": { role: "button", note: "Collapse control for the per-entry wake disclosure. Shown only while expanded." },
 	"mobile.schedules.show_more.monitors": { role: "button", note: "Expand control for hidden monitor rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more monitor', not 'more monitors'." },
 	"mobile.schedules.show_more.wakes": { role: "button", note: "Expand control for hidden wake rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more wake', not 'more wakes'." },
+	"mobile.schedules.state.disabled": { role: "status", note: "The store's state word for a monitor the user turned off, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop, no sentence around it." },
+	"mobile.schedules.state.dormant": { role: "status", note: "The store's state word for a monitor whose conversation is not running, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop. It must not be confused with the parked CLAUSE that replaces the whole head line." },
+	"mobile.schedules.state.expired": { role: "status", note: "The store's state word for a monitor past its expiry, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop." },
 	"mobile.schedules.state.stale": { role: "status", note: "One word replacing the due clock when the supervisor has given up on a wake. The terminal's own vocabulary for this state." },
 	"mobile.schedules.state.waiting": { role: "status", note: "One word for an armed monitor with no recorded due time. Replaces the slot that would hold a due clock." },
 	"mobile.schedules.summary.monitors_armed": { role: "heading", note: "Monitors section header when every monitor is healthy. {count} is the number of monitor rows; no final full stop." },
@@ -617,5 +636,145 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+};
+
+/**
+ * Every locale directory beside `en/`, projected from its JSON exactly as
+ * written. `Record<CatalogueKey, string>` is a compile-time completeness check
+ * as well as a type: a locale that loses a key stops compiling here, one step
+ * before `--check` reports the same parity failure.
+ *
+ * The map is keyed by the directory name — the canonical BCP-47 tag — and is
+ * UNFILTERED: it carries a locale whether or not `SHIPPED_LOCALES` in
+ * `src/i18n/locale.ts` claims it, because "a translation exists" and "this
+ * build renders it" are two decisions with two owners. `catalogues.ts` is where
+ * the shipped set is applied.
+ */
+export const LOCALISED_MESSAGES: Readonly<
+	Record<string, Readonly<Record<CatalogueKey, string>>>
+> = {
+	"fr": {
+		"mobile.account_routing.disconnected": "Connectez un ordinateur pour modifier l’acheminement du compte.",
+		"mobile.account_routing.error": "Impossible de confirmer la modification. Vérifiez la connexion et rechargez la politique en vigueur.",
+		"mobile.account_routing.load_error": "Impossible de charger l’acheminement du compte. Vérifiez la connexion et réessayez.",
+		"mobile.account_routing.loading": "Chargement de l’acheminement du compte…",
+		"mobile.account_routing.rejected": "La modification n’a pas été enregistrée. Vérifiez la valeur ou les paramètres de cet ordinateur, puis réessayez.",
+		"mobile.account_routing.reload": "Recharger la politique",
+		"mobile.account_routing.retry": "Réessayer",
+		"mobile.account_routing.save": "Enregistrer la politique",
+		"mobile.account_routing.saved": "Enregistré sur cet ordinateur.",
+		"mobile.account_routing.saving": "Enregistrement…",
+		"mobile.account_routing.scope": "Les modifications s’appliquent uniquement à cet ordinateur.",
+		"mobile.account_routing.title": "Acheminement du compte",
+		"mobile.account_routing.unavailable": "Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.",
+		"mobile.account_routing.unsaved": "Pas encore enregistré.",
+		"mobile.computers.add": "Ajouter un ordinateur",
+		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
+		"mobile.computers.badge.active": "actif",
+		"mobile.computers.badge.connecting": "connexion",
+		"mobile.computers.connecting": "Connexion…",
+		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
+		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
+		"mobile.computers.section.on_phone": "Sur ce téléphone",
+		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
+		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
+		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
+		"mobile.home.options.apply": "Utiliser ces options",
+		"mobile.home.options.fixed": "Les options initiales de cette conversation sont fixes. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
+		"mobile.home.options.folder": "Dossier sur cet ordinateur",
+		"mobile.home.options.title": "Options de la conversation",
+		"mobile.home.queue.discard": "Supprimer les messages en attente",
+		"mobile.home.queue.restore": "Déplacer les messages en attente vers le brouillon",
+		"mobile.home.queue.sheet_title": "Messages en attente",
+		"mobile.home.queue.view": "Voir les messages en attente",
+		"mobile.home.refused_start_fallback": "Ce dossier n’existe pas sur cet ordinateur.",
+		"mobile.home.starting": "Démarrage…",
+		"mobile.home.startup_queue.blocked": "Réessayez d’envoyer les messages en attente",
+		"mobile.home.startup_queue.not_started": "Non démarrée",
+		"mobile.home.startup_queue.sending": "Envoi des messages en attente…",
+		"mobile.home.startup_queue.unconfirmed": "Démarrage non confirmé",
+		"mobile.home.suggestion.last_turn": "Montrez le dernier tour",
+		"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
+		"mobile.home.suggestion.phone_access": "Activez l’accès mobile",
+		"mobile.home.suggestion.review_repo": "Examinez ce repo",
+		"mobile.home.suggestion.team_of_agents": "Créez une équipe",
+		"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
+		"mobile.home.tip.parallel": "demandez plusieurs sous-agents en parallèle",
+		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
+		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
+		"mobile.home.transcript.waiting": "En attente de la conversation…",
+		"mobile.notifications.answer": "Répondre",
+		"mobile.notifications.back": "Retour",
+		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
+		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
+		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
+		"mobile.notifications.detail.from": "Depuis",
+		"mobile.notifications.detail.no_asks": "Aucune question dans cette conversation.",
+		"mobile.notifications.detail.nothing_to_dismiss": "Aucune mise à jour de cette conversation à ignorer.",
+		"mobile.notifications.detail.projects": "Projets",
+		"mobile.notifications.dismiss": "Ignorer",
+		"mobile.notifications.filter_label": "Afficher",
+		"mobile.notifications.load_failed": "Impossible de charger les notifications",
+		"mobile.notifications.priority_high": "Élevée",
+		"mobile.notifications.title": "Notifications",
+		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
+		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
+		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
+		"mobile.projects.milestones.count": "{completed} jalons sur {total}",
+		"mobile.projects.milestones.none": "aucun jalon",
+		"mobile.projects.project_name_hint": "1 à 64 caractères : lettres, chiffres, point, tiret bas ou tiret. Aucun espace, et le nom ne peut pas commencer par un tiret.",
+		"mobile.projects.remove_milestone_body": "Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.",
+		"mobile.projects.session_state.filed_by": "classé par",
+		"mobile.projects.session_state.missing": "manquant",
+		"mobile.projects.session_state.not_running": "arrêtée",
+		"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
+		"mobile.projects.sessions.live": "{base} · {live} en cours",
+		"mobile.projects.stale_badge": "progression obsolète",
+		"mobile.projects.write_receipt": "{action} {subject}.",
+		"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.",
+		"mobile.schedules.cadence.every": "tous les {duration}",
+		"mobile.schedules.cadence.left": "{cadence} · {remaining, plural, one {# envoi restant} many {# d’envois restants} other {# envois restants}}",
+		"mobile.schedules.cadence.once": "une fois",
+		"mobile.schedules.cadence.spent": "{cadence} · plus aucun envoi restant",
+		"mobile.schedules.count.monitors": "{count, plural, one {# surveillance} many {# de surveillances} other {# surveillances}}",
+		"mobile.schedules.count.wakes": "{count, plural, one {# réveil} many {# de réveils} other {# réveils}}",
+		"mobile.schedules.due.ahead": "dans {label}",
+		"mobile.schedules.due.overdue": "en retard de {label}",
+		"mobile.schedules.empty.body": "Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements.",
+		"mobile.schedules.empty.title": "Aucune planification active",
+		"mobile.schedules.empty_line.monitors": "Aucune surveillance active.",
+		"mobile.schedules.empty_line.wakes": "Aucun réveil planifié.",
+		"mobile.schedules.gone.monitors": "Disparue — sa conversation n’existe plus sur cette machine, donc aucune vérification n’a lieu",
+		"mobile.schedules.gone.wakes": "Disparu — sa conversation n’existe plus sur cette machine, donc aucun déclenchement n’a lieu",
+		"mobile.schedules.head.next": "{head} · prochaine échéance {label}",
+		"mobile.schedules.head.overdue": "{head} · {label}",
+		"mobile.schedules.parked.monitors": "En pause — les surveillances reprennent lorsque sa conversation s’exécute de nouveau",
+		"mobile.schedules.parked.wakes": "En pause — les réveils reprennent après son prochain tour",
+		"mobile.schedules.read_error.monitors": "Impossible de lire les surveillances de cette machine.",
+		"mobile.schedules.read_error.wakes": "Impossible de lire les réveils de cette machine.",
+		"mobile.schedules.read_unreachable": "Impossible de lire les planifications de cette machine pour le moment.",
+		"mobile.schedules.show_less.monitors": "Afficher moins de surveillances",
+		"mobile.schedules.show_less.wakes": "Afficher moins de réveils",
+		"mobile.schedules.show_more.monitors": "{hidden, plural, one {Afficher # surveillance de plus} many {Afficher # de surveillances de plus} other {Afficher # surveillances de plus}}",
+		"mobile.schedules.show_more.wakes": "{hidden, plural, one {Afficher # réveil de plus} many {Afficher # de réveils de plus} other {Afficher # réveils de plus}}",
+		"mobile.schedules.state.disabled": "désactivée",
+		"mobile.schedules.state.dormant": "en veille",
+		"mobile.schedules.state.expired": "expirée",
+		"mobile.schedules.state.stale": "obsolète",
+		"mobile.schedules.state.waiting": "en attente",
+		"mobile.schedules.summary.monitors_armed": "{count, plural, one {# active} many {# de surveillances actives} other {# actives}}",
+		"mobile.schedules.summary.monitors_attention": "{broken} sur {total} en alerte",
+		"mobile.schedules.summary.wakes": "{count, plural, one {# planifié} many {# de réveils planifiés} other {# planifiés}}",
+		"mobile.schedules.supervisor.not_running": "Le superviseur de réveils est installé, mais ne s’exécute pas : les réveils ci-dessous ne se déclencheront pas.",
+		"mobile.schedules.supervisor.unsupported": "Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute.",
+		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
+		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
+		"mobile.schedules.truncated": "Affichage de {shown} conversations sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.conversation_details": "Détails de la conversation",
+		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+	},
 };

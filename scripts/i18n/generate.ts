@@ -1,6 +1,7 @@
 /**
  * Generate the runtime's catalogue projection and typed key surface from the
- * English catalogues.
+ * catalogues: English is the source of the typed surface and of every message,
+ * and every other locale directory beside `en/` is projected beside it.
  *
  * WHY GENERATED. The typed surface has to be a *consequence* of the catalogues,
  * not a second list maintained beside them. A key added to a JSON file and not
@@ -183,42 +184,76 @@ for (const file of namespaces) {
 const keys = [...messages.keys()].sort(compare);
 
 /**
- * LOCALE PARITY. Every other locale directory next to `en/` must define exactly
- * the English keys, namespace by namespace: a key missing from a locale would
- * render the English fallback for that reader without anyone having decided it
- * should, and a key the source does not have is a message nothing can ask for.
- * The programme's gate is "missing keys in any supported locale fail CI"; with
- * only `en` shipped today the loop has nothing to compare, and the moment a
- * translation directory lands this check is already armed. Placeholders are not
- * compared here — that is the translation wave's audit, not this slice's.
+ * LOCALE PARITY AND PROJECTION. Every other locale directory next to `en/` must
+ * define exactly the English keys, namespace by namespace: a key missing from a
+ * locale would render the English fallback for that reader without anyone having
+ * decided it should, and a key the source does not have is a message nothing can
+ * ask for. The same walk PROJECTS each translation into the generated module
+ * (`LOCALISED_MESSAGES`), so `catalogues.ts` never hand-copies a locale: a
+ * directory that exists is a directory the runtime can reach, and "wire the new
+ * locale up" stops being a second manual step nobody can check.
+ *
+ * Each translated message is PARSED with the same parser the runtime uses, so a
+ * translation that breaks the placeholder/plural grammar fails generation rather
+ * than throwing on a reader's screen. Placeholder SETS are not compared — a
+ * French plural is spelled with categories an English source does not have, so
+ * parity there is the translation review's call, not this tool's guess.
  */
-for (const locale of readdirSync(join(CATALOGUE_DIR, ".."), {
-	withFileTypes: true,
-})) {
-	if (!locale.isDirectory() || locale.name === "en") continue;
-	const directory = join(CATALOGUE_DIR, "..", locale.name);
+const catalogueRoot = join(CATALOGUE_DIR, "..");
+
+const localeNames = readdirSync(catalogueRoot, { withFileTypes: true })
+	.filter((entry) => entry.isDirectory() && entry.name !== "en")
+	.map((entry) => entry.name)
+	.sort(compare);
+
+/** locale → key → translated message, projected into `catalogue.gen.ts`. */
+const translations = new Map<string, Map<string, string>>();
+
+for (const locale of localeNames) {
+	const directory = join(catalogueRoot, locale);
+	const translated = new Map<string, string>();
+	const unknownNamespaces = readdirSync(directory)
+		.filter((name) => name.endsWith(".json") && !name.endsWith(".context.json"))
+		.filter((name) => !namespaces.includes(name))
+		.sort(compare);
+	if (unknownNamespaces.length > 0) {
+		fail(
+			`${locale}: defines a namespace the English source does not — ${unknownNamespaces.join(", ")}`,
+		);
+	}
 	for (const file of namespaces) {
-		let translated: Record<string, unknown>;
+		let catalogue: Record<string, unknown>;
 		try {
-			translated = readObject(join(directory, file), `${locale.name}/${file}`);
+			catalogue = readObject(join(directory, file), `${locale}/${file}`);
 		} catch {
-			fail(
-				`${locale.name}/${file} is missing; every locale needs every namespace`,
-			);
+			fail(`${locale}/${file} is missing; every locale needs every namespace`);
 		}
 		const source = Object.keys(readObject(join(CATALOGUE_DIR, file), file));
-		const missing = source.filter((key) => !(key in translated));
-		const extra = Object.keys(translated).filter(
-			(key) => !source.includes(key),
-		);
+		const missing = source.filter((key) => !(key in catalogue));
+		const extra = Object.keys(catalogue).filter((key) => !source.includes(key));
 		if (missing.length > 0 || extra.length > 0) {
 			fail(
-				`${locale.name}/${file} disagrees with the English source — missing: ${
+				`${locale}/${file} disagrees with the English source — missing: ${
 					missing.join(", ") || "none"
 				}; unknown: ${extra.join(", ") || "none"}`,
 			);
 		}
+		for (const key of source) {
+			const value = catalogue[key];
+			if (typeof value !== "string" || value.trim() === "") {
+				fail(`${locale}/${file}: ${key} must be a non-empty string`);
+			}
+			try {
+				parseMessage(value);
+			} catch (error) {
+				fail(
+					`${locale}/${file}: ${key} is not a valid message — ${(error as Error).message}`,
+				);
+			}
+			translated.set(key, value);
+		}
 	}
+	translations.set(locale, translated);
 }
 
 /** Split by shape: `t()` uses these two unions as its overload domains, so a
@@ -265,6 +300,23 @@ const contextRows = keys
 		const entry = context.get(key);
 		if (entry === undefined) fail(`missing context for ${key}`);
 		return `\t${JSON.stringify(key)}: { role: ${JSON.stringify(entry.role)}, note: ${JSON.stringify(entry.note)} },`;
+	})
+	.join("\n");
+
+/** One locale's whole catalogue, key-ordered exactly as the English source is, so
+ *  a translation diff is a value change and never a reordering. */
+const localeRows = localeNames
+	.map((locale) => {
+		const translated = translations.get(locale);
+		if (translated === undefined) fail(`no projection for ${locale}`);
+		const rows = keys
+			.map((key) => {
+				const value = translated.get(key);
+				if (value === undefined) fail(`${locale}: no projection for ${key}`);
+				return `\t\t${JSON.stringify(key)}: ${JSON.stringify(value)},`;
+			})
+			.join("\n");
+		return `\t${JSON.stringify(locale)}: {\n${rows}\n\t},`;
 	})
 	.join("\n");
 
@@ -330,6 +382,24 @@ ${messageRows}
 /** Translator context for every key above. */
 export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> = {
 ${contextRows}
+};
+
+/**
+ * Every locale directory beside \`en/\`, projected from its JSON exactly as
+ * written. \`Record<CatalogueKey, string>\` is a compile-time completeness check
+ * as well as a type: a locale that loses a key stops compiling here, one step
+ * before \`--check\` reports the same parity failure.
+ *
+ * The map is keyed by the directory name — the canonical BCP-47 tag — and is
+ * UNFILTERED: it carries a locale whether or not \`SHIPPED_LOCALES\` in
+ * \`src/i18n/locale.ts\` claims it, because "a translation exists" and "this
+ * build renders it" are two decisions with two owners. \`catalogues.ts\` is where
+ * the shipped set is applied.
+ */
+export const LOCALISED_MESSAGES: Readonly<
+	Record<string, Readonly<Record<CatalogueKey, string>>>
+> = {
+${localeRows}
 };
 `;
 
