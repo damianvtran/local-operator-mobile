@@ -282,11 +282,53 @@ export async function runInboxReturnFlow({
 				 * door QA round 1 recorded as never pressed. */
 				if (!undo) {
 					const row = target.replace("n_audit", "n_fraud");
-					const arm = async () => {
+					/* ARM N REFUSALS, not one: the recovery cell needs a single refusal
+					 * consumed by the mount read, and the failed-retry cell needs the retry
+					 * refused too — with a one-shot latch that state is unreachable. */
+					const arm = async (failures = 1) => {
 						const armed = await fetch(`${relay}/__mock/inbox-return`, {
 							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify({ failures }),
 						});
-						assert(armed.ok, "could not arm the one-shot inbox failure");
+						assert(armed.ok, "could not arm the inbox failure");
+					};
+					/* SERVER TRUTH FOR THE BADGE, from the relay's own store rather than a
+					 * number written into this file: the bell and the rail are compared
+					 * against what the store actually holds at that moment. */
+					const serverUnread = async (): Promise<number> => {
+						const answer = await fetch(`${relay}/__mock/state`);
+						assert(answer.ok, "relay state unavailable");
+						const body = (await answer.json()) as {
+							inbox?: {
+								unread_count?: number;
+								waiting_unread_count?: number;
+							};
+						};
+						const counts = body.inbox;
+						assert(counts, "relay state carries no inbox counts");
+						return (
+							Number(counts.unread_count ?? 0) +
+							Number(counts.waiting_unread_count ?? 0)
+						);
+					};
+					/** The home bell's own words, exactly as a reader's screen reader
+					 *  gets them — the same attribute the earlier count cells assert. */
+					const bellLabel = async (): Promise<string | null> => {
+						await wait(`Boolean(${present(CONTROL.homeNotifications)})`);
+						return evaluate<string | null>(
+							`${present(CONTROL.homeNotifications)}?.getAttribute('aria-label') ?? null`,
+						);
+					};
+					/** The conversations rail's badge, which must not disagree with the bell. */
+					const railBadge = async (): Promise<string | null> => {
+						await press(CONTROL.homeSidebar);
+						await wait(
+							`Boolean(${present(CONTROL.sidebarNotificationsCount)})`,
+						);
+						return evaluate<string | null>(
+							`${present(CONTROL.sidebarNotificationsCount)}?.textContent?.trim() ?? null`,
+						);
 					};
 					/* WARM THE ROW FIRST, so the measured return performs NO write. A detail
 					 * that reads an unread item publishes `noteInboxWrite`, and the list's own
@@ -344,10 +386,97 @@ export async function runInboxReturnFlow({
 						`!Boolean(${present(SURFACE.inboxError)})&&document.querySelectorAll('[data-testid^="notification-row-"]').length>0`,
 					);
 					await record("failure-after");
+					/* THE BADGE FOLLOWS THE RECOVERY. A read that succeeded against the relay
+					 * must reach the two entry points the count is painted at, and the number
+					 * is checked against the STORE rather than a literal in this file: a bell
+					 * that agrees only with an expectation is not evidence that it agrees with
+					 * the relay. */
+					const recoveredTruth = await serverUnread();
+					await press(CONTROL.inboxBack);
+					const recoveredBell = await bellLabel();
+					const recoveredRail = await railBadge();
+					journal.push({
+						assertion: "badge after a successful Try again",
+						serverTruth: recoveredTruth,
+						bell: recoveredBell,
+						rail: recoveredRail,
+					});
+					assert.equal(
+						recoveredBell,
+						`Notifications, ${recoveredTruth} unread`,
+						"the bell did not carry the recovered count",
+					);
+					assert.equal(
+						recoveredRail,
+						String(recoveredTruth),
+						"the rail disagreed with the bell after recovery",
+					);
+					await record("recovered-badge");
+					await press(CONTROL.sidebarNotifications);
+					await wait(`Boolean(${present(CONTROL.inboxFilterAll)})`);
 					/* The selection cell needs the All pile: it asserts the filter itself, and
 					 * the read rows it toggles are only listed there. */
 					await press(CONTROL.inboxFilterAll);
 					await wait(`Boolean(${present(row)})`);
+					/* A RETRY THAT FAILS IS ITS OWN STATE. Two refusals: the mount read and the
+					 * Try again that follows it, so this is the one path a one-shot latch cannot
+					 * reach. The screen must keep stating the failure, and the badge must keep
+					 * the last GOOD answer — a failed read that republished a zero would tell a
+					 * reader their inbox is empty when the relay never said so. */
+					const truthBeforeFailedRetry = await serverUnread();
+					await press(CONTROL.inboxBack);
+					await wait(`Boolean(${present(CONTROL.homeNotifications)})`);
+					await arm(2);
+					await press(CONTROL.homeNotifications);
+					await wait(`Boolean(${present(SURFACE.inboxError)})`);
+					await press(CONTROL.inboxRetry);
+					await evaluate("new Promise(r=>setTimeout(r,750))");
+					const afterFailedRetry = await evaluate(
+						`(()=>({error:Boolean(${present(SURFACE.inboxError)}),retry:Boolean(${present(CONTROL.inboxRetry)}),caughtUp:document.body.innerText.includes('All caught up'),skeleton:Boolean(${present(SURFACE.inboxLoading)})}))()`,
+					);
+					journal.push({
+						assertion: "a FAILED retry still states the failure",
+						actual: afterFailedRetry,
+					});
+					assert.deepEqual(
+						afterFailedRetry,
+						{ error: true, retry: true, caughtUp: false, skeleton: false },
+						"a failed retry must keep the failure stated, not resolve to an empty view",
+					);
+					await record("retry-failed");
+					await press(CONTROL.inboxBack);
+					const retainedBell = await bellLabel();
+					const retainedRail = await railBadge();
+					journal.push({
+						assertion: "badge after a FAILED retry",
+						serverTruth: truthBeforeFailedRetry,
+						bell: retainedBell,
+						rail: retainedRail,
+					});
+					assert.notEqual(
+						retainedBell,
+						"Notifications, 0 unread",
+						"a failed read republished a zero badge the relay never gave",
+					);
+					assert.equal(
+						retainedBell,
+						`Notifications, ${truthBeforeFailedRetry} unread`,
+						"the bell dropped the last good count on a failed retry",
+					);
+					assert.equal(
+						retainedRail,
+						String(truthBeforeFailedRetry),
+						"the rail dropped the last good count on a failed retry",
+					);
+					await record("retry-failed-badge");
+					/* The two refusals are spent, so this mount read is the real recovery and
+					 * leaves the list in the state the selection cell asserts. */
+					await press(CONTROL.sidebarNotifications);
+					await wait(`Boolean(${present(CONTROL.inboxFilterAll)})`);
+					await press(CONTROL.inboxFilterAll);
+					await wait(
+						`document.querySelectorAll('[data-testid^="notification-row-"]').length>0`,
+					);
 					journal.push({
 						assertion: "inbox request/response journal",
 						requests: (await readRelayRecord(relay)).filter(

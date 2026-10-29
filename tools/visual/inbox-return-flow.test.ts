@@ -71,10 +71,17 @@ describe("the bounded hosted inbox return proof", () => {
 		expect(flow).toContain("inboxRetry");
 		expect(flow).toContain("inboxSelectionBar");
 		expect(flow).toContain("readRelayRecord");
+		/* The badge cells: the count is compared against the RELAY's store, and a
+		 * failed retry must not republish a zero. */
+		expect(flow).toContain("badge after a successful Try again");
+		expect(flow).toContain("badge after a FAILED retry");
+		expect(flow).toContain("Notifications, 0 unread");
+		expect(flow).toContain("/__mock/state");
+		expect(flow).toContain("arm(2)");
 		/* The failure door and the ledger exist on the RELAY, not in the flow's own
 		 * head: a driver calling a control the mock does not serve fails at runtime. */
 		expect(mockRelay).toContain('"/__mock/inbox-return"');
-		expect(mockRelay).toContain("failNextNotificationList");
+		expect(mockRelay).toContain("failNotificationListReads");
 		expect(relayDriver).toContain("readRelayRecord");
 		/* Native half: a real Back press on a device, and no history call standing in
 		 * for it — the same rule the hosted flow is held to. */

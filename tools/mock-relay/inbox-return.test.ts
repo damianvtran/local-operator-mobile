@@ -37,11 +37,15 @@ async function start() {
 			signal: AbortSignal.timeout(2500),
 			headers: { cookie },
 		});
-	const control = (path: string) =>
+	const control = (path: string, body?: unknown) =>
 		fetch(`${url}${path}`, {
 			method: "POST",
 			signal: AbortSignal.timeout(2500),
-			headers: { "x-lo-harness": "test-client" },
+			headers: {
+				"content-type": "application/json",
+				"x-lo-harness": "test-client",
+			},
+			body: body === undefined ? undefined : JSON.stringify(body),
 		});
 	return { url, get, control };
 }
@@ -77,6 +81,18 @@ describe("the inbox return failure door", () => {
 		);
 	});
 
+	it("refuses as many reads as asked, so a FAILED retry is reachable", async () => {
+		const rig = await start();
+		/* A one-shot latch could only ever let Try again succeed, and the state worth
+		 * proving — what a FAILED retry shows — would be unreachable. */
+		expect((await rig.control("/__mock/inbox-return", { failures: 2 })).status).toBe(
+			200,
+		);
+		expect((await rig.get("/api/notifications?state=all")).status).toBe(503);
+		expect((await rig.get("/api/notifications?state=all")).status).toBe(503);
+		expect((await rig.get("/api/notifications?state=all")).status).toBe(200);
+	});
+
 	it("leaves every other route and every later control call untouched", async () => {
 		const rig = await start();
 		expect((await rig.control("/__mock/inbox-return")).status).toBe(200);
@@ -92,6 +108,21 @@ describe("the inbox return failure door", () => {
 		).toBe(200);
 		expect((await rig.get("/api/notifications?state=unread")).status).toBe(503);
 		expect((await rig.get("/api/notifications?state=unread")).status).toBe(200);
+	});
+
+	it("reports the inbox store's own counts on the control surface", async () => {
+		const rig = await start();
+		/* A badge cell compares the painted count against THIS, so it must be the
+		 * store's answer — the same one `GET /api/notifications` serves. */
+		const state = (await (await rig.get("/__mock/state")).json()) as {
+			inbox?: { unread_count: number; waiting_unread_count: number };
+		};
+		const list = (await (
+			await rig.get("/api/notifications?state=all")
+		).json()) as { unread_count: number; waiting_unread_count: number };
+		expect(state.inbox?.unread_count).toBe(list.unread_count);
+		expect(state.inbox?.waiting_unread_count).toBe(list.waiting_unread_count);
+		expect((list.unread_count ?? 0) + (list.waiting_unread_count ?? 0)).toBe(5);
 	});
 
 	it("records the refused read and the recovered read, so a proof can cite them", async () => {

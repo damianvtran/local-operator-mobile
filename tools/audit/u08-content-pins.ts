@@ -122,7 +122,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"e9c12826074cae29e223329fca4233f194cd2a62145009786c7c7168a780715f",
+		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
 	"tools/mock-relay/scenarios.ts":
 		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
 	"tools/mock-relay/shape.ts":

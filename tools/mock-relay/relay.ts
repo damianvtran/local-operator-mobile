@@ -509,9 +509,12 @@ export interface RelayState {
 	 */
 	transferDials: number;
 	transferJournal: Map<string, { body: string; status: number; payload: Json }>;
-	/** A one-request, route-scoped refusal for a return/readback proof. Unlike the
-	 * persistent gateway fault it cannot poison the next fixture or control call. */
-	failNextNotificationList: boolean;
+	/** How many of the NEXT list page reads to refuse, route-scoped. A COUNT and
+	 * not a boolean because a proof has to be able to fail a retry as well as the
+	 * read before it — with a one-shot latch the Try again could only ever
+	 * succeed. Unlike the persistent gateway fault it cannot poison the next
+	 * fixture or control call. */
+	failNotificationListReads: number;
 	/** All public requests held in memory, so a return proof can count actual
 	 * GETs. Off until a proof arms it: a full matrix must not grow this array. */
 	journalAll: boolean;
@@ -720,7 +723,7 @@ export function createRelay(options: RelayOptions = {}) {
 		seq: 0,
 		recorded: [],
 		journalAll: false,
-		failNextNotificationList: false,
+		failNotificationListReads: 0,
 		requestsServed: 0,
 		approvalsAnswered: 0,
 		admitted: new Map(),
@@ -2908,11 +2911,11 @@ export function createRelay(options: RelayOptions = {}) {
 			 * refusal that ignored that would be consumed by the detail while the cell
 			 * under test (the RETURN's re-read) was never refused at all. */
 			if (
-				state.failNextNotificationList &&
+				state.failNotificationListReads > 0 &&
 				!url.searchParams.has("session_id") &&
 				!url.searchParams.has("cursor")
 			) {
-				state.failNextNotificationList = false;
+				state.failNotificationListReads -= 1;
 				sendJson(res, 503, errorBody("synthetic inbox return read failure"));
 				return;
 			}
@@ -3770,9 +3773,26 @@ export function createRelay(options: RelayOptions = {}) {
 					}
 				}
 				if (pathname === "/__mock/state" && method === "GET") {
+					/* THE INBOX STORE'S OWN COUNTS, on the control surface. A proof that
+					 * asserts the bell/rail badge has to compare it against what the store
+					 * holds, not against a literal in the flow: an expectation written into
+					 * the driver proves only that the driver agrees with itself. This is the
+					 * same store `GET /api/notifications` answers from, read the same way. */
+					const inboxCounts = notificationsStore.page("all", 1) as unknown as {
+						unread_count?: number;
+						waiting_unread_count?: number;
+						high_water?: number;
+					};
 					return sendJson(res, 200, {
 						scenario: state.scenario,
 						faults: state.faults.applied,
+						inbox: {
+							unread_count: Number(inboxCounts.unread_count ?? 0),
+							waiting_unread_count: Number(
+								inboxCounts.waiting_unread_count ?? 0,
+							),
+							high_water: Number(inboxCounts.high_water ?? 0),
+						},
 						sessions: Object.keys(state.world.projections ?? {}).length,
 						admittedCommands: state.admitted.size,
 						supplementOps: state.supplementOps,
@@ -3807,12 +3827,19 @@ export function createRelay(options: RelayOptions = {}) {
 					return;
 				}
 				if (pathname === "/__mock/inbox-return" && method === "POST") {
-					/* ARMS THE RETURN PROOF: one refusal for the next list read, and the
-					 * request ledger the proof counts. Both are off in an ordinary matrix
-					 * run, where neither a scoped refusal nor a per-request array belongs. */
-					state.failNextNotificationList = true;
+					/* ARMS THE RETURN PROOF: N refusals for the next list page reads
+					 * (default 1), and the request ledger the proof counts. Both are off
+					 * in an ordinary matrix run, where neither a scoped refusal nor a
+					 * per-request array belongs. `failures` exists so a proof can refuse
+					 * the retry too and measure what a FAILED retry shows — the state a
+					 * one-shot latch can never reach. */
+					const raw = await readBody(req);
+					const asked = Number(JSON.parse(raw || "{}").failures ?? 1);
+					const failures =
+						Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 1;
+					state.failNotificationListReads = failures;
 					state.journalAll = true;
-					sendJson(res, 200, { failNextNotificationList: true });
+					sendJson(res, 200, { failNotificationListReads: failures });
 					return;
 				}
 				if (pathname === "/__mock/scenario" && method === "POST") {
