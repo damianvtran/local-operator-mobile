@@ -609,7 +609,9 @@ background push. The choice is open with the operator and is not resolved in thi
 What the design does use, so that "no Firebase" is not read as more than it is: app state in Atlas,
 Google identity in the Google Cloud project + Identity Toolkit, Microsoft identity in the Azure
 tenant. FCM's one role is the Android push transport (§5, "What FCM is here, and what it is not"),
-and that role ends at the device: it is a delivery rail, never a place anything is kept. A reader
+and that role ends at the device: it is a delivery rail, not a place state is kept. Its one
+qualification — an accepted message that FCM may hold for up to four weeks by default before the app
+sees it — is in §5 and changes no ownership: the store of record is Atlas. A reader
 who took "FCM + `google-services.json`" to mean this ADR adopts Firebase as the cloud's data layer
 would be reading the opposite of what is designed — which is why the store is named rather than left
 implicit: a record table with no named store is a table an implementer is free to put anywhere.
@@ -1623,7 +1625,20 @@ the worker rides on that rather than inventing a second policy.
 2026-10-28)*. This block exists because a reader can take "FCM + `google-services.json` + a
 cloud-held service account" to mean this project is adopting Firebase as a backend. FCM's one role
 is to carry an already-finished payload to an Android device: the cloud **composes nothing** (§3.2,
-"exactly one composer, the machine"), holds nothing on FCM's side, and asks it for no state back.
+"exactly one composer, the machine") and asks FCM for no state back. That is a claim about who
+authors state and who owns it, and not a claim of zero retention. FCM is not this design's store of
+record, and device, delivery and grant records remain Atlas's (§2.2); but Google does document
+provider-side buffering of an accepted message: "In these cases, FCM stores the message and delivers
+it as soon as possible", and "By default, requests that don't contain this field, last for a maximum
+period of four weeks" ([Set the lifespan of a
+message](https://firebase.google.com/docs/cloud-messaging/customize-messages/setting-message-lifespan),
+read 2026-10-29; a `ttl` of `0` is discarded rather than stored if it cannot be delivered at once).
+**What that means for revocation:** the token drop in §4 rule 1 stops future sends, while a message
+FCM has already accepted can still arrive afterwards — the transport owns it from acceptance, and
+only the app can decline to act on it. The app declines by treating no message as authority: a push
+carries no conversation name and no state (§3.2, P2), so a late one opens a read of the machine, and
+§3.3's rules finish it — the tap is authoritative over the push and the machine over both, so
+nothing is marked or acked that the machine does not already say.
 
 - **The constraint, as precisely as Google states it.** FCM clients "require devices running Android
   7.0 or higher that also have the Google Play Store app installed" — that is, Google Play services
@@ -1635,8 +1650,15 @@ is to carry an already-finished payload to an Android device: the cloud **compos
   services, just as if the app had called the services' `Service.stopSelf()` methods", and "the
   system doesn't allow a background app to create a background service" ([Background Execution
   Limits](https://developer.android.com/about/versions/oreo/background)). An app therefore cannot
-  hold a long-lived connection of its own from the background, so a wake has to arrive from the Play
-  services process.
+  hold a long-lived connection of its own from the background, so something outside it has to wake it,
+  and the same page names how: "An app is placed on the allowlist when it handles a task that's
+  visible to the user, such as: Handling a high-priority Firebase Cloud Messaging (FCM) message"
+  (same page). **When the transport is FCM, that wake arrives through the Play services process**,
+  which receives the message and delivers it. The page's own "such as" is why the claim stops there: a
+  user-installed UnifiedPush distributor is the other wake path (the bullet below), and ordinary
+  foreground work needs neither. What is true only of FCM is that it is the pre-installed path — the
+  Play-Store constraint quoted above — which is a statement about distribution, not a rule that only
+  Play services can reach an app.
 - **What that costs, in the same pages' words.** **Android background push via FCM requires adding
   Firebase to a Google Cloud project** — the same project, which gains a `firebase:enabled` label,
   shares its IAM with Firebase, and moves to the Blaze plan once it is billed: "Firebase
