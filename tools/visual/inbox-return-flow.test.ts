@@ -3,11 +3,20 @@ import { describe, expect, it } from "vitest";
 import { createNotificationsStore } from "../mock-relay/notifications.ts";
 import { inboxRowProbe, matchesInboxRow } from "./inbox-return-flow.ts";
 
-const flow = readFileSync(
-	new URL("./inbox-return-flow.ts", import.meta.url),
+/** Every file this suite reads, resolved from the suite's own directory. */
+const path = (relative: string) => new URL(relative, import.meta.url);
+
+const flow = readFileSync(path("inbox-return-flow.ts"), "utf8");
+const capture = readFileSync(path("capture.ts"), "utf8");
+const relayDriver = readFileSync(path("../lib/relay.ts"), "utf8");
+const mockRelay = readFileSync(path("../mock-relay/relay.ts"), "utf8");
+const nativeFlow = readFileSync(
+	new URL(
+		"../../e2e/maestro/flows/11-notification-return.yaml",
+		import.meta.url,
+	),
 	"utf8",
 );
-const capture = readFileSync(new URL("./capture.ts", import.meta.url), "utf8");
 const workflow = readFileSync(
 	new URL("../../.github/workflows/e2e.yml", import.meta.url),
 	"utf8",
@@ -50,6 +59,39 @@ describe("the bounded hosted inbox return proof", () => {
 		expect(workflow).toContain("--inbox-return-proof");
 		expect(workflow).toContain("baseline=(--inbox-baseline-dir");
 		expect(workflow).toContain("name: audit-frames");
+	});
+	it("proves the failure, ledger and selection returns, not only the happy path", () => {
+		/* Each of these is a cell QA round 1 recorded as BLOCKED. A driver that only
+		 * re-reads on a healthy return would still pass a green run, so the cells are
+		 * asserted HERE as a contract on the driver rather than left to the run. */
+		expect(flow).toContain("/__mock/inbox-return");
+		expect(flow).toContain("SURFACE.inboxError");
+		expect(flow).toContain("SURFACE.inboxLoading");
+		expect(flow).toContain("All caught up");
+		expect(flow).toContain("inboxRetry");
+		expect(flow).toContain("inboxSelectionBar");
+		expect(flow).toContain("readRelayRecord");
+		/* The badge cells: the count is compared against the RELAY's store, and a
+		 * failed retry must not republish a zero. */
+		expect(flow).toContain("badge after a successful Try again");
+		expect(flow).toContain("badge after a FAILED retry");
+		expect(flow).toContain("Notifications, 0 unread");
+		expect(flow).toContain("/__mock/state");
+		expect(flow).toContain("arm(2)");
+		/* The failure door and the ledger exist on the RELAY, not in the flow's own
+		 * head: a driver calling a control the mock does not serve fails at runtime. */
+		expect(mockRelay).toContain('"/__mock/inbox-return"');
+		expect(mockRelay).toContain("failNotificationListReads");
+		expect(relayDriver).toContain("readRelayRecord");
+		/* Native half: a real Back press on a device, and no history call standing in
+		 * for it — the same rule the hosted flow is held to. */
+		expect(nativeFlow).toContain('id: "notification-back"');
+		expect(nativeFlow).toContain('id: "notification-row-n_audit"');
+		expect(nativeFlow).toContain('id: "notification-dismiss-all"');
+		expect(nativeFlow).toContain('id: "dialog-confirm"');
+		expect(nativeFlow).toContain('id: "notifications-empty"');
+		expect(historyWarp.test(nativeFlow)).toBe(false);
+		expect(locationWarp.test(nativeFlow)).toBe(false);
 	});
 	it("derives 5 → 4 → 2 → 4 from the existing fixture, including the other conversation", () => {
 		const seed = JSON.parse(

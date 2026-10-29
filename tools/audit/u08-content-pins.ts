@@ -96,8 +96,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
 		"93251ff1211d500e3b70af1241a46095674d7c2a55ee5a48f92a6168c4e2a9c3",
+	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
+	 * onto its new head: the base owns the render and package identities, while
+	 * this PR adds only the relay driver's scoped fault and request-ledger
+	 * controls. Recomputed with `--print`; no U-03 exemption or skipped check. */
 	"tools/lib/relay.ts":
-		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
+		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
 		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
 	"tools/mock-relay/account-routing-gate.ts":
@@ -117,7 +121,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
 	"tools/mock-relay/relay.ts":
-		"f8af50fbb49dd7a4bf7d79ac6ff3692af5a7d46601c51e1bb6b173b997574b4c",
+		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
 	"tools/mock-relay/scenarios.ts":
 		"9b015bd5c3481297934008e74b4660ca6284f21b90677af966c1df869c786d8e",
 	"tools/mock-relay/shape.ts":
