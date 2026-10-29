@@ -5,6 +5,7 @@
  * tunnel edge/gateway refusals (`docs/relay/tunnel-edge.md`) with:
  *
  *   --scenario <name>   pin any state without a real agent (see scenarios.ts)
+ *   --language <tag>    the language the config stream serves (default en)
  *   --fault <name>      inject a real adversity deterministically (faults.ts)
  *   --record <dir>      write every request+response for assertions
  *
@@ -388,6 +389,13 @@ export interface RelayOptions {
 	/** `false`, or a directory to write the request transcript into on shutdown. */
 	record?: false | { dir: string };
 	scenario?: string;
+	/**
+	 * The RESOLVED language `/api/config/events` serves, as a BCP-47 tag. Defaults
+	 * to `en`, which is what every capture taken before the route existed assumed;
+	 * `--language fr` is the CLI's spelling and `POST /__mock/scenario` can set it
+	 * mid-run.
+	 */
+	language?: string;
 	faults?: string[];
 	quiet?: boolean;
 	/**
@@ -434,9 +442,47 @@ interface StreamOptions {
 	duplicate?: () => StreamFrame | null;
 }
 
+/**
+ * The language a harness asked for, canonicalized the way the relay canonicalizes
+ * its own (`en_us` → `en-US`, `FR` → `fr`).
+ *
+ * An unparseable tag falls back to `en` rather than failing the run: this is a
+ * capture harness, and a typo in a flag must not look like a broken app. The
+ * value is served VERBATIM in the frame otherwise — the mock does not filter it
+ * through the app's shipped set, because the client does that filtering itself
+ * (`src/i18n/locale.ts`) and a rig may want to prove that path.
+ */
+function resolveHarnessLanguage(tag: string): string {
+	const parts = tag.trim().replace(/_/g, "-").split("-").filter(Boolean);
+	const language = parts[0];
+	if (language === undefined || !/^[A-Za-z]{2,3}$/.test(language)) return "en";
+	const normalized = [language.toLowerCase()];
+	for (const part of parts.slice(1)) {
+		if (/^[A-Za-z]{2}$/.test(part)) normalized.push(part.toUpperCase());
+		else if (/^[A-Za-z]{4}$/.test(part))
+			normalized.push(
+				part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+			);
+		else normalized.push(part.toLowerCase());
+	}
+	return normalized.join("-");
+}
+
 /** The mock's mutable state: everything a request handler reads. */
 export interface RelayState {
 	scenario: string;
+	/**
+	 * The RESOLVED language the config stream serves (`/api/config/events`).
+	 *
+	 * A browser run of a translated screen is impossible without it: the app
+	 * renders whatever this frame says, so a mock that answered `404` here left
+	 * every capture English no matter what catalogue shipped. It is deliberately
+	 * RUN-level state rather than scenario state — a rig sets the language once
+	 * and then switches scenarios — and it defaults to `en` so every capture taken
+	 * before this route existed is byte-identical. Set it through
+	 * `POST /__mock/scenario` (`{scenario, language}`) or the `--language` flag.
+	 */
+	language: string;
 	/**
 	 * Which harness client pinned the current scenario, and when it last spoke.
 	 *
@@ -699,6 +745,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const state: RelayState = {
 		scenario: options.scenario ?? "idle",
+		language: resolveHarnessLanguage(options.language ?? "en"),
 		pinnedBy: null,
 		pinnedAt: 0,
 		world: {},
@@ -2227,6 +2274,28 @@ export function createRelay(options: RelayOptions = {}) {
 			});
 		}
 
+		/* `GET /api/config/events` — the resolved language, live (`docs/relay/
+		 * contract.md` §10). A translated screen cannot be captured without it: the
+		 * app renders whatever the baseline frame says, so a `404` here means every
+		 * browser run renders English.
+		 *
+		 * ONE frame, the baseline (`changed_keys: []`, never a replay), and no
+		 * further frames: `language` is run-level state that a rig sets BEFORE it
+		 * loads the app, and publishing a mid-stream change would need the scenario
+		 * machinery this route does not have. A rig that wants a different language
+		 * sets it and reopens the app, which is also what a real relay change looks
+		 * like to a cold start. */
+		if (pathname === "/api/config/events" && method === "GET") {
+			return openStream(req, res, {
+				kind: "config",
+				seed: {
+					event: "config",
+					data: { changed_keys: [], language: state.language },
+				},
+				frames: () => null,
+			});
+		}
+
 		if (pathname === "/api/tags" && method === "GET") {
 			/* LOH-11 S3: the catalogue exists only when the scenario says so —
 			 *  absence is an older relay, whose app renders no tag UI at all. */
@@ -3746,6 +3815,9 @@ export function createRelay(options: RelayOptions = {}) {
 				if (pathname === "/__mock/state" && method === "GET") {
 					return sendJson(res, 200, {
 						scenario: state.scenario,
+						// The language the config stream SERVES, so a rig can assert the
+						// screen it captured was the locale it asked for.
+						language: state.language,
 						faults: state.faults.applied,
 						sessions: Object.keys(state.world.projections ?? {}).length,
 						admittedCommands: state.admitted.size,
@@ -3782,7 +3854,8 @@ export function createRelay(options: RelayOptions = {}) {
 				}
 				if (pathname === "/__mock/scenario" && method === "POST") {
 					const raw = await readBody(req);
-					const next = JSON.parse(raw || "{}").scenario;
+					const body = JSON.parse(raw || "{}");
+					const next = body.scenario;
 					if (!next || !scenarios[next]) {
 						sendJson(res, 400, errorBody(`unknown scenario: '${next}'`));
 						return;
@@ -3814,8 +3887,18 @@ export function createRelay(options: RelayOptions = {}) {
 					state.scenario = next;
 					state.pinnedBy = clientId;
 					state.pinnedAt = Date.now();
+					/* The language rides the SAME call (and survives the world reset,
+					 * because it is run-level): a rig sets both before it loads the app,
+					 * so one request describes the whole frame it is about to capture. */
+					if (body.language !== undefined) {
+						if (typeof body.language !== "string") {
+							sendJson(res, 400, errorBody("language must be a string tag"));
+							return;
+						}
+						state.language = resolveHarnessLanguage(body.language);
+					}
 					resetWorld();
-					sendJson(res, 200, { scenario: next });
+					sendJson(res, 200, { scenario: next, language: state.language });
 					return;
 				}
 				if (pathname === "/__mock/fault" && method === "POST") {
@@ -4166,6 +4249,8 @@ if (import.meta.main) {
 				"  --port <n>            listen port (default 0: the OS picks; never 4098)",
 				"  --host <addr>         bind address (default 127.0.0.1)",
 				"  --scenario <name>     initial scenario (default idle) — see --list",
+				"  --language <tag>      the RESOLVED language the config stream serves",
+				"                        (default en); `POST /__mock/scenario` can change it",
 				"  --fault <name>        inject a fault; repeatable",
 				"  --record <dir>        write a request/response transcript on shutdown",
 				"  --fixtures <dir>      fixture corpus root (default <repo>/fixtures/relay)",
@@ -4233,6 +4318,10 @@ if (import.meta.main) {
 		accountRouting,
 		fixturesDir,
 		scenario: str(flags, "scenario", "idle"),
+		// The language the config stream serves. Default `en`: a run that does not
+		// ask for a translation must capture exactly what it captured before the
+		// route existed.
+		language: str(flags, "language", "en"),
 		faults: list(flags, "fault"),
 		password: str(flags, "password", DEFAULT_PASSWORD) ?? DEFAULT_PASSWORD,
 		// 0 means "no ceiling on this process", which is the bare relay's real
