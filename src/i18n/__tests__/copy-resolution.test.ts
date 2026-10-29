@@ -40,11 +40,22 @@ const PINNED_MODULES: ReadonlySet<string> = new Set([
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 
-/** Every `*-copy.ts` under `src/features`, as repo-relative paths. */
+/** Every copy module under `src/features`: the `*-copy.ts` family plus the two
+ *  modules that build a NAMED table from the catalogue (`composer.ts` composes
+ *  `composerCopy`, `health-copy.ts` composes `healthCopy`). Both were module-level
+ *  tables once, and both froze English until a QA round caught the composer in a
+ *  French build — the defect is the same shape whether the file is called
+ *  `-copy` or not, so the scan follows the SHAPE, not the filename. */
+const TABLE_MODULES = [
+	"src/features/session/composer.ts",
+	"src/features/session/health-copy.ts",
+];
+
 function copyModules(): string[] {
 	const root = join(ROOT, "src", "features");
 	return (readdirSync(root, { recursive: true, encoding: "utf8" }) as string[])
 		.filter((name) => name.endsWith("-copy.ts"))
+		.concat(TABLE_MODULES.map((rel) => rel.replace("src/features/", "")))
 		.map((name) => relative(ROOT, join(root, name)).split("\\").join("/"))
 		.filter((rel) => !PINNED_MODULES.has(rel))
 		.sort();
