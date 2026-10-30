@@ -4,7 +4,7 @@
 	"mobile.session_health.menu_hint": "सत्र मेन्यू खोलता है",
 	"mobile.session_health.menu_title": "सत्र",
 	"mobile.session_health.reopening": "फिर खुल रहा है — इसमें कुछ सेकंड लग सकते हैं।",
-	"mobile.session_health.still_reopening": "अभी तक तैयार नहीं हुआ",
+	"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
 	"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 	"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 	"mobile.session_health.resume_gone": "यह सत्र अब सहेजा हुआ नहीं है।",

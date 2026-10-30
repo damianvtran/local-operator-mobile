@@ -4,7 +4,7 @@
 	"mobile.account_routing.load_error": "खाता रूटिंग लोड नहीं हो सकी। कनेक्शन जाँचें और फिर से कोशिश करें।",
 	"mobile.account_routing.loading": "खाता रूटिंग लोड हो रही है…",
 	"mobile.account_routing.rejected": "बदलाव सहेजा नहीं गया। मान या इस कंप्यूटर की सेटिंग जाँचें और फिर से कोशिश करें।",
-	"mobile.account_routing.reload": "नीति फिर लोड करें",
+	"mobile.account_routing.reload": "नीति फिर से लोड करें",
 	"mobile.account_routing.retry": "फिर से कोशिश करें",
 	"mobile.account_routing.save": "नीति सहेजें",
 	"mobile.account_routing.saved": "इस कंप्यूटर पर सहेजा गया।",

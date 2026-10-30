@@ -389,7 +389,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "caae3a189a821127024686922bf43fd11562f8ac281e113ce93e3205e9741930",
+	src: "ccb278cabe3e714e8bd4bf44c80ece5d2a0e32d49c973d92addddb9b4cda3054",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -1,0 +1,340 @@
++ set -u
++ set -x
++ WT=/Users/damian/workspace/hi-wave
++ SD=/Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b
++ cd /Users/damian/workspace/hi-wave
++ echo '=== when ==='
+=== when ===
++ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-10-30T17:07:09Z
++ echo
+
++ echo '=== audited revision ==='
+=== audited revision ===
++ git rev-parse HEAD
+d4e31b1915b558171ded41501c741568f0854f3f
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-hindi
++ git log --oneline -1
+d4e31b1 feat(i18n): ship Hindi across the mobile catalogue
++ git status --short
++ echo
+
++ echo '=== the delta commit, files it touched ==='
+=== the delta commit, files it touched ===
++ git show --stat --format=%H%n%s d4e31b1
++ head -40
+d4e31b1915b558171ded41501c741568f0854f3f
+feat(i18n): ship Hindi across the mobile catalogue
+
+ docs/i18n.md                                       |   2 +-
+ .../hi/mobile.account_routing/hi30a4/audit.log     |  60 ++++
+ .../hi/mobile.account_routing/hi30a4/record.json   | 152 ++++++++
+ .../hi/mobile.account_routing/hi30a4/report.md     |  57 +++
+ .../evidence/hi/mobile.computers/hi30c1/audit.log  | 392 +++++++++++++++++++++
+ .../hi/mobile.computers/hi30c1/receipt.json        |  32 ++
+ .../hi/mobile.computers/hi30c1/record.json         | 213 +++++++++++
+ .../hi/mobile.computers/hi30c1/renders-all.tsv     |  77 ++++
+ .../hi/mobile.computers/hi30c1/renders.tsv         |  99 ++++++
+ .../evidence/hi/mobile.computers/hi30c1/report.md  |  90 +++++
+ .../hi/mobile.computers/hi30c1/verify.out.txt      |  28 ++
+ .../evidence/hi/mobile.home/hi30a1/audit.log       |  93 +++++
+ .../evidence/hi/mobile.home/hi30a1/record.json     | 218 ++++++++++++
+ .../evidence/hi/mobile.home/hi30a1/report.md       |  87 +++++
+ .../hi/mobile.notifications/hi30n1/audit.log       | 392 +++++++++++++++++++++
+ .../hi/mobile.notifications/hi30n1/receipt.json    |  32 ++
+ .../hi/mobile.notifications/hi30n1/record.json     | 213 +++++++++++
+ .../hi/mobile.notifications/hi30n1/renders-all.tsv |  77 ++++
+ .../hi/mobile.notifications/hi30n1/renders.tsv     |  99 ++++++
+ .../hi/mobile.notifications/hi30n1/report.md       |  94 +++++
+ .../hi/mobile.notifications/hi30n1/verify.out.txt  |  28 ++
+ .../evidence/hi/mobile.projects/hi30p1/audit.log   | 392 +++++++++++++++++++++
+ .../hi/mobile.projects/hi30p1/receipt.json         |  32 ++
+ .../evidence/hi/mobile.projects/hi30p1/record.json | 259 ++++++++++++++
+ .../hi/mobile.projects/hi30p1/renders-all.tsv      |  77 ++++
+ .../evidence/hi/mobile.projects/hi30p1/renders.tsv |  99 ++++++
+ .../evidence/hi/mobile.projects/hi30p1/report.md   | 125 +++++++
+ .../hi/mobile.projects/hi30p1/verify.out.txt       |  28 ++
+ .../evidence/hi/mobile.schedules/hi30s1/audit.log  | 392 +++++++++++++++++++++
+ .../hi/mobile.schedules/hi30s1/receipt.json        |  32 ++
+ .../hi/mobile.schedules/hi30s1/record.json         | 294 ++++++++++++++++
+ .../hi/mobile.schedules/hi30s1/renders-all.tsv     |  77 ++++
+ .../hi/mobile.schedules/hi30s1/renders.tsv         |  99 ++++++
+ .../evidence/hi/mobile.schedules/hi30s1/report.md  | 172 +++++++++
+ .../hi/mobile.schedules/hi30s1/verify.out.txt      |  28 ++
+ .../evidence/hi/mobile.session/hi30a2/audit.log    |  52 +++
+ .../evidence/hi/mobile.session/hi30a2/record.json  | 127 +++++++
++ echo
+
++ echo '=== input hashes: en, context and hi for the four group-B namespaces ==='
+=== input hashes: en, context and hi for the four group-B namespaces ===
++ for ns in mobile.computers mobile.notifications mobile.projects mobile.schedules
++ shasum -a 256 src/i18n/catalogues/en/mobile.computers.json src/i18n/catalogues/en/mobile.computers.context.json src/i18n/catalogues/hi/mobile.computers.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+0b38dc5d9c5b8eb132ec017d573ac46f4fdb6aa7887e9ce85be786e2a9ffb8a5  src/i18n/catalogues/hi/mobile.computers.json
++ for ns in mobile.computers mobile.notifications mobile.projects mobile.schedules
++ shasum -a 256 src/i18n/catalogues/en/mobile.notifications.json src/i18n/catalogues/en/mobile.notifications.context.json src/i18n/catalogues/hi/mobile.notifications.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252  src/i18n/catalogues/hi/mobile.notifications.json
++ for ns in mobile.computers mobile.notifications mobile.projects mobile.schedules
++ shasum -a 256 src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json src/i18n/catalogues/hi/mobile.projects.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+aa9a8def55e115385345a6350f1be8eea146c10c52353f6a7b720336aa614d6e  src/i18n/catalogues/hi/mobile.projects.json
++ for ns in mobile.computers mobile.notifications mobile.projects mobile.schedules
++ shasum -a 256 src/i18n/catalogues/en/mobile.schedules.json src/i18n/catalogues/en/mobile.schedules.context.json src/i18n/catalogues/hi/mobile.schedules.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+8f2c93a7bd7ffdf75e2909c5399804e5a19a21d30505dc48e89abad1431d34ae  src/i18n/catalogues/hi/mobile.schedules.json
++ echo
+
++ echo '=== round-1 bytes vs this head: key-level delta + byte-exact findings ==='
+=== round-1 bytes vs this head: key-level delta + byte-exact findings ===
++ python3 /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/delta_resolve.py
+== where the round-1 bytes come from ==
+mobile.schedules       r1 record sha256 88ac1b6ab0849e1270711d185172fb459a7198ac0521818b5922e0e37d291163
+                       snapshot  sha256 88ac1b6ab0849e1270711d185172fb459a7198ac0521818b5922e0e37d291163  MATCH
+mobile.projects        r1 record sha256 c2e2a90449d9295b1c8f8e15aa869d399ddb4d4e2cd93849c5e0447c8a53be55
+                       snapshot  sha256 c2e2a90449d9295b1c8f8e15aa869d399ddb4d4e2cd93849c5e0447c8a53be55  MATCH
+mobile.computers       r1 record sha256 0b38dc5d9c5b8eb132ec017d573ac46f4fdb6aa7887e9ce85be786e2a9ffb8a5
+                       snapshot  sha256 0b38dc5d9c5b8eb132ec017d573ac46f4fdb6aa7887e9ce85be786e2a9ffb8a5  MATCH
+mobile.notifications   r1 record sha256 5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252
+                       snapshot  sha256 5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252  MATCH
+
+== key-level delta, round-1 snapshot -> d4e31b1 (all four group-B files) ==
+mobile.schedules       38 keys, 7 changed: ['mobile.schedules.empty_line.wakes', 'mobile.schedules.gone.monitors', 'mobile.schedules.parked.wakes', 'mobile.schedules.summary.monitors_armed', 'mobile.schedules.supervisor.not_running', 'mobile.schedules.supervisor.unsupported', 'mobile.schedules.truncated']
+mobile.projects        15 keys, 3 changed: ['mobile.projects.draft_kept_note', 'mobile.projects.session_state.filed_by', 'mobile.projects.write_receipt']
+mobile.computers       10 keys, 0 changed: -
+mobile.notifications   14 keys, 0 changed: -
+
+== byte-exact resolution of each round-1 finding ==
+HI-B-1   RESOLVED mobile.schedules.truncated                           {family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।
+HI-B-2   RESOLVED mobile.schedules.summary.monitors_armed              {count} सक्रिय
+HI-B-3   RESOLVED mobile.schedules.empty_line.wakes                    कोई जागृति निर्धारित नहीं।
+HI-B-4   RESOLVED mobile.schedules.supervisor.not_running              …नीचे दी गई जागृतियाँ…
+HI-B-4   RESOLVED mobile.schedules.supervisor.unsupported              …नीचे दी गई जागृतियाँ…
+HI-B-5   RESOLVED mobile.schedules.count.wakes                         kept as shipped (CLDR one covers 0)
+HI-B-6   RESOLVED mobile.schedules.parked.wakes                        फिर शुरू हो जाती हैं
+HI-B-6   RESOLVED mobile.schedules.parked.monitors                     फिर शुरू होते हैं
+HI-B-7   RESOLVED mobile.schedules.gone.monitors                       अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए इसे कोई जाँचता नहीं
+HI-B-8   RESOLVED mobile.projects.draft_kept_note                      पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।
+HI-B-9   RESOLVED mobile.projects.session_state.filed_by               द्वारा दर्ज
+HI-B-10  RESOLVED mobile.projects.write_receipt                        deleted {मिटाया गया} × 3 kind arms
+HI-B-11  RESOLVED mobile.projects.write_receipt                        left as shipped (“{subject}” kept)
+
+== changed keys are exactly the applied findings' keys ==
+mobile.schedules       extra=- missing=-
+mobile.projects        extra=- missing=-
+mobile.computers       extra=- missing=-
+mobile.notifications   extra=- missing=-
+
+FAILURES: 0
++ echo 'delta_resolve exit=0'
+delta_resolve exit=0
++ echo
+
++ echo '=== the repo validator: generate --check ==='
+=== the repo validator: generate --check ===
++ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:31370) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/hi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/hi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ echo 'generate --check exit=0'
+generate --check exit=0
++ echo
+
++ echo '=== the generated type contract for the escalated {total} ==='
+=== the generated type contract for the escalated {total} ===
++ grep -n mobile.schedules.truncated src/i18n/catalogue.gen.ts
+151:	| "mobile.schedules.truncated"
+424:	"mobile.schedules.truncated": { shown: number; total: number; family: string };
+586:	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+733:	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+894:		"mobile.schedules.truncated": "Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.",
+1039:		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+1184:		"mobile.schedules.truncated": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+1329:		"mobile.schedules.truncated": "Беседы с {family, select, wakes {пробуждениями} other {мониторами}}: показано {shown} из {total}.",
+1474:		"mobile.schedules.truncated": "Đang hiện {shown} trên {total} cuộc trò chuyện có {family, select, wakes {lần thức dậy} other {giám sát}}.",
+1619:		"mobile.schedules.truncated": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
++ echo
+
++ echo '=== the repo gate: check-strings ==='
+=== the repo gate: check-strings ===
++ node scripts/i18n/check-strings.ts
++ tail -3
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
++ echo
+
++ echo '=== CLDR plural categories for hi ==='
+=== CLDR plural categories for hi ===
++ node -e 'const p=new Intl.PluralRules('\''hi'\'');console.log('\''categories'\'',p.resolvedOptions().pluralCategories);for(const n of [0,1,2,9,42,21])console.log(n,'\''->'\'',p.select(n))'
+categories [ 'one', 'other' ]
+0 -> one
+1 -> one
+2 -> other
+9 -> other
+42 -> other
+21 -> other
++ echo
+
++ echo '=== independent structural verifier over all 77 group-B keys ==='
+=== independent structural verifier over all 77 group-B keys ===
++ python3 /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/delta_verify.py
+mobile.computers: en=10 hi=10 context=10
+mobile.notifications: en=14 hi=14 context=14
+mobile.projects: en=15 hi=15 context=15
+  order-note mobile.projects.milestones.count: en=['completed', 'total'] hi=['total', 'completed']
+  order-note mobile.projects.write_receipt: en=['kind', 'action', 'subject', 'action', 'subject', 'action', 'subject'] hi=['kind', 'subject', 'action', 'subject', 'action', 'subject', 'action']
+mobile.schedules: en=38 hi=38 context=38
+  order-note mobile.schedules.summary.monitors_attention: en=['broken', 'total'] hi=['total', 'broken']
+  order-note mobile.schedules.truncated: en=['shown', 'total', 'family'] hi=['family', 'total', 'shown']
+
+-- permitted kind escalations (text -> plural/select) --
+ESCALATION: mobile.schedules.truncated: {total} text -> plural
+
+77 group-B keys checked, 0 problem(s), 1 escalation(s)
++ echo 'delta_verify exit=0'
+delta_verify exit=0
++ echo
+
++ echo '=== verifier negative controls (does the harness bite?) ==='
+=== verifier negative controls (does the harness bite?) ===
++ python3 /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/neg_controls.py
+PASS control unchanged: exit=0 (wanted 0)
+PASS control drop_placeholder: exit=1 (wanted 1)
+    FAIL: mobile.schedules.truncated: placeholder names differ en=['shown', 'total', 'family'] hi=['family', 'total']
+PASS control drop_hi_category: exit=1 (wanted 1)
+    FAIL: mobile.schedules.truncated: plural {total} lacks CLDR hi categories ['one']
+PASS control cross_plural_select: exit=1 (wanted 1)
+    FAIL: mobile.schedules.truncated: {family} is plural where en has select
+    FAIL: mobile.schedules.truncated: hi lost the select node {family}
+PASS control rename_select_arm: exit=1 (wanted 1)
+    FAIL: mobile.schedules.truncated: select {family} arms differ en=['other', 'wakes'] hi=['other', 'wake']
+PASS control inject_zwj: exit=1 (wanted 1)
+    FAIL: mobile.schedules.empty.title: contains U+200D ZWJ
+PASS control precomposed_nukta: exit=1 (wanted 1)
+    FAIL: mobile.projects.draft_kept_note: value is not NFC
+    FAIL: mobile.projects.draft_kept_note: precomposed U+095E (use base + U+093C)
+PASS control retype_plural_name: exit=1 (wanted 1)
+    FAIL: mobile.schedules.truncated: placeholder names differ en=['shown', 'total', 'family'] hi=['family', 'totals', 'shown']
+    FAIL: mobile.schedules.truncated: hi invents {totals}
+8/8 negative controls behaved as expected
++ echo 'neg_controls exit=0'
+neg_controls exit=0
++ echo
+
++ echo '=== render through the app runtime (renderFor, raw tag hi) ==='
+=== render through the app runtime (renderFor, raw tag hi) ===
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/delta-render.ts
+truncated/wakes/42	जागृतियों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।
+truncated/monitors/42	मॉनिटरों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।
+truncated/wakes/9	जागृतियों वाली कुल 9 बातचीतों में से 5 दिखा रहे हैं।
+truncated/monitors/9	मॉनिटरों वाली कुल 9 बातचीतों में से 5 दिखा रहे हैं।
+truncated/wakes/2	जागृतियों वाली कुल 2 बातचीतों में से 1 दिखा रहे हैं।
+truncated/wakes/1	जागृतियों वाली कुल 1 बातचीत में से 0 दिखा रहे हैं।
+truncated/wakes/42@21shown	जागृतियों वाली कुल 42 बातचीतों में से 21 दिखा रहे हैं।
+receipt/project/created	“beta” प्रोजेक्ट बनाया गया।
+receipt/project/completed	“beta” प्रोजेक्ट पूरा किया गया।
+receipt/project/reopened	“beta” प्रोजेक्ट फिर खोला गया।
+receipt/project/added	“beta” प्रोजेक्ट जोड़ा गया।
+receipt/project/updated	“beta” प्रोजेक्ट अपडेट किया गया।
+receipt/project/removed	“beta” प्रोजेक्ट हटाया गया।
+receipt/project/deleted	“beta” प्रोजेक्ट मिटाया गया।
+receipt/project/other	“beta” प्रोजेक्ट अपडेट किया गया।
+receipt/milestone/created	“beta” पड़ाव बनाया गया।
+receipt/milestone/completed	“beta” पड़ाव पूरा किया गया।
+receipt/milestone/reopened	“beta” पड़ाव फिर खोला गया।
+receipt/milestone/added	“beta” पड़ाव जोड़ा गया।
+receipt/milestone/updated	“beta” पड़ाव अपडेट किया गया।
+receipt/milestone/removed	“beta” पड़ाव हटाया गया।
+receipt/milestone/deleted	“beta” पड़ाव मिटाया गया।
+receipt/milestone/other	“beta” पड़ाव अपडेट किया गया।
+receipt/other/created	“beta” बनाया गया।
+receipt/other/completed	“beta” पूरा किया गया।
+receipt/other/reopened	“beta” फिर खोला गया।
+receipt/other/added	“beta” जोड़ा गया।
+receipt/other/updated	“beta” अपडेट किया गया।
+receipt/other/removed	“beta” हटाया गया।
+receipt/other/deleted	“beta” मिटाया गया।
+receipt/other/other	“beta” अपडेट किया गया।
+monitors_armed/0	0 सक्रिय
+summary.wakes/0	0 निर्धारित
+count.wakes/0	0 जागृति
+count.monitors/0	0 मॉनिटर
+monitors_armed/1	1 सक्रिय
+summary.wakes/1	1 निर्धारित
+count.wakes/1	1 जागृति
+count.monitors/1	1 मॉनिटर
+monitors_armed/2	2 सक्रिय
+summary.wakes/2	2 निर्धारित
+count.wakes/2	2 जागृतियाँ
+count.monitors/2	2 मॉनिटर
+monitors_armed/22	22 सक्रिय
+summary.wakes/22	22 निर्धारित
+count.wakes/22	22 जागृतियाँ
+count.monitors/22	22 मॉनिटर
+monitors_attention/2of9	9 में से 2 को ध्यान चाहिए
+tail.failed/1	1 विफल
+show_more.wakes/2	2 और जागृतियाँ दिखाएँ
+mobile.schedules.empty_line.wakes	कोई जागृति निर्धारित नहीं।
+mobile.schedules.empty_line.monitors	कोई मॉनिटर सक्रिय नहीं।
+mobile.schedules.empty.title	कुछ भी सक्रिय नहीं
+mobile.schedules.state.disabled	बंद
+mobile.schedules.state.dormant	निष्क्रिय
+mobile.schedules.state.expired	समाप्त
+mobile.schedules.state.stale	पुराना
+mobile.schedules.state.waiting	प्रतीक्षारत
+mobile.schedules.supervisor.not_running	जागृतियों का सुपरवाइज़र इंस्टॉल तो है पर चल नहीं रहा, इसलिए नीचे दी गई जागृतियाँ नहीं जागेंगी।
+mobile.schedules.supervisor.unsupported	इस प्लैटफ़ॉर्म पर जागृतियों की निगरानी अभी नहीं होती, इसलिए नीचे दी गई जागृतियाँ केवल तब जागेंगी जब उनकी बातचीत चल रही हो।
+mobile.schedules.supervisor.unverifiable	इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।
+mobile.schedules.parked.wakes	रुका हुआ — अगले टर्न के बाद इसकी जागृतियाँ फिर शुरू हो जाती हैं
+mobile.schedules.parked.monitors	रुका हुआ — बातचीत दोबारा चलने पर इसके मॉनिटर फिर शुरू होते हैं
+mobile.schedules.gone.wakes	अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए कोई जागृति नहीं जागेगी
+mobile.schedules.gone.monitors	अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए इसे कोई जाँचता नहीं
+draft_kept_note	पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।
+filed_by	द्वारा दर्ज
+filed_by/composed	work-a · द्वारा दर्ज
+receipt/quoted-subject/"alpha" plan	“"alpha" plan” प्रोजेक्ट मिटाया गया।
+receipt/quoted-subject/beta	“beta” प्रोजेक्ट मिटाया गया।
+delete_body	beta हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।
+remove_milestone_body	beta को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।
+write_unknown_note	आपके कंप्यूटर तक नहीं पहुँच सके, इसलिए यह नहीं बता सकते कि वह सहेजा गया या नहीं। दोबारा कोशिश करने से पहले प्रोजेक्ट जाँच लें।
+milestones.count/2of9	9 में से 2 पड़ाव
++ echo 'render exit=0'
+render exit=0
++ echo
+
++ echo '=== a number is now required for {total} (why the type narrowed) ==='
+=== a number is now required for {total} (why the type narrowed) ===
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/plural-needs-number.ts
+THREW: RangeError - Message "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।" needs a number for "total", received "42"
+number ok: जागृतियों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।
++ echo
+
++ echo '=== affected tests ==='
+=== affected tests ===
++ ./node_modules/.bin/vitest run src/i18n src/features/schedules src/features/projects
++ echo 'vitest exit=0'
+vitest exit=0
++ grep -E 'Test Files|Tests  |Duration' /Users/damian/.local-operator/sessions/4d508455ed51/scratchpad/hi-delta-b/vitest.out.txt
+ Test Files  7 passed (7)
+      Tests  188 passed (188)
+   Duration  4.35s (transform 67%, import 24%, tests 7%, worker 2%)
++ echo
+
++ echo '=== typecheck (the narrowed call-site contract) ==='
+=== typecheck (the narrowed call-site contract) ===
++ timeout 900 ./node_modules/.bin/tsc --noEmit
++ echo 'tsc exit=0'
+tsc exit=0
++ echo
+
++ echo '=== nothing was written to the repository ==='
+=== nothing was written to the repository ===
++ git status --short
++ echo '=== end ==='
+=== end ===
