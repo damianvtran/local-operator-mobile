@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "Xóa {name}? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.",
+	"mobile.projects.draft_kept_note": "Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.",
+	"mobile.projects.milestone_slash_note": "Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.",
+	"mobile.projects.milestones.count": "{completed} trên {total} mốc",
+	"mobile.projects.milestones.none": "chưa có mốc",
+	"mobile.projects.project_name_hint": "1-64 ký tự: chữ cái, chữ số, dấu chấm, gạch dưới hoặc gạch nối. Không có dấu cách và không được bắt đầu bằng gạch nối.",
+	"mobile.projects.remove_milestone_body": "Xóa {name} khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.",
+	"mobile.projects.session_state.filed_by": "ghi nhận bởi",
+	"mobile.projects.session_state.missing": "không còn",
+	"mobile.projects.session_state.not_running": "không chạy",
+	"mobile.projects.sessions.count": "{count, plural, other {# phiên}}",
+	"mobile.projects.sessions.live": "{base} · {live} đang chạy",
+	"mobile.projects.stale_badge": "tiến độ cũ",
+	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.} milestone {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} mốc {subject}.} other {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.}}",
+	"mobile.projects.write_unknown_note": "Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại."
+}

@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "Trả lời",
+	"mobile.notifications.back": "Quay lại",
+	"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
+	"mobile.notifications.detail.conversation_asks": "Câu hỏi trong cuộc trò chuyện này",
+	"mobile.notifications.detail.earlier_updates": "Cập nhật trước đó",
+	"mobile.notifications.detail.from": "Nguồn",
+	"mobile.notifications.detail.no_asks": "Không có câu hỏi nào trong cuộc trò chuyện này.",
+	"mobile.notifications.detail.nothing_to_dismiss": "Không có cập nhật nào từ cuộc trò chuyện này để bỏ qua.",
+	"mobile.notifications.detail.projects": "Dự án",
+	"mobile.notifications.dismiss": "Bỏ qua",
+	"mobile.notifications.filter_label": "Hiển thị",
+	"mobile.notifications.load_failed": "Không thể tải thông báo",
+	"mobile.notifications.priority_high": "Cao",
+	"mobile.notifications.title": "Thông báo"
+}

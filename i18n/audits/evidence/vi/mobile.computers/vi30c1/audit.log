@@ -1,0 +1,493 @@
++ set -u
++ REPO=/Users/damian/workspace/vi-wave
++ SB=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b
++ COPY=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy
++ echo '=== environment ==='
+=== environment ===
++ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-10-30T11:47:41Z
++ node --version
+v24.22.1
++ uname -sm
+Darwin arm64
++ echo '=== audited revision ==='
+=== audited revision ===
++ git -C /Users/damian/workspace/vi-wave rev-parse HEAD
+31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b
++ git -C /Users/damian/workspace/vi-wave branch --show-current
+feat/i18n-vietnamese
++ git -C /Users/damian/workspace/vi-wave status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/vi/
+?? src/i18n/catalogues/vi/
++ echo '=== input hashes (en, context, vi) ==='
+=== input hashes (en, context, vi) ===
++ shasum -a 256 src/i18n/catalogues/en/mobile.schedules.json src/i18n/catalogues/en/mobile.schedules.context.json src/i18n/catalogues/vi/mobile.schedules.json src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json src/i18n/catalogues/vi/mobile.projects.json src/i18n/catalogues/en/mobile.notifications.json src/i18n/catalogues/en/mobile.notifications.context.json src/i18n/catalogues/vi/mobile.notifications.json src/i18n/catalogues/en/mobile.computers.json src/i18n/catalogues/en/mobile.computers.context.json src/i18n/catalogues/vi/mobile.computers.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+2981717fd7638c1e7c5c9175bd59b6c742502e24c3c8959920802cfc7b5154f8  src/i18n/catalogues/vi/mobile.schedules.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+4f3b2a5c88356864e6df23c909bc9a717d4f0fd0f7c5dfeda21f6fa091ab63d5  src/i18n/catalogues/vi/mobile.projects.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+a50da99c7431bdd30629bd172af9677a7e47c208e1c7a34be8d5ad2d6c60d6b3  src/i18n/catalogues/vi/mobile.notifications.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+ff1fa7f6b5294c2a240bd5af5827aad0c86989be42ebb4a6fbfed2c1edc7e0a1  src/i18n/catalogues/vi/mobile.computers.json
++ echo '=== repo validator: generate.ts --check (key parity, parse, placeholder names/kinds) ==='
+=== repo validator: generate.ts --check (key parity, parse, placeholder names/kinds) ===
++ cd /Users/damian/workspace/vi-wave
++ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
+(node:61292) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/vi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/vi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ echo generate_check_exit=0
+generate_check_exit=0
++ echo '=== repo gate: check-strings.ts ==='
+=== repo gate: check-strings.ts ===
++ cd /Users/damian/workspace/vi-wave
++ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d
++ echo check_strings_exit=0
+check_strings_exit=0
++ echo '=== structural verifier (select arms, plural reachability, per-arm placeholders, NFC) ==='
+=== structural verifier (select arms, plural reachability, per-arm placeholders, NFC) ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
+{
+  "keyCount": 77,
+  "pluralNodes": 5,
+  "selectNodes": 5,
+  "problemCount": 0,
+  "problems": []
+}
++ echo verify_exit=0
+verify_exit=0
++ echo '=== vi CLDR plural categories ==='
+=== vi CLDR plural categories ===
++ node -e 'console.log(JSON.stringify(new Intl.PluralRules('\''vi'\'').resolvedOptions().pluralCategories))'
+["other"]
++ echo '=== production renderer + production copy modules (scratch copy with vi shipped) ==='
+=== production renderer + production copy modules (scratch copy with vi shipped) ===
++ cd /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy
++ diff -u /Users/damian/workspace/vi-wave/src/i18n/locale.ts src/i18n/locale.ts
+--- /Users/damian/workspace/vi-wave/src/i18n/locale.ts	2026-10-30 07:25:35
++++ src/i18n/locale.ts	2026-10-30 07:36:06
+@@ -66,7 +66,6 @@
+  * a reviewed change rather than a forgotten one.
+  */
+ export const NOT_YET_SHIPPED_LOCALES = [
+-	"vi",
+ 	"ur",
+ 	"hi",
+ ] as const satisfies readonly SupportedLocale[];
+@@ -83,6 +82,7 @@
+ 	"es",
+ 	"zh-CN",
+ 	"ru",
++	"vi",
+ ] as const satisfies readonly SupportedLocale[];
+ 
+ export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];
++ cd /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy
++ ./node_modules/.bin/tsx render-audit.mts
+## schedules — production clause functions, vi
+head.next 3 wakes, +240s	3 lần thức dậy · lần tới sau 4m
+head.next 1 wake, +240s	1 lần thức dậy · lần tới sau 4m
+head.next 2 wakes, +5400s	2 lần thức dậy · lần tới sau 1h
+head.overdue 3 wakes, -7200s	3 lần thức dậy · trễ 2h
+head.overdue 1 wake, -60s	1 lần thức dậy · trễ 60s
+due.ahead 4m	sau 4m
+due.overdue 2h	trễ 2h
+cadence.every 1d	mỗi 1d
+cadence.left 3 remaining	mỗi 1d · còn 3
+cadence.spent	mỗi 1d · không còn lượt gửi
+cadence.once	không lặp
+parked.wakes	Tạm gác — các lần thức dậy tiếp tục sau lượt tiếp theo của cuộc trò chuyện
+parked.monitors	Tạm gác — giám sát tiếp tục khi cuộc trò chuyện của nó chạy lại
+gone.wakes	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kích hoạt
+gone.monitors	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kiểm tra
+count.wakes 1	1 lần thức dậy
+count.wakes 2	2 lần thức dậy
+count.wakes 21	21 lần thức dậy
+count.monitors 1	1 giám sát
+count.monitors 2	2 giám sát
+count.monitors 0	0 giám sát
+truncated wakes 10/42	Đang hiện 10 trên 42 cuộc trò chuyện có lần thức dậy.
+truncated monitors 10/42	Đang hiện 10 trên 42 cuộc trò chuyện có giám sát.
+truncated wakes 3/4	Đang hiện 3 trên 4 cuộc trò chuyện có lần thức dậy.
+truncated monitors 1/2	Đang hiện 1 trên 2 cuộc trò chuyện có giám sát.
+HEADER wakes 3	Wakes · 3 đã lên lịch
+HEADER wakes 1	Wakes · 1 đã lên lịch
+HEADER wakes 0	Wakes · 0 đã lên lịch
+HEADER monitors 2 healthy	Monitors · 2 đang bật
+HEADER monitors 1/5 alerting	Monitors · 1 trên 5 cần chú ý
+HEADER monitors 5/5 alerting	Monitors · 5 trên 5 cần chú ý
+HEADER monitors 0	Monitors · 0 đang bật
+empty.title	Chưa có gì được bật
+empty.body	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộc trò chuyện vào thời điểm đã hẹn; giám sát theo dõi một thứ và báo khi có thay đổi.
+empty_line.wakes	Chưa lên lịch lần thức dậy nào.
+empty_line.monitors	Chưa bật giám sát nào.
+show_more.wakes 1	Hiện thêm 1 lần thức dậy
+show_more.wakes 4	Hiện thêm 4 lần thức dậy
+show_more.monitors 1	Hiện thêm 1 giám sát
+show_more.monitors 4	Hiện thêm 4 giám sát
+show_less.wakes	Hiện ít lần thức dậy hơn
+show_less.monitors	Hiện ít giám sát hơn
+read_error.wakes	Không đọc được các lần thức dậy trên máy này.
+read_error.monitors	Không đọc được các giám sát trên máy này.
+read_unreachable	Vừa rồi không đọc được lịch trên máy này.
+supervisor.not_running	Bộ giám sát các lần thức dậy đã được cài nhưng không hoạt động, nên các lần thức dậy bên dưới sẽ không chạy.
+supervisor.unsupported	Nền tảng này chưa giám sát các lần thức dậy, nên các lần thức dậy bên dưới chỉ chạy khi cuộc trò chuyện đang chạy.
+supervisor.unverifiable	Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.
+state.disabled	đã tắt
+state.dormant	tạm nghỉ
+state.expired	hết hạn
+state.stale	cũ
+state.waiting	đang chờ
+tail.failed 2	2 thất bại
+
+## projects — production functions, vi
+milestones.none	chưa có mốc
+milestones.count 2/3	2 trên 3 mốc
+milestones.count 0/1	0 trên 1 mốc
+milestones.count 1/1	1 trên 1 mốc
+sessions.count 1	1 phiên
+sessions.count 3	3 phiên
+sessions.live 3/2	3 phiên · 2 đang chạy
+stale_badge	tiến độ cũ
+delete_body	Xóa dự án Alpha? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+delete_body (slash name)	Xóa alpha/beta? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+remove_milestone_body	Xóa mốc beta khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+write_unknown_note	Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại.
+draft_kept_note	Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.
+milestone_slash_note	Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.
+project_name_hint	1-64 ký tự: chữ cái, chữ số, dấu chấm, gạch dưới hoặc gạch nối. Không có dấu cách và không được bắt đầu bằng gạch nối.
+session_state.filed_by	ghi nhận bởi
+session_state.missing	không còn
+session_state.not_running	không chạy
+write_receipt project/created	Đã tạo Thanh toán Q4.
+write_receipt project/completed	Đã hoàn thành Thanh toán Q4.
+write_receipt project/reopened	Đã mở lại Thanh toán Q4.
+write_receipt project/added	Đã thêm Thanh toán Q4.
+write_receipt project/updated	Đã cập nhật Thanh toán Q4.
+write_receipt project/removed	Đã xóa Thanh toán Q4.
+write_receipt project/deleted	Đã xóa Thanh toán Q4.
+write_receipt milestone/created	Đã tạo mốc Thanh toán Q4.
+write_receipt milestone/completed	Đã hoàn thành mốc Thanh toán Q4.
+write_receipt milestone/reopened	Đã mở lại mốc Thanh toán Q4.
+write_receipt milestone/added	Đã thêm mốc Thanh toán Q4.
+write_receipt milestone/updated	Đã cập nhật mốc Thanh toán Q4.
+write_receipt milestone/removed	Đã xóa mốc Thanh toán Q4.
+write_receipt milestone/deleted	Đã xóa mốc Thanh toán Q4.
+write_receipt other/created	Đã tạo Thanh toán Q4.
+write_receipt other/completed	Đã hoàn thành Thanh toán Q4.
+write_receipt other/reopened	Đã mở lại Thanh toán Q4.
+write_receipt other/added	Đã thêm Thanh toán Q4.
+write_receipt other/updated	Đã cập nhật Thanh toán Q4.
+write_receipt other/removed	Đã xóa Thanh toán Q4.
+write_receipt other/deleted	Đã xóa Thanh toán Q4.
+
+## notifications — t(), vi
+mobile.notifications.answer	Trả lời
+mobile.notifications.back	Quay lại
+mobile.notifications.detail.answer_in_conversation	Trả lời trong cuộc trò chuyện
+mobile.notifications.detail.conversation_asks	Câu hỏi trong cuộc trò chuyện này
+mobile.notifications.detail.earlier_updates	Cập nhật trước đó
+mobile.notifications.detail.from	Nguồn
+mobile.notifications.detail.no_asks	Không có câu hỏi nào trong cuộc trò chuyện này.
+mobile.notifications.detail.nothing_to_dismiss	Không có cập nhật nào từ cuộc trò chuyện này để bỏ qua.
+mobile.notifications.detail.projects	Dự án
+mobile.notifications.dismiss	Bỏ qua
+mobile.notifications.filter_label	Hiển thị
+mobile.notifications.load_failed	Không thể tải thông báo
+mobile.notifications.priority_high	Cao
+mobile.notifications.title	Thông báo
+
+## computers — t(), vi
+mobile.computers.add	Thêm máy tính
+mobile.computers.added.stays_listed	Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.
+mobile.computers.badge.active	hoạt động
+mobile.computers.badge.connecting	đang kết nối
+mobile.computers.connecting	Đang kết nối…
+mobile.computers.none_on_phone	Chưa có máy tính nào trên điện thoại này.
+mobile.computers.password_placeholder	Mật khẩu từ lop mobile
+mobile.computers.section.not_connected	Trong tài khoản Radient của bạn, chưa kết nối
+mobile.computers.section.on_phone	Trên điện thoại này
+mobile.computers.switch	Chuyển máy tính
+
+## English twin — same production functions
+head.next 3 wakes, +240s	3 wakes · next in 4m
+head.overdue 3 wakes, -7200s	3 wakes · 2h overdue
+HEADER wakes 3	Wakes · 3 scheduled
+HEADER monitors 1/5 alerting	Monitors · 1 of 5 need attention
+delete_body	Delete Alpha? The project row goes for good. Its linked sessions and their transcripts are not touched.
+remove_milestone_body	Remove beta from this project? The milestone goes for good. The project's sessions and its progress line are not touched.
+write_receipt milestone/deleted	Deleted milestone beta.
+
+## renderer gate
+renderFor('vi') returns	Chưa có gì được bật
+LOCALISED_MESSAGES.vi keys: 143
++ echo render_exit=0
+render_exit=0
++ echo '=== typography / width report ==='
+=== typography / width report ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/typography.mts
+## typography problems
+(none)
+
+## longest vi strings (plain-text code points)
+mobile.projects.write_receipt	en=307	vi=301	ratio ratio=0.98	{kind, select, project {{action, select, created completed reopened added updated removed deleted other } .} milestone {
+mobile.schedules.empty.body	en=181	vi=204	ratio ratio=1.13	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộ
+mobile.projects.write_unknown_note	en=112	vi=122	ratio ratio=1.09	Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lạ
+mobile.projects.project_name_hint	en=105	vi=118	ratio ratio=1.12	1-64 ký tự: chữ cái, chữ số, dấu chấm, gạch dưới hoặc gạch nối. Không có dấu cách và không được bắt đầu bằng gạch nối.
+mobile.schedules.supervisor.unsupported	en=108	vi=114	ratio ratio=1.06	Nền tảng này chưa giám sát các lần thức dậy, nên các lần thức dậy bên dưới chỉ chạy khi cuộc trò chuyện đang chạy.
+mobile.schedules.supervisor.not_running	en=83	vi=108	ratio ratio=1.30	Bộ giám sát các lần thức dậy đã được cài nhưng không hoạt động, nên các lần thức dậy bên dưới sẽ không chạy.
+mobile.schedules.supervisor.unverifiable	en=90	vi=107	ratio ratio=1.19	Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.
+mobile.computers.added.stays_listed	en=77	vi=97	ratio ratio=1.26	Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.
+mobile.projects.remove_milestone_body	en=116	vi=87	ratio ratio=0.75	Xóa khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+mobile.projects.delete_body	en=98	vi=84	ratio ratio=0.86	Xóa ? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+mobile.schedules.gone.wakes	en=70	vi=81	ratio ratio=1.16	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kích hoạt
+mobile.schedules.gone.monitors	en=71	vi=80	ratio ratio=1.13	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kiểm tra
+
+## ratio mean=1.12 max=2.25
+## words >= 18 chars (overflow risk on narrow rows):
+(none)
++ echo typography_exit=0
+typography_exit=0
++ echo '=== glossary counts: group B ==='
+=== glossary counts: group B ===
++ cd /Users/damian/workspace/vi-wave/src/i18n/catalogues/vi
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o mốc mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' mốc 4
+mốc              4
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'bộ giám sát' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'bộ giám sát' 0
+bộ giám sát    0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'Bộ giám sát' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'Bộ giám sát' 1
+Bộ giám sát    1
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'giám sát' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'giám sát' 11
+giám sát         11
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'lần thức dậy' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'lần thức dậy' 12
+lần thức dậy 12
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'hàng đợi' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'hàng đợi' 0
+hàng đợi       0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'bản nháp' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'bản nháp' 0
+bản nháp        0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'Bản nháp' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'Bản nháp' 0
+Bản nháp        0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'thư mục home' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'thư mục home' 0
+thư mục home    0
++ echo '=== glossary counts: core'\''s committed vi ==='
+=== glossary counts: core's committed vi ===
++ cd /Users/damian/local-operator/local_operator/i18n/catalogues/vi
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o mốc cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
+++ wc -l
++ printf '%-18s %s\n' mốc 17
+mốc              17
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'bộ giám sát' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ wc -l
+++ tr -d ' '
++ printf '%-18s %s\n' 'bộ giám sát' 1
+bộ giám sát    1
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ grep -o 'Bộ giám sát' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-18s %s\n' 'Bộ giám sát' 0
+Bộ giám sát    0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ grep -o 'giám sát' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
+++ wc -l
++ printf '%-18s %s\n' 'giám sát' 12
+giám sát         12
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ tr -d ' '
+++ grep -o 'lần thức dậy' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
++ printf '%-18s %s\n' 'lần thức dậy' 16
+lần thức dậy 16
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ grep -o 'hàng đợi' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-18s %s\n' 'hàng đợi' 5
+hàng đợi       5
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ grep -o 'bản nháp' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-18s %s\n' 'bản nháp' 0
+bản nháp        0
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ grep -o 'Bản nháp' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-18s %s\n' 'Bản nháp' 1
+Bản nháp        1
++ for term in "mốc" "bộ giám sát" "Bộ giám sát" "giám sát" "lần thức dậy" "hàng đợi" "bản nháp" "Bản nháp" "thư mục home"
+++ wc -l
+++ grep -o 'thư mục home' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-18s %s\n' 'thư mục home' 2
+thư mục home    2
++ echo '=== mirrored relay keys (outside group B; identity check only) ==='
+=== mirrored relay keys (outside group B; identity check only) ===
++ cd /Users/damian/workspace/vi-wave
++ python3 -
+relay.chrome keys 4 diffs 0 []
+relay.health keys 8 diffs 0 []
++ echo '=== NEGATIVE CONTROLS (scratch copy; each mutation restored afterwards) ==='
+=== NEGATIVE CONTROLS (scratch copy; each mutation restored afterwards) ===
++ cd /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy
++ cp -R src/i18n/catalogues/vi /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine
++ restore
++ rm -rf src/i18n/catalogues/vi
++ cp -Rc /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine src/i18n/catalogues/vi
++ node scripts/i18n/generate.ts
++ python3 -
++ run_case 'placeholders: {total} dropped from mobile.projects.milestones.count'
++ name='placeholders: {total} dropped from mobile.projects.milestones.count'
++ echo '--- negative control: placeholders: {total} dropped from mobile.projects.milestones.count ---'
+--- negative control: placeholders: {total} dropped from mobile.projects.milestones.count ---
++ node scripts/i18n/generate.ts
++ node scripts/i18n/generate.ts --check
++ echo generate_check_exit=1
+generate_check_exit=1
++ head -2 /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/g.out
+vi/mobile.projects.json: mobile.projects.milestones.count does not carry the source's parameters — missing: total; unexpected: none (English: completed:text, total:text; vi: completed:text)
++ VI_DIR=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/catalogues/vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
++ echo verify_exit=1
+verify_exit=1
++ grep -m2 -E ':\s(missing arm|unreachable|target string|placeholders differ|select shape)' /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/v.out
+    "mobile.projects/mobile.projects.milestones.count: placeholders differ: en {completed,total} vs vi {completed}"
++ restore
++ rm -rf src/i18n/catalogues/vi
++ cp -Rc /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine src/i18n/catalogues/vi
++ node scripts/i18n/generate.ts
++ python3 -
++ run_case 'select arms: milestone arm removed from mobile.projects.write_receipt'
++ name='select arms: milestone arm removed from mobile.projects.write_receipt'
++ echo '--- negative control: select arms: milestone arm removed from mobile.projects.write_receipt ---'
+--- negative control: select arms: milestone arm removed from mobile.projects.write_receipt ---
++ node scripts/i18n/generate.ts
++ node scripts/i18n/generate.ts --check
++ echo generate_check_exit=0
+generate_check_exit=0
++ head -2 /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/g.out
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+(node:61803) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
++ VI_DIR=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/catalogues/vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
++ echo verify_exit=1
+verify_exit=1
++ grep -m2 -E ':\s(missing arm|unreachable|target string|placeholders differ|select shape)' /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/v.out
+    "mobile.projects/mobile.projects.write_receipt: select shape differs:\n  en $/{kind,select,[milestone,other,project]} | $/{kind,select,project}/{action,select,[added,completed,created,deleted,other,removed,reopened,updated]} | $/{kind,select,milestone}/{action,select,[added,completed,created,deleted,other,removed,reopened,updated]} | $/{kind,select,other}/{action,select,[added,completed,created,deleted,other,removed,reopened,updated]}\n  vi $/{kind,select,[other,project]} | $/{kind,select,project}/{action,select,[added,completed,created,deleted,other,removed,reopened,updated]} | $/{kind,select,other}/{action,select,[added,completed,created,deleted,other,removed,reopened,updated]}",
+    "mobile.projects/mobile.projects.write_receipt: missing arm $/{kind,select,milestone}",
++ restore
++ rm -rf src/i18n/catalogues/vi
++ cp -Rc /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine src/i18n/catalogues/vi
++ node scripts/i18n/generate.ts
++ python3 -
++ run_case 'plural arms: unreachable '\''one'\'' arm added to mobile.schedules.count.wakes'
++ name='plural arms: unreachable '\''one'\'' arm added to mobile.schedules.count.wakes'
++ echo '--- negative control: plural arms: unreachable '\''one'\'' arm added to mobile.schedules.count.wakes ---'
+--- negative control: plural arms: unreachable 'one' arm added to mobile.schedules.count.wakes ---
++ node scripts/i18n/generate.ts
++ node scripts/i18n/generate.ts --check
++ echo generate_check_exit=0
+generate_check_exit=0
++ head -2 /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/g.out
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+(node:61920) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
++ VI_DIR=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/catalogues/vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
++ echo verify_exit=1
+verify_exit=1
++ grep -m2 -E ':\s(missing arm|unreachable|target string|placeholders differ|select shape)' /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/v.out
+    "mobile.schedules/mobile.schedules.count.wakes: unreachable plural arms at $/{count,plural}: [one,other] (vi categories [other])"
++ restore
++ rm -rf src/i18n/catalogues/vi
++ cp -Rc /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine src/i18n/catalogues/vi
++ node scripts/i18n/generate.ts
++ python3 -
++ run_case 'NFC: decomposed combining marks in mobile.projects.milestones.none'
++ name='NFC: decomposed combining marks in mobile.projects.milestones.none'
++ echo '--- negative control: NFC: decomposed combining marks in mobile.projects.milestones.none ---'
+--- negative control: NFC: decomposed combining marks in mobile.projects.milestones.none ---
++ node scripts/i18n/generate.ts
++ node scripts/i18n/generate.ts --check
++ echo generate_check_exit=0
+generate_check_exit=0
++ head -2 /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/g.out
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+(node:61979) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
++ VI_DIR=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/catalogues/vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
++ echo verify_exit=1
+verify_exit=1
++ grep -m2 -E ':\s(missing arm|unreachable|target string|placeholders differ|select shape)' /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/v.out
+    "mobile.projects/mobile.projects.milestones.none: target string is not NFC-normalized"
++ restore
++ rm -rf src/i18n/catalogues/vi
++ cp -Rc /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/vi-pristine src/i18n/catalogues/vi
++ node scripts/i18n/generate.ts
++ echo '--- restored sanity ---'
+--- restored sanity ---
++ node scripts/i18n/generate.ts --check
++ echo restored_generate_exit=0
+restored_generate_exit=0
++ VI_DIR=/Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/wave-copy/src/i18n/catalogues/vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/0156ce9c9f5e/scratchpad/vi-b/verify.mts
++ echo restored_verify_exit=0
+restored_verify_exit=0
++ echo '=== repo untouched by this audit (catalogues) ==='
+=== repo untouched by this audit (catalogues) ===
++ cd /Users/damian/workspace/vi-wave
++ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/vi/
+?? src/i18n/catalogues/vi/
