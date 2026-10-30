@@ -1,0 +1,322 @@
+
+===== IDENTITY — when and where this ran =====
+2026-10-30T03:50:43Z
+session: 0c96bc62035b | auditor model (session header for every command below): radient/auto
+fallback disclosure: anthropic/claude-sonnet-5-5 (provider quota) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, all before the first command; no earlier hop's output is evidence
+repo: /Users/damian/workspace/es-wave
+host: Darwin arm64 | node v24.22.1 | python 3.14.7
+
+===== 1. REPOSITORY STATE (read-only; this audit changes no tracked byte) =====
+bc770cea33d8d4265b1105baad53a5bb5a482ef2
+feat/i18n-spanish
+--- git status --porcelain (the only entry must be this audit bundle; no tracked byte changed) ---
+?? i18n/audits/evidence/es/mobile.schedules/es29b3r3/
+--- is the es catalogue tracked at HEAD? ---
+src/i18n/catalogues/es/mobile.schedules.json
+--- working tree equals HEAD for the audited file? ---
+(empty diff above = the audited bytes ARE the committed bytes)
+
+===== 2. INPUT IDENTITIES (sha256 of the exact bytes judged) =====
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+bf8afe000f506431789fb5df4654d700bf5935238eb1ba01f3aa1854936bd826  src/i18n/catalogues/es/mobile.schedules.json
+--- renderer + projection, for provenance ---
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4  src/i18n/runtime.ts
+d9a72ed53f88a49cbbc855dbeada6d45b709aef9b7a7e878e718d90987a3e9bb  src/i18n/catalogue.gen.ts
+72713f50b78bed572acf0f14d3647327fba825e1468f05f80b9c65e85dfdfaee  src/i18n/locale.ts
+--- the audited head's commit message subject ---
+bc770cea33d8d4265b1105baad53a5bb5a482ef2 test(i18n): assert Spanish resolves and renders, and re-pin the render tree
+
+===== 3. REPOSITORY VALIDATOR (generate.ts --check; es is in SHIPPED_LOCALES at this head) =====
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+--- SHIPPED / SUPPORTED (context for the check above) ---
+export const SHIPPED_LOCALES = [
+	"en",
+	"fr",
+	"es",
+] as const satisfies readonly SupportedLocale[];
+
+export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];
+
+===== 4. STRINGS VALIDATOR (repository-wide, for context) =====
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+
+===== 5. REPO TESTS FOR THIS NAMESPACE (independent of my probes) =====
+ Test Files  6 passed (6)
+      Tests  152 passed (152)
+   Duration  3.03s (transform 73%, import 21%, worker 4%, tests 2%)
+
+===== 6. MECHANICAL PARITY / ICU / PLURAL-ARM PROBE (app's own parser; probe.mjs is bundled) =====
+
+==============================================================================
+0. INPUT IDENTITY
+==============================================================================
+en keys: 38 | es keys: 38 | context entries: 38
+valid JSON: both parsed (this line proves it)
+
+==============================================================================
+1. KEY PARITY AND ORDER (38/38)
+==============================================================================
+en key count: 38 | es key count: 38
+missing in es: (none)
+extra in es: (none)
+same order as en: true
+
+==============================================================================
+2. ICU PARSE (es) + PLACEHOLDER NAME/TYPE PARITY vs en
+==============================================================================
+KIND-DIFF (accepted, en plain -> es plural) mobile.schedules.summary.monitors_armed: en[count:text] es[count:plural]
+KIND-DIFF (accepted, en plain -> es plural) mobile.schedules.summary.monitors_attention: en[broken:text,total:text] es[broken:plural,total:text]
+KIND-DIFF (accepted, en plain -> es plural) mobile.schedules.summary.wakes: en[count:text] es[count:plural]
+KIND-DIFF (accepted, en plain -> es plural) mobile.schedules.tail.failed: en[count:text] es[count:plural]
+messages parsed: 38/38 | parse failures: 0
+placeholder NAME sets identical: yes (38/38)
+placeholder KIND differences (en plain -> es plural): summary.monitors_armed:count(text->plural), summary.monitors_attention:broken(text->plural), summary.wakes:count(text->plural), tail.failed:count(text->plural)
+
+==============================================================================
+3. PLURAL ARM STRUCTURE (es) — ALL CLDR CATEGORIES FOR es PRESENT, NO ARM DROPPED
+==============================================================================
+Intl.PluralRules('es').resolvedOptions().pluralCategories = ["one","many","other"]
+app pluralCategory('es', n): 0=other 1=one 2=other 1000000=many 1500000=other
+ok      count.monitors [count] arms=["one","many","other"]
+ok      count.wakes [count] arms=["one","many","other"]
+ok      show_more.monitors [hidden] arms=["one","many","other"]
+ok      show_more.wakes [hidden] arms=["one","many","other"]
+ok      summary.monitors_armed [count] arms=["one","many","other"]
+ok      summary.monitors_attention [broken] arms=["one","many","other"]
+ok      summary.wakes [count] arms=["one","many","other"]
+ok      tail.failed [count] arms=["one","many","other"]
+plural messages in es: 8 | with an arm problem: 0 | arms dropped vs en: 0
+
+==============================================================================
+4. {total} RETAINED IN EVERY ARM OF summary.monitors_attention
+==============================================================================
+arm one    args=["total"] keepsTotal=true
+arm many   args=["total"] keepsTotal=true
+arm other  args=["total"] keepsTotal=true
+
+==============================================================================
+5. summary.monitors_attention AT broken=1 AND broken=2
+==============================================================================
+broken=1 total=40 es=one   | 1 de 40 requiere atención
+broken=2 total=40 es=other | 2 de 40 requieren atención
+broken=1 total=1 es=one   | 1 de 1 requiere atención
+broken=0 total=40 es=other | 0 de 40 requieren atención
+broken=1000000 total=40 es=many  | 1000000 de 40 requieren atención
+
+==============================================================================
+6. truncated — BOTH FAMILIES
+==============================================================================
+family=wakes    3/9 | Mostrando 3 de 9 conversaciones con despertares.
+family=wakes    1/9 | Mostrando 1 de 9 conversaciones con despertares.
+family=wakes    1/1 | Mostrando 1 de 1 conversaciones con despertares.
+family=wakes    200/500 | Mostrando 200 de 500 conversaciones con despertares.
+family=monitors 3/9 | Mostrando 3 de 9 conversaciones con monitorizaciones.
+family=monitors 1/9 | Mostrando 1 de 9 conversaciones con monitorizaciones.
+family=monitors 1/1 | Mostrando 1 de 1 conversaciones con monitorizaciones.
+family=monitors 200/500 | Mostrando 200 de 500 conversaciones con monitorizaciones.
+
+==============================================================================
+7. RENDERED — COUNTED NOUNS (0 / 1 / 2 / 1 000 000)
+==============================================================================
+count.monitors                 0 es=other | 0 monitorizaciones                           | en: 0 monitors
+count.monitors                 1 es=one   | 1 monitorización                             | en: 1 monitor
+count.monitors                 2 es=other | 2 monitorizaciones                           | en: 2 monitors
+count.monitors           1000000 es=many  | 1000000 de monitorizaciones                  | en: 1000000 monitors
+count.wakes                    0 es=other | 0 despertares                                | en: 0 wakes
+count.wakes                    1 es=one   | 1 despertar                                  | en: 1 wake
+count.wakes                    2 es=other | 2 despertares                                | en: 2 wakes
+count.wakes              1000000 es=many  | 1000000 de despertares                       | en: 1000000 wakes
+summary.monitors_armed         0 es=other | 0 monitorizaciones activas                   | en: 0 armed
+summary.monitors_armed         1 es=one   | 1 monitorización activa                      | en: 1 armed
+summary.monitors_armed         2 es=other | 2 monitorizaciones activas                   | en: 2 armed
+summary.monitors_armed   1000000 es=many  | 1000000 de monitorizaciones activas          | en: 1000000 armed
+summary.wakes                  0 es=other | 0 despertares programados                    | en: 0 scheduled
+summary.wakes                  1 es=one   | 1 despertar programado                       | en: 1 scheduled
+summary.wakes                  2 es=other | 2 despertares programados                    | en: 2 scheduled
+summary.wakes            1000000 es=many  | 1000000 de despertares programados           | en: 1000000 scheduled
+show_more.monitors             0 es=other | Mostrar 0 monitorizaciones más               | en: Show 0 more monitors
+show_more.monitors             1 es=one   | Mostrar 1 monitorización más                 | en: Show 1 more monitor
+show_more.monitors             2 es=other | Mostrar 2 monitorizaciones más               | en: Show 2 more monitors
+show_more.monitors       1000000 es=many  | Mostrar 1000000 de monitorizaciones más      | en: Show 1000000 more monitors
+show_more.wakes                0 es=other | Mostrar 0 despertares más                    | en: Show 0 more wakes
+show_more.wakes                1 es=one   | Mostrar 1 despertar más                      | en: Show 1 more wake
+show_more.wakes                2 es=other | Mostrar 2 despertares más                    | en: Show 2 more wakes
+show_more.wakes          1000000 es=many  | Mostrar 1000000 de despertares más           | en: Show 1000000 more wakes
+tail.failed                    0 es=other | 0 fallos                                     | en: 0 failed
+tail.failed                    1 es=one   | 1 fallo                                      | en: 1 failed
+tail.failed                    2 es=other | 2 fallos                                     | en: 2 failed
+tail.failed              1000000 es=many  | 1000000 de fallos                            | en: 1000000 failed
+
+==============================================================================
+8. REMEDIATED KEYS — RENDERED WHERE THEY LAND
+==============================================================================
+state.stale           | obsoleto   (wake row state slot; en 'stale')
+gone.monitors       | Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba
+  composed head line: Monitors · 2 monitorizaciones / Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba
+gone.wakes          | Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara
+  composed head line: Wakes · 5 despertares programados / Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara
+empty.body            | Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.
+
+==============================================================================
+9. MECHANICAL SWEEP
+==============================================================================
+bidi controls: 0 | markup/backticks: 0 | double spaces: 0 | space-before-punct: 0 | "!" in copy: 0
+em-dash form (must be ' — '): mobile.schedules.gone.monitors=ok mobile.schedules.gone.wakes=ok mobile.schedules.parked.monitors=ok mobile.schedules.parked.wakes=ok
+rendered terminal-character mismatches vs en: (none)
+full stops PRESENT in en but MISSING in es: none
+
+==============================================================================
+10. NEGATIVE CONTROL — these checks can fail
+==============================================================================
+(a) pre-remediation gone.monitors from f1c782f (git): "Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba"
+    occurrences of "ya no está" in that one line: 2
+    at head bc770ce: "Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba" -> occurrences of "ya no está": 1, of "ya no existe": 1
+(b) ungrammatical control at broken=1 -> 1 de 40 requieren atención
+(c) many-arm-removed control: arms=["one","other"] -> missing=["many"] (expected ["many"]); at 1000000 -> 1000000 monitorizaciones
+(c) {total}-dropped control: params=broken:plural vs en broken:text,total:text -> name-parity check flags it: true
+
+==============================================================================
+11. RESULT
+==============================================================================
+
+[end of probe]
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+===== 7. SHIPPED-PROJECTION RENDER (catalogue.gen.ts — what the phone loads) =====
+projection: en=143 keys, es=143 keys
+namespace keys present in the es projection: 38/38; projection bytes differing from the catalogue file: none
+state.stale {}
+   es (served from es): obsoleto
+   en: stale
+gone.monitors {}
+   es (served from es): Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba
+   en: Gone — its conversation is no longer on this machine, so nothing checks
+gone.wakes {}
+   es (served from es): Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara
+   en: Gone — its conversation is no longer on this machine, so nothing fires
+empty.body {}
+   es (served from es): Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.
+   en: Ask an agent in chat to do something on a regular basis and it will appear here. Wakes fire a prompt into a conversation at a time; monitors watch one thing and report what changes.
+summary.monitors_attention {"broken":1,"total":40}
+   es (served from es): 1 de 40 requiere atención
+   en: 1 of 40 need attention
+summary.monitors_attention {"broken":2,"total":40}
+   es (served from es): 2 de 40 requieren atención
+   en: 2 of 40 need attention
+truncated {"shown":3,"total":9,"family":"wakes"}
+   es (served from es): Mostrando 3 de 9 conversaciones con despertares.
+   en: Showing 3 of 9 conversations with wakes.
+truncated {"shown":3,"total":9,"family":"monitors"}
+   es (served from es): Mostrando 3 de 9 conversaciones con monitorizaciones.
+   en: Showing 3 of 9 conversations with monitors.
+count.monitors {"count":1}
+   es (served from es): 1 monitorización
+   en: 1 monitor
+count.monitors {"count":1000000}
+   es (served from es): 1000000 de monitorizaciones
+   en: 1000000 monitors
+parked.monitors {}
+   es (served from es): En pausa — las monitorizaciones se reanudan cuando su conversación vuelva a ejecutarse
+   en: Parked — monitors resume when its conversation runs again
+supervisor.unverifiable {}
+   es (served from es): Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.
+   en: Nothing supervises the wakes below, so they only fire while their conversation is running.
+
+keys served from the es projection: 12/12; fell back to en: 0
+keys whose es render is byte-identical to en (would mean untranslated): (none)
+projection bytes equal the es catalogue file for every case: true
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+===== 7b. DEFENSIVE CONTROL — the pre-fix catalogue must FAIL the byte comparison =====
+(the same verifier run against the parent commit's catalogue, which still carries 'obsoleta')
+  MISMATCH mobile.schedules.state.stale
+  MISMATCH mobile.schedules.gone.monitors
+  MISMATCH mobile.schedules.gone.wakes
+  MISMATCH mobile.schedules.empty.body
+VERDICT: NOT VERIFIED
+
+===== 8. BYTE-FOR-BYTE VERIFICATION OF THE THREE REMEDIATED FINDINGS (verify_remediation.py, bundled) =====
+==============================================================================
+ROUND-2 'EXACT REPLACEMENT' ROWS, PARSED FROM report.md (not retyped)
+==============================================================================
+mobile.schedules.state.stale
+    requested = obsoleto
+mobile.schedules.gone.monitors
+    requested = Ya no está \u2014 su conversación ya no existe en esta máquina, así que nada la comprueba
+mobile.schedules.gone.wakes
+    requested = Ya no está \u2014 su conversación ya no existe en esta máquina, así que nada lo dispara
+mobile.schedules.empty.body
+    requested = cada monitorización vigila una cosa y avisa de lo que cambia.
+
+==============================================================================
+SHIPPED BYTES AT THE ROUND-3 HEAD (bc770ce), COMPARED WITH THE REQUEST
+==============================================================================
+  MATCH   mobile.schedules.state.stale
+    shipped  = obsoleto
+  MATCH   mobile.schedules.gone.monitors
+    shipped  = Ya no está \u2014 su conversación ya no existe en esta máquina, así que nada la comprueba
+  MATCH   mobile.schedules.gone.wakes
+    shipped  = Ya no está \u2014 su conversación ya no existe en esta máquina, así que nada lo dispara
+mobile.schedules.empty.body
+    composed = Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.
+  MATCH   mobile.schedules.empty.body
+    shipped  = Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.
+
+==============================================================================
+DELTA f1c782f..HEAD ON THE es mobile.schedules FILE
+==============================================================================
+changed lines: 4 added, 4 removed
+  - "mobile.schedules.empty.body": "Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; las monitorizaciones vigilan una cosa y avisan de lo que cambia.",
+  + "mobile.schedules.empty.body": "Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.",
+  - "mobile.schedules.gone.monitors": "Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba",
+  + "mobile.schedules.gone.monitors": "Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba",
+  - "mobile.schedules.gone.wakes": "Ya no está — su conversación ya no está en esta máquina, así que nada lo dispara",
+  + "mobile.schedules.gone.wakes": "Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara",
+  - "mobile.schedules.state.stale": "obsoleta",
+  + "mobile.schedules.state.stale": "obsoleto",
+
+changed keys: ['mobile.schedules.empty.body', 'mobile.schedules.gone.monitors', 'mobile.schedules.gone.wakes', 'mobile.schedules.state.stale']
+exactly the three findings' four keys, nothing else: YES
+
+VERDICT: the three findings are remediated exactly as specified, with no collateral change
+exit=0
+
+===== 9. AUDIT LEDGER — the command my brief names, if this repository has one =====
+ls: i18n/ledger.json: No such file or directory
+(exit above is the finding: this repo has no ledger file and no ledger command)
+
+===== 10. BRANCH-STATE OBSERVATION (not a translation finding) =====
+The U-08 content-identity gate runs in 'pnpm test' (vitest.config.ts includes tools/**/*.test.ts).
+::error file=/Users/damian/workspace/es-wave/tools/audit/u08-content-pins.test.ts,title=tools/audit/u08-content-pins.test.ts > U08 content-identity admission > admits README-only edits and deletion in fixtures/relay,line=162,column=68::AssertionError: expected [Function] to not throw an error but 'Error: U08 content identity differs f…' was thrown%0A%0A- Expected:%0Aundefined%0A%0A+ Received:%0A"Error: U08 content identity differs from the pinned baseline; refusing approximate proof:%0A  render-tree src pinned=9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488 actual=c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646%0AA deliberate re-pin is required: review that change against what the proof measures, then run `node tools/audit/u08-content-pins.ts --print` and update the pin table in tools/audit/u08-content-pins.ts. Historical ORIGINAL_* incident hashes are never repinned."%0A%0A ❯ tools/audit/u08-content-pins.test.ts:162:68%0A%0A
+::error file=/Users/damian/workspace/es-wave/tools/audit/u08-content-pins.test.ts,title=tools/audit/u08-content-pins.test.ts > U08 content-identity admission > admits README-only edits and deletion in fixtures/supplements,line=162,column=68::AssertionError: expected [Function] to not throw an error but 'Error: U08 content identity differs f…' was thrown%0A%0A- Expected:%0Aundefined%0A%0A+ Received:%0A"Error: U08 content identity differs from the pinned baseline; refusing approximate proof:%0A  render-tree src pinned=9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488 actual=c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646%0AA deliberate re-pin is required: review that change against what the proof measures, then run `node tools/audit/u08-content-pins.ts --print` and update the pin table in tools/audit/u08-content-pins.ts. Historical ORIGINAL_* incident hashes are never repinned."%0A%0A ❯ tools/audit/u08-content-pins.test.ts:162:68%0A%0A
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+  render-tree src pinned=9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488 actual=c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646
+ Test Files  1 failed (1)
+      Tests  3 failed | 31 passed (34)
+--- which committed tree does the pin describe? (pin-attrib3.py, bundled) ---
+pin in the committed file: 9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488
+bc770ce  files= 481  c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646  
+e2e9f30  files= 481  9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488  <<< MATCHES THE PIN
+f1c782f  files= 481  2af8ee9aa2efbd68092c57ca0efed67ea1077af3884b00972c0a24e37e9ac70d  
+c5f491e  files= 471  ab8fd5465dc24ac8e9ae4756c0ffd0ffcba02a0263af78f43f74238fc9f572db  
+cefd93b  files= 459  55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30  
+02e1713  files= 459  55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30  
+63ef641  files= 459  55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30  
+d5babfa  files= 459  55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30  
+
+===== 11. READ-ONLY CONFIRMATION =====
+--- git status after every command above (only UNTRACKED evidence dirs may appear; round-2 bundle untouched) ---
+?? i18n/audits/evidence/es/mobile.schedules/es29b3r3/
+--- the round-2 bundle is untouched ---
+
+===== END =====

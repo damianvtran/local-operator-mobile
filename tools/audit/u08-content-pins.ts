@@ -385,7 +385,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-10-29 for the Spanish wave: `src` now carries the Spanish
 	 * catalogues and the per-locale budget, exactly the content these pins exist to
 	 * freeze. Recomputed with `--print`; nothing else in the table moved. */
-	src: "9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488",
+	src: "c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
