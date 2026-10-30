@@ -1,0 +1,238 @@
+zh-CN delta re-audit — mobile.projects
+audit log: actual command output, not notes
+worktree : /Users/damian/workspace/zh-wave
+branch   : feat/i18n-chinese
+harness  : node zhdelta.ts mobile.projects  (copied beside this log as render.ts.txt)
+note     : MODULE_TYPELESS_PACKAGE_JSON is silenced; nothing about the run changes.
+browser  : none opened; no UI frame is claimed for this delta.
+
+$ git -C /Users/damian/workspace/zh-wave rev-parse HEAD
+# started 2026-10-30T07:13:14Z
+d3c39d8d2df2bccc78af82df9253776b4c933ad8
+# exit=0
+
+$ git -C /Users/damian/workspace/zh-wave status --porcelain
+# started 2026-10-30T07:13:14Z
+?? i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/
+?? i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/
+# exit=0
+
+$ sha256sum <en> <context> <zh-CN target>
+# started 2026-10-30T07:13:14Z
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.projects.context.json
+5ca57753a788c9968c8818372477d6e15bc081f9e5240b8489e0803aa1c61825  /Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/mobile.projects.json
+# exit=0
+
+$ npm run -s i18n:catalogue:check
+# started 2026-10-30T07:13:14Z
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:12084) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/zh-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/zh-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+# exit=0
+
+$ npm run -s i18n:strings:check
+# started 2026-10-30T07:13:17Z
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+# exit=0
+
+$ node_modules/.bin/vitest run src/i18n/__tests__
+# started 2026-10-30T07:13:20Z
+      Tests  89 passed (89)
+   Start at  03:13:23
+   Duration  4.52s (transform 80%, import 10%, tests 8%, worker 3%)
+
+  Transform  transforming modules took 5.94s · 80% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+# exit=0
+
+$ python3 verify-prescriptions.py mobile.projects   (HEAD bytes vs each round-1 prescribed replacement)
+# started 2026-10-30T07:13:28Z
+
+## mobile.projects  (round-1 zh29b2, verdict changes_requested)
+  ZH-PRJ-1 [major] mobile.projects.delete_body
+      round1 : 删除“{name}”？项目行将永久移除。其关联会话和会话记录不受影响。
+      now    : 删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。
+      rx     : 删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。
+      -> APPLIED VERBATIM
+  ZH-PRJ-2 [minor] mobile.projects.remove_milestone_body
+      round1 : 从此项目中移除“{name}”？该里程碑将永久移除。项目的会话和进度行不受影响。
+      now    : 要从此项目中删除{name}吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。
+      rx     : 从此项目中移除“{name}”？该里程碑将被永久移除。项目的会话和进度记录不受影响。
+      -> REWRITTEN — differs from the prescribed wording
+  ZH-PRJ-3 [minor] mobile.projects.session_state.filed_by
+      round1 : 由会话提交
+      now    : 由会话登记
+      rx     : 由会话登记
+      -> APPLIED VERBATIM
+
+keys compared=3 applied_verbatim=2 rewritten=1 unchanged=0
+# exit=0
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON zhdelta.ts mobile.projects
+# started 2026-10-30T07:13:28Z
+
+===== PROVENANCE =====
+namespace            : mobile.projects
+repo                 : /Users/damian/workspace/zh-wave
+HEAD                 : ref: refs/heads/feat/i18n-chinese (worktree gitdir)
+branch/commit        : d3c39d8d2df2bccc78af82df9253776b4c933ad8  (HEAD -> feat/i18n-chinese, origin/feat/i18n-chinese)
+node                 : v24.22.1
+harness              : zhdelta.ts (uses src/i18n renderFor + schedules-copy)
+sha256 src/i18n/catalogues/en/mobile.projects.json
+       a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09
+sha256 src/i18n/catalogues/en/mobile.projects.context.json
+       5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99
+sha256 src/i18n/catalogues/zh-CN/mobile.projects.json
+       5ca57753a788c9968c8818372477d6e15bc081f9e5240b8489e0803aa1c61825
+keys                 : en=15 zh=15 context=15
+SHIPPED_LOCALES      : ["en","fr","es","zh-CN"]
+activeLocale-ish     : renderFor(..., "zh-CN") + setLocaleSource(() => "zh-CN")
+
+===== MECHANICAL — key parity =====
+en - zh  : []
+zh - en  : []
+en - ctx : []
+ctx - en : []
+order identical: true
+
+===== MECHANICAL — parse + parameter parity (app parser) =====
+parse failures=0 param/structure mismatches=0
+
+===== MECHANICAL — plural categories (Intl.PluralRules('zh-CN')) =====
+zh-CN categories: ["other"]
+plural nodes inspected=1  select nodes inspected=4
+  mobile.projects.sessions.count: zh=[["other"]] en=[["one","other"]]
+Intl.PluralRules('zh-CN').select(0) = other
+Intl.PluralRules('zh-CN').select(1) = other
+Intl.PluralRules('zh-CN').select(2) = other
+Intl.PluralRules('zh-CN').select(3) = other
+Intl.PluralRules('zh-CN').select(1000000) = other
+plural arm violations=0
+
+===== NEGATIVE CONTROLS — prove each check above can fail =====
+control 1 (a `one` arm must be caught): CAUGHT -> [["one","other"]]
+control 2 (a renamed/dropped placeholder must be caught): CAUGHT
+   good=[["broken","text"],["total","text"]] broken=[["total","text"]]
+control 3 (a renamed select arm must be caught): CAUGHT
+control 4 (a bidi control must be caught): CAUGHT
+control 5 (ASCII prose punctuation beside CJK must be caught): CAUGHT
+control 6 (a dropped plural must be caught): CAUGHT
+
+===== MECHANICAL — bidi controls / ASCII prose punctuation / Latin residue =====
+bidi controls: none
+ASCII prose punct adjacent to CJK: none
+Latin runs (naive; kept names/terms expected): ["mobile.projects.write_receipt: \"completed   reopened   added   updated   removed   deleted   other\"","mobile.projects.write_receipt: \"milestone   completed   reopened   added   updated   removed   deleted   other\"","mobile.projects.write_receipt: \"other   completed   reopened   added   updated   removed   deleted   other\""]
+U+2026 ellipsis count: 0
+您 occurrences: 0
+
+===== RENDER — executed strings (zh-CN) =====
+
+-- delete_body with a real project name (proves {name} survives) --
+delete_body("payments-migration")
+  zh: "删除“payments-migration”？该项目将被永久删除。其关联会话和会话记录不受影响。"
+  en: "Delete payments-migration? The project row goes for good. Its linked sessions and their transcripts are not touched."
+delete_body("beta cut")
+  zh: "删除“beta cut”？该项目将被永久删除。其关联会话和会话记录不受影响。"
+  en: "Delete beta cut? The project row goes for good. Its linked sessions and their transcripts are not touched."
+delete_body("项目甲")
+  zh: "删除“项目甲”？该项目将被永久删除。其关联会话和会话记录不受影响。"
+  en: "Delete 项目甲? The project row goes for good. Its linked sessions and their transcripts are not touched."
+
+-- remove_milestone_body with a real milestone name --
+remove_milestone_body("beta cut")
+  zh: "要从此项目中删除beta cut吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。"
+  en: "Remove beta cut from this project? The milestone goes for good. The project's sessions and its progress line are not touched."
+remove_milestone_body("v2.0-rc1")
+  zh: "要从此项目中删除v2.0-rc1吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。"
+  en: "Remove v2.0-rc1 from this project? The milestone goes for good. The project's sessions and its progress line are not touched."
+remove_milestone_body("里程碑乙")
+  zh: "要从此项目中删除里程碑乙吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。"
+  en: "Remove 里程碑乙 from this project? The milestone goes for good. The project's sessions and its progress line are not touched."
+
+-- filed_by / session_state --
+mobile.projects.session_state.filed_by: "由会话登记"
+mobile.projects.session_state.missing: "缺失"
+mobile.projects.session_state.not_running: "未运行"
+
+-- counts --
+mobile.projects.sessions.count {"count":2} -> "2 个会话"
+mobile.projects.sessions.count {"count":1} -> "1 个会话"
+mobile.projects.sessions.live {"base":"2 个会话","live":1} -> "2 个会话 · 1个进行中"
+mobile.projects.milestones.count {"completed":1,"total":2} -> "1/2个里程碑"
+
+-- write_receipt, every action x kind --
+created/project -> "已创建项目“payments-migration”。"
+completed/project -> "已完成项目“payments-migration”。"
+reopened/project -> "已重新打开项目“payments-migration”。"
+added/project -> "已添加项目“payments-migration”。"
+updated/project -> "已更新项目“payments-migration”。"
+removed/project -> "已移除项目“payments-migration”。"
+deleted/project -> "已删除项目“payments-migration”。"
+archived/project -> "已更新项目“payments-migration”。"
+created/milestone -> "已创建里程碑“beta cut”。"
+completed/milestone -> "已完成里程碑“beta cut”。"
+reopened/milestone -> "已重新打开里程碑“beta cut”。"
+added/milestone -> "已添加里程碑“beta cut”。"
+updated/milestone -> "已更新里程碑“beta cut”。"
+removed/milestone -> "已移除里程碑“beta cut”。"
+deleted/milestone -> "已删除里程碑“beta cut”。"
+archived/milestone -> "已更新里程碑“beta cut”。"
+created/other -> "已创建“payments-migration”。"
+completed/other -> "已完成“payments-migration”。"
+reopened/other -> "已重新打开“payments-migration”。"
+added/other -> "已添加“payments-migration”。"
+updated/other -> "已更新“payments-migration”。"
+removed/other -> "已移除“payments-migration”。"
+deleted/other -> "已删除“payments-migration”。"
+archived/other -> "已更新“payments-migration”。"
+
+-- remaining keys --
+mobile.projects.draft_kept_note: "已保留上次填写的内容。清空各字段即可重新开始。"
+mobile.projects.milestone_slash_note: "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。"
+mobile.projects.milestones.none: "无里程碑"
+mobile.projects.project_name_hint: "1-64个字符：字母、数字、点、下划线或连字符。不能包含空格，也不能以连字符开头。"
+mobile.projects.stale_badge: "进度已过期"
+mobile.projects.write_unknown_note: "无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。"
+
+===== FIT — cells, per string (2 cells per CJK/full-width char, 1 per ASCII) =====
+mobile.projects.delete_body: chars=36 cells=64 renderedCells=76
+mobile.projects.draft_kept_note: chars=23 cells=46 renderedCells=46
+mobile.projects.milestone_slash_note: chars=25 cells=50 renderedCells=50
+mobile.projects.milestones.count: chars=23 cells=27 renderedCells=11
+mobile.projects.milestones.none: chars=4 cells=8 renderedCells=8
+mobile.projects.project_name_hint: chars=41 cells=78 renderedCells=78
+mobile.projects.remove_milestone_body: chars=42 cells=78 renderedCells=90
+mobile.projects.session_state.filed_by: chars=5 cells=10 renderedCells=10
+mobile.projects.session_state.missing: chars=2 cells=4 renderedCells=4
+mobile.projects.session_state.not_running: chars=3 cells=6 renderedCells=6
+mobile.projects.sessions.count: chars=30 cells=33 renderedCells=8
+mobile.projects.sessions.live: chars=19 cells=23 renderedCells=20
+mobile.projects.stale_badge: chars=5 cells=10 renderedCells=10
+mobile.projects.write_receipt: chars=479 cells=565 renderedCells=32
+mobile.projects.write_unknown_note: chars=29 cells=58 renderedCells=58
+
+DONE
+# exit=0
+
+$ python3 core-terms.py 登记 提交   (core committed zh-CN, filed-by verb)
+# started 2026-10-30T07:13:31Z
+core zh-CN catalogue files at HEAD: 93
+'登记': occurrences=1 files=1 top=[('tui.projects.json', 1)]
+'提交': occurrences=15 files=6 top=[('wire.remote_compute.json', 8), ('cli.exec_remote_help.json', 3), ('mobile.setup.json', 1), ('tui.review.json', 1), ('wire.memory.json', 1), ('wire.settings.json', 1)]
+# exit=0
+
+$ python3 cross-locale.py   (the same two confirmations in shipped fr/es)
+# started 2026-10-30T07:13:41Z
+fr     delete_body              Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.
+fr     remove_milestone_body    Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.
+es     delete_body              ¿Eliminar {name}? La fila del proyecto se borra para siempre. Sus sesiones vinculadas y sus transcripciones no se tocan.
+es     remove_milestone_body    ¿Quitar {name} de este proyecto? El hito se borra para siempre. Las sesiones del proyecto y su línea de progreso no se tocan.
+zh-CN  delete_body              删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。
+zh-CN  remove_milestone_body    要从此项目中删除{name}吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。
+# exit=0

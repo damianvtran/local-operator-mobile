@@ -21,9 +21,9 @@
  * (`relay.chrome.session.subtitle.not_answering` / `.ended`) moved for the same
  * reason, into `relay.chrome.json`.
  *
- * NO LOCALE SHIP GATE IS CLAIMED HERE. Only `en` exists; the core's seven
- * audited locale catalogues (fr, es, ru, vi, zh-CN, hi, ur) are the
- * translations to adopt unchanged when the app ships locales.
+ * Locales ship through the catalogue like everything else: the core's audited
+ * catalogues are adopted unchanged for the mirrored namespaces, and this module
+ * now reads the active locale at render (`healthCopy()`), not at import.
  */
 import { t } from "@/i18n";
 

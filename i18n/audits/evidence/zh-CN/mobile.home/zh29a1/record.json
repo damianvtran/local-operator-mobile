@@ -1,0 +1,241 @@
+{
+	"schema": 1,
+	"audit_id": "zh29a1",
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"locale": "zh-CN",
+	"namespace": "mobile.home",
+	"audit_date": "2026-10-30",
+	"audited_revision": "a57fb8cbe16101d828b68edd422b56317523ac7d",
+	"audited_revision_note": "Branch feat/i18n-chinese at a57fb8cbe161 (the Spanish merge) plus the translator's uncommitted catalogue: src/i18n/catalogues/zh-CN/ is untracked at this revision and catalogue.gen.ts is modified. The target bytes are pinned by input_hashes.target.",
+	"key_count": {
+		"en": 27,
+		"target": 27,
+		"context": 27
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "6de17b1d6bbd",
+		"job": "not exposed to this subagent (delegated team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto; each switch a provider-quota HTTP 429 fallback. Two read-only survey calls ran before the first switch; every judgement, measurement and bundle in this audit was produced under radient/auto.",
+		"independent_from_translator_session": true,
+		"independent_from_translator": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is also the translator's served model; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "9855d3d26399",
+		"label": "zh-group-a-second-pass",
+		"agent": "reviewer (lopdev team)",
+		"selection": "parent model (anthropic/claude-sonnet-5-5 primary)",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "the worker's own report: opened as anthropic/claude-sonnet-5-5 and ran to completion as radient/auto after three quota-driven fallbacks",
+		"scope": "all 54 group-A keys across the four namespaces, read without the first auditor's findings; its own commands re-run (validators, key parity, parser, plural rules, measurements)",
+		"independence": "Different agent/session and a separate context; not model-diverse (same served model as this auditor and the translator) — disclosed, not closed.",
+		"verdicts": {
+			"mobile.home": "changes_requested (3 MINOR, 4 NIT)",
+			"mobile.session": "pass",
+			"mobile.session_health": "changes_requested (1 MINOR)",
+			"mobile.account_routing": "changes_requested (1 MAJOR, 1 MINOR)"
+		},
+		"agreements": [
+			"options.fixed: the 请 in non-'please' copy is a guide violation (MINOR) — independently reached",
+			"review_repo: the sidecar pins 'repo' as kept English and both merged waves kept it Latin (MINOR) — independently reached",
+			"mobile.account_routing: 账号 vs core's 账户 is a terminology MAJOR, same five keys and the same core-byte-identical unavailable replacement — independently reached",
+			"saved: the same-English sentence has two renderings across clients — independently reached; this audit then raised AR-03 from NIT to MINOR",
+			"all mechanical facts: 143/143 keys parse, exact key parity, zh-CN plural categories are other-only, quoted placeholders render intact, and the ended placeholder fits the field at 100 % and 200 %",
+			"the repository gate below: catalogues.test.ts:187 fails because the zh-CN directory exists while zh-CN is not shipped"
+		],
+		"reconciliations": [
+			{
+				"item": "mobile.home.suggestion.last_turn -> 上一回合",
+				"second_pass": "MINOR (turn is 回合 in this wave and in core)",
+				"this_audit": "NIT H-03: core's own phrase for 'the last turn' is 最后一轮 (cli.sessions_help.paused), the exact collocation this chip needs; 上一轮 is idiomatic and the wave's 回合 sits in a different collocation. Recorded, not required."
+			},
+			{
+				"item": "mobile.home.startup_queue.blocked -> 重试发送排队消息",
+				"second_pass": "NIT",
+				"this_audit": "adopted as NIT H-04"
+			},
+			{
+				"item": "mobile.home.tip.parallel -> 分派给多个子智能体",
+				"second_pass": "NIT",
+				"this_audit": "adopted as NIT H-05, with 分出 rather than 分派 to keep the fan-out agency"
+			},
+			{
+				"item": "mobile.home.tip.schedule -> 定期运行",
+				"second_pass": "NIT (按时 means punctually and repeats 定时)",
+				"this_audit": "declined: 定期 narrows 'on a timer' to a repeating cadence and drops the one-shot case"
+			},
+			{
+				"item": "mobile.home.tip.search's 以 clause",
+				"second_pass": "NIT",
+				"this_audit": "declined: core uses the same purpose clause in short UI copy (打开扩展弹窗以重新配对浏览器。), so it is the house voice"
+			},
+			{
+				"item": "mobile.session_health.ended_placeholder drops the home-folder destination",
+				"second_pass": "MINOR, with the note that the short form wins at 200 %",
+				"this_audit": "declined with the 200 % measurement: the destination-carrying form is 433.18 px against the ~324 px one-line field and clips; the current 20-cell form is the only candidate that fits at both scales, and the destination is carried by relay.health.ended_detail (same shape the French wave passed, fr29sm4)"
+			},
+			{
+				"item": "mobile.account_routing.scope",
+				"second_pass": "not flagged",
+				"this_audit": "kept as MINOR AR-02: 更改仅应用到此电脑。 is a second rendering of the sentence core ships as 更改仅对此电脑生效。"
+			}
+		],
+		"gate_finding": {
+			"kind": "repository_gate_not_copy",
+			"test": "src/i18n/__tests__/catalogues.test.ts:187 ('ships no locale the runtime cannot render')",
+			"status": "failing",
+			"evidence": "independently reproduced by this auditor: ./node_modules/.bin/vitest run src/i18n -> 1 failed | 87 passed; the on-disk directories include zh-CN while SHIPPED_LOCALES is en, fr, es",
+			"effect_on_copy_verdicts": "none"
+		}
+	},
+	"translator": {
+		"agent": "i18n-translator (as named by the requesting manager)",
+		"session": "not supplied to this auditor",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.home.json",
+			"sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.home.context.json",
+			"sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+		},
+		"zh-CN": {
+			"path": "src/i18n/catalogues/zh-CN/mobile.home.json",
+			"sha256": "24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033"
+		}
+	},
+	"verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04",
+			"H-05"
+		]
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04",
+			"H-05"
+		],
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [
+			"H-01",
+			"H-02"
+		],
+		"nit_ids": [
+			"H-03",
+			"H-04",
+			"H-05"
+		],
+		"verdict_reason": "No BLOCKER and no MAJOR. Two MINOR conventions remain: options.fixed carries a 请 the zh guide bans outside 'please' copy and narrows live controls to viewing (H-01), and review_repo translates the sidecar's kept-English 'repo' without recording the exception (H-02). Three optional NITs are recorded (the 'turn' word, a 以 purpose clause, and 展开 for fan-out) and gate nothing. All 27 keys preserve meaning and polarity; the destination label is byte-identical; every chip is an imperative and the widest measures 102 px against a ~256 px text box."
+	},
+	"repository_gate": {
+		"kind": "repository_gate_not_copy",
+		"status": "failing",
+		"test": "src/i18n/__tests__/catalogues.test.ts:187 ('ships no locale the runtime cannot render')",
+		"detail": "By design until activation: docs/i18n.md says a catalogue directory is not activation, and catalogues.test.ts requires every on-disk catalogue directory to be a SHIPPED_LOCALE. ./node_modules/.bin/vitest run src/i18n -> 1 failed | 87 passed, with zh-CN in the received directory list while SHIPPED_LOCALES is en, fr, es. It goes green when the wave flips SHIPPED_LOCALES after every group's audit passes (which then needs a measured SUGGESTION_CHAR_BUDGET['zh-CN'] entry); the fr and es waves flipped inside their own changes. Until then a branch that commits the zh-CN directory carries a red suite.",
+		"effect_on_this_bundle": "none — the copy verdict above is unchanged; full output is in i18n/audits/evidence/zh-CN/mobile.home/zh29a1/audit.log"
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0, 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)'; node scripts/i18n/check-strings.ts -> '284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161'. `pnpm i18n:check` itself cannot run in this worktree: pnpm refuses a hoisted directory at the symlinked node_modules; the two underlying scripts were run directly, same code and same exit status; the failed pnpm run itself is captured in i18n/audits/evidence/zh-CN/mobile.home/zh29a1/audit.log.",
+		"validator_scope": "key parity, catalogue projection and the strings ratchet; it does not compare placeholders between locales, so this audit checked that itself with the app's own parser",
+		"scoped_checks": "valid JSON; key and context parity; placeholder/ICU structure via src/i18n/messages.ts; bidi and control characters; full-width vs ASCII punctuation; CJK quotation balance; ellipsis U+2026 pairs; 请/您/！ scan; lead/trail whitespace; double spaces; character and cell counts",
+		"fit_metric": "UTF-16/code-point counts, CJK-aware cell counts (CJK and full-width punctuation = 2 cells, U+2026 = 2), and CoreText typographic widths at the app's token sizes (body-sm 14 pt, body 16 pt, meta 12 pt, title 20 pt, and the 200 % doubles)",
+		"no_rendered_frame": "text metrics and row arithmetic, not a rendered frame; no clipping claim beyond the measured comparison against the measured field/row width"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/report.md",
+			"sha256": "dc22d5313652243b7b970b05c3117a0f462ec925f135b966b62fffc26a1a1cdd"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/audit.log",
+			"sha256": "70c7460a6a5d5c7d59e3b8a5129848aa6463f7ea1ce41fe167b791ea11b8efaa",
+			"state": "actual command output, not notes"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/check.py.txt",
+			"sha256": "efbc048a24cae2b73bcfe626471a5b9c5a399cd831cbe012e4225341baed4603",
+			"note": "reproduction script retained as text, not an executable source tree"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/parse-check.mjs.txt",
+			"sha256": "4df320d42a29c5af06f0df7f87f9e8a280fd61fc8cf3c90552ab7829e017b588",
+			"note": "reproduction script retained as text, not an executable source tree"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/measure.swift.txt",
+			"sha256": "0c26e00dab700d492d7dfbe565e7833db944655f7562073a0067ee0cf135f557",
+			"note": "reproduction script retained as text, not an executable source tree"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This repository has no i18n ledger and no audit-ledger command (verified: package.json scripts, scripts/i18n/, docs/i18n.md). docs/i18n.md records the report in the pull request; this bundle is the durable record.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "zh-CN",
+			"namespace": "mobile.home",
+			"source_sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 5
+			},
+			"note": "zh-CN mobile.home passed: 0 BLOCKER, 0 MAJOR, 2 MINOR, 3 NIT; i18n/audits/evidence/zh-CN/mobile.home/zh29a1/record.json; radient/auto fallback run"
+		}
+	},
+	"route_disclosure": {
+		"reads": "ordinary worktree reads (files in this worktree, git show in the local core clone, the repository's own validator, local CoreText measurement)",
+		"english_context_sidecars": "nested-JSON context sidecars are NOT routable through read_public_copy; read as ordinary worktree files",
+		"credential_shaped_keys": "none in group A (mobile.computers.password_placeholder is credential-shaped and belongs to another group); no keyed receipt is claimed anywhere in this wave",
+		"receipts": "no keyed public-copy or credential receipt claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; no pixel-level or clipping claim is made. Width statements are executed CoreText text metrics plus the code's own geometry.",
+		"measurement_font": "system UI font (Figtree is not installed on this machine); the app's own stack falls back to the system face for CJK, where a CJK advance is 1 em",
+		"translator_observation": "translator provenance is as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"shipping_state": "zh-CN is in NOT_YET_SHIPPED_LOCALES (SHIPPED_LOCALES = en, fr, es), so no per-locale budget assertion covers this wave yet"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output."
+}

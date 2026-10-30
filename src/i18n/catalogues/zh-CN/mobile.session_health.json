@@ -1,0 +1,13 @@
+{
+	"mobile.session_health.control_hint": "说明此状态的含义，以及现在发送会怎样",
+	"mobile.session_health.menu_label": "会话操作",
+	"mobile.session_health.menu_hint": "打开会话菜单",
+	"mobile.session_health.menu_title": "会话",
+	"mobile.session_health.reopening": "正在重新打开——可能需要几秒。",
+	"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+	"mobile.session_health.resume_refused_title": "无法恢复",
+	"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
+	"mobile.session_health.resume_gone": "此会话已不存在。",
+	"mobile.session_health.resume_no_route": "连接电脑后才能恢复此会话。",
+	"mobile.session_health.ended_placeholder": "发送即可重新打开……"
+}

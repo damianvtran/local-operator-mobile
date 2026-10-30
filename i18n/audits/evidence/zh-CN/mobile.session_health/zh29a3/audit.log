@@ -1,0 +1,143 @@
+# zh-CN group-A audit probe — namespace=mobile.session_health case=session_health
+# run at 2026-10-30T06:31:58Z (UTC) by session 6de17b1d6bbd
+# cwd=/Users/damian/workspace/zh-wave
+
+$ git rev-parse --abbrev-ref HEAD HEAD
+feat/i18n-chinese
+a57fb8cbe16101d828b68edd422b56317523ac7d
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/zh-CN/
+?? src/i18n/catalogues/zh-CN/
+
+$ shasum -a 256 src/i18n/catalogues/{en/mobile.session_health.json,en/mobile.session_health.context.json,zh-CN/mobile.session_health.json}
+727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f  src/i18n/catalogues/en/mobile.session_health.json
+df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310  src/i18n/catalogues/en/mobile.session_health.context.json
+6aa79b07cf32bce319c71a44ef47eb99c7a70b26e4eea228c9bdd72ab7e126d3  src/i18n/catalogues/zh-CN/mobile.session_health.json
+
+$ node scripts/i18n/generate.ts --check 2>&1 | head -1
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+
+$ node scripts/i18n/check-strings.ts 2>&1 | tail -1
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+
+$ python3 /Users/damian/workspace/zh-check.py mobile.session_health
+namespace=mobile.session_health en=11 zh=11 context=11
+key_parity=True missing=[] extra=[]
+context_covers_every_key=True
+placeholder_tokens: en=0 zh=0
+placeholder_mismatches=[]
+icu_structs_en=[]
+icu_structures_in_zh=[]
+bidi_or_control_chars=[]
+style_findings=[]
+key	chars	cells	value
+mobile.session_health.control_hint	18	36	说明此状态的含义，以及现在发送会怎样
+mobile.session_health.ended_placeholder	10	20	发送即可重新打开……
+mobile.session_health.menu_hint	6	12	打开会话菜单
+mobile.session_health.menu_label	4	8	会话操作
+mobile.session_health.menu_title	2	4	会话
+mobile.session_health.reopening	15	28	正在重新打开——可能需要几秒。
+mobile.session_health.resume_gone	8	16	此会话已不存在。
+mobile.session_health.resume_no_route	13	26	连接电脑后才能恢复此会话。
+mobile.session_health.resume_refused	15	30	此会话刚才无法恢复。重试即可。
+mobile.session_health.resume_refused_title	4	8	无法恢复
+mobile.session_health.still_reopening	13	24	仍在重新打开——尚未就绪。
+max_cells=(36, 'mobile.session_health.control_hint')
+
+$ node /Users/damian/workspace/zh-audit-parse.mjs mobile.session_health  (stdout; node's type-stripping warning is on stderr)
+namespace=mobile.session_health parsed=11/11 keys_with_params=[]
+
+$ node -e '...'  # ended placeholder + the two relay strings it leans on
+mobile.session_health.ended_placeholder = "发送即可重新打开……"
+relay.health.ended_detail = "历史记录已保留。发送消息或点击“恢复”，即可在主目录中重新打开。"
+relay.chrome.session.resume = "恢复"
+mobile.session_health.resume_refused = "此会话刚才无法恢复。重试即可。"
+
+$ grep -rn 'placeholderMaxLines' src/features/session/components/composer.tsx | head -3
+src/features/session/components/composer.tsx:907:						placeholderMaxLines={1}
+
+$ grep -n 'text-body-sm\|text-body\b' src/ui/components/textarea.tsx | head -5   # the field type is text-body (16 pt)
+117:/** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
+123: *  field's own text is `text-body` at 24. An empty field floored on the cap's line
+243:				<Text className="text-body-sm text-ink-muted">{label}</Text>
+280:							className="text-body"
+
+$ /Users/damian/.local-operator/sessions/6de17b1d6bbd/scratchpad/measure < items-session-health.json
+[
+  {
+    "cells" : 20,
+    "chars" : 10,
+    "font" : ".AppleSystemUIFont",
+    "label" : "ended_placeholder (100% = 16pt)",
+    "size" : 16,
+    "utf16" : 10,
+    "width" : 152.13
+  },
+  {
+    "cells" : 20,
+    "chars" : 10,
+    "font" : ".AppleSystemUIFont",
+    "label" : "ended_placeholder (200% = 32pt)",
+    "size" : 32,
+    "utf16" : 10,
+    "width" : 281.45
+  },
+  {
+    "cells" : 30,
+    "chars" : 15,
+    "font" : ".AppleSystemUIFont",
+    "label" : "alt + 主目录 destination (100%)",
+    "size" : 16,
+    "utf16" : 15,
+    "width" : 231.51
+  },
+  {
+    "cells" : 30,
+    "chars" : 15,
+    "font" : ".AppleSystemUIFont",
+    "label" : "alt + 主目录 destination (200%)",
+    "size" : 32,
+    "utf16" : 15,
+    "width" : 433.18
+  },
+  {
+    "cells" : 36,
+    "chars" : 35,
+    "font" : ".AppleSystemUIFont",
+    "label" : "EN source (100%)",
+    "size" : 16,
+    "utf16" : 35,
+    "width" : 266.74
+  },
+  {
+    "cells" : 36,
+    "chars" : 35,
+    "font" : ".AppleSystemUIFont",
+    "label" : "EN source (200%)",
+    "size" : 32,
+    "utf16" : 35,
+    "width" : 494.42
+  },
+  {
+    "cells" : 16,
+    "chars" : 15,
+    "font" : ".AppleSystemUIFont",
+    "label" : "FR shipped final (100%)",
+    "size" : 16,
+    "utf16" : 15,
+    "width" : 120.67
+  },
+  {
+    "cells" : 16,
+    "chars" : 15,
+    "font" : ".AppleSystemUIFont",
+    "label" : "FR shipped final (200%)",
+    "size" : 32,
+    "utf16" : 15,
+    "width" : 222.34
+  }
+]
+
+# end of probe — exit at 2026-10-30T06:32:03Z

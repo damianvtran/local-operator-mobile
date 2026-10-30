@@ -1,0 +1,47 @@
+// Placeholder/ICU check through the app's OWN catalogue reader.
+// Usage: node zh-audit-parse.mjs <namespace> [--all]
+// It imports local_operator's i18n parser from src/i18n/messages.ts and, with
+// --all, also prints wave-wide plural and quote facts. Read-only.
+import { readFileSync } from "node:fs";
+import { parseMessage, formatMessage } from "/Users/damian/workspace/zh-wave/src/i18n/messages.ts";
+
+const ns = process.argv[2];
+const wave = process.argv.includes("--all");
+const root = "src/i18n/catalogues";
+const read = (loc, n) => JSON.parse(readFileSync(`${root}/${loc}/${n}.json`, "utf8"));
+
+const zh = read("zh-CN", ns);
+let ok = 0;
+const paramKeys = [];
+for (const [key, value] of Object.entries(zh)) {
+  const parsed = parseMessage(value);
+  ok += 1;
+  if (parsed.params.size > 0) paramKeys.push([key, [...parsed.params.entries()]]);
+}
+console.log(`namespace=${ns} parsed=${ok}/${Object.keys(zh).length} keys_with_params=${JSON.stringify(paramKeys)}`);
+
+if (wave) {
+  const rules = new Intl.PluralRules("zh-CN");
+  console.log(`Intl.PluralRules('zh-CN').resolvedOptions().pluralCategories=${JSON.stringify(rules.resolvedOptions().pluralCategories)}`);
+  for (const n of [0, 1, 2, 1.5, 100]) console.log(`  select(${n}) = ${rules.select(n)}`);
+
+  for (const name of ["mobile.projects", "mobile.schedules"]) {
+    const en = read("en", name);
+    const target = read("zh-CN", name);
+    for (const [key, value] of Object.entries(en)) {
+      if (!/plural\s*,/.test(value)) continue;
+      const enArms = [...(parseMessage(value).nodes.find((n) => n.type === "plural")?.options.keys() ?? [])];
+      const zhArms = [...(parseMessage(target[key]).nodes.find((n) => n.type === "plural")?.options.keys() ?? [])];
+      console.log(`ARMS ${name}/${key} en=[${enArms.join(",")}] zh=[${zhArms.join(",")}]`);
+    }
+  }
+
+  const projects = read("zh-CN", "mobile.projects");
+  for (const [key, args] of [
+    ["mobile.projects.write_receipt", { kind: "project", action: "created", subject: "发布" }],
+    ["mobile.projects.write_receipt", { kind: "milestone", action: "completed", subject: "审计" }],
+    ["mobile.projects.delete_body", { name: "示例项目" }],
+  ]) {
+    console.log(`RENDER ${key} -> ${formatMessage(parseMessage(projects[key]), args, "zh-CN")}`);
+  }
+}

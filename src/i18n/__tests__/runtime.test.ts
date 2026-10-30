@@ -46,12 +46,12 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` and `zh-CN` are languages this build RECOGNIZES (direction knows
-		 * Urdu; both are in `SUPPORTED_LOCALES`) but does not ship. The two
-		 * questions must not collapse into one — and `fr`/`es`, which ship with
+		/* `ur` and `ru` are languages this build RECOGNIZES (direction knows Urdu;
+		 * both are in `SUPPORTED_LOCALES`) but does not ship. The two questions
+		 * must not collapse into one — and `fr`, `es` and `zh-CN`, which ship with
 		 * their own catalogues, answer with a catalogue rather than English source. */
 		expect(catalogueLocaleFor("ur")).toBeNull();
-		expect(catalogueLocaleFor("zh-CN")).toBeNull();
+		expect(catalogueLocaleFor("ru")).toBeNull();
 		expect(catalogueLocaleFor("fr")).toBe("fr");
 		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
 		/* `es` now SHIPS: it answers with its own catalogue, and a regional tag
@@ -59,16 +59,21 @@ describe("the locale source", () => {
 		 * the audit rather than on the runtime. */
 		expect(catalogueLocaleFor("es")).toBe("es");
 		expect(catalogueLocaleFor("es-419")).toBe("es");
+		expect(catalogueLocaleFor("zh-CN")).toBe("zh-CN");
+		/* `zh-Hans` is NOT aliased to `zh-CN` today — asserted as the honest
+		 * current behaviour rather than assumed: a script subtag is not a region.
+		 */
+		expect(catalogueLocaleFor("zh-Hans")).toBeNull();
 		expect(catalogueLocaleFor("en-US")).toBe("en");
-		expect(SHIPPED_LOCALES).toEqual(["en", "fr", "es"]);
+		expect(SHIPPED_LOCALES).toEqual(["en", "fr", "es", "zh-CN"]);
 	});
 });
 
 describe("the English floor", () => {
 	it("renders English source for a preference with no shipped catalogue", () => {
-		/* `zh-CN` is supported and pending, not shipped: the reader gets the
+		/* `ru` is supported and pending, not shipped: the reader gets the
 		 * English sentence, not a key and not an empty string. */
-		setLocaleSource(() => "zh-CN");
+		setLocaleSource(() => "ru");
 		expect(activeLocale()).toBe("en");
 		expect(t("mobile.home.greeting")).toBe("What can I help you with today?");
 		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 wakes");
@@ -82,7 +87,7 @@ describe("the English floor", () => {
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
 		/* The same rule for a pending locale with no catalogue at all: English
 		 * plural categories, because the TEXT is English. */
-		setLocaleSource(() => "zh-CN");
+		setLocaleSource(() => "ru");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 	});
 

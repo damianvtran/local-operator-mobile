@@ -1,0 +1,47 @@
+// Cell/px measurement for the zh-wave catalogue review.
+// Input: JSON array of {"label":str,"text":str,"size":number}
+// Output: JSON lines with font used, UTF-16 length, code-point length, cells and width in px.
+// Uses CoreText with the app's font stack (SF Pro fallback; CJK falls back to a CJK face),
+// and models the CJK full-width glyph advance as 1 em.
+import Foundation
+import CoreText
+import AppKit
+
+struct Item: Codable { let label: String; let text: String; let size: Double }
+struct Row: Codable { let label: String; let size: Double; let chars: Int; let utf16: Int; let cells: Int; let width: Double; let font: String }
+
+let raw = FileHandle.standardInput.readDataToEndOfFile()
+let items = try JSONDecoder().decode([Item].self, from: raw)
+
+func fontAt(_ size: Double) -> NSFont {
+    if let f = NSFont(name: "Figtree", size: size) { return f }
+    return NSFont.systemFont(ofSize: size)
+}
+
+func cells(_ s: String) -> Int {
+    var n = 0
+    for u in s.unicodeScalars {
+        let v = u.value
+        let wide = (v >= 0x1100 && v <= 0x115F) || (v >= 0x2E80 && v <= 0xA4CF)
+            || (v >= 0xAC00 && v <= 0xD7A3) || (v >= 0xF900 && v <= 0xFAFF)
+            || (v >= 0xFE30 && v <= 0xFE6F) || (v >= 0xFF00 && v <= 0xFF60)
+            || (v >= 0xFFE0 && v <= 0xFFE6) || (v >= 0x20000 && v <= 0x3FFFD)
+            || v == 0x2026
+        n += wide ? 2 : 1
+    }
+    return n
+}
+
+var rows: [Row] = []
+for it in items {
+    let f = fontAt(it.size)
+    let attr = NSAttributedString(string: it.text, attributes: [.font: f])
+    let line = CTLineCreateWithAttributedString(attr as CFAttributedString)
+    var asc: CGFloat = 0, desc: CGFloat = 0, lead: CGFloat = 0
+    let w = CTLineGetTypographicBounds(line, &asc, &desc, &lead)
+    rows.append(Row(label: it.label, size: it.size, chars: it.text.count, utf16: it.text.utf16.count,
+                    cells: cells(it.text), width: (w * 100).rounded() / 100, font: f.fontName))
+}
+let enc = JSONEncoder()
+enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+print(String(data: try enc.encode(rows), encoding: .utf8)!)

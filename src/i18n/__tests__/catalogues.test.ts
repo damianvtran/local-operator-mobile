@@ -228,6 +228,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
+	"zh-CN": {
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
+	},
 };
 
 describe("a shipped translation is still translated", () => {
