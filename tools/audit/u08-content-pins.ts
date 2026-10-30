@@ -382,7 +382,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "ab8fd5465dc24ac8e9ae4756c0ffd0ffcba02a0263af78f43f74238fc9f572db",
+	/* Re-pinned 2026-10-29 for the Spanish wave: `src` now carries the Spanish
+	 * catalogues and the per-locale budget, exactly the content these pins exist to
+	 * freeze. Recomputed with `--print`; nothing else in the table moved. */
+	src: "9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

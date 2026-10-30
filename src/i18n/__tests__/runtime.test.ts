@@ -54,6 +54,11 @@ describe("the locale source", () => {
 		expect(catalogueLocaleFor("zh-CN")).toBeNull();
 		expect(catalogueLocaleFor("fr")).toBe("fr");
 		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
+		/* `es` now SHIPS: it answers with its own catalogue, and a regional tag
+		 * resolves to it. This is the assertion whose absence let the flip rest on
+		 * the audit rather than on the runtime. */
+		expect(catalogueLocaleFor("es")).toBe("es");
+		expect(catalogueLocaleFor("es-419")).toBe("es");
 		expect(catalogueLocaleFor("en-US")).toBe("en");
 		expect(SHIPPED_LOCALES).toEqual(["en", "fr", "es"]);
 	});
@@ -79,6 +84,13 @@ describe("the English floor", () => {
 		 * plural categories, because the TEXT is English. */
 		setLocaleSource(() => "zh-CN");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
+	});
+
+	it("renders the shipped Spanish catalogue, not English source", () => {
+		setLocaleSource(() => "es");
+		expect(activeLocale()).toBe("es");
+		expect(t("mobile.home.greeting")).toBe("¿En qué te puedo ayudar hoy?");
+		expect(t("mobile.projects.stale_badge")).toBe("progreso obsoleto");
 	});
 
 	it("never renders a key name or an empty string for a real key", () => {
