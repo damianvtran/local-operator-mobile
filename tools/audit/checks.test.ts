@@ -4,6 +4,10 @@ import { ENTRY_HEALTH_MARK } from "../../src/features/auth/entry-health-marks";
 import {
 	type AuditNode,
 	type AuditState,
+	DESIGN_EMPTY_CELLS,
+	designEmpty,
+	frameHasNothingToMeasure,
+	paintedNothing,
 	runChecks,
 	U40_DEFERRAL,
 	U41_EXEMPTIONS,
@@ -1129,5 +1133,86 @@ describe("U-03 navigation status shape", () => {
 		expect(audit({ ownText: "" }).some((row) => row.verdict === "FAIL")).toBe(
 			true,
 		);
+	});
+});
+
+/**
+ * THE FRAME THAT PAINTED NOTHING IS NOT A CLEAN FRAME.
+ *
+ * The case this closes is not a construct: two runs of ONE ci manifest at 150 % text
+ * measured 10 text/control boxes for a cell in one run and 0 in the other, and the run
+ * that painted nothing reported `U-08 PASS — 0 text/control boxes, no pair overlapping
+ * >25%`. Three of that cell's four `U-08` rows moved between the runs, so the variance a
+ * reviewer saw was this rule's vacuous branch, not the app's layout.
+ *
+ * Asserted at the seam the audit reads, because the empty set is otherwise unreachable
+ * from a fixture page: a page with a screen root and a state marker and NO content is
+ * what a paused/suspended render looks like, and no fixture can be made to paint nothing
+ * on purpose without also failing readiness first.
+ */
+describe("the painted-nothing rule over an empty text/control set", () => {
+	it("blocks U-08 instead of passing it when nothing was painted", () => {
+		const rows = run("U-08", state({ nodes: [] }));
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.verdict).toBe("BLOCKED");
+		/* `unmeasurable`, not `not-applicable`: there IS something to measure here by
+		 * the cell's own contract, and the frame did not provide it. The distinction is
+		 * what makes this count as a gap (exit 3) instead of passing quietly. */
+		expect(rows[0]?.blockedKind).toBe("unmeasurable");
+		expect(rows[0]?.measured).toBe("0 text/control boxes");
+	});
+
+	it("still passes when at least one text/control box exists (negative control)", () => {
+		const rows = run(
+			"U-08",
+			// One text node, nothing to collide with: the smallest non-empty frame.
+			state({ nodes: [node({ ownText: "hello" })] }),
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.verdict).toBe("PASS");
+		expect(rows[0]?.measured).toContain("1 text/control boxes");
+	});
+
+	it("reads the exemption table by CELL NAME and exempts nothing else", () => {
+		const empty = state({ screen: "S9", state: "spinner" });
+		expect(paintedNothing(empty)).toBe(true);
+		expect(designEmpty(empty)).toBe(false);
+		expect(frameHasNothingToMeasure(empty)).toBe(true);
+	});
+
+	it("reports a DECLARED-empty cell as not-applicable rather than as a gap", () => {
+		/* The table is EMPTY on this head (`DESIGN_EMPTY_CELLS` says why), so the exempt
+		 * branch is exercised by declaring one cell for the duration of this test.
+		 * Shipping a fake cell in the registry to reach the branch would put a lie in the
+		 * matrix; mutating the table here puts it in the test that owns the claim. */
+		const declared = DESIGN_EMPTY_CELLS as string[];
+		// Remember what was there: `declared.length = 0` assumes the table starts empty,
+		// and would wipe a real entry the day one is committed (review round 1, N3).
+		const before = [...declared];
+		declared.push("S9/spinner");
+		try {
+			const empty = state({ screen: "S9", state: "spinner" });
+			expect(designEmpty(empty)).toBe(true);
+			expect(frameHasNothingToMeasure(empty)).toBe(false);
+			const rows = run("U-08", empty);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]?.verdict).toBe("BLOCKED");
+			// `not-applicable` is the kind that does NOT count as a gap: a cell whose
+			// emptiness is its state cannot make a run incomplete.
+			expect(rows[0]?.blockedKind).toBe("not-applicable");
+
+			/* AND THE EXEMPTION HAS TO MEAN THAT FOR THE OTHER TWO RULES that
+			 * short-circuit on an empty set, or the first by-design cell still fails the
+			 * run through them (review round 1, F2: U-09 and U-10 came out
+			 * `unmeasurable`, which IS a gap, and exit 3). */
+			for (const check of ["U-09", "U-10"]) {
+				const row = run(check, state({ screen: "S9", state: "spinner" }))[0];
+				expect(row?.verdict).toBe("BLOCKED");
+				expect(row?.blockedKind).toBe("not-applicable");
+			}
+		} finally {
+			declared.length = 0;
+			declared.push(...before);
+		}
 	});
 });

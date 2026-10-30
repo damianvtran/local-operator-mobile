@@ -85,6 +85,10 @@ import {
 	SCREEN_ROOTS,
 	SCREENS,
 	THEMES,
+	/* The id→factor lookup, imported rather than kept: see `verifyTextScale` and
+	 * `judgeTextScale` for the two places a second copy of it had drifted into the
+	 * arithmetic. */
+	textScaleFactor,
 	UNSCROLLED_CONTROLS,
 } from "./matrix.ts";
 import { runS15FlowProof } from "./s15-flow.ts";
@@ -2340,6 +2344,23 @@ export async function runCapture(options: CaptureOptions) {
 			deviceProfile: DEVICES,
 			scaleProfile: SCALES,
 			screens: SCREENS,
+			/*
+			 * WHICH RELAY WORLDS DECLARE EACH CELL, as this run's relay answered it.
+			 *
+			 * A cell's state is a fact about a WORLD as much as about a URL: `S8/populated-long`
+			 * renders a 65-character name only in `long-names`, and `S5/populated-long` renders a
+			 * 520-row transcript only in `long-transcript`. The capture records the world it
+			 * pinned per cell (`records[].pinnedScenario`) and the audit replays it — but nothing
+			 * carried the registry's own answer, so a pin that names a world which does NOT
+			 * declare that cell (a manifest from an older head, or a hand-edited one — this run
+			 * refuses a `--scenario` that does not declare the cell, so a same-head capture cannot
+			 * record one) could only be discovered by noticing the page looked wrong. This map is what
+			 * lets the audit refuse it by name, from the manifest alone, with no relay running.
+			 *
+			 * `null` for a run with no relay: an ad-hoc `path:` matrix declares no worlds, and
+			 * claiming an empty registry would refuse every record in it.
+			 */
+			cellWorlds: state?.cellScenarios ?? null,
 		},
 		themeProblems,
 		readinessProblems,
@@ -2601,21 +2622,16 @@ export async function runCapture(options: CaptureOptions) {
 
 /**
  * The factor the guard's two scale ids declare, read from `SCALES` rather than written
- * as a 2 — see the call site for why. The lookup cannot fail for the pair the guard
- * pairs: `SCALES` declares every id a run can ask for, and every tier's list derives
- * from it.
+ * as a 2 — see the call site for why.
+ *
+ * Delegated to `matrix.ts` `textScaleFactor`, which is the ONE lookup: this file used to
+ * carry its own `factorOf` here, and a second resolution of the same table is how the
+ * hard-coded `* 2` / `/ 2` in `judgeTextScale` survived — the lookup moved with the table
+ * while the arithmetic beside it did not. It cannot fail for the pair the guard pairs:
+ * `SCALES` declares every id a run can ask for, and every tier's list derives from it.
  */
 function declaredScaleFactor(): number {
-	const factorOf = (id: string) => {
-		const scale = SCALES.find((entry) => entry.id === id);
-		// A plain Error, not a CaptureFailure: this is a programming error in this file's
-		// own pairing, not a finding about a captured cell (CaptureFailure carries the
-		// per-cell evidence a run reports).
-		if (scale === undefined)
-			throw new Error(`no declared scale with id '${id}'`);
-		return scale.factor;
-	};
-	return factorOf("200") / factorOf("100");
+	return textScaleFactor("200") / textScaleFactor("100");
 }
 
 /**
@@ -2775,8 +2791,16 @@ function roleReading(
 	return { histogram, rootPx: root };
 }
 
-/** One cell's per-role comparison, naming every role that did not line up. */
-function judgeTextScale(
+/**
+ * One cell's per-role comparison, naming every role that did not line up.
+ *
+ * EXPORTED for its own test, which is the only way to exercise the arithmetic with a
+ * factor the live table does not declare today: `SCALES` has 200/100 = 2, so a run of the
+ * real harness cannot tell `rem / 2` from `rem / factor` — the two only diverge for a
+ * factor the table is free to change, which is exactly the drift this function was fixed
+ * for. The test drives it at 1.5 (the `150` row) and asserts which branch fires.
+ */
+export function judgeTextScale(
 	key: string,
 	at100: Map<number, number>,
 	at200: Map<number, number>,
@@ -2806,7 +2830,7 @@ function judgeTextScale(
 	// The whole page frozen: the 200 % frame renders the 100 % frame's sizes exactly.
 	// Reported as that single fact rather than as per-role diffs, which is both
 	// truer and what a reader wants first.
-	if (sameSizes(at100, at200, rootPx100)) {
+	if (sameSizes(at100, at200, rootPx100, factor)) {
 		return {
 			key,
 			live: false,
@@ -2826,8 +2850,8 @@ function judgeTextScale(
 	//
 	//   * the role is still there at its OLD size — a node that ignored the root font
 	//     size. This is a role that did not scale, and the cell FAILS on it. In rem
-	//     terms that node's key halves (its px held while the root doubled), which is
-	//     exactly the `rem / 2` lookup below.
+	//     terms that node's key divides by the factor (its px held while the root grew
+	//     by it), which is exactly the `rem / factor` lookup below.
 	//   * the role is absent from the 200 % frame entirely — a layout that drops a label at
 	//     200 %, a state that settled differently between the two frames, OR a node
 	//     RESIZED to a size the factor does not produce (`calc()`/`clamp()`/an `em` under a
@@ -2845,22 +2869,29 @@ function judgeTextScale(
 	const problems: string[] = [];
 	const notes: string[] = [];
 	// A size the 200 % frame shows is expressed in THAT frame's px, which is what a
-	// reader sees in a screenshot (`px(rem) * 2`). Reporting it in the 100 % frame's
+	// reader sees in a screenshot (`px(rem) * factor`). Reporting it in the 100 % frame's
 	// scale would name a size nothing renders at — a frozen 14 px node would be filed
 	// as "7px text", which is the opposite of the honest reading.
-	const px200 = (rem: number) => Math.round(rem * rootPx100 * 2 * 100) / 100;
+	//
+	// THE FACTOR IS THE TABLE'S, NOT A 2. This line, the `rem / factor` lookup below and
+	// the two messages after it read `2` while the table held a literal 2 for `200`, so
+	// an arithmetic constant and an id→factor lookup agreed by coincidence — and only for
+	// a run that pairs 100 against 200. They now read the same `factor` the 200 % root was
+	// asserted against, so a table that stops declaring 2 moves this arithmetic with it.
+	const px200 = (rem: number) =>
+		Math.round(rem * rootPx100 * factor * 100) / 100;
 	for (const [rem, count] of at100) {
 		// `hasApprox` on BOTH halves of the question: the scaled lookup was exact while the
 		// frozen one allowed a tolerance, so a role that scaled but whose four-decimal
 		// quotient drifted was filed as absent rather than as scaled.
-		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is twice its 100 % px
-		if (hasApprox(at200, rem / 2))
+		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is the factor times its 100 % px
+		if (hasApprox(at200, rem / factor))
 			problems.push(
-				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * 2}px was expected`,
+				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * factor}px was expected`,
 			);
 		else
 			notes.push(
-				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
+				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * factor}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
 			);
 	}
 	for (const [rem, count] of at200) {
@@ -2885,11 +2916,17 @@ function hasApprox(map: Map<number, number>, value: number) {
  * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
  * whole-page inert case. Compares in px (each scale's own root), so a page whose
  * every role stayed put is recognised as one fact rather than as per-role diffs.
+ *
+ * `factor` is the table's 200-over-100 ratio, the same one `judgeTextScale` asserted
+ * the 200 % root against: a `2` here was the fourth place this arithmetic assumed the
+ * pair's factor, so a page that pinned its root read as inert rather than as a harness
+ * failure once the table moved.
  */
 function sameSizes(
 	at100: Map<number, number>,
 	at200: Map<number, number>,
 	rootPx100: number,
+	factor: number,
 ) {
 	const inPx = (histogram: Map<number, number>, root: number) => {
 		const out = new Map<number, number>();
@@ -2900,7 +2937,7 @@ function sameSizes(
 		return out;
 	};
 	const a = inPx(at100, rootPx100);
-	const b = inPx(at200, rootPx100 * 2);
+	const b = inPx(at200, rootPx100 * factor);
 	if (a.size !== b.size) return false;
 	for (const [size, count] of a) if (b.get(size) !== count) return false;
 	return true;
@@ -2997,6 +3034,30 @@ if (isMain) {
 		process.exit(2);
 	}
 	const tier: "ci" | "core" | "full" = tierFlag;
+	/*
+	 * AN UNDECLARED `--scales` VALUE IS REFUSED, NOT DROPPED.
+	 *
+	 * The ids are filtered through `SCALES` when the options are built, so an id the
+	 * table does not declare used to vanish there: `--scales 175` built an EMPTY scale
+	 * list, the plan was empty, the run planned 0 frames and exited 0. A caller asking
+	 * for a large-text run it did not get got a green exit and no frames — the silent
+	 * empty-axis failure this harness refuses elsewhere (`--tier`, the plan itself) and
+	 * had left open in the one flag that filters rather than errors. Refused here, before
+	 * the plan is built and therefore before any planning output: a run that prints a
+	 * plan and then refuses has already told the caller the plan exists.
+	 */
+	const undeclaredScales = scaleIds.filter(
+		(id) => !SCALES.some((scale) => scale.id === id),
+	);
+	if (undeclaredScales.length > 0) {
+		console.error(
+			`unknown --scales ${undeclaredScales.map((id) => `'${id}'`).join(", ")}: ` +
+				`the declared scales are ${SCALES.map((scale) => scale.id).join(", ")} ` +
+				"(tools/visual/matrix.ts SCALES); an id the table does not declare would drop " +
+				"out of the plan and leave a run with no frames",
+		);
+		process.exit(2);
+	}
 	const requestedDevices = csv(flags, "devices");
 	const defaultDevices =
 		tier === "full" ? ALL_DEVICES : tier === "ci" ? CI_DEVICES : CORE_DEVICES;

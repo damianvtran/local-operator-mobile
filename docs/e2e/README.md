@@ -268,6 +268,19 @@ the capture pins each cell's before rendering it and writes the name to
 `records[].pinnedScenario`; the audit pins the same one before re-driving, or the page is
 whatever the previous cell left behind.
 
+**The pin is checked against the registry that made the frames.** A cell's state is a
+property of a world and not only of a URL — `S8/populated-long` shows its 65-character
+conversation title only in `long-names`, and `S5/populated-long` shows the 520-row
+transcript only in `long-transcript` — so a pin naming a world that does not DECLARE the
+cell would re-drive a page the cell never named, with every row still carrying the cell's
+name. The capture writes the registry's own answer to `meta.cellWorlds` and `audit.ts`
+refuses such a manifest by name (`exit 2`), listing the worlds that do declare the cell.
+The same admission covers the text scale: a record's id is resolved against `matrix.ts`
+`SCALES`, and a manifest whose recorded factor for that id (`meta.scaleProfile`) is not
+the factor today's table declares is refused with both numbers, because `135` once meant
+1.35 and means 1.3529411765 now. A manifest that records neither field — one written
+before they existed — carries nothing to compare and is still audited.
+
 The origin must also be **stable across runs**, which is what `--port` is for: the
 harness serves the build on an ephemeral port by default, so each run's serve origin —
 the one the seed names, and the one the app's saved route and login are keyed by in
@@ -850,6 +863,12 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 plan's size (3000 ms/cell, floor 900 s) unless you name one, so the default bound
 always holds the plan it was computed for.
 
+**An id `--scales` does not recognise is REFUSED, not filtered out.** The ids are matched
+against `matrix.ts` `SCALES` when the plan is built, so an undeclared one used to vanish
+there: `--scales 175` planned 0 frames and exited 0, which reads as a green run in a log
+and leaves the caller with no stills for the size they asked about. It now exits 2 before
+any plan output, naming the value and every id the table declares.
+
 **A run states the bound it took, and so does the artifact it leaves.** The per-push
 `web-audit` job captures the `ci` tier — **2 of the 19 profiles above** — and a green job
 that printed only the devices it used read as "the app is fine" over an assertion about two
@@ -1192,6 +1211,21 @@ required to be RECORDED with its reason, so a pair that quietly stopped overlapp
 cannot pass as a working rule. `#status-row-dot` is deliberately **not** in that list:
 what proves its silence is the U-03 colour-only-status rule, not the painted-region
 rule, so listing it here would credit this rule with another rule's fixture.
+
+### A frame that painted nothing is not a clean frame
+
+Every rule reads something, and a page that rendered nothing gives every one of them an
+empty set to read. `U-08` used to answer that with its best verdict —
+`0 text/control boxes, no pair overlapping >25%`, PASS — which is what a run reports when
+a render paints nothing at all, and it is a false green: measured, two runs of ONE `ci`
+manifest at 150 % text produced 10 text/control boxes for a cell in one run and 0 in the
+other. So an empty text/control set is reported as what it is: `U-08` returns
+`BLOCKED`/`unmeasurable` with the count (`U-09` has always done this for
+`0 interactive AX nodes`), and the audit blocks EVERY row of that cell and counts it as a
+gap, because no rule on such a frame measured anything. A cell whose emptiness really is
+its state can say so by name in `DESIGN_EMPTY_CELLS` (`tools/audit/checks.ts`), which is
+empty on this head: every declared cell paints text or a control, and the blank frames the
+audit found were accidents rather than states.
 
 ### A measurement outside the captured frame says so
 

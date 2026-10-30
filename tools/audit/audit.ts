@@ -87,7 +87,11 @@ import {
 	textScaleFactor,
 } from "../visual/matrix.ts";
 import type { AuditState, CheckRow } from "./checks.ts";
-import { runChecks, SUB_RULE_TEXT } from "./checks.ts";
+import {
+	frameHasNothingToMeasure,
+	runChecks,
+	SUB_RULE_TEXT,
+} from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { EXTRACT_PROBE, flattenAxTree } from "./probe.ts";
 
@@ -724,6 +728,158 @@ export interface AuditOptions {
 /** Refused-audit: the exit code 2 path, thrown so the CLI and the API agree. */
 export class AuditRefused extends Error {}
 
+/** The scale table a manifest recorded, keyed by id, or an empty map. */
+function recordedScaleFactors(
+	meta: Record<string, unknown>,
+): Map<string, number> {
+	const out = new Map<string, number>();
+	const table = meta.scaleProfile;
+	if (!Array.isArray(table)) return out;
+	for (const entry of table) {
+		const record = asRecord(entry);
+		if (record === undefined) continue;
+		const { id, factor } = record;
+		// A malformed row is SKIPPED rather than refused: this table is a record of
+		// what a run used, and a row without a usable id/factor simply cannot
+		// contradict anything. Refusing it would make an old artifact unusable over a
+		// field whose absence is already handled.
+		if (typeof id === "string" && typeof factor === "number")
+			out.set(id, factor);
+	}
+	return out;
+}
+
+/**
+ * Refuse a manifest whose records name a scale this head cannot render at the size the
+ * capture rendered it.
+ *
+ * Two refusals, one place: an id the table does not declare, and an id whose recorded
+ * factor is not the factor the table declares today. The rationale for both is at the
+ * call site in `runAudit`, which is the path CI and the CLI take; this is exported so
+ * the ADMISSION is testable directly, without a browser, a build or a page.
+ */
+export function admitRecordScales(
+	records: ReadonlyArray<{
+		scale: string;
+		cell?: string | undefined;
+		path: string;
+	}>,
+	meta: Record<string, unknown>,
+): void {
+	const recorded = recordedScaleFactors(meta);
+	for (const record of records) {
+		const cell = record.cell ?? record.path;
+		let factor: number;
+		try {
+			factor = textScaleFactor(record.scale);
+		} catch {
+			throw new AuditRefused(
+				`${cell} records scale "${record.scale}", which the capture's scale table never defines — refusing to render it at some other size`,
+			);
+		}
+		const at = recorded.get(record.scale);
+		if (at !== undefined && at !== factor) {
+			throw new AuditRefused(
+				`${cell} records scale "${record.scale}" at factor ${at}, but this head's scale table declares ${factor} — the frames were captured at ${at}, so re-driving at ${factor} would measure a size the capture never saw`,
+			);
+		}
+	}
+}
+
+/**
+ * Refuse a manifest whose record pins a relay WORLD that does not declare the cell.
+ *
+ * A cell's state is a property of a world, not only of a URL: `S8/populated-long` renders
+ * its 65-character name in `long-names` and nowhere else, and `S5/populated-long` renders
+ * the 520-row transcript in `long-transcript`. The capture records the world it pinned
+ * (`records[].pinnedScenario`) and the audit replays that name; when the name is a world
+ * that does NOT declare this cell — a manifest from an older head or a hand-edited one;
+ * `capture.ts` refuses a `--scenario` pin that does not declare the cell, so a same-head
+ * capture cannot record one — the replay faithfully renders a page the cell never named, and the
+ * rows it produces are readings about that other page wearing this cell's name. Nothing in
+ * the frame afterwards can tell the two apart, which is why the check belongs here.
+ *
+ * The registry's own answer travels in the manifest (`meta.cellWorlds`, written by the
+ * capture), so this needs no relay running: it is a map lookup against what the run that
+ * MADE the frames was told.
+ *
+ * Absent inputs are not disagreements, for the reason `admitRecordScales` gives: an artifact
+ * from before this field existed carries nothing to compare against, and a record that pins
+ * nothing (an ad-hoc `path:` page) claims no world at all.
+ */
+export function admitRecordWorlds(
+	records: ReadonlyArray<{
+		cell?: string | undefined;
+		path: string;
+		pinnedScenario?: string | null;
+	}>,
+	meta: Record<string, unknown>,
+): void {
+	const worlds = asRecord(meta.cellWorlds);
+	if (worlds === undefined) return;
+	for (const record of records) {
+		const cell = record.cell ?? record.path;
+		const pinned = record.pinnedScenario;
+		if (typeof pinned !== "string" || pinned === "") continue;
+		const declaring = worlds[cell];
+		// A cell the registry never described is not this check's business: an ad-hoc
+		// `path:` record's key is a route, and the map has no entry for it.
+		if (!Array.isArray(declaring)) continue;
+		if (declaring.includes(pinned)) continue;
+		const named = declaring.filter(
+			(world): world is string => typeof world === "string",
+		);
+		throw new AuditRefused(
+			`${cell} pins the relay world "${pinned}", which does not declare it — the worlds that do are ${named.length > 0 ? named.join(", ") : "none"}`,
+		);
+	}
+}
+
+/**
+ * The painted-nothing rewrite, or the rows exactly as they came.
+ *
+ * A cell that painted nothing produced no measurement of its own, so its PASS rows are
+ * statements about an empty page — the false green measured in the tier ("`0 text/control
+ * boxes`, PASS") — and they become BLOCKED/unmeasurable, counted as a gap.
+ *
+ * EXCEPT WHEN A RULE MEASURED SOMETHING. A `FAIL` is a defect a rule READ, and an
+ * `EXCEPTION` is a pair the rule recorded with its reason; rewriting either would trade a
+ * real finding for an instrumentation gap, which is the same class of false verdict this
+ * gate exists to remove, pointing the other way. Review round 1 (F1) reproduced two
+ * reachable shapes where that happened: a frame whose only text node is clipped away by an
+ * ancestor (the text/control set is empty because `isGhost` drops it, and `U-07` reported
+ * `content 48px in a 20px box (overflow-y: hidden)`), and a frame with no boxes at all whose
+ * document overflows the viewport (`U-06` reported `document 511px wide in a 320px
+ * viewport`). Both left `frameHasNothingToMeasure` true, so both FAILs were overwritten: the
+ * report's `failures` fell to 0 and the exit became 3 (a gap) — and under `--allow-blocked`
+ * the run exited 0 over a real clipping defect.
+ *
+ * So the gate fires only when NOTHING on the frame measured anything. The rows it rewrites
+ * say what is true of them: a row about an empty page is not a measurement of the cell.
+ *
+ * Exported so both directions are testable without a browser (`tools/audit/unpainted-frame
+ * .test.ts`): a blank frame's PASS rows become a gap, and a frame that produced a FAIL keeps
+ * every row it produced.
+ */
+export function blockUnpaintedFrame(
+	produced: CheckRow[],
+	state: AuditState,
+): CheckRow[] {
+	if (!frameHasNothingToMeasure(state)) return produced;
+	const measuredSomething = produced.some(
+		(row) => row.verdict === "FAIL" || row.verdict === "EXCEPTION",
+	);
+	if (measuredSomething) return produced;
+	return produced.map((row) => ({
+		...row,
+		verdict: "BLOCKED" as const,
+		blockedKind: "unmeasurable" as const,
+		detail:
+			`${row.detail ?? ""} — the frame painted nothing: 0 text/control boxes, ` +
+			"so this row describes an empty page and is not a measurement of the cell",
+	}));
+}
+
 export async function runAudit(options: AuditOptions) {
 	/**
 	 * Every row as produced, before any blinding, so the specs can be judged once
@@ -778,23 +934,40 @@ export async function runAudit(options: AuditOptions) {
 		);
 	}
 	/*
-	 * EVERY RECORD'S SCALE MUST RESOLVE BEFORE ANY CELL RENDERS. The re-drive asks
-	 * `matrix.ts` for the factor the capture used, and the id is the only thing the
-	 * record carries. A partial mapping here used to fall through to 200%, so an
-	 * id the table does not declare would render a state the cell never named and
-	 * the run would report it under the cell's scale. Refused up front, naming the
-	 * cell and the scale, so the failure is a manifest problem rather than a
-	 * measurement of the wrong page.
+	 * EVERY RECORD'S SCALE MUST RESOLVE — AND AGREE WITH THE FACTOR THE MANIFEST
+	 * RECORDED — BEFORE ANY CELL RENDERS. The re-drive asks `matrix.ts` for the
+	 * factor the capture used, and the id is the only thing the record carries. A
+	 * partial mapping here used to fall through to 200%, so an id the table does
+	 * not declare would render a state the cell never named and the run would
+	 * report it under the cell's scale. Refused up front, naming the cell and the
+	 * scale, so the failure is a manifest problem rather than a measurement of the
+	 * wrong page.
+	 *
+	 * THE ID ALONE IS NOT ENOUGH, and that is the second half of this refusal. The
+	 * capture writes its own scale table into the manifest (`meta.scaleProfile`,
+	 * the `SCALES` table as that run read it), and a record's factor is only the
+	 * table's IF THE TABLE HAS NOT MOVED since. It has moved: `135` was declared at
+	 * 1.35 and is 1.3529411765 — the exact iOS `xxxLarge` step — so a manifest
+	 * captured either side of that edit names the same id at two different sizes.
+	 * Resolving the id against TODAY's table silently re-drives an old manifest at
+	 * the new factor: the cells render a size their frames were never captured at,
+	 * every row is then a reading about a page the capture did not see, and nothing
+	 * in the report says so. So a record whose recorded factor disagrees with the
+	 * table is refused BY NAME, with both numbers, and the message says which is
+	 * which — the reader has to be able to tell a stale manifest from a changed
+	 * table without opening either.
+	 *
+	 * AN ABSENT RECORDED FACTOR IS NOT A DISAGREEMENT: a manifest written before
+	 * this field existed carries no table to compare against, and inventing a
+	 * refusal for it would retire every artifact already on disk. What it cannot do
+	 * is claim a factor it did not record.
 	 */
-	for (const record of records) {
-		try {
-			textScaleFactor(record.scale);
-		} catch {
-			throw new AuditRefused(
-				`${record.cell ?? record.path} records scale "${record.scale}", which the capture's scale table never defines — refusing to render it at some other size`,
-			);
-		}
-	}
+	admitRecordScales(records, meta);
+	/* The world each record pins, checked against the registry that made the frames: a
+	 * record whose pin names a world which does not declare that cell is the one way a
+	 * re-drive can measure a page the cell never named while every row still carries the
+	 * cell's name (`admitRecordWorlds`). */
+	admitRecordWorlds(records, meta);
 	if (typeof meta.buildDir !== "string")
 		throw new AuditRefused(
 			`${manifestPath} has no meta.buildDir: cannot serve the build`,
@@ -1043,7 +1216,7 @@ export async function runAudit(options: AuditOptions) {
 									`${row.detail ?? ""} — the capture's record for this cell WAS ready and the ` +
 									`re-drive does not reach the state it names, so the row describes another screen: ${gap}`,
 							}))
-						: produced;
+						: blockUnpaintedFrame(produced, state);
 			const blinded = measured.map((row) => {
 				const spec = options.blind.find((candidate) =>
 					matchesBlind(row, [candidate]),
