@@ -1,7 +1,0 @@
-{
-	"relay.transcript.tool_row.bridge.label_conversation": "对话",
-	"relay.transcript.tool_row.bridge.label_outcome": "结果",
-	"relay.transcript.tool_row.bridge.kind_conversation": "一个对话",
-	"relay.transcript.tool_row.bridge.kind_dm": "一条私信",
-	"relay.transcript.tool_row.bridge.kind_teammate": "一位队友"
-}

@@ -10,11 +10,12 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import type { TranscriptEntry } from "@/contracts";
 import {
 	bridgeBody,
-	bridgeConversationLabel,
+	bridgeCopyOf,
 	bridgeHeadline,
 	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
+	bridgeTargetLabel,
 	isBridgeRow,
 } from "@/features/session/bridge-row";
 import { Markdown } from "@/features/session/components/markdown";
@@ -33,7 +34,6 @@ import {
 	toolElapsed,
 	toolGlyph,
 } from "@/features/session/projection";
-import { t } from "@/i18n";
 import { ROLE, toolRowToggleId } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
@@ -200,11 +200,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * line either way. */
 	const isBridge = isBridgeRow(entry);
 	const bridge = bridgeRowOf(entry);
-	const bridgeOutcome = bridgeOutcomeView(bridge);
-	const bridgeConversation = bridgeConversationLabel(bridge);
+	const bridgeCopy = bridgeCopyOf(entry);
+	const bridgeOutcome = bridgeOutcomeView(bridge, bridgeCopy);
+	const bridgeTarget = bridgeTargetLabel(bridge);
 	const bridgeMessage = bridgeBody(entry);
 	const mark = bridgeMark(bridge);
-	const headline = isBridge ? bridgeHeadline(entry) : entry.summary;
+	const headline = isBridge ? bridgeHeadline(entry, bridgeCopy) : entry.summary;
 	/* The icon is an SVG and cannot inherit a text colour (`useTokenColor`'s
 	 * own reason); `ink-muted` matches the tool name it replaces. */
 	const iconInk = useTokenColor("ink-muted");
@@ -260,8 +261,9 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const details =
 		hasToolDetails(entry) ||
 		note !== null ||
-		bridgeConversation !== null ||
-		bridgeOutcome !== null;
+		bridgeTarget !== null ||
+		bridgeOutcome !== null ||
+		(bridgeCopy !== null && bridgeCopy.outcomeSentence !== "");
 	const blocks = toolDetailBlocks(entry);
 	/* The bridge body IS the args' substance; printing the args block too would
 	 * say it twice (the diff-first tools' rule, `isDiffFirstTool`). */
@@ -453,26 +455,26 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							{note}
 						</Text>
 					) : null}
-					{/* The bridge facts: where it went and how it landed, as labelled
-					    lines, then the message itself through the transcript's own
-					    markdown renderer — it is prose a person wrote for people, and it
-					    wraps instead of scrolling a mono well sideways. */}
-					{bridgeConversation !== null ? (
-						<Text className="text-body-sm text-ink-muted">
-							<Text className="text-ink-dim">
-								{t("relay.transcript.tool_row.bridge.label_conversation")}
-							</Text>
-							{"  "}
-							{bridgeConversation}
-						</Text>
+					{/* The bridge facts, all of them the relay's own words: the target's
+					    name when it sent one, then `bridge_copy.outcome_sentence` — what
+					    the outcome means — then the message itself through the
+					    transcript's markdown renderer. It is prose a person wrote for
+					    people, and it wraps instead of scrolling a mono well sideways. */}
+					{bridgeTarget !== null ? (
+						<Text className="text-body-sm text-ink-muted">{bridgeTarget}</Text>
 					) : null}
-					{bridgeOutcome !== null && trailing !== null ? (
-						<Text className="text-body-sm">
-							<Text className="text-ink-dim">
-								{t("relay.transcript.tool_row.bridge.label_outcome")}
-							</Text>
-							{"  "}
-							<Text className={trailing.inkClass}>{bridgeOutcome.text}</Text>
+					{bridgeCopy !== null && bridgeCopy.outcomeSentence !== "" ? (
+						<Text
+							className={cx(
+								"text-body-sm",
+								bridgeOutcome?.tone === "danger"
+									? "text-danger"
+									: bridgeOutcome?.tone === "warning"
+										? "text-warning"
+										: "text-ink-muted",
+							)}
+						>
+							{bridgeCopy.outcomeSentence}
 						</Text>
 					) : null}
 					{bridgeMessage !== null ? <Markdown text={bridgeMessage} /> : null}

@@ -32,8 +32,6 @@ import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
-import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
-import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
 const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 
@@ -113,16 +111,6 @@ const NAMESPACES = [
 		context: relayChromeContext,
 		expected: 4,
 	},
-	{
-		/* The bridge tool row's relay-only labels, mirrored key for key from the
-		 *  relay's `relay.transcript.tool_row.bridge.*`. The OUTCOME words are
-		 *  deliberately absent: they belong to the core's namespace and are
-		 *  mirrored once their ids land (`session/bridge-row.ts`). */
-		name: "relay.transcript",
-		messages: relayTranscript,
-		context: relayTranscriptContext,
-		expected: 5,
-	},
 ] as const;
 
 describe("the English catalogues", () => {
@@ -165,7 +153,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(148);
+		expect(total).toBe(143);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -234,8 +222,6 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"French spells “session” the same way; equality is correct here, not a fallback.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
-		"relay.transcript.tool_row.bridge.label_conversation":
-			"French spells “conversation” the same way; equality is the correct translation of the field label, not a fallback.",
 	},
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */

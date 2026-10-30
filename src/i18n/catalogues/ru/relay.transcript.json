@@ -1,7 +1,0 @@
-{
-	"relay.transcript.tool_row.bridge.label_conversation": "Беседа",
-	"relay.transcript.tool_row.bridge.label_outcome": "Результат",
-	"relay.transcript.tool_row.bridge.kind_conversation": "беседа",
-	"relay.transcript.tool_row.bridge.kind_dm": "личное сообщение",
-	"relay.transcript.tool_row.bridge.kind_teammate": "участник команды"
-}

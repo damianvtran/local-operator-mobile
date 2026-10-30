@@ -40,7 +40,6 @@
  */
 
 import type { TranscriptEntry } from "@/contracts";
-import { t } from "@/i18n";
 
 /** The tool's own name on the wire (the core's tool registry). */
 export const BRIDGE_TOOL_NAME = "bridge";
@@ -175,24 +174,71 @@ export function bridgeRowOf(
 }
 
 /**
+ * The relay's rendered WORDS for one bridge row — `details.bridge_copy`.
+ *
+ * The daemon renders these from the core's `wire.tool_rows.bridge.*`
+ * catalogue in the reader's locale (local-operator #3205,
+ * `local_operator/mobile/projection.py::_bridge_copy`), and this app paints
+ * them VERBATIM. That is the whole point of the field: three surfaces, one
+ * translation, so the phone mints no copy of its own for anything the relay
+ * already decided. `outcome` is `""` for a plain landed call, and
+ * `refused`/`failed` arrive with ` · <code>` already appended.
+ *
+ * A missing or malformed payload is `null`, and the row then shows **no
+ * chip** — the relay's own rule ("if bridge_copy is missing, the relay shows
+ * no chip; it never guesses English"), mirrored rather than second-guessed.
+ */
+export interface BridgeCopy {
+	/** The chip's word; `""` when the call is unremarkable. */
+	outcome: string;
+	/** The expansion's headline (the relay's, with ids kept out by the core). */
+	headline: string;
+	/** The expanded card's sentence: what the outcome means, in words. */
+	outcomeSentence: string;
+}
+
+export function bridgeCopyOf(
+	entry: Pick<TranscriptEntry, "tool_name" | "details">,
+): BridgeCopy | null {
+	if (!isBridgeRow(entry)) return null;
+	const details: unknown = entry.details;
+	if (details === null || typeof details !== "object") return null;
+	const raw = (details as Record<string, unknown>).bridge_copy;
+	if (raw === null || typeof raw !== "object" || Array.isArray(raw))
+		return null;
+	const copy = raw as Record<string, unknown>;
+	return {
+		outcome: typeof copy.outcome === "string" ? copy.outcome.trim() : "",
+		headline:
+			typeof copy.headline === "string" ? scrubOpaqueIds(copy.headline) : "",
+		outcomeSentence:
+			typeof copy.outcome_sentence === "string"
+				? copy.outcome_sentence.trim()
+				: "",
+	};
+}
+
+/**
  * The one line the collapsed row and its spoken name lead with: the relay's
- * localized summary, ids stripped. Falls back to the tool's name only when the
- * summary is empty (a row still composing), so the line is never blank.
+ * rendered headline (`bridge_copy.headline`), else its localized `summary` —
+ * which is the same decision made for the older relay that sent no
+ * `bridge_copy` — with opaque ids stripped. The tool's own name is the last
+ * resort, so the line is never blank (a row still composing).
  */
 export const bridgeHeadline = (
 	entry: Pick<TranscriptEntry, "summary" | "tool_name">,
-): string => scrubOpaqueIds(entry.summary) || entry.tool_name;
+	copy: BridgeCopy | null = null,
+): string => copy?.headline || scrubOpaqueIds(entry.summary) || entry.tool_name;
 
-/** The outcome's tone: which ink the word takes and which mark the row shows. */
+/** Which ink an outcome's chip takes, and which mark the row shows beside it. */
 export type BridgeOutcomeTone = "warning" | "danger" | "muted";
 
 /**
- * The mark the STATE COLUMN draws for an outcome, where the desktop row
- * paints one of its own (local-operator-ui #1529): `inbox_only` is
- * `MessageSquareOff` and `awaiting_acceptance` is `Hourglass` there, so the
- * two clients cannot draw one bridge result two ways. The other three keep
- * the shared tool-state glyphs, and a row's mark is never the only channel
- * (`components.md` § 2.6): each of these also carries its own word.
+ * The mark for an outcome, where the desktop row paints one of its own
+ * (local-operator-ui #1529): `MessageSquareOff` for a peer inbox and
+ * `Hourglass` for a post nobody has accepted yet. The other three keep the
+ * shared tool-state glyphs, and no mark is the only channel
+ * (`components.md` § 2.6): each also carries the relay's word beside it.
  */
 export type BridgeMark = "message-off" | "hourglass" | null;
 
@@ -203,33 +249,6 @@ export const bridgeMark = (row: BridgeRow | null): BridgeMark =>
 			? "hourglass"
 			: null;
 
-export interface BridgeOutcomeView {
-	text: string;
-	tone: BridgeOutcomeTone;
-}
-
-/**
- * PLACEHOLDER — the outcome words, pending their CORE catalogue keys.
- *
- * The words are owned by the core's own namespace (the desktop/TUI lane,
- * local-operator c733bb5b44de), not by `relay.transcript.*`, so this app must
- * not mint keys for them; it mirrors the core's ids once they land. Until
- * then the English source is held in this ONE table so the swap is a
- * one-function change: replace each value with
- * `t("<core key>", { code })`, mirror the keys into every shipped catalogue,
- * and delete this table. Every locale renders English here meanwhile — a
- * known, temporary gap, not a policy exception.
- */
-const PENDING_OUTCOME_WORDS: Readonly<
-	Record<BridgeOutcome, (code: string) => string>
-> = {
-	inbox_only: () => "not posted to a conversation",
-	refused: (code) => `refused · ${code}`,
-	failed: (code) => `failed · ${code}`,
-	unconfirmed: () => "unconfirmed",
-	awaiting_acceptance: () => "awaiting acceptance",
-};
-
 const OUTCOME_TONE: Readonly<Record<BridgeOutcome, BridgeOutcomeTone>> = {
 	inbox_only: "warning",
 	refused: "danger",
@@ -238,48 +257,43 @@ const OUTCOME_TONE: Readonly<Record<BridgeOutcome, BridgeOutcomeTone>> = {
 	awaiting_acceptance: "muted",
 };
 
+export interface BridgeOutcomeView {
+	/** The relay's own word, printed as sent. */
+	text: string;
+	tone: BridgeOutcomeTone;
+}
+
 /**
- * The trailing word for an outcome, or `null` for the settled case.
- *
- * `refused`/`failed` carry the relay's machine `code` verbatim (a technical
- * token, untranslated — `docs/i18n.md`); when the relay sent no code the slot
- * shows an em dash rather than a second, unmirrored wording.
+ * The chip beside the row: the relay's `bridge_copy.outcome`, or `null` when
+ * the relay sent no words (no chip, never a guess) or the outcome token is one
+ * this build cannot name a tone for. The tone comes from the machine token
+ * (`bridge_row.outcome`), never from the sentence — copy is not a data
+ * channel, the same rule the send row's delivery states follow.
  */
 export function bridgeOutcomeView(
 	row: BridgeRow | null,
+	copy: BridgeCopy | null,
 ): BridgeOutcomeView | null {
 	if (row === null || row.outcome === null) return null;
-	return {
-		text: PENDING_OUTCOME_WORDS[row.outcome](row.code ?? "—"),
-		tone: OUTCOME_TONE[row.outcome],
-	};
+	if (copy === null || copy.outcome === "") return null;
+	return { text: copy.outcome, tone: OUTCOME_TONE[row.outcome] };
 }
 
 /**
- * What the expansion's "Conversation" line says: the target's own label when
- * the relay gave one, else the kind's word. A directory read or a target-less
- * op has no conversation, so the line is omitted (`null`) rather than invented.
+ * The target's own name for the expansion (`#release`, a person), when the
+ * relay sent one that is not an opaque id. There is no invented kind word any
+ * more: the relay's `bridge_copy` says what happened in a sentence, and a
+ * second, app-minted label would be copy the daemon never approved.
  */
-export function bridgeConversationLabel(row: BridgeRow | null): string | null {
-	if (row === null) return null;
-	if (row.targetLabel !== null) return row.targetLabel;
-	switch (row.targetKind) {
-		case "channel":
-		case "message":
-			return t("relay.transcript.tool_row.bridge.kind_conversation");
-		case "dm":
-			return t("relay.transcript.tool_row.bridge.kind_dm");
-		case "person":
-			return t("relay.transcript.tool_row.bridge.kind_teammate");
-		default:
-			return null;
-	}
-}
+export const bridgeTargetLabel = (row: BridgeRow | null): string | null =>
+	row?.targetLabel ?? null;
 
 /**
  * The message body the agent sent, for the expansion's markdown block: the
- * call's `body` (the tool's own argument) or `text`, as a string. Anything else
- * is `null`, and the row falls back to its generic args block.
+ * call's `body` (the tool's own argument) or `text`, as a string. The relay
+ * keeps that argument's newlines so markdown renders (`projection.py`,
+ * `_compact_multiline`). Anything else is `null`, and the row falls back to
+ * its generic args block.
  */
 export function bridgeBody(
 	entry: Pick<TranscriptEntry, "tool_name" | "details">,

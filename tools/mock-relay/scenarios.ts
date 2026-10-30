@@ -1734,14 +1734,75 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			/* `bridge_row` is newer than the hand-authored wire mirror; the mock
 			 * sends exactly what the relay will, so the payload rides through a
 			 * loose record rather than a widened contract type. */
+			/* The words the daemon would render for a token dict, in plain English
+			 * (the catalogue's own source strings; the mock is a wire fixture, not a
+			 * translation). Mirrors `harness/bridge_copy.py::outcome_word` +
+			 * `bridge_expanded`, including the " · <code>" the relay appends. */
+			const bridgeCopyFor = (
+				bridge: Record<string, unknown> | null,
+			): Record<string, unknown> => {
+				if (bridge === null) return {};
+				const outcome = bridge.outcome;
+				const label =
+					typeof (bridge.target as { label?: unknown } | undefined)?.label ===
+					"string"
+						? String((bridge.target as { label?: string }).label)
+						: "a conversation";
+				const words: Record<string, [string, string]> = {
+					inbox_only: [
+						"not posted to a conversation",
+						"Landed in their inbox, not in a conversation anyone reads yet.",
+					],
+					refused: ["refused", "The Team Bridge refused this action."],
+					failed: ["failed", "The Team Bridge could not complete this action."],
+					unconfirmed: ["unconfirmed", "Could not confirm the result."],
+					awaiting_acceptance: [
+						"awaiting acceptance",
+						"Waiting for them to accept.",
+					],
+				};
+				const pair = typeof outcome === "string" ? words[outcome] : undefined;
+				const code = typeof bridge.code === "string" ? bridge.code : "";
+				/* The headline is the VERB phrase (`bridge_expanded`), never the chip
+				 * word: a headline that repeated its own chip said one thing twice and
+				 * read as a bug. */
+				const verb =
+					bridge.action === "send" || bridge.action === "reply"
+						? "Sent to"
+						: "Post to";
+				return {
+					outcome:
+						pair === undefined ? "" : code ? `${pair[0]} · ${code}` : pair[0],
+					headline:
+						pair === undefined ? `Posted in ${label}` : `${verb} ${label}`,
+					outcome_sentence:
+						pair === undefined ? `Posted in ${label}.` : pair[1],
+				};
+			};
+
+			/* The relay sends the WORDS beside the tokens (`details.bridge_copy`,
+			 * `projection.py::_bridge_copy`): chip word, expanded headline and
+			 * sentence, all rendered server-side from `wire.tool_rows.bridge.*`.
+			 * `outcome` is "" for a plain landed call and carries " · <code>"
+			 * itself for a refusal. */
 			const bridgeRow = (
 				id: string,
 				summary: string,
 				bridge: Record<string, unknown> | null,
 				overrides: Partial<Row> = {},
 				args: Record<string, unknown> = {},
-			): Row =>
-				at(`tc-${id}`, "tool", {
+				/* `undefined` derives the words from the tokens, the way the relay
+				 * does; `null` sends none (the pre-copy relay, where the row must
+				 * paint no chip); an object overrides them verbatim. */
+				copy: Record<string, unknown> | null | undefined = undefined,
+			): Row => {
+				const words =
+					copy === null
+						? {}
+						: {
+								bridge_copy: copy ?? bridgeCopyFor(bridge),
+							};
+				return at(`tc-${id}`, "tool", {
 					tool_name: "bridge",
 					summary,
 					elapsed_s: 1.2,
@@ -1762,10 +1823,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 										...bridge,
 									},
 								}),
+						...words,
 						output: "ok",
 					} as Row["details"],
 					...overrides,
 				});
+			};
 			const body =
 				"**Nightly sweep is green.**\n\n- 412 tests passed\n- the flaky `relay-reconnect` case is fixed in #2210\n\nNext cut goes out at 18:00 unless someone objects here.";
 			const projection = projectionFrom(base, {
@@ -1780,6 +1843,11 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						{ preview: "Sweep is green" },
 						{ elapsed_s: 0.9 },
 						{ body: "Sweep is green." },
+						{
+							outcome: "",
+							headline: "Posted in #release",
+							outcome_sentence: "Posted — #12.",
+						},
 					),
 					at("tc-send-old", "tool", {
 						tool_name: "send",
@@ -1813,8 +1881,8 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						"Posted to bcv_01JC9X7Q2M8T · cut list attached",
 						{ target: { kind: "channel", label: null } },
 					),
-					/* The pre-field row: no `bridge_row` at all — icon and headline,
-					 * no outcome, no invented conversation. */
+					/* The pre-field row: no `bridge_row` and no `bridge_copy` — the
+					 * row falls back to its summary with no chip, and invents nothing. */
 					bridgeRow(
 						"bridge-prefield",
 						"Read the directory",
@@ -1823,6 +1891,22 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						{
 							op: "directory",
 						},
+						null,
+					),
+					/* Tokens but NO words: the relay's own rule is "no chip, never a
+					 * guess", so this row must paint none even though its outcome is
+					 * a refusal. */
+					bridgeRow(
+						"bridge-nocopy",
+						"Post to #leadership",
+						{
+							target: { kind: "channel", label: "#leadership" },
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						{ tool_state: "failed" },
+						{ body: "Heads-up: the cut moves to 18:00." },
+						null,
 					),
 					bridgeRow(
 						"bridge-inbox",
