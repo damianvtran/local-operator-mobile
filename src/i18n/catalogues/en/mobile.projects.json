@@ -12,6 +12,6 @@
 	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
 	"mobile.projects.sessions.live": "{base} · {live} live",
 	"mobile.projects.stale_badge": "progress stale",
-	"mobile.projects.write_receipt": "{action} {subject}.",
+	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}",
 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again."
 }

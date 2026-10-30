@@ -99,6 +99,18 @@
 		"role": "button",
 		"note": "Expand control for hidden wake rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more wake', not 'more wakes'."
 	},
+	"mobile.schedules.state.disabled": {
+		"role": "status",
+		"note": "The store's state word for a monitor the user turned off, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop, no sentence around it."
+	},
+	"mobile.schedules.state.dormant": {
+		"role": "status",
+		"note": "The store's state word for a monitor whose conversation is not running, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop. It must not be confused with the parked CLAUSE that replaces the whole head line."
+	},
+	"mobile.schedules.state.expired": {
+		"role": "status",
+		"note": "The store's state word for a monitor past its expiry, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop."
+	},
 	"mobile.schedules.state.stale": {
 		"role": "status",
 		"note": "One word replacing the due clock when the supervisor has given up on a wake. The terminal's own vocabulary for this state."

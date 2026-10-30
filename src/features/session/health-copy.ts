@@ -32,10 +32,11 @@ export const HEALTH_SOURCE_LOCALE = "en" as const;
 /**
  * The nine keys as a closed object, so a caller and a test can name them
  * without repeating a string literal — the values resolve through the
- * catalogue at import, which is the stated limit of the runtime's first slice
- * (`src/i18n/runtime.ts`).
+ * catalogue AT RENDER, through a function — a module-level table freezes the
+ * locale it was imported under, which is exactly what the copy-resolution
+ * guard forbids (`src/i18n/__tests__/copy-resolution.test.ts`).
  */
-export const HEALTH_COPY = {
+export const healthCopy = () => ({
 	"relay.health.live": t("relay.health.live"),
 	"relay.health.live_detail": t("relay.health.live_detail"),
 	"relay.health.reconnecting": t("relay.health.reconnecting"),
@@ -44,8 +45,10 @@ export const HEALTH_COPY = {
 	"relay.health.quiet_detail": t("relay.health.quiet_detail"),
 	"relay.health.ended_detail": t("relay.health.ended_detail"),
 	"relay.health.ended_send_failed": t("relay.health.ended_send_failed"),
-	"relay.health.ended_placeholder": t("relay.health.ended_placeholder"),
-} as const;
+	"mobile.session_health.ended_placeholder": t(
+		"mobile.session_health.ended_placeholder",
+	),
+});
 
 /**
  * The state's own word, per verdict — the sheet's title and the control's
@@ -54,15 +57,15 @@ export const HEALTH_COPY = {
  * `relay.chrome.session.subtitle.*` words, read from the catalogue under those
  * same keys.
  */
-export const HEALTH_STATE_WORDS: Record<
+export const healthStateWords = (): Record<
 	"live" | "not_answering" | "reconnecting" | "ended",
 	string
-> = {
-	live: HEALTH_COPY["relay.health.live"],
+> => ({
+	live: healthCopy()["relay.health.live"],
 	not_answering: t("relay.chrome.session.subtitle.not_answering"),
-	reconnecting: HEALTH_COPY["relay.health.reconnecting"],
+	reconnecting: healthCopy()["relay.health.reconnecting"],
 	ended: t("relay.chrome.session.subtitle.ended"),
-};
+});
 
 /**
  * The words around the health sheet's Resume and the reopen-on-send line —
@@ -83,7 +86,7 @@ export const HEALTH_STATE_WORDS: Record<
  *   gone, and "try again" would invite a retry that can never work (UX round
  *   1, U8). Same sentence as this app's Past sessions screen (`past.tsx`).
  */
-export const HEALTH_RESUME_COPY = {
+export const healthResumeCopy = () => ({
 	resume: t("relay.chrome.session.resume"),
 	resuming: t("relay.chrome.session.resuming"),
 	reopening: t("mobile.session_health.reopening"),
@@ -93,6 +96,6 @@ export const HEALTH_RESUME_COPY = {
 	refused: t("mobile.session_health.resume_refused"),
 	noLongerSaved: t("mobile.session_health.resume_gone"),
 	noRoute: t("mobile.session_health.resume_no_route"),
-} as const;
+});
 
-export type HealthCopyKey = keyof typeof HEALTH_COPY;
+export type HealthCopyKey = keyof ReturnType<typeof healthCopy>;

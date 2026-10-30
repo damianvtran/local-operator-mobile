@@ -1,0 +1,315 @@
+audit fr29c2 — mobile.computers — fr — 2026-10-29
+audited head: 79b3fad082c0ae850b06a4437006d445bb1c4887
+worktree: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n (tracked tree clean)
+
+auditor: i18n-auditor (lopdev team), session 985199bdd2dc, ACTUAL model radient/auto
+model provenance: harness fallback chain anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,
+                  each switch reported by the harness as "provider failure: quota"; the pinned Sonnet model did not run this audit.
+translator: i18n-translator, session c66311717837, job fbde6318e480 (as recorded by the round-1 bundle), model kimi/k3.1-pro (fallback)
+independence: a different agent and session from the translator; the auditor wrote and edited none of the audited strings.
+
+# note: every line below that follows a "$ " prompt is a command that was run, and the lines after it are
+# note: that command's actual output. Lines beginning "# note:" are explanation, never command output.
+# note: no translation API, SDK, model-translation CLI or MT service was used at any step; this audit is
+# note: reasoning over the files plus the app's own parser. No native-speaker review and no rendered frame.
+
+
+=== §1 repository validator ===
+$ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+exit=0
+
+=== §2 string-literal gate ===
+$ npm run -s i18n:strings:check
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d
+
+=== §3 scoped i18n tests (scripts/i18n + src/i18n) ===
+$ npx vitest run scripts/i18n src/i18n
+Test Files  7 passed (7)
+      Tests  94 passed (94)
+
+=== §4 independent mechanical scanner (this namespace) ===
+$ python3 scanner.py mobile.computers   # the script is retained beside this log as scanner.py.txt
+== inputs (sha256 of the exact bytes audited) ==
+mobile.computers     en       src/i18n/catalogues/en/mobile.computers.json         356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643
+mobile.computers     context  src/i18n/catalogues/en/mobile.computers.context.json 3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5
+mobile.computers     target   src/i18n/catalogues/fr/mobile.computers.json         7ea60387b25e50e76e0278013a34c1596b74ae0e3aa295537e43092cffa389ca
+
+== mobile.computers ==  en=10 fr=10 context=10
+  [PASS] key parity en==fr
+  [PASS] context parity en==context
+  missing in fr: []
+  extra in fr:   []
+  [PASS] mobile.computers.add: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.added.stays_listed: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.badge.active: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.badge.connecting: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.connecting: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.none_on_phone: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.password_placeholder: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.section.not_connected: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.section.on_phone: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] mobile.computers.switch: placeholder names en=[] fr=[] ; outermost kinds en={} fr={}
+  [PASS] token 'lop mobile': en=1 fr=1
+  [PASS] token 'Radient': en=1 fr=1
+  lengths (en -> fr, ratio):
+    mobile.computers.add                           14 ->  21  x1.50
+    mobile.computers.added.stays_listed            77 ->  95  x1.23
+    mobile.computers.badge.active                   6 ->   5  x0.83
+    mobile.computers.badge.connecting              10 ->   9  x0.90
+    mobile.computers.connecting                    11 ->  10  x0.91
+    mobile.computers.none_on_phone                 31 ->  49  x1.58
+    mobile.computers.password_placeholder          28 ->  37  x1.32
+    mobile.computers.section.not_connected         38 ->  39  x1.03
+    mobile.computers.section.on_phone              13 ->  16  x1.23
+    mobile.computers.switch                        15 ->  20  x1.33
+
+== overall mechanical result: PASS ==
+
+=== §5 ICU rendering through the app's own parser (src/i18n/messages.ts via runtime.ts) ===
+$ RESOLVE_HOOK_PATH=.../resolve-hook.mjs node --import .../register.mjs render-fr.ts
+== resolved CLDR plural categories ==
+en: ["one","other"]
+fr: ["one","many","other"]
+
+== category per count (fr) ==
+0 -> one
+1 -> one
+2 -> other
+1000000 -> many
+
+== rendered messages (app runtime, preference=fr) ==
+mobile.projects.milestones.count @0
+  fr: 0 jalon sur 3
+  en: 0 of 3 milestones
+mobile.projects.milestones.count @1
+  fr: 1 jalon sur 3
+  en: 1 of 3 milestones
+mobile.projects.milestones.count @2
+  fr: 2 jalons sur 3
+  en: 2 of 3 milestones
+mobile.projects.milestones.count @1000000
+  fr: 1000000 de jalons sur 3
+  en: 1000000 of 3 milestones
+mobile.projects.sessions.count @0
+  fr: 0 session
+  en: 0 sessions
+mobile.projects.sessions.count @1
+  fr: 1 session
+  en: 1 session
+mobile.projects.sessions.count @2
+  fr: 2 sessions
+  en: 2 sessions
+mobile.projects.sessions.count @1000000
+  fr: 1000000 de sessions
+  en: 1000000 sessions
+
+== sessions.live composed with sessions.count (fr) ==
+base="0 session" live=1 -> 0 session · 1 en cours
+base="0 session" live=2 -> 0 session · 2 en cours
+base="0 session" live=1000000 -> 0 session · 1000000 en cours
+base="1 session" live=1 -> 1 session · 1 en cours
+base="1 session" live=2 -> 1 session · 2 en cours
+base="1 session" live=1000000 -> 1 session · 1000000 en cours
+base="2 sessions" live=1 -> 2 sessions · 1 en cours
+base="2 sessions" live=2 -> 2 sessions · 2 en cours
+base="2 sessions" live=1000000 -> 2 sessions · 1000000 en cours
+base="1000000 de sessions" live=1 -> 1000000 de sessions · 1 en cours
+base="1000000 de sessions" live=2 -> 1000000 de sessions · 2 en cours
+base="1000000 de sessions" live=1000000 -> 1000000 de sessions · 1000000 en cours
+EN base="0 sessions" live=1 -> 0 sessions · 1 live
+EN base="1 session" live=1 -> 1 session · 1 live
+EN base="2 sessions" live=1 -> 2 sessions · 1 live
+EN base="1000000 sessions" live=1 -> 1000000 sessions · 1 live
+
+== milestones.none joined with sessions.count (fr) ==
+"aucun jalon · 0 session"
+"aucun jalon · 1 session"
+"aucun jalon · 2 sessions"
+"aucun jalon · 1000000 de sessions"
+
+== declared plural branches per locale ==
+en mobile.projects.milestones.count params=[completed:text,total:text]
+en mobile.projects.sessions.count params=[count:plural]
+fr mobile.projects.milestones.count params=[total:text,completed:plural]
+fr mobile.projects.sessions.count params=[count:plural]
+
+== every key in scope renders non-empty for fr ==
+mobile.computers.add -> Ajouter un ordinateur
+mobile.computers.added.stays_listed -> Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.
+mobile.computers.badge.active -> actif
+mobile.computers.badge.connecting -> connexion
+mobile.computers.connecting -> Connexion…
+mobile.computers.none_on_phone -> Aucun ordinateur sur ce téléphone pour le moment.
+mobile.computers.password_placeholder -> Le mot de passe fourni par lop mobile
+mobile.computers.section.not_connected -> Sur votre compte Radient, non connectés
+mobile.computers.section.on_phone -> Sur ce téléphone
+mobile.computers.switch -> Changer d’ordinateur
+mobile.projects.delete_body -> Supprimer X ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.
+mobile.projects.draft_kept_note -> Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.
+mobile.projects.milestone_slash_note -> Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.
+mobile.projects.milestones.count -> 2 jalons sur X
+mobile.projects.milestones.none -> aucun jalon
+mobile.projects.project_name_hint -> 1 à 64 caractères : lettres, chiffres, point, tiret bas ou tiret. Aucun espace, et le nom ne peut pas commencer par un tiret.
+mobile.projects.remove_milestone_body -> Retirer X de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.
+mobile.projects.session_state.filed_by -> classée par
+mobile.projects.session_state.missing -> manquante
+mobile.projects.session_state.not_running -> arrêtée
+mobile.projects.sessions.count -> 2 sessions
+mobile.projects.sessions.live -> X · X en cours
+mobile.projects.stale_badge -> progression obsolète
+mobile.projects.write_receipt -> X X.
+mobile.projects.write_unknown_note -> Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.
+mobile.session.conversation_details -> Détails de la conversation
+mobile.session.status_tray.hint -> Ouvre la ligne d’activité, les tâches et les sous-agents
+
+== composed project row meta (projectRowMeta: milestones · sessions [ · live]) ==
+  completed=0 total=0 sessions=0 live=0 -> "aucun jalon · 0 session"
+  completed=0 total=3 sessions=2 live=1 -> "0 jalon sur 3 · 2 sessions · 1 en cours"
+  completed=1 total=3 sessions=2 live=1 -> "1 jalon sur 3 · 2 sessions · 1 en cours"
+  completed=2 total=3 sessions=4 live=0 -> "2 jalons sur 3 · 4 sessions"
+  completed=1000000 total=3 sessions=2 live=1 -> "1000000 de jalons sur 3 · 2 sessions · 1 en cours"
+# note: the 0/1/2/1000000 count renders and the composed row lines belong to mobile.projects;
+# note: this namespace has no count-bearing message, so they are quoted here as the shared renderer run.
+
+=== §5b cross-namespace terminology and gender (read-only greps over the FR catalogue) ===
+$ python3 - <<"EOF"  # cross-namespace terminology greps (read-only)
+# every French value containing "conversation":
+  mobile.home.options.fixed: Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.
+  mobile.home.options.title: Options de la conversation
+  mobile.home.transcript.waiting: En attente de la conversation…
+  mobile.notifications.detail.answer_in_conversation: Répondre dans la conversation
+  mobile.notifications.detail.conversation_asks: Questions de cette conversation
+  mobile.notifications.detail.no_asks: Aucune question dans cette conversation.
+  mobile.notifications.detail.nothing_to_dismiss: Aucune mise à jour de cette conversation à ignorer.
+  mobile.schedules.empty.body: Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements.
+  mobile.schedules.gone.monitors: Disparue — sa conversation n’existe plus sur cette machine, donc aucune vérification n’a lieu
+  mobile.schedules.gone.wakes: Disparu — sa conversation n’existe plus sur cette machine, donc aucun déclenchement n’a lieu
+  mobile.schedules.parked.monitors: En pause — les surveillances reprennent lorsque sa conversation s’exécute de nouveau
+  mobile.schedules.supervisor.unsupported: Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute.
+  mobile.schedules.supervisor.unverifiable: Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.
+  mobile.schedules.truncated: Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.
+  mobile.session.conversation_details: Détails de la conversation
+
+# "Détails de la conversation" containment in mobile.home.options.fixed:
+  present = True
+
+# every French value containing "ordinateur":
+  mobile.account_routing.disconnected: Connectez un ordinateur pour modifier l’acheminement du compte.
+  mobile.account_routing.rejected: La modification n’a pas été enregistrée. Vérifiez la valeur ou les paramètres de cet ordinateur, puis réessayez.
+  mobile.account_routing.saved: Enregistré sur cet ordinateur.
+  mobile.account_routing.scope: Les modifications s’appliquent uniquement à cet ordinateur.
+  mobile.account_routing.unavailable: Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.
+  mobile.computers.add: Ajouter un ordinateur
+  mobile.computers.added.stays_listed: Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.
+  mobile.computers.none_on_phone: Aucun ordinateur sur ce téléphone pour le moment.
+  mobile.computers.switch: Changer d’ordinateur
+  mobile.home.connect_disabled_reason: Connectez un ordinateur pour envoyer.
+  mobile.home.folders_read_failed: Impossible de lire les dossiers de cet ordinateur pour le moment.
+  mobile.home.options.folder: Dossier sur cet ordinateur
+  mobile.home.refused_start_fallback: Ce dossier n’existe pas sur cet ordinateur.
+  mobile.projects.write_unknown_note: Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.
+
+# every French value containing "obsol" (stale) or "jalon" (milestone):
+  mobile.projects.milestone_slash_note: Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.
+  mobile.projects.milestones.count: {completed, plural, one {# jalon sur {total}} many {# de jalons sur {total}} other {# jalons sur {total}}}
+  mobile.projects.milestones.none: aucun jalon
+  mobile.projects.remove_milestone_body: Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.
+  mobile.projects.stale_badge: progression obsolète
+  mobile.schedules.state.stale: obsolète
+
+# French values containing "session" (gender of the noun the state fragments qualify):
+  mobile.home.tip.search: retrouvez une session passée pour la rouvrir
+  mobile.projects.delete_body: Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.
+  mobile.projects.remove_milestone_body: Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.
+  mobile.projects.sessions.count: {count, plural, one {# session} many {# de sessions} other {# sessions}}
+
+=== §6 provenance, input hashes, prior-round comparison ===
+$ git rev-parse HEAD
+79b3fad082c0ae850b06a4437006d445bb1c4887
+
+$ git status --porcelain --untracked-files=no   # tracked tree must be clean
+(nothing above = tracked files clean; i18n/audits bundles are new untracked files)
+
+$ git log -1 --format="%h %ci %s"
+79b3fad 2026-10-29 07:31:20 -0400 fix(i18n): compare translated arguments, correct French counts, unfreeze composer copy
+
+$ git log --oneline -2 -- src/i18n/catalogues/fr/
+79b3fad fix(i18n): compare translated arguments, correct French counts, unfreeze composer copy
+7610eb4 feat(i18n): translate the mobile catalogue into French
+
+$ shasum -a 256  # inputs audited (en, context, target) + renderer
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+7ea60387b25e50e76e0278013a34c1596b74ae0e3aa295537e43092cffa389ca  src/i18n/catalogues/fr/mobile.computers.json
+8218f1fcea96270ce2f9df4431e1eb0c749475305a9656b03d2c34a71c88bb93  src/i18n/catalogues/en/mobile.projects.json
+b8657428b40efc740196a6a289656cabc41f047a20ee72ccf5e5ed514ce3a68e  src/i18n/catalogues/en/mobile.projects.context.json
+58b738859d329b48c018cb9f379c778aa73ad0244546b759012f2597297128f6  src/i18n/catalogues/fr/mobile.projects.json
+8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  src/i18n/catalogues/en/mobile.session.context.json
+f57666b0586a9054ee187b880fbe922d81cee07cefc5ce995c6ffe798961ba78  src/i18n/catalogues/fr/mobile.session.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4  src/i18n/runtime.ts
+
+$ git rev-parse 7610eb4:src/i18n/catalogues/fr/mobile.computers.json HEAD:...   # unchanged since translation commit
+63fce0f7f4d4766edd6b60c32b7d26c05bc0db96
+63fce0f7f4d4766edd6b60c32b7d26c05bc0db96
+6727da3f90342ab13815562e1c89cd0875869352
+6727da3f90342ab13815562e1c89cd0875869352
+
+== mobile.computers  prior bundle fr29b2 (fr29b2)
+   prior key_count={'en': 10, 'target': 10}  prior verdict=passed
+   en       recorded=356f10123aa96d48 current=356f10123aa96d48 MATCH
+   context  recorded=3ac04e8333c94e9d current=3ac04e8333c94e9d MATCH
+   target   recorded=bd473792092e1fb4 current=7ea60387b25e50e7 MISMATCH
+== mobile.projects  prior bundle fr29b4 (fr29b4)
+   prior key_count={'en': 15, 'target': 15}  prior verdict=passed
+   en       recorded=8218f1fcea96270c current=8218f1fcea96270c MATCH
+   context  recorded=6a9e4b4c9fd4a45c current=b8657428b40efc74 MISMATCH
+   target   recorded=cb4cc4d83dccc791 current=58b738859d329b48 MISMATCH
+== mobile.session  prior bundle fr29b5 (fr29b5)
+   prior key_count={'en': 1, 'target': 1}  prior verdict=passed
+   en       recorded=fb14b28b23926c7e current=8539005ad9785ec1 MISMATCH
+   context  recorded=96f9e9d06f4a1b00 current=6e8d32e62d787a2c MISMATCH
+   target   recorded=2c45d0a0f781b0b6 current=f57666b0586a9054 MISMATCH
+
+=== §7 keyed clean-core public-copy route (harness tool, not a shell command) ===
+# note: the tool invocations below are the sanctioned audited route (read_public_copy). Their reply lines are actual output.
+read_public_copy path=local_operator/i18n/catalogues/en/mobile.computers.json key=mobile.computers.password_placeholder
+-> refused: the workspace is not a git checkout
+read_public_copy path=local_operator/i18n/catalogues/en/mobile.setup.json key=mobile.setup.title   # control probe
+-> refused: the workspace is not a git checkout
+# note: the refusal observed was environmental (the session workspace /Users/damian is not a git checkout), not the
+# note: "not committed in core" refusal this audit expected. NO keyed receipt was obtained either way; no receipt is claimed.
+# note: independently of the refusal reason, the core checkout does not commit this namespace at all.
+# note: the glob below lists only mobile.setup.json (and its context); mobile.computers/projects/session are absent:
+$ git -C /Users/damian/local-operator ls-files "local_operator/i18n/catalogues/en/mobile*"
+local_operator/i18n/catalogues/en/mobile.setup.context.json
+local_operator/i18n/catalogues/en/mobile.setup.json
+
+$ test -f local_operator/i18n/catalogues/en/mobile.computers.json && echo present || echo absent
+absent
+
+$ test -f local_operator/i18n/catalogues/en/mobile.projects.json && echo present || echo absent
+absent
+
+$ test -f local_operator/i18n/catalogues/en/mobile.session.json && echo present || echo absent
+absent
+
+=== §8 post-audit worktree drift (checked after the bundles were written) ===
+# note: another session working in this shared worktree changed two files after this audit's snapshot:
+# note: src/i18n/catalogues/fr/mobile.home.json and the regenerated src/i18n/catalogue.gen.ts (mobile.home namespace).
+# note: The nine input files this audit covers are untouched: recomputing them still equals the hashes recorded in §6.
+$ bash drift-check.sh
+$ git status --porcelain
+ M src/i18n/catalogue.gen.ts
+ M src/i18n/catalogues/fr/mobile.home.json
+?? i18n/
+
+$ git status --porcelain -- <the nine audited input files>   # must be empty
+(nothing above = the nine audited files are still the committed bytes)
+
+$ git diff --stat -- src/i18n/catalogues/fr/mobile.home.json src/i18n/catalogue.gen.ts
+ src/i18n/catalogue.gen.ts               | 2 +-
+ src/i18n/catalogues/fr/mobile.home.json | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)

@@ -1,0 +1,172 @@
+{
+	"schema": 1,
+	"audit_id": "fr29c2",
+	"audit_kind": "independent_round2_current_byte_namespace_audit",
+	"locale": "fr",
+	"namespace": "mobile.computers",
+	"audit_date": "2026-10-29",
+	"round": 2,
+	"audited_head_commit": "79b3fad082c0ae850b06a4437006d445bb1c4887",
+	"audited_worktree": "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n",
+	"key_count": {
+		"en": 10,
+		"target": 10
+	},
+	"auditor": {
+		"agent": "i18n-auditor",
+		"team": "lopdev",
+		"session": "985199bdd2dc",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "harness model-switch notices in this session: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each reported as 'provider failure: quota'. The audit was produced by radient/auto; the pinned anthropic/claude-sonnet-5-5 did not run it.",
+		"fallback": {
+			"used": true,
+			"pinned": "anthropic/claude-sonnet-5-5",
+			"actual": "radient/auto",
+			"chain": [
+				"anthropic/claude-sonnet-5-5",
+				"openai/gpt-6-astra",
+				"kimi/k3.1-pro",
+				"radient/auto"
+			],
+			"reason": "provider failure: quota"
+		},
+		"independent_from_translator_session": true,
+		"independence": "Different agent (i18n-auditor) and different session (985199bdd2dc vs c66311717837). The auditor wrote and edited none of the audited strings and cannot edit the catalogues. Round-1 bundles were read only for provenance and delta; every key was re-judged from the current bytes.",
+		"actual_model": "radient/auto"
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "as recorded by the round-1 bundle: temporary provider fallback",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.computers.json",
+			"sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.computers.context.json",
+			"sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/fr/mobile.computers.json",
+			"sha256": "7ea60387b25e50e76e0278013a34c1596b74ae0e3aa295537e43092cffa389ca"
+		}
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage)",
+		"entry": "src/i18n/runtime.ts (renderFor)",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4"
+		},
+		"lang_plural_categories": {
+			"en": [
+				"one",
+				"other"
+			],
+			"fr": [
+				"one",
+				"many",
+				"other"
+			]
+		},
+		"note": "Rendering used the app's own parser. The renderer renders '#' and numeric arguments through String(n): it produces no grouping separators, so 1000000 renders as '1000000', never '1 000 000'. That is the renderer's documented limitation in messages.ts, not a catalogue defect."
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": []
+	},
+	"findings": [],
+	"prior_round": {
+		"audit_id": "fr29b2",
+		"bundle": "i18n/audits/evidence/fr/mobile.computers/fr29b2/record.json",
+		"status_recorded": "passed",
+		"target_sha256_recorded": "bd473792092e1fb4ad3c454a2103781870341ebd9e3bd38c6fc0a01531f74ad3",
+		"target_bytes_match": false,
+		"reused": false,
+		"reason": "recorded target hash does not match current bytes (7ea60387b25e50e7...); en and context still match, so the French file alone changed. Round-1 verdict not carried forward; all 10 keys re-judged. Round-1 FR-COMP-1 (U+0020 before ':') verified fixed at U+202F."
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/report.md",
+			"sha256": "846ecc46bf0c62c2f68d47a5d9c1d34ed59e1da193ea2f431c21405b07e2870a"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/audit.log",
+			"sha256": "db7966182a95f8722e24579a56d1b5c3e44903956bf7a987edb1b7c5f2f1c4b2"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/scanner.py.txt",
+			"sha256": "358f3e300353f9d4d0ca2cf1d862409abfd4cac8f537e59cdb780c0c9f33d300"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/renderer.ts.txt",
+			"sha256": "4bad23a5a1d6b34daab2fc2481ae27c200baf2d4e407d96b05ec45b79e2457fa"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/resolver.mjs.txt",
+			"sha256": "418f8d09bd238c7fd9203ce9dbb226a2c08c3e39e860838fcfcb2d686e446603"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.computers/fr29c2/record.json",
+			"sha256": null,
+			"note": "this record; a self-hash is not meaningful"
+		}
+	],
+	"route_disclosure": {
+		"read_route": "ordinary mobile git/worktree reads in /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n (cat, python json, grep, git show/rev-parse); no network fetch of the copy",
+		"redaction_scan": "manager-reported: all English source/context inputs in scope were scanned with zero redaction-marker hits. This auditor did not re-run that scan; it read the same English files directly and they contain no credential values, only the placeholder-shaped key name.",
+		"english_context_sidecars": "English nested-JSON context sidecars are NOT routable through read_public_copy (the tool reads a catalogue key from an allowlisted path, not a nested JSON note), so the sidecars were read as ordinary worktree files.",
+		"credential_shaped_keys": "mobile.computers.password_placeholder is credential-shaped. The sanctioned clean-core keyed route was EXERCISED and REFUSED: read_public_copy(local_operator/i18n/catalogues/en/mobile.computers.json, key=mobile.computers.password_placeholder) returned 'refused: the workspace is not a git checkout'. A control probe on a core-committed catalogue (local_operator/i18n/catalogues/en/mobile.setup.json) returned the same refusal, so the refusal is environmental; independently, the file is not committed in core: git ls-files 'local_operator/i18n/catalogues/en/mobile*' in the core checkout lists only mobile.setup.json and its context sidecar. NO keyed receipt was obtained and none is claimed.",
+		"translation_services": "none used: no translation API, SDK or MT service compared or back-translated any string"
+	},
+	"limitations": [
+		"No native-speaker review: the judgement is an LLM auditor's.",
+		"No rendered proof: no screenshot, simulator or device frame was captured; width statements rest on executed character counts and the render sites' documented geometry.",
+		"No keyed public-copy receipt and no ledger row: this repository has no i18n/ledger.json and no audit-ledger command."
+	],
+	"audit_notes_not_execution_log": "report.md holds per-key reasoning and findings; audit.log holds actual command output for the validator, string gate, tests, the independent scanner, the renderer and the hash/provenance checks. Explanatory lines in audit.log are marked '# note:'. 10 keys, all clean. No placeholder, no plural. Round-1 U+202F finding remediated and verified by codepoint scan. No findings.",
+	"audited_revision": "79b3fad082c0ae850b06a4437006d445bb1c4887",
+	"audited_revision_note": "worktree /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n at that commit; tracked tree clean; the audited bytes are the committed bytes, not a dirty working copy.",
+	"mechanical": {
+		"key_parity": "10 en / 10 fr",
+		"context_parity": "10 en / 10 context",
+		"placeholders": "none in this namespace",
+		"icu_categories": "not applicable",
+		"bidi_controls": "none",
+		"typography": "U+202F before ':' present; U+2019 apostrophe; ellipsis U+2026; no U+0020 before punctuation"
+	},
+	"second_independent_pass": "This round-2 audit is the manager-requested second independent pass: a different session (985199bdd2dc) and a different served model (radient/auto) from round 1 (session e4ac0d5aa232, kimi/k3.1-pro). Round 1 was not trusted or copied; every key was re-judged from the current bytes.",
+	"executed_render_evidence": {
+		"count_bearing_keys": [],
+		"note": "no count-bearing key in this namespace; the shared renderer run for mobile.projects is in audit.log §5",
+		"counts_rendered": [
+			0,
+			1,
+			2,
+			1000000
+		],
+		"outputs": {}
+	},
+	"rendered_artifact": {
+		"captured": false,
+		"reason": "no screenshot, simulator or device frame was taken; fit statements rest on executed character counts plus the render sites' documented geometry, never on pixels"
+	},
+	"ledger": {
+		"row_written": false,
+		"reason": "this repository has no i18n/ledger.json and no audit-ledger command; docs/i18n.md records the report in the pull request, so this bundle is the artifact of record"
+	},
+	"concurrent_worktree_activity": {
+		"observed": true,
+		"detail": "after this audit's snapshot, another session in the shared worktree modified src/i18n/catalogues/fr/mobile.home.json and regenerated src/i18n/catalogue.gen.ts (mobile.home namespace, not part of this audit).",
+		"audited_files_rechecked": "the nine input files are unmodified and their sha256 still equals the recorded input_hashes; audit.log §8 holds the executed check",
+		"evidence": "audit.log §8"
+	},
+	"tracking_note": "This repository's .gitignore ignores '*.log' (line 76), so audit.log needs 'git add -f i18n/audits/evidence' or a negation rule such as '!i18n/audits/evidence/**/audit.log'; a plain 'git add i18n' would drop the execution log. Verified with git check-ignore -v. The pre-existing dated bundles are in the same position."
+}

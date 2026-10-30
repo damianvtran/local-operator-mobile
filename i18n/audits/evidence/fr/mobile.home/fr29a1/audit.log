@@ -1,0 +1,187 @@
+$ node --version
+v24.22.1
+
+$ npm run i18n:catalogue:check
+
+> local-operator-mobile@0.0.0 i18n:catalogue:check
+> node scripts/i18n/generate.ts --check
+
+src/i18n/catalogue.gen.ts is current (116 keys, 7 namespaces)
+(node:47575) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+EXIT=0
+
+$ node /Users/damian/.local-operator/sessions/cd6e19e68327/scratchpad/fr-mobile-mechanical.ts
+(node:47624) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/cd6e19e68327/scratchpad/fr-mobile-mechanical.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+SHA256 mobile.home en src/i18n/catalogues/en/mobile.home.json 4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+SHA256 mobile.home context src/i18n/catalogues/en/mobile.home.context.json db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+SHA256 mobile.home target src/i18n/catalogues/fr/mobile.home.json 3e559867dba8b34f0b3d0406baf00892553901cfb271f29822089ed14f49817a
+JSON mobile.home: en/context/target parse PASS
+KEYS mobile.home: en=27 target=27 context=27; missing=[]; extra=[]; context_parity=true
+MECHANICAL mobile.home.connect_disabled_reason: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=27; chars_fr=37
+MECHANICAL mobile.home.folders_read_failed: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=50; chars_fr=65
+MECHANICAL mobile.home.greeting: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=false; chars_en=31; chars_fr=40
+MECHANICAL mobile.home.options.apply: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=17; chars_fr=20
+MECHANICAL mobile.home.options.fixed: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=95; chars_fr=130
+MECHANICAL mobile.home.options.folder: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=23; chars_fr=26
+MECHANICAL mobile.home.options.title: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=20; chars_fr=26
+MECHANICAL mobile.home.queue.discard: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=23; chars_fr=33
+MECHANICAL mobile.home.queue.restore: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=29; chars_fr=50
+MECHANICAL mobile.home.queue.sheet_title: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=15; chars_fr=19
+MECHANICAL mobile.home.queue.view: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=20; chars_fr=28
+MECHANICAL mobile.home.refused_start_fallback: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=43; chars_fr=43
+MECHANICAL mobile.home.starting: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=9; chars_fr=10
+MECHANICAL mobile.home.startup_queue.blocked: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=29; chars_fr=43
+MECHANICAL mobile.home.startup_queue.not_started: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=11; chars_fr=12
+MECHANICAL mobile.home.startup_queue.sending: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=24; chars_fr=30
+MECHANICAL mobile.home.startup_queue.unconfirmed: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=19; chars_fr=22
+MECHANICAL mobile.home.suggestion.last_turn: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=21; chars_fr=27
+MECHANICAL mobile.home.suggestion.linear_mcp: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=17; chars_fr=21
+MECHANICAL mobile.home.suggestion.phone_access: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=20; chars_fr=22
+MECHANICAL mobile.home.suggestion.review_repo: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=16; chars_fr=16
+MECHANICAL mobile.home.suggestion.team_of_agents: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=23; chars_fr=25
+MECHANICAL mobile.home.suggestion.wake_summary: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=22; chars_fr=28
+MECHANICAL mobile.home.tip.parallel: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=42; chars_fr=62
+MECHANICAL mobile.home.tip.schedule: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=41; chars_fr=59
+MECHANICAL mobile.home.tip.search: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=45; chars_fr=66
+MECHANICAL mobile.home.transcript.waiting: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=29; chars_fr=30
+SHA256 mobile.schedules en src/i18n/catalogues/en/mobile.schedules.json bc08fca69542a22e301d1ce4e7311a69d04347fa2934f2abdca2b80c6c4b348f
+SHA256 mobile.schedules context src/i18n/catalogues/en/mobile.schedules.context.json 16d7cc2d4dd50908feb94291db93d9cf8ff757e7b5c4172bf68ce30452e11bca
+SHA256 mobile.schedules target src/i18n/catalogues/fr/mobile.schedules.json ac1d16109d61763957ea33e396725244fc59a7766ea45807ba6ded344ce670e3
+JSON mobile.schedules: en/context/target parse PASS
+KEYS mobile.schedules: en=35 target=35 context=35; missing=[]; extra=[]; context_parity=true
+MECHANICAL mobile.schedules.cadence.every: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=16; chars_fr=19
+MECHANICAL mobile.schedules.cadence.left: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=28; chars_fr=33
+MECHANICAL mobile.schedules.cadence.once: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=4; chars_fr=6
+MECHANICAL mobile.schedules.cadence.spent: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=30; chars_fr=36
+MECHANICAL mobile.schedules.count.monitors: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=false; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=51; chars_fr=87
+MECHANICAL mobile.schedules.count.wakes: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=false; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=45; chars_fr=69
+MECHANICAL mobile.schedules.due.ahead: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=10; chars_fr=12
+MECHANICAL mobile.schedules.due.overdue: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=15; chars_fr=20
+MECHANICAL mobile.schedules.empty.body: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=false; chars_en=181; chars_fr=237
+MECHANICAL mobile.schedules.empty.title: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=16; chars_fr=27
+MECHANICAL mobile.schedules.empty_line.monitors: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=18; chars_fr=27
+MECHANICAL mobile.schedules.empty_line.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=19; chars_fr=22
+MECHANICAL mobile.schedules.gone.monitors: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=71; chars_fr=93
+MECHANICAL mobile.schedules.gone.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=70; chars_fr=92
+MECHANICAL mobile.schedules.head.next: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=21; chars_fr=30
+MECHANICAL mobile.schedules.head.overdue: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=16; chars_fr=16
+MECHANICAL mobile.schedules.parked.monitors: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=57; chars_fr=84
+MECHANICAL mobile.schedules.parked.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=41; chars_fr=57
+MECHANICAL mobile.schedules.read_error.monitors: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=47; chars_fr=54
+MECHANICAL mobile.schedules.read_error.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=44; chars_fr=48
+MECHANICAL mobile.schedules.read_unreachable: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=51; chars_fr=70
+MECHANICAL mobile.schedules.show_less.monitors: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=19; chars_fr=31
+MECHANICAL mobile.schedules.show_less.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=16; chars_fr=25
+MECHANICAL mobile.schedules.show_more.monitors: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=false; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=72; chars_fr=136
+MECHANICAL mobile.schedules.show_more.wakes: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=false; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=66; chars_fr=118
+MECHANICAL mobile.schedules.state.stale: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=5; chars_fr=8
+MECHANICAL mobile.schedules.state.waiting: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=7; chars_fr=10
+MECHANICAL mobile.schedules.summary.monitors_armed: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=13; chars_fr=15
+MECHANICAL mobile.schedules.summary.monitors_attention: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=34; chars_fr=48
+MECHANICAL mobile.schedules.summary.wakes: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=17; chars_fr=17
+MECHANICAL mobile.schedules.supervisor.not_running: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=false; chars_en=83; chars_fr=111
+MECHANICAL mobile.schedules.supervisor.unsupported: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=false; chars_en=108; chars_fr=137
+MECHANICAL mobile.schedules.supervisor.unverifiable: FAIL; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=false; chars_en=90; chars_fr=105
+MECHANICAL mobile.schedules.tail.failed: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=14; chars_fr=14
+MECHANICAL mobile.schedules.truncated: PASS; params=true; order=true; fr_plurals=true; selects=true; hashes=true; tech=true; bidi=true; apostrophe=true; punctuation=true; chars_en=95; chars_fr=116
+CLDR fr resolvedCategories=["one","many","other"]; samples=[[0,"one"],[1,"one"],[2,"other"],[1000000,"many"],[1500000,"other"],[2000000,"many"]]
+SUMMARY [{"namespace":"mobile.home","keys":27,"mechanical_failures":1},{"namespace":"mobile.schedules","keys":35,"mechanical_failures":8}]
+PUNCTUATION_DETAIL mobile.home.greeting [{"before":" ","before_codepoint":"20","punctuation":"?"}]
+PUNCTUATION_DETAIL mobile.schedules.empty.body [{"before":" ","before_codepoint":"20","punctuation":":"},{"before":" ","before_codepoint":"20","punctuation":";"}]
+PUNCTUATION_DETAIL mobile.schedules.supervisor.not_running [{"before":" ","before_codepoint":"20","punctuation":":"}]
+PUNCTUATION_DETAIL mobile.schedules.supervisor.unsupported [{"before":" ","before_codepoint":"20","punctuation":":"}]
+PUNCTUATION_DETAIL mobile.schedules.supervisor.unverifiable [{"before":" ","before_codepoint":"20","punctuation":":"}]
+FIT_SUGGESTION mobile.home.suggestion.last_turn chars=27 budget=24 FAIL
+FIT_SUGGESTION mobile.home.suggestion.linear_mcp chars=21 budget=24 PASS
+FIT_SUGGESTION mobile.home.suggestion.phone_access chars=22 budget=24 PASS
+FIT_SUGGESTION mobile.home.suggestion.review_repo chars=16 budget=24 PASS
+FIT_SUGGESTION mobile.home.suggestion.team_of_agents chars=25 budget=24 FAIL
+FIT_SUGGESTION mobile.home.suggestion.wake_summary chars=28 budget=24 FAIL
+FIT_TIP mobile.home.tip.parallel chars=62 budget=48 FAIL
+FIT_TIP mobile.home.tip.schedule chars=59 budget=48 FAIL
+FIT_TIP mobile.home.tip.search chars=66 budget=48 FAIL
+(node:47624) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+EXIT=0
+
+--- script: fr-mobile-mechanical.ts (session scratch path above) ---
+import { readFileSync, realpathSync } from "node:fs";
+import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { registerSourceResolver } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/scripts/lib/load-src.ts";
+registerSourceResolver();
+const { parseMessage } = await import("/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts");
+const root = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const summary: any[] = [];
+for (const namespace of ["mobile.home", "mobile.schedules"]) {
+  const paths = {
+    en: `src/i18n/catalogues/en/${namespace}.json`,
+    context: `src/i18n/catalogues/en/${namespace}.context.json`,
+    target: `src/i18n/catalogues/fr/${namespace}.json`,
+  };
+  for (const [kind, rel] of Object.entries(paths)) {
+    const bytes = readFileSync(join(root, rel));
+    console.log(`SHA256 ${namespace} ${kind} ${rel} ${createHash("sha256").update(bytes).digest("hex")}`);
+  }
+  const en = JSON.parse(readFileSync(join(root, paths.en), "utf8"));
+  const ctx = JSON.parse(readFileSync(join(root, paths.context), "utf8"));
+  const fr = JSON.parse(readFileSync(join(root, paths.target), "utf8"));
+  console.log(`JSON ${namespace}: en/context/target parse PASS`);
+  const enKeys = Object.keys(en), frKeys = Object.keys(fr), ctxKeys = Object.keys(ctx);
+  console.log(`KEYS ${namespace}: en=${enKeys.length} target=${frKeys.length} context=${ctxKeys.length}; missing=${JSON.stringify(enKeys.filter(k=>!(k in fr)))}; extra=${JSON.stringify(frKeys.filter(k=>!(k in en)))}; context_parity=${enKeys.length===ctxKeys.length && enKeys.every(k=>k in ctx)}`);
+  let failures = 0;
+  for (const key of enKeys) {
+    let ep, fp;
+    try { ep = parseMessage(en[key]); } catch (e) { console.log(`SOURCE_PARSE_FAIL ${key}: ${e}`); failures++; continue; }
+    try { fp = parseMessage(fr[key]); } catch (e) { console.log(`TARGET_PARSE_FAIL ${key}: ${e}`); failures++; continue; }
+    const params = (p: any) => JSON.stringify([...p.params.entries()].sort());
+    const walk = (nodes: any[]): any[] => nodes.flatMap(n => {
+      if (n.type === "plural" || n.type === "select") return [[n.type, n.name, [...n.options.keys()].sort()], ...[...n.options.values()].flatMap(walk)];
+      if (n.type === "argument") return [["argument", n.name]];
+      if (n.type === "number") return [["number"]];
+      return [];
+    });
+    const paramOK = params(ep) === params(fp);
+    const sourceNodes = walk(ep.nodes), targetNodes = walk(fp.nodes);
+    const argumentOrder = (nodes:any[]) => nodes.filter(n=>n[0]==="argument" || n[0]==="plural" || n[0]==="select").map(n=>[n[0],n[1]]);
+    const orderOK = JSON.stringify(argumentOrder(sourceNodes)) === JSON.stringify(argumentOrder(targetNodes));
+    const enPlurals = sourceNodes.filter(n=>n[0]==="plural"), frPlurals = targetNodes.filter(n=>n[0]==="plural");
+    const enSelects = sourceNodes.filter(n=>n[0]==="select"), frSelects = targetNodes.filter(n=>n[0]==="select");
+    const pluralsOK = enPlurals.length===frPlurals.length && frPlurals.every(n=>JSON.stringify(n[2])===JSON.stringify(["many","one","other"]));
+    const selectsOK = JSON.stringify(enSelects.map(n=>[n[1],n[2]]))===JSON.stringify(frSelects.map(n=>[n[1],n[2]]));
+    const hashes = (s:string) => (s.match(/#/g)||[]).length;
+    const hashOK = hashes(en[key])===hashes(fr[key]);
+    const tech = (s:string) => s.match(/`[^`]+`|--[A-Za-z0-9_-]+|https?:\/\/\S+|\bLinear MCP\b/g) || [];
+    const techOK = JSON.stringify(tech(en[key]))===JSON.stringify(tech(fr[key]));
+    const bidiOK = !/[\u202A-\u202E\u2066-\u2069]/.test(fr[key]);
+    const asciiApostropheOK = !fr[key].includes("'");
+    const punctuationIssues = [...fr[key].matchAll(/([\s\S])([:;!?])/g)].filter(m=>!(m[1]==="\u202f" || /[\d)]/.test(m[1]))).map(m=>m[0]);
+    const punctuationOK = punctuationIssues.length===0;
+    const mechanicalOK = paramOK && orderOK && pluralsOK && selectsOK && hashOK && techOK && bidiOK && asciiApostropheOK && punctuationOK;
+    if (!mechanicalOK) failures++;
+    console.log(`MECHANICAL ${key}: ${mechanicalOK?"PASS":"FAIL"}; params=${paramOK}; order=${orderOK}; fr_plurals=${pluralsOK}; selects=${selectsOK}; hashes=${hashOK}; tech=${techOK}; bidi=${bidiOK}; apostrophe=${asciiApostropheOK}; punctuation=${punctuationOK}; chars_en=${[...en[key]].length}; chars_fr=${[...fr[key]].length}`);
+  }
+  summary.push({namespace, keys: enKeys.length, mechanical_failures: failures});
+}
+const pr = new Intl.PluralRules("fr");
+console.log(`CLDR fr resolvedCategories=${JSON.stringify(pr.resolvedOptions().pluralCategories)}; samples=${JSON.stringify([0,1,2,1000000,1500000,2000000].map(n=>[n,pr.select(n)]))}`);
+console.log(`SUMMARY ${JSON.stringify(summary)}`);
+for (const namespace of ["mobile.home", "mobile.schedules"]) {
+  const fr = JSON.parse(readFileSync(join(root, `src/i18n/catalogues/fr/${namespace}.json`), "utf8"));
+  for (const [key,value] of Object.entries(fr)) {
+    const bad = [...String(value).matchAll(/([\s\S])([:;!?])/g)].filter(m=>!(m[1]==="\u202f" || /[\d)]/.test(m[1]))).map(m=>({before:m[1],before_codepoint:m[1].codePointAt(0).toString(16),punctuation:m[2]}));
+    if (bad.length) console.log(`PUNCTUATION_DETAIL ${key} ${JSON.stringify(bad)}`);
+  }
+}
+const home = JSON.parse(readFileSync(join(root,"src/i18n/catalogues/fr/mobile.home.json"),"utf8"));
+for (const [key,value] of Object.entries(home)) {
+  if (key.includes("suggestion.")) console.log(`FIT_SUGGESTION ${key} chars=${String(value).length} budget=24 ${String(value).length<=24?"PASS":"FAIL"}`);
+  if (key.includes("tip.")) console.log(`FIT_TIP ${key} chars=${String(value).length} budget=48 ${String(value).length<=48?"PASS":"FAIL"}`);
+}

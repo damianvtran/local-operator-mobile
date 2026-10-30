@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "Connectez un ordinateur pour modifier l’acheminement du compte.",
+	"mobile.account_routing.error": "Impossible de confirmer la modification. Vérifiez la connexion et rechargez la politique en vigueur.",
+	"mobile.account_routing.load_error": "Impossible de charger l’acheminement du compte. Vérifiez la connexion et réessayez.",
+	"mobile.account_routing.loading": "Chargement de l’acheminement du compte…",
+	"mobile.account_routing.rejected": "La modification n’a pas été enregistrée. Vérifiez la valeur ou les paramètres de cet ordinateur, puis réessayez.",
+	"mobile.account_routing.reload": "Recharger la politique",
+	"mobile.account_routing.retry": "Réessayer",
+	"mobile.account_routing.save": "Enregistrer la politique",
+	"mobile.account_routing.saved": "Enregistré sur cet ordinateur.",
+	"mobile.account_routing.saving": "Enregistrement…",
+	"mobile.account_routing.scope": "Les modifications s’appliquent uniquement à cet ordinateur.",
+	"mobile.account_routing.title": "Acheminement du compte",
+	"mobile.account_routing.unavailable": "Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.",
+	"mobile.account_routing.unsaved": "Pas encore enregistré."
+}

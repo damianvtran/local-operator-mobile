@@ -25,8 +25,21 @@ describe("keyShapeError", () => {
 		expect(keyShapeError(ns, "mobile.schedules")).toContain("namespace");
 	});
 
-	it("rejects more than one group and non lower_snake_case segments", () => {
+	it("lets a mirrored namespace mirror the core's depth, and only that namespace", () => {
+		/* The relay catalogues are the desktop relay's own strings, mirrored key
+		 * for key so adopting core's locale files stays a file copy. Core's keys
+		 * go deeper than one group, so the mirrored namespace is exempt from the
+		 * group limit while every other namespace keeps it. */
+		expect(
+			keyShapeError(
+				"relay.chrome",
+				"relay.chrome.session.subtitle.not_answering",
+			),
+		).toBeUndefined();
 		expect(keyShapeError(ns, "mobile.schedules.a.b.c")).toContain("segments");
+	});
+
+	it("rejects non lower_snake_case segments", () => {
 		expect(keyShapeError(ns, "mobile.schedules.Title")).toContain("segment");
 		expect(keyShapeError(ns, "mobile.schedules.a..b")).toContain("segment");
 	});

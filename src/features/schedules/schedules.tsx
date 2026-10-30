@@ -11,12 +11,12 @@ import {
 	type MonitorLineView,
 	monitorEntryViews,
 	monitorSectionSummary,
-	NO_MONITORS_LINE,
-	NO_WAKES_LINE,
-	NOTHING_ARMED_BODY,
-	NOTHING_ARMED_TITLE,
-	READ_UNREACHABLE,
+	noMonitorsLine,
+	nothingArmedBody,
+	nothingArmedTitle,
+	noWakesLine,
 	readErrorClause,
+	readUnreachable,
 	scheduleRefusalSentence,
 	schedulesEmpty,
 	showLessMonitorLabel,
@@ -188,7 +188,7 @@ export default function Schedules() {
 				<Skeleton lines={6} testID={SURFACE.schedulesLoading} />
 			) : unreachable || refused !== null ? (
 				<View className="gap-3">
-					<Alert severity="error">{refused ?? READ_UNREACHABLE}</Alert>
+					<Alert severity="error">{refused ?? readUnreachable()}</Alert>
 					<Button
 						testID={CONTROL.schedulesRetry}
 						label="Try again"
@@ -200,8 +200,8 @@ export default function Schedules() {
 			) : empty ? (
 				<EmptyState
 					testID={EMPTY.schedules}
-					headline={NOTHING_ARMED_TITLE}
-					next={NOTHING_ARMED_BODY}
+					headline={nothingArmedTitle()}
+					next={nothingArmedBody()}
 				/>
 			) : payload !== null ? (
 				<View>
@@ -248,7 +248,7 @@ export default function Schedules() {
 									) : null}
 									{wakes.entries.length === 0 ? (
 										<Text className="py-2 text-body-sm text-ink-dim">
-											{NO_WAKES_LINE}
+											{noWakesLine()}
 										</Text>
 									) : (
 										wakeEntryViews(wakes, nowMs).map((entry) => (
@@ -303,7 +303,7 @@ export default function Schedules() {
 									) : null}
 									{monitors.entries.length === 0 ? (
 										<Text className="py-2 text-body-sm text-ink-dim">
-											{NO_MONITORS_LINE}
+											{noMonitorsLine()}
 										</Text>
 									) : (
 										monitorEntryViews(monitors, nowMs).map((entry) => (
@@ -387,7 +387,7 @@ const WakeEntry = ({
 					<Button
 						testID={scheduleMoreId(entry.sessionId)}
 						label={
-							expanded ? showLessWakeLabel : showMoreWakeLabel(entry.hidden)
+							expanded ? showLessWakeLabel() : showMoreWakeLabel(entry.hidden)
 						}
 						onPress={onToggle}
 						variant="quiet"
@@ -459,7 +459,7 @@ const MonitorEntry = ({
 						testID={scheduleMoreId(entry.sessionId)}
 						label={
 							expanded
-								? showLessMonitorLabel
+								? showLessMonitorLabel()
 								: showMoreMonitorLabel(entry.hidden)
 						}
 						onPress={onToggle}

@@ -1,0 +1,12 @@
+import json
+home = json.load(open("src/i18n/catalogues/fr/mobile.home.json", encoding="utf-8"))
+session = json.load(open("src/i18n/catalogues/fr/mobile.session.json", encoding="utf-8"))
+en_home = json.load(open("src/i18n/catalogues/en/mobile.home.json", encoding="utf-8"))
+en_session = json.load(open("src/i18n/catalogues/en/mobile.session.json", encoding="utf-8"))
+fr_label = session["mobile.session.conversation_details"]
+en_label = en_session["mobile.session.conversation_details"]
+print("fr label (mobile.session.conversation_details):", repr(fr_label))
+print("present byte-for-byte in fr mobile.home.options.fixed:", fr_label in home["mobile.home.options.fixed"])
+print("en label (mobile.session.conversation_details):", repr(en_label))
+print("present byte-for-byte in en mobile.home.options.fixed:", en_label in en_home["mobile.home.options.fixed"])
+print("occurrences of the label in the fr value:", home["mobile.home.options.fixed"].count(fr_label))

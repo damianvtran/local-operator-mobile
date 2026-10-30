@@ -2536,6 +2536,82 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	/* -------------------------------------------------------------- schedules -- */
 
+	/**
+	 * A captured body with its CAPTURE CLOCK rebased onto now, and its live entry
+	 * reduced to the wakes that are genuinely ahead of the reader.
+	 *
+	 * WHY THIS EXISTS. `schedules-populated` was captured on 2026-10-08 and every
+	 * absolute instant in it is an `*_at` epoch, so today every wake in it is overdue
+	 * — and the entry head line's forward arm (`mobile.schedules.head.next`,
+	 * `… · next in 4m`) is unreachable from any frame a rig can pin. The arm is real
+	 * code with real copy, so the answer is a state that reaches it, not a screenshot
+	 * of a state that does not.
+	 *
+	 * TWO MOVES, both stated rather than implied:
+	 *
+	 * 1. **The clock is rebased.** Every non-zero `*_at` epoch moves by the same
+	 *    delta (`now - wakes.generated_at`), so the capture reads as a store
+	 *    observed just now. A uniform shift leaves every RELATIVE field exactly true
+	 *    (`overdue_s`, `due_in_s`, `last_check_age_s` are differences of two shifted
+	 *    epochs), and a zero epoch stays zero — the contract's "no event".
+	 * 2. **The live conversation keeps only its forward-due, non-stale rows.** A
+	 *    store cannot have a stale wake (the supervisor has given up on it) whose
+	 *    instant is in the FUTURE, so carrying the capture's stale and overdue rows
+	 *    into a future-dated frame would put a flag and a clock in contradiction.
+	 *    What remains is a coherent world a real store can be in: the capture's own
+	 *    armed wake, an hour ahead, and no row whose clock contradicts its flag.
+	 *
+	 * Ids, counts, flags, the dormant and ghost conversations and the whole monitors
+	 * half are the capture's own; nothing is invented. The scenario declares the cell
+	 * `schedules-populated` already fills because it is the same screen in a different
+	 * clock, not a new screen.
+	 */
+	const EPOCH_FIELD = /_at$/;
+
+	function shiftEpochs(value: Json, delta: number): Json {
+		if (Array.isArray(value))
+			return value.map((item) => shiftEpochs(item, delta));
+		if (!isRecord(value)) return value;
+		const shifted: Record<string, Json> = {};
+		for (const [key, entry] of Object.entries(value)) {
+			shifted[key] =
+				EPOCH_FIELD.test(key) && typeof entry === "number" && entry > 0
+					? entry + delta
+					: shiftEpochs(entry as Json, delta);
+		}
+		return shifted;
+	}
+
+	function schedulesRebasedOnNow(nowMs: number): Json {
+		const body = fix.body("schedules-populated");
+		const wakes = isRecord(body) ? body.wakes : undefined;
+		const generated = isRecord(wakes) ? wakes.generated_at : undefined;
+		if (typeof generated !== "number") {
+			throw new Error(
+				"schedules-populated has no wakes.generated_at; the capture clock cannot be rebased",
+			);
+		}
+		const rebased = shiftEpochs(body, nowMs - generated);
+		if (!isRecord(rebased) || !isRecord(rebased.wakes)) return rebased;
+		const entries = rebased.wakes.entries;
+		if (!Array.isArray(entries)) return rebased;
+		for (const entry of entries) {
+			if (!isRecord(entry) || entry.dormant === true || entry.ghost === true)
+				continue;
+			const rows = Array.isArray(entry.schedules) ? entry.schedules : [];
+			const ahead = rows.filter((row) => {
+				if (!isRecord(row) || row.stale === true) return false;
+				return typeof row.next_due_at === "number" && row.next_due_at > nowMs;
+			});
+			if (ahead.length === 0) continue;
+			entry.schedules = ahead;
+			entry.next_due_at = Math.min(
+				...ahead.map((row) => (isRecord(row) ? Number(row.next_due_at) : 0)),
+			);
+		}
+		return rebased;
+	}
+
 	add(
 		"schedules-empty",
 		"Nothing is armed: both stores read OK and hold nothing, so the screen shows its own empty state — never a strip standing in for one.",
@@ -2558,6 +2634,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"The captured populated store: wakes armed / overdue / past the staleness bound / dormant / ghost with a hidden patience timer, monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode.",
 		["S17/populated"],
 		() => ({ schedules: fix.body("schedules-populated") }),
+	);
+
+	add(
+		"schedules-future",
+		"The populated capture with its clock rebased onto now: its live conversation keeps only the wake that is genuinely ahead (the capture clock is moved, and a store cannot hold a stale wake whose instant is in the future), so the head line renders `· next …` — the `head.next` arm no frame dated in the past can reach. The dormant and ghost conversations and the monitors half are the capture's own. Registered AFTER `schedules-populated` on purpose: the capture harness takes the FIRST scenario that declares a cell, so the default `S17/populated` frame is unchanged; a rig reaches this one with `--scenario schedules-future`.",
+		["S17/populated"],
+		() => ({ schedules: schedulesRebasedOnNow(Date.now()) }),
 	);
 
 	add(

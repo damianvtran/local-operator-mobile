@@ -1,0 +1,61 @@
+fr29sm2 actual execution log — 2026-10-29
+Working directory: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+No translation/MT service used. Commands below actually ran; output is verbatim.
+
+===== FILE READ, HASHES, WIDTH AND NAMESPACE DELTA =====
+$ python3 [read current JSON files; compute SHA-256, key parity, cell counts and index delta]
+READ src/i18n/catalogues/en/mobile.session_health.json
+  sha256=727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f keys=11 valid_json=yes
+READ src/i18n/catalogues/en/mobile.session_health.context.json
+  sha256=a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a keys=11 valid_json=yes
+READ src/i18n/catalogues/fr/mobile.session_health.json
+  sha256=eefa0d2bcd0a222910388231a414baf873561c05d6a7211031d68e6a168389da keys=11 valid_json=yes
+
+CURRENT FRENCH NAMESPACE (actual file, not brief wording):
+mobile.session_health.control_hint = Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.
+mobile.session_health.menu_label = Actions de la session
+mobile.session_health.menu_hint = Ouvre le menu de la session
+mobile.session_health.menu_title = Session
+mobile.session_health.reopening = Réouverture — cela peut prendre quelques secondes.
+mobile.session_health.still_reopening = Réouverture toujours en cours — elle n’est pas encore revenue.
+mobile.session_health.resume_refused_title = Reprise impossible
+mobile.session_health.resume_refused = Cette session n’a pas pu être rouverte pour le moment. Réessayez.
+mobile.session_health.resume_gone = Cette session n’est plus enregistrée.
+mobile.session_health.resume_no_route = Connectez un ordinateur pour reprendre cette session.
+mobile.session_health.ended_placeholder = Envoyer rouvre (dossier personnel)…
+
+CELL COUNT METHOD: JSON-decoded string; sum one terminal cell per printable character, two for East Asian W/F, zero for combining marks (asserted absent); U+2026 is one cell. This is not UTF-8 byte length.
+VALUE: 'Envoyer rouvre (dossier personnel)…'
+CURRENT FRENCH cells=35 code_points=35 utf8_bytes=37 budget=36 remainder=1
+ENGLISH: 'Send to reopen in your home folder…'
+CONTEXT: Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder.
+CANDIDATE 'Envoyer la rouvre (dossier perso)…' cells=34 utf8_bytes=36
+CANDIDATE 'Envoyer la rouvre (dossier personnel)…' cells=38 utf8_bytes=40
+CANDIDATE 'Envoyer la rouvre dans ~…' cells=25 utf8_bytes=27
+CODE POINTS: U+0045 U+006E U+0076 U+006F U+0079 U+0065 U+0072 U+0020 U+0072 U+006F U+0075 U+0076 U+0072 U+0065 U+0020 U+0028 U+0064 U+006F U+0073 U+0073 U+0069 U+0065 U+0072 U+0020 U+0070 U+0065 U+0072 U+0073 U+006F U+006E U+006E U+0065 U+006C U+0029 U+2026
+NO ICU/MARKUP/COMBINING/BIDI/WIDE CHARACTERS IN CHANGED VALUE: yes
+
+PREVIOUS ROUND INPUT: git show :src/i18n/catalogues/fr/mobile.session_health.json
+INDEX SHA-256: c28f177062c2a1a2d30a11e3167e40be0ae6d87f10f963fce762840fc2a6404c
+MATCHES fr29sh1 RECORDED TARGET: True
+EXACT en/context/current/old KEY PARITY: True
+DELTA:
+  mobile.session_health.ended_placeholder 'Envoyer rouvre dans votre dossier personnel…' -> 'Envoyer rouvre (dossier personnel)…'
+UNCHANGED FRENCH KEYS: 10 OF 11
+ADDED KEYS: []
+DROPPED KEYS: []
+REVISION HEAD: 4500723be18a94e53cde39a6f3f9ee1aca92ddb5
+REVISION MERGE_HEAD: d5babfa1854416265df06ba9a78609348db7f13d
+
+===== REPOSITORY VALIDATOR =====
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:85510) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 34274c2d328d
+exit=0
+
+===== EXECUTION DISAMBIGUATION =====
+Initial invocations from /Users/damian exited 1 because that directory is not this repository; they are not validator results. The successful validator above was explicitly run with cd to the workspace root. A prior HEAD-only git show could not retrieve the newly added catalogue; the index blob was then checked against the fr29sh1 recorded SHA-256 and used as the round-1 comparison input.

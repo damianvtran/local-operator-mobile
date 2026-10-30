@@ -16,7 +16,7 @@ import {
 	type LinkInput,
 	sessionHealth,
 } from "@/features/session/health";
-import { HEALTH_COPY } from "@/features/session/health-copy";
+import { healthCopy } from "@/features/session/health-copy";
 
 type Row = {
 	name: string;
@@ -435,10 +435,10 @@ describe("the words", () => {
 		expect(healthLabel("not_answering")).toBe("Not answering");
 		expect(healthLabel("reconnecting")).toBe("Reconnecting");
 		expect(healthLabel("ended")).toBe("Ended");
-		expect(HEALTH_COPY["relay.health.ended_placeholder"]).toBe(
+		expect(healthCopy()["mobile.session_health.ended_placeholder"]).toBe(
 			"Send to reopen in your home folder…",
 		);
-		expect(HEALTH_COPY["relay.health.ended_send_failed"]).toContain(
+		expect(healthCopy()["relay.health.ended_send_failed"]).toContain(
 			"couldn't be reopened",
 		);
 	});

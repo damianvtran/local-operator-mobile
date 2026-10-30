@@ -66,7 +66,6 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
  * a reviewed change rather than a forgotten one.
  */
 export const NOT_YET_SHIPPED_LOCALES = [
-	"fr",
 	"es",
 	"zh-CN",
 	"ru",
@@ -76,12 +75,14 @@ export const NOT_YET_SHIPPED_LOCALES = [
 ] as const satisfies readonly SupportedLocale[];
 
 /** The locale directories this build actually ships. Being in this list is not
- *  enough: the locale must also be reachable through `CATALOGUES` in
- *  `catalogues.ts`, which is hand-written today and carries English only because
- *  the generator projects the English source alone. A subset of
- *  `SUPPORTED_LOCALES`, enforced by the type. */
+ *  enough: the locale must also be projected by `generate.ts` into
+ *  `catalogue.gen.ts`, which `catalogues.ts` now builds `CATALOGUES` from — the
+ *  registry is derived from this list rather than hand-written beside it, so a
+ *  locale listed here without a translated directory throws at import and fails
+ *  `catalogues.test.ts`. A subset of `SUPPORTED_LOCALES`, enforced by the type. */
 export const SHIPPED_LOCALES = [
 	"en",
+	"fr",
 ] as const satisfies readonly SupportedLocale[];
 
 export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];

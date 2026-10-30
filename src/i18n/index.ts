@@ -16,7 +16,11 @@ export type {
 	NoParamKey,
 	ParamKey,
 } from "./catalogue.gen";
-export { ENGLISH_CONTEXT, ENGLISH_MESSAGES } from "./catalogue.gen";
+export {
+	ENGLISH_CONTEXT,
+	ENGLISH_MESSAGES,
+	LOCALISED_MESSAGES,
+} from "./catalogue.gen";
 export type { Catalogue } from "./catalogues";
 export { CATALOGUES, ENGLISH_CATALOGUE } from "./catalogues";
 export type { TextDirection } from "./direction";

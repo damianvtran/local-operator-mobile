@@ -4,14 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
 	acknowledgedCurrentDraft,
 	attachmentLabel,
-	COMPOSER_COPY,
 	composerControls,
+	composerCopy,
 	receiptForError,
 } from "@/features/session/composer";
-import {
-	HEALTH_COPY,
-	HEALTH_RESUME_COPY,
-} from "@/features/session/health-copy";
+import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import { RelayError } from "@/relay";
 
 /**
@@ -82,7 +79,7 @@ describe("the send/steer morph", () => {
 		// A second, differently keyed instruction sent while the first may already be
 		// admitted is the duplicate the envelope exists to prevent.
 		expect(blocked.primary.disabled).toBe(true);
-		expect(blocked.disabledReason).toBe(COMPOSER_COPY.retryDisabledHint);
+		expect(blocked.disabledReason).toBe(composerCopy().retryDisabledHint);
 	});
 
 	it("reads `…` while sending, so the reader is told the control is busy", () => {
@@ -154,7 +151,7 @@ describe("the send/steer morph", () => {
 				envelopePending: true,
 				ended: false,
 			}).disabledReason,
-		).toBe(COMPOSER_COPY.retryDisabledHint);
+		).toBe(composerCopy().retryDisabledHint);
 	});
 });
 
@@ -245,8 +242,8 @@ describe("the error taxonomy the reader sees", () => {
 		// own words — which is the point: `String(exception)` must not reach a screen.
 		expect(receiptForError(bare).message).not.toBe("Load failed");
 		expect([
-			COMPOSER_COPY.continuationError,
-			COMPOSER_COPY.steerError,
+			composerCopy().continuationError,
+			composerCopy().steerError,
 		]).toContain(receiptForError(bare).message);
 	});
 });
@@ -279,19 +276,19 @@ describe("the composer's ended copy has ONE source", () => {
 		"utf8",
 	);
 	it("reads the placeholder, the failure sentence and the reopening line from the catalogue", () => {
-		expect(COMPOSER_COPY.endedPlaceholder).toBe(
-			HEALTH_COPY["relay.health.ended_placeholder"],
+		expect(composerCopy().endedPlaceholder).toBe(
+			healthCopy()["mobile.session_health.ended_placeholder"],
 		);
-		expect(COMPOSER_COPY.endedSendFailed).toBe(
-			HEALTH_COPY["relay.health.ended_send_failed"],
+		expect(composerCopy().endedSendFailed).toBe(
+			healthCopy()["relay.health.ended_send_failed"],
 		);
-		expect(COMPOSER_COPY.reopening).toBe(HEALTH_RESUME_COPY.reopening);
+		expect(composerCopy().reopening).toBe(healthResumeCopy().reopening);
 	});
 	it("carries none of those sentences as a literal", () => {
 		for (const sentence of [
-			HEALTH_COPY["relay.health.ended_placeholder"],
-			HEALTH_COPY["relay.health.ended_send_failed"],
-			HEALTH_RESUME_COPY.reopening,
+			healthCopy()["mobile.session_health.ended_placeholder"],
+			healthCopy()["relay.health.ended_send_failed"],
+			healthResumeCopy().reopening,
 		])
 			expect(source).not.toContain(sentence);
 	});

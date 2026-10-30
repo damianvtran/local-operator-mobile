@@ -8,7 +8,7 @@
  * The rules below are the same ones, in the same order, because two clients
  * describing one session two ways is the defect the port exists to avoid.
  */
-import { HEALTH_STATE_WORDS } from "@/features/session/health-copy";
+import { healthStateWords } from "@/features/session/health-copy";
 import type { ColorRole } from "@/ui/tokens.gen";
 
 /** The four readings the dot can give. Three colours: `not_answering` and
@@ -205,7 +205,7 @@ export function headerHealth(
     (its `relay.chrome.session.subtitle.*` keys), so the two clients cannot
     disagree. */
 export function healthLabel(health: SessionHealth): string {
-	return HEALTH_STATE_WORDS[health];
+	return healthStateWords()[health];
 }
 
 /** Which sentence the sheet says, as a copy key — split from the component so

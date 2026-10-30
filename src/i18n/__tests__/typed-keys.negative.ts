@@ -20,6 +20,10 @@ t("mobile.projects.sessions.count", { count: 2 });
 t("mobile.projects.sessions.live", { base: "2 sessions", live: 1 });
 t("mobile.schedules.count.wakes", { count: 3 });
 t("mobile.schedules.truncated", { shown: 1, total: 2, family: "wakes" });
+/* Positive controls for the strictest-kind rule: a parameter a SHIPPED locale
+ * pluralizes takes a NUMBER, and a number still satisfies a plain placeholder. */
+t("mobile.schedules.cadence.left", { cadence: "every 1d", remaining: 3 });
+t("mobile.projects.milestones.count", { completed: 2, total: 3 });
 
 /* @ts-expect-error — an unknown key is a compile error, not `undefined` at run time. */
 t("mobile.home.greetingg");
@@ -32,6 +36,20 @@ t("mobile.projects.sessions.count");
 
 /* @ts-expect-error — a plural count must be a number, not a string. */
 t("mobile.schedules.count.wakes", { count: "3" });
+
+/* THE STRICTEST KIND ACROSS SHIPPED LOCALES (review B1). English spells these
+ * two arguments as plain placeholders — `{cadence} · {remaining} left` and
+ * `{completed} of {total} milestones` — and French pluralizes both. The type is
+ * therefore `number`, which is what the renderer requires of a plural: a string
+ * would render in English and throw `RangeError` in French, from one call site.
+ * If a translation stops pluralizing one of these, the directive below becomes
+ * unused and `tsc` fails with TS2578 — loosening the type is a catalogue change
+ * that has to be reviewed, never a silent one. */
+/* @ts-expect-error — French pluralizes `remaining`; a string renders in English and throws in French. */
+t("mobile.schedules.cadence.left", { cadence: "every 1d", remaining: "3" });
+
+/* @ts-expect-error — French pluralizes `completed`; a string is not a plural count in any locale. */
+t("mobile.projects.milestones.count", { completed: "2", total: 3 });
 
 /* @ts-expect-error — a required argument cannot be omitted. */
 t("mobile.schedules.truncated", { shown: 1, total: 2 });

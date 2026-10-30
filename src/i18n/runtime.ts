@@ -19,12 +19,14 @@
  *    render `21 wake` — the programme names this exact failure. `renderFor`
  *    below is where that decision lives.
  *
- * WHAT IT DELIBERATELY DOES NOT DO: live re-render on a locale change. The four
- * copy modules export their strings as `const`s because every screen and test
- * reads them as values, so those constants resolve once, at import. Functions
- * (`deleteProjectBody`, `wakeCadenceWord`, …) call `t()` per invocation and do
- * re-resolve. Converting the constants to a hook is a screen rewrite and belongs
- * to the wave that lands translations; it is not smuggled in here.
+ * WHAT IT DELIBERATELY DOES NOT DO: trigger a re-render on a locale change.
+ * `t()` resolves against the locale source at CALL time, and every `*-copy.ts`
+ * keeps its text inside a function for exactly that reason — a module-level
+ * `t()` would freeze the language the module was first imported in, and
+ * `__tests__/copy-resolution.test.ts` fails one that comes back. What this file
+ * cannot do is make an already-painted screen repaint itself: a surface re-reads
+ * its copy when IT re-renders, and subscribing the screens to the config store is
+ * its own change rather than a side effect of the renderer.
  */
 
 import type {

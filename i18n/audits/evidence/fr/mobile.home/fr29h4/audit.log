@@ -1,0 +1,103 @@
+audit fr29h4 — mobile.home — fr — 2026-10-29
+audited head: 49f79b3b3ca23ff91403ed05072945a672fb7d4e
+worktree: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+tracked tree: 0 modified tracked path(s) outside the untracked evidence bundles
+auditor: i18n-auditor (lopdev team child session 78c640379596), ACTUAL model radient/auto
+model provenance: harness model-switch notices in this transcript — anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,
+                  each reported as 'provider failure: quota'. The pinned Sonnet model did not run this audit.
+independence: different agent and session from the translator; this audit proposed neither the home wording nor the French receipt arms.
+# note: every line after a '$ ' prompt is a command actually run; the lines below it are that command's output.
+# note: no native-speaker review, no rendered frame, and no translation service is claimed or used.
+
+=== §1 repository i18n gate (generate --check + strings check) ===
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d
+exit=0
+
+=== §2 targeted tests (i18n runtime + projects copy) ===
+$ npx vitest run src/i18n src/features/projects
+ Test Files  6 passed (6)
+      Tests  97 passed (97)
+
+=== §3 app-runtime render + parser + typography (mobile.home) ===
+# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.
+# note: loader.mjs only teaches plain Node the app's extensionless relative imports so src/i18n/runtime.ts runs UNMODIFIED.
+$ node --import ./loader.mjs render.mjs | awk "/=== 1\\. mobile.home.options.fixed/{p=1} /=== 5\\. mobile.projects.write_receipt/{p=0} p"
+=== 1. mobile.home.options.fixed — source, context, target ===
+en  : "This conversation's starting options are fixed. Use Conversation details for its live controls."
+ctx : {"role":"help","note":"Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title."}
+fr  : "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours."
+en  params=[]
+fr  params=[]
+en  node types: text
+fr  node types: text
+fr  braces present: false ; backticks: false ; double space: false
+
+=== 2. options.fixed rendered through t()'s path (renderFor) ===
+fr => Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.
+en => This conversation's starting options are fixed. Use Conversation details for its live controls.
+
+=== 3. cross-reference byte check against mobile.session.conversation_details ===
+fr label: true (label="Détails de la conversation")
+en label: true (label="Conversation details")
+fr render equals raw value: true
+
+=== 4. options.fixed character / typography scan ===
+length: 148 UTF-16 units (en 95)
+non-ASCII: U+00E9 U+00E9 U+00E9
+ASCII apostrophe: false ; ASCII quotes: false ; ASCII "...": false
+bidi/control chars: none
+U+202F thin space count: 0
+sentence count: 2
+substring 'commandes en cours' present: false
+substring 'en direct' present: false
+
+
+=== §4 delta proof: exactly one substring changed since the round-3 bundle (fr29h3) ===
+$ python3 revert-one-substring.py
+current                              124a5de3d345c0e0acd53d3d4cc3f574b0994fa9fd703e568e0f02c2fed6fdd0 2017 bytes
+round-3 bundle recorded target       2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39
+current with the one substring reverted to the round-3 wording
+  replaced: aux commandes de la conversation en cours -> à ses commandes en direct
+                                     2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39 2002 bytes
+reconstruction matches round 3        True
+occurrences of the new substring      1
+
+=== §5 the prior-round bytes this delta departs from ===
+$ git show daa46f6:src/i18n/catalogues/fr/mobile.home.json | shasum -a 256
+2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39  -
+$ git diff --stat daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json
+ src/i18n/catalogues/fr/mobile.home.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ git diff daa46f6..HEAD -- src/i18n/catalogues/fr/mobile.home.json
+diff --git a/src/i18n/catalogues/fr/mobile.home.json b/src/i18n/catalogues/fr/mobile.home.json
+index f576bb4..3f16a09 100644
+--- a/src/i18n/catalogues/fr/mobile.home.json
++++ b/src/i18n/catalogues/fr/mobile.home.json
+@@ -3,7 +3,7 @@
+ 	"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
+ 	"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
+ 	"mobile.home.options.apply": "Utiliser ces options",
+-	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.",
++	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
+ 	"mobile.home.options.folder": "Dossier sur cet ordinateur",
+ 	"mobile.home.options.title": "Options de la conversation",
+ 	"mobile.home.queue.discard": "Supprimer les messages en attente",
+
+=== §6 English inputs unchanged since round 2/3 ===
+$ shasum -a 256 src/i18n/catalogues/en/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+# note: round 2 and round 3 both recorded en 4ebba126… and context db18b25d… — identical today.
+
+=== §7 the referenced destination label, byte for byte ===
+$ python3 label-check.py
+fr label (mobile.session.conversation_details): 'Détails de la conversation'
+present byte-for-byte in fr mobile.home.options.fixed: True
+en label (mobile.session.conversation_details): 'Conversation details'
+present byte-for-byte in en mobile.home.options.fixed: True
+occurrences of the label in the fr value: 1
+
+=== §8 evidence-bundle files (hashes computed after writing) ===
+# note: recorded in record.json artifacts; this section is written by the bundling step, see report.md.

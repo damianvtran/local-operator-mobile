@@ -9,9 +9,12 @@
  *
  * 1. The typed surface has to be a consequence of the catalogues, not a second
  *    list beside them. `CatalogueKey` and `MessageParams` are derived here from
- *    the same parse the renderer performs, so an unknown key, a misspelled one, a
- *    missing argument or a wrongly typed argument fails `tsc` instead of
- *    rendering `undefined` at run time.
+ *    the same parse the renderer performs, so a key that is missing, misspelled
+ *    or mistyped fails the build rather than rendering a wrong sentence. Both
+ *    are read from the STRICTEST kind across the shipped locales (see the
+ *    parity block in `scripts/i18n/generate.ts`): a French plural tightens an
+ *    English plain placeholder to `number` here, so the one call site cannot
+ *    pass a string that renders in English and throws in French.
  * 2. Part of this app is loaded by plain Node scripts (`scripts/ci/account-routing-*`
  *    reach the runtime through a feature module), and Node cannot resolve `src/`'s
  *    extensionless imports or a JSON import without an import attribute. A single
@@ -133,6 +136,9 @@ export type CatalogueKey =
 	| "mobile.schedules.show_less.wakes"
 	| "mobile.schedules.show_more.monitors"
 	| "mobile.schedules.show_more.wakes"
+	| "mobile.schedules.state.disabled"
+	| "mobile.schedules.state.dormant"
+	| "mobile.schedules.state.expired"
 	| "mobile.schedules.state.stale"
 	| "mobile.schedules.state.waiting"
 	| "mobile.schedules.summary.monitors_armed"
@@ -143,8 +149,10 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.conversation_details"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session_health.control_hint"
+	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
 	| "mobile.session_health.menu_label"
 	| "mobile.session_health.menu_title"
@@ -160,7 +168,6 @@ export type CatalogueKey =
 	| "relay.chrome.session.subtitle.not_answering"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
-	| "relay.health.ended_placeholder"
 	| "relay.health.ended_send_failed"
 	| "relay.health.live"
 	| "relay.health.live_detail"
@@ -258,13 +265,18 @@ export type NoParamKey =
 	| "mobile.schedules.read_unreachable"
 	| "mobile.schedules.show_less.monitors"
 	| "mobile.schedules.show_less.wakes"
+	| "mobile.schedules.state.disabled"
+	| "mobile.schedules.state.dormant"
+	| "mobile.schedules.state.expired"
 	| "mobile.schedules.state.stale"
 	| "mobile.schedules.state.waiting"
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.conversation_details"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session_health.control_hint"
+	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
 	| "mobile.session_health.menu_label"
 	| "mobile.session_health.menu_title"
@@ -280,7 +292,6 @@ export type NoParamKey =
 	| "relay.chrome.session.subtitle.not_answering"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
-	| "relay.health.ended_placeholder"
 	| "relay.health.ended_send_failed"
 	| "relay.health.live"
 	| "relay.health.live_detail"
@@ -361,7 +372,7 @@ export type MessageParams = {
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
-	"mobile.projects.milestones.count": { completed: string | number; total: string | number };
+	"mobile.projects.milestones.count": { total: string | number; completed: number };
 	"mobile.projects.milestones.none": NoParams;
 	"mobile.projects.project_name_hint": NoParams;
 	"mobile.projects.remove_milestone_body": { name: string | number };
@@ -371,10 +382,10 @@ export type MessageParams = {
 	"mobile.projects.sessions.count": { count: number };
 	"mobile.projects.sessions.live": { base: string | number; live: string | number };
 	"mobile.projects.stale_badge": NoParams;
-	"mobile.projects.write_receipt": { action: string | number; subject: string | number };
+	"mobile.projects.write_receipt": { subject: string | number; action: string; kind: string };
 	"mobile.projects.write_unknown_note": NoParams;
 	"mobile.schedules.cadence.every": { duration: string | number };
-	"mobile.schedules.cadence.left": { cadence: string | number; remaining: string | number };
+	"mobile.schedules.cadence.left": { cadence: string | number; remaining: number };
 	"mobile.schedules.cadence.once": NoParams;
 	"mobile.schedules.cadence.spent": { cadence: string | number };
 	"mobile.schedules.count.monitors": { count: number };
@@ -398,18 +409,23 @@ export type MessageParams = {
 	"mobile.schedules.show_less.wakes": NoParams;
 	"mobile.schedules.show_more.monitors": { hidden: number };
 	"mobile.schedules.show_more.wakes": { hidden: number };
+	"mobile.schedules.state.disabled": NoParams;
+	"mobile.schedules.state.dormant": NoParams;
+	"mobile.schedules.state.expired": NoParams;
 	"mobile.schedules.state.stale": NoParams;
 	"mobile.schedules.state.waiting": NoParams;
-	"mobile.schedules.summary.monitors_armed": { count: string | number };
+	"mobile.schedules.summary.monitors_armed": { count: number };
 	"mobile.schedules.summary.monitors_attention": { broken: string | number; total: string | number };
-	"mobile.schedules.summary.wakes": { count: string | number };
+	"mobile.schedules.summary.wakes": { count: number };
 	"mobile.schedules.supervisor.not_running": NoParams;
 	"mobile.schedules.supervisor.unsupported": NoParams;
 	"mobile.schedules.supervisor.unverifiable": NoParams;
-	"mobile.schedules.tail.failed": { count: string | number };
-	"mobile.schedules.truncated": { shown: string | number; total: string | number; family: string };
+	"mobile.schedules.tail.failed": { count: number };
+	"mobile.schedules.truncated": { total: string | number; shown: number; family: string };
+	"mobile.session.conversation_details": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session_health.control_hint": NoParams;
+	"mobile.session_health.ended_placeholder": NoParams;
 	"mobile.session_health.menu_hint": NoParams;
 	"mobile.session_health.menu_label": NoParams;
 	"mobile.session_health.menu_title": NoParams;
@@ -425,7 +441,6 @@ export type MessageParams = {
 	"relay.chrome.session.subtitle.not_answering": NoParams;
 	"relay.health.dropped_detail": NoParams;
 	"relay.health.ended_detail": NoParams;
-	"relay.health.ended_placeholder": NoParams;
 	"relay.health.ended_send_failed": NoParams;
 	"relay.health.live": NoParams;
 	"relay.health.live_detail": NoParams;
@@ -529,7 +544,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
 	"mobile.projects.sessions.live": "{base} · {live} live",
 	"mobile.projects.stale_badge": "progress stale",
-	"mobile.projects.write_receipt": "{action} {subject}.",
+	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}",
 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.",
 	"mobile.schedules.cadence.every": "every {duration}",
 	"mobile.schedules.cadence.left": "{cadence} · {remaining} left",
@@ -556,6 +571,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.show_less.wakes": "Show fewer wakes",
 	"mobile.schedules.show_more.monitors": "{hidden, plural, one {Show # more monitor} other {Show # more monitors}}",
 	"mobile.schedules.show_more.wakes": "{hidden, plural, one {Show # more wake} other {Show # more wakes}}",
+	"mobile.schedules.state.disabled": "disabled",
+	"mobile.schedules.state.dormant": "dormant",
+	"mobile.schedules.state.expired": "expired",
 	"mobile.schedules.state.stale": "stale",
 	"mobile.schedules.state.waiting": "waiting",
 	"mobile.schedules.summary.monitors_armed": "{count} armed",
@@ -566,8 +584,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
+	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…",
 	"mobile.session_health.menu_hint": "Opens the session menu",
 	"mobile.session_health.menu_label": "Session actions",
 	"mobile.session_health.menu_title": "Session",
@@ -583,7 +603,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.chrome.session.subtitle.not_answering": "Not answering",
 	"relay.health.dropped_detail": "Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
 	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
-	"relay.health.ended_placeholder": "Send to reopen in your home folder…",
 	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
 	"relay.health.live": "Live",
 	"relay.health.live_detail": "Running on your computer — messages reach it right away",
@@ -662,7 +681,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
-	"mobile.projects.milestones.count": { role: "meta", note: "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers; no plural agreement is needed because the noun is fixed to the count phrase." },
+	"mobile.projects.milestones.count": { role: "meta", note: "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers and both must survive translation. ENGLISH needs no plural agreement because its noun is fixed to the count phrase; a locale whose noun agrees with the completed count must pluralize on {completed} (French: one/many/other) and keep {total} a plain placeholder inside every branch — the generator fails a translation that drops or retypes either name." },
 	"mobile.projects.milestones.none": { role: "meta", note: "Lower-case fragment shown where a milestone count would go when the relay reports zero total milestones. It is joined with a session count, so it carries no final full stop." },
 	"mobile.projects.project_name_hint": { role: "help", note: "The complete project-name grammar stated before the tap. Length range and allowed characters must stay exact: this sentence is the reader's only warning before a refusal." },
 	"mobile.projects.remove_milestone_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the milestone name (user text, may contain spaces). Says what goes and what stays." },
@@ -672,7 +691,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.sessions.count": { role: "meta", note: "Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English." },
 	"mobile.projects.sessions.live": { role: "meta", note: "Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live." },
 	"mobile.projects.stale_badge": { role: "status", note: "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name." },
-	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop." },
+	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop." },
 	"mobile.projects.write_unknown_note": { role: "status", note: "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved." },
 	"mobile.schedules.cadence.every": { role: "meta", note: "Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice." },
 	"mobile.schedules.cadence.left": { role: "meta", note: "Cadence with a bounded delivery budget. {cadence} is the already-rendered 'every …' phrase; {remaining} is a positive integer. The middle dot is a separator, keep it." },
@@ -699,6 +718,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.show_less.wakes": { role: "button", note: "Collapse control for the per-entry wake disclosure. Shown only while expanded." },
 	"mobile.schedules.show_more.monitors": { role: "button", note: "Expand control for hidden monitor rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more monitor', not 'more monitors'." },
 	"mobile.schedules.show_more.wakes": { role: "button", note: "Expand control for hidden wake rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more wake', not 'more wakes'." },
+	"mobile.schedules.state.disabled": { role: "status", note: "The store's state word for a monitor the user turned off, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop, no sentence around it." },
+	"mobile.schedules.state.dormant": { role: "status", note: "The store's state word for a monitor whose conversation is not running, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop. It must not be confused with the parked CLAUSE that replaces the whole head line." },
+	"mobile.schedules.state.expired": { role: "status", note: "The store's state word for a monitor past its expiry, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop." },
 	"mobile.schedules.state.stale": { role: "status", note: "One word replacing the due clock when the supervisor has given up on a wake. The terminal's own vocabulary for this state." },
 	"mobile.schedules.state.waiting": { role: "status", note: "One word for an armed monitor with no recorded due time. Replaces the slot that would hold a due clock." },
 	"mobile.schedules.summary.monitors_armed": { role: "heading", note: "Monitors section header when every monitor is healthy. {count} is the number of monitor rows; no final full stop." },
@@ -709,8 +731,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
+	"mobile.session_health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence." },
 	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
 	"mobile.session_health.menu_label": { role: "button", note: "Accessible name of the session header's overflow button (the ⋮). Present only when the menu has an item." },
 	"mobile.session_health.menu_title": { role: "heading", note: "Title of the overflow menu's sheet. One short noun; not the conversation's name." },
@@ -726,11 +750,172 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.chrome.session.subtitle.not_answering": { role: "status", note: "The relay SPA's own subtitle word for the YELLOW status dot: the session's process is alive but not answering (its runtime is unreachable or its heartbeat and frames have both been quiet past the relay's window). Reused here verbatim so the two clients cannot name one state two ways. Its explanation is relay.health.dropped_detail or relay.health.quiet_detail, depending on which cause won." },
 	"relay.health.dropped_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen." },
 	"relay.health.ended_detail": { role: "help", note: "Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder." },
-	"relay.health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.ended_send_failed": { role: "status", note: "Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume." },
 	"relay.health.live": { role: "status", note: "Accessible name and sheet title for the GREEN status dot: the session's process is running on the user's computer, its heartbeat is fresh and the phone's link is up. One short state word; avoid 'Connected' (the phone-link word) and 'Active' (whose negation is Idle). Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.live_detail": { role: "help", note: "Sheet body for the green dot. 'Your computer' is the machine running the agent session, not the phone. 'Right away' means delivered to the running session now, not queued for a restart — never promise an instant reply." },
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+};
+
+/**
+ * Every locale directory beside `en/`, projected from its JSON exactly as
+ * written. `Record<CatalogueKey, string>` is a compile-time completeness check
+ * as well as a type: a locale that loses a key stops compiling here, one step
+ * before `--check` reports the same parity failure.
+ *
+ * The map is keyed by the directory name — the canonical BCP-47 tag — and is
+ * UNFILTERED: it carries a locale whether or not `SHIPPED_LOCALES` in
+ * `src/i18n/locale.ts` claims it, because "a translation exists" and "this
+ * build renders it" are two decisions with two owners. `catalogues.ts` is where
+ * the shipped set is applied.
+ */
+export const LOCALISED_MESSAGES: Readonly<
+	Record<string, Readonly<Record<CatalogueKey, string>>>
+> = {
+	"fr": {
+		"mobile.account_routing.disconnected": "Connectez un ordinateur pour modifier l’acheminement du compte.",
+		"mobile.account_routing.error": "Impossible de confirmer la modification. Vérifiez la connexion et rechargez la politique en vigueur.",
+		"mobile.account_routing.load_error": "Impossible de charger l’acheminement du compte. Vérifiez la connexion et réessayez.",
+		"mobile.account_routing.loading": "Chargement de l’acheminement du compte…",
+		"mobile.account_routing.rejected": "La modification n’a pas été enregistrée. Vérifiez la valeur ou les paramètres de cet ordinateur, puis réessayez.",
+		"mobile.account_routing.reload": "Recharger la politique",
+		"mobile.account_routing.retry": "Réessayer",
+		"mobile.account_routing.save": "Enregistrer la politique",
+		"mobile.account_routing.saved": "Enregistré sur cet ordinateur.",
+		"mobile.account_routing.saving": "Enregistrement…",
+		"mobile.account_routing.scope": "Les modifications s’appliquent uniquement à cet ordinateur.",
+		"mobile.account_routing.title": "Acheminement du compte",
+		"mobile.account_routing.unavailable": "Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.",
+		"mobile.account_routing.unsaved": "Pas encore enregistré.",
+		"mobile.computers.add": "Ajouter un ordinateur",
+		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
+		"mobile.computers.badge.active": "actif",
+		"mobile.computers.badge.connecting": "connexion",
+		"mobile.computers.connecting": "Connexion…",
+		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
+		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
+		"mobile.computers.section.on_phone": "Sur ce téléphone",
+		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
+		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
+		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
+		"mobile.home.options.apply": "Utiliser ces options",
+		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
+		"mobile.home.options.folder": "Dossier sur cet ordinateur",
+		"mobile.home.options.title": "Options de la conversation",
+		"mobile.home.queue.discard": "Supprimer les messages en attente",
+		"mobile.home.queue.restore": "Déplacer les messages en attente vers le brouillon",
+		"mobile.home.queue.sheet_title": "Messages en attente",
+		"mobile.home.queue.view": "Voir les messages en attente",
+		"mobile.home.refused_start_fallback": "Ce dossier n’existe pas sur cet ordinateur.",
+		"mobile.home.starting": "Démarrage…",
+		"mobile.home.startup_queue.blocked": "Réessayez d’envoyer les messages en attente",
+		"mobile.home.startup_queue.not_started": "Non démarrée",
+		"mobile.home.startup_queue.sending": "Envoi des messages en attente…",
+		"mobile.home.startup_queue.unconfirmed": "Démarrage non confirmé",
+		"mobile.home.suggestion.last_turn": "Montrez le dernier tour",
+		"mobile.home.suggestion.linear_mcp": "Configurez Linear MCP",
+		"mobile.home.suggestion.phone_access": "Activez l’accès mobile",
+		"mobile.home.suggestion.review_repo": "Examinez ce repo",
+		"mobile.home.suggestion.team_of_agents": "Créez une équipe d’agents",
+		"mobile.home.suggestion.wake_summary": "Réveillez-moi et résumez",
+		"mobile.home.tip.parallel": "demandez plusieurs sous-agents en parallèle",
+		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
+		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
+		"mobile.home.transcript.waiting": "En attente de la conversation…",
+		"mobile.notifications.answer": "Répondre",
+		"mobile.notifications.back": "Retour",
+		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
+		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
+		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
+		"mobile.notifications.detail.from": "Depuis",
+		"mobile.notifications.detail.no_asks": "Aucune question dans cette conversation.",
+		"mobile.notifications.detail.nothing_to_dismiss": "Aucune mise à jour de cette conversation à ignorer.",
+		"mobile.notifications.detail.projects": "Projets",
+		"mobile.notifications.dismiss": "Ignorer",
+		"mobile.notifications.filter_label": "Afficher",
+		"mobile.notifications.load_failed": "Impossible de charger les notifications",
+		"mobile.notifications.priority_high": "Élevée",
+		"mobile.notifications.title": "Notifications",
+		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
+		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
+		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
+		"mobile.projects.milestones.count": "{completed, plural, one {# jalon sur {total}} many {# de jalons sur {total}} other {# jalons sur {total}}}",
+		"mobile.projects.milestones.none": "aucun jalon",
+		"mobile.projects.project_name_hint": "1 à 64 caractères : lettres, chiffres, point, tiret bas ou tiret. Aucun espace, et le nom ne peut pas commencer par un tiret.",
+		"mobile.projects.remove_milestone_body": "Retirer {name} de ce projet ? Le jalon sera définitivement supprimé. Les sessions du projet et sa ligne de progression ne seront pas modifiées.",
+		"mobile.projects.session_state.filed_by": "classée par",
+		"mobile.projects.session_state.missing": "manquante",
+		"mobile.projects.session_state.not_running": "arrêtée",
+		"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
+		"mobile.projects.sessions.live": "{base} · {live} en cours",
+		"mobile.projects.stale_badge": "progression obsolète",
+		"mobile.projects.write_receipt": "{kind, select, project {Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} milestone {Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} other {{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.}}",
+		"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.",
+		"mobile.schedules.cadence.every": "tous les {duration}",
+		"mobile.schedules.cadence.left": "{cadence} · {remaining, plural, one {# envoi restant} many {# d’envois restants} other {# envois restants}}",
+		"mobile.schedules.cadence.once": "une fois",
+		"mobile.schedules.cadence.spent": "{cadence} · plus aucun envoi restant",
+		"mobile.schedules.count.monitors": "{count, plural, one {# surveillance} many {# de surveillances} other {# surveillances}}",
+		"mobile.schedules.count.wakes": "{count, plural, one {# réveil} many {# de réveils} other {# réveils}}",
+		"mobile.schedules.due.ahead": "dans {label}",
+		"mobile.schedules.due.overdue": "en retard de {label}",
+		"mobile.schedules.empty.body": "Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements.",
+		"mobile.schedules.empty.title": "Aucune planification active",
+		"mobile.schedules.empty_line.monitors": "Aucune surveillance active.",
+		"mobile.schedules.empty_line.wakes": "Aucun réveil planifié.",
+		"mobile.schedules.gone.monitors": "Disparue — sa conversation n’existe plus sur cette machine, donc aucune vérification n’a lieu",
+		"mobile.schedules.gone.wakes": "Disparu — sa conversation n’existe plus sur cette machine, donc aucun déclenchement n’a lieu",
+		"mobile.schedules.head.next": "{head} · prochaine échéance {label}",
+		"mobile.schedules.head.overdue": "{head} · {label}",
+		"mobile.schedules.parked.monitors": "En pause — les surveillances reprennent lorsque sa conversation s’exécute de nouveau",
+		"mobile.schedules.parked.wakes": "En pause — les réveils reprennent après son prochain tour",
+		"mobile.schedules.read_error.monitors": "Impossible de lire les surveillances de cette machine.",
+		"mobile.schedules.read_error.wakes": "Impossible de lire les réveils de cette machine.",
+		"mobile.schedules.read_unreachable": "Impossible de lire les planifications de cette machine pour le moment.",
+		"mobile.schedules.show_less.monitors": "Afficher moins de surveillances",
+		"mobile.schedules.show_less.wakes": "Afficher moins de réveils",
+		"mobile.schedules.show_more.monitors": "{hidden, plural, one {Afficher # surveillance de plus} many {Afficher # de surveillances de plus} other {Afficher # surveillances de plus}}",
+		"mobile.schedules.show_more.wakes": "{hidden, plural, one {Afficher # réveil de plus} many {Afficher # de réveils de plus} other {Afficher # réveils de plus}}",
+		"mobile.schedules.state.disabled": "désactivée",
+		"mobile.schedules.state.dormant": "en veille",
+		"mobile.schedules.state.expired": "expirée",
+		"mobile.schedules.state.stale": "obsolète",
+		"mobile.schedules.state.waiting": "en attente",
+		"mobile.schedules.summary.monitors_armed": "{count, plural, one {# active} many {# de surveillances actives} other {# actives}}",
+		"mobile.schedules.summary.monitors_attention": "{broken} sur {total} en alerte",
+		"mobile.schedules.summary.wakes": "{count, plural, one {# planifié} many {# de réveils planifiés} other {# planifiés}}",
+		"mobile.schedules.supervisor.not_running": "Le superviseur de réveils est installé, mais ne s’exécute pas : les réveils ci-dessous ne se déclencheront pas.",
+		"mobile.schedules.supervisor.unsupported": "Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute.",
+		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
+		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
+		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.conversation_details": "Détails de la conversation",
+		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
+		"mobile.session_health.ended_placeholder": "Envoyer rouvre…",
+		"mobile.session_health.menu_hint": "Ouvre le menu de la session",
+		"mobile.session_health.menu_label": "Actions de la session",
+		"mobile.session_health.menu_title": "Session",
+		"mobile.session_health.reopening": "Réouverture — cela peut prendre quelques secondes.",
+		"mobile.session_health.resume_gone": "Cette session n’est plus enregistrée.",
+		"mobile.session_health.resume_no_route": "Connectez un ordinateur pour reprendre cette session.",
+		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
+		"mobile.session_health.resume_refused_title": "Reprise impossible",
+		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"relay.chrome.session.resume": "Reprendre",
+		"relay.chrome.session.resuming": "Reprise…",
+		"relay.chrome.session.subtitle.ended": "Terminée",
+		"relay.chrome.session.subtitle.not_answering": "Ne répond pas",
+		"relay.health.dropped_detail": "Votre ordinateur n’arrive pas à joindre cette session pour l’instant et continue d’essayer. Tant qu’il n’y parvient pas, un envoi échoue aussitôt et votre texte reste dans la zone de saisie.",
+		"relay.health.ended_detail": "L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.",
+		"relay.health.ended_send_failed": "Cette session est terminée et n’a pas pu être rouverte pour le moment. Réessayez ou touchez « Terminée » en haut, puis choisissez « Reprendre ».",
+		"relay.health.live": "En ligne",
+		"relay.health.live_detail": "S’exécute sur votre ordinateur — vos messages lui parviennent tout de suite",
+		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
+		"relay.health.reconnecting": "Reconnexion",
+		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+	},
 };

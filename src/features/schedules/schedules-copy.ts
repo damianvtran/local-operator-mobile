@@ -170,18 +170,21 @@ export const nextDueClause = (countClause: string, seconds: number): string => {
  * entry (the desktop's `PARKED_CLAUSE`; see the module header for the
  * measured fact it encodes).
  */
-export const PARKED_WAKES_CLAUSE = t("mobile.schedules.parked.wakes");
+export const parkedWakesClause = (): string =>
+	t("mobile.schedules.parked.wakes");
 
 /** The monitor side of the parked clause: monitors tick while the
  *  conversation runs, so a stopped conversation pauses them until it runs
  *  again (the monitor store's own semantics — dormancy is the honest state,
  *  and monitors never engage a cold session, §10.4). */
-export const PARKED_MONITORS_CLAUSE = t("mobile.schedules.parked.monitors");
+export const parkedMonitorsClause = (): string =>
+	t("mobile.schedules.parked.monitors");
 
 /** The ghost clauses. See the module header for why the phone splits ghost
  *  from parked where the desktop collapses them. */
-export const GONE_WAKES_CLAUSE = t("mobile.schedules.gone.wakes");
-export const GONE_MONITORS_CLAUSE = t("mobile.schedules.gone.monitors");
+export const goneWakesClause = (): string => t("mobile.schedules.gone.wakes");
+export const goneMonitorsClause = (): string =>
+	t("mobile.schedules.gone.monitors");
 
 /* ----------------------------------------------------------- the supervisor */
 
@@ -270,8 +273,9 @@ export const schedulesEmpty = (payload: SchedulesResponse): boolean =>
 	familyState(payload.wakes) === "empty" &&
 	familyState(payload.monitors) === "empty";
 
-export const NOTHING_ARMED_TITLE = t("mobile.schedules.empty.title");
-export const NOTHING_ARMED_BODY = t("mobile.schedules.empty.body");
+export const nothingArmedTitle = (): string =>
+	t("mobile.schedules.empty.title");
+export const nothingArmedBody = (): string => t("mobile.schedules.empty.body");
 
 /* ------------------------------------------------------------ wake rows */
 
@@ -368,8 +372,8 @@ export const wakeEntryClause = (
 	entry: ScheduleWakeEntry,
 	nowMs: number,
 ): string => {
-	if (entry.dormant) return PARKED_WAKES_CLAUSE;
-	if (entry.ghost) return GONE_WAKES_CLAUSE;
+	if (entry.dormant) return parkedWakesClause();
+	if (entry.ghost) return goneWakesClause();
 	const count = wakeCountClause(entry.schedules.length);
 	if (entry.next_due_at === null) return count;
 	return nextDueClause(count, (entry.next_due_at - nowMs) / 1000);
@@ -411,8 +415,8 @@ export type MonitorEntryView = {
 
 /**
  * The due-or-state slot for a monitor row, the states in the wire's own
- * precedence (`state` is the server's word — `dormant` | `disabled` |
- * `expired` | `armed` — passed through, never re-derived):
+ * precedence (`state` is the store's word — `dormant` | `disabled` | `expired`
+ * | `armed` — translated here, never re-derived):
  *
  * - a state word other than `armed` takes the slot, because the clock it
  *   replaces is the least informative thing in the row;
@@ -420,9 +424,37 @@ export type MonitorEntryView = {
  *   `waiting` when no due time is recorded (the TUI band's word for it).
  */
 export const monitorSlot = (row: ScheduleMonitorRow): string => {
-	if (row.state !== "armed") return row.state;
+	if (row.state !== "armed") return monitorStateWord(row.state);
 	if (row.due_in_s === null) return t("mobile.schedules.state.waiting");
 	return dueLabel(row.due_in_s);
+};
+
+/**
+ * The state word a monitor row shows in place of its due clock.
+ *
+ * THE SWITCH IS TOTAL, AND ITS DEFAULT IS THE STORE'S OWN WORD. The states this
+ * build knows have keys; a state it has never heard of renders as the word the
+ * relay sent, because a newer store must not blank a row on an older app and
+ * must not be guessed into one of the three either. A lookup table with a
+ * fallback KEY could not express that: the honest answer for an unknown state
+ * is the wire's own vocabulary, in the one slot where a reader would otherwise
+ * see nothing.
+ *
+ * `armed` never reaches here — it is the one state that draws a clock instead of
+ * a word — and `state.waiting` is a different question (an armed monitor with no
+ * recorded due time).
+ */
+const monitorStateWord = (state: string): string => {
+	switch (state) {
+		case "disabled":
+			return t("mobile.schedules.state.disabled");
+		case "expired":
+			return t("mobile.schedules.state.expired");
+		case "dormant":
+			return t("mobile.schedules.state.dormant");
+		default:
+			return state;
+	}
 };
 
 /** The monitor row's health tail, in the TUI band's precedence: an unavailable
@@ -474,8 +506,8 @@ export const monitorEntryClause = (
 	entry: ScheduleMonitorEntry,
 	nowMs: number,
 ): string => {
-	if (entry.dormant) return PARKED_MONITORS_CLAUSE;
-	if (entry.ghost) return GONE_MONITORS_CLAUSE;
+	if (entry.dormant) return parkedMonitorsClause();
+	if (entry.ghost) return goneMonitorsClause();
 	const count = monitorCountClause(entry.monitors.length);
 	if (entry.next_due_at === null) return count;
 	return nextDueClause(count, (entry.next_due_at - nowMs) / 1000);
@@ -564,8 +596,9 @@ export const monitorSectionSummary = (rows: MonitorLineView[]): string => {
  * case, and a reader with monitors running should still see the wakes they
  * have armed — none — rather than a vanished section. Same rule for monitors.
  */
-export const NO_WAKES_LINE = t("mobile.schedules.empty_line.wakes");
-export const NO_MONITORS_LINE = t("mobile.schedules.empty_line.monitors");
+export const noWakesLine = (): string => t("mobile.schedules.empty_line.wakes");
+export const noMonitorsLine = (): string =>
+	t("mobile.schedules.empty_line.monitors");
 
 /** The per-entry disclosure's label: the desktop's `hiddenWakesLabel`, whose
  *  singular was a shipped defect on the desktop list ("Show 1 more wakes"). */
@@ -576,12 +609,15 @@ export const showMoreMonitorLabel = (hidden: number): string =>
 	t("mobile.schedules.show_more.monitors", { hidden });
 
 /** The disclosure's collapse label, shown once expanded. */
-export const showLessWakeLabel = t("mobile.schedules.show_less.wakes");
-export const showLessMonitorLabel = t("mobile.schedules.show_less.monitors");
+export const showLessWakeLabel = (): string =>
+	t("mobile.schedules.show_less.wakes");
+export const showLessMonitorLabel = (): string =>
+	t("mobile.schedules.show_less.monitors");
 
 /** A read that failed without a sentence: a transport drop, which the
  *  connection's own surface owns rather than this screen re-wording it. */
-export const READ_UNREACHABLE = t("mobile.schedules.read_unreachable");
+export const readUnreachable = (): string =>
+	t("mobile.schedules.read_unreachable");
 
 /**
  * The relay's own refusal sentence for a failed read, or `null` when the

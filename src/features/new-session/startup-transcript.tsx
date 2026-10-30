@@ -49,7 +49,7 @@ export function StartupTranscript({
 					label={
 						runtime.projection?.pending
 							? t("mobile.notifications.detail.answer_in_conversation")
-							: "Conversation details"
+							: t("mobile.session.conversation_details")
 					}
 					variant="quiet"
 					size="sm"

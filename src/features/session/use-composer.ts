@@ -22,9 +22,9 @@ import type { AttachSource } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
-	COMPOSER_COPY,
 	chooseOp,
 	composerControls,
+	composerCopy,
 	receiptForError,
 } from "@/features/session/composer";
 import {
@@ -270,7 +270,7 @@ export const useComposer = (input: {
 		envelopeStore.peek(sessionId).then((held) => {
 			if (cancelled) return;
 			setRetained(held);
-			if (held !== null) setError(COMPOSER_COPY.retainedError);
+			if (held !== null) setError(composerCopy().retainedError);
 		});
 		return () => {
 			cancelled = true;
@@ -420,7 +420,7 @@ export const useComposer = (input: {
 					 * It is kept for that race, deliberately not deleted, and it is the only
 					 * path that reaches this sentence — so it stays untested end-to-end
 					 * rather than being claimed as a live flow. */
-					setNotice(COMPOSER_COPY.reusedDraftNotice);
+					setNotice(composerCopy().reusedDraftNotice);
 				} else if (
 					// Only clear the visible draft when the acknowledged bytes ARE the
 					// visible draft. If the reader edited while the request was out, the ack
@@ -440,7 +440,7 @@ export const useComposer = (input: {
 					setDraft("");
 					setImages([]);
 				} else {
-					setNotice(COMPOSER_COPY.retryAckNotice);
+					setNotice(composerCopy().retryAckNotice);
 				}
 				onSent?.();
 			} catch (failure) {
@@ -459,11 +459,13 @@ export const useComposer = (input: {
 					 * a send is resume-then-send (the daemon wakes a host for a prompt with
 					 * no live entry), so a failure here means that WAKE failed, and the
 					 * honest remedies are send again or Resume from the status sheet. */
-					setError(ended ? COMPOSER_COPY.endedSendFailed : receipt.message);
+					setError(ended ? composerCopy().endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(
-						ended ? COMPOSER_COPY.endedSendFailed : ambiguousMessage(streaming),
+						ended
+							? composerCopy().endedSendFailed
+							: ambiguousMessage(streaming),
 					);
 				}
 			} finally {
@@ -549,7 +551,7 @@ export const useComposer = (input: {
 					setDraft("");
 					setImages([]);
 				} else {
-					setNotice(COMPOSER_COPY.retryAckNotice);
+					setNotice(composerCopy().retryAckNotice);
 				}
 			} catch (failure) {
 				if (isRelayError(failure)) {
@@ -559,11 +561,13 @@ export const useComposer = (input: {
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(ended ? COMPOSER_COPY.endedSendFailed : receipt.message);
+					setError(ended ? composerCopy().endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(
-						ended ? COMPOSER_COPY.endedSendFailed : ambiguousMessage(streaming),
+						ended
+							? composerCopy().endedSendFailed
+							: ambiguousMessage(streaming),
 					);
 				}
 			} finally {
@@ -606,8 +610,8 @@ export const useComposer = (input: {
 		} catch (failure) {
 			setError(
 				isRelayError(failure)
-					? (failure.displayableMessage ?? COMPOSER_COPY.steerError)
-					: COMPOSER_COPY.steerError,
+					? (failure.displayableMessage ?? composerCopy().steerError)
+					: composerCopy().steerError,
 			);
 			return false;
 		}
@@ -631,8 +635,8 @@ export const useComposer = (input: {
 				} catch (failure) {
 					setError(
 						isRelayError(failure)
-							? (failure.displayableMessage ?? COMPOSER_COPY.continuationError)
-							: COMPOSER_COPY.continuationError,
+							? (failure.displayableMessage ?? composerCopy().continuationError)
+							: composerCopy().continuationError,
 					);
 				} finally {
 					setSending(false);
@@ -658,8 +662,8 @@ export const useComposer = (input: {
 				} catch (failure) {
 					setError(
 						isRelayError(failure)
-							? (failure.displayableMessage ?? COMPOSER_COPY.continuationError)
-							: COMPOSER_COPY.continuationError,
+							? (failure.displayableMessage ?? composerCopy().continuationError)
+							: composerCopy().continuationError,
 					);
 				} finally {
 					setSending(false);
@@ -692,10 +696,10 @@ export const useComposer = (input: {
 						/* The one arm that is not a cancel: the reader pressed Paste and no
 						 *  image came back. Told, because a press with no outcome reads as a
 						 *  broken control — the same rule `attachError` follows. */
-						setError(COMPOSER_COPY.pasteEmpty);
+						setError(composerCopy().pasteEmpty);
 					}
 				} catch {
-					setError(COMPOSER_COPY.attachError);
+					setError(composerCopy().attachError);
 				} finally {
 					setAttaching(false);
 				}
@@ -718,7 +722,7 @@ export const useComposer = (input: {
 					const image = await readWebImageFile(file);
 					setImages((current) => [...current, image]);
 				} catch {
-					setError(COMPOSER_COPY.attachError);
+					setError(composerCopy().attachError);
 				} finally {
 					setAttaching(false);
 				}

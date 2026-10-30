@@ -19,10 +19,7 @@
  */
 
 import type { PromptImage } from "@/contracts";
-import {
-	HEALTH_COPY,
-	HEALTH_RESUME_COPY,
-} from "@/features/session/health-copy";
+import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import type { ContinuationOp, RelayError } from "@/relay";
 
 /* ------------------------------------------------------------------- copy */
@@ -36,7 +33,7 @@ import type { ContinuationOp, RelayError } from "@/relay";
  * three places a retained instruction is named — the alert, the retry button and
  * the delivered acknowledgement — rather than "previous"/"pending"/"last".
  */
-export const COMPOSER_COPY = {
+export const composerCopy = () => ({
 	/* The web client's sentence here is `Message Local Operator…`, and this port
 	 * shortens it ON PURPOSE: the field's content box is 166 pt on the 320 pt phone
 	 * and a placeholder is one line, so the sentence renders 184 pt at 100 % text and
@@ -82,16 +79,16 @@ export const COMPOSER_COPY = {
 	 *  either: it treats an exact mirror of a catalogue value as a deliberate
 	 *  one, and it scans only `-copy.ts` modules. Reading the value makes
 	 *  divergence impossible rather than merely detectable. */
-	endedPlaceholder: HEALTH_COPY["relay.health.ended_placeholder"],
+	endedPlaceholder: healthCopy()["mobile.session_health.ended_placeholder"],
 	/** The send-failure sentence when reopening an ended session failed. The two
 	 *  honest remedies are send again, or Resume from the header's status sheet —
 	 *  the same sentence the sheet's own failure uses. */
-	endedSendFailed: HEALTH_COPY["relay.health.ended_send_failed"],
+	endedSendFailed: healthCopy()["relay.health.ended_send_failed"],
 	/** Under the composer while a send to an ENDED session is in flight: the
 	 *  send IS the reopen and the daemon's engage takes seconds, so "…" on the
 	 *  button alone said nothing (UX round 1, U2). The same acceptance line the
 	 *  health sheet shows after Resume, so one act has one sentence. */
-	reopening: HEALTH_RESUME_COPY.reopening,
+	reopening: healthResumeCopy().reopening,
 	/** The retry button under `endedSendFailed`: the sentence's own verb, so the
 	 *  reader is not told to "Try again" beside a button that says something
 	 *  else. The generic envelope case keeps `retryLabel`. */
@@ -111,7 +108,7 @@ export const COMPOSER_COPY = {
 	 *  (`attach.ts`), so a sentence about the clipboard's CONTENTS would be false
 	 *  for the denial arm. */
 	pasteEmpty: "No image was pasted. Copy an image, then try again.",
-} as const;
+});
 
 /* ------------------------------------------------------------------- the op */
 
@@ -220,7 +217,7 @@ export const composerControls = (
 		 *  earlier instruction first" under it was the stack UX U7 / design D5
 		 *  measured. */
 		disabledReason:
-			blocked && !input.ended ? COMPOSER_COPY.retryDisabledHint : null,
+			blocked && !input.ended ? composerCopy().retryDisabledHint : null,
 		ended: input.ended,
 	};
 };
@@ -278,8 +275,8 @@ export const receiptForError = (error: RelayError): SendReceipt => {
 			.map((value) => value?.trim() ?? "")
 			.find((value) => value !== "" && !value.startsWith("<")) ??
 		(error.kind === "ambiguous-delivery"
-			? COMPOSER_COPY.steerError
-			: COMPOSER_COPY.continuationError);
+			? composerCopy().steerError
+			: composerCopy().continuationError);
 	if (error.envelope === "clear-all") return { kind: "sign-out", message };
 	if (error.envelope === "keep") return { kind: "ambiguous", message };
 	return { kind: "rejected", message };
@@ -301,7 +298,7 @@ export const receiptForError = (error: RelayError): SendReceipt => {
  *  "couldn't send this instruction" and "couldn't continue this conversation" are
  *  two different expectations about what the session was doing. */
 export const ambiguousMessage = (streaming: boolean): string =>
-	streaming ? COMPOSER_COPY.steerError : COMPOSER_COPY.continuationError;
+	streaming ? composerCopy().steerError : composerCopy().continuationError;
 
 /* ------------------------------------------------------- the draft after an ack */
 

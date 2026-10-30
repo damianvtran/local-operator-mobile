@@ -39,10 +39,7 @@ import {
 	healthLabel,
 	type SessionHealth,
 } from "@/features/session/health";
-import {
-	HEALTH_COPY,
-	HEALTH_RESUME_COPY,
-} from "@/features/session/health-copy";
+import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import { t } from "@/i18n";
 import { isRelayMissing } from "@/relay";
 import { CONTROL, ROLE } from "@/ui/a11y";
@@ -89,7 +86,7 @@ export function useResume(sessionId: string, ended: boolean) {
 		if (busy) return;
 		const client = relay();
 		if (!client) {
-			setError(HEALTH_RESUME_COPY.noRoute);
+			setError(healthResumeCopy().noRoute);
 			return;
 		}
 		setBusy(true);
@@ -103,7 +100,7 @@ export function useResume(sessionId: string, ended: boolean) {
 			   POST that succeeded against a session slow to come back must not
 			   leave Resume disabled forever — retrying is safe, `spawn_session`
 			   coalesces concurrent resumes. */
-			setNotice(HEALTH_RESUME_COPY.reopening);
+			setNotice(healthResumeCopy().reopening);
 			setBusy(false);
 		} catch (failure) {
 			/* The relay's own 404 means the session is GONE: saying "try again"
@@ -114,17 +111,17 @@ export function useResume(sessionId: string, ended: boolean) {
 			const missing = isRelayMissing(failure);
 			if (missing) setGone(true);
 			setError(
-				missing ? HEALTH_RESUME_COPY.noLongerSaved : HEALTH_RESUME_COPY.refused,
+				missing ? healthResumeCopy().noLongerSaved : healthResumeCopy().refused,
 			);
 			setBusy(false);
 		}
 	}, [busy, relay, sessionId]);
 
 	useEffect(() => {
-		if (notice !== HEALTH_RESUME_COPY.reopening) return;
+		if (notice !== healthResumeCopy().reopening) return;
 		const t = setTimeout(
-			() => setNotice(HEALTH_RESUME_COPY.stillReopening),
-			HEALTH_RESUME_COPY.reopenReportMs,
+			() => setNotice(healthResumeCopy().stillReopening),
+			healthResumeCopy().reopenReportMs,
 		);
 		return () => clearTimeout(t);
 	}, [notice]);
@@ -351,7 +348,7 @@ export function SessionHealthControl({
 			>
 				<View className="gap-3 px-4 pb-4">
 					<Text className="text-body-sm text-ink-muted">
-						{HEALTH_COPY[healthDetailKey(health, projection)]}
+						{healthCopy()[healthDetailKey(health, projection)]}
 					</Text>
 					{children}
 				</View>
@@ -472,8 +469,8 @@ export function SessionHeaderActions({
 						testID={CONTROL.sessionMenuResume}
 						label={
 							resumeBusy
-								? HEALTH_RESUME_COPY.resuming
-								: HEALTH_RESUME_COPY.resume
+								? healthResumeCopy().resuming
+								: healthResumeCopy().resume
 						}
 						disabled={resumeBusy || resumeGone}
 						onPress={onResume}
@@ -495,7 +492,7 @@ export function ResumeBlock({
 			<Button
 				testID={CONTROL.sessionHealthResume}
 				label={
-					resume.busy ? HEALTH_RESUME_COPY.resuming : HEALTH_RESUME_COPY.resume
+					resume.busy ? healthResumeCopy().resuming : healthResumeCopy().resume
 				}
 				disabled={resume.busy || resume.gone}
 				onPress={() => void resume.resume()}
@@ -509,7 +506,7 @@ export function ResumeBlock({
 				</Text>
 			) : null}
 			{resume.error ? (
-				<Alert severity="warning" title={HEALTH_RESUME_COPY.refusedTitle}>
+				<Alert severity="warning" title={healthResumeCopy().refusedTitle}>
 					{resume.error}
 				</Alert>
 			) : null}

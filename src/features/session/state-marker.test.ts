@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
-import { COMPOSER_COPY, composerControls } from "@/features/session/composer";
+import { composerControls, composerCopy } from "@/features/session/composer";
 import {
 	composerStateFlags,
 	type SessionStateFacts,

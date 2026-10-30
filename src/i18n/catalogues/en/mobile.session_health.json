@@ -8,5 +8,6 @@
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_gone": "This session is no longer saved.",
-	"mobile.session_health.resume_no_route": "Connect to a computer to resume this session."
+	"mobile.session_health.resume_no_route": "Connect to a computer to resume this session.",
+	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…"
 }

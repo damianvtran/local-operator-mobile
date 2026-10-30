@@ -13,7 +13,7 @@
 	},
 	"mobile.projects.milestones.count": {
 		"role": "meta",
-		"note": "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers; no plural agreement is needed because the noun is fixed to the count phrase."
+		"note": "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers and both must survive translation. ENGLISH needs no plural agreement because its noun is fixed to the count phrase; a locale whose noun agrees with the completed count must pluralize on {completed} (French: one/many/other) and keep {total} a plain placeholder inside every branch — the generator fails a translation that drops or retypes either name."
 	},
 	"mobile.projects.milestones.none": {
 		"role": "meta",
@@ -53,7 +53,7 @@
 	},
 	"mobile.projects.write_receipt": {
 		"role": "status",
-		"note": "One-line success receipt. {action} is a past-tense verb supplied by the screen (Created, Renamed, Deleted…); {subject} is the thing acted on. Ends with a full stop."
+		"note": "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop."
 	},
 	"mobile.projects.write_unknown_note": {
 		"role": "status",

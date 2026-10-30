@@ -120,10 +120,21 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"33712084ac78c1b2cfb489861d19b8586327a5916f5d453f79589013e140d532",
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
+	/* Re-pinned 2026-10-29 by the French-locale wave, deliberately: `src` now carries the
+	 * French catalogues and the copy modules that resolve per render, and the mock relay and
+	 * its scenario registry gained `/api/config/events` plus a selectable language so a
+	 * browser run can render a non-English catalogue at all. Those are exactly the files
+	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
+	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
-		"98a394ac0b94a1744b3adb03487923f3a1f45ad5206838e41dc981df58acaf8b",
+		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
+	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
+	 * wave: `src` and `app` carry that surface plus the French catalogues and the
+	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
+	 * it. All are content the proof measures, so the pins follow the reviewed
+	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"5cacc6af718133d094658e797b82342b125d515f30f5d293ba0d1242e60f1b57",
+		"50d67b1f0951d36793dcaa4b2d961a1031b5bda2eb4a6bb46f08a35a07b2b70b",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -358,12 +369,6 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	/* Re-pinned 2026-10-29 for the convergence merge onto main `3427c8e` (PR #128,
-	 * the i18n policy, on top of #127/#129): main moved `app`, `src` and three
-	 * instrument files under this branch, whose own change in the same trees is
-	 * the session header's stacked-budget fix. No U-08 scene changes — the proof
-	 * measures the same four screens — so these are digest moves, not new coverage.
-	 * Recomputed with `--print` from the staged merged tree, after the merge. */
 	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -377,7 +382,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
 	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
 	 * construction — so only `src` was re-pinned. */
-	src: "55f924a6fe321205bc2b9249244d05e687192a250d1becb41521bfb547f75c30",
+	src: "ab8fd5465dc24ac8e9ae4756c0ffd0ffcba02a0263af78f43f74238fc9f572db",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
