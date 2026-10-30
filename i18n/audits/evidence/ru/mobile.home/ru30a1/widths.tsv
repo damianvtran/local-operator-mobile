@@ -1,0 +1,61 @@
+# Widths measured with CoreText for the ru wave audit (mobile.home + mobile.session_health).
+# Harness: measure.swift.txt in this bundle, input built from the catalogue JSON.
+# PRECISION LIMIT, stated once: Figtree is not installed on this machine, so the sans
+# stack falls back to the system face (.AppleSystemUIFont); absolute points are
+# therefore approximate. The harness reproduces the repo's OWN recorded measurement
+# for the widest Spanish chip (189.4 pt, quoted in src/features/home/home-copy.ts) to
+# the tenth of a point, which is why the RATIOS below are used for judgement and the
+# absolute numbers only with the headroom each row records.
+# cells = 1 per code point, 2 for East-Asian wide/fullwidth (terminal proxy for the
+# core's maxCells budgets); cells_ellipsis_wide repeats it with U+2026 at 2 cells.
+label	step	size	script	chars	utf16	cells	cells_ellipsis_wide	advance_pt	font
+en	chip/last_turn	body-sm 14pt/400	Latin+Cyrillic	21	21	21	21	140.6	.AppleSystemUIFont
+en	chip/linear_mcp	body-sm 14pt/400	Latin+Cyrillic	17	17	17	17	119.8	.AppleSystemUIFont
+en	chip/phone_access	body-sm 14pt/400	Latin+Cyrillic	20	20	20	20	142.0	.AppleSystemUIFont
+en	chip/review_repo	body-sm 14pt/400	Latin+Cyrillic	16	16	16	16	106.2	.AppleSystemUIFont
+en	chip/team_of_agents	body-sm 14pt/400	Latin+Cyrillic	23	23	23	23	154.8	.AppleSystemUIFont
+en	chip/wake_summary	body-sm 14pt/400	Latin+Cyrillic	22	22	22	22	164.4	.AppleSystemUIFont
+en	placeholder/ended	body 16pt/400	Latin+Cyrillic	35	35	35	36	266.7	.AppleSystemUIFont
+en	tip/parallel	meta 12pt/500	Latin+Cyrillic	42	42	42	42	239.5	.AppleSystemUIFontMedium
+en	tip/schedule	meta 12pt/500	Latin+Cyrillic	41	41	41	41	238.0	.AppleSystemUIFontMedium
+en	tip/search	meta 12pt/500	Latin+Cyrillic	45	45	45	45	267.7	.AppleSystemUIFontMedium
+es	chip/last_turn	body-sm 14pt/400	Latin+Cyrillic	25	25	25	25	169.4	.AppleSystemUIFont
+es	chip/linear_mcp	body-sm 14pt/400	Latin+Cyrillic	20	20	20	20	141.4	.AppleSystemUIFont
+es	chip/phone_access	body-sm 14pt/400	Latin+Cyrillic	27	27	27	27	172.1	.AppleSystemUIFont
+es	chip/review_repo	body-sm 14pt/400	Latin+Cyrillic	16	16	16	16	106.6	.AppleSystemUIFont
+es	chip/team_of_agents	body-sm 14pt/400	Latin+Cyrillic	25	25	25	25	173.5	.AppleSystemUIFont
+es	chip/wake_summary	body-sm 14pt/400	Latin+Cyrillic	26	26	26	26	189.4	.AppleSystemUIFont
+es	placeholder/ended	body 16pt/400	Latin+Cyrillic	19	19	19	20	138.2	.AppleSystemUIFont
+es	tip/parallel	meta 12pt/500	Latin+Cyrillic	34	34	34	34	201.4	.AppleSystemUIFontMedium
+es	tip/schedule	meta 12pt/500	Latin+Cyrillic	37	37	37	37	226.6	.AppleSystemUIFontMedium
+es	tip/search	meta 12pt/500	Latin+Cyrillic	40	40	40	40	245.3	.AppleSystemUIFontMedium
+fr	chip/last_turn	body-sm 14pt/400	Latin+Cyrillic	23	23	23	23	148.1	.AppleSystemUIFont
+fr	chip/linear_mcp	body-sm 14pt/400	Latin+Cyrillic	21	21	21	21	148.9	.AppleSystemUIFont
+fr	chip/phone_access	body-sm 14pt/400	Latin+Cyrillic	22	22	22	22	142.7	.AppleSystemUIFont
+fr	chip/review_repo	body-sm 14pt/400	Latin+Cyrillic	16	16	16	16	114.0	.AppleSystemUIFont
+fr	chip/team_of_agents	body-sm 14pt/400	Latin+Cyrillic	25	25	25	25	172.5	.AppleSystemUIFont
+fr	chip/wake_summary	body-sm 14pt/400	Latin+Cyrillic	24	24	24	24	161.7	.AppleSystemUIFont
+fr	placeholder/ended	body 16pt/400	Latin+Cyrillic	15	15	15	16	120.7	.AppleSystemUIFont
+fr	tip/parallel	meta 12pt/500	Latin+Cyrillic	43	43	43	43	262.3	.AppleSystemUIFontMedium
+fr	tip/schedule	meta 12pt/500	Latin+Cyrillic	44	44	44	44	259.8	.AppleSystemUIFontMedium
+fr	tip/search	meta 12pt/500	Latin+Cyrillic	44	44	44	44	256.4	.AppleSystemUIFontMedium
+ru	chip/last_turn	body-sm 14pt/400	Latin+Cyrillic	22	22	22	22	171.9	.AppleSystemUIFont
+ru	chip/linear_mcp	body-sm 14pt/400	Latin+Cyrillic	20	20	20	20	150.2	.AppleSystemUIFont
+ru	chip/phone_access	body-sm 14pt/400	Latin+Cyrillic	26	26	26	26	196.8	.AppleSystemUIFont
+ru	chip/review_repo	body-sm 14pt/400	Latin+Cyrillic	21	21	21	21	164.3	.AppleSystemUIFont
+ru	chip/team_of_agents	body-sm 14pt/400	Latin+Cyrillic	24	24	24	24	182.2	.AppleSystemUIFont
+ru	chip/wake_summary	body-sm 14pt/400	Latin+Cyrillic	25	25	25	25	187.3	.AppleSystemUIFont
+ru	placeholder/ended	body 16pt/400	Latin+Cyrillic	37	37	37	38	316.0	.AppleSystemUIFont
+ru	tip/parallel	meta 12pt/500	Latin+Cyrillic	44	44	44	44	296.2	.AppleSystemUIFontMedium
+ru	tip/schedule	meta 12pt/500	Latin+Cyrillic	47	47	47	47	313.8	.AppleSystemUIFontMedium
+ru	tip/search	meta 12pt/500	Latin+Cyrillic	44	44	44	44	306.0	.AppleSystemUIFontMedium
+zh-CN	chip/last_turn	body-sm 14pt/400	CJK	5	5	10	10	69.5	.AppleSystemUIFont
+zh-CN	chip/linear_mcp	body-sm 14pt/400	CJK	12	12	14	14	102.0	.AppleSystemUIFont
+zh-CN	chip/phone_access	body-sm 14pt/400	CJK	6	6	12	12	83.3	.AppleSystemUIFont
+zh-CN	chip/review_repo	body-sm 14pt/400	CJK	5	5	10	10	69.5	.AppleSystemUIFont
+zh-CN	chip/team_of_agents	body-sm 14pt/400	CJK	7	7	14	14	97.2	.AppleSystemUIFont
+zh-CN	chip/wake_summary	body-sm 14pt/400	CJK	6	6	12	12	83.3	.AppleSystemUIFont
+zh-CN	placeholder/ended	body 16pt/400	CJK	10	10	18	20	152.1	.AppleSystemUIFont
+zh-CN	tip/parallel	meta 12pt/500	CJK	15	15	30	30	178.8	.AppleSystemUIFontMedium
+zh-CN	tip/schedule	meta 12pt/500	CJK	13	13	26	26	154.9	.AppleSystemUIFontMedium
+zh-CN	tip/search	meta 12pt/500	CJK	13	13	26	26	154.9	.AppleSystemUIFontMedium

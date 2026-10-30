@@ -1,0 +1,934 @@
+==================================================================
+ru group-B audit execution log
+auditor : i18n-auditor (lopdev team), session 3cb03947a304
+model   : radient/auto (actual; see record.json auditor block)
+date    : 2026-10-30T09:34:52Z
+==================================================================
+
+$ git rev-parse HEAD; git status --short; git log -1
+ba39018c493dda114d42a6b4d9dfbf337f4110f5
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ru/
+?? src/i18n/catalogues/ru/
+ba39018c493dda114d42a6b4d9dfbf337f4110f5 2026-10-30 feat(i18n): ship Simplified Chinese across the mobile catalogue (#137)
+
+$ shasum -a 256 <the audited inputs>
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508  src/i18n/catalogues/ru/mobile.schedules.json
+ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b  src/i18n/catalogues/ru/mobile.projects.json
+d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf  src/i18n/catalogues/ru/mobile.notifications.json
+bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600  src/i18n/catalogues/ru/mobile.computers.json
+
+$ git -C ~/local-operator log -1  (core glossary ground truth)
+89f2beda69354d368d62c919d0368924149b3e7d 2026-10-30 fix(notifications): raise an inbox item when an approval parks
+
+$ git ls-tree HEAD -- src/i18n/catalogues/ru (empty = the catalogue directory is untracked at this head)
+$ ls i18n/ ; node -e "scripts" | grep -i ledger || echo 'no ledger script'
+audits
+audit:capture
+audit:run
+$ test -f i18n/ledger.json && echo present || echo 'i18n/ledger.json: absent'
+i18n/ledger.json: absent
+
+$ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
+$ node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts
+  ]
+
+ ❯ src/i18n/__tests__/catalogues.test.ts:187:23
+    185|    .map((entry) => entry.name)
+    186|    .sort();
+    187|   expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+       |                       ^
+    188|  });
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 37 passed (38)
+   Start at  05:34:57
+   Duration  664ms (transform 87%, import 8%, tests 4%, worker 1%)
+
+
+$ node /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/mech.ts   (mechanical + negative controls)
+
+===== PROVENANCE =====
+repo        : /Users/damian/workspace/ru-wave
+branch      : feat/i18n-russian
+HEAD        : ba39018c493dda114d42a6b4d9dfbf337f4110f5 2026-10-30 feat(i18n): ship Simplified Chinese across the mobile catalogue (#137)
+status      : M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/ru/ | ?? src/i18n/catalogues/ru/
+node        : v24.22.1
+harness     : mech.ts (repo parser src/i18n/messages.ts; no mirrored formatter)
+categories  : ru = ["one","few","many","other"]
+sha256 en/mobile.schedules.json                   0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f
+sha256 en/mobile.schedules.context.json           d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92
+sha256 ru/mobile.schedules.json                   2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508
+sha256 en/mobile.projects.json                    a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09
+sha256 en/mobile.projects.context.json            5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99
+sha256 ru/mobile.projects.json                    ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b
+sha256 en/mobile.notifications.json               c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064
+sha256 en/mobile.notifications.context.json       240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6
+sha256 ru/mobile.notifications.json               d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf
+sha256 en/mobile.computers.json                   356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643
+sha256 en/mobile.computers.context.json           3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5
+sha256 ru/mobile.computers.json                   bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600
+Intl ru    : 0→many 1→one 2→few 5→many 21→one 1.5→other 11→many 22→few 101→one
+
+===== MECHANICAL — JSON, key parity, order =====
+
+mobile.schedules
+  en=38 ru=38 context=38
+  en-ru = []
+  ru-en = []
+  context parity: en-ctx=[] ctx-en=[]
+  key order identical: true
+  duplicate-key check en: declared 38, parsed 38 -> none
+  duplicate-key check ru: declared 38, parsed 38 -> none
+  duplicate-key check context: declared 38, parsed 38 -> none
+
+mobile.projects
+  en=15 ru=15 context=15
+  en-ru = []
+  ru-en = []
+  context parity: en-ctx=[] ctx-en=[]
+  key order identical: true
+  duplicate-key check en: declared 15, parsed 15 -> none
+  duplicate-key check ru: declared 15, parsed 15 -> none
+  duplicate-key check context: declared 15, parsed 15 -> none
+
+mobile.notifications
+  en=14 ru=14 context=14
+  en-ru = []
+  ru-en = []
+  context parity: en-ctx=[] ctx-en=[]
+  key order identical: true
+  duplicate-key check en: declared 14, parsed 14 -> none
+  duplicate-key check ru: declared 14, parsed 14 -> none
+  duplicate-key check context: declared 14, parsed 14 -> none
+
+mobile.computers
+  en=10 ru=10 context=10
+  en-ru = []
+  ru-en = []
+  context parity: en-ctx=[] ctx-en=[]
+  key order identical: true
+  duplicate-key check en: declared 10, parsed 10 -> none
+  duplicate-key check ru: declared 10, parsed 10 -> none
+  duplicate-key check context: declared 10, parsed 10 -> none
+
+TOTAL en=77 ru=77
+
+===== MECHANICAL — pair audit over every key (real catalogue) =====
+
+keys checked: 77; problems: 0
+
+plain-placeholder → plural/select escalations (allowed by generate.ts: parameter-parity, listed for the record):
+  mobile.schedules.cadence.left  {remaining}: text→plural
+  mobile.schedules.summary.monitors_armed  {count}: text→plural
+  mobile.schedules.summary.monitors_attention  {broken}: text→plural
+  mobile.schedules.tail.failed  {count}: text→plural
+  mobile.projects.milestones.count  {completed}: text→plural
+  mobile.projects.sessions.live  {live}: text→plural
+
+===== NEGATIVE CONTROLS — each check must fail on a mutated message =====
+TRIPPED  drop a placeholder [mobile.schedules.truncated]
+           → params: missing=["total"] unexpected=[] en=[["family","select"],["shown","text"],["total","text"]] ru=[["family","select"],["shown","text"]]
+TRIPPED  rename a placeholder [mobile.schedules.tail.failed]
+           → params: missing=["count"] unexpected=["total"] en=[["count","text"]] ru=[["total","plural"]]
+TRIPPED  drop the few arm [mobile.schedules.count.wakes]
+           → clrd-missing: {count} missing ["few"] (has ["one","many","other"])
+TRIPPED  add an en-only category [mobile.schedules.count.wakes]
+           → clrd-extra: {count} has non-ru categories ["two"]
+TRIPPED  drop other [mobile.schedules.count.wakes]
+           → parse-ru: Invalid message "{count, plural, one {# пробуждение} few {# пробуждения} many {# пробуждений}}": plural is missing its 'other' branch (at offset 76)
+TRIPPED  rewrite a select arm [mobile.schedules.truncated]
+           → parse-ru: Invalid message "Беседы с {family, select, wakes {пробуждениями} monitors {мониторами}}: показано {shown} из {total}.": select is missing its 'other' branch (at offset 69)
+TRIPPED  insert a bidi control [mobile.notifications.title]
+           → bidi: bidi control in "Уведомления‫"
+TRIPPED  ASCII ellipsis [mobile.computers.connecting]
+           → ellipsis: ASCII ... instead of …: "Подключение..."
+TRIPPED  straight quotes [mobile.projects.delete_body]
+           → quotes: non-«» quote "\""
+TRIPPED  double space [mobile.computers.badge.active]
+           → double-space: "активен  "
+           → edge-space: "активен  "
+TRIPPED  literal # outside a plural [mobile.schedules.summary.wakes]
+           → stray-hash: literal # outside a plural: " запланировано #"
+TRIPPED  unparseable message [mobile.computers.connecting]
+           → parse-ru: Invalid message "Подключение{": expected a placeholder name (at offset 12)
+
+controls tripped: 12/12
+
+$ node /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/render.ts   (repo parser/formatter + real composition functions)
+
+===== PROVENANCE =====
+repo               : /Users/damian/workspace/ru-wave
+branch/commit      : ba39018c493dda114d42a6b4d9dfbf337f4110f5 2026-10-30 feat(i18n): ship Simplified Chinese across the mobile catalogue (#137)
+worktree status    : M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/ru/ | ?? src/i18n/catalogues/ru/
+scratch copy       : /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/ru-copy
+copy diff vs repo  : Files /Users/damian/workspace/ru-wave/src/i18n/locale.ts and /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/ru-copy/src/i18n/locale.ts differ
+SHIPPED (copy)     : ["en","fr","es","zh-CN","ru"]  ← the ONLY change: +"ru"
+node               : v24.22.1
+sha256 ru/mobile.schedules.json  2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508  (copy identical: 2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508 )
+sha256 ru/mobile.projects.json  ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b  (copy identical: ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b )
+sha256 ru/mobile.notifications.json  d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf  (copy identical: d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf )
+sha256 ru/mobile.computers.json  bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600  (copy identical: bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600 )
+
+===== PLURALS — every plural node at 0/1/2/5/21/1.5/11/22/101 (Intl.PluralRules('ru')) =====
+categories: 0→many  1→one  2→few  5→many  21→one  1.5→other  11→many  22→few  101→one
+
+-- mobile.schedules.count.wakes ({count})
+   0     many  PASS  "0 пробуждений"
+   1     one   PASS  "1 пробуждение"
+   2     few   PASS  "2 пробуждения"
+   5     many  PASS  "5 пробуждений"
+   21    one   PASS  "21 пробуждение"
+   1.5   other PASS  "1.5 пробуждения"
+   11    many  PASS  "11 пробуждений"
+   22    few   PASS  "22 пробуждения"
+   101   one   PASS  "101 пробуждение"
+
+-- mobile.schedules.count.monitors ({count})
+   0     many  PASS  "0 мониторов"
+   1     one   PASS  "1 монитор"
+   2     few   PASS  "2 монитора"
+   5     many  PASS  "5 мониторов"
+   21    one   PASS  "21 монитор"
+   1.5   other PASS  "1.5 монитора"
+   11    many  PASS  "11 мониторов"
+   22    few   PASS  "22 монитора"
+   101   one   PASS  "101 монитор"
+
+-- mobile.schedules.show_more.wakes ({hidden})
+   0     many  PASS  "Показать ещё 0 пробуждений"
+   1     one   PASS  "Показать ещё 1 пробуждение"
+   2     few   PASS  "Показать ещё 2 пробуждения"
+   5     many  PASS  "Показать ещё 5 пробуждений"
+   21    one   PASS  "Показать ещё 21 пробуждение"
+   1.5   other PASS  "Показать ещё 1.5 пробуждения"
+   11    many  PASS  "Показать ещё 11 пробуждений"
+   22    few   PASS  "Показать ещё 22 пробуждения"
+   101   one   PASS  "Показать ещё 101 пробуждение"
+
+-- mobile.schedules.show_more.monitors ({hidden})
+   0     many  PASS  "Показать ещё 0 мониторов"
+   1     one   PASS  "Показать ещё 1 монитор"
+   2     few   PASS  "Показать ещё 2 монитора"
+   5     many  PASS  "Показать ещё 5 мониторов"
+   21    one   PASS  "Показать ещё 21 монитор"
+   1.5   other PASS  "Показать ещё 1.5 монитора"
+   11    many  PASS  "Показать ещё 11 мониторов"
+   22    few   PASS  "Показать ещё 22 монитора"
+   101   one   PASS  "Показать ещё 101 монитор"
+
+-- mobile.schedules.summary.monitors_armed ({count})
+   0     many  PASS  "0 активны"
+   1     one   PASS  "1 активен"
+   2     few   PASS  "2 активны"
+   5     many  PASS  "5 активны"
+   21    one   PASS  "21 активен"
+   1.5   other PASS  "1.5 активны"
+   11    many  PASS  "11 активны"
+   22    few   PASS  "22 активны"
+   101   one   PASS  "101 активен"
+
+-- mobile.schedules.summary.monitors_attention ({broken})
+   0     many  PASS  "0 из 3 требуют внимания"
+   1     one   PASS  "1 из 3 требует внимания"
+   2     few   PASS  "2 из 3 требуют внимания"
+   5     many  PASS  "5 из 3 требуют внимания"
+   21    one   PASS  "21 из 3 требует внимания"
+   1.5   other PASS  "1.5 из 3 требуют внимания"
+   11    many  PASS  "11 из 3 требуют внимания"
+   22    few   PASS  "22 из 3 требуют внимания"
+   101   one   PASS  "101 из 3 требует внимания"
+
+-- mobile.schedules.tail.failed ({count})
+   0     many  PASS  "0 сбоев"
+   1     one   PASS  "1 сбой"
+   2     few   PASS  "2 сбоя"
+   5     many  PASS  "5 сбоев"
+   21    one   PASS  "21 сбой"
+   1.5   other PASS  "1.5 сбоя"
+   11    many  PASS  "11 сбоев"
+   22    few   PASS  "22 сбоя"
+   101   one   PASS  "101 сбой"
+
+-- mobile.schedules.cadence.left ({remaining})
+   0     many  PASS  "раз в 1d · осталось 0"
+   1     one   FAIL  "раз в 1d · остался 1"  expected "раз в 1d · осталось 1"
+   2     few   PASS  "раз в 1d · осталось 2"
+   5     many  PASS  "раз в 1d · осталось 5"
+   21    one   FAIL  "раз в 1d · остался 21"  expected "раз в 1d · осталось 21"
+   1.5   other PASS  "раз в 1d · осталось 1.5"
+   11    many  PASS  "раз в 1d · осталось 11"
+   22    few   PASS  "раз в 1d · осталось 22"
+   101   one   FAIL  "раз в 1d · остался 101"  expected "раз в 1d · осталось 101"
+
+-- mobile.projects.sessions.count ({count})
+   0     many  PASS  "0 сессий"
+   1     one   PASS  "1 сессия"
+   2     few   PASS  "2 сессии"
+   5     many  PASS  "5 сессий"
+   21    one   PASS  "21 сессия"
+   1.5   other PASS  "1.5 сессии"
+   11    many  PASS  "11 сессий"
+   22    few   PASS  "22 сессии"
+   101   one   PASS  "101 сессия"
+
+-- mobile.projects.milestones.count ({completed})
+   0     many  PASS  "0 вех из 3"
+   1     one   PASS  "1 веха из 3"
+   2     few   PASS  "2 вехи из 3"
+   5     many  PASS  "5 вех из 3"
+   21    one   PASS  "21 веха из 3"
+   1.5   other PASS  "1.5 вехи из 3"
+   11    many  PASS  "11 вех из 3"
+   22    few   PASS  "22 вехи из 3"
+   101   one   PASS  "101 веха из 3"
+
+-- mobile.projects.sessions.live ({live})
+   0     many  PASS  "5 сессий · 0 активны"
+   1     one   PASS  "5 сессий · 1 активна"
+   2     few   PASS  "5 сессий · 2 активны"
+   5     many  PASS  "5 сессий · 5 активны"
+   21    one   PASS  "5 сессий · 21 активна"
+   1.5   other PASS  "5 сессий · 1.5 активны"
+   11    many  PASS  "5 сессий · 11 активны"
+   22    few   PASS  "5 сессий · 22 активны"
+   101   one   PASS  "5 сессий · 101 активна"
+
+===== SELECTS — mobile.schedules.truncated, both arms =====
+   wakes 2/5 → "Беседы с пробуждениями: показано 2 из 5."
+   monitors 1/3 → "Беседы с мониторами: показано 1 из 3."
+   wakes 0/0 → "Беседы с пробуждениями: показано 0 из 0."
+   monitors 1000000/1000000 → "Беседы с мониторами: показано 1000000 из 1000000."
+
+===== SELECTS — mobile.projects.write_receipt, every kind × action (24 arms + fallbacks) =====
+   project   created   name✓ "Создан проект «payments-migration»."
+   project   completed name✓ "Завершён проект «payments-migration»."
+   project   reopened  name✓ "Возобновлён проект «payments-migration»."
+   project   added     name✓ "Добавлен проект «payments-migration»."
+   project   updated   name✓ "Обновлён проект «payments-migration»."
+   project   removed   name✓ "Удалён проект «payments-migration»."
+   project   deleted   name✓ "Удалён проект «payments-migration»."
+   project   archived  name✓ "Обновлён проект «payments-migration»."
+   milestone created   name✓ "Добавлена веха «payments-migration»."
+   milestone completed name✓ "Завершена веха «payments-migration»."
+   milestone reopened  name✓ "Возобновлена веха «payments-migration»."
+   milestone added     name✓ "Добавлена веха «payments-migration»."
+   milestone updated   name✓ "Обновлена веха «payments-migration»."
+   milestone removed   name✓ "Удалена веха «payments-migration»."
+   milestone deleted   name✓ "Удалена веха «payments-migration»."
+   milestone archived  name✓ "Обновлена веха «payments-migration»."
+   other     created   name✓ "Создано «payments-migration»."
+   other     completed name✓ "Завершено «payments-migration»."
+   other     reopened  name✓ "Возобновлено «payments-migration»."
+   other     added     name✓ "Добавлено «payments-migration»."
+   other     updated   name✓ "Обновлено «payments-migration»."
+   other     removed   name✓ "Удалено «payments-migration»."
+   other     deleted   name✓ "Удалено «payments-migration»."
+   other     archived  name✓ "Обновлено «payments-migration»."
+   arms rendered: 24 (3 kind arms x 8 action arms: 7 codes + the other fallback)
+   fallback action="archived" kind="project" → "Обновлён проект «Q4 launch»."  (carriesName=true)
+   fallback action="created" kind="unknown" → "Создано «Q4 launch»."  (carriesName=true)
+   fallback action="" kind="" → "Обновлено «Q4 launch»."  (carriesName=true)
+
+===== COMPOSITION — mobile.schedules head lines (real wakeEntryClause/monitorEntryClause) =====
+
+1 wake, +240 s (future)
+   ru  "1 пробуждение · далее через 4m"
+   en  "1 wake · next in 4m"
+
+3 wakes, +60 s (future)
+   ru  "3 пробуждения · далее через 60s"
+   en  "3 wakes · next in 60s"
+
+5 wakes, +240 s (future)
+   ru  "5 пробуждений · далее через 4m"
+   en  "5 wakes · next in 3m"
+
+21 wakes, +240 s (future)
+   ru  "21 пробуждение · далее через 4m"
+   en  "21 wakes · next in 4m"
+
+1.5-shaped: 2 wakes, +5400 s
+   ru  "2 пробуждения · далее через 1h"
+   en  "2 wakes · next in 1h"
+
+3 wakes, −7 200 s (overdue)
+   ru  "3 пробуждения · просрочено на 2h"
+   en  "3 wakes · 2h overdue"
+
+5 wakes, −259 200 s (overdue)
+   ru  "5 пробуждений · просрочено на 3d"
+   en  "5 wakes · 3d overdue"
+
+4 wakes, dormant (parked)
+   ru  "Приостановлено — пробуждения возобновятся после её следующего хода"
+   en  "Parked — wakes resume after its next turn"
+
+4 wakes, ghost (gone)
+   ru  "Беседа исчезла — её нет на этой машине, срабатывать нечему"
+   en  "Gone — its conversation is no longer on this machine, so nothing fires"
+
+4 wakes, no next_due_at
+   ru  "4 пробуждения"
+   en  "4 wakes"
+
+3 monitors, +240 s (future)
+   ru  "3 монитора · далее через 4m"
+   en  "3 monitors · next in 4m"
+
+2 monitors, −7 200 s (overdue)
+   ru  "2 монитора · просрочено на 2h"
+   en  "2 monitors · 2h overdue"
+
+4 monitors, dormant (parked)
+   ru  "Приостановлено — мониторы возобновятся, когда её беседа снова запустится"
+   en  "Parked — monitors resume when its conversation runs again"
+
+4 monitors, ghost (gone)
+   ru  "Беседа исчезла — её нет на этой машине, проверять нечего"
+   en  "Gone — its conversation is no longer on this machine, so nothing checks"
+
+CONTROL (composed-line defect, negative control):
+   the translator's reported pre-fix draft "{head} · далее через {label}"
+   executed → "3 пробуждения · далее через через 4m"   [doubled preposition present: true]
+   HEAD bytes → "3 пробуждения · далее через 4m"   [doubled preposition present: false]
+
+===== COMPOSITION — supervisor lead, section summaries, rows, disclosure =====
+
+   supervisor unsupported platform
+      ru "На этой платформе у пробуждений пока нет супервизора, поэтому пробуждения ниже срабатывают, только пока идёт беседа."
+      en "Wakes are not supervised on this platform yet, so the wakes below only fire while a conversation is running."
+
+   supervisor installed, not running
+      ru "Супервизор пробуждений установлен, но не запущен, поэтому пробуждения ниже не сработают."
+      en "The wake supervisor is installed but not running, so the wakes below will not fire."
+
+   supervisor unverifiable store (verifiable=false)
+      ru "У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа."
+      en "Nothing supervises the wakes below, so they only fire while their conversation is running."
+
+   supervisor absent verifiable field (probe can speak)
+      ru "Супервизор пробуждений установлен, но не запущен, поэтому пробуждения ниже не сработают."
+      en "The wake supervisor is installed but not running, so the wakes below will not fire."
+
+   supervisor running
+      ru ""
+      en ""
+   wakeSectionSummary([]) ru "0 запланировано"   ← the header renders this when the wakes family is EMPTY but monitors have rows
+   monitorSectionSummary([]) ru "0 активны"   <- the header renders this when the monitors family is EMPTY but wakes have rows
+   the executed header label there: "Monitors · 0 активны"   (the "Monitors · " prefix is hardcoded English in schedules.tsx:280)
+   monitorSectionSummary(0 rows but 1 broken? no rows => broken=0): "0 активны"
+   wakeSectionSummary(1) ru "1 запланировано"
+   wakeSectionSummary(2) ru "2 запланировано"
+   wakeSectionSummary(5) ru "5 запланировано"
+   wakeSectionSummary(21) ru "21 запланировано"
+   monitorSectionSummary(broken=0, total=5) ru "5 активны"
+   monitorSectionSummary(broken=1, total=3) ru "1 из 3 требует внимания"
+   monitorSectionSummary(broken=2, total=5) ru "2 из 5 требуют внимания"
+   monitorSectionSummary(broken=5, total=5) ru "5 из 5 требуют внимания"
+   monitorSlot(state=disabled, due_in_s=null) ru "отключён"
+   monitorSlot(state=expired, due_in_s=null) ru "истёк"
+   monitorSlot(state=dormant, due_in_s=null) ru "спит"
+   monitorSlot(state=armed, due_in_s=null) ru "ожидает"
+   monitorSlot(state=armed, due_in_s=240) ru "через 4m"
+   wakeDueWord(stale=true) ru "устарело"
+   wakeDueWord(stale=false) ru "просрочено на 2h"
+   monitorTail(consecutive_failures=1) ru "1 сбой"
+   monitorTail(consecutive_failures=2) ru "2 сбоя"
+   monitorTail(consecutive_failures=5) ru "5 сбоев"
+   monitorTail(consecutive_failures=21) ru "21 сбой"
+   showMoreWakeLabel(1) "Показать ещё 1 пробуждение"   showMoreMonitorLabel(1) "Показать ещё 1 монитор"
+   showMoreWakeLabel(2) "Показать ещё 2 пробуждения"   showMoreMonitorLabel(2) "Показать ещё 2 монитора"
+   showMoreWakeLabel(5) "Показать ещё 5 пробуждений"   showMoreMonitorLabel(5) "Показать ещё 5 мониторов"
+   showMoreWakeLabel(21) "Показать ещё 21 пробуждение"   showMoreMonitorLabel(21) "Показать ещё 21 монитор"
+   truncatedClause(wakes, 2, 5) "Беседы с пробуждениями: показано 2 из 5."
+   truncatedClause(monitors, 1, 3) "Беседы с мониторами: показано 1 из 3."
+   parkedWakes "Приостановлено — пробуждения возобновятся после её следующего хода"
+   parkedMonitors "Приостановлено — мониторы возобновятся, когда её беседа снова запустится"
+   goneWakes "Беседа исчезла — её нет на этой машине, срабатывать нечему"
+   goneMonitors "Беседа исчезла — её нет на этой машине, проверять нечего"
+   empty title/body "Ничего не запланировано" / "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях."
+   empty lines "Нет запланированных пробуждений." / "Нет активных мониторов."
+   read errors "Не удалось прочитать пробуждения на этой машине." / "Не удалось прочитать мониторы на этой машине." / "Не удалось прочитать расписания этой машины."
+   showLess "Показать меньше пробуждений" / "Показать меньше мониторов"
+   cadenceWord(every=86400000ms, remaining=3) "раз в 1d · осталось 3"
+   cadenceWord(every=86400000ms, remaining=1) "раз в 1d · остался 1"
+   cadenceWord(every=86400000ms, remaining=0) "раз в 1d · доставок больше нет"
+   cadenceWord(every=5400000ms, remaining=3) "раз в 1h30m · осталось 3"
+   cadenceWord(every=5400000ms, remaining=1) "раз в 1h30m · остался 1"
+   cadenceWord(every=5400000ms, remaining=0) "раз в 1h30m · доставок больше нет"
+   cadenceWord(null, null) "однократно"
+   dueLabel(240) ru "через 4m"  en "in 4m"
+   dueLabel(60) ru "через 60s"  en "in 60s"
+   dueLabel(5400) ru "через 1h"  en "in 1h"
+   dueLabel(-7200) ru "просрочено на 2h"  en "2h overdue"
+   dueLabel(-259200) ru "просрочено на 3d"  en "3d overdue"
+
+===== COMPOSITION — mobile.projects (real milestoneCountLabel/sessionCountLabel/writeReceipt) =====
+   milestoneCountLabel(2, 3) "2 вехи из 3"
+   milestoneCountLabel(1, 3) "1 веха из 3"
+   milestoneCountLabel(5, 7) "5 вех из 7"
+   milestoneCountLabel(21, 30) "21 веха из 30"
+   milestoneCountLabel(0, 0) "вех нет"
+   sessionCountLabel(5, 2) "5 сессий · 2 активны"
+   sessionCountLabel(1, 1) "1 сессия · 1 активна"
+   sessionCountLabel(21, 1) "21 сессия · 1 активна"
+   sessionCountLabel(5, 0) "5 сессий"
+   projectRowMeta sample "2 вехи из 3 · 5 сессий · 2 активны"
+EN_ROW_META "[\"2 of 3 milestones · 5 sessions · 2 live\",\"21 of 30 milestones · 21 sessions · 1 live\",\"no milestones · 5 sessions\",\"1 of 1 milestones · 1 session · 1 live\",\"5 of 7 milestones · 21 sessions · 21 live\"]"
+ROW_META ["2 вехи из 3 · 5 сессий · 2 активны","21 веха из 30 · 21 сессия · 1 активна","вех нет · 5 сессий","1 веха из 1 · 1 сессия · 1 активна","5 вех из 7 · 21 сессия · 21 активна"]
+   projectRowMeta no milestones "вех нет · 1 сессия"
+   writeReceipt(deleted, "payments-migration", project) "Удалён проект «payments-migration»."
+   writeReceipt(removed, "ship/v2", milestone) "Удалена веха «ship/v2»."
+   writeReceipt(updated, "Q4 launch", project) "Обновлён проект «Q4 launch»."
+   writeReceipt(created, "Beta", milestone) "Добавлена веха «Beta»."
+   writeReceipt with an EMPTY subject (screen never sends one; shown so the sentence shape is visible):
+      "Обновлён проект «»."
+   deleteProjectBody("payments-migration") "Удалить «payments-migration»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются."
+   removeMilestoneBody("payments-migration") "Удалить веху «payments-migration» из этого проекта? Веха исчезнет навсегда. Сессии проекта и его строка прогресса не затрагиваются."
+   deleteProjectBody("Q4 launch") "Удалить «Q4 launch»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются."
+   removeMilestoneBody("Q4 launch") "Удалить веху «Q4 launch» из этого проекта? Веха исчезнет навсегда. Сессии проекта и его строка прогресса не затрагиваются."
+   deleteProjectBody("ship/v2") "Удалить «ship/v2»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются."
+   removeMilestoneBody("ship/v2") "Удалить веху «ship/v2» из этого проекта? Веха исчезнет навсегда. Сессии проекта и его строка прогресса не затрагиваются."
+   linkedSessionState({"role":"coordination","exists":true,"runtime":null}) "завела работу"
+   linkedSessionState({"role":"work","exists":false,"runtime":null}) "отсутствует"
+   linkedSessionState({"role":"work","exists":true,"runtime":{"state":"stopped"}}) "не запущена"
+   linkedSessionState({"role":"work","exists":true,"runtime":{"state":"live"}}) "live"
+   staleBadgeLabel() "прогресс устарел"
+   writeUnknownNote() "Не удалось связаться с компьютером, поэтому неизвестно, сохранилось ли изменение. Проверьте проект, прежде чем повторять попытку."
+
+===== RENDER — mobile.notifications and mobile.computers (every key, t()) =====
+   mobile.notifications.answer                      "Ответить"
+   mobile.notifications.back                        "Назад"
+   mobile.notifications.detail.answer_in_conversation "Ответить в беседе"
+   mobile.notifications.detail.conversation_asks    "Вопросы этой беседы"
+   mobile.notifications.detail.earlier_updates      "Прошлые обновления"
+   mobile.notifications.detail.from                 "Источник"
+   mobile.notifications.detail.no_asks              "В этой беседе нет вопросов."
+   mobile.notifications.detail.nothing_to_dismiss   "В этой беседе нет обновлений, которые можно скрыть."
+   mobile.notifications.detail.projects             "Проекты"
+   mobile.notifications.dismiss                     "Скрыть"
+   mobile.notifications.filter_label                "Показать"
+   mobile.notifications.load_failed                 "Не удалось загрузить уведомления"
+   mobile.notifications.priority_high               "Важно"
+   mobile.notifications.title                       "Уведомления"
+   mobile.computers.add                             "Добавить компьютер"
+   mobile.computers.added.stays_listed              "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров."
+   mobile.computers.badge.active                    "активен"
+   mobile.computers.badge.connecting                "подключается"
+   mobile.computers.connecting                      "Подключение…"
+   mobile.computers.none_on_phone                   "На этом телефоне пока нет компьютеров."
+   mobile.computers.password_placeholder            "Пароль из lop mobile"
+   mobile.computers.section.not_connected           "В вашем аккаунте Radient — не подключены"
+   mobile.computers.section.on_phone                "На этом телефоне"
+   mobile.computers.switch                          "Сменить компьютер"
+
+===== REPLACEMENT VERIFICATION — the prescribed bytes, rendered through the same formatter =====
+   RU-SCH-1 cadence.left 1     "раз в 1d · осталось 1"
+   RU-SCH-1 cadence.left 2     "раз в 1d · осталось 2"
+   RU-SCH-1 cadence.left 5     "раз в 1d · осталось 5"
+   RU-SCH-1 cadence.left 21    "раз в 1d · осталось 21"
+   RU-SCH-1 cadence.left 101   "раз в 1d · осталось 101"
+   RU-SCH-2 summary.monitors_armed 0     "0 активных"
+   RU-SCH-2 summary.monitors_armed 1     "1 активный"
+   RU-SCH-2 summary.monitors_armed 2     "2 активных"
+   RU-SCH-2 summary.monitors_armed 5     "5 активных"
+   RU-SCH-2 summary.monitors_armed 21    "21 активный"
+   RU-SCH-2 summary.monitors_armed 1.5   "1.5 активных"
+   RU-SCH-3 parked.wakes
+      "Приостановлено — пробуждения возобновятся после следующего хода"
+   RU-SCH-3 parked.monitors
+      "Приостановлено — мониторы возобновятся, когда эта беседа снова запустится"
+   RU-PRJ-1 receipt milestone/created
+      "Создана веха «Beta»."
+   RU-PRJ-2 project_name_hint
+      "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Пробелы не допускаются; дефис не может быть первым символом."
+   RU-PRJ-3 session_state.missing
+      "не найдена"
+   RU-PRJ-4 milestone_slash_note
+      "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить."
+
+===== ASSERTIONS SUMMARY =====
+failures: 3
+
+$ python3 /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/width.py   (system-face width measurement)
+=== MEASURED WIDTHS (system face; 320 pt device -> 288 pt content) ===
+id                                                     width  avail  uses lines verdict
+ru:mobile.schedules.cadence.once                        71.7    288  0.25     1 fits
+en:mobile.schedules.cadence.once                        28.2    288  0.10     1 fits
+ru:mobile.schedules.empty.body                        1382.5    288  4.80     6 wraps->6 lines
+en:mobile.schedules.empty.body                        1165.9    288  4.05     5 wraps->5 lines
+ru:mobile.schedules.empty.title                        214.4    288  0.74     1 fits
+en:mobile.schedules.empty.title                        134.0    288  0.47     1 fits
+ru:mobile.schedules.empty_line.monitors                173.6    288  0.60     1 fits
+en:mobile.schedules.empty_line.monitors                127.8    288  0.44     1 fits
+ru:mobile.schedules.empty_line.wakes                   249.9    288  0.87     1 fits
+en:mobile.schedules.empty_line.wakes                   137.1    288  0.48     1 fits
+ru:mobile.schedules.gone.monitors                      408.5    288  1.42     2 wraps->2 lines
+en:mobile.schedules.gone.monitors                      465.4    288  1.62     2 wraps->2 lines
+ru:mobile.schedules.gone.wakes                         428.3    288  1.49     2 wraps->2 lines
+en:mobile.schedules.gone.wakes                         448.0    288  1.56     2 wraps->2 lines
+ru:mobile.schedules.parked.monitors                    536.8    288  1.86     3 wraps->3 lines
+en:mobile.schedules.parked.monitors                    387.5    288  1.35     2 wraps->2 lines
+ru:mobile.schedules.parked.wakes                       508.2    288  1.76     2 wraps->2 lines
+en:mobile.schedules.parked.wakes                       271.0    288  0.94     1 fits
+ru:mobile.schedules.read_error.monitors                338.1    288  1.17     2 wraps->2 lines
+en:mobile.schedules.read_error.monitors                311.7    288  1.08     2 wraps->2 lines
+ru:mobile.schedules.read_error.wakes                   360.9    288  1.25     2 wraps->2 lines
+en:mobile.schedules.read_error.wakes                   295.2    288  1.03     2 wraps->2 lines
+ru:mobile.schedules.read_unreachable                   331.7    288  1.15     2 wraps->2 lines
+en:mobile.schedules.read_unreachable                   336.4    288  1.17     2 wraps->2 lines
+ru:mobile.schedules.show_less.monitors                 197.3    288  0.68     1 fits
+en:mobile.schedules.show_less.monitors                 135.5    288  0.47     1 fits
+ru:mobile.schedules.show_less.wakes                    215.4    288  0.75     1 fits
+en:mobile.schedules.show_less.wakes                    119.1    288  0.41     1 fits
+ru:mobile.schedules.state.disabled                      64.8    288  0.23     1 fits
+en:mobile.schedules.state.disabled                      54.6    288  0.19     1 fits
+ru:mobile.schedules.state.dormant                       31.2    288  0.11     1 fits
+en:mobile.schedules.state.dormant                       54.4    288  0.19     1 fits
+ru:mobile.schedules.state.expired                       37.9    288  0.13     1 fits
+en:mobile.schedules.state.expired                       47.7    288  0.17     1 fits
+ru:mobile.schedules.state.stale                         61.8    288  0.21     1 fits
+en:mobile.schedules.state.stale                         30.9    288  0.11     1 fits
+ru:mobile.schedules.state.waiting                       57.6    288  0.20     1 fits
+en:mobile.schedules.state.waiting                       46.0    288  0.16     1 fits
+ru:mobile.schedules.supervisor.not_running             663.7    288  2.30     3 wraps->3 lines
+en:mobile.schedules.supervisor.not_running             520.1    288  1.81     2 wraps->2 lines
+ru:mobile.schedules.supervisor.unsupported             862.7    288  3.00     4 wraps->4 lines
+en:mobile.schedules.supervisor.unsupported             690.7    288  2.40     3 wraps->3 lines
+ru:mobile.schedules.supervisor.unverifiable            645.8    288  2.24     3 wraps->3 lines
+en:mobile.schedules.supervisor.unverifiable            572.6    288  1.99     3 wraps->3 lines
+ru:mobile.projects.draft_kept_note                     444.9    288  1.54     2 wraps->2 lines
+en:mobile.projects.draft_kept_note                     413.2    288  1.43     2 wraps->2 lines
+ru:mobile.projects.milestone_slash_note                549.6    288  1.91     3 wraps->3 lines
+en:mobile.projects.milestone_slash_note                550.2    288  1.91     2 wraps->2 lines
+ru:mobile.projects.milestones.none                      43.7    288  0.15     1 fits
+en:mobile.projects.milestones.none                      80.5    288  0.28     1 fits
+ru:mobile.projects.project_name_hint                   807.5    288  2.80     4 wraps->4 lines
+en:mobile.projects.project_name_hint                   660.8    288  2.29     3 wraps->3 lines
+ru:mobile.projects.session_state.filed_by               96.4    288  0.33     1 fits
+en:mobile.projects.session_state.filed_by               47.3    288  0.16     1 fits
+ru:mobile.projects.session_state.missing                79.3    288  0.28     1 fits
+en:mobile.projects.session_state.missing                49.3    288  0.17     1 fits
+ru:mobile.projects.session_state.not_running            86.3    288  0.30     1 fits
+en:mobile.projects.session_state.not_running            73.8    288  0.26     1 fits
+ru:mobile.projects.stale_badge                         120.8    272  0.44     1 fits
+en:mobile.projects.stale_badge                          91.6    272  0.34     1 fits
+ru:mobile.projects.write_unknown_note                  949.2    288  3.30     4 wraps->4 lines
+en:mobile.projects.write_unknown_note                  727.2    288  2.52     3 wraps->3 lines
+ru:mobile.notifications.answer                          61.8    288  0.21     1 fits
+en:mobile.notifications.answer                          47.7    288  0.17     1 fits
+ru:mobile.notifications.back                            41.5    288  0.14     1 fits
+en:mobile.notifications.back                            31.8    288  0.11     1 fits
+ru:mobile.notifications.detail.answer_in_conversation   125.4    288  0.44     1 fits
+en:mobile.notifications.detail.answer_in_conversation   149.4    288  0.52     1 fits
+ru:mobile.notifications.detail.conversation_asks       181.5    288  0.63     1 fits
+en:mobile.notifications.detail.conversation_asks       192.4    288  0.67     1 fits
+ru:mobile.notifications.detail.earlier_updates         181.8    288  0.63     1 fits
+en:mobile.notifications.detail.earlier_updates         118.1    288  0.41     1 fits
+ru:mobile.notifications.detail.from                     79.1    288  0.27     1 fits
+en:mobile.notifications.detail.from                     40.5    288  0.14     1 fits
+ru:mobile.notifications.detail.no_asks                 193.9    288  0.67     1 fits
+en:mobile.notifications.detail.no_asks                 184.2    288  0.64     1 fits
+ru:mobile.notifications.detail.nothing_to_dismiss      376.4    288  1.31     2 wraps->2 lines
+en:mobile.notifications.detail.nothing_to_dismiss      295.1    288  1.02     2 wraps->2 lines
+ru:mobile.notifications.detail.projects                 73.0    288  0.25     1 fits
+en:mobile.notifications.detail.projects                 64.7    288  0.22     1 fits
+ru:mobile.notifications.dismiss                         50.0    288  0.17     1 fits
+en:mobile.notifications.dismiss                         50.1    288  0.17     1 fits
+ru:mobile.notifications.filter_label                    56.0    288  0.19     1 fits
+en:mobile.notifications.filter_label                    31.7    288  0.11     1 fits
+ru:mobile.notifications.load_failed                    293.6    288  1.02     2 wraps->2 lines
+en:mobile.notifications.load_failed                    206.3    288  0.72     1 fits
+ru:mobile.notifications.priority_high                   44.2    288  0.15     1 fits
+en:mobile.notifications.priority_high                   30.0    288  0.10     1 fits
+ru:mobile.notifications.title                          111.3    288  0.39     1 fits
+en:mobile.notifications.title                          100.0    288  0.35     1 fits
+ru:mobile.computers.add                                142.8    288  0.50     1 fits
+en:mobile.computers.add                                103.0    288  0.36     1 fits
+ru:mobile.computers.added.stays_listed                 678.5    288  2.36     3 wraps->3 lines
+en:mobile.computers.added.stays_listed                 484.8    288  1.68     2 wraps->2 lines
+ru:mobile.computers.badge.active                        50.2    272  0.18     1 fits
+en:mobile.computers.badge.active                        36.9    272  0.14     1 fits
+ru:mobile.computers.badge.connecting                    89.0    272  0.33     1 fits
+en:mobile.computers.badge.connecting                    67.7    272  0.25     1 fits
+ru:mobile.computers.connecting                         104.4    288  0.36     1 fits
+en:mobile.computers.connecting                          85.5    288  0.30     1 fits
+ru:mobile.computers.none_on_phone                      282.7    288  0.98     1 fits
+en:mobile.computers.none_on_phone                      210.5    288  0.73     1 fits
+ru:mobile.computers.password_placeholder               139.7    288  0.48     1 fits
+en:mobile.computers.password_placeholder               194.9    288  0.68     1 fits
+ru:mobile.computers.section.not_connected              365.1    288  1.27     2 wraps->2 lines
+en:mobile.computers.section.not_connected              315.9    288  1.10     2 wraps->2 lines
+ru:mobile.computers.section.on_phone                   149.5    288  0.52     1 fits
+en:mobile.computers.section.on_phone                   109.0    288  0.38     1 fits
+ru:mobile.computers.switch                             137.3    288  0.48     1 fits
+en:mobile.computers.switch                             109.3    288  0.38     1 fits
+ru-sample:count.wakes#5                                 93.7    288  0.33     1 fits
+en-sample:count.wakes#5                                 47.0    288  0.16     1 fits
+ru-sample:count.wakes#21                                98.9    288  0.34     1 fits
+en-sample:count.wakes#21                                52.6    288  0.18     1 fits
+ru-sample:count.monitors#3                              70.2    288  0.24     1 fits
+en-sample:count.monitors#3                              62.1    288  0.22     1 fits
+ru-sample:show_more.wakes#21                           186.2    288  0.65     1 fits
+en-sample:show_more.wakes#21                           120.3    288  0.42     1 fits
+ru-sample:show_more.monitors#21                        156.0    288  0.54     1 fits
+en-sample:show_more.monitors#21                        135.4    288  0.47     1 fits
+ru-sample:summary.wakes#5                              103.8    288  0.36     1 fits
+en-sample:summary.wakes#5                               70.9    288  0.25     1 fits
+ru-sample:summary.monitors_armed#5                      61.3    288  0.21     1 fits
+en-sample:summary.monitors_armed#5                      47.8    288  0.17     1 fits
+ru-sample:summary.monitors_attention#2of5              151.9    288  0.53     1 fits
+en-sample:summary.monitors_attention#2of5              120.8    288  0.42     1 fits
+ru-sample:tail.failed#5                                 46.5    288  0.16     1 fits
+en-sample:tail.failed#5                                 42.9    288  0.15     1 fits
+ru-sample:cadence.left#3                               123.9    288  0.43     1 fits
+en-sample:cadence.left#3                                89.2    288  0.31     1 fits
+ru-sample:cadence.left#1                               114.7    288  0.40     1 fits
+en-sample:cadence.left#1                                87.2    288  0.30     1 fits
+ru-sample:truncated#wakes                              294.3    288  1.02     2 wraps->2 lines
+en-sample:truncated#wakes                              268.8    288  0.93     1 fits
+ru-sample:write_receipt#milestone                      265.1    288  0.92     1 fits
+en-sample:write_receipt#milestone                      260.1    288  0.90     1 fits
+ru-sample:milestones.count#2of3                         66.6    288  0.23     1 fits
+en-sample:milestones.count#2of3                         99.6    288  0.35     1 fits
+ru-sample:sessions.count#5                              53.7    288  0.19     1 fits
+en-sample:sessions.count#5                              61.2    288  0.21     1 fits
+ru-sample:sessions.live#2                              125.2    288  0.43     1 fits
+en-sample:sessions.live#2                              102.0    288  0.35     1 fits
+ru:projectRowMeta#0                                    202.1    288  0.70     1 fits
+ru:projectRowMeta#1                                    215.8    288  0.75     1 fits
+ru:projectRowMeta#2                                    107.8    288  0.37     1 fits
+ru:projectRowMeta#3                                    191.3    288  0.66     1 fits
+ru:projectRowMeta#4                                    202.3    288  0.70     1 fits
+en:projectRowMeta#0                                    211.9    288  0.74     1 fits
+en:projectRowMeta#1                                    229.4    288  0.80     1 fits
+en:projectRowMeta#2                                    152.1    288  0.53     1 fits
+en:projectRowMeta#3                                    198.4    288  0.69     1 fits
+en:projectRowMeta#4                                    222.7    288  0.77     1 fits
+ru:head#0                                              205.6    288  0.71     1 fits
+ru:head#1                                              203.2    288  0.71     1 fits
+ru:head#2                                              212.9    288  0.74     1 fits
+ru:head#3                                              453.9    288  1.58     2 wraps->2 lines
+ru:head#4                                              382.5    288  1.33     2 wraps->2 lines
+en:head#0                                              123.5    288  0.43     1 fits
+en:head#1                                              121.5    288  0.42     1 fits
+en:head#2                                              122.6    288  0.43     1 fits
+en:head#3                                              243.4    288  0.85     1 fits
+en:head#4                                              401.9    288  1.40     2 wraps->2 lines
+
+=== CLAMPED SLOTS THAT TRUNCATE ===
+none
+
+=== WIDEST UNBREAKABLE TOKEN PER STRING (overflow risk when > avail) ===
+none: no single token exceeds its slot
+
+=== ru vs en growth on the same key ===
+  2.54x  mobile.schedules.cadence.once                  en   28.2 -> ru   71.7
+  2.04x  mobile.projects.session_state.filed_by         en   47.3 -> ru   96.4
+  2.00x  mobile.schedules.state.stale                   en   30.9 -> ru   61.8
+  1.95x  mobile.notifications.detail.from               en   40.5 -> ru   79.1
+  1.88x  mobile.schedules.parked.wakes                  en  271.0 -> ru  508.2
+  1.82x  mobile.schedules.empty_line.wakes              en  137.1 -> ru  249.9
+  1.81x  mobile.schedules.show_less.wakes               en  119.1 -> ru  215.4
+  1.77x  mobile.notifications.filter_label              en   31.7 -> ru   56.0
+  1.61x  mobile.projects.session_state.missing          en   49.3 -> ru   79.3
+  1.60x  mobile.schedules.empty.title                   en  134.0 -> ru  214.4
+  median growth: 1.28x
+  keys measured: 55
+
+$ python3 /Users/damian/.local-operator/sessions/3cb03947a304/scratchpad/core-terms.py   (glossary against core's committed Russian)
+core catalogue: /Users/damian/local-operator/local_operator/i18n/catalogues/ru (1947 keys)
+mobile group B: /Users/damian/workspace/ru-wave/src/i18n/catalogues/ru (77 keys)
+
+== milestone: 14 core occurrences
+   core   tui.projects_edit.binding_add_milestone = Добавить веху
+   core   tui.projects_edit.binding_remove_milestone = Удалить веху
+   core   tui.projects_edit.confirm_remove = удалить веху «{name}»? · y удалить · n оставить
+   core   tui.projects_edit.hint_add_milestone = добавить веху
+   mobile: 5 occurrences
+   mobile mobile.projects.milestone_slash_note = Имя вехи не может содержать косую черту — такую веху не удалось бы удалить.
+   mobile mobile.projects.milestones.count = {completed, plural, one {# веха из {total}} few {# вехи из {total}} many {# вех из {total}} other {# вехи из {total}}}
+   mobile mobile.projects.milestones.none = вех нет
+   mobile mobile.projects.remove_milestone_body = Удалить веху «{name}» из этого проекта? Веха исчезнет навсегда. Сессии проекта и его строка прогресса не затрагиваются.
+   mobile mobile.projects.write_receipt = {kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {
+
+== supervisor: 1 core occurrences
+   core   tui.schedule.notice_supervisor = У этих пробуждений нет супервизора — они срабатывают, только пока идёт эта беседа.
+   mobile: 3 occurrences
+   mobile mobile.schedules.supervisor.not_running = Супервизор пробуждений установлен, но не запущен, поэтому пробуждения ниже не сработают.
+   mobile mobile.schedules.supervisor.unsupported = На этой платформе у пробуждений пока нет супервизора, поэтому пробуждения ниже срабатывают, только пока идёт беседа.
+   mobile mobile.schedules.supervisor.unverifiable = У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа.
+
+== monitor (object): 5 core occurrences
+   core   wire.settings.monitor.description = Мониторы дельт: как часто они проверяют, сколько хранят и когда сдаются.
+   core   wire.settings.monitor.title = Мониторы
+   core   wire.settings.monitor_classifymaxchars.help = Ограничение на изменённые строки, которые получает проверка значимости (имя и назначение монитора передаются вместе и обрезаются о
+   core   wire.settings.monitor_maxconsecutivefailures.help = Число последовательных сбоев проверки, после которых монитор отключается.
+   mobile: 8 occurrences
+   mobile mobile.schedules.count.monitors = {count, plural, one {# монитор} few {# монитора} many {# мониторов} other {# монитора}}
+   mobile mobile.schedules.empty.body = Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; м
+   mobile mobile.schedules.empty_line.monitors = Нет активных мониторов.
+   mobile mobile.schedules.parked.monitors = Приостановлено — мониторы возобновятся, когда её беседа снова запустится
+   mobile mobile.schedules.read_error.monitors = Не удалось прочитать мониторы на этой машине.
+   mobile mobile.schedules.show_less.monitors = Показать меньше мониторов
+
+== monitoring (activity): 1 core occurrences
+   core   wire.settings.session_delegated.description = Делегированная работа: транскрипты субагентов и фоновых сессий и их временные рабочие папки. По умолчанию включено: они удаляются 
+   mobile: 0 occurrences
+
+== delivery: 2 core occurrences
+   core   wire.settings.monitor_deltamaxchars.help = Суммарный текст дельты на одно сообщение доставки.
+   core   wire.settings.monitor_maxdeltalines.help = Изменённых строк в сводке на одну доставку.
+   mobile: 0 occurrences
+
+== turn: 26 core occurrences
+   core   relay.transcript.turn.condensed = Сжатый ход
+   core   tui.notices.kept_going_stopped = Этот ход остановлен: его снова и снова просили продолжать; ожидающее сообщение отброшено. Ответьте, что делать дальше.
+   core   tui.notices.stopped_session_held = Работа, поступающая в остановленную сессию, удерживается и не выполняется. Удержанные элементы читаются в следующем ходе.
+   core   tui.schedule.empty_body = Нажмите n, чтобы запланировать одно — пробуждение начнёт ход в этой беседе в выбранное вами время.
+   mobile: 1 occurrences
+   mobile mobile.schedules.parked.wakes = Приостановлено — пробуждения возобновятся после её следующего хода
+
+== ask: вопрос: 36 core occurrences
+   core   relay.ask.context.messages = {count, plural, one {# сообщение от вас после этого вопроса (последнее в {time})} few {# сообщения от вас после этого вопроса (пос
+   core   relay.ask.dismiss.title = Убрать этот вопрос
+   core   relay.asks.card.gone = этот разговор больше не существует — вопрос уже никогда не прочитать; начните новый разговор и спросите снова.
+   core   relay.asks.card.nothing_left = здесь больше нечего отвечать — эти вопросы уже забрала другая поверхность.
+   mobile: 2 occurrences
+   mobile mobile.notifications.detail.conversation_asks = Вопросы этой беседы
+   mobile mobile.notifications.detail.no_asks = В этой беседе нет вопросов.
+
+== ask: запрос: 64 core occurrences
+   core   relay.approvals.card.request_needs_answer = Этот запрос всё ещё ждёт вашего ответа.
+   core   relay.approvals.gate.default_auto = выполнять без запроса во всех сессиях (default auto)
+   core   relay.approvals.gate.unpaired_default_auto = Выполнять без запроса во всех сессиях тоже требует сопряжённого телефона.
+   core   relay.asks.gate.body = Ask приостанавливает каждый вызов инструмента, требующий одобрения, пока вы не ответите на его карточку. Auto разрешает им выполня
+   mobile: 0 occurrences
+
+== wake: 27 core occurrences
+   core   relay.transcript.fold.unit = {kind, select, files {{count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}} searches {{count, plural, one {
+   core   relay.transcript.label.wake = Пробуждение
+   core   tui.schedule.empty_body = Нажмите n, чтобы запланировать одно — пробуждение начнёт ход в этой беседе в выбранное вами время.
+   core   tui.schedule.empty_header = Нет запланированных пробуждений
+   mobile: 11 occurrences
+   mobile mobile.schedules.count.wakes = {count, plural, one {# пробуждение} few {# пробуждения} many {# пробуждений} other {# пробуждения}}
+   mobile mobile.schedules.empty.body = Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; м
+   mobile mobile.schedules.empty_line.wakes = Нет запланированных пробуждений.
+   mobile mobile.schedules.parked.wakes = Приостановлено — пробуждения возобновятся после её следующего хода
+   mobile mobile.schedules.read_error.wakes = Не удалось прочитать пробуждения на этой машине.
+   mobile mobile.schedules.show_less.wakes = Показать меньше пробуждений
+
+== conversation: 78 core occurrences
+   core   relay.chrome.appearance.group_by_tag = Группировать беседы по тегам
+   core   relay.chrome.drawer.conversations = Беседы
+   core   relay.chrome.list.empty = Бесед пока нет
+   core   relay.chrome.list.empty_hint = Начните беседу кнопкой «Новая» или в Local Operator на компьютере
+   mobile: 11 occurrences
+   mobile mobile.notifications.detail.answer_in_conversation = Ответить в беседе
+   mobile mobile.notifications.detail.conversation_asks = Вопросы этой беседы
+   mobile mobile.notifications.detail.no_asks = В этой беседе нет вопросов.
+   mobile mobile.notifications.detail.nothing_to_dismiss = В этой беседе нет обновлений, которые можно скрыть.
+   mobile mobile.schedules.empty.body = Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; м
+   mobile mobile.schedules.gone.monitors = Беседа исчезла — её нет на этой машине, проверять нечего
+
+== machine: 8 core occurrences
+   core   cli.exec_remote_help.remote = Выполнить эту задачу на удалённых вычислениях Radient (уровень 1: короткие запуски) вместо этой машины
+   core   relay.asks.gate.not_paired_error = Этот телефон ещё не сопряжён с той машиной — сопрягите его один раз, и он сможет дать это согласие сам.
+   core   relay.asks.gate.operator_refused = {message} (Подпись этого телефона отклонена — на той машине `lop operator devices` покажет, отозвано ли это устройство или истёк с
+   core   relay.asks.gate.unpaired_before = Этот телефон не сопряжён с той машиной, поэтому
+   mobile: 5 occurrences
+   mobile mobile.schedules.gone.monitors = Беседа исчезла — её нет на этой машине, проверять нечего
+   mobile mobile.schedules.gone.wakes = Беседа исчезла — её нет на этой машине, срабатывать нечему
+   mobile mobile.schedules.read_error.monitors = Не удалось прочитать мониторы на этой машине.
+   mobile mobile.schedules.read_error.wakes = Не удалось прочитать пробуждения на этой машине.
+   mobile mobile.schedules.read_unreachable = Не удалось прочитать расписания этой машины.
+
+== computer: 15 core occurrences
+   core   relay.account_policy.rejected = Изменение не сохранено. Проверьте значение или настройки этого компьютера и повторите попытку.
+   core   relay.account_policy.saved = Сохранено на этом компьютере.
+   core   relay.account_policy.scope = Изменения применяются только к этому компьютеру.
+   core   relay.account_policy.title = Настройки компьютера
+   mobile: 5 occurrences
+   mobile mobile.computers.add = Добавить компьютер
+   mobile mobile.computers.added.stays_listed = Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.
+   mobile mobile.computers.none_on_phone = На этом телефоне пока нет компьютеров.
+   mobile mobile.computers.switch = Сменить компьютер
+   mobile mobile.projects.write_unknown_note = Не удалось связаться с компьютером, поэтому неизвестно, сохранилось ли изменение. Проверьте проект, прежде чем повторять попытку.
+
+== notification: 29 core occurrences
+   core   relay.notifications.confirm.mark_all = {count, plural, one {Отметить # уведомление прочитанным?} few {Отметить # уведомления прочитанными?} many {Отметить # уведомлений 
+   core   relay.notifications.detail.back = Все уведомления
+   core   relay.notifications.detail.loading = Загрузка уведомления…
+   core   relay.notifications.detail.missing.title = Этого уведомления больше нет
+   mobile: 2 occurrences
+   mobile mobile.notifications.load_failed = Не удалось загрузить уведомления
+   mobile mobile.notifications.title = Уведомления
+
+== dismiss/скрыть: 31 core occurrences
+   core   relay.asks.card.dismiss = скрыть — без ответа
+   core   relay.asks.status.dismissed = Скрыто — ответ не отправлен
+   core   relay.notifications.confirm.dismiss = Скрыть
+   core   relay.notifications.confirm.dismiss_session = {count, plural, one {Скрыть # обновление из беседы {source}?} few {Скрыть # обновления из беседы {source}?} many {Скрыть # обновле
+   mobile: 2 occurrences
+   mobile mobile.notifications.detail.nothing_to_dismiss = В этой беседе нет обновлений, которые можно скрыть.
+   mobile mobile.notifications.dismiss = Скрыть
+
+== stale: 10 core occurrences
+   core   relay.asks.status.expired = Устарел — этот вопрос слишком старый, ответить уже нельзя; спросите агента снова
+   core   tui.review.lane_stale = устарело
+   core   tui.review.lane_stale_head = устарело — ревью на {reviewed}, head {head}
+   core   tui.review.lane_stale_reviewed = устарело — ревью на {reviewed}
+   mobile: 2 occurrences
+   mobile mobile.projects.stale_badge = прогресс устарел
+   mobile mobile.schedules.state.stale = устарело
+
+== parked: 7 core occurrences
+   core   relay.notifications.error.refresh = Не удалось обновить. Показано то, что загружено в {time}; скрытие и отметка о прочтении приостановлены.
+   core   wire.radient_saver.notice.no_credit = Radient Saver приостановлен в этой сессии, потому что на балансе Radient нет средств. Пополните баланс на console.radienthq.com, ч
+   core   wire.radient_saver.notice.signed_out = Radient Saver приостановлен в этой сессии, потому что вы не вошли в Radient. Введите /login radient, чтобы пользоваться Saver.
+   core   wire.settings.aida_cadence_paused.choice.true.description = на паузе
+   mobile: 2 occurrences
+   mobile mobile.schedules.parked.monitors = Приостановлено — мониторы возобновятся, когда её беседа снова запустится
+   mobile mobile.schedules.parked.wakes = Приостановлено — пробуждения возобновятся после её следующего хода
+
+== dormant: 0 core occurrences
+   mobile: 1 occurrences
+   mobile mobile.schedules.state.dormant = спит
+
+== scheduled: 8 core occurrences
+   core   tui.schedule.empty_header = Нет запланированных пробуждений
+   core   tui.schedule.notice_created = Запланировано {id} на {due}.
+   core   tui.schedule.slash_help = Запланированные пробуждения этой беседы
+   core   tui.schedule.status_scheduled = запланировано
+   mobile: 3 occurrences
+   mobile mobile.schedules.empty.title = Ничего не запланировано
+   mobile mobile.schedules.empty_line.wakes = Нет запланированных пробуждений.
+   mobile mobile.schedules.summary.wakes = {count} запланировано
+
+== remaining: 6 core occurrences
+   core   relay.notifications.receipt.stale = {count, plural, one {# изменилось после просмотра и осталось как есть} few {# изменились после просмотра и остались как есть} many
+   core   relay.shell.usage.remaining = осталось {value, number} {unit}
+   core   relay.shell.usage.remaining_percent = осталось {value, number, percent}
+   core   relay.shell.usage.remaining_unknown_unit = осталось {value, number}
+   mobile: 1 occurrences
+   mobile mobile.schedules.cadence.left = {cadence} · {remaining, plural, one {остался #} few {осталось #} many {осталось #} other {осталось #}}
+
+
+=== END OF EXECUTION LOG ===

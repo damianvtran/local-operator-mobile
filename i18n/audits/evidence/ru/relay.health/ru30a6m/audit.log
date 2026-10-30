@@ -1,0 +1,92 @@
++ echo '# audit id: ru30a6m'
+# audit id: ru30a6m
++ echo '# locale: ru   namespace: relay.health   audit date: 2026-10-30'
+# locale: ru   namespace: relay.health   audit date: 2026-10-30
++ echo '# auditor: i18n-auditor (lopdev team), session 68877acd3c8a'
+# auditor: i18n-auditor (lopdev team), session 68877acd3c8a
+++ git -C /Users/damian/workspace/ru-wave rev-parse --abbrev-ref HEAD
+++ git -C /Users/damian/workspace/ru-wave rev-parse HEAD
++ echo '# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5'
+# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5
+++ shasum -a 256 /Users/damian/workspace/ru-wave/src/i18n/catalogues/ru/relay.health.json
+++ cut '-d ' -f1
++ echo '# ru catalogue sha256: 01581b3deb86708155dcb01fd54095da6cb3edb42fe191916b5c998f763bd196'
+# ru catalogue sha256: 01581b3deb86708155dcb01fd54095da6cb3edb42fe191916b5c998f763bd196
++ echo '# This file is the captured transcript of the commands below (bash set -x), not a summary.'
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
++ echo
+
++ set -x
++ cd /Users/damian/workspace/ru-wave
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:28924) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs relay.health
+# namespace relay.health  (group mirrored)
+# keys en=8 ru=8 context=8
+# sha256 en=65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f
+# sha256 context=b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec
+# sha256 ru=01581b3deb86708155dcb01fd54095da6cb3edb42fe191916b5c998f763bd196
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  relay.health.live  en=[]  ru=[]
+  same  relay.health.live_detail  en=[]  ru=[]
+  same  relay.health.reconnecting  en=[]  ru=[]
+  same  relay.health.reconnecting_detail  en=[]  ru=[]
+  same  relay.health.dropped_detail  en=[]  ru=[]
+  same  relay.health.quiet_detail  en=[]  ru=[]
+  same  relay.health.ended_detail  en=[]  ru=[]
+  same  relay.health.ended_send_failed  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in relay.health: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 82; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  relay.health.live	В сети
+  relay.health.live_detail	Запущена на вашем компьютере — сообщения доставляются сразу
+  relay.health.reconnecting	Переподключение
+  relay.health.reconnecting_detail	Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.
+  relay.health.dropped_detail	Компьютер сейчас не может связаться с этой сессией и продолжает попытки. Пока это не удастся, отправка сразу завершается ошибкой, а текст остаётся в поле ввода.
+  relay.health.quiet_detail	Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.
+  relay.health.ended_detail	История сохранена. Отправьте сообщение или нажмите «Возобновить», чтобы снова открыть сессию в вашей домашней папке.
+  relay.health.ended_send_failed	Эта сессия завершена, и открыть её снова пока не удалось. Попробуйте отправить ещё раз или нажмите «Завершена» вверху и выберите «Возобновить».
+
+=== mirrored against core's committed Russian (git show origin/main:...) ===
+  identical  relay.health.live  sha=dabf46d05e58f8ff  11B
+  identical  relay.health.live_detail  sha=3fda9f6728759762  112B
+  identical  relay.health.reconnecting  sha=a2ec70e4d38d34f7  30B
+  identical  relay.health.reconnecting_detail  sha=1f16a8b9b1fc6cd2  341B
+  identical  relay.health.dropped_detail  sha=67718a50f8f47695  292B
+  identical  relay.health.quiet_detail  sha=f4a505e92c0d26ed  394B
+  identical  relay.health.ended_detail  sha=8fe06cdfac6eca7c  215B
+  identical  relay.health.ended_send_failed  sha=d931912e002c7f86  263B
+  core file has 8 keys; this catalogue mirrors 8; keys here absent from core: []
+  values differing from core's Russian: 0
+
+=== SUMMARY relay.health: 90 checks, 0 failed ===
+(node:28947) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)

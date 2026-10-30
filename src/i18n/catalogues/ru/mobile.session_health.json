@@ -1,0 +1,13 @@
+{
+	"mobile.session_health.control_hint": "Показывает, что означает это состояние и что произойдёт при отправке",
+	"mobile.session_health.menu_label": "Действия с сессией",
+	"mobile.session_health.menu_hint": "Открывает меню сессии",
+	"mobile.session_health.menu_title": "Сессия",
+	"mobile.session_health.reopening": "Сессия открывается заново — это может занять несколько секунд.",
+	"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+	"mobile.session_health.resume_refused_title": "Не удалось возобновить",
+	"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
+	"mobile.session_health.resume_gone": "Эта сессия больше не сохранена.",
+	"mobile.session_health.resume_no_route": "Подключитесь к компьютеру, чтобы возобновить эту сессию.",
+	"mobile.session_health.ended_placeholder": "Отправка откроет её…"
+}
