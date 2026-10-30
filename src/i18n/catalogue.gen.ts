@@ -1242,6 +1242,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।",
 		"relay.health.reconnecting": "फिर से कनेक्ट हो रहा",
 		"relay.health.reconnecting_detail": "इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।",
+		"relay.transcript.tool_row.bridge.kind_conversation": "एक बातचीत",
+		"relay.transcript.tool_row.bridge.kind_dm": "एक डायरेक्ट मैसेज",
+		"relay.transcript.tool_row.bridge.kind_teammate": "एक साथी",
+		"relay.transcript.tool_row.bridge.label_conversation": "बातचीत",
+		"relay.transcript.tool_row.bridge.label_outcome": "नतीजा",
 	},
 	"ru": {
 		"mobile.account_routing.disconnected": "Подключитесь к компьютеру, чтобы изменить маршрутизацию аккаунтов.",
