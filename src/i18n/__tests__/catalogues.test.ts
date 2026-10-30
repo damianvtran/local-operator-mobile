@@ -237,6 +237,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
+	vi: {
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
+	},
 };
 
 describe("a shipped translation is still translated", () => {

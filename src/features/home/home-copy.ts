@@ -91,6 +91,11 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * (`suggestion.phone_access`), and width decides the row, not length — the
 	 * same reasoning the Spanish budget records, so it takes the same 32. */
 	ru: 32,
+	/* Vietnamese measured: its longest chip is 29 characters
+	 * (`suggestion.wake_summary`, 212.8 pt in a ~256 pt box) and runs longer
+	 * per character than Latin because of stacked diacritics, so it takes the
+	 * same measured headroom the Spanish and Russian entries record. */
+	vi: 32,
 };
 
 /** The row's ceiling for one shipped locale. */
