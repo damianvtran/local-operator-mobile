@@ -46,9 +46,9 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` and `zh-CN` are languages this build RECOGNIZES (direction knows
-		 * Urdu; both are in `SUPPORTED_LOCALES`) but does not ship. The two
-		 * questions must not collapse into one — and `fr`/`es`, which ship with
+		/* `ur` and `ru` are languages this build RECOGNIZES (direction knows Urdu;
+		 * both are in `SUPPORTED_LOCALES`) but does not ship. The two questions
+		 * must not collapse into one — and `fr`, `es` and `zh-CN`, which ship with
 		 * their own catalogues, answer with a catalogue rather than English source. */
 		expect(catalogueLocaleFor("ur")).toBeNull();
 		expect(catalogueLocaleFor("ru")).toBeNull();

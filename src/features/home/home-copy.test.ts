@@ -57,26 +57,28 @@ describe("the home's copy", () => {
 
 	it("pins English at 24 and gives every locale room for the chips it ships", () => {
 		/* The floor used to be "no locale tighter than English", measured in
-		 * CHARACTERS — which is true of Latin scripts and false for Chinese, where
-		 * a chip is 5–12 characters and the row still holds it. The invariant that
-		 * actually matters is the one below: each locale's ceiling must cover the
-		 * longest chip that locale actually ships. English is still pinned to its
-		 * calibrated 24, and every budget is an integer. */
+		 * CHARACTERS — true of Latin scripts, false for Chinese, where a chip is
+		 * 5–12 characters and the row still holds it. The invariant that matters is
+		 * the one below: each locale's ceiling must cover the longest chip that
+		 * locale actually ships. Every locale is checked before the assertion, so a
+		 * failure names all of them rather than the first one alphabetically. */
 		expect(SUGGESTION_CHAR_BUDGET.en).toBe(24);
+		const violations: string[] = [];
 		for (const [locale, budget] of Object.entries(SUGGESTION_CHAR_BUDGET)) {
 			expect(Number.isInteger(budget)).toBe(true);
 			const catalogue = CATALOGUES[locale as keyof typeof CATALOGUES] as
 				| Readonly<Record<string, string>>
 				| undefined;
 			expect(catalogue, `${locale} ships a catalogue`).toBeTruthy();
-			const widest = Object.keys(catalogue ?? {})
-				.filter((key) => key.includes(".suggestion."))
-				.reduce((max, key) => Math.max(max, catalogue?.[key]?.length ?? 0), 0);
-			expect(
-				budget,
-				`${locale}: budget covers its longest chip`,
-			).toBeGreaterThanOrEqual(widest);
+			const widest = HOME_SUGGESTION_KEYS.reduce(
+				(max, key) => Math.max(max, catalogue?.[key]?.length ?? 0),
+				0,
+			);
+			if (budget < widest) violations.push(`${locale}: ${budget} < ${widest}`);
 		}
+		expect(violations, "each locale's budget covers its longest chip").toEqual(
+			[],
+		);
 	});
 
 	it("keeps the pool's two composition rules", () => {
