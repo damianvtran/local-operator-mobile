@@ -19,6 +19,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { useDirection } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -101,6 +102,8 @@ export const Dialog = ({
 	 *  the dismissal to the ledger is what lets a screen wait for it. */
 	const shown = visible && !covered;
 	const dismissed = useModalDismissal(shown, Platform.OS === "web");
+	/* Read here, applied on the modal's own root below: see the comment there. */
+	const direction = useDirection();
 
 	return (
 		<ModalScopeContext.Provider value={scope}>
@@ -114,7 +117,15 @@ export const Dialog = ({
 				testID={testID}
 			>
 				<ScopedVariables variables={variables}>
-					<View className="flex-1 items-center justify-center px-6">
+					{/* The direction is re-applied INSIDE the modal: a React Native `Modal`
+					 *  renders through its own root, so it inherits neither the root view's
+					 *  Yoga direction nor (on native) the web document's `dir`; without this
+					 *  a dialog opened in an Urdu session lays its rows out left-to-right
+					 *  while the screen behind it is mirrored. */}
+					<View
+						className="flex-1 items-center justify-center px-6"
+						style={{ direction }}
+					>
 						{/* Same rule as `Sheet`: one dim per stack, and a hosted dialog's
 						 *  scrim is the press layer with no dim of its own. */}
 						<Pressable

@@ -51,7 +51,7 @@ export const FindBar = ({
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={`Message ${active + 1} of ${count}. Edit search.`}
 				onPress={onEdit}
-				className="min-h-12 flex-row items-center gap-1 pr-3"
+				className="min-h-12 flex-row items-center gap-1 pe-3"
 			>
 				<Search color={ink} size={16} />
 				<Text className="text-body-sm text-ink tabular-nums">

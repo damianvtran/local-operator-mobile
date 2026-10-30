@@ -54,7 +54,7 @@ export type ListRowProps = {
 	model?: string;
 	/** The trailing relative time ("now", "5 min", "3h", "2d"), from the panel's
 	 *  time-based sections — the SECTION says when, the row says how long ago.
-	 *  `ml-auto shrink-0` puts it on the row's right edge in every row, so the
+	 *  `ms-auto shrink-0` puts it on the row's right edge in every row, so the
 	 *  title's own start x is the indicator slot's business regardless, and the
 	 *  time's right edge does not depend on the title's length. Running rows pass
 	 *  nothing (a running row's time is "now", which says nothing). */
@@ -325,7 +325,7 @@ export const ListRow = ({
 							) : null}
 							{time !== undefined && time !== "" ? (
 								<Text
-									className="ml-auto shrink-0 text-meta text-ink-dim"
+									className="ms-auto shrink-0 text-meta text-ink-dim"
 									// The row's accessible name already carries the state; the time is
 									// part of the title line's scan and needs no announcement of its own
 									// (the visible string is what a reader needs).

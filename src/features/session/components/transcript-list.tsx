@@ -882,7 +882,7 @@ export const TranscriptList = ({
 					 * Absolutely positioned so a landing shifts no row's geometry. */}
 					{item.id === highlightId ? (
 						<View
-							className="absolute bottom-0 left-0 top-0 w-0.5 bg-accent"
+							className="absolute bottom-0 start-0 top-0 w-0.5 bg-accent"
 							aria-hidden
 						/>
 					) : null}

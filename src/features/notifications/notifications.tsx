@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { CheckCheck, ChevronLeft, X } from "lucide-react-native";
+import { CheckCheck, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
@@ -80,6 +80,7 @@ import {
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackIcon } from "@/ui/components/back-icon";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
@@ -500,7 +501,9 @@ export default function Notifications() {
 				<IconButton
 					accessibilityLabel={t("mobile.notifications.back")}
 					onPress={() => router.back()}
-					icon={({ color, size }) => <ChevronLeft color={color} size={size} />}
+					icon={({ color, size }) => (
+						<BackIcon color={color} size={size} glyph="chevron" />
+					)}
 					testID={CONTROL.inboxBack}
 				/>
 			}

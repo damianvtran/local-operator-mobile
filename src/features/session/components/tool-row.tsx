@@ -218,7 +218,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						 *  16 pt sat 2.6 pt to the right of line two at 150 % — U-41's "line 2
 						 *  starts off the row's rail". Left-aligned, the glyph is the rail. */
 						className={cx(
-							"w-4 text-left font-mono text-mono-sm",
+							"w-4 text-start font-mono text-mono-sm",
 							tone.inkClass,
 						)}
 						aria-hidden
@@ -305,7 +305,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				) : null}
 			</Pressable>
 			{open && details ? (
-				<View className="flex flex-col gap-1.5 pb-1 pl-6">
+				<View className="flex flex-col gap-1.5 pb-1 ps-6">
 					{/* D1's recoverability half: the summary restated at the top of the
 					 *  expansion. At 150 % and up the collapsed row keeps it with the word
 					 *  moved aside, but even at 100 % it is clipped (`138 of 187`), and a

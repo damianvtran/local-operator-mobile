@@ -48,6 +48,7 @@ import {
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
+import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { composerBudget } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
@@ -406,6 +407,11 @@ export const Composer = ({
 	 * comment. `effectiveScale` — not `scale` — because on the web the platform's
 	 * factor reaches the glyphs through the root font size. */
 	const { effectiveScale } = useTextScale();
+	/* The dictation clock below is aligned to the row's TRAILING edge. React Native's
+	 *  `textAlign` has no `start`/`end` (the type only accepts auto/left/right/
+	 *  center/justify, and Android logs "Invalid textAlign" for `end`), so the
+	 *  direction is resolved here instead of in the style. */
+	const rtl = useIsRTL();
 	const dictationLargeText = effectiveScale > LARGE_TEXT_SCALE;
 
 	/* The handler the listener calls, kept in a ref: re-attaching the listener on
@@ -533,7 +539,7 @@ export const Composer = ({
 						numberOfLines={1}
 						style={{
 							minWidth: Math.round(34 * effectiveScale),
-							textAlign: "right",
+							textAlign: rtl ? "left" : "right",
 						}}
 						testID={SURFACE.composerDictationTimer}
 					>
@@ -685,7 +691,9 @@ export const Composer = ({
 										style={{
 											position: "absolute",
 											top: 0,
-											right: 0,
+											/* The removal badge sits on the attachment's trailing corner: `end`
+											 *  keeps it over the same corner when the layout direction flips. */
+											end: 0,
 											width: TOUCH_FLOOR,
 											height: TOUCH_FLOOR,
 											alignItems: "flex-end",

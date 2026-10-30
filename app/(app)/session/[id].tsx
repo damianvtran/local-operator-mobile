@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Search } from "lucide-react-native";
+import { Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Platform,
@@ -94,6 +94,7 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { BackIcon } from "@/ui/components/back-icon";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
@@ -970,7 +971,7 @@ export default function Session() {
 						accessibilityLabel="Back to sessions"
 						testID={CONTROL.sessionBack}
 						onPress={() => router.back()}
-						icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
+						icon={({ color, size }) => <BackIcon color={color} size={size} />}
 					/>
 					<NavigationMark />
 				</View>

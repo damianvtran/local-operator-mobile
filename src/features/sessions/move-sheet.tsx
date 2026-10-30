@@ -602,7 +602,7 @@ const MovedBody = ({
 							progress={phase.progress}
 							name={PHASE_WORDS[phase.phase] ?? phase.phase}
 						/>
-						<Text className="w-12 text-right text-meta text-ink-dim">
+						<Text className="w-12 text-end text-meta text-ink-dim">
 							{Math.round(Math.max(0, Math.min(1, phase.progress)) * 100)}%
 						</Text>
 					</View>
