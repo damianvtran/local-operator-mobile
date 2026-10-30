@@ -66,7 +66,6 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
  * a reviewed change rather than a forgotten one.
  */
 export const NOT_YET_SHIPPED_LOCALES = [
-	"ru",
 	"vi",
 	"ur",
 	"hi",
@@ -83,6 +82,7 @@ export const SHIPPED_LOCALES = [
 	"fr",
 	"es",
 	"zh-CN",
+	"ru",
 ] as const satisfies readonly SupportedLocale[];
 
 export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];

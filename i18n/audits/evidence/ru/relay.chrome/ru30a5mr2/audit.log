@@ -1,0 +1,68 @@
+# audit id: ru30a5mr2   (delta round 2 of relay.chrome)
+# locale: ru   namespace: relay.chrome   audit date: 2026-10-30
+# auditor: i18n-auditor (lopdev team), session c9aa2aca8837
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
+
++ cd /Users/damian/workspace/ru-wave
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ shasum -a 256 src/i18n/catalogues/ru/relay.chrome.json
++ cut '-d ' -f1
+eb9ae1745c59f8247e319f870c05c1bc0548c2f24beabbc7811acac9b95518cd
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
++ npm run -s i18n:strings:check
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs relay.chrome
+# namespace relay.chrome  (group mirrored)
+# keys en=4 ru=4 context=4
+# sha256 en=e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1
+# sha256 context=195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b
+# sha256 ru=eb9ae1745c59f8247e319f870c05c1bc0548c2f24beabbc7811acac9b95518cd
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  relay.chrome.session.subtitle.not_answering  en=[]  ru=[]
+  same  relay.chrome.session.subtitle.ended  en=[]  ru=[]
+  same  relay.chrome.session.resume  en=[]  ru=[]
+  same  relay.chrome.session.resuming  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in relay.chrome: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 41; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  relay.chrome.session.subtitle.not_answering	Не отвечает
+  relay.chrome.session.subtitle.ended	Завершена
+  relay.chrome.session.resume	Возобновить
+  relay.chrome.session.resuming	Возобновляем…
+
+=== mirrored against core's committed Russian (git show origin/main:...) ===
+  identical  relay.chrome.session.subtitle.not_answering  sha=78133141664d007d  21B
+  identical  relay.chrome.session.subtitle.ended  sha=d0dd0cfdf6019043  18B
+  identical  relay.chrome.session.resume  sha=07c7b8b8142d494f  22B
+  identical  relay.chrome.session.resuming  sha=b1847be91c6df4db  27B
+  core file has 85 keys; this catalogue mirrors 4; keys here absent from core: []
+  values differing from core's Russian: 0
+
+=== SUMMARY relay.chrome: 45 checks, 0 failed ===
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)
++ set +x

@@ -1,0 +1,5 @@
+# relay.chrome: round-1 prescriptions compared BYTE-WISE with the shipped bytes
+# compared field: i18n/audits/evidence/ru/relay.chrome/ru30a5m/record.json -> findings[].replacement
+# compared with: src/i18n/catalogues/ru/relay.chrome.json at 2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
+
+No prescribed replacements in round 1 — nothing to bind. The target file's sha256 is identical to the round-1 audited bytes.

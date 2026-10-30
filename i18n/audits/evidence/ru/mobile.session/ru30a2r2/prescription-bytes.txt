@@ -1,0 +1,12 @@
+# mobile.session: round-1 prescriptions compared BYTE-WISE with the shipped bytes
+# compared field: i18n/audits/evidence/ru/mobile.session/ru30a2/record.json -> findings[].replacement
+# compared with: src/i18n/catalogues/ru/mobile.session.json at 2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
+
+ru30a2-F1  mobile.session.status_tray.hint
+   record.json replacement : Открывает строку текущей работы, задачи и субагентов
+   shipped value           : Открывает строку текущей работы, задачи и субагентов
+   BYTE-EXACT              : True
+   sha256(replacement)     : 6dd2a633df348d9e783f3d6c941938e4faac5b9ee37d629dcb4be56c370dd8fb
+   sha256(shipped)         : 6dd2a633df348d9e783f3d6c941938e4faac5b9ee37d629dcb4be56c370dd8fb
+   utf8 bytes replacement/shipped: 97/97
+

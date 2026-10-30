@@ -1,0 +1,193 @@
+{
+  "schema": 1,
+  "audit_id": "ru30a1",
+  "audit_kind": "independent_current_byte_namespace_audit",
+  "locale": "ru",
+  "namespace": "mobile.home",
+  "audit_date": "2026-10-30",
+  "wave": "ru wave 4 — damianvtran/local-operator-mobile, after fr c5f491e, es a57fb8c, zh-CN ba39018",
+  "audited_revision": "ba39018c493dda114d42a6b4d9dfbf337f4110f5",
+  "audited_revision_note": "The ru catalogue is untracked on this branch (?? src/i18n/catalogues/ru/) and src/i18n/catalogue.gen.ts is modified; the hashes below are the bytes that were audited.",
+  "key_count": {
+    "en": 27,
+    "target": 27,
+    "context": 27
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "68877acd3c8a",
+    "model": "radient/auto",
+    "requested_model": "anthropic/claude-sonnet-5-5",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the session's own [model switch] notices: primary anthropic/claude-sonnet-5-5 hit a provider quota and the turn continued on openai/gpt-6-astra, then kimi/k3.1-pro, then radient/auto; every command below ran on radient/auto.",
+    "independent_from_translator": true,
+    "independence": "Different agent (i18n-auditor, never i18n-translator) and a different session from the translator's; the translator's session id was not supplied to this auditor, so independence is asserted by role and by the audit being a separate run, not by a transcript comparison."
+  },
+  "second_independent_pass": {
+    "performed": true,
+    "job": "0e8a65e92a72",
+    "label": "ru-group-a-second-pass",
+    "agent": "reviewer (lopdev team)",
+    "actual_model": "radient/auto",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the delegated job's own report: primary anthropic/claude-sonnet-5-5 hit provider quota, intermediate notices named openai/gpt-6-astra and kimi/k3.1-pro, and the run finished on radient/auto.",
+    "scope": "All 54 group-A keys (mobile.home 27, mobile.session 2, mobile.session_health 11, mobile.account_routing 14), read independently before seeing this auditor's verdict; it was given the style guide, glossary, English sidecars and the app code, and explicitly told not to read this auditor's scratch conclusions.",
+    "verdict_for_this_namespace": "Reported the same three tip MAJORs with identical measurements (313.8 / 296.2 / 306.0 pt) and proposed the same tip.parallel replacement; this auditor adopted its calque finding on «поставьте расписание» and its status_tray.hint MINOR (in ru30a2). Its tip.schedule and tip.search replacements were not adopted verbatim: its schedule string drops the «run» sense and its search string drops «прошлых», so the replacements here preserve both while staying inside the row."
+  },
+  "translator": {
+    "agent": "i18n-translator (as named by the requesting manager)",
+    "session": "not supplied to this auditor",
+    "model": "not disclosed to this auditor",
+    "date": "2026-10-30"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.home.json",
+      "sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.home.context.json",
+      "sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/ru/mobile.home.json",
+      "sha256": "6b1cc7d1c0553ec29f0bfa5c7f521ac5f013b194d9caa51021b0f784bd50c279"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/appendix-composition.txt",
+      "sha256": "4a922b786737ea155498086d6cb54521b333a1920d6725d150ed01cbcc47ad42",
+      "bytes": 2765
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/audit.log",
+      "sha256": "2390be4228c8e594434a444f9d5a67395d25412c4891198c3b2e00e002295112",
+      "bytes": 7643
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/measure.swift.txt",
+      "sha256": "342e319c15066d509324cc20cebdfdcca7cc7532c1b166f8cdf23affe7a7a8ea",
+      "bytes": 2942
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/report.md",
+      "sha256": "9125f96225acc39e8c5d7baed74795ac86998e236ddf1adc8f78622a72308ba2",
+      "bytes": 7666
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/tip-overflow.txt",
+      "sha256": "b2ac5228d4d7093a3c46e0ae874c540fcc76b5f0e9a4dcff0e8104ddd84e59c1",
+      "bytes": 2360
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/verify.mjs.txt",
+      "sha256": "c1c7c93a2d858e3f98e58be9cae190bb4f56c84d538b05b1e3dcb5fcab76f937",
+      "bytes": 11226
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.home/ru30a1/widths.tsv",
+      "sha256": "25cb6afbb5ed1400228cd552bccc5822a96c6caf5905a4be91c31b78d485cecc",
+      "bytes": 5230
+    }
+  ],
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 3,
+    "finding_ids": [
+      "ru30a1-F1",
+      "ru30a1-F2",
+      "ru30a1-F3"
+    ],
+    "severity_counts": {
+      "BLOCKER": 0,
+      "MAJOR": 3,
+      "MINOR": 0,
+      "NIT": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "ru30a1-F1",
+      "severity": "MAJOR",
+      "class": "fit",
+      "key": "mobile.home.tip.parallel",
+      "current": "попросите параллельную работу для субагентов",
+      "problem": "Two defects in one string. (a) Fit: 296.2 pt at the tip's 12 pt meta step against the ~288 pt one-line row at 320 pt, and the row is numberOfLines={1} at 100 % text scale, so the tail is ellipsized; English's own longest tip is 267.7 pt. (b) Meaning: «для субагентов» reads as work *for* the subagents' benefit, while the source's “fan out subagents” makes the subagents the mechanism the work spreads into — the relation is reversed.",
+      "replacement": "попросите раздать работу субагентам",
+      "replacement_width_pt": 234.3
+    },
+    {
+      "id": "ru30a1-F2",
+      "severity": "MAJOR",
+      "class": "fit",
+      "key": "mobile.home.tip.schedule",
+      "current": "поставьте расписание запуска промпта по таймеру",
+      "problem": "Fit: 313.8 pt against the same ~288 pt one-line row at 320 pt — the widest entry in the pool and 46 pt over the row, so it truncates at 100 % text scale. Wording: «поставьте расписание» is not the Russian collocation for setting a schedule (it is задают or настраивают); «поставить» belongs with a task (поставить задачу) or a timer, not a schedule.",
+      "replacement": "настройте запуск промпта по расписанию",
+      "replacement_width_pt": 258
+    },
+    {
+      "id": "ru30a1-F3",
+      "severity": "MAJOR",
+      "class": "fit",
+      "key": "mobile.home.tip.search",
+      "current": "поищите прошлые беседы, чтобы открыть сессию",
+      "problem": "Fit: 306.0 pt against the ~288 pt row at 320 pt, so it truncates at 100 %. Wording: «поищите прошлые беседы» searches *for* past conversations; the source searches *in* them to reopen a session, and the missing «в» turns the scope into the object.",
+      "replacement": "поищите сессию в прошлых беседах",
+      "replacement_width_pt": 223.3
+    }
+  ],
+  "considered_and_accepted": [
+    {
+      "key": "mobile.home.suggestion.phone_access",
+      "value": "Включите доступ с телефона",
+      "judgement": "SHIP as-is (26 characters against English's 24).",
+      "reason": "The 24-character figure is an English-calibrated character budget, not this slot's constraint: the chip row is measured in points and the code keeps a per-locale SUGGESTION_CHAR_BUDGET for exactly that reason. Measured, this chip is 196.8 pt against the ~254 pt text box at 320 pt (Spanish's widest, which the code records as 189.4 pt, fits at the same box), so it does not truncate and even at 200 % text scale it wraps to the second line the row allows at large text. The wave must raise the budget when it ships (see ship_gate below), not shorten the copy."
+    },
+    {
+      "key": "mobile.home.suggestion.wake_summary",
+      "value": "Разбудите меня со сводкой",
+      "judgement": "ACCEPT — a verb divergence from core that is not a glossary violation.",
+      "reason": "Core's committed Russian uses «пробудить» once, in wire.settings.team_bridge_session.help («Сессия, которую можно пробудить при новых сообщениях»), while this chip uses «Разбудите меня». The glossary's term is the noun «пробуждение»; the glossary says a preferred rendering is a citation form, and that a row is violated by a different TERM, not by a grammar form. «Разбудить» is the everyday verb for waking a person and is the only natural imperative for this playful chip; «Пробудите меня со сводкой» would read literary. No change requested."
+    }
+  ],
+  "ship_gate": [
+    "mobile.home.tip.* replacements must land before the ru set is flipped to shipped.",
+    "Before the flip, SUGGESTION_CHAR_BUDGET and IDENTICAL_BY_DESIGN are Record<ShippedLocale, …>: adding ru without entries is a TypeScript error. The widest ru chip measures 26 characters (phone_access), and the identity list needs mobile.schedules.head.overdue (the only value in the wave byte-identical to English).",
+    "At this head src/i18n/__tests__/catalogues.test.ts fails on the directory↔SHIPPED_LOCALES binding (expected: the directory exists before the ship flip), so the branch cannot be green until the flip lands."
+  ],
+  "notes": [
+    "Proof that this namespace has no plural node and no placeholder, derived rather than assumed: verify.mjs reports 0 plural nodes and identical (empty) parameter lists for all 27 keys.",
+    "Composition evidence for a manager request about mobile.schedules keys (group B) is attached as appendix-composition.txt; it carries no verdict on this namespace."
+  ],
+  "route": {
+    "engine": "the repository's own renderer: messages.parseMessage + messages.formatMessage + messages.pluralCategory (the same functions renderFor calls)",
+    "render_entry_point": "renderFor(key, args, \"ru\") returns the ENGLISH source at this head, because ru is still in NOT_YET_SHIPPED_LOCALES (proved in audit.log of ru30a1 via appendix-composition.txt); every ru string in these records was therefore rendered by calling formatMessage(parseMessage(<ru value>), args, \"ru\") directly, which is byte-identically what renderFor does once ru ships — proved by rendering all 38 zh-CN mobile.schedules keys through both paths and getting identical output.",
+    "width_engine": "swift + CoreText over the app's sans stack (measure.swift.txt); Figtree absent on this machine, so widths use the system face — the harness reproduces the repo's recorded 189.4 pt Spanish chip measurement, which is why ratios are used for judgement",
+    "machine_translation": "none — no translation or MT service was used to compare or back-translate",
+    "read_only": "the working tree was not edited, staged, committed or pushed; the only writes are these audit bundles under i18n/audits/evidence/ru/"
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n ledger exist in this repository at this head (i18n/ holds only audits/, and scripts/i18n/ has check-strings, generate, key-shape, ratchet, scan-strings — no ledger writer). The served record is this record.json under i18n/audits/evidence/<locale>/<namespace>/<id>/, matching the fr, es and zh-CN waves' machinery. There is likewise no i18n/audits/evidence/README.md contract in this checkout."
+  },
+  "audit_notes_not_execution_log": "This record and report.md are NOTES. The execution evidence is audit.log in the same directory: a bash set -x transcript of the catalogue validator, verify.mjs for this namespace, and verify.mjs --negative, captured when they ran. widths.tsv / tip-overflow.txt / widths-placeholder.tsv / appendix-composition.txt are measurement and composition artifacts, produced by the harnesses also stored here.",
+  "evidence_limitations": [
+    "Figtree is not installed on this machine, so CoreText widths use the system sans face; absolute points are approximate and the report leans on ratios and on the headroom each row records. The harness reproduces the repository's own recorded 189.4 pt Spanish-chip measurement, which is the calibration check.",
+    "renderFor(key, args, \"ru\") cannot render this catalogue yet — ru is still in NOT_YET_SHIPPED_LOCALES — so renders come from formatMessage(parseMessage(<ru value>), args, \"ru\"), proved byte-equal to renderFor on the 38 zh-CN mobile.schedules keys.",
+    "No rendered frame was captured: this was a copy audit, and the app was not built or driven. A UI reviewer still has to look at the ru strings in a build.",
+    "The 320 pt field width for ended_placeholder is derived from the sidecar's own 390 pt measurement (~348 pt) minus the viewport difference; it is an inference from a recorded measurement, not a direct capture.",
+    "Plural and placeholder machinery was exercised on the whole ru catalogue (11 plural nodes, all carrying one/few/many/other with correct numeral-noun agreement) but this namespace contains none of them."
+  ]
+}

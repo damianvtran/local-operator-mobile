@@ -87,6 +87,10 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * characters and its widest advance measured 102 px against a ~256 pt box at
 	 * 320 pt, so 14 is headroom over use rather than a scaled Latin number. */
 	"zh-CN": 14,
+	/* Russian measured, not scaled: the pool's longest chip is 26 characters
+	 * (`suggestion.phone_access`), and width decides the row, not length — the
+	 * same reasoning the Spanish budget records, so it takes the same 32. */
+	ru: 32,
 };
 
 /** The row's ceiling for one shipped locale. */

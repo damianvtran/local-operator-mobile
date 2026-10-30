@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "audit_id": "ru30a4r2",
+  "audit_kind": "independent_delta_reaudit_of_round1_remediation",
+  "delta_of": {
+    "namespace": "mobile.account_routing",
+    "round1_audit_id": "ru30a4"
+  },
+  "locale": "ru",
+  "namespace": "mobile.account_routing",
+  "audit_date": "2026-10-30",
+  "wave": "ru wave 4 delta — damianvtran/local-operator-mobile; binds the round-1 prescriptions to the bytes shipped in remediation commit 2921aea",
+  "audited_revision": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+  "audited_revision_note": "Unlike round 1, where the ru catalogue was untracked at ba39018 and only working-tree bytes could be audited, the catalogue is TRACKED at this head — `git ls-files src/i18n/catalogues/ru` lists all ten namespaces — so these hashes name committed bytes.",
+  "key_count": {
+    "en": 14,
+    "target": 14,
+    "context": 14
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "c9aa2aca8837",
+    "model": "radient/auto",
+    "requested_model": "anthropic/claude-sonnet-5-5",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the session's own [model switch] notices in this turn: the primary anthropic/claude-sonnet-5-5 hit a provider quota and the turn continued on openai/gpt-6-astra, then kimi/k3.1-pro, then radient/auto. Every command in audit.log and every measurement in widths-delta.tsv ran after the final switch, on radient/auto.",
+    "independent_from_translator": true,
+    "independence": "Different agent (i18n-auditor, never i18n-translator) and a different session from the translator's; the translator's session id was not supplied to this auditor, so independence is asserted by role and by the run being separate, not by a transcript comparison.",
+    "independent_from_round1": false,
+    "self_review_disclosure": "This is the SAME agent and session as the round-1 audit (ru30a1..ru30a6m) and it is grading the replacements it prescribed in round 1. That is a structural self-review risk and it is disclosed rather than papered over. Mitigations: (a) each shipped value is compared BYTE-WISE against this session's own record.json, not against prose; (b) every width is re-measured with the same harness, whose calibration control (es wake_summary = 189.4 pt, the repo's own recorded number) and whose re-measurement of the OLD strings (296.2/313.8/306.0/316.0 pt, identical to round 1) show it is the same method; (c) an independent second pass judged all seven delta strings from the guide, glossary and English only, without reading this session's conclusions."
+  },
+  "second_independent_pass": {
+    "performed": true,
+    "job": "d473234f21a9",
+    "label": "ru-delta-second-pass",
+    "agent": "reviewer (lopdev team)",
+    "actual_model": "radient/auto",
+    "actual_model_source": "the delegated job's own completion line reads 'model=radient/auto (pinned anthropic/claude-opus-5-5)', and its report states it ran as radient/auto after the session's quota-driven fallbacks (claude-sonnet-5-5 -> gpt-6-astra -> kimi/k3.1-pro -> radient/auto).",
+    "scope": "The seven delta strings only: the five values prescribed in round 1 plus the two parked clauses. It was given the ru style guide, the glossary, the English catalogues and their context sidecars, core's committed Russian catalogue for precedent, and an explicit instruction to read nothing under i18n/audits/ or any scratchpad, to judge independently, and to say so if a prescription itself was wrong. It independently re-ran CoreText measurements and reproduced this auditor's numbers exactly (234.3 / 258.0 / 223.3 / 171.5 / 485.1 / 515.6 / 267.7 pt).",
+    "verdict_for_this_namespace": "not covered by the second pass",
+    "agreement": "Five of its seven verdicts stand as they came: CLEAN on tip.schedule, tip.search, parked.monitors and parked.wakes, and MINOR on tip.parallel and ended_placeholder. Two of its recommendations were NOT adopted: its tip.parallel replacement (280.6 pt) clips the ~270 pt text box, so a different string is recommended here; and its NIT on status_tray.hint is recorded as considered-and-accepted because two of the three already-shipped locales adapt away from core's term in this same slot. Where it and this auditor agree on a width, both harnesses produced the identical figure."
+  },
+  "translator": {
+    "agent": "i18n-translator (as named by the requesting manager)",
+    "session": "not supplied to this auditor",
+    "model": "not disclosed to this auditor",
+    "date": "2026-10-30"
+  },
+  "remediation": {
+    "commit": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+    "subject": "feat(i18n): ship Russian across the mobile catalogue"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.account_routing.json",
+      "sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.account_routing.context.json",
+      "sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/ru/mobile.account_routing.json",
+      "sha256": "c1d8cfd327be840aaf756d10da3dc82b7f4aabce3ac32a1abefdd40f91d63341"
+    }
+  },
+  "round1_baseline": {
+    "record": "i18n/audits/evidence/ru/mobile.account_routing/ru30a4/record.json",
+    "record_sha256": "dcb50a865dff31c459e741fb13d866b67c3ed1858ea995deccd9a2f71e52c0b0",
+    "target_sha256_audited_then": "c1d8cfd327be840aaf756d10da3dc82b7f4aabce3ac32a1abefdd40f91d63341"
+  },
+  "round1_findings_resolved": [],
+  "findings": [],
+  "considered_and_accepted": [
+    {
+      "key": "all 14 values",
+      "reason": "The target file's sha256 is IDENTICAL to the bytes audited in round 1 (c1d8cfd327be840a…), and the English catalogue and context sidecar are identical too, so the round-1 `passed` verdict stands byte-for-byte. This round re-ran the mechanical suite over all 14 keys rather than re-litigating wording that did not move."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/ru/mobile.account_routing/ru30a4r2/audit.log",
+      "sha256": "5c9d0364a58ce016c864f184c46170a306c7223f1bd380988501372c609491ca",
+      "bytes": 4974
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.account_routing/ru30a4r2/diff-vs-round1.txt",
+      "sha256": "6ec5ba23a5d870c3c37855919aaa4a58099e1d467829a23d1280c15f64ae2315",
+      "bytes": 996
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.account_routing/ru30a4r2/prescription-bytes.txt",
+      "sha256": "70212302903733917a6a822249a9f7b369a97dff716ced21a7c183ab97ee596c",
+      "bytes": 440
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.account_routing/ru30a4r2/verify.mjs.txt",
+      "sha256": "c1c7c93a2d858e3f98e58be9cae190bb4f56c84d538b05b1e3dcb5fcab76f937",
+      "bytes": 11226
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "blocker_ids": [],
+    "major_ids": [],
+    "minor_ids": [],
+    "nit_ids": [],
+    "finding_ids": [],
+    "reason": "0 round-1 findings; the namespace is byte-identical to its audited round-1 bytes and re-ran clean (142 checks, 0 failed)"
+  },
+  "route": {
+    "engine": "the repository's own renderer: messages.parseMessage + messages.formatMessage + messages.pluralCategory (the same functions renderFor calls)",
+    "render_entry_point": "renderFor(key, args, \"ru\") now resolves ru for real, because the locale was flipped in 2921aea. The per-key render block in audit.log still comes from formatMessage(parseMessage(<ru value>), args, \"ru\"), which is byte-identically what renderFor calls once a key is in a shipped locale.",
+    "width_engine": "swift + CoreText over the app's sans stack (measure.swift.txt), same harness as round 1; Figtree absent on this machine, so widths use the system face. Calibration: it reproduces the repo's own recorded 189.4 pt Spanish chip measurement exactly, and it reproduces round 1's ru figures (296.2 / 313.8 / 306.0 / 316.0 pt) to the tenth.",
+    "machine_translation": "none — no translation or MT service was used to compare or back-translate",
+    "read_only": "the catalogues, code and git history were not edited, staged, committed or pushed; the only writes are these audit bundles under i18n/audits/evidence/ru/"
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n ledger exist in this repository at this head (i18n/ holds only audits/, and scripts/i18n/ has check-strings, generate, key-shape, ratchet, scan-strings — no ledger writer), and there is no i18n/audits/evidence/README.md contract in this checkout. The served record is this record.json under i18n/audits/evidence/<locale>/<namespace>/<id>/, matching the fr, es and zh-CN waves' machinery."
+  },
+  "audit_notes_not_execution_log": "This record and report.md are NOTES. The execution evidence is audit.log in the same directory: a bash set -x transcript of the repository's own validators (i18n:catalogue:check, i18n:strings:check), verify.mjs for this namespace and verify.mjs --negative, captured when they ran. widths-delta.tsv / items-delta.json / measure.swift.txt are the measurement artifacts and the harness that produced them; diff-vs-round1.txt is the per-key comparison that binds these bytes to round 1's.",
+  "evidence_limitations": [
+    "Figtree is not installed on this machine, so CoreText widths fall back to the system sans face and absolute points are approximate. Two controls make the ratios sound: the harness reproduces the repository's own recorded 189.4 pt Spanish-chip measurement to the tenth of a point, and it re-measures the round-1 strings to round 1's exact figures (296.2 / 313.8 / 306.0 pt for the three tips, 316.0 pt for the old placeholder), which is the evidence that this round used the same method.",
+    "No rendered frame was captured: this is a copy audit and the app was not built or driven. A UI reviewer still has to look at the ru strings in a build; these are text advances, not screenshots.",
+    "The 320 pt figures are derived, not captured: the composer's own chrome is subtracted from the viewport — mx-3 (12 pt each side) + px-2 (8 pt each side) + the two hairline borders = 42 pt — and the sidecar records the field at ~348 px at 390 pt, which is the same 42 pt, so 320 pt leaves 278 pt. The tip row's ~270 pt text box (the 288 pt row minus the 12 pt Info icon and gap-1.5) is round 1's own note, carried forward because the layout did not change.",
+    "This delta round is bounded by design: it re-judges the changed values and re-runs the mechanical suite over every key of the namespace, and it carries the round-1 linguistic verdict for the unchanged keys because their bytes are identical (proved by sha256) and their English source and context sidecars are byte-identical to round 1 too.",
+    "Independence is disclosed rather than claimed: this auditor is the same agent and session as round 1 and is therefore grading its own prescriptions."
+  ]
+}

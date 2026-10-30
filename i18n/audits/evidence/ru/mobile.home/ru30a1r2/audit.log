@@ -1,0 +1,106 @@
+# audit id: ru30a1r2   (delta round 2 of mobile.home)
+# locale: ru   namespace: mobile.home   audit date: 2026-10-30
+# auditor: i18n-auditor (lopdev team), session c9aa2aca8837
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
+
++ cd /Users/damian/workspace/ru-wave
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ shasum -a 256 src/i18n/catalogues/ru/mobile.home.json
++ cut '-d ' -f1
+29b700aca504eab9194699a8e74db4ecde26954c120eba8541ed17f3318c1793
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
++ npm run -s i18n:strings:check
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs mobile.home
+# namespace mobile.home  (group A)
+# keys en=27 ru=27 context=27
+# sha256 en=4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+# sha256 context=db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+# sha256 ru=29b700aca504eab9194699a8e74db4ecde26954c120eba8541ed17f3318c1793
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.home.connect_disabled_reason  en=[]  ru=[]
+  same  mobile.home.folders_read_failed  en=[]  ru=[]
+  same  mobile.home.greeting  en=[]  ru=[]
+  same  mobile.home.options.apply  en=[]  ru=[]
+  same  mobile.home.options.fixed  en=[]  ru=[]
+  same  mobile.home.options.folder  en=[]  ru=[]
+  same  mobile.home.options.title  en=[]  ru=[]
+  same  mobile.home.queue.discard  en=[]  ru=[]
+  same  mobile.home.queue.restore  en=[]  ru=[]
+  same  mobile.home.queue.sheet_title  en=[]  ru=[]
+  same  mobile.home.queue.view  en=[]  ru=[]
+  same  mobile.home.refused_start_fallback  en=[]  ru=[]
+  same  mobile.home.starting  en=[]  ru=[]
+  same  mobile.home.startup_queue.blocked  en=[]  ru=[]
+  same  mobile.home.startup_queue.not_started  en=[]  ru=[]
+  same  mobile.home.startup_queue.sending  en=[]  ru=[]
+  same  mobile.home.startup_queue.unconfirmed  en=[]  ru=[]
+  same  mobile.home.suggestion.last_turn  en=[]  ru=[]
+  same  mobile.home.suggestion.linear_mcp  en=[]  ru=[]
+  same  mobile.home.suggestion.phone_access  en=[]  ru=[]
+  same  mobile.home.suggestion.review_repo  en=[]  ru=[]
+  same  mobile.home.suggestion.team_of_agents  en=[]  ru=[]
+  same  mobile.home.suggestion.wake_summary  en=[]  ru=[]
+  same  mobile.home.tip.parallel  en=[]  ru=[]
+  same  mobile.home.tip.schedule  en=[]  ru=[]
+  same  mobile.home.tip.search  en=[]  ru=[]
+  same  mobile.home.transcript.waiting  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.home: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 274; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.home.connect_disabled_reason	Подключите компьютер, чтобы отправить.
+  mobile.home.folders_read_failed	Не удалось прочитать папки этого компьютера.
+  mobile.home.greeting	Чем помочь сегодня?
+  mobile.home.options.apply	Применить
+  mobile.home.options.fixed	Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».
+  mobile.home.options.folder	Папка на этом компьютере
+  mobile.home.options.title	Параметры беседы
+  mobile.home.queue.discard	Удалить сообщения из очереди
+  mobile.home.queue.restore	Перенести сообщения в черновик
+  mobile.home.queue.sheet_title	Сообщения в очереди
+  mobile.home.queue.view	Показать сообщения в очереди
+  mobile.home.refused_start_fallback	Такой папки на этом компьютере нет.
+  mobile.home.starting	Запуск…
+  mobile.home.startup_queue.blocked	Повторите, чтобы отправить сообщения из очереди
+  mobile.home.startup_queue.not_started	Не запущено
+  mobile.home.startup_queue.sending	Отправка сообщений из очереди…
+  mobile.home.startup_queue.unconfirmed	Запуск не подтверждён
+  mobile.home.suggestion.last_turn	Покажите последний ход
+  mobile.home.suggestion.linear_mcp	Настройте Linear MCP
+  mobile.home.suggestion.phone_access	Включите доступ с телефона
+  mobile.home.suggestion.review_repo	Проверьте репозиторий
+  mobile.home.suggestion.team_of_agents	Создайте команду агентов
+  mobile.home.suggestion.wake_summary	Разбудите меня со сводкой
+  mobile.home.tip.parallel	попросите раздать работу субагентам
+  mobile.home.tip.schedule	настройте запуск промпта по расписанию
+  mobile.home.tip.search	поищите сессию в прошлых беседах
+  mobile.home.transcript.waiting	Ожидание беседы…
+
+=== SUMMARY mobile.home: 274 checks, 0 failed ===
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)
++ set +x

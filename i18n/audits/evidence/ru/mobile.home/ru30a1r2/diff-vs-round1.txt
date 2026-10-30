@@ -1,0 +1,41 @@
+# mobile.home: every key, round-1 rendered bytes vs commit 2921aea bytes
+# round-1 bundle: i18n/audits/evidence/ru/mobile.home/ru30a1/audit.log (rendered-section)
+# the round-1 ru file was UNTRACKED at ba39018, so the old bytes come from that log's own
+# formatMessage render; the namespace carries no plural/select nodes, so rendered == raw.
+# keys: round1=27 now=27; key-set identical=True
+
+same     mobile.home.connect_disabled_reason
+same     mobile.home.folders_read_failed
+same     mobile.home.greeting
+same     mobile.home.options.apply
+same     mobile.home.options.fixed
+same     mobile.home.options.folder
+same     mobile.home.options.title
+same     mobile.home.queue.discard
+same     mobile.home.queue.restore
+same     mobile.home.queue.sheet_title
+same     mobile.home.queue.view
+same     mobile.home.refused_start_fallback
+same     mobile.home.starting
+same     mobile.home.startup_queue.blocked
+same     mobile.home.startup_queue.not_started
+same     mobile.home.startup_queue.sending
+same     mobile.home.startup_queue.unconfirmed
+same     mobile.home.suggestion.last_turn
+same     mobile.home.suggestion.linear_mcp
+same     mobile.home.suggestion.phone_access
+same     mobile.home.suggestion.review_repo
+same     mobile.home.suggestion.team_of_agents
+same     mobile.home.suggestion.wake_summary
+CHANGED  mobile.home.tip.parallel
+   r1 : попросите параллельную работу для субагентов
+   now: попросите раздать работу субагентам
+CHANGED  mobile.home.tip.schedule
+   r1 : поставьте расписание запуска промпта по таймеру
+   now: настройте запуск промпта по расписанию
+CHANGED  mobile.home.tip.search
+   r1 : поищите прошлые беседы, чтобы открыть сессию
+   now: поищите сессию в прошлых беседах
+same     mobile.home.transcript.waiting
+
+# values differing: 3
