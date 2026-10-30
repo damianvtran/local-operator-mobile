@@ -1,0 +1,209 @@
+zh-CN delta re-audit — mobile.computers
+audit log: actual command output, not notes
+worktree : /Users/damian/workspace/zh-wave
+branch   : feat/i18n-chinese
+harness  : node zhdelta.ts mobile.computers  (copied beside this log as render.ts.txt)
+note     : MODULE_TYPELESS_PACKAGE_JSON is silenced; nothing about the run changes.
+browser  : none opened; no UI frame is claimed for this delta.
+
+$ git -C /Users/damian/workspace/zh-wave rev-parse HEAD
+# started 2026-10-30T07:14:34Z
+d3c39d8d2df2bccc78af82df9253776b4c933ad8
+# exit=0
+
+$ git -C /Users/damian/workspace/zh-wave status --porcelain
+# started 2026-10-30T07:14:34Z
+?? i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/
+?? i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/
+# exit=0
+
+$ sha256sum <en> <context> <zh-CN target>
+# started 2026-10-30T07:14:35Z
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.computers.context.json
+90f4c203d68c8f7f402d448738b66cad3041ff3ea8df50588410af071f3701a5  /Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/mobile.computers.json
+# exit=0
+
+$ npm run -s i18n:catalogue:check
+# started 2026-10-30T07:14:35Z
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:13751) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/zh-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/zh-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+# exit=0
+
+$ npm run -s i18n:strings:check
+# started 2026-10-30T07:14:39Z
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+# exit=0
+
+$ node_modules/.bin/vitest run src/i18n/__tests__
+# started 2026-10-30T07:14:43Z
+      Tests  89 passed (89)
+   Start at  03:14:47
+   Duration  3.75s (transform 78%, import 12%, tests 7%, worker 3%)
+
+  Transform  transforming modules took 7.11s · 78% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+# exit=0
+
+$ python3 verify-prescriptions.py mobile.computers   (HEAD bytes vs each round-1 prescribed replacement)
+# started 2026-10-30T07:14:51Z
+
+## mobile.computers  (round-1 zh29b4, verdict changes_requested)
+  ZH-CMP-1 [major] mobile.computers.section.not_connected
+      round1 : Radient账号中，未连接
+      now    : Radient账户下，未连接
+      rx     : Radient账户下，未连接
+      -> APPLIED VERBATIM
+  ZH-CMP-2 [minor] mobile.computers.added.stays_listed
+      round1 : 它仍会保留在此手机列表中，可从电脑列表切回。
+      now    : 它仍会保留在此手机列表中，可从电脑列表切回。
+      rx     : 它仍会保留在此手机的列表中，可从电脑列表中切回。
+      -> UNCHANGED — round-1 bytes still present
+
+keys compared=2 applied_verbatim=1 rewritten=0 unchanged=1
+# exit=0
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON zhdelta.ts mobile.computers
+# started 2026-10-30T07:14:51Z
+
+===== PROVENANCE =====
+namespace            : mobile.computers
+repo                 : /Users/damian/workspace/zh-wave
+HEAD                 : ref: refs/heads/feat/i18n-chinese (worktree gitdir)
+branch/commit        : d3c39d8d2df2bccc78af82df9253776b4c933ad8  (HEAD -> feat/i18n-chinese, origin/feat/i18n-chinese)
+node                 : v24.22.1
+harness              : zhdelta.ts (uses src/i18n renderFor + schedules-copy)
+sha256 src/i18n/catalogues/en/mobile.computers.json
+       356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643
+sha256 src/i18n/catalogues/en/mobile.computers.context.json
+       3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5
+sha256 src/i18n/catalogues/zh-CN/mobile.computers.json
+       90f4c203d68c8f7f402d448738b66cad3041ff3ea8df50588410af071f3701a5
+keys                 : en=10 zh=10 context=10
+SHIPPED_LOCALES      : ["en","fr","es","zh-CN"]
+activeLocale-ish     : renderFor(..., "zh-CN") + setLocaleSource(() => "zh-CN")
+
+===== MECHANICAL — key parity =====
+en - zh  : []
+zh - en  : []
+en - ctx : []
+ctx - en : []
+order identical: true
+
+===== MECHANICAL — parse + parameter parity (app parser) =====
+parse failures=0 param/structure mismatches=0
+
+===== MECHANICAL — plural categories (Intl.PluralRules('zh-CN')) =====
+zh-CN categories: ["other"]
+plural nodes inspected=0  select nodes inspected=0
+Intl.PluralRules('zh-CN').select(0) = other
+Intl.PluralRules('zh-CN').select(1) = other
+Intl.PluralRules('zh-CN').select(2) = other
+Intl.PluralRules('zh-CN').select(3) = other
+Intl.PluralRules('zh-CN').select(1000000) = other
+plural arm violations=0
+
+===== NEGATIVE CONTROLS — prove each check above can fail =====
+control 1 (a `one` arm must be caught): CAUGHT -> [["one","other"]]
+control 2 (a renamed/dropped placeholder must be caught): CAUGHT
+   good=[["broken","text"],["total","text"]] broken=[["total","text"]]
+control 3 (a renamed select arm must be caught): CAUGHT
+control 4 (a bidi control must be caught): CAUGHT
+control 5 (ASCII prose punctuation beside CJK must be caught): CAUGHT
+control 6 (a dropped plural must be caught): CAUGHT
+
+===== MECHANICAL — bidi controls / ASCII prose punctuation / Latin residue =====
+bidi controls: none
+ASCII prose punct adjacent to CJK: none
+Latin runs (naive; kept names/terms expected): ["mobile.computers.password_placeholder: \"lop mobile\"","mobile.computers.section.not_connected: \"Radient\""]
+U+2026 ellipsis count: 2
+您 occurrences: 0
+
+===== RENDER — executed strings (zh-CN) =====
+
+-- every key rendered --
+mobile.computers.add
+  zh: "添加电脑"
+  en: "Add a computer"
+  cells=8
+mobile.computers.added.stays_listed
+  zh: "它仍会保留在此手机列表中，可从电脑列表切回。"
+  en: "It stays listed on this phone, so you can switch back from the computer list."
+  cells=44
+mobile.computers.badge.active
+  zh: "使用中"
+  en: "active"
+  cells=6
+mobile.computers.badge.connecting
+  zh: "连接中"
+  en: "connecting"
+  cells=6
+mobile.computers.connecting
+  zh: "正在连接……"
+  en: "Connecting…"
+  cells=10
+mobile.computers.none_on_phone
+  zh: "此手机尚未添加电脑。"
+  en: "No computers on this phone yet."
+  cells=20
+mobile.computers.password_placeholder
+  zh: "来自lop mobile的密码"
+  en: "The password from lop mobile"
+  cells=20
+mobile.computers.section.not_connected
+  zh: "Radient账户下，未连接"
+  en: "On your Radient account, not connected"
+  cells=21
+mobile.computers.section.on_phone
+  zh: "此手机"
+  en: "On this phone"
+  cells=6
+mobile.computers.switch
+  zh: "切换电脑"
+  en: "Switch computer"
+  cells=8
+
+-- not_connected against core's committed account noun --
+zh: "Radient账户下，未连接"
+contains 账户: true
+contains 账号: false
+raw bytes: "RU+52 aU+61 dU+64 iU+69 eU+65 nU+6E tU+74 账U+8D26 户U+6237 下U+4E0B ，U+FF0C 未U+672A 连U+8FDE 接U+63A5"
+
+===== FIT — cells, per string (2 cells per CJK/full-width char, 1 per ASCII) =====
+mobile.computers.add: chars=4 cells=8 renderedCells=8
+mobile.computers.added.stays_listed: chars=22 cells=44 renderedCells=44
+mobile.computers.badge.active: chars=3 cells=6 renderedCells=6
+mobile.computers.badge.connecting: chars=3 cells=6 renderedCells=6
+mobile.computers.connecting: chars=6 cells=10 renderedCells=10
+mobile.computers.none_on_phone: chars=10 cells=20 renderedCells=20
+mobile.computers.password_placeholder: chars=15 cells=20 renderedCells=20
+mobile.computers.section.not_connected: chars=14 cells=21 renderedCells=21
+mobile.computers.section.on_phone: chars=3 cells=6 renderedCells=6
+mobile.computers.switch: chars=4 cells=8 renderedCells=8
+
+DONE
+# exit=0
+
+$ python3 account-term.py   (core's COMMITTED zh-CN: 账户 vs 账号)
+# started 2026-10-30T07:14:55Z
+core commit 2008053b5d6af37fa449fc303d9e344c262f82c8
+zh-CN catalogue files: 93
+'账户': occurrences=42 files=10 top=[('mobile.setup.json', 22), ('tui.authoring.json', 6), ('wire.settings.json', 4), ('relay.account_policy.json', 3), ('wire.remote_compute.json', 2), ('tui.team_authoring.json', 1), ('tui.welcome.json', 1), ('wire.errors.auth.json', 1)]
+'账号': occurrences=0 files=0 top=[]
+# exit=0
+
+$ grep -rn '账户|账号' src/i18n/catalogues/zh-CN/   (both namespaces that use the term)
+# started 2026-10-30T07:15:08Z
+mobile.computers.json:9:	"mobile.computers.section.not_connected": "Radient账户下，未连接",
+mobile.account_routing.json:2:	"mobile.account_routing.disconnected": "连接电脑后才能更改账户路由。",
+mobile.account_routing.json:4:	"mobile.account_routing.load_error": "无法加载账户路由。检查连接后重试。",
+mobile.account_routing.json:5:	"mobile.account_routing.loading": "正在加载账户路由……",
+mobile.account_routing.json:13:	"mobile.account_routing.title": "账户路由",
+mobile.account_routing.json:14:	"mobile.account_routing.unavailable": "此中继不提供账户路由设置。在此电脑上更新Local Operator。",
+# exit=0

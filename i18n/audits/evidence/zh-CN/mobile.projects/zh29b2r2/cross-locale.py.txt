@@ -1,0 +1,5 @@
+import json
+for loc in ("fr", "es", "zh-CN"):
+    d = json.load(open(f"/Users/damian/workspace/zh-wave/src/i18n/catalogues/{loc}/mobile.projects.json"))
+    for k in ("delete_body", "remove_milestone_body"):
+        print(f"{loc:6} {k:24} {d['mobile.projects.' + k]}")
