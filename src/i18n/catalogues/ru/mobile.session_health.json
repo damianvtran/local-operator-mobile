@@ -9,5 +9,5 @@
 	"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 	"mobile.session_health.resume_gone": "Эта сессия больше не сохранена.",
 	"mobile.session_health.resume_no_route": "Подключитесь к компьютеру, чтобы возобновить эту сессию.",
-	"mobile.session_health.ended_placeholder": "Отправка откроет её…"
+	"mobile.session_health.ended_placeholder": "Отправка возобновит её…"
 }

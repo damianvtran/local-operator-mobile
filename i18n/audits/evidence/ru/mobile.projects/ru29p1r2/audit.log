@@ -1,0 +1,513 @@
++ unset CMUX_SESSION_ID CMUX_SURFACE_ID CMUX_TAB_ID CMUX_PANE_ID
++ export LC_ALL=en_US.UTF-8
++ LC_ALL=en_US.UTF-8
++ cd /Users/damian/workspace/ru-wave
++ echo '# audit id: ru29s1r2 / ru29p1r2 / ru29n1r2 / ru29c1r2   (group B delta, round 2)'
+# audit id: ru29s1r2 / ru29p1r2 / ru29n1r2 / ru29c1r2   (group B delta, round 2)
+++ date -u +%Y-%m-%dT%H:%M:%SZ
++ echo '# date: 2026-10-30T09:43:23Z   locale: ru   namespaces: schedules, projects, notifications, computers'
+# date: 2026-10-30T09:43:23Z   locale: ru   namespaces: schedules, projects, notifications, computers
++ echo '# auditor: i18n-auditor (lopdev team), session d598a29e6e64'
+# auditor: i18n-auditor (lopdev team), session d598a29e6e64
++ echo '# This file is the captured transcript of the commands below (bash set -x), not a summary.'
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
++ echo
+
++ echo '===== PROVENANCE ====='
+===== PROVENANCE =====
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ git log -1 '--format=%H %ad %s' --date=short
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88 2026-10-30 feat(i18n): ship Russian across the mobile catalogue
++ git status --porcelain
++ head -20
+?? i18n/audits/evidence/ru/mobile.account_routing/ru30a4r2/
+?? i18n/audits/evidence/ru/mobile.home/ru30a1r2/
+?? i18n/audits/evidence/ru/mobile.session/ru30a2r2/
+?? i18n/audits/evidence/ru/mobile.session_health/ru30a3r2/
+?? i18n/audits/evidence/ru/relay.chrome/ru30a5mr2/
+?? i18n/audits/evidence/ru/relay.health/ru30a6mr2/
++ echo '-- input hashes (en / context / ru) --'
+-- input hashes (en / context / ru) --
++ shasum -a 256 src/i18n/catalogues/en/mobile.schedules.json src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/en/mobile.notifications.json src/i18n/catalogues/en/mobile.computers.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
++ shasum -a 256 src/i18n/catalogues/en/mobile.schedules.context.json src/i18n/catalogues/en/mobile.projects.context.json src/i18n/catalogues/en/mobile.notifications.context.json src/i18n/catalogues/en/mobile.computers.context.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
++ shasum -a 256 src/i18n/catalogues/ru/mobile.schedules.json src/i18n/catalogues/ru/mobile.projects.json src/i18n/catalogues/ru/mobile.notifications.json src/i18n/catalogues/ru/mobile.computers.json
+f95a0e2167f0f74bdd46d4479ae53eabb2ffa01b972c97e6e7132ac513c97090  src/i18n/catalogues/ru/mobile.schedules.json
+fba4cec42e08b363690453ddbe7bf0e93f9b5d3127082c55895351d65e249aa3  src/i18n/catalogues/ru/mobile.projects.json
+d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf  src/i18n/catalogues/ru/mobile.notifications.json
+bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600  src/i18n/catalogues/ru/mobile.computers.json
++ echo '-- round-1 audited target hashes, for byte heredity --'
+-- round-1 audited target hashes, for byte heredity --
++ python3 -
+mobile.schedules     r1 2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508  now f95a0e2167f0f74bdd46d4479ae53eabb2ffa01b972c97e6e7132ac513c97090  CHANGED
+                     en       SAME_BYTES
+                     context  SAME_BYTES
+mobile.projects      r1 ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b  now fba4cec42e08b363690453ddbe7bf0e93f9b5d3127082c55895351d65e249aa3  CHANGED
+                     en       SAME_BYTES
+                     context  SAME_BYTES
+mobile.notifications r1 d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf  now d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf  SAME_BYTES
+                     en       SAME_BYTES
+                     context  SAME_BYTES
+mobile.computers     r1 bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600  now bb37e91fb78c6f9bf230910d6ab53e19e294ac10b23a89366678f8b745f46600  SAME_BYTES
+                     en       SAME_BYTES
+                     context  SAME_BYTES
++ echo
+
++ echo '===== REPO GATE (mechanical) ====='
+===== REPO GATE (mechanical) =====
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
+(node:45805) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ echo 'catalogue:check exit=0'
+catalogue:check exit=0
++ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
+(node:45860) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
++ echo 'i18n:check exit=0'
+i18n:check exit=0
++ echo
+
++ echo '===== NO TRANSLATION LEDGER AT THIS HEAD ====='
+===== NO TRANSLATION LEDGER AT THIS HEAD =====
++ node -e 'const p=require('\''./package.json'\''); const h=Object.entries(p.scripts||{}).filter(([k])=>/i18n|ledger/i.test(k)); console.log(h)'
+[
+  [ 'i18n:generate', 'node scripts/i18n/generate.ts' ],
+  [ 'i18n:catalogue:check', 'node scripts/i18n/generate.ts --check' ],
+  [ 'i18n:strings:check', 'node scripts/i18n/check-strings.ts' ],
+  [
+    'i18n:check',
+    'node scripts/i18n/generate.ts --check && node scripts/i18n/check-strings.ts'
+  ]
+]
++ ls i18n
+audits
++ ls i18n/audits
+evidence
++ echo
+
++ echo '===== HARNESS: structure, tokens, typing, renders, real call sites ====='
+===== HARNESS: structure, tokens, typing, renders, real call sites =====
++ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /Users/damian/.local-operator/sessions/d598a29e6e64/scratchpad/ru-delta-b/verify.mjs
+{
+ "head": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+ "checks": {
+  "structure": [
+   {
+    "ns": "mobile.schedules",
+    "en": 38,
+    "ru": 38,
+    "ctx": 38,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.projects",
+    "en": 15,
+    "ru": 15,
+    "ctx": 15,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.notifications",
+    "en": 14,
+    "ru": 14,
+    "ctx": 14,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.computers",
+    "en": 10,
+    "ru": 10,
+    "ctx": 10,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   }
+  ],
+  "paramOrArmProblems": [],
+  "sanctionedEscalations": [
+   {
+    "key": "mobile.schedules.cadence.left",
+    "param": "remaining",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.summary.monitors_armed",
+    "param": "count",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.summary.monitors_attention",
+    "param": "broken",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.tail.failed",
+    "param": "count",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.projects.milestones.count",
+    "param": "completed",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.projects.sessions.live",
+    "param": "live",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   }
+  ],
+  "tokenProblems": [],
+  "typography": [],
+  "cadenceLeftType": "\"mobile.schedules.cadence.left\": { cadence: string | number; remaining: number };",
+  "cadenceLeftParsedParams": [
+   [
+    "cadence",
+    "text"
+   ],
+   [
+    "remaining",
+    "plural"
+   ]
+  ],
+  "armedParsedParams": [
+   [
+    "count",
+    "plural"
+   ]
+  ],
+  "pluralStringNegativeControl": "threw RangeError: Message \"{n, plural, one {# x} other {# x}}\" needs a number for \"n\", received \"1\""
+ },
+ "renders": {
+  "cadence_left_bytes": "{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
+  "monitors_armed_bytes": "{count, plural, one {# активный} few {# активных} many {# активных} other {# активных}}",
+  "cadence_left": {
+   "0": "раз в 1d · осталось 0",
+   "1": "раз в 1d · осталось 1",
+   "2": "раз в 1d · осталось 2",
+   "5": "раз в 1d · осталось 5",
+   "11": "раз в 1d · осталось 11",
+   "21": "раз в 1d · осталось 21",
+   "22": "раз в 1d · осталось 22",
+   "101": "раз в 1d · осталось 101",
+   "1.5": "раз в 1d · осталось 1.5"
+  },
+  "monitors_armed": {
+   "0": "0 активных",
+   "1": "1 активный",
+   "2": "2 активных",
+   "5": "5 активных",
+   "11": "11 активных",
+   "21": "21 активный",
+   "22": "22 активных",
+   "101": "101 активный",
+   "1.5": "1.5 активных"
+  },
+  "cadence_left_arm_signatures": [
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]"
+  ],
+  "cadence_left_arms_identical": true,
+  "cadence_left_codepoints": "007b 0063 0061 0064 0065 006e 0063 0065 007d 0020 00b7 0020 007b 0072 0065 006d 0061 0069 006e 0069 006e 0067 002c 0020 0070 006c 0075 0072 0061 006c 002c 0020 006f 006e 0065 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 0066 0065 0077 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 006d 0061 006e 0079 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 006f 0074 0068 0065 0072 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 007d",
+  "armed_codepoints": "007b 0063 006f 0075 006e 0074 002c 0020 0070 006c 0075 0072 0061 006c 002c 0020 006f 006e 0065 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0439 007d 0020 0066 0065 0077 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 0020 006d 0061 006e 0079 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 0020 006f 0074 0068 0065 0072 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 007d"
+ },
+ "receipts": {
+  "project.created": "Создан проект «payments-migration».",
+  "project.completed": "Завершён проект «payments-migration».",
+  "project.reopened": "Возобновлён проект «payments-migration».",
+  "project.added": "Добавлен проект «payments-migration».",
+  "project.updated": "Обновлён проект «payments-migration».",
+  "project.removed": "Удалён проект «payments-migration».",
+  "project.deleted": "Удалён проект «payments-migration».",
+  "project.bogus": "Обновлён проект «payments-migration».",
+  "milestone.created": "Создана веха «payments-migration».",
+  "milestone.completed": "Завершена веха «payments-migration».",
+  "milestone.reopened": "Возобновлена веха «payments-migration».",
+  "milestone.added": "Добавлена веха «payments-migration».",
+  "milestone.updated": "Обновлена веха «payments-migration».",
+  "milestone.removed": "Удалена веха «payments-migration».",
+  "milestone.deleted": "Удалена веха «payments-migration».",
+  "milestone.bogus": "Обновлена веха «payments-migration».",
+  "other.created": "Создано «payments-migration».",
+  "other.completed": "Завершено «payments-migration».",
+  "other.reopened": "Возобновлено «payments-migration».",
+  "other.added": "Добавлено «payments-migration».",
+  "other.updated": "Обновлено «payments-migration».",
+  "other.removed": "Удалено «payments-migration».",
+  "other.deleted": "Удалено «payments-migration».",
+  "other.bogus": "Обновлено «payments-migration»."
+ },
+ "composition": {
+  "parked_wakes": "Приостановлено — пробуждения возобновятся после следующего хода этой беседы",
+  "parked_monitors": "Приостановлено — мониторы возобновятся, когда снова запустится эта беседа",
+  "wakes_1_next": "1 пробуждение · далее через 4m",
+  "wakes_2_next": "2 пробуждения · далее через 4m",
+  "wakes_5_next": "5 пробуждений · далее через 4m",
+  "wakes_21_next": "21 пробуждение · далее через 4m",
+  "wakes_3_overdue": "3 пробуждения · просрочено на 2h",
+  "monitors_3_next": "3 монитора · далее через 4m",
+  "monitor_summary_empty_family": "0 активных",
+  "monitor_summary_5": "5 активных",
+  "wake_summary_0": "0 запланировано",
+  "empty_body": "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях.",
+  "truncated": "Беседы с пробуждениями: показано 2 из 5.",
+  "project_name_hint": "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.",
+  "milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
+  "linked_session_missing": "не найдена",
+  "linked_session_stopped": "не запущена",
+  "milestone_count_1of3": "1 веха из 3",
+  "milestone_count_2of5": "2 вехи из 5",
+  "sessions_5_live_1": "5 сессий · 1 активна",
+  "sessions_21_live_21": "21 сессия · 21 активна"
+ },
+ "receipts_bytes": "{kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {Добавлен проект} updated {Обновлён проект} removed {Удалён проект} deleted {Удалён проект} other {Обновлён проект}} «{subject}».} milestone {{action, select, created {Создана веха} completed {Завершена веха} reopened {Возобновлена веха} added {Добавлена веха} updated {Обновлена веха} removed {Удалена веха} deleted {Удалена веха} other {Обновлена веха}} «{subject}».} other {{action, select, created {Создано} completed {Завершено} reopened {Возобновлено} added {Добавлено} updated {Обновлено} removed {Удалено} deleted {Удалено} other {Обновлено}} «{subject}».}}",
+ "composition_en": {
+  "parked_wakes": "Parked — wakes resume after its next turn",
+  "parked_monitors": "Parked — monitors resume when its conversation runs again",
+  "project_name_hint": "1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.",
+  "monitors_armed_5": "5 armed",
+  "cadence_left_1": "every 1d · 1 left"
+ }
+}
++ echo 'verify.mjs exit=0'
+verify.mjs exit=0
++ echo
+
++ echo '===== PLURAL AND COMPOSITION NEIGHBOURS ====='
+===== PLURAL AND COMPOSITION NEIGHBOURS =====
++ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /Users/damian/.local-operator/sessions/d598a29e6e64/scratchpad/ru-delta-b/neighbours.mjs
+# plural neighbours, ru, shipped bytes 2921aea
+mobile.schedules.count.wakes {"count":0} -> 0 пробуждений
+mobile.schedules.count.monitors {"count":0} -> 0 мониторов
+mobile.schedules.show_more.wakes {"hidden":0} -> Показать ещё 0 пробуждений
+mobile.schedules.show_more.monitors {"hidden":0} -> Показать ещё 0 мониторов
+mobile.schedules.tail.failed {"count":0} -> 0 сбоев
+mobile.schedules.summary.monitors_attention {"broken":0,"total":3} -> 0 из 3 требуют внимания
+mobile.projects.sessions.count {"count":0} -> 0 сессий
+mobile.projects.milestones.count {"completed":0,"total":5} -> 0 вех из 5
+mobile.projects.sessions.live {"base":"0 сессий","live":0} -> 0 сессий · 0 активны
+mobile.schedules.count.wakes {"count":1} -> 1 пробуждение
+mobile.schedules.count.monitors {"count":1} -> 1 монитор
+mobile.schedules.show_more.wakes {"hidden":1} -> Показать ещё 1 пробуждение
+mobile.schedules.show_more.monitors {"hidden":1} -> Показать ещё 1 монитор
+mobile.schedules.tail.failed {"count":1} -> 1 сбой
+mobile.schedules.summary.monitors_attention {"broken":1,"total":3} -> 1 из 3 требует внимания
+mobile.projects.sessions.count {"count":1} -> 1 сессия
+mobile.projects.milestones.count {"completed":1,"total":5} -> 1 веха из 5
+mobile.projects.sessions.live {"base":"1 сессий","live":1} -> 1 сессий · 1 активна
+mobile.schedules.count.wakes {"count":2} -> 2 пробуждения
+mobile.schedules.count.monitors {"count":2} -> 2 монитора
+mobile.schedules.show_more.wakes {"hidden":2} -> Показать ещё 2 пробуждения
+mobile.schedules.show_more.monitors {"hidden":2} -> Показать ещё 2 монитора
+mobile.schedules.tail.failed {"count":2} -> 2 сбоя
+mobile.schedules.summary.monitors_attention {"broken":2,"total":3} -> 2 из 3 требуют внимания
+mobile.projects.sessions.count {"count":2} -> 2 сессии
+mobile.projects.milestones.count {"completed":2,"total":5} -> 2 вехи из 5
+mobile.projects.sessions.live {"base":"2 сессий","live":2} -> 2 сессий · 2 активны
+mobile.schedules.count.wakes {"count":5} -> 5 пробуждений
+mobile.schedules.count.monitors {"count":5} -> 5 мониторов
+mobile.schedules.show_more.wakes {"hidden":5} -> Показать ещё 5 пробуждений
+mobile.schedules.show_more.monitors {"hidden":5} -> Показать ещё 5 мониторов
+mobile.schedules.tail.failed {"count":5} -> 5 сбоев
+mobile.schedules.summary.monitors_attention {"broken":5,"total":3} -> 5 из 3 требуют внимания
+mobile.projects.sessions.count {"count":5} -> 5 сессий
+mobile.projects.milestones.count {"completed":5,"total":5} -> 5 вех из 5
+mobile.projects.sessions.live {"base":"5 сессий","live":5} -> 5 сессий · 5 активны
+mobile.schedules.count.wakes {"count":21} -> 21 пробуждение
+mobile.schedules.count.monitors {"count":21} -> 21 монитор
+mobile.schedules.show_more.wakes {"hidden":21} -> Показать ещё 21 пробуждение
+mobile.schedules.show_more.monitors {"hidden":21} -> Показать ещё 21 монитор
+mobile.schedules.tail.failed {"count":21} -> 21 сбой
+mobile.schedules.summary.monitors_attention {"broken":21,"total":3} -> 21 из 3 требует внимания
+mobile.projects.sessions.count {"count":21} -> 21 сессия
+mobile.projects.milestones.count {"completed":21,"total":5} -> 21 веха из 5
+mobile.projects.sessions.live {"base":"21 сессий","live":21} -> 21 сессий · 21 активна
+mobile.schedules.count.wakes {"count":1.5} -> 1.5 пробуждения
+mobile.schedules.count.monitors {"count":1.5} -> 1.5 монитора
+mobile.schedules.show_more.wakes {"hidden":1.5} -> Показать ещё 1.5 пробуждения
+mobile.schedules.show_more.monitors {"hidden":1.5} -> Показать ещё 1.5 монитора
+mobile.schedules.tail.failed {"count":1.5} -> 1.5 сбоя
+mobile.schedules.summary.monitors_attention {"broken":1.5,"total":3} -> 1.5 из 3 требуют внимания
+mobile.projects.sessions.count {"count":1.5} -> 1.5 сессии
+mobile.projects.milestones.count {"completed":1.5,"total":5} -> 1.5 вехи из 5
+mobile.projects.sessions.live {"base":"1.5 сессий","live":1.5} -> 1.5 сессий · 1.5 активны
+
+# cadence / section-header composition
+cadence.left remaining=0 -> раз в 1d · осталось 0
+cadence.left remaining=1 -> раз в 1d · осталось 1
+cadence.left remaining=2 -> раз в 1d · осталось 2
+cadence.left remaining=5 -> раз в 1d · осталось 5
+cadence.left remaining=21 -> раз в 1d · осталось 21
+monitorSectionSummary([]) -> 0 активных
+section header shape     -> Monitors · 0 активных (the label is still English in schedules.tsx, out of scope)
+wakeSectionSummary([])   -> Wakes · 0 запланировано
+wakeCadenceWord(240000, 3) -> раз в 4m · осталось 3
+wakeCadenceWord(240000, 1) -> раз в 4m · осталось 1
+wakeCadenceWord(240000, 0) -> раз в 4m · доставок больше нет
+wakeCadenceWord(240000, null) -> раз в 4m
+wakeCadenceWord(null, 2)     -> однократно
+
+# receipt kind discrimination
+created: project=Создан проект «x». | milestone=Создана веха «x».
+added: project=Добавлен проект «x». | milestone=Добавлена веха «x».
+
+# hint constraint set
+От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+  length 1-64: present
+  allowed chars: present
+  no spaces: present
+  no leading hyphen: present
+
+# parked clauses and the empty body
+parked.wakes     -> Приостановлено — пробуждения возобновятся после следующего хода этой беседы
+parked.monitors  -> Приостановлено — мониторы возобновятся, когда снова запустится эта беседа
+empty.body       -> Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях.
+gone.wakes       -> Беседа исчезла — её нет на этой машине, срабатывать нечему
+gone.monitors    -> Беседа исчезла — её нет на этой машине, проверять нечего
++ echo 'neighbours.mjs exit=0'
+neighbours.mjs exit=0
++ echo
+
++ echo '===== NEGATIVE CONTROLS (the same renderer must still see the round-1 defects) ====='
+===== NEGATIVE CONTROLS (the same renderer must still see the round-1 defects) =====
++ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /Users/damian/.local-operator/sessions/d598a29e6e64/scratchpad/ru-delta-b/control.mjs
+PASS  defect  RU-SCH-1 at remaining=1 must still read masculine  ->  раз в 1d · остался 1
+PASS  defect  RU-SCH-2 at count=0 must still read '0 активны'  ->  0 активны
+PASS  defect  RU-PRJ-2 must still carry the ', и не может' join  ->  От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов, и не может начинаться с дефиса.
+PASS  shipped RU-SCH-1 at remaining=1 reads neutral  ->  раз в 1d · осталось 1
+PASS  shipped RU-SCH-2 at count=0 reads adjectival  ->  0 активных
+PASS  shipped RU-PRJ-2 has no ', и' join  ->  От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+controls: 6/6 as expected
++ echo 'control.mjs exit=0'
+control.mjs exit=0
++ echo
+
++ echo '===== WIDTHS (CoreText, AppKit .AppleSystemUIFont at text-meta 12/500) ====='
+===== WIDTHS (CoreText, AppKit .AppleSystemUIFont at text-meta 12/500) =====
++ cd /Users/damian/.local-operator/sessions/d598a29e6e64/scratchpad/ru-delta-b
++ ./measure
++ echo 'measure exit=0'
+measure exit=0
++ python3 -
+label         width(pt)  lines@288  lines@200%  cells
+rw_new          515.6         2           5     75
+rm_new          485.1         2           5     73
+rw_old          453.9         2           4     66
+rm_old          479.8         2           5     72
+rw_rx           436.4         2           4     63
+rm_rx           485.1         2           5     73
+en_w            243.4         1           2     41
+en_m            347.8         2           3     57
+hint_new        740.9         3           6    114
+hint_old        723.2         3           6    112
+hint_rx         842.4         4           7    127
+en_hint         594.7         3           5    105
+fr_hint         698.1         3           6    125
+es_hint         625.5         3           5    109
+zh_hint         468.2         1           1     78
+cad21           129.4         1           1     22
+arm21            74.3         1           1     11
+arm0             68.2         1           1     10
++ cd /Users/damian/workspace/ru-wave
++ echo
+
++ echo '===== DESIGNED DIRECTORY-VS-SHIPPED GATE (catalogues.test.ts) ====='
+===== DESIGNED DIRECTORY-VS-SHIPPED GATE (catalogues.test.ts) =====
++ node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts
++ tail -12
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 /Users/damian/workspace/ru-wave
+
+·······································
+
+ Test Files  1 passed (1)
+      Tests  39 passed (39)
+   Start at  05:43:25
+   Duration  400ms (transform 80%, import 11%, tests 8%, worker 1%)
+
++ echo
+
++ echo '# end of transcript'
+# end of transcript
+
+# ===== CODA (executed after the body above) =====
++ git ls-tree HEAD -- src/i18n/catalogues/ru
+040000 tree 5361e08d2382004d06c4fc285f566ea6831aa9a8	src/i18n/catalogues/ru
++ git ls-tree HEAD --name-only src/i18n/catalogues/ru
++ wc -l
+       1
++ git status --porcelain src/i18n/catalogues
++ head
++ echo '# end of coda'
+# end of coda
++ git ls-tree -r HEAD --name-only src/i18n/catalogues/ru
++ wc -l
+      10
++ git ls-tree -r HEAD --name-only src/i18n/catalogues/ru
++ head -3
+src/i18n/catalogues/ru/mobile.account_routing.json
+src/i18n/catalogues/ru/mobile.computers.json
+src/i18n/catalogues/ru/mobile.home.json
++ git status --porcelain src/i18n/catalogues src/i18n/catalogue.gen.ts
++ echo '# (empty status above = no worktree edits to the catalogues or the projection)'
+# (empty status above = no worktree edits to the catalogues or the projection)
+
+===== DELTA SCOPE PROOF (invert the applied fixes -> round-1 bytes) =====
++ python3 /Users/damian/.local-operator/sessions/d598a29e6e64/scratchpad/ru-delta-b/scope.py
+mobile.schedules: reconstructed 2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508
+mobile.schedules: round-1 target 2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508
+mobile.schedules: SCOPE_EXACT
+mobile.projects: reconstructed ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b
+mobile.projects: round-1 target ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b
+mobile.projects: SCOPE_EXACT
++ echo 'scope.py exit=0'
+scope.py exit=0
+
+===== CORE TWIN + RECEIPT NAMES (executed) =====
++ git -C /Users/damian/local-operator rev-parse --short HEAD
+89f2beda693
++ grep -n '"tui.schedule.ends_left"' /Users/damian/local-operator/local_operator/i18n/catalogues/ru/tui.schedule.json
+16:  "tui.schedule.ends_left": "{count, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
++ grep -n tui.schedule.ends_left /Users/damian/local-operator/local_operator/i18n/catalogues/en/tui.schedule.json
+16:  "tui.schedule.ends_left": "{count, plural, one {# left} other {# left}}",
++ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON -e $'\nimport("/Users/damian/workspace/ru-wave/scripts/lib/load-src.ts").then(async (m) => {\n  m.registerSourceResolver();\n  const { registerHooks } = await import("node:module");\n  const { existsSync } = await import("node:fs");\n  const { pathToFileURL } = await import("node:url");\n  const REPO = "/Users/damian/workspace/ru-wave";\n  registerHooks({ resolve(s, c, n) { if (s.startsWith("@/")) { const b = REPO + "/src/" + s.slice(2); for (const x of [b+".ts", b+"/index.ts"]) if (existsSync(x)) return n(pathToFileURL(x).href, c); } return n(s, c); } });\n  const i18n = await import(REPO + "/src/i18n/index.ts"); i18n.setLocaleSource(() => "ru");\n  const p = await import(REPO + "/src/features/projects/projects-copy.ts");\n  for (const name of ["Q4 launch", "ship/v2"]) for (const a of ["created", "added"]) console.log(a, JSON.stringify(name), "->", p.writeReceipt(a, name, "milestone"), "|", p.writeReceipt(a, name, "project"));\n});\n'
+created "Q4 launch" -> Создана веха «Q4 launch». | Создан проект «Q4 launch».
+added "Q4 launch" -> Добавлена веха «Q4 launch». | Добавлен проект «Q4 launch».
+created "ship/v2" -> Создана веха «ship/v2». | Создан проект «ship/v2».
+added "ship/v2" -> Добавлена веха «ship/v2». | Добавлен проект «ship/v2».
++ echo 'receipt-names exit=0'
+receipt-names exit=0

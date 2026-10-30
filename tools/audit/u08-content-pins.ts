@@ -388,7 +388,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-10-30 for the Chinese wave: `src` carries the zh-CN
 	 * catalogues, the locale flip and the per-locale chip budget. Recomputed
 	 * with `--print` after the last catalogue edit; nothing else moved. */
-	src: "afba6cb820dd017d5ffeea0567931120b43fa6ff12a1ea71eb5ec3b4cfdf9ba4",
+	src: "4093a8329b49cd54179428bd070ee10b27894c800f375af7bbe22192b2cd274f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

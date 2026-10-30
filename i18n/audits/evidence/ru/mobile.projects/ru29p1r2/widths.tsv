@@ -1,0 +1,19 @@
+label	width_pt	lines_at_288pt	lines_at_200pct	cells	text
+rw_new	515.6	2	5	75	Приостановлено — пробуждения возобновятся после следующего хода этой беседы
+rm_new	485.1	2	5	73	Приостановлено — мониторы возобновятся, когда снова запустится эта беседа
+rw_old	453.9	2	4	66	Приостановлено — пробуждения возобновятся после её следующего хода
+rm_old	479.8	2	5	72	Приостановлено — мониторы возобновятся, когда её беседа снова запустится
+rw_rx	436.4	2	4	63	Приостановлено — пробуждения возобновятся после следующего хода
+rm_rx	485.1	2	5	73	Приостановлено — мониторы возобновятся, когда эта беседа снова запустится
+en_w	243.4	1	2	41	Parked — wakes resume after its next turn
+en_m	347.8	2	3	57	Parked — monitors resume when its conversation runs again
+hint_new	740.9	3	6	114	От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+hint_old	723.2	3	6	112	От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов, и не может начинаться с дефиса.
+hint_rx	842.4	4	7	127	От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Пробелы не допускаются; дефис не может быть первым символом.
+en_hint	594.7	3	5	105	1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.
+fr_hint	698.1	3	6	125	1 à 64 caractères : lettres, chiffres, point, tiret bas ou tiret. Aucun espace, et le nom ne peut pas commencer par un tiret.
+es_hint	625.5	3	5	109	De 1 a 64 caracteres: letras, dígitos, punto, guion bajo o guion. Sin espacios, y no puede empezar por guion.
+zh_hint	468.2	1	1	78	1-64个字符：字母、数字、点、下划线或连字符。不能包含空格，也不能以连字符开头。
+cad21	129.4	1	1	22	раз в 1d · осталось 21
+arm21	74.3	1	1	11	21 активный
+arm0	68.2	1	1	10	0 активных
