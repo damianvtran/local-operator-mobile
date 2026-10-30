@@ -1,0 +1,12 @@
+{
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": "chưa đăng vào cuộc trò chuyện",
+	"relay.transcript.tool_row.bridge.outcome_refused": "bị từ chối · {code}",
+	"relay.transcript.tool_row.bridge.outcome_failed": "thất bại · {code}",
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "chưa xác nhận đã đăng",
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "đang chờ chấp nhận",
+	"relay.transcript.tool_row.bridge.label_conversation": "Cuộc trò chuyện",
+	"relay.transcript.tool_row.bridge.label_outcome": "Kết quả",
+	"relay.transcript.tool_row.bridge.kind_conversation": "một cuộc trò chuyện",
+	"relay.transcript.tool_row.bridge.kind_dm": "một tin nhắn riêng",
+	"relay.transcript.tool_row.bridge.kind_teammate": "một đồng đội"
+}

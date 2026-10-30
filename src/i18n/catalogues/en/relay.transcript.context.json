@@ -1,0 +1,42 @@
+{
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": {
+		"role": "status",
+		"note": "Trailing amber word on a Team Bridge tool row whose message landed only in a peer's inbox, NOT in a conversation anyone reads. Must never read as success. Lower-case, no full stop; mirrors the relay key of the same name."
+	},
+	"relay.transcript.tool_row.bridge.outcome_refused": {
+		"role": "status",
+		"note": "Trailing red word when Team Bridge refused the action. {code} is the relay's machine code (e.g. not_a_member) and stays untranslated. Keep the middle dot separator."
+	},
+	"relay.transcript.tool_row.bridge.outcome_failed": {
+		"role": "status",
+		"note": "Trailing red word when the Team Bridge action failed. {code} is the relay's machine code and stays untranslated. Keep the middle dot separator."
+	},
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": {
+		"role": "status",
+		"note": "Muted trailing words: the relay could not confirm the bridge post landed. Not a failure and not a success; do not imply either."
+	},
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": {
+		"role": "status",
+		"note": "Muted trailing words: the target has not yet accepted the bridge invitation/conversation, so nothing is visible to them yet."
+	},
+	"relay.transcript.tool_row.bridge.label_conversation": {
+		"role": "meta",
+		"note": "Field label in the expanded bridge row, before the conversation's name or kind word."
+	},
+	"relay.transcript.tool_row.bridge.label_outcome": {
+		"role": "meta",
+		"note": "Field label in the expanded bridge row, before the outcome words."
+	},
+	"relay.transcript.tool_row.bridge.kind_conversation": {
+		"role": "meta",
+		"note": "Stand-in for an unnamed Team Bridge channel conversation, after the 'Conversation' label. Indefinite, lower-case."
+	},
+	"relay.transcript.tool_row.bridge.kind_dm": {
+		"role": "meta",
+		"note": "Stand-in for an unnamed direct-message conversation, after the 'Conversation' label. Indefinite, lower-case."
+	},
+	"relay.transcript.tool_row.bridge.kind_teammate": {
+		"role": "meta",
+		"note": "Stand-in for an unnamed person target (a teammate), after the 'Conversation' label. Indefinite, lower-case."
+	}
+}

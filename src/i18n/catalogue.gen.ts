@@ -173,7 +173,17 @@ export type CatalogueKey =
 	| "relay.health.live_detail"
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
-	| "relay.health.reconnecting_detail";
+	| "relay.health.reconnecting_detail"
+	| "relay.transcript.tool_row.bridge.kind_conversation"
+	| "relay.transcript.tool_row.bridge.kind_dm"
+	| "relay.transcript.tool_row.bridge.kind_teammate"
+	| "relay.transcript.tool_row.bridge.label_conversation"
+	| "relay.transcript.tool_row.bridge.label_outcome"
+	| "relay.transcript.tool_row.bridge.outcome_awaiting_acceptance"
+	| "relay.transcript.tool_row.bridge.outcome_failed"
+	| "relay.transcript.tool_row.bridge.outcome_inbox_only"
+	| "relay.transcript.tool_row.bridge.outcome_refused"
+	| "relay.transcript.tool_row.bridge.outcome_unconfirmed";
 
 /** Keys with no placeholders: `t()` takes no second argument for these. */
 export type NoParamKey =
@@ -297,7 +307,15 @@ export type NoParamKey =
 	| "relay.health.live_detail"
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
-	| "relay.health.reconnecting_detail";
+	| "relay.health.reconnecting_detail"
+	| "relay.transcript.tool_row.bridge.kind_conversation"
+	| "relay.transcript.tool_row.bridge.kind_dm"
+	| "relay.transcript.tool_row.bridge.kind_teammate"
+	| "relay.transcript.tool_row.bridge.label_conversation"
+	| "relay.transcript.tool_row.bridge.label_outcome"
+	| "relay.transcript.tool_row.bridge.outcome_awaiting_acceptance"
+	| "relay.transcript.tool_row.bridge.outcome_inbox_only"
+	| "relay.transcript.tool_row.bridge.outcome_unconfirmed";
 
 /** Keys that take one argument object, typed by `MessageParams`. */
 export type ParamKey = Exclude<CatalogueKey, NoParamKey>;
@@ -447,6 +465,16 @@ export type MessageParams = {
 	"relay.health.quiet_detail": NoParams;
 	"relay.health.reconnecting": NoParams;
 	"relay.health.reconnecting_detail": NoParams;
+	"relay.transcript.tool_row.bridge.kind_conversation": NoParams;
+	"relay.transcript.tool_row.bridge.kind_dm": NoParams;
+	"relay.transcript.tool_row.bridge.kind_teammate": NoParams;
+	"relay.transcript.tool_row.bridge.label_conversation": NoParams;
+	"relay.transcript.tool_row.bridge.label_outcome": NoParams;
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": NoParams;
+	"relay.transcript.tool_row.bridge.outcome_failed": { code: string | number };
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": NoParams;
+	"relay.transcript.tool_row.bridge.outcome_refused": { code: string | number };
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": NoParams;
 };
 
 export type ContextRole =
@@ -609,6 +637,16 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.reconnecting": "Reconnecting",
 	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+	"relay.transcript.tool_row.bridge.kind_conversation": "a conversation",
+	"relay.transcript.tool_row.bridge.kind_dm": "a DM",
+	"relay.transcript.tool_row.bridge.kind_teammate": "a teammate",
+	"relay.transcript.tool_row.bridge.label_conversation": "Conversation",
+	"relay.transcript.tool_row.bridge.label_outcome": "Outcome",
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "awaiting acceptance",
+	"relay.transcript.tool_row.bridge.outcome_failed": "failed · {code}",
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": "not posted to a conversation",
+	"relay.transcript.tool_row.bridge.outcome_refused": "refused · {code}",
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "post unconfirmed",
 };
 
 /** Translator context for every key above. */
@@ -756,6 +794,16 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+	"relay.transcript.tool_row.bridge.kind_conversation": { role: "meta", note: "Stand-in for an unnamed Team Bridge channel conversation, after the 'Conversation' label. Indefinite, lower-case." },
+	"relay.transcript.tool_row.bridge.kind_dm": { role: "meta", note: "Stand-in for an unnamed direct-message conversation, after the 'Conversation' label. Indefinite, lower-case." },
+	"relay.transcript.tool_row.bridge.kind_teammate": { role: "meta", note: "Stand-in for an unnamed person target (a teammate), after the 'Conversation' label. Indefinite, lower-case." },
+	"relay.transcript.tool_row.bridge.label_conversation": { role: "meta", note: "Field label in the expanded bridge row, before the conversation's name or kind word." },
+	"relay.transcript.tool_row.bridge.label_outcome": { role: "meta", note: "Field label in the expanded bridge row, before the outcome words." },
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": { role: "status", note: "Muted trailing words: the target has not yet accepted the bridge invitation/conversation, so nothing is visible to them yet." },
+	"relay.transcript.tool_row.bridge.outcome_failed": { role: "status", note: "Trailing red word when the Team Bridge action failed. {code} is the relay's machine code and stays untranslated. Keep the middle dot separator." },
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": { role: "status", note: "Trailing amber word on a Team Bridge tool row whose message landed only in a peer's inbox, NOT in a conversation anyone reads. Must never read as success. Lower-case, no full stop; mirrors the relay key of the same name." },
+	"relay.transcript.tool_row.bridge.outcome_refused": { role: "status", note: "Trailing red word when Team Bridge refused the action. {code} is the relay's machine code (e.g. not_a_member) and stays untranslated. Keep the middle dot separator." },
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": { role: "status", note: "Muted trailing words: the relay could not confirm the bridge post landed. Not a failure and not a success; do not imply either." },
 };
 
 /**
@@ -917,6 +965,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
 		"relay.health.reconnecting": "Reconectando",
 		"relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+		"relay.transcript.tool_row.bridge.kind_conversation": "una conversación",
+		"relay.transcript.tool_row.bridge.kind_dm": "un mensaje directo",
+		"relay.transcript.tool_row.bridge.kind_teammate": "un compañero de equipo",
+		"relay.transcript.tool_row.bridge.label_conversation": "Conversación",
+		"relay.transcript.tool_row.bridge.label_outcome": "Resultado",
+		"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "pendiente de aceptación",
+		"relay.transcript.tool_row.bridge.outcome_failed": "falló · {code}",
+		"relay.transcript.tool_row.bridge.outcome_inbox_only": "no publicado en una conversación",
+		"relay.transcript.tool_row.bridge.outcome_refused": "rechazado · {code}",
+		"relay.transcript.tool_row.bridge.outcome_unconfirmed": "publicación sin confirmar",
 	},
 	"fr": {
 		"mobile.account_routing.disconnected": "Connectez un ordinateur pour modifier l’acheminement du compte.",
@@ -1062,6 +1120,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
 		"relay.health.reconnecting": "Reconnexion",
 		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+		"relay.transcript.tool_row.bridge.kind_conversation": "une conversation",
+		"relay.transcript.tool_row.bridge.kind_dm": "un message privé",
+		"relay.transcript.tool_row.bridge.kind_teammate": "un coéquipier",
+		"relay.transcript.tool_row.bridge.label_conversation": "Conversation",
+		"relay.transcript.tool_row.bridge.label_outcome": "Résultat",
+		"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "en attente d’acceptation",
+		"relay.transcript.tool_row.bridge.outcome_failed": "échec · {code}",
+		"relay.transcript.tool_row.bridge.outcome_inbox_only": "non publié dans une conversation",
+		"relay.transcript.tool_row.bridge.outcome_refused": "refusé · {code}",
+		"relay.transcript.tool_row.bridge.outcome_unconfirmed": "publication non confirmée",
 	},
 	"hi": {
 		"mobile.account_routing.disconnected": "खाता रूटिंग बदलने के लिए कंप्यूटर से कनेक्ट करें।",
@@ -1352,6 +1420,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.",
 		"relay.health.reconnecting": "Переподключение",
 		"relay.health.reconnecting_detail": "Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.",
+		"relay.transcript.tool_row.bridge.kind_conversation": "беседа",
+		"relay.transcript.tool_row.bridge.kind_dm": "личное сообщение",
+		"relay.transcript.tool_row.bridge.kind_teammate": "участник команды",
+		"relay.transcript.tool_row.bridge.label_conversation": "Беседа",
+		"relay.transcript.tool_row.bridge.label_outcome": "Результат",
+		"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "ожидает принятия",
+		"relay.transcript.tool_row.bridge.outcome_failed": "ошибка · {code}",
+		"relay.transcript.tool_row.bridge.outcome_inbox_only": "не опубликовано в беседе",
+		"relay.transcript.tool_row.bridge.outcome_refused": "отклонено · {code}",
+		"relay.transcript.tool_row.bridge.outcome_unconfirmed": "публикация не подтверждена",
 	},
 	"vi": {
 		"mobile.account_routing.disconnected": "Kết nối máy tính để thay đổi định tuyến tài khoản.",
@@ -1497,6 +1575,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Phiên này trên máy tính của bạn đã ngừng phản hồi — có thể đang bận hoặc bị treo. Có thể tin nhắn báo gửi thất bại nhưng vẫn được chuyển đến khi phiên bắt kịp. Thử lại sẽ không gửi tin nhắn hai lần.",
 		"relay.health.reconnecting": "Đang kết nối lại",
 		"relay.health.reconnecting_detail": "Điện thoại này đã mất kết nối với máy tính của bạn và đang liên tục thử lại. Phiên có thể vẫn đang chạy ở đó; gửi tin nhắn có thể không thành công cho đến khi kết nối trở lại.",
+		"relay.transcript.tool_row.bridge.kind_conversation": "một cuộc trò chuyện",
+		"relay.transcript.tool_row.bridge.kind_dm": "một tin nhắn riêng",
+		"relay.transcript.tool_row.bridge.kind_teammate": "một đồng đội",
+		"relay.transcript.tool_row.bridge.label_conversation": "Cuộc trò chuyện",
+		"relay.transcript.tool_row.bridge.label_outcome": "Kết quả",
+		"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "đang chờ chấp nhận",
+		"relay.transcript.tool_row.bridge.outcome_failed": "thất bại · {code}",
+		"relay.transcript.tool_row.bridge.outcome_inbox_only": "chưa đăng vào cuộc trò chuyện",
+		"relay.transcript.tool_row.bridge.outcome_refused": "bị từ chối · {code}",
+		"relay.transcript.tool_row.bridge.outcome_unconfirmed": "chưa xác nhận đã đăng",
 	},
 	"zh-CN": {
 		"mobile.account_routing.disconnected": "连接电脑后才能更改账户路由。",
@@ -1642,5 +1730,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "电脑上的此会话已停止响应——可能正忙或卡住了。发送可能显示失败，但会话重新响应后仍可能送达。重试也不会重复送达。",
 		"relay.health.reconnecting": "重连中",
 		"relay.health.reconnecting_detail": "此手机与电脑的连接已断开，正在不断尝试重连。会话可能仍在电脑上运行；重新连上之前，发送消息可能会失败。",
+		"relay.transcript.tool_row.bridge.kind_conversation": "一个对话",
+		"relay.transcript.tool_row.bridge.kind_dm": "一条私信",
+		"relay.transcript.tool_row.bridge.kind_teammate": "一位队友",
+		"relay.transcript.tool_row.bridge.label_conversation": "对话",
+		"relay.transcript.tool_row.bridge.label_outcome": "结果",
+		"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "等待接受",
+		"relay.transcript.tool_row.bridge.outcome_failed": "失败 · {code}",
+		"relay.transcript.tool_row.bridge.outcome_inbox_only": "未发布到对话",
+		"relay.transcript.tool_row.bridge.outcome_refused": "已拒绝 · {code}",
+		"relay.transcript.tool_row.bridge.outcome_unconfirmed": "发布未确认",
 	},
 };

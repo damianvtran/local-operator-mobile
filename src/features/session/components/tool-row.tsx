@@ -1,8 +1,18 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
+import { MessagesSquare } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
+import {
+	bridgeBody,
+	bridgeConversationLabel,
+	bridgeHeadline,
+	bridgeOutcomeView,
+	bridgeRowOf,
+	isBridgeRow,
+} from "@/features/session/bridge-row";
+import { Markdown } from "@/features/session/components/markdown";
 import {
 	deliveryAccessibleName,
 	isPartialDelivery,
@@ -18,7 +28,9 @@ import {
 	toolElapsed,
 	toolGlyph,
 } from "@/features/session/projection";
+import { t } from "@/i18n";
 import { ROLE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -63,6 +75,15 @@ import { cx } from "@/ui/variants";
  * that landed in a busy peer's mailbox must not read as a failure, and must not
  * read as a clean success either. The mapping lives in `session/delivery.ts`;
  * this file only renders it.
+ *
+ * **The bridge row is the second arm** (`session/bridge-row.ts` owns the
+ * mapping): the Team Bridge icon stands in for the tool's name, the relay's
+ * localized summary is the headline, and `details.bridge_row.outcome` takes the
+ * same trailing-word slot the delivery word uses — so the large-text rule (own
+ * line above `LARGE_TEXT_SCALE`) is one rule for both. `inbox_only` takes the
+ * warning mark, never the tick: a message that reached no conversation is not a
+ * success. A bridge row whose `bridge_row` is missing or unreadable keeps the
+ * icon and headline and nothing else — the generic row, honestly labelled.
  */
 export type ToolRowProps = {
 	entry: TranscriptEntry;
@@ -168,25 +189,74 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const note =
 		delivery === null ? null : (SEND_DELIVERY_NOTE[delivery] ?? null);
 	const deliveryName = deliveryAccessibleName(delivery);
+	/* The bridge arm. `bridge` is `null` for every other tool and for a bridge
+	 * row with no readable payload; `isBridge` alone still swaps the icon and
+	 * the scrubbed headline in, because the summary is the relay's localized
+	 * line either way. */
+	const isBridge = isBridgeRow(entry);
+	const bridge = bridgeRowOf(entry);
+	const bridgeOutcome = bridgeOutcomeView(bridge);
+	const bridgeConversation = bridgeConversationLabel(bridge);
+	const bridgeMessage = bridgeBody(entry);
+	const headline = isBridge ? bridgeHeadline(entry) : entry.summary;
+	/* The icon is an SVG and cannot inherit a text colour (`useTokenColor`'s
+	 * own reason); `ink-muted` matches the tool name it replaces. */
+	const iconInk = useTokenColor("ink-muted");
 	/* The amber pair takes the warning mark — neither the silent success tick
 	 * nor the danger wash — and the WORD beside it carries the distinction with
 	 * colour off. `delivered` and `failed` keep the glyph their tool state
 	 * already earned. */
 	const partial = isPartialDelivery(delivery);
-	const tone = partial
-		? { glyph: "!", inkClass: "text-warning", pulsing: false }
-		: toolGlyph(entry.tool_state);
+	/* A bridge outcome overrides the state glyph the same way a partial
+	 * delivery does: `inbox_only` must not keep the tick its settled tool state
+	 * earned, and a refusal that the tool reported as `done` must still read as
+	 * one. The muted pair (unconfirmed, awaiting acceptance) keeps the state's
+	 * own glyph — they are pending facts, not problems. */
+	const tone =
+		partial || bridgeOutcome?.tone === "warning"
+			? { glyph: "!", inkClass: "text-warning", pulsing: false }
+			: bridgeOutcome?.tone === "danger"
+				? { glyph: "✗", inkClass: "text-danger", pulsing: false }
+				: toolGlyph(entry.tool_state);
+	/* ONE trailing word per row, from whichever arm owns it, so the inline /
+	 * own-line placement below is a single rule. */
+	const trailing: { text: string; inkClass: string } | null =
+		word !== null
+			? {
+					text: word,
+					inkClass: delivery === "failed" ? "text-danger" : "text-warning",
+				}
+			: bridgeOutcome !== null
+				? {
+						text: bridgeOutcome.text,
+						inkClass:
+							bridgeOutcome.tone === "danger"
+								? "text-danger"
+								: bridgeOutcome.tone === "warning"
+									? "text-warning"
+									: "text-ink-muted",
+					}
+				: null;
 	/* Above `LARGE_TEXT_SCALE` the word cannot share the row without taking the
 	 * name and the summary with it (design round 1, D1 — 265 pt of word against a
 	 * 350 pt row at 200 %), so it moves to a line of its own; the render below
 	 * carries the numbers. */
-	const deliveryOnOwnLine = word !== null && effectiveScale > LARGE_TEXT_SCALE;
+	const deliveryOnOwnLine =
+		trailing !== null && effectiveScale > LARGE_TEXT_SCALE;
 	const counts = diffCounts(entry);
 	const elapsed = toolElapsed(entry);
 	/* The delivery note is a reason to allow the expansion on its own: a row
 	 * whose hint the reader can only reach by expanding must be expandable. */
-	const details = hasToolDetails(entry) || note !== null;
+	const details =
+		hasToolDetails(entry) ||
+		note !== null ||
+		bridgeConversation !== null ||
+		bridgeOutcome !== null;
 	const blocks = toolDetailBlocks(entry);
+	/* The bridge body IS the args' substance; printing the args block too would
+	 * say it twice (the diff-first tools' rule, `isDiffFirstTool`). */
+	const showArgs =
+		blocks.showArgs && blocks.args.length > 0 && bridgeMessage === null;
 	/* A queued call keeps the raised background of a live row — it is announced and
 	 * may still execute — but it does NOT pulse: the pulse is the "work is
 	 * happening" signal, and nothing is happening while it waits behind a sibling. */
@@ -206,7 +276,14 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 		>
 			<Pressable
 				accessibilityRole={details ? ROLE.button : ROLE.text}
-				accessibilityLabel={`${entry.tool_name} ${entry.tool_state}${entry.summary ? `, ${entry.summary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`}
+				accessibilityLabel={
+					isBridge
+						? /* The human headline leads, not the tool's machine name: a
+							 * screen reader should hear what was said where, then the
+							 * outcome when there is one. */
+							`${headline}${bridgeOutcome ? `, ${bridgeOutcome.text}` : ""}`
+						: `${entry.tool_name} ${entry.tool_state}${entry.summary ? `, ${entry.summary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`
+				}
 				accessibilityState={details ? { expanded: open } : undefined}
 				disabled={!details}
 				onPress={() => details && setOverride(!open)}
@@ -229,17 +306,29 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    thing lost rather than the first: a truncated name is visibly
 					    truncated, while a clipped duration is a shorter string that is
 					    still a valid duration and so looks correct. */}
+					{isBridge ? (
+						/* The Team Bridge nav item's icon in place of the word `bridge`:
+						 *  fixed size (it does not scale with type, like the glyph), so
+						 *  the headline keeps every point the name used to take. */
+						<View className="shrink-0" aria-hidden>
+							<MessagesSquare color={iconInk} size={14} />
+						</View>
+					) : (
+						<Text
+							className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+							numberOfLines={1}
+						>
+							{entry.tool_name}
+						</Text>
+					)}
 					<Text
-						className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+						className={cx(
+							"min-w-0 flex-1 text-body-sm",
+							isBridge ? "text-ink-muted" : "text-ink-dim",
+						)}
 						numberOfLines={1}
 					>
-						{entry.tool_name}
-					</Text>
-					<Text
-						className="min-w-0 flex-1 text-body-sm text-ink-dim"
-						numberOfLines={1}
-					>
-						{entry.summary}
+						{headline}
 					</Text>
 					{/* The delivery word: the state's own name for what is known (see
 					    `session/delivery.ts`), never a bare verdict. Amber for the two
@@ -247,15 +336,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    Rendered inline below `LARGE_TEXT_SCALE`; at and above it the
 					    word takes its own line below the row — see the render and its
 					    measurements there. */}
-					{word !== null && !deliveryOnOwnLine ? (
+					{trailing !== null && !deliveryOnOwnLine ? (
 						<Text
-							className={cx(
-								"shrink-0 text-body-sm",
-								delivery === "failed" ? "text-danger" : "text-warning",
-							)}
+							className={cx("shrink-0 text-body-sm", trailing.inkClass)}
 							numberOfLines={1}
 						>
-							{word}
+							{trailing.text}
 						</Text>
 					) : null}
 					{/* Suppressed entirely when both counts are zero — `+0 −0` is noise
@@ -292,15 +378,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				 *  numbers) and the word stays whole. It moves by being a sibling of
 				 *  the line row rather than by wrapping, so the rule is one rule on
 				 *  phone and tablet alike; below the threshold nothing changes. */}
-				{deliveryOnOwnLine ? (
+				{deliveryOnOwnLine && trailing !== null ? (
 					<Text
-						className={cx(
-							"text-body-sm",
-							delivery === "failed" ? "text-danger" : "text-warning",
-						)}
+						className={cx("text-body-sm", trailing.inkClass)}
 						numberOfLines={1}
 					>
-						{word}
+						{trailing.text}
 					</Text>
 				) : null}
 			</Pressable>
@@ -312,8 +395,10 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					 *  resend decision leans on the target being readable somewhere. Only
 					 *  rows carrying a delivery word render it: a `delivered` send is the
 					 *  row it always was. */}
-					{word !== null && entry.summary ? (
-						<Text className="text-body-sm text-ink-dim">{entry.summary}</Text>
+					{(word !== null && entry.summary) || isBridge ? (
+						/* A bridge headline is single-line on the row, so the expansion
+						 *  restates it whole and wrapping — the same recoverability rule. */
+						<Text className="text-body-sm text-ink-dim">{headline}</Text>
 					) : null}
 					{entry.intent ? (
 						<Text className="text-body-sm text-ink-muted">{entry.intent}</Text>
@@ -335,7 +420,30 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							{note}
 						</Text>
 					) : null}
-					{blocks.showArgs && blocks.args.length > 0 ? (
+					{/* The bridge facts: where it went and how it landed, as labelled
+					    lines, then the message itself through the transcript's own
+					    markdown renderer — it is prose a person wrote for people, and it
+					    wraps instead of scrolling a mono well sideways. */}
+					{bridgeConversation !== null ? (
+						<Text className="text-body-sm text-ink-muted">
+							<Text className="text-ink-dim">
+								{t("relay.transcript.tool_row.bridge.label_conversation")}
+							</Text>
+							{"  "}
+							{bridgeConversation}
+						</Text>
+					) : null}
+					{bridgeOutcome !== null && trailing !== null ? (
+						<Text className="text-body-sm">
+							<Text className="text-ink-dim">
+								{t("relay.transcript.tool_row.bridge.label_outcome")}
+							</Text>
+							{"  "}
+							<Text className={trailing.inkClass}>{bridgeOutcome.text}</Text>
+						</Text>
+					) : null}
+					{bridgeMessage !== null ? <Markdown text={bridgeMessage} /> : null}
+					{showArgs ? (
 						<TextBlock lines={blocks.args} tone="text-ink-muted" />
 					) : null}
 					{blocks.diff.length > 0 ? <DiffBlock lines={blocks.diff} /> : null}

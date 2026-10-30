@@ -1,0 +1,12 @@
+{
+	"relay.transcript.tool_row.bridge.outcome_inbox_only": "not posted to a conversation",
+	"relay.transcript.tool_row.bridge.outcome_refused": "refused · {code}",
+	"relay.transcript.tool_row.bridge.outcome_failed": "failed · {code}",
+	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "post unconfirmed",
+	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "awaiting acceptance",
+	"relay.transcript.tool_row.bridge.label_conversation": "Conversation",
+	"relay.transcript.tool_row.bridge.label_outcome": "Outcome",
+	"relay.transcript.tool_row.bridge.kind_conversation": "a conversation",
+	"relay.transcript.tool_row.bridge.kind_dm": "a DM",
+	"relay.transcript.tool_row.bridge.kind_teammate": "a teammate"
+}
