@@ -409,8 +409,12 @@ export const Composer = ({
 	const { effectiveScale } = useTextScale();
 	/* The dictation clock below is aligned to the row's TRAILING edge. React Native's
 	 *  `textAlign` has no `start`/`end` (the type only accepts auto/left/right/
-	 *  center/justify, and Android logs "Invalid textAlign" for `end`), so the
-	 *  direction is resolved here instead of in the style. */
+	 *  center/justify, and Android logs "Invalid textAlign" for `end`), so it is
+	 *  resolved per platform instead. Web `right` is PHYSICAL, so an RTL document
+	 *  needs `left`. Native `right` already means the trailing edge: React Native
+	 *  swaps left/right itself under an RTL layout direction (iOS
+	 *  `RCTAttributedTextUtils.mm`; Android `TextAttributeProps.getTextAlignment`),
+	 *  so flipping it here too would put the clock back on the leading edge. */
 	const rtl = useIsRTL();
 	const dictationLargeText = effectiveScale > LARGE_TEXT_SCALE;
 
@@ -539,7 +543,7 @@ export const Composer = ({
 						numberOfLines={1}
 						style={{
 							minWidth: Math.round(34 * effectiveScale),
-							textAlign: rtl ? "left" : "right",
+							textAlign: Platform.OS === "web" && rtl ? "left" : "right",
 						}}
 						testID={SURFACE.composerDictationTimer}
 					>

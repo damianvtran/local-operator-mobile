@@ -7,8 +7,7 @@ import "../src/ui/theme.css";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { type ReactNode, useMemo } from "react";
-import { View } from "react-native";
+import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
 import {
@@ -21,7 +20,7 @@ import { activeDirection } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
-import { DirectionProvider } from "@/ui/direction";
+import { DirectionProvider, DirectionView } from "@/ui/direction";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 
 /**
@@ -94,16 +93,16 @@ export default function RootLayout() {
  * export surface belongs to the router.
  */
 const DirectionRoot = ({ children }: { children: ReactNode }) => {
-	const language = useLocaleFrame();
-	/* `language` is a TRIGGER: `activeDirection()` reads the same store at call
-	 * time, so biome sees no reference to it in the callback. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: `activeDirection()` reads the locale live, so the memo must re-run on a frame (see above)
-	const direction = useMemo(() => activeDirection(), [language]);
+	/* Called for the SUBSCRIPTION only: a language frame re-renders this component,
+	 * and `activeDirection()` below then reads the same store live. A lookup that
+	 * cheap needs no memo (and a memo would need a lint waiver for the trigger). */
+	useLocaleFrame();
+	const direction = activeDirection();
 	return (
 		<DirectionProvider direction={direction}>
-			<View className="flex-1 bg-canvas" style={{ direction }}>
-				{children}
-			</View>
+			{/* `DirectionView` puts the direction on both channels (style + `dir` prop);
+			 *  why both is documented there. */}
+			<DirectionView className="flex-1 bg-canvas">{children}</DirectionView>
 		</DirectionProvider>
 	);
 };

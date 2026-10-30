@@ -40,7 +40,7 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
-import { LTR_WRITING } from "@/ui/direction";
+import { LTR_WRITING, TEXT_END_CLASS } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import type { ThemePreference } from "@/ui/tokens.gen";
@@ -677,7 +677,7 @@ const DiagnosticRow = ({ label, value }: { label: string; value: string }) => (
 	<View className="flex-row items-start justify-between gap-4">
 		<Text className="text-body-sm text-ink-muted">{label}</Text>
 		<Text
-			className="flex-1 text-end text-mono-sm text-ink-dim"
+			className={`flex-1 ${TEXT_END_CLASS} text-mono-sm text-ink-dim`}
 			accessibilityRole={ROLE.text}
 			numberOfLines={2}
 			/* `minWidth: 0` lets this column shrink below its content's width — the
@@ -686,7 +686,7 @@ const DiagnosticRow = ({ label, value }: { label: string; value: string }) => (
 			/* MIXED CONTENT: a diagnostic value is a path, a hostname, a model id or a
 			 *  version — left-to-right by its own grammar even inside an Urdu screen.
 			 *  `LTR_WRITING` states that direction without moving the column: the cell
-			 *  keeps its trailing alignment (`text-end` above), which flips with the
+			 *  keeps its trailing alignment (`TEXT_END_CLASS` above), which flips with the
 			 *  layout while the value inside it stays readable. */
 			style={{ minWidth: 0, ...LTR_WRITING }}
 		>

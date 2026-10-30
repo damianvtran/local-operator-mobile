@@ -15,6 +15,7 @@ import {
 	parseInline,
 	parseMarkdown,
 	TABLE_CELL_PADDING_X_PT,
+	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
@@ -117,14 +118,10 @@ const TableFade = ({
 	colour: string;
 }) => {
 	const rtl = useIsRTL();
-	/* The cue is a statement in READING order, but a fade is PAINTED in physical
-	 *  coordinates: the gradient below runs `x1 0% -> x2 100%`, i.e. left to
-	 *  right, whatever the layout direction is. So the logical edge is resolved
-	 *  once here and both the position and the opaque stop follow it — a fade that
-	 *  moved only its `left`/`right` would leave its solid end on the wrong side
-	 *  and read as a second edge instead of a continuation. In `ltr` this is the
-	 *  identity: `end` is the right edge, exactly what this drew before. */
-	const atEndEdge = rtl ? edge === "start" : edge === "end";
+	/* The gradient below runs `x1 0% -> x2 100%` (physical, left to right), so the
+	 *  reading edge is resolved to a physical side once, in a pure function that a
+	 *  test pins for both directions. */
+	const { side, nearOpacity, farOpacity } = tableFadeGeometry(edge, rtl);
 	const id = useRef("");
 	if (id.current === "") {
 		fadeSeq += 1;
@@ -142,8 +139,8 @@ const TableFade = ({
 				top: 0,
 				bottom: 0,
 				width: TABLE_FADE_PT,
-				right: atEndEdge ? 0 : undefined,
-				left: atEndEdge ? undefined : 0,
+				right: side === "right" ? 0 : undefined,
+				left: side === "left" ? 0 : undefined,
 			}}
 		>
 			<Svg width="100%" height="100%">
@@ -157,13 +154,13 @@ const TableFade = ({
 								key="near"
 								offset="0"
 								stopColor={colour}
-								stopOpacity={atEndEdge ? 0 : 1}
+								stopOpacity={nearOpacity}
 							/>,
 							<Stop
 								key="far"
 								offset="1"
 								stopColor={colour}
-								stopOpacity={atEndEdge ? 1 : 0}
+								stopOpacity={farOpacity}
 							/>,
 						]}
 					</LinearGradient>

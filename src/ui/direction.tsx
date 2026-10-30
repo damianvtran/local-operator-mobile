@@ -30,8 +30,14 @@
  * subscription here would be a second source of truth for the same fact.
  */
 
-import { createContext, type ReactNode, useContext, useEffect } from "react";
-import { Platform } from "react-native";
+import {
+	type ComponentProps,
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+} from "react";
+import { Platform, View } from "react-native";
 
 import { activeLocale, type TextDirection } from "@/i18n";
 
@@ -70,8 +76,22 @@ export const DirectionProvider = ({
 	useEffect(() => {
 		if (Platform.OS !== "web" || typeof document === "undefined") return;
 		const root = document.documentElement;
+		const previous = {
+			dir: root.getAttribute("dir"),
+			lang: root.getAttribute("lang"),
+		};
 		root.setAttribute("dir", direction);
 		root.setAttribute("lang", activeLocale());
+		/* Put back what the document had: this effect re-runs on every direction
+		 * change and a test or story mounts the provider more than once, so an
+		 * unmount that left `dir="rtl"` behind would lay the NEXT tree out
+		 * right-to-left. */
+		return () => {
+			for (const [name, value] of Object.entries(previous)) {
+				if (value === null) root.removeAttribute(name);
+				else root.setAttribute(name, value);
+			}
+		};
 	}, [direction]);
 
 	return (
@@ -79,6 +99,31 @@ export const DirectionProvider = ({
 			{children}
 		</DirectionContext.Provider>
 	);
+};
+
+/**
+ * A `View` that carries the active direction on BOTH channels. Used for the app
+ * root and for each modal root (`Sheet`, `Dialog`), so there is one definition of
+ * "this subtree is laid out in the active direction".
+ *
+ * WHY TWO CHANNELS. The `direction` style is what Yoga reads on native and what
+ * CSS-class utilities (`ps-*`, `border-s`, `ms-auto`) resolve against on web. It
+ * does NOT reach react-native-web's own style objects: RNW resolves `start`/`end`/
+ * `marginStart`/`paddingEnd`... in an INLINE `style` from its locale context,
+ * which only a `dir`/`lang` PROP on a View sets (neither a `direction` style nor
+ * `<html dir>` does). So `style={{ end: 0 }}` stayed on the physical right in an
+ * RTL session until the prop was added. `dir` is inert on native.
+ */
+export const DirectionView = ({
+	style,
+	...rest
+}: ComponentProps<typeof View>) => {
+	const direction = useDirection();
+	/* `dir` is not in React Native's `ViewProps` typings (it is a react-native-web
+	 * prop, and a no-op prop on native), so it is attached through a typed spread
+	 * rather than a cast on the element. */
+	const web: object = { dir: direction };
+	return <View {...rest} {...web} style={[{ direction }, style]} />;
 };
 
 /**
@@ -92,17 +137,50 @@ export const DirectionProvider = ({
  * preserve), and these two constants are the whole mechanism:
  *
  *   - `LTR_TEXT` states the direction AND the alignment, for a block that owns
- *     its whole line (a command, a code listing). `textAlign: "left"` is written
- *     physically on purpose: React Native's `textAlign` has no `start`/`end`, and
- *     `writingDirection: "ltr"` is what makes "left" mean left on every platform
- *     (Android derives a paragraph's RTL-ness from that attribute, so the pair is
- *     self-consistent rather than fighting itself).
+ *     its whole line (a command, a code listing). The alignment is per platform
+ *     because "left" does not mean the same thing on both:
+ *       web    `left` is physical, and inside an RTL document that is the edge a
+ *              left-to-right block belongs on.
+ *       native React Native SWAPS `left`/`right` itself whenever the paragraph's
+ *              layout direction is RTL (iOS `RCTAttributedTextUtils.mm`, the
+ *              `layoutDirection == RightToLeft` branch; Android
+ *              `TextAttributeProps.getTextAlignment`), so `left` under the Urdu root
+ *              lands on the physical RIGHT. `auto` is Natural alignment, which
+ *              follows the paragraph's `writingDirection: "ltr"` to the left edge.
  *   - `LTR_WRITING` states only the direction, for a value that must still sit
  *     against the sentence's trailing edge (a diagnostic value column).
  */
 export const LTR_TEXT = {
 	writingDirection: "ltr",
-	textAlign: "left",
+	textAlign: Platform.OS === "web" ? "left" : "auto",
 } as const;
 
 export const LTR_WRITING = { writingDirection: "ltr" } as const;
+
+/**
+ * Trailing-edge text alignment, as a class: ONE definition for every column that
+ * has to sit against the end of its line (a clock, a percentage, a value column).
+ *
+ * WHY TWO UTILITIES. The platforms disagree about what `textAlign: "right"` means
+ * under a right-to-left layout, so no single class is right on both:
+ *
+ *   - **web**: `text-align: end` follows the element's computed `direction`, which
+ *     is exactly the behaviour wanted, and `right` would be physical (wrong in RTL).
+ *   - **native**: React Native has no `end`. Its text layer maps only
+ *     `auto|start -> Natural`, `left`, `center`, `right`, `justify`, and logs
+ *     "Unsupported TextAlignment value" for anything else, falling back to
+ *     Natural, i.e. the LEADING edge (`ReactCommon/react/renderer/attributedstring/
+ *     conversions.h`, `fromRawValue(... TextAlignment&)`). So `text-end` silently
+ *     left-aligns a column in ENGLISH. `right`, however, is already the trailing
+ *     edge once the layout is RTL, because RN swaps `left`/`right` itself when the
+ *     paragraph's layout direction is RTL (iOS `RCTAttributedTextUtils.mm`
+ *     `textAttributes.layoutDirection == RightToLeft` branch; Android
+ *     `TextAttributeProps.getTextAlignment` and `TextLayoutManager.getTextAlignment`).
+ *     `text-right` is therefore correct on native in both directions.
+ *
+ * Uniwind's `web:` / `native:` variants pick the utility per platform at compile
+ * time, so no `Platform.OS` branch is needed. Both utilities appear as LITERALS in
+ * this file on purpose: Tailwind generates a class only for a token it can read in
+ * source, and a class assembled at runtime would compile to nothing.
+ */
+export const TEXT_END_CLASS = "web:text-end native:text-right";

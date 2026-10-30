@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 
 import { elapsedLabel } from "@/lib/format";
 import { useReducedMotion } from "@/ui/components";
+import { TEXT_END_CLASS } from "@/ui/direction";
 
 /**
  * The working line: the ONE in-progress indicator on the screen
@@ -112,7 +113,9 @@ export const WorkingLine = ({
 			    changing number cannot re-clip the label beside it — an unreserved clock
 			    makes the label jump a few characters at each form change (`59m 59s` →
 			    `1h`), which reads as the screen twitching. */}
-			<Text className="w-[6ch] shrink-0 text-end font-mono text-mono-sm text-ink-dim tabular-nums">
+			<Text
+				className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
+			>
 				{hasClock ? elapsedLabel(elapsed) : ""}
 			</Text>
 		</View>

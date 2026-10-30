@@ -25,7 +25,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
-import { useDirection } from "@/ui/direction";
+import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
@@ -269,8 +269,6 @@ export const Sheet = ({
 	 *  ledger`; PR #122 QA round 6, Q9). Keyed on what the Modal is given. */
 	const shown = visible && !covered;
 	const dismissed = useModalDismissal(shown, Platform.OS === "web");
-	/* Read here, applied on the modal's own root below: see the comment there. */
-	const direction = useDirection();
 
 	/**
 	 * Keep the pointer-only scrim from taking focus from the sheet's title.
@@ -363,9 +361,8 @@ export const Sheet = ({
 					{/* Same rule as `Dialog`: the modal root is a separate root, so the
 					 *  direction is re-applied here or a sheet opened in an Urdu session keeps
 					 *  its leading/trailing chrome on the English edges. */}
-					<View
+					<DirectionView
 						className="flex-1 justify-end"
-						style={{ direction }}
 						onLayout={(event) =>
 							setColumnHeight(event.nativeEvent.layout.height)
 						}
@@ -586,7 +583,7 @@ export const Sheet = ({
 								</View>
 							) : null}
 						</Animated.View>
-					</View>
+					</DirectionView>
 				</ScopedVariables>
 			</Modal>
 		</ModalScopeContext.Provider>
