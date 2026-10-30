@@ -1,0 +1,426 @@
+# Audit bundle: zh-CN / mobile.computers / zh29b4
+# This transcript is the group-wide executed run; report.md scopes the namespace.
+===== zh-CN group B independent audit — executed transcript =====
+date -u: 2026-10-30T06:37:35Z
+pwd: /Users/damian/workspace/zh-wave
+
+$ git rev-parse HEAD
+a57fb8cbe16101d828b68edd422b56317523ac7d
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/zh-CN/
+?? src/i18n/catalogues/zh-CN/
+
+$ git diff --stat
+ src/i18n/catalogue.gen.ts | 145 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 145 insertions(+)
+
+$ git ls-tree HEAD -- src/i18n/catalogues/zh-CN
+[empty output = the zh-CN directory is untracked at this revision]
+
+$ test ! -e i18n/ledger.json && echo ABSENT
+i18n/ledger.json ABSENT
+$ test ! -e i18n/audits/evidence/README.md && echo ABSENT
+i18n/audits/evidence/README.md ABSENT
+
+===== COMMAND 1: repo catalogue validator =====
+$ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+(node:52203) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/zh-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/zh-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[exit=0]
+
+===== COMMAND 2: input and renderer hashes =====
+$ shasum -a 256 <en, context, zh-CN, renderer, theme>
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+12e5fd823fcd482138010dae757e2dcc901fa87e993a22395d91e1c63a782eb0  src/i18n/catalogues/zh-CN/mobile.schedules.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+7828e1156d9e6828a581af3735b15833b9c1373a987220c8f64fcb378b0eb309  src/i18n/catalogues/zh-CN/mobile.projects.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+84e5360c407face2b0f635b57f472e6586481cd389bf66d76774d758574e673f  src/i18n/catalogues/zh-CN/mobile.notifications.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+35e1126ce5f9b18e6adaf509c077b87684fed043398169c06a2b88ee74deeb1a  src/i18n/catalogues/zh-CN/mobile.computers.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4  src/i18n/runtime.ts
+1bea0c094b0f7c27cbe8668ea2df75b9f3302ab3d80253080452fe75871dde43  src/i18n/catalogue.gen.ts
+adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23  src/ui/theme.css
+
+===== COMMAND 3: app parser/render evidence (all 77 keys) =====
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/09e9d1711068/scratchpad/zh_render_final.ts
+CLDR zh-CN plural categories: ["other"]
+KEYS en=77 zh=77 context=77
+MISSING=[]
+EXTRA=[]
+CONTEXT_MISSING=[]
+MECH mobile.schedules.cadence.every: PASS; args=duration:text; selects=0; plural=[]; chars_en=16; chars_zh=11; cells_zh=12
+MECH mobile.schedules.cadence.left: PASS; args=cadence:text,remaining:text; selects=0; plural=[]; chars_en=28; chars_zh=26; cells_zh=29
+MECH mobile.schedules.cadence.once: PASS; args=none; selects=0; plural=[]; chars_en=4; chars_zh=2; cells_zh=4
+MECH mobile.schedules.cadence.spent: PASS; args=cadence:text; selects=0; plural=[]; chars_en=30; chars_zh=18; cells_zh=24
+MECH mobile.schedules.count.monitors: PASS; args=count:plural; selects=0; plural=[["other"]]; chars_en=51; chars_zh=30; cells_zh=33
+MECH mobile.schedules.count.wakes: PASS; args=count:plural; selects=0; plural=[["other"]]; chars_en=45; chars_zh=30; cells_zh=33
+MECH mobile.schedules.due.ahead: PASS; args=label:text; selects=0; plural=[]; chars_en=10; chars_zh=8; cells_zh=9
+MECH mobile.schedules.due.overdue: PASS; args=label:text; selects=0; plural=[]; chars_en=15; chars_zh=10; cells_zh=13
+MECH mobile.schedules.empty.body: PASS; args=none; selects=0; plural=[]; chars_en=181; chars_zh=59; cells_zh=118
+MECH mobile.schedules.empty.title: PASS; args=none; selects=0; plural=[]; chars_en=16; chars_zh=8; cells_zh=16
+MECH mobile.schedules.empty_line.monitors: PASS; args=none; selects=0; plural=[]; chars_en=18; chars_zh=8; cells_zh=16
+MECH mobile.schedules.empty_line.wakes: PASS; args=none; selects=0; plural=[]; chars_en=19; chars_zh=8; cells_zh=16
+MECH mobile.schedules.gone.monitors: PASS; args=none; selects=0; plural=[]; chars_en=71; chars_zh=22; cells_zh=42
+MECH mobile.schedules.gone.wakes: PASS; args=none; selects=0; plural=[]; chars_en=70; chars_zh=22; cells_zh=42
+MECH mobile.schedules.head.next: PASS; args=head:text,label:text; selects=0; plural=[]; chars_en=21; chars_zh=18; cells_zh=20
+MECH mobile.schedules.head.overdue: PASS; args=head:text,label:text; selects=0; plural=[]; chars_en=16; chars_zh=16; cells_zh=16
+MECH mobile.schedules.parked.monitors: PASS; args=none; selects=0; plural=[]; chars_en=57; chars_zh=18; cells_zh=34
+MECH mobile.schedules.parked.wakes: PASS; args=none; selects=0; plural=[]; chars_en=41; chars_zh=18; cells_zh=34
+MECH mobile.schedules.read_error.monitors: PASS; args=none; selects=0; plural=[]; chars_en=47; chars_zh=12; cells_zh=24
+MECH mobile.schedules.read_error.wakes: PASS; args=none; selects=0; plural=[]; chars_en=44; chars_zh=12; cells_zh=24
+MECH mobile.schedules.read_unreachable: PASS; args=none; selects=0; plural=[]; chars_en=51; chars_zh=15; cells_zh=30
+MECH mobile.schedules.show_less.monitors: PASS; args=none; selects=0; plural=[]; chars_en=19; chars_zh=6; cells_zh=12
+MECH mobile.schedules.show_less.wakes: PASS; args=none; selects=0; plural=[]; chars_en=16; chars_zh=6; cells_zh=12
+MECH mobile.schedules.show_more.monitors: PASS; args=hidden:plural; selects=0; plural=[["other"]]; chars_en=72; chars_zh=33; cells_zh=39
+MECH mobile.schedules.show_more.wakes: PASS; args=hidden:plural; selects=0; plural=[["other"]]; chars_en=66; chars_zh=33; cells_zh=39
+MECH mobile.schedules.state.disabled: PASS; args=none; selects=0; plural=[]; chars_en=8; chars_zh=3; cells_zh=6
+MECH mobile.schedules.state.dormant: PASS; args=none; selects=0; plural=[]; chars_en=7; chars_zh=3; cells_zh=6
+MECH mobile.schedules.state.expired: PASS; args=none; selects=0; plural=[]; chars_en=7; chars_zh=3; cells_zh=6
+MECH mobile.schedules.state.stale: PASS; args=none; selects=0; plural=[]; chars_en=5; chars_zh=3; cells_zh=6
+MECH mobile.schedules.state.waiting: PASS; args=none; selects=0; plural=[]; chars_en=7; chars_zh=3; cells_zh=6
+MECH mobile.schedules.summary.monitors_armed: PASS; args=count:text; selects=0; plural=[]; chars_en=13; chars_zh=11; cells_zh=15
+MECH mobile.schedules.summary.monitors_attention: PASS; args=broken:text,total:text; selects=0; plural=[]; chars_en=34; chars_zh=21; cells_zh=26
+MECH mobile.schedules.summary.wakes: PASS; args=count:text; selects=0; plural=[]; chars_en=17; chars_zh=11; cells_zh=15
+MECH mobile.schedules.supervisor.not_running: PASS; args=none; selects=0; plural=[]; chars_en=83; chars_zh=25; cells_zh=50
+MECH mobile.schedules.supervisor.unsupported: PASS; args=none; selects=0; plural=[]; chars_en=108; chars_zh=28; cells_zh=56
+MECH mobile.schedules.supervisor.unverifiable: PASS; args=none; selects=0; plural=[]; chars_en=90; chars_zh=24; cells_zh=48
+MECH mobile.schedules.tail.failed: PASS; args=count:text; selects=0; plural=[]; chars_en=14; chars_zh=10; cells_zh=13
+MECH mobile.schedules.truncated: PASS; args=shown:text,total:text,family:select; selects=1; plural=[]; chars_en=95; chars_zh=63; cells_zh=76
+MECH mobile.projects.delete_body: PASS; args=name:text; selects=0; plural=[]; chars_en=104; chars_zh=35; cells_zh=62
+MECH mobile.projects.draft_kept_note: PASS; args=none; selects=0; plural=[]; chars_en=67; chars_zh=23; cells_zh=46
+MECH mobile.projects.milestone_slash_note: PASS; args=none; selects=0; plural=[]; chars_en=83; chars_zh=25; cells_zh=50
+MECH mobile.projects.milestones.count: PASS; args=completed:text,total:text; selects=0; plural=[]; chars_en=33; chars_zh=23; cells_zh=27
+MECH mobile.projects.milestones.none: PASS; args=none; selects=0; plural=[]; chars_en=13; chars_zh=4; cells_zh=8
+MECH mobile.projects.project_name_hint: PASS; args=none; selects=0; plural=[]; chars_en=105; chars_zh=41; cells_zh=78
+MECH mobile.projects.remove_milestone_body: PASS; args=name:text; selects=0; plural=[]; chars_en=123; chars_zh=40; cells_zh=72
+MECH mobile.projects.session_state.filed_by: PASS; args=none; selects=0; plural=[]; chars_en=8; chars_zh=5; cells_zh=10
+MECH mobile.projects.session_state.missing: PASS; args=none; selects=0; plural=[]; chars_en=7; chars_zh=2; cells_zh=4
+MECH mobile.projects.session_state.not_running: PASS; args=none; selects=0; plural=[]; chars_en=11; chars_zh=3; cells_zh=6
+MECH mobile.projects.sessions.count: PASS; args=count:plural; selects=0; plural=[["other"]]; chars_en=51; chars_zh=30; cells_zh=33
+MECH mobile.projects.sessions.live: PASS; args=base:text,live:text; selects=0; plural=[]; chars_en=20; chars_zh=19; cells_zh=23
+MECH mobile.projects.stale_badge: PASS; args=none; selects=0; plural=[]; chars_en=14; chars_zh=5; cells_zh=10
+MECH mobile.projects.write_receipt: PASS; args=action:select,subject:text,kind:select; selects=4; plural=[]; chars_en=574; chars_zh=479; cells_zh=565
+MECH mobile.projects.write_unknown_note: PASS; args=none; selects=0; plural=[]; chars_en=112; chars_zh=29; cells_zh=58
+MECH mobile.notifications.answer: PASS; args=none; selects=0; plural=[]; chars_en=6; chars_zh=2; cells_zh=4
+MECH mobile.notifications.back: PASS; args=none; selects=0; plural=[]; chars_en=4; chars_zh=2; cells_zh=4
+MECH mobile.notifications.detail.answer_in_conversation: PASS; args=none; selects=0; plural=[]; chars_en=22; chars_zh=6; cells_zh=12
+MECH mobile.notifications.detail.conversation_asks: PASS; args=none; selects=0; plural=[]; chars_en=24; chars_zh=6; cells_zh=12
+MECH mobile.notifications.detail.earlier_updates: PASS; args=none; selects=0; plural=[]; chars_en=15; chars_zh=5; cells_zh=10
+MECH mobile.notifications.detail.from: PASS; args=none; selects=0; plural=[]; chars_en=4; chars_zh=2; cells_zh=4
+MECH mobile.notifications.detail.no_asks: PASS; args=none; selects=0; plural=[]; chars_en=29; chars_zh=9; cells_zh=18
+MECH mobile.notifications.detail.nothing_to_dismiss: PASS; args=none; selects=0; plural=[]; chars_en=45; chars_zh=12; cells_zh=24
+MECH mobile.notifications.detail.projects: PASS; args=none; selects=0; plural=[]; chars_en=8; chars_zh=2; cells_zh=4
+MECH mobile.notifications.dismiss: PASS; args=none; selects=0; plural=[]; chars_en=7; chars_zh=2; cells_zh=4
+MECH mobile.notifications.filter_label: PASS; args=none; selects=0; plural=[]; chars_en=4; chars_zh=2; cells_zh=4
+MECH mobile.notifications.load_failed: PASS; args=none; selects=0; plural=[]; chars_en=27; chars_zh=6; cells_zh=12
+MECH mobile.notifications.priority_high: PASS; args=none; selects=0; plural=[]; chars_en=4; chars_zh=1; cells_zh=2
+MECH mobile.notifications.title: PASS; args=none; selects=0; plural=[]; chars_en=13; chars_zh=2; cells_zh=4
+MECH mobile.computers.add: PASS; args=none; selects=0; plural=[]; chars_en=14; chars_zh=4; cells_zh=8
+MECH mobile.computers.added.stays_listed: PASS; args=none; selects=0; plural=[]; chars_en=77; chars_zh=22; cells_zh=44
+MECH mobile.computers.badge.active: PASS; args=none; selects=0; plural=[]; chars_en=6; chars_zh=3; cells_zh=6
+MECH mobile.computers.badge.connecting: PASS; args=none; selects=0; plural=[]; chars_en=10; chars_zh=3; cells_zh=6
+MECH mobile.computers.connecting: PASS; args=none; selects=0; plural=[]; chars_en=11; chars_zh=6; cells_zh=10
+MECH mobile.computers.none_on_phone: PASS; args=none; selects=0; plural=[]; chars_en=31; chars_zh=10; cells_zh=20
+MECH mobile.computers.password_placeholder: PASS; args=none; selects=0; plural=[]; chars_en=28; chars_zh=15; cells_zh=20
+MECH mobile.computers.section.not_connected: PASS; args=none; selects=0; plural=[]; chars_en=38; chars_zh=14; cells_zh=21
+MECH mobile.computers.section.on_phone: PASS; args=none; selects=0; plural=[]; chars_en=13; chars_zh=3; cells_zh=6
+MECH mobile.computers.switch: PASS; args=none; selects=0; plural=[]; chars_en=15; chars_zh=4; cells_zh=8
+MECH_FAILURES=0
+
+## COUNTS — zh-CN (app parser), en comparator
+| key | 0 | 1 | 2 | 1000000 |
+| mobile.schedules.count.wakes | "0 个唤醒" | "1 个唤醒" | "2 个唤醒" | "1000000 个唤醒" |
+| mobile.schedules.count.monitors | "0 个监控" | "1 个监控" | "2 个监控" | "1000000 个监控" |
+| mobile.schedules.show_more.wakes | "再显示0个唤醒" | "再显示1个唤醒" | "再显示2个唤醒" | "再显示1000000个唤醒" |
+| mobile.schedules.show_more.monitors | "再显示0个监控" | "再显示1个监控" | "再显示2个监控" | "再显示1000000个监控" |
+| mobile.schedules.summary.wakes | "0个已定时" | "1个已定时" | "2个已定时" | "1000000个已定时" |
+| mobile.schedules.summary.monitors_armed | "0个已启用" | "1个已启用" | "2个已启用" | "1000000个已启用" |
+| mobile.schedules.tail.failed | "0个失败" | "1个失败" | "2个失败" | "1000000个失败" |
+| mobile.projects.sessions.count | "0 个会话" | "1 个会话" | "2 个会话" | "1000000 个会话" |
+
+## PROJECT LIVE COUNT
+1: "2 个会话 · 1个进行中"  | en: "2 sessions · 1 live"
+2: "2 个会话 · 2个进行中"  | en: "2 sessions · 2 live"
+1000000: "2 个会话 · 1000000个进行中"  | en: "2 sessions · 1000000 live"
+
+## MILESTONES
+| completed/total | zh-CN | en |
+| 0/0 | "0/0个里程碑" | "0 of 0 milestones" |
+| 0/3 | "0/3个里程碑" | "0 of 3 milestones" |
+| 1/2 | "1/2个里程碑" | "1 of 2 milestones" |
+| 2/3 | "2/3个里程碑" | "2 of 3 milestones" |
+| 3/3 | "3/3个里程碑" | "3 of 3 milestones" |
+| 1000000/1000000 | "1000000/1000000个里程碑" | "1000000 of 1000000 milestones" |
+
+## ATTENTION
+| broken/total | zh-CN | en |
+| 0/3 | "0/3个需要处理" | "0 of 3 need attention" |
+| 1/3 | "1/3个需要处理" | "1 of 3 need attention" |
+| 2/3 | "2/3个需要处理" | "2 of 3 need attention" |
+| 3/3 | "3/3个需要处理" | "3 of 3 need attention" |
+| 1000000/1000000 | "1000000/1000000个需要处理" | "1000000 of 1000000 need attention" |
+
+## TRUNCATED
+wakes 1/1: "显示1/1个设有唤醒的对话。"  | en: "Showing 1 of 1 conversations with wakes."
+wakes 3/10: "显示3/10个设有唤醒的对话。"  | en: "Showing 3 of 10 conversations with wakes."
+wakes 1/1000000: "显示1/1000000个设有唤醒的对话。"  | en: "Showing 1 of 1000000 conversations with wakes."
+monitors 1/1: "显示1/1个设有监控的对话。"  | en: "Showing 1 of 1 conversations with monitors."
+monitors 3/10: "显示3/10个设有监控的对话。"  | en: "Showing 3 of 10 conversations with monitors."
+monitors 1/1000000: "显示1/1000000个设有监控的对话。"  | en: "Showing 1 of 1000000 conversations with monitors."
+
+## RECEIPTS — all action codes x project/milestone/other
+| action | project | milestone | other |
+| created | "已创建项目“payments-migration”。" | "已创建里程碑“beta cut”。" | "已创建“payments-migration”。" |
+| completed | "已完成项目“payments-migration”。" | "已完成里程碑“beta cut”。" | "已完成“payments-migration”。" |
+| reopened | "已重新打开项目“payments-migration”。" | "已重新打开里程碑“beta cut”。" | "已重新打开“payments-migration”。" |
+| added | "已添加项目“payments-migration”。" | "已添加里程碑“beta cut”。" | "已添加“payments-migration”。" |
+| updated | "已更新项目“payments-migration”。" | "已更新里程碑“beta cut”。" | "已更新“payments-migration”。" |
+| removed | "已移除项目“payments-migration”。" | "已移除里程碑“beta cut”。" | "已移除“payments-migration”。" |
+| deleted | "已删除项目“payments-migration”。" | "已删除里程碑“beta cut”。" | "已删除“payments-migration”。" |
+| archived | "已更新项目“payments-migration”。" | "已更新里程碑“beta cut”。" | "已更新“payments-migration”。" |
+
+## COMPOSITION — dueLabel/nextDueClause mirrored from schedules-copy.ts
+| count | due | head.next/overdue zh-CN | en |
+| wakes 1 @240s | 4m后 | "1 个唤醒 · 下次4m后" | "1 wake · next in 4m" |
+| wakes 3 @60s | 60s后 | "3 个唤醒 · 下次60s后" | "3 wakes · next in 60s" |
+| wakes 1000000 @-7200s | 已逾期2h | "1000000 个唤醒 · 已逾期2h" | "1000000 wakes · 2h overdue" |
+| wakes 5 @-259200s | 已逾期3d | "5 个唤醒 · 已逾期3d" | "5 wakes · 3d overdue" |
+| monitors 1 @60s | 60s后 | "1 个监控 · 下次60s后" | "1 monitor · next in 60s" |
+| monitors 3 @-7200s | 已逾期2h | "3 个监控 · 已逾期2h" | "3 monitors · 2h overdue" |
+
+## CADENCE / STATE / STATUS
+cadence.every(1h30m): "每1h30m"
+cadence.left 1: "每1h · 剩余1次"
+cadence.left 1000000: "每1h · 剩余1000000次"
+cadence.spent: "每1h · 已无剩余次数"
+cadence.once: "单次"
+mobile.schedules.state.disabled: "已禁用"
+mobile.schedules.state.dormant: "休眠中"
+mobile.schedules.state.expired: "已过期"
+mobile.schedules.state.stale: "已失效"
+mobile.schedules.state.waiting: "等待中"
+mobile.schedules.empty.title: "尚未启用任何任务"
+mobile.schedules.empty.body: "在对话中让智能体定期做某件事，它就会出现在这里。唤醒会在指定时间向对话发送提示词；监控会持续观察某一项内容并报告变化。"
+mobile.schedules.empty_line.wakes: "未安排任何唤醒。"
+mobile.schedules.empty_line.monitors: "未启用任何监控。"
+mobile.schedules.gone.wakes: "已失效——其对话已不在此机器上，因此不会触发"
+mobile.schedules.gone.monitors: "已失效——其对话已不在此机器上，因此不会检查"
+mobile.schedules.parked.wakes: "已暂停——下次回合结束后，唤醒会恢复"
+mobile.schedules.parked.monitors: "已暂停——对话再次运行后，监控会恢复"
+mobile.schedules.read_error.wakes: "无法读取此机器上的唤醒。"
+mobile.schedules.read_error.monitors: "无法读取此机器上的监控。"
+mobile.schedules.read_unreachable: "刚才无法读取此机器的定时任务。"
+mobile.schedules.show_less.wakes: "收起部分唤醒"
+mobile.schedules.show_less.monitors: "收起部分监控"
+mobile.schedules.supervisor.not_running: "唤醒监管程序已安装但未运行，因此下方唤醒不会触发。"
+mobile.schedules.supervisor.unsupported: "此平台尚未支持唤醒监管，因此下方唤醒仅在对话运行时触发。"
+mobile.schedules.supervisor.unverifiable: "下方唤醒没有监管程序，因此仅在其对话运行时触发。"
+
+## PROJECT / NOTIFICATION / COMPUTER STRINGS
+mobile.projects.delete_body: "删除“payments-migration”？项目行将永久移除。其关联会话和会话记录不受影响。"
+mobile.projects.draft_kept_note: "已保留上次填写的内容。清空各字段即可重新开始。"
+mobile.projects.milestone_slash_note: "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。"
+mobile.projects.milestones.count: "2/3个里程碑"
+mobile.projects.milestones.none: "无里程碑"
+mobile.projects.project_name_hint: "1-64个字符：字母、数字、点、下划线或连字符。不能包含空格，也不能以连字符开头。"
+mobile.projects.remove_milestone_body: "从此项目中移除“beta cut”？该里程碑将永久移除。项目的会话和进度行不受影响。"
+mobile.projects.session_state.filed_by: "由会话提交"
+mobile.projects.session_state.missing: "缺失"
+mobile.projects.session_state.not_running: "未运行"
+mobile.projects.sessions.count: "2 个会话"
+mobile.projects.sessions.live: "2 个会话 · 1个进行中"
+mobile.projects.stale_badge: "进度已过期"
+mobile.projects.write_unknown_note: "无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。"
+mobile.notifications.answer: "回答"
+mobile.notifications.back: "返回"
+mobile.notifications.detail.answer_in_conversation: "在对话中回答"
+mobile.notifications.detail.conversation_asks: "此对话的问题"
+mobile.notifications.detail.earlier_updates: "较早的更新"
+mobile.notifications.detail.from: "来自"
+mobile.notifications.detail.no_asks: "此对话中没有问题。"
+mobile.notifications.detail.nothing_to_dismiss: "此对话没有可忽略的更新。"
+mobile.notifications.detail.projects: "项目"
+mobile.notifications.dismiss: "忽略"
+mobile.notifications.filter_label: "显示"
+mobile.notifications.load_failed: "无法加载通知"
+mobile.notifications.priority_high: "高"
+mobile.notifications.title: "通知"
+mobile.computers.add: "添加电脑"
+mobile.computers.added.stays_listed: "它仍会保留在此手机列表中，可从电脑列表切回。"
+mobile.computers.badge.active: "使用中"
+mobile.computers.badge.connecting: "连接中"
+mobile.computers.connecting: "正在连接……"
+mobile.computers.none_on_phone: "此手机尚未添加电脑。"
+mobile.computers.password_placeholder: "来自lop mobile的密码"
+mobile.computers.section.not_connected: "Radient账号中，未连接"
+mobile.computers.section.on_phone: "此手机"
+mobile.computers.switch: "切换电脑"
+[exit=0]
+
+===== COMMAND 4: font-metric width evidence (SFNS/PingFang via AppKit) =====
+$ swift /Users/damian/.local-operator/sessions/09e9d1711068/scratchpad/measure_group_b.swift
+group	label	chars	cells	px@100	avail	lines@100	px@200	lines@200	note
+schedules	empty.body	59	118	826.0	288	3	1652.0	6	body-sm, wraps
+schedules	supervisor.not_running	25	50	350.0	288	2	700.0	3	Alert body, wraps
+schedules	supervisor.unsupported	28	56	392.0	288	2	784.0	3	Alert body, wraps
+schedules	supervisor.unverifiable	24	48	336.0	288	2	672.0	3	Alert body, wraps
+schedules	truncated 3/10 wakes	15	26	156.7	288	1	313.4	2	text-meta strip, wraps
+schedules	head.next 3 wakes +4m	13	19	114.5	288	1	229.0	1	entry clause, wraps
+schedules	head.overdue 3 wakes 2h	13	19	110.9	288	1	221.7	1	entry clause, wraps
+schedules	summary.wakes 3	5	9	53.4	288	1	106.9	1	section header fragment
+schedules	summary.monitors_attention 1/3	8	13	76.7	288	1	153.5	1	section header fragment
+schedules	show_more 3 wakes	7	13	79.1	288	1	158.1	1	quiet button sm
+schedules	empty_line.monitors	8	16	112.0	288	1	224.0	1	body-sm
+schedules	gone.monitors	22	42	264.0	288	1	528.0	2	entry clause, wraps
+projects	row meta 2/3 + 2 + 1 live	23	34	195.8	288	1	391.7	2	ONE-LINE clamp (numberOfLines=1)
+projects	row meta 12/150 + 120 + 8	28	39	226.6	288	1	453.2	2	ONE-LINE clamp (numberOfLines=1)
+projects	row meta none + 2	12	19	109.1	288	1	218.2	1	ONE-LINE clamp
+projects	receipt reopened milestone	29	38	273.6	236	2	547.2	3	Toast pill, wraps (no clamp)
+projects	receipt created project	26	32	231.6	236	1	463.2	2	Toast pill, wraps
+projects	delete_body	47	74	525.6	288	2	1051.2	4	Alert body, wraps
+projects	remove_milestone_body	42	74	517.0	288	2	1034.0	4	Alert body, wraps
+projects	project_name_hint	41	78	548.7	288	2	1097.3	4	help, wraps
+projects	write_unknown_note	29	58	406.0	288	2	812.0	3	problem text, wraps
+projects	stale_badge	5	10	57.6	288	1	115.3	1	badge
+notifications	detail.answer_in_conversation	6	12	89.6	288	1	179.2	1	primary button
+notifications	detail.conversation_asks	6	12	69.3	288	1	138.6	1	section header
+notifications	detail.nothing_to_dismiss	12	24	168.0	288	1	336.0	2	dialog body, wraps
+notifications	load_failed	6	12	84.0	288	1	168.0	1	alert title
+notifications	priority_high	1	2	11.0	288	1	22.0	1	badge
+computers	section.not_connected	14	21	181.0	288	1	362.1	2	settings section header
+computers	added.stays_listed	22	44	308.0	288	2	616.0	3	help, wraps
+computers	password_placeholder	15	20	137.5	288	1	275.0	1	field placeholder
+computers	connecting	6	10	84.0	288	1	168.0	1	inline status
+[exit=0]
+
+===== COMMAND 5: core committed zh-CN terminology references =====
+$ git -C ~/local-operator rev-parse HEAD
+2008053b5d6af37fa449fc303d9e344c262f82c8
+$ grep -n <selected keys> ~/local-operator/local_operator/i18n/catalogues/zh-CN/*.json
+50:  "tui.small.wake_panel.monitors_need_attention": "{count, plural, other {{shown}/{total}项需要关注}}",
+51:  "tui.small.wake_panel.monitors_armed": "{count, plural, other {{shown}个监控已启用}}",
+103:  "tui.small.wake_panel.scheduled_count": "{count, plural, other {{shown}项已定时}}",
+2:  "cli.wake_help.wake": "检查定时唤醒及其触发监督者",
+3:  "cli.wake_help.status": "显示是否已安装监督者，以及接下来会触发什么",
+4:  "cli.wake_help.json": "机器可读输出",
+5:  "cli.wake_help.status_install": "立即安装监督者，而非等待下次定时任务",
+6:  "cli.wake_help.status_uninstall": "移除监督者；之后定时唤醒仅在会话打开时触发",
+7:  "cli.wake_help.install": "立即安装或修复监督者（重启过期或已停止的监督者）",
+8:  "cli.wake_help.list": "此机器上的所有定时唤醒，按最早触发优先排序",
+9:  "cli.wake_help.create": "为会话设置定时唤醒（按需安装监督者）",
+10:  "cli.wake_help.create_session": "要唤醒的会话ID",
+11:  "cli.wake_help.create_when": "触发时间：时长（“in 2m”、“45s”）或时刻（“at 09:30”）",
+12:  "cli.wake_help.create_message": "触发时发送的自提示词（最多{max}个字符）",
+13:  "cli.wake_help.create_every": "首次触发后每隔DURATION重复（“5m”、“1h”、“8h30m”）",
+77:  "tui.projects.render.progress_none": "进展：尚无记录",
+78:  "tui.projects.render.progress_reported": "{age}前报告进展{suffix}： ",
+81:  "tui.projects.render.session_missing": "{session} [缺失]",
+83:  "tui.projects.render.filed_by": "由{ids}登记{more}",
+2:  "relay.transcript.turn.condensed": "已折叠的轮次",
+3:  "relay.transcript.turn.took": "耗时 {duration}",
+72:  "relay.notifications.detail.section.from": "来源",
+75:  "relay.notifications.detail.section.projects": "相关项目",
+76:  "relay.notifications.detail.section.history": "更早的更新",
+2:  "mobile.setup.owner_missing": "运行lop login-status，恢复所属账户的登录。设置不会将现有隧道或待处理请求指向其他账户。",
+3:  "mobile.setup.owner_mismatch": "选择现有隧道所属的凭据；设置绝不会切换账户。",
+8:  "mobile.setup.choose_login": "从lop login-status中选择目标账户，然后运行lop tunnel setup --credential-id <id>。",
+9:  "mobile.setup.login": "运行lop login radient，登录所属账户，然后重试。",
+10:  "mobile.setup.account_failed": "最新的Radient账户和路由验证失败。检查网络连接及lop login-status；未执行任何设置写入。",
+11:  "mobile.setup.complete": "打开上方URL，使用同一Radient账户登录。使用lop tunnel stop关闭远程访问。",
+16:  "mobile.setup.failed": "设置未完成。检查lop tunnel setup --json，然后使用当前账户和报价重试。已完成的步骤未被撤销。",
+25:  "mobile.setup.checking": "正在检查所属账户、本地前置条件和手机访问路由……",
+2:  "relay.account_policy.title": "电脑设置",
+3:  "relay.account_policy.back": "返回",
+4:  "relay.account_policy.loading": "正在加载账户路由……",
+5:  "relay.account_policy.save": "保存策略",
+6:  "relay.account_policy.saving": "正在保存……",
+7:  "relay.account_policy.saved": "已保存在此电脑上。",
+8:  "relay.account_policy.retry": "重试",
+9:  "relay.account_policy.unavailable": "此中继上无法使用账户路由设置。更新此电脑上的Local Operator。",
+84:  "tui.analytics.totals.calls_failed": "（{count}次失败）",
+2:  "tui.schedule.cadence_every": "每{interval}",
+3:  "tui.schedule.cadence_once": "单次",
+11:  "tui.schedule.due_in": "{duration}后",
+13:  "tui.schedule.due_overdue": "已逾期{age}",
+
+===== COMMAND 6: core reference-file hashes =====
+$ shasum -a 256 <core cited files>
+5b7e05905402a7713dee3dd0ffa3df8048bae23e6b18108cfcec1c6cd4567ca6  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/tui.small.json
+174948d3130775efb6da3e8cbb2c192d97b8c9b21dd2ef50d75b09eda429baf9  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/cli.wake_help.json
+e24bd6988479039fd71cdeb82aef4c0cf4223f244c0da9f48e8f5f76ef99bf74  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/tui.projects.json
+440de2d4cf0b7ec96379d01dbfe43655e20ad7734952c928bf5644b6cbe798cc  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/relay.transcript.json
+a75ddb99367a41c55085fe9d7651601a0f6704350d71e33fbcd600bfc2d8b4b6  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/relay.notifications.json
+15333fe4a0bc853904649906e60d2335036e898d15b361845b97d67b99bea47a  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/mobile.setup.json
+71b1cc7b3988bf8ccce82d7d6d599d9c170d9b3644cc76ce662629dc644eb2e2  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/relay.account_policy.json
+725d9653bcccf233f708719ec8b9180b53947a9118a73627382fe4f2bf5cfaea  /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN/tui.analytics.json
+
+===== COMMAND 7: catalogue shape =====
+$ node -e "count keys per namespace (en and zh-CN)"
+mobile.schedules: en=38 zh=38 context=38 missing=[] extra=[]
+mobile.projects: en=15 zh=15 context=15 missing=[] extra=[]
+mobile.notifications: en=14 zh=14 context=14 missing=[] extra=[]
+mobile.computers: en=10 zh=10 context=10 missing=[] extra=[]
+
+
+===== COMMAND 8: strings ratchet =====
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+[exit=0]
+
+===== COMMAND 9: catalogue gate test (designed directory-vs-shipped gate) =====
+$ node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 /Users/damian/workspace/zh-wave
+
+································x····
+::error file=/Users/damian/workspace/zh-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=187,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'zh-CN' ] to deeply equal [ 'en', 'es', 'fr' ]%0A%0A- Expected%0A+ Received%0A%0A  [%0A    "en",%0A    "es",%0A    "fr",%0A+   "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:187:23%0A%0A
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render
+AssertionError: expected [ 'en', 'es', 'fr', 'zh-CN' ] to deeply equal [ 'en', 'es', 'fr' ]
+
+- Expected
++ Received
+
+  [
+    "en",
+    "es",
+    "fr",
++   "zh-CN",
+  ]
+
+ ❯ src/i18n/__tests__/catalogues.test.ts:187:23
+    185|    .map((entry) => entry.name)
+    186|    .sort();
+    187|   expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+       |                       ^
+    188|  });
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 passed (37)
+   Start at  02:37:54
+   Duration  4.57s (transform 73%, tests 16%, worker 8%, import 3%)
+
+[exit=1]
+
+===== end transcript =====

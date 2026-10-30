@@ -19,7 +19,7 @@ import {
 	TIP_CHAR_BUDGET,
 	tipAt,
 } from "@/features/home/home-copy";
-import { renderFor, SHIPPED_LOCALES } from "@/i18n";
+import { CATALOGUES, renderFor, SHIPPED_LOCALES } from "@/i18n";
 
 /** Hoisted so the check is compiled once (the same rule the kit's own modules
  *  follow — an inline regex in a callback is re-created per call). */
@@ -55,14 +55,27 @@ describe("the home's copy", () => {
 		}
 	});
 
-	it("pins English at 24 and gives no locale a tighter row than English", () => {
-		/* English is the calibrated number the spec fixes, and every other budget
-		 *  is a MEASURED widening of it (`home-copy.ts`): a locale that got a
-		 *  smaller ceiling than English would be truncation dressed as a limit. */
+	it("pins English at 24 and gives every locale room for the chips it ships", () => {
+		/* The floor used to be "no locale tighter than English", measured in
+		 * CHARACTERS — which is true of Latin scripts and false for Chinese, where
+		 * a chip is 5–12 characters and the row still holds it. The invariant that
+		 * actually matters is the one below: each locale's ceiling must cover the
+		 * longest chip that locale actually ships. English is still pinned to its
+		 * calibrated 24, and every budget is an integer. */
 		expect(SUGGESTION_CHAR_BUDGET.en).toBe(24);
-		for (const budget of Object.values(SUGGESTION_CHAR_BUDGET)) {
+		for (const [locale, budget] of Object.entries(SUGGESTION_CHAR_BUDGET)) {
 			expect(Number.isInteger(budget)).toBe(true);
-			expect(budget).toBeGreaterThanOrEqual(24);
+			const catalogue = CATALOGUES[locale as keyof typeof CATALOGUES] as
+				| Readonly<Record<string, string>>
+				| undefined;
+			expect(catalogue, `${locale} ships a catalogue`).toBeTruthy();
+			const widest = Object.keys(catalogue ?? {})
+				.filter((key) => key.includes(".suggestion."))
+				.reduce((max, key) => Math.max(max, catalogue?.[key]?.length ?? 0), 0);
+			expect(
+				budget,
+				`${locale}: budget covers its longest chip`,
+			).toBeGreaterThanOrEqual(widest);
 		}
 	});
 

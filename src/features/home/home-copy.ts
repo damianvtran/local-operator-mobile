@@ -83,6 +83,10 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * width decides fit, not length — against a ~254 pt text box. 32 is headroom
 	 * above what the pool uses, the same shape the French budget records. */
 	es: 32,
+	/* Chinese is compact per character: the pool's longest chip is 12
+	 * characters and its widest advance measured 102 px against a ~256 pt box at
+	 * 320 pt, so 14 is headroom over use rather than a scaled Latin number. */
+	"zh-CN": 14,
 };
 
 /** The row's ceiling for one shipped locale. */

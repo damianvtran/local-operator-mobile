@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "添加电脑",
+	"mobile.computers.added.stays_listed": "它仍会保留在此手机列表中，可从电脑列表切回。",
+	"mobile.computers.badge.active": "使用中",
+	"mobile.computers.badge.connecting": "连接中",
+	"mobile.computers.connecting": "正在连接……",
+	"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
+	"mobile.computers.password_placeholder": "来自lop mobile的密码",
+	"mobile.computers.section.not_connected": "Radient账户下，未连接",
+	"mobile.computers.section.on_phone": "此手机",
+	"mobile.computers.switch": "切换电脑"
+}

@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。",
+	"mobile.projects.draft_kept_note": "已保留上次填写的内容。清空各字段即可重新开始。",
+	"mobile.projects.milestone_slash_note": "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。",
+	"mobile.projects.milestones.count": "{completed}/{total}个里程碑",
+	"mobile.projects.milestones.none": "无里程碑",
+	"mobile.projects.project_name_hint": "1-64个字符：字母、数字、点、下划线或连字符。不能包含空格，也不能以连字符开头。",
+	"mobile.projects.remove_milestone_body": "要从此项目中删除{name}吗？该里程碑将被永久移除。项目的会话和进度记录不受影响。",
+	"mobile.projects.session_state.filed_by": "由会话登记",
+	"mobile.projects.session_state.missing": "缺失",
+	"mobile.projects.session_state.not_running": "未运行",
+	"mobile.projects.sessions.count": "{count, plural, other {# 个会话}}",
+	"mobile.projects.sessions.live": "{base} · {live}个进行中",
+	"mobile.projects.stale_badge": "进度已过期",
+	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}项目“{subject}”。} milestone {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}里程碑“{subject}”。} other {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}“{subject}”。}}",
+	"mobile.projects.write_unknown_note": "无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。"
+}

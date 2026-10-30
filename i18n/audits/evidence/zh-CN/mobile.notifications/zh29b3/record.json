@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "audit_id": "zh29b3",
+  "audit_kind": "initial_translation_audit",
+  "round": 1,
+  "locale": "zh-CN",
+  "namespace": "mobile.notifications",
+  "file_group": "mobile.notifications",
+  "audit_date": "2026-10-30",
+  "audited_head_commit": "a57fb8cbe16101d828b68edd422b56317523ac7d",
+  "audited_revision": "a57fb8cbe16101d828b68edd422b56317523ac7d",
+  "audited_branch": "feat/i18n-chinese",
+  "audited_worktree": "/Users/damian/workspace/zh-wave",
+  "audited_worktree_note": "The zh-CN catalogue directory is untracked at a57fb8c (git ls-tree HEAD -- src/i18n/catalogues/zh-CN is empty); catalogue.gen.ts is modified and in sync (i18n:catalogue:check passes). Target bytes are pinned by input_hashes.target.sha256, not by the commit.",
+  "key_count": {
+    "en": 14,
+    "target": 14,
+    "context": 14
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "09e9d1711068",
+    "job": null,
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota/429 fallback. Every evidence command in audit.log ran after the final switch; earlier reconnaissance output is not used as evidence.",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "fallback_disclosed": true,
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and context from the translator. Not model-diverse: the translator's supplied actual model is also radient/auto. Disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": null,
+    "job": null,
+    "model": "radient/auto",
+    "actual_model_source": "supplied by the requesting manager; not independently observed by this auditor",
+    "date": "2026-10-30"
+  },
+  "second_pass": {
+    "performed": true,
+    "job": "a163531a0dbd",
+    "label": "zh-group-B-second-pass",
+    "role": "reviewer",
+    "model": "radient/auto",
+    "actual_model_source": "reported in the child job result: anthropic/claude-sonnet-5-5 quota failure -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto",
+    "independent_from_first_pass": true,
+    "scope": "all four group-B namespaces, without the first pass's findings",
+    "summary": "0 BLOCKER, 0 MAJOR, 5 MINOR, 5 NIT across the group; independently found the supervisor noun, account noun, tail.failed, truncated, filed_by, the row/line calques and from; judged head.next acceptable and state.stale/parked.wakes/stale_badge/milestones.count fine.",
+    "severity_differences": "This pass keeps head.next, summary.monitors_attention, supervisor.*, delete_body and the account term as MAJOR; the second pass graded them no finding / NIT / MINOR / MINOR / MINOR respectively. Reasons are in report.md.",
+    "count_note": "The second pass's text says 83 keys; the executed group count is 77 and each namespace is 38/15/14/10, verified by the key-parity check."
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.notifications.json",
+      "sha256": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.notifications.context.json",
+      "sha256": "240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.notifications.json",
+      "sha256": "84e5360c407face2b0f635b57f472e6586481cd389bf66d76774d758574e673f"
+    }
+  },
+  "renderer_provenance": {
+    "parser": "src/i18n/messages.ts (parseMessage/formatMessage/pluralCategory)",
+    "runtime": "src/i18n/runtime.ts (renderFor)",
+    "projection": "src/i18n/catalogue.gen.ts",
+    "type_scale": "src/ui/theme.css",
+    "sha256": {
+      "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+      "src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+      "src/i18n/catalogue.gen.ts": "1bea0c094b0f7c27cbe8668ea2df75b9f3302ab3d80253080452fe75871dde43",
+      "src/ui/theme.css": "adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23"
+    },
+    "lang_plural_categories": {
+      "zh-CN": [
+        "other"
+      ]
+    }
+  },
+  "mechanical": {
+    "repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)'",
+    "repo_validator_scope": "key parity and message parse; it does not compare placeholders between locales, so the scoped check below compares every key itself",
+    "strings_ratchet": "node scripts/i18n/check-strings.ts -> 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161",
+    "scoped_checks": "valid JSON; 77/77/77 keys across the four namespaces (38/15/14/10); zero parse failures; zero placeholder-name/kind/order mismatches; zero select-arm mismatches; zh-CN plural categories ['other'] only; no bidi controls; no ASCII prose punctuation; no Latin prose outside kept names and ICU arm identifiers",
+    "gate_test": "node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts -> 1 failed / 36 passed: expected ['en','es','fr'] vs received ['en','es','fr','zh-CN'] because the zh-CN directory exists while zh-CN is still in NOT_YET_SHIPPED_LOCALES. This is the designed directory-vs-shipped gate, not a copy defect; the wave must flip SHIPPED_LOCALES when it ships.",
+    "false_positive_note": "The naive Latin-residue check reports only ICU select arm identifiers (e.g. 'other'); the #-count check reports no defect because zh-CN legitimately has only the other arm; String(n) prints 1000000 without grouping, a renderer limitation not a translation error."
+  },
+  "fit": {
+    "scope": "namespace-only",
+    "method": "AppKit NSFont (PingFang SC/SFNS) advance widths at text-meta 12/500, text-body-sm 14/400, text-heading 17/600 and button label 15/600, against 288 pt content width (320 pt device minus Screen px-4); no rendered frame.",
+    "result": "detail.answer_in_conversation 89.6 pt (button) -> one line; detail.nothing_to_dismiss 168.0 pt -> one line, wraps at 200%; load_failed 84.0 pt; priority_high 11.0 pt. No catalogued string is clamped and no unbreakable token exceeds 288 pt.",
+    "maxCells_present": false
+  },
+  "out_of_scope": [
+    "src/features/notifications/notification-detail.tsx hardcodes SectionHeader labels 'Notification', 'Links' and 'Message'; a zh-CN build will keep those three English headings until keyed."
+  ],
+  "audit_notes_not_execution_log": "report.md contains judgement and per-key reasoning; audit.log contains the actual executed command output; notes do not prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered frame or human native-speaker review; source parsing and font-metric measurements only."
+  },
+  "findings": [
+    {
+      "id": "ZH-NTF-1",
+      "severity": "minor",
+      "status": "open",
+      "key": "mobile.notifications.detail.earlier_updates",
+      "current": "较早的更新",
+      "replacement": "更早的更新",
+      "detail": "The identical relay-inbox section is committed in core as 更早的更新 (relay.notifications.detail.section.history), with the section word 更早; 较早 is attested in core only for older history in prose. Both are correct Chinese; one product should use one rendering."
+    },
+    {
+      "id": "ZH-NTF-2",
+      "severity": "nit",
+      "status": "open",
+      "key": "mobile.notifications.detail.from",
+      "current": "来自",
+      "replacement": "来源",
+      "detail": "A preposition used as a bare section heading; the committed header for the identical section is the noun 来源 (relay.notifications.detail.section.from). The card beneath already carries the conversation name and state, so 来源 reads as the label."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "blocker_ids": [],
+    "major_ids": [],
+    "minor_ids": [
+      "ZH-NTF-1"
+    ],
+    "nit_ids": [
+      "ZH-NTF-2"
+    ],
+    "reason": "No blocker or major. Two section-header consistency items remain: 较早的更新 vs core's 更早的更新, and the preposition 来自 vs core's noun 来源. Every key parses; no placeholders; dismiss/answer vocabulary matches core.",
+    "finding_ids": [
+      "ZH-NTF-1",
+      "ZH-NTF-2"
+    ]
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "local-operator-mobile has no i18n/ledger.json and no audit-ledger command at a57fb8c; docs/i18n.md makes the PR report the artifact of record. No CLI ledger receipt is claimed.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "zh-CN",
+      "file_group": "mobile.notifications",
+      "status": "passed",
+      "auditor": "i18n-auditor",
+      "model": "radient/auto",
+      "source_hash": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064",
+      "target_hash": "84e5360c407face2b0f635b57f472e6586481cd389bf66d76774d758574e673f",
+      "record_path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/record.json",
+      "note": "passed 0B/0M; zh-CN mobile.notifications 14 keys; 1 minor + 1 nit; record: i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/record.json",
+      "note_length": 141
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/report.md",
+      "sha256": "7ff5737ab648d5841fd6185ba0b5481cc4a4a11576f7e42b28241214459691aa"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/audit.log",
+      "sha256": "351ff46de97a4f245ffe60cfd0b892c60f9ff77134fd7f12396c14522e6d5aad"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/render.ts.txt",
+      "sha256": "c494ac4cfb0f8394f76b32383ad30ac01a2cafeb23e23b9f35978d6a00c614c0",
+      "note": "group-wide render harness transcript copy; not executed from this path"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.notifications/zh29b3/measure.swift.txt",
+      "sha256": "1108f489439aa542f76e526aafd6563d04c6877e64f58de44e6a3fc87063cc76",
+      "note": "group-wide font-metric measurement transcript copy; not executed from this path"
+    }
+  ]
+}

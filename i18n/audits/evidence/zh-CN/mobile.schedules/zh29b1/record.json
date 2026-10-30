@@ -1,0 +1,235 @@
+{
+  "schema": 1,
+  "audit_id": "zh29b1",
+  "audit_kind": "initial_translation_audit",
+  "round": 1,
+  "locale": "zh-CN",
+  "namespace": "mobile.schedules",
+  "file_group": "mobile.schedules",
+  "audit_date": "2026-10-30",
+  "audited_head_commit": "a57fb8cbe16101d828b68edd422b56317523ac7d",
+  "audited_revision": "a57fb8cbe16101d828b68edd422b56317523ac7d",
+  "audited_branch": "feat/i18n-chinese",
+  "audited_worktree": "/Users/damian/workspace/zh-wave",
+  "audited_worktree_note": "The zh-CN catalogue directory is untracked at a57fb8c (git ls-tree HEAD -- src/i18n/catalogues/zh-CN is empty); catalogue.gen.ts is modified and in sync (i18n:catalogue:check passes). Target bytes are pinned by input_hashes.target.sha256, not by the commit.",
+  "key_count": {
+    "en": 38,
+    "target": 38,
+    "context": 38
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "09e9d1711068",
+    "job": null,
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota/429 fallback. Every evidence command in audit.log ran after the final switch; earlier reconnaissance output is not used as evidence.",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "fallback_disclosed": true,
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and context from the translator. Not model-diverse: the translator's supplied actual model is also radient/auto. Disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": null,
+    "job": null,
+    "model": "radient/auto",
+    "actual_model_source": "supplied by the requesting manager; not independently observed by this auditor",
+    "date": "2026-10-30"
+  },
+  "second_pass": {
+    "performed": true,
+    "job": "a163531a0dbd",
+    "label": "zh-group-B-second-pass",
+    "role": "reviewer",
+    "model": "radient/auto",
+    "actual_model_source": "reported in the child job result: anthropic/claude-sonnet-5-5 quota failure -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto",
+    "independent_from_first_pass": true,
+    "scope": "all four group-B namespaces, without the first pass's findings",
+    "summary": "0 BLOCKER, 0 MAJOR, 5 MINOR, 5 NIT across the group; independently found the supervisor noun, account noun, tail.failed, truncated, filed_by, the row/line calques and from; judged head.next acceptable and state.stale/parked.wakes/stale_badge/milestones.count fine.",
+    "severity_differences": "This pass keeps head.next, summary.monitors_attention, supervisor.*, delete_body and the account term as MAJOR; the second pass graded them no finding / NIT / MINOR / MINOR / MINOR respectively. Reasons are in report.md.",
+    "count_note": "The second pass's text says 83 keys; the executed group count is 77 and each namespace is 38/15/14/10, verified by the key-parity check."
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.json",
+      "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+      "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.schedules.json",
+      "sha256": "12e5fd823fcd482138010dae757e2dcc901fa87e993a22395d91e1c63a782eb0"
+    }
+  },
+  "renderer_provenance": {
+    "parser": "src/i18n/messages.ts (parseMessage/formatMessage/pluralCategory)",
+    "runtime": "src/i18n/runtime.ts (renderFor)",
+    "projection": "src/i18n/catalogue.gen.ts",
+    "type_scale": "src/ui/theme.css",
+    "sha256": {
+      "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+      "src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+      "src/i18n/catalogue.gen.ts": "1bea0c094b0f7c27cbe8668ea2df75b9f3302ab3d80253080452fe75871dde43",
+      "src/ui/theme.css": "adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23"
+    },
+    "lang_plural_categories": {
+      "zh-CN": [
+        "other"
+      ]
+    }
+  },
+  "mechanical": {
+    "repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)'",
+    "repo_validator_scope": "key parity and message parse; it does not compare placeholders between locales, so the scoped check below compares every key itself",
+    "strings_ratchet": "node scripts/i18n/check-strings.ts -> 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161",
+    "scoped_checks": "valid JSON; 77/77/77 keys across the four namespaces (38/15/14/10); zero parse failures; zero placeholder-name/kind/order mismatches; zero select-arm mismatches; zh-CN plural categories ['other'] only; no bidi controls; no ASCII prose punctuation; no Latin prose outside kept names and ICU arm identifiers",
+    "gate_test": "node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts -> 1 failed / 36 passed: expected ['en','es','fr'] vs received ['en','es','fr','zh-CN'] because the zh-CN directory exists while zh-CN is still in NOT_YET_SHIPPED_LOCALES. This is the designed directory-vs-shipped gate, not a copy defect; the wave must flip SHIPPED_LOCALES when it ships.",
+    "false_positive_note": "The naive Latin-residue check reports only ICU select arm identifiers (e.g. 'other'); the #-count check reports no defect because zh-CN legitimately has only the other arm; String(n) prints 1000000 without grouping, a renderer limitation not a translation error."
+  },
+  "fit": {
+    "scope": "namespace-only",
+    "method": "AppKit NSFont (PingFang SC/SFNS) advance widths at text-meta 12/500, text-body-sm 14/400 and text-heading 17/600, against 288 pt content width (320 pt device minus Screen px-4); no rendered frame.",
+    "result": "No catalogued string has an unbreakable token wider than 288 pt at 100%. empty.body 59 chars/118 cells/826 pt -> 3 lines; supervisor.not_running 25/50/350 -> 2; supervisor.unsupported 28/56/392 -> 2; supervisor.unverifiable 24/48/336 -> 2; gone.monitors 264 pt -> one line with 24 pt spare, 2 at 200%; truncated 156.7 and head.next 114.5 -> one line; summary fragments 53.4 (wakes) and 76.7 (attention) -> one line. Nothing in this namespace is clamped (the entry name and user message are not catalogue strings).",
+    "maxCells_present": false
+  },
+  "out_of_scope": [
+    "src/features/schedules/schedules.tsx hardcodes the section prefixes 'Wakes ·' and 'Monitors ·' (and the screen title 'Schedules', 'Back', 'Try again'); a zh-CN build will show them in English until the strings programme keys them. Prior fr/es audits recorded the same unkeyed-prefix gap."
+  ],
+  "audit_notes_not_execution_log": "report.md contains judgement and per-key reasoning; audit.log contains the actual executed command output; notes do not prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered frame or human native-speaker review; source parsing and font-metric measurements only."
+  },
+  "findings": [
+    {
+      "id": "ZH-SCH-1",
+      "severity": "major",
+      "status": "open",
+      "key": "mobile.schedules.head.next",
+      "current": "{head} · 下次{label}",
+      "replacement": "{head} · 下次：{label}",
+      "detail": "dueLabel already returns the whole relative phrase (4m后 / 已逾期2h). '下次' + '4m后' with no separator renders '3 个唤醒 · 下次4m后' ('next 4m later'), a calque of 'next in 4m'; head.overdue already uses the clean '{head} · {label}' shape. The full-width colon keeps the source's 'next' and separates the two time expressions. The terser '{head} · {label}' is an equally valid alternative."
+    },
+    {
+      "id": "ZH-SCH-2",
+      "severity": "major",
+      "status": "open",
+      "key": "mobile.schedules.summary.monitors_attention",
+      "current": "{broken}/{total}个需要处理",
+      "replacement": "{broken}/{total}项需要关注",
+      "detail": "'1/3个需要处理' puts the generic classifier 个 after a ratio and leaves 需要处理 without a noun; it reads as 'one-third of an item needs handling'. Core's committed twin is '{shown}/{total}项需要关注' (tui.small.wake_panel.monitors_need_attention); 关注 is the softer, accurate 'need attention' and 处理 asks for action the header does not."
+    },
+    {
+      "id": "ZH-SCH-3",
+      "severity": "major",
+      "status": "open",
+      "keys": [
+        "mobile.schedules.supervisor.not_running",
+        "mobile.schedules.supervisor.unsupported",
+        "mobile.schedules.supervisor.unverifiable"
+      ],
+      "current": [
+        "唤醒监管程序已安装但未运行，因此下方唤醒不会触发。",
+        "此平台尚未支持唤醒监管，因此下方唤醒仅在对话运行时触发。",
+        "下方唤醒没有监管程序，因此仅在其对话运行时触发。"
+      ],
+      "replacement": [
+        "唤醒监督者已安装但未运行，因此以下唤醒不会触发。",
+        "此平台尚不支持监督唤醒，因此以下唤醒仅在对话运行时触发。",
+        "以下唤醒没有监督者，因此仅在其对话运行时触发。"
+      ],
+      "detail": "Core's committed zh-CN names the wake supervisor 监督者 in 14 strings (cli.wake_help.wake/status/install, cli.browser.supervisor_line); 监管 appears in core only as a verb (tui.schedule.notice_supervisor '没有进程监管这些唤醒'). 监管程序/唤醒监管 gives the same process a second noun. 下方唤醒 is a spatial calque; 以下唤醒 is the idiomatic text reference."
+    },
+    {
+      "id": "ZH-SCH-4",
+      "severity": "minor",
+      "status": "open",
+      "key": "mobile.schedules.tail.failed",
+      "current": "{count}个失败",
+      "replacement": "{count}次失败",
+      "detail": "The value is consecutive_failures — failure occurrences, not a count of failed objects. 次 is the classifier for occurrences; core's tui.analytics.totals.calls_failed is '（{count}次失败）'. '3个失败' reads as three failed things."
+    },
+    {
+      "id": "ZH-SCH-5",
+      "severity": "minor",
+      "status": "open",
+      "key": "mobile.schedules.truncated",
+      "current": "显示{shown}/{total}个设有{family, select, wakes {唤醒} other {监控}}的对话。",
+      "replacement": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
+      "detail": "设有 belongs to installed facilities (园区设有食堂), not to a conversation that holds wakes or monitors. 含 is the natural containment verb and leaves both select arms untouched."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 3,
+    "blocker_ids": [],
+    "major_ids": [
+      "ZH-SCH-1",
+      "ZH-SCH-2",
+      "ZH-SCH-3"
+    ],
+    "minor_ids": [
+      "ZH-SCH-4",
+      "ZH-SCH-5"
+    ],
+    "nit_ids": [],
+    "reason": "Executed composition renders '3 个唤醒 · 下次4m后' (redundant 下次 + 后); '1/3个需要处理' is an ungrammatical count phrase where core has '{broken}/{total}项需要关注'; the three supervisor notices use 监管程序/唤醒监管 while core's noun is 监督者. Mechanical parity and all plural/select arms are intact.",
+    "finding_ids": [
+      "ZH-SCH-1",
+      "ZH-SCH-2",
+      "ZH-SCH-3",
+      "ZH-SCH-4",
+      "ZH-SCH-5"
+    ]
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "local-operator-mobile has no i18n/ledger.json and no audit-ledger command at a57fb8c; docs/i18n.md makes the PR report the artifact of record. No CLI ledger receipt is claimed.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "zh-CN",
+      "file_group": "mobile.schedules",
+      "status": "changes_requested",
+      "auditor": "i18n-auditor",
+      "model": "radient/auto",
+      "source_hash": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f",
+      "target_hash": "12e5fd823fcd482138010dae757e2dcc901fa87e993a22395d91e1c63a782eb0",
+      "record_path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/record.json",
+      "note": "changes_requested 0B/3M/2m; zh-CN mobile.schedules 38 keys; head.next composition, supervisor noun, attention count; record: i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/record.json",
+      "note_length": 187
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/report.md",
+      "sha256": "61628ef3152a7420c41fbb38b51421ea33e4d7bcb6496006b4c1a8d6e81e328c"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/audit.log",
+      "sha256": "489fe836fe3d1bab4bc5ce180c95b7423992dadb8139c2b7310d93d373f7cafd"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/render.ts.txt",
+      "sha256": "c494ac4cfb0f8394f76b32383ad30ac01a2cafeb23e23b9f35978d6a00c614c0",
+      "note": "group-wide render harness transcript copy; not executed from this path"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/measure.swift.txt",
+      "sha256": "1108f489439aa542f76e526aafd6563d04c6877e64f58de44e6a3fc87063cc76",
+      "note": "group-wide font-metric measurement transcript copy; not executed from this path"
+    }
+  ]
+}

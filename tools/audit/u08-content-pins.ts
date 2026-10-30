@@ -385,7 +385,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-10-29 for the Spanish wave: `src` now carries the Spanish
 	 * catalogues and the per-locale budget, exactly the content these pins exist to
 	 * freeze. Recomputed with `--print`; nothing else in the table moved. */
-	src: "c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646",
+	/* Re-pinned 2026-10-30 for the Chinese wave: `src` carries the zh-CN
+	 * catalogues, the locale flip and the per-locale chip budget. Recomputed
+	 * with `--print` after the last catalogue edit; nothing else moved. */
+	src: "b078ae00d6e0f824ae5b2b6475be65f76da50a6aa6a5dabd2fa5717a7622026d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
