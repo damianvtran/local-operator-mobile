@@ -186,6 +186,23 @@ export const bridgeHeadline = (
 /** The outcome's tone: which ink the word takes and which mark the row shows. */
 export type BridgeOutcomeTone = "warning" | "danger" | "muted";
 
+/**
+ * The mark the STATE COLUMN draws for an outcome, where the desktop row
+ * paints one of its own (local-operator-ui #1529): `inbox_only` is
+ * `MessageSquareOff` and `awaiting_acceptance` is `Hourglass` there, so the
+ * two clients cannot draw one bridge result two ways. The other three keep
+ * the shared tool-state glyphs, and a row's mark is never the only channel
+ * (`components.md` § 2.6): each of these also carries its own word.
+ */
+export type BridgeMark = "message-off" | "hourglass" | null;
+
+export const bridgeMark = (row: BridgeRow | null): BridgeMark =>
+	row?.outcome === "inbox_only"
+		? "message-off"
+		: row?.outcome === "awaiting_acceptance"
+			? "hourglass"
+			: null;
+
 export interface BridgeOutcomeView {
 	text: string;
 	tone: BridgeOutcomeTone;

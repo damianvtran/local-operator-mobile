@@ -1,5 +1,9 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
-import { MessagesSquare } from "lucide-react-native";
+import {
+	Hourglass,
+	MessageSquareOff,
+	MessagesSquare,
+} from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
@@ -8,6 +12,7 @@ import {
 	bridgeBody,
 	bridgeConversationLabel,
 	bridgeHeadline,
+	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
 	isBridgeRow,
@@ -198,10 +203,15 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const bridgeOutcome = bridgeOutcomeView(bridge);
 	const bridgeConversation = bridgeConversationLabel(bridge);
 	const bridgeMessage = bridgeBody(entry);
+	const mark = bridgeMark(bridge);
 	const headline = isBridge ? bridgeHeadline(entry) : entry.summary;
 	/* The icon is an SVG and cannot inherit a text colour (`useTokenColor`'s
 	 * own reason); `ink-muted` matches the tool name it replaces. */
 	const iconInk = useTokenColor("ink-muted");
+	/* The two marks the desktop row paints for its own bridge states, in the
+	 * inks those states already carry here. */
+	const warningInk = useTokenColor("warning");
+	const dimInk = useTokenColor("ink-muted");
 	/* The amber pair takes the warning mark — neither the silent success tick
 	 * nor the danger wash — and the WORD beside it carries the distinction with
 	 * colour off. `delivered` and `failed` keep the glyph their tool state
@@ -308,11 +318,22 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    truncated, while a clipped duration is a shorter string that is
 					    still a valid duration and so looks correct. */}
 					{isBridge ? (
-						/* The Team Bridge nav item's icon in place of the word `bridge`:
-						 *  fixed size (it does not scale with type, like the glyph), so
-						 *  the headline keeps every point the name used to take. */
-						<View className="shrink-0" aria-hidden>
-							<MessagesSquare color={iconInk} size={14} />
+						/* The Team Bridge identity column, in place of the word `bridge`:
+						 *  the same fixed width either way, so the row's layout never
+						 *  shifts between a mark and the plain mark. The state glyph
+						 *  stays in the rail ahead of it rather than being replaced by
+						 *  the mark: the glyph is the rail's anchor (U-41 measures the
+						 *  row's first text against it) and it still carries the tool
+						 *  state, while the mark carries the bridge outcome exactly as
+						 *  the desktop row names it. */
+						<View className="w-3.5 shrink-0 items-start" aria-hidden>
+							{mark === "message-off" ? (
+								<MessageSquareOff color={warningInk} size={14} />
+							) : mark === "hourglass" ? (
+								<Hourglass color={dimInk} size={14} />
+							) : (
+								<MessagesSquare color={iconInk} size={14} />
+							)}
 						</View>
 					) : (
 						<Text
@@ -339,18 +360,18 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    measurements there. */}
 					{trailing !== null && !deliveryOnOwnLine ? (
 						<Text
-							/* The send word keeps `shrink-0` (design round 1, D1). The
-							 *  bridge outcome is longer ("not posted to a conversation"),
-							 *  and the 320 pt audit (U-06) measured it pushing the clock
-							 *  and chevron up to 77 px past the edge while the large-text
-							 *  rule had not yet moved it; letting it truncate last keeps
-							 *  the row inside the viewport in every frame. The expansion's
-							 *  Outcome line always carries the whole word. */
-							className={cx(
-								"text-body-sm",
-								isBridge ? "min-w-0 shrink truncate" : "shrink-0",
-								trailing.inkClass,
-							)}
+							/* `shrink-0` is the send word's design decision (design round 1, D1).
+							 *  The bridge outcome is longer, and the row is laid out so the headline
+							 *  only ever gets the leftover: `flex-1` on the headline takes what the
+							 *  word's INTRINSIC width leaves, so an uncapped word at 320 pt took
+							 *  the headline down to one letter and, before the cap, pushed the
+							 *  clock and chevron 77 px past the viewport (audit U-06). A percentage
+							 *  class did not take effect on this Text (measured in the shipped
+							 *  frame), so the cap is a STYLE — the one place React Native Web
+							 *  always applies it. The expansion's Outcome line carries the whole
+							 *  word, and the spoken name repeats it. */
+							className={cx("shrink-0 text-body-sm", trailing.inkClass)}
+							style={isBridge ? { maxWidth: "40%" } : undefined}
 							numberOfLines={1}
 						>
 							{trailing.text}

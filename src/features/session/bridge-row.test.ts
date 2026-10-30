@@ -5,6 +5,7 @@ import {
 	bridgeBody,
 	bridgeConversationLabel,
 	bridgeHeadline,
+	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
 	isBridgeRow,
@@ -109,6 +110,28 @@ describe("bridge row: parse", () => {
 			code: null,
 			preview: null,
 		});
+	});
+});
+
+describe("bridge row: marks", () => {
+	/* The two states the desktop row paints with an icon of its own
+	 *  (local-operator-ui #1529): the two clients must not draw one bridge
+	 *  result two ways. */
+	it("paints MessageSquareOff for a peer inbox and Hourglass for acceptance", () => {
+		expect(
+			bridgeMark(bridgeRowOf(row(payload({ outcome: "inbox_only" })))),
+		).toBe("message-off");
+		expect(
+			bridgeMark(bridgeRowOf(row(payload({ outcome: "awaiting_acceptance" })))),
+		).toBe("hourglass");
+	});
+
+	it("leaves the text glyphs to the other outcomes and to a generic row", () => {
+		for (const outcome of ["refused", "failed", "unconfirmed", null]) {
+			expect(bridgeMark(bridgeRowOf(row(payload({ outcome }))))).toBeNull();
+		}
+		expect(bridgeMark(bridgeRowOf(row({})))).toBeNull();
+		expect(bridgeMark(null)).toBeNull();
 	});
 });
 
