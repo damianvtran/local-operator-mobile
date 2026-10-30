@@ -1,0 +1,127 @@
+{
+	"schema": 1,
+	"audit_id": "es29a1",
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"locale": "es",
+	"namespace": "mobile.account_routing",
+	"audit_date": "2026-10-29",
+	"audited_revision": "c5f491ece9db11ec2dc7d136e7de88f93781acff",
+	"audited_revision_note": "Branch feat/i18n-spanish. The Spanish catalogue directory is untracked at this revision; the target bytes are pinned by input_hashes.es.",
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "c58fa60fdb20",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is the translator's served model too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "8bb0387a07e8",
+		"agent": "reviewer (label es-group-a-second-pass)",
+		"pinned_model": "anthropic/claude-sonnet-5-5",
+		"actual_model": "radient/auto",
+		"scope": "all 14 keys, read without the first auditor's findings",
+		"verdict": "passed",
+		"agreement": "independently passed the namespace with no finding",
+		"disagreement": "none"
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c53616dcee1c",
+		"model": "radient/auto",
+		"actual_model_source": "as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.json",
+			"sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.context.json",
+			"sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+		},
+		"es": {
+			"path": "src/i18n/catalogues/es/mobile.account_routing.json",
+			"sha256": "f0484e6dc7b34a5e6ddcc8e1f2b22aac8ba50d1164b37f53224fe8840cc46ac2"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [],
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [],
+		"nit_ids": [],
+		"verdict_reason": "All 14 keys accurate against the English and its context notes; safety text neither softens nor over-promises; terminology matches core es (enrutamiento de cuentas, politica, rele, maquina, ajustes); typography clean. No BLOCKER or MAJOR."
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:check -> exit 0; 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)'; check-strings: 284 findings all baselined, 0 new",
+		"validator_scope": "key parity, message parse and the strings ratchet; it does not compare placeholders between locales, so this audit checked them itself",
+		"scoped_checks": "valid JSON; key and context parity; placeholder/ICU structure; bidi controls; ASCII apostrophes and ellipsis; special spaces; double spaces; edge whitespace; control characters; guillemets; em-dash spacing; technical tokens; character counts",
+		"fit_metric": "glyph advance widths measured with CoreText using the system font at the app's token sizes (body-sm 14 pt, meta 12 pt, body 16 pt and 200 % = 32 pt), plus UTF-16 character counts",
+		"no_rendered_frame": "widths are measured text metrics, not a rendered frame; no clipping claim beyond the measured comparison against the widest shipped string"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.account_routing/es29a1/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.account_routing/es29a1/report.md",
+			"sha256": "e63148353a84530afac2f588dd60aed6b6cf7b2998de6784e26e8fe05293797c"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.account_routing/es29a1/audit.log",
+			"sha256": "ea7211803f5589cc58985a303ba45101b7898000a76ee40595dae0e8f3ad2f26",
+			"state": "actual command output, not notes"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This repository has no i18n/ledger.json and no audit-ledger command (verified: package.json scripts, scripts/i18n/, docs/i18n.md). docs/i18n.md records the report in the pull request; this bundle is the durable record.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "es",
+			"namespace": "mobile.account_routing",
+			"source_sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-29",
+				"result": "passed",
+				"findings": 0
+			},
+			"note": "es passed: 14 keys, no BLOCKER/MAJOR; safe save/error wording, core terms match; i18n/audits/evidence/es/mobile.account_routing/es29a1/record.json; radient/auto fallback run"
+		}
+	},
+	"route_disclosure": {
+		"reads": "ordinary worktree reads (git show / git archive in a local clone, files in this worktree, the repository's own validator, local CoreText measurement)",
+		"english_context_sidecars": "nested-JSON context sidecars are NOT routable through read_public_copy; read as ordinary worktree files",
+		"credential_shaped_keys": "mobile.computers.password_placeholder is credential-shaped; no keyed receipt is claimed anywhere in this wave",
+		"receipts": "no keyed public-copy receipt claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; no pixel-level or clipping claim is made",
+		"translator_observation": "translator provenance is as supplied by the requesting manager; this auditor did not observe the translator's run"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output."
+}

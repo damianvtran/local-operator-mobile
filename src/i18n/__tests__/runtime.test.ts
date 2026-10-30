@@ -46,24 +46,24 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` and `es` are languages this build RECOGNIZES (direction knows Urdu;
-		 * both are in `SUPPORTED_LOCALES`) but does not ship. The two questions must
-		 * not collapse into one — and `fr`, which shipped with its own catalogue,
-		 * answers with a catalogue rather than with English source. */
+		/* `ur` and `zh-CN` are languages this build RECOGNIZES (direction knows
+		 * Urdu; both are in `SUPPORTED_LOCALES`) but does not ship. The two
+		 * questions must not collapse into one — and `fr`/`es`, which ship with
+		 * their own catalogues, answer with a catalogue rather than English source. */
 		expect(catalogueLocaleFor("ur")).toBeNull();
-		expect(catalogueLocaleFor("es")).toBeNull();
+		expect(catalogueLocaleFor("zh-CN")).toBeNull();
 		expect(catalogueLocaleFor("fr")).toBe("fr");
 		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
 		expect(catalogueLocaleFor("en-US")).toBe("en");
-		expect(SHIPPED_LOCALES).toEqual(["en", "fr"]);
+		expect(SHIPPED_LOCALES).toEqual(["en", "fr", "es"]);
 	});
 });
 
 describe("the English floor", () => {
 	it("renders English source for a preference with no shipped catalogue", () => {
-		/* `es` is supported and pending, not shipped: the reader gets the English
-		 * sentence, not a key and not an empty string. */
-		setLocaleSource(() => "es");
+		/* `zh-CN` is supported and pending, not shipped: the reader gets the
+		 * English sentence, not a key and not an empty string. */
+		setLocaleSource(() => "zh-CN");
 		expect(activeLocale()).toBe("en");
 		expect(t("mobile.home.greeting")).toBe("What can I help you with today?");
 		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 wakes");
@@ -77,7 +77,7 @@ describe("the English floor", () => {
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
 		/* The same rule for a pending locale with no catalogue at all: English
 		 * plural categories, because the TEXT is English. */
-		setLocaleSource(() => "es");
+		setLocaleSource(() => "zh-CN");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 	});
 

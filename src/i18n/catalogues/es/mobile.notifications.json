@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "Responder",
+	"mobile.notifications.back": "Atrás",
+	"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
+	"mobile.notifications.detail.conversation_asks": "Preguntas de esta conversación",
+	"mobile.notifications.detail.earlier_updates": "Actualizaciones anteriores",
+	"mobile.notifications.detail.from": "De",
+	"mobile.notifications.detail.no_asks": "No hay preguntas en esta conversación.",
+	"mobile.notifications.detail.nothing_to_dismiss": "No hay actualizaciones de esta conversación que descartar.",
+	"mobile.notifications.detail.projects": "Proyectos",
+	"mobile.notifications.dismiss": "Descartar",
+	"mobile.notifications.filter_label": "Mostrar",
+	"mobile.notifications.load_failed": "No se pudieron cargar las notificaciones",
+	"mobile.notifications.priority_high": "Alta",
+	"mobile.notifications.title": "Notificaciones"
+}

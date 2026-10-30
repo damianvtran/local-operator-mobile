@@ -78,6 +78,10 @@ export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
 export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	en: 24,
 	fr: 31,
+	/* Measured, not guessed: the widest shipped Spanish chip is 32 characters
+	 * and 236.8 pt against a ~254 pt text box — the same 1.30 headroom the
+	 * French budget records, so the ceiling follows the measurement. */
+	es: 32,
 };
 
 /** The row's ceiling for one shipped locale. */
