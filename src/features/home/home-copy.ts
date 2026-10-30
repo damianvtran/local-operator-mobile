@@ -92,9 +92,10 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * same reasoning the Spanish budget records, so it takes the same 32. */
 	ru: 32,
 	/* Vietnamese measured: its longest chip is 29 characters and measures
-	 * 196.8 pt in the ~256 pt chip row at the type it actually renders in
-	 * (meta 14/500), not the 212.7 pt a 16 pt title-size sample gave. Same
-	 * 32-character headroom the Spanish and Russian entries record. */
+	 * 196.8 pt in the ~256 pt chip row at `text-body-sm` (14 px/400), the type
+	 * these rows render in; the audit's 212.8 pt was sampled at `text-label`
+	 * 15/600, which these rows do not use. Same 32-character headroom the
+	 * Spanish and Russian entries record. */
 	vi: 32,
 };
 

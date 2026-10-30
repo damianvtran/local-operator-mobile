@@ -63,6 +63,10 @@ describe("the locale source", () => {
 		expect(catalogueLocaleFor("zh-CN")).toBe("zh-CN");
 		/* `ru` now SHIPS too — the fourth flip, on the same assertion. */
 		expect(catalogueLocaleFor("ru")).toBe("ru");
+		/* `vi`, the fifth flip: asserted on the path a relay tag actually takes,
+		 * including a regional tag, rather than inferred from the list. */
+		expect(catalogueLocaleFor("vi")).toBe("vi");
+		expect(catalogueLocaleFor("vi-VN")).toBe("vi");
 		/* `zh-Hans` is NOT aliased to `zh-CN` today — asserted as the honest
 		 * current behaviour rather than assumed: a script subtag is not a region.
 		 */
@@ -83,14 +87,21 @@ describe("the English floor", () => {
 	});
 
 	it("formats an English fallback with ENGLISH plural rules", () => {
-		/* The pending locales left (`hi`, then `ur`) both select `one`/`other`,
-		 * so neither can supply the 21-vs-one discrimination — the Russian block
-		 * in `catalogues.test.ts` does that on a shipped locale. What this asserts
-		 * is narrower and still worth having: a pending locale renders English
-		 * TEXT with English plural rules, whatever its own rules are. */
+		/* The discrimination moved to ZERO, not gone: `hi` selects `one` for 0
+		 * where English selects `other`, so this line still tells English rules
+		 * from the reader's. The 21-vs-one case lives in the Russian block in
+		 * `catalogues.test.ts`, on a shipped locale with four forms. */
 		setLocaleSource(() => "hi");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
+		/* `hi` selects `one` for 0 where English selects `other` — but this must go
+		 * through `renderFor` with the RAW tag, because `t()` resolves the
+		 * preference through the shipped set first and hands the rules lookup
+		 * `en`, which hides the bug entirely. This is the line that tells English
+		 * rules from the reader's: with the reader's rules it renders "0 wake". */
+		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "hi")).toBe(
+			"0 wakes",
+		);
 		/* The same rule for a pending locale with no catalogue at all: English
 		 * plural categories, because the TEXT is English. */
 		setLocaleSource(() => "ur");
