@@ -1,0 +1,218 @@
+{
+ "schema": 1,
+ "audit_id": "hi30p1r2",
+ "audit_kind": "same_history_delta_reaudit",
+ "round": 2,
+ "parent_audit_id": "hi30p1",
+ "locale": "hi",
+ "namespace": "mobile.projects",
+ "file_group": "B",
+ "audit_date": "2026-10-30",
+ "audited_head_commit": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_revision": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_branch": "feat/i18n-hindi",
+ "audited_worktree": "/Users/damian/workspace/hi-wave",
+ "audited_worktree_note": "The hi catalogue IS committed at this head (unlike round 1, where it was an untracked working-tree directory). This audit wrote only the four r2 evidence directories; no catalogue byte, code byte or git state was changed, and nothing was committed.",
+ "key_count": {
+  "en": 15,
+  "target": 15,
+  "context": 15
+ },
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "4d508455ed51",
+  "job": null,
+  "model": "radient/auto",
+  "actual_model": "radient/auto",
+  "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider quota) -> kimi/k3.1-pro (provider quota) -> radient/auto (provider quota); every command in this round's audit.log ran under radient/auto. The concrete model behind the provider's `auto` router is not observable from the session, so it is not claimed.",
+  "model_history": [
+   "anthropic/claude-sonnet-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "fallback_applied": true,
+  "fallback_note": "three provider-quota fallbacks occurred before any command of this round ran",
+  "independent_from_translator_session": true,
+  "independence": "Independent auditor identity and a new session (4d508455ed51), not the translator's; this auditor also wrote the round-1 bundles for group B and did not translate. The translator's model is not visible to this auditor, so model diversity is not claimed. No human native-speaker review, no second independent pass and no rendered UI frame are claimed for this delta."
+ },
+ "translator": {
+  "agent": "i18n-translator (hi wave 6)",
+  "session": null,
+  "job": null,
+  "model": "not observed by this auditor",
+  "actual_model_source": "not disclosed to this auditor; the brief guarantees a different agent/session"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.projects.json",
+   "sha256": "a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.projects.context.json",
+   "sha256": "5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99"
+  },
+  "target": {
+   "path": "src/i18n/catalogues/hi/mobile.projects.json",
+   "sha256": "aa9a8def55e115385345a6350f1be8eea146c10c52353f6a7b720336aa614d6e"
+  }
+ },
+ "parent_source_unchanged": {
+  "en": true,
+  "context": true
+ },
+ "delta_reconstruction": {
+  "method": "The hi catalogue was an untracked working-tree directory at round 1, so git cannot diff it. The round-1 audited bytes are read from the audited snapshot at /Users/damian/.local-operator/sessions/a98ed4a82f18/scratchpad/hi-audit-b/repo/src/i18n/catalogues/hi, whose sha256 equals the parent record's recorded input_hashes.target.sha256 for all four namespaces; delta_resolve.py compares the four files key by key against this head.",
+  "round1_snapshot_sha256": {
+   "mobile.schedules": "88ac1b6ab0849e1270711d185172fb459a7198ac0521818b5922e0e37d291163",
+   "mobile.projects": "c2e2a90449d9295b1c8f8e15aa869d399ddb4d4e2cd93849c5e0447c8a53be55",
+   "mobile.computers": "0b38dc5d9c5b8eb132ec017d573ac46f4fdb6aa7887e9ce85be786e2a9ffb8a5",
+   "mobile.notifications": "5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252"
+  }
+ },
+ "changed_keys": [
+  "mobile.projects.draft_kept_note",
+  "mobile.projects.session_state.filed_by",
+  "mobile.projects.write_receipt"
+ ],
+ "round1_findings": [
+  {
+   "id": "HI-B-8",
+   "severity": "minor",
+   "key": "mobile.projects.draft_kept_note",
+   "resolution": "resolved_byte_exact",
+   "method": "string equality with the parent record's `replacement`",
+   "expected": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।",
+   "observed": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।"
+  },
+  {
+   "id": "HI-B-9",
+   "severity": "minor",
+   "key": "mobile.projects.session_state.filed_by",
+   "resolution": "resolved_byte_exact",
+   "method": "string equality with the parent record's `replacement`",
+   "expected": "द्वारा दर्ज",
+   "observed": "द्वारा दर्ज"
+  },
+  {
+   "id": "HI-B-10",
+   "severity": "nit",
+   "key": "mobile.projects.write_receipt",
+   "resolution": "resolved",
+   "method": "`deleted {मिटाया गया}` present in all three kind arms, `deleted {हटाया गया}` absent"
+  },
+  {
+   "id": "HI-B-11",
+   "severity": "nit",
+   "key": "mobile.projects.write_receipt",
+   "resolution": "left_as_shipped_by_recorded_decision",
+   "method": "the parent record's own option 1; `“{subject}”` kept in all three arms"
+  }
+ ],
+ "mechanical": {
+  "repo_validator": "node scripts/i18n/generate.ts --check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)'",
+  "repo_gate": "node scripts/i18n/check-strings.ts -> exit 0: '284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5'",
+  "affected_tests": "vitest run src/i18n src/features/schedules src/features/projects -> 7 files, 188 tests passed, exit 0",
+  "typecheck": "tsc --noEmit -> exit 0 (the narrowed {total}: number is satisfied at every call site)",
+  "structural_verifier": "delta_verify.py over all 77 group-B keys -> 0 problems, 1 accounted escalation; placeholder name sets identical (4 recorded reorderings, same four as round 1), select arms identical, every plural node carries one+other, key order identical to English, NFC clean, no ZWJ/ZWNJ/bidi controls, no doubled spaces, no precomposed U+0958-U+095F",
+  "negative_controls": "8/8 as expected: unchanged copy passes; dropped placeholder, dropped `one` arm, plural<->select crossing, renamed select arm, ZWJ, precomposed U+095E and a renamed plural placeholder each fail with the expected message",
+  "delta_proof": "key-level comparison against the round-1 snapshot: 10 keys changed across group B, exactly the applied findings' keys; computers and notifications are byte-identical files"
+ },
+ "audit_notes_not_execution_log": "report.md holds judgement and per-finding reasoning; audit.log is the executed transcript (bash -x) and covers all four group-B namespaces, so it is identical in the four delta bundles. Notes never prove execution.",
+ "original_lost_evidence": {
+  "status": "none",
+  "note": "Nothing was lost or replaced; this is an additional delta round beside an intact round-1 bundle."
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/hi/mobile.projects/hi30p1r2/record.json",
+   "note": "this record; not self-hashed"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.projects/hi30p1r2/report.md",
+   "sha256": "cfda6e2dac8f281ad6c2414cfbce874cf58e720eb6f528be1b4dd03ebdcd60fa",
+   "bytes": 8456
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.projects/hi30p1r2/audit.log",
+   "sha256": "65183e8f7985e0ac68340299acf55189161d6ca9b1bdae048a96891ad8d2b843",
+   "bytes": 25450
+  }
+ ],
+ "verdict_scope": {
+  "receipt_arms": {
+   "method": "renderFor('mobile.projects.write_receipt', {kind, action, subject:'beta'}, 'hi') over 3 kinds × 8 actions = 24 combinations",
+   "verbs": {
+    "created": "बनाया गया",
+    "completed": "पूरा किया गया",
+    "reopened": "फिर खोला गया",
+    "added": "जोड़ा गया",
+    "updated": "अपडेट किया गया",
+    "removed": "हटाया गया",
+    "deleted": "मिटाया गया",
+    "other": "अपडेट किया गया"
+   },
+   "composed": [
+    "project:   “beta” प्रोजेक्ट मिटाया गया।",
+    "milestone: “beta” पड़ाव मिटाया गया।",
+    "other:     “beta” मिटाया गया।"
+   ],
+   "verdict": "All three kind arms read correctly; मिटाया गया (delete) is now distinct from हटाया गया (remove), masculine agreement matches प्रोजेक्ट/पड़ाव, and the unknown-kind fallback reads as English's does."
+  },
+  "filed_by_composition_correction": {
+   "round1_note": "The parent record described the fragment as joining the session name inline.",
+   "corrected": "linkedSessionState() renders into its own Text block BELOW the session label (project-detail.tsx:437-443): two lines, no `·` separator.",
+   "still_correct": "`द्वारा दर्ज` under the name composes as `work-a द्वारा दर्ज` ('filed by work-a') in standard Hindi order and has the same shape as the sibling states (गायब, नहीं चल रहा)."
+  },
+  "environment_observation_not_a_finding": "The delete dialog's title and confirm button are hard-coded English literals (project-detail.tsx title=\"Delete project\", confirmLabel=\"Delete\"), baselined in scripts/i18n/strings-baseline.json and identical in every locale — an app-level coverage gap outside the catalogue, recorded for context only."
+ },
+ "new_findings": [
+  {
+   "id": "HI-B-12",
+   "severity": "minor",
+   "status": "open",
+   "gating": false,
+   "key": "mobile.projects.delete_body",
+   "relation": "unchanged neighbour; raised because the changed `deleted` arm now names the action differently from the confirmation the user tapped",
+   "current": "{name} हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
+   "problem": "One irreversible action, two verbs in one flow: the confirm asks हटाएँ (remove) and the receipt now says मिटाया गया (erased). Before d4e31b1 both said हटाया/हटाएँ, so the split is a consequence of the fix. Core's own committed Hindi splits the same way and makes the confirmation the odd one: wire.slash.delete renders a permanent delete as 'इस बातचीत को हमेशा के लिए मिटाएँ; पुष्टि माँगता है', while हटाएँ is the dismiss/remove verb (tui.notifications.hint_dismiss, hint_clear). हटाएँ here is also the verb the milestone remove uses (remove_milestone_body), which is the removed/deleted collapse HI-B-10 set out to break.",
+   "suggested": "{name} मिटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
+   "not_major_because": "meaning, polarity and the destructive warning are intact; the sentence says the row goes for good"
+  }
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "blocker_ids": [],
+  "major_ids": [],
+  "minor_open_ids": [
+   "HI-B-12"
+  ],
+  "finding_ids": [
+   "HI-B-8",
+   "HI-B-9",
+   "HI-B-10",
+   "HI-B-11",
+   "HI-B-12"
+  ],
+  "carried_open": [
+   "HI-B-12"
+  ],
+  "reason": "0 BLOCKER, 0 MAJOR. HI-B-8/9/10 are resolved byte-exactly and the receipt reads correctly in all three kind arms; HI-B-11 is left as shipped per the record's own option 1. One new MINOR (HI-B-12) records that the delete confirmation still says हटाएँ while the changed receipt says मिटाया गया; it does not gate."
+ },
+ "ledger": {
+  "command": null,
+  "note": "No i18n ledger or audit-ledger command exists at this head (package.json, scripts/i18n/ and docs/i18n.md contain none); docs/i18n.md makes the PR report the artifact of record. The row below is proposed, not written.",
+  "proposed_row": {
+   "locale": "hi",
+   "file_group": "mobile.projects",
+   "status": "passed",
+   "auditor": "i18n-auditor (lopdev team)",
+   "model": "radient/auto",
+   "source_hash": "aa9a8def55e115385345a6350f1be8eea146c10c52353f6a7b720336aa614d6e",
+   "audit_id": "hi30p1r2",
+   "record": "i18n/audits/evidence/hi/mobile.projects/hi30p1r2/record.json",
+   "note": "hi/mobile.projects hi30p1r2: 15 keys, 3 round-1 findings resolved byte-exactly, HI-B-11 left as shipped; 1 new MINOR (HI-B-12, delete confirm verb) non-gating. Record: i18n/audits/evidence/hi/mobile.projects/hi30p1r2/record.json"
+  }
+ }
+}

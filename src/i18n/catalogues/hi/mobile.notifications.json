@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "उत्तर दें",
+	"mobile.notifications.back": "वापस",
+	"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
+	"mobile.notifications.detail.conversation_asks": "इस बातचीत के सवाल",
+	"mobile.notifications.detail.earlier_updates": "पिछले अपडेट",
+	"mobile.notifications.detail.from": "स्रोत",
+	"mobile.notifications.detail.no_asks": "इस बातचीत में कोई सवाल नहीं।",
+	"mobile.notifications.detail.nothing_to_dismiss": "इस बातचीत से हटाने के लिए कोई अपडेट नहीं।",
+	"mobile.notifications.detail.projects": "प्रोजेक्ट",
+	"mobile.notifications.dismiss": "हटाएँ",
+	"mobile.notifications.filter_label": "दिखाएँ",
+	"mobile.notifications.load_failed": "सूचनाएँ लोड नहीं हो सकीं",
+	"mobile.notifications.priority_high": "उच्च",
+	"mobile.notifications.title": "सूचनाएँ"
+}

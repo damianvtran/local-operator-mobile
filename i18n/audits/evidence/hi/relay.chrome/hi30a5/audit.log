@@ -1,0 +1,60 @@
+# audit.log — hindi wave 6, namespace relay.chrome, audit id hi30a5
+# produced by executing the repository's own validator and renderer in this session; not notes
+
+$ cd /Users/damian/workspace/hi-wave && node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/verify_ns.mjs relay.chrome   # repository parser + formatter, per-key
+# Hindi audit — namespace relay.chrome
+# generated: 2026-10-30T16:47:18.700Z
+# worktree: /Users/damian/workspace/hi-wave  HEAD: 647581a4abd5eafce09914b5b1936982749c16c4
+# git status (porcelain): M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/hi/ | ?? src/i18n/catalogues/hi/
+
+## inputs
+  en       src/i18n/catalogues/en/relay.chrome.json  sha256=e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1  keys=4
+  context  src/i18n/catalogues/en/relay.chrome.context.json  sha256=195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b  keys=4
+  hi       src/i18n/catalogues/hi/relay.chrome.json  sha256=afcfa7fbf08b687b7f6f03a8b63d2959bca62654d59be962ecb6e699a2b037ae  keys=4
+
+## structure
+  [PASS] key set identical — en=4 hi=4
+  [PASS] no key dropped or added
+  [PASS] every key documented in the context sidecar — ctx=4
+  [INFO] placeholder-bearing messages: 0; plural-bearing messages: 0
+  [PASS] placeholder surface identical on every key
+  [PASS] ICU arms identical on every key
+  [PASS] code spans identical on every key
+
+## render through the worktree renderer (parseMessage + formatMessage)
+  [PASS] all 4 values render without error
+
+## typography / Devanagari
+  [PASS] typography predicates clean
+  [INFO] values carrying danda: 0/4; ellipsis U+2026: 1
+
+## mirror check against core's committed Hindi (git -C core show origin/main:<path>)
+  [INFO] core origin/main = 8076c56acd56f07f1cabf90fd7fca8bf0e5acdff
+  [PASS] byte-identical relay.chrome.session.resume
+  [PASS] byte-identical relay.chrome.session.resuming
+  [PASS] byte-identical relay.chrome.session.subtitle.ended
+  [PASS] byte-identical relay.chrome.session.subtitle.not_answering
+  [INFO] core keys not mirrored by the mobile catalogue: 81
+
+## result
+  checks failed: 0
+  VERDICT(mechanical): PASS
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/compose_ns.mjs relay.chrome   # composed sentences quoted in report.md
+# composition for relay.chrome
+  values as the shared component renders them:
+    उत्तर नहीं दे रहा
+    समाप्त
+    जारी रखें
+    खुल रहा है…
+    → उत्तर नहीं दे रहा ⏎ समाप्त ⏎ जारी रखें ⏎ खुल रहा है…
+exit=0

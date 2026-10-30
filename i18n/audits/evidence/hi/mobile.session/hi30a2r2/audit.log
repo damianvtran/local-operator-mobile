@@ -1,0 +1,70 @@
+# audit.log — hindi wave 6 · namespace mobile.session · delta audit hi30a2r2
+# repository /Users/damian/workspace/hi-wave at d4e31b1915b558171ded41501c741568f0854f3f; no tracked file differs from HEAD (`git diff HEAD -- src/ i18n/` empty)
+# round-1 audit hi30a2: /Users/damian/workspace/hi-wave/i18n/audits/evidence/hi/mobile.session/hi30a2/
+# every command below ran in this session; the text after each prompt is its captured output
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:41683) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/hi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/hi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/delta_check.py mobile.session
+# namespace mobile.session  round-1 audit hi30a2  audited revision d4e31b1
+
+## inputs (sha256)
+  en         src/i18n/catalogues/en/mobile.session.json  8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8
+  context    src/i18n/catalogues/en/mobile.session.context.json  6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1
+  hi (now)   src/i18n/catalogues/hi/mobile.session.json  1f326bb988a0063f528c9a15f09127674419c2687d851a07d5c58a8513bcb21a
+  hi (r1)    src/i18n/catalogues/hi/mobile.session.json  1f326bb988a0063f528c9a15f09127674419c2687d851a07d5c58a8513bcb21a  (from hi30a2/record.json)
+  source unchanged since round 1: en=True context=True
+  target unchanged since round 1: True
+
+## round-1 findings: byte-exact resolution
+  (round 1 raised no finding for this namespace)
+## structure and predicates on the current bytes
+  [PASS] key set identical — en=2 hi=2
+  [PASS] every key has a context note — ctx=2
+  [INFO] placeholder-bearing messages: 0; plural/select messages: 0
+  [PASS] placeholder surface identical
+  [PASS] ICU arms identical
+  [PASS] NFC
+  [PASS] no ZWJ/ZWNJ/ZWSP
+  [PASS] no bidi controls
+  [PASS] Latin digits only
+  [PASS] no space before punctuation
+  [PASS] U+2026 ellipsis
+  [PASS] danda not ASCII '.'
+  [PASS] curly quotes only
+  [PASS] no तुम/तू
+  [PASS] no double/edge space
+
+## delta diff coverage (old values recovered from the round-1 measurement artifacts)
+  values comparable for this namespace: 2 of 2
+  changed: 0
+
+## rendered through the repository's own parseMessage/formatMessage
+  every value in this namespace rendered without error in the group pass
+  (render_group_a.mts: 66 values across group A, 0 failures)
+exit=0
+
+$ swift /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/measure.swift   # CoreText CTLineGetTypographicBounds, AppKit system font
+conversation_details (unchanged)	size=14/400	width=99.8pt	cells=11	बातचीत का विवरण
+status_tray.hint (unchanged)	size=14/400	width=227.7pt	cells=30	कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है
+
+$ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/render_group_a.mts   # group pass; block for this namespace
+## mobile.session (2 keys)
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/negative_controls.py   # group-level predicate falsifiability
+  66 keys x 10 predicates on real values: PASS (0 failures)
+  [MISMATCH] mobile.session_health:mobile.session_health.still_reopening
+  mismatches in group A: 1
+RESULT: PASS (10/10 controls fired, 0 false positives)
+exit=0

@@ -1,0 +1,32 @@
+{
+	"bundle": "i18n/audits/evidence/hi/mobile.computers/hi30c1",
+	"audit_id": "hi30c1",
+	"written_at_utc": "2026-10-30",
+	"provenance": "same auditor/session/model as record.json (i18n-auditor, a98ed4a82f18, radient/auto)",
+	"companions": {
+		"record.json": {
+			"sha256": "a9c766f0fc16c69eede60e696b19c842275073515b28d1634582f84ad16d67b6",
+			"bytes": 12335
+		},
+		"report.md": {
+			"sha256": "2c672023e7ee77cfeecfacf7962be1f899665c25282f6fd88e7f756b5c35eb5c",
+			"bytes": 11827
+		},
+		"audit.log": {
+			"sha256": "0cfd469b1f9359eb96fa90c9ea8b2ea32835a0de3802b142db480632fa5c1e1c",
+			"bytes": 34550
+		},
+		"renders.tsv": {
+			"sha256": "5b07621f0942793fb0ef6281bfa37d7cad35cf8a15fe1a83e8bbe0e8816e1b60",
+			"bytes": 8130
+		},
+		"renders-all.tsv": {
+			"sha256": "aced29b41069fc4c08e5250297a7de758feb9c5c23a818a525c9322e912704b2",
+			"bytes": 8955
+		},
+		"verify.out.txt": {
+			"sha256": "3aaed8a220805a56a42ddcb6eec774d9e59be584476e22af96f58280501a0fd8",
+			"bytes": 2706
+		}
+	}
+}

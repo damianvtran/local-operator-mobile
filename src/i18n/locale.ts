@@ -67,7 +67,6 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
  */
 export const NOT_YET_SHIPPED_LOCALES = [
 	"ur",
-	"hi",
 ] as const satisfies readonly SupportedLocale[];
 
 /** The locale directories this build actually ships. Being in this list is not
@@ -83,6 +82,7 @@ export const SHIPPED_LOCALES = [
 	"zh-CN",
 	"ru",
 	"vi",
+	"hi",
 ] as const satisfies readonly SupportedLocale[];
 
 export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];

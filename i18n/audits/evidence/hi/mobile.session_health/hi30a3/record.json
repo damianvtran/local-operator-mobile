@@ -1,0 +1,153 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"audit_id": "hi30a3",
+	"locale": "hi",
+	"namespace": "mobile.session_health",
+	"audit_date": "2026-10-30",
+	"wave": "hi wave 6 — damianvtran/local-operator-mobile, branch feat/i18n-hindi, group A",
+	"audited_revision": "647581a4abd5eafce09914b5b1936982749c16c4",
+	"audited_revision_note": "The hi catalogue directory is untracked at this revision and src/i18n/catalogue.gen.ts is modified; the target bytes are pinned by input_hashes.hi.",
+	"key_count": {
+		"en": 11,
+		"target": 11,
+		"context": 11
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "0c3fa150075f",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback. Every command recorded in these bundles ran after the final switch, i.e. on radient/auto.",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is the translator's served model too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (hi wave 6)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session_health.json",
+			"sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+			"sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+		},
+		"hi": {
+			"path": "src/i18n/catalogues/hi/mobile.session_health.json",
+			"sha256": "4c3c584958e08b5c39d45592f809d4e4d448c46d416764f559e9c4ba12f9c776"
+		}
+	},
+	"core_reference": {
+		"repo": "damianvtran/local-operator",
+		"origin_main": "8076c56acd56f07f1cabf90fd7fca8bf0e5acdff",
+		"paths": "core glossary + hi style guide; per-term occurrence counts over origin/main:local_operator/i18n/catalogues/hi/"
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0 (catalogue.gen.ts current, 143 keys, 10 namespaces); node scripts/i18n/check-strings.ts -> 284 baselined findings, 0 new, no growth vs 647581a",
+		"validator_scope": "the validator checks key parity, message parsing, catalogue projection and the strings ratchet; it does not compare placeholders or ICU arms between locales and does not run a plural zero case, so this audit parsed every value with the repository's own parser and compared those surfaces itself",
+		"scoped_checks": "valid JSON; key and sidecar parity; placeholder name/kind parity; ICU arm parity; whole-value round-trip through parseMessage/formatMessage; NFC; no ZWJ/ZWNJ; no double/edge spaces; no space before punctuation; no ASCII ellipsis or ASCII full stop after Devanagari; curly quotes only; no Devanagari digits; no control or bidi characters; no तुम/तू",
+		"renderer": "src/i18n/messages.ts parseMessage/formatMessage and src/i18n/locale.ts, driven from a scratch script; the repository's own code, not a reimplementation",
+		"fit_metric": "glyph advances measured with CoreText/AppKit (system font) at the app's token sizes (meta 12/500, body-sm 14/400, title 20/600, label 15/600) against boxes read from home-splash.tsx, tokens.gen.ts and the sidecars: 288 pt splash column at 320 pt, 270 pt tip text box, 256 pt chip text box",
+		"no_rendered_frame": "widths are measured text advances, not a rendered frame; the claim is the comparison with the row boxes, not a screenshot"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "3509c19895bd",
+		"agent": "reviewer subagent (label hi-second-pass)",
+		"requested_model": "anthropic/claude-sonnet-5-5 (role default)",
+		"actual_model": "radient/auto",
+		"scope": "all four group-A namespaces, 54 values, read in full without seeing this auditor's findings",
+		"effect": "agreed the tip.parallel wording is wrong and proposed the same replacement (graded MINOR there; MAJOR here per the task rubric); refuted this auditor's tentative MAJOR on resume_refused with three checkable reasons (English does the same, core splits the same way, the title already carries the verb) — finding withdrawn; contributed the फिर से consistency finding and the अभी दोबारा alignment, both adopted; judged options.apply natural where this auditor files a NIT — disagreement disclosed; independently flagged the red catalogues.test.ts and the English accessibilityLabel on the status tray, both verified here"
+	},
+	"findings": [
+		{
+			"id": "H-01",
+			"key": "mobile.session_health.resume_refused",
+			"severity": "MINOR",
+			"current": "यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।",
+			"problem": "Two adverb forms diverge from the shipped Hindi for the same events: core's relay.health.ended_send_failed says अभी दोबारा नहीं खोला जा सका and फिर से कोशिश करें, which ship in this app (byte-identical to core) and render in the same health sheet family. अभी फिर is not the standard collocation for 'just now'.",
+			"replacement": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
+			"evidence": "Measured 317.6 pt at body-sm 14/400 (was 292.4); a sentence in the health sheet wraps to two lines either way."
+		},
+		{
+			"id": "H-02",
+			"key": "mobile.session_health.still_reopening",
+			"severity": "NIT",
+			"current": "अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।",
+			"problem": "अभी twice in one line; English's 'yet' is अभी तक.",
+			"replacement": "अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।",
+			"evidence": "Measured 262.8 pt at body-sm 14/400 (was 243.3)."
+		}
+	],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [
+			"H-01"
+		],
+		"nit_ids": [
+			"H-02"
+		],
+		"finding_ids": [
+			"H-01",
+			"H-02"
+		],
+		"reason": "no BLOCKER or MAJOR; 1 MINOR + 1 NIT (adverb consistency with core's same-sheet sentence). The resume verb split was raised as a tentative MAJOR, then withdrawn on evidence"
+	},
+	"ledger": {
+		"command": "absent",
+		"note": "No audit-ledger command and no i18n ledger exist in this repository at this head: i18n/ holds audits/ only, and scripts/i18n/ has generate.ts, check-strings.ts and the ratchet, with no ledger writer. docs/i18n.md records the report in the pull request. This bundle is the durable record; a ledger-ready row is proposed in ledger_row_proposed and explicitly NOT written.",
+		"ledger_row_proposed": {
+			"locale": "hi",
+			"namespace": "mobile.session_health",
+			"status": "passed",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+			"note": "hi wave 6 hi30a3: see i18n/audits/evidence/hi/mobile.session_health/hi30a3/record.json",
+			"written": false
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root (no tracked manifest maps a different root)",
+		"reads": "ordinary worktree reads; core's committed bytes via git -C /Users/damian/local-operator show origin/main:<path>; the repository's own validator and renderer; local CoreText measurement",
+		"writes": "this bundle only; no edit to any catalogue, source or config file; nothing committed or pushed"
+	},
+	"limits": {
+		"native_review": "none performed; this auditor reads Hindi fluently by reasoning, not as a community-verified native reviewer",
+		"rendered_frame": "none captured; no simulator or browser frame was produced for these strings",
+		"translator_observation": "the translator's run was not observed by this auditor",
+		"plural_zero_case": "this namespace carries no plural message. The catalogue's plural messages live in mobile.schedules and mobile.projects (other auditors' groups); this auditor rendered them at 0/1/2/21 through the repository's formatter and independently reached the same zero-case defect the schedules bundle files as HI-B-5 (hi30s1), with the same fix. Rendered evidence is in this record's cross_namespace_observations. This auditor would grade it MAJOR; the schedules auditor owns the disposition. Width is measured, never rendered.",
+		"shipping_state": "at this head hi sits in NOT_YET_SHIPPED_LOCALES, so t() renders English for a hi preference and catalogues.test.ts fails until the ship step flips the list (verified: 51 pass, 1 fail at catalogues.test.ts:188) — a wave step, not a copy defect"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output. audit.log holds the commands actually run and their actual output at this head. Rendered composed sentences quoted in report.md were produced by the repository's own formatter in this session.",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3/report.md",
+			"sha256": "e3848af5a773767632386078a2973a36c3d7ade2bfc86c6f696fdc79863cba5a"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3/audit.log",
+			"note": "actual command output, not notes",
+			"sha256": "f43ced8a6816998670a43c54cb9a5edbad7c6beb885288f5075094129b3d8828"
+		}
+	],
+	"cross_namespace_observations": []
+}
