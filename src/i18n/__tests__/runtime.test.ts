@@ -46,13 +46,13 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` and `hi` are languages this build RECOGNIZES (direction knows Urdu;
-		 * both are in `SUPPORTED_LOCALES`) but does not ship. The two questions
+		/* `ur` is the last language this build RECOGNIZES (direction knows Urdu;
+		 * it is in `SUPPORTED_LOCALES`) but does not ship. The two questions
 		 * must not collapse into one — and `fr`, `es`, `zh-CN` and `ru`, which
 		 * ship with their own catalogues, answer with a catalogue rather than
 		 * English source. */
 		expect(catalogueLocaleFor("ur")).toBeNull();
-		expect(catalogueLocaleFor("hi")).toBeNull();
+		expect(catalogueLocaleFor("ur")).toBeNull();
 		expect(catalogueLocaleFor("fr")).toBe("fr");
 		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
 		/* `es` now SHIPS: it answers with its own catalogue, and a regional tag
@@ -67,40 +67,52 @@ describe("the locale source", () => {
 		 * including a regional tag, rather than inferred from the list. */
 		expect(catalogueLocaleFor("vi")).toBe("vi");
 		expect(catalogueLocaleFor("vi-VN")).toBe("vi");
+		expect(catalogueLocaleFor("hi")).toBe("hi");
 		/* `zh-Hans` is NOT aliased to `zh-CN` today — asserted as the honest
 		 * current behaviour rather than assumed: a script subtag is not a region.
 		 */
 		expect(catalogueLocaleFor("zh-Hans")).toBeNull();
 		expect(catalogueLocaleFor("en-US")).toBe("en");
-		expect(SHIPPED_LOCALES).toEqual(["en", "fr", "es", "zh-CN", "ru", "vi"]);
+		expect(SHIPPED_LOCALES).toEqual([
+			"en",
+			"fr",
+			"es",
+			"zh-CN",
+			"ru",
+			"vi",
+			"hi",
+		]);
 	});
 });
 
 describe("the English floor", () => {
 	it("renders English source for a preference with no shipped catalogue", () => {
-		/* `hi` is supported and pending, not shipped: the reader gets the
+		/* `ur` is supported and pending, not shipped: the reader gets the
 		 * English sentence, not a key and not an empty string. */
-		setLocaleSource(() => "hi");
+		setLocaleSource(() => "ur");
 		expect(activeLocale()).toBe("en");
 		expect(t("mobile.home.greeting")).toBe("What can I help you with today?");
 		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 wakes");
 	});
 
 	it("formats an English fallback with ENGLISH plural rules", () => {
-		/* The discrimination moved to ZERO, not gone: `hi` selects `one` for 0
-		 * where English selects `other`, so this line still tells English rules
-		 * from the reader's. The 21-vs-one case lives in the Russian block in
-		 * `catalogues.test.ts`, on a shipped locale with four forms. */
-		setLocaleSource(() => "hi");
+		/* HONEST LIMIT: this can no longer discriminate. It needs a pending
+		 * locale whose plural rules differ from English, and the only one left
+		 * (`ur`) selects `other` for 0 and `one` for 1 — exactly what English
+		 * does. Hindi supplied the 0-vs-other case until it shipped; a shipped
+		 * locale cannot supply it, because key parity guarantees it has the key
+		 * and so never falls back. Kept as a behavioural pin, not as proof of
+		 * guarantee 3; the discriminating plural coverage now lives in the
+		 * Russian block in `catalogues.test.ts`, on a shipped four-form locale. */
+		setLocaleSource(() => "ur");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
-		/* `hi` selects `one` for 0 where English selects `other` — but this must go
-		 * through `renderFor` with the RAW tag, because `t()` resolves the
-		 * preference through the shipped set first and hands the rules lookup
-		 * `en`, which hides the bug entirely. This is the line that tells English
-		 * rules from the reader's: with the reader's rules it renders "0 wake". */
+		/* `hi` now SHIPS, so this renders the Hindi catalogue, not an English
+		 * fallback: `0 जागृति` is the expected Hindi sentence, not "0 wakes".
+		 * Kept because the zero case is where Hindi disagrees with English and a
+		 * change to the arm structure should show up here first. */
 		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "hi")).toBe(
-			"0 wakes",
+			"0 जागृति",
 		);
 		/* The same rule for a pending locale with no catalogue at all: English
 		 * plural categories, because the TEXT is English. */

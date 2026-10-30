@@ -1,0 +1,152 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"audit_id": "hi30a4",
+	"locale": "hi",
+	"namespace": "mobile.account_routing",
+	"audit_date": "2026-10-30",
+	"wave": "hi wave 6 — damianvtran/local-operator-mobile, branch feat/i18n-hindi, group A",
+	"audited_revision": "647581a4abd5eafce09914b5b1936982749c16c4",
+	"audited_revision_note": "The hi catalogue directory is untracked at this revision and src/i18n/catalogue.gen.ts is modified; the target bytes are pinned by input_hashes.hi.",
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "0c3fa150075f",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback. Every command recorded in these bundles ran after the final switch, i.e. on radient/auto.",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is the translator's served model too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (hi wave 6)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.json",
+			"sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.context.json",
+			"sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+		},
+		"hi": {
+			"path": "src/i18n/catalogues/hi/mobile.account_routing.json",
+			"sha256": "411a1ca9ae52ccc82049c2fb01dcc2e36880cddbba446c1a3f066e90eef7de83"
+		}
+	},
+	"core_reference": {
+		"repo": "damianvtran/local-operator",
+		"origin_main": "8076c56acd56f07f1cabf90fd7fca8bf0e5acdff",
+		"paths": "core glossary + hi style guide; per-term occurrence counts over origin/main:local_operator/i18n/catalogues/hi/"
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0 (catalogue.gen.ts current, 143 keys, 10 namespaces); node scripts/i18n/check-strings.ts -> 284 baselined findings, 0 new, no growth vs 647581a",
+		"validator_scope": "the validator checks key parity, message parsing, catalogue projection and the strings ratchet; it does not compare placeholders or ICU arms between locales and does not run a plural zero case, so this audit parsed every value with the repository's own parser and compared those surfaces itself",
+		"scoped_checks": "valid JSON; key and sidecar parity; placeholder name/kind parity; ICU arm parity; whole-value round-trip through parseMessage/formatMessage; NFC; no ZWJ/ZWNJ; no double/edge spaces; no space before punctuation; no ASCII ellipsis or ASCII full stop after Devanagari; curly quotes only; no Devanagari digits; no control or bidi characters; no तुम/तू",
+		"renderer": "src/i18n/messages.ts parseMessage/formatMessage and src/i18n/locale.ts, driven from a scratch script; the repository's own code, not a reimplementation",
+		"fit_metric": "glyph advances measured with CoreText/AppKit (system font) at the app's token sizes (meta 12/500, body-sm 14/400, title 20/600, label 15/600) against boxes read from home-splash.tsx, tokens.gen.ts and the sidecars: 288 pt splash column at 320 pt, 270 pt tip text box, 256 pt chip text box",
+		"no_rendered_frame": "widths are measured text advances, not a rendered frame; the claim is the comparison with the row boxes, not a screenshot"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "3509c19895bd",
+		"agent": "reviewer subagent (label hi-second-pass)",
+		"requested_model": "anthropic/claude-sonnet-5-5 (role default)",
+		"actual_model": "radient/auto",
+		"scope": "all four group-A namespaces, 54 values, read in full without seeing this auditor's findings",
+		"effect": "agreed the tip.parallel wording is wrong and proposed the same replacement (graded MINOR there; MAJOR here per the task rubric); refuted this auditor's tentative MAJOR on resume_refused with three checkable reasons (English does the same, core splits the same way, the title already carries the verb) — finding withdrawn; contributed the फिर से consistency finding and the अभी दोबारा alignment, both adopted; judged options.apply natural where this auditor files a NIT — disagreement disclosed; independently flagged the red catalogues.test.ts and the English accessibilityLabel on the status tray, both verified here"
+	},
+	"findings": [
+		{
+			"id": "H-01",
+			"key": "mobile.account_routing.reload",
+			"severity": "MINOR",
+			"current": "नीति फिर पढ़ें",
+			"problem": "Control/text mismatch in one namespace: loading, load_error and error all say लोड (…मौजूदा नीति पढ़ने के लिए फिर लोड करें), while the only control the reader can press is named पढ़ें. The error instructs an action no control is called. English's control is 'Reload policy'.",
+			"replacement": "नीति फिर लोड करें",
+			"evidence": "Measured 94.4 pt at body-sm 14/400 (was 68.4); the sm Button sizes to its label. The alternative — keep the button and change the error to …मौजूदा नीति फिर पढ़ें। — was measured at 373.7 pt and is acceptable; renaming the control is preferred because three strings already say लोड."
+		},
+		{
+			"id": "H-02",
+			"key": "mobile.account_routing.retry / load_error / rejected",
+			"severity": "MINOR",
+			"current": "फिर कोशिश करें · …और फिर कोशिश करें। · …और फिर कोशिश करें।",
+			"problem": "Same फिर से divergence as mobile.home H-02, in three keys of one screen.",
+			"replacement": "फिर से कोशिश करें · …और फिर से कोशिश करें। · …और फिर से कोशिश करें।",
+			"evidence": "Measured 98.1 pt at body-sm 14/400 (was 84.8) for the button; sentences wrap."
+		}
+	],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [
+			"H-01",
+			"H-02"
+		],
+		"nit_ids": [],
+		"finding_ids": [
+			"H-01",
+			"H-02"
+		],
+		"reason": "no BLOCKER or MAJOR; 1 MINOR (control named differently from the sentence that instructs it) + 1 MINOR (फिर vs फिर से) + 1 NIT"
+	},
+	"ledger": {
+		"command": "absent",
+		"note": "No audit-ledger command and no i18n ledger exist in this repository at this head: i18n/ holds audits/ only, and scripts/i18n/ has generate.ts, check-strings.ts and the ratchet, with no ledger writer. docs/i18n.md records the report in the pull request. This bundle is the durable record; a ledger-ready row is proposed in ledger_row_proposed and explicitly NOT written.",
+		"ledger_row_proposed": {
+			"locale": "hi",
+			"namespace": "mobile.account_routing",
+			"status": "passed",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03",
+			"note": "hi wave 6 hi30a4: see i18n/audits/evidence/hi/mobile.account_routing/hi30a4/record.json",
+			"written": false
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root (no tracked manifest maps a different root)",
+		"reads": "ordinary worktree reads; core's committed bytes via git -C /Users/damian/local-operator show origin/main:<path>; the repository's own validator and renderer; local CoreText measurement",
+		"writes": "this bundle only; no edit to any catalogue, source or config file; nothing committed or pushed"
+	},
+	"limits": {
+		"native_review": "none performed; this auditor reads Hindi fluently by reasoning, not as a community-verified native reviewer",
+		"rendered_frame": "none captured; no simulator or browser frame was produced for these strings",
+		"translator_observation": "the translator's run was not observed by this auditor",
+		"plural_zero_case": "this namespace carries no plural message. The catalogue's plural messages live in mobile.schedules and mobile.projects (other auditors' groups); this auditor rendered them at 0/1/2/21 through the repository's formatter and independently reached the same zero-case defect the schedules bundle files as HI-B-5 (hi30s1), with the same fix. Rendered evidence is in this record's cross_namespace_observations. This auditor would grade it MAJOR; the schedules auditor owns the disposition. Width is measured, never rendered.",
+		"shipping_state": "at this head hi sits in NOT_YET_SHIPPED_LOCALES, so t() renders English for a hi preference and catalogues.test.ts fails until the ship step flips the list (verified: 51 pass, 1 fail at catalogues.test.ts:188) — a wave step, not a copy defect"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output. audit.log holds the commands actually run and their actual output at this head. Rendered composed sentences quoted in report.md were produced by the repository's own formatter in this session.",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/hi/mobile.account_routing/hi30a4/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.account_routing/hi30a4/report.md",
+			"sha256": "2f3b93c0edaa33f64b1a16b4adeb3aa6d1404e78ff9c96289db1bd727144ffab"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.account_routing/hi30a4/audit.log",
+			"note": "actual command output, not notes",
+			"sha256": "0c61e39ca0ce3049785c5ef3047dba5eff05305e5d4ecd72b9701ff7df52938f"
+		}
+	],
+	"cross_namespace_observations": []
+}

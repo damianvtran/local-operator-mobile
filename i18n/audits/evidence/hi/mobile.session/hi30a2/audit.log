@@ -1,0 +1,52 @@
+# audit.log — hindi wave 6, namespace mobile.session, audit id hi30a2
+# produced by executing the repository's own validator and renderer in this session; not notes
+
+$ cd /Users/damian/workspace/hi-wave && node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/verify_ns.mjs mobile.session   # repository parser + formatter, per-key
+# Hindi audit — namespace mobile.session
+# generated: 2026-10-30T16:47:10.330Z
+# worktree: /Users/damian/workspace/hi-wave  HEAD: 647581a4abd5eafce09914b5b1936982749c16c4
+# git status (porcelain): M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/hi/ | ?? src/i18n/catalogues/hi/
+
+## inputs
+  en       src/i18n/catalogues/en/mobile.session.json  sha256=8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  keys=2
+  context  src/i18n/catalogues/en/mobile.session.context.json  sha256=6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  keys=2
+  hi       src/i18n/catalogues/hi/mobile.session.json  sha256=1f326bb988a0063f528c9a15f09127674419c2687d851a07d5c58a8513bcb21a  keys=2
+
+## structure
+  [PASS] key set identical — en=2 hi=2
+  [PASS] no key dropped or added
+  [PASS] every key documented in the context sidecar — ctx=2
+  [INFO] placeholder-bearing messages: 0; plural-bearing messages: 0
+  [PASS] placeholder surface identical on every key
+  [PASS] ICU arms identical on every key
+  [PASS] code spans identical on every key
+
+## render through the worktree renderer (parseMessage + formatMessage)
+  [PASS] all 2 values render without error
+
+## typography / Devanagari
+  [PASS] typography predicates clean
+  [INFO] values carrying danda: 0/2; ellipsis U+2026: 0
+
+## mirror check: not a relay namespace (no core mirror required)
+
+## result
+  checks failed: 0
+  VERDICT(mechanical): PASS
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/compose_ns.mjs mobile.session   # composed sentences quoted in report.md
+# composition for mobile.session
+  tray hint after the tray label:
+    (label not in mobile catalogue)
+    कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है
+    → (label not in mobile catalogue) ⏎ कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है
+exit=0

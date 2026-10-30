@@ -385,12 +385,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-10-29 for the Spanish wave: `src` now carries the Spanish
 	 * catalogues and the per-locale budget, exactly the content these pins exist to
 	 * freeze. Recomputed with `--print`; nothing else in the table moved. */
-	/* Re-pinned 2026-10-30 for the Vietnamese wave: `src` carries the vi
-	 * catalogues, the shipped flip, the per-locale chip budget and the
-	 * restored English-rules guard. Recomputed with `--print` AFTER the last
-	 * `src` edit — an earlier pass pinned before a comment-only change and the
-	 * guard refused, which is the failure this ordering exists to prevent. */
-	src: "d77c9e6cd72594f7d69da300398d745829dc8ae0414a37d6ac608cc2e40ba757",
+	/* Re-pinned 2026-10-30 for the Hindi wave: `src` carries the hi catalogues,
+	 * the shipped flip, the hi chip budget and the zero-count assertion that
+	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
+	 * AFTER the last `src` edit. */
+	src: "caae3a189a821127024686922bf43fd11562f8ac281e113ce93e3205e9741930",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

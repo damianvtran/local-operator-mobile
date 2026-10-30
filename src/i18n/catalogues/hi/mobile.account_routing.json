@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "खाता रूटिंग बदलने के लिए कंप्यूटर से कनेक्ट करें।",
+	"mobile.account_routing.error": "बदलाव की पुष्टि नहीं हो सकी। कनेक्शन जाँचें और मौजूदा नीति पढ़ने के लिए फिर लोड करें।",
+	"mobile.account_routing.load_error": "खाता रूटिंग लोड नहीं हो सकी। कनेक्शन जाँचें और फिर से कोशिश करें।",
+	"mobile.account_routing.loading": "खाता रूटिंग लोड हो रही है…",
+	"mobile.account_routing.rejected": "बदलाव सहेजा नहीं गया। मान या इस कंप्यूटर की सेटिंग जाँचें और फिर से कोशिश करें।",
+	"mobile.account_routing.reload": "नीति फिर लोड करें",
+	"mobile.account_routing.retry": "फिर से कोशिश करें",
+	"mobile.account_routing.save": "नीति सहेजें",
+	"mobile.account_routing.saved": "इस कंप्यूटर पर सहेजा गया।",
+	"mobile.account_routing.saving": "सहेजा जा रहा है…",
+	"mobile.account_routing.scope": "बदलाव केवल इस कंप्यूटर पर लागू होते हैं।",
+	"mobile.account_routing.title": "खाता रूटिंग",
+	"mobile.account_routing.unavailable": "इस रिले पर खाता रूटिंग की सेटिंग उपलब्ध नहीं है। इस कंप्यूटर पर Local Operator अपडेट करें।",
+	"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।"
+}

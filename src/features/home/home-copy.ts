@@ -97,6 +97,11 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * 15/600, which these rows do not use. Same 32-character headroom the
 	 * Spanish and Russian entries record. */
 	vi: 32,
+	/* Hindi measured: its longest chip is 24 characters and measures
+	 * ~204.8 pt at text-body-sm in the ~256 pt chip row, so it needs no
+	 * widening beyond English's own 24 — recorded rather than inherited,
+	 * because the next Hindi chip may not be this short. */
+	hi: 24,
 };
 
 /** The row's ceiling for one shipped locale. */
