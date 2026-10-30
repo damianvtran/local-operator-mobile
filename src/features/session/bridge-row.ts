@@ -192,45 +192,50 @@ export interface BridgeOutcomeView {
 }
 
 /**
+ * PLACEHOLDER — the outcome words, pending their CORE catalogue keys.
+ *
+ * The words are owned by the core's own namespace (the desktop/TUI lane,
+ * local-operator c733bb5b44de), not by `relay.transcript.*`, so this app must
+ * not mint keys for them; it mirrors the core's ids once they land. Until
+ * then the English source is held in this ONE table so the swap is a
+ * one-function change: replace each value with
+ * `t("<core key>", { code })`, mirror the keys into every shipped catalogue,
+ * and delete this table. Every locale renders English here meanwhile — a
+ * known, temporary gap, not a policy exception.
+ */
+const PENDING_OUTCOME_WORDS: Readonly<
+	Record<BridgeOutcome, (code: string) => string>
+> = {
+	inbox_only: () => "not posted to a conversation",
+	refused: (code) => `refused · ${code}`,
+	failed: (code) => `failed · ${code}`,
+	unconfirmed: () => "unconfirmed",
+	awaiting_acceptance: () => "awaiting acceptance",
+};
+
+const OUTCOME_TONE: Readonly<Record<BridgeOutcome, BridgeOutcomeTone>> = {
+	inbox_only: "warning",
+	refused: "danger",
+	failed: "danger",
+	unconfirmed: "muted",
+	awaiting_acceptance: "muted",
+};
+
+/**
  * The trailing word for an outcome, or `null` for the settled case.
  *
  * `refused`/`failed` carry the relay's machine `code` verbatim (a technical
- * token, untranslated — `docs/i18n.md`); when the relay sent no code the word
- * still renders with an em dash in the slot, because dropping the placeholder
- * would mean a second, unmirrored key.
+ * token, untranslated — `docs/i18n.md`); when the relay sent no code the slot
+ * shows an em dash rather than a second, unmirrored wording.
  */
 export function bridgeOutcomeView(
 	row: BridgeRow | null,
 ): BridgeOutcomeView | null {
 	if (row === null || row.outcome === null) return null;
-	const code = row.code ?? "—";
-	switch (row.outcome) {
-		case "inbox_only":
-			return {
-				text: t("relay.transcript.tool_row.bridge.outcome_inbox_only"),
-				tone: "warning",
-			};
-		case "refused":
-			return {
-				text: t("relay.transcript.tool_row.bridge.outcome_refused", { code }),
-				tone: "danger",
-			};
-		case "failed":
-			return {
-				text: t("relay.transcript.tool_row.bridge.outcome_failed", { code }),
-				tone: "danger",
-			};
-		case "unconfirmed":
-			return {
-				text: t("relay.transcript.tool_row.bridge.outcome_unconfirmed"),
-				tone: "muted",
-			};
-		case "awaiting_acceptance":
-			return {
-				text: t("relay.transcript.tool_row.bridge.outcome_awaiting_acceptance"),
-				tone: "muted",
-			};
-	}
+	return {
+		text: PENDING_OUTCOME_WORDS[row.outcome](row.code ?? "—"),
+		tone: OUTCOME_TONE[row.outcome],
+	};
 }
 
 /**

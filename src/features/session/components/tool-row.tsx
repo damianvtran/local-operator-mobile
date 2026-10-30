@@ -29,7 +29,7 @@ import {
 	toolGlyph,
 } from "@/features/session/projection";
 import { t } from "@/i18n";
-import { ROLE } from "@/ui/a11y";
+import { ROLE, toolRowToggleId } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -287,6 +287,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				accessibilityState={details ? { expanded: open } : undefined}
 				disabled={!details}
 				onPress={() => details && setOverride(!open)}
+				testID={toolRowToggleId(entry.id)}
 			>
 				<View className="min-h-11 flex-row items-center gap-1.5">
 					<Text
@@ -338,7 +339,18 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    measurements there. */}
 					{trailing !== null && !deliveryOnOwnLine ? (
 						<Text
-							className={cx("shrink-0 text-body-sm", trailing.inkClass)}
+							/* The send word keeps `shrink-0` (design round 1, D1). The
+							 *  bridge outcome is longer ("not posted to a conversation"),
+							 *  and the 320 pt audit (U-06) measured it pushing the clock
+							 *  and chevron up to 77 px past the edge while the large-text
+							 *  rule had not yet moved it; letting it truncate last keeps
+							 *  the row inside the viewport in every frame. The expansion's
+							 *  Outcome line always carries the whole word. */
+							className={cx(
+								"text-body-sm",
+								isBridge ? "min-w-0 shrink truncate" : "shrink-0",
+								trailing.inkClass,
+							)}
 							numberOfLines={1}
 						>
 							{trailing.text}

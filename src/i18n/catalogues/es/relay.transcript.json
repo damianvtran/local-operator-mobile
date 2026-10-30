@@ -1,9 +1,4 @@
 {
-	"relay.transcript.tool_row.bridge.outcome_inbox_only": "no publicado en una conversación",
-	"relay.transcript.tool_row.bridge.outcome_refused": "rechazado · {code}",
-	"relay.transcript.tool_row.bridge.outcome_failed": "falló · {code}",
-	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "publicación sin confirmar",
-	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "pendiente de aceptación",
 	"relay.transcript.tool_row.bridge.label_conversation": "Conversación",
 	"relay.transcript.tool_row.bridge.label_outcome": "Resultado",
 	"relay.transcript.tool_row.bridge.kind_conversation": "una conversación",

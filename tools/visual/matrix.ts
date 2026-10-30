@@ -25,6 +25,7 @@ import {
 	projectMilestoneEditId,
 	sessionRowId,
 	sessionTagOptionId,
+	toolRowToggleId,
 } from "../../src/ui/a11y.ts";
 import type { Affordance } from "../lib/affordance.ts";
 
@@ -922,6 +923,18 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 *  screen in the before-press frame. */
 	"path:/session/{sessionId}?lo-scroll=top/imagegen-cancel-queued": [
 		{ click: imagegenCancelId("tc-img-queued-position") },
+	],
+	/* The bridge row OPENED (`bridge-tool-row` scenario): the press is the
+	 *  row's own disclosure, so the frame shows what a reader sees after one
+	 *  tap — the Conversation line, and the markdown body wrapping. */
+	"path:/session/{sessionId}/bridge-expanded": [
+		{ click: toolRowToggleId("tc-bridge-post") },
+	],
+	/* Same scenario: the refusal and the peer-inbox rows opened together, so
+	 *  one frame carries both Outcome lines. */
+	"path:/session/{sessionId}/bridge-outcomes-open": [
+		{ click: toolRowToggleId("tc-bridge-inbox") },
+		{ click: toolRowToggleId("tc-bridge-refused") },
 	],
 	/* --- the in-conversation find, over the long conversation (see the cells
 	 * on the `long-transcript` scenario). The lever and the field are the app's

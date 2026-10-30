@@ -1667,6 +1667,199 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		},
 	);
 
+	/* The `bridge` tool's row (Team Bridge posts, DMs and reactions), as the
+	 * relay sends it after the desktop/TUI lane (local-operator c733bb5b44de):
+	 * a localized `summary` and a structured `details.bridge_row`. Two turns:
+	 *
+	 *   - the FIRST is complete and a newer turn exists, so it condenses — a
+	 *     bridge post and a `send` side by side, proving the bridge row rolls
+	 *     into the bar like any tool (`turn-condensing.test.ts` pins the count);
+	 *   - the SECOND is the showroom, one row per arm: a clean post whose body
+	 *     is markdown (the expanded cell opens it), the peer-inbox warning, a
+	 *     refusal with its code, the muted pending pair, a mixed-build summary
+	 *     still carrying a `bcv_` id (scrubbed on screen), and a pre-field row
+	 *     with no `bridge_row` at all (the generic fallback). It has no closing
+	 *     answer and ENDS on peer-inbox, refusal, post: the list anchors to its
+	 *     tail, and on the 320 pt floor only the last rows (and an expansion
+	 *     opened among them) are in frame.
+	 *
+	 * `shows` is EMPTY, as `imagegen` explains for its own case: a registered
+	 * S5 cell needs an app-side state marker, which this row does not add. The
+	 * frames come from ad-hoc cells:
+	 *
+	 *   path:/session/{sessionId}/bridge                     the collapsed tail
+	 *   path:/session/{sessionId}/bridge-expanded            the post opened
+	 *   path:/session/{sessionId}/bridge-outcomes-open       inbox + refusal opened
+	 *   path:/session/{sessionId}?lo-scroll=top/bridge-condensed
+	 *                                                        the condensed turn
+	 *   path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-condensed-open
+	 *                                                        the same turn opened */
+	add(
+		"bridge-tool-row",
+		"Team Bridge tool rows in each outcome — posted (markdown body), peer inbox only, refused, unconfirmed, awaiting acceptance, a stray opaque id, a pre-field row — plus a completed turn mixing bridge and send that condenses.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the bridge-tool-row base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const at = (
+				id: string,
+				kind: Row["kind"],
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id,
+				kind,
+				tool_call_id: kind === "tool" ? id : "",
+				tool_name: "",
+				tool_state: "done",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			/* `bridge_row` is newer than the hand-authored wire mirror; the mock
+			 * sends exactly what the relay will, so the payload rides through a
+			 * loose record rather than a widened contract type. */
+			const bridgeRow = (
+				id: string,
+				summary: string,
+				bridge: Record<string, unknown> | null,
+				overrides: Partial<Row> = {},
+				args: Record<string, unknown> = {},
+			): Row =>
+				at(`tc-${id}`, "tool", {
+					tool_name: "bridge",
+					summary,
+					elapsed_s: 1.2,
+					details: {
+						args: { op: "post", ...args },
+						...(bridge === null
+							? {}
+							: {
+									bridge_row: {
+										op: "post",
+										action: "post",
+										target: { kind: "channel", label: "#release" },
+										preview: null,
+										count: null,
+										emoji: null,
+										outcome: null,
+										code: null,
+										...bridge,
+									},
+								}),
+						output: "ok",
+					} as Row["details"],
+					...overrides,
+				});
+			const body =
+				"**Nightly sweep is green.**\n\n- 412 tests passed\n- the flaky `relay-reconnect` case is fixed in #2210\n\nNext cut goes out at 18:00 unless someone objects here.";
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					at("m-bridge-u1", "user", {
+						text: "Tell the release channel the sweep is green, and ping the audit session.",
+					}),
+					bridgeRow(
+						"bridge-old",
+						"Posted to #release",
+						{ preview: "Sweep is green" },
+						{ elapsed_s: 0.9 },
+						{ body: "Sweep is green." },
+					),
+					at("tc-send-old", "tool", {
+						tool_name: "send",
+						summary: "→ nightly-audit · sweep is green",
+						elapsed_s: 2.1,
+						details: { delivery: { state: "delivered" }, output: "delivered" },
+					}),
+					at("m-bridge-a1", "assistant", {
+						text: "Posted to #release and told the audit session.",
+					}),
+					at("m-bridge-u2", "user", {
+						text: "Now post the full summary, DM Priya, and invite the new reviewer.",
+					}),
+					bridgeRow("bridge-unconfirmed", "Reacted 👍 in #release", {
+						op: "react",
+						action: "react",
+						target: { kind: "message", label: null },
+						emoji: "👍",
+						outcome: "unconfirmed",
+					}),
+					bridgeRow("bridge-awaiting", "Invited a teammate to #release", {
+						op: "invite",
+						action: "invite",
+						target: { kind: "person", label: null },
+						outcome: "awaiting_acceptance",
+					}),
+					/* A mixed-build frame: an older relay that still prints the
+					 * conversation id. The row must not show it. */
+					bridgeRow(
+						"bridge-stray-id",
+						"Posted to bcv_01JC9X7Q2M8T · cut list attached",
+						{ target: { kind: "channel", label: null } },
+					),
+					/* The pre-field row: no `bridge_row` at all — icon and headline,
+					 * no outcome, no invented conversation. */
+					bridgeRow(
+						"bridge-prefield",
+						"Read the directory",
+						null,
+						{},
+						{
+							op: "directory",
+						},
+					),
+					bridgeRow(
+						"bridge-inbox",
+						"Sent to Priya's inbox",
+						{
+							op: "dm",
+							action: "send",
+							target: { kind: "dm", label: null },
+							outcome: "inbox_only",
+						},
+						{},
+						{ body: "Can you look at the cut list before 18:00?" },
+					),
+					bridgeRow(
+						"bridge-refused",
+						"Post to #leadership",
+						{
+							target: { kind: "channel", label: "#leadership" },
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						{ tool_state: "failed", error: "not a member of #leadership" },
+						{ body: "Heads-up: the cut moves to 18:00." },
+					),
+					bridgeRow(
+						"bridge-post",
+						"Posted to #release · Nightly sweep is green. 412 tests passed and the flaky case is fixed",
+						{ preview: "Nightly sweep is green." },
+						{},
+						{ body },
+					),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
 	/* The image-generation card's states, as the app renders them (the native
 	 * surface's imagegen lane; the wire shape froze 2026-10-09, local-operator
 	 * #2089). One row per state the card draws: queued without and with a queue

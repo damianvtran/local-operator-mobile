@@ -1,9 +1,4 @@
 {
-	"relay.transcript.tool_row.bridge.outcome_inbox_only": "не опубликовано в беседе",
-	"relay.transcript.tool_row.bridge.outcome_refused": "отклонено · {code}",
-	"relay.transcript.tool_row.bridge.outcome_failed": "ошибка · {code}",
-	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "публикация не подтверждена",
-	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "ожидает принятия",
 	"relay.transcript.tool_row.bridge.label_conversation": "Беседа",
 	"relay.transcript.tool_row.bridge.label_outcome": "Результат",
 	"relay.transcript.tool_row.bridge.kind_conversation": "беседа",

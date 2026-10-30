@@ -146,7 +146,7 @@ describe("bridge row: outcomes", () => {
 	it("the pending pair is muted words", () => {
 		expect(
 			bridgeOutcomeView(bridgeRowOf(row(payload({ outcome: "unconfirmed" })))),
-		).toEqual({ text: "post unconfirmed", tone: "muted" });
+		).toEqual({ text: "unconfirmed", tone: "muted" });
 		expect(
 			bridgeOutcomeView(
 				bridgeRowOf(row(payload({ outcome: "awaiting_acceptance" }))),

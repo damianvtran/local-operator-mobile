@@ -1,9 +1,4 @@
 {
-	"relay.transcript.tool_row.bridge.outcome_inbox_only": "未发布到对话",
-	"relay.transcript.tool_row.bridge.outcome_refused": "已拒绝 · {code}",
-	"relay.transcript.tool_row.bridge.outcome_failed": "失败 · {code}",
-	"relay.transcript.tool_row.bridge.outcome_unconfirmed": "发布未确认",
-	"relay.transcript.tool_row.bridge.outcome_awaiting_acceptance": "等待接受",
 	"relay.transcript.tool_row.bridge.label_conversation": "对话",
 	"relay.transcript.tool_row.bridge.label_outcome": "结果",
 	"relay.transcript.tool_row.bridge.kind_conversation": "一个对话",
