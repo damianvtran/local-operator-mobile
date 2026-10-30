@@ -238,7 +238,8 @@ So v1 ships:
 
 **Push notifications are a separate RFC.** They are not a scheduling choice inside
 this ADR: they need a relay-side service, a credential, a privacy surface, and
-they conflict with the FOSS channel as it stands. That RFC will have to settle
+they conflict with the FOSS channel as it stands. That RFC is [ADR 0006 — Push notifications and
+cross-surface acknowledgement](0006-push-and-ack-sync.md), **Accepted 2026-10-29**: it settles
 APNs/FCM vs a self-hosted path, and ADR 0004's F-Droid row is one of its inputs.
 
 ### 6. `tui`-hosted sessions: asks are answerable through the queue
