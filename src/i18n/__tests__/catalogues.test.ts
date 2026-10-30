@@ -310,6 +310,19 @@ describe("a four-form plural locale agrees with its own rules", () => {
 		).toBe("8 сессий");
 	});
 
+	it("keeps Hindi's zero on the one arm, as its own rules and core do", () => {
+		/* Hindi selects `one` for 0 where English selects `other`. Both auditors
+		 * disagreed about whether `0 जागृति` is idiomatic; CLDR, core's committed
+		 * Hindi and the hi style guide all put 0 in `one`, so the shipped
+		 * behaviour is pinned here — a change to the arms cannot land silently. */
+		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "hi")).toBe(
+			"0 जागृति",
+		);
+		expect(renderFor("mobile.schedules.count.wakes", { count: 2 }, "hi")).toBe(
+			"2 जागृतियाँ",
+		);
+	});
+
 	it("carries all four arms in the shipped catalogue", () => {
 		/* A dropped `few` or `many` arm would fall back to `other` and still
 		 * render, so the arms are asserted directly rather than inferred from

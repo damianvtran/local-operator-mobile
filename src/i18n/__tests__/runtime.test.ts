@@ -96,28 +96,23 @@ describe("the English floor", () => {
 	});
 
 	it("formats an English fallback with ENGLISH plural rules", () => {
-		/* HONEST LIMIT: this can no longer discriminate. It needs a pending
-		 * locale whose plural rules differ from English, and the only one left
-		 * (`ur`) selects `other` for 0 and `one` for 1 — exactly what English
-		 * does. Hindi supplied the 0-vs-other case until it shipped; a shipped
-		 * locale cannot supply it, because key parity guarantees it has the key
-		 * and so never falls back. Kept as a behavioural pin, not as proof of
-		 * guarantee 3; the discriminating plural coverage now lives in the
-		 * Russian block in `catalogues.test.ts`, on a shipped four-form locale. */
+		/* The discriminating case needs a preference whose own rules differ from
+		 * English at a count we assert — and it does NOT have to be a supported
+		 * locale. Any tag the shipped set does not resolve reaches the same
+		 * fallback path, so an unsupported tag supplies the case that the last
+		 * pending locale (`ur`, `other` at 0 like English) cannot:
+		 * Portuguese selects `one` for 0 where English selects `other`.
+		 * With the reader's rules wired in, this renders "0 wake". */
+		setLocaleSource(() => "pt");
+		expect(activeLocale()).toBe("en");
+		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "pt")).toBe(
+			"0 wakes",
+		);
+		/* A supported and still-pending locale renders English TEXT with English
+		 * rules — the same guarantee, on the path a relay tag actually takes. */
 		setLocaleSource(() => "ur");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
-		/* `hi` now SHIPS, so this renders the Hindi catalogue, not an English
-		 * fallback: `0 जागृति` is the expected Hindi sentence, not "0 wakes".
-		 * Kept because the zero case is where Hindi disagrees with English and a
-		 * change to the arm structure should show up here first. */
-		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "hi")).toBe(
-			"0 जागृति",
-		);
-		/* The same rule for a pending locale with no catalogue at all: English
-		 * plural categories, because the TEXT is English. */
-		setLocaleSource(() => "ur");
-		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 	});
 
 	it("renders the shipped Spanish catalogue, not English source", () => {
