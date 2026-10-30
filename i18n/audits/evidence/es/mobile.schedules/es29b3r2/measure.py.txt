@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Width measurement for the es mobile.schedules delta (round 2).
+
+WHAT THIS MEASURES, AND WHAT IT DOES NOT.
+  Measured: advance width of the ACTUAL rendered strings, in San Francisco
+  (SFNS.ttf, the iOS system face) at the design kit's own sizes and weights
+  (src/ui/theme.css: text-meta 12/500, text-mono-label 11/600 +0.06em,
+  text-body-sm 14/400), against the content width the schedules screen gives
+  them (320pt device — docs/ux/audit-rubric.md's `narrow` — minus the screen's
+  px-4 = 32pt, and minus pl-3 = 12pt inside a monitor/wake row), at 100 % and
+  200 % text scale, plus a greedy word-wrap so a line COUNT is reported.
+  NOT measured: an actual rendered frame. No simulator, no screenshot, no
+  Chromium. These are font-metric widths, so they are an estimate of the pixel
+  layout (±a few percent: the OS may pick a different optical-size instance, and
+  RN may apply its own letter-spacing rounding). Every layout claim below is
+  therefore "at these metrics", not "as seen on a device".
+
+  A string OVERFLOWS only if a single unbreakable token is wider than the line;
+  everything else wraps, because none of these strings sits in a one-line clamp
+  (checked in the source: `numberOfLines` appears only on the entry NAME, not on
+  any string this namespace renders).
+"""
+from PIL import ImageFont
+
+FONT = "/System/Library/Fonts/SFNS.ttf"
+DEVICE = 320           # docs/ux/audit-rubric.md: the smallest supported width ("narrow")
+SCREEN_PAD = 16 * 2    # Screen contentContainerClassName="px-4"
+ROW_INDENT = 12        # the schedules rows' pl-3
+CONTENT = DEVICE - SCREEN_PAD
+
+
+def font(size, weight):
+    f = ImageFont.truetype(FONT, size)
+    f.set_variation_by_axes([100, max(17, min(96, size)), 400, weight])
+    return f
+
+
+def width(text, size, weight, tracking_em=0.0):
+    f = font(size, weight)
+    return f.getlength(text) + tracking_em * size * max(0, len(text) - 1)
+
+
+def wrap_lines(text, avail, size, weight, tracking_em=0.0):
+    """Greedy wrap; returns (line_count, widest_single_token)."""
+    words = text.split()
+    widest = max(width(w, size, weight, tracking_em) for w in words) if words else 0.0
+    lines, cur = 1, ""
+    for w in words:
+        trial = (cur + " " + w).strip()
+        if width(trial, size, weight, tracking_em) <= avail:
+            cur = trial
+        else:
+            lines += 1
+            cur = w
+    return lines, widest
+
+
+META = (12, 500, 0.0)          # text-meta
+LABEL = (11, 600, 0.06)        # text-mono-label (uppercase applied before measuring)
+BODY = (14, 400, 0.0)          # text-body-sm
+
+
+def row(label, text, style, avail, scale=1.0):
+    size, weight, tr = style
+    s = size * scale
+    lines, widest = wrap_lines(text, avail, s, weight, tr)
+    w = width(text, s, weight, tr)
+    return dict(label=label, text=text, width=w, avail=avail, lines=lines,
+                widest=widest, fits_one_line=(lines == 1),
+                overflow=(widest > avail))
+
+
+CASES = []
+
+
+def case(what, en, es_old, es_new, style, avail):
+    for tag, text in (("en", en), ("es-old", es_old), ("es-new", es_new)):
+        CASES.append((what, tag, style, avail, text))
+
+
+# --- the monitors section header (Screen-level, full content width) ----------
+AVAIL = CONTENT
+case("header armed count=5",
+     "MONITORS · 5 ARMED",
+     "MONITORS · 5 MONITORES ARMADOS",
+     "MONITORS · 5 MONITORIZACIONES ACTIVAS", LABEL, AVAIL)
+case("header armed count=1",
+     "MONITORS · 1 ARMED",
+     "MONITORS · 1 MONITOR ARMADO",
+     "MONITORS · 1 MONITORIZACIÓN ACTIVA", LABEL, AVAIL)
+case("header attention 2/5",
+     "MONITORS · 2 OF 5 NEED ATTENTION",
+     "MONITORS · 2 DE 5 REQUIEREN ATENCIÓN",
+     "MONITORS · 2 DE 5 REQUIEREN ATENCIÓN", LABEL, AVAIL)
+case("header attention 1/40",
+     "MONITORS · 1 OF 40 NEED ATTENTION",
+     "MONITORS · 1 DE 40 REQUIEREN ATENCIÓN",
+     "MONITORS · 1 DE 40 REQUIERE ATENCIÓN", LABEL, AVAIL)
+
+# --- the monitor entry head clause (meta, content width) --------------------
+AVAIL = CONTENT
+case("entry head 2 · next in 4m",
+     "2 monitors · next in 4m",
+     "2 monitores · próximo en 4m",
+     "2 monitorizaciones · próximo en 4m", META, AVAIL)
+case("entry head 1 · overdue",
+     "1 monitor · venció hace 2h",
+     "1 monitor · vencido hace 2h",
+     "1 monitorización · vencido hace 2h", META, AVAIL)
+
+# --- the disclosure button (quiet, size sm -> text-meta) ---------------------
+AVAIL = CONTENT
+case("show_less.monitors",
+     "Show fewer monitors",
+     "Mostrar menos monitores",
+     "Mostrar menos monitorizaciones", META, AVAIL)
+case("show_more.monitors hidden=3",
+     "Show 3 more monitors",
+     "Mostrar 3 monitores más",
+     "Mostrar 3 monitorizaciones más", META, AVAIL)
+
+# --- status sentences (meta) ------------------------------------------------
+AVAIL = CONTENT
+case("gone.monitors",
+     "Gone — its conversation is no longer on this machine, so nothing checks",
+     "Desaparecido — su conversación ya no está en esta máquina, así que nada lo comprueba",
+     "Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba",
+     META, AVAIL)
+case("truncated monitors 200/500",
+     "Showing 200 of 500 conversations with monitors.",
+     "Mostrando 200 de 500 conversaciones con monitores.",
+     "Mostrando 200 de 500 conversaciones con monitorizaciones.", META, AVAIL)
+case("read_error.monitors",
+     "The monitors on this machine could not be read.",
+     "No se pudieron leer los monitores de esta máquina.",
+     "No se pudieron leer las monitorizaciones de esta máquina.", META, AVAIL)
+
+# --- body-sm strings --------------------------------------------------------
+AVAIL = CONTENT
+case("empty.body",
+     "Ask an agent in chat to do something on a regular basis and it will appear here. Wakes fire a prompt into a conversation at a time; monitors watch one thing and report what changes.",
+     "Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; los monitores vigilan una cosa y avisan de lo que cambia.",
+     "Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; las monitorizaciones vigilan una cosa y avisan de lo que cambia.",
+     BODY, AVAIL)
+case("empty_line.monitors",
+     "No monitors armed.",
+     "No hay monitores armados.",
+     "No hay monitorizaciones activas.", BODY, AVAIL)
+
+# --- a monitor row's facts line (flex-row flex-wrap, indented row) ----------
+AVAIL = CONTENT - ROW_INDENT
+case("facts row: slot + cadence + tail",
+     "2h overdue   every 5m   3 failed",
+     "vencido hace 2h   cada 5m   3 fallidos",
+     "vencido hace 2h   cada 5m   3 fallos", META, AVAIL)
+
+print("=" * 100)
+print("WIDTH MEASUREMENT — SF Pro at the design kit's sizes; content width "
+      f"{CONTENT}pt (320pt device - 32pt screen padding), rows {CONTENT - ROW_INDENT}pt")
+print("=" * 100)
+print(f"{'case':34} {'variant':7} {'w(pt)':>7} {'avail':>6} {'lines':>5} {'widest tok':>10}  text")
+print("-" * 100)
+for what, tag, style, avail, text in CASES:
+    for scale in (1.0, 2.0):
+        r = row(what, text, style, avail * 1.0, scale)
+        print(f"{what:34} {tag:7} {r['width']:7.1f} {avail:6.0f} {r['lines']:5d} {r['widest']:10.1f}  "
+              f"{'[200%] ' if scale == 2.0 else ''}{text[:46]}")
+        if r["overflow"]:
+            print(f"{'':34} {'':7} OVERFLOW: widest token {r['widest']:.1f} > {avail:.0f}")
+    print()
+
+# Grow ratio: how much longer is es-new than en, per case.
+print("=" * 100)
+print("GROWTH vs ENGLISH (and vs the round-1 es bytes)")
+print("=" * 100)
+by = {}
+for what, tag, style, avail, text in CASES:
+    size, weight, tr = style
+    by.setdefault(what, {})[tag] = width(text, size, weight, tr)
+for what, d in by.items():
+    print(f"{what:34} en={d['en']:7.1f}  es-old={d['es-old']:7.1f} ({(d['es-old']/d['en']-1)*100:+5.1f}%)  "
+          f"es-new={d['es-new']:7.1f} ({(d['es-new']/d['en']-1)*100:+5.1f}%)  "
+          f"delta vs old={(d['es-new']/d['es-old']-1)*100:+5.1f}%")
