@@ -1,0 +1,341 @@
+{
+	"schema": 1,
+	"audit_id": "es29b3r2",
+	"audit_kind": "independent_delta_reaudit_round_2",
+	"round": 2,
+	"locale": "es",
+	"namespace": "mobile.schedules",
+	"file_group": "mobile.schedules",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "f1c782f22a1f4a3f31f025282849cc62ba41b8c6",
+	"audited_branch": "feat/i18n-spanish",
+	"audited_worktree": "/Users/damian/workspace/es-wave",
+	"audited_worktree_note": "The es catalogue is TRACKED at this commit (git ls-tree HEAD -- src/i18n/catalogues/es lists it), so the audited bytes are COMMITTED bytes, verified by input_hashes.target.sha256. Round 1 audited untracked working-tree bytes at c5f491e.",
+	"baseline_of_this_round": {
+		"previous_audit_id": "es29b3",
+		"previous_record": "i18n/audits/evidence/es/mobile.schedules/es29b3/record.json",
+		"previous_target_sha256": "aae7d6ac08f896b71ad1c70af5cfa73b81bd565ceda2efa9607648d925842084",
+		"previous_bytes_recoverable_from_git": false,
+		"previous_bytes_note": "The round-1 es file was untracked at c5f491e and is committed only in f1c782f, so the pre-remediation bytes cannot be re-derived from git. Every 'before' value in this round's report is quoted from the round-1 bundle's recorded per-key table, and the delta script that diffs them (delta.py) is bundled and its output executed in audit.log section 10."
+	},
+	"key_count": {
+		"en": 38,
+		"target": 38,
+		"changed_since_round_1": 18,
+		"unchanged_since_round_1": 20
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "4018f32a5589",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "session model header at the time of every command in audit.log: radient/auto. Temporary provider fallback chain, all before the first command: anthropic/claude-sonnet-5-5 (provider quota) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto. No earlier hop's output is used as evidence.",
+		"fallback_disclosed": true,
+		"independent_from_translator_session": true,
+		"independent_from_round_1_auditor_session": true,
+		"independence": "Different session and context from both the translator and the round-1 auditor; neither bundle's notes were treated as evidence. MODEL IDENTITY IS NOT DIVERSE: the round-1 auditor also served radient/auto, so this is session independence only, disclosed, not closed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"model": "not independently observed by this auditor",
+		"note": "This round judges a REMEDIATION wave (the fixes to round-1 findings) whose author is not identified in the bundle; this auditor did not read the author's notes as evidence."
+	},
+	"remediation_author": {
+		"agent": "not recorded in this bundle",
+		"note": "The delta is the fix wave for round-1 findings ES-SCH-1..5; the implementing agent is the manager's record, not this auditor's."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.json",
+			"sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+			"sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/es/mobile.schedules.json",
+			"sha256": "cb58766d4f3933e0c2d64012be2e93712d7e49f506e38b6d6806d2228b3b4a83"
+		}
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/pluralCategory)",
+		"runtime": "src/i18n/runtime.ts (renderFor)",
+		"projection": "src/i18n/catalogue.gen.ts",
+		"type_scale": "src/ui/theme.css",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+			"src/i18n/catalogue.gen.ts": "9a337f26ad65e98b3fa50e2db5fcd8863e091376094b1a79df92775b4c3ae41b",
+			"src/ui/theme.css": "adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23"
+		},
+		"lang_plural_categories": {
+			"es": [
+				"one",
+				"many",
+				"other"
+			],
+			"en": [
+				"one",
+				"other"
+			]
+		},
+		"note": "Every rendered row comes from the app's own parser (no ICU library, no MT service). formatMessage renders '#' and numeric arguments through String(n), so 1000000 prints ungrouped; that is a documented renderer limitation, not a catalogue defect, and it makes the style guide's 1.000.000 grouping unobservable in these tables."
+	},
+	"checks_executed": {
+		"repository_validator": {
+			"command": "node scripts/i18n/generate.ts --check",
+			"exit": 0,
+			"output": "src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)",
+			"meaning": "es is in SHIPPED_LOCALES at this commit, so the projection is generated from the es bytes as well; the validator no longer skips es (it did in round 1)."
+		},
+		"repo_tests": {
+			"command": "npx vitest run src/i18n/__tests__ src/features/schedules",
+			"result": "6 test files, 151 tests passed"
+		},
+		"key_parity": {
+			"missing_in_target": 0,
+			"extra_in_target": 0,
+			"same_order_as_en": true
+		},
+		"icu_parse": {
+			"messages": 38,
+			"failures": 0
+		},
+		"placeholder_names": {
+			"mismatches": 0
+		},
+		"placeholder_kinds_promoted_text_to_plural": {
+			"keys": [
+				"mobile.schedules.summary.wakes",
+				"mobile.schedules.summary.monitors_armed",
+				"mobile.schedules.summary.monitors_attention",
+				"mobile.schedules.tail.failed"
+			],
+			"disposition": "accepted: generate.ts merges argument kinds across en/es/fr and fails only on a plural/select clash; names are kept; callers pass numbers; the French wave ships the same promotion on count.monitors, summary.wakes, summary.monitors_armed and tail.failed."
+		},
+		"plural_arms": {
+			"cldr_categories_es": [
+				"one",
+				"many",
+				"other"
+			],
+			"plural_messages": 8,
+			"arm_problems": 0,
+			"few_or_non_es_category": 0
+		},
+		"total_argument_retention": {
+			"key": "mobile.schedules.summary.monitors_attention",
+			"arms": [
+				"one",
+				"many",
+				"other"
+			],
+			"total_present_in_every_arm": true
+		},
+		"mechanically_clean": [
+			"0 bidi control characters",
+			"0 markup/backtick/code-span differences",
+			"0 double spaces",
+			"0 space-before-punctuation",
+			"0 exclamation marks",
+			"em dash ' — ' with spaces in all 4 values that use one",
+			"no full stop added where en has none"
+		],
+		"negative_controls": [
+			"the round-1 attention string still renders '1 de 40 requieren atención' while the current one renders '1 de 40 requiere atención'",
+			"a message with the many arm removed is caught as missing 'many' and renders '1000000 monitorizaciones' (the de-less form the many arm exists to prevent)",
+			"an attention message with {total} deleted is caught by the placeholder-name parity check"
+		]
+	},
+	"fit": {
+		"declared_budget": "none: this namespace's context sidecar carries no maxCells/maxChars (only relay.health and mobile.session_health do in this repo)",
+		"method": "advance widths in SF Pro (SFNS.ttf) at the design kit's sizes/weights (text-meta 12/500, text-mono-label 11/600 +0.06em, text-body-sm 14/400), against 288pt content width (320pt 'narrow' device minus px-4) and 276pt inside a row (pl-3), at 100% and 200% text",
+		"not_measured": "no rendered frame, no simulator, no screenshot: widths are font-metric estimates (+/- a few percent), so thresholds are estimates",
+		"clipping": "impossible in this namespace: numberOfLines appears only on the entry NAME in schedules.tsx, and SectionHeader, Alert, EmptyState and Button (no labelLines at these call sites) all wrap. Widest single token at 200%: 'MONITORIZACIONES' 232pt of 276pt.",
+		"findings": [
+			"armed header es now 277.8pt of 288pt at 100% (10.2pt / 3.5% margin; round 1 was 232.1pt); wraps at 3-digit counts (99 -> 287.4pt one line, 100 -> 293.1pt two lines); listing caps at 200 monitors",
+			"show_less.monitors label 200.0pt at 100% (one line) and 345pt at 200% (two lines); round-1 'Mostrar menos monitores' was 271pt and fitted at 200%",
+			"empty_line.monitors 219pt at 100% (one line), three lines at 200% (was two)",
+			"nothing clips; the noun change costs +21% to +28% on the lines that carry it"
+		],
+		"disposition": "recorded as a measurement, not a finding: no change requested. An optional elided form ({count, plural, one {# activa} many {# de activas} other {# activas}}) measures 146.5pt but depends on the untranslated 'Monitors ·' prefix, which is why it is not recommended."
+	},
+	"naturalness_of_monitorizacion": {
+		"glossary_row": "i18n/glossary.md section 2: monitor -> translate, es = monitorización (binding)",
+		"core_committed_es": [
+			"wire.settings.monitor.title = 'Monitorizaciones'",
+			"wire.settings.monitor_maxconsecutivefailures.help = '...antes de desactivar una monitorización.'"
+		],
+		"verdict": "reads naturally in the count, empty, read-error, parked, armed and truncated sentences; grammatical but heavy in the two button labels; the one place the abstract noun strains is empty.body ('las monitorizaciones vigilan una cosa'), recorded as NIT ES-SCH-8.",
+		"not_reopened": "the glossary decision itself was not re-opened; the audit checked what the noun breaks downstream (gender cascade, count renders, widths)."
+	},
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 1,
+		"finding_ids": [
+			"ES-SCH-6",
+			"ES-SCH-7",
+			"ES-SCH-8"
+		]
+	},
+	"findings": [
+		{
+			"id": "ES-SCH-6",
+			"severity": "major",
+			"status": "open",
+			"key": "mobile.schedules.state.stale",
+			"current": "obsoleta",
+			"replacement": "obsoleto",
+			"detail": "The only wake-side state word was swept into the feminine pass made for 'monitorización'. wakeDueWord renders it into a wake row under a header reading 'Wakes · 5 despertares programados', where nothing is feminine; core's committed es uses 'obsoleto' (tui.review.lane_stale). Regression from text round 1 recorded clean."
+		},
+		{
+			"id": "ES-SCH-7",
+			"severity": "minor",
+			"status": "open",
+			"keys": [
+				"mobile.schedules.gone.monitors",
+				"mobile.schedules.gone.wakes"
+			],
+			"current": "Ya no está — su conversación ya no está en esta máquina, ...",
+			"replacement": [
+				"gone.monitors -> Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba",
+				"gone.wakes -> Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara"
+			],
+			"detail": "The new status word and the untouched clause now share the verb phrase 'ya no está' eight words apart. Round-1 ES-SCH-4 offered 'ya no existe' for the second clause; only the status word landed."
+		},
+		{
+			"id": "ES-SCH-8",
+			"severity": "nit",
+			"status": "open",
+			"key": "mobile.schedules.empty.body",
+			"current": "...; las monitorizaciones vigilan una cosa y avisan de lo que cambia.",
+			"replacement": "...; cada monitorización vigila una cosa y avisa de lo que cambia.",
+			"detail": "Register only: an activity noun made the plural subject of a concrete verb with a distributive 'una cosa'. The distributive singular is how Spanish phrases the class."
+		}
+	],
+	"round_1_disposition": [
+		{
+			"id": "ES-SCH-1",
+			"severity": "major",
+			"status": "closed",
+			"evidence": "13 keys moved to monitorización with the feminine agreement fixed"
+		},
+		{
+			"id": "ES-SCH-2",
+			"severity": "major",
+			"status": "closed",
+			"evidence": "plural retype on {broken}; {total} retained in all three arms; renders '1 de 40 requiere atención'"
+		},
+		{
+			"id": "ES-SCH-3",
+			"severity": "minor",
+			"status": "closed",
+			"evidence": "empty.title 'No hay nada activo', empty_line.monitors 'No hay monitorizaciones activas.', summary.monitors_armed 'activa/activas'"
+		},
+		{
+			"id": "ES-SCH-4",
+			"severity": "nit",
+			"status": "closed_for_the_word_open_for_the_clause",
+			"evidence": "'Ya no está' landed; the second 'ya no está' is ES-SCH-7"
+		},
+		{
+			"id": "ES-SCH-5",
+			"severity": "nit",
+			"status": "closed",
+			"evidence": "tail.failed renders 1 fallo / 2 fallos / 1000000 de fallos"
+		}
+	],
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/report.md",
+			"role": "audit report",
+			"sha256": "e2a038aadddf5e5caf5035258cbddda8c18db7b6d320849f1aaa9f400bf49377"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/audit.log",
+			"role": "execution log (actual command output)",
+			"sha256": "ffe41a40348f8433a14c11e21e73562a079b279a2b9c903546db20310c3b7920"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/delta.py.txt",
+			"role": "delta + gender-census script executed in audit.log section 10",
+			"sha256": "114a3131eb15f40fafa1f15b478d03fd6048d753a884e873a465d745d951eb5a"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/render.mjs.txt",
+			"role": "render/parity probe executed in audit.log section 5",
+			"sha256": "e74a6447a96aafcb9fbe19149769408a1a8cfb50151b9889839df994d320c612"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/e2e.mjs.txt",
+			"role": "shipped-projection render executed in audit.log section 6",
+			"sha256": "50359974691cefa80c6f89267a2f553ffac0fff4e98cb4417893d48616d7eedb"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/measure.py.txt",
+			"role": "width measurement executed in audit.log section 7",
+			"sha256": "633457da5da997080a7aee86254110203b19551985b5e762063b470680bd2652"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/widths2.py.txt",
+			"role": "wrap-threshold measurement executed in audit.log section 8",
+			"sha256": "b5f4441d4c99967105b1df16aec965cd60ee485297e0a369999ce118429de807"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/run-all.sh.txt",
+			"role": "the driver that produced audit.log",
+			"sha256": "9fa7bbae4e44692b87fa0415c073ad4d0c7e02809688ae4d136cbb88cb9ab53b"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/record.json",
+			"role": "this record",
+			"sha256": null,
+			"note": "a self-hash is not meaningful"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and this record carry per-key reasoning and findings (notes). audit.log carries actual command output: repository state and input hashes (1-2), the validator (3), repo tests (4), the render/parity probe (5), the shipped-projection render (6), the width measurements (7-8), the no-ledger-command proof (9), the delta and gender census (10) and the read-only confirmation (11). No native-speaker review and no screenshot claim is made.",
+	"ledger": {
+		"recorded": false,
+		"reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command under scripts/i18n/ (audit.log section 9: ls exit 1, grep exit 1; declared i18n scripts are i18n:generate, i18n:catalogue:check, i18n:strings:check, i18n:check). No RFC CLI ledger receipt can be claimed here.",
+		"ledger_row_proposed": {
+			"written": false,
+			"locale": "es",
+			"file_group": "mobile.schedules",
+			"round": 2,
+			"status": "changes_requested",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f",
+			"hash_subject": "src/i18n/catalogues/en/mobile.schedules.json (English source, current bytes)",
+			"target_hash": "cb58766d4f3933e0c2d64012be2e93712d7e49f506e38b6d6806d2228b3b4a83",
+			"unresolved_blocker_major_count": 1,
+			"note": "R2 changes_requested: ES-SCH-1..5 closed; ES-SCH-6 major (state.stale obsoleta->obsoleto), ES-SCH-7 minor, ES-SCH-8 nit. Record: i18n/audits/evidence/es/mobile.schedules/es29b3r2/record.json",
+			"note_length": 190,
+			"record_path": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/record.json"
+		}
+	},
+	"read_only_confirmation": {
+		"source_files_modified": false,
+		"git_state_changed": false,
+		"committed": false,
+		"note": "The bundle was written untracked and left unstaged; git status shows only untracked i18n/audits/evidence directories (this bundle and other sessions' bundles). The round-1 bundle es29b3 was not touched."
+	},
+	"limitations": [
+		"No native-speaker human review: the judgement is an LLM auditor's, in one session.",
+		"No rendered proof: widths are font-metric estimates (SF Pro advance widths), not pixels; no simulator, screenshot or browser frame was captured.",
+		"Model identity is not diverse from round 1: both rounds served radient/auto.",
+		"The round-1 es bytes cannot be re-derived from git; the 'before' column is quoted from the round-1 bundle's recorded table and diffed by the bundled delta.py.",
+		"The audit-ledger row required by the brief could not be written: no ledger file or ledger command exists in this repository; the row is proposed (unwritten) above.",
+		"Out of scope by design: the hardcoded English 'Monitors ·'/'Wakes ·' section prefixes, the 'Schedules' title and 'Back'/'Try again' labels in schedules.tsx are not catalogue keys; they are the strings programme's, and are noted only so the composed header line is read as a user reads it."
+	],
+	"limits": [
+		"No native-speaker human review: the judgement is an LLM auditor's, in one session.",
+		"No rendered proof: widths are font-metric estimates (SF Pro advance widths), not pixels; no simulator, screenshot or browser frame was captured.",
+		"Model identity is not diverse from round 1: both rounds served radient/auto.",
+		"The round-1 es bytes cannot be re-derived from git; the 'before' column is quoted from the round-1 bundle's recorded table and diffed by the bundled delta.py.",
+		"The audit-ledger row required by the brief could not be written: no ledger file or ledger command exists in this repository; the row is proposed (unwritten) above.",
+		"Out of scope by design: the hardcoded English 'Monitors ·'/'Wakes ·' section prefixes, the 'Schedules' title and 'Back'/'Try again' labels in schedules.tsx are not catalogue keys; they are the strings programme's, and are noted only so the composed header line is read as a user reads it."
+	]
+}

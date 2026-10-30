@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "Conecta una máquina para cambiar el enrutamiento de cuentas.",
+	"mobile.account_routing.error": "No se pudo confirmar el cambio. Revisa la conexión y vuelve a cargar para leer la política actual.",
+	"mobile.account_routing.load_error": "No se pudo cargar el enrutamiento de cuentas. Revisa la conexión y vuelve a intentarlo.",
+	"mobile.account_routing.loading": "Cargando el enrutamiento de cuentas…",
+	"mobile.account_routing.rejected": "El cambio no se guardó. Revisa el valor o los ajustes de esta máquina y vuelve a intentarlo.",
+	"mobile.account_routing.reload": "Recargar política",
+	"mobile.account_routing.retry": "Reintentar",
+	"mobile.account_routing.save": "Guardar política",
+	"mobile.account_routing.saved": "Guardado en esta máquina.",
+	"mobile.account_routing.saving": "Guardando…",
+	"mobile.account_routing.scope": "Los cambios solo se aplican a esta máquina.",
+	"mobile.account_routing.title": "Enrutamiento de cuentas",
+	"mobile.account_routing.unavailable": "Los ajustes de enrutamiento de cuentas no están disponibles en este relé. Actualiza Local Operator en esta máquina.",
+	"mobile.account_routing.unsaved": "Aún sin guardar."
+}

@@ -1,0 +1,65 @@
+/**
+ * Real-path render for mobile.schedules (es) at head bc770ce.
+ *
+ * WHAT THIS IS: the SHIPPED PROJECTION (`src/i18n/catalogue.gen.ts`, what the
+ * phone loads) + the app's ONE parser/formatter. `renderFor()` is
+ * `pick(localized ?? english)` then `formatMessage(source, args, catalogueLocale)`
+ * — this file does exactly that, because a plain-Node import of runtime.ts fails
+ * on Node's ESM directory resolution (`src/i18n/catalogues/` exists beside
+ * `src/i18n/catalogues.ts`). The app's own runtime test (runtime.test.ts) is what
+ * exercises renderFor itself, including the es resolution the head commit added;
+ * it passes in the vitest run recorded in audit.log.
+ */
+const M = await import("/Users/damian/workspace/es-wave/src/i18n/messages.ts");
+const G = await import("/Users/damian/workspace/es-wave/src/i18n/catalogue.gen.ts");
+const { readFileSync } = await import("node:fs");
+
+const EN = G.ENGLISH_MESSAGES;
+const ES = G.LOCALISED_MESSAGES["es"];
+console.log(`projection: en=${Object.keys(EN).length} keys, es=${ES ? Object.keys(ES).length : "MISSING"} keys`);
+if (!ES) process.exit(2);
+
+const CAT = JSON.parse(readFileSync("/Users/damian/workspace/es-wave/src/i18n/catalogues/es/mobile.schedules.json", "utf8"));
+const NS = "mobile.schedules.";
+const projected = Object.keys(CAT).filter((k) => k in ES).length;
+const mism = Object.entries(CAT).filter(([k, v]) => ES[k] !== v).map(([k]) => k);
+console.log(`namespace keys present in the es projection: ${projected}/${Object.keys(CAT).length}; projection bytes differing from the catalogue file: ${mism.length ? mism.join(", ") : "none"}`);
+
+const render = (locale, key, args) => {
+	const v = locale === "es" ? ES[key] : undefined;
+	const src = locale === "es" ? (ES[key] ?? undefined) : undefined;
+	// replicate the projection's per-locale message map; en is the source
+	const chosen = locale === "es" ? (ES[key] ?? EN[key]) : EN[key];
+	const used = locale === "es" && ES[key] !== undefined ? "es" : "en";
+	return { text: M.formatMessage(M.parseMessage(chosen), args, used), used };
+};
+
+const cases = [
+	["mobile.schedules.state.stale", {}],
+	["mobile.schedules.gone.monitors", {}],
+	["mobile.schedules.gone.wakes", {}],
+	["mobile.schedules.empty.body", {}],
+	["mobile.schedules.summary.monitors_attention", { broken: 1, total: 40 }],
+	["mobile.schedules.summary.monitors_attention", { broken: 2, total: 40 }],
+	["mobile.schedules.truncated", { shown: 3, total: 9, family: "wakes" }],
+	["mobile.schedules.truncated", { shown: 3, total: 9, family: "monitors" }],
+	["mobile.schedules.count.monitors", { count: 1 }],
+	["mobile.schedules.count.monitors", { count: 1000000 }],
+	["mobile.schedules.parked.monitors", {}],
+	["mobile.schedules.supervisor.unverifiable", {}],
+];
+let served = 0, fell = 0;
+for (const [k, p] of cases) {
+	const es = render("es", k, p);
+	const en = render("en", k, p);
+	if (es.used === "es") served++; else fell++;
+	console.log(`${k.replace(NS, "")} ${JSON.stringify(p)}`);
+	console.log(`   es (served from ${es.used}): ${es.text}`);
+	console.log(`   en: ${en.text}`);
+}
+console.log("");
+console.log(`keys served from the es projection: ${served}/${cases.length}; fell back to en: ${fell}`);
+const identical = cases.filter(([k, p]) => render("es", k, p).text === render("en", k, p).text).map(([k]) => k);
+console.log(`keys whose es render is byte-identical to en (would mean untranslated): ${identical.length ? identical.join(", ") : "(none)"}`);
+const eqFile = cases.every(([k]) => ES[k] === CAT[k]);
+console.log(`projection bytes equal the es catalogue file for every case: ${eqFile}`);

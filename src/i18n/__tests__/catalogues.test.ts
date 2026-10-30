@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
-
+import type { ShippedLocale } from "@/i18n";
 import {
 	CATALOGUES,
 	ENGLISH_CATALOGUE,
@@ -208,20 +208,30 @@ describe("the English catalogues", () => {
  * untranslated, and an entry that is no longer identical fails as stale, so an
  * exemption cannot quietly become permanent.
  */
-const IDENTICAL_BY_DESIGN: Readonly<Record<string, string>> = {
-	"mobile.notifications.title":
-		"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
-	/* French « session » is the same word as English "session": identical bytes
-	 * here are the correct translation, not a value nobody translated. */
-	"mobile.session_health.menu_title":
-		"French spells “session” the same way; equality is correct here, not a fallback.",
-	"mobile.schedules.head.overdue":
-		"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
+const IDENTICAL_BY_DESIGN: Readonly<
+	Record<ShippedLocale, Readonly<Record<string, string>>>
+> = {
+	en: {},
+	fr: {
+		"mobile.notifications.title":
+			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
+		/* French « session » is the same word as English "session": identical
+		 * bytes here are the correct translation, not a value nobody translated. */
+		"mobile.session_health.menu_title":
+			"French spells “session” the same way; equality is correct here, not a fallback.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
+	},
+	/* Spanish happens to render the placeholder-only template identically —
+	 * `{head} · {label}` has no words of its own — and nothing else. */
+	es: {
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
+	},
 };
 
 describe("a shipped translation is still translated", () => {
 	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");
-	const allowlisted = Object.keys(IDENTICAL_BY_DESIGN).sort();
 
 	it.each(shipped)("%s: no value falls back to the English text", (locale) => {
 		const catalogue = CATALOGUES[locale] as Readonly<Record<string, string>>;
@@ -229,15 +239,19 @@ describe("a shipped translation is still translated", () => {
 		const identical = Object.keys(source)
 			.filter((key) => catalogue[key] === source[key])
 			.sort();
-		expect(identical).toEqual(allowlisted);
+		expect(identical).toEqual(
+			Object.keys(IDENTICAL_BY_DESIGN[locale] ?? {}).sort(),
+		);
 	});
 
 	it("gives every allowlisted value its reason", () => {
 		/* The reason is the reviewable part: an entry without one is a blanket
 		 *  exemption, and the point of the list is that each case was judged. */
-		for (const [key, reason] of Object.entries(IDENTICAL_BY_DESIGN)) {
-			expect(reason.trim().length).toBeGreaterThan(20);
-			expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);
+		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN)) {
+			for (const [key, reason] of Object.entries(perLocale)) {
+				expect(reason.trim().length).toBeGreaterThan(20);
+				expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);
+			}
 		}
 	});
 });

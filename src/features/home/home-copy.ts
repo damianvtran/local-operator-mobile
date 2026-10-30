@@ -78,6 +78,11 @@ export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
 export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	en: 24,
 	fr: 31,
+	/* Measured, not guessed: the pool's longest shipped chip is 27 characters,
+	 * and its widest measured advance is 189.4 pt — a 26-character chip, because
+	 * width decides fit, not length — against a ~254 pt text box. 32 is headroom
+	 * above what the pool uses, the same shape the French budget records. */
+	es: 32,
 };
 
 /** The row's ceiling for one shipped locale. */

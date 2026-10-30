@@ -1,0 +1,636 @@
+
+
+===== IDENTITY — when and where this ran =====
+2026-10-30T02:51:45Z
+session: 4018f32a5589 | auditor model (session header, every command below): radient/auto
+fallback disclosure: session started on anthropic/claude-sonnet-5-5 (quota failure) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto before the first command
+repo: /Users/damian/workspace/es-wave
+
+
+===== 1. REPOSITORY STATE (read-only; no worktree change made by this audit) =====
+f1c782f22a1f4a3f31f025282849cc62ba41b8c6
+feat/i18n-spanish
+?? i18n/audits/evidence/es/mobile.home/es29a3r2/
+?? i18n/audits/evidence/es/mobile.schedules/es29b3r2/
+?? i18n/audits/evidence/es/mobile.session_health/es29a5r2/
+--- tracked es catalogue in HEAD? ---
+src/i18n/catalogues/es/mobile.account_routing.json
+src/i18n/catalogues/es/mobile.computers.json
+src/i18n/catalogues/es/mobile.home.json
+src/i18n/catalogues/es/mobile.notifications.json
+src/i18n/catalogues/es/mobile.projects.json
+src/i18n/catalogues/es/mobile.schedules.json
+src/i18n/catalogues/es/mobile.session.json
+src/i18n/catalogues/es/mobile.session_health.json
+src/i18n/catalogues/es/relay.chrome.json
+src/i18n/catalogues/es/relay.health.json
+
+
+===== 2. INPUT IDENTITIES (sha256 of the exact bytes judged) =====
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+cb58766d4f3933e0c2d64012be2e93712d7e49f506e38b6d6806d2228b3b4a83  src/i18n/catalogues/es/mobile.schedules.json
+--- renderer + projection, for provenance ---
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4  src/i18n/runtime.ts
+9a337f26ad65e98b3fa50e2db5fcd8863e091376094b1a79df92775b4c3ae41b  src/i18n/catalogue.gen.ts
+adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23  src/ui/theme.css
+
+
+===== 3. REPOSITORY VALIDATOR (now parses es, because es is in SHIPPED_LOCALES at this commit) =====
+68:export const NOT_YET_SHIPPED_LOCALES = [
+69-	"zh-CN",
+70-	"ru",
+71-	"vi",
+72-	"ur",
+--
+82:export const SHIPPED_LOCALES = [
+83-	"en",
+84-	"fr",
+85-	"es",
+86-] as const satisfies readonly SupportedLocale[];
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+exit=0
+
+
+===== 4. REPO TESTS for this namespace (independent of my probes) =====
+ Test Files  6 passed (6)
+      Tests  151 passed (151)
+   Duration  5.12s (transform 80%, import 12%, tests 7%, worker 1%)
+
+
+===== 5. RENDER PROBE — app parser, key parity, arms, counted nouns, attention, truncated, composition =====
+
+==============================================================================
+0. INPUT IDENTITY
+==============================================================================
+en keys: 38 | es keys: 38 | context entries: 38
+
+==============================================================================
+1. KEY PARITY AND ORDER
+==============================================================================
+missing in es: (none)
+extra in es: (none)
+same order as en: true
+
+==============================================================================
+2. ICU PARSE (es) + PLACEHOLDER NAME/TYPE PARITY vs en
+==============================================================================
+PARAM-MISMATCH mobile.schedules.summary.monitors_armed: en[count:text] es[count:plural]
+PARAM-MISMATCH mobile.schedules.summary.monitors_attention: en[broken:text,total:text] es[broken:plural,total:text]
+PARAM-MISMATCH mobile.schedules.summary.wakes: en[count:text] es[count:plural]
+PARAM-MISMATCH mobile.schedules.tail.failed: en[count:text] es[count:plural]
+messages parsed: 38/38 | parse failures: 0 | param mismatches: 4
+
+==============================================================================
+3. PLURAL ARM STRUCTURE (es) — CLDR categories for es
+==============================================================================
+Intl.PluralRules('es').resolvedOptions().pluralCategories = ["one","many","other"]
+app pluralCategory('es', n) samples: 0=other 1=one 2=other 1000000=many 1500000=other
+ok      mobile.schedules.count.monitors [count] arms=["one","many","other"]
+ok      mobile.schedules.count.wakes [count] arms=["one","many","other"]
+ok      mobile.schedules.show_more.monitors [hidden] arms=["one","many","other"]
+ok      mobile.schedules.show_more.wakes [hidden] arms=["one","many","other"]
+ok      mobile.schedules.summary.monitors_armed [count] arms=["one","many","other"]
+ok      mobile.schedules.summary.monitors_attention [broken] arms=["one","many","other"]
+ok      mobile.schedules.summary.wakes [count] arms=["one","many","other"]
+ok      mobile.schedules.tail.failed [count] arms=["one","many","other"]
+plural messages with an arm problem: 0
+
+==============================================================================
+4. {total} RETAINED IN EVERY ARM OF summary.monitors_attention
+==============================================================================
+arm one    text="0 de 40 requiere atención" args=["total"] keepsTotal=true
+arm many   text="0 de 40 requieren atención" args=["total"] keepsTotal=true
+arm other  text="0 de 40 requieren atención" args=["total"] keepsTotal=true
+
+==============================================================================
+5. RENDERED — COUNTED NOUNS (0 / 1 / 2 / 1 000 000)
+==============================================================================
+count.monitors                 0 es=other | 0 monitorizaciones                         | en: 0 monitors
+count.monitors                 1 es=one   | 1 monitorización                           | en: 1 monitor
+count.monitors                 2 es=other | 2 monitorizaciones                         | en: 2 monitors
+count.monitors           1000000 es=many  | 1000000 de monitorizaciones                | en: 1000000 monitors
+count.wakes                    0 es=other | 0 despertares                              | en: 0 wakes
+count.wakes                    1 es=one   | 1 despertar                                | en: 1 wake
+count.wakes                    2 es=other | 2 despertares                              | en: 2 wakes
+count.wakes              1000000 es=many  | 1000000 de despertares                     | en: 1000000 wakes
+summary.monitors_armed         0 es=other | 0 monitorizaciones activas                 | en: 0 armed
+summary.monitors_armed         1 es=one   | 1 monitorización activa                    | en: 1 armed
+summary.monitors_armed         2 es=other | 2 monitorizaciones activas                 | en: 2 armed
+summary.monitors_armed   1000000 es=many  | 1000000 de monitorizaciones activas        | en: 1000000 armed
+summary.wakes                  0 es=other | 0 despertares programados                  | en: 0 scheduled
+summary.wakes                  1 es=one   | 1 despertar programado                     | en: 1 scheduled
+summary.wakes                  2 es=other | 2 despertares programados                  | en: 2 scheduled
+summary.wakes            1000000 es=many  | 1000000 de despertares programados         | en: 1000000 scheduled
+show_more.monitors             0 es=other | Mostrar 0 monitorizaciones más             | en: Show 0 more monitors
+show_more.monitors             1 es=one   | Mostrar 1 monitorización más               | en: Show 1 more monitor
+show_more.monitors             2 es=other | Mostrar 2 monitorizaciones más             | en: Show 2 more monitors
+show_more.monitors       1000000 es=many  | Mostrar 1000000 de monitorizaciones más    | en: Show 1000000 more monitors
+show_more.wakes                0 es=other | Mostrar 0 despertares más                  | en: Show 0 more wakes
+show_more.wakes                1 es=one   | Mostrar 1 despertar más                    | en: Show 1 more wake
+show_more.wakes                2 es=other | Mostrar 2 despertares más                  | en: Show 2 more wakes
+show_more.wakes          1000000 es=many  | Mostrar 1000000 de despertares más         | en: Show 1000000 more wakes
+tail.failed                    0 es=other | 0 fallos                                   | en: 0 failed
+tail.failed                    1 es=one   | 1 fallo                                    | en: 1 failed
+tail.failed                    2 es=other | 2 fallos                                   | en: 2 failed
+tail.failed              1000000 es=many  | 1000000 de fallos                          | en: 1000000 failed
+
+==============================================================================
+6. RENDERED — summary.monitors_attention AT THE AGREEMENT BOUNDARIES
+==============================================================================
+broken=1 total=40 es=one   | 1 de 40 requiere atención
+broken=2 total=40 es=other | 2 de 40 requieren atención
+broken=1 total=1 es=one   | 1 de 1 requiere atención
+broken=0 total=40 es=other | 0 de 40 requieren atención
+broken=2 total=5 es=other | 2 de 5 requieren atención
+broken=1000000 total=40 es=many  | 1000000 de 40 requieren atención
+
+==============================================================================
+7. RENDERED — truncated, BOTH FAMILIES
+==============================================================================
+family=wakes    3/9 | Mostrando 3 de 9 conversaciones con despertares.
+family=wakes    1/9 | Mostrando 1 de 9 conversaciones con despertares.
+family=wakes    1/1 | Mostrando 1 de 1 conversaciones con despertares.
+family=wakes    200/500 | Mostrando 200 de 500 conversaciones con despertares.
+family=monitors 3/9 | Mostrando 3 de 9 conversaciones con monitorizaciones.
+family=monitors 1/9 | Mostrando 1 de 9 conversaciones con monitorizaciones.
+family=monitors 1/1 | Mostrando 1 de 1 conversaciones con monitorizaciones.
+family=monitors 200/500 | Mostrando 200 de 500 conversaciones con monitorizaciones.
+
+==============================================================================
+8. COMPOSED SURFACES (the app's own composition functions, re-implemented here)
+==============================================================================
+monitor head n=1 240s | 1 monitorización · próximo en 4m
+wake    head n=1 240s | 1 despertar · próximo en 4m
+monitor head n=2 240s | 2 monitorizaciones · próximo en 4m
+wake    head n=2 240s | 2 despertares · próximo en 4m
+monitor head n=1 -7200s | 1 monitorización · vencido hace 2h
+wake    head n=1 -7200s | 1 despertar · vencido hace 2h
+monitor head n=2 -7200s | 2 monitorizaciones · vencido hace 2h
+wake    head n=2 -7200s | 2 despertares · vencido hace 2h
+monitor head n=1 30s | 1 monitorización · próximo en 30s
+wake    head n=1 30s | 1 despertar · próximo en 30s
+
+header (armed)  count=1 | Monitors · 1 monitorización activa
+header (armed)  count=5 | Monitors · 5 monitorizaciones activas
+header (attn)  1 of 40 | Monitors · 1 de 40 requiere atención
+header (armed)  wake 5 | Wakes · 5 despertares programados
+
+cadence.left  | cada 1d · 3 por enviar
+cadence.spent | cada 1d · no quedan envíos
+
+==============================================================================
+9. RENDERED — STATE WORDS AND THE NOUN EACH MODIFIES
+==============================================================================
+state.disabled  -> "desactivada"  (raw, unformatted)
+state.dormant   -> "inactiva"  (raw, unformatted)
+state.expired   -> "caducada"  (raw, unformatted)
+state.stale     -> "obsoleta"  (raw, unformatted)
+state.waiting   -> "en espera"  (raw, unformatted)
+
+state.disabled  slot="desactivada"    with la monitorización
+state.dormant   slot="inactiva"       with la monitorización
+state.expired   slot="caducada"       with la monitorización
+state.stale     slot="obsoleta"       with el despertar
+state.waiting   slot="en espera"      with la monitorización
+
+==============================================================================
+10. RENDERED — SENTENCES (empty / parked / gone / read error)
+==============================================================================
+empty.title              | No hay nada activo
+empty.body               | Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; las monitorizaciones vigilan una cosa y avisan de lo que cambia.
+empty_line.wakes         | No hay despertares programados.
+empty_line.monitors      | No hay monitorizaciones activas.
+parked.wakes             | En pausa — los despertares se reanudan tras su próximo turno
+parked.monitors          | En pausa — las monitorizaciones se reanudan cuando su conversación vuelva a ejecutarse
+gone.wakes               | Ya no está — su conversación ya no está en esta máquina, así que nada lo dispara
+gone.monitors            | Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba
+read_error.wakes         | No se pudieron leer los despertares de esta máquina.
+read_error.monitors      | No se pudieron leer las monitorizaciones de esta máquina.
+read_unreachable         | Ahora mismo no hemos podido leer las programaciones de esta máquina.
+supervisor.not_running   | El supervisor de despertares está instalado pero no se ejecuta, así que los despertares de abajo no se dispararán.
+supervisor.unsupported   | En esta plataforma aún no se supervisan los despertares, así que los de abajo solo se disparan mientras una conversación está en marcha.
+supervisor.unverifiable  | Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.
+show_less.wakes          | Mostrar menos despertares
+show_less.monitors       | Mostrar menos monitorizaciones
+
+==============================================================================
+11. MECHANICAL SWEEP
+==============================================================================
+bidi controls: 0 | markup/backticks: 0 | double spaces: 0 | space-before-punct: 0 | "!" in copy: 0 | English-leftover candidates: 0
+
+em-dash form check (must be ' — ', not '—'): mobile.schedules.gone.monitors=ok mobile.schedules.gone.wakes=ok mobile.schedules.parked.monitors=ok mobile.schedules.parked.wakes=ok
+final full stops where en has none: (none)
+trailing punctuation parity (en vs es last char) mismatches: mobile.schedules.cadence.left en="t" es="r" | mobile.schedules.cadence.once en="e" es="z" | mobile.schedules.cadence.spent en="t" es="s" | mobile.schedules.due.overdue en="e" es="}" | mobile.schedules.empty.title en="d" es="o" | mobile.schedules.gone.monitors en="s" es="a" | mobile.schedules.gone.wakes en="s" es="a" | mobile.schedules.parked.monitors en="n" es="e" | mobile.schedules.parked.wakes en="n" es="o" | mobile.schedules.state.disabled en="d" es="a" | mobile.schedules.state.dormant en="t" es="a" | mobile.schedules.state.expired en="d" es="a" | mobile.schedules.state.stale en="e" es="a" | mobile.schedules.state.waiting en="g" es="a" | mobile.schedules.summary.monitors_armed en="d" es="}" | mobile.schedules.summary.monitors_attention en="n" es="}" | mobile.schedules.summary.wakes en="d" es="}" | mobile.schedules.tail.failed en="d" es="}"
+
+==============================================================================
+12. NEGATIVE CONTROL — the checks above can fail
+==============================================================================
+round-1 string at broken=1 -> 1 de 40 requieren atención   (expected ungrammatical)
+round-2 string at broken=1 -> 1 de 40 requiere atención
+tampered arms=["one","other"] -> check says missing=["many"] (expected ["many"])
+tampered at 1000000 -> 1000000 monitorizaciones   (expected "1000000 monitorizaciones", i.e. the de-less form the many arm exists to avoid)
+tampered (no {total}) params=broken:plural vs source params=broken:text,total:text -> would flag: true
+
+==============================================================================
+13. RESULT
+==============================================================================
+
+[end of probe]
+
+
+===== 6. RENDER PROBE — shipped projection + runtime tests (real path) =====
+projection: en=143 keys, es=143 keys
+mobile.schedules.count.monitors {"count":1}
+   es (served from es): 1 monitorización
+   en: 1 monitor
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.count.monitors {"count":2}
+   es (served from es): 2 monitorizaciones
+   en: 2 monitors
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.count.monitors {"count":1000000}
+   es (served from es): 1000000 de monitorizaciones
+   en: 1000000 monitors
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.summary.monitors_armed {"count":1}
+   es (served from es): 1 monitorización activa
+   en: 1 armed
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.summary.monitors_armed {"count":5}
+   es (served from es): 5 monitorizaciones activas
+   en: 5 armed
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.summary.monitors_attention {"broken":1,"total":40}
+   es (served from es): 1 de 40 requiere atención
+   en: 1 of 40 need attention
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.summary.monitors_attention {"broken":2,"total":40}
+   es (served from es): 2 de 40 requieren atención
+   en: 2 of 40 need attention
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.truncated {"shown":3,"total":9,"family":"wakes"}
+   es (served from es): Mostrando 3 de 9 conversaciones con despertares.
+   en: Showing 3 of 9 conversations with wakes.
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.truncated {"shown":3,"total":9,"family":"monitors"}
+   es (served from es): Mostrando 3 de 9 conversaciones con monitorizaciones.
+   en: Showing 3 of 9 conversations with monitors.
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.tail.failed {"count":1}
+   es (served from es): 1 fallo
+   en: 1 failed
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.tail.failed {"count":3}
+   es (served from es): 3 fallos
+   en: 3 failed
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.show_more.monitors {"hidden":3}
+   es (served from es): Mostrar 3 monitorizaciones más
+   en: Show 3 more monitors
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.show_less.monitors
+   es (served from es): Mostrar menos monitorizaciones
+   en: Show fewer monitors
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.state.stale
+   es (served from es): obsoleta
+   en: stale
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.state.disabled
+   es (served from es): desactivada
+   en: disabled
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.gone.monitors
+   es (served from es): Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba
+   en: Gone — its conversation is no longer on this machine, so nothing checks
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.parked.monitors
+   es (served from es): En pausa — las monitorizaciones se reanudan cuando su conversación vuelva a ejecutarse
+   en: Parked — monitors resume when its conversation runs again
+   zh-CN -> English floor: en | same as en: true
+mobile.schedules.empty_line.monitors
+   es (served from es): No hay monitorizaciones activas.
+   en: No monitors armed.
+   zh-CN -> English floor: en | same as en: true
+
+keys served from the es projection: 18/18; keys that fell back to en: 0
+
+
+===== 7. WIDTH MEASUREMENT — SF Pro at the design kit's sizes (text-meta 12/500, mono-label 11/600, body-sm 14/400) =====
+====================================================================================================
+WIDTH MEASUREMENT — SF Pro at the design kit's sizes; content width 288pt (320pt device - 32pt screen padding), rows 276pt
+====================================================================================================
+case                               variant   w(pt)  avail lines widest tok  text
+----------------------------------------------------------------------------------------------------
+header armed count=5               en        133.2    288     1       66.6  MONITORS · 5 ARMED
+header armed count=5               en        256.4    288     1      129.2  [200%] MONITORS · 5 ARMED
+
+header armed count=5               es-old    232.1    288     1       74.3  MONITORS · 5 MONITORES ARMADOS
+header armed count=5               es-old    444.3    288     2      143.6  [200%] MONITORS · 5 MONITORES ARMADOS
+
+header armed count=5               es-new    277.8    288     1      126.9  MONITORS · 5 MONITORIZACIONES ACTIVAS
+header armed count=5               es-new    528.5    288     3      244.8  [200%] MONITORS · 5 MONITORIZACIONES ACTIVAS
+
+header armed count=1               en        131.2    288     1       66.6  MONITORS · 1 ARMED
+header armed count=1               en        252.4    288     1      129.2  [200%] MONITORS · 1 ARMED
+
+header armed count=1               es-old    205.2    288     1       66.6  MONITORS · 1 MONITOR ARMADO
+header armed count=1               es-old    395.3    288     2      129.2  [200%] MONITORS · 1 MONITOR ARMADO
+
+header armed count=1               es-new    250.8    288     1      110.6  MONITORS · 1 MONITORIZACIÓN ACTIVA
+header armed count=1               es-new    479.6    288     3      215.2  [200%] MONITORS · 1 MONITORIZACIÓN ACTIVA
+
+header attention 2/5               en        230.5    288     1       73.3  MONITORS · 2 OF 5 NEED ATTENTION
+header attention 2/5               en        439.9    288     2      138.6  [200%] MONITORS · 2 OF 5 NEED ATTENTION
+
+header attention 2/5               es-old    258.1    288     1       68.3  MONITORS · 2 DE 5 REQUIEREN ATENCIÓN
+header attention 2/5               es-old    498.2    288     2      135.6  [200%] MONITORS · 2 DE 5 REQUIEREN ATENCIÓN
+
+header attention 2/5               es-new    258.1    288     1       68.3  MONITORS · 2 DE 5 REQUIEREN ATENCIÓN
+header attention 2/5               es-new    498.2    288     2      135.6  [200%] MONITORS · 2 DE 5 REQUIEREN ATENCIÓN
+
+header attention 1/40              en        238.1    288     1       73.3  MONITORS · 1 OF 40 NEED ATTENTION
+header attention 1/40              en        452.2    288     2      138.6  [200%] MONITORS · 1 OF 40 NEED ATTENTION
+
+header attention 1/40              es-old    265.8    288     1       68.3  MONITORS · 1 DE 40 REQUIEREN ATENCIÓN
+header attention 1/40              es-old    510.5    288     2      135.6  [200%] MONITORS · 1 DE 40 REQUIEREN ATENCIÓN
+
+header attention 1/40              es-new    257.1    288     1       66.6  MONITORS · 1 DE 40 REQUIERE ATENCIÓN
+header attention 1/40              es-new    492.2    288     2      129.2  [200%] MONITORS · 1 DE 40 REQUIERE ATENCIÓN
+
+entry head 2 · next in 4m          en        138.0    288     1       55.0  2 monitors · next in 4m
+entry head 2 · next in 4m          en        237.0    288     1       93.0  [200%] 2 monitors · next in 4m
+
+entry head 2 · next in 4m          es-old    173.0    288     1       63.0  2 monitores · próximo en 4m
+entry head 2 · next in 4m          es-old    295.0    288     2      106.0  [200%] 2 monitores · próximo en 4m
+
+entry head 2 · next in 4m          es-new    215.0    288     1      105.0  2 monitorizaciones · próximo en 4m
+entry head 2 · next in 4m          es-new    369.0    288     2      180.0  [200%] 2 monitorizaciones · próximo en 4m
+
+entry head 1 · overdue             en        155.0    288     1       48.0  1 monitor · venció hace 2h
+entry head 1 · overdue             en        270.0    288     1       81.0  [200%] 1 monitor · venció hace 2h
+
+entry head 1 · overdue             es-old    163.0    288     1       48.0  1 monitor · vencido hace 2h
+entry head 1 · overdue             es-old    284.0    288     1       83.0  [200%] 1 monitor · vencido hace 2h
+
+entry head 1 · overdue             es-new    205.0    288     1       90.0  1 monitorización · vencido hace 2h
+entry head 1 · overdue             es-new    358.0    288     2      155.0  [200%] 1 monitorización · vencido hace 2h
+
+show_less.monitors                 en        131.0    288     1       55.0  Show fewer monitors
+show_less.monitors                 en        222.0    288     1       93.0  [200%] Show fewer monitors
+
+show_less.monitors                 es-old    158.0    288     1       63.0  Mostrar menos monitores
+show_less.monitors                 es-old    271.0    288     1      106.0  [200%] Mostrar menos monitores
+
+show_less.monitors                 es-new    200.0    288     1      105.0  Mostrar menos monitorizaciones
+show_less.monitors                 es-new    345.0    288     2      180.0  [200%] Mostrar menos monitorizaciones
+
+show_more.monitors hidden=3        en        137.0    288     1       55.0  Show 3 more monitors
+show_more.monitors hidden=3        en        234.0    288     1       93.0  [200%] Show 3 more monitors
+
+show_more.monitors hidden=3        es-old    153.0    288     1       63.0  Mostrar 3 monitores más
+show_more.monitors hidden=3        es-old    264.0    288     1      106.0  [200%] Mostrar 3 monitores más
+
+show_more.monitors hidden=3        es-new    195.0    288     1      105.0  Mostrar 3 monitorizaciones más
+show_more.monitors hidden=3        es-new    338.0    288     2      180.0  [200%] Mostrar 3 monitorizaciones más
+
+gone.monitors                      en        436.0    288     2       80.0  Gone — its conversation is no longer on this m
+gone.monitors                      en        751.0    288     3      137.0  [200%] Gone — its conversation is no longer on this m
+
+gone.monitors                      es-old    537.0    288     2       85.0  Desaparecido — su conversación ya no está en e
+gone.monitors                      es-old    932.0    288     4      147.0  [200%] Desaparecido — su conversación ya no está en e
+
+gone.monitors                      es-new    515.0    288     2       81.0  Ya no está — su conversación ya no está en est
+gone.monitors                      es-new    896.0    288     4      141.0  [200%] Ya no está — su conversación ya no está en est
+
+truncated monitors 200/500         en        301.0    288     2       87.0  Showing 200 of 500 conversations with monitors
+truncated monitors 200/500         en        522.0    288     3      149.0  [200%] Showing 200 of 500 conversations with monitors
+
+truncated monitors 200/500         es-old    331.0    288     2       96.0  Mostrando 200 de 500 conversaciones con monito
+truncated monitors 200/500         es-old    577.0    288     3      166.0  [200%] Mostrando 200 de 500 conversaciones con monito
+
+truncated monitors 200/500         es-new    373.0    288     2      108.0  Mostrando 200 de 500 conversaciones con monito
+truncated monitors 200/500         es-new    651.0    288     3      185.0  [200%] Mostrando 200 de 500 conversaciones con monito
+
+read_error.monitors                en        292.0    288     2       55.0  The monitors on this machine could not be read
+read_error.monitors                en        501.0    288     2       93.0  [200%] The monitors on this machine could not be read
+
+read_error.monitors                es-old    312.0    288     2       63.0  No se pudieron leer los monitores de esta máqu
+read_error.monitors                es-old    532.0    288     3      106.0  [200%] No se pudieron leer los monitores de esta máqu
+
+read_error.monitors                es-new    353.0    288     2      105.0  No se pudieron leer las monitorizaciones de es
+read_error.monitors                es-new    606.0    288     3      180.0  [200%] No se pudieron leer las monitorizaciones de es
+
+empty.body                         en       1196.0    288     5       87.0  Ask an agent in chat to do something on a regu
+empty.body                         en       2106.0    288     9      152.0  [200%] Ask an agent in chat to do something on a regu
+
+empty.body                         es-old   1392.0    288     6       89.0  Pide a un agente en el chat que haga algo de f
+empty.body                         es-old   2464.0    288    10      157.0  [200%] Pide a un agente en el chat que haga algo de f
+
+empty.body                         es-new   1438.0    288     6      113.0  Pide a un agente en el chat que haga algo de f
+empty.body                         es-new   2544.0    288    11      199.0  [200%] Pide a un agente en el chat que haga algo de f
+
+empty_line.monitors                en        128.0    288     1       58.0  No monitors armed.
+empty_line.monitors                en        232.0    288     1      104.0  [200%] No monitors armed.
+
+empty_line.monitors                es-old    180.0    288     1       66.0  No hay monitores armados.
+empty_line.monitors                es-old    323.0    288     2      118.0  [200%] No hay monitores armados.
+
+empty_line.monitors                es-new    219.0    288     1      113.0  No hay monitorizaciones activas.
+empty_line.monitors                es-new    383.0    288     3      199.0  [200%] No hay monitorizaciones activas.
+
+facts row: slot + cadence + tail   en        189.0    276     1       51.0  2h overdue   every 5m   3 failed
+facts row: slot + cadence + tail   en        323.0    276     2       86.0  [200%] 2h overdue   every 5m   3 failed
+
+facts row: slot + cadence + tail   es-old    222.0    276     1       48.0  vencido hace 2h   cada 5m   3 fallidos
+facts row: slot + cadence + tail   es-old    389.0    276     2       83.0  [200%] vencido hace 2h   cada 5m   3 fallidos
+
+facts row: slot + cadence + tail   es-new    211.0    276     1       48.0  vencido hace 2h   cada 5m   3 fallos
+facts row: slot + cadence + tail   es-new    370.0    276     2       83.0  [200%] vencido hace 2h   cada 5m   3 fallos
+
+====================================================================================================
+GROWTH vs ENGLISH (and vs the round-1 es bytes)
+====================================================================================================
+header armed count=5               en=  133.2  es-old=  232.1 (+74.3%)  es-new=  277.8 (+108.5%)  delta vs old=+19.7%
+header armed count=1               en=  131.2  es-old=  205.2 (+56.3%)  es-new=  250.8 (+91.1%)  delta vs old=+22.2%
+header attention 2/5               en=  230.5  es-old=  258.1 (+12.0%)  es-new=  258.1 (+12.0%)  delta vs old= +0.0%
+header attention 1/40              en=  238.1  es-old=  265.8 (+11.6%)  es-new=  257.1 ( +8.0%)  delta vs old= -3.3%
+entry head 2 · next in 4m          en=  138.0  es-old=  173.0 (+25.4%)  es-new=  215.0 (+55.8%)  delta vs old=+24.3%
+entry head 1 · overdue             en=  155.0  es-old=  163.0 ( +5.2%)  es-new=  205.0 (+32.3%)  delta vs old=+25.8%
+show_less.monitors                 en=  131.0  es-old=  158.0 (+20.6%)  es-new=  200.0 (+52.7%)  delta vs old=+26.6%
+show_more.monitors hidden=3        en=  137.0  es-old=  153.0 (+11.7%)  es-new=  195.0 (+42.3%)  delta vs old=+27.5%
+gone.monitors                      en=  436.0  es-old=  537.0 (+23.2%)  es-new=  515.0 (+18.1%)  delta vs old= -4.1%
+truncated monitors 200/500         en=  301.0  es-old=  331.0 (+10.0%)  es-new=  373.0 (+23.9%)  delta vs old=+12.7%
+read_error.monitors                en=  292.0  es-old=  312.0 ( +6.8%)  es-new=  353.0 (+20.9%)  delta vs old=+13.1%
+empty.body                         en= 1196.0  es-old= 1392.0 (+16.4%)  es-new= 1438.0 (+20.2%)  delta vs old= +3.3%
+empty_line.monitors                en=  128.0  es-old=  180.0 (+40.6%)  es-new=  219.0 (+71.1%)  delta vs old=+21.7%
+facts row: slot + cadence + tail   en=  189.0  es-old=  222.0 (+17.5%)  es-new=  211.0 (+11.6%)  delta vs old= -5.0%
+
+
+===== 8. WIDTH MEASUREMENT — wrap thresholds and the single-token clipping test =====
+== armed header vs monitor count (100% text, mono-label 11/600) ==
+MONITORS · 1 MONITORIZACIONES ACTIVAS            250.8pt of 288 -> 1 line(s)
+MONITORS · 2 MONITORIZACIONES ACTIVAS            277.8pt of 288 -> 1 line(s)
+MONITORS · 3 MONITORIZACIONES ACTIVAS            277.8pt of 288 -> 1 line(s)
+MONITORS · 4 MONITORIZACIONES ACTIVAS            278.8pt of 288 -> 1 line(s)
+MONITORS · 5 MONITORIZACIONES ACTIVAS            277.8pt of 288 -> 1 line(s)
+MONITORS · 6 MONITORIZACIONES ACTIVAS            278.8pt of 288 -> 1 line(s)
+MONITORS · 7 MONITORIZACIONES ACTIVAS            277.8pt of 288 -> 1 line(s)
+MONITORS · 8 MONITORIZACIONES ACTIVAS            278.8pt of 288 -> 1 line(s)
+MONITORS · 9 MONITORIZACIONES ACTIVAS            278.8pt of 288 -> 1 line(s)
+MONITORS · 10 MONITORIZACIONES ACTIVAS           284.4pt of 288 -> 1 line(s)
+MONITORS · 11 MONITORIZACIONES ACTIVAS           281.4pt of 288 -> 1 line(s)
+MONITORS · 12 MONITORIZACIONES ACTIVAS           283.4pt of 288 -> 1 line(s)
+
+== elided-noun alternative (fr's shape) ==
+MONITORS · 1 ACTIVA(S)                           135.9pt of 288 -> 1 line(s)
+MONITORS · 5 ACTIVA(S)                           146.5pt of 288 -> 1 line(s)
+MONITORS · 12 ACTIVA(S)                          152.2pt of 288 -> 1 line(s)
+
+== wake header for comparison ==
+WAKES · 5 DESPERTARES PROGRAMADOS                260.1pt of 288 -> 1 line(s)
+WAKES · 1 DESPERTAR PROGRAMADO                   233.1pt of 288 -> 1 line(s)
+
+== button label at 200% ==
+Mostrar menos monitorizaciones [200%]            345.0pt of 288 -> 2 line(s)
+Mostrar menos monitores [200%, round 1]          271.0pt of 288 -> 1 line(s)
+Show fewer monitors [200%]                       222.0pt of 288 -> 1 line(s)
+
+== single widest token at 200% meta (clipping test) ==
+  monitorizaciones      180.0pt vs 276pt row width
+  MONITORIZACIONES      232.0pt vs 276pt row width
+  comprobación          150.0pt vs 276pt row width
+
+
+===== 9. NO AUDIT-LEDGER COMMAND IN THIS REPOSITORY (the task asked for one; recording the evidence it does not exist) =====
+audits
+--- i18n/ledger.json present? (RFC 6 ledger file) ---
+ls: i18n/ledger.json: No such file or directory
+ls exit=1
+--- any 'ledger' write/receipt command under scripts/i18n/? ---
+grep exit=1 (1 = no match: no ledger command)
+--- declared i18n scripts ---
+i18n:generate i18n:catalogue:check i18n:strings:check i18n:check
+
+
+===== 10. DELTA — what changed between the round-1 audited text and these bytes =====
+round-1 table rows parsed: 38 (expect 38)
+keys in current file: 38
+changed since round 1: 18
+  - mobile.schedules.count.monitors
+      old: {count, plural, one {# monitor} many {# de monitores} other {# monitores}}
+      new: {count, plural, one {# monitorización} many {# de monitorizaciones} other {# monitorizaciones}}
+  - mobile.schedules.empty.body
+      old: Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; los monitores vigilan una cosa y avisan de lo que cambia.
+      new: Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; las monitorizaciones vigilan una cosa y avisan de lo que cambia.
+  - mobile.schedules.empty.title
+      old: No hay nada armado
+      new: No hay nada activo
+  - mobile.schedules.empty_line.monitors
+      old: No hay monitores armados.
+      new: No hay monitorizaciones activas.
+  - mobile.schedules.gone.monitors
+      old: Desaparecido — su conversación ya no está en esta máquina, así que nada lo comprueba
+      new: Ya no está — su conversación ya no está en esta máquina, así que nada la comprueba
+  - mobile.schedules.gone.wakes
+      old: Desaparecido — su conversación ya no está en esta máquina, así que nada lo dispara
+      new: Ya no está — su conversación ya no está en esta máquina, así que nada lo dispara
+  - mobile.schedules.parked.monitors
+      old: En pausa — los monitores se reanudan cuando su conversación vuelva a ejecutarse
+      new: En pausa — las monitorizaciones se reanudan cuando su conversación vuelva a ejecutarse
+  - mobile.schedules.read_error.monitors
+      old: No se pudieron leer los monitores de esta máquina.
+      new: No se pudieron leer las monitorizaciones de esta máquina.
+  - mobile.schedules.show_less.monitors
+      old: Mostrar menos monitores
+      new: Mostrar menos monitorizaciones
+  - mobile.schedules.show_more.monitors
+      old: {hidden, plural, one {Mostrar # monitor más} many {Mostrar # de monitores más} other {Mostrar # monitores más}}
+      new: {hidden, plural, one {Mostrar # monitorización más} many {Mostrar # de monitorizaciones más} other {Mostrar # monitorizaciones más}}
+  - mobile.schedules.state.disabled
+      old: desactivado
+      new: desactivada
+  - mobile.schedules.state.dormant
+      old: inactivo
+      new: inactiva
+  - mobile.schedules.state.expired
+      old: caducado
+      new: caducada
+  - mobile.schedules.state.stale
+      old: obsoleto
+      new: obsoleta
+  - mobile.schedules.summary.monitors_armed
+      old: {count, plural, one {# monitor armado} many {# de monitores armados} other {# monitores armados}}
+      new: {count, plural, one {# monitorización activa} many {# de monitorizaciones activas} other {# monitorizaciones activas}}
+  - mobile.schedules.summary.monitors_attention
+      old: {broken} de {total} requieren atención
+      new: {broken, plural, one {# de {total} requiere atención} many {# de {total} requieren atención} other {# de {total} requieren atención}}
+  - mobile.schedules.tail.failed
+      old: {count, plural, one {# fallido} many {# de fallidos} other {# fallidos}}
+      new: {count, plural, one {# fallo} many {# de fallos} other {# fallos}}
+  - mobile.schedules.truncated
+      old: Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitores}}.
+      new: Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.
+unchanged: 20
+  = mobile.schedules.cadence.every
+  = mobile.schedules.cadence.left
+  = mobile.schedules.cadence.once
+  = mobile.schedules.cadence.spent
+  = mobile.schedules.count.wakes
+  = mobile.schedules.due.ahead
+  = mobile.schedules.due.overdue
+  = mobile.schedules.empty_line.wakes
+  = mobile.schedules.head.next
+  = mobile.schedules.head.overdue
+  = mobile.schedules.parked.wakes
+  = mobile.schedules.read_error.wakes
+  = mobile.schedules.read_unreachable
+  = mobile.schedules.show_less.wakes
+  = mobile.schedules.show_more.wakes
+  = mobile.schedules.state.waiting
+  = mobile.schedules.summary.wakes
+  = mobile.schedules.supervisor.not_running
+  = mobile.schedules.supervisor.unsupported
+  = mobile.schedules.supervisor.unverifiable
+
+--- gender census over the 38 es values ---
+  mobile.schedules.cadence.once                            F:una
+  mobile.schedules.count.monitors                          F:monitorizaciones,monitorización
+  mobile.schedules.count.wakes                             M:despertar,despertares
+  mobile.schedules.empty.body                              F:las,monitorizaciones,una M:despertares,el,lo,un
+  mobile.schedules.empty_line.monitors                     F:activas,monitorizaciones
+  mobile.schedules.empty_line.wakes                        M:despertares,programados
+  mobile.schedules.gone.monitors                           F:la
+  mobile.schedules.gone.wakes                              M:lo
+  mobile.schedules.parked.monitors                         F:las,monitorizaciones
+  mobile.schedules.parked.wakes                            M:despertares,los
+  mobile.schedules.read_error.monitors                     F:las,monitorizaciones
+  mobile.schedules.read_error.wakes                        M:despertares,los
+  mobile.schedules.read_unreachable                        F:las
+  mobile.schedules.show_less.monitors                      F:monitorizaciones
+  mobile.schedules.show_less.wakes                         M:despertares
+  mobile.schedules.show_more.monitors                      F:monitorizaciones,monitorización
+  mobile.schedules.show_more.wakes                         M:despertar,despertares
+  mobile.schedules.state.disabled                          F:desactivada
+  mobile.schedules.state.dormant                           F:inactiva
+  mobile.schedules.state.expired                           F:caducada
+  mobile.schedules.state.stale                             F:obsoleta
+  mobile.schedules.summary.monitors_armed                  F:activa,activas,monitorizaciones,monitorización
+  mobile.schedules.summary.wakes                           M:despertar,despertares,programado,programados
+  mobile.schedules.supervisor.not_running                  M:despertares,los
+  mobile.schedules.supervisor.unsupported                  F:una M:despertares,los
+  mobile.schedules.supervisor.unverifiable                 M:despertares,los
+  mobile.schedules.truncated                               F:monitorizaciones M:despertares
+values with a gender-marked token: 27
+  feminine only: 14 -> ['mobile.schedules.cadence.once', 'mobile.schedules.count.monitors', 'mobile.schedules.empty_line.monitors', 'mobile.schedules.gone.monitors', 'mobile.schedules.parked.monitors', 'mobile.schedules.read_error.monitors', 'mobile.schedules.read_unreachable', 'mobile.schedules.show_less.monitors', 'mobile.schedules.show_more.monitors', 'mobile.schedules.state.disabled', 'mobile.schedules.state.dormant', 'mobile.schedules.state.expired', 'mobile.schedules.state.stale', 'mobile.schedules.summary.monitors_armed']
+  masculine only: 10 -> ['mobile.schedules.count.wakes', 'mobile.schedules.empty_line.wakes', 'mobile.schedules.gone.wakes', 'mobile.schedules.parked.wakes', 'mobile.schedules.read_error.wakes', 'mobile.schedules.show_less.wakes', 'mobile.schedules.show_more.wakes', 'mobile.schedules.summary.wakes', 'mobile.schedules.supervisor.not_running', 'mobile.schedules.supervisor.unverifiable']
+  both (sentence names both families): 3 -> ['mobile.schedules.empty.body', 'mobile.schedules.supervisor.unsupported', 'mobile.schedules.truncated']
+
+
+===== 11. READ-ONLY CONFIRMATION — no source file was modified by this audit =====
+?? i18n/audits/evidence/es/mobile.home/es29a3r2/
+?? i18n/audits/evidence/es/mobile.schedules/es29b3r2/
+?? i18n/audits/evidence/es/mobile.session_health/es29a5r2/
+(every entry above is an audit-evidence directory written by this wave's auditor sessions and left UNSTAGED; es29b3r2 is this audit's own. No tracked file was modified.)

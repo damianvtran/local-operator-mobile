@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "Añadir una máquina",
+	"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
+	"mobile.computers.badge.active": "activa",
+	"mobile.computers.badge.connecting": "conectando",
+	"mobile.computers.connecting": "Conectando…",
+	"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
+	"mobile.computers.password_placeholder": "La contraseña de lop mobile",
+	"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
+	"mobile.computers.section.on_phone": "En este teléfono",
+	"mobile.computers.switch": "Cambiar de máquina"
+}

@@ -1,0 +1,83 @@
+#!/bin/bash
+# Third-round verification driver for mobile.schedules (es) at head bc770ce.
+# Every line below is the ACTUAL output of the command printed above it.
+set -u
+REPO=/Users/damian/workspace/es-wave
+SCRATCH="$LOCAL_OPERATOR_SCRATCHPAD/es29b3r3"
+cd "$REPO" || exit 1
+
+banner() { echo; echo "===== $* ====="; }
+
+banner "IDENTITY — when and where this ran"
+date -u +%Y-%m-%dT%H:%M:%SZ
+echo "session: 0c96bc62035b | auditor model (session header for every command below): radient/auto"
+echo "fallback disclosure: anthropic/claude-sonnet-5-5 (provider quota) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, all before the first command; no earlier hop's output is evidence"
+echo "repo: $REPO"
+echo "host: $(uname -sm) | node $(node -v) | python $(python3 -V 2>&1 | cut -d' ' -f2)"
+
+banner "1. REPOSITORY STATE (read-only; this audit changes no tracked byte)"
+git rev-parse HEAD
+git rev-parse --abbrev-ref HEAD
+echo "--- git status --porcelain (the only entry must be this audit bundle; no tracked byte changed) ---"
+git status --porcelain
+echo "--- is the es catalogue tracked at HEAD? ---"
+git ls-tree --name-only HEAD -- src/i18n/catalogues/es/ | grep mobile.schedules
+echo "--- working tree equals HEAD for the audited file? ---"
+git diff --stat HEAD -- src/i18n/catalogues/es/mobile.schedules.json
+echo "(empty diff above = the audited bytes ARE the committed bytes)"
+
+banner "2. INPUT IDENTITIES (sha256 of the exact bytes judged)"
+sha256sum src/i18n/catalogues/en/mobile.schedules.json \
+          src/i18n/catalogues/en/mobile.schedules.context.json \
+          src/i18n/catalogues/es/mobile.schedules.json
+echo "--- renderer + projection, for provenance ---"
+sha256sum src/i18n/messages.ts src/i18n/runtime.ts src/i18n/catalogue.gen.ts src/i18n/locale.ts
+echo "--- the audited head's commit message subject ---"
+git log -1 --format='%H %s'
+
+banner "3. REPOSITORY VALIDATOR (generate.ts --check; es is in SHIPPED_LOCALES at this head)"
+node scripts/i18n/generate.ts --check 2>&1 | grep -v MODULE_TYPELESS
+echo "exit=$?"
+echo "--- SHIPPED / SUPPORTED (context for the check above) ---"
+grep -A 6 "export const SHIPPED_LOCALES" src/i18n/locale.ts
+
+banner "4. STRINGS VALIDATOR (repository-wide, for context)"
+node scripts/i18n/check-strings.ts 2>&1 | tail -2
+
+banner "5. REPO TESTS FOR THIS NAMESPACE (independent of my probes)"
+npx vitest run src/i18n/__tests__ src/features/schedules 2>&1 | grep -E "Test Files|Tests |Duration|FAIL"
+
+banner "6. MECHANICAL PARITY / ICU / PLURAL-ARM PROBE (app's own parser; probe.mjs is bundled)"
+# stdin carries the PRE-remediation catalogue so the negative control can quote it.
+git show f1c782f:src/i18n/catalogues/es/mobile.schedules.json | node "$SCRATCH/probe.mjs" 2>&1 | grep -v MODULE_TYPELESS
+
+banner "7. SHIPPED-PROJECTION RENDER (catalogue.gen.ts — what the phone loads)"
+node "$SCRATCH/e2e.mjs" 2>&1 | grep -v MODULE_TYPELESS
+
+banner "7b. DEFENSIVE CONTROL — the pre-fix catalogue must FAIL the byte comparison"
+echo "(the same verifier run against the parent commit's catalogue, which still carries 'obsoleta')"
+git show f1c782f:src/i18n/catalogues/es/mobile.schedules.json > "$SCRATCH/es-at-f1c782f.json"
+ES_OVERRIDE="$SCRATCH/es-at-f1c782f.json" python3 "$SCRATCH/verify_remediation.py" 2>&1 | grep -E "MATCH|MISMATCH|VERDICT"
+
+banner "8. BYTE-FOR-BYTE VERIFICATION OF THE THREE REMEDIATED FINDINGS (verify_remediation.py, bundled)"
+python3 "$SCRATCH/verify_remediation.py"
+echo "exit=$?"
+
+banner "9. AUDIT LEDGER — the command my brief names, if this repository has one"
+ls i18n/ledger.json 2>&1
+grep -rn "ledger" scripts/i18n/ 2>&1 | head -3
+echo "(exit above is the finding: this repo has no ledger file and no ledger command)"
+
+banner "10. BRANCH-STATE OBSERVATION (not a translation finding)"
+echo "The U-08 content-identity gate runs in 'pnpm test' (vitest.config.ts includes tools/**/*.test.ts)."
+npx vitest run tools/audit/u08-content-pins.test.ts 2>&1 | grep -E "Test Files|Tests |pinned=|actual=" | head -6
+echo "--- which committed tree does the pin describe? (pin-attrib3.py, bundled) ---"
+python3 "$SCRATCH/pin-attrib3.py"
+
+banner "11. READ-ONLY CONFIRMATION"
+echo "--- git status after every command above (only UNTRACKED evidence dirs may appear; round-2 bundle untouched) ---"
+git status --porcelain
+echo "--- the round-2 bundle is untouched ---"
+git status --porcelain -- i18n/audits/evidence/es/mobile.schedules/es29b3r2/
+
+banner "END"

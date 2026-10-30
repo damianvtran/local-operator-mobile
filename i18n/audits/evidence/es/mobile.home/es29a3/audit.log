@@ -1,0 +1,141 @@
+# Spanish audit A — execution log
+# namespace:   mobile.home
+# audit id:    es29a3
+# audit date:  2026-10-29
+# auditor:     i18n-auditor (lopdev team); session c58fa60fdb20
+# model:       radient/auto (ACTUAL; fallback trail anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider quota fallback)
+# translator:  i18n-translator; session c53616dcee1c; actual model radient/auto (as supplied by the requesting manager)
+# independence: different agent/session/context from the translator; same served model for part of the run, disclosed
+# read-only:   this audit wrote nothing outside i18n/audits/evidence/es/mobile.home/es29a3/
+# route:       ordinary worktree reads; nested-JSON sidecars are not routable through read_public_copy; no keyed receipt claimed
+# limits:      no native-speaker review; no rendered frame
+
+$ git -C /Users/damian/workspace/es-wave rev-parse HEAD && git -C /Users/damian/workspace/es-wave branch --show-current && git -C /Users/damian/workspace/es-wave status --short
+c5f491ece9db11ec2dc7d136e7de88f93781acff
+feat/i18n-spanish
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/es/
+?? src/i18n/catalogues/es/
+
+$ node --version
+v24.22.1
+EXIT=0
+
+# The repository's own validator (key parity + message parse + strings ratchet).
+
+$ npm run -s i18n:check   # run in /Users/damian/workspace/es-wave
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:92708) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+EXIT=0
+
+# Per-key mechanical check: JSON, key/context parity, placeholders, ICU presence,
+# bidi controls, typography codepoints, technical tokens, character counts.
+# The metric is UTF-16 .length — the same metric home-copy.ts budgets use.
+
+$ python3 /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/es-ns-check.py mobile.home
+JSON mobile.home: en/context/es parse PASS
+KEYS mobile.home: en=27 target=27 context=27; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.home.connect_disabled_reason: PASS; role=status; params=True; icu=False; chars_en=27; chars_es=32; ratio=1.19
+MECH mobile.home.folders_read_failed: PASS; role=status; params=True; icu=False; chars_en=50; chars_es=62; ratio=1.24
+MECH mobile.home.greeting: PASS; role=heading; params=True; icu=False; chars_en=31; chars_es=28; ratio=0.90
+MECH mobile.home.options.apply: PASS; role=button; params=True; icu=False; chars_en=17; chars_es=19; ratio=1.12
+MECH mobile.home.options.fixed: PASS; role=help; params=True; icu=False; chars_en=95; chars_es=118; ratio=1.24
+MECH mobile.home.options.folder: PASS; role=meta; params=True; icu=False; chars_en=23; chars_es=23; ratio=1.00
+MECH mobile.home.options.title: PASS; role=heading; params=True; icu=False; chars_en=20; chars_es=27; ratio=1.35
+MECH mobile.home.queue.discard: PASS; role=button; params=True; icu=False; chars_en=23; chars_es=30; ratio=1.30
+MECH mobile.home.queue.restore: PASS; role=button; params=True; icu=False; chars_en=29; chars_es=37; ratio=1.28
+MECH mobile.home.queue.sheet_title: PASS; role=heading; params=True; icu=False; chars_en=15; chars_es=16; ratio=1.07
+MECH mobile.home.queue.view: PASS; role=button; params=True; icu=False; chars_en=20; chars_es=24; ratio=1.20
+MECH mobile.home.refused_start_fallback: PASS; role=status; params=True; icu=False; chars_en=43; chars_es=38; ratio=0.88
+MECH mobile.home.starting: PASS; role=status; params=True; icu=False; chars_en=9; chars_es=10; ratio=1.11
+MECH mobile.home.startup_queue.blocked: PASS; role=status; params=True; icu=False; chars_en=29; chars_es=42; ratio=1.45
+MECH mobile.home.startup_queue.not_started: PASS; role=status; params=True; icu=False; chars_en=11; chars_es=11; ratio=1.00
+MECH mobile.home.startup_queue.sending: PASS; role=status; params=True; icu=False; chars_en=24; chars_es=30; ratio=1.25
+MECH mobile.home.startup_queue.unconfirmed: PASS; role=status; params=True; icu=False; chars_en=19; chars_es=20; ratio=1.05
+MECH mobile.home.suggestion.last_turn: PASS; role=button; params=True; icu=False; chars_en=21; chars_es=25; ratio=1.19
+MECH mobile.home.suggestion.linear_mcp: PASS; role=button; params=True; icu=False; chars_en=17; chars_es=21; ratio=1.24
+MECH mobile.home.suggestion.phone_access: PASS; role=button; params=True; icu=False; chars_en=20; chars_es=32; ratio=1.60
+MECH mobile.home.suggestion.review_repo: PASS; role=button; params=True; icu=False; chars_en=16; chars_es=17; ratio=1.06
+MECH mobile.home.suggestion.team_of_agents: PASS; role=button; params=True; icu=False; chars_en=23; chars_es=26; ratio=1.13
+MECH mobile.home.suggestion.wake_summary: PASS; role=button; params=True; icu=False; chars_en=22; chars_es=26; ratio=1.18
+MECH mobile.home.tip.parallel: PASS; role=help; params=True; icu=False; chars_en=42; chars_es=48; ratio=1.14
+MECH mobile.home.tip.schedule: PASS; role=help; params=True; icu=False; chars_en=41; chars_es=53; ratio=1.29
+MECH mobile.home.tip.search: PASS; role=help; params=True; icu=False; chars_en=45; chars_es=52; ratio=1.16
+MECH mobile.home.transcript.waiting: PASS; role=status; params=True; icu=False; chars_en=29; chars_es=26; ratio=0.90
+SHA256 mobile.home en src/i18n/catalogues/en/mobile.home.json 4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+SHA256 mobile.home context src/i18n/catalogues/en/mobile.home.context.json db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+SHA256 mobile.home es src/i18n/catalogues/es/mobile.home.json 1f693998e869ccdb355745b9cdfd95325518e290d1e5a2fd9824700254de5229
+SUMMARY mobile.home: keys=27; mechanical_failures=0; placeholders_in_namespace=0
+EXIT=0
+
+# Glyph advance widths for this namespace's fit questions, measured with the
+# platform's own text stack (CoreText, system font = SF Pro) at the app's token
+# sizes: body-sm 14 pt for suggestion rows, meta 12 pt for the tip line,
+# body 16 pt and 200 % (32 pt) for the ended-composer placeholder.
+# Widths are points; React Native dp == pt on iOS. Estimates only: no frame captured.
+
+$ swift /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/measure.swift /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/measure-home.json
+chip-current last_turn	14.0pt	193.4	Muéstrame el último turno
+chip-current linear_mcp	14.0pt	165.7	Configurar Linear MCP
+chip-current phone_access	14.0pt	236.8	Activar acceso desde el teléfono
+chip-current review_repo	14.0pt	126.9	Revisar este repo
+chip-current team_of_agents	14.0pt	199.8	Crear un equipo de agentes
+chip-current wake_summary	14.0pt	213.5	Despiértame con un resumen
+chip-proposed linear_mcp	14.0pt	159.0	Configura Linear MCP
+chip-proposed phone_access	14.0pt	195.1	Activa el acceso telefónico
+chip-proposed phone_access-alt	14.0pt	246.4	Activa el acceso desde el teléfono
+chip-proposed phone_access-alt2	14.0pt	230.1	Activa acceso desde el teléfono
+chip-proposed review_repo	14.0pt	120.2	Revisa este repo
+chip-proposed team_of_agents	14.0pt	193.1	Crea un equipo de agentes
+chip-calibration en	14.0pt	173.8	Create a team of agents
+chip-calibration fr	14.0pt	194.3	Créez une équipe d’agents
+tip-current parallel	12.0pt	308.5	pide trabajo en paralelo entre varios subagentes
+tip-current schedule	12.0pt	362.1	programa un prompt para que se ejecute periódicamente
+tip-current search	12.0pt	348.8	busca conversaciones pasadas para reabrir una sesión
+tip-proposed parallel	12.0pt	222.2	pide varios subagentes en paralelo
+tip-proposed parallel-alt	12.0pt	281.6	pide trabajo en paralelo a varios subagentes
+tip-proposed schedule	12.0pt	249.1	programa un prompt para que se repita
+tip-proposed schedule-secondpass	12.0pt	247.9	programa un prompt con temporizador
+tip-proposed search	12.0pt	269.9	busca una conversación pasada y reábrela
+tip-proposed search-secondpass	12.0pt	293.4	busca una conversación pasada para reabrirla
+tip-calibration en (longest)	12.0pt	295.0	search past conversations to reopen a session
+tip-calibration fr (longest)	12.0pt	290.1	demandez plusieurs sous-agents en parallèle
+status NIT candidate	12.0pt	266.8	Reintenta el envío de los mensajes en cola
+EXIT=0
+
+# Core Spanish catalogue cross-check for the terms this namespace reuses or asserts.
+# Read from the core repository's committed main (origin/main), not a working tree.
+
+$ git -C /Users/damian/local-operator ls-tree -r --name-only origin/main -- local_operator/i18n/catalogues/es/ | wc -l
+      80
+EXIT=0
+
+$ for f in relay.chrome relay.health cli.mobile_help wire.settings wire.settings.account_policy; do echo "--- $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json 2>/dev/null | grep -E 'línea de trabajo|turno|borrador|cola' | head -8; done
+--- relay.chrome ---
+--- relay.health ---
+--- cli.mobile_help ---
+--- wire.settings ---
+  "wire.settings.asks.description": "Preguntas que un agente deja en cola para ti. Un cambio se aplica de inmediato en la terminal, la aplicación de escritorio y tu teléfono.",
+  "wire.settings.classification_waitms.help": "Requiere las recomendaciones activadas. Cuánto espera un turno; 0 usa 50 ms.",
+  "wire.settings.compaction_auto_continue.help": "Programa un prompt de continuación tras una pasada correcta posterior al turno.",
+  "wire.settings.compaction_mid_turn_enabled.choice.false.description": "solo entre turnos",
+  "wire.settings.compaction_mid_turn_enabled.choice.true.description": "compactar a mitad de turno",
+  "wire.settings.compaction_mid_turn_enabled.help": "Permite una pasada en límites seguros del bucle de herramientas, no solo entre turnos.",
+  "wire.settings.compaction_mid_turn_enabled.label": "Compactación a mitad de turno",
+  "wire.settings.display_narration.help": "Conserva la narración del agente a mitad de turno en la transcripción después de que se ejecuten sus llamadas a herramientas.",
+--- wire.settings.account_policy ---
+EXIT=0
+
+$ for f in relay.chrome relay.health; do echo "--- sha256 $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json | shasum -a 256; done
+--- sha256 relay.chrome ---
+a2d25deb40633c2b478babb7c9fd0dd3bdc0b2cd77c4010fedd1c205b9840097  -
+--- sha256 relay.health ---
+563c533f52fbc21b240979fba164e4e0768ff57f2882025d592280fc56638c62  -
+EXIT=0
+
+# Verdict for this namespace is recorded in record.json and argued in report.md.
+# This file is actual command output, not notes.
