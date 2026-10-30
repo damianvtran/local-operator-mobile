@@ -9,6 +9,7 @@ import {
 	ENGLISH_CONTEXT,
 	ENGLISH_MESSAGES,
 	parseMessage,
+	renderFor,
 	SHIPPED_LOCALES,
 } from "@/i18n";
 import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.context.json";
@@ -260,6 +261,56 @@ describe("a shipped translation is still translated", () => {
 				expect(reason.trim().length).toBeGreaterThan(20);
 				expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);
 			}
+		}
+	});
+});
+
+/**
+ * Russian plural agreement, bound as a test rather than an audit snapshot.
+ *
+ * `Intl.PluralRules("ru")` selects four categories, and the four arms are only
+ * correct if each renders the NUMERAL AND THE NOUN FORM its category demands —
+ * "1 сессия", not "1 сессий". The audit measured this once; this keeps it
+ * measured on every run, because a plural that loses an arm still parses and
+ * still passes a key-parity check.
+ */
+describe("a four-form plural locale agrees with its own rules", () => {
+	const cases: ReadonlyArray<readonly [number, string]> = [
+		[0, "0 пробуждений"],
+		[1, "1 пробуждение"],
+		[2, "2 пробуждения"],
+		[5, "5 пробуждений"],
+		[21, "21 пробуждение"],
+		[1.5, "1.5 пробуждения"],
+	];
+
+	it.each(cases)("renders %s wakes as «%s»", (count, expected) => {
+		expect(renderFor("mobile.schedules.count.wakes", { count }, "ru")).toBe(
+			expected,
+		);
+	});
+
+	it("agrees on a second noun, so this is the rules and not one lucky key", () => {
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 1 }, "ru"),
+		).toBe("1 сессия");
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 3 }, "ru"),
+		).toBe("3 сессии");
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 8 }, "ru"),
+		).toBe("8 сессий");
+	});
+
+	it("carries all four arms in the shipped catalogue", () => {
+		/* A dropped `few` or `many` arm would fall back to `other` and still
+		 * render, so the arms are asserted directly rather than inferred from
+		 * output. */
+		const value = (CATALOGUES.ru as Readonly<Record<string, string>>)[
+			"mobile.schedules.count.wakes"
+		];
+		for (const arm of ["one", "few", "many", "other"]) {
+			expect(value).toContain(`${arm} {`);
 		}
 	});
 });

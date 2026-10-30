@@ -83,9 +83,11 @@ describe("the English floor", () => {
 	});
 
 	it("formats an English fallback with ENGLISH plural rules", () => {
-		/* The discriminating case the programme names: a locale with a `one` arm
-		 * selected at 21 (Russian did, before it shipped) must not bend an English
-		 * fallback to its own plural rules. English must read "21 wakes". */
+		/* Vietnamese selects only `other`, so it cannot supply the 21-vs-one
+		 * discrimination on its own — the Russian block in `catalogues.test.ts`
+		 * does that on a shipped locale. What this asserts is narrower and still
+		 * worth having: a pending locale renders English TEXT with English plural
+		 * rules, whatever its own rules are. English must read "21 wakes". */
 		setLocaleSource(() => "vi");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
