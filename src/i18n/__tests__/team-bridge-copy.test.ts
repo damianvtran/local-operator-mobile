@@ -53,6 +53,46 @@ describe("Team Bridge copy", () => {
 			).toContain("Aida");
 		},
 	);
+	/* I1/I2: source-semantic regressions, not proof the longer Urdu labels fit.
+	 * Whole-message ICU variants retain their placeholders and exact-zero case. */
+	it("uses the agreed Vietnamese software-agent term", () => {
+		const text = renderFor(
+			"mobile.team_bridge.gate.plan_description",
+			{},
+			"vi",
+		);
+		expect(text.match(/tác nhân/g)).toHaveLength(2);
+		expect(text).not.toContain("tác tử");
+	});
+	it("makes every Urdu unread label explicitly about messages", () => {
+		for (const count of [1, 2]) {
+			const expected =
+				count === 1 ? "نا پڑھا گیا پیغام" : "نا پڑھے گئے پیغامات";
+			expect(renderFor("mobile.team_bridge.unread", { count }, "ur")).toContain(
+				expected,
+			);
+			expect(
+				renderFor("mobile.team_bridge.navigation.entry", { count }, "ur"),
+			).toContain(expected);
+			expect(
+				renderFor(
+					"mobile.team_bridge.list.organization_label",
+					{ name: "Atlas", readOnly: "yes", count },
+					"ur",
+				),
+			).toContain(expected);
+		}
+		expect(
+			renderFor("mobile.team_bridge.navigation.entry", { count: 0 }, "ur"),
+		).toBe("Team Bridge");
+		expect(
+			renderFor(
+				"mobile.team_bridge.list.organization_label",
+				{ name: "Atlas", readOnly: "no", count: 0 },
+				"ur",
+			),
+		).toBe("Atlas");
+	});
 	it("distinguishes singular, few and many unread messages in Russian", () => {
 		expect(renderFor("mobile.team_bridge.unread", { count: 1 }, "ru")).toBe(
 			"1 непрочитанное",

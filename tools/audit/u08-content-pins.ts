@@ -407,7 +407,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * 86 complete messages from all eight catalogues (233 total keys). Runtime
 	 * copy and generated source moved; auth/lifecycle/Settings bytes did not.
 	 * Source identity only — fresh independent language and rendered review owed. */
-	src: "b9f640abeb86de7f3f0d75233d0895fc09de69950fbdf73bec96f7da6baa2457",
+	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
+	 * messages, their projection and regressions only. Component/auth bytes
+	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
+	src: "acabd9f191bfb846b509acc5e9405bc9ab400517e44a0e2929f727667890c4c0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
