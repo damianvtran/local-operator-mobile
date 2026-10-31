@@ -29,6 +29,13 @@ import {
 	type ProofProcessIdentity,
 } from "./auth-retirement-proof-contract.ts";
 
+import {
+	createFromIntent,
+	prepareCreation,
+	type Run,
+	recoverCreation,
+} from "./auth-retirement-simulator.ts";
+
 const PROOF_ID = "com.localoperator.mobile.retirementproof";
 const FLAVOR = "auth-retirement-proof";
 /** Deliberately non-rotating synthetic protocol. Returned values are never
@@ -156,6 +163,7 @@ export async function command(
 	executable: string,
 	args: string[],
 	timeout = 30000,
+	beforeStart?: (pid: number) => void,
 ): Promise<string> {
 	return new Promise((yes, no) => {
 		const env = Object.fromEntries(
@@ -163,11 +171,19 @@ export async function command(
 				([k]) => !k.startsWith("CMUX_") && k !== "XPC_FLAGS",
 			),
 		);
-		const child = spawn(executable, args, {
-			env: { ...env, NODE_ENV: process.env.NODE_ENV ?? "test" },
-			detached: true,
-			stdio: ["ignore", "pipe", "pipe"],
-		});
+		// A create client cannot issue its service request until its group PID
+		// is durably journaled. Host death before release leaves an inert wrapper;
+		// EOF exits it, and timeout still reaps this exact owned process group.
+		const gateCode = `const {spawn}=require('node:child_process');let released=false;process.stdin.once('data',()=>{released=true;const c=spawn(${JSON.stringify(executable)},${JSON.stringify(args)},{stdio:['ignore','pipe','pipe']});c.stdout.pipe(process.stdout);c.stderr.pipe(process.stderr);c.on('error',()=>process.exit(125));c.on('exit',(code)=>process.exit(code??125));});process.stdin.on('end',()=>{if(!released)process.exit(125);});`;
+		const child = spawn(
+			beforeStart ? process.execPath : executable,
+			beforeStart ? ["-e", gateCode] : args,
+			{
+				env: { ...env, NODE_ENV: process.env.NODE_ENV ?? "test" },
+				detached: true,
+				stdio: ["pipe", "pipe", "pipe"],
+			},
+		);
 		let output = "",
 			timedOut = false,
 			done = false;
@@ -207,6 +223,18 @@ export async function command(
 				no(new Error("Proof subprocess failed or timed out"));
 			else yes(output.trim());
 		});
+		if (beforeStart) {
+			try {
+				if (!child.pid) throw new Error("No gated client PID");
+				beforeStart(child.pid);
+				child.stdin.end("go");
+			} catch {
+				kill();
+				clearTimeout(timer);
+				done = true;
+				no(new Error("Creation PID journal failed before native request"));
+			}
+		} else child.stdin.end();
 	});
 }
 
@@ -295,16 +323,16 @@ export async function runNativeProof(
 	) as { devicetypes: Array<{ name: string; identifier: string }> };
 	const type = types.devicetypes.find((d) => d.name === template.name);
 	if (!type) throw new Error("Template device type unavailable");
-	const udid = await command("xcrun", [
-		"simctl",
-		"create",
-		`lop-retirement-${frozen.nonce}`,
-		type.identifier,
-		template.runtime,
-	]);
-	if (!/^[a-fA-F0-9-]{36}$/.test(udid) || udid === templateUdid)
-		throw new Error("Fresh owned device creation failed");
-	const owned = { udid, hostPid: process.pid, nonce: frozen.nonce };
+	const intent = prepareCreation(root, {
+		nonce: frozen.nonce,
+		runId: process.env.GITHUB_RUN_ID!,
+		hostPid: process.pid,
+		runtime: template.runtime,
+		deviceType: type.identifier,
+		templateUdid,
+	});
+	let udid = "";
+	let owned: { udid: string; hostPid: number; nonce: string; runId: string };
 
 	const actual = frozen;
 	// All cleanup after lease creation lives under finally, including setup
@@ -312,11 +340,8 @@ export async function runNativeProof(
 	let cleanupFailed = false;
 	let phaseFailed: unknown;
 	try {
-		writeFileSync(
-			join(root, "simulator-lease.json"),
-			JSON.stringify({ ...owned, runId: process.env.GITHUB_RUN_ID }),
-			{ flag: "wx" },
-		);
+		owned = await createFromIntent(root, intent, command);
+		udid = owned.udid;
 		await command("xcrun", ["simctl", "boot", udid]);
 		await command("xcrun", ["simctl", "bootstatus", udid, "-b"], 90000);
 		assertInstalledArtifact(await measureArtifact(frozen.appPath), frozen);
@@ -541,14 +566,17 @@ export async function runNativeProof(
 	} catch (error) {
 		phaseFailed = error;
 	} finally {
-		assertOwnedLease(owned, owned);
-		for (const operation of ["shutdown", "delete"]) {
-			try {
-				await command("xcrun", ["simctl", operation, owned.udid]);
-			} catch {
-				cleanupFailed = true;
-			}
+		try {
+			await recoverCreation(
+				root,
+				frozen.nonce,
+				process.env.GITHUB_RUN_ID!,
+				command,
+			);
+		} catch {
+			cleanupFailed = true;
 		}
+
 		if (cleanupFailed && existsSync(join(root, "proof.json"))) {
 			const receipt = JSON.parse(
 				readFileSync(join(root, "proof.json"), "utf8"),
@@ -557,10 +585,6 @@ export async function runNativeProof(
 			receipt.cleanupFailed = true;
 			writeFileSync(join(root, "proof.json"), JSON.stringify(receipt, null, 2));
 		}
-		writeFileSync(
-			join(root, "cleanup.json"),
-			JSON.stringify({ udid, hostPid: process.pid, cleanupFailed }),
-		);
 	}
 	if (phaseFailed) throw phaseFailed;
 	if (cleanupFailed) throw new Error("Owned simulator cleanup failed");
@@ -569,47 +593,20 @@ export async function runNativeProof(
 /** Workflow always() fallback after timeout/cancellation. A persisted lease
  * alone is NOT delete authority: require this CI run, compiled nonce and the
  * actual simulator's unique created name. Never erase or touch the template. */
-export async function cleanupLease(root: string): Promise<void> {
+export async function cleanupLease(
+	root: string,
+	deps: { run?: Run; isAlive?: (pid: number) => boolean } = {},
+): Promise<void> {
 	requireManualProof();
-	const leasePath = join(root, "simulator-lease.json");
-	if (!existsSync(leasePath)) return;
-	const lease = JSON.parse(readFileSync(leasePath, "utf8"));
 	const build = JSON.parse(
 		readFileSync(join(root, "build-identity.json"), "utf8"),
 	);
-	if (
-		lease.runId !== process.env.GITHUB_RUN_ID ||
-		lease.nonce !== build.nonce ||
-		!Number.isSafeInteger(lease.hostPid) ||
-		lease.hostPid <= 0 ||
-		!/^[a-fA-F0-9-]{36}$/.test(lease.udid)
-	)
-		throw new Error("Cleanup lease refused");
-	const list = JSON.parse(
-		await command("xcrun", ["simctl", "list", "devices", "--json"]),
-	) as {
-		devices: Record<
-			string,
-			Array<{ udid: string; name: string; state: string }>
-		>;
-	};
-	const device = Object.values(list.devices)
-		.flat()
-		.find((d) => d.udid === lease.udid);
-	if (!device) return;
-	if (device.name !== `lop-retirement-${build.nonce}`)
-		throw new Error("Cleanup device ownership mismatch");
-	if (device.state !== "Shutdown")
-		await command("xcrun", ["simctl", "shutdown", lease.udid]);
-	await command("xcrun", ["simctl", "delete", lease.udid]);
-	writeFileSync(
-		join(root, "cleanup.json"),
-		JSON.stringify({
-			udid: lease.udid,
-			hostPid: lease.hostPid,
-			cleanupFailed: false,
-			fallback: true,
-		}),
+	await recoverCreation(
+		root,
+		build.nonce,
+		process.env.GITHUB_RUN_ID!,
+		deps.run ?? command,
+		deps.isAlive,
 	);
 }
 

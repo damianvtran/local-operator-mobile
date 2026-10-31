@@ -98,7 +98,12 @@ describe("unified native proof review regressions", () => {
 		expect(workflow).not.toMatch(
 			/--run "\$app" "\$\{\{ steps\.simulator\.outputs\.udid \}\}"/,
 		);
-		expect(source).toContain('"create"');
+		expect(
+			readFileSync(
+				new URL("./auth-retirement-simulator.ts", import.meta.url),
+				"utf8",
+			),
+		).toContain('"create"');
 	});
 	it("S3: teardown authority binds a fresh-device lease to this host PID and nonce", () => {
 		expect(typeof gate.assertOwnedLease).toBe("function");
