@@ -103,7 +103,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/relay.ts":
 		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
-		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
+		"dd7312406f3b0fe2a4c47e94fe1d9d49abc414d382b43c3c0ee8fea71517e917",
 	"tools/mock-relay/account-routing-gate.ts":
 		"2388f03adfea61dd69bcf397428fb899ab5d5977f47574727d81087d8d597379",
 	"tools/mock-relay/account-routing-identity.ts":
@@ -134,7 +134,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"813fa35400cd85bc75c6a435bfb3a28d8c0b343d007dc3032bf29d7d00edb934",
+		"df118e27da228111cf6e5775e6c24554919072df28395e716f52941b39d3854f",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by

@@ -1146,7 +1146,11 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	add(
 		"agent-avatars",
 		"Conversation rows bound to agents with profile pictures, in every status (running, waiting for approval, unread, ended, idle), beside rows that keep the glyph: unbound, an agent with no picture, and a picture the relay no longer has.",
-		["S15/agent-avatars", "S5/agent-avatar-header"],
+		/* Declared against EXISTING cells, as a second world for them (a cell's
+		 *  default world stays the first scenario that declares it): new cell
+		 *  names would grow the registry every plan figure in the tree is pinned
+		 *  to. Reach it with `--scenario agent-avatars`. */
+		["S15/populated", "S5/populated"],
 		() => {
 			const pictured = (
 				key: string,
@@ -1180,7 +1184,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				liveIdle,
 			);
 			const ended = pictured("avatar-ended", "Yesterday's sweep", afterDeath);
-			const idle = pictured("avatar-idle", "Draft the release notes", liveIdle);
+			/* The idle row keeps the CAPTURED session id, so the capture harness's
+			 *  session cell (`S5/agent-avatar-header`, which opens that id) shows a
+			 *  pictured header. */
+			const idle = projectionFrom(liveIdle, {
+				session_id: CAPTURED_SESSION,
+				conversation_name: "Draft the release notes",
+			});
 			const unbound = pictured(
 				"avatar-unbound",
 				"Plain conversation",
