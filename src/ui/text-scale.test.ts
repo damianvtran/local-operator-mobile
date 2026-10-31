@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	clampTextScale,
+	lineBoxPt,
 	parseTextScalePreference,
 	resolveTextScale,
 	scaledTextVariables,
@@ -201,5 +202,18 @@ describe("parseTextScalePreference", () => {
 		expect(parseTextScalePreference("200")).toBe("200");
 		expect(parseTextScalePreference("400")).toBe("system");
 		expect(parseTextScalePreference(undefined)).toBe("system");
+	});
+});
+
+describe("lineBoxPt", () => {
+	/* The one derivation the header's state line and the stacked mark box share
+	 *  (agent review round 3, R3-3): size x line height x scale, off the tokens. */
+	it("is one line box of the step at the scale", () => {
+		expect(lineBoxPt("display", 1)).toBeCloseTo(33.6, 6);
+		expect(lineBoxPt("display", 2)).toBeCloseTo(67.2, 6);
+		expect(lineBoxPt("meta", 2)).toBeCloseTo(33.6, 6);
+		expect(lineBoxPt("meta", 1)).toBe(
+			TYPE_STEPS.meta.size * TYPE_STEPS.meta.lineHeight,
+		);
 	});
 });

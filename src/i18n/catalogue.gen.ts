@@ -45,6 +45,8 @@ export type CatalogueKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.agent_avatar.edit_hint"
+	| "mobile.agent_avatar.label"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
@@ -228,6 +230,8 @@ export type NoParamKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.agent_avatar.edit_hint"
+	| "mobile.agent_avatar.label"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
@@ -390,6 +394,8 @@ export type MessageParams = {
 	"mobile.account_routing.title": NoParams;
 	"mobile.account_routing.unavailable": NoParams;
 	"mobile.account_routing.unsaved": NoParams;
+	"mobile.agent_avatar.edit_hint": NoParams;
+	"mobile.agent_avatar.label": NoParams;
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
 	"mobile.common.done": NoParams;
@@ -589,6 +595,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.title": "Account routing",
 	"mobile.account_routing.unavailable": "Account routing settings are unavailable on this relay. Update Local Operator on this computer.",
 	"mobile.account_routing.unsaved": "Not saved yet.",
+	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
+	"mobile.agent_avatar.label": "Agent picture",
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
 	"mobile.common.done": "Done",
@@ -773,6 +781,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.title": { role: "heading", note: "Section heading in computer settings; not a provider/model picker." },
 	"mobile.account_routing.unavailable": { role: "status", note: "Confirmed missing relay route only; never use for an offline/unknown tunnel." },
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
+	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
+	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
@@ -971,6 +981,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Enrutamiento de cuentas",
 		"mobile.account_routing.unavailable": "Los ajustes de enrutamiento de cuentas no están disponibles en este relé. Actualiza Local Operator en esta máquina.",
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
+		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
+		"mobile.agent_avatar.label": "Imagen del agente",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
 		"mobile.common.done": "Hecho",
@@ -1153,6 +1165,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Acheminement du compte",
 		"mobile.account_routing.unavailable": "Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.",
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
+		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
+		"mobile.agent_avatar.label": "Photo de l’agent",
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
 		"mobile.common.done": "Terminé",
@@ -1335,6 +1349,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "खाता रूटिंग",
 		"mobile.account_routing.unavailable": "इस रिले पर खाता रूटिंग की सेटिंग उपलब्ध नहीं है। इस कंप्यूटर पर Local Operator अपडेट करें।",
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
+		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
+		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
 		"mobile.common.done": "हो गया",
@@ -1517,6 +1533,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Маршрутизация аккаунтов",
 		"mobile.account_routing.unavailable": "Настройки маршрутизации аккаунтов недоступны на этом ретрансляторе. Обновите Local Operator на этом компьютере.",
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
+		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
+		"mobile.agent_avatar.label": "Изображение агента",
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
 		"mobile.common.done": "Готово",
@@ -1699,6 +1717,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "اکاؤنٹ روٹنگ",
 		"mobile.account_routing.unavailable": "اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
+		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
+		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
 		"mobile.common.done": "ہو گیا",
@@ -1881,6 +1901,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Định tuyến tài khoản",
 		"mobile.account_routing.unavailable": "Cài đặt định tuyến tài khoản không khả dụng trên máy chủ chuyển tiếp này. Hãy cập nhật Local Operator trên máy tính này.",
 		"mobile.account_routing.unsaved": "Chưa lưu.",
+		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
+		"mobile.agent_avatar.label": "Ảnh của tác nhân",
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
 		"mobile.common.done": "Xong",
@@ -2063,6 +2085,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "账户路由",
 		"mobile.account_routing.unavailable": "此中继不提供账户路由设置。在此电脑上更新Local Operator。",
 		"mobile.account_routing.unsaved": "尚未保存。",
+		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
+		"mobile.agent_avatar.label": "智能体头像",
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",
 		"mobile.common.done": "完成",

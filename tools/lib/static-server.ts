@@ -38,6 +38,10 @@ export const PROXIED_PREFIXES = [
 	"/login",
 	"/logout",
 	"/assets/",
+	/* The agent-profile-picture route (`/v1/agents/{id}/avatar`), the one relay
+	 *  path outside `/api/`: without it a captured row's picture request reached
+	 *  the static server and every frame drew the fallback glyph. */
+	"/v1/agents/",
 ] as const;
 
 /** True when a path belongs to the relay rather than to the app bundle. */

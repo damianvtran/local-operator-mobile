@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { maxColumnWidth } from "@/ui/column";
 import { Heading } from "@/ui/components/heading";
 import { headerStacks } from "@/ui/size-class";
+import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
@@ -71,6 +72,23 @@ export type ScreenProps = {
 	 * (the sessions list's badges) leaves this off and keeps the wrapping row.
 	 */
 	stackedActionsBeside?: boolean;
+	/**
+	 * Stacked only: a mark that leads the TITLE row, before `titleNode`/the title.
+	 *
+	 * Stacked, the leading cluster moves to its own row above the title, so a
+	 * leading mark that belongs to the NAME — the session header's agent picture is
+	 * the first mark of the title's line at every other size — ended up on the
+	 * chrome row, 30 pt above a title it is read as part of: on a 320 pt phone the
+	 * disc sat between the back control and search while the health dot, the actual
+	 * state marker, was at the far left of the title line (design review round 1,
+	 * D1 — measured: picture x 100–127.5 y 38–65.5, title's first line starting at
+	 * y 70). A mark passed here is drawn inside the title's own row instead, in the
+	 * same order it has inline (picture → dot → name). The caller decides WHICH
+	 * mark moves, because only it knows whether the mark belongs to the title or to
+	 * the chrome (finding D1 scoped this to the stacked branch, and the inline
+	 * cluster is unchanged).
+	 */
+	stackedTitleLeading?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
@@ -103,6 +121,62 @@ export type ScreenProps = {
 };
 
 /**
+ * The stacked header's title row: the title block, led by an optional mark.
+ *
+ * A plain fragment when no mark is passed, so every screen without one renders
+ * exactly as before. With a mark (`ScreenProps.stackedTitleLeading`) the title
+ * block becomes the row's shrinking member, and the mark sits before it in the
+ * same order it has inline — for the session header that is
+ * picture → health dot → name, rather than a picture stranded on the chrome row
+ * (design review round 1, D1).
+ *
+ * THE MARK IS CENTRED ON THE TITLE'S TEXT LINE, not on the block. The block is
+ * the text line PLUS the reserved state line the session header keeps in every
+ * state (so the header never resizes when a word appears), and a block-centred
+ * mark therefore sat 25.75 pt below the first line's ink at 100 % and 16.5 pt at
+ * 200 % (design review rounds 2–3, D8). The mark's box is exactly ONE `display`
+ * line tall and centres the mark inside it, which moves the mark and nothing
+ * else: the title's width is untouched, so the 200 % truncation the design round
+ * accepted stays exactly as it was. (The session header's health dot is NOT moved
+ * by this: it centres on the title block, its own pre-existing rule for every
+ * conversation, so on a two-line title it sits below line 1 — design round 3,
+ * D11, recorded rather than claimed aligned.)
+ *
+ * AN EMPTY MARK COSTS 0 pt (design review round 3, D12). The caller passes an
+ * ELEMENT that may render `null` (the session header's picture before or without
+ * one), so this box exists whenever the prop does and nothing here can tell an
+ * empty one from a pictured one. The 8 pt between mark and title is therefore a
+ * `gap` INSIDE the box, between the mark and a zero-width end item: a gap only
+ * exists between two laid-out items, so it is 8 pt with a picture and nothing
+ * without one. Spacing on the ROW charged 8 pt for an empty box (the no-picture
+ * header was indented 8.0 pt), and padding on the box would too — padding is
+ * the box's own width, drawn whether or not it holds anything.
+ */
+const StackedTitleRow = ({
+	leading,
+	children,
+}: {
+	leading?: ReactNode;
+	children: ReactNode;
+}): ReactNode => {
+	const { effectiveScale } = useTextScale();
+	return leading === undefined ? (
+		children
+	) : (
+		<View className="flex-row items-start">
+			<View
+				className="flex-row items-center gap-2"
+				style={{ height: lineBoxPt("display", effectiveScale) }}
+			>
+				{leading}
+				<View />
+			</View>
+			<View className="min-w-0 flex-1">{children}</View>
+		</View>
+	);
+};
+
+/**
  * The readable measure for the current viewport, or `null` on a phone where the
  * column IS the screen.
  *
@@ -122,6 +196,7 @@ export const Screen = ({
 	headerDetail,
 	titleNode,
 	stackedActionsBeside = false,
+	stackedTitleLeading,
 	scroll = true,
 	capColumn = true,
 	stackBelowWidth,
@@ -213,19 +288,9 @@ export const Screen = ({
 							) : null}
 						</View>
 						{title !== undefined ? (
-							headerDetail === undefined ? (
-								(titleNode ?? (
-									<Heading
-										level={1}
-										className="text-display text-ink"
-										numberOfLines={titleLines}
-									>
-										{title}
-									</Heading>
-								))
-							) : (
-								<View className="gap-1">
-									{titleNode ?? (
+							<StackedTitleRow leading={stackedTitleLeading}>
+								{headerDetail === undefined ? (
+									(titleNode ?? (
 										<Heading
 											level={1}
 											className="text-display text-ink"
@@ -233,10 +298,22 @@ export const Screen = ({
 										>
 											{title}
 										</Heading>
-									)}
-									{headerDetail}
-								</View>
-							)
+									))
+								) : (
+									<View className="gap-1">
+										{titleNode ?? (
+											<Heading
+												level={1}
+												className="text-display text-ink"
+												numberOfLines={titleLines}
+											>
+												{title}
+											</Heading>
+										)}
+										{headerDetail}
+									</View>
+								)}
+							</StackedTitleRow>
 						) : null}
 						{/* `flex-wrap` and not a squeeze: the action cluster can hold a count
 						 *  badge, an icon button and an avatar, and at 200 % on a 320 pt phone
