@@ -226,6 +226,31 @@ export class StartupAuthorizationLifecycle {
 		return work;
 	}
 
+	/** Only an EXPLICIT, verified login may turn retained credentials into restore
+	 * authority again. The caller first awaits its privacy retirement; this runs
+	 * on that same tail, not a bypass around it. The durable writer reports proof
+	 * (not merely that a platform write was attempted). If killed before the final
+	 * record write, the tombstone still refuses restore — conservative, not a
+	 * silent re-adoption of the signed-out account. `revoked` opens no live scope;
+	 * normal route authentication/admit still owns that decision.
+	 *
+	 * Check both sides of persistence: a newer sign-out suspends synchronously
+	 * while its tombstone write queues behind us. Never acknowledge that newer
+	 * boundary, even when the previous login's write was already in storage. */
+	replaceCredentialsIfCurrent(
+		revision: number,
+		persist: () => Promise<boolean>,
+	): Promise<boolean> {
+		const work = this.tail.then(async () => {
+			if (!this.isCurrent(revision)) return false;
+			if (!(await persist()) || !this.isCurrent(revision)) return false;
+			await this.storage.write({ version: 1, state: "revoked" });
+			return this.isCurrent(revision);
+		});
+		this.tail = work;
+		return work;
+	}
+
 	/** One durable step at a time, and a rejected step never blocks the next
 	 *  explicit retry — `retire`/`revoke` are the user's own actions, so they may
 	 *  replace a failed one. `admit` deliberately does NOT catch: an unrepaired

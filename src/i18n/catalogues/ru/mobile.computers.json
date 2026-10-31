@@ -8,5 +8,7 @@
 	"mobile.computers.password_placeholder": "Пароль из lop mobile",
 	"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 	"mobile.computers.section.on_phone": "На этом телефоне",
+	"mobile.computers.sign_out": "Выйти",
+	"mobile.computers.signing_out": "Выход…",
 	"mobile.computers.switch": "Сменить компьютер"
 }

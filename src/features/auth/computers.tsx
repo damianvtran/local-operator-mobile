@@ -35,6 +35,7 @@ import { SetupComputer } from "@/features/auth/setup-computer";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { t } from "@/i18n";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
@@ -530,6 +531,7 @@ export default function Computers() {
 				) : null
 			}
 		>
+			<TeamBridgeEntry />
 			{refusal ? (
 				<RefusalSurface
 					kind={refusal.kind}

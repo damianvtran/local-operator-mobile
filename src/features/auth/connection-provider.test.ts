@@ -29,6 +29,7 @@ import {
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { activeLocale, preferredLocale } from "@/i18n";
+import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 import {
 	performSwitcherTap,
@@ -224,6 +225,8 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		rejectOauthRefresh?: boolean;
+		refreshOauth?: boolean;
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
@@ -295,6 +298,20 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.refreshOauth) {
+			json({
+				access_token: "fresh-retirement",
+				refresh_token: "rotated",
+				expires_in: 3600,
+				token_type: "Bearer",
+				scope: "openid",
+			});
+			return;
+		}
+		if (path === "/v1/auth/oauth/token" && options.rejectOauthRefresh) {
+			json({ error: "invalid_grant" }, 400);
+			return;
+		}
 		if (path === "/v1/tunnels") {
 			tunnelsReceived.resolve();
 			if (options.holdTunnels) await releaseTunnels.promise;
@@ -568,6 +585,10 @@ function transport(controlPlane?: string) {
 }
 
 beforeEach(async () => {
+	// Finish the real registry module's one-time authorization-storage setup
+	// BEFORE installing this test's synthetic adapter. Its lazy import from
+	// rememberLiveComputer must not replace the adapter during route admission.
+	await realRegistry();
 	privacy.fail = false;
 	handoff.block = null;
 	handoff.started = false;
@@ -682,6 +703,9 @@ describe("mounted provider authentication retirement", () => {
 		});
 		const original = getStartupAuthorization()?.scope;
 		expect(original).toBeTruthy();
+		// Controlled lazy-import completion: the registry module must not steal
+		// the test's configured authorization adapter before a remount.
+		await realRegistry();
 		durable.saved = {
 			baseUrl: input.url,
 			password: input.password,
@@ -1337,6 +1361,149 @@ describe("mounted provider authentication retirement", () => {
 			mock.events.indexOf("login:2:cookie"),
 		);
 		expect(latest.relay()).not.toBeNull();
+	});
+
+	it("reserves route logout before a held push retirement; a new sign-in waits for the full wipe", async () => {
+		/* Two properties, one test. (1) OAuth is NOT cleared early: push-device
+		 * removal authenticates with the grant, so the clear must not start while
+		 * that retirement is held. (2) A new sign-in is NOT accepted before the old
+		 * credentials are confirmed wiped (#97/#118): `connectCustom` waits for the
+		 * sign-out's `privacy` step, which includes the held push retirement, so the
+		 * replacement login's cookie request only goes out AFTER the clear. The cost
+		 * (a sign-in right after sign-out waits up to the 35 s push ceiling) is the
+		 * accepted fail-closed trade documented at `signOut`. */
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		const push = deferred();
+		const unregister = registerTeamBridgeRetirement(() => push.promise);
+		try {
+			let exiting!: Promise<boolean>;
+			let second!: Promise<void>;
+			await act(async () => {
+				exiting = latest.signOut();
+				// Withdrawing route admission cannot wait for the push registry.
+				expect(latest.relay()).toBeNull();
+				expect(connectionStore.getState().route).toBeNull();
+				second = latest.connectCustom({
+					url: mock.origin,
+					password: "new",
+					allowInsecure: true,
+				});
+				// Let the replacement sign-in run as far as it is allowed to.
+				for (let turn = 0; turn < 20; turn += 1)
+					await new Promise<void>((resolve) => setImmediate(resolve));
+			});
+			// Held push retirement: nothing is cleared and the new login is parked.
+			expect(durable.clearsStarted).toBe(0);
+			expect(mock.events).not.toContain("login:2:cookie");
+			push.resolve();
+			await until(() => mock.events.includes("login:2:cookie"));
+			// The wipe finished before the replacement login reached the relay.
+			expect(durable.events).toContain("clear");
+			await act(async () => {
+				await Promise.all([exiting, second]);
+			});
+			/* `exiting` resolves false here by design: the replacement login's route
+			 * admission supersedes the sign-out's revocation owner. */
+			expect(durable.clearsStarted).toBe(1);
+			expect(jars.get(mock.origin)).toBe("lop_mobile=synthetic-2");
+			expect(mock.events.lastIndexOf("GET /logout")).toBeLessThan(
+				mock.events.indexOf("login:2:cookie"),
+			);
+			expect(latest.relay()).not.toBeNull();
+		} finally {
+			push.resolve();
+			unregister();
+		}
+	});
+
+	it("an invalid_grant during push retirement does not cancel the requested route and durable sign-out", async () => {
+		const mock = await relay({ rejectOauthRefresh: true });
+		transport(mock.origin);
+		durable.oauth = { ...oauth, refresh: "rolling" };
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		const push = deferred();
+		const unregister = registerTeamBridgeRetirement(() => push.promise);
+		try {
+			let exiting!: Promise<boolean>;
+			let refreshing!: Promise<string | null>;
+			await act(async () => {
+				exiting = latest.signOut();
+				refreshing = latest.radientAccessToken({ force: true });
+			});
+			await until(() => !latest.radientSignedIn);
+			expect(durable.clearsStarted).toBe(0);
+			push.resolve();
+			await act(async () => {
+				await Promise.all([exiting, refreshing]);
+			});
+			expect(await exiting).toBe(true);
+			expect(await refreshing).toBeNull();
+			expect(mock.events).toContain("POST /v1/auth/oauth/token");
+			expect(mock.events).toContain("GET /logout");
+			expect(durable.clearsStarted).toBe(1);
+			expect(durable.oauth).toBeNull();
+			expect(latest.relay()).toBeNull();
+		} finally {
+			push.resolve();
+			unregister();
+		}
+	});
+
+	it("refreshes an expired retirement bearer while the actual native clear barrier awaits device removal", async () => {
+		const mock = await relay({ refreshOauth: true });
+		transport(mock.origin);
+		const held = { ...oauth, refresh: "rolling" };
+		durable.oauth = held;
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "old",
+				allowInsecure: true,
+			});
+		});
+		// Expiry occurs after restoration accepted the same provider-owned grant.
+		held.expires_at = 0;
+		let bearer: string | null | undefined;
+		const unregister = registerTeamBridgeRetirement(async () => {
+			bearer = await latest.radientRetirementAccessToken();
+			expect(durable.clearsStarted).toBe(0);
+		});
+		try {
+			let exiting!: Promise<boolean>;
+			await act(async () => {
+				exiting = latest.signOut();
+			});
+			// The normal accessor would deadlock behind the clear barrier until the
+			// five-second emergency timeout. Require progress before that fallback.
+			await until(() => bearer === "fresh-retirement");
+			await act(async () => {
+				expect(await exiting).toBe(true);
+			});
+			expect(
+				mock.events.filter((event) => event === "POST /v1/auth/oauth/token"),
+			).toHaveLength(1);
+			expect(durable.clearsStarted).toBe(1);
+			expect(durable.oauth).toBeNull();
+		} finally {
+			unregister();
+		}
 	});
 
 	it.each(["sign-out", "unmount", "switch"])(

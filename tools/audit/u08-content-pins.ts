@@ -71,7 +71,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
 	"tools/audit/checks.ts":
-		"3b49282a11c21ec0437e80d4feb00a481d544c3554dd7dcfcb42793f85926ed9",
+		"d4cb5cbe1005982e0dd717d69de6ae016e40da2e9069ad15ba7ba5d82a94dfb0",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -369,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "80e1501d11893f35d0d7e27e4f1c1dfb40165adaa7e1de3c2fda9483f530580b",
+	app: "ac18960e1b7055b7922224987139c38e3cd409d5f014af524c76d121d2b75fb5",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -389,7 +389,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "cdaeba30c2bbcb2b71b75c5ae1b425176695df3ad3f13515131f4e6f1e10bed9",
+	/* Re-pinned 2026-10-31 for merging main into PR #105 (Team Bridge): `app`
+	 * gains `TeamBridgeProvider` inside main's `DirectionRoot`, `src` carries the
+	 * merged connection provider, drawer route count and a11y ids, and
+	 * `tools/audit/checks.ts` is the auto-merged union of both sides. Recomputed
+	 * with `--print` from the staged merged tree. */
+	/* Re-pinned 2026-10-31 for #105 M1/M2 remediation: stored credentials refuse
+	 * tombstone authority, explicit durable replacement is lifecycle-fenced,
+	 * Settings shows local signing-out feedback, and all eight locales include
+	 * its keys. `src` only; no instrument or fixture changes. --print recomputed
+	 * after the final source edit; this is identity, not rendered visual proof. */
+	/* Main convergence 2026-10-31: #143 adds avatar rendering in app/src and
+	 * two catalogue keys; #105 retains Team Bridge and M1/M2 security/pending
+	 * behavior. Digests below identify the mechanical union only. They are NOT
+	 * a review refresh or rendered evidence; convergence QA is still pending. */
+	/* #105 localization 2026-10-31: the same four Team Bridge screens now read
+	 * 86 complete messages from all eight catalogues (233 total keys). Runtime
+	 * copy and generated source moved; auth/lifecycle/Settings bytes did not.
+	 * Source identity only — fresh independent language and rendered review owed. */
+	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
+	 * messages, their projection and regressions only. Component/auth bytes
+	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
+	src: "acabd9f191bfb846b509acc5e9405bc9ab400517e44a0e2929f727667890c4c0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -1219,13 +1219,18 @@ function dialogSeparator(
 	b: AuditNode,
 	state: AuditState,
 ): AuditNode | null {
-	// The region both boxes claim, in LAYOUT terms: this branch decides before the
-	// painted-region gates run, and the separator must cover whatever region the
-	// pair shares at all.
-	const x = Math.max(a.rect.x, b.rect.x);
-	const y = Math.max(a.rect.y, b.rect.y);
-	const right = Math.min(a.rect.x + a.rect.w, b.rect.x + b.rect.w);
-	const bottom = Math.min(a.rect.y + a.rect.h, b.rect.y + b.rect.h);
+	// Use the same painted boxes as U-08's final verdict. Requiring coverage of
+	// the layout intersection while measuring the surface's painted box mixes
+	// coordinate policies: clipping can leave an unpainted layout band outside an
+	// opaque surface that fully covers the actual collision. Nothing unpainted
+	// needs a separator; the existing painted-region gates report that case.
+	const paintedA = paintedBox(a);
+	const paintedB = paintedBox(b);
+	if (paintedA === null || paintedB === null) return null;
+	const x = Math.max(paintedA.x, paintedB.x);
+	const y = Math.max(paintedA.y, paintedB.y);
+	const right = Math.min(paintedA.x + paintedA.w, paintedB.x + paintedB.w);
+	const bottom = Math.min(paintedA.y + paintedA.h, paintedB.y + paintedB.h);
 	if (right - x <= 1 || bottom - y <= 1) return null;
 	for (const candidate of state.nodes) {
 		// The separator is a SURFACE of the dialog, not a pair member and not a

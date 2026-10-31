@@ -54,6 +54,7 @@ import {
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
 	CONTROL,
 	EMPTY,
@@ -367,7 +368,11 @@ export const ConversationsPane = ({
 	 *  destinations comes from the relay's own flags, so an older relay with fewer
 	 *  routes keeps the pinned footer it has always had (R7-01). */
 	const pinnedRoutes =
-		4 +
+		/* Team Bridge's entry is pinned in the same footer and is always shown
+		 *  (a hub destination, not a relay capability), so it counts as a route
+		 *  unconditionally — omitting it would under-state the footer's height
+		 *  against the floor this derivation was measured for. */
+		5 +
 		(notificationsEnabled(capabilities) ? 1 : 0) +
 		(libraryEnabled(capabilities) ? 1 : 0);
 	const scrollFooter = sidebarFooterScrolls(useLayout(), {
@@ -471,8 +476,8 @@ export const ConversationsPane = ({
 		openSession(session);
 	};
 
-	/* Keep one navigation tree in both placements: compact landscape gives the
-	 * list all remaining height; the four unchanged routes follow its rows. The
+	/* Keep one navigation tree in both placements: short landscape and compact
+	 * large text give the list room; secondary routes follow its rows. The
 	 * negative margin only cancels the list's px-4, preserving the footer width
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (
@@ -608,6 +613,7 @@ export const ConversationsPane = ({
 					</View>
 				</>
 			) : null}
+			<TeamBridgeEntry onNavigate={onNavigate} />
 			{/* The fifth route, gated on the relay's own capability flag. An older
 			 *  relay omits `features.library`; showing the entry there would offer a
 			 *  control whose screen can only 404, so absence hides it. The gate is the
