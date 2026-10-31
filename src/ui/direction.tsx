@@ -23,6 +23,9 @@
  *      affordance, not a picture of an object — see `back-icon.tsx`.
  *   3. **Mixed content** that has to keep its own direction inside translated
  *      prose — see `LTR_TEXT` below.
+ *   4. **Composed copy** whose first strong character can be the wrong script —
+ *      a fixed label spliced to a translated count, or a duration spliced to an
+ *      Urdu postposition — see `useComposedDir` below.
  *
  * WHAT IT IS DELIBERATELY NOT. A subscription of its own: the value comes from
  * `activeDirection()` at render time, and the surface that renders the root
@@ -135,6 +138,75 @@ export const DirectionView = ({
 	const web: object = { dir: direction };
 	return <View {...rest} {...web} style={[{ direction }, style]} />;
 };
+
+/**
+ * The paragraph direction a COMPOSED line has to state for itself: one that
+ * splices a translated fragment to something whose script is not the line's —
+ * a fixed heading over a translated count (`Wakes · 5 شیڈول شدہ`), a duration
+ * with an Urdu postposition (`22d سے تاخیر`), `ہر 5m · 2 باقی`. Spread the
+ * result onto the `Text` that renders the composed value.
+ *
+ * THE DEFECT THIS EXISTS FOR, because it is invisible in the source. Every
+ * `<Text>` that is not inside another `Text` reaches the browser with
+ * `dir="auto"`: react-native-web writes `supportedProps.dir =
+ * componentDirection != null ? componentDirection : 'auto'`
+ * (`node_modules/react-native-web/dist/exports/Text/index.js`), where
+ * `componentDirection` is `props.dir || (props.lang && getLocaleDirection(props.lang))`.
+ * `dir="auto"` asks the BROWSER to pick the paragraph base from the FIRST
+ * STRONG character of the string (UAX#9 P2/P3), which makes the direction of a
+ * translated sentence depend on which language happens to come first in it.
+ * Urdu copy composed after a Latin word or a duration therefore resolves LTR
+ * inside an RTL page, and two measurable things follow:
+ *   - the line's `text-align: start` resolves to the physical LEFT, so a
+ *     section heading sits at the trailing edge of a right-to-left screen
+ *     (design round 1, D1: 210.5 pt from the edge the eye lands on);
+ *   - the base direction inverts the reading order of the Urdu run. The
+ *     catalogue fixes the word order — `mobile.schedules.due.overdue` is
+ *     `{label} سے تاخیر` — and under an LTR base `22d سے تاخیر` lays out as
+ *     `22d تاخیر سے`, read as `سے، تاخیر، 22d`: the postposition AHEAD of the
+ *     noun it governs (design round 1, D2). The copy is right; only the base
+ *     was wrong.
+ *
+ * WHY A PROP AND NOT A STYLE. The prop is the only channel that overrides the
+ * inference: RNW reads `props.dir` first and writes `auto` only when it is
+ * null, and neither a `direction` style nor `<html dir>` reaches the element's
+ * own `dir` attribute. The emitted attribute sets the element's computed
+ * `direction`, which is what `text-align: start` and the bidi base resolve
+ * against.
+ *
+ * WHY `{}` ON NATIVE AND `{}` IN AN LTR CATALOGUE. Native paragraph direction
+ * comes from Yoga's layout direction, which the root view and every
+ * `Sheet`/`Dialog` already carry, so a native `<Text>` resolves exactly as this
+ * helper would and `dir` is a web-only prop. In `en`/`fr`/`hi` the browser's
+ * inference is already the correct base for these lines — no composed value
+ * begins with a right-to-left character — so the helper emits NO prop at all
+ * rather than restating what the document implies, which is what keeps those
+ * three catalogues byte-identical to the pre-Urdu build.
+ *
+ * THE CONSTRAINT. It states the PAGE's direction, never a script's: it is for a
+ * composed value whose base must not depend on its first token, so it may not
+ * be applied as a blanket to every `Text` (a pure-Urdu line needs nothing and
+ * gets the same answer twice) and never as a hard-coded `rtl` (that would force
+ * a base the catalogue does not claim, and the next locale pays for it). The
+ * counterpart case — a value that must keep a direction OPPOSITE to the page,
+ * like a command or a hostname — is `LTR_TEXT` below, not this.
+ */
+export type ComposedDirProps = { readonly dir?: TextDirection };
+
+/** The pure half: `{dir}` on web for an RTL page, nothing otherwise. */
+export const composedDirection = (
+	direction: TextDirection,
+): ComposedDirProps =>
+	Platform.OS === "web" && direction === "rtl" ? { dir: "rtl" } : {};
+
+/**
+ * `composedDirection` of the active page. Use it in the component that renders
+ * the composed value — not in the function that builds the string, because the
+ * catalogue string has to stay the source of truth about the text and this is
+ * a fact about the surface it lands on.
+ */
+export const useComposedDir = (): ComposedDirProps =>
+	composedDirection(useDirection());
 
 /**
  * Mixed content that must keep ITS OWN direction inside translated prose.

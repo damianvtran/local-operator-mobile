@@ -1,14 +1,17 @@
 import { act, createElement as h, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { renderFor } from "@/i18n";
 import {
+	composedDirection,
 	DirectionProvider,
 	DirectionView,
 	LTR_TEXT,
 	TEXT_END_CLASS,
+	useComposedDir,
 	useDirection,
 	useIsRTL,
 } from "@/ui/direction";
@@ -219,6 +222,69 @@ describe("DirectionView: inline logical style props follow the direction on web"
 	});
 });
 
+describe("composed copy: the base comes from the page, not from its first strong character", () => {
+	/* The REAL catalogue renderer — `renderFor` is exported for tests — so these are
+	 * the strings the Schedules screen hands a `Text`: a fixed heading spliced to a
+	 * translated count, and a duration spliced to an Urdu postposition. Both begin
+	 * with a Latin strong character, which is exactly what `dir="auto"` resolves
+	 * against (design review round 1, D1/D2). */
+	const HEADER = `Wakes · ${renderFor(
+		"mobile.schedules.summary.wakes",
+		{ count: 5 },
+		"ur",
+	)}`;
+	const DUE = renderFor("mobile.schedules.due.overdue", { label: "22d" }, "ur");
+
+	/** One composition site: the `Text` that renders the composed value, no more. */
+	const Composed = ({ value }: { value: string }) => {
+		/* Widened for the reason the component spreads it that way: `dir` is not in
+		 * React Native's `TextProps`, and a precise `{ dir }` fails TypeScript's
+		 * weak-type check against an all-optional prop type. */
+		const dir: object = useComposedDir();
+		return h(Text, dir, value);
+	};
+
+	const compose = (direction: "ltr" | "rtl", value: string, helper = true) =>
+		renderToStaticMarkup(
+			provide(
+				direction,
+				helper ? h(Composed, { value }) : h(Text, null, value),
+			),
+		);
+
+	it("is `{dir}` on web for rtl and nothing else", () => {
+		expect(composedDirection("rtl")).toEqual({ dir: "rtl" });
+		expect(composedDirection("ltr")).toEqual({});
+	});
+
+	it("rtl: both composed values carry the explicit dir", () => {
+		for (const value of [HEADER, DUE]) {
+			const markup = compose("rtl", value);
+			expect(markup).toContain('dir="rtl"');
+			expect(markup).not.toContain('dir="auto"');
+			/* The value itself is what is being laid out, not a stand-in. */
+			expect(markup).toContain(value);
+		}
+	});
+
+	it("can fail: without the helper the same value falls back to dir=auto", () => {
+		for (const value of [HEADER, DUE]) {
+			const markup = compose("rtl", value, false);
+			expect(markup).toContain('dir="auto"');
+			expect(markup).not.toContain('dir="rtl"');
+		}
+	});
+
+	it("ltr: emits no dir at all, so en/fr/hi stay byte-identical", () => {
+		for (const value of ["Wakes · 5 scheduled", "22d overdue"]) {
+			expect(compose("ltr", value)).toBe(compose("ltr", value, false));
+		}
+		/* The equality above is not vacuous: the un-assisted render DOES carry the
+		 * attribute inference LTR relies on. */
+		expect(compose("ltr", HEADER, false)).toContain('dir="auto"');
+	});
+});
+
 describe("the per-platform text constants", () => {
 	it("TEXT_END_CLASS names the web utility and the native one, both literally", () => {
 		/* Both tokens must be readable in source for Tailwind to generate them. */
@@ -247,6 +313,22 @@ describe("the native half of the per-platform constants", () => {
 			writingDirection: "ltr",
 			textAlign: "auto",
 		});
+		vi.doUnmock("react-native");
+		vi.resetModules();
+	});
+
+	/* The composed line's other half, pinned the same way: `dir` is a
+	 * react-native-web prop, and native needs nothing from it because Yoga's layout
+	 * direction (the root view's `direction` style) already resolves the paragraph. */
+	it("composedDirection is a no-op on native, where Yoga already resolves the paragraph", async () => {
+		vi.resetModules();
+		vi.doMock("react-native", async () => ({
+			...(await vi.importActual<object>("react-native")),
+			Platform: { OS: "ios" },
+		}));
+		const native = await import("@/ui/direction");
+		expect(native.composedDirection("rtl")).toEqual({});
+		expect(native.composedDirection("ltr")).toEqual({});
 		vi.doUnmock("react-native");
 		vi.resetModules();
 	});
