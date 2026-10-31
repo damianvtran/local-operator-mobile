@@ -1108,6 +1108,25 @@ export class RelayEndpoints {
 		});
 	}
 
+	/**
+	 * An agent's profile picture bytes (`GET /v1/agents/{id}/avatar?v=<sha>`).
+	 *
+	 * The path is the agent-profile-picture contract's own, served by the relay
+	 * behind the same authentication as every `/api` route. `v` is the digest the
+	 * session row named (`avatar_sha256`): the route ignores it for lookup, but
+	 * it makes the URL content-addressed, so any cache between here and the
+	 * relay can never hand back the PREVIOUS picture under the same address.
+	 * A relay without the route, or an agent whose picture was removed, answers
+	 * 404 — the caller reads the relay's own 404 as "draw the glyph".
+	 */
+	async agentAvatar(agentId: string, sha256: string): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/v1/agents/${encodeURIComponent(agentId)}/avatar${query({ v: sha256 })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	/** One page of a child's own transcript. */
 	async agentHistory(
 		sessionId: string,

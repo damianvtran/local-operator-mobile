@@ -265,6 +265,27 @@ describe("the session-health chrome", () => {
 			}
 		}
 	});
+	/* The agent picture (agent-profile-picture contract) joins the leading
+	 *  cluster LEFT of the name: inline it is title-line chrome, so it is charged
+	 *  — its 28 pt plus the cluster's 4 pt gap — and stacked it rides the back
+	 *  row, so it costs the title line nothing. Absent, nothing moves. */
+	it("charges the agent picture inline, and only when there is one", () => {
+		const live = headerTitleChars(phone(390), { dot: true });
+		const pictured = headerTitleChars(phone(390), { dot: true, avatar: true });
+		expect(pictured).toBe(Math.floor((198 - 32) / DISPLAY_ADVANCE_PT));
+		expect(pictured).toBeLessThan(live);
+		expect(headerTitleChars(phone(390), { dot: true, avatar: false })).toBe(
+			live,
+		);
+		expect(
+			compactTitleChars({ width: 844, height: 390 }, 1, { avatar: true }),
+		).toBeLessThan(compactTitleChars({ width: 844, height: 390 }, 1));
+	});
+	it("stacked, the agent picture rides the back row and costs the title nothing", () => {
+		expect(headerTitleChars(phone(320), { avatar: true })).toBe(
+			headerTitleChars(phone(320)),
+		);
+	});
 	it("stacked, only the dot narrows the title row: the menu sits on the back row", () => {
 		expect(headerTitleChars(phone(320), { menu: true })).toBe(
 			headerTitleChars(phone(320)),

@@ -78,19 +78,39 @@ const HEADER_CHROME_PT =
  * Both default to absent, so every caller that passes no extras — and every
  * figure `header.test.ts` pinned before the dot — is unchanged.
  */
-export type HeaderExtras = { dot?: boolean; menu?: boolean; word?: boolean };
+export type HeaderExtras = {
+	dot?: boolean;
+	menu?: boolean;
+	word?: boolean;
+	/** The bound agent's picture, drawn left of the name on the title row
+	 *  (agent-profile-picture contract). Charged only while a row names one, so
+	 *  every conversation without a picture keeps the budget it was proved with. */
+	avatar?: boolean;
+};
 /* Chrome is rem-spaced, so on web BOTH its width and the glyph advance scale
  * with the reader. On native the chrome is in pt and only the advance scales;
  * the caller passes `Platform.OS !== "web"` for that case. */
 const HEALTH_DOT_PT = 8 + 8;
 const HEADER_MENU_PT = 48 + 8;
+/* The agent picture: `HEADER_AVATAR_PT` is the size `HeaderAgentAvatar` renders
+ *  (the same 28 pt as the navigation mark beside it, so the leading cluster reads
+ *  as one height), plus the leading cluster's `gap-1` it joins. Exported so the
+ *  component draws with THIS number rather than a second copy of it. */
+export const HEADER_AVATAR_PT = 28;
+const HEADER_AVATAR_SLOT_PT = HEADER_AVATAR_PT + 4;
 const extrasPt = (
-	{ dot = false, menu = false, word = false }: HeaderExtras = {},
+	{
+		dot = false,
+		menu = false,
+		word = false,
+		avatar = false,
+	}: HeaderExtras = {},
 	scale = 1,
 ): number =>
 	((dot ? HEALTH_DOT_PT : 0) +
 		(menu ? HEADER_MENU_PT : 0) +
-		(word ? STATE_WORD_PT : 0)) *
+		(word ? STATE_WORD_PT : 0) +
+		(avatar ? HEADER_AVATAR_SLOT_PT : 0)) *
 	scale;
 
 /**
@@ -278,6 +298,8 @@ export const headerTitleChars = (
 		const titleRow =
 			row -
 			HEADER_GUTTERS_PT * chromeScale -
+			/* Not `avatar`: stacked, the leading cluster (back, mark, picture) is
+			 *  its own row above the title, so the picture costs this line nothing. */
 			extrasPt({ dot: extras.dot }, chromeScale);
 		/* Two clamped lines at the ACTUAL scale, less the same wrap slack. The
 		 *  previous budget hard-coded 2x and ignored the scaled dot/gutters; at

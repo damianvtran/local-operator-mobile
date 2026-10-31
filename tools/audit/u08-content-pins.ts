@@ -127,14 +127,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
-		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
+		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"83f4c75b29fc623c59d9ebcd59a1d9d494036e659ac3fb60b7e2ded4049541cc",
+		"813fa35400cd85bc75c6a435bfb3a28d8c0b343d007dc3032bf29d7d00edb934",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -369,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "2ffdb99852f38846a87727e38132a3e55037a54bbe8b025bde1104b1c1fa6955",
+	app: "8d9c43ed3cca39a7aab0f0836ae3429e744b0d390c3366c81a4c0f48f5861d3b",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -389,7 +389,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "9d1b1894e3135528aae1911cd5fdccf0b13030688b58e91131f636595cc0d710",
+	src: "e9e91f05ca61ad70b3236a088b3ca95c647da9a4efdae7efc8e6fd253fcd5628",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

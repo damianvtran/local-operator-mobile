@@ -677,6 +677,12 @@ export interface SessionSummary {
   placement?: Record<string, unknown> | null;
   origin?: Record<string, unknown> | null;
   last_synced_at?: number | null;
+  /** The bound agent and its stored picture's sha256 (local-operator
+   *  agent-profile-picture contract; `agent.yml` `avatar.sha256`). Additive:
+   *  absent/`null` on older relays, unbound sessions and picture-less agents.
+   *  The bytes are `GET /v1/agents/{agent_id}/avatar?v=<sha>`. */
+  agent_id?: string | null;
+  avatar_sha256?: string | null;
 }
 
 /** Capabilities ride the SAME list frames (`daemon.py:3485-3518`): one answer,

@@ -10,6 +10,8 @@ import {
 	View,
 } from "react-native";
 import type { SessionSummary } from "@/contracts";
+import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { AgentListRow } from "@/features/agent-avatar/agent-avatar-view";
 import {
 	DrawerComputerRow,
 	useComputerEntry,
@@ -60,6 +62,7 @@ import {
 	remoteSessionRowId,
 	STATE_MARKER,
 	SURFACE,
+	sessionRowAvatarId,
 	sessionRowId,
 	sessionTagLineId,
 } from "@/ui/a11y";
@@ -71,7 +74,6 @@ import { ConnectionPill } from "@/ui/components/connection-pill";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { ListRow } from "@/ui/components/list-row";
 import { middleFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
@@ -807,7 +809,9 @@ export const ConversationsPane = ({
 					 * on the row's kind rather than read through the default. */
 					const remote = isRemoteRow(session);
 					return (
-						<ListRow
+						<AgentListRow
+							avatarRef={avatarRefOf(session)}
+							avatarTestID={sessionRowAvatarId(session.session_id)}
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
 								remote

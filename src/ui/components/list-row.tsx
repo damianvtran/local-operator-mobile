@@ -126,8 +126,28 @@ export type ListRowProps = {
 	 *  row's single label: the line itself is a child node, so without this a
 	 *  reader hears the title and never the tags (review round 1, D4/Q2). */
 	tagAnnouncement?: string;
+	/**
+	 * A leading picture (the bound agent's profile picture), or undefined for the
+	 * plain reserved slot. A NODE, like `tagLine`, so the kit stays free of the
+	 * feature that fetches it.
+	 *
+	 * With a picture the status indicator is NOT replaced: it is drawn per
+	 * `LIST_ROW_STATUS_PLACEMENT` — by default as a badge on the picture's
+	 * corner — so running / waiting / unread stay legible on every row. Without
+	 * one the row is byte-for-byte today's, the 12×12 slot and all.
+	 */
+	leading?: ReactNode;
 	testID: string;
 };
+
+/**
+ * Where a pictured row draws its status: `"corner"` — a badge on the picture's
+ * lower-right corner (the agent-profile-picture design's chosen variant) — or
+ * `"beside"`, the unchanged 12×12 slot followed by the picture. One constant so
+ * the design round can switch the variant without touching the layout.
+ */
+export type ListRowStatusPlacement = "corner" | "beside";
+export const LIST_ROW_STATUS_PLACEMENT = "corner" as ListRowStatusPlacement;
 
 export const ListRow = ({
 	title,
@@ -151,6 +171,7 @@ export const ListRow = ({
 	longPressAccessibilityHint,
 	tagAnnouncement,
 	tagLine,
+	leading,
 	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
@@ -232,7 +253,16 @@ export const ListRow = ({
 		>
 			{({ pressed }) => (
 				<View className={listRowClasses({ selected, pressed })}>
-					<Indicator attention={attention} />
+					{leading === undefined ? (
+						<Indicator attention={attention} />
+					) : LIST_ROW_STATUS_PLACEMENT === "beside" ? (
+						<>
+							<Indicator attention={attention} />
+							{leading}
+						</>
+					) : (
+						<LeadingWithBadge attention={attention}>{leading}</LeadingWithBadge>
+					)}
 					<View className="flex-1 gap-0.5">
 						{/* `flex-wrap` — but only at large text (`wrapMarks`): at 200 % on a
 						 *  320 pt phone the title plus its marks do not fit one line, and a
@@ -490,6 +520,49 @@ const META_PATH_BOX = (scale: number) => ({
  *  which — with the cwd at `flexShrink: 0` — is what makes it the field that
  *  yields rather than the two of them splitting the loss proportionally. */
 const META_VALUE_BOX = { flexGrow: 0, flexShrink: 1, minWidth: 0 } as const;
+
+/**
+ * The picture with the status indicator as a corner badge.
+ *
+ * The badge is the SAME `Indicator` the plain row draws (same ladder, same
+ * pulse, same reduced-motion rule), seated on a `surface`-filled disc so the dot
+ * keeps its contrast over any photo, and offset past the picture's edge so it
+ * never covers the face. Nothing is drawn for `none`: an idle row has no state
+ * to report, exactly as the plain slot paints nothing. The spinner is scaled to
+ * the badge: at its native 20 pt it would cover the picture it annotates.
+ */
+const LeadingWithBadge = ({
+	attention,
+	children,
+}: {
+	attention: ReturnType<typeof listRowIndicator>;
+	children: ReactNode;
+}) => (
+	<View>
+		{children}
+		{attention === "none" ? null : (
+			<View
+				className="absolute items-center justify-center rounded-full bg-surface"
+				style={{
+					right: -3,
+					bottom: -3,
+					width: 14,
+					height: 14,
+				}}
+			>
+				<View
+					style={
+						attention === "streaming"
+							? { transform: [{ scale: 0.6 }] }
+							: undefined
+					}
+				>
+					<Indicator attention={attention} />
+				</View>
+			</View>
+		)}
+	</View>
+);
 
 /** The reserved slot. Same 12×12 box in every state. */
 const Indicator = ({

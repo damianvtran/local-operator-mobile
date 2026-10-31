@@ -28,7 +28,7 @@
  * own, so a `lop mobile` on 4098 keeps running untouched.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
@@ -65,8 +65,10 @@ import type {
 	TransferScript,
 } from "./scenarios.ts";
 import {
+	AGENT_AVATARS,
 	buildScenarios,
 	capabilityBlock,
+	REMOVED_AVATAR_SHA,
 	resolveScenarioName,
 	rowFrom,
 	scenarioNames,
@@ -126,6 +128,9 @@ const KNOWN_OPS = new Set([
 ]);
 
 export const DEFAULT_PASSWORD = "mock-relay-password";
+
+/** The agent-profile-picture route's path (`/v1/agents/{id}/avatar`). */
+const AGENT_AVATAR_PATH = /^\/v1\/agents\/([^/]+)\/avatar$/;
 
 /** A real 1×1 PNG, so `<Image>` has something decodable to render for `/image`. */
 const TINY_PNG = Buffer.from(
@@ -2259,6 +2264,38 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 
 		/* ----------------------------------------------------------- api: list -- */
+
+		/* The agent-profile-picture route, as the contract states it: the bytes
+		 *  with `ETag: "<sha256>"`, `304` on a matching `If-None-Match`, and the
+		 *  relay's own JSON `404` when the agent has no picture. `v` is the
+		 *  client's cache-buster and is not used for lookup — the stored picture
+		 *  is the authority, so a stale `v` still gets the current bytes. It sits
+		 *  after the auth gate above like every application route. */
+		const avatarMatch = AGENT_AVATAR_PATH.exec(pathname);
+		if (avatarMatch && method === "GET") {
+			const agentId = decodeURIComponent(avatarMatch[1] ?? "");
+			const bytes = AGENT_AVATARS[agentId];
+			const requested = url.searchParams.get("v");
+			/* A digest no stored picture has is the "removed between frames" case. */
+			if (bytes === undefined || requested === REMOVED_AVATAR_SHA) {
+				return sendJson(res, 404, { error: "not_found" });
+			}
+			const sha = createHash("sha256").update(bytes).digest("hex");
+			const etag = `"${sha}"`;
+			if (req.headers["if-none-match"] === etag) {
+				res.writeHead(304, { etag });
+				res.end();
+				return;
+			}
+			res.writeHead(200, {
+				"content-type": "image/png",
+				"content-length": String(bytes.length),
+				etag,
+				"cache-control": "private, max-age=31536000, immutable",
+			});
+			res.end(bytes);
+			return;
+		}
 
 		if (pathname === "/api/sessions" && method === "GET") {
 			const gzipped = sendJson(
