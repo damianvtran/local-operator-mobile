@@ -930,6 +930,24 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	"path:/session/{sessionId}/bridge-expanded": [
 		{ click: toolRowToggleId("tc-bridge-post") },
 	],
+	/* The SAME card read from the TOP of the transcript (`lo-scroll=top` plus
+	 *  turn 1 restored), where its first lines are in frame at every width. The
+	 *  tail-anchored cells above only show a card the viewport has room for: on
+	 *  the 320 pt phone the expanded card lands behind the composer and the frame
+	 *  is byte-identical to the collapsed one, which is what design round 1 (D8)
+	 *  and review R6 measured. */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-top": [
+		{ click: toolRowToggleId("tc-bridge-old") },
+	],
+	/* The compact world's single post, opened — the frame that carries the CARD
+	 * at 320 pt (the showroom's card lands behind the composer there). */
+	"path:/session/{sessionId}/bridge-card": [
+		{ click: toolRowToggleId("tc-compact-post") },
+	],
+	/* …and the same rows without the card, for the collapsed-first-line case at
+	 *  200 %, where only a few rows fit. */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-top-collapsed":
+		[],
 	/* Same scenario: the refusal and the peer-inbox rows opened together, so
 	 *  one frame carries both Outcome lines. */
 	"path:/session/{sessionId}/bridge-outcomes-open": [

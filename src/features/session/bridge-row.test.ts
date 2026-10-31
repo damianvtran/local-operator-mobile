@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
 import {
+	bridgeAccessibleName,
 	bridgeBody,
+	bridgeCardHeadline,
+	bridgeChipBucket,
 	bridgeCopyOf,
-	bridgeHeadline,
+	bridgeGlyphFor,
 	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
-	bridgeTargetLabel,
+	bridgeRowSummary,
 	isBridgeRow,
 	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
@@ -73,9 +76,6 @@ describe("bridge row: parse", () => {
 			action: "post",
 			targetKind: "channel",
 			targetLabel: "#release",
-			preview: "nightly is green",
-			count: 3,
-			emoji: "👍",
 			outcome: null,
 			code: null,
 		});
@@ -88,7 +88,7 @@ describe("bridge row: parse", () => {
 		expect(bridgeRowOf(row({ bridge_row: "inbox_only" }))).toBeNull();
 		// and the generic row says nothing it cannot vouch for
 		expect(bridgeOutcomeView(bridgeRowOf(row({})), null)).toBeNull();
-		expect(bridgeTargetLabel(bridgeRowOf(row({})))).toBeNull();
+		expect(bridgeRowOf(row({}))?.targetLabel ?? null).toBeNull();
 	});
 
 	it("reads an unknown outcome or target kind as absent, never as a verdict", () => {
@@ -107,9 +107,7 @@ describe("bridge row: parse", () => {
 		expect(parsed).toMatchObject({
 			targetKind: "none",
 			targetLabel: null,
-			count: null,
 			code: null,
-			preview: null,
 		});
 	});
 });
@@ -188,6 +186,8 @@ describe("bridge row: the relay's words (bridge_copy)", () => {
 		);
 		expect(bridgeOutcomeView(bridgeRowOf(inbox), bridgeCopyOf(inbox))).toEqual({
 			text: "not posted to a conversation",
+			word: "not posted to a conversation",
+			code: "",
 			tone: "warning",
 		});
 
@@ -201,6 +201,8 @@ describe("bridge row: the relay's words (bridge_copy)", () => {
 			bridgeOutcomeView(bridgeRowOf(refused), bridgeCopyOf(refused)),
 		).toEqual({
 			text: "refusé · not_a_member",
+			word: "refusé",
+			code: " · not_a_member",
 			tone: "danger",
 		});
 	});
@@ -211,67 +213,230 @@ describe("bridge row: the relay's words (bridge_copy)", () => {
 	});
 });
 
-describe("bridge row: target label", () => {
-	it("shows the relay's own label and invents nothing", () => {
-		const of = (target: Record<string, unknown>) =>
-			bridgeTargetLabel(bridgeRowOf(row(payload({ target }))));
-		expect(of({ kind: "channel", label: "#release" })).toBe("#release");
-		expect(of({ kind: "channel" })).toBeNull();
-		expect(of({ kind: "dm" })).toBeNull();
-		expect(of({ kind: "directory" })).toBeNull();
+describe("bridge row: the row line vs the card title", () => {
+	/* Design round 1, D1: the row keeps the daemon's one-line summary (verb,
+	 *  target, PREVIEW) and the card prints the rendered headline. Printing one
+	 *  string twice lost the preview and repeated the row. */
+	it("the row keeps the summary; the card takes the headline", () => {
+		const entry = row(payload(), {
+			summary: "Posted in #release · Nightly sweep is green.",
+		});
+		const copy = {
+			outcome: "",
+			headline: "Posted in #release",
+			outcomeSentence: "",
+		};
+		expect(
+			bridgeRowSummary(entry, bridgeCopyOf(entry), bridgeRowOf(entry)),
+		).toBe("Posted in #release · Nightly sweep is green.");
+		expect(bridgeCardHeadline(copy)).toBe("Posted in #release");
 	});
 
-	it("never shows an opaque id as the label", () => {
+	it("strips the outcome tail the chip already says (D10)", () => {
+		/* `words` is the relay's chip text; the TOKEN is its first segment. */
+		/* `outcome` is the TOKEN, `words` the relay's chip text (which carries
+		 *  the code for a refusal). */
+		const of = (summary: string, outcome: string, words = outcome) => {
+			const entry = row(
+				{ ...payload({ outcome }), bridge_copy: { outcome: words } },
+				{ summary },
+			);
+			return bridgeRowSummary(entry, bridgeCopyOf(entry), bridgeRowOf(entry));
+		};
+		// the full two-segment tail, matched by TEXT not by the last separator
 		expect(
-			bridgeTargetLabel(
-				bridgeRowOf(
-					row(payload({ target: { kind: "dm", label: "bcv_01HXYZabc" } })),
-				),
+			of(
+				"Couldn't post in #leadership · Heads-up · refused · not_a_member",
+				"refused",
+				"refused · not_a_member",
 			),
-		).toBeNull();
-	});
-});
-
-describe("bridge row: headline", () => {
-	it("prefers the relay's rendered headline, else its localized summary", () => {
-		expect(bridgeHeadline(row({}), null)).toBe("Posted to #release");
+		).toBe("Couldn't post in #leadership · Heads-up");
+		// the single-segment tail
 		expect(
-			bridgeHeadline(row({ summary: "Posted to #release" }), {
-				outcome: "",
-				headline: "Posted in #release",
-				outcomeSentence: "",
-			}),
-		).toBe("Posted in #release");
-	});
-
-	it("strips every opaque id class a mixed-build frame may still carry", () => {
-		const dirty = [
-			"Posted to bcv_01HXYZ9 · nightly is green",
-			"Reacted 👍 to bcmsg_77aa-bb",
-			"→ acc_42 · hello",
-			"Read ep_abc_def directory",
-		];
-		for (const summary of dirty) {
-			const out = bridgeHeadline(row({}, { summary }), null);
-			expect(out).not.toMatch(ID);
-			expect(out.length).toBeGreaterThan(0);
-		}
-		expect(
-			bridgeHeadline(
-				row({}, { summary: "Posted to bcv_01HXYZ9 · nightly is green" }),
+			of(
+				"Sent to Priya · Can you look? · not posted to a conversation",
+				"inbox_only",
+				"not posted to a conversation",
 			),
-		).toBe("Posted to · nightly is green");
-		expect(scrubOpaqueIds("→ acc_42 · hello")).toBe("hello");
+		).toBe("Sent to Priya · Can you look?");
+		// a tail the projection's cap cut anywhere: inside the word…
+		expect(
+			of(
+				"Sent to Priya · Can you look? · not posted…",
+				"inbox_only",
+				"not posted to a conversation",
+			),
+		).toBe("Sent to Priya · Can you look?");
+		// …inside the code of a refusal…
+		expect(
+			of(
+				"Couldn't post in #leadership · refused · not_a…",
+				"refused",
+				"refused · not_a_member",
+			),
+		).toBe("Couldn't post in #leadership");
+		// …and cut to a bare separator (QA round 3's case)
+		expect(
+			of(
+				"Sent to Priya · awaiting…",
+				"awaiting_acceptance",
+				"awaiting acceptance",
+			),
+		).toBe("Sent to Priya");
 	});
 
-	it("leaves words that merely contain an id prefix alone", () => {
-		expect(scrubOpaqueIds("keep_going step_ep_x")).toBe("keep_going step_ep_x");
+	it("leaves a summary with no tail alone, and never invents one", () => {
+		const entry = row(
+			{ ...payload(), bridge_copy: { outcome: "" } },
+			{ summary: "Looked up the team directory (2 members)" },
+		);
+		expect(
+			bridgeRowSummary(entry, bridgeCopyOf(entry), bridgeRowOf(entry)),
+		).toBe("Looked up the team directory (2 members)");
+		// no chip at all → nothing to strip, even if the text ends like one
+		const noCopy = row(
+			{ ...payload({ outcome: "refused" }) },
+			{ summary: "Posted · refused" },
+		);
+		expect(bridgeRowSummary(noCopy, null, bridgeRowOf(noCopy))).toBe(
+			"Posted · refused",
+		);
+	});
+
+	it("scrubs every opaque id class on the row line", () => {
+		const out = bridgeRowSummary(
+			row(
+				{},
+				{
+					summary:
+						"Posted to bcv_01JC9X7Q2M8T · cut list attached · acc_remote_9",
+				},
+			),
+			null,
+			null,
+		);
+		expect(out).not.toMatch(ID);
+		expect(out).toBe("Posted to · cut list attached");
 	});
 
 	it("falls back to the tool name rather than a blank line", () => {
-		expect(bridgeHeadline(row({}, { summary: "" }), null)).toBe("bridge");
-		expect(bridgeHeadline(row({}, { summary: "bcv_only" }), null)).toBe(
-			"bridge",
+		const entry = row({}, { summary: "" });
+		expect(bridgeRowSummary(entry, null, null)).toBe("bridge");
+	});
+});
+
+describe("bridge row: ink for all five outcomes", () => {
+	/* R2: the tone table is the rule that keeps a refusal, an inbox and a
+	 *  pending write from sharing one ink; it is pinned for every arm. */
+	const toneOf = (outcome: string) => {
+		const entry = row({
+			...payload({ outcome }),
+			bridge_copy: { outcome: `${outcome} word` },
+		});
+		return bridgeOutcomeView(bridgeRowOf(entry), bridgeCopyOf(entry))?.tone;
+	};
+
+	it("maps each outcome to its own ink", () => {
+		expect(toneOf("inbox_only")).toBe("warning");
+		expect(toneOf("refused")).toBe("danger");
+		expect(toneOf("failed")).toBe("danger");
+		// R3/D2: pending is the AMBER warning tier, not a muted grey
+		expect(toneOf("unconfirmed")).toBe("pending");
+		expect(toneOf("awaiting_acceptance")).toBe("pending");
+	});
+
+	it("splits the relay's ` · code` into word and code", () => {
+		const entry = row({
+			...payload({ outcome: "refused", code: "not_a_member" }),
+			bridge_copy: { outcome: "refused · not_a_member" },
+		});
+		expect(bridgeOutcomeView(bridgeRowOf(entry), bridgeCopyOf(entry))).toEqual({
+			text: "refused · not_a_member",
+			word: "refused",
+			code: " · not_a_member",
+			tone: "danger",
+		});
+	});
+});
+
+describe("bridge row: the leading glyph", () => {
+	/* R2: this decision used to live inside the component, where no Node test
+	 *  could reach it — and it is where "never a success tick for an unconfirmed
+	 *  write" lives (D2). */
+	const glyphOf = (outcome: string | null, words = true) => {
+		const entry = row({
+			...payload({ outcome }),
+			...(words ? { bridge_copy: { outcome: "word" } } : {}),
+		});
+		return bridgeGlyphFor(bridgeRowOf(entry), bridgeCopyOf(entry));
+	};
+	it("never shows the green tick for a write nobody confirmed", () => {
+		expect(bridgeGlyphFor(bridgeRowOf(row({})), null)).toEqual({
+			kind: "state",
+		});
+		expect(glyphOf("unconfirmed")).toEqual({ kind: "partial" });
+		expect(glyphOf("awaiting_acceptance")).toEqual({ kind: "partial" });
+	});
+	it("keeps the danger mark for a refusal and amber for a peer inbox", () => {
+		expect(glyphOf("refused")).toEqual({ kind: "failed" });
+		expect(glyphOf("failed")).toEqual({ kind: "failed" });
+		expect(glyphOf("inbox_only")).toEqual({ kind: "partial" });
+	});
+	it("falls back to the tool state when the relay sent no words", () => {
+		expect(glyphOf("refused", false)).toEqual({ kind: "state" });
+		expect(glyphOf(null)).toEqual({ kind: "state" });
+	});
+});
+
+describe("bridge row: chip buckets", () => {
+	/* D3: the relay's two container-query thresholds, on the measured row width. */
+	it("sheds the code, then the word, as the row narrows", () => {
+		expect(bridgeChipBucket(390)).toBe("full");
+		expect(bridgeChipBucket(384)).toBe("full");
+		expect(bridgeChipBucket(383)).toBe("capped");
+		expect(bridgeChipBucket(342)).toBe("capped"); // 390 pt phone
+		expect(bridgeChipBucket(288)).toBe("capped");
+		expect(bridgeChipBucket(287)).toBe("mark-only");
+		expect(bridgeChipBucket(272)).toBe("mark-only"); // 320 pt phone
+	});
+});
+
+describe("bridge row: the accessible name", () => {
+	/* R1: a row whose words the relay withheld must still announce the state,
+	 *  and the identity noun keeps "which tool" answerable (the visible name is
+	 *  an icon). */
+	it("leads with the identity and the state, then the relay's words", () => {
+		const entry = row(
+			{
+				...payload({ outcome: "refused", code: "not_a_member" }),
+				bridge_copy: { outcome: "refused · not_a_member" },
+			},
+			{
+				tool_state: "failed",
+				summary: "Couldn't post in #leadership · refused · not_a_member",
+			},
+		);
+		expect(
+			bridgeAccessibleName(entry, bridgeRowOf(entry), bridgeCopyOf(entry)),
+		).toBe(
+			"bridge failed, refused · not_a_member, Couldn't post in #leadership",
+		);
+	});
+
+	it("keeps the state when there is no bridge_copy", () => {
+		const entry = row(
+			{ ...payload({ outcome: "refused", code: "not_a_member" }) },
+			{ tool_state: "failed", summary: "Post to #leadership" },
+		);
+		expect(bridgeAccessibleName(entry, bridgeRowOf(entry), null)).toBe(
+			"bridge failed, Post to #leadership",
+		);
+	});
+
+	it("keeps a generic bridge row speakable", () => {
+		const entry = row({}, { summary: "Read the directory" });
+		expect(bridgeAccessibleName(entry, null, null)).toBe(
+			"bridge done, Read the directory",
 		);
 	});
 });

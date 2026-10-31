@@ -5,18 +5,28 @@ import {
 	MessagesSquare,
 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+	Pressable,
+	ScrollView,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
 import {
+	bridgeAccessibleName,
 	bridgeBody,
+	bridgeCardHeadline,
+	bridgeChipBucket,
 	bridgeCopyOf,
-	bridgeHeadline,
+	bridgeGlyphFor,
 	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
-	bridgeTargetLabel,
+	bridgeRowSummary,
 	isBridgeRow,
+	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
 import { Markdown } from "@/features/session/components/markdown";
 import {
@@ -90,6 +100,9 @@ import { cx } from "@/ui/variants";
  * success. A bridge row whose `bridge_row` is missing or unreadable keeps the
  * icon and headline and nothing else — the generic row, honestly labelled.
  */
+/** The transcript row's horizontal chrome: `px-4` outside, `px-2` here. */
+const ROW_CHROME_PT = 48;
+
 export type ToolRowProps = {
 	entry: TranscriptEntry;
 	testID?: string;
@@ -202,10 +215,30 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const bridge = bridgeRowOf(entry);
 	const bridgeCopy = bridgeCopyOf(entry);
 	const bridgeOutcome = bridgeOutcomeView(bridge, bridgeCopy);
-	const bridgeTarget = bridgeTargetLabel(bridge);
 	const bridgeMessage = bridgeBody(entry);
 	const mark = bridgeMark(bridge);
-	const headline = isBridge ? bridgeHeadline(entry, bridgeCopy) : entry.summary;
+	/* The ROW keeps the daemon's one-line summary — verb, target and the message
+	 * PREVIEW — with the outcome tail stripped, because the chip beside it says
+	 * that already (design round 1, D1/D10). The CARD prints the daemon's
+	 * rendered headline instead, which names the call rather than repeating the
+	 * row. */
+	const headline = isBridge
+		? bridgeRowSummary(entry, bridgeCopy, bridge)
+		: entry.summary;
+	const cardTitle = bridgeCardHeadline(bridgeCopy);
+	/* The chip's share of the row is a width decision the relay makes with
+	 * container queries; RN has none, so it is measured here (D3). */
+	/* The row's own width, minus the two paddings the transcript stack applies
+	 * (`px-4` on the row wrapper, `px-2` here = 24 pt a side). Measured, not
+	 * guessed: the 320 pt frames put the pressable at x 24–296, i.e. 272 pt.
+	 * Chosen over `onLayout` because it is the same number on the first frame,
+	 * so a chip can never paint wide and then jump. */
+	const rowWidthPt = Math.max(0, useWindowDimensions().width - ROW_CHROME_PT);
+	const chipBucket = bridgeChipBucket(rowWidthPt);
+	/* The daemon's sentence already states the outcome; the raw error and output
+	 * would say it again (design round 1, D5). */
+	const bridgeStated =
+		isBridge && bridgeCopy !== null && bridgeCopy.outcomeSentence !== "";
 	/* The icon is an SVG and cannot inherit a text colour (`useTokenColor`'s
 	 * own reason); `ink-muted` matches the tool name it replaces. */
 	const iconInk = useTokenColor("ink-muted");
@@ -223,10 +256,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * earned, and a refusal that the tool reported as `done` must still read as
 	 * one. The muted pair (unconfirmed, awaiting acceptance) keeps the state's
 	 * own glyph — they are pending facts, not problems. */
+	const glyphDecision = bridgeGlyphFor(bridge, bridgeCopy);
 	const tone =
-		partial || bridgeOutcome?.tone === "warning"
+		partial || glyphDecision.kind === "partial"
 			? { glyph: "!", inkClass: "text-warning", pulsing: false }
-			: bridgeOutcome?.tone === "danger"
+			: glyphDecision.kind === "failed"
 				? { glyph: "✗", inkClass: "text-danger", pulsing: false }
 				: toolGlyph(entry.tool_state);
 	/* ONE trailing word per row, from whichever arm owns it, so the inline /
@@ -240,12 +274,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 			: bridgeOutcome !== null
 				? {
 						text: bridgeOutcome.text,
+						/* Both amber tones share one class: `pending` is the same
+						 * warning ink as `inbox_only` (design round 1, R3/D2), so a
+						 * settled-but-unconfirmed write never reads as a quiet fact. */
 						inkClass:
-							bridgeOutcome.tone === "danger"
-								? "text-danger"
-								: bridgeOutcome.tone === "warning"
-									? "text-warning"
-									: "text-ink-muted",
+							bridgeOutcome.tone === "danger" ? "text-danger" : "text-warning",
 					}
 				: null;
 	/* Above `LARGE_TEXT_SCALE` the word cannot share the row without taking the
@@ -261,8 +294,8 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const details =
 		hasToolDetails(entry) ||
 		note !== null ||
-		bridgeTarget !== null ||
 		bridgeOutcome !== null ||
+		cardTitle !== "" ||
 		(bridgeCopy !== null && bridgeCopy.outcomeSentence !== "");
 	const blocks = toolDetailBlocks(entry);
 	/* The bridge body IS the args' substance; printing the args block too would
@@ -290,10 +323,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				accessibilityRole={details ? ROLE.button : ROLE.text}
 				accessibilityLabel={
 					isBridge
-						? /* The human headline leads, not the tool's machine name: a
-							 * screen reader should hear what was said where, then the
-							 * outcome when there is one. */
-							`${headline}${bridgeOutcome ? `, ${bridgeOutcome.text}` : ""}`
+						? /* Identity, state, the relay's chip and the row line — see
+							 * `bridgeAccessibleName`, which keeps the state so a row the
+							 * relay sent no words for still announces that it failed
+							 * (design round 1, R1). */
+							bridgeAccessibleName(entry, bridge, bridgeCopy)
 						: `${entry.tool_name} ${entry.tool_state}${entry.summary ? `, ${entry.summary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`
 				}
 				accessibilityState={details ? { expanded: open } : undefined}
@@ -346,9 +380,18 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						</Text>
 					)}
 					<Text
+						/* One ink for every row's line: the bridge row's extra weight was
+						 *  a side effect of which arm drew it, and inside a condensed
+						 *  group it sat beside `send`'s dimmer line in the same list
+						 *  (design round 1, D9). The identity icon already carries what
+						 *  the muted name carried.
+						 *
+						 *  A row with a chip holds a floor for this line (D3): at 320 pt
+						 *  a floorless line lost to the chip and read `Sent to c…`, so the
+						 *  caveat outranked the message. 4.5 rem is the relay's own floor. */
 						className={cx(
-							"min-w-0 flex-1 text-body-sm",
-							isBridge ? "text-ink-muted" : "text-ink-dim",
+							"min-w-0 flex-1 text-body-sm text-ink-dim",
+							isBridge && bridgeOutcome !== null && "min-w-[4.5rem]",
 						)}
 						numberOfLines={1}
 					>
@@ -360,23 +403,56 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    Rendered inline below `LARGE_TEXT_SCALE`; at and above it the
 					    word takes its own line below the row — see the render and its
 					    measurements there. */}
-					{trailing !== null && !deliveryOnOwnLine ? (
+					{/* A bridge chip and the send word share this slot, but not its width
+					    rule. The send word is `shrink-0` (design round 1, D1) — it is two
+					    words at most. The bridge chip is longer and carries a mark, so it
+					    is capped and, on a narrow row, sheds its code whole and then its
+					    word (see `bridgeChipBucket`); the word it sheds stays in the
+					    accessible name. */}
+					{bridgeOutcome !== null &&
+					!deliveryOnOwnLine &&
+					!(chipBucket === "mark-only" && mark !== null) ? (
+						/* The MARK lives in ONE place: the identity column already draws
+						 * MessageSquareOff / Hourglass for the two marked outcomes, so the
+						 * chip is the WORD alone — drawing it again beside the word put two
+						 * identical icons on one row (measured on the 320 pt frame). At the
+						 * narrowest width a marked outcome therefore drops the chip and its
+						 * identity mark carries the caveat; a refusal has no mark, so it
+						 * keeps its word and sheds only the code. */
+						<View
+							className={cx(
+								"min-w-0 shrink flex-row items-center",
+								bridgeOutcome.tone === "danger"
+									? "text-danger"
+									: "text-warning",
+							)}
+							/* A percentage cap did not take effect as a class on this row
+							 * (measured in the shipped frame), so every width here is a
+							 * STYLE — the one place React Native Web always applies it. */
+							style={{ maxWidth: chipBucket === "full" ? "55%" : "40%" }}
+						>
+							<Text
+								className={cx(
+									"min-w-0 shrink text-body-sm",
+									trailing?.inkClass,
+								)}
+								numberOfLines={1}
+							>
+								{bridgeOutcome.word}
+								{/* The code is dropped WHOLE at a narrow width, never cut
+								    mid-token (the relay's D3/D9): a reader who sees `not_a_m`
+								    cannot search for it, and the card's sentence repeats it
+								    in full. */}
+								{chipBucket === "full" ? bridgeOutcome.code : null}
+							</Text>
+						</View>
+					) : null}
+					{word !== null && !deliveryOnOwnLine && bridgeOutcome === null ? (
 						<Text
-							/* `shrink-0` is the send word's design decision (design round 1, D1).
-							 *  The bridge outcome is longer, and the row is laid out so the headline
-							 *  only ever gets the leftover: `flex-1` on the headline takes what the
-							 *  word's INTRINSIC width leaves, so an uncapped word at 320 pt took
-							 *  the headline down to one letter and, before the cap, pushed the
-							 *  clock and chevron 77 px past the viewport (audit U-06). A percentage
-							 *  class did not take effect on this Text (measured in the shipped
-							 *  frame), so the cap is a STYLE — the one place React Native Web
-							 *  always applies it. The expansion's Outcome line carries the whole
-							 *  word, and the spoken name repeats it. */
-							className={cx("shrink-0 text-body-sm", trailing.inkClass)}
-							style={isBridge ? { maxWidth: "40%" } : undefined}
+							className={cx("shrink-0 text-body-sm", trailing?.inkClass)}
 							numberOfLines={1}
 						>
-							{trailing.text}
+							{word}
 						</Text>
 					) : null}
 					{/* Suppressed entirely when both counts are zero — `+0 −0` is noise
@@ -430,16 +506,24 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					 *  resend decision leans on the target being readable somewhere. Only
 					 *  rows carrying a delivery word render it: a `delivered` send is the
 					 *  row it always was. */}
-					{(word !== null && entry.summary) || isBridge ? (
-						/* A bridge headline is single-line on the row, so the expansion
-						 *  restates it whole and wrapping — the same recoverability rule. */
-						<Text className="text-body-sm text-ink-dim">{headline}</Text>
+					{word !== null && entry.summary ? (
+						/* The send row's restatement ONLY. A bridge card opens on the
+						 *  daemon's headline instead: repeating the row's own line made
+						 *  the top of the card say what the row already said (design
+						 *  round 1, D1), and the row line is one tap away anyway. */
+						<Text className="text-body-sm text-ink-dim">{entry.summary}</Text>
 					) : null}
 					{entry.intent ? (
 						<Text className="text-body-sm text-ink-muted">{entry.intent}</Text>
 					) : null}
-					{entry.error ? (
-						<Text className="text-body-sm text-danger">{entry.error}</Text>
+					{/* A bridge card whose daemon sentence states the outcome does not
+					    repeat it in a raw red line: three restatements of one fact led the
+					    panel (design round 1, D5), and the relay scrubs the sentence on
+					    the wire while this raw line can still carry an id. */}
+					{entry.error && !bridgeStated ? (
+						<Text className="text-body-sm text-danger">
+							{isBridge ? scrubOpaqueIds(entry.error) : entry.error}
+						</Text>
 					) : null}
 					{/* The delivery state's wrapping sentence — what the state means and
 					    what to do about it, including the check-before-resending hint the
@@ -455,13 +539,20 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							{note}
 						</Text>
 					) : null}
-					{/* The bridge facts, all of them the relay's own words: the target's
-					    name when it sent one, then `bridge_copy.outcome_sentence` — what
-					    the outcome means — then the message itself through the
-					    transcript's markdown renderer. It is prose a person wrote for
-					    people, and it wraps instead of scrolling a mono well sideways. */}
-					{bridgeTarget !== null ? (
-						<Text className="text-body-sm text-ink-muted">{bridgeTarget}</Text>
+					{/* The bridge CARD, in the relay SPA's order and hierarchy (design
+					    round 1, D1/D6/D7): the daemon's headline as the title, then the
+					    message in its own sunken well, then the outcome sentence. No
+					    separate target line — the headline already names the target, so
+					    a second line printed it twice (D1). The title takes full ink and
+					    the sentence recedes, because the card's own name is what a reader
+					    scans for (D6: the title measured weaker than its own gloss). */}
+					{cardTitle !== "" ? (
+						<Text className="text-body-sm text-ink">{cardTitle}</Text>
+					) : null}
+					{bridgeMessage !== null ? (
+						<View className="rounded-sm bg-sunken p-2">
+							<Markdown text={bridgeMessage} />
+						</View>
 					) : null}
 					{bridgeCopy !== null && bridgeCopy.outcomeSentence !== "" ? (
 						<Text
@@ -469,7 +560,8 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 								"text-body-sm",
 								bridgeOutcome?.tone === "danger"
 									? "text-danger"
-									: bridgeOutcome?.tone === "warning"
+									: bridgeOutcome?.tone === "warning" ||
+											bridgeOutcome?.tone === "pending"
 										? "text-warning"
 										: "text-ink-muted",
 							)}
@@ -477,12 +569,14 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							{bridgeCopy.outcomeSentence}
 						</Text>
 					) : null}
-					{bridgeMessage !== null ? <Markdown text={bridgeMessage} /> : null}
 					{showArgs ? (
 						<TextBlock lines={blocks.args} tone="text-ink-muted" />
 					) : null}
 					{blocks.diff.length > 0 ? <DiffBlock lines={blocks.diff} /> : null}
-					{blocks.output.length > 0 ? (
+					{/* Same rule for the raw output: on a bridge card the tool's text is
+					    the receipt the sentence already states — the `ok` well said
+					    nothing and outranked everything (design round 1, D5). */}
+					{blocks.output.length > 0 && !bridgeStated ? (
 						<TextBlock
 							lines={blocks.output}
 							tone="text-ink-muted"

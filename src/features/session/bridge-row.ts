@@ -6,37 +6,50 @@
  * row it showed the word `bridge`, a machine summary and — worst — a settled
  * tick on a message that never reached a conversation (the peer-inbox path),
  * which is exactly the "it went" reading that makes a person resend or assume a
- * colleague saw something they did not. The desktop and TUI lane
- * (local-operator c733bb5b44de) fixed the contract at the source: the relay now
- * sends `entry.summary` already localized for bridge rows (never an opaque
- * `bcv_…` id), and attaches a structured `details.bridge_row`:
+ * colleague saw something they did not.
  *
- *   { op, action, target: { kind, label }, preview, count, emoji,
- *     outcome: null | inbox_only | refused | failed | unconfirmed
- *              | awaiting_acceptance,
- *     code }
+ * THE CONTRACT IS THE RELAY'S, field for field (local-operator
+ * `feat/mobile-relay-bridge-row`, `mobile/projection.py`):
  *
- * This module turns that payload into what the row paints. It is pure (no
- * React) so `vitest` pins every arm in Node, the way `delivery.ts` pins the
- * send row's states.
+ *   details.bridge_row  = { op, action, target: { kind, label }, preview,
+ *                           count, emoji, outcome, code }
+ *   details.bridge_copy = { outcome, headline, outcome_sentence }
  *
- * THE RULES, each the contract's, not this file's invention:
+ * `bridge_row` is the FACTS (which op, where, how it ended); `bridge_copy` is
+ * the WORDS, rendered server-side from the core's `wire.tool_rows.bridge.*`
+ * catalogue in the reader's locale. This app paints those words verbatim and
+ * mints none of its own — a second translation of one decision is the drift
+ * the shared copy exists to remove. No words means NO CHIP, never guessed
+ * English.
+ *
+ * THE SPLIT BETWEEN THE ROW AND THE CARD is the relay SPA's (its
+ * `bridgeSummary` / `BridgeExpansion`, `mobile/web/src/components/tool-row.tsx`):
+ *
+ *   - the ROW paints `entry.summary` — verb, target and the message PREVIEW,
+ *     with the outcome TAIL stripped (the chip already says that) and every
+ *     opaque id removed;
+ *   - the CARD paints `bridge_copy.headline`, the daemon's rendered title.
+ *
+ * Painting the card's headline on the row instead (this module's first shape)
+ * lost the preview and printed one string twice, which is what design round 1
+ * measured as D1.
+ *
+ * This module is pure (no React), so `vitest` pins every arm in Node the way
+ * `delivery.ts` pins the send row's states.
+ *
+ * THE RULES, each the contract's:
  *
  *   - **Parse defensively; unknown reads as absent.** A missing, non-object or
- *     malformed `bridge_row` — an older relay, or a future field this build does
- *     not know — yields `null`, and the row keeps the generic treatment (icon
- *     and headline only, no outcome word). An outcome string this build does not
- *     know is `null` too: inventing a verdict for it would be this surface
- *     claiming something the relay did not say. The same forward-only rule
- *     `deliveryStateFromDetails` follows.
- *   - **`inbox_only` is never success.** The message landed in a peer's inbox,
- *     not in a conversation anyone reads; it is painted amber with its own words
- *     and the warning mark, never the tick.
- *   - **No opaque ids on the headline.** The relay promises a localized summary,
- *     but a mixed-build frame (an older relay beside this client) may still
- *     carry `bcv_…`/`bcmsg_…`/`acc_…`/`ep_…` tokens; those are stripped here so
- *     the one line a reader scans never shows an id they cannot act on. The raw
- *     output block in the expansion is untouched — that is where ids belong.
+ *     malformed payload — an older relay, or a future field — yields `null`,
+ *     and the row keeps the generic treatment. An outcome string this build
+ *     does not know is `null` too: inventing a verdict for it would be this
+ *     surface claiming something the relay did not say.
+ *   - **No outcome is ever success ink.** `inbox_only` is a warning, the two
+ *     pending outcomes are the app's `partial` amber (never the green tick: a
+ *     write nobody confirmed must not scan as done), and a refusal is danger.
+ *   - **No opaque ids on anything a reader scans.** The relay scrubs the copy
+ *     on the wire; a mixed-build summary may still carry `bcv_`…, so the row
+ *     scrubs again. The relay's own token set, matched the same way.
  */
 
 import type { TranscriptEntry } from "@/contracts";
@@ -76,7 +89,11 @@ const TARGET_KINDS: ReadonlySet<string> = new Set<BridgeTargetKind>([
 	"none",
 ]);
 
-/** The parsed payload: only the fields this client renders, each narrowed. */
+/**
+ * The parsed tokens — only what this row READS. `preview`, `count` and `emoji`
+ * are on the wire and are already in `entry.summary` (the relay renders them
+ * into it); narrowing fields nothing paints was design round 1's N1.
+ */
 export interface BridgeRow {
 	op: string | null;
 	action: string | null;
@@ -84,20 +101,21 @@ export interface BridgeRow {
 	/** The relay's human label for the target (a channel or person name), or
 	 *  `null` when absent or when it is itself an opaque id. */
 	targetLabel: string | null;
-	preview: string | null;
-	count: number | null;
-	emoji: string | null;
 	/** `null` is the settled, unremarkable case: nothing to say beside the row. */
 	outcome: BridgeOutcome | null;
 	code: string | null;
 }
 
 /** Whether a row is a bridge row at all — the gate every reader goes through,
- *  so a lookalike `bridge_row` key on another tool never grows the treatment
- *  (the `sendDeliveryStateOf` lesson). */
+ *  so a lookalike payload on another tool never grows the treatment (the
+ *  `sendDeliveryStateOf` lesson). Non-string `tool_name` (a malformed frame)
+ *  reads as "not a bridge row" rather than throwing: this module's first rule
+ *  is that unknown input falls back to the generic row. */
 export const isBridgeRow = (
 	entry: Pick<TranscriptEntry, "tool_name">,
-): boolean => entry.tool_name.toLowerCase() === BRIDGE_TOOL_NAME;
+): boolean =>
+	typeof entry.tool_name === "string" &&
+	entry.tool_name.toLowerCase() === BRIDGE_TOOL_NAME;
 
 const stringOrNull = (value: unknown): string | null =>
 	typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -106,9 +124,11 @@ const stringOrNull = (value: unknown): string | null =>
  * Opaque Team Bridge ids: conversation (`bcv_`), message (`bcmsg_`), account
  * (`acc_`) and endpoint (`ep_`). Word-bounded so a real word that merely
  * contains `ep_` mid-token is left alone; the tail is the id alphabet the core
- * mints (letters, digits, `-` and `_`).
+ * mints (letters, digits, `-` and `_`) — the same token set the relay's
+ * `_BRIDGE_ID_RE` uses, case-insensitively, because a real id can carry either
+ * case and a tail with `-` (`ep_01J-ABC`) must not leave its second half.
  */
-const OPAQUE_ID = /\b(?:bcv|bcmsg|acc|ep)_[A-Za-z0-9_-]+/g;
+const OPAQUE_ID = /\b(?:bcv|bcmsg|acc|ep)_[A-Za-z0-9_-]+/gi;
 const RUNS_OF_SPACE = /\s+/g;
 /** A separator an id leaves dangling once removed: one followed directly by
  *  another separator or by the end (`to bcv_x · hi` → `to · hi`, not `to  · hi`). */
@@ -162,12 +182,6 @@ export function bridgeRowOf(
 		action: stringOrNull(row.action),
 		targetKind: TARGET_KINDS.has(kind) ? (kind as BridgeTargetKind) : "none",
 		targetLabel: scrubbedLabel,
-		preview: stringOrNull(row.preview),
-		count:
-			typeof row.count === "number" && Number.isFinite(row.count)
-				? row.count
-				: null,
-		emoji: stringOrNull(row.emoji),
 		outcome,
 		code: stringOrNull(row.code),
 	};
@@ -176,22 +190,17 @@ export function bridgeRowOf(
 /**
  * The relay's rendered WORDS for one bridge row — `details.bridge_copy`.
  *
- * The daemon renders these from the core's `wire.tool_rows.bridge.*`
- * catalogue in the reader's locale (local-operator #3205,
- * `local_operator/mobile/projection.py::_bridge_copy`), and this app paints
- * them VERBATIM. That is the whole point of the field: three surfaces, one
- * translation, so the phone mints no copy of its own for anything the relay
- * already decided. `outcome` is `""` for a plain landed call, and
- * `refused`/`failed` arrive with ` · <code>` already appended.
- *
- * A missing or malformed payload is `null`, and the row then shows **no
- * chip** — the relay's own rule ("if bridge_copy is missing, the relay shows
- * no chip; it never guesses English"), mirrored rather than second-guessed.
+ * Rendered by the daemon from the core's `wire.tool_rows.bridge.*` catalogue
+ * (`harness/bridge_copy.py`), already id-free on the wire
+ * (`projection.py::_bridge_copy` scrubs all three values). `outcome` is `""`
+ * for a plain landed call, and `refused`/`failed` arrive with ` · <code>`
+ * already appended. A missing or malformed payload is `null`, and the row then
+ * shows no chip — the relay's own rule, mirrored rather than second-guessed.
  */
 export interface BridgeCopy {
-	/** The chip's word; `""` when the call is unremarkable. */
+	/** The chip's whole text: the word, plus ` · <code>` for a refusal. */
 	outcome: string;
-	/** The expansion's headline (the relay's, with ids kept out by the core). */
+	/** The daemon's title for the expanded card. */
 	headline: string;
 	/** The expanded card's sentence: what the outcome means, in words. */
 	outcomeSentence: string;
@@ -218,27 +227,93 @@ export function bridgeCopyOf(
 	};
 }
 
+/** The chip split into its word and its code — see `bridgeOutcomeView`. */
+export interface BridgeOutcomeView {
+	/** The whole relay text, for the accessible name and the full width. */
+	text: string;
+	/** The word alone (`refused`, `not posted to a conversation`). */
+	word: string;
+	/** ` · <code>` as the relay appended it, or `""`. */
+	code: string;
+	tone: BridgeOutcomeTone;
+}
+
 /**
- * The one line the collapsed row and its spoken name lead with: the relay's
- * rendered headline (`bridge_copy.headline`), else its localized `summary` —
- * which is the same decision made for the older relay that sent no
- * `bridge_copy` — with opaque ids stripped. The tool's own name is the last
- * resort, so the line is never blank (a row still composing).
+ * The chip's ink. Three tones, not four: the two PENDING outcomes share the
+ * amber `warning` ink with `inbox_only` rather than a muted grey. A settled
+ * tick beside "awaiting acceptance" reads as done, and the reader's next move
+ * (wait, or check) depends on it not reading that way — the relay's own D1/D6
+ * and the app's `partial` send arm take the same view.
  */
-export const bridgeHeadline = (
-	entry: Pick<TranscriptEntry, "summary" | "tool_name">,
-	copy: BridgeCopy | null = null,
-): string => copy?.headline || scrubOpaqueIds(entry.summary) || entry.tool_name;
+export type BridgeOutcomeTone = "warning" | "danger" | "pending";
 
-/** Which ink an outcome's chip takes, and which mark the row shows beside it. */
-export type BridgeOutcomeTone = "warning" | "danger" | "muted";
+const OUTCOME_TONE: Readonly<Record<BridgeOutcome, BridgeOutcomeTone>> = {
+	inbox_only: "warning",
+	refused: "danger",
+	failed: "danger",
+	unconfirmed: "pending",
+	awaiting_acceptance: "pending",
+};
 
 /**
- * The mark for an outcome, where the desktop row paints one of its own
- * (local-operator-ui #1529): `MessageSquareOff` for a peer inbox and
- * `Hourglass` for a post nobody has accepted yet. The other three keep the
- * shared tool-state glyphs, and no mark is the only channel
- * (`components.md` § 2.6): each also carries the relay's word beside it.
+ * The chip beside the row: the relay's words, split at the ` · ` it appended
+ * itself, or `null` when the relay sent none (no chip, never a guess) or the
+ * token is one this build cannot name a tone for. The tone comes from the
+ * machine token, never from the sentence — copy is not a data channel.
+ */
+export function bridgeOutcomeView(
+	row: BridgeRow | null,
+	copy: BridgeCopy | null,
+): BridgeOutcomeView | null {
+	if (row === null || row.outcome === null) return null;
+	if (copy === null || copy.outcome === "") return null;
+	const text = scrubOpaqueIds(copy.outcome);
+	if (text === "") return null;
+	const separator = text.indexOf(" · ");
+	return {
+		text,
+		word: separator > 0 ? text.slice(0, separator) : text,
+		code: separator > 0 ? text.slice(separator) : "",
+		tone: OUTCOME_TONE[row.outcome],
+	};
+}
+
+/**
+ * The row's leading GLYPH, as a decision rather than a render (design round 1,
+ * R2): `bridgeGlyphFor` had grown inside the component, where no Node test can
+ * reach it, and it is the one place the "never a success tick for an unconfirmed
+ * write" rule lives.
+ *
+ * The three tones map to the app's existing vocabulary:
+ *   - `warning` / `pending` take the `!` partial mark in amber — the same arm the
+ *     send row uses for a wake-unconfirmed delivery, so one scan of the glyph
+ *     column never says "done" for a write nobody confirmed;
+ *   - `danger` takes `✗` in danger ink;
+ *   - no chip, or a relay that sent no words, keeps the tool state's own glyph
+ *     (`toolGlyph`), which is the row every other tool paints.
+ */
+export type BridgeGlyphDecision =
+	| { kind: "partial" }
+	| { kind: "failed" }
+	| { kind: "state" };
+
+export const bridgeGlyphFor = (
+	row: BridgeRow | null,
+	copy: BridgeCopy | null,
+): BridgeGlyphDecision => {
+	const tone = bridgeOutcomeView(row, copy)?.tone;
+	if (tone === "danger") return { kind: "failed" };
+	/* A refusal whose words the relay withheld has no tone to read, but it is
+	 * still a failed call: the tool state carries it, and the state glyph is ✗. */
+	if (tone === undefined) return { kind: "state" };
+	if (tone === "pending" || tone === "warning") return { kind: "partial" };
+	return { kind: "state" };
+};
+
+/**
+ * The mark the identity column draws, where the desktop row paints one of its
+ * own (local-operator-ui #1529): `MessageSquareOff` for a peer inbox and
+ * `Hourglass` for a post nobody has accepted yet.
  */
 export type BridgeMark = "message-off" | "hourglass" | null;
 
@@ -249,51 +324,127 @@ export const bridgeMark = (row: BridgeRow | null): BridgeMark =>
 			? "hourglass"
 			: null;
 
-const OUTCOME_TONE: Readonly<Record<BridgeOutcome, BridgeOutcomeTone>> = {
-	inbox_only: "warning",
-	refused: "danger",
-	failed: "danger",
-	unconfirmed: "muted",
-	awaiting_acceptance: "muted",
-};
+/**
+ * What the STATE column shows, as a decision rather than a render.
+ *
+ * Extracted from the component so every arm is testable in Node (design round
+ * 1, D2 measured a green tick on "awaiting acceptance", which no test could
+ * have caught while the mapping lived in a closure):
+ *
+ *   - `inbox_only` and the two PENDING outcomes take the app's `partial` arm —
+ *     `!` in warning ink, the same treatment a wake-unconfirmed `send` gets;
+ *   - `refused`/`failed` take the failure mark in danger ink;
+ *   - everything else (including a row with no readable outcome) keeps the
+ *     tool state's own glyph and ink.
+ *
+ * Never the only channel: each of these also carries the chip's word
+ * (`components.md` § 2.6).
+ */
+export interface BridgeGlyphOverride {
+	glyph: "!" | "✗";
+	/** Tailwind ink class, matching the tone. */
+	inkClass: string;
+	/** Only a running call pulses; an override is a settled fact. */
+	pulsing: false;
+}
 
-export interface BridgeOutcomeView {
-	/** The relay's own word, printed as sent. */
-	text: string;
-	tone: BridgeOutcomeTone;
+export function bridgeGlyphOverride(
+	row: BridgeRow | null,
+): BridgeGlyphOverride | null {
+	if (row === null || row.outcome === null) return null;
+	switch (row.outcome) {
+		case "inbox_only":
+		case "unconfirmed":
+		case "awaiting_acceptance":
+			return { glyph: "!", inkClass: "text-warning", pulsing: false };
+		case "refused":
+		case "failed":
+			return { glyph: "✗", inkClass: "text-danger", pulsing: false };
+	}
 }
 
 /**
- * The chip beside the row: the relay's `bridge_copy.outcome`, or `null` when
- * the relay sent no words (no chip, never a guess) or the outcome token is one
- * this build cannot name a tone for. The tone comes from the machine token
- * (`bridge_row.outcome`), never from the sentence — copy is not a data
- * channel, the same rule the send row's delivery states follow.
+ * The row's one line: the relay's summary, id-free, with the outcome tail the
+ * chip already shows REMOVED.
+ *
+ * The daemon's summary (`bridge_row_line`) ends ` · <outcome>` because a
+ * single-cell surface has no status cap of its own; this row has the chip, so
+ * leaving the tail would print the caveat twice. The strip order is the relay
+ * SPA's `bridgeSummary`, which needed three rounds to get right and is copied
+ * here rather than re-derived:
+ *
+ *   1. the FULL outcome, matched by TEXT (a refusal's outcome is itself two
+ *      segments — `refused · not_a_member` — so splitting on the last ` · `
+ *      would compare only `not_a_member` and miss);
+ *   2. a CAP of it: the projection compacts from the right, so the tail may
+ *      arrive cut anywhere, including inside the separator (`· refus…`,
+ *      `· refused · not_a…`, `· …`). Walk the separators from the end and keep
+ *      the outermost whose stub is empty or a prefix of the outcome.
  */
-export function bridgeOutcomeView(
+export function bridgeRowSummary(
+	entry: Pick<TranscriptEntry, "summary" | "tool_name">,
+	copy: BridgeCopy | null,
+	row: BridgeRow | null,
+): string {
+	const text = scrubOpaqueIds(entry.summary) || entry.tool_name;
+	const outcome = bridgeOutcomeView(row, copy);
+	if (outcome === null) return text;
+	const full = ` · ${outcome.text}`;
+	if (text.endsWith(full)) return text.slice(0, -full.length);
+	if (!text.endsWith("…")) return text;
+	let capped = text.slice(0, -1);
+	if (capped.endsWith(" ·")) capped += " ";
+	let cut = -1;
+	for (
+		let separator = capped.lastIndexOf(" · ");
+		separator >= 0;
+		separator = capped.lastIndexOf(" · ", separator - 1)
+	) {
+		const tail = capped.slice(separator + 3).trimEnd();
+		if (tail.length > outcome.text.length) break;
+		if (tail === "" || outcome.text.startsWith(tail)) cut = separator;
+	}
+	return cut >= 0 ? text.slice(0, cut) : text;
+}
+
+/** The card's title: the daemon's rendered headline, or `""` when it sent none
+ *  (the card then opens on its sentence and body rather than inventing one). */
+export const bridgeCardHeadline = (copy: BridgeCopy | null): string =>
+	copy?.headline ?? "";
+
+/**
+ * The accessible name for a bridge row (design round 1, R1).
+ *
+ * Three parts, in the order a screen reader should hear them: the stable
+ * IDENTITY noun, the TOOL STATE, then the relay's chip word when there is one,
+ * then the row line. The state is what keeps a row readable when the relay sent
+ * no words — `bridge-nocopy`'s refused call must not announce a bare headline —
+ * and the noun keeps "which tool was this" answerable, because the visible name
+ * on a bridge row is an icon.
+ *
+ * Deliberately NOT invented here: an English word for the outcome token. With
+ * no `bridge_copy` the relay has said nothing to print, and "refused" would be
+ * this app minting copy the daemon owns (see the module header).
+ */
+export function bridgeAccessibleName(
+	entry: Pick<TranscriptEntry, "tool_name" | "tool_state" | "summary">,
 	row: BridgeRow | null,
 	copy: BridgeCopy | null,
-): BridgeOutcomeView | null {
-	if (row === null || row.outcome === null) return null;
-	if (copy === null || copy.outcome === "") return null;
-	return { text: copy.outcome, tone: OUTCOME_TONE[row.outcome] };
+): string {
+	const line = bridgeRowSummary(entry, copy, row);
+	const chip = bridgeOutcomeView(row, copy)?.text ?? "";
+	/* `bridge <state>[, <chip>][, <line>]` — the state never dropped: a refusal
+	 * whose words the relay withheld must still announce that it failed. */
+	const head = `${BRIDGE_TOOL_NAME} ${entry.tool_state}`;
+	return [head, chip, line === BRIDGE_TOOL_NAME ? "" : line]
+		.filter((part) => part !== "")
+		.join(", ");
 }
 
 /**
- * The target's own name for the expansion (`#release`, a person), when the
- * relay sent one that is not an opaque id. There is no invented kind word any
- * more: the relay's `bridge_copy` says what happened in a sentence, and a
- * second, app-minted label would be copy the daemon never approved.
- */
-export const bridgeTargetLabel = (row: BridgeRow | null): string | null =>
-	row?.targetLabel ?? null;
-
-/**
- * The message body the agent sent, for the expansion's markdown block: the
- * call's `body` (the tool's own argument) or `text`, as a string. The relay
- * keeps that argument's newlines so markdown renders (`projection.py`,
- * `_compact_multiline`). Anything else is `null`, and the row falls back to
- * its generic args block.
+ * The message body the agent sent, for the card's markdown block: the call's
+ * `body` (the tool's own argument) or `text`. The relay keeps that argument's
+ * newlines so markdown renders (`projection.py`, `_compact_multiline`).
  */
 export function bridgeBody(
 	entry: Pick<TranscriptEntry, "tool_name" | "details">,
@@ -303,3 +454,33 @@ export function bridgeBody(
 	if (args === null || typeof args !== "object") return null;
 	return stringOrNull(args.body) ?? stringOrNull(args.text);
 }
+
+/**
+ * How much of the chip a row can show, from the row's own width.
+ *
+ * The relay SPA decides this with container queries (`@max-[24rem]`,
+ * `@max-[18rem]`); React Native has none, so the same two thresholds are
+ * applied to the measured row width instead. Measured on the shipped frames
+ * (design round 1, D3): at 390 pt both the line and the chip truncated and the
+ * chip had 13 pt MORE than the line, because the line had no floor and the chip
+ * had only a cap.
+ *
+ *   - `full`      — the word and the code (a refusal keeps its code);
+ *   - `capped`    — the word, the code dropped WHOLE (never cut mid-token);
+ *   - `mark-only` — a marked chip collapses to its mark; its word stays in the
+ *                   accessible name, which is this platform's equivalent of the
+ *                   SPA's `sr-only` (RN has no such utility, and a zero-size
+ *                   text node would be a lie about the layout).
+ */
+export type BridgeChipBucket = "full" | "capped" | "mark-only";
+
+/** 24 rem and 18 rem, the relay's own thresholds, in points. */
+export const BRIDGE_CHIP_FULL_MIN_PT = 384;
+export const BRIDGE_CHIP_WORD_MIN_PT = 288;
+
+export const bridgeChipBucket = (rowWidthPt: number): BridgeChipBucket =>
+	rowWidthPt >= BRIDGE_CHIP_FULL_MIN_PT
+		? "full"
+		: rowWidthPt >= BRIDGE_CHIP_WORD_MIN_PT
+			? "capped"
+			: "mark-only";
