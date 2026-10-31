@@ -1794,6 +1794,26 @@ export const U42_EXEMPTIONS: Array<{
 	reason: string;
 }> = [
 	{
+		/* The tool row's expansion container (`components/tool-row.tsx`,
+		 * `flex flex-col gap-1.5 pb-1 pl-6`): the 6 pt step between an expanded
+		 * row's blocks. It predates the bridge row (identical on `origin/main`),
+		 * and the bridge cell is simply the first audited cell that OPENS a tool
+		 * row, which is why it scores now. 6 pt sits between the 4 and 8 steps in
+		 * `space.scale`; moving it re-spaces every expanded tool row in the app,
+		 * so it belongs to the same UI-wide vocabulary sweep the records below
+		 * name. Recorded rather than passed (design round 1, U-42). */
+		path: "div.css-g5y9jx.rounded-sm>div.css-g5y9jx.flex",
+		value: 6,
+		properties: ["row-gap", "column-gap"],
+		reason:
+			"the tool row's expanded-card gap (`tool-row.tsx`, `flex flex-col gap-1.5`; the node " +
+			"reads as `div.rounded-sm > div.flex` in the audit's path because RN Web compiles the " +
+			"utilities into one hashed class) — a " +
+			"pre-existing 6 pt block step, unchanged by the bridge row, which only made it " +
+			"visible by opening a tool row in an audited cell; re-spacing it touches every " +
+			"expanded card in the app and belongs to the vocabulary sweep, not to this row.",
+	},
+	{
 		path: ">div.css-g5y9jx.gap-1.5",
 		value: 6,
 		properties: ["row-gap", "column-gap"],

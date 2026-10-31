@@ -1667,6 +1667,524 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		},
 	);
 
+	/* The `bridge` tool's row (Team Bridge posts, DMs, reactions and reads), as
+	 * the relay really sends it: `details.bridge_row` = the tokens, and
+	 * `details.bridge_copy` = the WORDS rendered server-side from the core's
+	 * `wire.tool_rows.bridge.*` catalogue (local-operator #3205,
+	 * `mobile/projection.py::_bridge_copy`).
+	 *
+	 * EVERY string below is verbatim from
+	 * `local_operator/i18n/catalogues/en/wire.tool_rows.bridge.json` at relay head
+	 * `42085b43` (the key is named beside each one), and every summary is what
+	 * `harness/bridge_copy.py::bridge_row_line` produces for those tokens. The
+	 * first shape of this fixture invented its own English; design round 1 (D4)
+	 * measured a refusal card headed "Posted to #leadership" as a result, which
+	 * is a frame proving a sentence the daemon would never send. A fixture is a
+	 * wire contract, so it quotes the wire.
+	 *
+	 * Two turns:
+	 *
+	 *   - the FIRST is complete and a newer turn exists, so it condenses — a
+	 *     bridge post and a `send` side by side, proving the bridge row rolls into
+	 *     the bar like any tool (`turn-condensing.test.ts` pins the count);
+	 *   - the SECOND is the showroom and ENDS on peer-inbox, refusal and a clean
+	 *     post: the list anchors to its tail, and on the 320 pt floor only the
+	 *     last rows (and an expansion opened among them) are in frame.
+	 *
+	 * `shows` is EMPTY, as `imagegen` explains for its own case: a registered S5
+	 * cell needs an app-side state marker, which this row does not add. The frames
+	 * come from ad-hoc cells:
+	 *
+	 *   path:/session/{sessionId}/bridge                     the collapsed tail
+	 *   path:/session/{sessionId}/bridge-expanded            the post opened
+	 *   path:/session/{sessionId}/bridge-outcomes-open       inbox + refusal opened
+	 *   path:/session/{sessionId}?lo-scroll=top/bridge-condensed
+	 *                                                        the condensed turn
+	 *   path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-condensed-open
+	 *                                                        the same turn opened */
+	add(
+		"bridge-tool-row",
+		"Team Bridge tool rows in each outcome of the real wire — a clean post with a markdown body, peer inbox only, refused with its code, delivery unconfirmed, awaiting acceptance, an id-bearing older-relay summary, a row whose words the relay withheld — plus a completed turn mixing bridge and send that condenses.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the bridge-tool-row base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const at = (
+				id: string,
+				kind: Row["kind"],
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id,
+				kind,
+				tool_call_id: kind === "tool" ? id : "",
+				tool_name: "",
+				tool_state: "done",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			/* One bridge call. `row` is the token dict, `copy` the daemon's words —
+			 * both passed whole so each fixture line reads as the wire does. `args`
+			 * carries the call's own op (the args block and the tokens must agree:
+			 * design round 1, N4). */
+			const bridgeRow = (
+				id: string,
+				fixture: {
+					summary: string;
+					row: Record<string, unknown> | null;
+					copy: Record<string, unknown> | null;
+					args: Record<string, unknown>;
+					overrides?: Partial<Row>;
+				},
+			): Row =>
+				at(`tc-${id}`, "tool", {
+					tool_name: "bridge",
+					summary: fixture.summary,
+					elapsed_s: 1.2,
+					details: {
+						args: fixture.args,
+						...(fixture.row === null ? {} : { bridge_row: fixture.row }),
+						...(fixture.copy === null ? {} : { bridge_copy: fixture.copy }),
+						output: "ok",
+					} as Row["details"],
+					...(fixture.overrides ?? {}),
+				});
+			const body =
+				"**Nightly sweep is green.**\n\n- 412 tests passed\n- the flaky `relay-reconnect` case is fixed in #2210\n\nNext cut goes out at 18:00 unless someone objects here.";
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					at("m-bridge-u1", "user", {
+						text: "Tell the release channel the sweep is green, and ping the audit session.",
+					}),
+					bridgeRow("bridge-old", {
+						/* bridge_row_line("Posted in", "#release · Sweep is green", null) */
+						summary: "Posted in #release · Sweep is green",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#release" },
+							preview: "Sweep is green",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							/* wire.tool_rows.bridge.verb_settled.channel_post + target */
+							headline: "Posted in #release",
+							/* wire.tool_rows.bridge.expanded.posted */
+							outcome_sentence: "Posted.",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "release",
+							body: "Sweep is green",
+						},
+						overrides: { elapsed_s: 0.9 },
+					}),
+					at("tc-send-old", "tool", {
+						tool_name: "send",
+						summary: "→ nightly-audit · sweep is green",
+						elapsed_s: 2.1,
+						details: { delivery: { state: "delivered" }, output: "delivered" },
+					}),
+					at("m-bridge-a1", "assistant", {
+						text: "Posted to #release and told the audit session.",
+					}),
+					at("m-bridge-u2", "user", {
+						text: "Now post the full summary, DM Priya, and react to her message.",
+					}),
+					/* A reaction the hub could not confirm. `react` takes a CHANNEL
+					 * target (rows.py; design round 1, R4). */
+					bridgeRow("bridge-unconfirmed", {
+						summary: "Reacted in a conversation · 👍 · delivery unconfirmed",
+						row: {
+							op: "react",
+							action: "react",
+							target: { kind: "channel", label: null },
+							preview: null,
+							count: null,
+							emoji: "👍",
+							outcome: "unconfirmed",
+							code: "send_unconfirmed",
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.unconfirmed */
+							outcome: "delivery unconfirmed",
+							/* verb_settled.react + target.conversation */
+							headline: "Reacted in a conversation",
+							/* expanded.unconfirmed_bare — the error was empty */
+							outcome_sentence: "Delivery unconfirmed.",
+						},
+						args: { op: "react", message_id: "bcmsg_7f2a", emoji: "👍" },
+					}),
+					/* A DM to an agent whose owner has not accepted yet: the outcome
+					 * comes from `dm` with a non-active `recipient_state` (rows.py),
+					 * never from an op that does not exist. */
+					bridgeRow("bridge-awaiting", {
+						summary:
+							"Messaged Sam · Can you review the cut? · awaiting acceptance",
+						row: {
+							op: "dm",
+							action: "dm",
+							target: { kind: "dm", label: "Sam" },
+							preview: "Can you review the cut?",
+							count: null,
+							emoji: null,
+							outcome: "awaiting_acceptance",
+							code: null,
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.awaiting_acceptance */
+							outcome: "awaiting acceptance",
+							/* wire.tool_rows.bridge.expanded.dm_headline */
+							headline: "Direct message to Sam",
+							/* wire.tool_rows.bridge.expanded.awaiting_acceptance */
+							outcome_sentence:
+								"Posted, but the recipient agent is invited — its owner must accept before it is woken.",
+						},
+						args: {
+							op: "dm",
+							recipient: "sam",
+							body: "Can you review the cut?",
+						},
+					}),
+					/* An OLDER relay: its summary still carries the conversation id,
+					 * and so does the headline it rendered. Both must be scrubbed —
+					 * the row paints the summary, the card the headline, so this one
+					 * row proves both paths (design round 1, R5/Q2). */
+					bridgeRow("bridge-stray-id", {
+						summary: "Posted in bcv_01JC9X7Q2M8T · cut list attached",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: null },
+							preview: "cut list attached",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							headline: "Posted in bcv_01JC9X7Q2M8T",
+							outcome_sentence: "Posted.",
+						},
+						args: { op: "channel_post", body: "cut list attached" },
+					}),
+					/* No `bridge_row` and no `bridge_copy` at all: the generic row,
+					 * with an id in its summary so the fallback scrub is exercised. */
+					bridgeRow("bridge-prefield", {
+						summary: "Read bcv_01JC9X7Q2M8T directory",
+						row: null,
+						copy: null,
+						args: { op: "directory" },
+					}),
+					/* Tokens but NO words: the relay's rule is "no chip, never a
+					 * guess", so a refused call shows no caveat here. */
+					bridgeRow("bridge-nocopy", {
+						summary:
+							"Couldn't post in #leadership · Heads-up · refused · not_a_member",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#leadership" },
+							preview: "Heads-up",
+							count: null,
+							emoji: null,
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						copy: null,
+						args: {
+							op: "channel_post",
+							channel_id: "leadership",
+							body: "Heads-up: the cut moves to 18:00.",
+						},
+						overrides: { tool_state: "failed" },
+					}),
+					/* The copy-less AMBER arm (N4): the relay withheld its words, so there
+					 * is no chip — and the row must still read amber with the inbox mark,
+					 * never the success tick. This is R7's peer-inbox arm on screen. */
+					bridgeRow("bridge-inbox-nocopy", {
+						/* No tail: with no words there is no chip to carry one, and the
+						 * relay's localised tail is vocabulary this app does not mint, so
+						 * it cannot be stripped here (the row would cut into `· …`). */
+						summary: "Sent to Priya · Can you look at the cut?",
+						row: {
+							op: "send",
+							action: "send",
+							target: { kind: "dm", label: "Priya" },
+							preview: "Can you look at the cut?",
+							count: null,
+							emoji: null,
+							outcome: "inbox_only",
+							code: null,
+						},
+						copy: null,
+						args: {
+							op: "send",
+							recipient: "priya",
+							body: "Can you look at the cut?",
+						},
+					}),
+					/* The refusal: the sentence carries the error AND the code, as
+					 * `expanded.refused` renders them. */
+					bridgeRow("bridge-refused", {
+						summary:
+							"Couldn't post in #leadership · Heads-up: the cut moves · refused · not_a_member",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#leadership" },
+							preview: "Heads-up: the cut moves",
+							count: null,
+							emoji: null,
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						copy: {
+							/* outcome.refused + the code the relay appends */
+							outcome: "refused · not_a_member",
+							/* verb_failed.channel_post + target */
+							headline: "Couldn't post in #leadership",
+							/* expanded.refused: {error} ({code}) */
+							outcome_sentence:
+								"Refused: not a member of channel_id=#leadership (not_a_member)",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "leadership",
+							body: "Heads-up: the cut moves to 18:00.",
+						},
+						overrides: {
+							tool_state: "failed",
+							error: "not a member of channel_id=#leadership",
+						},
+					}),
+					/* A DM that only reached the peer's inbox: the arm that must
+					 * never read as success. */
+					bridgeRow("bridge-inbox", {
+						summary:
+							"Sent to Priya · Can you look at the cut list? · not posted to a conversation",
+						row: {
+							op: "send",
+							action: "send",
+							target: { kind: "person", label: "Priya" },
+							preview: "Can you look at the cut list?",
+							count: null,
+							emoji: null,
+							outcome: "inbox_only",
+							code: null,
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.inbox_only */
+							outcome: "not posted to a conversation",
+							headline: "Sent to Priya",
+							/* wire.tool_rows.bridge.expanded.inbox_only */
+							outcome_sentence:
+								"Accepted into their inbox — not posted to a conversation or shown in Team Bridge. Use a DM to be seen.",
+						},
+						args: {
+							op: "send",
+							recipient: "priya",
+							body: "Can you look at the cut list before 18:00?",
+						},
+					}),
+					/* The clean post: the showroom's tail, and the row the expanded
+					 * cell opens (a markdown body). */
+					bridgeRow("bridge-post", {
+						summary: "Posted in #release · Nightly sweep is green.",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#release" },
+							preview: "Nightly sweep is green.",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							headline: "Posted in #release",
+							/* wire.tool_rows.bridge.expanded.posted_at */
+							outcome_sentence: "Posted at seq 412",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "release",
+							body,
+						},
+					}),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
+	/* A TWO-ROW world, for the frames the full showroom cannot give: at 320 pt
+	 * the showroom's second turn ends under the composer, so an expanded card
+	 * opens behind it and the frame is byte-identical to the collapsed one
+	 * (design round 1, D8; review R6). Here one bridge row sits directly under a
+	 * one-line request, so its card has the room to be photographed at the
+	 * narrowest phone in both themes. Same wire strings as `bridge-tool-row`. */
+	add(
+		"bridge-tool-row-compact",
+		"One bridge post under a one-line request, so the expanded card fits a 320 pt frame.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the bridge-tool-row-compact base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const at = (
+				id: string,
+				kind: Row["kind"],
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id,
+				kind,
+				tool_call_id: kind === "tool" ? id : "",
+				tool_name: "",
+				tool_state: "done",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					at("m-compact-u1", "user", {
+						text: "Post the sweep summary to #release.",
+					}),
+					at("tc-compact-post", "tool", {
+						tool_name: "bridge",
+						summary: "Posted in #release · Nightly sweep is green.",
+						elapsed_s: 1.2,
+						details: {
+							args: {
+								op: "channel_post",
+								channel_id: "release",
+								body: "**Nightly sweep is green.** 412 tests, no flakes.",
+							},
+							bridge_row: {
+								op: "channel_post",
+								action: "channel_post",
+								target: { kind: "channel", label: "#release" },
+								preview: "Nightly sweep is green.",
+								count: null,
+								emoji: null,
+								outcome: null,
+								code: null,
+							},
+							bridge_copy: {
+								outcome: "",
+								headline: "Posted in #release",
+								outcome_sentence: "Posted at seq 412",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					/* The two PENDING outcomes, so their CARDS can open in a world
+					 * short enough to show one at 320 pt (design round 2, D7): the
+					 * showroom's copies of these rows sit high enough that only their
+					 * collapsed lines fit a narrow frame. */
+					at("tc-compact-awaiting", "tool", {
+						tool_name: "bridge",
+						summary:
+							"Messaged Sam · Can you review the cut? · awaiting acceptance",
+						elapsed_s: 1.2,
+						details: {
+							args: {
+								op: "dm",
+								recipient: "sam",
+								body: "Can you review the cut?",
+							},
+							bridge_row: {
+								op: "dm",
+								action: "dm",
+								target: { kind: "dm", label: "Sam" },
+								preview: "Can you review the cut?",
+								count: null,
+								emoji: null,
+								outcome: "awaiting_acceptance",
+								code: null,
+							},
+							/* The real `wire.tool_rows.bridge.*` sentences (relay lane,
+							 * `relay.transcript.json`): the card paints them verbatim. */
+							bridge_copy: {
+								outcome: "awaiting acceptance",
+								headline: "Direct message to Sam",
+								outcome_sentence:
+									"Posted, but the recipient agent is invited — its owner must accept before it is woken.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					at("tc-compact-unconfirmed", "tool", {
+						tool_name: "bridge",
+						summary: "Reacted in a conversation · 👍 · delivery unconfirmed",
+						elapsed_s: 1.1,
+						details: {
+							args: { op: "react", message_id: "msg-1", emoji: "👍" },
+							bridge_row: {
+								op: "react",
+								action: "react",
+								target: { kind: "channel", label: null },
+								preview: null,
+								count: null,
+								emoji: "👍",
+								outcome: "unconfirmed",
+								code: "send_unconfirmed",
+							},
+							bridge_copy: {
+								outcome: "delivery unconfirmed",
+								headline: "Reacted in a conversation",
+								outcome_sentence: "Delivery unconfirmed.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					at("m-compact-a1", "assistant", { text: "Posted." }),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
 	/* The image-generation card's states, as the app renders them (the native
 	 * surface's imagegen lane; the wire shape froze 2026-10-09, local-operator
 	 * #2089). One row per state the card draws: queued without and with a queue

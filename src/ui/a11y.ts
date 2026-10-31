@@ -998,6 +998,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"transcript-image-",
 	"transcript-video-",
 	"imagegen-cancel-",
+	/* One tool row's disclosure, keyed by the entry: the press a capture cell
+	 *  makes to show a row's expansion (the bridge row's markdown body), since
+	 *  the row's own `transcript-row-` id sits on the wrapper, not the control. */
+	"tool-row-toggle-",
 	"attach-option-",
 	/* The Library's parameterised identifiers: one tile per asset, one tag chip
 	 *  per catalogue tag (and one per assigned tag in the editor). */
@@ -1925,6 +1929,10 @@ export const transcriptVideoId = (entryId: string, index: number): string =>
  *  Maestro's `id:` matching would otherwise pick one arbitrarily. */
 export const imagegenCancelId = (entryId: string): string =>
 	`imagegen-cancel-${entryId}`;
+
+/** One tool row's disclosure control, keyed by the entry it belongs to. */
+export const toolRowToggleId = (entryId: string): string =>
+	`tool-row-toggle-${entryId}`;
 
 /** One model in the model sheet. */
 export const modelOptionId = (modelId: string): string =>

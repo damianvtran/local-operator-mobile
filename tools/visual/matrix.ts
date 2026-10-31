@@ -25,6 +25,7 @@ import {
 	projectMilestoneEditId,
 	sessionRowId,
 	sessionTagOptionId,
+	toolRowToggleId,
 } from "../../src/ui/a11y.ts";
 import type { Affordance } from "../lib/affordance.ts";
 
@@ -922,6 +923,54 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 *  screen in the before-press frame. */
 	"path:/session/{sessionId}?lo-scroll=top/imagegen-cancel-queued": [
 		{ click: imagegenCancelId("tc-img-queued-position") },
+	],
+	/* The bridge row OPENED (`bridge-tool-row` scenario): the press is the
+	 *  row's own disclosure, so the frame shows what a reader sees after one
+	 *  tap — the Conversation line, and the markdown body wrapping. */
+	"path:/session/{sessionId}/bridge-expanded": [
+		{ click: toolRowToggleId("tc-bridge-post") },
+	],
+	/* The SAME card read from the TOP of the transcript (`lo-scroll=top` plus
+	 *  turn 1 restored), where its first lines are in frame at every width. The
+	 *  tail-anchored cells above only show a card the viewport has room for: on
+	 *  the 320 pt phone the expanded card lands behind the composer and the frame
+	 *  is byte-identical to the collapsed one, which is what design round 1 (D8)
+	 *  and review R6 measured. */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-top": [
+		{ click: toolRowToggleId("tc-bridge-old") },
+	],
+	/* The compact world's single post, opened — the frame that carries the CARD
+	 * at 320 pt (the showroom's card lands behind the composer there). */
+	"path:/session/{sessionId}/bridge-card": [
+		{ click: toolRowToggleId("tc-compact-post") },
+	],
+	/* D7 (design round 2): the two PENDING outcomes with their CARDS OPEN — the
+	 *  88-character awaiting sentence and the Hourglass arm, both of which need a
+	 *  world short enough to leave room for an expansion at 320 pt. */
+	/* N4/D7 gap: the copy-less amber row, and the AWAITING card opened on its own
+	 * so a 320 pt frame can hold it (pressing both pending rows scrolls past the
+	 * first card). */
+	/* …and the same card read from the TOP of the transcript, where its headline is
+	 * in frame at 320 pt (the tail-anchored cell above only has room for the
+	 * sentence). */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-compact-u1/bridge-awaiting-top":
+		[{ click: toolRowToggleId("tc-compact-awaiting") }],
+	"path:/session/{sessionId}/bridge-awaiting-open": [
+		{ click: toolRowToggleId("tc-compact-awaiting") },
+	],
+	"path:/session/{sessionId}/bridge-pending-open": [
+		{ click: toolRowToggleId("tc-compact-awaiting") },
+		{ click: toolRowToggleId("tc-compact-unconfirmed") },
+	],
+	/* …and the same rows without the card, for the collapsed-first-line case at
+	 *  200 %, where only a few rows fit. */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-top-collapsed":
+		[],
+	/* Same scenario: the refusal and the peer-inbox rows opened together, so
+	 *  one frame carries both Outcome lines. */
+	"path:/session/{sessionId}/bridge-outcomes-open": [
+		{ click: toolRowToggleId("tc-bridge-inbox") },
+		{ click: toolRowToggleId("tc-bridge-refused") },
 	],
 	/* --- the in-conversation find, over the long conversation (see the cells
 	 * on the `long-transcript` scenario). The lever and the field are the app's

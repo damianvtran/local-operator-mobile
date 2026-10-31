@@ -211,6 +211,54 @@ describe("the condense decision", () => {
 		]);
 	});
 
+	/* The bridge tool row is a tool row like `send`: it must roll into the
+	 * turn's bar (counted, timed, hidden) and must not split the turn — its
+	 * structured `details.bridge_row` and its outcome are render facts, never
+	 * condensing facts. Pinned because the row grew its own render arm. */
+	it("rolls bridge rows into the bar beside send, refusals counted as steps", () => {
+		const bridge = (id: string, outcome: string | null, elapsedS: number) =>
+			row({
+				id,
+				kind: "tool",
+				tool_name: "bridge",
+				tool_state: outcome === "refused" ? "failed" : "done",
+				summary: "Posted to #release",
+				elapsed_s: elapsedS,
+				details: {
+					args: { body: "**nightly** is green" },
+					bridge_row: { op: "post", outcome, code: null },
+				} as TranscriptEntry["details"],
+			});
+		const send = row({
+			id: "s1",
+			kind: "tool",
+			tool_name: "send",
+			elapsed_s: 2,
+			details: { delivery: { state: "mailbox" } },
+		});
+		const plan = planOf([
+			user("u1"),
+			bridge("b1", null, 1),
+			send,
+			bridge("b2", "inbox_only", 3),
+			bridge("b3", "refused", 4),
+			answer("a1"),
+			user("u2"),
+			tool("t9"),
+		]);
+		const [first] = plan.turns;
+		expect(first?.condensed).toBe(true);
+		expect(first?.bar).toEqual({ steps: 4, durationS: 10 });
+		expect(first?.hiddenIds).toEqual(["b1", "s1", "b2", "b3"]);
+		expect(plan.items.map((item) => item.id)).toEqual([
+			"u1",
+			"turn-bar-u1",
+			"a1",
+			"u2",
+			"t9",
+		]);
+	});
+
 	it("never condenses the active (last) turn, however complete it looks", () => {
 		const plan = planOf([user("u1"), tool("t1"), answer("a1")]);
 		expect(plan.turns[0]?.condensed).toBe(false);
@@ -943,6 +991,24 @@ describe("quietGroupsOf — the derivation", () => {
 				rowIds: ["p1", "t1", "q1", "p2", "t2", "q2"],
 			},
 		]);
+	});
+
+	it("counts bridge rows as the work between receipts, like send", () => {
+		const bridgeRow = row({
+			id: "b1",
+			kind: "tool",
+			tool_name: "bridge",
+			details: {
+				bridge_row: { outcome: "inbox_only" },
+			} as TranscriptEntry["details"],
+		});
+		const sendRow = row({ id: "s1", kind: "tool", tool_name: "send" });
+		const [group] = quietGroupsOf(
+			itemsOf([peer("p1", "a"), bridgeRow, sendRow, peer("p2", "b")]),
+		);
+		expect(group?.rowIds).toEqual(["p1", "b1", "s1", "p2"]);
+		expect(group?.actions).toBe(2);
+		expect(group?.failed).toBe(0);
 	});
 
 	it("one receipt is not a group", () => {

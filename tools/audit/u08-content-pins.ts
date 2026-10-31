@@ -71,7 +71,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
 	"tools/audit/checks.ts":
-		"d3225ab47f6fa1837240ec36eb55bec791cde6684c6106e4f61c5fd477104b9e",
+		"3b49282a11c21ec0437e80d4feb00a481d544c3554dd7dcfcb42793f85926ed9",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -134,7 +134,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"50d67b1f0951d36793dcaa4b2d961a1031b5bda2eb4a6bb46f08a35a07b2b70b",
+		"83f4c75b29fc623c59d9ebcd59a1d9d494036e659ac3fb60b7e2ded4049541cc",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -151,7 +151,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"dcd96584cb631e6aeb8dfc92a2ad0cb8187db3db9966fcb64f73bcd35102e098",
+		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -389,7 +389,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "7879983174b87cd789fea698597ba5fe875c6924c227db4b46ab6b626e5cf167",
+	src: "77a7773156dc6a67230dda0fe5d819b2a2385cd816acfccf81001b0d89f2a79d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
