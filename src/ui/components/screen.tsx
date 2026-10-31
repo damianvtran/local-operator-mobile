@@ -6,6 +6,7 @@ import { maxColumnWidth } from "@/ui/column";
 import { Heading } from "@/ui/components/heading";
 import { headerStacks } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * A screen: the canvas ground, the safe-area insets, and an opaque header
@@ -119,6 +120,12 @@ export type ScreenProps = {
 	testID?: string;
 };
 
+/** The stacked title's FIRST line box in pt: the `display` TYPE STEP times the
+ *  reader's scale — the same derivation `stateLinePt` uses for the state line
+ *  under it. What the leading mark is centred on (see `StackedTitleRow`). */
+const titleLinePt = (effectiveScale: number): number =>
+	TYPE_STEPS.display.size * TYPE_STEPS.display.lineHeight * effectiveScale;
+
 /**
  * The stacked header's title row: the title block, led by an optional mark.
  *
@@ -128,6 +135,16 @@ export type ScreenProps = {
  * same order it has inline — for the session header that is
  * picture → health dot → name, rather than a picture stranded on the chrome row
  * (design review round 1, D1).
+ *
+ * THE MARK IS CENTRED ON THE TITLE'S TEXT LINE, not on the block. The block is
+ * the text line PLUS the reserved state line the session header keeps in every
+ * state (so the header never resizes when a word appears), and a block-centred
+ * mark therefore sat 8.4 pt below the text at 100 % and 16.8 pt at 200 % — over
+ * the second line's ink — while the health dot it belongs beside tracked the text
+ * to within 0.75 pt (design review round 2, D8). The mark's box is exactly ONE
+ * line tall and centres the mark inside it, which moves the mark and nothing
+ * else: the title's width is untouched, so the 200 % two-line truncation the
+ * design round accepted stays exactly as it was.
  */
 const StackedTitleRow = ({
 	leading,
@@ -135,15 +152,22 @@ const StackedTitleRow = ({
 }: {
 	leading?: ReactNode;
 	children: ReactNode;
-}): ReactNode =>
-	leading === undefined ? (
+}): ReactNode => {
+	const { effectiveScale } = useTextScale();
+	return leading === undefined ? (
 		children
 	) : (
-		<View className="flex-row items-center gap-2">
-			{leading}
+		<View className="flex-row items-start gap-2">
+			<View
+				className="justify-center"
+				style={{ height: titleLinePt(effectiveScale) }}
+			>
+				{leading}
+			</View>
 			<View className="min-w-0 flex-1">{children}</View>
 		</View>
 	);
+};
 
 /**
  * The readable measure for the current viewport, or `null` on a phone where the

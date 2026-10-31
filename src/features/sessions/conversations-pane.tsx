@@ -141,6 +141,17 @@ export type ConversationsPaneProps = {
 	 *  home screen (`directories()` is one read, and two readers of one datum is
 	 *  how two labels drift). */
 	homeDirectory?: string | null;
+	/**
+	 * The surface these rows sit on, handed to `ListRow` so a selected agent's
+	 * badge ring matches what is actually behind the row.
+	 *
+	 * The list does not own its background: the same component renders inside the
+	 * screen (`bg-surface`-free, `bg-elevated`-free — the screen's `bg-canvas`) and
+	 * inside the phone drawer's panel (`bg-elevated`). Only the caller knows which, so a
+	 * hardcoded ring was right in exactly one placement (agent review round 2, R2-2).
+	 * Undefined leaves `ListRow`'s own default (the screen canvas) in place.
+	 */
+	surfaceClassName?: string;
 };
 
 /**
@@ -232,6 +243,7 @@ export const ConversationsPane = ({
 	onNewChat,
 	notice,
 	homeDirectory,
+	surfaceClassName,
 }: ConversationsPaneProps) => {
 	const router = useRouter();
 	const { refreshList, relay, busy, streamHealth } = useConnection();
@@ -826,6 +838,7 @@ export const ConversationsPane = ({
 							avatarRef={avatarRefOf(session)}
 							avatarTestID={sessionRowAvatarId(session.session_id)}
 							reserveLeading={anyRowPictured}
+							surfaceClassName={surfaceClassName}
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
 								remote

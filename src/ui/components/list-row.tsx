@@ -155,6 +155,20 @@ export type ListRowProps = {
 	 * picture — leaves the row exactly as it was, and no width is spent.
 	 */
 	leadingSlotPt?: number;
+	/**
+	 * The class painting the surface this row is drawn ON — the corner badge's ring.
+	 *
+	 * WHY THE CALLER NAMES IT. The ring exists to make the badge read as a cutout
+	 * over its picture, so it has to be the colour BEHIND the row, and a row is
+	 * `bg-transparent` at rest: the fill is the container's. That container is not
+	 * the kit's to know, and it differs by placement — the sessions pane sits on the
+	 * screen's `bg-canvas` in a split and on the drawer panel's `bg-elevated` inside
+	 * the drawer. Hardcoding one of them left the other a 1.05-1.07:1 halo: the ring
+	 * painted `bg-elevated` over `bg-canvas` in split view (design review round 2,
+	 * agent review round 2 R2-2). Undefined keeps the screen's canvas, which is
+	 * where a bare list sits.
+	 */
+	surfaceClassName?: string;
 	testID: string;
 };
 
@@ -191,6 +205,7 @@ export const ListRow = ({
 	tagLine,
 	leading,
 	leadingSlotPt,
+	surfaceClassName = "bg-canvas",
 	testID,
 }: ListRowProps) => {
 	const attention = listRowIndicator({
@@ -295,14 +310,15 @@ export const ListRow = ({
 						<LeadingWithBadge
 							attention={attention}
 							/* The ring is the surface this ROW sits on, so the badge reads as a
-							 *  cutout over any photo: the conversations surface by default, the row's
-							 *  own tint while it is selected or pressed. */
+							 *  cutout over any photo: the caller's surface (`surfaceClassName` — the
+							 *  screen's canvas in a split, the drawer panel's in the drawer), and the
+							 *  row's own tint while it is selected or pressed. */
 							ringClassName={
 								selected
 									? "bg-row-selected"
 									: pressed
 										? "bg-row-hover"
-										: "bg-elevated"
+										: surfaceClassName
 							}
 						>
 							{leading}

@@ -292,6 +292,11 @@ export const ConversationsDrawer = ({
 									onNewChat={onNewChat ? newChat : undefined}
 									notice={notice}
 									homeDirectory={homeDirectory}
+									/* The rows are painted on THIS panel's fill (`bg-elevated`
+									 *  above), not on the screen's canvas: the corner badge's
+									 *  ring must be the same colour or it reads as a halo
+									 *  (agent review round 2, R2-2). */
+									surfaceClassName="bg-elevated"
 								/>
 							</TextScaleProvider>
 						</View>
