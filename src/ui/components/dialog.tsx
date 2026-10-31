@@ -10,7 +10,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScopedVariables } from "uniwind";
-import { t } from "@/i18n";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { maxColumnWidth } from "@/ui/column";
@@ -130,7 +129,7 @@ export const Dialog = ({
 								backgroundColor: drawsDim ? scrimColour : "transparent",
 							}}
 							accessibilityRole={ROLE.button}
-							accessibilityLabel={t("mobile.common.cancel")}
+							accessibilityLabel="Cancel"
 							testID={CONTROL.dialogScrim}
 							onPress={onCancel}
 						/>
@@ -188,7 +187,7 @@ export const Dialog = ({
 								</ScrollView>
 								<View className="mt-4 flex-row justify-end gap-2">
 									<Button
-										label={t("mobile.common.cancel")}
+										label="Cancel"
 										variant="quiet"
 										testID={CONTROL.dialogCancel}
 										onPress={onCancel}
