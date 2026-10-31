@@ -214,7 +214,28 @@ export const sendDeliveryDetailsSchema = z.looseObject({
 /** `args` rides through as an object as often as a string; `diff` as a list of
  *  unified-diff lines as often as a string. Both are modelled as the union the
  *  relay actually sends rather than as the convenient one. */
+const bridgeReceiptDisplaySchema = z.strictObject({
+	v: z.literal(1),
+	sender: z
+		.strictObject({
+			name: z.string().max(240).optional(),
+			kind: z.enum(["human", "agent"]).optional(),
+			organization: z.string().max(240).optional(),
+		})
+		.optional(),
+	conversation: z
+		.strictObject({
+			kind: z.enum(["dm", "group", "channel"]).optional(),
+			label: z.string().max(240).optional(),
+		})
+		.optional(),
+	attachment_count: z.number().int().min(0).max(1_000_000).optional(),
+});
+
 export const transcriptEntryDetailsSchema = z.looseObject({
+	// Malformed additive display metadata costs the label, never the session.
+	bridge_receipt: bridgeReceiptDisplaySchema.optional().catch(undefined),
+	custom_kind: z.string().optional(),
 	args: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
 	output: z.string().optional(),
 	diff: z.union([z.string(), z.array(z.string())]).optional(),
@@ -229,7 +250,7 @@ export const transcriptEntryDetailsSchema = z.looseObject({
 	expects_reply: z.boolean().optional(),
 	steer: z.boolean().optional(),
 	severity: z.enum(["info", "warning", "error"]).optional(),
-	notice_kind: z.literal("wake").optional(),
+	notice_kind: z.enum(["wake", "cross_session_boundary"]).optional(),
 	user_run: z.boolean().optional(),
 	argument_bytes: z.number().optional(),
 	/** The `send` tool's delivered / wake-unconfirmed / delivery-unconfirmed /
@@ -241,6 +262,7 @@ export const transcriptEntryDetailsSchema = z.looseObject({
 
 export const transcriptEntrySchema = z.looseObject({
 	id: nonEmpty,
+	custom_type: z.string().optional(),
 	kind: entryKindSchema,
 	text: z.string(),
 	tool_call_id: z.string(),
