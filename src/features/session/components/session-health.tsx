@@ -50,8 +50,8 @@ import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * The documented resume affordance for an ENDED session, shared by the sheet
@@ -166,13 +166,14 @@ function useReturnFocus(open: boolean, target: RefObject<View | null>) {
 	}, [open, target]);
 }
 
-/** The state line's reserved height, derived from the `meta` TYPE STEP it draws
- *  (`tokens.gen`: 12 px at 1.4 line height) times the reader's text scale.
- *  Reserved in EVERY state, live included, so the header's height does not change
- *  when a word appears (D11). A fixed 20 pt here was the D8 residual: at 200 % the
- *  real line box is 33.6 pt and the header grew to fit it anyway. */
+/** The state line's reserved height: one line box of the `meta` TYPE STEP it
+ *  draws (`tokens.gen`: 12 px at 1.4 line height) at the reader's text scale,
+ *  via the shared `lineBoxPt`. Reserved in EVERY state, live included, so the
+ *  header's height does not change when a word appears (D11). A fixed 20 pt here
+ *  was the D8 residual: at 200 % the real line box is 33.6 pt and the header grew
+ *  to fit it anyway. */
 const stateLinePt = (effectiveScale: number): number =>
-	TYPE_STEPS.meta.size * TYPE_STEPS.meta.lineHeight * effectiveScale;
+	lineBoxPt("meta", effectiveScale);
 
 export type SessionHealthControlProps = {
 	/** The header's reading. `null` (no frame yet, or the client stopped

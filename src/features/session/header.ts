@@ -103,8 +103,9 @@ export const HEADER_AVATAR_PT = 28;
  *  (`gap-1` on that cluster). */
 const HEADER_AVATAR_SLOT_PT = HEADER_AVATAR_PT + 4;
 /* Stacked, it leads the TITLE row (`Screen`'s `stackedTitleLeading`), where the
- *  gap is the title row's own 8 pt (`gap-2`) — so the same picture costs that
- *  line 4 pt more than it costs the inline cluster. */
+ *  gap is 8 pt (`gap-2` inside the mark's own box, so it exists only while a
+ *  picture does — design round 3, D12) — so the same picture costs that line 4 pt
+ *  more than it costs the inline cluster. */
 const STACKED_AVATAR_SLOT_PT = HEADER_AVATAR_PT + 8;
 const extrasPt = (
 	{

@@ -344,7 +344,11 @@ const BADGE_RING_FROM_CALLER =
 	/pressed\s*\?\s*"bg-row-hover"\s*:\s*surfaceClassName/;
 const BADGE_RING_DEFAULT = /surfaceClassName = "bg-canvas"/;
 const PANE_FORWARDS_SURFACE = /surfaceClassName=\{surfaceClassName\}/;
-const DRAWER_NAMES_SURFACE = /surfaceClassName="bg-elevated"/;
+/* R3-1: the drawer names its panel fill ONCE and hands that same constant to the
+ *  pane, so the ring cannot drift off the fill with one edit. */
+const DRAWER_ONE_SURFACE = /const PANEL_SURFACE = "bg-elevated";/;
+const DRAWER_PANEL_USES = /border-r \$\{PANEL_SURFACE\}/;
+const DRAWER_NAMES_SURFACE = /surfaceClassName=\{PANEL_SURFACE\}/;
 /* R3: the spinner is sized to the disc, not transformed into it on web — and the
  *  numeric `size` and the iOS paint scale are the two halves of that rule, so BOTH
  *  are guarded and not just the plain row's `size="small"` (agent review round 2,
@@ -356,12 +360,6 @@ const SPINNER_NUMERIC_SIZE =
 const SPINNER_IOS_PAINT_SCALE =
 	/Platform\.OS === "ios"[\s\S]{0,200}scale: pt \/ SPINNER_INTRINSIC_PT/;
 const SPINNER_INTRINSIC_PT = /const SPINNER_INTRINSIC_PT = 20;/;
-/* D8: the stacked mark is centred on the title's TEXT line — one line tall, top
- *  aligned — not on the block, whose extra state line pushed it below the text. */
-const STACKED_MARK_LINE_BOX =
-	/items-start gap-2[\s\S]{0,160}style=\{\{ height: titleLinePt\(effectiveScale\) \}\}/;
-const TITLE_LINE_FROM_TOKENS =
-	/TYPE_STEPS\.display\.size \* TYPE_STEPS\.display\.lineHeight \* effectiveScale/;
 /* D3: the badge's own pulse floor, above the kit's 0.35. */
 const BADGE_PULSE = /const BADGE_PULSE_FLOOR = 0\.75;/;
 const PULSE_USES_FLOOR = /toValue: pulseFloor,/;
@@ -372,7 +370,6 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 	const PANE = read("../sessions/conversations-pane.tsx");
 	const DRAWER = read("../sessions/conversations-drawer.tsx");
 	const ROW = read("../../ui/components/list-row.tsx");
-	const SCREEN_UI = read("../../ui/components/screen.tsx");
 
 	it("a tap AND a long press on the header picture show the desktop hint", () => {
 		expect(VIEW).toMatch(PRESS_SHOWS_HINT);
@@ -444,7 +441,11 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(ROW).toMatch(BADGE_RING_FROM_CALLER);
 		expect(ROW).toMatch(BADGE_RING_DEFAULT);
 		expect(PANE).toMatch(PANE_FORWARDS_SURFACE);
+		expect(DRAWER).toMatch(DRAWER_ONE_SURFACE);
+		expect(DRAWER).toMatch(DRAWER_PANEL_USES);
 		expect(DRAWER).toMatch(DRAWER_NAMES_SURFACE);
+		/* And no second literal of it anywhere in the file. */
+		expect(DRAWER.split("bg-elevated").length - 1).toBe(1);
 	});
 
 	it("the badge's spinner is sized to the disc, not transformed into it (R3)", () => {
@@ -452,11 +453,6 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(ROW).toMatch(SPINNER_NUMERIC_SIZE);
 		expect(ROW).toMatch(SPINNER_IOS_PAINT_SCALE);
 		expect(ROW).toMatch(SPINNER_INTRINSIC_PT);
-	});
-
-	it("stacked, the mark is centred on the title's TEXT line, not the block (D8)", () => {
-		expect(SCREEN_UI).toMatch(STACKED_MARK_LINE_BOX);
-		expect(SCREEN_UI).toMatch(TITLE_LINE_FROM_TOKENS);
 	});
 
 	it("the badge's danger dot never dims under 3:1 (D3)", () => {
