@@ -370,6 +370,15 @@ describe("bridge row: N1 — no dangling separator in the row line", () => {
 		).toBe("Couldn't post in #leadership: refused by policy");
 	});
 
+	it("scrubs an UPPER-CASE id too (R16)", () => {
+		/* The relay's own `_ID_TOKEN_RE` is `re.IGNORECASE`, so a piece of copy
+		 *  that upper-cases its id is still an id. Without the flag this string
+		 *  kept `BCV_01JC9X7Q2M8T` and the assertion below fails. */
+		expect(
+			call({ outcome: null }, "Posted in BCV_01JC9X7Q2M8T · cut list attached"),
+		).toBe("Posted in · cut list attached");
+	});
+
 	it("tidies the separator an id left behind", () => {
 		expect(
 			call({ outcome: null }, "Posted in bcv_01JC9X7Q2M8T · cut list attached"),
