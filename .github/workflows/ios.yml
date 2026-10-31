@@ -31,6 +31,11 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      retirement_proof:
+        description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -150,6 +155,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Only the manual opt-in gets an ephemeral dedicated Metro entry/bundle ID.
+      # No ordinary artifact imports or accepts the proof controller's commands.
+      - name: Prepare dedicated retirement-proof flavor
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        env:
+          RETIREMENT_PROOF: "true"
+        run: node scripts/ci/auth-retirement-ios-proof.ts --prepare "$RUNNER_TEMP/auth-retirement-proof"
+
       - name: Derive the version from the ref
         run: node scripts/ci/version.ts --write
 
@@ -221,6 +234,7 @@ jobs:
           node scripts/ci/native-config.ts ios "$RUNNER_TEMP/Info.json"
 
       - name: Boot the simulator
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         id: boot
         run: |
           set -euo pipefail
@@ -234,7 +248,17 @@ jobs:
           # from a screenshot of the app.
           xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
 
+      - name: Freeze proof artifact before installation
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        env:
+          RETIREMENT_PROOF: "true"
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-ios-proof.ts --freeze-artifact "$app" "$RUNNER_TEMP/auth-retirement-proof"
+
       - name: Install the app, assert the version it carries, and launch it
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         # A build that produces a .app which cannot start is not a working app,
         # and this is the cheapest honest way to find that out without a device.
         run: |
@@ -274,7 +298,35 @@ jobs:
           xcrun simctl install "$udid" "$app"
           xcrun simctl launch "$udid" "$bundle"
 
+      - name: Native durable retirement and restore primitives (manual opt-in)
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        timeout-minutes: 10
+        env:
+          RETIREMENT_PROOF: "true"
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-ios-proof.ts --run "$app" "$RUNNER_TEMP/auth-retirement-proof" "${{ steps.simulator.outputs.udid }}"
+
+      - name: Reap only this proof run's leased simulator
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        timeout-minutes: 2
+        env:
+          RETIREMENT_PROOF: "true"
+        run: node scripts/ci/auth-retirement-ios-proof.ts --cleanup "$RUNNER_TEMP/auth-retirement-proof"
+
+      - name: Upload redacted native primitive evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-retirement-native-primitives
+          path: |
+            ${{ runner.temp }}/auth-retirement-proof/proof.json
+            ${{ runner.temp }}/auth-retirement-proof/cleanup.json
+          if-no-files-found: error
+
       - name: Capture the frame the app renders, and assert it rendered
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         # WHAT THIS ASSERTS, AND WHY IT DOES NOT GATE ON "SETTLED".
         # Two hard assertions: the frame after launch must differ from the
         # pre-install home screen (so the app painted something rather than
@@ -351,6 +403,7 @@ jobs:
           fi
 
       - name: Upload the frame and the simulator build
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         uses: actions/upload-artifact@v7
         with:
           name: ios-simulator
