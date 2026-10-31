@@ -102,6 +102,13 @@ export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
 	 * widening beyond English's own 24 — recorded rather than inherited,
 	 * because the next Hindi chip may not be this short. */
 	hi: 24,
+	/* Urdu measured on the same terms: its longest chip is 23 characters
+	 * (`suggestion.wake_summary`, after the audit's rewrite) and the pool's
+	 * widest is `suggestion.linear_mcp` at 22. 24 is English's own ceiling and
+	 * sits one character above what the pool uses — recorded rather than
+	 * inherited, because Nastaliq shapes wider than Latin at the same length and
+	 * the next chip may not be this short. */
+	ur: 24,
 };
 
 /** The row's ceiling for one shipped locale. */

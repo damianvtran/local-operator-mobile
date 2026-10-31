@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔",
+	"mobile.account_routing.error": "تبدیلی کی تصدیق نہیں ہو سکی۔ کنکشن چیک کریں اور موجودہ پالیسی پڑھنے کے لیے دوبارہ لوڈ کریں۔",
+	"mobile.account_routing.load_error": "اکاؤنٹ روٹنگ لوڈ نہیں ہو سکی۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔",
+	"mobile.account_routing.loading": "اکاؤنٹ روٹنگ لوڈ ہو رہی ہے…",
+	"mobile.account_routing.rejected": "تبدیلی محفوظ نہیں ہوئی۔ درج کی گئی قدر یا اس کمپیوٹر کی ترتیبات چیک کر کے دوبارہ کوشش کریں۔",
+	"mobile.account_routing.reload": "پالیسی دوبارہ لوڈ کریں",
+	"mobile.account_routing.retry": "دوبارہ کوشش کریں",
+	"mobile.account_routing.save": "پالیسی محفوظ کریں",
+	"mobile.account_routing.saved": "اس کمپیوٹر پر محفوظ کر لیا گیا۔",
+	"mobile.account_routing.saving": "محفوظ ہو رہا ہے…",
+	"mobile.account_routing.scope": "تبدیلیاں صرف اسی کمپیوٹر پر لاگو ہوں گی۔",
+	"mobile.account_routing.title": "اکاؤنٹ روٹنگ",
+	"mobile.account_routing.unavailable": "اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
+	"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔"
+}

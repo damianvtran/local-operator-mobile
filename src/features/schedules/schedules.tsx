@@ -47,6 +47,7 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Skeleton } from "@/ui/components/skeleton";
+import { useComposedDir } from "@/ui/direction";
 
 /**
  * Schedules (S17): what is ARMED on this machine — every conversation carrying
@@ -157,6 +158,14 @@ export default function Schedules() {
 	 *  unreadable store would assert a number no process read. */
 	const wakeState = wakes === null ? null : familyState(wakes);
 	const monitorState = monitors === null ? null : familyState(monitors);
+	/* Both headings COMPOSE a fixed word with a translated count
+	 *  (`Wakes · 5 شیڈول شدہ`), so each begins with a Latin character and
+	 *  `dir="auto"` would lay the whole line out left-to-right under the Urdu
+	 *  page — on the trailing edge, half a screen from the reading start (design
+	 *  round 1, D1). Stated on BOTH branches, including the bare `Wakes` of an
+	 *  unreadable store: a heading belongs on the logical leading edge whether or
+	 *  not its summary was composable. */
+	const composedDir = useComposedDir();
 
 	return (
 		<Screen
@@ -208,6 +217,7 @@ export default function Schedules() {
 					{wakes !== null ? (
 						<View>
 							<SectionHeader
+								labelDir={composedDir}
 								label={
 									wakeState === "unreadable"
 										? "Wakes"
@@ -274,6 +284,7 @@ export default function Schedules() {
 					{monitors !== null ? (
 						<View>
 							<SectionHeader
+								labelDir={composedDir}
 								label={
 									monitorState === "unreadable"
 										? "Monitors"
@@ -364,6 +375,13 @@ const WakeEntry = ({
 	onToggle: () => void;
 }) => {
 	const rows = expanded ? entry.rows : entry.rows.slice(0, LINE_CAP);
+	/* The clause is COMPOSED — a count spliced to a relative instant in one
+	 *  catalogue string, so under Urdu it can begin with a digit and a Latin unit
+	 *  (`3 بیداریاں · 30d سے تاخیر` starts in Urdu, `30d سے تاخیر` does not, and a
+	 *  translator may reorder the placeholders at any time). Its paragraph base
+	 *  must therefore come from the page, not from whichever character lands
+	 *  first (design review round 1, D1/D2). */
+	const composedDir = useComposedDir();
 	return (
 		<View
 			testID={scheduleWakeRowId(entry.sessionId)}
@@ -376,7 +394,9 @@ const WakeEntry = ({
 			>
 				{entry.name}
 			</Text>
-			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
+			<Text {...composedDir} className="text-meta text-ink-dim">
+				{entry.clause}
+			</Text>
 			<View className="gap-2 ps-3 pt-2">
 				{rows.map((row) => (
 					<WakeLine key={row.id} row={row} />
@@ -404,23 +424,36 @@ const WakeEntry = ({
  *  and the cadence. The message wraps rather than clamping for the clause's
  *  reason (audit U-04/U-07), and the stack steps by `gap-1` — 4 pt, the
  *  smallest step of the token scale; `gap-0.5`'s 2 pt is off it (audit U-42). */
-const WakeLine = ({ row }: { row: WakeLineView }) => (
-	<View className="gap-1">
-		{row.message !== "" ? (
-			<Text className="text-body-sm text-ink">{row.message}</Text>
-		) : null}
-		<View className="flex-row flex-wrap gap-x-2">
-			{row.due !== "" ? (
-				<Text
-					className={`text-meta ${row.stale ? "text-warning" : "text-ink-dim"}`}
-				>
-					{row.due}
-				</Text>
+const WakeLine = ({ row }: { row: WakeLineView }) => {
+	/* Both facts are COMPOSED and can LEAD with a Latin token: the due slot is
+	 *  `{label} سے تاخیر` / `{label} بعد` wrapped round the formatter's `22d`, and
+	 *  the cadence splices an Urdu word onto a duration. `dir="auto"` took an LTR
+	 *  base from the `d` in `22d` while the line above it took an RTL base from
+	 *  its leading Urdu letter — the same catalogue word order rendered two ways,
+	 *  and the LTR reading puts the postposition `سے` before the noun it follows
+	 *  (design review round 1, D2). The base belongs to the screen. */
+	const composedDir = useComposedDir();
+	return (
+		<View className="gap-1">
+			{row.message !== "" ? (
+				<Text className="text-body-sm text-ink">{row.message}</Text>
 			) : null}
-			<Text className="text-meta text-ink-dim">{row.cadence}</Text>
+			<View className="flex-row flex-wrap gap-x-2">
+				{row.due !== "" ? (
+					<Text
+						{...composedDir}
+						className={`text-meta ${row.stale ? "text-warning" : "text-ink-dim"}`}
+					>
+						{row.due}
+					</Text>
+				) : null}
+				<Text {...composedDir} className="text-meta text-ink-dim">
+					{row.cadence}
+				</Text>
+			</View>
 		</View>
-	</View>
-);
+	);
+};
 
 /** One monitor-carrying conversation, the wake entry's twin: name, head
  *  clause, then one line per watch. The clause wraps for the same reason its
@@ -435,6 +468,10 @@ const MonitorEntry = ({
 	onToggle: () => void;
 }) => {
 	const rows = expanded ? entry.rows : entry.rows.slice(0, LINE_CAP);
+	/* The wake entry's twin, and composed the same way (`{count} · {instant}`),
+	 *  so it pins the paragraph base to the page for the same reason — see the
+	 *  comment in `WakeEntry`. */
+	const composedDir = useComposedDir();
 	return (
 		<View
 			testID={scheduleMonitorRowId(entry.sessionId)}
@@ -447,7 +484,9 @@ const MonitorEntry = ({
 			>
 				{entry.name}
 			</Text>
-			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
+			<Text {...composedDir} className="text-meta text-ink-dim">
+				{entry.clause}
+			</Text>
 			<View className="gap-2 ps-3 pt-2">
 				{rows.map((row) => (
 					<MonitorLine key={row.id} row={row} />
@@ -479,28 +518,47 @@ const MonitorEntry = ({
  *  full string left to the accessibility tree (audit U-07, design round 1
  *  D64-2); the wake message wraps for the same reason. The stack steps by
  *  `gap-1` for the wake line's reason (audit U-42). */
-const MonitorLine = ({ row }: { row: MonitorLineView }) => (
-	<View className="gap-1">
-		<Text className="text-body-sm text-ink">{row.name}</Text>
-		{row.description !== "" ? (
-			<Text className="text-meta text-ink-dim">{row.description}</Text>
-		) : null}
-		<View className="flex-row flex-wrap gap-x-2">
-			{row.slot !== "" ? (
-				<Text
-					className={`text-meta ${row.alerting ? "text-warning" : "text-ink-dim"}`}
-				>
-					{row.slot}
-				</Text>
+const MonitorLine = ({ row }: { row: MonitorLineView }) => {
+	/* The three facts are the most exposed of the set: the slot is `in 4m` /
+	 * `2h overdue` off the same `dueLabel`, so under Urdu it reads
+	 * `22h سے تاخیر` — an LTR paragraph base puts `سے` ahead of the noun it
+	 * follows — and the cadence and the failure tail splice a count/duration into
+	 * Urdu copy the same way. Pinned to the page for the wake line's reason. */
+	const composedDir = useComposedDir();
+	return (
+		<View className="gap-1">
+			<Text className="text-body-sm text-ink">{row.name}</Text>
+			{row.description !== "" ? (
+				<Text className="text-meta text-ink-dim">{row.description}</Text>
 			) : null}
-			<Text className="text-meta text-ink-dim">{row.cadence}</Text>
-			{row.tail !== null ? (
-				<Text
-					className={`text-meta ${row.alerting ? "text-warning" : "text-ink-dim"}`}
-				>
-					{row.tail}
+			<View className="flex-row flex-wrap gap-x-2">
+				{row.slot !== "" ? (
+					<Text
+						{...composedDir}
+						className={`text-meta ${row.alerting ? "text-warning" : "text-ink-dim"}`}
+					>
+						{row.slot}
+					</Text>
+				) : null}
+				<Text {...composedDir} className="text-meta text-ink-dim">
+					{row.cadence}
 				</Text>
-			) : null}
+				{row.tail !== null ? (
+					/* NOT pinned to the page direction, and the reason is the fix for
+					 * this line's opposite defect (design round 2, D6): when there is
+					 * health text it is the RELAY's English sentence — "{n} checks, 0
+					 * deliveries — nothing has changed" — and an RTL paragraph base
+					 * carries the leading count to the far end of the line, away from
+					 * the noun it counts. With no health text the tail is `{count}
+					 * ناکام`, Urdu-first, which `dir="auto"` already resolves to RTL on
+					 * its own. So this one line is left to the algorithm, deliberately. */
+					<Text
+						className={`text-meta ${row.alerting ? "text-warning" : "text-ink-dim"}`}
+					>
+						{row.tail}
+					</Text>
+				) : null}
+			</View>
 		</View>
-	</View>
-);
+	);
+};

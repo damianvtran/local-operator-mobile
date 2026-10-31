@@ -65,9 +65,11 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
  * supported locale to be listed here or in `SHIPPED_LOCALES`, so flipping one is
  * a reviewed change rather than a forgotten one.
  */
-export const NOT_YET_SHIPPED_LOCALES = [
-	"ur",
-] as const satisfies readonly SupportedLocale[];
+/* Every supported locale now ships a catalogue: this list is empty on purpose
+ * rather than deleted, because the next target locale starts here and the test
+ * that keeps the two lists exhaustive reads it. */
+export const NOT_YET_SHIPPED_LOCALES =
+	[] as const satisfies readonly SupportedLocale[];
 
 /** The locale directories this build actually ships. Being in this list is not
  *  enough: the locale must also be projected by `generate.ts` into
@@ -83,6 +85,7 @@ export const SHIPPED_LOCALES = [
 	"ru",
 	"vi",
 	"hi",
+	"ur",
 ] as const satisfies readonly SupportedLocale[];
 
 export type ShippedLocale = (typeof SHIPPED_LOCALES)[number];
