@@ -604,6 +604,15 @@ const META_VALUE_BOX = { flexGrow: 0, flexShrink: 1, minWidth: 0 } as const;
  *    conversations surface; `row-selected` / `row-hover` when the row tints), so
  *    it reads as a cutout whatever the picture is.
  *  - The marks are sized to the disc instead of scaled into it: see `Indicator`.
+ *  - The badge sits on the picture's END corner, not its physical right. The
+ *    row's leading slot is row order (`flex-row`, see the caller), so the picture
+ *    is at the START edge: in English that is the row's left, with the badge on
+ *    the inner corner facing the text, and in Urdu the picture is at the row's
+ *    right, where a physical `right` would have thrown the badge onto the
+ *    screen-edge corner instead. `end` is read by Yoga from the root
+ *    `DirectionView`'s `direction` and by react-native-web from its `dir` prop,
+ *    and the physical-edge scan cannot see this value (it is a computed
+ *    expression), so the comment is the guard here.
  */
 const BADGE_DISC_PT = 12;
 const BADGE_RING_PT = 2;
@@ -644,7 +653,7 @@ const LeadingWithBadge = ({
 			<View
 				className={`absolute items-center justify-center rounded-full ${ringClassName}`}
 				style={{
-					right: -(BADGE_INSET_PT + BADGE_RING_PT),
+					end: -(BADGE_INSET_PT + BADGE_RING_PT),
 					bottom: -(BADGE_INSET_PT + BADGE_RING_PT),
 					width: BADGE_DISC_PT + BADGE_RING_PT * 2,
 					height: BADGE_DISC_PT + BADGE_RING_PT * 2,
