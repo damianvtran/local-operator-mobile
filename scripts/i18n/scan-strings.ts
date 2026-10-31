@@ -15,9 +15,10 @@
  *    every `<Text>` body in this repo takes), or text between `>` and `<` on one
  *    line. This is the rule that catches copy added the ordinary way.
  * 2. `jsx-attribute` — a string literal assigned to a user-facing attribute
- *    (`accessibilityLabel`, `placeholder`, `label`, `title`, `alt`, `aria-*`).
- *    Deliberately a fixed list: flagging EVERY prop would bury the real findings
- *    under `testID="…"` and route ids.
+ *    (accessibility labels, text input hints and component copy props). EmptyState
+ *    uses `headline`/`next`, dialogs use `body`, and refusal surfaces use `detail`;
+ *    overlooking component-specific names lets visible copy evade the gate.
+ *    The fixed list excludes `testID` and route ids, which are identifiers.
  * 3. `copy-module-literal` — a multi-word string literal inside a `*-copy.ts`
  *    module that the English catalogue does NOT already own. Those files exist to
  *    hold copy, so a sentence there that neither comes from `t()` nor appears in a
@@ -62,7 +63,7 @@ interface Literal {
 }
 
 const USER_FACING_ATTRIBUTE =
-	/(?:^|\s)(?:accessibilityLabel|accessibilityHint|placeholder|label|title|alt|aria-label|aria-description)\s*=\s*$/;
+	/(?:^|\s)(?:accessibilityLabel|accessibilityHint|placeholder|label|title|alt|aria-label|aria-description|headline|next|subtitle|caption|body|message|hint|description|detail)\s*=\s*$/;
 
 /** A real JSX tag has a boundary before its `<`. TypeScript generics
  *  (`Promise<T>`, `=> Promise<T>`) do not, and matching those produced a

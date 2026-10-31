@@ -104,6 +104,29 @@ describe("the scanner", () => {
 		);
 	});
 
+	it("finds copy-bearing component props without treating identifiers as copy", () => {
+		const props = [
+			"headline",
+			"next",
+			"subtitle",
+			"caption",
+			"body",
+			"message",
+			"hint",
+			"description",
+			"detail",
+		];
+		const source = props
+			.map((prop) => `<Card ${prop}="Visible human copy" />`)
+			.join("\n");
+		expect(scanSource(FILE, source).map((finding) => finding.text)).toEqual(
+			props.map(() => "Visible human copy"),
+		);
+		expect(
+			scanSource(FILE, '<Card testID="technical identifier value" />'),
+		).toHaveLength(0);
+	});
+
 	it("finds a sentence added to a copy module", () => {
 		const findings = scanSource(
 			COPY_FILE,
