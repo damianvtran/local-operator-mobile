@@ -1,0 +1,123 @@
+{
+ "schema": 1,
+ "audit_id": "lib-common-es-r2",
+ "audit_kind": "delta_audit_of_shipped_bytes",
+ "locale": "es",
+ "namespace": "mobile.common",
+ "audit_date": "2026-10-31",
+ "round": 2,
+ "delta_of": "lib-common-es-r1",
+ "delta_statement": "lib-common-es-r1 recorded sha256 ed13003eed33e826439bcf11cca0c85089df3585a20226b0f7782d1373b313c2; mobile.common.done was changed Listo->Hecho afterwards, so that bundle describes bytes that no longer ship. This bundle attests the CURRENT bytes. Reverting that one key in the shipped raw bytes reproduces the round-1 sha256 (tools/common_delta.py; audit.log).",
+ "keys_changed_since_round_1": [
+  "mobile.common.done"
+ ],
+ "key_changes": [
+  {
+   "key": "mobile.common.done",
+   "round1_text": "Listo",
+   "shipped_now": "Hecho",
+   "verdict": "correct; keep (matches core es relay.session.tags.done for the same sheet-closing role)"
+  }
+ ],
+ "round1_findings_disposition": [
+  {
+   "round1_finding": "lib-common-es-r1-n1",
+   "severity": "NIT",
+   "key": "mobile.common.back",
+   "disposition": "unchanged, keep (open_nongating)"
+  }
+ ],
+ "pr": 145,
+ "project": "damianvtran/local-operator-mobile",
+ "audited_worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "audited_head_commit": "4292fa48 (plus uncommitted post-review fixes; read-only for this auditor)",
+ "key_count": {
+  "en": 6,
+  "target": 6
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "c1967ad9dd38",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header ('Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "es (native-fluent reader; no MT or translation service used)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/es/mobile.common.json",
+   "sha256": "7a7984bee951441f16fb3c461863ea62896621c49219bc60c8362ca237e75880"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.common.json",
+   "sha256": "3d1a8007b0ea260984f2868949859e55bfa31ea14beb2b6574fb2a2c578e604d"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.common.context.json",
+   "sha256": "6d8c765e302f556f53140aae70ac2dba66125cac7fbf04e81dc7fcbf43edf633"
+  },
+  "round1_target_recorded": {
+   "path": "i18n/audits/evidence/es/mobile.common/lib-common-es-r1/record.json",
+   "sha256": "ed13003eed33e826439bcf11cca0c85089df3585a20226b0f7782d1373b313c2"
+  }
+ },
+ "file_unchanged_during_audit": "audit.log hashes the target at the start and again as its last command; both equal input_hashes.target.sha256",
+ "other_mobile_common_bundles_stale": [],
+ "other_mobile_common_bundles_checked": [
+  "fr",
+  "hi",
+  "ru",
+  "ur",
+  "vi",
+  "zh-CN"
+ ],
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** - not used",
+  "context_sidecar_routability": "not routable (nested {role,note} objects)",
+  "receipt": null,
+  "honest_note": "no copy-route receipt obtained or claimed"
+ },
+ "redaction_scan": {
+  "secret_pattern_matches": 0,
+  "patterns_checked": [
+   "sk-*",
+   "ghp_*",
+   "xox[bap]-",
+   "AKIA*",
+   "Bearer <token>",
+   "password[:=]",
+   "api_key[:=]"
+  ],
+  "files": [
+   "audit.log",
+   "report.md"
+  ],
+  "absolute_scratch_paths_present": true,
+  "note": "audit.log carries real absolute scratch paths; publication normalisation is for the committer"
+ },
+ "artifacts": {
+  "audit.log": {
+   "path": "i18n/audits/evidence/es/mobile.common/lib-common-es-r2/audit.log",
+   "sha256": "785d4d38efb984d3fb202edede9da4c0f37e93afc1fecc727dc88342fbd48f3d"
+  },
+  "tools_sha256": {
+   "common_run.sh": "af738382c497ff19b5db54bebaadeb06f9984f3db8d9f157a7d072d6d870161c",
+   "common_delta.py": "2e6ae7f158847c891d52fa4d827fc7d26e262d052ad7a48a15bf6d0d8a1f903c",
+   "common_render.ts": "4f61df59c9578286aacdbb993f633af8396b594040a7f5634038abe3a0370062",
+   "common_stale.py": "28666d31e7465a2bdc9e7c9bbadca853f5947222f7b81e6672524fb3cd785ecb"
+  },
+  "report.md": "report.md (hash omitted: it quotes this record)"
+ },
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only.",
+ "ledger": {
+  "row_written": false,
+  "reason": "no audit-ledger command exists in this repository; the bundle is the artifact of record"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ }
+}

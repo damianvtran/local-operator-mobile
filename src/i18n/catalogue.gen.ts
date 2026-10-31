@@ -973,7 +973,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
-		"mobile.common.done": "Listo",
+		"mobile.common.done": "Hecho",
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",

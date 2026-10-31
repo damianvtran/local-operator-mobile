@@ -94,6 +94,9 @@ import { Textarea } from "@/ui/components/textarea";
  *  places and a third time in the English sentence; one constant keeps the
  *  gate and the sentence (which takes it as the `{limit}` placeholder) from
  *  drifting apart. */
+/* Mirrors the server-side cap (`MAX_TAGS_PER_ASSET = 12` in the core library
+ * metadata module). The editor gates on it and passes it to `{limit}`, so the
+ * sentence a reader sees and the rule the server enforces are one number. */
 const MAX_ASSET_TAGS = 12;
 
 export default function LibraryDetail() {
