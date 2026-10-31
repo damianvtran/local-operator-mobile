@@ -15,6 +15,9 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const fingerprintsPattern =
 	/scanner sha256: base=[0-9a-f]{64} head=[0-9a-f]{64}/;
+const nextJob = /\n {2}[a-z][\w-]*:/;
+const fullCheckout =
+	/actions\/checkout@v7\s+with:\s+(?:#[^\n]*\n\s*)*fetch-depth:\s*0/;
 const isolated = (cwd: string) => ({
 	HOME: cwd,
 	NODE_ENV: "test" as const,
@@ -104,6 +107,79 @@ const baseline = (dir: string) =>
 	);
 
 describe("historical scanner migration in Git", () => {
+	it("supplies full history to the release gate and checks a shallow tag checkout", () => {
+		const workflow = readFileSync(
+			join(root, ".github/workflows/ci.yml"),
+			"utf8",
+		);
+		const checks = workflow.split("\n  checks:")[1]?.split(nextJob)[0] ?? "";
+		expect(checks).toMatch(fullCheckout);
+		const dir = fixture();
+		git(dir, "branch", "-M", "main");
+		expect(update(dir).status).toBe(0);
+		git(dir, "add", ".");
+		git(
+			dir,
+			"-c",
+			"user.name=Test",
+			"-c",
+			"user.email=test@example.invalid",
+			"commit",
+			"-qm",
+			"release",
+		);
+		git(dir, "tag", "v1.0.0");
+		const dest = join(
+			process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+			`i18n-tag-${Date.now()}-${process.pid}`,
+		);
+		git(
+			dir,
+			"clone",
+			"--depth=1",
+			"--single-branch",
+			"--branch",
+			"v1.0.0",
+			`file://${dir}`,
+			dest,
+		);
+		const before = run(dest);
+		expect(before.status).not.toBe(0);
+		expect(before.stderr).toContain("Cannot resolve base");
+		// checkout@v7 with fetch-depth: 0 fetches branch refs and complete history.
+		git(
+			dest,
+			"fetch",
+			"--unshallow",
+			"origin",
+			"+refs/heads/*:refs/remotes/origin/*",
+		);
+		const after = run(dest);
+		expect(after.status, after.stderr).toBe(0);
+		expect(after.stdout).toContain("0 new");
+		const eventPath = join(dest, "event.json");
+		const baseSha = git(dest, "rev-parse", "HEAD^").toString().trim();
+		const prRun = () =>
+			spawnSync(process.execPath, ["scripts/i18n/check-strings.ts"], {
+				cwd: dest,
+				encoding: "utf8",
+				env: {
+					...isolated(dest),
+					GITHUB_EVENT_NAME: "pull_request",
+					GITHUB_EVENT_PATH: eventPath,
+				},
+			});
+		writeFileSync(
+			eventPath,
+			JSON.stringify({ pull_request: { base: { sha: baseSha } } }),
+		);
+		const pr = prRun();
+		expect(pr.status, pr.stderr).toBe(0);
+		writeFileSync(eventPath, JSON.stringify({ pull_request: {} }));
+		const invalid = prRun();
+		expect(invalid.status).not.toBe(0);
+		expect(invalid.stderr).toContain("pull_request event has no base SHA");
+	}, 30_000);
 	it("seeds 27 existing identities, rejects a fresh hand-baselined headline, and shrinks on deletion", () => {
 		const dir = fixture();
 		const count = baseline(dir).findings.length;
