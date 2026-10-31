@@ -1064,9 +1064,15 @@ export const ConnectionProvider = ({
 			/* Both fences: the lifecycle revision (a sign-out after this sign-in
 			 *  began wins) and the accessor epoch on the native credential queue (a
 			 *  replacement grant is never overwritten by this one). */
-			await startupAuthorizationLifecycle.runIfCurrent(revision, async () => {
-				await radientAccessRef.current?.persist(result.tokens, ownsGrant);
-			});
+			/* A fresh browser proof may replace a pending sign-out's retained grant,
+			 * but only a verified durable write makes it eligible for next-launch
+			 * restore. A newer sign-out wins even if it arrived during that write. */
+			await startupAuthorizationLifecycle.replaceCredentialsIfCurrent(
+				revision,
+				() =>
+					radientAccessRef.current?.persist(result.tokens, ownsGrant) ??
+					Promise.resolve(false),
+			);
 			if (!isCurrent()) return;
 			setSignInState({ kind: "idle" });
 			/* Straight into discovery, which is what makes the button's promise —

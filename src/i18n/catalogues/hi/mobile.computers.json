@@ -8,5 +8,7 @@
 	"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 	"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 	"mobile.computers.section.on_phone": "इस फ़ोन पर",
+	"mobile.computers.sign_out": "साइन आउट करें",
+	"mobile.computers.signing_out": "साइन आउट हो रहा है…",
 	"mobile.computers.switch": "कंप्यूटर बदलें"
 }

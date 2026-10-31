@@ -394,7 +394,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * merged connection provider, drawer route count and a11y ids, and
 	 * `tools/audit/checks.ts` is the auto-merged union of both sides. Recomputed
 	 * with `--print` from the staged merged tree. */
-	src: "ba7124040b2537740ad522944dd987ce21261bade1f06f06eace57947d06a54c",
+	/* Re-pinned 2026-10-31 for #105 M1/M2 remediation: stored credentials refuse
+	 * tombstone authority, explicit durable replacement is lifecycle-fenced,
+	 * Settings shows local signing-out feedback, and all eight locales include
+	 * its keys. `src` only; no instrument or fixture changes. --print recomputed
+	 * after the final source edit; this is identity, not rendered visual proof. */
+	src: "b70a5496056e1b758ca3daad91864f5c40d5beefad9a02774f5862cd5fcc94eb",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

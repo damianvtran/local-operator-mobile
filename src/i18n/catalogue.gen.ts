@@ -54,6 +54,8 @@ export type CatalogueKey =
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.sign_out"
+	| "mobile.computers.signing_out"
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
@@ -200,6 +202,8 @@ export type NoParamKey =
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.sign_out"
+	| "mobile.computers.signing_out"
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
@@ -327,6 +331,8 @@ export type MessageParams = {
 	"mobile.computers.password_placeholder": NoParams;
 	"mobile.computers.section.not_connected": NoParams;
 	"mobile.computers.section.on_phone": NoParams;
+	"mobile.computers.sign_out": NoParams;
+	"mobile.computers.signing_out": NoParams;
 	"mobile.computers.switch": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
@@ -489,6 +495,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.password_placeholder": "The password from lop mobile",
 	"mobile.computers.section.not_connected": "On your Radient account, not connected",
 	"mobile.computers.section.on_phone": "On this phone",
+	"mobile.computers.sign_out": "Sign out",
+	"mobile.computers.signing_out": "Signing out…",
 	"mobile.computers.switch": "Switch computer",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
@@ -636,6 +644,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
 	"mobile.computers.section.not_connected": { role: "heading", note: "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate." },
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
+	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
+	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
@@ -797,6 +807,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 		"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 		"mobile.computers.section.on_phone": "En este teléfono",
+		"mobile.computers.sign_out": "Cerrar sesión",
+		"mobile.computers.signing_out": "Cerrando sesión…",
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
@@ -942,6 +954,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
+		"mobile.computers.sign_out": "Se déconnecter",
+		"mobile.computers.signing_out": "Déconnexion en cours…",
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
@@ -1087,6 +1101,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 		"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
+		"mobile.computers.sign_out": "साइन आउट करें",
+		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
@@ -1232,6 +1248,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
 		"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 		"mobile.computers.section.on_phone": "На этом телефоне",
+		"mobile.computers.sign_out": "Выйти",
+		"mobile.computers.signing_out": "Выход…",
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
@@ -1377,6 +1395,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
 		"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
 		"mobile.computers.section.on_phone": "اس فون پر",
+		"mobile.computers.sign_out": "سائن آؤٹ کریں",
+		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
@@ -1522,6 +1542,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
 		"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
+		"mobile.computers.sign_out": "Đăng xuất",
+		"mobile.computers.signing_out": "Đang đăng xuất…",
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
@@ -1667,6 +1689,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
 		"mobile.computers.section.not_connected": "Radient账户下，未连接",
 		"mobile.computers.section.on_phone": "此手机",
+		"mobile.computers.sign_out": "退出登录",
+		"mobile.computers.signing_out": "正在退出登录…",
 		"mobile.computers.switch": "切换电脑",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",

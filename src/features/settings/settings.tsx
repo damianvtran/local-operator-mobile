@@ -106,6 +106,12 @@ export default function Settings() {
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [confirmSignOut, setConfirmSignOut] = useState(false);
+	const [signingOut, setSigningOut] = useState(false);
+	/* This is SETTINGS's action, not global connection busy (which also covers
+	 * discovery/picks). Keep the screen responsive and the pending explanation
+	 * visible while bounded push retirement runs. The ref closes the same-tick
+	 * double-confirm window before React has committed disabled={signingOut}. */
+	const signingOutRef = useRef(false);
 
 	const version = Constants.expoConfig?.version ?? "0.0.0";
 
@@ -239,12 +245,20 @@ export default function Settings() {
 	}, [disarmRetry, phase, refusal, tunnelId]);
 
 	const doSignOut = useCallback(async () => {
+		if (signingOutRef.current) return;
+		signingOutRef.current = true;
+		setSigningOut(true);
 		setConfirmSignOut(false);
-		// A failed remote logout keeps its refusal/retry on this screen; do not
-		// claim revocation or navigate away merely because local readiness ended.
-		if (!(await signOut())) return;
-		showToast("Signed out. The session was revoked on your computer.");
-		router.replace("/welcome");
+		try {
+			// A failed logout keeps its refusal/retry on this screen; do not claim
+			// revocation or navigate away merely because local readiness ended.
+			if (!(await signOut())) return;
+			showToast("Signed out. The session was revoked on your computer.");
+			router.replace("/welcome");
+		} finally {
+			signingOutRef.current = false;
+			setSigningOut(false);
+		}
 	}, [router, showToast, signOut]);
 
 	return (
@@ -575,7 +589,13 @@ export default function Settings() {
 				{/* -------------------------------------------------- sign out, delete */}
 				<View className="gap-3 pt-2">
 					<Button
-						label="Sign out"
+						label={
+							signingOut
+								? t("mobile.computers.signing_out")
+								: t("mobile.computers.sign_out")
+						}
+						loading={signingOut}
+						disabled={signingOut}
 						onPress={() => setConfirmSignOut(true)}
 						variant="outline"
 						testID={CONTROL.settingsSignOut}
