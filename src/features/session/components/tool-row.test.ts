@@ -7,6 +7,9 @@ const CENTRED = /\btext-center\b/;
  *  `bridge-row.test.ts`; the one-line wiring had no guard but the audit frames. */
 const GLYPH_CALL = /const glyphOverride = bridgeGlyphFor\(bridge\);/;
 const CHIP_GATE = /chipLayout === "words" ?/;
+/** R17: the layout's scale argument must reach it from the provider, not default. */
+const CHIP_SCALE =
+	/bridgeChipLayout\(\s*rowWidthPt,\s*chipWord,\s*mark !== null,\s*effectiveScale,\s*\)/;
 
 /**
  * SOURCE CHECK, not a render (the Node test environment has no render seam for a
@@ -50,5 +53,11 @@ describe("tool row bridge wiring", () => {
 
 	it("paints the chip only when the layout says the phrase fits", () => {
 		expect(source).toMatch(CHIP_GATE);
+	});
+
+	it("passes the live text scale into the chip layout (R17)", () => {
+		/* Dropping the fourth argument silently pins every frame to 100 % while the
+		 *  function's scale arm stays green in the unit tests (round-3 review, R17). */
+		expect(source).toMatch(CHIP_SCALE);
 	});
 });
