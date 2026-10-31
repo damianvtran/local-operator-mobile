@@ -143,10 +143,16 @@ export const DirectionView = ({
  *              left-to-right block belongs on.
  *       native React Native SWAPS `left`/`right` itself whenever the paragraph's
  *              layout direction is RTL (iOS `RCTAttributedTextUtils.mm`, the
- *              `layoutDirection == RightToLeft` branch; Android
- *              `TextAttributeProps.getTextAlignment`), so `left` under the Urdu root
- *              lands on the physical RIGHT. `auto` is Natural alignment, which
- *              follows the paragraph's `writingDirection: "ltr"` to the left edge.
+ *              `layoutDirection == RightToLeft` branch), so `left` under the Urdu
+ *              root lands on the physical RIGHT. `auto` is Natural alignment, which
+ *              on iOS follows the paragraph's `writingDirection: "ltr"` to the
+ *              left edge.
+ *              ANDROID IS NOT ESTABLISHED. `<Text>` goes through
+ *              `TextLayoutManager.getTextAlignment`, and Android ignores
+ *              `writingDirection` there, so `auto` will probably put a command or
+ *              code block on the physical right under an RTL layout. This is a
+ *              reasoned reading of RN source, not a measured frame: it needs an
+ *              Android RTL frame, which the Urdu change must take before it ships.
  *   - `LTR_WRITING` states only the direction, for a value that must still sit
  *     against the sentence's trailing edge (a diagnostic value column).
  */
