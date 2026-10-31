@@ -389,7 +389,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "cdaeba30c2bbcb2b71b75c5ae1b425176695df3ad3f13515131f4e6f1e10bed9",
+	/* Re-pinned 2026-10-31 for incoming Bridge grouping (#146), deliberately:
+	 * optional wire/parser facts, positive receipt classification and material
+	 * ownership move src. The exact 520-row long-transcript U-08 scene parses
+	 * and produces identical condense/group plans against b51f098a in collapsed,
+	 * first-expanded and all-expanded states (SHA256 93b57ecb3c0caf8b...). This
+	 * is source-plan equivalence, not a new rendered/native proof. --print finds
+	 * only this current render-tree identity changed; instrument/input pins and
+	 * historical ORIGINAL_* incident identities are not altered. */
+	src: "489050e97cbdeb61f021186ebc251c6d28538e1f32bcf0b02af082a3f16c34fe",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
