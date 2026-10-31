@@ -544,8 +544,15 @@ const MonitorLine = ({ row }: { row: MonitorLineView }) => {
 					{row.cadence}
 				</Text>
 				{row.tail !== null ? (
+					/* NOT pinned to the page direction, and the reason is the fix for
+					 * this line's opposite defect (design round 2, D6): when there is
+					 * health text it is the RELAY's English sentence — "{n} checks, 0
+					 * deliveries — nothing has changed" — and an RTL paragraph base
+					 * carries the leading count to the far end of the line, away from
+					 * the noun it counts. With no health text the tail is `{count}
+					 * ناکام`, Urdu-first, which `dir="auto"` already resolves to RTL on
+					 * its own. So this one line is left to the algorithm, deliberately. */
 					<Text
-						{...composedDir}
 						className={`text-meta ${row.alerting ? "text-warning" : "text-ink-dim"}`}
 					>
 						{row.tail}
