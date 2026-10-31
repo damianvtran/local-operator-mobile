@@ -1921,6 +1921,31 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 						},
 						overrides: { tool_state: "failed" },
 					}),
+					/* The copy-less AMBER arm (N4): the relay withheld its words, so there
+					 * is no chip — and the row must still read amber with the inbox mark,
+					 * never the success tick. This is R7's peer-inbox arm on screen. */
+					bridgeRow("bridge-inbox-nocopy", {
+						/* No tail: with no words there is no chip to carry one, and the
+						 * relay's localised tail is vocabulary this app does not mint, so
+						 * it cannot be stripped here (the row would cut into `· …`). */
+						summary: "Sent to Priya · Can you look at the cut?",
+						row: {
+							op: "send",
+							action: "send",
+							target: { kind: "dm", label: "Priya" },
+							preview: "Can you look at the cut?",
+							count: null,
+							emoji: null,
+							outcome: "inbox_only",
+							code: null,
+						},
+						copy: null,
+						args: {
+							op: "send",
+							recipient: "priya",
+							body: "Can you look at the cut?",
+						},
+					}),
 					/* The refusal: the sentence carries the error AND the code, as
 					 * `expanded.refused` renders them. */
 					bridgeRow("bridge-refused", {

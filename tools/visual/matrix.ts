@@ -947,6 +947,18 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	/* D7 (design round 2): the two PENDING outcomes with their CARDS OPEN — the
 	 *  88-character awaiting sentence and the Hourglass arm, both of which need a
 	 *  world short enough to leave room for an expansion at 320 pt. */
+	/* N4/D7 gap: the copy-less amber row, and the AWAITING card opened on its own
+	 * so a 320 pt frame can hold it (pressing both pending rows scrolls past the
+	 * first card). */
+	/* …and the same card read from the TOP of the transcript, where its headline is
+	 * in frame at 320 pt (the tail-anchored cell above only has room for the
+	 * sentence). */
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-compact-u1/bridge-awaiting-top": [
+		{ click: toolRowToggleId("tc-compact-awaiting") },
+	],
+	"path:/session/{sessionId}/bridge-awaiting-open": [
+		{ click: toolRowToggleId("tc-compact-awaiting") },
+	],
 	"path:/session/{sessionId}/bridge-pending-open": [
 		{ click: toolRowToggleId("tc-compact-awaiting") },
 		{ click: toolRowToggleId("tc-compact-unconfirmed") },

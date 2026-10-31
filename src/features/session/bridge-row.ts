@@ -112,7 +112,7 @@ const stringOrNull = (value: unknown): string | null =>
  * break, so an `ep_` inside a real word survives. Kept in step with the relay's
  * `_BRIDGE_ID_RE`.
  */
-const OPAQUE_ID = /\b(?:bcv|bcmsg|acc|ep)_[A-Za-z0-9_-]+/g;
+const OPAQUE_ID = /\b(?:bcv|bcmsg|acc|ep)_[A-Za-z0-9_-]+/gi;
 const RUNS_OF_SPACE = /\s+/g;
 /** A separator an id leaves dangling once removed: one followed directly by
  *  another separator or by the end (`to bcv_x · hi` → `to · hi`, not `to  · hi`). */
@@ -352,20 +352,22 @@ export type BridgeChipLayout = "words" | "mark" | "own-line";
 /** 24 rem and 18 rem, the relay's own thresholds, in points. */
 export const BRIDGE_CHIP_FULL_MIN_PT = 384;
 
-/** Everything on the row that is not the chip's own text: the two paddings, the
- *  state glyph, the identity mark, three 6 pt gaps, the clock and the chevron.
- *  Read off the 320 pt frame (pressable `l:24 r:296`; glyph at 26.7; mark to
- *  59.0; clock ending ~284). */
-const CHIP_CHROME_PT = 24 * 2 + 16 + 14 + 6 * 3 + 24 + 16;
+const CHIP_CHAR_PT = 6.5;
 
-/** Body-sm averages ~6.9 pt per character at 100 % in this app's faces; the
- *  estimate rounds up, so a phrase is only called fitting with room to spare. */
-const CHIP_CHAR_PT = 7.4;
+/** The slack a phrase must have before it is called fitting, in points. It buys
+ *  the estimate its one-sided error: a phrase that is merely close goes to its
+ *  own line rather than to an ellipsis (Q1). */
+const CHIP_FIT_MARGIN_PT = 4;
 
 const CHIP_WIDE_CAP = 0.55;
 const CHIP_NARROW_CAP = 0.4;
 
-/** Whether `word` fits the chip's share of a row `rowWidthPt` wide. */
+/** Whether `word` fits the chip's share of a row `rowWidthPt` wide.
+ *
+ *  The base is `rowWidthPt × cap` — the exact box the chip's `maxWidth` style
+ *  gives it. The earlier estimate subtracted the row's own padding and chrome
+ *  again (both already gone from `rowWidthPt`) and so measured a 82 pt box where
+ *  the render allows 137 pt (D10). */
 export const bridgeChipFits = (
 	rowWidthPt: number,
 	word: string,
@@ -373,9 +375,8 @@ export const bridgeChipFits = (
 ): boolean => {
 	const cap =
 		rowWidthPt >= BRIDGE_CHIP_FULL_MIN_PT ? CHIP_WIDE_CAP : CHIP_NARROW_CAP;
-	return (
-		word.length * CHIP_CHAR_PT * scale <= (rowWidthPt - CHIP_CHROME_PT) * cap
-	);
+	const available = rowWidthPt * cap - CHIP_FIT_MARGIN_PT;
+	return word.length * CHIP_CHAR_PT * scale <= available;
 };
 
 export const bridgeChipLayout = (

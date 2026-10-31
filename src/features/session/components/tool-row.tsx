@@ -239,7 +239,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * Chosen over `onLayout` because it is the same number on the first frame,
 	 * so a chip can never paint wide and then jump. */
 	const rowWidthPt = Math.max(0, useWindowDimensions().width - ROW_CHROME_PT);
-	const chipLayout = bridgeChipLayout(rowWidthPt, chipWord, mark !== null);
+	const chipLayout = bridgeChipLayout(
+		rowWidthPt,
+		chipWord,
+		mark !== null,
+		effectiveScale,
+	);
 	/* The daemon's sentence already states the outcome; the raw error and output
 	 * would say it again (design round 1, D5). */
 	const bridgeStated =
@@ -322,15 +327,29 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * unmarked phrase fits it takes its own line instead of being clipped (Q1).
 	 * One value, so the two reasons can never print the line twice — measured at
 	 * 390 pt, 150 %, where they did. */
+	/* D9: an open card that states the outcome retires the row's second line. The
+	 *  same token and the same fact 46 pt apart, the rail line out-dented 24.6 pt
+	 *  from the card it introduced, read as the card's heading (measured at 390 pt).
+	 *  The accessible name keeps the word either way. */
 	const bridgeSecondLine =
-		deliveryOnOwnLine && trailing !== null
+		open && bridgeStated
+			? null
+			: deliveryOnOwnLine && trailing !== null
+				? trailing
+				: bridgeOutcome !== null && chipLayout === "own-line"
+					? {
+							text: bridgeOutcome.text,
+							inkClass: trailing?.inkClass ?? "text-warning",
+						}
+					: null;
+	/* ONE second line per row, whatever put it there: a bridge caveat that could
+	 * not fit its chip, or a send word above `LARGE_TEXT_SCALE`. One value feeds
+	 * both the grouping (D8) and the render, so the two can never disagree. */
+	const secondLine = isBridge
+		? bridgeSecondLine
+		: deliveryOnOwnLine && trailing !== null
 			? trailing
-			: bridgeOutcome !== null && chipLayout === "own-line"
-				? {
-						text: bridgeOutcome.text,
-						inkClass: trailing?.inkClass ?? "text-warning",
-					}
-				: null;
+			: null;
 
 	return (
 		<View
@@ -360,7 +379,21 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				onPress={() => details && setOverride(!open)}
 				testID={toolRowToggleId(entry.id)}
 			>
-				<View className="min-h-11 flex-row items-center gap-1.5">
+				{/* D8: a row that carries a SECOND line groups it by geometry. Line
+				 *  one keeps a 44 pt box normally; with a second line the box drops to
+				 *  `min-h-8` (32 pt, a `space.scale` step) and the second line takes
+				 *  `pb-1` (4 pt). Measured on the frames, that leaves ~5.9 pt above the
+				 *  caveat against ~15.9 pt below it, so it reads as its row's, not as a
+				 *  heading for the next one — at 100 %, where the equidistant 32/32
+				 *  split did exactly that (390 pt: 292 → 324 → 356). The pressable is
+				 *  32 + 20.3 + 4 = 56.3 pt, still over the 44 pt touch floor, and the
+				 *  rail is untouched (U-41) because nothing moved horizontally. */}
+				<View
+					className={cx(
+						"flex-row items-center gap-1.5",
+						secondLine !== null ? "min-h-8" : "min-h-11",
+					)}
+				>
 					<Text
 						/* LEFT-aligned in its fixed box, not centred: the delivery word (and the
 						 *  expansion's hint) start on the ROW's left edge, so a glyph centred in
@@ -525,20 +558,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				 *  orphan read is answered differently: the line lives inside its own
 				 *  row's pressable and directly under it, so it cannot sit above
 				 *  another row's text or read as that row's. */}
-				{isBridge && bridgeSecondLine !== null ? (
+				{secondLine !== null ? (
 					<Text
-						className={cx("text-body-sm", bridgeSecondLine.inkClass)}
+						className={cx("pb-1 text-body-sm", secondLine.inkClass)}
 						numberOfLines={1}
 					>
-						{bridgeSecondLine.text}
-					</Text>
-				) : null}
-				{!isBridge && deliveryOnOwnLine && trailing !== null ? (
-					<Text
-						className={cx("text-body-sm", trailing.inkClass)}
-						numberOfLines={1}
-					>
-						{trailing.text}
+						{secondLine.text}
 					</Text>
 				) : null}
 			</Pressable>

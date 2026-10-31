@@ -16,6 +16,7 @@ import {
 	bridgeRowSummary,
 	bridgeToneOf,
 	isBridgeRow,
+	isLoneReceiptLine,
 	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
 
@@ -463,10 +464,10 @@ describe("bridge row: the leading glyph", () => {
 				bridgeRowOf(row({ ...payload({ outcome }) })),
 			);
 			expect(without).toBe(withWords);
-			/* The table's three tones: a refusal is danger, the two unconfirmed
-			 * outcomes are the muted `pending` pair, the peer inbox is `warning` —
-			 * and every one of them paints AMBER or RED through `bridgeGlyphFor`,
-			 * never the settled ink (R3/D2). */
+			/* The table's three tones: a refusal is `danger`, the peer inbox is
+			 * `warning`, and the two unconfirmed outcomes are `pending` — which is
+			 * the AMBER tier, not muted grey: all three paint amber or red through
+			 * `bridgeGlyphFor`, never the settled ink (R3/D2, R14). */
 			expect(withWords).toBe(
 				outcome === "refused" || outcome === "failed"
 					? "danger"
@@ -496,6 +497,46 @@ describe("bridge row: the mark", () => {
 			bridgeMark(bridgeRowOf(row(payload({ outcome: "refused" })))),
 		).toBeNull();
 		expect(bridgeMark(null)).toBeNull();
+	});
+});
+
+describe("bridge row: R10 — the spoken state is the outcome's, not the tool's", () => {
+	/* Every refusal test before this one used `tool_state: "failed"`, so reverting
+	 *  the a11y half of R7 (`const state = entry.tool_state`) passed the suite. */
+	it("speaks failed for a refusal the tool reported as done", () => {
+		const entry = row(
+			{ ...payload({ outcome: "refused", code: "not_a_member" }) },
+			{
+				tool_state: "done",
+				summary:
+					"Couldn't post in #leadership · Heads-up · refused · not_a_member",
+			},
+		);
+		expect(bridgeAccessibleName(entry, bridgeRowOf(entry), null)).toBe(
+			"bridge failed, refused, Couldn't post in #leadership · Heads-up",
+		);
+	});
+
+	it("keeps the tool's own state when the outcome does not qualify it", () => {
+		const entry = row(
+			{ ...payload({ outcome: "inbox_only" }) },
+			{ tool_state: "done", summary: "Sent to Priya · Can you look?" },
+		);
+		expect(bridgeAccessibleName(entry, bridgeRowOf(entry), null)).toBe(
+			"bridge done, inbox only, Sent to Priya · Can you look?",
+		);
+	});
+});
+
+describe("bridge row: R12 — the lone receipt", () => {
+	it("is one lowercase word, and nothing else", () => {
+		expect(isLoneReceiptLine(["ok"])).toBe(true);
+		expect(isLoneReceiptLine(["sent"])).toBe(true);
+		expect(isLoneReceiptLine(["ok", "x"])).toBe(false);
+		expect(isLoneReceiptLine(["Posted to #release"])).toBe(false);
+		expect(isLoneReceiptLine([])).toBe(false);
+		/* Digits and punctuation are text, not a receipt token. */
+		expect(isLoneReceiptLine(["seq 412"])).toBe(false);
 	});
 });
 
@@ -536,11 +577,16 @@ describe("bridge row: the chip's layout", () => {
 	});
 
 	it("counts the 150 % scale as narrower, never wider", () => {
-		expect(bridgeChipFits(390, "delivery unconfirmed", 1.5)).toBe(false);
-		/* No mark to fall back on, so it takes its own line at any width rather
-		 * than clipping — the one layout Q1 leaves honest. */
-		expect(bridgeChipLayout(390, "delivery unconfirmed", false, 1.5)).toBe(
+		/* Row widths, not viewports: 342 pt is the row a 390 pt phone lays out, and
+		 * that is what the style caps and the estimate both measure (D10). */
+		expect(bridgeChipFits(342, "delivery unconfirmed", 1.5)).toBe(false);
+		expect(bridgeChipLayout(342, "delivery unconfirmed", false, 1.5)).toBe(
 			"own-line",
+		);
+		/* At 100 % the same row DOES fit it — the D10 case, where the old
+		 * over-estimate sent a phrase that renders whole to its own line. */
+		expect(bridgeChipLayout(342, "delivery unconfirmed", false, 1)).toBe(
+			"words",
 		);
 	});
 });

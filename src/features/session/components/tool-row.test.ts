@@ -3,6 +3,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const CENTRED = /\btext-center\b/;
+/** The two wiring lines R7 and Q1 depend on. Their pure decisions are tested in
+ *  `bridge-row.test.ts`; the one-line wiring had no guard but the audit frames. */
+const GLYPH_CALL = /const glyphOverride = bridgeGlyphFor\(bridge\);/;
+const CHIP_GATE = /chipLayout === "words" ?/;
 
 /**
  * SOURCE CHECK, not a render (the Node test environment has no render seam for a
@@ -21,5 +25,30 @@ describe("tool row rail", () => {
 
 	it("does not centre the delivery glyph's text", () => {
 		expect(source).not.toMatch(CENTRED);
+	});
+});
+
+/**
+ * R11 — the component's WIRING, which is where R7 and Q1 can silently come back.
+ *
+ * Both defects lived on one line: re-gating the glyph on the copy
+ * (`bridgeOutcome === null ? null : bridgeGlyphFor(bridge)`) restores R7 exactly,
+ * and dropping the `chipLayout === "words"` gate re-opens Q1's ellipsis. The pure
+ * functions stayed green through both mutations (round-3 review, executed), so
+ * these source assertions are the only cheap guard that does not need a render.
+ */
+describe("tool row bridge wiring", () => {
+	const source = readFileSync(
+		fileURLToPath(new URL("./tool-row.tsx", import.meta.url)),
+		"utf8",
+	);
+
+	it("asks the glyph decision with the row alone, never gated on copy", () => {
+		expect(source).toMatch(GLYPH_CALL);
+		expect(source).not.toMatch(/bridgeGlyphFor\(bridge, bridgeCopy\)/);
+	});
+
+	it("paints the chip only when the layout says the phrase fits", () => {
+		expect(source).toMatch(CHIP_GATE);
 	});
 });
