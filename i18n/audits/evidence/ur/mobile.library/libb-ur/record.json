@@ -1,0 +1,216 @@
+{
+ "schema": 1,
+ "audit_id": "libb-ur",
+ "locale": "ur",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 29,
+ "value_count": 29,
+ "kind": "initial independent audit (library extraction wave, Audit B)",
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "session scratchpad lib-wave, detached at 4fd4ad7c plus the translator's uncommitted extraction and seven locale translations; read-only for this auditor",
+ "base_commit": "4fd4ad7c",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** - not used",
+  "context_sidecar_routability": "not routable: the en mobile.library.context.json maps keys to nested {role,note} objects, not message strings",
+  "receipt": null,
+  "honest_note": "no copy-route receipt obtained or claimed for any input in this bundle"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "31e9e2398db8",
+  "model": "radient/auto",
+  "actual_model_source": "session model-switch notices (provider-quota fallbacks) in this session's transcript: anthropic/claude-sonnet-5-5 -> anthropic/claude-opus-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto",
+  "model_chain": [
+   "anthropic/claude-sonnet-5-5",
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "primary_model": "anthropic/claude-sonnet-5-5",
+  "fallback_used": true,
+  "fallback_note": "readings and judgments were formed under anthropic/claude-sonnet-5-5; provider-quota fallbacks then moved the session to radient/auto, under which the bundle was assembled and re-verified (generate.ts --check, renderers and probes re-run)",
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "ur (native-fluent reader; no MT or translation service used at any point)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/mobile.library.json",
+   "sha256": "22e5cf3611f379dc53ff724228bf8b2ad6e68f218d3138e82fcc9617a91298ce"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "eae4550326593bb4da0773ccd5970583acbc7dd846dd3bd47af0c2030b756ad3"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "1c459b0eaa68e314edd5935619480b8f28a5b31d4d52cd9286d7a746e2a31d6c"
+  }
+ },
+ "redaction_scan": {
+  "secret_pattern_matches": 0,
+  "patterns_checked": [
+   "sk-*",
+   "ghp_*",
+   "xox[bap]-",
+   "AKIA*",
+   "Bearer <token>",
+   "password[:=]",
+   "api_key[:=]"
+  ],
+  "files": [
+   "audit.log",
+   "report.md"
+  ],
+  "secret_material_in_bundles": 0,
+  "absolute_scratch_paths_present": true,
+  "note": "audit.log carries this run's real absolute scratch paths (not normalised, not claimed as normalised); publication normalisation, where earlier bundles did it, is for the committer"
+ },
+ "findings": [
+  {
+   "id": "libb-ur-1",
+   "severity": "MAJOR",
+   "key": "mobile.library.editor.new_tag_placeholder",
+   "current": "موضوع-کا-نام",
+   "replacement": "topic-name",
+   "why": "Sidecar: the placeholder 'shows the form real tags take'. Core's server tag grammar is ^[a-z0-9][a-z0-9_-]{0,23}$ (local_operator/library/metadata.py:1289 `_normalise_tag_name`, applied by `create_tag`, which the phone's `create_tag_payload` calls). Proven on the real path in audit.log: a throwaway `MetadataStore.create_tag` REFUSES «موضوع-کا-نام» with TagRefused (the route maps it to 422 bad_tag_name and the editor shows 'That tag was not created.') and CREATES 'topic-name'. So the example teaches a form the product cannot save, inside the field beside «شامل کریں». The sidecar's 'a localised example is fine' rests on a premise the server contradicts. `mobile.library.editor.new_tag_placeholder` must be added to `IDENTICAL_BY_DESIGN.<locale>` in src/i18n/__tests__/catalogues.test.ts with a reason, because the 'no shipped value equals English' test (catalogues.test.ts:281-286) fails on a value identical to en. A different ASCII example (e.g. `weekly-notes`) needs no allowlist entry. Same defect in ru, vi and zh-CN (probed); not my bundles.",
+   "verified": "tools/tagprobe.py: function-level gate + real MetadataStore.create_tag in a temp dir; tools/verify-repl.ts render — both in audit.log"
+  },
+  {
+   "id": "libb-ur-2",
+   "severity": "MAJOR",
+   "key": "mobile.library.detail.seen_in",
+   "current": "جن گفتگوؤں میں دیکھا گیا",
+   "replacement": "ان گفتگوؤں میں دیکھا گیا",
+   "why": "Composed-sentence defect against the call site (library-detail.tsx:346-352: a heading completed by the list of conversation titles below it, or by the detail.no_source line). «جن … میں» is the relative half of an Urdu correlative pair and expects its «ان … میں» in a main clause that this heading does not have, so it dangles; the demonstrative «ان گفتگوؤں میں دیکھا گیا» ('seen in these conversations') is complete, points at the list, and matches shipped Hindi 'इन बातचीतों में दिखा'. Oblique plural گفتگوؤں and masculine دیکھا گیا (اثاثہ) unchanged.",
+   "verified": "tools/verify-repl.ts render in audit.log; call site read at library-detail.tsx:346-352"
+  },
+  {
+   "id": "libb-ur-3",
+   "severity": "MAJOR",
+   "key": "mobile.library.browse.no_tags",
+   "current": "ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے ہوئے ٹیگ شامل کرتی ہے۔",
+   "replacement": "ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔",
+   "why": "One subject, two genders in one sentence. Core renders the Librarian as feminine ('Librarian عالمی Library منظم رکھتی ہے', wire.settings.librarian.description) and the main verb here is feminine (کرتی ہے), but the conjunctive participle کرتے ہوئے is the masculine(-plural) form; with a feminine subject standard Urdu wants کرتی ہوئی, which reads heavy in a status line. The gender-invariant 'کرتے وقت' ('while/at the time of') removes the clash without rewriting the sentence; meaning, the ۔ and the Latin name are untouched. Sentence 1 is byte-identical to core tui.tags.empty 'ابھی کوئی ٹیگ نہیں۔'",
+   "verified": "tools/verify-repl.ts render in audit.log; core feminine rendering quoted from the bounded grep in audit.log"
+  },
+  {
+   "id": "libb-ur-4",
+   "severity": "MINOR",
+   "key": "mobile.library.editor.tag_limit",
+   "current": "ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد {limit} ہے۔",
+   "replacement": "ایک اثاثے پر ٹیگز کی حد {limit} ہے۔",
+   "why": "«زیادہ سے زیادہ حد» says 'maximum limit' — حد already is the ceiling — and «کے لیے» is looser than the پر core uses for the same rule (wire.errors.desktop.library_tag_limit: 'ایک اثاثے پر زیادہ سے زیادہ {max, number} ٹیگز ہو سکتے ہیں۔'). Honest caveat: core's relay.session.tags.limit_hint ships the same doubling in a different sentence, so this is entrenched elsewhere too; polish, not a violation. Grammatical at every {limit}.",
+   "verified": "tools/verify-repl.ts render in audit.log"
+  }
+ ],
+ "mechanical": {
+  "generate_ts_check": "exit 0 - catalogue.gen.ts is current (178 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)",
+  "keyset_equals_en": true,
+  "placeholders_ok": true,
+  "plural_arms": 0,
+  "bidi_controls": 0,
+  "full_stops_ok": true,
+  "nfc_stable": true,
+  "json_valid": true
+ },
+ "plural_cases": {
+  "editor.tag_limit_at": [
+   0,
+   1,
+   2,
+   12,
+   21
+  ],
+  "browse.filters_count_at": [
+   0,
+   1,
+   2,
+   21
+  ],
+  "grammatical_at_all": true,
+  "note": "no ICU arms: the number labels a quantity (a ceiling, a count), so no CLDR arm is selected and the ur 0->other / hi 0->one divergence cannot apply; call sites render only limit=12 and count>0"
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 3,
+  "finding_ids": [
+   "libb-ur-1",
+   "libb-ur-2",
+   "libb-ur-3",
+   "libb-ur-4"
+  ],
+  "blocker_major_ids": [
+   "libb-ur-1",
+   "libb-ur-2",
+   "libb-ur-3"
+  ]
+ },
+ "second_pass": {
+  "high_visibility_group": false,
+  "note": "mobile.library is not an onboarding/errors/settings surface; if the programme treats the Library screens as high-visibility, a second independent pass is still outstanding and is NOT claimed here"
+ },
+ "audit_notes_not_execution_log": "report.md prose is judgement, not command output; every mechanical and render claim is backed by audit.log",
+ "execution_log": "audit.log - real stdout/stderr of tools/run.sh ur: git rev-parse, git status, sha256 of the three inputs, generate.ts --check, tools/checks.py, tools/render.ts, tools/fit.py (rich cell widths), tools/tagprobe.py (core .venv, read-only), a bounded glossary grep over core's committed catalogues, tools/verify-repl.ts",
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/audit.log",
+   "sha256": "3dc66e5f277e65c7c0a685904fbcaf2f3a5302837b74bea7c219e3ff785f661b"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/report.md",
+   "sha256": "3cfdedeb3af8be111bd8ff449bc4d0287339f178a23fdaad165f8e5582232416"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/run.sh",
+   "sha256": "71ae12ad7e92f3ba1750e8621325bec67aa299a6b1ddba42140675deb3546869"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/render.ts",
+   "sha256": "e41e118b70c9a316f8594976d3896d35caa7d7d10cbea7a635f5e78713bfa1da"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/checks.py",
+   "sha256": "e0c6ac2c4d6b07b4faf3d5f93de044898a96b25578e783f1cfd2d7733c96c465"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/tagprobe.py",
+   "sha256": "c5022ba893909e2370e5947b9875202288ce721f4a8f5bcc1a06ccbffe9b083a"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/verify-repl.ts",
+   "sha256": "93ecc76786953608fd2785d975c7c2b8eec4b50ff578dda1593d1e2ae5696326"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/tools/fit.py",
+   "sha256": "722f1972ccedec75d9f7292ba6aa5a3f12e93148feda37d6a8c0a9e21b495b22"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.library/libb-ur/record.json",
+   "sha256": "self (not applicable: a file cannot attest its own hash)"
+  }
+ ],
+ "ledger_row_draft": {
+  "locale": "ur",
+  "namespace": "mobile.library",
+  "source_sha256": "eae4550326593bb4da0773ccd5970583acbc7dd846dd3bd47af0c2030b756ad3",
+  "translator": {
+   "agent": "i18n-translator (lopdev lane)",
+   "note": "value supplied by the translator session; this auditor did not translate these strings"
+  },
+  "status": "changes_requested",
+  "note": "Independent audit (ur / mobile.library, 4 keys to work, 3 major, 0 blocker). Record with hashes, model, findings: i18n/audits/evidence/ur/mobile.library/libb-ur/record.json."
+ },
+ "ledger_command": {
+  "exists": false,
+  "checked": [
+   "src/i18n/ scripts in the audited repo (package.json i18n scripts: generate/check/ratchet; no ledger)",
+   "i18n/ in the audited repo: audits/ only, no ledger.json",
+   "core repo scripts/i18n/{check,generate,login}.py and emit.mjs: no ledger subcommand"
+  ],
+  "consequence": "the ledger row is a draft in this record; nobody can honestly claim a ledger write was executed"
+ },
+ "ledger_note_offer": "record at i18n/audits/evidence/ur/mobile.library/libb-ur/record.json; status 'changes_requested', 3 MAJOR, no BLOCKER, verdict agreed with record hashes/identities"
+}

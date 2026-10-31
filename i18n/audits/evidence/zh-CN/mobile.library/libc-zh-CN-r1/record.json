@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "audit_id": "libc-zh-CN-r1",
+ "locale": "zh-CN",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 31,
+ "value_count": 31,
+ "kind": "initial independent audit (library extraction wave, Audit C)",
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "base_commit": "4fd4ad7c (plus uncommitted extraction and translations; read-only for this auditor)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "e89500535af7",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header ('Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "zh-CN (native-fluent reader; no MT or translation service used, no back-translation tool)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/zh-CN/mobile.library.json",
+   "sha256": "27a055806e3d3f87e57bc2bdadeac3a39827cf317045d9a0ec97f2af9e6c3b61"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc"
+  }
+ },
+ "file_unchanged_during_audit": "audit.log hashes the target at the start and again as its last command; both equal input_hashes.target.sha256",
+ "call_sites_read": [
+  "src/features/library/library-detail.tsx (editor sheet 815-910, Dialog 914-929, detail 238-370)",
+  "src/features/library/library-screen.tsx (chips 280-310, sheets 435-640)",
+  "src/ui/components/dialog.tsx (Cancel = t(\"mobile.common.cancel\"), confirmLabel prop, danger variant)"
+ ],
+ "ledger_command": "none exists in this repo (no 'ledger' in docs/i18n.md, package.json scripts or scripts/i18n); status is recorded here in current_report_verdict only. Nothing was written to any ledger file.",
+ "findings": [
+  {
+   "id": "libc-zh-CN-r1-1",
+   "severity": "MAJOR",
+   "key": "mobile.library.detail.no_source",
+   "current": "此资源没有记录来源会话。",
+   "replacement": "此资源没有记录来源对话。",
+   "why": "The zh mobile catalogue keeps two words apart: 对话 = conversation (home.tip.search «搜索过往对话以重新打开会话», session.conversation_details «对话详情», schedules.*, notifications.*) and 会话 = session (projects.sessions.count «# 个会话», session_health.*). English \"source conversation\" is a conversation → 对话. On the same screen the button beside it is «打开对话» (action.open_chat) and the «出现于» list it sits under lists conversation titles, so 会话 contradicts the sibling control and reads as a different object (a session). Core zh desktop library (tui.library.*) uses 会话 for this, but the mobile catalogue is the binding reference for a mobile screen.",
+   "verified": "mobile zh grep for 对话/会话 usage; before/after render in audit.log"
+  }
+ ],
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only. Reads of call sites and sibling catalogues (sed/grep/python) are not replayed in audit.log. Out-of-catalogue observation, not a finding on this file: library-screen.tsx:300 still builds the Sort chip as the English literal `Sort: ${...}` (and \"Recently seen\"), and library-detail.tsx has English literals \"Back to the library\", \"Favorite(d)\", \"A conversation\", \"Clear filters\" - no key exists for them, so this bundle cannot judge them.",
+ "execution_note": "the first foreground attempt of run.sh timed out (node startup under load); the five audit.log files are the complete reruns, each with 8 commands all exit 0.",
+ "artifacts": {
+  "audit.log": {
+   "path": "i18n/audits/evidence/zh-CN/mobile.library/libc-zh-CN-r1/audit.log",
+   "sha256": "dcfb43e2cc60833b1e9965bc1db05f5628c8d12fd67bd28a4d2a6e25e48cd386"
+  },
+  "tools_sha256": {
+   "checks.py": "32ccf5277c5ec848f19d3a202db68b15efbf679f2130a19b18bd7e1ab43220b5",
+   "render.ts": "b6c0152dd00a2202c7af90249aa9d31c8c4de9bb6f344941536717e9613096fb",
+   "run.sh": "f255781e0ae2ac6471fbb1c9b2a299ef71c23af028ec1e3c24c2d1a5c849bff2",
+   "zh-CN.repl.json": "dae8dee268deb86c4bcd77e57662d9d30052313a981abd654a15a1743a60bee8"
+  },
+  "report.md": "report.md (hash omitted: it quotes this record)"
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+   "libc-zh-CN-r1-1"
+  ]
+ }
+}

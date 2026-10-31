@@ -1,0 +1,112 @@
+# audit.log - libc-es-r1 mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/run.sh es, run 2026-10-31T13:47:38Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own and are not replayed here.
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ git status --short -- src/i18n/catalogues/es/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+ M src/features/library/library-detail.tsx
+ M src/ui/components/dialog.tsx
+?? src/i18n/catalogues/en/mobile.library.context.json
+?? src/i18n/catalogues/en/mobile.library.json
+?? src/i18n/catalogues/es/mobile.library.json
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/es/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/es/mobile.common.json
+b8548f22e7bdc8a38922ed08296d07822d10a5a1b8069d4cefcc531ac1f0c67d  src/i18n/catalogues/es/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+ed13003eed33e826439bcf11cca0c85089df3585a20226b0f7782d1373b313c2  src/i18n/catalogues/es/mobile.common.json
+[exit 0]
+
+$ grep -n mobile.library.discard\|mobile.library.editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:825:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:916:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:917:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:918:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/checks.py es
+en keys 31 sidecar keys 31 sidecar==en True
+es: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+sentence keys (en ends with .): 6
+full-stop mismatch (locale stop vs en): none
+ASCII-quote / ASCII apostrophe in values: none
+special spaces (NNBSP U+202F / NBSP U+00A0): []
+new_tag_placeholder 'nombre-del-tema' matches server grammar ^[a-z0-9][a-z0-9_-]{0,23}$ : True
+mid-dot kept in filters_count: True
+discard_confirm != common cancel:
+   common.cancel = 'Cancelar' | discard_confirm = 'Descartar' | equal: False
+   common.save = 'Guardar'
+length (chars) of button/chip/label values:
+   action.add_tag                 6 chars (en 3)  Añadir
+   action.edit                    6 chars (en 4)  Editar
+   action.open_chat              10 chars (en 9)  Abrir chat
+   browse.any_tag                18 chars (en 7)  Cualquier etiqueta
+   browse.filters                 7 chars (en 7)  Filtros
+   browse.more_kinds              9 chars (en 10)  Más tipos
+   browse.sort                    7 chars (en 4)  Ordenar
+   browse.status                  6 chars (en 6)  Estado
+   browse.tag                     8 chars (en 3)  Etiqueta
+   discard_confirm                9 chars (en 7)  Descartar
+   editor.discard_title          23 chars (en 16)  ¿Descartar los cambios?
+   browse.search_placeholder     27 chars (en 18)  Nombre, etiqueta o palabras
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts, WITH any prescribed replacement beneath
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/render.ts es /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/es.repl.json
+action.add_tag                   {}           => Añadir
+action.edit                      {}           => Editar
+action.open_chat                 {}           => Abrir chat
+                                 REPLACEMENT  => Abrir conversación
+browse.any_tag                   {}           => Cualquier etiqueta
+browse.filter_by_kind            {}           => Filtrar por tipo
+browse.filters                   {}           => Filtros
+browse.filters_count             {"count":1}  => Filtros · 1
+browse.filters_count             {"count":2}  => Filtros · 2
+browse.filters_count             {"count":5}  => Filtros · 5
+browse.more_kinds                {}           => Más tipos
+browse.no_tags                   {}           => Aún no hay etiquetas. El bibliotecario las añade al organizar los recursos.
+                                 REPLACEMENT  => Aún no hay etiquetas. El Bibliotecario las añade al organizar los recursos.
+browse.refresh                   {}           => Actualizar biblioteca
+browse.search_label              {}           => Buscar en la biblioteca
+browse.search_placeholder        {}           => Nombre, etiqueta o palabras
+browse.sort                      {}           => Ordenar
+browse.status                    {}           => Estado
+browse.tag                       {}           => Etiqueta
+detail.message_label             {}           => Mensaje sobre este recurso
+detail.missing_file              {}           => Este archivo se ha movido o eliminado. Su nombre, etiquetas y descripción siguen aquí.
+detail.no_source                 {}           => No hay ninguna conversación de origen registrada para este recurso.
+detail.no_tags                   {}           => Aún no hay etiquetas. Edita los detalles para añadir una.
+detail.seen_in                   {}           => Visto en
+editor.description               {}           => Descripción
+editor.discard_title             {}           => ¿Descartar los cambios?
+editor.name                      {}           => Nombre
+editor.new_tag                   {}           => Nueva etiqueta
+editor.new_tag_placeholder       {}           => nombre-del-tema
+editor.tag_limit                 {"limit":12} => Un recurso puede tener como máximo 12 etiquetas.
+editor.tags                      {}           => Etiquetas
+editor.title                     {}           => Editar detalles
+title                            {}           => Biblioteca
+discard_not_saved                {}           => Los cambios que has hecho en el nombre, la descripción y las etiquetas no se guardarán.
+discard_confirm                  {}           => Descartar
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/es/mobile.library.json
+b8548f22e7bdc8a38922ed08296d07822d10a5a1b8069d4cefcc531ac1f0c67d  src/i18n/catalogues/es/mobile.library.json
+[exit 0]

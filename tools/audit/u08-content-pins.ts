@@ -397,7 +397,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is source-plan equivalence, not a new rendered/native proof. --print finds
 	 * only this current render-tree identity changed; instrument/input pins and
 	 * historical ORIGINAL_* incident identities are not altered. */
-	src: "489050e97cbdeb61f021186ebc251c6d28538e1f32bcf0b02af082a3f16c34fe",
+	/* DIRTY convergence with main239cada4 (#145 Library i18n): recomputed
+	 * with --print over the combined tree, not either side's isolated digest.
+	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
+	 * identical plans in the three states above (same SHA256); Library labels
+	 * do not enter that measured scene. All other pin tables stay unchanged. */
+	src: "c84927ef257c6c61645eeb7db62bae083b268c190fa9c16dba95c5903f66ba81",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

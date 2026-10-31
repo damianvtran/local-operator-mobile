@@ -1,0 +1,26 @@
+{
+	"mobile.common.back": {
+		"role": "button",
+		"note": "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)."
+	},
+	"mobile.common.cancel": {
+		"role": "button",
+		"note": "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key."
+	},
+	"mobile.common.done": {
+		"role": "button",
+		"note": "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'."
+	},
+	"mobile.common.save": {
+		"role": "button",
+		"note": "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key."
+	},
+	"mobile.common.send": {
+		"role": "button",
+		"note": "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'."
+	},
+	"mobile.common.try_again": {
+		"role": "button",
+		"note": "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection."
+	}
+}

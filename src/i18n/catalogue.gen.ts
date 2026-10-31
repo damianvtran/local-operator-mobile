@@ -47,6 +47,12 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.common.back"
+	| "mobile.common.cancel"
+	| "mobile.common.done"
+	| "mobile.common.save"
+	| "mobile.common.send"
+	| "mobile.common.try_again"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
@@ -84,6 +90,37 @@ export type CatalogueKey =
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.waiting"
+	| "mobile.library.action.add_tag"
+	| "mobile.library.action.edit"
+	| "mobile.library.action.open_chat"
+	| "mobile.library.browse.any_tag"
+	| "mobile.library.browse.filter_by_kind"
+	| "mobile.library.browse.filters"
+	| "mobile.library.browse.filters_count"
+	| "mobile.library.browse.more_kinds"
+	| "mobile.library.browse.no_tags"
+	| "mobile.library.browse.refresh"
+	| "mobile.library.browse.search_label"
+	| "mobile.library.browse.search_placeholder"
+	| "mobile.library.browse.sort"
+	| "mobile.library.browse.status"
+	| "mobile.library.browse.tag"
+	| "mobile.library.detail.message_label"
+	| "mobile.library.detail.missing_file"
+	| "mobile.library.detail.no_source"
+	| "mobile.library.detail.no_tags"
+	| "mobile.library.detail.seen_in"
+	| "mobile.library.discard_confirm"
+	| "mobile.library.discard_not_saved"
+	| "mobile.library.editor.description"
+	| "mobile.library.editor.discard_title"
+	| "mobile.library.editor.name"
+	| "mobile.library.editor.new_tag"
+	| "mobile.library.editor.new_tag_placeholder"
+	| "mobile.library.editor.tag_limit"
+	| "mobile.library.editor.tags"
+	| "mobile.library.editor.title"
+	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
 	| "mobile.notifications.detail.answer_in_conversation"
@@ -195,6 +232,12 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.common.back"
+	| "mobile.common.cancel"
+	| "mobile.common.done"
+	| "mobile.common.save"
+	| "mobile.common.send"
+	| "mobile.common.try_again"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
@@ -232,6 +275,35 @@ export type NoParamKey =
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
 	| "mobile.home.transcript.waiting"
+	| "mobile.library.action.add_tag"
+	| "mobile.library.action.edit"
+	| "mobile.library.action.open_chat"
+	| "mobile.library.browse.any_tag"
+	| "mobile.library.browse.filter_by_kind"
+	| "mobile.library.browse.filters"
+	| "mobile.library.browse.more_kinds"
+	| "mobile.library.browse.no_tags"
+	| "mobile.library.browse.refresh"
+	| "mobile.library.browse.search_label"
+	| "mobile.library.browse.search_placeholder"
+	| "mobile.library.browse.sort"
+	| "mobile.library.browse.status"
+	| "mobile.library.browse.tag"
+	| "mobile.library.detail.message_label"
+	| "mobile.library.detail.missing_file"
+	| "mobile.library.detail.no_source"
+	| "mobile.library.detail.no_tags"
+	| "mobile.library.detail.seen_in"
+	| "mobile.library.discard_confirm"
+	| "mobile.library.discard_not_saved"
+	| "mobile.library.editor.description"
+	| "mobile.library.editor.discard_title"
+	| "mobile.library.editor.name"
+	| "mobile.library.editor.new_tag"
+	| "mobile.library.editor.new_tag_placeholder"
+	| "mobile.library.editor.tags"
+	| "mobile.library.editor.title"
+	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
 	| "mobile.notifications.detail.answer_in_conversation"
@@ -324,6 +396,12 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.common.back": NoParams;
+	"mobile.common.cancel": NoParams;
+	"mobile.common.done": NoParams;
+	"mobile.common.save": NoParams;
+	"mobile.common.send": NoParams;
+	"mobile.common.try_again": NoParams;
 	"mobile.computers.add": NoParams;
 	"mobile.computers.added.stays_listed": NoParams;
 	"mobile.computers.badge.active": NoParams;
@@ -361,6 +439,37 @@ export type MessageParams = {
 	"mobile.home.tip.schedule": NoParams;
 	"mobile.home.tip.search": NoParams;
 	"mobile.home.transcript.waiting": NoParams;
+	"mobile.library.action.add_tag": NoParams;
+	"mobile.library.action.edit": NoParams;
+	"mobile.library.action.open_chat": NoParams;
+	"mobile.library.browse.any_tag": NoParams;
+	"mobile.library.browse.filter_by_kind": NoParams;
+	"mobile.library.browse.filters": NoParams;
+	"mobile.library.browse.filters_count": { count: string | number };
+	"mobile.library.browse.more_kinds": NoParams;
+	"mobile.library.browse.no_tags": NoParams;
+	"mobile.library.browse.refresh": NoParams;
+	"mobile.library.browse.search_label": NoParams;
+	"mobile.library.browse.search_placeholder": NoParams;
+	"mobile.library.browse.sort": NoParams;
+	"mobile.library.browse.status": NoParams;
+	"mobile.library.browse.tag": NoParams;
+	"mobile.library.detail.message_label": NoParams;
+	"mobile.library.detail.missing_file": NoParams;
+	"mobile.library.detail.no_source": NoParams;
+	"mobile.library.detail.no_tags": NoParams;
+	"mobile.library.detail.seen_in": NoParams;
+	"mobile.library.discard_confirm": NoParams;
+	"mobile.library.discard_not_saved": NoParams;
+	"mobile.library.editor.description": NoParams;
+	"mobile.library.editor.discard_title": NoParams;
+	"mobile.library.editor.name": NoParams;
+	"mobile.library.editor.new_tag": NoParams;
+	"mobile.library.editor.new_tag_placeholder": NoParams;
+	"mobile.library.editor.tag_limit": { limit: string | number };
+	"mobile.library.editor.tags": NoParams;
+	"mobile.library.editor.title": NoParams;
+	"mobile.library.title": NoParams;
 	"mobile.notifications.answer": NoParams;
 	"mobile.notifications.back": NoParams;
 	"mobile.notifications.detail.answer_in_conversation": NoParams;
@@ -488,6 +597,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.common.back": "Back",
+	"mobile.common.cancel": "Cancel",
+	"mobile.common.done": "Done",
+	"mobile.common.save": "Save",
+	"mobile.common.send": "Send",
+	"mobile.common.try_again": "Try again",
 	"mobile.computers.add": "Add a computer",
 	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
 	"mobile.computers.badge.active": "active",
@@ -525,6 +640,37 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.library.action.add_tag": "Add",
+	"mobile.library.action.edit": "Edit",
+	"mobile.library.action.open_chat": "Open chat",
+	"mobile.library.browse.any_tag": "Any tag",
+	"mobile.library.browse.filter_by_kind": "Filter by kind",
+	"mobile.library.browse.filters": "Filters",
+	"mobile.library.browse.filters_count": "Filters · {count}",
+	"mobile.library.browse.more_kinds": "More kinds",
+	"mobile.library.browse.no_tags": "No tags yet. The Librarian adds them as it organizes assets.",
+	"mobile.library.browse.refresh": "Refresh library",
+	"mobile.library.browse.search_label": "Search the library",
+	"mobile.library.browse.search_placeholder": "Name, tag or words",
+	"mobile.library.browse.sort": "Sort",
+	"mobile.library.browse.status": "Status",
+	"mobile.library.browse.tag": "Tag",
+	"mobile.library.detail.message_label": "Message about this asset",
+	"mobile.library.detail.missing_file": "This file has moved or been deleted. Its name, tags and description are still here.",
+	"mobile.library.detail.no_source": "No source conversation is recorded for this asset.",
+	"mobile.library.detail.no_tags": "No tags yet. Edit the details to add one.",
+	"mobile.library.detail.seen_in": "Seen in",
+	"mobile.library.discard_confirm": "Discard",
+	"mobile.library.discard_not_saved": "The name, description and tags you changed will not be saved.",
+	"mobile.library.editor.description": "Description",
+	"mobile.library.editor.discard_title": "Discard changes?",
+	"mobile.library.editor.name": "Name",
+	"mobile.library.editor.new_tag": "New tag",
+	"mobile.library.editor.new_tag_placeholder": "topic-name",
+	"mobile.library.editor.tag_limit": "An asset can carry at most {limit} tags.",
+	"mobile.library.editor.tags": "Tags",
+	"mobile.library.editor.title": "Edit details",
+	"mobile.library.title": "Library",
 	"mobile.notifications.answer": "Answer",
 	"mobile.notifications.back": "Back",
 	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
@@ -637,6 +783,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
+	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
+	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
+	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
+	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
+	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
 	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
 	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
@@ -674,6 +826,37 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.schedule": { role: "help", note: "Rotating tip fragment, lower case by design. 'prompt' is the product's word for what a wake sends. No final full stop, at most 48 characters." },
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
 	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
+	"mobile.library.action.add_tag": { role: "button", note: "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset." },
+	"mobile.library.action.edit": { role: "button", note: "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself." },
+	"mobile.library.action.open_chat": { role: "button", note: "Button on an asset that opens the conversation the asset is linked to. Imperative label, no final full stop. 'Chat' is a conversation with the agent." },
+	"mobile.library.browse.any_tag": { role: "button", note: "Choice in the tag filter that clears the tag restriction so assets with any tag, or none, are listed. Fragment, no final full stop." },
+	"mobile.library.browse.filter_by_kind": { role: "meta", note: "Accessible label of the segmented control that narrows the list by kind of file (images, documents, audio and so on). Not visible text. An imperative; no final full stop." },
+	"mobile.library.browse.filters": { role: "heading", note: "Title of the sheet holding the status and tag filters. Plural noun, no final full stop." },
+	"mobile.library.browse.filters_count": { role: "meta", note: "Label of the filters chip when at least one filter is active. {count} is the number of active filters, a positive integer; it is a count, not a plural-agreeing noun, so no plural arms. The middle dot is a separator, keep it. Same word as the plain 'Filters' chip and sheet title." },
+	"mobile.library.browse.more_kinds": { role: "heading", note: "Title of the sheet listing the kinds of file that did not fit in the main kind control. 'Kinds' are types of file, such as spreadsheet or presentation. No final full stop." },
+	"mobile.library.browse.no_tags": { role: "status", note: "Shown in the tag filter when no tag exists. Two sentences. 'The Librarian' is the name of a background helper that labels assets automatically; keep it a proper noun and do not imply the user must create tags." },
+	"mobile.library.browse.refresh": { role: "button", note: "Accessible label of an icon-only button that reloads the list from the computer. Not visible text. Imperative, no final full stop." },
+	"mobile.library.browse.search_label": { role: "meta", note: "Label of the search field. Imperative, no final full stop. Searches the user's catalogue of assets, not the web." },
+	"mobile.library.browse.search_placeholder": { role: "help", note: "Placeholder of the search field: three things the search matches (an asset's name, a tag, or words in its text), in that order. A fragment, not a sentence; no final full stop." },
+	"mobile.library.browse.sort": { role: "heading", note: "Title of the sheet that chooses the list order. A verb used as a title, no final full stop." },
+	"mobile.library.browse.status": { role: "meta", note: "Label above the choices that filter by an asset's state (for example locked or favourite). A noun, no final full stop; not the status of the connection." },
+	"mobile.library.browse.tag": { role: "meta", note: "Label above the choices that filter by tag. A noun (a label attached to an asset), singular, no final full stop; not a verb." },
+	"mobile.library.detail.message_label": { role: "meta", note: "Accessible label of the composer field on an asset: the message goes to the conversation linked to the asset, or starts a new one. A fragment, no final full stop." },
+	"mobile.library.detail.missing_file": { role: "status", note: "Warning shown when the asset's file is no longer on the computer. Two sentences: what happened (the cause is unknown, so keep 'moved or deleted' together), then what remains. Must not imply the user can recover the file." },
+	"mobile.library.detail.no_source": { role: "status", note: "Shown under 'Seen in' when the asset has no recorded conversation of origin. Says nothing was recorded; it does not mean the file is orphaned or unsafe." },
+	"mobile.library.detail.no_tags": { role: "help", note: "Shown on an asset with no tags. Two sentences: the state, then the way to fix it. 'Edit the details' refers to the 'Edit' button on this screen; keep it consistent with that label." },
+	"mobile.library.detail.seen_in": { role: "heading", note: "Heading above the list of conversations where the asset appeared. Fragment completed by the list below it; no final full stop." },
+	"mobile.library.discard_confirm": { role: "confirm", note: "The DESTRUCTIVE confirm button of that dialog. It must read as 'discard' and must NOT reuse the generic Cancel wording; the dialog's Cancel is mobile.common.cancel." },
+	"mobile.library.discard_not_saved": { role: "confirm", note: "Body of the dialog that appears when leaving the editor with unsaved changes. States the consequence: the edits are lost. Full sentence with a full stop." },
+	"mobile.library.editor.description": { role: "meta", note: "Label of the asset's description field in the edit sheet. A noun, no final full stop." },
+	"mobile.library.editor.discard_title": { role: "confirm", note: "Title of the confirmation that appears when the user closes the edit sheet with unsaved edits. A question. The dialog body and buttons are separate strings; the destructive button is not the shared 'Cancel'." },
+	"mobile.library.editor.name": { role: "meta", note: "Label of the asset's display-name field in the edit sheet. A noun, no final full stop; the name of the file or asset, not the user's name." },
+	"mobile.library.editor.new_tag": { role: "meta", note: "Label of the field where the user types a tag to create. A noun phrase, no final full stop." },
+	"mobile.library.editor.new_tag_placeholder": { role: "help", note: "Example tag shown as placeholder text. The SERVER refuses anything outside `^[a-z0-9][a-z0-9_-]{0,23}$` (lower-case ASCII, digits, hyphen, underscore), so this value is a valid example wherever the locale's script is not Latin — do not localise it into non-ASCII. No final full stop." },
+	"mobile.library.editor.tag_limit": { role: "status", note: "Shown when the asset already has the maximum number of tags. {limit} is the maximum, a positive integer set by the app (currently 12); keep the placeholder and do not hard-code the number. Plural fixed to the limit." },
+	"mobile.library.editor.tags": { role: "heading", note: "Heading above the tag choices in the edit sheet. Plural noun (labels attached to an asset), no final full stop." },
+	"mobile.library.editor.title": { role: "heading", note: "Title of the sheet where an asset's name, description and tags are changed. Imperative, no final full stop." },
+	"mobile.library.title": { role: "heading", note: "Title of the Library screens (the list and the single-asset view). 'Library' is the name of the feature that catalogues files and images from the user's conversations, not a building or a book collection; no final full stop." },
 	"mobile.notifications.answer": { role: "button", note: "Button on an ask in the inbox list that opens it to be answered. One word, imperative." },
 	"mobile.notifications.back": { role: "button", note: "Accessibility label of the icon-only back button in the inbox header." },
 	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
@@ -800,6 +983,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.common.back": "Atrás",
+		"mobile.common.cancel": "Cancelar",
+		"mobile.common.done": "Hecho",
+		"mobile.common.save": "Guardar",
+		"mobile.common.send": "Enviar",
+		"mobile.common.try_again": "Reintentar",
 		"mobile.computers.add": "Añadir una máquina",
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
@@ -837,6 +1026,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "programa un prompt para que se repita",
 		"mobile.home.tip.search": "busca una conversación pasada y reábrela",
 		"mobile.home.transcript.waiting": "Esperando la conversación…",
+		"mobile.library.action.add_tag": "Añadir",
+		"mobile.library.action.edit": "Editar",
+		"mobile.library.action.open_chat": "Abrir conversación",
+		"mobile.library.browse.any_tag": "Cualquier etiqueta",
+		"mobile.library.browse.filter_by_kind": "Filtrar por tipo",
+		"mobile.library.browse.filters": "Filtros",
+		"mobile.library.browse.filters_count": "Filtros · {count}",
+		"mobile.library.browse.more_kinds": "Más tipos",
+		"mobile.library.browse.no_tags": "Aún no hay etiquetas. El Bibliotecario las añade al organizar los recursos.",
+		"mobile.library.browse.refresh": "Actualizar biblioteca",
+		"mobile.library.browse.search_label": "Buscar en la biblioteca",
+		"mobile.library.browse.search_placeholder": "Nombre, etiqueta o palabras",
+		"mobile.library.browse.sort": "Ordenar",
+		"mobile.library.browse.status": "Estado",
+		"mobile.library.browse.tag": "Etiqueta",
+		"mobile.library.detail.message_label": "Mensaje sobre este recurso",
+		"mobile.library.detail.missing_file": "Este archivo se ha movido o eliminado. Su nombre, etiquetas y descripción siguen aquí.",
+		"mobile.library.detail.no_source": "No hay ninguna conversación de origen registrada para este recurso.",
+		"mobile.library.detail.no_tags": "Aún no hay etiquetas. Edita los detalles para añadir una.",
+		"mobile.library.detail.seen_in": "Visto en",
+		"mobile.library.discard_confirm": "Descartar",
+		"mobile.library.discard_not_saved": "Los cambios que has hecho en el nombre, la descripción y las etiquetas no se guardarán.",
+		"mobile.library.editor.description": "Descripción",
+		"mobile.library.editor.discard_title": "¿Descartar los cambios?",
+		"mobile.library.editor.name": "Nombre",
+		"mobile.library.editor.new_tag": "Nueva etiqueta",
+		"mobile.library.editor.new_tag_placeholder": "nombre-del-tema",
+		"mobile.library.editor.tag_limit": "Un recurso puede tener como máximo {limit} etiquetas.",
+		"mobile.library.editor.tags": "Etiquetas",
+		"mobile.library.editor.title": "Editar detalles",
+		"mobile.library.title": "Biblioteca",
 		"mobile.notifications.answer": "Responder",
 		"mobile.notifications.back": "Atrás",
 		"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
@@ -947,6 +1167,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.common.back": "Retour",
+		"mobile.common.cancel": "Annuler",
+		"mobile.common.done": "Terminé",
+		"mobile.common.save": "Enregistrer",
+		"mobile.common.send": "Envoyer",
+		"mobile.common.try_again": "Réessayer",
 		"mobile.computers.add": "Ajouter un ordinateur",
 		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
 		"mobile.computers.badge.active": "actif",
@@ -984,6 +1210,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
 		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
 		"mobile.home.transcript.waiting": "En attente de la conversation…",
+		"mobile.library.action.add_tag": "Ajouter",
+		"mobile.library.action.edit": "Modifier",
+		"mobile.library.action.open_chat": "Ouvrir la conversation",
+		"mobile.library.browse.any_tag": "Toutes les étiquettes",
+		"mobile.library.browse.filter_by_kind": "Filtrer par type",
+		"mobile.library.browse.filters": "Filtres",
+		"mobile.library.browse.filters_count": "Filtres · {count}",
+		"mobile.library.browse.more_kinds": "Autres types",
+		"mobile.library.browse.no_tags": "Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.",
+		"mobile.library.browse.refresh": "Actualiser la bibliothèque",
+		"mobile.library.browse.search_label": "Rechercher dans la bibliothèque",
+		"mobile.library.browse.search_placeholder": "Nom, étiquette ou mots",
+		"mobile.library.browse.sort": "Trier",
+		"mobile.library.browse.status": "État",
+		"mobile.library.browse.tag": "Étiquette",
+		"mobile.library.detail.message_label": "Message à propos de cet élément",
+		"mobile.library.detail.missing_file": "Ce fichier a été déplacé ou supprimé. Son nom, ses étiquettes et sa description sont toujours là.",
+		"mobile.library.detail.no_source": "Aucune conversation source n’est enregistrée pour cet élément.",
+		"mobile.library.detail.no_tags": "Aucune étiquette pour l’instant. Modifiez les détails pour en ajouter une.",
+		"mobile.library.detail.seen_in": "Vu dans",
+		"mobile.library.discard_confirm": "Abandonner",
+		"mobile.library.discard_not_saved": "Les modifications apportées au nom, à la description et aux étiquettes ne seront pas enregistrées.",
+		"mobile.library.editor.description": "Description",
+		"mobile.library.editor.discard_title": "Abandonner les modifications ?",
+		"mobile.library.editor.name": "Nom",
+		"mobile.library.editor.new_tag": "Nouvelle étiquette",
+		"mobile.library.editor.new_tag_placeholder": "nom-du-sujet",
+		"mobile.library.editor.tag_limit": "Un élément peut porter au plus {limit} étiquettes.",
+		"mobile.library.editor.tags": "Étiquettes",
+		"mobile.library.editor.title": "Modifier les détails",
+		"mobile.library.title": "Bibliothèque",
 		"mobile.notifications.answer": "Répondre",
 		"mobile.notifications.back": "Retour",
 		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
@@ -1094,6 +1351,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.common.back": "वापस",
+		"mobile.common.cancel": "रद्द करें",
+		"mobile.common.done": "हो गया",
+		"mobile.common.save": "सहेजें",
+		"mobile.common.send": "भेजें",
+		"mobile.common.try_again": "फिर से कोशिश करें",
 		"mobile.computers.add": "कंप्यूटर जोड़ें",
 		"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
 		"mobile.computers.badge.active": "सक्रिय",
@@ -1131,6 +1394,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें",
 		"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
 		"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
+		"mobile.library.action.add_tag": "जोड़ें",
+		"mobile.library.action.edit": "संपादित करें",
+		"mobile.library.action.open_chat": "बातचीत खोलें",
+		"mobile.library.browse.any_tag": "कोई भी टैग",
+		"mobile.library.browse.filter_by_kind": "प्रकार के अनुसार फ़िल्टर करें",
+		"mobile.library.browse.filters": "फ़िल्टर",
+		"mobile.library.browse.filters_count": "फ़िल्टर · {count}",
+		"mobile.library.browse.more_kinds": "अन्य प्रकार",
+		"mobile.library.browse.no_tags": "अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।",
+		"mobile.library.browse.refresh": "लाइब्रेरी ताज़ा करें",
+		"mobile.library.browse.search_label": "लाइब्रेरी में खोजें",
+		"mobile.library.browse.search_placeholder": "नाम, टैग या शब्द",
+		"mobile.library.browse.sort": "क्रमबद्ध करें",
+		"mobile.library.browse.status": "स्थिति",
+		"mobile.library.browse.tag": "टैग",
+		"mobile.library.detail.message_label": "इस संसाधन के बारे में संदेश",
+		"mobile.library.detail.missing_file": "यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।",
+		"mobile.library.detail.no_source": "इस संसाधन के लिए कोई स्रोत बातचीत दर्ज नहीं है।",
+		"mobile.library.detail.no_tags": "अभी कोई टैग नहीं है। जोड़ने के लिए विवरण संपादित करें।",
+		"mobile.library.detail.seen_in": "इन बातचीतों में दिखा",
+		"mobile.library.discard_confirm": "छोड़ें",
+		"mobile.library.discard_not_saved": "नाम, विवरण और टैग में किए गए बदलाव सहेजे नहीं जाएँगे।",
+		"mobile.library.editor.description": "विवरण",
+		"mobile.library.editor.discard_title": "बदलाव छोड़ें?",
+		"mobile.library.editor.name": "नाम",
+		"mobile.library.editor.new_tag": "नया टैग",
+		"mobile.library.editor.new_tag_placeholder": "topic-name",
+		"mobile.library.editor.tag_limit": "एक संसाधन पर टैग की सीमा {limit} है।",
+		"mobile.library.editor.tags": "टैग",
+		"mobile.library.editor.title": "विवरण संपादित करें",
+		"mobile.library.title": "लाइब्रेरी",
 		"mobile.notifications.answer": "उत्तर दें",
 		"mobile.notifications.back": "वापस",
 		"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
@@ -1241,6 +1535,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.common.back": "Назад",
+		"mobile.common.cancel": "Отмена",
+		"mobile.common.done": "Готово",
+		"mobile.common.save": "Сохранить",
+		"mobile.common.send": "Отправить",
+		"mobile.common.try_again": "Повторить",
 		"mobile.computers.add": "Добавить компьютер",
 		"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
 		"mobile.computers.badge.active": "активен",
@@ -1278,6 +1578,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "настройте запуск промпта по расписанию",
 		"mobile.home.tip.search": "поищите сессию в прошлых беседах",
 		"mobile.home.transcript.waiting": "Ожидание беседы…",
+		"mobile.library.action.add_tag": "Добавить",
+		"mobile.library.action.edit": "Изменить",
+		"mobile.library.action.open_chat": "Открыть беседу",
+		"mobile.library.browse.any_tag": "Любой тег",
+		"mobile.library.browse.filter_by_kind": "Фильтровать по типу",
+		"mobile.library.browse.filters": "Фильтры",
+		"mobile.library.browse.filters_count": "Фильтры · {count}",
+		"mobile.library.browse.more_kinds": "Другие типы",
+		"mobile.library.browse.no_tags": "Тегов пока нет. Библиотекарь добавляет их, когда упорядочивает ресурсы.",
+		"mobile.library.browse.refresh": "Обновить библиотеку",
+		"mobile.library.browse.search_label": "Искать в библиотеке",
+		"mobile.library.browse.search_placeholder": "Название, тег или слова",
+		"mobile.library.browse.sort": "Сортировка",
+		"mobile.library.browse.status": "Статус",
+		"mobile.library.browse.tag": "Тег",
+		"mobile.library.detail.message_label": "Сообщение об этом ресурсе",
+		"mobile.library.detail.missing_file": "Файл перемещён или удалён. Его название, теги и описание сохранились.",
+		"mobile.library.detail.no_source": "Для этого ресурса не записана исходная беседа.",
+		"mobile.library.detail.no_tags": "Тегов пока нет. Измените сведения, чтобы добавить тег.",
+		"mobile.library.detail.seen_in": "Встречается в",
+		"mobile.library.discard_confirm": "Отбросить",
+		"mobile.library.discard_not_saved": "Изменения названия, описания и тегов не будут сохранены.",
+		"mobile.library.editor.description": "Описание",
+		"mobile.library.editor.discard_title": "Отбросить изменения?",
+		"mobile.library.editor.name": "Название",
+		"mobile.library.editor.new_tag": "Новый тег",
+		"mobile.library.editor.new_tag_placeholder": "topic-name",
+		"mobile.library.editor.tag_limit": "Максимум тегов на ресурс — {limit}.",
+		"mobile.library.editor.tags": "Теги",
+		"mobile.library.editor.title": "Изменить сведения",
+		"mobile.library.title": "Библиотека",
 		"mobile.notifications.answer": "Ответить",
 		"mobile.notifications.back": "Назад",
 		"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
@@ -1388,6 +1719,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.common.back": "واپس",
+		"mobile.common.cancel": "منسوخ کریں",
+		"mobile.common.done": "ہو گیا",
+		"mobile.common.save": "محفوظ کریں",
+		"mobile.common.send": "بھیجیں",
+		"mobile.common.try_again": "دوبارہ کوشش کریں",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
@@ -1425,6 +1762,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں",
 		"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
 		"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
+		"mobile.library.action.add_tag": "شامل کریں",
+		"mobile.library.action.edit": "ترمیم کریں",
+		"mobile.library.action.open_chat": "گفتگو کھولیں",
+		"mobile.library.browse.any_tag": "کوئی بھی ٹیگ",
+		"mobile.library.browse.filter_by_kind": "قسم کے مطابق فلٹر کریں",
+		"mobile.library.browse.filters": "فلٹرز",
+		"mobile.library.browse.filters_count": "فلٹرز · {count}",
+		"mobile.library.browse.more_kinds": "مزید اقسام",
+		"mobile.library.browse.no_tags": "ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔",
+		"mobile.library.browse.refresh": "لائبریری تازہ کریں",
+		"mobile.library.browse.search_label": "لائبریری میں تلاش کریں",
+		"mobile.library.browse.search_placeholder": "نام، ٹیگ یا الفاظ",
+		"mobile.library.browse.sort": "ترتیب دیں",
+		"mobile.library.browse.status": "حالت",
+		"mobile.library.browse.tag": "ٹیگ",
+		"mobile.library.detail.message_label": "اس اثاثے کے بارے میں پیغام",
+		"mobile.library.detail.missing_file": "یہ فائل منتقل ہو گئی ہے یا حذف کر دی گئی ہے۔ اس کا نام، ٹیگز اور تفصیل اب بھی یہاں موجود ہیں۔",
+		"mobile.library.detail.no_source": "اس اثاثے کے لیے کوئی ماخذ گفتگو درج نہیں ہے۔",
+		"mobile.library.detail.no_tags": "ابھی کوئی ٹیگ نہیں۔ ایک شامل کرنے کے لیے تفصیلات میں ترمیم کریں۔",
+		"mobile.library.detail.seen_in": "ان گفتگوؤں میں دیکھا گیا",
+		"mobile.library.discard_confirm": "چھوڑ دیں",
+		"mobile.library.discard_not_saved": "نام، تفصیل اور ٹیگز میں کی گئی تبدیلیاں محفوظ نہیں ہوں گی۔",
+		"mobile.library.editor.description": "تفصیل",
+		"mobile.library.editor.discard_title": "تبدیلیاں چھوڑیں؟",
+		"mobile.library.editor.name": "نام",
+		"mobile.library.editor.new_tag": "نیا ٹیگ",
+		"mobile.library.editor.new_tag_placeholder": "topic-name",
+		"mobile.library.editor.tag_limit": "ایک اثاثے پر ٹیگز کی حد {limit} ہے۔",
+		"mobile.library.editor.tags": "ٹیگز",
+		"mobile.library.editor.title": "تفصیلات میں ترمیم کریں",
+		"mobile.library.title": "لائبریری",
 		"mobile.notifications.answer": "جواب دیں",
 		"mobile.notifications.back": "واپس",
 		"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
@@ -1535,6 +1903,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.common.back": "Quay lại",
+		"mobile.common.cancel": "Hủy",
+		"mobile.common.done": "Xong",
+		"mobile.common.save": "Lưu",
+		"mobile.common.send": "Gửi",
+		"mobile.common.try_again": "Thử lại",
 		"mobile.computers.add": "Thêm máy tính",
 		"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
 		"mobile.computers.badge.active": "hoạt động",
@@ -1572,6 +1946,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "lên lịch để chạy prompt theo hẹn giờ",
 		"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
 		"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
+		"mobile.library.action.add_tag": "Thêm",
+		"mobile.library.action.edit": "Chỉnh sửa",
+		"mobile.library.action.open_chat": "Mở cuộc trò chuyện",
+		"mobile.library.browse.any_tag": "Mọi thẻ",
+		"mobile.library.browse.filter_by_kind": "Lọc theo loại",
+		"mobile.library.browse.filters": "Bộ lọc",
+		"mobile.library.browse.filters_count": "Bộ lọc · {count}",
+		"mobile.library.browse.more_kinds": "Các loại khác",
+		"mobile.library.browse.no_tags": "Chưa có thẻ nào. Thủ thư sẽ thêm thẻ khi sắp xếp các tài nguyên.",
+		"mobile.library.browse.refresh": "Làm mới thư viện",
+		"mobile.library.browse.search_label": "Tìm kiếm trong thư viện",
+		"mobile.library.browse.search_placeholder": "Tên, thẻ hoặc từ trong nội dung",
+		"mobile.library.browse.sort": "Sắp xếp",
+		"mobile.library.browse.status": "Trạng thái",
+		"mobile.library.browse.tag": "Thẻ",
+		"mobile.library.detail.message_label": "Tin nhắn về tài nguyên này",
+		"mobile.library.detail.missing_file": "Tệp này đã bị di chuyển hoặc xóa. Tên, thẻ và mô tả của nó vẫn còn ở đây.",
+		"mobile.library.detail.no_source": "Chưa ghi nhận cuộc trò chuyện nguồn nào cho tài nguyên này.",
+		"mobile.library.detail.no_tags": "Chưa có thẻ nào. Hãy chỉnh sửa chi tiết để thêm thẻ.",
+		"mobile.library.detail.seen_in": "Xuất hiện trong",
+		"mobile.library.discard_confirm": "Bỏ thay đổi",
+		"mobile.library.discard_not_saved": "Tên, mô tả và thẻ bạn đã thay đổi sẽ không được lưu.",
+		"mobile.library.editor.description": "Mô tả",
+		"mobile.library.editor.discard_title": "Bỏ thay đổi?",
+		"mobile.library.editor.name": "Tên",
+		"mobile.library.editor.new_tag": "Thẻ mới",
+		"mobile.library.editor.new_tag_placeholder": "topic-name",
+		"mobile.library.editor.tag_limit": "Mỗi tài nguyên có tối đa {limit} thẻ.",
+		"mobile.library.editor.tags": "Thẻ",
+		"mobile.library.editor.title": "Chỉnh sửa chi tiết",
+		"mobile.library.title": "Thư viện",
 		"mobile.notifications.answer": "Trả lời",
 		"mobile.notifications.back": "Quay lại",
 		"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
@@ -1682,6 +2087,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.common.back": "返回",
+		"mobile.common.cancel": "取消",
+		"mobile.common.done": "完成",
+		"mobile.common.save": "保存",
+		"mobile.common.send": "发送",
+		"mobile.common.try_again": "重试",
 		"mobile.computers.add": "添加电脑",
 		"mobile.computers.added.stays_listed": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
 		"mobile.computers.badge.active": "使用中",
@@ -1719,6 +2130,37 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.schedule": "设置定时任务按时运行提示词",
 		"mobile.home.tip.search": "搜索过往对话以重新打开会话",
 		"mobile.home.transcript.waiting": "正在等待对话……",
+		"mobile.library.action.add_tag": "添加",
+		"mobile.library.action.edit": "编辑",
+		"mobile.library.action.open_chat": "打开对话",
+		"mobile.library.browse.any_tag": "任意标签",
+		"mobile.library.browse.filter_by_kind": "按类型筛选",
+		"mobile.library.browse.filters": "筛选",
+		"mobile.library.browse.filters_count": "筛选 · {count}",
+		"mobile.library.browse.more_kinds": "更多类型",
+		"mobile.library.browse.no_tags": "暂无标签。Librarian整理资源时会自动添加。",
+		"mobile.library.browse.refresh": "刷新资料库",
+		"mobile.library.browse.search_label": "搜索资料库",
+		"mobile.library.browse.search_placeholder": "名称、标签或文字",
+		"mobile.library.browse.sort": "排序",
+		"mobile.library.browse.status": "状态",
+		"mobile.library.browse.tag": "标签",
+		"mobile.library.detail.message_label": "关于此资源的消息",
+		"mobile.library.detail.missing_file": "此文件已被移动或删除。名称、标签和描述仍保留在这里。",
+		"mobile.library.detail.no_source": "此资源没有记录来源对话。",
+		"mobile.library.detail.no_tags": "暂无标签。编辑详情即可添加。",
+		"mobile.library.detail.seen_in": "出现于",
+		"mobile.library.discard_confirm": "放弃",
+		"mobile.library.discard_not_saved": "对名称、描述和标签所做的更改不会保存。",
+		"mobile.library.editor.description": "描述",
+		"mobile.library.editor.discard_title": "放弃更改？",
+		"mobile.library.editor.name": "名称",
+		"mobile.library.editor.new_tag": "新标签",
+		"mobile.library.editor.new_tag_placeholder": "topic-name",
+		"mobile.library.editor.tag_limit": "每个资源最多可添加{limit}个标签。",
+		"mobile.library.editor.tags": "标签",
+		"mobile.library.editor.title": "编辑详情",
+		"mobile.library.title": "资料库",
 		"mobile.notifications.answer": "回答",
 		"mobile.notifications.back": "返回",
 		"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
