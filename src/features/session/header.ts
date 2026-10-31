@@ -83,8 +83,10 @@ export type HeaderExtras = {
 	menu?: boolean;
 	word?: boolean;
 	/** The bound agent's picture, drawn left of the name on the title row
-	 *  (agent-profile-picture contract). Charged only while a row names one, so
-	 *  every conversation without a picture keeps the budget it was proved with. */
+	 *  (agent-profile-picture contract) — inline in the leading cluster, stacked at
+	 *  the head of the title row. Charged on whichever row it occupies, and only
+	 *  while a row names one, so every conversation without a picture keeps the
+	 *  budget it was proved with. */
 	avatar?: boolean;
 };
 /* Chrome is rem-spaced, so on web BOTH its width and the glyph advance scale
@@ -94,10 +96,16 @@ const HEALTH_DOT_PT = 8 + 8;
 const HEADER_MENU_PT = 48 + 8;
 /* The agent picture: `HEADER_AVATAR_PT` is the size `HeaderAgentAvatar` renders
  *  (the same 28 pt as the navigation mark beside it, so the leading cluster reads
- *  as one height), plus the leading cluster's `gap-1` it joins. Exported so the
- *  component draws with THIS number rather than a second copy of it. */
+ *  as one height), plus the gap it joins. Exported so the component draws with
+ *  THIS number rather than a second copy of it. */
 export const HEADER_AVATAR_PT = 28;
+/* Inline, the picture is the last mark of the leading cluster, whose gap is 4 pt
+ *  (`gap-1` on that cluster). */
 const HEADER_AVATAR_SLOT_PT = HEADER_AVATAR_PT + 4;
+/* Stacked, it leads the TITLE row (`Screen`'s `stackedTitleLeading`), where the
+ *  gap is the title row's own 8 pt (`gap-2`) — so the same picture costs that
+ *  line 4 pt more than it costs the inline cluster. */
+const STACKED_AVATAR_SLOT_PT = HEADER_AVATAR_PT + 8;
 const extrasPt = (
 	{
 		dot = false,
@@ -106,11 +114,12 @@ const extrasPt = (
 		avatar = false,
 	}: HeaderExtras = {},
 	scale = 1,
+	avatarSlotPt = HEADER_AVATAR_SLOT_PT,
 ): number =>
 	((dot ? HEALTH_DOT_PT : 0) +
 		(menu ? HEADER_MENU_PT : 0) +
 		(word ? STATE_WORD_PT : 0) +
-		(avatar ? HEADER_AVATAR_SLOT_PT : 0)) *
+		(avatar ? avatarSlotPt : 0)) *
 	scale;
 
 /**
@@ -282,8 +291,8 @@ export const headerTitleChars = (
 	 * R2-M2 / design D1, and the tag-line header shares the same budget. */
 	if (headerStacks(effectiveScale, width)) {
 		/* Stacked, the ⋮ sits on the BACK row (`Screen`'s `stackedActionsBeside`),
-		 *  never beside the title, so only the inline dot narrows the title's own
-		 *  row. */
+		 *  never beside the title, so only the dot and the agent picture narrow the
+		 *  title's own row. */
 		const chromeScale = nativeChrome ? 1 : effectiveScale;
 		/* THE ROW IS THE COLUMN, NOT THE VIEWPORT (CI run 40823746854, job
 		 * 123288151628). The stacked title lives inside the content column, which
@@ -298,9 +307,17 @@ export const headerTitleChars = (
 		const titleRow =
 			row -
 			HEADER_GUTTERS_PT * chromeScale -
-			/* Not `avatar`: stacked, the leading cluster (back, mark, picture) is
-			 *  its own row above the title, so the picture costs this line nothing. */
-			extrasPt({ dot: extras.dot }, chromeScale);
+			/* The picture DOES cost this line: stacked, it leads the title row
+			 *  (`Screen`'s `stackedTitleLeading`) rather than riding the chrome row
+			 *  above it — the placement design review round 1 D1 asked for, which
+			 *  makes the stacked order the same picture → dot → name the inline
+			 *  cluster has. It is charged at the title row's 8 pt gap, not the
+			 *  cluster's 4. */
+			extrasPt(
+				{ dot: extras.dot, avatar: extras.avatar },
+				chromeScale,
+				STACKED_AVATAR_SLOT_PT,
+			);
 		/* Two clamped lines at the ACTUAL scale, less the same wrap slack. The
 		 *  previous budget hard-coded 2x and ignored the scaled dot/gutters; at
 		 *  320/200% it promised 16 chars (2x14.06) while the dot row was left

@@ -134,7 +134,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"df118e27da228111cf6e5775e6c24554919072df28395e716f52941b39d3854f",
+		"0be0b00d9451014fd45dc3aa989f3f3882f7e15731d8c77fee6ea60e63529bc3",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -369,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "8d9c43ed3cca39a7aab0f0836ae3429e744b0d390c3366c81a4c0f48f5861d3b",
+	app: "80e1501d11893f35d0d7e27e4f1c1dfb40165adaa7e1de3c2fda9483f530580b",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -389,7 +389,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "e9e91f05ca61ad70b3236a088b3ca95c647da9a4efdae7efc8e6fd253fcd5628",
+	src: "035faa16dcc5fe85aab43a67edba16b694c0b0798f4a03f2479b622979acfc1b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

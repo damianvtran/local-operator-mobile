@@ -1184,9 +1184,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				liveIdle,
 			);
 			const ended = pictured("avatar-ended", "Yesterday's sweep", afterDeath);
-			/* The idle row keeps the CAPTURED session id, so the capture harness's
-			 *  session cell (`S5/agent-avatar-header`, which opens that id) shows a
-			 *  pictured header. */
+			/* The idle row keeps the CAPTURED session id, so the session cell
+			 *  (`S5/populated`, which opens that id) shows a pictured header. That cell is
+			 *  the one the comment above means — this world declares no cell of its own,
+			 *  because a new cell name grows the registry every plan figure is pinned to
+			 *  (agent review round 1 R5 / QA round 1 Q2: the comment used to name
+			 *  `S5/agent-avatar-header`, a cell that has never existed). */
 			const idle = projectionFrom(liveIdle, {
 				session_id: CAPTURED_SESSION,
 				conversation_name: "Draft the release notes",
@@ -1217,15 +1220,24 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			});
 			return {
 				projections: Object.fromEntries(
+					/* THE ORDER IS THE FRAME (agent review round 1 R6 / design round 1 D7).
+					 *  A phone shows four to five rows, and the first version declared every
+					 *  pictured row first — so all three glyph-fallback rows sat below the fold
+					 *  on every phone profile and the scenario's own claim ("rows that must keep
+					 *  the plain glyph") could not be a frame. The wire order is the list's order
+					 *  (`buildItems` re-sorts nothing), so interleaving here is what makes the
+					 *  fallback rows visible: two pictured statuses, two fallbacks, then the
+					 *  rest. It also puts a pictured and a plain row adjacent, which is the
+					 *  mixed-list alignment frame (`ListRow`'s `leadingSlotPt`). */
 					[
 						running,
 						waiting,
-						unread,
-						ended,
-						idle,
 						unbound,
 						noPicture,
+						unread,
+						idle,
 						removed,
+						ended,
 					].map((projection) => [projection.session_id, projection]),
 				),
 				rowOverridesById: {

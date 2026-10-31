@@ -553,6 +553,21 @@ export default function Session() {
 	 *  control draws two (review M1 — a one-line clamp under a two-line budget
 	 *  cut every stacked name twice). Compact never stacks. */
 	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
+	/* The agent picture is a mark of the TITLE's line, not of the chrome. Inline it
+	 *  is the last item of the leading cluster and the title follows it; stacked, the
+	 *  leading cluster moves to its own row above the title, so leaving it there
+	 *  stranded a 28 pt disc between the back control and search while the health dot
+	 *  — the state marker it belongs beside — sat at the far left of the title line
+	 *  (design review round 1, D1). It renders in exactly ONE of the two places: two
+	 *  mounts would be two elements under one test id and two hooks racing to paint
+	 *  the same picture. Which one is `Screen`'s own stacking decision, so the two
+	 *  cannot disagree. */
+	const agentAvatar = (
+		<HeaderAgentAvatar
+			avatarRef={headerAvatarRef}
+			testID={CONTROL.sessionAgentAvatar}
+		/>
+	);
 	const headerTitle =
 		title.length > 0
 			? middleTruncate(
@@ -986,16 +1001,13 @@ export default function Session() {
 					/>
 					<NavigationMark />
 					{/* The bound agent's picture, LEFT of the conversation name
-					 *  (agent-profile-picture contract). Here, in the leading
-					 *  cluster, rather than inside the title control: that control is
-					 *  one button opening the health sheet, and a second pressable
-					 *  nested in it could not have its own press. Renders nothing
-					 *  without a picture, and the title budget charges its slot
-					 *  only then (`avatar: headerAvatarRef !== null`). */}
-					<HeaderAgentAvatar
-						avatarRef={headerAvatarRef}
-						testID={CONTROL.sessionAgentAvatar}
-					/>
+					 *  (agent-profile-picture contract) — inline. Stacked it leads the title
+					 *  row instead (`stackedTitleLeading` below), so the picture is a mark of
+					 *  the title's line at every width. Renders nothing without a picture.
+					 *  Not inside the title control: that is one button opening the health
+					 *  sheet, and a second pressable nested in it could not have its own
+					 *  press. */}
+					{headerStacked ? null : agentAvatar}
 				</View>
 			}
 			/* The title block is a CONTROL inside the h1: the conversation name
@@ -1020,6 +1032,10 @@ export default function Session() {
 				</SessionHealthControl>
 			}
 			stackedActionsBeside
+			/* Stacked, the picture leads the TITLE row instead of the chrome row
+			 *  (design review round 1, D1) — and the title budget charges it there
+			 *  (`header.ts`'s stacked branch). */
+			stackedTitleLeading={headerStacked ? agentAvatar : undefined}
 			headerAction={
 				<SessionHeaderActions
 					ended={ended}

@@ -392,6 +392,19 @@ export const ConversationsPane = ({
 		[filtered, now],
 	);
 	const items = useMemo(() => buildItems(sections), [sections]);
+	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
+	 *  width for its title, so the list's titles share one left edge instead of
+	 *  stepping in and out between pictured and plain rows (design review round 1,
+	 *  D4 / agent review round 1, R2). Decided from the WIRE (`avatar_sha256`), not
+	 *  from which pictures resolved: a row whose digest the relay 404s still reserves,
+	 *  so the column does not move when a picture loads, fails or is removed. */
+	const anyRowPictured = useMemo(
+		() =>
+			items.some(
+				(item) => item.kind === "row" && avatarRefOf(item.session) !== null,
+			),
+		[items],
+	);
 
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
@@ -812,6 +825,7 @@ export const ConversationsPane = ({
 						<AgentListRow
 							avatarRef={avatarRefOf(session)}
 							avatarTestID={sessionRowAvatarId(session.session_id)}
+							reserveLeading={anyRowPictured}
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
 								remote

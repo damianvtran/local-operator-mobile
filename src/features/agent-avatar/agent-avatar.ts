@@ -69,11 +69,50 @@ export const avatarRefOf = (row: {
 export type AvatarLoader = (ref: AgentAvatarRef) => Promise<string>;
 
 /**
- * Entries kept. A stored picture is ≤ 1 MiB (the contract's cap), ~1.37 MiB as a
- * data URI, so this bounds the worst case near 33 MiB — and a phone's list shows
- * a handful of distinct agents, so in practice every live one stays resident.
+ * Entries kept, keyed by digest — so this is "how many distinct pictures" a
+ * reader can scroll back through without a re-download.
+ *
+ * 24 was the first guess and it is smaller than the population it caches: a
+ * workspace's sessions are attended by its agents, and a roster of a few dozen
+ * agents is ordinary, so more than 24 distinct pictures in one list re-fetched on
+ * scroll-back — the miss flashes the glyph, the exact artefact `peek` exists to
+ * prevent (review round 1, R4). 48 covers a few dozen agents. The worst case is
+ * bounded but not small: a picture is ≤ 1 MiB by the contract's cap, ~1.37 MiB as
+ * a base64 data URI, so 48 entries of pathological pictures would be ~66 MiB. Real
+ * pictures are tens of KB (the two in the mock relay are 99 bytes), and a phone
+ * does not hold 48 agents' pictures at the cap at once. Anything beyond the bound
+ * is still evicted LRU-first and re-fetched on scroll-back.
  */
-export const AVATAR_CACHE_LIMIT = 24;
+export const AVATAR_CACHE_LIMIT = 48;
+
+/**
+ * Requests in flight at once.
+ *
+ * Every pictured row fires on mount, and the list mounts ~10 rows at once, so
+ * opening a conversation list used to put ~10 avatar requests on the tunnel
+ * simultaneously — each up to 1 MiB, each becoming a data URI in the JS heap
+ * (review round 1, R4). Four at a time keeps the first paint bounded and still
+ * lands every picture within a couple of round trips; the queue is FIFO, so the
+ * row nearest the top of the list is served first.
+ */
+export const AVATAR_FETCH_CONCURRENCY = 4;
+
+/**
+ * What a ref paints when it arrives or CHANGES — the settled picture for that
+ * exact ref, or nothing.
+ *
+ * The distinction that matters is identity: `useAgentAvatarUri` holds the picture
+ * in state, so without asking this on every change of `(agent id, digest)` the
+ * previous picture stays on screen until the new bytes arrive, and the header or
+ * row shows one avatar's face under another's name (review round 1, R1). Returning
+ * `null` — rather than leaving the old value — is the honest frame: nothing is
+ * known about this ref's picture yet, and the glyph is what the app draws while
+ * it does not know.
+ */
+export const paintedPicture = (
+	cache: Pick<AvatarCache, "peek">,
+	ref: AgentAvatarRef | null,
+): string | null => (ref === null ? null : (cache.peek(ref) ?? null));
 
 export type AvatarCache = {
 	/**
@@ -95,10 +134,36 @@ export type AvatarCache = {
 
 export const createAvatarCache = (
 	limit: number = AVATAR_CACHE_LIMIT,
+	concurrency: number = AVATAR_FETCH_CONCURRENCY,
 ): AvatarCache => {
 	/* Insertion order is the LRU order: a hit re-inserts its key. */
 	const settled = new Map<string, string | null>();
 	const inflight = new Map<string, Promise<string | null>>();
+	/* The fetch queue: at most `concurrency` loads run at once, the rest wait in
+	 *  arrival order. One queue per cache, so a second cache (a test's) is not
+	 *  throttled by this one. */
+	const waiting: Array<() => void> = [];
+	let running = 0;
+	const withSlot = <T>(load: () => Promise<T>): Promise<T> =>
+		new Promise<T>((resolve, reject) => {
+			const start = () => {
+				running += 1;
+				let started: Promise<T>;
+				try {
+					/* Called SYNCHRONOUSLY when a slot is free, so a caller that already holds
+					 *  one behaves exactly as it did before this queue existed. */
+					started = load();
+				} catch (error) {
+					started = Promise.reject(error);
+				}
+				started.then(resolve, reject).finally(() => {
+					running -= 1;
+					waiting.shift()?.();
+				});
+			};
+			if (running < concurrency) start();
+			else waiting.push(start);
+		});
 
 	const remember = (key: string, value: string | null) => {
 		settled.delete(key);
@@ -122,7 +187,7 @@ export const createAvatarCache = (
 			}
 			const pending = inflight.get(key);
 			if (pending) return pending;
-			const request = load(ref)
+			const request = withSlot(() => load(ref))
 				.then(
 					(uri) => {
 						remember(key, uri);
