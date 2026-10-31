@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "Ответить",
+	"mobile.notifications.back": "Назад",
+	"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
+	"mobile.notifications.detail.conversation_asks": "Вопросы этой беседы",
+	"mobile.notifications.detail.earlier_updates": "Прошлые обновления",
+	"mobile.notifications.detail.from": "Источник",
+	"mobile.notifications.detail.no_asks": "В этой беседе нет вопросов.",
+	"mobile.notifications.detail.nothing_to_dismiss": "В этой беседе нет обновлений, которые можно скрыть.",
+	"mobile.notifications.detail.projects": "Проекты",
+	"mobile.notifications.dismiss": "Скрыть",
+	"mobile.notifications.filter_label": "Показать",
+	"mobile.notifications.load_failed": "Не удалось загрузить уведомления",
+	"mobile.notifications.priority_high": "Важно",
+	"mobile.notifications.title": "Уведомления"
+}

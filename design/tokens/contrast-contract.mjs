@@ -321,6 +321,18 @@ const CONTROLS = [
 	{ id: "chip/rest", fill: "surface", border: "border-control", ink: "ink-muted", grounds: ["canvas", "surface", "elevated"] },
 	{ id: "chip/selected", fill: "accent-muted", border: "accent-border", ink: "accent-hover", themes: ["dark"], grounds: ["canvas", "surface", "elevated"] },
 	{ id: "chip/selected", fill: "accent-muted", border: "accent-border", ink: "accent-active", themes: ["light"], grounds: ["canvas", "surface", "elevated"] },
+
+	/* The switcher's two NAVIGATION entry points: the Home header's computer chip
+	   and the drawer footer's workspace row. Both paint `border-control`, and the
+	   edge is load-bearing rather than decorative — at 200 % text the chip drops
+	   its chevron, so the capsule is the only thing that says "this opens a
+	   picker" (design round 2, D8). `panel-edge` is deliberately NOT the role
+	   here: in the light palette it is `hairline` (#dad5cb), measured 1.25:1 on
+	   canvas and 1.34:1 on surface. `border-control` measures 3.42 / 3.65 light
+	   and 3.93 / 3.58 dark. */
+	{ id: "nav/computer-chip", fill: null, border: "border-control", ink: "ink-muted", grounds: ["canvas"] },
+	{ id: "nav/drawer-computer-row", fill: "surface", border: "border-control", ink: "ink", grounds: ["canvas", "surface"] },
+
 	{ id: "badge/neutral", fill: "surface", border: "hairline", ink: "ink-dim", boundary: false },
 	{ id: "badge/success", fill: "success-wash", border: "success-border", ink: "success", boundary: false },
 	{ id: "badge/warning", fill: "warning-wash", border: "warning-border", ink: "warning", boundary: false },

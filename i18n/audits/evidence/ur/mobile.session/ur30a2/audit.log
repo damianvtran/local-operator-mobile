@@ -1,0 +1,185 @@
+# audit bundle ur/mobile.session/ur30a2 — captured 2026-10-30T22:24:05Z
+$ git -C <worktree> rev-parse HEAD
+32c7677715f6a6409b5da05021650c725169c853
+$ git -C <worktree> status --short src/i18n/catalogues/ur
+?? src/i18n/catalogues/ur/
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:45154) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<scratch>/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <scratch>/ur-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) npx tsx <scratch>/ur-audit-a/evidence.mts mobile.session ur30a2
+== bundle ur/mobile.session/ur30a2 — independent Urdu audit, group A
+== command: npx tsx <scratch>/ur-audit-a/evidence.mts mobile.session ur30a2
+== route: catalogue read as ordinary WORKTREE FILES (read_public_copy is refused for src/i18n/**);
+   the en context sidecar is nested JSON ({role,note} objects), not a message map, so it is not routable;
+   NO copy-route receipt was obtained for any input below — none is claimed.
+
+-- inputs
+   en       8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  <worktree>/src/i18n/catalogues/en/mobile.session.json
+   context  6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  <worktree>/src/i18n/catalogues/en/mobile.session.context.json
+   ur       e0183e404ca6555a0cfe29d6083544eb2ac7379dfd684e2627a3a14e6ec485a7  <worktree>/src/i18n/catalogues/ur/mobile.session.json
+
+-- key parity: en=2 ur=2 missing=[] unknown=[]
+   JSON validity: both files parsed by JSON.parse above (no exception).
+
+-- plural probe (independent of the catalogue)
+   Intl.PluralRules('ur').select: 0=other 1=one 2=other 21=other
+   app pluralCategory("ur", n):    0=other 1=one 2=other 21=other
+   parameterised keys in mobile.session: 0 (no placeholder/plural/select in this namespace)
+   → CLDR category completeness (all categories for the locale) is vacuous here: no plural/select message exists in this namespace.
+
+-- per-key evidence (len = code points; the style guide measures ≈1 terminal cell per character)
+   mobile.session.conversation_details
+      en(20): Conversation details
+      ur(16): گفتگو کی تفصیلات
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): گفتگو کی تفصیلات
+      render(renderFor(key,{},'ur')): Conversation details  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=heading
+   mobile.session.status_tray.hint
+      en(43): Opens the working line, tasks and subagents
+      ur(50): جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے
+      render(renderFor(key,{},'ur')): Opens the working line, tasks and subagents  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+
+-- bidi: control-character hits in this namespace = 0 (expected 0; the render layer adds FSI/PDI)
+-- latin runs: 0 in the ur text, 0 not present in the en source (expected 0)
+-- typography: ۔=0 ،=1 ؟=0 “”=0 …(U+2026)=0 | strings containing ASCII "..."=0 | digits=none | Arabic yeh/kaf/heh/marbuta=none
+-- non-ASCII code points used: U+06AF U+0641 U+062A U+0648 U+06A9 U+06CC U+0635 U+0644 U+0627 U+062C U+0631 U+0633 U+0645 U+0626 U+0646 U+060C U+0630 U+0679 U+06BE U+06C1 U+06D2
+-- redaction scan: 0 marker(s) across the three inputs (expected 0)
+
+== end bundle ur/mobile.session/ur30a2
+exit=0
+
+$ python3 <scratch>/ur-audit-a/compose.py mobile.session
+-- composed / cross-namespace checks: mobile.session
+   reads: <scratch>/ur-wave/src/i18n/catalogues/ur/mobile.session.json, the en source and context beside it, sibling namespaces, core catalogues
+
+   composed: the tray's accessible name + its hint (status-tray.tsx)
+     label template : ${summary} — show status
+     sample label   : کام 1/2 · ایجنٹس 0/3 — show status
+     hint           : جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے
+     → the label suffix ' — show summary'/'— show status' is an English literal in code (out-of-scope observation)
+
+   heading reuse: 'mobile.session.connection' not in this namespace; menu title = 'سیشن'
+
+   redaction scan: 6 input files read, 0 marker(s) in total (expected 0)
+exit=0
+
+$ python3 <scratch>/ur-audit-a/scan_all.py
+redaction scan: all inputs — 102 files enumerated below
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/messages.ts
+   read: <worktree>/src/i18n/runtime.ts
+   read: <worktree>/src/i18n/locale.ts
+   read: <worktree>/src/i18n/catalogues.ts
+   read: <worktree>/src/i18n/catalogue.gen.ts
+   read: <worktree>/scripts/i18n/generate.ts
+   read: <worktree>/scripts/i18n/check-strings.ts
+   read: <worktree>/package.json
+   read: <worktree>/src/features/home/home-copy.ts
+   read: <worktree>/src/features/home/home.tsx
+   read: <worktree>/src/features/home/home-splash.tsx
+   read: <worktree>/src/features/session/composer.ts
+   read: <worktree>/src/features/session/health-copy.ts
+   read: <worktree>/src/features/session/components/status-tray.tsx
+   read: <worktree>/src/features/session/components/composer.tsx
+   read: <worktree>/src/features/new-session/startup-transcript.tsx
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.services_status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.team_bridge.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.approvals.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.ask.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.health.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.library.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.login.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.shell.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.palette.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.projects_edit.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.review.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.schedule.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.team_authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.viewer.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.welcome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.desktop.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.incidents.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.memory.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.notices.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.radient_saver.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.remote_compute.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
+   read: <scratch>/ur-audit-a/core-en/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-en/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-en/relay.health.json
+   read: <core>/i18n/glossary.md
+   read: <core>/i18n/style-guides/ur.md
+   read: <core>/docs/I18N.md
+redaction scan: all inputs — 0 marker(s) across 102 files (expected 0)
+exit=0

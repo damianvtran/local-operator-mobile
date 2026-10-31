@@ -133,6 +133,188 @@ describe("the connection store is the only place a route starts or ends", () => 
 		expect(store.getState().tunnelId).toBeNull();
 	});
 
+	it("keeps the account's computers when discovery finishes before a route starts", () => {
+		/* Radient discovery lists an ACCOUNT's computers before any route exists —
+		 *  the route is what picking one of them creates — so a store that drops
+		 *  the list while `route` is null leaves the picker on "Set up a computer"
+		 *  for an account with tunnels (PR #120 QA round 1, Q1). */
+		const store = createConnectionStore();
+		const discovered = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		store.getState().setComputers([discovered]);
+		expect(store.getState().computers).toEqual([discovered]);
+		/* Recording the list is not a route switch: still signed out, no route. */
+		expect(store.getState().route).toBeNull();
+		expect(store.getState().phase).toBe("signed-out");
+
+		/* Sign-out still empties it: `endRoute` resets to the initial snapshot. */
+		store.getState().endRoute();
+		expect(store.getState().computers).toEqual([]);
+	});
+
+	it("keeps the account's computers through a Radient route start, not a custom one", () => {
+		/* Picking a computer starts a Radient route; resetting the list there erased
+		 *  the list the reader picked from (PR #121 review round 1, R1-M1). */
+		const store = createConnectionStore();
+		const discovered = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		store.getState().setComputers([discovered]);
+		store.getState().noteDiscoveryFailure("unreachable");
+		store.getState().startRoute({
+			mode: "radient",
+			hostname: "h",
+			tunnelId: "t1",
+		});
+		expect(store.getState().computers).toEqual([discovered]);
+		expect(store.getState().discoveryFailure).toBe("unreachable");
+		/* A custom route is another identity: Radient's rows do not follow it. */
+		store.getState().startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example",
+			allowInsecure: false,
+		});
+		expect(store.getState().computers).toEqual([]);
+		expect(store.getState().discoveryFailure).toBeNull();
+	});
+
+	it("hides a removed computer from a discovery that finishes before a route starts", () => {
+		/* PR #121 dropped `setComputers`' route guard and PR #120 added the hidden
+		 *  filter to the same action; the merge must keep both. A route-free
+		 *  discovery (sign-in, cold-start restore) is exactly where a removed
+		 *  computer would come back if the filter only ran with a route
+		 *  (PR #120 review round 2, merge-conflict note). */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = {
+			...visible,
+			tunnelId: "t2",
+			name: "old desktop",
+			deviceId: "d2",
+			hostname: "h2",
+		} as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().route).toBeNull();
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().hiddenTunnelIds).toEqual(["t2"]);
+	});
+
+	it("keeps the unfiltered discovery for the switcher, and an un-hide relists at once (M2a)", () => {
+		/* The switcher's "not connected" section needs a removed computer the account
+		 *  still lists; every other reader keeps the filtered `computers`. */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = { ...visible, tunnelId: "t2", hostname: "h2" } as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().discoveredComputers).toEqual([visible, removed]);
+		store.getState().unhideComputer("t2");
+		expect(store.getState().computers).toEqual([visible, removed]);
+		/* `computerId` belongs to a route: ignored without one, reset by the next. */
+		store.getState().noteComputer("saved-1");
+		expect(store.getState().computerId).toBeNull();
+		store
+			.getState()
+			.startRoute({ mode: "radient", hostname: "h1", tunnelId: "t1" });
+		store.getState().noteComputer("saved-1");
+		expect(store.getState().computerId).toBe("saved-1");
+		store
+			.getState()
+			.startRoute({ mode: "radient", hostname: "h2", tunnelId: "t2" });
+		expect(store.getState().computerId).toBeNull();
+		expect(store.getState().discoveredComputers).toHaveLength(2);
+		store.getState().endRoute();
+		expect(store.getState().discoveredComputers).toEqual([]);
+	});
+
+	it("keeps the visible list and the hidden set through a Radient pick", () => {
+		/* Picking starts a Radient route: #121 carries the list across it and #120
+		 *  carries the removed set, so neither a removed computer reappearing nor
+		 *  the picker emptying may follow from the pick. */
+		const store = createConnectionStore();
+		const visible = {
+			tunnelId: "t1",
+			name: "laptop",
+			deviceId: "d1",
+			hostname: "h1",
+			status: "ready",
+			rawStatus: "active",
+			supportsLocalOperator: true,
+			billing: { eligible: null, message: null },
+			updatedAt: 0,
+		} as const;
+		const removed = { ...visible, tunnelId: "t2", hostname: "h2" } as const;
+		store.getState().setHiddenTunnelIds(["t2"]);
+		store.getState().setComputers([visible, removed]);
+		store.getState().startRoute({
+			mode: "radient",
+			hostname: "h1",
+			tunnelId: "t1",
+		});
+		expect(store.getState().computers).toEqual([visible]);
+		expect(store.getState().hiddenTunnelIds).toEqual(["t2"]);
+		/* And a refresh on the new route still filters with the carried set. */
+		store.getState().setComputers([visible, removed]);
+		expect(store.getState().computers).toEqual([visible]);
+	});
+
+	it("records a discovery failure without touching the route, and a list clears it", () => {
+		/* A failed LISTING is account state (design round 1, D2): it must not flip a
+		 *  live route to refused, and the next successful discovery clears it. */
+		const store = createConnectionStore();
+		store.getState().startRoute({
+			mode: "custom",
+			baseUrl: "https://relay.example",
+			allowInsecure: false,
+		});
+		store.getState().markLive();
+		store.getState().noteDiscoveryFailure("rejected");
+		expect(store.getState().phase).toBe("live");
+		expect(store.getState().surface).toBeNull();
+		expect(store.getState().discoveryFailure).toBe("rejected");
+		store.getState().setComputers([]);
+		expect(store.getState().discoveryFailure).toBeNull();
+	});
+
 	it("sends a sign-in failure back to signed-out and keeps the route", () => {
 		const store = createConnectionStore();
 		store.getState().startRoute({
@@ -313,6 +495,51 @@ describe("the list store replaces wholesale and keeps stale-but-labelled", () =>
 		expect(found.length).toBe(sessions.length);
 		expect(searchLoadedSessions(sessions, "no-such-row")).toEqual([]);
 		expect(sessionTitle({ conversation_name: "   " })).toBe("untitled");
+	});
+});
+
+describe("the inbox counts follow the freshest answer, never an older one", () => {
+	/* The bell and the rail read these; the inbox screen hands over its own
+	 * answer's counts so all three agree the moment a read or dismiss lands,
+	 * instead of a scan tick later (QA round 7 O2). */
+	const block = (unread: number, highWater: number) => ({
+		unread_count: unread,
+		waiting_count: 1,
+		waiting_unread_count: 1,
+		high_water: highWater,
+	});
+
+	it("takes a page answer's counts when they are as new or newer", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(7, 40) });
+		store
+			.getState()
+			.applyInboxCounts(block(6, 41), store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(6);
+	});
+
+	it("refuses a page answer older than the frame it holds", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
+		store
+			.getState()
+			.applyInboxCounts(block(7, 49), store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(5);
+	});
+
+	it("never turns a known count into unknown", () => {
+		const store = createListStore();
+		store
+			.getState()
+			.applyFrame({ ...listFrame(), notifications: block(5, 50) });
+		store
+			.getState()
+			.applyInboxCounts({}, store.getState().connectionGeneration);
+		expect(store.getState().notifications?.unread_count).toBe(5);
 	});
 });
 

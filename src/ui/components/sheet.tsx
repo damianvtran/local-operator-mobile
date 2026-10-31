@@ -1,11 +1,15 @@
 import { X } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	Animated,
 	Easing,
+	findNodeHandle,
 	Modal,
+	Platform,
 	Pressable,
 	ScrollView,
+	type Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
@@ -21,7 +25,9 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
+import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -90,8 +96,15 @@ let sheetFadeSeq = 0;
 export type SheetProps = {
 	visible: boolean;
 	onClose: () => void;
+	/** Web only: fires after the modal has stopped rendering and returned focus. */
+	onDismiss?: () => void;
 	/** The sheet's accessible name; also its visible title. */
 	title: string;
+	/** Opt-in for a picker whose first announcement is its purpose, not Close. */
+	focusTitle?: boolean;
+	/** Drawer openers unmount; return to the persistent Home chip after RNW has
+	 * completed its own focus return, never during the closing animation. */
+	returnFocusTestID?: string;
 	detent?: SheetDetent;
 	children: React.ReactNode;
 	/**
@@ -109,18 +122,31 @@ export type SheetProps = {
 	 * header, the scrolling body, and a pinned action region that never scrolls.
 	 */
 	footer?: React.ReactNode;
+	/** How many lines the title may wrap to. ONE by default (the app's
+	 *  truncation idiom, below); a sheet whose title IS its state — the session
+	 *  health sheet's "Not answering" — passes 2, because an ellipsis there cuts
+	 *  the one word the sheet exists to say ("Not answe…" at 320 pt / 200 %,
+	 *  design round 1 D7). */
+	titleLines?: 1 | 2;
 	testID?: string;
 };
 
 export const Sheet = ({
 	visible,
 	onClose,
+	onDismiss,
 	title,
+	focusTitle = false,
+	returnFocusTestID,
 	detent = "content",
 	children,
 	footer,
+	titleLines = 1,
 	testID,
 }: SheetProps) => {
+	const titleRef = useRef<Text>(null);
+	/* The scrim's DOM node, read only by the web focus guard below. */
+	const scrimRef = useRef<View>(null);
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -238,16 +264,85 @@ export const Sheet = ({
 	 *  `@/ui/modal-stack`, and the registration lives here because this is where the
 	 *  `Modal` is rendered. */
 	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
+	/* Owes a dismissal from the close until RNW's `onDismiss`, so a screen that
+	 *  moves the reader waits out this sheet's focus return (`@/ui/modal-dismissal-
+	 *  ledger`; PR #122 QA round 6, Q9). Keyed on what the Modal is given. */
+	const shown = visible && !covered;
+	const dismissed = useModalDismissal(shown, Platform.OS === "web");
+
+	/**
+	 * Keep the pointer-only scrim from taking focus from the sheet's title.
+	 *
+	 * `focusTitle` already removes the scrim from the accessibility tree and gives it
+	 * `tabIndex={-1}`, so nothing TABS to it — but focus can still be PLACED on it,
+	 * and one path does exactly that. Opening this sheet from the drawer's workspace
+	 * row closes the drawer in the same press: the pane's focused node unmounts, and
+	 * the modal's own trap re-enters at the first node it can focus, which is this
+	 * scrim. A keyboard or screen-reader reader then hears "Close" instead of the
+	 * title they just opened (QA round 2, Q7 — 3/3 reps at 390/100 and 320/200, while
+	 * the chip and Settings openers landed on the heading).
+	 *
+	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
+	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
+	 * pane header in split layout, which is `returnFocusTestID`'s `activeElement ===
+	 * body` guard for the same reason — is never robbed of focus by a blanket
+	 * refocus. The listener is web-only: native has no `<div>` and no focus trap.
+	 */
+	useEffect(() => {
+		if (!shown || !focusTitle || Platform.OS !== "web") return;
+		const scrim = scrimRef.current as unknown as HTMLElement | null;
+		const title = titleRef.current as unknown as HTMLElement | null;
+		if (!scrim || !title) return;
+		const onFocusIn = (event: Event) => {
+			if (event.target === scrim) title.focus({ preventScroll: true });
+		};
+		scrim.addEventListener("focusin", onFocusIn);
+		return () => scrim.removeEventListener("focusin", onFocusIn);
+	}, [shown, focusTitle]);
 
 	return (
 		/* The scope publishes this sheet as the HOST of anything a modal is raised
 		 *  inside it — the conversations pane's menu is the app's nested case. */
 		<ModalScopeContext.Provider value={scope}>
 			<Modal
-				visible={visible && !covered}
+				visible={shown}
 				transparent
 				animationType="none"
 				onRequestClose={onClose}
+				onShow={() => {
+					if (!focusTitle || !titleRef.current) return;
+					if (Platform.OS === "web")
+						(titleRef.current as unknown as HTMLElement).focus({
+							preventScroll: true,
+						});
+					else {
+						const handle = findNodeHandle(titleRef.current);
+						if (handle !== null)
+							AccessibilityInfo.setAccessibilityFocus(handle);
+					}
+				}}
+				onDismiss={
+					Platform.OS === "web"
+						? () => {
+								// Settle the fallback before publishing the ledger transition; Settings'
+								// refusal reveal must run after ALL focus-return work (#122).
+								if (
+									!visible &&
+									returnFocusTestID &&
+									(document.activeElement === document.body ||
+										document.activeElement === null)
+								) {
+									document
+										.querySelector<HTMLElement>(
+											`[data-testid="${returnFocusTestID}"]`,
+										)
+										?.focus({ preventScroll: true });
+								}
+								dismissed();
+								onDismiss?.();
+							}
+						: undefined
+				}
 				// The covered application is inert while the sheet is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal
@@ -263,7 +358,10 @@ export const Sheet = ({
 				 *  applied one level down; on native it merely re-provides the same
 				 *  context. */}
 				<ScopedVariables variables={variables}>
-					<View
+					{/* Same rule as `Dialog`: the modal root is a separate root, so the
+					 *  direction is re-applied here or a sheet opened in an Urdu session keeps
+					 *  its leading/trailing chrome on the English edges. */}
+					<DirectionView
 						className="flex-1 justify-end"
 						onLayout={(event) =>
 							setColumnHeight(event.nativeEvent.layout.height)
@@ -294,12 +392,21 @@ export const Sheet = ({
 							className="absolute inset-0"
 						>
 							<Pressable
+								ref={scrimRef}
 								className="flex-1"
 								style={{
 									backgroundColor: drawsDim ? scrimColour : "transparent",
 								}}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel="Close"
+								// The labelled close button remains available; a picker's scrim is
+								// pointer-only so initial focus never starts on a duplicate Close.
+								accessible={!focusTitle}
+								accessibilityElementsHidden={focusTitle}
+								importantForAccessibility={
+									focusTitle ? "no-hide-descendants" : "auto"
+								}
+								tabIndex={focusTitle ? -1 : 0}
 								testID={CONTROL.sheetScrim}
 								onPress={onClose}
 							/>
@@ -350,6 +457,8 @@ export const Sheet = ({
 								}
 							>
 								<Heading
+									ref={titleRef}
+									tabIndex={focusTitle ? -1 : undefined}
 									level={2}
 									className="flex-1 text-title text-ink"
 									/* ONE LINE, the app's truncation idiom (36 call sites, the rows
@@ -357,7 +466,7 @@ export const Sheet = ({
 									 * title was the sheet's single biggest chrome block — 81 pt of a
 									 * 525 pt surface (design D63-1) — and a single-line title that
 									 * ellipsizes keeps its full accessible name. */
-									numberOfLines={1}
+									numberOfLines={titleLines}
 								>
 									{title}
 								</Heading>
@@ -474,7 +583,7 @@ export const Sheet = ({
 								</View>
 							) : null}
 						</Animated.View>
-					</View>
+					</DirectionView>
 				</ScopedVariables>
 			</Modal>
 		</ModalScopeContext.Provider>

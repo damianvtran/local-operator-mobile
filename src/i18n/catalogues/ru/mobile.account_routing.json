@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "Подключитесь к компьютеру, чтобы изменить маршрутизацию аккаунтов.",
+	"mobile.account_routing.error": "Не удалось подтвердить изменение. Проверьте подключение и перезагрузите политику, чтобы прочитать текущую.",
+	"mobile.account_routing.load_error": "Не удалось загрузить маршрутизацию аккаунтов. Проверьте подключение и повторите попытку.",
+	"mobile.account_routing.loading": "Загрузка маршрутизации аккаунтов…",
+	"mobile.account_routing.rejected": "Изменение не сохранено. Проверьте значение или настройки этого компьютера и повторите попытку.",
+	"mobile.account_routing.reload": "Перезагрузить политику",
+	"mobile.account_routing.retry": "Повторить",
+	"mobile.account_routing.save": "Сохранить политику",
+	"mobile.account_routing.saved": "Сохранено на этом компьютере.",
+	"mobile.account_routing.saving": "Сохранение…",
+	"mobile.account_routing.scope": "Изменения применяются только к этому компьютеру.",
+	"mobile.account_routing.title": "Маршрутизация аккаунтов",
+	"mobile.account_routing.unavailable": "Настройки маршрутизации аккаунтов недоступны на этом ретрансляторе. Обновите Local Operator на этом компьютере.",
+	"mobile.account_routing.unsaved": "Ещё не сохранено."
+}

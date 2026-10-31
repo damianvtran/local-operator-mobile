@@ -6,22 +6,22 @@ import { Pressable, Text, View } from "react-native";
 import type { LinkedSession, ProjectMilestone, ProjectView } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
-	DRAFT_KEPT_NOTE,
 	deleteProjectBody,
+	draftKeptNote,
 	isVanishRefusal,
 	linkedSessionLabel,
 	linkedSessionState,
-	MILESTONE_SLASH_NOTE,
 	milestoneNameUsable,
+	milestoneSlashNote,
 	milestoneUnremovable,
 	projectDisplayName,
 	projectRefusalSentence,
 	projectStatusTone,
 	removeMilestoneBody,
-	STALE_BADGE_LABEL,
 	showsStaleMark,
-	WRITE_UNKNOWN_NOTE,
+	staleBadgeLabel,
 	writeReceipt,
+	writeUnknownNote,
 } from "@/features/projects/projects-copy";
 import { ProjectDetailStateMarkers } from "@/features/projects/projects-markers";
 import { useUiStore } from "@/state/ui-store";
@@ -147,7 +147,7 @@ export default function ProjectDetail() {
 				router.back();
 				return;
 			}
-			setProblem(projectRefusalSentence(error) ?? WRITE_UNKNOWN_NOTE);
+			setProblem(projectRefusalSentence(error) ?? writeUnknownNote());
 		},
 		[router, showToast],
 	);
@@ -168,7 +168,11 @@ export default function ProjectDetail() {
 			});
 			setProject(answer.project);
 			showToast(
-				writeReceipt(completing ? "Completed" : "Reopened", milestone.name),
+				writeReceipt(
+					completing ? "completed" : "reopened",
+					milestone.name,
+					"milestone",
+				),
 			);
 		} catch (error) {
 			writeFailed(error);
@@ -193,7 +197,7 @@ export default function ProjectDetail() {
 			 *  says so — the half of U3 that had to become ONE rule with the create
 			 *  sheet: losing a typed draft to a stray tap is the worse of the two
 			 *  failures, so a draft survives a dismissal in both forms, and the form
-			 *  tells the reader it did (`DRAFT_KEPT_NOTE`). */
+			 *  tells the reader it did (`draftKeptNote()`). */
 			setKeptDraft(draftName.trim() !== "" || draftDate.trim() !== "");
 		}
 		setEditor({ editingName: milestone?.name ?? null });
@@ -225,8 +229,9 @@ export default function ProjectDetail() {
 			setProject(answer.project);
 			showToast(
 				writeReceipt(
-					editor.editingName === null ? "Added" : "Updated",
-					`milestone ${name}`,
+					editor.editingName === null ? "added" : "updated",
+					name,
+					"milestone",
 				),
 			);
 			setEditor(null);
@@ -246,7 +251,7 @@ export default function ProjectDetail() {
 		try {
 			const answer = await client.removeProjectMilestone(project.id, name);
 			setProject(answer.project);
-			showToast(writeReceipt("Removed", `milestone ${name}`));
+			showToast(writeReceipt("removed", name, "milestone"));
 			setConfirmRemove(false);
 			setEditor(null);
 		} catch (error) {
@@ -270,7 +275,7 @@ export default function ProjectDetail() {
 			 *  is the title when there is one, so the two must not be conflated
 			 *  here. */
 			await client.deleteProject(project.id, project.name);
-			showToast(writeReceipt("Deleted", project.name));
+			showToast(writeReceipt("deleted", project.name, "project"));
 			setConfirmDelete(false);
 			router.back();
 		} catch (error) {
@@ -351,7 +356,7 @@ export default function ProjectDetail() {
 						{/* The same rule the row uses: a stale verdict is only shown where a
 						 *  progress line exists to be stale (`showsStaleMark`). */}
 						{showsStaleMark(project) ? (
-							<Badge label={STALE_BADGE_LABEL} tone="warning" />
+							<Badge label={staleBadgeLabel()} tone="warning" />
 						) : null}
 					</View>
 
@@ -511,7 +516,7 @@ export default function ProjectDetail() {
 								testID={SURFACE.projectMilestoneSlashNote}
 								className="text-body-sm text-ink-muted"
 							>
-								{MILESTONE_SLASH_NOTE}
+								{milestoneSlashNote()}
 							</Text>
 						) : null}
 
@@ -551,7 +556,7 @@ export default function ProjectDetail() {
 							testID={SURFACE.projectMilestoneDraftNote}
 							className="text-meta text-ink-muted"
 						>
-							{DRAFT_KEPT_NOTE}
+							{draftKeptNote()}
 						</Text>
 					) : null}
 

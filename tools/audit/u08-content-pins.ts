@@ -69,15 +69,15 @@ const sha256 = (content: string | Uint8Array) =>
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
-		"a6d619015bc78c7e5f753f452e326a722b172c18150371c3414c77fd8b4b2ebf",
+		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
 	"tools/audit/checks.ts":
-		"0342b7587d55d235db66030d470dc1b94145f8f76ddf1a2e5d0ddd0078c1e304",
+		"d4cb5cbe1005982e0dd717d69de6ae016e40da2e9069ad15ba7ba5d82a94dfb0",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
 		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
 	"tools/audit/probe.ts":
-		"4083769831f6d34b5c0db4fd7c432fa94317ac00db4fa05eb947947c4ec677ba",
+		"4ed608393c78474ce7dd152a7c57637fdacb8ec23fbb9b3abfd9879330c0ab66",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
@@ -95,9 +95,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/page.ts":
 		"904bc7539a366a4e76f642e6ac534eb109f827ca5e4c645dbb52673677197b8f",
 	"tools/lib/readiness.ts":
-		"663b0da6d58769a3ca32f8983901485c6ad5ff07992939a68534d44a3509fcc6",
+		"f8f7fe0804801759475f074591ae42e64573cd4de466803a13361e9b4f477030",
+	/* Re-pinned 2026-10-29 by the stacked QA-harness PR for #127 after rebasing
+	 * onto its new head: the base owns the render and package identities, while
+	 * this PR adds only the relay driver's scoped fault and request-ledger
+	 * controls. Recomputed with `--print`; no U-03 exemption or skipped check. */
 	"tools/lib/relay.ts":
-		"b79a81f6fb5259ebd9e8b0ba4917ed724ad5a2d778dbac104ee11f0da269e05e",
+		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
 		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
 	"tools/mock-relay/account-routing-gate.ts":
@@ -112,37 +116,290 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"1641e6e2b3b424a2143ea6c3b8e69f3f2fc5ca02f8418429ca0835e54cf8bb4e",
 	"tools/mock-relay/library.ts":
 		"e33cd28ff3c0fb72bc8088cb06c0290993c115ceaf3b4d6bb2773ec89b3fd304",
+	"tools/mock-relay/notifications.ts":
+		"33712084ac78c1b2cfb489861d19b8586327a5916f5d453f79589013e140d532",
 	"tools/mock-relay/projects.ts":
 		"24db74688d1f5b6ac12975a00d48399a64ec0bec2e9d019f8cc11f00923b85ea",
+	/* Re-pinned 2026-10-29 by the French-locale wave, deliberately: `src` now carries the
+	 * French catalogues and the copy modules that resolve per render, and the mock relay and
+	 * its scenario registry gained `/api/config/events` plus a selectable language so a
+	 * browser run can render a non-English catalogue at all. Those are exactly the files
+	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
+	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
-		"b3f94c0eba8559301f2f04119e992c625a9a9a108bacd043e48efdfcd6af4ee4",
+		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
+	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
+	 * wave: `src` and `app` carry that surface plus the French catalogues and the
+	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
+	 * it. All are content the proof measures, so the pins follow the reviewed
+	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"530b6e922af122dcaf62180eed49923e7f0ed671d630c1da904dd8bbdc5c8c96",
+		"83f4c75b29fc623c59d9ebcd59a1d9d494036e659ac3fb60b7e2ded4049541cc",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
+	/* The startup evidence helper the fixture's relay imports. It has been loaded by
+	 * the driver since the auth-fence work on this branch and was never pinned — the
+	 * coverage test caught it as a gap rather than a drift, so the entry is added
+	 * here (same batch) instead of leaving a module the driver runs unguarded. */
+	/* Re-pinned with the D9 capacity fix (4c67362): the ledger's byte ceiling is a
+	 * guard the driver's own evidence path depends on, so its bytes are pinned like
+	 * the rest of the instrument. Only the constant moved. */
+	"tools/mock-relay/startup.ts":
+		"e51390abdcec9e3e88d674304f1b236bc0b991e12e65f166e8f89567c1bd38ca",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"172b9fe4007edcee68ded3dba4d93f584c9b1d848b3d05e6d68a12e942c35f44",
+		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
 	"e2e/fixtures/audit-canary/index.html":
-		"721a48e28a4f0282cfbf15c5f25a3f19d7c9ae10e0ffcb31edc7c2503af35bb9",
+		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
-	app: "478316b5d8fd4234138f88b87194878ba324fa7bba1835a239b883e32a19ac15",
+	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
+	 * polish work itself (new status-tray module, one-row session chrome, Home splash
+	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
+	 * the guard is doing its job, not failing. `tools/mock-relay/relay.ts` moved with
+	 * them because its fixture semantics changed for the same screens.
+	 *
+	 * A re-pin is only legitimate when the reader can see WHY from this diff; a pin
+	 * bumped to make CI green earns nothing, and the suite still refuses every other
+	 * file's drift (`--print` is the only way to produce these values).
+	 *
+	 * Re-pinned again 2026-10-26, still deliberately, for two later source commits on
+	 * this branch: `987e2fb` (the status layout predicate moved the phone/landscape
+	 * decision into `src/ui/size-class.ts` and wired it in `app/(app)/session/[id].tsx`
+	 * — hence BOTH trees move) and `46bd248` (Home's New-chat callback became a
+	 * memoised callback reading a refreshed ref; src only). Neither commit adds or
+	 * removes a file under these roots; the digests move because those files' bytes do.
+	 *
+	 * Third re-pin in the same batch, for the UX U1 remediation: the stranded-queue
+	 * escape (coordinator enqueue gate, `restoreQueueToDraft`/`discardQueue`, the
+	 * fresh-draft rotation in `startup-runtime.ts`, the Home row and its help), all
+	 * under `src/` only — `app` is unchanged this time and keeps its previous digest.
+	 * Fourth in the batch, for R11-1 and the five UX minors (queue surgery refused
+	 * during a flight, merge computed in-transaction, late-SID mapping, row copy);
+	 * again `src` only. Fifth, for the final audit's two geometry defects: the
+	 * composer chip's cap moved onto its own flex item (`src/ui/components/chip.tsx`,
+	 * U-08's 48×41 overlap at 320 pt / 200 %) and the field's painted height now adds
+	 * its border (`src/ui/variants.ts` `fieldBoxHeight`, wired in `textarea.tsx`,
+	 * U-07's "content 88px in a 86px box"); `src` only once more. Sixth, for code
+	 * R14: organized imports in `textarea.tsx`/`variants.test.ts` and the border
+	 * reserved once in `composerBudget` (`size-class.ts`); `src` only. Seventh, for
+	 * design recheck D-c: the portrait composer is bounded by the window through
+	 * `composerLimit` and a self-measured top (`composer.tsx` and the session screen
+	 * `app/(app)/session/[id].tsx`), so BOTH trees move. Eighth, lint-only: the
+	 * composer's re-measure effect reads `measurementKey` so the dependency the
+	 * ceiling contract needs is a real one (`src` only, no geometry change).
+	 *
+	 * Re-pinned 2026-10-27 for the saved-computers registry (M1): new non-rendering
+	 * modules (`src/connection/saved-computers.ts` and its test,
+	 * `src/features/auth/use-saved-computers-hydration.ts`), the connection store's
+	 * hidden-computer filter, the Computers screen's Remove handler, and a
+	 * render-nothing hydration component in `app/_layout.tsx` — so BOTH trees move.
+	 * No markup, style or copy changes; no proof scene renders differently.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 1 (`src` only; `app` is
+	 * unchanged): the registry no longer copies the custom slot and lets a
+	 * throwing read propagate, sign-out clears it, and the Remove handler and
+	 * startup merge moved into `src/features/auth/saved-computers-sync.ts` (plus
+	 * its test) so they can be tested. The screen's `onConfirm` now calls that
+	 * helper; no markup, style or copy changes.
+	 *
+	 * Re-pinned again 2026-10-27 for the M1 review round 2 N1/N2 (`src` only):
+	 * read-only registry paths skip an entry whose read throws, writes keep its
+	 * id, and sign-out writes the empty index past an unreadable index. Registry
+	 * internals and their test only; nothing renders differently.
+	 *
+	 * Re-pinned 2026-10-27 by PR #121, deliberately, `src` only (`app` unchanged):
+	 * `f41245c` lets Radient discovery record the account's computers before a route
+	 * exists (`src/state/connection-store.ts`), and the round-1 remediation commit
+	 * on top of it keeps that list through a pick and a failed Refresh (the store,
+	 * `computers.tsx` + new `computers-view.ts`, the provider's discovery arms and
+	 * refusal subject, Settings' failure line, the `retry` refusal's copy). Picker
+	 * and refusal screens only; nothing on the U-08 proofs' measured scenes.
+	 * Again, `src` only, for the PR's round-2 remediation: a cold-start pick lands
+	 * on Home, the 401 sign-in state and its button, the generation-fenced
+	 * `discovering` flag, network mint failures on `retry`, and Settings' row
+	 * state (`computers.tsx`, `computers-view.ts`, the provider, `settings.tsx`,
+	 * a store comment). Same screens; no U-08 scene.
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#120) into PR #121: both branches
+	 * edited `src/state/connection-store.ts` (the hidden-computer filter and the
+	 * route-free `setComputers`/Radient carry-over now live in one file), so the
+	 * merged `src` digest is neither side's; recomputed with `--print` from the
+	 * staged merge tree. `app` is #120's, which #121 never touched. Store and its
+	 * tests only; nothing renders differently.
+	 *
+	 * Re-pinned 2026-10-27 for the computer switcher (M2a), deliberately, `app` and
+	 * `src`: `app/_layout.tsx` mounts the one switcher sheet's provider around the
+	 * stack, and `src` adds the sheet and its view model, the store's unfiltered
+	 * discovery list and live computer id, the provider's remember-on-live, the
+	 * probe-at-origin, the own-address `?url=` prefill, and the Switch entry points
+	 * on Computers and Settings. Computer screens and an overlay that is closed by
+	 * default; no U-08 scene. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-1 remediation, `src` only: the
+	 * switcher's probe lifecycle, failed-pick close, account-scoped Radient entries
+	 * (the grant's account id), kept names, the stored-grant load before a pick,
+	 * the registry-id own-address hand-off and its password-first entry, the active
+	 * row's accent bar, and the Computers header's "Switch computer". Same screens;
+	 * no U-08 scene. `app` unchanged. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-2 remediation, `src` only: Settings'
+	 * refusal surface, the refusal surface's live region, the Computers header's
+	 * measured stack width and add mode, the switcher's per-open account state and
+	 * Add a computer target, and the password-entry copy. No U-08 scene changes;
+	 * `app` unchanged. Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-3 remediation, `src` only: the
+	 * Computers add-mode wait finding the new computer, Settings scrolling its
+	 * refusal into view and dropping the Diagnostics retry, the sheet's Add a
+	 * computer deciding from `computersView`, and the Computers console remedy. No
+	 * U-08 scene changes; `app` unchanged. Recomputed with `--print` from the staged
+	 * tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-4 remediation, `src` only: the sheet
+	 * primitive forwarding the web modal's completed dismissal, Settings revealing
+	 * its refusal on that dismissal and disarming its retry on failure, and Computers
+	 * replacing the answered panel with a connected confirmation once the pick is
+	 * live. No U-08 scene changes; `app` unchanged. Recomputed with `--print` from
+	 * the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for the S8 short-landscape overlap fix (BOTH trees move):
+	 * `statusTrayVisible` in `src/ui/size-class.ts` and its one use in
+	 * `app/(app)/session/[id].tsx` hide the one-row status tray while a pending
+	 * approval/ask is on screen in short landscape, and bottom-anchor that cluster
+	 * so the freed height does not become a band under the composer (design D1).
+	 * It changes no other state or viewport: the proofs' scene is a 390x844 portrait
+	 * `long-transcript` cell with no pending decision (`tray` stays visible there,
+	 * `compact` is false), so nodes 64/65/66 of the four original cells measure what
+	 * they measured before. Re-pinned a second time in the same PR for that round-1
+	 * remediation, after the LAST `src`/`app` edit (`native-polish.test.ts`).
+	 *
+	 * Re-pinned 2026-10-27 for merging main (#123) into PR #122: the two branches'
+	 * digests are both stale on the merge, because `src` now carries PR #122's
+	 * round-4 Settings/Computers changes AND PR #123's `statusTrayVisible`, and
+	 * `app` carries #123's `app/(app)/session/[id].tsx` tray wiring. Both are
+	 * recomputed here from the merged tree with `--print`. Neither proof's scene
+	 * moves: PR #122 renders computer screens and an overlay that is closed by
+	 * default, and #123's tray is visible in every captured combination (its own
+	 * note below records the same reading).
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-5 remediation, `src` only: the
+	 * switcher provider counting closes alongside dismissals, Settings revealing a
+	 * refusal once no dismissal is owed, and the Try now focus move owned by the
+	 * retry's start state. No U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-27 for PR #122's round-7 remediation, `src` only and a test
+	 * file only: `modal-dismissal-ledger.test.ts` types the Sheet's required
+	 * `children` (CI tsc) and adds the sibling-Sheet close-ordering case (R7-m1).
+	 * No runtime source and no U-08 scene changes; `app` unchanged. Recomputed with
+	 * `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-28 for M2b (the switcher's Home chip and drawer row), `src`
+	 * only: `computer-entry.ts`/`computer-entry-points.tsx`, the Home header slot,
+	 * the drawer footer, the `CONTROL` doc comments, and `native-polish.test.ts`
+	 * following the D3 one-line rule into the chip. The proofs' scene is a
+	 * session transcript, which renders neither the Home header nor the drawer, so
+	 * no U-08 scene changes; `app` unchanged. Recomputed with `--print` from the
+	 * staged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #126 round-1 remediation: registry-backed entry
+	 * names, slot fitting, refusal remedies and opt-in picker focus, plus tests.
+	 * The transcript proofs do not render these navigation entry points. Sheet's
+	 * new focus behavior is opt-in (only the computer picker enables it), and
+	 * middleFit preserves its mono default (26 focused fit tests). This is a source
+	 * identity update, NOT a claim of new rendered proof; independent visual/QA
+	 * validation remains required on this head. app/instrument/input pins unchanged.
+	 * Recomputed with --print after staging the complete remediation.
+	 *
+	 * Re-pinned 2026-10-28 for the M2b round-2 remediation on PR #126, deliberately:
+	 * the switcher's two navigation entry points moved their health marks into an
+	 * alias-free module (`src/features/auth/entry-health-marks.ts`, which the frame
+	 * audit's own test must import so `tools/tsconfig.json` stops failing on `@/`),
+	 * put the kit's control-edge role on both affordances, and made the mark and the
+	 * drawer row's health word follow the text scale. `design/tokens` moves with them
+	 * because two CONTROLS rows were added to `contrast-contract.mjs` for that edge.
+	 * `app/` keeps its previous digest - no route, layout or shell changed. This pin
+	 * is content identity, not a geometry claim: the U-08 cell rows are re-measured
+	 * when the proof runs, and it refuses on its own findings on this number.
+	 *
+	 * Re-pinned 2026-10-28 by the merge refresh of PR #112 (`feat/i18n`), `src`
+	 * only: the branch's runtime, its four keyed copy modules, its generated
+	 * projection and its strings baseline all live under `src/i18n/**` and
+	 * `src/features/**`, so the merged `src` digest is neither side's. The keyed
+	 * modules resolve to the same English bytes they carried as literals (their
+	 * tests assert the sentences verbatim), so no scene's paint or geometry
+	 * moves; `app`, the design inputs and the proof's fixtures keep their
+	 * digests. Recomputed with `--print` from the merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #112's round-1 remediation, `src` and
+	 * `package.json`: the 40 literals main introduced are keyed (same English
+	 * bytes, rendered through `t()`), the ICU apostrophe/plural-count guards in
+	 * `messages.ts`, and the `i18n:*` scripts added to package.json (scripts only;
+	 * `main` and `export:web` are unchanged). No scene's paint or geometry moves;
+	 * `app` and the design inputs keep their digests.
+	 *
+	 * Re-pinned 2026-10-28 for merging main's i18n extraction into PR #126, `src`
+	 * only: the merged tree now contains both the runtime/catalogue extraction and
+	 * the switcher's Home and drawer entry points. The ratchet removed the replaced
+	 * drawer literal and added no baseline entries; existing switcher copy is
+	 * already keyed. Neither proof renders those navigation entry points, and `app`,
+	 * `design/tokens`, fixtures and package identity keep their existing digests.
+	 * Recomputed with `--print` from the staged merged tree.
+	 *
+	 * Re-pinned 2026-10-28 for PR #127 (inbox re-reads on return), `src` only: the
+	 * notifications inbox refetches on focus and fences writes by route
+	 * (`src/features/notifications/*`), the list store's `applyFrame` takes the
+	 * connection generation it was read under so a stale frame cannot land
+	 * (`src/state/list-store.ts`, `src/features/auth/connection-provider.tsx`), and
+	 * their tests. The U-08 scene is a `long-transcript` session cell: it renders no
+	 * inbox, and the generation fence only drops frames from a retired connection,
+	 * which the proof's single mock-relay connection never produces. `app` unchanged.
+	 * Recomputed with `--print` from the staged tree.
+	 *
+	 * Re-pinned 2026-10-29 for rebasing PR #127 onto main (`8eedcb6`, carrying
+	 * PR #112's i18n extraction and PR #126's switcher entry points), `src` only:
+	 * main keyed the copy under `src/features/notifications/*` that PR #127 also
+	 * rewrites, so the rebased `src` digest is neither side's; recomputed with
+	 * `--print` from the rebased tree and no U-08 scene changes. `design/tokens` is
+	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
+	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
+	 * their digests. */
+	app: "970ae89119efe541d75fdf6c95c5a0a4588d5a7cd8d5f6140f3bbc5bed3dff71",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"404b34cfbc35fadd1513bfd13312f1ea978d4c7b16cdbcd0ecae8771a967b8c5",
+		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
-	src: "f9f60f90e866ed183ff07abbc0b09a9523ec446db24b4869100a151a042c7caa",
+	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
+	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
+	 * and `src/i18n/__tests__/locales.test.ts`, so `src` MUST move and the guard is
+	 * working. The same digest also covers main's advances merged in to resolve this
+	 * branch's conflicts; `app`, `public`, `design/*` and the instrument files did not
+	 * move. A doc under `docs/` cannot trip this guard — `docs/` is out of scope by
+	 * construction — so only `src` was re-pinned. */
+	/* Re-pinned 2026-10-29 for the Spanish wave: `src` now carries the Spanish
+	 * catalogues and the per-locale budget, exactly the content these pins exist to
+	 * freeze. Recomputed with `--print`; nothing else in the table moved. */
+	/* Re-pinned 2026-10-30 for the Hindi wave: `src` carries the hi catalogues,
+	 * the shipped flip, the hi chip budget and the zero-count assertion that
+	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
+	 * AFTER the last `src` edit. */
+	/* Re-pinned 2026-10-31 for merging main into PR #105 (Team Bridge): `app`
+	 * gains `TeamBridgeProvider` inside main's `DirectionRoot`, `src` carries the
+	 * merged connection provider, drawer route count and a11y ids, and
+	 * `tools/audit/checks.ts` is the auto-merged union of both sides. Recomputed
+	 * with `--print` from the staged merged tree. */
+	src: "ba7124040b2537740ad522944dd987ce21261bade1f06f06eace57947d06a54c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 	"fixtures/relay":
-		"c1b9c2bc12fdae19972252bd6ecedd5585d98f4b22865656f7938c37f92914cb",
+		"c4c1d6f26a45764241473a0b9a4491763697f976ca2c1cf349f8ab9c9adec5ab",
 	"fixtures/supplements":
 		"29bad98e91e6e29bd8148505f06058c24ff6682b3b4ba62bd43575a6a94d19cc",
 };
@@ -153,7 +410,7 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"766ef74869e325f6e0b1b0ace856b0359e894205b03f8eb1b77244bcd7c786de",
+		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
 	"pnpm-lock.yaml":
 		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
 	"pnpm-workspace.yaml":

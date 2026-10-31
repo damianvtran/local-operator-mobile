@@ -1,0 +1,109 @@
+# Spanish audit A — execution log
+# namespace:   mobile.session_health
+# audit id:    es29a5
+# audit date:  2026-10-29
+# auditor:     i18n-auditor (lopdev team); session c58fa60fdb20
+# model:       radient/auto (ACTUAL; fallback trail anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider quota fallback)
+# translator:  i18n-translator; session c53616dcee1c; actual model radient/auto (as supplied by the requesting manager)
+# independence: different agent/session/context from the translator; same served model for part of the run, disclosed
+# read-only:   this audit wrote nothing outside i18n/audits/evidence/es/mobile.session_health/es29a5/
+# route:       ordinary worktree reads; nested-JSON sidecars are not routable through read_public_copy; no keyed receipt claimed
+# limits:      no native-speaker review; no rendered frame
+
+$ git -C /Users/damian/workspace/es-wave rev-parse HEAD && git -C /Users/damian/workspace/es-wave branch --show-current && git -C /Users/damian/workspace/es-wave status --short
+c5f491ece9db11ec2dc7d136e7de88f93781acff
+feat/i18n-spanish
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/es/
+?? src/i18n/catalogues/es/
+
+$ node --version
+v24.22.1
+EXIT=0
+
+# The repository's own validator (key parity + message parse + strings ratchet).
+
+$ npm run -s i18n:check   # run in /Users/damian/workspace/es-wave
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:97119) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+EXIT=0
+
+# Per-key mechanical check: JSON, key/context parity, placeholders, ICU presence,
+# bidi controls, typography codepoints, technical tokens, character counts.
+# The metric is UTF-16 .length — the same metric home-copy.ts budgets use.
+
+$ python3 /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/es-ns-check.py mobile.session_health
+JSON mobile.session_health: en/context/es parse PASS
+KEYS mobile.session_health: en=11 target=11 context=11; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.session_health.control_hint: PASS; role=help; params=True; icu=False; chars_en=52; chars_es=59; ratio=1.13
+MECH mobile.session_health.ended_placeholder: PASS; role=help; params=True; icu=False; chars_en=35; chars_es=19; ratio=0.54
+MECH mobile.session_health.menu_hint: PASS; role=button; params=True; icu=False; chars_en=22; chars_es=25; ratio=1.14
+MECH mobile.session_health.menu_label: PASS; role=button; params=True; icu=False; chars_en=15; chars_es=21; ratio=1.40
+MECH mobile.session_health.menu_title: PASS; role=heading; params=True; icu=False; chars_en=7; chars_es=6; ratio=0.86
+MECH mobile.session_health.reopening: PASS; role=status; params=True; icu=False; chars_en=40; chars_es=45; ratio=1.12
+MECH mobile.session_health.resume_gone: PASS; role=status; params=True; icu=False; chars_en=32; chars_es=32; ratio=1.00
+MECH mobile.session_health.resume_no_route: PASS; role=status; params=True; icu=False; chars_en=45; chars_es=46; ratio=1.02
+MECH mobile.session_health.resume_refused: PASS; role=status; params=True; icu=False; chars_en=55; chars_es=68; ratio=1.24
+MECH mobile.session_health.resume_refused_title: PASS; role=heading; params=True; icu=False; chars_en=16; chars_es=19; ratio=1.19
+MECH mobile.session_health.still_reopening: PASS; role=status; params=True; icu=False; chars_en=41; chars_es=43; ratio=1.05
+SHA256 mobile.session_health en src/i18n/catalogues/en/mobile.session_health.json 727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+SHA256 mobile.session_health context src/i18n/catalogues/en/mobile.session_health.context.json df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310
+SHA256 mobile.session_health es src/i18n/catalogues/es/mobile.session_health.json 8552e560a6837e7381e9213455c3bb3200e9ebcda1fd14fbea4efec290b75fa1
+SUMMARY mobile.session_health: keys=11; mechanical_failures=0; placeholders_in_namespace=0
+EXIT=0
+
+# Glyph advance widths for this namespace's fit questions, measured with the
+# platform's own text stack (CoreText, system font = SF Pro) at the app's token
+# sizes: body-sm 14 pt for suggestion rows, meta 12 pt for the tip line,
+# body 16 pt and 200 % (32 pt) for the ended-composer placeholder.
+# Widths are points; React Native dp == pt on iOS. Estimates only: no frame captured.
+
+$ swift /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/measure.swift /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/measure-session_health.json
+placeholder current	16.0pt	161.9	Envía para reabrir…
+placeholder with destination (rejected for width)	16.0pt	351.5	Envía para reabrir en tu carpeta personal…
+placeholder-calibration en	16.0pt	302.2	Send to reopen in your home folder…
+placeholder-calibration fr	16.0pt	141.7	Envoyer rouvre…
+placeholder current at 200 %	32.0pt	306.2	Envía para reabrir…
+placeholder-calibration en at 200 %	32.0pt	581.2	Send to reopen in your home folder…
+reopening current	12.0pt	308.4	Reabriendo — esto puede tardar unos segundos.
+still_reopening current	12.0pt	284.5	Sigue reabriendo — todavía no ha arrancado.
+still_reopening proposed	12.0pt	274.7	Sigue reabriéndose — todavía no está lista.
+EXIT=0
+
+# Core Spanish catalogue cross-check for the terms this namespace reuses or asserts.
+# Read from the core repository's committed main (origin/main), not a working tree.
+
+$ git -C /Users/damian/local-operator ls-tree -r --name-only origin/main -- local_operator/i18n/catalogues/es/ | wc -l
+      80
+EXIT=0
+
+$ for f in relay.chrome relay.health cli.mobile_help wire.settings wire.settings.account_policy; do echo "--- $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json 2>/dev/null | grep -E 'Reanudar|Reanudando|Finalizada|reabrir|carpeta personal' | head -8; done
+--- relay.chrome ---
+  "relay.chrome.session.subtitle.ended": "Finalizada",
+  "relay.chrome.session.ended": "Finalizada · historial guardado",
+  "relay.chrome.session.ended_hint": "Enviar un mensaje o Reanudar la reabre en tu carpeta personal",
+  "relay.chrome.session.resume": "Reanudar",
+  "relay.chrome.session.resuming": "Reanudando…",
+--- relay.health ---
+  "relay.health.ended_detail": "El historial se conserva. Envía un mensaje o toca Reanudar para reabrir la sesión en tu carpeta personal.",
+  "relay.health.ended_send_failed": "Esta sesión finalizó y no se pudo reabrir en este momento. Inténtalo de nuevo o toca “Finalizada” arriba y elige Reanudar."
+--- cli.mobile_help ---
+--- wire.settings ---
+  "wire.settings.display_hide_cross_session.choice.false.description": "mostrar lo nuevo; reabrir para releer",
+  "wire.settings.display_hide_cross_session.choice.true.description": "ocultar lo nuevo; reabrir para releer",
+--- wire.settings.account_policy ---
+EXIT=0
+
+$ for f in relay.chrome relay.health; do echo "--- sha256 $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json | shasum -a 256; done
+--- sha256 relay.chrome ---
+a2d25deb40633c2b478babb7c9fd0dd3bdc0b2cd77c4010fedd1c205b9840097  -
+--- sha256 relay.health ---
+563c533f52fbc21b240979fba164e4e0768ff57f2882025d592280fc56638c62  -
+EXIT=0
+
+# Verdict for this namespace is recorded in record.json and argued in report.md.
+# This file is actual command output, not notes.

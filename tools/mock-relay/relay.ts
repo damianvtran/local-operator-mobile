@@ -5,6 +5,7 @@
  * tunnel edge/gateway refusals (`docs/relay/tunnel-edge.md`) with:
  *
  *   --scenario <name>   pin any state without a real agent (see scenarios.ts)
+ *   --language <tag>    the language the config stream serves (default en)
  *   --fault <name>      inject a real adversity deterministically (faults.ts)
  *   --record <dir>      write every request+response for assertions
  *
@@ -52,8 +53,17 @@ import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
 import { defaultFixturesDir, loadFixtures, textOf } from "./fixtures.ts";
 import { createLibraryStore } from "./library.ts";
+import {
+	createNotificationsStore,
+	type NotificationsStore,
+} from "./notifications.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
-import type { ScenarioWorld, StreamSpec, TransferScript } from "./scenarios.ts";
+import type {
+	FixtureOverride,
+	ScenarioWorld,
+	StreamSpec,
+	TransferScript,
+} from "./scenarios.ts";
 import {
 	buildScenarios,
 	capabilityBlock,
@@ -61,6 +71,7 @@ import {
 	rowFrom,
 	scenarioNames,
 } from "./scenarios.ts";
+import { createStartupEvidence } from "./startup.ts";
 import { declaredLengthOf, transcribeResponse } from "./transcribe.ts";
 import {
 	authVerdict,
@@ -77,6 +88,7 @@ import {
 	SSE_KEEPALIVE_S,
 	setCookieHeader,
 	sseFrame,
+	syntheticSessionId,
 	verifyCookie,
 } from "./wire.ts";
 
@@ -364,6 +376,7 @@ export interface RecordedRequest {
 }
 
 const ACCOUNT_POLICY_ROUTE = /^\/api\/settings\/account-routing$/;
+const MOCK_BARRIER_RELEASE_ROUTE = /^\/__mock\/barriers\/[^/]+\/release$/;
 
 /** Everything `createRelay` accepts. */
 export interface RelayOptions {
@@ -376,6 +389,13 @@ export interface RelayOptions {
 	/** `false`, or a directory to write the request transcript into on shutdown. */
 	record?: false | { dir: string };
 	scenario?: string;
+	/**
+	 * The RESOLVED language `/api/config/events` serves, as a BCP-47 tag. Defaults
+	 * to `en`, which is what every capture taken before the route existed assumed;
+	 * `--language fr` is the CLI's spelling and `POST /__mock/scenario` can set it
+	 * mid-run.
+	 */
+	language?: string;
 	faults?: string[];
 	quiet?: boolean;
 	/**
@@ -422,9 +442,47 @@ interface StreamOptions {
 	duplicate?: () => StreamFrame | null;
 }
 
+/**
+ * The language a harness asked for, canonicalized the way the relay canonicalizes
+ * its own (`en_us` → `en-US`, `FR` → `fr`).
+ *
+ * An unparseable tag falls back to `en` rather than failing the run: this is a
+ * capture harness, and a typo in a flag must not look like a broken app. The
+ * value is served VERBATIM in the frame otherwise — the mock does not filter it
+ * through the app's shipped set, because the client does that filtering itself
+ * (`src/i18n/locale.ts`) and a rig may want to prove that path.
+ */
+function resolveHarnessLanguage(tag: string): string {
+	const parts = tag.trim().replace(/_/g, "-").split("-").filter(Boolean);
+	const language = parts[0];
+	if (language === undefined || !/^[A-Za-z]{2,3}$/.test(language)) return "en";
+	const normalized = [language.toLowerCase()];
+	for (const part of parts.slice(1)) {
+		if (/^[A-Za-z]{2}$/.test(part)) normalized.push(part.toUpperCase());
+		else if (/^[A-Za-z]{4}$/.test(part))
+			normalized.push(
+				part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+			);
+		else normalized.push(part.toLowerCase());
+	}
+	return normalized.join("-");
+}
+
 /** The mock's mutable state: everything a request handler reads. */
 export interface RelayState {
 	scenario: string;
+	/**
+	 * The RESOLVED language the config stream serves (`/api/config/events`).
+	 *
+	 * A browser run of a translated screen is impossible without it: the app
+	 * renders whatever this frame says, so a mock that answered `404` here left
+	 * every capture English no matter what catalogue shipped. It is deliberately
+	 * RUN-level state rather than scenario state — a rig sets the language once
+	 * and then switches scenarios — and it defaults to `en` so every capture taken
+	 * before this route existed is byte-identical. Set it through
+	 * `POST /__mock/scenario` (`{scenario, language}`) or the `--language` flag.
+	 */
+	language: string;
 	/**
 	 * Which harness client pinned the current scenario, and when it last spoke.
 	 *
@@ -497,6 +555,15 @@ export interface RelayState {
 	 */
 	transferDials: number;
 	transferJournal: Map<string, { body: string; status: number; payload: Json }>;
+	/** How many of the NEXT list page reads to refuse, route-scoped. A COUNT and
+	 * not a boolean because a proof has to be able to fail a retry as well as the
+	 * read before it — with a one-shot latch the Try again could only ever
+	 * succeed. Unlike the persistent gateway fault it cannot poison the next
+	 * fixture or control call. */
+	failNotificationListReads: number;
+	/** All public requests held in memory, so a return proof can count actual
+	 * GETs. Off until a proof arms it: a full matrix must not grow this array. */
+	journalAll: boolean;
 	/** Origins a mutation may come from; unset means the same-origin rule is off. */
 	allowedOrigins?: string[];
 	submittedAt: number | null;
@@ -594,11 +661,51 @@ export function createRelay(options: RelayOptions = {}) {
 	 * create in one cell's scenario must not appear in the next one's.
 	 */
 	const projects = createProjectsStore(fix);
+	/** The inbox store (see `notifications.ts`): seeded from the synthetic
+	 *  `notifications-populated` corpus and mutated by the same writes the real
+	 *  routes perform, so a dismiss really removes the row a later read returns.
+	 *  Reset with the world, so one cell's dismiss cannot leak into the next. */
+	/**
+	 * One inbox fixture's BODY, without its provenance marker.
+	 *
+	 * The corpus files carry `provenance` as the authority on their own origin
+	 * (`fixtures/relay/README.md`), and the routes must not serve that field to a
+	 * client: it is a statement about the file, not about the relay's answer.
+	 * `payload` is the accessor that resolves a name across all three corpora.
+	 */
+	const inboxFixture = (name: string): Json => {
+		const value = fix.payload(name);
+		if (typeof value !== "object" || value === null) return {};
+		const record = { ...(value as Record<string, Json>) };
+		delete record.provenance;
+		return record;
+	};
+
+	const notifications = (world: ScenarioWorld): NotificationsStore =>
+		createNotificationsStore({
+			seed:
+				world.notifications !== undefined &&
+				!isFixtureOverride(world.notifications)
+					? world.notifications
+					: inboxFixture("notifications-populated"),
+			details: {
+				n_audit: inboxFixture("notifications-detail"),
+			},
+		});
+	let notificationsStore = notifications({});
+	/** The world the store above was built for. A scenario change rebuilds it so a
+	 *  dismiss taken in one cell cannot be read back in the next (the projects
+	 *  store's rule, which has the same failure mode). */
+	let notificationsScanned: ScenarioWorld | null = null;
 	/** The Library store (see `library.ts`): seeded from the hand-authored
 	 *  `library-listing` fixture and mutated by the same writes the metadata store
 	 *  performs. Reset with the world so a tag/patch in one cell cannot leak into
 	 *  the next. */
 	const library = createLibraryStore(fix);
+	const startup = createStartupEvidence();
+	// Never reuse a created identity across scenario resets: a stale client must
+	// not accidentally address the next world's new conversation.
+	let createdSequence = 0;
 	/* The push device registry (push/ack-sync S4, ADR 0006 §3.1). The corpus
 	 * holds no captures of these routes — they shipped after the last drain — so
 	 * the mock models them from the core's own source (`push_devices.py`: the
@@ -647,6 +754,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const state: RelayState = {
 		scenario: options.scenario ?? "idle",
+		language: resolveHarnessLanguage(options.language ?? "en"),
 		pinnedBy: null,
 		pinnedAt: 0,
 		world: {},
@@ -661,6 +769,8 @@ export function createRelay(options: RelayOptions = {}) {
 		startedAt: Date.now(),
 		seq: 0,
 		recorded: [],
+		journalAll: false,
+		failNotificationListReads: 0,
 		requestsServed: 0,
 		approvalsAnswered: 0,
 		admitted: new Map(),
@@ -687,6 +797,7 @@ export function createRelay(options: RelayOptions = {}) {
 		record: false,
 	};
 	const resetWorld = (): void => {
+		startup.reset();
 		state.world = scenarios[state.scenario]?.world() ?? {};
 		/* The store is part of the WORLD, not of the process: a cell that creates
 		 *  or deletes a row must not leave it behind for the next cell's own
@@ -889,6 +1000,7 @@ export function createRelay(options: RelayOptions = {}) {
 		projection: SessionProjection,
 		commandId: string,
 		text: unknown,
+		images: SessionProjection["transcript"][number]["images"],
 	): void => {
 		projection.version =
 			(typeof projection.version === "number" ? projection.version : 1) + 1;
@@ -908,7 +1020,7 @@ export function createRelay(options: RelayOptions = {}) {
 				elapsed_s: 0,
 				error: "",
 				details: {},
-				images: [],
+				images,
 				final: true,
 				text_complete: true,
 			},
@@ -1023,6 +1135,10 @@ export function createRelay(options: RelayOptions = {}) {
 	/** The session rows for the listing, in the relay's own rank order. */
 	const rowsFor = (): SessionSummary[] => {
 		const world = state.world;
+		if (world !== notificationsScanned) {
+			notificationsScanned = world;
+			notificationsStore = notifications(world);
+		}
 		const overrides = world.rowOverrides ?? {};
 		/* Per-session overrides win over the blanket ones: `unseen` is a fact about
 		 * ONE conversation, and the §1.4 equality cell needs a mix. */
@@ -1128,6 +1244,25 @@ export function createRelay(options: RelayOptions = {}) {
 				return capabilities;
 			})(),
 			unread,
+			/* THE INBOX COUNTS RIDE THE LIST FRAME (contract §5.4). Both new entry
+			 * points read the badge from here, and the mock answered only
+			 * `sessions`/`degraded`/`capabilities`/`unread` — so the count the design
+			 * puts on the home bell and the conversations rail had never rendered in
+			 * a frame: a designed state nobody had seen (design review D3). */
+			notifications: (() => {
+				const counts = notificationsStore.page("all", 1) as unknown as {
+					unread_count?: number;
+					waiting_count?: number;
+					waiting_unread_count?: number;
+					high_water?: number;
+				};
+				return {
+					unread_count: Number(counts.unread_count ?? 0),
+					waiting_count: Number(counts.waiting_count ?? 0),
+					waiting_unread_count: Number(counts.waiting_unread_count ?? 0),
+					high_water: Number(counts.high_water ?? 0),
+				};
+			})(),
 		};
 	};
 
@@ -1508,12 +1643,13 @@ export function createRelay(options: RelayOptions = {}) {
 		}
 	};
 
-	const handleCommand = (
+	const handleCommand = async (
 		req: IncomingMessage,
 		res: ServerResponse,
 		sessionId: string,
 		body: Record<string, unknown>,
-	): void => {
+		rawBody: string,
+	): Promise<void> => {
 		const world = state.world;
 		if (world.commandOverride) {
 			sendFixture(res, world.commandOverride);
@@ -1654,17 +1790,38 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "command-prompt-duplicate");
 				return;
 			}
-			if (faults.noAckForever) {
-				// Accepted and never acknowledged — but the identity IS reserved before the
-				// ack, exactly as production reserves it (`command_reservation.py:82`
-				// writes `self._commands[command_id]` at reserve time, before the wait).
-				// A mock that forgot the command on the way out would hang the *retry* too,
-				// which models a relay that never saw it rather than the ambiguity this
-				// fault exists for: admitted, unacknowledged, and a retry answered
-				// `already admitted`.
-				state.admitted.set(commandId, { op, at: Date.now() });
+			// Admission is the effect, not the HTTP acknowledgment. Every ack-loss
+			// path must leave the same immutable evidence and exactly one user row.
+			if (!startup.admit(sessionId, commandId, body, rawBody)) {
+				sendJson(
+					res,
+					507,
+					errorBody(
+						"mock admission evidence capacity reached; reset the scenario",
+					),
+				);
 				return;
 			}
+			state.admitted.set(commandId, { op, at: Date.now() });
+			startup.trackReply(res);
+			const projection = projectionFor(sessionId);
+			if (projection)
+				appendUserRow(
+					projection,
+					commandId,
+					body.text,
+					startup.imageRefs(commandId),
+				);
+			if (faults.duplicateDelivery) state.duplicateFramePending = true;
+			if (
+				!(await startup.wait(
+					"command-ack",
+					{ path: `/api/sessions/${sessionId}/command`, sessionId, commandId },
+					res,
+				))
+			)
+				return;
+			if (faults.noAckForever) return;
 			// A command to a runtime that is up but not answering (the `degraded`
 			// scenario): the relay holds the request for its own reply window and then
 			// answers the same 504 the timed fault does. Without this the scenario
@@ -1672,27 +1829,17 @@ export function createRelay(options: RelayOptions = {}) {
 			// forever would have passed.
 			const commandWindowMs = world.hold?.commands;
 			if (typeof commandWindowMs === "number") {
-				state.admitted.set(commandId, { op, at: Date.now() });
-				setTimeout(() => {
+				startup.trackReply(res, commandWindowMs, () => {
 					sendJson(res, 504, errorBody("session did not answer"));
-				}, commandWindowMs);
+				});
 				return;
 			}
 			if (faults.noAck) {
-				state.admitted.set(commandId, { op, at: Date.now() });
-				setTimeout(() => {
+				startup.trackReply(res, faults.noAckAfterMs, () => {
 					sendJson(res, 504, errorBody("session did not answer"));
-				}, faults.noAckAfterMs);
+				});
 				return;
 			}
-			state.admitted.set(commandId, { op, at: Date.now() });
-			// The runtime appends the user's row to the transcript when it admits a
-			// command, so the effect of a duplicated delivery is observable as ONE row
-			// after TWO identical frames — which is what makes the fault falsifiable by
-			// a client rather than by this process's own counter.
-			const projection = projectionFor(sessionId);
-			if (projection) appendUserRow(projection, commandId, body.text);
-			if (faults.duplicateDelivery) state.duplicateFramePending = true;
 			if (op === "steer") sendFixture(res, "command-steer-queued");
 			else sendFixture(res, "command-prompt-ok");
 			return;
@@ -1993,6 +2140,15 @@ export function createRelay(options: RelayOptions = {}) {
 			return res.end(JSON.stringify(reply.body));
 		}
 
+		// Selective configuration holds run AFTER the actual auth/origin gates.
+		// The control namespace must never turn an unauthenticated API into a hang.
+		if (
+			method === "GET" &&
+			(pathname === "/api/models" || pathname === "/api/directories")
+		) {
+			if (!(await startup.wait("config", { path: pathname }, res))) return;
+		}
+
 		/* ------------------------------------------------------------- public -- */
 
 		if (pathname === "/healthz") {
@@ -2129,6 +2285,28 @@ export function createRelay(options: RelayOptions = {}) {
 			});
 		}
 
+		/* `GET /api/config/events` — the resolved language, live (`docs/relay/
+		 * contract.md` §10). A translated screen cannot be captured without it: the
+		 * app renders whatever the baseline frame says, so a `404` here means every
+		 * browser run renders English.
+		 *
+		 * ONE frame, the baseline (`changed_keys: []`, never a replay), and no
+		 * further frames: `language` is run-level state that a rig sets BEFORE it
+		 * loads the app, and publishing a mid-stream change would need the scenario
+		 * machinery this route does not have. A rig that wants a different language
+		 * sets it and reopens the app, which is also what a real relay change looks
+		 * like to a cold start. */
+		if (pathname === "/api/config/events" && method === "GET") {
+			return openStream(req, res, {
+				kind: "config",
+				seed: {
+					event: "config",
+					data: { changed_keys: [], language: state.language },
+				},
+				frames: () => null,
+			});
+		}
+
 		if (pathname === "/api/tags" && method === "GET") {
 			/* LOH-11 S3: the catalogue exists only when the scenario says so —
 			 *  absence is an older relay, whose app renders no tag UI at all. */
@@ -2185,9 +2363,56 @@ export function createRelay(options: RelayOptions = {}) {
 				sendFixture(res, "start-bad-cwd");
 				return;
 			}
-			const fixture = fix.record("start-session");
-			const id = asString(fixture.session_id) ?? "";
-			sendJson(res, 200, { ...fixture, session_id: id });
+			if (!(await startup.wait("start", { path: pathname }, res))) return;
+			// Legacy create is deliberately NOT idempotent. A static fixture hid
+			// duplicate POSTs by returning an already-existing session both times.
+			const id = syntheticSessionId(`mock-start-${++createdSequence}`);
+			if (!startup.create(id, body, rawBody ?? "")) {
+				sendJson(
+					res,
+					507,
+					errorBody(
+						"mock creation evidence capacity reached; reset the scenario",
+					),
+				);
+				return;
+			}
+			const projection = fix.projection("sse-projection-live-idle");
+			Object.assign(projection, {
+				session_id: id,
+				conversation_name: "",
+				transcript: [],
+				todos: [],
+				subagents: [],
+				pending: null,
+				pending_count: 0,
+				asks: [],
+				asks_open: 0,
+				streaming: false,
+				activity: "",
+				activity_started_s: null,
+				stop_reason: "",
+				cut_off: false,
+				queued_count: 0,
+				ended: false,
+				degraded: false,
+				version: 1,
+				...(typeof body.cwd === "string" ? { cwd: body.cwd } : {}),
+				...(typeof body.model === "string"
+					? { model_selector: body.model, model_label: body.model }
+					: {}),
+			});
+			world.projections ??= {};
+			world.projections[id] = projection;
+			if (
+				!(await startup.wait(
+					"start-ack",
+					{ path: pathname, sessionId: id },
+					res,
+				))
+			)
+				return;
+			sendJson(res, 200, { ...fix.record("start-session"), session_id: id });
 			return;
 		}
 
@@ -2744,6 +2969,115 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 
+		/* ------------------------------------------------------- notifications -- */
+
+		if (pathname === "/api/notifications" && method === "GET") {
+			/* THE ARMED RETURN-PROOF REFUSAL, checked before this branch's own
+			 * `filterState` shadow, so it reads the relay's state and not the query.
+			 *
+			 * SCOPED TO THE LIST'S OWN PAGE READ — no `session_id`, no `cursor`. The
+			 * detail's conversation count walks this same route with `session_id`, and a
+			 * refusal that ignored that would be consumed by the detail while the cell
+			 * under test (the RETURN's re-read) was never refused at all. */
+			if (
+				state.failNotificationListReads > 0 &&
+				!url.searchParams.has("session_id") &&
+				!url.searchParams.has("cursor")
+			) {
+				state.failNotificationListReads -= 1;
+				sendJson(res, 503, errorBody("synthetic inbox return read failure"));
+				return;
+			}
+			/* The inbox read. A scenario may pin the whole body (a bare body or a
+			 * recorded answer); otherwise the STORE answers, so a dismiss or a read
+			 * taken earlier in the same capture is visible here — a canned body
+			 * would make "the row disappeared" a claim about a constant. */
+			const pinned = world.notifications;
+			if (isFixtureOverride(pinned)) {
+				sendJson(res, pinned.status, pinned.json ?? {}, pinned.headers);
+				return;
+			}
+			/* `filterState`, not `state`: `state` is the relay's own mutable state, and a
+			 *  same-named local for the query parameter put the route's earlier reads of
+			 *  the relay state behind this declaration's temporal dead zone. */
+			const filterState = url.searchParams.get("state") ?? "unread";
+			const rawLimit = Number(url.searchParams.get("limit") ?? "");
+			const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : 50;
+			/* The live route's narrowing parameters, passed through so a client
+			 * that walks a conversation's pages under one boundary is exercised
+			 * against paging rather than against one answer that held everything. */
+			const rawThrough = url.searchParams.get("through_seq");
+			const through = rawThrough === null ? Number.NaN : Number(rawThrough);
+			sendJson(
+				res,
+				200,
+				notificationsStore.page(filterState, limit, {
+					sessionId: url.searchParams.get("session_id") ?? undefined,
+					throughSeq: Number.isFinite(through) ? through : undefined,
+					cursor: url.searchParams.get("cursor") ?? undefined,
+				}),
+			);
+			return;
+		}
+
+		if (pathname === "/api/asks" && method === "GET") {
+			/* THE ANSWER SURFACE'S READ, which the mock did not serve at all: every
+			 *  mock-built pass therefore rendered "the relay is too old" instead of
+			 *  the picker, and a real picker ask could not be exercised on a mock at
+			 *  all (QA round 3, Q9's second half). The fixture is the CORE
+			 *  PRODUCER's shape — options as `{label, description?}` mappings, one of
+			 *  them without a description — so the sheet is exercised against what
+			 *  `asks/queue.py::_question_shape` actually emits. */
+			sendJson(res, 200, inboxFixture("asks-populated"));
+			return;
+		}
+
+		if (pathname === "/api/notifications" && method === "PATCH") {
+			const outcome = notificationsStore.patch(body);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
+		if (pathname === "/api/notifications/seen" && method === "POST") {
+			/* THE PHONE'S OWN RECEIPT DOOR, as the real relay now serves it
+			 *  (local-operator `mobile/daemon.py:api_notifications_seen` at
+			 *  `3cacd0cad01`): `surface` is pinned to `native`, every item is
+			 *  re-checked against the store, and anything that fails is `skipped`
+			 *  with its reason. A non-native surface is refused with its own code,
+			 *  so a client can tell "wrong door" from "bad evidence". The mock
+			 *  keeps the same two answers because a mock that accepted anything
+			 *  would let a bare-assertion receipt pass a suite the production
+			 *  surface rejects. */
+			const record =
+				typeof body === "object" && body !== null
+					? (body as Record<string, unknown>)
+					: {};
+			const claim = record.evidence;
+			const evidence =
+				typeof claim === "object" && claim !== null
+					? (claim as Record<string, unknown>)
+					: {};
+			if (evidence.surface !== "native") {
+				sendJson(res, 422, {
+					error:
+						"read receipts on the relay are for the native surface, which reports touch, press or scroll edges",
+					code: "relay_surface_mismatch",
+				});
+				return;
+			}
+			const outcome = notificationsStore.seen(body);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
+		const notificationDetail = /^\/api\/notifications\/([^/]+)$/.exec(pathname);
+		if (notificationDetail && method === "GET") {
+			const id = decodeURIComponent(notificationDetail[1] ?? "");
+			const outcome = notificationsStore.detail(id);
+			sendJson(res, outcome.ok ? 200 : outcome.status, outcome.body);
+			return;
+		}
+
 		if (pathname === "/api/schedules" && method === "GET") {
 			/* The armed index (S17): the scenario's whole body when it declares
 			 *  one (a bare body or a recorded response), else the captured EMPTY
@@ -2805,14 +3139,13 @@ export function createRelay(options: RelayOptions = {}) {
 					const refusal = gatewayRefusalFor(key);
 					if (refusal === null)
 						throw new Error(`no such gateway refusal: ${key}`);
-					if (state.record) {
+					if (state.record || state.journalAll)
 						recordRequest({
 							method,
 							path: pathname + (url.search || ""),
 							status: refusal.status,
 							note: `stream:gateway:${refusal.tag}`,
 						});
-					}
 					return sendJson(res, refusal.status, refusal.json, refusal.headers);
 				}
 				if (!projection) {
@@ -2925,6 +3258,23 @@ export function createRelay(options: RelayOptions = {}) {
 				if (index !== null && !/^\d+$/.test(index)) {
 					sendJson(res, 400, errorBody("bad image index"));
 					return;
+				}
+				const admittedImage = startup.image(
+					sessionId,
+					entry,
+					Number(index ?? 0),
+				);
+				if (admittedImage === null) {
+					sendFixture(res, "image-unknown-entry");
+					return;
+				}
+				if (admittedImage) {
+					res.writeHead(200, {
+						"content-type": admittedImage.mimeType,
+						"content-length": admittedImage.data.length,
+						"cache-control": "no-store",
+					});
+					return res.end(admittedImage.data);
 				}
 				// The captured (session, entry, index) triple is served from the
 				// corpus, which is what makes the capture's own URL resolve. Anything
@@ -3239,7 +3589,7 @@ export function createRelay(options: RelayOptions = {}) {
 			}
 
 			if (rest === "/command" && method === "POST")
-				return handleCommand(req, res, sessionId, body ?? {});
+				return handleCommand(req, res, sessionId, body ?? {}, rawBody ?? "");
 
 			const agentMatch = /^\/agents\/([^/]+)(\/history)?$/.exec(rest);
 			if (agentMatch && method === "GET") {
@@ -3445,7 +3795,7 @@ export function createRelay(options: RelayOptions = {}) {
 			state.pinnedAt = started;
 
 		const finish = (status: number, note = ""): void => {
-			if (state.record) {
+			if (state.record || state.journalAll) {
 				recordRequest({
 					method,
 					path: pathname + (url.search || ""),
@@ -3466,10 +3816,55 @@ export function createRelay(options: RelayOptions = {}) {
 		// asserts what the run did.
 		if (pathname.startsWith("/__mock")) {
 			try {
+				if (pathname === "/__mock/startup" && method === "GET") {
+					return sendJson(res, 200, startup.snapshot());
+				}
+				if (
+					method === "POST" &&
+					(pathname === "/__mock/barriers" ||
+						MOCK_BARRIER_RELEASE_ROUTE.test(pathname))
+				) {
+					try {
+						const input: unknown = JSON.parse(await readBody(req));
+						if (!isRecord(input))
+							throw new Error("barrier body must be an object");
+						const result =
+							pathname === "/__mock/barriers"
+								? startup.arm(input)
+								: startup.release(pathname.split("/")[3] ?? "", input.outcome);
+						return sendJson(
+							res,
+							pathname === "/__mock/barriers" ? 201 : 200,
+							result,
+						);
+					} catch (error) {
+						return sendJson(res, 400, errorBody(String(error)));
+					}
+				}
 				if (pathname === "/__mock/state" && method === "GET") {
+					/* THE INBOX STORE'S OWN COUNTS, on the control surface. A proof that
+					 * asserts the bell/rail badge has to compare it against what the store
+					 * holds, not against a literal in the flow: an expectation written into
+					 * the driver proves only that the driver agrees with itself. This is the
+					 * same store `GET /api/notifications` answers from, read the same way. */
+					const inboxCounts = notificationsStore.page("all", 1) as unknown as {
+						unread_count?: number;
+						waiting_unread_count?: number;
+						high_water?: number;
+					};
 					return sendJson(res, 200, {
 						scenario: state.scenario,
+						// The language the config stream SERVES, so a rig can assert the
+						// screen it captured was the locale it asked for.
+						language: state.language,
 						faults: state.faults.applied,
+						inbox: {
+							unread_count: Number(inboxCounts.unread_count ?? 0),
+							waiting_unread_count: Number(
+								inboxCounts.waiting_unread_count ?? 0,
+							),
+							high_water: Number(inboxCounts.high_water ?? 0),
+						},
 						sessions: Object.keys(state.world.projections ?? {}).length,
 						admittedCommands: state.admitted.size,
 						supplementOps: state.supplementOps,
@@ -3503,11 +3898,41 @@ export function createRelay(options: RelayOptions = {}) {
 					sendJson(res, 200, { requests: state.recorded });
 					return;
 				}
+				if (pathname === "/__mock/inbox-return" && method === "POST") {
+					/* ARMS THE RETURN PROOF: N refusals for the next list page reads
+					 * (default 1), and the request ledger the proof counts. Both are off
+					 * in an ordinary matrix run, where neither a scoped refusal nor a
+					 * per-request array belongs. `failures` exists so a proof can refuse
+					 * the retry too and measure what a FAILED retry shows — the state a
+					 * one-shot latch can never reach. */
+					const raw = await readBody(req);
+					const asked = Number(JSON.parse(raw || "{}").failures ?? 1);
+					const failures =
+						Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : 1;
+					state.failNotificationListReads = failures;
+					state.journalAll = true;
+					sendJson(res, 200, { failNotificationListReads: failures });
+					return;
+				}
 				if (pathname === "/__mock/scenario" && method === "POST") {
 					const raw = await readBody(req);
-					const next = JSON.parse(raw || "{}").scenario;
+					const body = JSON.parse(raw || "{}");
+					/* VALIDATE EVERY FIELD BEFORE ANY STATE MOVES (review m8). The language
+					 *  check used to sit AFTER the world was pinned, so `{scenario:"idle",
+					 *  language: 42}` answered 400 having already applied the scenario and taken
+					 *  the pin — a rejected request that changed two pieces of state, which the
+					 *  rig that sent it would then have to undo by hand. A request either applies
+					 *  whole or changes nothing. */
+					const next = body.scenario;
 					if (!next || !scenarios[next]) {
 						sendJson(res, 400, errorBody(`unknown scenario: '${next}'`));
+						return;
+					}
+					if (
+						body.language !== undefined &&
+						typeof body.language !== "string"
+					) {
+						sendJson(res, 400, errorBody("language must be a string tag"));
 						return;
 					}
 					const quietFor = Date.now() - state.pinnedAt;
@@ -3537,8 +3962,14 @@ export function createRelay(options: RelayOptions = {}) {
 					state.scenario = next;
 					state.pinnedBy = clientId;
 					state.pinnedAt = Date.now();
+					/* The language rides the SAME call (and survives the world reset,
+					 * because it is run-level): a rig sets both before it loads the app,
+					 * so one request describes the whole frame it is about to capture. */
+					if (body.language !== undefined) {
+						state.language = resolveHarnessLanguage(body.language);
+					}
 					resetWorld();
-					sendJson(res, 200, { scenario: next });
+					sendJson(res, 200, { scenario: next, language: state.language });
 					return;
 				}
 				if (pathname === "/__mock/fault" && method === "POST") {
@@ -3697,6 +4128,7 @@ export function createRelay(options: RelayOptions = {}) {
 	state.record = record || false;
 
 	const shutdown = async (): Promise<void> => {
+		startup.reset();
 		// The record goes first. `server.close()` only calls back once every
 		// connection has ended, and a client holding a keep-alive connection would
 		// keep this function parked past the caller's own SIGTERM deadline — which
@@ -3888,6 +4320,8 @@ if (import.meta.main) {
 				"  --port <n>            listen port (default 0: the OS picks; never 4098)",
 				"  --host <addr>         bind address (default 127.0.0.1)",
 				"  --scenario <name>     initial scenario (default idle) — see --list",
+				"  --language <tag>      the RESOLVED language the config stream serves",
+				"                        (default en); `POST /__mock/scenario` can change it",
 				"  --fault <name>        inject a fault; repeatable",
 				"  --record <dir>        write a request/response transcript on shutdown",
 				"  --fixtures <dir>      fixture corpus root (default <repo>/fixtures/relay)",
@@ -3955,6 +4389,10 @@ if (import.meta.main) {
 		accountRouting,
 		fixturesDir,
 		scenario: str(flags, "scenario", "idle"),
+		// The language the config stream serves. Default `en`: a run that does not
+		// ask for a translation must capture exactly what it captured before the
+		// route existed.
+		language: str(flags, "language", "en"),
 		faults: list(flags, "fault"),
 		password: str(flags, "password", DEFAULT_PASSWORD) ?? DEFAULT_PASSWORD,
 		// 0 means "no ceiling on this process", which is the bare relay's real
@@ -3977,4 +4415,15 @@ if (import.meta.main) {
 	};
 	process.on("SIGINT", stop);
 	process.on("SIGTERM", stop);
+}
+
+/** Whether a scenario pinned a whole RESPONSE for a route rather than a body.
+ *  The two are different claims: a recorded answer means "the relay said this",
+ *  so the store must not be consulted at all. */
+function isFixtureOverride(value: unknown): value is FixtureOverride {
+	if (typeof value !== "object" || value === null) return false;
+	const record = value as Record<string, unknown>;
+	return (
+		typeof record.status === "number" && typeof record.headers === "object"
+	);
 }

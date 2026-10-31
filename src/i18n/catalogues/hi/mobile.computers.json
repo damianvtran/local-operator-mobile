@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "कंप्यूटर जोड़ें",
+	"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
+	"mobile.computers.badge.active": "सक्रिय",
+	"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
+	"mobile.computers.connecting": "कनेक्ट हो रहा है…",
+	"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
+	"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
+	"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
+	"mobile.computers.section.on_phone": "इस फ़ोन पर",
+	"mobile.computers.switch": "कंप्यूटर बदलें"
+}

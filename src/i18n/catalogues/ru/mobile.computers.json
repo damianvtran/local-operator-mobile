@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "Добавить компьютер",
+	"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
+	"mobile.computers.badge.active": "активен",
+	"mobile.computers.badge.connecting": "подключается",
+	"mobile.computers.connecting": "Подключение…",
+	"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
+	"mobile.computers.password_placeholder": "Пароль из lop mobile",
+	"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
+	"mobile.computers.section.on_phone": "На этом телефоне",
+	"mobile.computers.switch": "Сменить компьютер"
+}

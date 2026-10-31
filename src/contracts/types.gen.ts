@@ -248,7 +248,9 @@ export interface SubagentDetail extends SubagentRow {
 
 export interface AskOption {
 	label: string;
-	description: string;
+	/** Optional on the wire: the producer stores the ask tool's own option dict,
+	 *  and an option may carry only a label. Absent = no consequence line. */
+	description?: string;
 }
 
 export interface PendingRequest {
@@ -375,6 +377,18 @@ export interface SessionProjection {
 	/** Never observed `true` over the relay; derive liveness from the list row. */
 	ended: boolean;
 	degraded: boolean;
+	/**
+	 * The relay's "owner has gone quiet" verdict (local-operator #3008,
+	 * `SessionProjection.heartbeat_stale` in `mobile/types.py`): true once BOTH
+	 * the runtime's heartbeat and its frames are older than the daemon's one
+	 * health window (`SESSION_HEALTH_WINDOW_S`), false while either is fresh.
+	 *
+	 * ABSENT, not null, on the wire: the daemon POPS the key when the verdict is
+	 * `None` ("not reported" — an older daemon, or a durable rebuild with no
+	 * live owner to measure). Absence therefore reads as NO signal, never as
+	 * stale, and never as live either — `pid: 0` still says a disk rebuild.
+	 */
+	heartbeat_stale?: boolean | null;
 	transcript: TranscriptEntry[];
 	todos: TodoPhase[];
 	subagents: SubagentRow[];
@@ -633,6 +647,9 @@ export interface SessionListFrame {
 	 * unread completions counts once.
 	 */
 	unread?: UnreadBlock;
+	/** The inbox's counts (contract §5.4), on this frame so the phone needs no
+	 *  second stream. Absent on an older relay: the badge then shows no number. */
+	notifications?: NotificationsBlock;
 }
 
 /** The frame-level unread aggregate (`SessionListFrame.unread`). */
@@ -876,6 +893,240 @@ export interface AsksResponse {
 	/** True only when a wire bound dropped rows — a prefix is never drawn beside
 	 *  a full count and read as complete. Absent while the route is uncapped. */
 	asks_truncated?: boolean;
+}
+
+/* --------------------------------------------------------------- notifications -- */
+
+/** Which store an inbox row came from (`local-operator` notifications contract
+ *  §2.2). OPEN, not an enum, for the reason `PendingAsk.status` is: a newer
+ *  relay may aggregate another source, and the row it sends must still render
+ *  as a card rather than blank the list. The phone styles `ask` differently
+ *  (it offers Answer, never Dismiss) and treats anything else as an update. */
+export type NotificationSource = string;
+
+/** The owning conversation, as the session catalogue names it. `live` is the
+ *  relay's own liveness verdict — a row is never greyed by the client guessing. */
+export interface NotificationSessionRef {
+	id: string;
+	title: string;
+	agent_id: string;
+	live: boolean;
+}
+
+/** A related project, resolved by the relay at read time from the project
+ *  registry's page-scoped `projects_for_session`. Never re-derived here: the
+ *  registry is the authority on what a session belongs to. */
+export interface NotificationProjectRef {
+	key: string;
+	name: string;
+	status: string;
+}
+
+/** An open ask's own block. PRESENT ONLY ON AN ASK ROW: an update carries
+ *  `null`, because the two have different verbs (an ask cannot be dismissed
+ *  from the reel — contract §2.3). `dismissible` is the relay's verdict from
+ *  the ask's own `dismiss_refusal`, so a relayed or Bridge-mirrored ask hides
+ *  the reasoned dismiss flow without this client re-deciding it. */
+export interface NotificationAskBlock {
+	status: string;
+	deadline_at: number;
+	question_count: number;
+	dismissible: boolean;
+}
+
+/** Which acts the relay says this row admits. Read as a permission, never as a
+ *  hint: a row whose `dismiss` is false is drawn without the gesture rather
+ *  than drawn and refused. */
+export interface NotificationActions {
+	dismiss: boolean;
+	answer: boolean;
+	read: boolean;
+}
+
+/** One inbox row (`GET /api/notifications`, contract §2.2).
+ *
+ * `revision` is the ACK TOKEN, not a version to display: every read or dismiss
+ * this client sends names the revision it rendered, and the relay refuses one
+ * that has moved (R10 applied to items — an update published after the render
+ * must not be cleared by a gesture aimed at the row before it). An open ask is
+ * always revision 1 and cannot be dismissed at all.
+ *
+ * `read_via` names HOW it was read — `explicit` (the reader acted), `in_view`
+ * (an evidenced receipt), `watching` (created read because the operator was
+ * present) — and is the only field that tells the phone whether an unread row
+ * is one the operator has never seen or one a surface saw for them. `null` on
+ * an unread row.
+ */
+export interface NotificationItem {
+	id: string;
+	source: NotificationSource;
+	priority: string;
+	title: string;
+	/** The first 160 characters of the body (or the ask's first question). */
+	excerpt: string;
+	created_at: number;
+	updated_at: number;
+	seq: number;
+	revision: number;
+	read: boolean;
+	read_via: string | null;
+	dismissed: boolean;
+	repeat_count: number;
+	/** The `notify` call's own collapse key. Absent on an ask row. */
+	key?: string;
+	/** The transcript entry the item was raised against. Absent on an ask row and
+	 *  on a `notify` raised without a resolvable anchor. */
+	anchor_id?: string;
+	/** Detail only: the notify body's markdown and its links. */
+	body_md?: string;
+	links?: Array<{ label: string; url: string }>;
+	session: NotificationSessionRef;
+	projects: NotificationProjectRef[];
+	ask: NotificationAskBlock | null;
+	actions: NotificationActions;
+	/** Waiting rows only, and passed through exactly as `api_asks` sends them:
+	 *  whether a runtime is attached to that conversation right now, and whether
+	 *  the ask survives a restart. Absent means the relay did not say. */
+	runtime_live?: boolean;
+	durable?: boolean;
+}
+
+/** The inbox counts riding the session list frame (`_list_frame`'s
+ *  `notifications` block, contract §5.4). One store read publishes all three;
+ *  the frame omits the block entirely when the relay is older than the route,
+ *  which the app reads as UNKNOWN rather than zero. */
+export interface NotificationsBlock {
+	/** Every field optional: the core answers `{}` when its store cannot be read,
+	 *  and a block with no counts is UNKNOWN — the badge then draws nothing. */
+	unread_count?: number;
+	waiting_count?: number;
+	/** The unread asks among `waiting` — the other half of the badge. */
+	waiting_unread_count?: number;
+	high_water?: number;
+}
+
+/** `GET /api/notifications` (contract §5.2/§5.4).
+ *
+ * `waiting` is the OPEN ASKS array, unpaged and present only on the first page:
+ * those are the items an agent is blocked on, so they are pinned above the
+ * time-grouped updates rather than paged among them. `high_water` is the max
+ * `seq` this answer could see — the through-token a mark-all write names, so a
+ * gesture can only ever clear what the screen had actually loaded.
+ */
+export interface NotificationsResponse {
+	items: NotificationItem[];
+	/** Present on the FIRST page only; absent (never `[]`) on a cursor page and
+	 *  under `state=dismissed`/`source=notify`, where the relay omits the key. */
+	waiting?: NotificationItem[];
+	/** Opaque, `null` on the last page. */
+	next_cursor: string | null;
+	unread_count: number;
+	waiting_count: number;
+	/** Present on the live relay (`a7d149e705`); absent means the relay does not
+	 *  publish it, never zero. */
+	waiting_unread_count?: number;
+	high_water: number;
+	/** The id/revision tokens this answer observed. A BULK write must echo them
+	 *  (the live route refuses one without), which is what bounds a mark-all to
+	 *  the events the screen actually held. */
+	observed?: NotificationObservedToken[];
+}
+
+/** One id at one revision, as the list answer reports what it observed. */
+export interface NotificationObservedToken {
+	id: string;
+	revision: number;
+}
+
+/** One title/excerpt a row carried at a revision (`history` in the detail).
+ *  Durable read history is kept by the store (decisions, presence correction),
+ *  so the phone can show what an updated item said before it collapsed. */
+export interface NotificationHistoryEntry {
+	revision: number;
+	at: number;
+	title: string;
+	excerpt: string;
+}
+
+/** The source conversation, at detail depth: `live_state` and `cwd` come from
+ *  the same catalogue read the session routes use. `live_state` is a string
+ *  because a newer relay may publish a state this build does not know. */
+export interface NotificationDetailSession {
+	id: string;
+	title: string;
+	agent_id: string;
+	/** Liveness as the relay publishes it (`SessionFacts.get`). */
+	live?: boolean;
+	/** The other producer's name for the same fact; either may arrive, so neither
+	 *  is required (the core sends `live` and no `live_state`). */
+	live_state?: string;
+	cwd: string;
+}
+
+/** The transcript anchor's excerpt, bounded and redacted by the relay. `null`
+ *  when the entry could not be resolved — honest absence, never a blank string
+ *  the phone would draw as an empty quote. */
+export interface NotificationAnchorRef {
+	id: string;
+	excerpt: string;
+}
+
+/** `GET /api/notifications/{id}` (contract §5.2). `asks` is that conversation's
+ *  asks INCLUDING settled ones (`session_asks`), which is the one place a
+ *  settled ask appears — the reel shows open ones only. */
+export interface NotificationDetailResponse {
+	item: NotificationItem;
+	history: NotificationHistoryEntry[];
+	session: NotificationDetailSession;
+	anchor: NotificationAnchorRef | null;
+	projects: NotificationProjectRef[];
+	asks: RelayAskRow[];
+}
+
+/** One ask as the relay's detail relays it (the core's stored row, verbatim).
+ *  Only `ask_id` is guaranteed; a question may carry its text and nothing else. */
+export interface RelayAskRow {
+	ask_id: string;
+	session_id?: string;
+	cwd?: string;
+	status?: string;
+	created_at?: number;
+	expires_at?: number;
+	timeout_s?: number;
+	urgent?: boolean;
+	delivered?: boolean;
+	questions?: Array<{
+		id?: string;
+		header?: string;
+		question?: string;
+		/** NORMALISED by the reader: the wire carries either a bare label string
+		 *  (older projections) or the producer's `{label, description?}` mapping,
+		 *  and `relayAskRowSchema` folds both into this one shape. */
+		options?: AskOption[];
+		multi?: boolean;
+		secret?: boolean;
+		persist?: boolean;
+	}>;
+	answers?: Record<string, string[]>;
+}
+
+/** One id a write refused, with the relay's own reason. `stale_revision` and
+ *  `live_ask` are the two the client must be able to explain to the reader: the
+ *  row moved, or the thing cannot be dismissed at all. */
+export interface NotificationWriteSkip {
+	id: string;
+	reason: string;
+}
+
+/** The answer to `PATCH /api/notifications` and `POST /api/notifications/seen`,
+ *  one shape for both (contract §5.2). `changed` is what the store actually
+ *  moved — a client that assumes its whole selection landed is claiming a write
+ *  the relay may have skipped. */
+export interface NotificationWriteResponse {
+	changed: string[];
+	skipped: NotificationWriteSkip[];
+	unread_count: number;
+	high_water: number;
 }
 
 /** `GET /api/push/conversation/{handle}` — a push tap's opaque handle resolved to

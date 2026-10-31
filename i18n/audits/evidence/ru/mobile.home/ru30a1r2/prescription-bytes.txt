@@ -1,0 +1,28 @@
+# mobile.home: round-1 prescriptions compared BYTE-WISE with the shipped bytes
+# compared field: i18n/audits/evidence/ru/mobile.home/ru30a1/record.json -> findings[].replacement
+# compared with: src/i18n/catalogues/ru/mobile.home.json at 2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
+
+ru30a1-F1  mobile.home.tip.parallel
+   record.json replacement : попросите раздать работу субагентам
+   shipped value           : попросите раздать работу субагентам
+   BYTE-EXACT              : True
+   sha256(replacement)     : b9e9b554d617b38bf20ec4101bfc666ee514f5d3fc2fd1d5dea42fa71f810d05
+   sha256(shipped)         : b9e9b554d617b38bf20ec4101bfc666ee514f5d3fc2fd1d5dea42fa71f810d05
+   utf8 bytes replacement/shipped: 67/67
+
+ru30a1-F2  mobile.home.tip.schedule
+   record.json replacement : настройте запуск промпта по расписанию
+   shipped value           : настройте запуск промпта по расписанию
+   BYTE-EXACT              : True
+   sha256(replacement)     : a244bfa4dce387302d318b48b3e678d2fbdf379f7bd01c3a05ba5f34d57eee7b
+   sha256(shipped)         : a244bfa4dce387302d318b48b3e678d2fbdf379f7bd01c3a05ba5f34d57eee7b
+   utf8 bytes replacement/shipped: 72/72
+
+ru30a1-F3  mobile.home.tip.search
+   record.json replacement : поищите сессию в прошлых беседах
+   shipped value           : поищите сессию в прошлых беседах
+   BYTE-EXACT              : True
+   sha256(replacement)     : 06b7157feb47ffadc6ada4bfb28ae36bba969be8a46750c8178052805f0055d3
+   sha256(shipped)         : 06b7157feb47ffadc6ada4bfb28ae36bba969be8a46750c8178052805f0055d3
+   utf8 bytes replacement/shipped: 60/60
+

@@ -1,19 +1,40 @@
 import { useRouter } from "expo-router";
 import { Search, SquarePen, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import {
+	FlatList,
+	type LayoutChangeEvent,
+	Pressable,
+	RefreshControl,
+	Text,
+	View,
+} from "react-native";
 import type { SessionSummary } from "@/contracts";
+import {
+	DrawerComputerRow,
+	useComputerEntry,
+} from "@/features/auth/computer-entry-points";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	useConnection,
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
 import { libraryEnabled } from "@/features/library/library-model";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
+import {
+	type RailCountPlacement,
+	railCountPlacement,
+} from "@/features/sessions/rail-count-layout";
 import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	inboxBadgeCount,
 	isRemoteRow,
 	relativeTimeFor,
 	remoteAttention,
@@ -30,7 +51,6 @@ import {
 } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { homeShortened } from "@/lib/format";
-import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
@@ -45,6 +65,7 @@ import {
 	sessionTagLineId,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
@@ -52,7 +73,8 @@ import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { ListRow } from "@/ui/components/list-row";
-import { tailFit } from "@/ui/components/list-row-meta";
+import { middleFit } from "@/ui/components/list-row-meta";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
@@ -120,6 +142,89 @@ export type ConversationsPaneProps = {
 	homeDirectory?: string | null;
 };
 
+/**
+ * The inbox count pill, rendered TWICE on its rail row: visibly at the row's end
+ * and invisibly at its start.
+ *
+ * WHY A MIRROR RATHER THAN A CONSTANT. The two sides used to be fixed 40 pt, but
+ * the pill grows with its text: at 320 × 568 / 200 % `99+` measured wider than the
+ * slot, ran past the pane's edge and the list clipped it to "99" (design round 7,
+ * D22 / code review round 8, R8-02 — on native the slot stays 40 dp while the
+ * system text size grows the badge). Both sides are the same element, so they are
+ * the same width at every text size and the route's label sits on the rail's
+ * centre line the way `D19` requires.
+ *
+ * THE MIRROR IS NOT THE DEFAULT, and the row is grouped until a measurement says
+ * otherwise — see the placement state below. An earlier revision claimed the
+ * switch could always happen before the first paint; on native `onLayout` runs
+ * after layout is presented, so that claim was false, and the answer is to make
+ * the UNMEASURED state the safe one instead (code review round 10, M-2).
+ *
+ * The invisibility is on the BADGE, not on this wrapper: a transparent wrapper
+ * still leaves the badge inside it a painted node, and the audit read the mirrored
+ * count as a colour-only status (U-03) — a status with no word or name, because a
+ * spacer has none to give. `Badge`'s `hidden` prop drops the badge itself from the
+ * painted frame while it keeps its box, and the wrapper below hides the subtree
+ * from assistive tech: it is a spacer, not content.
+ */
+/** The destination's name, in ONE place: the button renders it and the out-of-flow
+ *  stand-in measures it, so a copy change cannot leave the row measuring a word it
+ *  no longer shows (code review round 10, m-6). */
+const RAIL_INBOX_LABEL = "Notifications";
+
+const RailCount = ({
+	count,
+	hidden,
+	onWidth,
+}: {
+	count: number;
+	hidden?: boolean;
+	/** Reports the pill's own width, so the row can decide its placement from a
+	 *  measurement rather than from a guess about the text scale (D23). */
+	onWidth?: (width: number) => void;
+}) => {
+	// The count's own line box is the one thing here that depends on the text
+	// scale: at 300 % its digits outgrow the fixed 16 pt box (D25), and below that
+	// step passing the scale is a no-op.
+	const { effectiveScale } = useTextScale();
+	return (
+		<View
+			className="items-center"
+			testID={
+				hidden === true
+					? CONTROL.sidebarNotificationsSpacer
+					: CONTROL.sidebarNotificationsCount
+			}
+			aria-hidden={hidden}
+			accessibilityElementsHidden={hidden}
+			importantForAccessibility={
+				hidden === true ? "no-hide-descendants" : "auto"
+			}
+			pointerEvents={hidden === true ? "none" : "auto"}
+			onLayout={
+				onWidth === undefined
+					? undefined
+					: (event) => onWidth(event.nativeEvent.layout.width)
+			}
+		>
+			<Badge
+				/* The app's one cap, as the home bell uses (R7-02/D21). */
+				label={countLabel(count)}
+				/* The 300 % step is where a count's digits outgrow the fixed line box
+				 *  (D25); below it this is a no-op, which is why only the count passes it. */
+				scale={effectiveScale}
+				tone="warning"
+				emphasis
+				mono
+				hidden={hidden}
+				accessibilityLabel={
+					hidden === true ? undefined : `Notifications, ${count} unread`
+				}
+			/>
+		</View>
+	);
+};
+
 export const ConversationsPane = ({
 	onClose,
 	onNavigate,
@@ -140,9 +245,63 @@ export const ConversationsPane = ({
 	const stale = useListState((state) => state.stale);
 	const lastFrameAt = useListState((state) => state.lastFrameAt);
 	const capabilities = useListState((state) => state.capabilities);
-	const computers = useConnectionState((state) => state.computers);
-	const tunnelId = useConnectionState((state) => state.tunnelId);
+	/* The inbox's own count, off the list frame (contract §5.4). `null` draws no
+	 * numeral — an older relay's omission is unknown, never a zero. */
+	const inboxBlock = useListState((state) => state.notifications);
+	const inboxCount = inboxBadgeCount(inboxBlock);
 	const route = useConnectionState((state) => state.route);
+
+	/* THE INBOX ROW'S PLACEMENT (D23), and the rule is about the UNMEASURED state:
+	 *  the unmeasured state is the SAFE one, and measurement may only improve it.
+	 *
+	 * So the row starts GROUPED — pair centred, label truncated if it must be, no
+	 * mirror — because that cannot overlap, and adopts the symmetric centring (D19)
+	 * only once a measurement proves the row holds `label + 2 × count`. A placement
+	 * decided from a measurement cannot be promised before the first paint on every
+	 * platform: on the web target `onLayout` arrives from a ResizeObserver in the
+	 * render steps before paint, but on native it is delivered after the layout is
+	 * presented. Making the default safe is what makes the rule true on both — and
+	 * measurement then only ever REPLACES a layout that was already correct.
+	 *
+	 * A predicate on the text scale could not answer the question either: `5` and
+	 * `42` fit at 200 % and `99+` does not, so the widths are measured. */
+	const [railWidths, setRailWidths] = useState<{
+		row?: number;
+		label?: number;
+		pill?: number;
+	}>({});
+	/* Each of these returns the PREVIOUS state when the number has not moved: a
+	 *  resize or a keyboard event must not re-render the whole pane for a width
+	 *  that is already known (code review round 10, n-3). */
+	const measureRow = (event: LayoutChangeEvent) => {
+		const row = event.nativeEvent.layout.width;
+		setRailWidths((held) => (held.row === row ? held : { ...held, row }));
+	};
+	const measureLabel = (event: LayoutChangeEvent) => {
+		const label = event.nativeEvent.layout.width;
+		setRailWidths((held) => (held.label === label ? held : { ...held, label }));
+	};
+	const measurePill = (width: number) => {
+		setRailWidths((held) =>
+			held.pill === width ? held : { ...held, pill: width },
+		);
+	};
+	/* NO COUNT IS NOT A PLACEMENT QUESTION. With nothing to place there is no pair
+	 *  and no mirror: the destination must look like its siblings — full width, the
+	 *  label on the rail's centre line — rather than sitting as a grouped pair for
+	 *  the rest of its life (code review round 11, m-3). */
+	const hasInboxCount = inboxCount !== null && inboxCount > 0;
+	/* GROUPED UNTIL PROVEN OTHERWISE — the safe state, never the majority one. */
+	const placement: RailCountPlacement =
+		railWidths.row === undefined ||
+		railWidths.label === undefined ||
+		railWidths.pill === undefined
+			? "grouped"
+			: railCountPlacement({
+					rowWidth: railWidths.row,
+					labelWidth: railWidths.label,
+					pillWidth: railWidths.pill,
+				});
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -186,26 +345,39 @@ export const ConversationsPane = ({
 	}, []);
 
 	const { effectiveScale } = useTextScale();
+	const [switcherWidth, setSwitcherWidth] = useState(0);
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-	const scrollFooter = sidebarFooterScrolls(useLayout(), effectiveScale);
+	/* Large text counts here because the routes grow with it: at 200 % on a
+	 *  320 × 568 pane the pinned footer left the list 60 pt and the first session
+	 *  row — the only thing that tells `ended` from `populated` — was entirely
+	 *  below the fold (`S15` refused the capture on 2026-10-27). The number of
+	 *  destinations comes from the relay's own flags, so an older relay with fewer
+	 *  routes keeps the pinned footer it has always had (R7-01). */
+	const pinnedRoutes =
+		/* Team Bridge's entry is pinned in the same footer and is always shown
+		 *  (a hub destination, not a relay capability), so it counts as a route
+		 *  unconditionally — omitting it would under-state the footer's height
+		 *  against the floor this derivation was measured for. */
+		5 +
+		(notificationsEnabled(capabilities) ? 1 : 0) +
+		(libraryEnabled(capabilities) ? 1 : 0);
+	const scrollFooter = sidebarFooterScrolls(useLayout(), {
+		largeText,
+		routes: pinnedRoutes,
+	});
 
-	/* The switcher's painted label. The text box's OWN width is the budget —
-	 *  measured on the line, so it cannot drift from the flex rules — and the
-	 *  fit is the row's meta arithmetic (`tailFit`): whole before the first
-	 *  layout (the common label fits, so the first frame is the settled frame),
-	 *  tail-kept once the box is narrower than the string. Measured motivation
-	 *  (review round 3, D3): at 200 % the drawer's 143 dp box dropped the port
-	 *  of `127.0.0.1:51078` — the only part that differs per session — because
-	 *  react-native-web ignores `ellipsizeMode`, so the painted STRING is the
-	 *  only control over which end survives. The home header paints the same
-	 *  ladder whole at 200 %: its box is wider, and the fit engages only where
-	 *  the box runs out. */
-	const switcherLabel = listLabel(computers, tunnelId, route);
-	const [switcherLabelWidth, setSwitcherLabelWidth] = useState(0);
-	const paintedSwitcherLabel =
-		switcherLabelWidth > 0
-			? tailFit(switcherLabel, switcherLabelWidth, effectiveScale)
-			: switcherLabel;
+	/* The switcher's full identity, painted as ONE fitted line (`middleFit`).
+	 *  Two shapes came before this and both failed visibly: a tail fit kept only
+	 *  "…0.0.1:49869", and a two-line middle let the platform break INSIDE the
+	 *  address ("127.0.0.1:49" over "892") at 320 pt and 200 % text. react-native-web
+	 *  ignores `ellipsizeMode`, so the painted string is pre-fitted rather than
+	 *  wrapped; the button's accessible label still carries it unbroken. */
+	const computerEntry = useComputerEntry();
+	const { open: openComputerSwitcher } = useComputerSwitcher();
+	const switcherLabel =
+		computerEntry.kind === "computer"
+			? computerEntry.name
+			: computerEntry.label;
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -283,34 +455,20 @@ export const ConversationsPane = ({
 	 * (and its content-driven wrapping) from the pinned portrait layout. */
 	const footer = (
 		<View
-			className="gap-2 border-hairline border-t px-2 pb-2 pt-2"
+			className="gap-2 bg-sunken px-2 pb-2 pt-3"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		>
-			<View className="flex-row flex-wrap gap-2">
-				<View className="flex-auto">
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
-				</View>
-				<View className="flex-auto">
-					<Button
-						label="Computers"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/tunnels");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarComputers}
-					/>
-				</View>
+			<View className="w-full">
+				<Button
+					label="Past sessions"
+					onPress={() => {
+						onNavigate?.();
+						router.push("/past");
+					}}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.sidebarPast}
+				/>
 			</View>
 			<View className="w-full">
 				<Button
@@ -328,8 +486,7 @@ export const ConversationsPane = ({
 			 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
 			 *  view of what is running on the machine, not a row in Settings —
 			 *  and the desktop sidebar carries Schedules as a top-level
-			 *  destination beside them. Full-width beneath the pair, like Projects,
-			 *  so the wrap band stays 2+1+1. */}
+			 *  destination beside them. Full-width, like Projects. */}
 			<View className="w-full">
 				<Button
 					label="Schedules"
@@ -342,6 +499,93 @@ export const ConversationsPane = ({
 					testID={CONTROL.sidebarSchedules}
 				/>
 			</View>
+			{notificationsEnabled(capabilities) ? (
+				<>
+					{/* The sixth route, and the one the operator named: the inbox. Its
+					 *  count rides the button's own row, so the pane can say how much is
+					 *  waiting without opening it. Other rail rows keep their quiet pill:
+					 *  only this badge is asked to stand out (decisions §D5). */}
+					{/* ONE LINE, count included. The badge used to be a sibling BELOW
+					 *  the label in a column view, so it orphaned onto its own row and
+					 *  the rail grew by two rows instead of one — measured against main
+					 *  on iphone-se / 135 % (`S15/move-progress`): our pinned footer was
+					 *  312 pt to main's 236 pt, which put a rail row across the move
+					 *  sheet's edge and the audit read the straddle as an overlap (U-08,
+					 *  4 rows). The count belongs on the destination's own line, the way
+					 *  the home header's bell carries it. */}
+					<View
+						className={
+							placement === "symmetric" || !hasInboxCount
+								? "w-full flex-row items-center"
+								: /* GROUPED centres the label and the count as ONE pair
+									 *  (code review round 10, M-1): the label loses
+									 *  `flex-1` below, so without `justify-center` the pair
+									 *  packs against the row's start edge — the model, the
+									 *  tests and the frame would describe three different
+									 *  layouts. */
+									"w-full flex-row items-center justify-center"
+						}
+						onLayout={measureRow}
+					>
+						{/* THE SAME PILL, INVISIBLE, so the label centres on the rail's centre
+						 *  line like every sibling: with the count added to one side only it
+						 *  sat 15.6 pt left of the others at 100 % and 19.3 pt left at 200 %
+						 *  (design round 6, D19). A copy rather than a constant keeps both
+						 *  sides equal at every text size (design round 7, D22).
+						 *
+						 *  Only when the row can HOLD it. At 320 × 568 / 200 % with `99+`
+						 *  the two pills and the label need 258.8 pt of a 247 pt row, and
+						 *  the label painted over the pill's own edge — "Notification"
+						 *  (design round 8, D23). Then the mirror is dropped and the label
+						 *  and count are centred as one pair, which needs ~205 pt: legible
+						 *  first, exactly symmetric whenever it fits. */}
+						{hasInboxCount && placement === "symmetric" ? (
+							<RailCount count={inboxCount} hidden />
+						) : null}
+						<View
+							className={
+								placement === "symmetric" || !hasInboxCount
+									? "flex-1"
+									: /* An over-running pair shortens the LABEL, never the
+										 *  count (m-5): the wrapper shrinks and the button's
+										 *  own text ellipsizes inside it. */
+										"shrink"
+							}
+						>
+							<Button
+								label={RAIL_INBOX_LABEL}
+								labelLines={
+									placement === "symmetric" || !hasInboxCount ? undefined : 1
+								}
+								onPress={() => {
+									onNavigate?.();
+									router.push("/notifications");
+								}}
+								variant="quiet"
+								size="sm"
+								testID={CONTROL.sidebarNotifications}
+							/>
+						</View>
+						{hasInboxCount ? (
+							<RailCount count={inboxCount} onWidth={measurePill} />
+						) : null}
+						{/* THE MEASURING STAND-INS. Out of flow and unpainted, so they
+						 *  neither move the row nor reach the audit's node set, and both
+						 *  wear the label's own type step so their width is the label's. */}
+						<Text
+							className="text-meta absolute opacity-0"
+							pointerEvents="none"
+							aria-hidden
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+							onLayout={measureLabel}
+							testID={CONTROL.sidebarNotificationsMeasure}
+						>
+							{RAIL_INBOX_LABEL}
+						</Text>
+					</View>
+				</>
+			) : null}
 			<TeamBridgeEntry onNavigate={onNavigate} />
 			{/* The fifth route, gated on the relay's own capability flag. An older
 			 *  relay omits `features.library`; showing the entry there would offer a
@@ -361,45 +605,76 @@ export const ConversationsPane = ({
 					/>
 				</View>
 			) : null}
+			{/* THE BOTTOM OF THE NAVIGATION: the computer in use, and the switcher.
+			 *  The operator asked for the switcher "at the bottom of the navigation";
+			 *  this app is a Stack with a drawer and no tab bar, so this footer is
+			 *  that place, and the row takes the shape Slack gives its workspace row
+			 *  (ux-flows F5). It replaced the "Computers" route that sat beside Past
+			 *  sessions: it opens the ONE switcher sheet, whose "Add a computer" and
+			 *  Settings keep the management paths. Last and full-width, as the design
+			 *  frame draws it. */}
+			<View className="w-full pt-1">
+				<DrawerComputerRow
+					testID={CONTROL.sidebarComputers}
+					onNavigate={onNavigate}
+				/>
+			</View>
 		</View>
 	);
 
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
 			{/* ---- the header row: switcher・search・close (close: drawer only) ---- */}
-			<View className="flex-row items-center gap-1 px-2">
+			<View className="flex-row items-center gap-2 px-3 py-2">
+				<NavigationMark size={32} />
 				<Pressable
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${switcherLabel} — choose a computer`}
+					accessibilityLabel={computerEntry.accessibilityLabel}
 					onPress={() => {
 						onNavigate?.();
-						router.push("/tunnels");
+						// Both name controls choose a computer; management remains in Settings.
+						openComputerSwitcher({
+							returnFocusTestID: CONTROL.computersButton,
+						});
 					}}
 					testID={CONTROL.sidebarSwitcher}
 					className="min-w-0 flex-1 justify-center px-2"
 					/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
-					 *  is not iOS — the web/audit profile included, which is the build the
-					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
-					style={{ minHeight: TOUCH_FLOOR }}
+					 *  is not iOS — the web/audit target included, which is the build the
+					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher).
+					 *
+					 * BOTH AXES, on its own merits: a height floor a neighbour can squeeze
+					 * on the other axis is not a floor, and this control's label pre-fits to
+					 * its measured width, so it can use the 44 and still paint its own middle
+					 * ellipsis. The four U-01 rows of ci run 40579948001 were NOT this
+					 * control: they were the HOME header's `computers-button`, squeezed to
+					 * 36.4 pt beside the bell's `99+` pill at 200 % text. That one is fixed
+					 * at the defect, in `home.tsx` (design round 9, D24) — the same floor
+					 * here, and a bell whose pill yields at large text. */
+					style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 				>
+					{/* ONE unbreakable line, pre-fitted with a middle ellipsis: the drawer's
+					 * box is narrower than the home header's, and a two-line middle let the
+					 * platform break inside the address/port at 320 pt and 200 % (D3). The
+					 * full value stays in the button's accessible label above. */}
 					<Text
 						className="text-mono-sm text-ink-muted"
 						numberOfLines={1}
-						ellipsizeMode="tail"
-						/* The painted string is fitted above (`tailFit`); this pair stays as the
-						 *  platform mop-up, as on the row's meta line: on iOS/Android the tail
-						 *  ellipsis is the direction the fitted string already has. */
 						onLayout={(event) =>
-							setSwitcherLabelWidth(event.nativeEvent.layout.width)
+							setSwitcherWidth(Math.floor(event.nativeEvent.layout.width))
 						}
+						style={{ flexShrink: 1 }}
 					>
-						{paintedSwitcherLabel}
+						{switcherWidth > 0
+							? middleFit(switcherLabel, switcherWidth, effectiveScale)
+							: switcherLabel}
 					</Text>
 				</Pressable>
 				<IconButton
 					accessibilityLabel="Search conversations"
 					onPress={() => setSearching((value) => !value)}
 					icon={({ color, size }) => <Search color={color} size={size} />}
+					size={22}
 					testID={CONTROL.sidebarSearch}
 				/>
 				{onClose ? (
@@ -449,7 +724,7 @@ export const ConversationsPane = ({
 						onNewChat?.();
 					}}
 					testID={CONTROL.sidebarNewChat}
-					className="flex-row items-center gap-3 border-hairline border-b px-4"
+					className="flex-row items-center gap-3 px-4"
 					style={{ minHeight: 56 }}
 				>
 					<SquarePen size={20} color={newChatInk} />
@@ -634,7 +909,10 @@ export const ConversationsPane = ({
 							}}
 							onConnect={() => {
 								onNavigate?.();
-								router.push("/tunnels");
+								// Both name controls choose a computer; management remains in Settings.
+								openComputerSwitcher({
+									returnFocusTestID: CONTROL.computersButton,
+								});
 							}}
 						/>
 					</View>

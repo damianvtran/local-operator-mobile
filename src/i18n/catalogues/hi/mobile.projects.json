@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "{name} मिटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
+	"mobile.projects.draft_kept_note": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।",
+	"mobile.projects.milestone_slash_note": "पड़ाव के नाम में स्लैश नहीं हो सकता। स्लैश वाला पड़ाव कभी हटाया नहीं जा सकेगा।",
+	"mobile.projects.milestones.count": "{total} में से {completed} पड़ाव",
+	"mobile.projects.milestones.none": "कोई पड़ाव नहीं",
+	"mobile.projects.project_name_hint": "1-64 वर्ण: अक्षर, अंक, बिंदु (.), अंडरस्कोर (_) या हाइफ़न (-)। स्पेस नहीं, और हाइफ़न से शुरुआत नहीं हो सकती।",
+	"mobile.projects.remove_milestone_body": "{name} को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।",
+	"mobile.projects.session_state.filed_by": "द्वारा दर्ज",
+	"mobile.projects.session_state.missing": "गायब",
+	"mobile.projects.session_state.not_running": "नहीं चल रहा",
+	"mobile.projects.sessions.count": "{count, plural, one {# सत्र} other {# सत्र}}",
+	"mobile.projects.sessions.live": "{base} · {live} सक्रिय",
+	"mobile.projects.stale_badge": "प्रगति पुरानी",
+	"mobile.projects.write_receipt": "{kind, select, project {“{subject}” प्रोजेक्ट {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} milestone {“{subject}” पड़ाव {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} other {“{subject}” {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।}}",
+	"mobile.projects.write_unknown_note": "आपके कंप्यूटर तक नहीं पहुँच सके, इसलिए यह नहीं बता सकते कि वह सहेजा गया या नहीं। दोबारा कोशिश करने से पहले प्रोजेक्ट जाँच लें।"
+}

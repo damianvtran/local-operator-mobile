@@ -1,0 +1,123 @@
+# Audit log — es29a5r2 — mobile.session_health (es), delta re-audit (round 2)
+# Date: 2026-10-29
+# Auditor: i18n-auditor (lopdev team), session 3ef3aad1f731
+# Served model: radient/auto (fallbacks: anthropic/claude-sonnet-5-5 ->
+#   openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, provider quota)
+# Head: f1c782f22a1f4a3f31f025282849cc62ba41b8c6 (branch feat/i18n-spanish)
+# Previous round: es29a5 at c5f491ece9db11ec2dc7d136e7de88f93781acff, changes_requested
+#
+# HOW TO READ THIS FILE. It was run as `bash -v`: every line below that is not a
+# comment is a command exactly as executed, and the lines following it are its
+# actual output. Nothing here is transcribed. The only write this run made is
+# this bundle; no catalogue, code, index or commit was touched.
+#
+# NOTE (judgement, not command output): S-01 is resolved; verdict passed,
+# 0 BLOCKER, 0 MAJOR, 0 new findings.
+
+set -v
+
+cd /Users/damian/workspace/es-wave
+git rev-parse --abbrev-ref HEAD
+feat/i18n-spanish
+git rev-parse HEAD
+f1c782f22a1f4a3f31f025282849cc62ba41b8c6
+git log --oneline -2
+f1c782f feat(i18n): ship Spanish across the mobile catalogue
+c5f491e feat(i18n): ship French across the mobile catalogue (#132)
+sha256sum src/i18n/catalogues/en/mobile.session_health.json src/i18n/catalogues/en/mobile.session_health.context.json src/i18n/catalogues/es/mobile.session_health.json
+727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f  src/i18n/catalogues/en/mobile.session_health.json
+df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310  src/i18n/catalogues/en/mobile.session_health.context.json
+16c491040c369953c1039e12100e76514fab1aa7b956f1531ea28cc004dfb7e9  src/i18n/catalogues/es/mobile.session_health.json
+
+# Delta reconstruction. Note what the next block shows: the changed key has the
+# SAME character count as the round-1 string, so length evidence alone cannot
+# find it — the exact comparison against the round-1 quoted value is what proves
+# the change, and the ten other keys are proven byte-identical the same way.
+python3 /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/delta-check.py mobile.session_health i18n/audits/evidence/es/mobile.session_health/es29a5/report.md i18n/audits/evidence/es/mobile.session_health/es29a5/record.json /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/round1-lengths.txt
+HEAD-BRANCH feat/i18n-spanish
+HEAD f1c782f22a1f4a3f31f025282849cc62ba41b8c6
+ROUND1-REV c5f491ece9db11ec2dc7d136e7de88f93781acff audit_id=es29a5 status=changes_requested
+HASH en: round1=727b7e4977b39546 now=727b7e4977b39546 unchanged src/i18n/catalogues/en/mobile.session_health.json
+HASH context: round1=df99892225c85921 now=df99892225c85921 unchanged src/i18n/catalogues/en/mobile.session_health.context.json
+HASH es: round1=8552e560a6837e73 now=16c491040c369953 CHANGED src/i18n/catalogues/es/mobile.session_health.json
+QUOTE from finding heading: still_reopening
+QUOTE from finding heading: resume_refused
+KEYS mobile.session_health: en=11 es=11 context=11; parity=True; context_parity=True
+DELTA exact_quote_match=10 keys=['control_hint', 'ended_placeholder', 'menu_hint', 'menu_label', 'menu_title', 'reopening', 'resume_gone', 'resume_no_route', 'resume_refused', 'resume_refused_title']
+DELTA no_round1_quote=[]
+LEN round1_length_rows_in_file=64; keys_compared=11 of 11
+LEN length_changed=[]
+LEN length_unchanged=['control_hint', 'ended_placeholder', 'menu_hint', 'menu_label', 'menu_title', 'reopening', 'resume_gone', 'resume_no_route', 'resume_refused', 'resume_refused_title', 'still_reopening']
+  CHANGED mobile.session_health.still_reopening
+    round1: «Sigue reabriendo — todavía no ha arrancado.»
+    now   : «Sigue reabriéndose — todavía no está lista.»
+
+# Repository gates.
+npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+(node:49352) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+npx vitest run src/i18n/__tests__/ src/features/home/ 2>&1 | tail -18
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 /Users/damian/workspace/es-wave
+
+·························································································································
+
+ Test Files  9 passed (9)
+      Tests  121 passed (121)
+   Start at  22:48:43
+   Duration  5.67s (transform 67%, import 27%, tests 5%, worker 1%)
+
+  Transform  transforming modules took 10.60s · 67% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+
+# Per-key mechanical layer.
+python3 /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/es-ns-check.py mobile.session_health
+JSON mobile.session_health: en/context/es parse PASS
+KEYS mobile.session_health: en=11 target=11 context=11; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.session_health.control_hint: PASS; role=help; params=True; icu=False; chars_en=52; chars_es=59; ratio=1.13
+MECH mobile.session_health.ended_placeholder: PASS; role=help; params=True; icu=False; chars_en=35; chars_es=19; ratio=0.54
+MECH mobile.session_health.menu_hint: PASS; role=button; params=True; icu=False; chars_en=22; chars_es=25; ratio=1.14
+MECH mobile.session_health.menu_label: PASS; role=button; params=True; icu=False; chars_en=15; chars_es=21; ratio=1.40
+MECH mobile.session_health.menu_title: PASS; role=heading; params=True; icu=False; chars_en=7; chars_es=6; ratio=0.86
+MECH mobile.session_health.reopening: PASS; role=status; params=True; icu=False; chars_en=40; chars_es=45; ratio=1.12
+MECH mobile.session_health.resume_gone: PASS; role=status; params=True; icu=False; chars_en=32; chars_es=32; ratio=1.00
+MECH mobile.session_health.resume_no_route: PASS; role=status; params=True; icu=False; chars_en=45; chars_es=46; ratio=1.02
+MECH mobile.session_health.resume_refused: PASS; role=status; params=True; icu=False; chars_en=55; chars_es=68; ratio=1.24
+MECH mobile.session_health.resume_refused_title: PASS; role=heading; params=True; icu=False; chars_en=16; chars_es=19; ratio=1.19
+MECH mobile.session_health.still_reopening: PASS; role=status; params=True; icu=False; chars_en=41; chars_es=43; ratio=1.05
+SHA256 mobile.session_health en src/i18n/catalogues/en/mobile.session_health.json 727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+SHA256 mobile.session_health context src/i18n/catalogues/en/mobile.session_health.context.json df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310
+SHA256 mobile.session_health es src/i18n/catalogues/es/mobile.session_health.json 16c491040c369953c1039e12100e76514fab1aa7b956f1531ea28cc004dfb7e9
+SUMMARY mobile.session_health: keys=11; mechanical_failures=0; placeholders_in_namespace=0
+
+# Core's own Spanish vocabulary for this flow, read from the core repository's
+# committed main (not a working tree) — the reference the resume/reopen wording
+# must not contradict.
+git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/relay.health.json | grep -E "ended_detail|ended_send_failed"
+  "relay.health.ended_detail": "El historial se conserva. Envía un mensaje o toca Reanudar para reabrir la sesión en tu carpeta personal.",
+  "relay.health.ended_send_failed": "Esta sesión finalizó y no se pudo reabrir en este momento. Inténtalo de nuevo o toca “Finalizada” arriba y elige Reanudar."
+git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/relay.chrome.json | grep -E "session.resume|session.subtitle.ended"
+  "relay.chrome.session.subtitle.ended": "Finalizada",
+  "relay.chrome.session.resume": "Reanudar",
+
+# Fit: advance widths at the status line's own type role (meta 12 pt/500).
+swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure.swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure-health.json
+en still_reopening	12.0pt	248.6	Still reopening — it has not come up yet.
+es still_reopening	12.0pt	267.3	Sigue reabriéndose — todavía no está lista.
+es reopening	12.0pt	300.6	Reabriendo — esto puede tardar unos segundos.
+
+# NOTE (not command output): the second independent pass was job ac1915638e4e
+# (reviewer, read-only, served radient/auto; pinned anthropic/claude-sonnet-5-5
+# with the same quota fallback). It read the changed value without this
+# auditor's findings and judged it clean for the same grammatical reason.
+# Verdict: passed.

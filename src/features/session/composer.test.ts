@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 import {
 	acknowledgedCurrentDraft,
 	attachmentLabel,
-	COMPOSER_COPY,
 	composerControls,
+	composerCopy,
 	receiptForError,
 } from "@/features/session/composer";
+import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import { RelayError } from "@/relay";
 
 /**
@@ -76,7 +79,7 @@ describe("the send/steer morph", () => {
 		// A second, differently keyed instruction sent while the first may already be
 		// admitted is the duplicate the envelope exists to prevent.
 		expect(blocked.primary.disabled).toBe(true);
-		expect(blocked.disabledReason).toBe(COMPOSER_COPY.retryDisabledHint);
+		expect(blocked.disabledReason).toBe(composerCopy().retryDisabledHint);
 	});
 
 	it("reads `…` while sending, so the reader is told the control is busy", () => {
@@ -104,7 +107,7 @@ describe("the send/steer morph", () => {
 		expect(sending.sending).toBe(true);
 	});
 
-	it("sends nothing to an ended session, whatever the draft says", () => {
+	it("keeps the primary ENABLED on an ended session, because a send reopens it", () => {
 		const ended = composerControls({
 			streaming: false,
 			hasDraft: true,
@@ -113,21 +116,20 @@ describe("the send/steer morph", () => {
 			envelopePending: false,
 			ended: true,
 		});
-		expect(ended.primary.disabled).toBe(true);
-		// And it SAYS so, and what the reader can do instead. A dead control with no
-		// reason is the "control that cannot work" pattern this feature exists to
-		// avoid (review round 1, M4): `disabledReason` was computed for the retained
-		// case and read by nobody, so the ended case had no copy anywhere at all.
-		expect(ended.disabledReason).toBe(COMPOSER_COPY.endedSession);
-		expect(ended.disabledReason).toContain("ended");
-		// The two reasons are distinct: an unresolved instruction is a different
-		// problem from a session that is over, and each names its own remedy.
-		expect(ended.disabledReason).not.toBe(COMPOSER_COPY.retryDisabledHint);
+		// A send to an ended session is itself resume-then-send (the daemon wakes a
+		// host for a prompt with no live entry), so the primary is the way back —
+		// disabling it would refuse the one action that revives the session. The
+		// placeholder, not a disabled reason, says what a send does.
+		expect(ended.primary.disabled).toBe(false);
+		expect(ended.disabledReason).toBeNull();
 	});
 
-	it("keeps the ended reason ahead of the retained one", () => {
-		// Both can be true at once. The ended state is the one that explains why the
-		// retry cannot help either, so it is the sentence the reader gets.
+	it("an ended session with an unresolved instruction still blocks on the instruction, without a third sentence", () => {
+		// Both can be true at once. The retained instruction is the thing that
+		// blocks a second send (the duplicate hazard), so the primary stays
+		// disabled. But on an ended session the retained card already carries the
+		// ended sentence and the one Retry; "Resolve the earlier instruction first"
+		// under it was the third stacked message UX U7 / design D5 measured.
 		const both = composerControls({
 			streaming: false,
 			hasDraft: true,
@@ -136,7 +138,20 @@ describe("the send/steer morph", () => {
 			envelopePending: true,
 			ended: true,
 		});
-		expect(both.disabledReason).toBe(COMPOSER_COPY.endedSession);
+		expect(both.primary.disabled).toBe(true);
+		expect(both.disabledReason).toBeNull();
+		// A live session keeps the hint: there it is the only sentence that says
+		// why the primary is dead.
+		expect(
+			composerControls({
+				streaming: false,
+				hasDraft: true,
+				hasImages: false,
+				sending: false,
+				envelopePending: true,
+				ended: false,
+			}).disabledReason,
+		).toBe(composerCopy().retryDisabledHint);
 	});
 });
 
@@ -227,8 +242,8 @@ describe("the error taxonomy the reader sees", () => {
 		// own words — which is the point: `String(exception)` must not reach a screen.
 		expect(receiptForError(bare).message).not.toBe("Load failed");
 		expect([
-			COMPOSER_COPY.continuationError,
-			COMPOSER_COPY.steerError,
+			composerCopy().continuationError,
+			composerCopy().steerError,
 		]).toContain(receiptForError(bare).message);
 	});
 });
@@ -246,5 +261,35 @@ describe("attachment metadata shown before send", () => {
 		// which reads as a broken or empty attachment. Anything under 1 KB says so.
 		const image = { data_b64: "A".repeat(96), mime_type: "image/png" };
 		expect(attachmentLabel(image)).toBe("PNG · < 1 KB");
+	});
+});
+
+describe("the composer's ended copy has ONE source", () => {
+	/* Review round 3, M2 / QA Q12 / UX U14 / design D12: this file's module used
+	 * to hold literal copies of three catalogue sentences, and the copies were what
+	 * rendered. `check-strings` cannot see that shape — it treats an exact mirror of
+	 * a catalogue value as a deliberate one, and it scans only `-copy.ts` modules —
+	 * so the binding is asserted here instead. Reading the catalogue makes
+	 * divergence impossible; this test fails if a future edit re-inlines a literal. */
+	const source = readFileSync(
+		new URL("./composer.ts", import.meta.url),
+		"utf8",
+	);
+	it("reads the placeholder, the failure sentence and the reopening line from the catalogue", () => {
+		expect(composerCopy().endedPlaceholder).toBe(
+			healthCopy()["mobile.session_health.ended_placeholder"],
+		);
+		expect(composerCopy().endedSendFailed).toBe(
+			healthCopy()["relay.health.ended_send_failed"],
+		);
+		expect(composerCopy().reopening).toBe(healthResumeCopy().reopening);
+	});
+	it("carries none of those sentences as a literal", () => {
+		for (const sentence of [
+			healthCopy()["mobile.session_health.ended_placeholder"],
+			healthCopy()["relay.health.ended_send_failed"],
+			healthResumeCopy().reopening,
+		])
+			expect(source).not.toContain(sentence);
 	});
 });

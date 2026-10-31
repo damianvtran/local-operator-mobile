@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { LinkedSession, ProjectSummary } from "@/contracts";
+import type { ReceiptAction } from "@/features/projects/projects-copy";
 import {
 	deleteProjectBody,
 	isVanishRefusal,
 	linkedSessionLabel,
 	linkedSessionState,
-	MILESTONE_SLASH_NOTE,
 	milestoneCountLabel,
 	milestoneNameUsable,
+	milestoneSlashNote,
 	milestoneUnremovable,
 	parseTags,
 	projectDisplayName,
@@ -16,13 +17,21 @@ import {
 	projectRowMeta,
 	projectStatusTone,
 	removeMilestoneBody,
-	STALE_BADGE_LABEL,
 	sessionCountLabel,
 	showsStaleMark,
-	WRITE_UNKNOWN_NOTE,
+	staleBadgeLabel,
 	writeReceipt,
+	writeUnknownNote,
 } from "@/features/projects/projects-copy";
+import { renderFor } from "@/i18n";
 import { RelayError } from "@/relay";
+
+/** The English verbs the receipt codes used to be interpolated as. `write_receipt`
+ *  must never render one of these in a shipped non-English locale: that was the
+ *  defect — an English verb inside a French sentence — and this is the list that
+ *  makes a regression name itself in the failure message. */
+const ENGLISH_RECEIPT_VERBS =
+	/Created|Completed|Reopened|Added|Updated|Removed|Deleted/;
 
 const summary = (over: Partial<ProjectSummary>): ProjectSummary =>
 	({
@@ -131,7 +140,7 @@ describe("project copy", () => {
 		 *  `stale` reads as a verdict on the project — so the word names what has gone
 		 *  old, and BOTH surfaces plus the row's `accessibilityLabel` read it from this
 		 *  one constant rather than three literals that can drift apart. */
-		expect(STALE_BADGE_LABEL).toBe("progress stale");
+		expect(staleBadgeLabel()).toBe("progress stale");
 	});
 
 	it("names a linked session by its title, falling back to the id", () => {
@@ -218,7 +227,7 @@ describe("the write helpers", () => {
 		 *  rather than offering Remove. */
 		expect(milestoneUnremovable("ship/v2")).toBe(true);
 		expect(milestoneUnremovable("beta cut")).toBe(false);
-		expect(MILESTONE_SLASH_NOTE).toContain("slash");
+		expect(milestoneSlashNote()).toContain("slash");
 	});
 
 	it("splits tags the way a list is typed, and rewrites nothing", () => {
@@ -247,13 +256,124 @@ describe("the write helpers", () => {
 	it("says the outcome is UNKNOWN when a write got no answer", () => {
 		/* The one failure whose result this client cannot know: the request may have
 		 *  landed with its answer lost. The sentence must not claim nothing happened. */
-		expect(WRITE_UNKNOWN_NOTE).toContain("can't tell whether that was saved");
+		expect(writeUnknownNote()).toContain("can't tell whether that was saved");
 	});
 
 	it("leaves a receipt that names the action and its subject", () => {
-		expect(writeReceipt("Created", "payments-migration")).toBe(
+		expect(writeReceipt("created", "payments-migration", "project")).toBe(
 			"Created payments-migration.",
 		);
+	});
+
+	it("translates the action instead of printing the screen's own word", () => {
+		/* THE DEFECT THIS KEY WAS RESHAPED FOR: `action` used to arrive as a
+		 *  rendered English verb, so a French reader saw "Deleted Projet X." on a
+		 *  French screen — the catalogue had no word left to translate. It is a CODE
+		 *  now, and both ends are pinned here: the English sentence is byte-identical
+		 *  to what that screen rendered before, and the French one carries a French
+		 *  verb with no English verb in it. */
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "payments-migration", kind: "project" },
+				"en",
+			),
+		).toBe("Deleted payments-migration.");
+		const french = renderFor(
+			"mobile.projects.write_receipt",
+			{ action: "deleted", subject: "payments-migration", kind: "project" },
+			"fr",
+		);
+		expect(french).toContain("supprimé");
+		expect(french).not.toContain("Deleted");
+		expect(french).toBe("Projet payments-migration supprimé.");
+	});
+
+	/* The one row per action code, in both locales: the verb the CODE must
+	 *  produce (English capitalised as a sentence opener, French an invariant
+	 *  participle that the French sentence puts last). */
+	const RECEIPT_VERBS: ReadonlyArray<readonly [ReceiptAction, string, string]> =
+		[
+			["created", "Created", "créé"],
+			["completed", "Completed", "terminé"],
+			["reopened", "Reopened", "rouvert"],
+			["added", "Added", "ajouté"],
+			["updated", "Updated", "mis à jour"],
+			["removed", "Removed", "retiré"],
+			["deleted", "Deleted", "supprimé"],
+		];
+
+	it("keeps the English project receipt byte-identical and names a milestone", () => {
+		/* English is the floor: the project shape is the exact sentence the screen
+		 *  produced before this key existed, and a milestone names its NOUN between
+		 *  the verb and the name — the two halves of what used to be a composed
+		 *  phrase (`milestone X`), now supplied by the catalogue from `kind`. */
+		for (const [action, verb] of RECEIPT_VERBS) {
+			expect(writeReceipt(action, "payments-migration", "project")).toBe(
+				`${verb} payments-migration.`,
+			);
+			expect(writeReceipt(action, "beta cut", "milestone")).toBe(
+				`${verb} milestone beta cut.`,
+			);
+		}
+	});
+
+	it("puts the French verb last and borrows no English noun", () => {
+		/* The defect P3-01, per code and per kind: French names the thing first
+		 *  (« Projet X supprimé. », « Jalon X retiré. ») and closes with an invariant
+		 *  participle. Neither the English noun `milestone` nor an English verb may
+		 *  survive anywhere in the sentence — the two halves that used to be
+		 *  interpolated from the screen. */
+		for (const [action, verb, participle] of RECEIPT_VERBS) {
+			const project = renderFor(
+				"mobile.projects.write_receipt",
+				{ action, subject: "payments-migration", kind: "project" },
+				"fr",
+			);
+			expect(project).toBe(`Projet payments-migration ${participle}.`);
+			const milestone = renderFor(
+				"mobile.projects.write_receipt",
+				{ action, subject: "X", kind: "milestone" },
+				"fr",
+			);
+			expect(milestone).toBe(`Jalon X ${participle}.`);
+			expect(milestone).not.toContain("milestone");
+			expect(`${project} ${milestone}`).not.toMatch(ENGLISH_RECEIPT_VERBS);
+			expect(`${project} ${milestone}`).not.toContain(verb);
+		}
+	});
+
+	it("falls back to `other` for an unknown code and an unclassified subject", () => {
+		/* A code this build has never heard of, and a subject it cannot classify:
+		 *  both arms must still say something true rather than print the code. */
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "archived", subject: "X", kind: "milestone" },
+				"en",
+			),
+		).toBe("Updated milestone X.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "archived", subject: "X", kind: "milestone" },
+				"fr",
+			),
+		).toBe("Jalon X mis à jour.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "X", kind: "other" },
+				"en",
+			),
+		).toBe("Deleted X.");
+		expect(
+			renderFor(
+				"mobile.projects.write_receipt",
+				{ action: "deleted", subject: "X", kind: "other" },
+				"fr",
+			),
+		).toBe("X supprimé.");
 	});
 
 	it("recognises the row vanishing under a write, and nothing else", () => {

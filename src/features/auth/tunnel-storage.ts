@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-
 import {
 	type CustomRouteSet,
 	expoSecureStore,
@@ -14,6 +13,13 @@ import {
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
+import type { RouteProfile } from "@/connection/profile";
+import {
+	type RadientComputerInput,
+	type SavedComputer,
+	SavedComputers,
+} from "@/connection/saved-computers";
+import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 
 /**
  * Where the app keeps the reader's credentials.
@@ -48,6 +54,17 @@ import {
 
 let adapter: SecureStoreAdapter | null = null;
 let storage: SecureStorage | null = null;
+let opening: Promise<TunnelStorage> | null = null;
+let registry: SavedComputers | null = null;
+const savedComputersClearedListeners = new Set<() => void>();
+
+// Lazy callbacks keep platform initialization out of module evaluation and the
+// authorization owner independent of React/coordinator imports.
+configureStartupAuthorizationStorage({
+	read: async () => (await open()).storage.readStartupAuthorization(),
+	write: async (record) =>
+		(await open()).storage.writeStartupAuthorization(record),
+});
 
 /**
  * The reader's own tunnel, as this layer stores it.
@@ -75,10 +92,20 @@ async function open(): Promise<TunnelStorage> {
 	if (storage && adapter) {
 		return { storage, adapter, persistent: Platform.OS !== "web" };
 	}
-	const persistent = Platform.OS !== "web";
-	adapter = persistent ? await expoSecureStore() : memorySecureStore();
-	storage = new SecureStorage(adapter);
-	return { storage, adapter, persistent };
+	if (!opening) {
+		opening = (async () => {
+			const persistent = Platform.OS !== "web";
+			adapter = persistent ? await expoSecureStore() : memorySecureStore();
+			storage = new SecureStorage(adapter);
+			return { storage, adapter, persistent };
+		})();
+		// Concurrent credential/generation reads must share one adapter, including
+		// the memory-only web fallback. A failed platform open remains retryable.
+		void opening.catch(() => {
+			opening = null;
+		});
+	}
+	return opening;
 }
 
 /** The stored tunnel, or null. A runtime whose keystore refuses reads (a locked
@@ -152,6 +179,14 @@ export async function readStoredOauth(): Promise<RadientTokens | null> {
 	}
 }
 
+/** The Radient account id of the stored grant (`RadientTokens.account_id`), or
+ *  `null` when there is none or it predates the field. The computer switcher reads
+ *  it to scope saved Radient computers to the account that used them; a keystore
+ *  that refuses the read reports none, which lists them (the "unknown" rule). */
+export async function readStoredRadientAccount(): Promise<string | null> {
+	return (await readStoredOauth())?.account_id ?? null;
+}
+
 /** Persists the grant. Returns whether it can survive a restart, so a caller can tell
  *  "signed in and remembered" from "signed in for this run" instead of implying the
  *  first. */
@@ -217,13 +252,173 @@ export async function writeStoredTunnelSession(
  * Deliberately the ONLY full wipe, and deliberately here rather than duplicated at the
  * sign-out call site, so the three records cannot be cleared by three code paths and
  * drift apart.
+ *
+ * The saved-computers registry goes too, AFTER the credentials: the Sign out dialog
+ * promises "forgetting it here", and Radient hostnames are account-linked personal
+ * data the reader could no longer see or delete once signed out. Removals are keyed by
+ * tunnel id, so a second account would only carry the first one's dead weight. The
+ * registry comes second so a failure there still leaves the credentials gone, and it
+ * fails the sign-out like a credential delete does — a retry runs both again, and
+ * `clearAll()` is idempotent. Listeners hear about it only once the keystore agrees,
+ * so the in-memory hidden set never claims a wipe that did not happen.
  */
 export async function clearStoredCredentials(): Promise<void> {
+	const { storage: store } = await open();
+	// A failed delete is NOT successful sign-out. Let the provider retain a
+	// closed admission gate and report failure instead of resurrecting at restart.
+	await store.clearAll();
+	await (await savedComputers()).clear();
+	for (const listener of savedComputersClearedListeners) listener();
+}
+
+/**
+ * Called after sign-out has cleared the saved-computers registry.
+ *
+ * A listener rather than a store call because this module must not import the
+ * connection store's owner (`connection-provider.tsx` imports THIS module), and the
+ * provider's sign-out path is a later slice's to rewire. The root hydration hook is
+ * the subscriber: it already owns moving registry state into the store.
+ */
+export function onSavedComputersCleared(listener: () => void): () => void {
+	savedComputersClearedListeners.add(listener);
+	return () => {
+		savedComputersClearedListeners.delete(listener);
+	};
+}
+
+/* ------------------------------------------------------------ saved computers */
+
+/**
+ * The saved-computers registry over the SAME adapter singleton, for the reason
+ * point 1 of the module note gives. One registry instance, too: it serialises its
+ * own read-modify-writes, which only holds if every caller shares it.
+ *
+ * Cleared by `clearStoredCredentials` (sign-out), after `clearAll()`; see there.
+ */
+async function savedComputers(): Promise<SavedComputers> {
+	const { adapter: store } = await open();
+	registry ??= new SavedComputers(store);
+	return registry;
+}
+
+/** The Radient computers the reader removed. A keystore that refuses the read
+ *  reports none, which shows a removed computer again rather than failing a
+ *  screen — the reader can remove it again, and nothing reconnects on its own. */
+export async function readHiddenTunnelIds(): Promise<string[]> {
 	try {
-		const { storage: store } = await open();
-		await store.clearAll();
+		return await (await savedComputers()).hiddenTunnelIds();
 	} catch {
-		/* A keystore that refuses the delete leaves the reader signed in on this device,
-		 * which is what the reader then sees; there is no honest alternative to report. */
+		return [];
+	}
+}
+
+/** Remembers that the reader removed this computer. Returns whether that will
+ *  survive a restart, so a caller can say so instead of implying it. The
+ *  Computers screen does not say so yet: on web (`memorySecureStore`) a removal
+ *  lasts for the session, and the copy for that belongs with the switcher's
+ *  surface rather than a toast, which is never for a shortfall. */
+export async function hideRadientComputer(
+	computer: RadientComputerInput,
+): Promise<{ persistent: boolean }> {
+	try {
+		const { persistent } = await open();
+		await (await savedComputers()).hideRadient(computer);
+		return { persistent };
+	} catch {
+		return { persistent: false };
+	}
+}
+
+/** Every saved computer, hidden ones included, most recently used first: what the
+ *  computer switcher sorts into its two sections. A keystore that refuses the read
+ *  reports none, like `readHiddenTunnelIds` — the switcher then lists only what
+ *  discovery reports, and nothing is lost on disk. */
+export async function readSavedComputers(): Promise<SavedComputer[]> {
+	try {
+		return await (await savedComputers()).list();
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Records that this phone reached a computer: remembered (added or refreshed) and
+ * then `markUsed`, so the switcher lists it under "On this phone" and orders it by
+ * use. Called by the provider once a route is LIVE — never on a pick, because a
+ * computer that refused or never answered is not one this phone has used.
+ *
+ * Radient computers are keyed by tunnel id; custom ones by their registry id when
+ * the caller knows it (`computerId`, a tap on a switcher row), else by address,
+ * which is `rememberCustom`'s own stopgap for the single custom slot. The address
+ * never becomes the identity (operator decision a-2a8b): it only finds the entry.
+ *
+ * Returns the entry, or `null` when nothing could be stored — the route works
+ * either way, and the switcher simply has nothing new to list.
+ */
+export async function rememberLiveComputer(
+	route: RouteProfile,
+	input: {
+		name?: string;
+		computerId?: string;
+		account?: string;
+		onlyIf?: () => boolean;
+	} = {},
+): Promise<SavedComputer | null> {
+	try {
+		const store = await savedComputers();
+		const options = { onlyIf: input.onlyIf };
+		const entry =
+			route.mode === "radient"
+				? await store.rememberRadient(
+						{
+							tunnelId: route.tunnelId,
+							hostname: route.hostname,
+							/* No name → the registry keeps the saved one (a never-named
+							 *  computer still falls back to its hostname there). */
+							...(input.name !== undefined ? { name: input.name } : {}),
+							...(input.account !== undefined
+								? { account: input.account }
+								: {}),
+						},
+						options,
+					)
+				: await store.rememberCustom(
+						{
+							id: input.computerId,
+							baseUrl: route.baseUrl,
+							allowInsecure: route.allowInsecure,
+						},
+						options,
+					);
+		if (input.onlyIf && !input.onlyIf()) return null;
+		return (await store.markUsed(entry.id)) ?? entry;
+	} catch {
+		return null;
+	}
+}
+
+/** The switcher's way back for a computer in its "not connected" section, by
+ *  registry id. Best effort, like the other registry writes here: the store's
+ *  hidden set is what the screens read, and the caller updates it first. */
+export async function unhideSavedComputer(id: string): Promise<void> {
+	try {
+		await (await savedComputers()).unhide(id);
+	} catch {
+		/* Nothing that can store it: the un-hide lasts for this run. */
+	}
+}
+
+/** The way back from a removal, by tunnel id: the computer switcher's
+ *  not-connected rows, for a removed computer it reached through discovery. */
+export async function unhideRadientComputer(tunnelId: string): Promise<void> {
+	try {
+		const store = await savedComputers();
+		const entry = (await store.list()).find(
+			(candidate) =>
+				candidate.transport === "radient" && candidate.tunnelId === tunnelId,
+		);
+		if (entry) await store.unhide(entry.id);
+	} catch {
+		/* Nothing saved to un-hide, or nothing that can store it. */
 	}
 }

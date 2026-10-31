@@ -473,6 +473,17 @@ export interface SessionProjection {
    *  branch raises it on the *entry* (`daemon.py:2619-2620`), which is what the
    *  summary row reads; the payload mirror follows a dial/reader failure. */
   degraded: boolean;
+  /** The relay's "owner has gone quiet" verdict (local-operator #3008,
+   *  `types.py::SessionProjection.heartbeat_stale`): true when the runtime's
+   *  heartbeat AND its frames are both older than `SESSION_HEALTH_WINDOW_S`
+   *  (45 s); false while either is fresh.
+   *
+   *  ABSENT, not null, when the daemon has nothing to measure — an older
+   *  daemon, or a durable rebuild with no live owner (`daemon.py` pops the key
+   *  for a `None` verdict, so a durable frame stays byte-identical to what it
+   *  was before the field existed). Absence is "not reported": a client paints
+   *  nothing from it, never yellow. */
+  heartbeat_stale?: boolean | null;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from
@@ -703,6 +714,25 @@ export interface SessionListFrame {
    *  relay omits the block, and **absence means "unknown", never 0**. `count`
    *  is absent when `degraded` is non-empty. */
   unread?: UnreadBlock;
+  /** The inbox's own counts (contract §5.4), published on this frame so a phone
+   *  needs no second stream. Absent on an older relay, and **absence means
+   *  unknown, never 0** — the badge then draws no number rather than a zero.
+   *
+   * This block was missing from this file after it shipped on the app's schema
+   * (`src/contracts/schemas.ts`, `sessionListFrameSchema`), which is how the
+   * mock relay came to serve a frame the badge could never read: the designed
+   * count had never rendered in any frame (design review D3). */
+  notifications?: NotificationsBlock;
+}
+
+/** The inbox's counts (`SessionListFrame.notifications`): the badge's number,
+ *  the pinned asks, and the boundary a bounded bulk read is compared against.
+ *  All three ride together because the relay publishes them from one store
+ *  read — a partial block would describe a moment that never existed. */
+export interface NotificationsBlock {
+  unread_count: number;
+  waiting_count: number;
+  high_water: number;
 }
 
 /** The frame-level unread aggregate. `count` is the §1.4 badge number:

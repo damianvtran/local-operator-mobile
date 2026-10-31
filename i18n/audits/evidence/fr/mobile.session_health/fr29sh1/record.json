@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "audit_id": "fr29sh1",
+  "audit_kind": "independent_current_byte_namespace_audit",
+  "locale": "fr",
+  "namespace": "mobile.session_health",
+  "audit_date": "2026-10-29",
+  "audited_revision": "4500723be18a94e53cde39a6f3f9ee1aca92ddb5",
+  "merge_head": "d5babfa1854416265df06ba9a78609348db7f13d",
+  "key_count": {
+    "en": 11,
+    "context": 11,
+    "target": 11
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "208d48c700c7",
+    "job": "not exposed to this team child; manager owns delegation job",
+    "model": "kimi/k3.1-pro",
+    "actual_model": "kimi/k3.1-pro",
+    "actual_model_source": "Observed harness model-switch notices: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro; fallback reason provider failure: quota. The pinned Sonnet model did not perform this audit.",
+    "fallback": {
+      "used": true,
+      "reason": "provider failure: quota",
+      "chain": ["anthropic/claude-sonnet-5-5", "openai/gpt-6-astra", "kimi/k3.1-pro"]
+    },
+    "independent_from_translator_session": true,
+    "independence": "Different agent and session 208d48c700c7 from translator d6778f2c68ea. Judged current bytes independently; no translation service or back-translation."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": "d6778f2c68ea",
+    "model": "kimi/k3.1-pro",
+    "actual_model_source": "Translator provenance supplied by manager; actual model inferred from same-session prior wave records, not independently observed here. Session lookup found no live/stored session with this id.",
+    "date": "2026-10-29"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.json",
+      "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+      "sha256": "a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/fr/mobile.session_health.json",
+      "sha256": "c28f177062c2a1a2d30a11e3167e40be0ae6d87f10f963fce762840fc2a6404c"
+    }
+  },
+  "supporting_reference_hashes": {
+    "style_guide": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/fr.md",
+      "sha256": "b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39"
+    },
+    "glossary": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+    }
+  },
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 1,
+    "finding_ids": ["SH-01"],
+    "verdict_reason": "SH-01 MAJOR: mobile-only ended_placeholder is 44 cells against its 36-cell budget and omits a natural French object; use 'Envoyer la rouvre (dossier perso)…' (34 cells)."
+  },
+  "findings": [
+    {
+      "id": "SH-01",
+      "severity": "MAJOR",
+      "key": "mobile.session_health.ended_placeholder",
+      "current": "Envoyer rouvre dans votre dossier personnel…",
+      "measured": "44 Unicode cells, 46 UTF-8 bytes; English 35 cells; budget 36; over by 8",
+      "problem": "Exceeds explicit one-line placeholder budget and reads clipped because 'Envoyer rouvre…' lacks a natural object. Composer passes placeholderMaxLines=1; source supports real truncation/overflow risk but no rendered result is claimed.",
+      "suggested": "Envoyer la rouvre (dossier perso)…",
+      "suggested_cells": 34
+    }
+  ],
+  "mechanical": {
+    "repo_validator": "npm run -s i18n:check -> exit 0; 143 keys, 10 namespaces; 284 baselined string findings, 0 new",
+    "independent_checks": "valid JSON, unique keys, exact en/context/fr key and order parity; no ICU arguments/plurals/selects, markup, technical tokens, bidi controls, or typography violations",
+    "render": "All 23 assigned keys parse and return exact en/fr values via renderFor; this namespace is 11 of those keys",
+    "targeted_tests": "npx vitest run src/i18n/__tests__ src/features/session/health.test.ts src/features/session/composer.test.ts -> 150 passed, 4 failed. Stale 9/10 counts, missing menu_title identical-value exemption, and module-scope t() in health-copy.ts; not claimed green."
+  },
+  "scope_note": "The branch is mid-merge. During this audit ended_placeholder moved here from relay.health. This is the final 11-key current-byte audit; the earlier 10-key layout is superseded. A follow-up key-shape rule may rename keys; audit concerns the VALUES at these hashes.",
+  "second_independent_pass": {
+    "performed": true,
+    "agent": "reviewer",
+    "job": "cb8315ae0e76",
+    "model": "kimi/k3.1-pro",
+    "actual_model_source": "Subagent's observed harness model-switch notice, quota fallback from anthropic/claude-sonnet-5-5",
+    "result": "changes_requested; independently measured 44 cells and selected the same 34-cell replacement"
+  },
+  "route_disclosure": {
+    "read_route": "Ordinary local worktree reads; core style guide/glossary as supporting files",
+    "english_context_sidecars": "Nested-JSON English context sidecars are NOT routable through the core keyed public-copy reader; read as ordinary worktree files",
+    "core_french_file": "A repository comparison input where used, not a keyed public-copy receipt",
+    "credential_shaped_keys": "None exists in these namespaces; no keyed receipt claimed",
+    "translation_services": "No translation API, SDK, MT service, or back-translation used"
+  },
+  "audit_notes_not_execution_log": "report.md contains every-key reasoning and findings. audit.log contains actual command output including core-vs-mobile comparisons; notes do not prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered frame or human native-speaker review; source and character/cell measurements only"
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command; no RFC CLI ledger receipt can be claimed here.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "fr",
+      "file_group": "mobile.session_health",
+      "status": "changes_requested",
+      "auditor": "i18n-auditor",
+      "model": "kimi/k3.1-pro",
+      "source_hash": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+      "hash_subject": "src/i18n/catalogues/en/mobile.session_health.json (English source, current bytes)",
+      "note": "CHANGES 0B/1M SH-01: placeholder 44 cells vs 36; suggest 'Envoyer la rouvre (dossier perso)…' (34). Record: i18n/audits/evidence/fr/mobile.session_health/fr29sh1/record.json",
+      "note_length": 173,
+      "record_path": "i18n/audits/evidence/fr/mobile.session_health/fr29sh1/record.json"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sh1/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sh1/report.md",
+      "sha256": "3415e42fd8bd2e520c3abb933ca6028afb01e7acbd54e099d976caa759732f90"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sh1/audit.log",
+      "sha256": "07986d986a76c927f4a644fbf5c8e82689e0580397793acddc4b5029365dcbef"
+    }
+  ]
+}

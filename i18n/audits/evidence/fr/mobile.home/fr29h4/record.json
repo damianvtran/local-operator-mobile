@@ -1,0 +1,232 @@
+{
+ "schema": 1,
+ "audit_id": "fr29h4",
+ "audit_kind": "independent_delta_reaudit_of_audit_finding",
+ "locale": "fr",
+ "namespace": "mobile.home",
+ "audit_date": "2026-10-29",
+ "round": 4,
+ "audited_revision": "49f79b3b3ca23ff91403ed05072945a672fb7d4e",
+ "audited_revision_note": "worktree /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n at 49f79b3 with a clean tracked tree; every hash below is of the worktree bytes, which equal the commit.",
+ "delta": {
+  "keys": [
+   "mobile.home.options.fixed"
+  ],
+  "reason": "A later independent review rejected the round-3 wording « commandes en direct » as the broadcast/live-stream idiom, and commit 49f79b3 applied a third wording, so the round-3 record no longer covers the current bytes.",
+  "previous_round_finding": "H-01 (fr29h2, MAJOR; passed by fr29h3 as « commandes en direct »)",
+  "brief_quoted_wording": "The brief offered « … ses commandes en direct » and « … à ses commandes en conversation »; NEITHER is in the file. The file reads « … aux commandes de la conversation en cours ».",
+  "applied_wording": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
+  "scope_note": "delta-only: one key; the other 26 namespace keys are not re-judged here"
+ },
+ "key_count": {
+  "en": 27,
+  "context": 27,
+  "target": 27,
+  "delta_keys": 1
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "78c640379596",
+  "job": "none exposed to this team child session; the delegating manager holds the job id",
+  "model": "radient/auto",
+  "actual_model": "radient/auto",
+  "actual_model_source": "harness model-switch notices in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each 'provider failure: quota'. The pinned model did not run this audit.",
+  "model_history": [
+   "anthropic/claude-sonnet-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "fallback": {
+   "used": true,
+   "pinned": "anthropic/claude-sonnet-5-5",
+   "actual": "radient/auto",
+   "chain": [
+    "anthropic/claude-sonnet-5-5",
+    "openai/gpt-6-astra",
+    "kimi/k3.1-pro",
+    "radient/auto"
+   ],
+   "reason": "provider failure: quota"
+  },
+  "independent_from_translator_session": true,
+  "independence": "Different agent (i18n-auditor) and different session from the translator, and this session proposed neither the home wording it judged nor the French receipt arms: the current home sentence was applied by commit 49f79b3 from a review's suggestion quoted in that commit, and the fr arms were authored in the same fix commit. Judged from the current bytes.",
+  "second_pass_model": "reviewer subagent job e4c88d8f7509, launched on this session's model selection, actual model radient/auto (self-reported after the same quota descent)"
+ },
+ "translator": {
+  "agent": "i18n-translator",
+  "session": "c66311717837",
+  "model": "kimi/k3.1-pro",
+  "actual_model_source": "as recorded by the round-1/round-2 bundles; not observed by this auditor",
+  "date": "2026-10-29",
+  "delta_note": "The bytes judged in this delta were authored in commit 49f79b3 (a fix commit outside the translator session); the translator session above is the namespace's original French, not these bytes."
+ },
+ "previous_round_reference": {
+  "audit_id": "fr29h3",
+  "path": "i18n/audits/evidence/fr/mobile.home/fr29h3",
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "recorded_target_sha256": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39",
+  "finding_history": "fr29h2 H-01 (MAJOR, « commandes en cours ») -> round 3 passed « ses commandes en direct » -> a later review rejected « en direct » as the broadcast idiom -> commit 49f79b3 applied the current wording, which is neither string the brief quoted",
+  "read_for": "the finding text and the round-3 recorded bytes, used as the hash basis of the delta proof"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+  },
+  "target": {
+   "path": "src/i18n/catalogues/fr/mobile.home.json",
+   "sha256": "124a5de3d345c0e0acd53d3d4cc3f574b0994fa9fd703e568e0f02c2fed6fdd0"
+  }
+ },
+ "supporting_reference_hashes": {
+  "style_guide": {
+   "path": "core-keyed-route/i18n/style-guides/fr.md",
+   "sha256": "49010212a65f0d30d49bf532601bb39ad277be28aef5d476715186cf28525990"
+  },
+  "glossary": {
+   "path": "core-keyed-route/i18n/glossary.md",
+   "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+  },
+  "note": "The fr style guide and glossary are not files in this mobile repository; they live in the core keyed-route checkout beside it. Both hashes equal the ones round 2 and round 3 recorded, so neither moved under this delta.",
+  "renderer": {
+   "parser": "src/i18n/messages.ts",
+   "entry": "src/i18n/runtime.ts",
+   "sha256": {
+    "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+    "src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4"
+   },
+   "note": "Rendering executed the app's real runtime under plain Node through a resolution hook (loader.mjs.txt) that only teaches Node the app's extensionless relative imports; no app module was modified."
+  }
+ },
+ "delta_verification": {
+  "method": "Revert the single substituted substring in the CURRENT target file and hash the result (audit.log §4); independently, git diff and git show hash the same file at the previous committed state (§5).",
+  "previous_round_target_sha256": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39",
+  "current_target_sha256": "124a5de3d345c0e0acd53d3d4cc3f574b0994fa9fd703e568e0f02c2fed6fdd0",
+  "reverted_substring": {
+   "from": "aux commandes de la conversation en cours",
+   "to": "à ses commandes en direct"
+  },
+  "reconstructed_sha256": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39",
+  "reconstruction_matches": true,
+  "byte_sizes": {
+   "current": 2017,
+   "after_revert": 2002
+  },
+  "git_diff_agrees": "git show daa46f6:src/i18n/catalogues/fr/mobile.home.json hashes to the round-3 value; git diff daa46f6..HEAD shows one changed line in that file and nothing else in src/i18n/ outside the generated projection.",
+  "english_inputs_unchanged_since_round2": true,
+  "conclusion": "The delta is exactly one value in one key. The other 26 keys of the namespace are consequently at the bytes round 2 judged, and are not re-judged here."
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "H4-01"
+  ],
+  "minor_ids": [
+   "H4-01"
+  ],
+  "verdict_reason": "The applied wording preserves 'live controls' without either rejected reading, keeps the destination label byte-exact, and is register- and typography-correct; the one MINOR is a repetition polish that does not gate the namespace."
+ },
+ "findings": [
+  {
+   "id": "H4-01",
+   "severity": "MINOR",
+   "key": "mobile.home.options.fixed",
+   "current": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
+   "problem": "Three 'conversation' in two sentences; the trailing 'de la conversation en cours' repeats the referent the destination label already names and reads more like a rendering of 'of the conversation in progress' than like native copy. Meaning, register and typography are correct.",
+   "suggested": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes qui restent disponibles.",
+   "suggested_chars": 144,
+   "alternative": {
+    "text": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour la piloter.",
+    "note": "not adopted: drops the noun 'controls' the English names",
+    "chars_note": "second pass proposed « … pour la piloter. » (109)"
+   },
+   "gating": false
+  }
+ ],
+ "mechanical": {
+  "repo_validator": "npm run -s i18n:check -> exit 0; 'src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)'; 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d'",
+  "parser": "parseMessage(fr) -> params [], one text node; parseMessage(en) -> params [], one text node",
+  "render_path": "renderFor(key, {}, 'fr') from src/i18n/runtime.ts (what t() calls) -> the French sentence; 'en' -> the English source; fr render equals the raw value",
+  "cross_reference": "fr mobile.session.conversation_details = 'Détails de la conversation' occurs once, byte-for-byte, inside the audited value; en label likewise",
+  "typography": "non-ASCII U+00E9 x3 only; no bidi/control char, no U+00A0, no ASCII apostrophe/quote/ellipsis; no : ; ! ? so no U+202F site; two sentences, full stops",
+  "fit": "148 UTF-16 characters (en 95); sidecar sets no maxCells/maxChars and the key is role:help prose in a wrapping sheet; no pixel claim",
+  "tests": "npx vitest run src/i18n src/features/projects -> 6 files, 97 tests passed",
+  "json_and_keys": "valid JSON, no duplicate keys, 27 en / 27 context / 27 fr, no key added or dropped",
+  "delta_scope": "exactly one key changed in the target file since the round-3 bytes, proved by whole-file hash reconstruction"
+ },
+ "second_independent_pass": {
+  "performed": true,
+  "why": "This sentence has been contested in two earlier rounds; an independent second reading was run so a fourth verdict is not one model's opinion.",
+  "reviewer": {
+   "agent": "reviewer",
+   "job": "e4c88d8f7509",
+   "model_launched_with": "harness reported 'on this session's model (anthropic/claude-sonnet-5-5)'; the child reported actually running as radient/auto",
+   "actual_model": "radient/auto",
+   "actual_model_source": "self-reported by the child in its final report, after the same provider-quota descent",
+   "independent_from_translator_session": true,
+   "shown_my_analysis": false
+  },
+  "home_result": {
+   "verdict": "PASS",
+   "nit": "same repetition; suggested « … pour la piloter. » (109)",
+   "agreement": "meaning preserved, rejected idioms absent, label byte-exact, register and typography correct",
+   "disagreement": "it rates the repetition a NIT; this audit records a MINOR — same substance, different severity, both would ship"
+  }
+ },
+ "route_disclosure": {
+  "reads": "Ordinary local git/worktree reads of the catalogue JSON, the English context sidecars, the fr style guide and glossary checkout, and the app's own src/i18n + src/features modules and tests. No network fetch of any copy.",
+  "english_inputs_redaction_scan": "zero redaction-marker hits recorded by the manager across the English inputs",
+  "context_sidecar_routing": "English nested-JSON context sidecars are NOT routable through read_public_copy (its allowlist is committed public key copy); the sidecars were read as ordinary worktree files.",
+  "receipts": "No keyed receipt is claimed for this locale: the wave's one credential-shaped key (mobile.computers.password_placeholder) had its clean-core route refused, and this namespace has no credential-shaped key at all.",
+  "translation_services": "No translation API, SDK, MT service or back-translation was used to compare or produce anything."
+ },
+ "limitations": [
+  "No native-speaker review: the judgement is an LLM auditor's, cross-checked by a second independent LLM reviewer.",
+  "No rendered proof: no screenshot, simulator or device frame was captured; fit statements rest on executed character counts.",
+  "No ledger row and no keyed public-copy receipt: this repository has no i18n/ledger.json and no audit-ledger command."
+ ],
+ "audit_notes_not_execution_log": "report.md holds the reasoning; audit.log holds the executed commands and their actual output. The report's prose is notes, never evidence of a command that was not run.",
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/report.md",
+   "sha256": "bd35c2d4140edcf7493e2e33a990c495391f6b72c601eaabb84311bd17d72767"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/audit.log",
+   "sha256": "69f0c34c0fcd25d69a9af476a4e78c359f5131473ede5f041b84f514ef7b22e1"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/render.mjs.txt",
+   "sha256": "7b2a2dbda052b4a2d5a623ff39ff22ffdf90f1e0189f74f6df73c6cd1743d339"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/loader.mjs.txt",
+   "sha256": "b727eae82d46055cee179409f6d313b8fbd91ba8cd38fb1ea6529ffad721d9b3"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/home-delta.py.txt",
+   "sha256": "71c71c8ee6cacde9b097b719e5bf34e8f1d30701fc8169cf22264effd7006355"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/label-check.py.txt",
+   "sha256": "03e5c18be9aeae34400867c14b0e76174ee34a1c94949c12a1b8e7283cf69a39"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/make-log.sh.txt",
+   "sha256": "31b77cafddcf5107c3570a5354317fe6d45910ea3a9cee8f1097391c41721d15"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.home/fr29h4/record.json",
+   "sha256": null,
+   "note": "this record; a self-hash is not meaningful"
+  }
+ ]
+}

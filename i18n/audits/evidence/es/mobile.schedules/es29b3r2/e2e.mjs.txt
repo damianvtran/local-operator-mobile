@@ -1,0 +1,59 @@
+/**
+ * Real-path render for mobile.schedules (es), round 2.
+ *
+ * WHAT THIS IS: the SHIPPED PROJECTION + the one parser. `src/i18n/runtime.ts`'s
+ * renderFor() is `pick(localized ?? english)` then `formatMessage(source, args,
+ * catalogueLocale)`. This file does exactly that, because a plain-Node import of
+ * runtime.ts fails on Node's ESM directory resolution: `src/i18n/catalogues/` (a
+ * directory) sits beside `src/i18n/catalogues.ts`, and Node rejects the
+ * extensionless directory import before any of this code runs. The app's own
+ * runtime tests (src/i18n/__tests__/runtime.test.ts, copy-resolution.test.ts)
+ * are what exercise renderFor itself; they pass on this commit (6 files, 151
+ * tests, recorded in audit.log).
+ */
+const M = await import("/Users/damian/workspace/es-wave/src/i18n/messages.ts");
+const G = await import("/Users/damian/workspace/es-wave/src/i18n/catalogue.gen.ts");
+
+const EN = G.ENGLISH_MESSAGES;
+const ES = G.LOCALISED_MESSAGES["es"];
+console.log(`projection: en=${Object.keys(EN).length} keys, es=${ES ? Object.keys(ES).length : "MISSING"} keys`);
+if (!ES) process.exit(2);
+
+const render = (key, params, locale) => {
+  const src = (locale === "es" ? ES[key] : undefined) ?? EN[key];
+  const usedLocale = (locale === "es" && ES[key] !== undefined) ? "es" : "en";
+  return { text: M.formatMessage(M.parseMessage(src), params, usedLocale), usedLocale };
+};
+
+const cases = [
+  ["mobile.schedules.count.monitors", { count: 1 }],
+  ["mobile.schedules.count.monitors", { count: 2 }],
+  ["mobile.schedules.count.monitors", { count: 1000000 }],
+  ["mobile.schedules.summary.monitors_armed", { count: 1 }],
+  ["mobile.schedules.summary.monitors_armed", { count: 5 }],
+  ["mobile.schedules.summary.monitors_attention", { broken: 1, total: 40 }],
+  ["mobile.schedules.summary.monitors_attention", { broken: 2, total: 40 }],
+  ["mobile.schedules.truncated", { shown: 3, total: 9, family: "wakes" }],
+  ["mobile.schedules.truncated", { shown: 3, total: 9, family: "monitors" }],
+  ["mobile.schedules.tail.failed", { count: 1 }],
+  ["mobile.schedules.tail.failed", { count: 3 }],
+  ["mobile.schedules.show_more.monitors", { hidden: 3 }],
+  ["mobile.schedules.show_less.monitors", {}],
+  ["mobile.schedules.state.stale", {}],
+  ["mobile.schedules.state.disabled", {}],
+  ["mobile.schedules.gone.monitors", {}],
+  ["mobile.schedules.parked.monitors", {}],
+  ["mobile.schedules.empty_line.monitors", {}],
+];
+let esServed = 0, enFallback = 0;
+for (const [k, p] of cases) {
+  const es = render(k, p ?? {}, "es");
+  const en = render(k, p ?? {}, "en");
+  const zh = render(k, p ?? {}, "zh-CN");
+  if (es.usedLocale === "es") esServed++; else enFallback++;
+  console.log(`${k}${p && Object.keys(p).length ? " " + JSON.stringify(p) : ""}`);
+  console.log(`   es (served from ${es.usedLocale}): ${es.text}`);
+  console.log(`   en: ${en.text}`);
+  console.log(`   zh-CN -> English floor: ${zh.usedLocale} | same as en: ${zh.text === en.text}`);
+}
+console.log(`\nkeys served from the es projection: ${esServed}/${cases.length}; keys that fell back to en: ${enFallback}`);

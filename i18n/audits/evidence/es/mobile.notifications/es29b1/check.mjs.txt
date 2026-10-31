@@ -1,0 +1,344 @@
+/**
+ * Spanish (es) audit B — mechanical + render checks for three mobile namespaces.
+ *
+ * Uses the APP'S OWN parser and formatter (src/i18n/messages.ts), not a generic
+ * ICU library, so what this prints is what the phone renders, including the
+ * parser's documented limits (# renders String(n), no grouping).
+ *
+ * Read-only: opens catalogue JSON, never writes into the repo.
+ */
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const REPO = process.argv[2] ?? "/Users/damian/workspace/es-wave";
+const { parseMessage, formatMessage } = await import(
+	new URL(`file://${REPO}/src/i18n/messages.ts`).href
+);
+
+const ALL = ["mobile.notifications", "mobile.projects", "mobile.schedules"];
+const ONLY = process.argv[3];
+const NAMESPACES = ONLY ? ALL.filter((n) => n === ONLY) : ALL;
+
+const load = (rel) => JSON.parse(readFileSync(`${REPO}/${rel}`, "utf8"));
+const sha = (rel) =>
+	createHash("sha256").update(readFileSync(`${REPO}/${rel}`)).digest("hex");
+
+const ids = (s) => [...s].map((c) => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0"));
+
+let failures = 0;
+const fail = (msg) => {
+	failures += 1;
+	console.log(`FAIL ${msg}`);
+};
+const ok = (msg) => console.log(`ok   ${msg}`);
+
+console.log("=== validator: generator --check output is appended to this log separately ===");
+console.log(`repo: ${REPO}`);
+console.log(`node: ${process.version}`);
+console.log(`Intl es plural categories for 0/1/2/1000000: ${[0, 1, 2, 1000000]
+	.map((n) => `${n}=${new Intl.PluralRules("es").select(n)}`)
+	.join(" ")}`);
+
+for (const ns of NAMESPACES) {
+	console.log(`\n=== ${ns} ===`);
+	const enPath = `src/i18n/catalogues/en/${ns}.json`;
+	const esPath = `src/i18n/catalogues/es/${ns}.json`;
+	const ctxPath = `src/i18n/catalogues/en/${ns}.context.json`;
+	const en = load(enPath);
+	const es = load(esPath);
+	const ctx = load(ctxPath);
+
+	console.log(`sha256 en      ${sha(enPath)}`);
+	console.log(`sha256 es      ${sha(esPath)}`);
+	console.log(`sha256 context ${sha(ctxPath)}`);
+	console.log(`keys: en=${Object.keys(en).length} es=${Object.keys(es).length} ctx=${Object.keys(ctx).length}`);
+
+	const enKeys = Object.keys(en).sort();
+	const esKeys = Object.keys(es).sort();
+	const missing = enKeys.filter((k) => !(k in es));
+	const extra = esKeys.filter((k) => !(k in en));
+	if (missing.length || extra.length) {
+		fail(`key parity: missing=${JSON.stringify(missing)} extra=${JSON.stringify(extra)}`);
+	} else {
+		ok("key parity: es covers exactly the en key set");
+	}
+	/* context parity is not the target's business, but a missing note means the
+	 * translator was guessing; record it so the report can say what it read. */
+	const ctxMissing = enKeys.filter((k) => !(k in ctx));
+	if (ctxMissing.length) fail(`context sidecar missing notes for ${JSON.stringify(ctxMissing)}`);
+	else ok("context sidecar covers every key");
+
+	for (const key of enKeys) {
+		if (!(key in es)) continue;
+		const e = en[key];
+		const s = es[key];
+		let ep;
+		let sp;
+		try {
+			ep = parseMessage(e);
+		} catch (error) {
+			fail(`${key}: ENGLISH PARSE ${e}`);
+			continue;
+		}
+		try {
+			sp = parseMessage(s);
+		} catch (err) {
+			fail(`${key}: ES PARSE ${err.message} :: ${s}`);
+			continue;
+		}
+		/* placeholder parity: names identical; kinds may only move text -> plural
+		 * or text -> select (the conditional allowance), never back, never rename. */
+		const enParams = [...ep.params.entries()];
+		const esParams = new Map(sp.params);
+		for (const [name, kind] of enParams) {
+			if (!esParams.has(name)) fail(`${key}: es DROPS placeholder {${name}} (en kind ${kind})`);
+			else {
+				const ek = esParams.get(name);
+				if (ek !== kind) {
+					const allowed = kind === "text" && (ek === "plural" || ek === "select");
+					if (allowed) ok(`${key}: {${name}} text -> ${ek} (allowed conditional retype)`);
+					else fail(`${key}: {${name}} en=${kind} es=${ek} (disallowed retype)`);
+				}
+			}
+		}
+		for (const name of esParams.keys()) {
+			if (!ep.params.has(name)) fail(`${key}: es ADDS placeholder {${name}} not in en`);
+		}
+		/* structural arms: every plural must carry 'other' plus every category
+		 * Intl.PluralRules('es') can produce (one/many/other) — the app falls back
+		 * to 'other', which would silently flatten a missing arm. */
+		const walk = (nodes, out) => {
+			for (const node of nodes) {
+				if (node.type === "plural" || node.type === "select") {
+					out.push(node);
+					for (const branch of node.options.values()) walk(branch, out);
+				}
+			}
+			return out;
+		};
+		const structural = walk(sp.nodes, []);
+		for (const node of structural) {
+			const arms = [...node.options.keys()];
+			console.log(`     ${key}: ${node.type} {${node.name}} arms=[${arms.join(",")}]`);
+			if (!arms.includes("other")) fail(`${key}: ${node.type} {${node.name}} has no 'other' arm`);
+			if (node.type === "plural") {
+				for (const cat of ["one", "many", "other"]) {
+					if (!arms.includes(cat)) fail(`${key}: plural {${node.name}} missing es category '${cat}' (arms ${arms.join(",")})`);
+				}
+				for (const arm of arms) {
+					if (!/^(one|many|other|zero|two|few|=\d+)$/.test(arm)) fail(`${key}: plural {${node.name}} unknown arm '${arm}'`);
+				}
+				/* 'zero' is not an es category: Intl never selects it, but ICU treats it
+				 * as exact-match, so its presence would be a silent dead arm. */
+				if (arms.includes("zero")) fail(`${key}: plural {${node.name}} carries a 'zero' arm es never selects`);
+			}
+			if (node.type === "select") {
+				/* selectors are stable codes, not CLDR categories: compare with en. */
+				const enNode = walk(ep.nodes, []).find((n) => n.type === "select" && n.name === node.name);
+				if (enNode) {
+					const enArms = [...enNode.options.keys()].sort().join(",");
+					const esArms = [...node.options.keys()].sort().join(",");
+					if (enArms !== esArms) fail(`${key}: select {${node.name}} arms es=${esArms} en=${enArms}`);
+					else ok(`${key}: select {${node.name}} arms identical to en (${esArms})`);
+				}
+			}
+		}
+		/* text hygiene: bidi controls, ICU apostrophe quoting, trailing spaces */
+		for (const c of ["\u202A", "\u202B", "\u202C", "\u202D", "\u202E", "\u2066", "\u2067", "\u2068", "\u2069"]) {
+			if (s.includes(c)) fail(`${key}: bidi control ${ids(c)}`);
+		}
+		if (/[ \t]$/.test(s)) fail(`${key}: trailing whitespace`);
+		/* es typographic rules from i18n/style-guides/es.md: no space before ? ! : ;
+		 * (unlike fr), no straight quotes/guillemets, ellipsis as U+2026 not "...". */
+		for (const ch of ["?", "!", ":", ";"]) {
+			if (s.includes(` ${ch}`) || s.includes(`\u00a0${ch}`) || s.includes(`\u202f${ch}`)) fail(`${key}: space before '${ch}' :: ${s}`);
+		}
+		if (/["\u00ab\u00bb]/.test(s)) fail(`${key}: straight quote or guillemet :: ${s}`);
+		if (s.includes("...")) fail(`${key}: three dots instead of U+2026 :: ${s}`);
+		if (/ {2,}/.test(s)) fail(`${key}: double space`);
+		if (s.includes("''") || s.includes("'{") || s.includes("'}")) fail(`${key}: ICU apostrophe quoting`);
+	}
+	console.log(`  typography/bidi/quote scan: ${Object.keys(es).length} values checked, no finding printed above means clean`);
+}
+
+/* ------------------------------------------------------------ render tables */
+
+const render = (ns, key, locale, params) =>
+	formatMessage(parseMessage(load(`src/i18n/catalogues/${locale}/${ns}.json`)[key]), params, locale);
+
+const show = (label, out) => console.log(`  ${label.padEnd(46)} ${JSON.stringify(out)}`);
+const want = (n) => NAMESPACES.includes(n);
+
+if (want("mobile.projects")) {
+console.log("\n=== RENDER: mobile.projects.write_receipt (7 actions x 3 kinds, es) ===");
+const actions = ["created", "completed", "reopened", "added", "updated", "removed", "deleted"];
+const kinds = ["project", "milestone", "other"];
+for (const kind of kinds) {
+	for (const action of actions) {
+		const out = render("mobile.projects", "mobile.projects.write_receipt", "es", {
+			kind,
+			subject: kind === "project" ? "pagos-migración" : "beta corta",
+			action,
+		});
+		show(`${kind}/${action}`, out);
+	}
+}
+console.log("  --- unknown codes (other catches both) ---");
+for (const params of [
+	{ kind: "project", subject: "pagos-migración", action: "archived" },
+	{ kind: "workspace", subject: "pagos-migración", action: "created" },
+]) {
+	show(`kind=${params.kind} action=${params.action}`, render("mobile.projects", "mobile.projects.write_receipt", "es", params));
+}
+/* unknown kind must not throw: select falls back to 'other' */
+console.log("  --- same in en for comparison ---");
+for (const kind of ["project", "milestone", "other"]) {
+	show(`en ${kind}/created`, render("mobile.projects", "mobile.projects.write_receipt", "en", { kind, subject: "payments", action: "created" }));
+}
+}
+
+const pluralKeys = [
+	["mobile.projects", "mobile.projects.milestones.count"],
+	["mobile.projects", "mobile.projects.sessions.count"],
+	["mobile.schedules", "mobile.schedules.count.wakes"],
+	["mobile.schedules", "mobile.schedules.count.monitors"],
+	["mobile.schedules", "mobile.schedules.show_more.wakes"],
+	["mobile.schedules", "mobile.schedules.show_more.monitors"],
+	["mobile.schedules", "mobile.schedules.summary.wakes"],
+	["mobile.schedules", "mobile.schedules.summary.monitors_armed"],
+	["mobile.schedules", "mobile.schedules.tail.failed"],
+];
+const counts = [0, 1, 2, 1000000];
+const activePluralKeys = pluralKeys.filter(([ns]) => want(ns));
+if (activePluralKeys.length) console.log("\n=== RENDER: counts / plurals (es categories from Intl) ===");
+for (const [ns, key] of activePluralKeys) {
+	console.log(`  -- ${key}`);
+	for (const n of counts) {
+		const paramName = key.endsWith("show_more.wakes") || key.endsWith("show_more.monitors") ? "hidden" : "count";
+		let params = { [paramName]: n };
+		if (key.endsWith("milestones.count")) params = { completed: n, total: 40 };
+		let out;
+		try {
+			out = render(ns, key, "es", params);
+		} catch (err) {
+			out = `THROW ${err.message}`;
+		}
+		show(`${paramName}=${n} [${new Intl.PluralRules("es").select(n)}]`, out);
+	}
+}
+
+if (want("mobile.projects")) {
+console.log("\n=== RENDER: {total} survives in every arm of milestones.count ===");
+	const source = load("src/i18n/catalogues/es/mobile.projects.json")["mobile.projects.milestones.count"];
+	const totalValues = [1, 7, 40];
+	const armCounts = { one: 1, many: 1000000, other: 0 };
+	for (const [arm, n] of Object.entries(armCounts)) {
+		const outs = totalValues.map((total) => render("mobile.projects", "mobile.projects.milestones.count", "es", { completed: n, total }));
+		const distinct = new Set(outs).size === totalValues.length;
+		console.log(`  arm ${arm} (completed=${n}): ${outs.map((o) => JSON.stringify(o)).join(" | ")} -> total-sensitive=${distinct}`);
+		if (!distinct) fail("milestones.count: {total} does not vary in some arm");
+	}
+	console.log(`  es cardinal categories for 1, 2, 1000000, 2000000: ${[1, 2, 1000000, 2000000]
+		.map((n) => `${n}=${new Intl.PluralRules("es").select(n)}`)
+		.join(" ")}`);
+	console.log(`  es 'many' covers: 1e6=${new Intl.PluralRules("es").select(1000000)}, 1.5e6=${new Intl.PluralRules("es").select(1500000)}`);
+}
+
+if (want("mobile.schedules")) {
+console.log("\n=== RENDER: mobile.schedules head/due composition (es) ===");
+/* Mirrors src/features/schedules/schedules-copy.ts: dueLabel(seconds) returns the
+ * due phrase, and nextDueClause splices it into head.next / head.overdue. */
+const dueLabel = (locale, seconds) => {
+	const magnitude = Math.abs(seconds);
+	const label = magnitude < 90 ? `${Math.floor(magnitude)}s` : magnitude < 5400 ? `${Math.floor(magnitude / 60)}m` : magnitude < 172800 ? `${Math.floor(magnitude / 3600)}h` : `${Math.floor(magnitude / 86400)}d`;
+	return seconds < 0
+		? render("mobile.schedules", "mobile.schedules.due.overdue", locale, { label })
+		: render("mobile.schedules", "mobile.schedules.due.ahead", locale, { label });
+};
+const head = (locale, countClause, seconds) => {
+	const label = dueLabel(locale, seconds);
+	return seconds < 0
+		? render("mobile.schedules", "mobile.schedules.head.overdue", locale, { head: countClause, label })
+		: render("mobile.schedules", "mobile.schedules.head.next", locale, { head: countClause, label });
+};
+for (const locale of ["es", "en"]) {
+	console.log(`  -- ${locale}`);
+	for (const [seconds, countClause] of [
+		[240, render("mobile.schedules", "mobile.schedules.count.wakes", locale, { count: 3 })],
+		[-7200, render("mobile.schedules", "mobile.schedules.count.monitors", locale, { count: 2 })],
+		[30, render("mobile.schedules", "mobile.schedules.count.wakes", locale, { count: 1 })],
+	]) {
+		show(`nextDueClause(${countClause}, ${seconds}s)`, head(locale, countClause, seconds));
+	}
+}
+}
+
+if (want("mobile.schedules")) {
+console.log("\n=== RENDER: mobile.schedules state words + fragments (es) ===");
+for (const key of [
+	"mobile.schedules.state.disabled",
+	"mobile.schedules.state.dormant",
+	"mobile.schedules.state.expired",
+	"mobile.schedules.state.stale",
+	"mobile.schedules.state.waiting",
+	"mobile.schedules.cadence.once",
+	"mobile.schedules.empty.title",
+	"mobile.schedules.empty_line.wakes",
+	"mobile.schedules.empty_line.monitors",
+	"mobile.schedules.show_less.wakes",
+	"mobile.schedules.show_less.monitors",
+	"mobile.schedules.summary.monitors_attention",
+	"mobile.schedules.truncated",
+]) {
+	const params =
+		key === "mobile.schedules.summary.monitors_attention" ? { broken: 1, total: 40 } : key === "mobile.schedules.truncated" ? { shown: 3, total: 9, family: "wakes" } : {};
+	show(key, render("mobile.schedules", key, "es", params));
+}
+console.log("  -- truncated, both families and boundary counts --");
+for (const family of ["wakes", "monitors"]) {
+	for (const [shown, total] of [[3, 9], [1, 9]]) {
+		show(`family=${family} ${shown}/${total}`, render("mobile.schedules", "mobile.schedules.truncated", "es", { shown, total, family }));
+	}
+}
+console.log("  -- summary.monitors_attention at broken=1 / 2 (verb agreement) --");
+for (const broken of [1, 2, 1000000]) {
+	show(`broken=${broken} total=40`, render("mobile.schedules", "mobile.schedules.summary.monitors_attention", "es", { broken, total: 40 }));
+}
+console.log("  -- cadence composition --");
+show("cadence.every(1d)", render("mobile.schedules", "mobile.schedules.cadence.every", "es", { duration: "1d" }));
+show("cadence.left(1d,3)", render("mobile.schedules", "mobile.schedules.cadence.left", "es", { cadence: render("mobile.schedules", "mobile.schedules.cadence.every", "es", { duration: "1d" }), remaining: 3 }));
+show("cadence.spent(1d)", render("mobile.schedules", "mobile.schedules.cadence.spent", "es", { cadence: render("mobile.schedules", "mobile.schedules.cadence.every", "es", { duration: "1d" }) }));
+}
+
+if (want("mobile.projects")) {
+console.log("\n=== RENDER: mobile.projects live/base composition + fragments (es) ===");
+{
+	const base = render("mobile.projects", "mobile.projects.sessions.count", "es", { count: 4 });
+	show("sessions.live(base=4 sesiones, live=2)", render("mobile.projects", "mobile.projects.sessions.live", "es", { base, live: 2 }));
+	show("milestones.none", render("mobile.projects", "mobile.projects.milestones.none", "es", {}));
+	show("stale_badge", render("mobile.projects", "mobile.projects.stale_badge", "es", {}));
+	show("filed_by", render("mobile.projects", "mobile.projects.session_state.filed_by", "es", {}));
+	show("missing", render("mobile.projects", "mobile.projects.session_state.missing", "es", {}));
+	show("not_running", render("mobile.projects", "mobile.projects.session_state.not_running", "es", {}));
+}
+}
+
+console.log("\n=== English leakage sweep (es values containing whole English words) ===");
+{
+	const suspicious = [];
+	const englishWords = ["the", "and", "with", "your", "from", "show", "more", "less", "no", "of", "sessions", "projects", "milestones", "wake", "wakes", "monitor", "monitors", "created", "updated", "deleted", "removed", "added", "reopened", "completed"];
+	for (const ns of NAMESPACES) {
+		const es = load(`src/i18n/catalogues/es/${ns}.json`);
+		for (const [key, value] of Object.entries(es)) {
+			for (const word of englishWords) {
+				const re = new RegExp(`(^|[^\\p{L}])${word}($|[^\\p{L}])`, "u");
+				if (re.test(value)) suspicious.push(`${key}: '${word}' in ${JSON.stringify(value)}`);
+			}
+		}
+	}
+	if (suspicious.length === 0) ok(`no English word tokens found in ${NAMESPACES.join(", ")}`);
+	else for (const s of suspicious) console.log(`  NOTE ${s}`);
+}
+
+console.log(`\n=== RESULT: ${failures === 0 ? "no mechanical failures" : failures + " mechanical failure(s)"} ===`);
+process.exitCode = failures === 0 ? 0 : 1;

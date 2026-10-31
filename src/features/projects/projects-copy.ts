@@ -1,4 +1,5 @@
 import type { LinkedSession, ProjectSummary } from "@/contracts";
+import { t } from "@/i18n";
 import { isRelayError } from "@/relay";
 import type { SemanticTone } from "@/ui/variants";
 
@@ -58,8 +59,11 @@ export function milestoneCountLabel(
 	milestonesCompleted: number,
 	milestonesTotal: number,
 ): string {
-	if (milestonesTotal <= 0) return "no milestones";
-	return `${milestonesCompleted} of ${milestonesTotal} milestones`;
+	if (milestonesTotal <= 0) return t("mobile.projects.milestones.none");
+	return t("mobile.projects.milestones.count", {
+		completed: milestonesCompleted,
+		total: milestonesTotal,
+	});
 }
 
 /**
@@ -76,9 +80,9 @@ export function sessionCountLabel(
 	sessions: number,
 	liveSessions: number,
 ): string {
-	const base = sessions === 1 ? "1 session" : `${sessions} sessions`;
+	const base = t("mobile.projects.sessions.count", { count: sessions });
 	if (liveSessions <= 0) return base;
-	return `${base} · ${liveSessions} live`;
+	return t("mobile.projects.sessions.live", { base, live: liveSessions });
 }
 
 /** The row's one-line summary: milestones, then sessions, then the stale word. */
@@ -99,10 +103,14 @@ export function projectRowMeta(project: ProjectSummary): string {
  * milestones and sessions and says nothing about progress, so a bare `stale` reads
  * as a verdict on the PROJECT (review round 1, D4). Naming what has gone old is
  * true in both places, because the condition is `progress_stale` over a progress
- * line that exists (`showsStaleMark`) — and ONE constant is what stops the two
+ * line that exists (`showsStaleMark`) — and ONE reader is what stops the two
  * surfaces drifting into two spellings of one fact again.
+ *
+ * A FUNCTION, not a constant: `t` at module scope freezes the language this
+ * module was first imported in, and this badge lives on screens that outlast a
+ * relay config change.
  */
-export const STALE_BADGE_LABEL = "progress stale";
+export const staleBadgeLabel = (): string => t("mobile.projects.stale_badge");
 
 /**
  * Whether to show the stale mark, which is NOT the same question as
@@ -183,11 +191,15 @@ export function linkedSessionLabel(link: LinkedSession): string {
  * must not paint a filing as a worker that has stopped.
  */
 export function linkedSessionState(link: LinkedSession): string | null {
-	if (link.role === "coordination") return "filed by";
-	if (!link.exists) return "missing";
+	if (link.role === "coordination") {
+		return t("mobile.projects.session_state.filed_by");
+	}
+	if (!link.exists) return t("mobile.projects.session_state.missing");
 	const state = link.runtime?.state;
 	if (typeof state !== "string" || state === "") return null;
-	return state === "stopped" ? "not running" : state;
+	return state === "stopped"
+		? t("mobile.projects.session_state.not_running")
+		: state;
 }
 
 /* ---------------------------------------------------------------- writes --- */
@@ -211,8 +223,8 @@ export function linkedSessionState(link: LinkedSession): string | null {
  * happens). What the reader needs is above the line; the paragraph you are
  * reading is where the why for the next maintainer lives.
  */
-export const MILESTONE_SLASH_NOTE =
-	"Milestone names can't contain a slash. A milestone with one could never be removed.";
+export const milestoneSlashNote = (): string =>
+	t("mobile.projects.milestone_slash_note");
 
 /** Whether a typed milestone name is one this build will send. */
 export function milestoneNameUsable(name: string): boolean {
@@ -236,8 +248,8 @@ export function milestoneUnremovable(name: string): boolean {
  * which still cost a round trip for a 65-character name or a leading hyphen
  * (U4). The wording stays in the reader's terms rather than the store's.
  */
-export const PROJECT_NAME_HINT =
-	"1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.";
+export const projectNameHint = (): string =>
+	t("mobile.projects.project_name_hint");
 
 /**
  * What a form says when it reopens holding the reader's unfinished work.
@@ -249,8 +261,7 @@ export const PROJECT_NAME_HINT =
  * the worse of the two failures — and the form says so, so a reader opening the
  * sheet to start something else is not silently handed the last attempt.
  */
-export const DRAFT_KEPT_NOTE =
-	"Kept from your last visit. Clear the fields to start something new.";
+export const draftKeptNote = (): string => t("mobile.projects.draft_kept_note");
 
 /**
  * The tags a reader typed, split the way a list is typed.
@@ -269,12 +280,12 @@ export function parseTags(text: string): string[] {
 
 /** The deletion's confirmation sentence, naming what is lost and what is not. */
 export function deleteProjectBody(displayName: string): string {
-	return `Delete ${displayName}? The project row goes for good. Its linked sessions and their transcripts are not touched.`;
+	return t("mobile.projects.delete_body", { name: displayName });
 }
 
 /** The milestone removal's confirmation sentence, the same two halves. */
 export function removeMilestoneBody(name: string): string {
-	return `Remove ${name} from this project? The milestone goes for good. The project's sessions and its progress line are not touched.`;
+	return t("mobile.projects.remove_milestone_body", { name });
 }
 
 /**
@@ -286,12 +297,53 @@ export function removeMilestoneBody(name: string): string {
  * client cannot make. A definitive refusal never reaches here — it carries the
  * relay's own words (`projectRefusalSentence`).
  */
-export const WRITE_UNKNOWN_NOTE =
-	"We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.";
+export const writeUnknownNote = (): string =>
+	t("mobile.projects.write_unknown_note");
 
-/** The one-line receipt a successful write leaves. */
-export function writeReceipt(action: string, subject: string): string {
-	return `${action} ${subject}.`;
+/** The stable CODES a successful project write reports.
+ *
+ *  A union of CODES, deliberately not the words the reader sees: the catalogue
+ *  selects the verb from the code, so a French reader gets a French verb and an
+ *  English reader the same English word this screen used to pass in directly.
+ *  A rendered word passed as `action` would be printed verbatim in every locale —
+ *  the defect this key was shaped to close. Adding a write means adding a code
+ *  here AND an arm to the action select of `mobile.projects.write_receipt` in
+ *  every catalogue — in EVERY `kind` arm, because each locale places the verb
+ *  where its own grammar wants it. */
+export type ReceiptAction =
+	| "created"
+	| "completed"
+	| "reopened"
+	| "added"
+	| "updated"
+	| "removed"
+	| "deleted";
+
+/**
+ * What the action was performed ON, as a CODE — the other half of the same
+ * lesson, and the defect this third parameter closes.
+ *
+ * The screen used to hand the catalogue a composed ENGLISH phrase (`milestone
+ * X`) as the subject. A phrase built in one language cannot be ordered or
+ * inflected by another: a French reader saw « Ajouté milestone X. », an English
+ * noun inside a French sentence. The KIND travels as a code instead and the
+ * catalogue supplies both the noun and its position — English `Removed milestone
+ * X.`, French « Jalon X retiré. » — while `subject` stays the bare name the relay
+ * stores. `other` is the fallback for a subject this build cannot classify: it
+ * renders the name with no noun at all rather than guessing one.
+ */
+export type ReceiptKind = "project" | "milestone" | "other";
+
+/** The one-line receipt a successful write leaves. Every argument is a CODE
+ *  except `subject`: the catalogue owns the verb, the noun and the word order
+ *  (`deleted` + `payments-migration` + `project` → `Deleted payments-migration.`
+ *  / « Projet payments-migration supprimé. »). */
+export function writeReceipt(
+	action: ReceiptAction,
+	subject: string,
+	kind: ReceiptKind,
+): string {
+	return t("mobile.projects.write_receipt", { action, subject, kind });
 }
 
 /**

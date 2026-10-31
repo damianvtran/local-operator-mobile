@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "Ajouter un ordinateur",
+	"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
+	"mobile.computers.badge.active": "actif",
+	"mobile.computers.badge.connecting": "connexion",
+	"mobile.computers.connecting": "Connexion…",
+	"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
+	"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+	"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
+	"mobile.computers.section.on_phone": "Sur ce téléphone",
+	"mobile.computers.switch": "Changer d’ordinateur"
+}

@@ -27,7 +27,20 @@ re-derived.
   in the console.** An APNs `.p8` key and an FCM service account, an always-on fan-out service with
   an owner and an on-call story, and a way for a user to revoke a device without access to the
   device (ADR 0006 §4, the stolen-phone case). This is a *runtime* commitment, unlike A8, and it is
-  the critical path.
+  the critical path. **Where its state lives:** the operator's 2026-10-28 decision puts state in
+  **MongoDB Atlas**, the managed database the rest of Radient runs on, so the fan-out service's
+  device rows, delivery record and per-device grant go there. The **durable queue** is not part of
+  that decision — it stays this plan's and the ops note's own proposal (`docs/push-cloud-ops.md` § 3
+  costs "a managed queue"). FCM is the Android delivery rail only (ADR 0006 §5), and no
+  Firebase-hosted store is part of any of this. **Android background push via FCM requires adding
+  Firebase to a Google Cloud project** — the same project, which gains a `firebase:enabled` label,
+  shares its IAM with Firebase, and moves to the Blaze plan once it is billed. Radient's prior "does
+  not use Firebase" decision (2026-10-28) therefore ruled out Android background push; **the
+  operator resolved that on 2026-10-29 by allowing FCM only on the existing Google Cloud project**
+  (ADR 0006 Status, §5), which unblocks the runtime commitment this bullet describes without
+  unblocking any of its slices. **The operator steps that decision leaves, and the slices that
+  follow, are in [`docs/publishing/push-setup.md`](publishing/push-setup.md)** — no slice below is
+  implemented.
 
 ---
 

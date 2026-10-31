@@ -1,0 +1,83 @@
+# Spanish audit A — execution log
+# namespace:   mobile.session
+# audit id:    es29a4
+# audit date:  2026-10-29
+# auditor:     i18n-auditor (lopdev team); session c58fa60fdb20
+# model:       radient/auto (ACTUAL; fallback trail anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider quota fallback)
+# translator:  i18n-translator; session c53616dcee1c; actual model radient/auto (as supplied by the requesting manager)
+# independence: different agent/session/context from the translator; same served model for part of the run, disclosed
+# read-only:   this audit wrote nothing outside i18n/audits/evidence/es/mobile.session/es29a4/
+# route:       ordinary worktree reads; nested-JSON sidecars are not routable through read_public_copy; no keyed receipt claimed
+# limits:      no native-speaker review; no rendered frame
+
+$ git -C /Users/damian/workspace/es-wave rev-parse HEAD && git -C /Users/damian/workspace/es-wave branch --show-current && git -C /Users/damian/workspace/es-wave status --short
+c5f491ece9db11ec2dc7d136e7de88f93781acff
+feat/i18n-spanish
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/es/
+?? src/i18n/catalogues/es/
+
+$ node --version
+v24.22.1
+EXIT=0
+
+# The repository's own validator (key parity + message parse + strings ratchet).
+
+$ npm run -s i18n:check   # run in /Users/damian/workspace/es-wave
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:62260) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+EXIT=0
+
+# Per-key mechanical check: JSON, key/context parity, placeholders, ICU presence,
+# bidi controls, typography codepoints, technical tokens, character counts.
+# The metric is UTF-16 .length — the same metric home-copy.ts budgets use.
+
+$ python3 /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/es-ns-check.py mobile.session
+JSON mobile.session: en/context/es parse PASS
+KEYS mobile.session: en=2 target=2 context=2; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.session.conversation_details: PASS; role=heading; params=True; icu=False; chars_en=20; chars_es=27; ratio=1.35
+MECH mobile.session.status_tray.hint: PASS; role=help; params=True; icu=False; chars_en=43; chars_es=53; ratio=1.23
+SHA256 mobile.session en src/i18n/catalogues/en/mobile.session.json 8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8
+SHA256 mobile.session context src/i18n/catalogues/en/mobile.session.context.json 6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1
+SHA256 mobile.session es src/i18n/catalogues/es/mobile.session.json b9a931b3f36787201b7fa66f1163545ff58b5a859c259322d24d948aacb140c2
+SUMMARY mobile.session: keys=2; mechanical_failures=0; placeholders_in_namespace=0
+EXIT=0
+
+# Core Spanish catalogue cross-check for the terms this namespace reuses or asserts.
+# Read from the core repository's committed main (origin/main), not a working tree.
+
+$ git -C /Users/damian/local-operator ls-tree -r --name-only origin/main -- local_operator/i18n/catalogues/es/ | wc -l
+      80
+EXIT=0
+
+$ for f in relay.chrome relay.health cli.mobile_help wire.settings wire.settings.account_policy; do echo "--- $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json 2>/dev/null | grep -E 'Detalles|conversación' | head -8; done
+--- relay.chrome ---
+  "relay.chrome.list.no_matches": "Ninguna conversación coincide",
+  "relay.chrome.session.loading": "Cargando la conversación…",
+--- relay.health ---
+--- cli.mobile_help ---
+--- wire.settings ---
+  "wire.settings.aida_name.help": "Cómo se la llama en todas partes. Renombrar su conversación o /aida rename <name> lo actualiza.",
+  "wire.settings.auto_save_conversation.label": "Autoguardar conversación",
+  "wire.settings.compaction.description": "Cuándo se resume la conversación para recuperar contexto.",
+  "wire.settings.conversation_length.label": "Longitud de la conversación",
+  "wire.settings.fork.description": "Dónde abre /fork la conversación bifurcada.",
+  "wire.settings.librarian_name.help": "El nombre que usan su conversación fijada y todos los recibos.",
+  "wire.settings.providers_anthropic_cache_ttl_1h_min_context_tokens.help": "Tamaño de contexto a partir del cual las peticiones de Anthropic con clave de API usan el TTL de 1 hora de la caché de prompts (coste de escritura 2x; sobrevive a huecos de inactividad de más de 5 minutos). Con una suscripción de Claude que no esté consumiendo uso adicional, la conversación principal usa siempre 1 hora, y un subagente pasa a 1 hora en cuanto una de sus llamadas dura 4 minutos o más. 0 desactiva todo esto; solo sigue aplicándose el ajuste de tamaño de los subagentes.",
+  "wire.settings.tui_sidebar_position.choice.left.description": "las sesiones a la izquierda de la conversación",
+--- wire.settings.account_policy ---
+EXIT=0
+
+$ for f in relay.chrome relay.health; do echo "--- sha256 $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json | shasum -a 256; done
+--- sha256 relay.chrome ---
+a2d25deb40633c2b478babb7c9fd0dd3bdc0b2cd77c4010fedd1c205b9840097  -
+--- sha256 relay.health ---
+563c533f52fbc21b240979fba164e4e0768ff57f2882025d592280fc56638c62  -
+EXIT=0
+
+# Verdict for this namespace is recorded in record.json and argued in report.md.
+# This file is actual command output, not notes.

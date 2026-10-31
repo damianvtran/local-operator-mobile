@@ -1,15 +1,18 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Search } from "lucide-react-native";
+import { Search } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TextInput } from "react-native";
 import {
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
+	type TextInput,
 	useWindowDimensions,
 	View,
 } from "react-native";
+import type { PromptImage } from "@/contracts";
 import { useListState } from "@/features/auth/connection-provider";
+import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
 import { composerChipLabels } from "@/features/session/chip-labels";
 import {
@@ -28,11 +31,22 @@ import {
 	ModelSheet,
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
+import {
+	HealthAnnouncer,
+	ResumeBlock,
+	SessionHeaderActions,
+	SessionHealthControl,
+	useResume,
+} from "@/features/session/components/session-health";
 import { SlashSheet } from "@/features/session/components/slash-sheet";
 import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
+import {
+	StatusTray,
+	type StatusTrayFacts,
+} from "@/features/session/components/status-tray";
 import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
@@ -40,6 +54,7 @@ import { TranscriptList } from "@/features/session/components/transcript-list";
 import { WorkingLine } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
+import { headerHealth } from "@/features/session/health";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
@@ -79,15 +94,22 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { BackIcon } from "@/ui/components/back-icon";
+import { NavigationMark } from "@/ui/components/navigation-mark";
+import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
 	COMPACT_OPEN_PANEL_SHARE,
 	COMPACT_PENDING_SHARE,
 	compactChromeShare,
+	composerLimit,
+	headerStacks,
 	type RegionKey,
 	regionOrder,
+	sessionStatusLayout,
 	snapRegion,
+	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
@@ -134,6 +156,18 @@ export default function Session() {
 	const [tagsOpen, setTagsOpen] = useState(false);
 
 	const runtime = useSessionRuntime(sessionId);
+	const provisional = useStartup(null, sessionId);
+	const provisionalEditor =
+		provisional.coordinator === null
+			? undefined
+			: {
+					draft: provisional.snapshot.draft.text,
+					images: provisional.snapshot.draft.images,
+					setDraft: (text: string) => provisional.setText(text),
+					setImages: (
+						next: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+					) => provisional.setImages(next),
+				};
 	/* The relay's capability block, off the same list frame the screen already reads
 	 * below. Declared before the composer because the composer's mic gate needs it. */
 	const capabilities = useListState((state) => state.capabilities);
@@ -150,8 +184,12 @@ export default function Session() {
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
-		ended: runtime.projection?.ended === true,
+		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
+		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
+		 *  too, and a send to either REOPENS it. */
+		ended: headerHealth(runtime.projection, runtime.link) === "ended",
 		capabilities,
+		editor: provisionalEditor,
 	});
 
 	/* The supplement block's host calls: one session-scoped client, built here
@@ -174,6 +212,9 @@ export default function Session() {
 	const [openPanel, setOpenPanel] = useState<null | "todos" | "subagents">(
 		null,
 	);
+	/** The compact status sheet. The tray's one row opens it; on a wide column
+	 *  the panels stay inline, so this is never true there. */
+	const [statusSheetOpen, setStatusSheetOpen] = useState(false);
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
@@ -318,6 +359,14 @@ export default function Session() {
 		projection?.asks,
 	);
 
+	/* The header dot's sheet + the session menu, held here (not in the control) so
+	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`
+	 *  marker and the sheet it claims cannot disagree. */
+	const [healthSheetOpen, setHealthSheetOpen] = useState(false);
+	const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+	/* Focus goes back to the header control when its sheet closes (UX U10). */
+	const healthControlRef = useRef<View | null>(null);
+
 	/* The state markers the design audit reads, from the same facts the screen renders
 	 *  from — a marker is a claim about the state the reader is in, so it may only be
 	 *  emitted for a fact that is TRUE. Memoised because this is the route a reader
@@ -340,6 +389,11 @@ export default function Session() {
 				 * state the visible block does not show. */
 				supplements: runtime.supplements,
 				supplementPid: runtime.projectionPid,
+				/* The dot's verdict, from the same call the dot renders — so the
+				 * `S5/health-quiet` marker cannot claim a yellow the header is not
+				 * showing. */
+				health: headerHealth(projection, runtime.link),
+				healthSheetOpen,
 			}),
 		[
 			projection,
@@ -350,12 +404,24 @@ export default function Session() {
 			runtime.projectionPid,
 			subagents.total,
 			composer.voice.micVisible,
+			runtime.link,
+			healthSheetOpen,
 		],
 	);
 	/* One definition of `aborted`, used by the marker and by the resume affordance.
 	 *  Two copies of this predicate is how the copy a reader sees and the copy a cell
 	 *  is measured by drift apart (`state-marker.ts` § `sessionFactsFrom`). */
 	const aborted = stateFacts.aborted;
+
+	/* The header's status dot: ONE verdict, read by the dot, the composer's
+	 *  placeholder and the ended send-failure sentence. From runtime signals the
+	 *  relay publishes (ended / degraded / heartbeat_stale / pid) plus the phone's
+	 *  own link, never from the last message — `health.ts` owns the ladder.
+	 *  `null` before the first frame and after the client stops retrying: no
+	 *  dot, no announcement (review M3, UX U4/U5). */
+	const health = headerHealth(projection, runtime.link);
+	const ended = health === "ended";
+	const resume = useResume(sessionId, ended);
 
 	const pendingViewProps = useMemo(
 		() =>
@@ -420,12 +486,28 @@ export default function Session() {
 	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
 	 *  shortened portrait window never takes this branch (`compactChromeFor`). */
 	const compact = useCompactChrome();
+	/* ONE decision, three consumers (tray, sheet, inline region), so the surfaces
+	 * cannot disagree — see `sessionStatusLayout`. `phone` is a WIDTH question, not
+	 * `compact`: gating on `compact` left the old task/subagent bands on portrait
+	 * phones, which is exactly what D2 fixed. */
+	const { tray, inlineSecondary, statusSheet } = sessionStatusLayout(
+		viewportWidth,
+		compact,
+	);
 	const { effectiveScale } = useTextScale();
 	/* The secondary region's own scroller, and what it needs to behave: each child's
 	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
 	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
 	 *  yet", and the region then uses its plain cap for one frame. */
 	const regionRef = useRef<ScrollView | null>(null);
+	/* The composer's top in WINDOW coordinates, for `composerLimit`: portrait has no
+	 *  short-landscape budget, and this is the only honest ceiling for a long draft at
+	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
+	 *  would reparent the field, which the footer contract forbids. */
+	const [composerBox, setComposerBox] = useState<{
+		top: number;
+		height: number;
+	} | null>(null);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
 	>({});
@@ -459,6 +541,12 @@ export default function Session() {
 	const [regionHeights, setRegionHeights] = useState<
 		Partial<Record<RegionKey, number>>
 	>({});
+	/* The same predicate `Screen` stacks on (it passes no `stackBelowWidth`
+	 *  here), so the title's line clamp and its budget agree: stacked, the
+	 *  budget assumes TWO lines (`headerTitleChars`' stacked branch) and the
+	 *  control draws two (review M1 — a one-line clamp under a two-line budget
+	 *  cut every stacked name twice). Compact never stacks. */
+	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
 	const headerTitle =
 		title.length > 0
 			? middleTruncate(
@@ -467,11 +555,27 @@ export default function Session() {
 						? compactTitleChars(
 								{ width: viewportWidth, height: viewportHeight },
 								effectiveScale,
+								/* The word rides this row in compact and takes width from
+								 *  the title, so it is charged — in EVERY state, live
+								 *  included, so the name's shape does not change when the
+								 *  dot changes colour (review round 4, D15 / QA N3). */
+								/* The dot is ALWAYS inline in compact, so it is
+								 *  charged here too — the budget promised 356.83 pt
+								 *  into a 341 pt box without it (design round 6,
+								 *  D19). */
+								{ dot: true, menu: ended, word: true },
+								Platform.OS !== "web",
 							)
-						: headerTitleChars({
-								width: viewportWidth,
-								height: viewportHeight,
-							}),
+						: headerTitleChars(
+								{ width: viewportWidth, height: viewportHeight },
+								/* The dot now holds ONE slot before the name in EVERY state
+								 *  (round 2 D11), so it is charged in every state rather than
+								 *  only on live — and the ⋮ only while it has an item (ended).
+								 *  Review M1, and round 2's D11 layout unification. */
+								{ dot: true, menu: ended },
+								effectiveScale,
+								Platform.OS !== "web",
+							),
 				)
 			: "session";
 
@@ -482,8 +586,10 @@ export default function Session() {
 		<TodosPanel
 			testID={SURFACE.todosPanel}
 			todos={todos}
-			open={openPanel === "todos"}
-			onToggle={() => setOpenPanel(openPanel === "todos" ? null : "todos")}
+			open={statusSheet ? statusSheetOpen : openPanel === "todos"}
+			onToggle={() =>
+				statusSheet || openPanel !== "todos" ? undefined : setOpenPanel(null)
+			}
 			heldShut={pending !== null}
 			compact={compact}
 		/>
@@ -494,9 +600,11 @@ export default function Session() {
 			subagents={subagents}
 			viewportHeight={viewportHeight}
 			compact={compact}
-			open={openPanel === "subagents"}
+			open={statusSheet ? statusSheetOpen : openPanel === "subagents"}
 			onToggle={() =>
-				setOpenPanel(openPanel === "subagents" ? null : "subagents")
+				statusSheet || openPanel !== "subagents"
+					? undefined
+					: setOpenPanel(null)
 			}
 			onOpenAgent={openAgent}
 		/>
@@ -657,6 +765,24 @@ export default function Session() {
 	 *  panel directly below carries the same lever and the same counts in its own
 	 *  header, so nothing becomes unreachable — it is one control, not two. */
 	const showChip = !compact && subagents.total > 0;
+	/* The compact tray's facts, taken from the SAME projections the panels read:
+	 *  a row that counted its own way would be able to disagree with the sheet it
+	 *  opens. `null` means "nothing to say", never zero. */
+	const trayFacts: StatusTrayFacts = {
+		working: working === null ? null : working.activity,
+		tasks: todos.empty
+			? null
+			: { open: todos.total - todos.done, total: todos.total },
+		agents:
+			subagents.total > 0
+				? { running: subagents.running, total: subagents.total }
+				: null,
+		context:
+			projection?.context_tokens != null && projection?.context_window != null
+				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
+				: null,
+	};
+
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
 			<View
@@ -725,12 +851,15 @@ export default function Session() {
 		todos: todosPanel,
 		strip: compact ? statusStrip : null,
 	};
-	const regionItems = regionOrder(
-		compact,
-		rosterNeedsAttention(subagents.clauses),
-	)
-		.map((key) => ({ key, node: regionNodes[key] }))
-		.filter((item) => item.node !== null);
+	/* Compact: the tray is the whole of the secondary status, so the clipped stack
+	 *  (and the cue that explained the cut) is not rendered at all. Wide keeps the
+	 *  inline panels — a tablet column has the room, and a reader there can see the
+	 *  list and the roster at once. */
+	const regionItems = !inlineSecondary
+		? []
+		: regionOrder(compact, rosterNeedsAttention(subagents.clauses))
+				.map((key) => ({ key, node: regionNodes[key] }))
+				.filter((item) => item.node !== null);
 	const panelOpen = openPanel !== null;
 	const regionCap = compact
 		? Math.round(
@@ -804,7 +933,13 @@ export default function Session() {
 					? "none"
 					: "flex") as "none" | "flex",
 			}
-		: ({ flexGrow: 0, flexShrink: 0 } as const);
+		: ({
+				flexGrow: 0,
+				flexShrink: 0,
+				/* A portrait phone shows the tray instead, so the old stack keeps its place in
+				 *  the tree (rotation must not remount the panels) but is not painted. */
+				...(inlineSecondary ? {} : { display: "none" as const }),
+			} as const);
 
 	/* Opening a panel scrolls the region to that panel's header, so the rows the
 	 *  reader asked for are the thing on screen — before this, the roster opened below
@@ -831,26 +966,63 @@ export default function Session() {
 			scroll={false}
 			testID={SCREEN.session}
 			headerLeading={
-				<IconButton
-					accessibilityLabel="Back to sessions"
-					testID={CONTROL.sessionBack}
-					onPress={() => router.back()}
-					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
-				/>
+				<View className="flex-row items-center gap-1">
+					<IconButton
+						accessibilityLabel="Back to sessions"
+						testID={CONTROL.sessionBack}
+						onPress={() => router.back()}
+						icon={({ color, size }) => <BackIcon color={color} size={size} />}
+					/>
+					<NavigationMark />
+				</View>
 			}
+			/* The title block is a CONTROL inside the h1: the conversation name
+			 *  plus the status dot (and, when not live, the state word), a tap on
+			 *  which opens the health sheet. Before the first frame `health` is
+			 *  null and the title renders bare. The action cluster goes through
+			 *  `headerAction` like every other screen's, so a tag line under the
+			 *  title cannot pull it into the title column (review M2), and stacked
+			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
+			titleNode={
+				<SessionHealthControl
+					health={health}
+					projection={projection}
+					title={headerTitle}
+					compact={compact}
+					stacked={headerStacked}
+					sheetOpen={healthSheetOpen}
+					onSheetOpenChange={setHealthSheetOpen}
+					controlRef={healthControlRef}
+				>
+					{ended ? <ResumeBlock resume={resume} /> : null}
+				</SessionHealthControl>
+			}
+			stackedActionsBeside
 			headerAction={
-				/* The find lever. It is the kit's own header control (`IconButton`) — 48 pt on
-				   the web/audit build, 44 on iOS — and it IS header chrome: `header.ts`
-				   counts it and its gap in the title budget. An earlier note here argued the
-				   icon "cannot clip the middle truncation's budget"; the 2026-10-11
-				   full-surface pass measured that it can and did, so the comment and the sum
-				   were corrected together (review round 1, F1). */
-				<IconButton
-					accessibilityLabel="Search this conversation"
-					accessibilityHint="Finds messages in the transcript loaded on this device"
-					testID={CONTROL.sessionFind}
-					onPress={find.open}
-					icon={({ color, size }) => <Search color={color} size={size} />}
+				<SessionHeaderActions
+					ended={ended}
+					menuOpen={sessionMenuOpen}
+					onMenuOpenChange={setSessionMenuOpen}
+					resumeBusy={resume.busy}
+					resumeGone={resume.gone}
+					onResume={() => {
+						setSessionMenuOpen(false);
+						setHealthSheetOpen(true);
+						void resume.resume();
+					}}
+					findAction={
+						/* The find lever. It is the kit's own header control (`IconButton`) —
+						   48 pt on the web/audit build, 44 on iOS — and it IS header chrome:
+						   `header.ts` counts it and its gap in the title budget. */
+						<IconButton
+							accessibilityLabel="Search this conversation"
+							accessibilityHint="Finds messages in the transcript loaded on this device"
+							size={22}
+							testID={CONTROL.sessionFind}
+							onPress={find.open}
+							icon={({ color, size }) => <Search color={color} size={size} />}
+						/>
+					}
 				/>
 			}
 			/* The conversation's tags, in the header's own column. The line is a
@@ -878,6 +1050,7 @@ export default function Session() {
 			}
 		>
 			<SessionStateMarkers facts={stateFacts} />
+			<HealthAnnouncer health={health} />
 			{/* The find states, asserted by the capture cells that declare them
 			    (`S5/find-results`, `S5/find-empty`, `S5/find-hit`, `S5/find-caveat`):
 			    each marker is present ONLY in the state it names, so a frame that
@@ -890,7 +1063,19 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
-			{compact ? null : statusStrip}
+			{tray ? (
+				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
+				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
+				 *  under the composer at 135-200 % text. */
+				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
+					<StatusTray
+						facts={trayFacts}
+						onOpen={() => setStatusSheetOpen(true)}
+					/>
+				) : null
+			) : (
+				statusStrip
+			)}
 
 			{/* The transcript, the panels and the composer, in one measure-capped
 			    column. `Screen` applies the cap (`src/ui/column.ts`): a 1366 pt tablet
@@ -902,6 +1087,18 @@ export default function Session() {
 			<View className="flex-1 min-h-0">
 				<View
 					className="flex-1 min-h-0"
+					/* Short landscape: a pending decision collapses the transcript and hides the
+					 * secondary region, so the column's remaining children no longer fill it.
+					 * Anchor that cluster to the BOTTOM rather than letting the slack fall
+					 * below the composer: otherwise the composer jumps up when a decision
+					 * arrives and drops back after it is answered (the floating-composer
+					 * defect design D18 fixed for the loading state). Portrait and tablet
+					 * keep the normal column flow. */
+					style={
+						compact && pendingViewProps !== null
+							? { justifyContent: "flex-end" as const }
+							: undefined
+					}
 					testID={SURFACE.sessionColumn}
 					onLayout={(event) =>
 						measureRecovery("column", event.nativeEvent.layout.height)
@@ -1119,6 +1316,13 @@ export default function Session() {
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
+						limit={composerLimit(
+							viewportHeight,
+							composerBox?.top ?? null,
+							composerBox?.height ?? null,
+						)}
+						onMeasure={setComposerBox}
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
 						compact={
 							compact
 								? {
@@ -1147,6 +1351,7 @@ export default function Session() {
 						onRetry={composer.retry}
 						showResume={aborted}
 						onResume={composer.send}
+						ended={ended}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
 						modelChip={chipLabels.model}
@@ -1168,6 +1373,30 @@ export default function Session() {
 					/>
 				</View>
 			</View>
+
+			{/* One row in the column, the same panels one tap away. The panels keep
+			    their own testIDs and their own content; only the clip is gone, because
+			    inside a sheet the list can be as tall as it is. */}
+			<Sheet
+				visible={statusSheetOpen}
+				onClose={() => setStatusSheetOpen(false)}
+				title="status"
+				testID={SURFACE.sessionStatusSheet}
+			>
+				<View className="gap-2 pb-2">
+					{workingLineView}
+					{subagents.total > 0 ? subagentsPanel : null}
+					{todos.empty ? null : todosPanel}
+					{projection?.context_tokens != null ? (
+						<Text className="px-4 text-mono-sm text-ink-dim">
+							{trayFacts.context}
+							{projection.cumulative_parent_cost != null
+								? ` · $${projection.cumulative_parent_cost.toFixed(2)}`
+								: ""}
+						</Text>
+					) : null}
+				</View>
+			</Sheet>
 
 			<ModelSheet
 				visible={modelsOpen}

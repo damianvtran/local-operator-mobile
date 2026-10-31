@@ -1,0 +1,200 @@
+# Audit log — es29a3r2 — mobile.home (es), delta re-audit (round 2)
+# Date: 2026-10-29
+# Auditor: i18n-auditor (lopdev team), session 3ef3aad1f731
+# Served model: radient/auto (fallbacks: anthropic/claude-sonnet-5-5 ->
+#   openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, provider quota)
+# Head: f1c782f22a1f4a3f31f025282849cc62ba41b8c6 (branch feat/i18n-spanish)
+# Previous round: es29a3 at c5f491ece9db11ec2dc7d136e7de88f93781acff, changes_requested
+#
+# HOW TO READ THIS FILE. It was run as `bash -v`: every line below that is not a
+# comment is a command exactly as executed, and the lines following it are its
+# actual output. Nothing here is transcribed. The two deltas this run wrote are
+# the arena bundles under i18n/audits/evidence/es/ — no catalogue, code, index or
+# commit was touched; `git status` below shows that.
+#
+# NOTE (judgement, not command output): the verdict is passed — 0 BLOCKER,
+# 0 MAJOR, 1 new MINOR (a stale comment, no user-visible copy) and 4 NIT.
+
+set -v
+
+cd /Users/damian/workspace/es-wave
+git rev-parse --abbrev-ref HEAD
+feat/i18n-spanish
+git rev-parse HEAD
+f1c782f22a1f4a3f31f025282849cc62ba41b8c6
+git log --oneline -2
+f1c782f feat(i18n): ship Spanish across the mobile catalogue
+c5f491e feat(i18n): ship French across the mobile catalogue (#132)
+git status --porcelain=v1
+?? i18n/audits/evidence/es/mobile.home/es29a3r2/
+?? i18n/audits/evidence/es/mobile.schedules/es29b3r2/
+?? i18n/audits/evidence/es/mobile.session_health/es29a5r2/
+sha256sum src/i18n/catalogues/en/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json src/i18n/catalogues/es/mobile.home.json
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+9d6d5966c6ce7c8f9ce59fc64843a953d1d2849e7779e7cd2efeb687395e8e86  src/i18n/catalogues/es/mobile.home.json
+
+# Delta reconstruction: the Spanish directory was untracked at c5f491ec, so the
+# round-1 bytes are recovered from the values quoted in es29a3 (per-key table
+# rows and single-key finding headings) plus the round-1 character counts, and
+# compared with today's file key by key.
+python3 /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/delta-check.py mobile.home i18n/audits/evidence/es/mobile.home/es29a3/report.md i18n/audits/evidence/es/mobile.home/es29a3/record.json /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/round1-lengths.txt
+HEAD-BRANCH feat/i18n-spanish
+HEAD f1c782f22a1f4a3f31f025282849cc62ba41b8c6
+ROUND1-REV c5f491ece9db11ec2dc7d136e7de88f93781acff audit_id=es29a3 status=changes_requested
+HASH en: round1=4ebba126f106bada now=4ebba126f106bada unchanged src/i18n/catalogues/en/mobile.home.json
+HASH context: round1=db18b25dd2099a95 now=db18b25dd2099a95 unchanged src/i18n/catalogues/en/mobile.home.context.json
+HASH es: round1=1f693998e869ccdb now=9d6d5966c6ce7c8f CHANGED src/i18n/catalogues/es/mobile.home.json
+QUOTE from finding heading: tip.schedule
+QUOTE from finding heading: tip.search
+QUOTE from finding heading: tip.parallel
+QUOTE from finding heading: options.fixed
+QUOTE from finding heading: startup_queue.blocked
+KEYS mobile.home: en=27 es=27 context=27; parity=True; context_parity=True
+DELTA exact_quote_match=17 keys=['greeting', 'options.apply', 'options.folder', 'options.title', 'queue.discard', 'queue.restore', 'queue.sheet_title', 'queue.view', 'refused_start_fallback', 'starting', 'startup_queue.blocked', 'startup_queue.not_started', 'startup_queue.sending', 'startup_queue.unconfirmed', 'suggestion.last_turn', 'suggestion.wake_summary', 'transcript.waiting']
+DELTA no_round1_quote=['connect_disabled_reason', 'folders_read_failed', 'suggestion.linear_mcp', 'suggestion.phone_access', 'suggestion.review_repo', 'suggestion.team_of_agents']
+LEN round1_length_rows_in_file=64; keys_compared=27 of 27
+LEN length_changed=['options.fixed', 'suggestion.linear_mcp', 'suggestion.phone_access', 'suggestion.review_repo', 'suggestion.team_of_agents', 'tip.parallel', 'tip.schedule', 'tip.search']
+LEN length_unchanged=['connect_disabled_reason', 'folders_read_failed', 'greeting', 'options.apply', 'options.folder', 'options.title', 'queue.discard', 'queue.restore', 'queue.sheet_title', 'queue.view', 'refused_start_fallback', 'starting', 'startup_queue.blocked', 'startup_queue.not_started', 'startup_queue.sending', 'startup_queue.unconfirmed', 'suggestion.last_turn', 'suggestion.wake_summary', 'transcript.waiting']
+  CHANGED mobile.home.options.fixed
+    round1: «Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para ver sus controles en vivo.»
+    now   : «Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.»
+  CHANGED mobile.home.tip.parallel
+    round1: «pide trabajo en paralelo entre varios subagentes»
+    now   : «pide varios subagentes en paralelo»
+  CHANGED mobile.home.tip.schedule
+    round1: «programa un prompt para que se ejecute periódicamente»
+    now   : «programa un prompt para que se repita»
+  CHANGED mobile.home.tip.search
+    round1: «busca conversaciones pasadas para reabrir una sesión»
+    now   : «busca una conversación pasada y reábrela»
+
+# Repository gates.
+npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+(node:48201) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+npx vitest run src/i18n/__tests__/ src/features/home/ 2>&1 | tail -18
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 /Users/damian/workspace/es-wave
+
+·························································································································
+
+ Test Files  9 passed (9)
+      Tests  121 passed (121)
+   Start at  22:47:54
+   Duration  10.21s (transform 77%, import 17%, tests 5%, worker 1%)
+
+  Transform  transforming modules took 27.06s · 77% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+
+# Per-key mechanical layer: JSON, key/context parity, placeholders, bidi,
+# typography codepoints, technical tokens, character counts (UTF-16, the same
+# metric home-copy.ts budgets with).
+python3 /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/es-ns-check.py mobile.home
+JSON mobile.home: en/context/es parse PASS
+KEYS mobile.home: en=27 target=27 context=27; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.home.connect_disabled_reason: PASS; role=status; params=True; icu=False; chars_en=27; chars_es=32; ratio=1.19
+MECH mobile.home.folders_read_failed: PASS; role=status; params=True; icu=False; chars_en=50; chars_es=62; ratio=1.24
+MECH mobile.home.greeting: PASS; role=heading; params=True; icu=False; chars_en=31; chars_es=28; ratio=0.90
+MECH mobile.home.options.apply: PASS; role=button; params=True; icu=False; chars_en=17; chars_es=19; ratio=1.12
+MECH mobile.home.options.fixed: PASS; role=help; params=True; icu=False; chars_en=95; chars_es=114; ratio=1.20
+MECH mobile.home.options.folder: PASS; role=meta; params=True; icu=False; chars_en=23; chars_es=23; ratio=1.00
+MECH mobile.home.options.title: PASS; role=heading; params=True; icu=False; chars_en=20; chars_es=27; ratio=1.35
+MECH mobile.home.queue.discard: PASS; role=button; params=True; icu=False; chars_en=23; chars_es=30; ratio=1.30
+MECH mobile.home.queue.restore: PASS; role=button; params=True; icu=False; chars_en=29; chars_es=37; ratio=1.28
+MECH mobile.home.queue.sheet_title: PASS; role=heading; params=True; icu=False; chars_en=15; chars_es=16; ratio=1.07
+MECH mobile.home.queue.view: PASS; role=button; params=True; icu=False; chars_en=20; chars_es=24; ratio=1.20
+MECH mobile.home.refused_start_fallback: PASS; role=status; params=True; icu=False; chars_en=43; chars_es=38; ratio=0.88
+MECH mobile.home.starting: PASS; role=status; params=True; icu=False; chars_en=9; chars_es=10; ratio=1.11
+MECH mobile.home.startup_queue.blocked: PASS; role=status; params=True; icu=False; chars_en=29; chars_es=42; ratio=1.45
+MECH mobile.home.startup_queue.not_started: PASS; role=status; params=True; icu=False; chars_en=11; chars_es=11; ratio=1.00
+MECH mobile.home.startup_queue.sending: PASS; role=status; params=True; icu=False; chars_en=24; chars_es=30; ratio=1.25
+MECH mobile.home.startup_queue.unconfirmed: PASS; role=status; params=True; icu=False; chars_en=19; chars_es=20; ratio=1.05
+MECH mobile.home.suggestion.last_turn: PASS; role=button; params=True; icu=False; chars_en=21; chars_es=25; ratio=1.19
+MECH mobile.home.suggestion.linear_mcp: PASS; role=button; params=True; icu=False; chars_en=17; chars_es=20; ratio=1.18
+MECH mobile.home.suggestion.phone_access: PASS; role=button; params=True; icu=False; chars_en=20; chars_es=27; ratio=1.35
+MECH mobile.home.suggestion.review_repo: PASS; role=button; params=True; icu=False; chars_en=16; chars_es=16; ratio=1.00
+MECH mobile.home.suggestion.team_of_agents: PASS; role=button; params=True; icu=False; chars_en=23; chars_es=25; ratio=1.09
+MECH mobile.home.suggestion.wake_summary: PASS; role=button; params=True; icu=False; chars_en=22; chars_es=26; ratio=1.18
+MECH mobile.home.tip.parallel: PASS; role=help; params=True; icu=False; chars_en=42; chars_es=34; ratio=0.81
+MECH mobile.home.tip.schedule: PASS; role=help; params=True; icu=False; chars_en=41; chars_es=37; ratio=0.90
+MECH mobile.home.tip.search: PASS; role=help; params=True; icu=False; chars_en=45; chars_es=40; ratio=0.89
+MECH mobile.home.transcript.waiting: PASS; role=status; params=True; icu=False; chars_en=29; chars_es=26; ratio=0.90
+SHA256 mobile.home en src/i18n/catalogues/en/mobile.home.json 4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+SHA256 mobile.home context src/i18n/catalogues/en/mobile.home.context.json db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+SHA256 mobile.home es src/i18n/catalogues/es/mobile.home.json 9d6d5966c6ce7c8f9ce59fc64843a953d1d2849e7779e7cd2efeb687395e8e86
+SUMMARY mobile.home: keys=27; mechanical_failures=0; placeholders_in_namespace=0
+
+# The two facts the manager asked to be confirmed by comparison, not by eye:
+# the destination label inside options.fixed, and the per-locale character gates.
+python3 -c "import json,pathlib; r=pathlib.Path('src/i18n/catalogues'); es=json.loads((r/'es/mobile.home.json').read_text()); sess=json.loads((r/'es/mobile.session.json').read_text()); d=sess['mobile.session.conversation_details']; f=es['mobile.home.options.fixed']; print('destination:', repr(d)); print('contained byte-identically:', d in f); print('fixed:', f); u=lambda s: len(s.encode('utf-16-le'))//2; [print(f'CHIP {k.split(chr(46))[-1]:16s} u16={u(v):3d} <=32 {u(v)<=32}') for k,v in sorted(es.items()) if '.suggestion.' in k]; [print(f'TIP  {k.split(chr(46))[-1]:10s} u16={u(v):3d} <=48 {u(v)<=48}') for k,v in sorted(es.items()) if '.tip.' in k]"
+destination: 'Detalles de la conversación'
+contained byte-identically: True
+fixed: Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.
+CHIP last_turn        u16= 25 <=32 True
+CHIP linear_mcp       u16= 20 <=32 True
+CHIP phone_access     u16= 27 <=32 True
+CHIP review_repo      u16= 16 <=32 True
+CHIP team_of_agents   u16= 25 <=32 True
+CHIP wake_summary     u16= 26 <=32 True
+TIP  parallel   u16= 34 <=48 True
+TIP  schedule   u16= 37 <=48 True
+TIP  search     u16= 40 <=48 True
+
+# Fit: glyph advance widths with the platform's text stack (CoreText, SF Pro)
+# at the app's own type roles — chips body-sm 14 pt/400, tips meta 12 pt/500.
+# Points; React Native dp == pt on iOS.
+swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure.swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure-delta.json
+chip last_turn	14.0pt	169.4	Muéstrame el último turno
+chip linear_mcp	14.0pt	141.4	Configura Linear MCP
+chip phone_access	14.0pt	172.1	Activa el acceso telefónico
+chip review_repo	14.0pt	106.6	Revisa este repo
+chip team_of_agents	14.0pt	173.5	Crea un equipo de agentes
+chip wake_summary	14.0pt	189.4	Despiértame con un resumen
+chip-calibration fr widest	14.0pt	173.2	Créez une équipe d'agents
+chip-prev phone_access	14.0pt	209.9	Activar acceso desde el teléfono
+tip parallel	12.0pt	216.3	pide varios subagentes en paralelo
+tip schedule	12.0pt	242.6	programa un prompt para que se repita
+tip search	12.0pt	262.9	busca una conversación pasada y reábrela
+tip-prev parallel	12.0pt	300.1	pide trabajo en paralelo entre varios subagentes
+tip-prev schedule	12.0pt	352.7	programa un prompt para que se ejecute periódicamente
+tip-prev search	12.0pt	339.5	busca conversaciones pasadas para reabrir una sesión
+tip-calibration en longest	12.0pt	287.2	search past conversations to reopen a session
+tip-calibration fr longest	12.0pt	282.1	demandez plusieurs sous-agents en parallèle
+health still_reopening	12.0pt	267.3	Sigue reabriéndose — todavía no está lista.
+health still_reopening prev	12.0pt	277.2	Sigue reabriendo — todavía no ha arrancado.
+health reopening	12.0pt	300.6	Reabriendo — esto puede tardar unos segundos.
+swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure.swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure-chips.json
+chip phone_access current	14.0pt	172.1	Activa el acceso telefónico
+chip phone_access longer	14.0pt	219.7	Activa el acceso desde el teléfono
+chip widest current	14.0pt	189.4	Despiértame con un resumen
+
+# Calibration of the previous round's instrument: the same strings re-measured
+# at the sizes that reproduce its numbers (16 pt chips, 12.33 pt tips).
+swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure.swift /Users/damian/.local-operator/sessions/3ef3aad1f731/scratchpad/measure-hypothesis.json
+old phone_access @14	14.0pt	209.9	Activar acceso desde el teléfono
+old phone_access @16	16.0pt	235.4	Activar acceso desde el teléfono
+fr widest chip @14	14.0pt	173.2	Créez une équipe d'agents
+fr widest chip @16	16.0pt	194.5	Créez une équipe d'agents
+still_reopening @12	12.0pt	267.3	Sigue reabriéndose — todavía no está lista.
+still_reopening @12.33	12.33pt	273.9	Sigue reabriéndose — todavía no está lista.
+old search tip @12	12.0pt	339.5	busca conversaciones pasadas para reabrir una sesión
+old search tip @12.33	12.33pt	347.8	busca conversaciones pasadas para reabrir una sesión
+new search tip @14??	12.0pt	262.9	busca una conversación pasada y reábrela
+
+# NOTE (not command output): the second independent pass was job ac1915638e4e
+# (reviewer, read-only, served radient/auto; pinned anthropic/claude-sonnet-5-5
+# with the same quota fallback). It read the nine changed values without this
+# auditor's findings and returned clean (0 BLOCKER, 0 MAJOR, 2 MINOR, 2 NIT);
+# agreement and disagreement are recorded in report.md and record.json.
+# Verdict: passed.

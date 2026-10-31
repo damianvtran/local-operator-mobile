@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "Thêm máy tính",
+	"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
+	"mobile.computers.badge.active": "hoạt động",
+	"mobile.computers.badge.connecting": "đang kết nối",
+	"mobile.computers.connecting": "Đang kết nối…",
+	"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
+	"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+	"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
+	"mobile.computers.section.on_phone": "Trên điện thoại này",
+	"mobile.computers.switch": "Chuyển máy tính"
+}

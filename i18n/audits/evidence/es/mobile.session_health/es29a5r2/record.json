@@ -1,0 +1,182 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_delta_reaudit_of_changed_namespace",
+	"locale": "es",
+	"audit_date": "2026-10-29",
+	"audited_revision": "f1c782f22a1f4a3f31f025282849cc62ba41b8c6",
+	"audited_revision_note": "Branch feat/i18n-spanish, HEAD f1c782f. The Spanish catalogue is tracked at this revision; target bytes are pinned by input_hashes.es.",
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "3ef3aad1f731",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the round-1 translator and from the remediation author. Not model-diverse: the served model radient/auto is the translator's served model and the second pass's too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "ac1915638e4e",
+		"agent": "reviewer (label es-delta-second-pass)",
+		"pinned_model": "anthropic/claude-sonnet-5-5",
+		"actual_model": "radient/auto",
+		"actual_model_source": "subagent's own disclosure: pinned anthropic/claude-sonnet-5-5 never served; three provider-quota route changes to radient/auto",
+		"scope": "the nine changed values read without this auditor's findings; read-only, no edit",
+		"verdict": "clean: 0 BLOCKER, 0 MAJOR, 2 MINOR, 2 NIT",
+		"agreement": "independently confirmed all five round-1 findings fixed, uniform imperative register with the tap-sends-the-line rationale, every string inside its character gate and box, the reflexive in still_reopening, the byte-identical destination label, and the stale es budget comment and tip.search noun as follow-ups",
+		"disagreement": "rated suggestion.phone_access ('acceso telefónico') MINOR and options.fixed ('controles en vivo') MINOR where this audit records NIT with reasons; proposed 'controles actuales', rejected here because it drops the live/real-time sense; its tip widths read ~7% narrower than this run's at the same stated tokens, which changes no verdict"
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c53616dcee1c",
+		"model": "radient/auto",
+		"actual_model_source": "as supplied by the requesting manager in round 1; not independently observed by this auditor",
+		"date": "2026-10-29"
+	},
+	"remediation_author": {
+		"commit": "f1c782f22a1f4a3f31f025282849cc62ba41b8c6",
+		"author": "Damian Tran <damian@radienthq.com>",
+		"note": "per git log for the commit under audit; the agent or session that wrote the remediation copy is not observed by this auditor"
+	},
+	"route_disclosure": {
+		"reads": "ordinary worktree reads, the repository's own validator and test suites, local CoreText measurement, and read-only git reads of the core repository's origin/main",
+		"english_context_sidecars": "nested-JSON context sidecars are NOT routable through read_public_copy; read as ordinary worktree files",
+		"credential_shaped_keys": "mobile.computers.password_placeholder is credential-shaped; no keyed receipt is claimed anywhere in this wave",
+		"receipts": "no keyed public-copy receipt claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"ledger": {
+		"recorded": false,
+		"reason": "This repository has no i18n/ledger.json and no audit-ledger command at f1c782f (verified: package.json scripts, scripts/i18n/, docs/i18n.md), and the core repository's i18n/ledger.json holds no mobile.* namespace rows. docs/i18n.md records the report in the pull request; this bundle is the durable record.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "es",
+			"namespace": "mobile.session_health",
+			"source_sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-29",
+				"result": "passed",
+				"findings": 0
+			},
+			"note": "es delta R2 mobile.session_health passed at f1c782f: S-01 resolved (reabriéndose + todavía no está lista), 0 new findings; i18n/audits/evidence/es/mobile.session_health/es29a5r2/record.json; radient/auto fallback"
+		}
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; no pixel-level or clipping claim is made",
+		"translator_observation": "round-1 translator and remediation provenance are as supplied or as recorded by git; this auditor did not observe their runs"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output under bash -v.",
+	"audit_id": "es29a5r2",
+	"namespace": "mobile.session_health",
+	"previous_round": {
+		"audit_id": "es29a5",
+		"audited_revision": "c5f491ece9db11ec2dc7d136e7de88f93781acff",
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 1,
+		"finding_ids": [
+			"S-01",
+			"S-2",
+			"S-3"
+		],
+		"blocker_ids": [],
+		"major_ids": [
+			"S-01"
+		],
+		"minor_ids": [],
+		"nit_ids": [
+			"S-2",
+			"S-3"
+		]
+	},
+	"key_count": {
+		"en": 11,
+		"target": 11,
+		"context": 11
+	},
+	"delta": {
+		"changed_keys": [
+			"mobile.session_health.still_reopening"
+		],
+		"unchanged_keys_exact_quote_match": 10,
+		"unchanged_keys_length_only": [],
+		"same_length_change": "the changed string is 43 characters in both rounds, so length or layout evidence cannot detect it; the delta is proved by comparison against the round-1 quoted value",
+		"proof": "round-1 bytes recovered from the values quoted in es29a5/report.md (per-key table plus the S-1/S-2 finding headings) and compared as strings in audit.log"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session_health.json",
+			"sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+			"sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+		},
+		"es": {
+			"path": "src/i18n/catalogues/es/mobile.session_health.json",
+			"sha256": "16c491040c369953c1039e12100e76514fab1aa7b956f1531ea28cc004dfb7e9"
+		},
+		"es_previous_round": {
+			"path": "src/i18n/catalogues/es/mobile.session_health.json",
+			"sha256": "8552e560a6837e7381e9213455c3bb3200e9ebcda1fd14fbea4efec290b75fa1",
+			"state": "hash recorded by es29a5; the file itself was untracked at c5f491ec"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"resolved_finding_ids": [
+			"S-01"
+		],
+		"open_optional_ids": [
+			"S-2",
+			"S-3"
+		],
+		"finding_ids": [
+			"S-01",
+			"S-2",
+			"S-3"
+		],
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [],
+		"nit_ids": [
+			"S-2",
+			"S-3"
+		],
+		"verdict_reason": "S-01 resolved: the pronominal 'reabriéndose' removes the repeated-attempts reading and 'todavía no está lista' states the pending fact without the daemon startup verb, agreeing with la sesión; safe wording, no new finding, and the two accepted NITs are unchanged and not re-litigated."
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:check -> exit 0; 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)'; check-strings: 284 findings all baselined, 0 new",
+		"repo_tests": "npx vitest run src/i18n/__tests__/ src/features/home/ -> 9 files, 121 tests passed",
+		"validator_scope": "key parity, message parse and the strings ratchet; it does not compare placeholders between locales, so this audit checked them itself",
+		"scoped_checks": "valid JSON; key and context parity; placeholder/ICU structure (none present); bidi controls; typography codepoints on the changed string; technical tokens; character counts; core-Spanish vocabulary cross-check",
+		"fit_metric": "glyph advance widths with CoreText on the system font at meta 12 pt/500 (the status line's own type role); UTF-16 character counts",
+		"no_rendered_frame": "widths are measured text metrics, not a rendered frame; no clipping claim is made"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.session_health/es29a5r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session_health/es29a5r2/report.md",
+			"sha256": "08f6d8a55e9bf1f06b9c51db8a850cdea958ac5b5af6bd007e8f288bd7c9dfb7"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session_health/es29a5r2/audit.log",
+			"sha256": "a72702a7234c11c82acfeb49427f02f915a5162ec7e0bed1ed8ca829efda9994",
+			"state": "actual command output under bash -v, not notes"
+		}
+	]
+}

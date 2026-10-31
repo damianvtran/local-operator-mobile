@@ -1,0 +1,253 @@
+{
+ "schema": 1,
+ "audit_id": "fr29p4",
+ "audit_kind": "independent_delta_reaudit_of_audit_finding",
+ "locale": "fr",
+ "namespace": "mobile.projects",
+ "audit_date": "2026-10-29",
+ "round": 4,
+ "audited_revision": "615b24f4e3cbc41acefade9bfa39ff5702a2f398",
+ "audited_revision_note": "worktree /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n at 615b24f with a clean tracked tree (the only untracked paths are evidence bundles); every hash below is of the worktree bytes, which equal the commit.",
+ "delta": {
+  "keys": [
+   "mobile.projects.write_receipt"
+  ],
+  "reason": "The key gained a third parameter `kind` (select project | milestone | other) and the action select is now repeated inside every kind arm so a locale can order the sentence its own way; the English value, the French value, the English context note and the generated parameter list all changed, and the five call sites now pass a kind code plus a bare name. The round-3 record no longer covers the current bytes.",
+  "scope_note": "delta-only: one key, its five call sites and the parameter list it generates; the other 14 namespace keys are not re-judged here",
+  "note_change": "the English context note now names three parameters, calls {subject} the BARE NAME (never a composed phrase), calls {kind} a stable code, and explains why the action arms repeat inside each kind arm"
+ },
+ "delta_basis": {
+  "name": "fr29p3",
+  "path": "i18n/audits/evidence/fr/mobile.projects/fr29p3",
+  "round": 3,
+  "audited_revision": "49f79b3b3ca23ff91403ed05072945a672fb7d4e",
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "relation": "This round judges whether the round-3 MAJOR is fixed at the current tip. It does not re-open the round-3 analysis and does not re-judge the catalogues' other 14 keys."
+ },
+ "key_count": {
+  "en": 15,
+  "context": 15,
+  "target": 15,
+  "delta_keys": 1
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "a95ed4b473ca",
+  "model": "radient/auto",
+  "actual_model": "radient/auto",
+  "actual_model_source": "harness model-switch notices in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each reported as 'provider failure: quota'. The pinned model did not run this audit.",
+  "model_history": [
+   "anthropic/claude-sonnet-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "fallback": {
+   "used": true,
+   "pinned": "anthropic/claude-sonnet-5-5",
+   "actual": "radient/auto",
+   "chain": [
+    "anthropic/claude-sonnet-5-5",
+    "openai/gpt-6-astra",
+    "kimi/k3.1-pro",
+    "radient/auto"
+   ],
+   "reason": "provider failure: quota"
+  },
+  "independent_from_translator_session": true,
+  "independence": "Different agent (i18n-auditor) and different session from the translator. This session authored neither the round-3 French arms nor the round-4 kind arms or call-site changes: the current bytes are commit 615b24f, and the namespace's original French is the translator session c66311717837. Judged from the current bytes."
+ },
+ "translator": {
+  "agent": "i18n-translator",
+  "session": "c66311717837",
+  "model": "kimi/k3.1-pro",
+  "actual_model_source": "as recorded by the round-1/round-2 bundles; not observed by this auditor",
+  "date": "2026-10-29",
+  "delta_note": "The bytes judged in this delta were authored in commits 49f79b3 and 615b24f (fix commits outside the translator session); the translator session above is the namespace's original French, not these bytes."
+ },
+ "prior_findings": [
+  {
+   "id": "P3-01",
+   "severity": "MAJOR",
+   "status": "resolved",
+   "key": "mobile.projects.write_receipt (call sites)",
+   "round_3_evidence": "project-detail.tsx passed `milestone ${name}` as the subject, so French rendered \"Retiré milestone X.\" with an English noun",
+   "resolution_evidence": "fr renders \"Jalon X retiré.\" and \"Projet payments-migration supprimé.\"; no rendered French row of the 21 contains 'milestone' or an English verb (audit.log section 5 rows, section 5 subsection 10 token scan); the five call sites pass bare names and kind codes (audit.log section 6)",
+   "fixed_in": "615b24f"
+  },
+  {
+   "id": "P3-02",
+   "severity": "MINOR",
+   "status": "resolved",
+   "key": "mobile.projects.write_receipt",
+   "round_3_evidence": "the completed/reopened receipts named no object (\"Terminé Brief de lancement.\")",
+   "resolution_evidence": "fr \"Jalon Brief de lancement terminé.\" / en \"Completed milestone Brief de lancement.\" - the object is named in both locales",
+   "fixed_in": "615b24f"
+  }
+ ],
+ "prior_finding_id_note": "No round of this namespace used an H-prefixed finding id; the round-3 MAJOR the brief refers to is P3-01 in bundle fr29p3.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.projects.json",
+   "sha256": "a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.projects.context.json",
+   "sha256": "5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99"
+  },
+  "target": {
+   "path": "src/i18n/catalogues/fr/mobile.projects.json",
+   "sha256": "48c868a951090e12d6b47ad600036262524ae5a8f710868b5303c5d95451ff59"
+  }
+ },
+ "renderer_hashes": {
+  "messages_ts": {
+   "path": "src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "runtime_ts": {
+   "path": "src/i18n/runtime.ts",
+   "sha256": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4"
+  },
+  "catalogue_gen_ts": {
+   "path": "src/i18n/catalogue.gen.ts",
+   "sha256": "f4992113c851de901f6dd63bf7987e6f05328922aca5a83f5c1dcf31e705869c"
+  },
+  "note": "The renderer is the app's own: renderFor -> formatMessage -> parseMessage. loader.mjs only teaches plain Node the app's extensionless relative imports; no app module was modified."
+ },
+ "supporting_reference_hashes": {
+  "style_guide": {
+   "path": "i18n/style-guides/fr.md (core repository checkout ~/local-operator, last commit touching it 24d328a19a8)",
+   "sha256_committed_blob": "49010212a65f0d30d49bf532601bb39ad277be28aef5d476715186cf28525990",
+   "sha256_working_copy_read": "b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39",
+   "working_copy_state": "that shared checkout carries a staged, uncommitted removal of nine lines (the wave-2 'bearer' note and a recorded width exception); no storage copy was modified by this audit"
+  },
+  "glossary": {
+   "path": "/Users/damian/local-operator/i18n/glossary.md",
+   "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+  },
+  "note": "The scratch mobile-i18n tree carries no style guide, so both were read from the core repository checkout. The two passages absent from the working copy are not rules this audit applied; the committed blob was diffed against the working copy and the unchanged sections supply every rule cited."
+ },
+ "mechanical": {
+  "repo_validator": "npm run -s i18n:check -> exit 0; 'catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)'; 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d'",
+  "json": "all three files valid JSON, no duplicate keys; 15 en / 15 context / 15 fr keys; en == fr and en == ctx key sets true; no key added or dropped since 49f79b3",
+  "params": "parser reads {action: select, subject: text, kind: select} in both locales; the two parameter sets agree name-for-name and kind-for-kind",
+  "arms": "root kind select has project, milestone, other in both locales; every kind arm carries all seven action codes plus other (6 arms x 8 options); nested select-in-select parses and renders",
+  "words": "en Created/Completed/Reopened/Added/Updated/Removed/Deleted; fr créé/terminé/rouvert/ajouté/mis à jour/retiré/supprimé (accents as bytes); every code maps to exactly one expected word per locale; the new inner arm set repeats the old seven English words exactly",
+  "placeholders": "{subject} appears three times per locale, {action, select three times, {kind, select once; no placeholder added, renamed or reordered",
+  "tests": "npx vitest run src/i18n src/features/projects -> 6 files, 98 tests passed",
+  "typecheck": "npx tsc --noEmit -> exit 0, so every call site supplies the third argument"
+ },
+ "english_byte_compatibility": {
+  "project_arm": "identical to the pre-change `{action} {subject}.` output for all seven codes (rendered from the old message text with the capitalised verb, compared byte for byte: identical=true on all seven)",
+  "milestone_arm_required": "identical to the old `{action} milestone {subject}.` output for removed, added and updated: identical=true",
+  "milestone_arm_changed": "completed and reopened intentionally changed from `Completed X.` / `Reopened X.` to `Completed milestone X.` / `Reopened milestone X.` because the old call sites passed the bare milestone name",
+  "judgement": "acceptable, honest and not a regression: the change is additive and truthful (the old sentence never named what was completed), it uses the noun ordering the sibling receipts already shipped (Added/Updated/Removed milestone X.), nothing becomes false or ambiguous, the toast wraps and the key declares no maxCells, and the wording is asserted per code and named in the key's context note. It is a deliberate user-visible English copy change riding a translation fix and is disclosed as such rather than called byte-identical."
+ },
+ "french_quality": {
+  "grammar": "the participle is preceded by a masculine singular noun the catalogue supplies (Projet, Jalon), so agreement with arbitrary user text cannot be wrong; créé/terminé/rouvert/ajouté/retiré/supprimé are masculine singular and « mis à jour » is invariant",
+  "order": "noun first, participle last - the natural French status order; the verb-first calque is not shipped",
+  "register": "terse status, no article added, no « a bien été » wrapper; sentence-initial Projet/Jalon, lowercase participles",
+  "typography": "one final full stop, single U+0020 separators, no double space, no trailing space, no ASCII apostrophe, zero U+202F and zero U+00A0 (no ': ; ! ?' site), no bidi or control characters",
+  "terminology": "jalon is the word the rest of the fr catalogue uses for the object; projet matches the glossary row 'project -> translate (projet)'; retiré vs supprimé keeps the distinction the confirmation bodies draw"
+ },
+ "anti_regression_checks": [
+  "All seven action codes x project/milestone/other x en/fr rendered through renderFor (the function t() calls), 21 rows quoted in audit.log section 5",
+  "Case-insensitive scan for the seven English verbs and the noun 'milestone' over every rendered French row: 21/21 clean",
+  "Token scan of every rendered row against a French vocabulary whitelist: fr-foreign=[] and en-foreign=[] on all 21",
+  "Unknown action code 'archived' falls to the action other arm in both locales; unknown kind 'workspace' falls to the kind other arm in both locales",
+  "English output reconstructed from the OLD message text and the OLD call-site subjects read via git show 49f79b3, not from memory: project identical for seven codes, milestone identical for added/updated/removed, completed/reopened differ by design",
+  "Structural equality of both catalogues' kind arms and action arms read from the app's parser and independently by a brace scan of the raw bytes",
+  "Key-set equality and no added/dropped key versus 49f79b3; generated catalogue.gen.ts current; tsc --noEmit clean at the audited head"
+ ],
+ "current_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "P3-01",
+   "P3-02",
+   "P4-N1",
+   "P4-N2"
+  ],
+  "blocker_ids": [],
+  "major_ids": [],
+  "minor_ids": [],
+  "nit_ids": [
+   "P4-N1",
+   "P4-N2"
+  ],
+  "verdict_reason": "Both locales parse, the parameter sets agree, every kind arm exists in both with all seven codes plus other, all 21 rows render sensibly, French carries no English verb or noun, and English byte-compatibility holds where it must (all seven project codes; added/updated/removed milestones). The completed/reopened wording change is intentional, additive and disclosed, not a regression. The two NITs are future-proofing and test-coverage notes, neither of which the brief makes gating."
+ },
+ "findings": [
+  {
+   "id": "P4-N1",
+   "severity": "NIT",
+   "key": "mobile.projects.write_receipt (fr, other arm)",
+   "current": "Audit Q4 supprimé.",
+   "problem": "The other arm has no noun, so nothing anchors the participle's gender or number; a future caller routing a feminine or plural subject through kind=other would render a wrong agreement (Session X supprimé.).",
+   "suggested": "If other ever gains a caller, name the noun (Élément {subject} {action}.) or avoid an agreeing participle.",
+   "reachable_today": false
+  },
+  {
+   "id": "P4-N2",
+   "severity": "NIT",
+   "key": "mobile.projects.write_receipt (tests)",
+   "current": "the other kind arm is asserted once per locale (deleted only)",
+   "problem": "A future action added to the project and milestone arms but forgotten in the other arm would silently fall back to mis à jour / Updated rather than fail.",
+   "suggested": "Extend the RECEIPT_VERBS loop over the other kind arm.",
+   "reachable_today": false
+  }
+ ],
+ "second_independent_pass": {
+  "performed": false,
+  "why": "mobile.projects is not in the high-visibility set named in the auditor brief (onboarding, errors, settings), the manager requested no second pass this round, and the round-3 second pass covered the same arms - its finding is precisely what this round verifies as fixed. The delta is 21 fixed strings whose correctness is proved by execution, not opinion.",
+  "disclosure": "A clean round-4 verdict here is one executed read, not two."
+ },
+ "route_disclosure": {
+  "reads": "Ordinary local git/worktree reads of the catalogue JSON, the English context sidecars, the fr style guide and glossary, the app's own src/i18n + src/features modules and tests, and git objects at 49f79b3 and 615b24f. No network fetch of any copy; no translation API, SDK, MT service or back-translation.",
+  "context_sidecar_routing": "English nested-JSON context sidecars are NOT routable through the core keyed public-copy reader (its allowlist is committed public key copy); they were read as ordinary worktree files.",
+  "credential_keys": "This file group has no credential-shaped key; the only secret-shaped example in the wave is mobile.computers.password_placeholder, which is not in this namespace and was not read.",
+  "read_credential_receipt": "none claimed or produced - no keyed read was performed for this bundle.",
+  "commit_writes": "none: this bundle is untracked; the audit edited no tracked file and made no commit."
+ },
+ "limitations": [
+  "No native-speaker review: the judgement is an LLM auditor's, executed against the app's own renderer but not reviewed by a human native speaker.",
+  "No rendered proof: no screenshot, simulator or device frame was captured; fit statements rest on executed character counts (longest French row 37 cells, longest English 39) and on the toast's wrapping Text, not on pixels.",
+  "No second independent pass this round (see second_independent_pass).",
+  "No ledger row and no keyed public-copy receipt: this repository has no i18n/ledger.json, no audit-ledger command and no i18n/audits/evidence/README.md contract file."
+ ],
+ "audit_notes_not_execution_log": "report.md holds the reasoning; audit.log holds the executed commands and their actual output. The report's prose is notes, never evidence of a command that was not run.",
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/report.md",
+   "sha256": "047366ef9203487f9b508a4e7a4885f8376a73218953bbc17a09f9b17c9fe134"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/audit.log",
+   "sha256": "ee86c7908d03e009c4751302b45d7084b9e181b7d7c3cbc4fdb8f58f9b18932d"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/render.mjs.txt",
+   "sha256": "73c36552fe2ec43ddcd9eaa3eb9b0358bb2c2d7c7b3c80d2cd62678f3cab8569"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/loader.mjs.txt",
+   "sha256": "b727eae82d46055cee179409f6d313b8fbd91ba8cd38fb1ea6529ffad721d9b3"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/checks.py.txt",
+   "sha256": "4f8a332368e481abfe87b0365eea69654ed0f2cafbc64a66e0be5cae24fc6410"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/make-log.sh.txt",
+   "sha256": "4eeb0294831f54a2b3cf869c18725c3086eaa23e9c47c74d2ef0f3266eaf3e4d"
+  },
+  {
+   "path": "i18n/audits/evidence/fr/mobile.projects/fr29p4/record.json",
+   "sha256": null,
+   "note": "this record; a self-hash is not meaningful"
+  }
+ ]
+}

@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+"""Mechanical checks for one zh-CN namespace of the local-operator-mobile catalogue.
+
+Executed by the audit run; its output is what audit.log records. Read-only.
+
+Checks, per the wave's audit order:
+  1. valid JSON and key parity (en vs zh-CN), plus context-sidecar coverage;
+  2. placeholder tokens and ICU plural/select presence (these namespaces are
+     expected to have none; the script proves it rather than assuming it);
+  3. invisible/control characters and bidi controls;
+  4. punctuation and spacing conventions from i18n/style-guides/zh-CN.md;
+  5. per-string character and cell width (CJK/full-width = 2 cells, ASCII = 1).
+"""
+import json
+import re
+import sys
+import unicodedata
+
+BASE = "/Users/damian/workspace/zh-wave/src/i18n/catalogues"
+ns = sys.argv[1]
+
+en = json.load(open(f"{BASE}/en/{ns}.json", encoding="utf-8"))
+ctx = json.load(open(f"{BASE}/en/{ns}.context.json", encoding="utf-8"))
+zh = json.load(open(f"{BASE}/zh-CN/{ns}.json", encoding="utf-8"))
+
+print(f"namespace={ns} en={len(en)} zh={len(zh)} context={len(ctx)}")
+print(f"key_parity={set(en) == set(zh)} missing={sorted(set(en) - set(zh))} extra={sorted(set(zh) - set(en))}")
+print(f"context_covers_every_key={set(ctx) == set(en)}")
+
+PLACEHOLDER = re.compile(r"\{[^{}]*\}")
+ICU = re.compile(r"\{\s*\w+\s*,\s*(plural|select|selectordinal)\s*,")
+ph_en = {k: sorted(PLACEHOLDER.findall(v)) for k, v in en.items()}
+ph_zh = {k: sorted(PLACEHOLDER.findall(v)) for k, v in zh.items()}
+print(f"placeholder_tokens: en={sum(len(v) for v in ph_en.values())} zh={sum(len(v) for v in ph_zh.values())}")
+print(f"placeholder_mismatches={[(k, ph_en[k], ph_zh[k]) for k in en if ph_en[k] != ph_zh[k]]}")
+print(f"icu_structs_en={[k for k, v in en.items() if ICU.search(v)]}")
+print(f"icu_structures_in_zh={[k for k, v in zh.items() if ICU.search(v)]}")
+
+bad_control = []
+for k, v in zh.items():
+    for c in v:
+        if unicodedata.category(c) in ("Cf", "Cc") and c not in "\n\t":
+            bad_control.append((k, hex(ord(c)), unicodedata.name(c, "?")))
+print(f"bidi_or_control_chars={bad_control}")
+
+issues = []
+for k, v in zh.items():
+    if v != v.strip():
+        issues.append((k, "edge-whitespace", repr(v)))
+    if "  " in v:
+        issues.append((k, "double-space", repr(v)))
+    for m in re.finditer(r"[\u4e00-\u9fff][,;:?!]|[,;:?!][\u4e00-\u9fff]", v):
+        issues.append((k, "ascii-punctuation-in-cjk", m.group(0)))
+    if "\u2026" in v:
+        if v.count("\u2026") % 2:
+            issues.append((k, "odd-ellipsis-count", repr(v)))
+        if not v.endswith("\u2026"):
+            issues.append((k, "ellipsis-not-final", repr(v)))
+    if v.count("\u201c") != v.count("\u201d"):
+        issues.append((k, "unbalanced-cjk-quotes", repr(v)))
+    if "请" in v:
+        issues.append((k, "please-particle", "请"))
+    if "您" in v:
+        issues.append((k, "formal-you", "您"))
+    if "！" in v:
+        issues.append((k, "exclamation", "！"))
+print(f"style_findings={issues}")
+
+
+def cells(s):
+    n = 0
+    for ch in s:
+        v = ord(ch)
+        wide = (
+            0x1100 <= v <= 0x115F
+            or 0x2E80 <= v <= 0xA4CF
+            or 0xAC00 <= v <= 0xD7A3
+            or 0xF900 <= v <= 0xFAFF
+            or 0xFE30 <= v <= 0xFE6F
+            or 0xFF00 <= v <= 0xFF60
+            or 0xFFE0 <= v <= 0xFFE6
+            or 0x20000 <= v <= 0x3FFFD
+            or v == 0x2026
+        )
+        n += 2 if wide else 1
+    return n
+
+
+print("key\tchars\tcells\tvalue")
+for k in sorted(zh):
+    print(f"{k}\t{len(zh[k])}\t{cells(zh[k])}\t{zh[k]}")
+print(f"max_cells={max((cells(v), k) for k, v in zh.items())}")
+
+ok = set(en) == set(zh) and sum(len(v) for v in ph_en.values()) == sum(len(v) for v in ph_zh.values())
+sys.exit(0 if ok else 1)

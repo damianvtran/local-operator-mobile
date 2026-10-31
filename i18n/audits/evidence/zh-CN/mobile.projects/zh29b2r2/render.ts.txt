@@ -1,0 +1,489 @@
+/**
+ * zh-CN delta re-audit harness (round 2) — read-only, repo untouched.
+ *
+ * Runs the APP'S OWN render path, not a mirror:
+ *  - `@/i18n` `setLocaleSource` + `renderFor` = the runtime a zh-CN reader gets
+ *  - `@/features/schedules/schedules-copy` `dueLabel` / `nextDueClause` =
+ *    the real composition functions the head line uses
+ *
+ * Usage: node zhdelta.ts <namespace>
+ */
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { registerHooks } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const REPO = "/Users/damian/workspace/zh-wave";
+const SRC = `${REPO}/src`;
+const CAT = `${REPO}/src/i18n/catalogues`;
+
+/* ---------------------------------------------------------------- resolver */
+
+const HAS_EXT = /\.[cm]?[jt]s$|\.json$/;
+registerHooks({
+	resolve(specifier, context, nextResolve) {
+		if (specifier.startsWith("@/")) {
+			const base = `${SRC}/${specifier.slice(2)}`;
+			for (const candidate of [`${base}.ts`, `${base}/index.ts`, `${base}.json`]) {
+				if (existsSync(candidate) && statSync(candidate).isFile()) {
+					return nextResolve(pathToFileURL(candidate).href, context);
+				}
+			}
+		}
+		if (
+			(specifier.startsWith("./") || specifier.startsWith("../")) &&
+			context.parentURL?.startsWith("file:") &&
+			!HAS_EXT.test(specifier)
+		) {
+			const base = fileURLToPath(new URL(specifier, context.parentURL).href);
+			for (const candidate of [`${base}.ts`, `${base}/index.ts`]) {
+				if (existsSync(candidate) && statSync(candidate).isFile()) {
+					return nextResolve(pathToFileURL(candidate).href, context);
+				}
+			}
+		}
+		return nextResolve(specifier, context);
+	},
+});
+
+const NS = process.argv[2];
+if (!NS) throw new Error("usage: zhdelta.ts <namespace>");
+
+const i18n = await import(`${SRC}/i18n/index.ts`);
+const copy = await import(`${SRC}/features/schedules/schedules-copy.ts`);
+
+const { renderFor, setLocaleSource } = i18n as any;
+const { dueLabel, nextDueClause, wakeCountClause, monitorCountClause } = copy as any;
+setLocaleSource(() => "zh-CN");
+
+/* --------------------------------------------------------------- utilities */
+
+const read = (path: string) => JSON.parse(readFileSync(path, "utf8"));
+const sha = (path: string) =>
+	createHash("sha256").update(readFileSync(path)).digest("hex");
+const en = read(`${CAT}/en/${NS}.json`);
+const zh = read(`${CAT}/zh-CN/${NS}.json`);
+const ctx = read(`${CAT}/en/${NS}.context.json`);
+
+type Node = any;
+const walk = (nodes: readonly Node[], visit: (n: Node) => void): void => {
+	for (const n of nodes) {
+		visit(n);
+		if (n.type === "plural" || n.type === "select") {
+			for (const [, arms] of n.options as Map<string, readonly Node[]>) {
+				walk(arms, visit);
+			}
+		}
+	}
+};
+const plurals = (nodes: readonly Node[]): string[][] => {
+	const out: string[][] = [];
+	walk(nodes, (n) => {
+		if (n.type === "plural") out.push([...n.options.keys()]);
+	});
+	return out;
+};
+const selects = (nodes: readonly Node[]): string[][] => {
+	const out: string[][] = [];
+	walk(nodes, (n) => {
+		if (n.type === "select") out.push([...n.options.keys()]);
+	});
+	return out;
+};
+const chars = (s: string): number => [...s].length;
+const isWide = (ch: string): boolean => {
+	const cp = ch.codePointAt(0) ?? 0;
+	return (
+		(cp >= 0x1100 && cp <= 0x115f) ||
+		(cp >= 0x2e80 && cp <= 0xa4cf) ||
+		(cp >= 0xac00 && cp <= 0xd7a3) ||
+		(cp >= 0xf900 && cp <= 0xfaff) ||
+		(cp >= 0xfe10 && cp <= 0xfe19) ||
+		(cp >= 0xfe30 && cp <= 0xfe6f) ||
+		(cp >= 0xff00 && cp <= 0xff60) ||
+		(cp >= 0xffe0 && cp <= 0xffe6)
+	);
+};
+const cells = (s: string): number =>
+	[...s].reduce((n, ch) => n + (isWide(ch) ? 2 : 1), 0);
+const BIDI =
+	/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u061c\u202b\u202a]/u;
+const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
+const ASCII_PROSE = /[,.?!;:]/;
+
+const line = (s: string) => console.log(s);
+const rule = (title: string) => line(`\n===== ${title} =====`);
+
+/* -------------------------------------------------------------- provenance */
+
+rule("PROVENANCE");
+line(`namespace            : ${NS}`);
+line(`repo                 : ${REPO}`);
+line(
+	`HEAD                 : ${readFileSync(`${execFileSync("git", ["-C", REPO, "rev-parse", "--absolute-git-dir"]).toString().trim()}/HEAD`, "utf8").trim()} (worktree gitdir)`,
+);
+line(
+	`branch/commit        : ${execFileSync("git", ["-C", REPO, "log", "-1", "--format=%H %d"]).toString().trim()}`,
+);
+line(`node                 : ${process.version}`);
+line(`harness              : zhdelta.ts (uses src/i18n renderFor + schedules-copy)`);
+for (const rel of [
+	`src/i18n/catalogues/en/${NS}.json`,
+	`src/i18n/catalogues/en/${NS}.context.json`,
+	`src/i18n/catalogues/zh-CN/${NS}.json`,
+]) {
+	line(`sha256 ${rel}\n       ${sha(`${REPO}/${rel}`)}`);
+}
+line(`keys                 : en=${Object.keys(en).length} zh=${Object.keys(zh).length} context=${Object.keys(ctx).length}`);
+line(`SHIPPED_LOCALES      : ${JSON.stringify((i18n as any).SHIPPED_LOCALES)}`);
+line(`activeLocale-ish     : renderFor(..., "zh-CN") + setLocaleSource(() => "zh-CN")`);
+
+/* ------------------------------------------------------------- mechanical */
+
+rule("MECHANICAL — key parity");
+const enKeys = Object.keys(en).sort();
+const zhKeys = Object.keys(zh).sort();
+const ctxKeys = Object.keys(ctx).sort();
+line(`en - zh  : ${JSON.stringify(enKeys.filter((k) => !(k in zh)))}`);
+line(`zh - en  : ${JSON.stringify(zhKeys.filter((k) => !(k in en)))}`);
+line(`en - ctx : ${JSON.stringify(enKeys.filter((k) => !(k in ctx)))}`);
+line(`ctx - en : ${JSON.stringify(ctxKeys.filter((k) => !(k in en)))}`);
+line(`order identical: ${JSON.stringify(enKeys) === JSON.stringify(zhKeys)}`);
+
+rule("MECHANICAL — parse + parameter parity (app parser)");
+const { parseMessage, formatMessage } = i18n as any;
+let paramFail = 0;
+let parseFail = 0;
+for (const key of enKeys) {
+	let pe: any;
+	let pz: any;
+	try {
+		pe = parseMessage(en[key]);
+		pz = parseMessage(zh[key]);
+	} catch (error) {
+		parseFail += 1;
+		line(`PARSE FAIL ${key}: ${(error as Error).message}`);
+		continue;
+	}
+	const shape = (p: any) =>
+		JSON.stringify([...p.params.entries()].sort((a: any, b: any) => (a[0] < b[0] ? -1 : 1)));
+	if (shape(pe) !== shape(pz)) {
+		paramFail += 1;
+		line(`PARAM MISMATCH ${key}\n  en=${shape(pe)}\n  zh=${shape(pz)}`);
+	}
+	const enP = plurals(pe.nodes);
+	const zhP = plurals(pz.nodes);
+	if (plurals(pe.nodes).length !== plurals(pz.nodes).length) {
+		paramFail += 1;
+		line(`PLURAL COUNT MISMATCH ${key}: en=${enP.length} zh=${zhP.length}`);
+	}
+	const enS = selects(pe.nodes);
+	const zhS = selects(pz.nodes);
+	if (enS.length !== zhS.length) {
+		paramFail += 1;
+		line(`SELECT COUNT MISMATCH ${key}: en=${enS.length} zh=${zhS.length}`);
+	} else {
+		enS.forEach((arms, i) => {
+			const mine = zhS[i];
+			const enSet = arms.filter((a) => a !== "other");
+			const zhSet = mine.filter((a) => a !== "other");
+			if (JSON.stringify(enSet) !== JSON.stringify(zhSet)) {
+				paramFail += 1;
+				line(`SELECT ARM MISMATCH ${key} #${i}: en=${JSON.stringify(arms)} zh=${JSON.stringify(mine)}`);
+			}
+			if (!mine.includes("other")) {
+				paramFail += 1;
+				line(`SELECT MISSING other ${key} #${i}: ${JSON.stringify(mine)}`);
+			}
+		});
+	}
+}
+line(`parse failures=${parseFail} param/structure mismatches=${paramFail}`);
+
+rule("MECHANICAL — plural categories (Intl.PluralRules('zh-CN'))");
+const CLDR = new Intl.PluralRules("zh-CN").resolvedOptions().pluralCategories;
+line(`zh-CN categories: ${JSON.stringify(CLDR)}`);
+let pluralFail = 0;
+let pluralNodes = 0;
+let selectNodes = 0;
+const perKeyPlurals: string[] = [];
+for (const key of enKeys) {
+	const arms = plurals(parseMessage(zh[key]).nodes);
+	const armsEn = plurals(parseMessage(en[key]).nodes);
+	pluralNodes += arms.length;
+	selectNodes += selects(parseMessage(zh[key]).nodes).length;
+	if (arms.length > 0) perKeyPlurals.push(`${key}: zh=${JSON.stringify(arms)} en=${JSON.stringify(armsEn)}`);
+	for (const armsOfOne of arms) {
+		if (JSON.stringify([...armsOfOne].sort()) !== JSON.stringify([...CLDR].sort())) {
+			pluralFail += 1;
+			line(`NON-CLDR ARMS ${key}: ${JSON.stringify(arms)}`);
+		}
+	}
+}
+line(`plural nodes inspected=${pluralNodes}  select nodes inspected=${selectNodes}`);
+for (const entry of perKeyPlurals) line(`  ${entry}`);
+for (const n of [0, 1, 2, 3, 1000000]) {
+	line(`Intl.PluralRules('zh-CN').select(${n}) = ${new Intl.PluralRules("zh-CN").select(n)}`);
+}
+line(`plural arm violations=${pluralFail}`);
+
+rule("NEGATIVE CONTROLS — prove each check above can fail");
+{
+	const oneArm = parseMessage("{count, plural, one {# 个唤醒} other {# 个唤醒}}");
+	const arms = plurals(oneArm.nodes);
+	const caught =
+		arms.length === 1 &&
+		JSON.stringify([...arms[0]].sort()) !== JSON.stringify([...CLDR].sort());
+	line(`control 1 (a \`one\` arm must be caught): ${caught ? "CAUGHT" : "MISSED"} -> ${JSON.stringify(arms)}`);
+
+	const broken = parseMessage("{total} 个需要关注");
+	const good = parseMessage("{broken}/{total} 项需要关注");
+	const shapeOf = (q: any) =>
+		JSON.stringify([...q.params.entries()].sort((a: any, b: any) => (a[0] < b[0] ? -1 : 1)));
+	line(`control 2 (a renamed/dropped placeholder must be caught): ${shapeOf(broken) !== shapeOf(good) ? "CAUGHT" : "MISSED"}`);
+	line(`   good=${shapeOf(good)} broken=${shapeOf(broken)}`);
+
+	const familyArm = parseMessage("{family, select, wakes {唤醒} other {监控}}");
+	const familyArmWrong = parseMessage("{family, select, monitors {监控} other {监控}}");
+	line(
+		`control 3 (a renamed select arm must be caught): ${
+			JSON.stringify(selects(familyArm.nodes)[0]) !==
+			JSON.stringify(selects(familyArmWrong.nodes)[0])
+				? "CAUGHT"
+				: "MISSED"
+		}`,
+	);
+
+	const withBidi = "删除\u200e项目";
+	line(`control 4 (a bidi control must be caught): ${BIDI.test(withBidi) ? "CAUGHT" : "MISSED"}`);
+	const withAscii = "删除,项目";
+	line(
+		`control 5 (ASCII prose punctuation beside CJK must be caught): ${
+			[...withAscii].some((c, i) => (c === "," && (CJK.test([...withAscii][i - 1] ?? "") || CJK.test([...withAscii][i + 1] ?? "")))) ? "CAUGHT" : "MISSED"
+		}`,
+	);
+	const wrongPluralCount = parseMessage("{count, plural, other {# 个}}");
+	const rightPluralCount = parseMessage("{count, plural, other {# 个}} {n, plural, other {# 次}}");
+	line(
+		`control 6 (a dropped plural must be caught): ${
+			plurals(wrongPluralCount.nodes).length !== plurals(rightPluralCount.nodes).length ? "CAUGHT" : "MISSED"
+		}`,
+	);
+}
+
+rule("MECHANICAL — bidi controls / ASCII prose punctuation / Latin residue");
+const bidiHits: string[] = [];
+const asciiHits: string[] = [];
+const latinHits: string[] = [];
+for (const key of enKeys) {
+	const value: string = zh[key];
+	if (BIDI.test(value)) bidiHits.push(key);
+	for (let i = 0; i < value.length; i += 1) {
+		const ch = value[i] as string;
+		if (!ASCII_PROSE.test(ch)) continue;
+		const prev = value[i - 1] ?? "";
+		const next = value[i + 1] ?? "";
+		if (CJK.test(prev) || CJK.test(next)) asciiHits.push(`${key}: ${JSON.stringify(ch)} at ${i}`);
+	}
+	const stripped = value
+		.replace(/\{[^}]*\}/g, " ")
+		.replace(/\b(wakes|monitors|other|project|milestone|created|completed|reopened|added|updated|removed|deleted)\b(?=\s*\{)/g, " ");
+	const latin = stripped.match(/[A-Za-z][A-Za-z .-]{1,}/g) ?? [];
+	for (const run of latin) {
+		if (/^(other|wakes|monitors)$/.test(run.trim())) continue;
+		latinHits.push(`${key}: ${JSON.stringify(run.trim())}`);
+	}
+}
+line(`bidi controls: ${bidiHits.length === 0 ? "none" : JSON.stringify(bidiHits)}`);
+line(`ASCII prose punct adjacent to CJK: ${asciiHits.length === 0 ? "none" : JSON.stringify(asciiHits)}`);
+line(`Latin runs (naive; kept names/terms expected): ${JSON.stringify(latinHits)}`);
+line(`U+2026 ellipsis count: ${(JSON.stringify(zh).match(/\u2026/g) ?? []).length}`);
+line(`您 occurrences: ${(Object.values(zh) as string[]).filter((v) => v.includes("您")).length}`);
+
+/* ---------------------------------------------------------------- renders */
+
+const r = (key: string, params: Record<string, string | number> = {}) =>
+	renderFor(key, params, "zh-CN");
+const rEn = (key: string, params: Record<string, string | number> = {}) =>
+	renderFor(key, params, "en");
+/** Run the app's own composition functions with an English preference, then put
+ * the reader back on zh-CN. `t()` inside `dueLabel`/`nextDueClause` resolves the
+ * locale source at call time, so this is the same path an English reader takes,
+ * not a hand-built comparator string. */
+const withLocale = <T,>(locale: string, fn: () => T): T => {
+	setLocaleSource(() => locale);
+	try {
+		return fn();
+	} finally {
+		setLocaleSource(() => "zh-CN");
+	}
+};
+
+rule("RENDER — executed strings (zh-CN)");
+
+if (NS === "mobile.schedules") {
+	line("\n-- count nouns (0/1/2/1000000) --");
+	for (const key of ["mobile.schedules.count.wakes", "mobile.schedules.count.monitors"]) {
+		const row = [0, 1, 2, 1000000].map((n) => `${n}->${JSON.stringify(r(key, { count: n }))}`);
+		line(`${key}: ${row.join("  ")}`);
+	}
+	line("\n-- due labels from the real dueLabel() --");
+	for (const seconds of [60, 240, 5400, -7200, -259200, -30]) {
+		line(`dueLabel(${seconds}) = ${JSON.stringify(dueLabel(seconds))}`);
+	}
+	line("\n-- head.next via the real nextDueClause() (app composition, both locales) --");
+	const heads: Array<[string, number, string]> = [
+		["wakes 1", 1, wakeCountClause(1)],
+		["wakes 3", 3, wakeCountClause(3)],
+		["wakes 5", 5, wakeCountClause(5)],
+		["monitors 1", 1, monitorCountClause(1)],
+		["monitors 3", 3, monitorCountClause(3)],
+	];
+	for (const [label, count, head] of heads) {
+		const countKey = label.startsWith("monitors")
+			? "mobile.schedules.count.monitors"
+			: "mobile.schedules.count.wakes";
+		for (const seconds of [240, 60, -3600, -7200, -259200]) {
+			const zhHead = nextDueClause(head, seconds);
+			const enHead = withLocale("en", () =>
+				nextDueClause(renderFor(countKey, { count }, "en"), seconds),
+			);
+			line(`${label} @${seconds}s -> ${JSON.stringify(zhHead)}   [en: ${JSON.stringify(enHead)}]`);
+		}
+	}
+	line("\n-- dueLabel, the same app function in both locales --");
+	for (const seconds of [240, -7200]) {
+		const zhLabel = dueLabel(seconds);
+		const enLabel = withLocale("en", () => dueLabel(seconds));
+		line(`${seconds}s  zh=${JSON.stringify(zhLabel)}  en=${JSON.stringify(enLabel)}`);
+	}
+	line("\n-- head.next direct with a future label (its only real use) --");
+	line(JSON.stringify(r("mobile.schedules.head.next", { head: "3 个唤醒", label: "4m后" })));
+	line("-- head.next fed an overdue-shaped label, to show why the app routes it away --");
+	line(JSON.stringify(r("mobile.schedules.head.next", { head: "3 个唤醒", label: "已逾期2h" })));
+	line("-- head.overdue (the overdue branch) --");
+	line(JSON.stringify(r("mobile.schedules.head.overdue", { head: "3 个唤醒", label: "已逾期2h" })));
+
+	line("\n-- summary.monitors_attention at 1/3 and 2/3 (+ edges) --");
+	for (const [broken, total] of [[1, 3], [2, 3], [0, 3], [3, 3], [1000000, 1000000]] as const) {
+		line(`${broken}/${total} -> ${JSON.stringify(r("mobile.schedules.summary.monitors_attention", { broken, total }))}   [en: ${JSON.stringify(rEn("mobile.schedules.summary.monitors_attention", { broken, total }))}]`);
+	}
+	line("-- sibling summary keys --");
+	for (const key of ["mobile.schedules.summary.wakes", "mobile.schedules.summary.monitors_armed"]) {
+		line(`${key} 0/1/3 -> ${[0, 1, 3].map((n) => JSON.stringify(r(key, { count: n }))).join("  ")}`);
+	}
+
+	line("\n-- the three supervisor notices --");
+	for (const key of [
+		"mobile.schedules.supervisor.not_running",
+		"mobile.schedules.supervisor.unsupported",
+		"mobile.schedules.supervisor.unverifiable",
+	]) {
+		line(`${key}\n  zh: ${JSON.stringify(r(key))}\n  en: ${JSON.stringify(rEn(key))}\n  cells=${cells(r(key))}`);
+	}
+
+	line("\n-- truncated, both families --");
+	for (const family of ["wakes", "monitors"]) {
+		for (const [shown, total] of [[3, 10], [1, 2], [1000000, 1000000]] as const) {
+			line(`${family} ${shown}/${total} -> ${JSON.stringify(r("mobile.schedules.truncated", { shown, total, family }))}   [en: ${JSON.stringify(rEn("mobile.schedules.truncated", { shown, total, family }))}]`);
+		}
+	}
+
+	line("\n-- tail/status + the rest of the namespace (unchanged keys, regression pass) --");
+	for (const key of enKeys) {
+		const params: Record<string, any> = {};
+		if (key === "mobile.schedules.tail.failed") params.count = 3;
+		if (key === "mobile.schedules.cadence.every") params.duration = "1h";
+		if (key === "mobile.schedules.cadence.left") {
+			params.cadence = r("mobile.schedules.cadence.every", { duration: "1h" });
+			params.remaining = 1;
+		}
+		if (key === "mobile.schedules.cadence.spent") params.cadence = r("mobile.schedules.cadence.every", { duration: "1h" });
+		if (key === "mobile.schedules.show_more.wakes" || key === "mobile.schedules.show_more.monitors") params.hidden = 2;
+		if (key === "mobile.schedules.truncated") continue;
+		if (key.startsWith("mobile.schedules.count.") || key.startsWith("mobile.schedules.summary.")) continue;
+		if (key.startsWith("mobile.schedules.supervisor.")) continue;
+		if (key.startsWith("mobile.schedules.head.")) continue;
+		if (key.startsWith("mobile.schedules.due.")) continue;
+		try {
+			line(`${key}: ${JSON.stringify(r(key, params))}`);
+		} catch (err) {
+			line(`${key}: NOT-RENDERED-HERE (${(err as Error).message})`);
+		}
+	}
+	line("-- due.ahead / due.overdue direct --");
+	line(`due.ahead(4m) -> ${JSON.stringify(r("mobile.schedules.due.ahead", { label: "4m" }))}   [en: ${JSON.stringify(rEn("mobile.schedules.due.ahead", { label: "4m" }))}]`);
+	line(`due.overdue(2h) -> ${JSON.stringify(r("mobile.schedules.due.overdue", { label: "2h" }))}   [en: ${JSON.stringify(rEn("mobile.schedules.due.overdue", { label: "2h" }))}]`);
+	line(`tail.failed 1/3 -> ${[1, 3].map((n) => JSON.stringify(r("mobile.schedules.tail.failed", { count: n }))).join("  ")}`);
+}
+
+if (NS === "mobile.projects") {
+	line("\n-- delete_body with a real project name (proves {name} survives) --");
+	for (const name of ["payments-migration", "beta cut", "项目甲"]) {
+		line(`delete_body(${JSON.stringify(name)})\n  zh: ${JSON.stringify(r("mobile.projects.delete_body", { name }))}\n  en: ${JSON.stringify(rEn("mobile.projects.delete_body", { name }))}`);
+	}
+	line("\n-- remove_milestone_body with a real milestone name --");
+	for (const name of ["beta cut", "v2.0-rc1", "里程碑乙"]) {
+		line(`remove_milestone_body(${JSON.stringify(name)})\n  zh: ${JSON.stringify(r("mobile.projects.remove_milestone_body", { name }))}\n  en: ${JSON.stringify(rEn("mobile.projects.remove_milestone_body", { name }))}`);
+	}
+	line("\n-- filed_by / session_state --");
+	for (const key of [
+		"mobile.projects.session_state.filed_by",
+		"mobile.projects.session_state.missing",
+		"mobile.projects.session_state.not_running",
+	]) {
+		line(`${key}: ${JSON.stringify(r(key))}`);
+	}
+	line("\n-- counts --");
+	for (const [key, params] of [
+		["mobile.projects.sessions.count", { count: 2 }],
+		["mobile.projects.sessions.count", { count: 1 }],
+		["mobile.projects.sessions.live", { base: r("mobile.projects.sessions.count", { count: 2 }), live: 1 }],
+		["mobile.projects.milestones.count", { completed: 1, total: 2 }],
+	] as const) {
+		line(`${key} ${JSON.stringify(params)} -> ${JSON.stringify(r(key, params as any))}`);
+	}
+	line("\n-- write_receipt, every action x kind --");
+	const actions = ["created", "completed", "reopened", "added", "updated", "removed", "deleted", "archived"];
+	for (const kind of ["project", "milestone", "other"]) {
+		for (const action of actions) {
+			line(`${action}/${kind} -> ${JSON.stringify(r("mobile.projects.write_receipt", { kind, action, subject: kind === "milestone" ? "beta cut" : "payments-migration" }))}`);
+		}
+	}
+	line("\n-- remaining keys --");
+	for (const key of enKeys) {
+		if (key.startsWith("mobile.projects.write_receipt")) continue;
+		if (key.startsWith("mobile.projects.delete_body") || key.startsWith("mobile.projects.remove_milestone_body")) continue;
+		if (key.startsWith("mobile.projects.sessions.") || key.startsWith("mobile.projects.milestones.count")) continue;
+		if (key.startsWith("mobile.projects.session_state.")) continue;
+		line(`${key}: ${JSON.stringify(r(key))}`);
+	}
+}
+
+if (NS === "mobile.computers") {
+	line("\n-- every key rendered --");
+	for (const key of enKeys) {
+		line(`${key}\n  zh: ${JSON.stringify(r(key))}\n  en: ${JSON.stringify(rEn(key))}\n  cells=${cells(r(key))}`);
+	}
+	line("\n-- not_connected against core's committed account noun --");
+	line(`zh: ${JSON.stringify(r("mobile.computers.section.not_connected"))}`);
+	line(`contains 账户: ${r("mobile.computers.section.not_connected").includes("账户")}`);
+	line(`contains 账号: ${r("mobile.computers.section.not_connected").includes("账号")}`);
+	line(`raw bytes: ${JSON.stringify(r("mobile.computers.section.not_connected").split("").map((c: string) => `${c}U+${c.codePointAt(0)?.toString(16).toUpperCase()}`).join(" "))}`);
+}
+
+rule("FIT — cells, per string (2 cells per CJK/full-width char, 1 per ASCII)");
+for (const key of enKeys) {
+	const value = zh[key] as string;
+	const rendered = (() => {
+		try {
+			return r(key, { count: 3, hidden: 2, broken: 1, total: 3, name: "payments-migration", base: "3 个会话", live: 1, completed: 1, milestoneTotal: 2, shown: 3, total2: 10, family: "wakes", kind: "project", action: "created", subject: "payments-migration", duration: "1h", cadence: "每1h", remaining: 1 });
+		} catch {
+			return value;
+		}
+	})();
+	line(`${key}: chars=${chars(value)} cells=${cells(value)} renderedCells=${cells(rendered)}`);
+}
+
+line("\nDONE");

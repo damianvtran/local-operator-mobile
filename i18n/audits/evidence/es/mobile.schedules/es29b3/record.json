@@ -1,0 +1,157 @@
+{
+	"schema": 1,
+	"audit_id": "es29b3",
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"locale": "es",
+	"namespace": "mobile.schedules",
+	"audit_date": "2026-10-29",
+	"round": 1,
+	"audited_head_commit": "c5f491ece9db11ec2dc7d136e7de88f93781acff",
+	"audited_worktree": "/Users/damian/workspace/es-wave",
+	"audited_worktree_note": "feat/i18n-spanish at c5f491e. The es catalogues are UNTRACKED new files and src/i18n/catalogue.gen.ts is modified (it already carries an es projection), so the audited bytes are working-tree bytes identified by input_hashes.target.sha256, not committed bytes.",
+	"key_count": {
+		"en": 38,
+		"target": 38
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "1f01d8fb4b08",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "session model header: temporary fallback chain from anthropic/claude-sonnet-5-5 because of provider quota (openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto). Every command in audit.log ran while the session header read radient/auto; no earlier hop's output is used as evidence.",
+		"independent_from_translator_session": true,
+		"independence": "Different agent context and different session from the translator (session c53616dcee1c, job not recorded in this bundle). No shared transcript, no translator note read as evidence. MODEL IDENTITY IS NOT DIVERSE: the translator's reported served model is the same (radient/auto), so this is identity independence only - disclosed, not closed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c53616dcee1c",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "reported in the audit task brief; not independently observed by this auditor",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "catalogues/en/mobile.schedules.json",
+			"sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+		},
+		"context": {
+			"path": "catalogues/en/mobile.schedules.context.json",
+			"sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+		},
+		"target": {
+			"path": "catalogues/es/mobile.schedules.json",
+			"sha256": "aae7d6ac08f896b71ad1c70af5cfa73b81bd565ceda2efa9607648d925842084"
+		}
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage)",
+		"entry": "src/i18n/runtime.ts (renderFor)",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4"
+		},
+		"lang_plural_categories": {
+			"es": [
+				"one",
+				"many",
+				"other"
+			],
+			"en": [
+				"one",
+				"other"
+			]
+		},
+		"note": "Rendered with the app's own parser, not a generic ICU library. The renderer renders '#' and numeric arguments through String(n): 1000000 renders as '1000000', never '1.000.000'. That is the renderer's documented limitation (src/i18n/messages.ts), not a catalogue defect, and it is why the style guide's grouping rule cannot be observed in these tables."
+	},
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 2,
+		"finding_ids": [
+			"ES-SCH-1",
+			"ES-SCH-2",
+			"ES-SCH-3",
+			"ES-SCH-4",
+			"ES-SCH-5"
+		]
+	},
+	"findings": [
+		{
+			"id": "ES-SCH-1",
+			"severity": "major",
+			"status": "open",
+			"detail": "see report.md, section 'Findings' (ES-SCH-1)"
+		},
+		{
+			"id": "ES-SCH-2",
+			"severity": "major",
+			"status": "open",
+			"detail": "see report.md, section 'Findings' (ES-SCH-2)"
+		},
+		{
+			"id": "ES-SCH-3",
+			"severity": "minor",
+			"status": "open",
+			"detail": "see report.md, section 'Findings' (ES-SCH-3)"
+		},
+		{
+			"id": "ES-SCH-4",
+			"severity": "nit",
+			"status": "open",
+			"detail": "see report.md, section 'Findings' (ES-SCH-4)"
+		},
+		{
+			"id": "ES-SCH-5",
+			"severity": "nit",
+			"status": "open",
+			"detail": "see report.md, section 'Findings' (ES-SCH-5)"
+		}
+	],
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3/report.md",
+			"sha256": "51c2f4813a134d8d5af8708dfb13e0b2236c2fbad9a5370a874d2bc961dc021a"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3/audit.log",
+			"sha256": "de55b4bace60bb6584bbbac6059fefa58219f4b8d01a5c380214edb2be725aaf"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3/check.mjs.txt",
+			"sha256": "93ce81cce474afb8b2ae2f292188f6933b4523d11744448e8946c3998597f83a"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3/record.json",
+			"sha256": null,
+			"note": "this record; a self-hash is not meaningful"
+		}
+	],
+	"route_disclosure": {
+		"read_route": "ordinary git/worktree reads in /Users/damian/workspace/es-wave (cat, python json, grep, git rev-parse/status/check-ignore, shasum); no network fetch of any copy",
+		"english_context_sidecars": "English nested-JSON context sidecars are NOT routable through read_public_copy (that tool reads a catalogue key from an allowlisted path, not a nested JSON note), so the sidecars were read as ordinary worktree files.",
+		"credential_shaped_keys": "no credential-shaped key exists in these three namespaces, so no keyed clean-core route was required or attempted",
+		"redaction_scan": "this auditor did not run a redaction-marker scan; the English source and context files were read directly and contain no credential values",
+		"translation_services": "none used: no translation API, SDK or MT service compared, produced or back-translated any string; all judgements are reading judgements"
+	},
+	"limitations": [
+		"No native-speaker human review: the judgement is an LLM auditor's.",
+		"No rendered proof: no screenshot, simulator or device frame was captured; width statements rest on executed character counts, not on pixels.",
+		"No ledger row and no ledger command: this repository has no i18n/ledger.json and no audit-ledger command (docs/i18n.md records the report in the pull request), so this bundle is the artifact of record.",
+		"The repository validator (npm run -s i18n:catalogue:check) passes but does NOT parse the es bytes while es is absent from SHIPPED_LOCALES: its own line reads 'argument types from en, fr'. ICU validity for es is therefore established by this auditor's parse of every es message with src/i18n/messages.ts, not by the validator.",
+		"Audited bytes are WORKING-TREE bytes: the es catalogues are untracked new files on feat/i18n-spanish at c5f491e, and src/i18n/catalogue.gen.ts is modified (it already carries an es projection). Verified against input_hashes.target.sha256, not against a committed revision."
+	],
+	"limits": [
+		"No native-speaker human review: the judgement is an LLM auditor's.",
+		"No rendered proof: no screenshot, simulator or device frame was captured; width statements rest on executed character counts, not on pixels.",
+		"No ledger row and no ledger command: this repository has no i18n/ledger.json and no audit-ledger command (docs/i18n.md records the report in the pull request), so this bundle is the artifact of record.",
+		"The repository validator (npm run -s i18n:catalogue:check) passes but does NOT parse the es bytes while es is absent from SHIPPED_LOCALES: its own line reads 'argument types from en, fr'. ICU validity for es is therefore established by this auditor's parse of every es message with src/i18n/messages.ts, not by the validator.",
+		"Audited bytes are WORKING-TREE bytes: the es catalogues are untracked new files on feat/i18n-spanish at c5f491e, and src/i18n/catalogue.gen.ts is modified (it already carries an es projection). Verified against input_hashes.target.sha256, not against a committed revision."
+	],
+	"limits_note": "same list as limitations; the audit brief names this field 'limits', the fr bundles name it 'limitations'",
+	"audit_notes_not_execution_log": "report.md and this record contain per-key reasoning and findings (notes). audit.log holds the actual command output: the repository validator run, the mechanical/ICU/typography scans and every rendered table quoted in report.md. No native-speaker review and no screenshot claim is made.",
+	"ledger": {
+		"row_written": false,
+		"reason": "this repository has no i18n/ledger.json and no audit-ledger command (docs/i18n.md records the report in the pull request); the bundle is the artifact of record"
+	},
+	"tracking_note": "i18n/audits/evidence/**/audit.log is negated in .gitignore line 80 (!i18n/audits/evidence/**/audit.log), so a plain `git add i18n` keeps the execution log; verified with git check-ignore -v."
+}

@@ -1,0 +1,141 @@
+audit fr29p3 — mobile.projects — fr — 2026-10-29
+audited head: 49f79b3b3ca23ff91403ed05072945a672fb7d4e
+worktree: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+tracked tree: 0 modified tracked path(s) outside the untracked evidence bundles
+auditor: i18n-auditor (lopdev team child session 78c640379596), ACTUAL model radient/auto
+model provenance: harness model-switch notices in this transcript — anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,
+                  each reported as 'provider failure: quota'. The pinned Sonnet model did not run this audit.
+independence: different agent and session from the translator; this audit proposed neither the home wording nor the French receipt arms.
+# note: every line after a '$ ' prompt is a command actually run; the lines below it are that command's output.
+# note: no native-speaker review, no rendered frame, and no translation service is claimed or used.
+
+=== §1 repository i18n gate (generate --check + strings check) ===
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d
+exit=0
+
+=== §2 targeted tests (i18n runtime + projects copy) ===
+$ npx vitest run src/i18n src/features/projects
+ Test Files  6 passed (6)
+      Tests  97 passed (97)
+
+=== §3 app-runtime render, all codes, both locales (mobile.projects) ===
+# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.
+$ node --import ./loader.mjs render.mjs | awk "/=== 5\\. mobile.projects.write_receipt/{p=1} /=== 11\\. CLDR/{p=0} p"
+=== 5. mobile.projects.write_receipt — source, context, target ===
+en  : "{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}."
+ctx : "One-line success receipt. {action} is a stable CODE the screen selects — created, completed, reopened, added, updated, removed or deleted — and never a rendered word: the catalogue turns the code into the verb, so each locale supplies its own. other catches an unknown code as Updated. {subject} is the thing acted on. Ends with a full stop."
+fr  : "{action, select, created {Créé} completed {Terminé} reopened {Rouvert} added {Ajouté} updated {Mis à jour} removed {Retiré} deleted {Supprimé} other {Mis à jour}} {subject}."
+
+=== 5a. declared arms per locale (from the app's own parser) ===
+en: [["select","action",["added","completed","created","deleted","other","removed","reopened","updated"]]]
+fr: [["select","action",["added","completed","created","deleted","other","removed","reopened","updated"]]]
+params: en=[["action","select"],["subject","text"]] fr=[["action","select"],["subject","text"]]
+
+=== 6. all seven codes + other, rendered through renderFor (en / fr) ===
+created   en="Created payments-migration."    fr="Créé Projet X."           english-verb-in-fr=false
+completed en="Completed payments-migration."  fr="Terminé Projet X."        english-verb-in-fr=false
+reopened  en="Reopened payments-migration."   fr="Rouvert Projet X."        english-verb-in-fr=false
+added     en="Added payments-migration."      fr="Ajouté Projet X."         english-verb-in-fr=false
+updated   en="Updated payments-migration."    fr="Mis à jour Projet X."     english-verb-in-fr=false
+removed   en="Removed payments-migration."    fr="Retiré Projet X."         english-verb-in-fr=false
+deleted   en="Deleted payments-migration."    fr="Supprimé Projet X."       english-verb-in-fr=false
+other     en="Updated payments-migration."    fr="Mis à jour Projet X."     english-verb-in-fr=false
+
+=== 7. unknown-code fallback (other) vs known code, both locales ===
+fr unknown: Mis à jour Projet X.
+en unknown: Updated payments-migration.
+
+=== 8. English rendering unchanged vs the pre-change mechanism ===
+en source before: "{action} {subject}."
+created   before="Created payments-migration."    after="Created payments-migration."    identical=true
+completed before="Completed payments-migration."  after="Completed payments-migration."  identical=true
+reopened  before="Reopened payments-migration."   after="Reopened payments-migration."   identical=true
+added     before="Added payments-migration."      after="Added payments-migration."      identical=true
+updated   before="Updated payments-migration."    after="Updated payments-migration."    identical=true
+removed   before="Removed payments-migration."    after="Removed payments-migration."    identical=true
+deleted   before="Deleted payments-migration."    after="Deleted payments-migration."    identical=true
+
+=== 9. French arms: participle agreement + English-word scan ===
+created   -> "Créé"             ascii-only=false has-accent=true
+completed -> "Terminé"          ascii-only=false has-accent=true
+reopened  -> "Rouvert"          ascii-only=true has-accent=false
+added     -> "Ajouté"           ascii-only=false has-accent=true
+updated   -> "Mis à jour"       ascii-only=false has-accent=true
+removed   -> "Retiré"           ascii-only=false has-accent=true
+deleted   -> "Supprimé"         ascii-only=false has-accent=true
+other     -> "Mis à jour"       ascii-only=false has-accent=true
+distinct arms: en=7 fr=7
+
+=== 10. subject composition — what the screens actually pass ===
+project-create.tsx:152   writeReceipt("created", answer.project.name)
+project-detail.tsx:171   writeReceipt(completing ? "completed" : "reopened", milestone.name)
+project-detail.tsx:227   writeReceipt(editor.editingName === null ? "added" : "updated", `milestone ${name}`)
+project-detail.tsx:249   writeReceipt("removed", `milestone ${name}`)
+project-detail.tsx:273   writeReceipt("deleted", project.name)
+  as rendered on a French screen: Ajouté milestone Audit Q4.
+  as rendered on a French screen: Retiré milestone Audit Q4.
+
+
+=== §4 delta proof: exactly the three recorded substrings changed since the round-2 bundle (fr29p2) ===
+$ python3 projects-delta.py
+src/i18n/catalogues/en/mobile.projects.json
+  current bytes 4ecd274b49c1e872113e9f9ffd47b282a9e16f2223b04c72157e2111a2b02808 1554
+  round-2 recorded value, after reverting the one changed string: 8218f1fcea96270ce2f9df4431e1eb0c749475305a9656b03d2c34a71c88bb93 1401
+  reconstruction matches round 2: True
+  occurrences of the new string: 1
+src/i18n/catalogues/fr/mobile.projects.json
+  current bytes cdf1a5c10855fdfd6d09d0b6853c3d31945b7b850b5f29fffb96e9686a036e7f 1854
+  round-2 recorded value, after reverting the one changed string: 58b738859d329b48c018cb9f379c778aa73ad0244546b759012f2597297128f6 1692
+  reconstruction matches round 2: True
+  occurrences of the new string: 1
+src/i18n/catalogues/en/mobile.projects.context.json
+  current bytes 37f6dac52ec4d2217e518b3bd308e8809d5a94c33d30457aa2331dbd84a867d3 3775
+  round-2 recorded value, after reverting the one changed string: b8657428b40efc740196a6a289656cabc41f047a20ee72ccf5e5ed514ce3a68e 3596
+  reconstruction matches round 2: True
+  occurrences of the new string: 1
+
+=== §5 call sites (current head) ===
+$ grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx
+src/features/projects/project-create.tsx:11:	writeReceipt,
+src/features/projects/project-create.tsx:152:			showToast(writeReceipt("created", answer.project.name));
+src/features/projects/project-detail.tsx:23:	writeReceipt,
+src/features/projects/project-detail.tsx:171:				writeReceipt(completing ? "completed" : "reopened", milestone.name),
+src/features/projects/project-detail.tsx:227:				writeReceipt(
+src/features/projects/project-detail.tsx:249:			showToast(writeReceipt("removed", `milestone ${name}`));
+src/features/projects/project-detail.tsx:273:			showToast(writeReceipt("deleted", project.name));
+$ git show 79b3fad:src/features/projects/project-detail.tsx | grep -n "writeReceipt"
+23:	writeReceipt,
+171:				writeReceipt(completing ? "Completed" : "Reopened", milestone.name),
+227:				writeReceipt(
+249:			showToast(writeReceipt("Removed", `milestone ${name}`));
+273:			showToast(writeReceipt("Deleted", project.name));
+$ git show 79b3fad:src/features/projects/project-create.tsx | grep -n "writeReceipt"
+11:	writeReceipt,
+152:			showToast(writeReceipt("Created", answer.project.name));
+
+=== §6 the French catalogue's own word for the milestone object ===
+$ grep -o "jalon" src/i18n/catalogues/fr/mobile.projects.json | wc -l
+       7
+$ grep -n "milestone ${name}" src/features/projects/project-detail.tsx
+229:					`milestone ${name}`,
+249:			showToast(writeReceipt("removed", `milestone ${name}`));
+
+=== §7 English rendering unchanged against the pre-change mechanism ===
+# note: the old call sites passed the rendered English verb; §5 above prints them from git.
+$ node --import ./loader.mjs render.mjs | awk "/=== 8\\. English rendering unchanged/{p=1} /=== 9\\. French arms/{p=0} p"
+=== 8. English rendering unchanged vs the pre-change mechanism ===
+en source before: "{action} {subject}."
+created   before="Created payments-migration."    after="Created payments-migration."    identical=true
+completed before="Completed payments-migration."  after="Completed payments-migration."  identical=true
+reopened  before="Reopened payments-migration."   after="Reopened payments-migration."   identical=true
+added     before="Added payments-migration."      after="Added payments-migration."      identical=true
+updated   before="Updated payments-migration."    after="Updated payments-migration."    identical=true
+removed   before="Removed payments-migration."    after="Removed payments-migration."    identical=true
+deleted   before="Deleted payments-migration."    after="Deleted payments-migration."    identical=true
+
+=== 9. French arms: participle agreement + English-word scan ===
+
+=== §8 evidence-bundle files (hashes computed after writing) ===
+# note: recorded in record.json artifacts; this section is written by the bundling step, see report.md.

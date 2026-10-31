@@ -1,0 +1,944 @@
+# audit.log — locale fr — namespace mobile.home — audit id fr29h2
+# Round-2 independent audit of the CURRENT bytes at this worktree's HEAD.
+# Every line below is the command line followed by that command's ACTUAL stdout/stderr.
+# Scope note: the harness scripts below cover BOTH namespaces (mobile.home, mobile.schedules);
+# this bundle's scope is mobile.home. Nothing was filtered out of any command's output.
+
+==================================================================
+## 0. Revision under audit
+==================================================================
+$ git rev-parse HEAD; git log --oneline -1
+79b3fad082c0ae850b06a4437006d445bb1c4887
+79b3fad fix(i18n): compare translated arguments, correct French counts, unfreeze composer copy
+
+$ git status --porcelain | head -5
+?? i18n/
+
+==================================================================
+## 1. Input hashes (sha256), the files actually read
+==================================================================
+$ sha256sum src/i18n/catalogues/{en,fr}/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json src/i18n/catalogues/{en,fr}/mobile.schedules.json src/i18n/catalogues/en/mobile.schedules.context.json
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d  src/i18n/catalogues/fr/mobile.home.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+af37a911231771859a1cf8517410a8bc9ea35f674323481d66d58aab3cdf9cb2  src/i18n/catalogues/fr/mobile.schedules.json
+
+==================================================================
+## 2. The repository's own catalogue validator
+==================================================================
+$ npm run i18n:catalogue:check
+> local-operator-mobile@0.0.0 i18n:catalogue:check
+> node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+(node:35886) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0 (as observed)
+
+==================================================================
+## 3. Scoped mechanical audit: JSON parity, placeholder names/types,
+##    ICU branch inventory, French CLDR categories, banned characters
+==================================================================
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON <scratch>/audit2.ts
+== INPUT HASHES (sha256) ==
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d  src/i18n/catalogues/fr/mobile.home.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+af37a911231771859a1cf8517410a8bc9ea35f674323481d66d58aab3cdf9cb2  src/i18n/catalogues/fr/mobile.schedules.json
+
+===== mobile.home =====
+key counts: en=27 context=27 fr=27
+fr duplicate keys: []
+missing in fr: []
+extra in fr: []
+en keys without context: []
+
+-- PER-KEY STRUCTURE --
+mobile.home.connect_disabled_reason | params en=[] fr=[] | ok
+mobile.home.folders_read_failed | params en=[] fr=[] | ok
+mobile.home.greeting | params en=[] fr=[] | ok
+mobile.home.options.apply | params en=[] fr=[] | ok
+mobile.home.options.fixed | params en=[] fr=[] | ok
+mobile.home.options.folder | params en=[] fr=[] | ok
+mobile.home.options.title | params en=[] fr=[] | ok
+mobile.home.queue.discard | params en=[] fr=[] | ok
+mobile.home.queue.restore | params en=[] fr=[] | ok
+mobile.home.queue.sheet_title | params en=[] fr=[] | ok
+mobile.home.queue.view | params en=[] fr=[] | ok
+mobile.home.refused_start_fallback | params en=[] fr=[] | ok
+mobile.home.starting | params en=[] fr=[] | ok
+mobile.home.startup_queue.blocked | params en=[] fr=[] | ok
+mobile.home.startup_queue.not_started | params en=[] fr=[] | ok
+mobile.home.startup_queue.sending | params en=[] fr=[] | ok
+mobile.home.startup_queue.unconfirmed | params en=[] fr=[] | ok
+mobile.home.suggestion.last_turn | params en=[] fr=[] | ok
+mobile.home.suggestion.linear_mcp | params en=[] fr=[] | ok
+mobile.home.suggestion.phone_access | params en=[] fr=[] | ok
+mobile.home.suggestion.review_repo | params en=[] fr=[] | ok
+mobile.home.suggestion.team_of_agents | params en=[] fr=[] | ok
+mobile.home.suggestion.wake_summary | params en=[] fr=[] | ok
+mobile.home.tip.parallel | params en=[] fr=[] | ok
+mobile.home.tip.schedule | params en=[] fr=[] | ok
+mobile.home.tip.search | params en=[] fr=[] | ok
+mobile.home.transcript.waiting | params en=[] fr=[] | ok
+
+===== mobile.schedules =====
+key counts: en=38 context=38 fr=38
+fr duplicate keys: []
+missing in fr: []
+extra in fr: []
+en keys without context: []
+
+-- PER-KEY STRUCTURE --
+mobile.schedules.cadence.every | params en=[duration:text] fr=[duration:text] | ok
+mobile.schedules.cadence.left | params en=[cadence:text remaining:text] fr=[cadence:text remaining:plural] | branches remaining=[one|many|other] | remaining:fr-CLDR-ok | FLAGS TYPE-DIFF en[cadence:text,remaining:text] fr[cadence:text,remaining:plural]
+mobile.schedules.cadence.once | params en=[] fr=[] | ok
+mobile.schedules.cadence.spent | params en=[cadence:text] fr=[cadence:text] | ok
+mobile.schedules.count.monitors | params en=[count:plural] fr=[count:plural] | branches count=[one|many|other] | count:fr-CLDR-ok | ok
+mobile.schedules.count.wakes | params en=[count:plural] fr=[count:plural] | branches count=[one|many|other] | count:fr-CLDR-ok | ok
+mobile.schedules.due.ahead | params en=[label:text] fr=[label:text] | ok
+mobile.schedules.due.overdue | params en=[label:text] fr=[label:text] | ok
+mobile.schedules.empty.body | params en=[] fr=[] | ok
+mobile.schedules.empty.title | params en=[] fr=[] | ok
+mobile.schedules.empty_line.monitors | params en=[] fr=[] | ok
+mobile.schedules.empty_line.wakes | params en=[] fr=[] | ok
+mobile.schedules.gone.monitors | params en=[] fr=[] | ok
+mobile.schedules.gone.wakes | params en=[] fr=[] | ok
+mobile.schedules.head.next | params en=[head:text label:text] fr=[head:text label:text] | ok
+mobile.schedules.head.overdue | params en=[head:text label:text] fr=[head:text label:text] | ok
+mobile.schedules.parked.monitors | params en=[] fr=[] | ok
+mobile.schedules.parked.wakes | params en=[] fr=[] | ok
+mobile.schedules.read_error.monitors | params en=[] fr=[] | ok
+mobile.schedules.read_error.wakes | params en=[] fr=[] | ok
+mobile.schedules.read_unreachable | params en=[] fr=[] | ok
+mobile.schedules.show_less.monitors | params en=[] fr=[] | ok
+mobile.schedules.show_less.wakes | params en=[] fr=[] | ok
+mobile.schedules.show_more.monitors | params en=[hidden:plural] fr=[hidden:plural] | branches hidden=[one|many|other] | hidden:fr-CLDR-ok | ok
+mobile.schedules.show_more.wakes | params en=[hidden:plural] fr=[hidden:plural] | branches hidden=[one|many|other] | hidden:fr-CLDR-ok | ok
+mobile.schedules.state.disabled | params en=[] fr=[] | ok
+mobile.schedules.state.dormant | params en=[] fr=[] | ok
+mobile.schedules.state.expired | params en=[] fr=[] | ok
+mobile.schedules.state.stale | params en=[] fr=[] | ok
+mobile.schedules.state.waiting | params en=[] fr=[] | ok
+mobile.schedules.summary.monitors_armed | params en=[count:text] fr=[count:plural] | branches count=[one|many|other] | count:fr-CLDR-ok | FLAGS TYPE-DIFF en[count:text] fr[count:plural]
+mobile.schedules.summary.monitors_attention | params en=[broken:text total:text] fr=[broken:text total:text] | ok
+mobile.schedules.summary.wakes | params en=[count:text] fr=[count:plural] | branches count=[one|many|other] | count:fr-CLDR-ok | FLAGS TYPE-DIFF en[count:text] fr[count:plural]
+mobile.schedules.supervisor.not_running | params en=[] fr=[] | ok
+mobile.schedules.supervisor.unsupported | params en=[] fr=[] | ok
+mobile.schedules.supervisor.unverifiable | params en=[] fr=[] | ok
+mobile.schedules.tail.failed | params en=[count:text] fr=[count:plural] | branches count=[one|many|other] | count:fr-CLDR-ok | FLAGS TYPE-DIFF en[count:text] fr[count:plural]
+mobile.schedules.truncated | params en=[family:select shown:text total:text] fr=[family:select shown:plural total:text] | branches shown=[one|many|other] family=select[wakes|other] | shown:fr-CLDR-ok | FLAGS TYPE-DIFF en[family:select,shown:text,total:text] fr[family:select,shown:plural,total:text]
+
+===== EXECUTED PLURAL RENDERS (app parser, locale fr) =====
+pluralCategory(fr, n): 0->one  1->one  2->other  1000000->many  1500000->other
+pluralCategory(en, n): 0->other  1->one  2->other  1000000->other  1500000->other
+RENDER fr mobile.schedules.count.monitors count=0: 0 surveillance
+RENDER fr mobile.schedules.count.monitors count=1: 1 surveillance
+RENDER fr mobile.schedules.count.monitors count=2: 2 surveillances
+RENDER fr mobile.schedules.count.monitors count=1000000: 1000000 de surveillances
+RENDER fr mobile.schedules.count.monitors count=1500000: 1500000 surveillances
+RENDER fr mobile.schedules.count.wakes count=0: 0 réveil
+RENDER fr mobile.schedules.count.wakes count=1: 1 réveil
+RENDER fr mobile.schedules.count.wakes count=2: 2 réveils
+RENDER fr mobile.schedules.count.wakes count=1000000: 1000000 de réveils
+RENDER fr mobile.schedules.count.wakes count=1500000: 1500000 réveils
+RENDER fr mobile.schedules.cadence.left remaining=0: tous les 1h · 0 envoi restant
+RENDER fr mobile.schedules.cadence.left remaining=1: tous les 1h · 1 envoi restant
+RENDER fr mobile.schedules.cadence.left remaining=2: tous les 1h · 2 envois restants
+RENDER fr mobile.schedules.cadence.left remaining=1000000: tous les 1h · 1000000 d’envois restants
+RENDER fr mobile.schedules.cadence.left remaining=1500000: tous les 1h · 1500000 envois restants
+RENDER fr mobile.schedules.show_more.monitors hidden=0: Afficher 0 surveillance de plus
+RENDER fr mobile.schedules.show_more.monitors hidden=1: Afficher 1 surveillance de plus
+RENDER fr mobile.schedules.show_more.monitors hidden=2: Afficher 2 surveillances de plus
+RENDER fr mobile.schedules.show_more.monitors hidden=1000000: Afficher 1000000 de surveillances de plus
+RENDER fr mobile.schedules.show_more.monitors hidden=1500000: Afficher 1500000 surveillances de plus
+RENDER fr mobile.schedules.show_more.wakes hidden=0: Afficher 0 réveil de plus
+RENDER fr mobile.schedules.show_more.wakes hidden=1: Afficher 1 réveil de plus
+RENDER fr mobile.schedules.show_more.wakes hidden=2: Afficher 2 réveils de plus
+RENDER fr mobile.schedules.show_more.wakes hidden=1000000: Afficher 1000000 de réveils de plus
+RENDER fr mobile.schedules.show_more.wakes hidden=1500000: Afficher 1500000 réveils de plus
+RENDER fr mobile.schedules.summary.monitors_armed count=0: 0 active
+RENDER fr mobile.schedules.summary.monitors_armed count=1: 1 active
+RENDER fr mobile.schedules.summary.monitors_armed count=2: 2 actives
+RENDER fr mobile.schedules.summary.monitors_armed count=1000000: 1000000 de surveillances actives
+RENDER fr mobile.schedules.summary.monitors_armed count=1500000: 1500000 actives
+RENDER fr mobile.schedules.summary.wakes count=0: 0 planifié
+RENDER fr mobile.schedules.summary.wakes count=1: 1 planifié
+RENDER fr mobile.schedules.summary.wakes count=2: 2 planifiés
+RENDER fr mobile.schedules.summary.wakes count=1000000: 1000000 de réveils planifiés
+RENDER fr mobile.schedules.summary.wakes count=1500000: 1500000 planifiés
+RENDER fr mobile.schedules.tail.failed count=0: 0 échec
+RENDER fr mobile.schedules.tail.failed count=1: 1 échec
+RENDER fr mobile.schedules.tail.failed count=2: 2 échecs
+RENDER fr mobile.schedules.tail.failed count=1000000: 1000000 d’échecs
+RENDER fr mobile.schedules.tail.failed count=1500000: 1500000 échecs
+RENDER fr mobile.schedules.truncated shown=0: Affichage de 0 conversation sur 5 avec des réveils.
+RENDER fr mobile.schedules.truncated shown=1: Affichage de 1 conversation sur 5 avec des réveils.
+RENDER fr mobile.schedules.truncated shown=2: Affichage de 2 conversations sur 5 avec des réveils.
+RENDER fr mobile.schedules.truncated shown=1000000: Affichage de 1000000 de conversations sur 5 avec des réveils.
+RENDER fr mobile.schedules.truncated shown=1500000: Affichage de 1500000 conversations sur 5 avec des réveils.
+
+===== COMPOSED FRAGMENTS (dueLabel -> nextDueClause equivalent) =====
+COMPOSE head wakes n=3 secs=240: 3 réveils · prochaine échéance dans 4m
+COMPOSE head monitors n=3 secs=240: 3 surveillances · prochaine échéance dans 4m
+COMPOSE head wakes n=1 secs=30: 1 réveil · prochaine échéance dans 30s
+COMPOSE head monitors n=1 secs=30: 1 surveillance · prochaine échéance dans 30s
+COMPOSE head wakes n=2 secs=-7200: 2 réveils · en retard de 2h
+COMPOSE head monitors n=2 secs=-7200: 2 surveillances · en retard de 2h
+COMPOSE head wakes n=1000000 secs=240: 1000000 de réveils · prochaine échéance dans 4m
+COMPOSE head monitors n=1000000 secs=240: 1000000 de surveillances · prochaine échéance dans 4m
+COMPOSE wakeDueWord overdue: en retard de 2h   ahead: dans 4m
+COMPOSE cadence.left remaining=1: tous les 1h · 1 envoi restant
+COMPOSE cadence.left remaining=2: tous les 1h · 2 envois restants
+COMPOSE cadence.left remaining=1000000: tous les 1h · 1000000 d’envois restants
+COMPOSE monitors_attention 1/1: 1 sur 1 en alerte
+COMPOSE monitors_attention 2/5: 2 sur 5 en alerte
+COMPOSE monitors_attention 0/3: 0 sur 3 en alerte
+COMPOSE truncated 3/12/wakes: Affichage de 3 conversations sur 12 avec des réveils.
+COMPOSE truncated 1/1/monitors: Affichage de 1 conversation sur 1 avec des surveillances.
+COMPOSE truncated 3/5/monitors: Affichage de 3 conversations sur 5 avec des surveillances.
+
+===== SAME-CODE EN CONTROL (locale en) =====
+RENDER en mobile.schedules.count.monitors count=0: 0 monitors
+RENDER en mobile.schedules.count.monitors count=1: 1 monitor
+RENDER en mobile.schedules.count.monitors count=1000000: 1000000 monitors
+RENDER en mobile.schedules.count.wakes count=0: 0 wakes
+RENDER en mobile.schedules.count.wakes count=1: 1 wake
+RENDER en mobile.schedules.count.wakes count=1000000: 1000000 wakes
+RENDER en mobile.schedules.show_more.monitors hidden=0: Show 0 more monitors
+RENDER en mobile.schedules.show_more.monitors hidden=1: Show 1 more monitor
+RENDER en mobile.schedules.show_more.monitors hidden=1000000: Show 1000000 more monitors
+RENDER en mobile.schedules.show_more.wakes hidden=0: Show 0 more wakes
+RENDER en mobile.schedules.show_more.wakes hidden=1: Show 1 more wake
+RENDER en mobile.schedules.show_more.wakes hidden=1000000: Show 1000000 more wakes
+
+===== TYPOGRAPHY / CHARACTER AUDIT =====
+
+-- narrow-space inventory (U+202F / U+00A0) per fr key --
+mobile.home.greeting: U+202F=1 U+00A0=0 U+2019=1
+mobile.home.refused_start_fallback: U+202F=0 U+00A0=0 U+2019=1
+mobile.home.startup_queue.blocked: U+202F=0 U+00A0=0 U+2019=1
+mobile.home.suggestion.phone_access: U+202F=0 U+00A0=0 U+2019=1
+mobile.home.suggestion.team_of_agents: U+202F=0 U+00A0=0 U+2019=1
+mobile.schedules.cadence.left: U+202F=0 U+00A0=0 U+2019=1
+mobile.schedules.empty.body: U+202F=2 U+00A0=0 U+2019=1
+mobile.schedules.gone.monitors: U+202F=0 U+00A0=0 U+2019=2
+mobile.schedules.gone.wakes: U+202F=0 U+00A0=0 U+2019=2
+mobile.schedules.parked.monitors: U+202F=0 U+00A0=0 U+2019=1
+mobile.schedules.supervisor.not_running: U+202F=1 U+00A0=0 U+2019=1
+mobile.schedules.supervisor.unsupported: U+202F=1 U+00A0=0 U+2019=2
+mobile.schedules.supervisor.unverifiable: U+202F=1 U+00A0=0 U+2019=1
+mobile.schedules.tail.failed: U+202F=0 U+00A0=0 U+2019=1
+
+===== LENGTH BUDGETS =====
+CHIP fr mobile.home.suggestion.phone_access: 22/31 OK   (en 20/24 OK)
+CHIP fr mobile.home.suggestion.team_of_agents: 25/31 OK   (en 23/24 OK)
+CHIP fr mobile.home.suggestion.last_turn: 23/31 OK   (en 21/24 OK)
+CHIP fr mobile.home.suggestion.linear_mcp: 21/31 OK   (en 17/24 OK)
+CHIP fr mobile.home.suggestion.review_repo: 16/31 OK   (en 16/24 OK)
+CHIP fr mobile.home.suggestion.wake_summary: 24/31 OK   (en 22/24 OK)
+TIP  fr mobile.home.tip.schedule: 44/48 OK   (en 41/48)
+TIP  fr mobile.home.tip.parallel: 43/48 OK   (en 42/48)
+TIP  fr mobile.home.tip.search: 44/48 OK   (en 45/48)
+NOTE fr mobile.home.starting: 10 chars :: "Démarrage…"
+NOTE fr mobile.home.startup_queue.not_started: 12 chars :: "Non démarrée"
+NOTE fr mobile.home.connect_disabled_reason: 37 chars :: "Connectez un ordinateur pour envoyer."
+
+-- widest fr strings in each namespace (fit triage) --
+mobile.home: mobile.home.options.fixed=131  mobile.home.folders_read_failed=65  mobile.home.queue.restore=50  mobile.home.tip.schedule=44  mobile.home.tip.search=44  mobile.home.refused_start_fallback=43
+mobile.schedules: mobile.schedules.empty.body=237  mobile.schedules.truncated=182  mobile.schedules.show_more.monitors=139  mobile.schedules.supervisor.unsupported=137  mobile.schedules.show_more.wakes=121  mobile.schedules.supervisor.not_running=111
+
+===== TECHNICAL TOKEN PRESERVATION =====
+mobile.home.suggestion.review_repo: token "repo" en=true fr=true :: fr="Examinez ce repo"
+mobile.home.suggestion.linear_mcp: token "Linear MCP" en=true fr=true :: fr="Configurez Linear MCP"
+mobile.home.suggestion.linear_mcp: token "MCP" en=true fr=true :: fr="Configurez Linear MCP"
+mobile.home.tip.schedule: token "prompt" en=true fr=true :: fr="planifiez un prompt à exécuter régulièrement"
+mobile.home.suggestion.linear_mcp: token "MCP" en=true fr=true :: fr="Configurez Linear MCP"
+mobile.schedules.empty.body: token "repo" en=true fr=false :: fr="Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements."
+mobile.schedules.empty.body: token "prompt" en=true fr=true :: fr="Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements."
+
+-- backticks/commands/URLs in the pair --
+
+DONE
+
+==================================================================
+## 4. Production-path render: the app's own renderFor(), preference 'fr'
+##    (catalogue lookup + source-locale plural rules + parser, all shipped code)
+==================================================================
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON <scratch>/render-prod.ts
+== PRODUCTION-PATH RENDER, preference 'fr' (renderFor) ==
+fr           mobile.home.connect_disabled_reason :: "Connectez un ordinateur pour envoyer."
+fr           mobile.home.folders_read_failed :: "Impossible de lire les dossiers de cet ordinateur pour le moment."
+fr           mobile.home.greeting :: "Comment puis-je vous aider aujourd’hui ?"
+fr           mobile.home.options.apply :: "Utiliser ces options"
+fr           mobile.home.options.fixed :: "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours."
+fr           mobile.home.options.folder :: "Dossier sur cet ordinateur"
+fr           mobile.home.options.title :: "Options de la conversation"
+fr           mobile.home.queue.discard :: "Supprimer les messages en attente"
+fr           mobile.home.queue.restore :: "Déplacer les messages en attente vers le brouillon"
+fr           mobile.home.queue.sheet_title :: "Messages en attente"
+fr           mobile.home.queue.view :: "Voir les messages en attente"
+fr           mobile.home.refused_start_fallback :: "Ce dossier n’existe pas sur cet ordinateur."
+fr           mobile.home.starting :: "Démarrage…"
+fr           mobile.home.startup_queue.blocked :: "Réessayez d’envoyer les messages en attente"
+fr           mobile.home.startup_queue.not_started :: "Non démarrée"
+fr           mobile.home.startup_queue.sending :: "Envoi des messages en attente…"
+fr           mobile.home.startup_queue.unconfirmed :: "Démarrage non confirmé"
+fr           mobile.home.suggestion.last_turn :: "Montrez le dernier tour"
+fr           mobile.home.suggestion.linear_mcp :: "Configurez Linear MCP"
+fr           mobile.home.suggestion.phone_access :: "Activez l’accès mobile"
+fr           mobile.home.suggestion.review_repo :: "Examinez ce repo"
+fr           mobile.home.suggestion.team_of_agents :: "Créez une équipe d’agents"
+fr           mobile.home.suggestion.wake_summary :: "Réveillez-moi et résumez"
+fr           mobile.home.tip.parallel :: "demandez plusieurs sous-agents en parallèle"
+fr           mobile.home.tip.schedule :: "planifiez un prompt à exécuter régulièrement"
+fr           mobile.home.tip.search :: "retrouvez une session passée pour la rouvrir"
+fr           mobile.home.transcript.waiting :: "En attente de la conversation…"
+fr           mobile.schedules.state.disabled :: "désactivée"
+fr           mobile.schedules.state.dormant :: "en veille"
+fr           mobile.schedules.state.expired :: "expirée"
+fr           mobile.schedules.state.stale :: "obsolète"
+fr           mobile.schedules.state.waiting :: "en attente"
+fr           mobile.schedules.empty.title :: "Aucune planification active"
+fr           mobile.schedules.empty_line.monitors :: "Aucune surveillance active."
+fr           mobile.schedules.empty_line.wakes :: "Aucun réveil planifié."
+fr           mobile.schedules.gone.monitors :: "Disparue — sa conversation n’existe plus sur cette machine, donc aucune vérification n’a lieu"
+fr           mobile.schedules.gone.wakes :: "Disparu — sa conversation n’existe plus sur cette machine, donc aucun déclenchement n’a lieu"
+fr           mobile.schedules.parked.monitors :: "En pause — les surveillances reprennent lorsque sa conversation s’exécute de nouveau"
+fr           mobile.schedules.parked.wakes :: "En pause — les réveils reprennent après son prochain tour"
+fr           mobile.schedules.read_error.monitors :: "Impossible de lire les surveillances de cette machine."
+fr           mobile.schedules.read_error.wakes :: "Impossible de lire les réveils de cette machine."
+fr           mobile.schedules.read_unreachable :: "Impossible de lire les planifications de cette machine pour le moment."
+fr           mobile.schedules.show_less.monitors :: "Afficher moins de surveillances"
+fr           mobile.schedules.show_less.wakes :: "Afficher moins de réveils"
+fr           mobile.schedules.supervisor.not_running :: "Le superviseur de réveils est installé, mais ne s’exécute pas : les réveils ci-dessous ne se déclencheront pas."
+fr           mobile.schedules.supervisor.unsupported :: "Les réveils ne sont pas encore supervisés sur cette plateforme : ceux ci-dessous ne se déclenchent que lorsqu’une conversation s’exécute."
+fr           mobile.schedules.supervisor.unverifiable :: "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute."
+fr           mobile.schedules.cadence.once :: "une fois"
+fr           mobile.schedules.cadence.every :: "tous les 1h30m"
+fr           mobile.schedules.empty.body :: "Demandez à un agent dans une conversation d’effectuer une tâche régulière : elle apparaîtra ici. Les réveils envoient un prompt à une conversation à une heure précise ; les surveillances observent un élément et signalent ses changements."
+fr           mobile.schedules.due.ahead :: "dans 4m"
+fr           mobile.schedules.due.overdue :: "en retard de 2h"
+fr           mobile.schedules.cadence.spent :: "tous les 1h · plus aucun envoi restant"
+fr           mobile.schedules.head.next :: "3 réveils · prochaine échéance dans 4m"
+SAME-AS-EN mobile.schedules.head.overdue :: "2 réveils · en retard de 2h"
+fr           mobile.schedules.summary.monitors_attention :: "1 sur 1 en alerte"
+keys rendering byte-identical French/English: 1
+
+== PRODUCTION-PATH PLURAL RENDER AT 0/1/2/1000000/1500000 ==
+fr mobile.schedules.count.monitors count=0 -> "0 surveillance"
+fr mobile.schedules.count.monitors count=1 -> "1 surveillance"
+fr mobile.schedules.count.monitors count=2 -> "2 surveillances"
+fr mobile.schedules.count.monitors count=1000000 -> "1000000 de surveillances"
+fr mobile.schedules.count.monitors count=1500000 -> "1500000 surveillances"
+fr mobile.schedules.count.wakes count=0 -> "0 réveil"
+fr mobile.schedules.count.wakes count=1 -> "1 réveil"
+fr mobile.schedules.count.wakes count=2 -> "2 réveils"
+fr mobile.schedules.count.wakes count=1000000 -> "1000000 de réveils"
+fr mobile.schedules.count.wakes count=1500000 -> "1500000 réveils"
+fr mobile.schedules.cadence.left remaining=0 -> "tous les 1h · 0 envoi restant"
+fr mobile.schedules.cadence.left remaining=1 -> "tous les 1h · 1 envoi restant"
+fr mobile.schedules.cadence.left remaining=2 -> "tous les 1h · 2 envois restants"
+fr mobile.schedules.cadence.left remaining=1000000 -> "tous les 1h · 1000000 d’envois restants"
+fr mobile.schedules.cadence.left remaining=1500000 -> "tous les 1h · 1500000 envois restants"
+fr mobile.schedules.show_more.monitors hidden=0 -> "Afficher 0 surveillance de plus"
+fr mobile.schedules.show_more.monitors hidden=1 -> "Afficher 1 surveillance de plus"
+fr mobile.schedules.show_more.monitors hidden=2 -> "Afficher 2 surveillances de plus"
+fr mobile.schedules.show_more.monitors hidden=1000000 -> "Afficher 1000000 de surveillances de plus"
+fr mobile.schedules.show_more.monitors hidden=1500000 -> "Afficher 1500000 surveillances de plus"
+fr mobile.schedules.show_more.wakes hidden=0 -> "Afficher 0 réveil de plus"
+fr mobile.schedules.show_more.wakes hidden=1 -> "Afficher 1 réveil de plus"
+fr mobile.schedules.show_more.wakes hidden=2 -> "Afficher 2 réveils de plus"
+fr mobile.schedules.show_more.wakes hidden=1000000 -> "Afficher 1000000 de réveils de plus"
+fr mobile.schedules.show_more.wakes hidden=1500000 -> "Afficher 1500000 réveils de plus"
+fr mobile.schedules.summary.monitors_armed count=0 -> "0 active"
+fr mobile.schedules.summary.monitors_armed count=1 -> "1 active"
+fr mobile.schedules.summary.monitors_armed count=2 -> "2 actives"
+fr mobile.schedules.summary.monitors_armed count=1000000 -> "1000000 de surveillances actives"
+fr mobile.schedules.summary.monitors_armed count=1500000 -> "1500000 actives"
+fr mobile.schedules.summary.wakes count=0 -> "0 planifié"
+fr mobile.schedules.summary.wakes count=1 -> "1 planifié"
+fr mobile.schedules.summary.wakes count=2 -> "2 planifiés"
+fr mobile.schedules.summary.wakes count=1000000 -> "1000000 de réveils planifiés"
+fr mobile.schedules.summary.wakes count=1500000 -> "1500000 planifiés"
+fr mobile.schedules.tail.failed count=0 -> "0 échec"
+fr mobile.schedules.tail.failed count=1 -> "1 échec"
+fr mobile.schedules.tail.failed count=2 -> "2 échecs"
+fr mobile.schedules.tail.failed count=1000000 -> "1000000 d’échecs"
+fr mobile.schedules.tail.failed count=1500000 -> "1500000 échecs"
+fr mobile.schedules.truncated shown=0 -> "Affichage de 0 conversation sur 5 avec des réveils."
+fr mobile.schedules.truncated shown=1 -> "Affichage de 1 conversation sur 5 avec des réveils."
+fr mobile.schedules.truncated shown=2 -> "Affichage de 2 conversations sur 5 avec des réveils."
+fr mobile.schedules.truncated shown=1000000 -> "Affichage de 1000000 de conversations sur 5 avec des réveils."
+fr mobile.schedules.truncated shown=1500000 -> "Affichage de 1500000 conversations sur 5 avec des réveils."
+
+== EN CONTROL (same keys, preference 'en') ==
+en mobile.schedules.count.monitors count=0 -> "0 monitors"
+en mobile.schedules.count.monitors count=1 -> "1 monitor"
+en mobile.schedules.count.monitors count=1000000 -> "1000000 monitors"
+en mobile.schedules.count.wakes count=0 -> "0 wakes"
+en mobile.schedules.count.wakes count=1 -> "1 wake"
+en mobile.schedules.count.wakes count=1000000 -> "1000000 wakes"
+en mobile.schedules.cadence.left remaining=0 -> "every 1h · 0 left"
+en mobile.schedules.cadence.left remaining=1 -> "every 1h · 1 left"
+en mobile.schedules.cadence.left remaining=1000000 -> "every 1h · 1000000 left"
+en mobile.schedules.show_more.monitors hidden=0 -> "Show 0 more monitors"
+en mobile.schedules.show_more.monitors hidden=1 -> "Show 1 more monitor"
+en mobile.schedules.show_more.monitors hidden=1000000 -> "Show 1000000 more monitors"
+en mobile.schedules.show_more.wakes hidden=0 -> "Show 0 more wakes"
+en mobile.schedules.show_more.wakes hidden=1 -> "Show 1 more wake"
+en mobile.schedules.show_more.wakes hidden=1000000 -> "Show 1000000 more wakes"
+en mobile.schedules.summary.monitors_armed count=0 -> "0 armed"
+en mobile.schedules.summary.monitors_armed count=1 -> "1 armed"
+en mobile.schedules.summary.monitors_armed count=1000000 -> "1000000 armed"
+en mobile.schedules.summary.wakes count=0 -> "0 scheduled"
+en mobile.schedules.summary.wakes count=1 -> "1 scheduled"
+en mobile.schedules.summary.wakes count=1000000 -> "1000000 scheduled"
+en mobile.schedules.tail.failed count=0 -> "0 failed"
+en mobile.schedules.tail.failed count=1 -> "1 failed"
+en mobile.schedules.tail.failed count=1000000 -> "1000000 failed"
+en mobile.schedules.truncated shown=0 -> "Showing 0 of 5 conversations with wakes."
+en mobile.schedules.truncated shown=1 -> "Showing 1 of 5 conversations with wakes."
+en mobile.schedules.truncated shown=1000000 -> "Showing 1000000 of 5 conversations with wakes."
+
+==================================================================
+## 5. Positive character evidence for mobile.home
+==================================================================
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON <scratch>/chars.ts mobile.home
+== mobile.home: per-key character inventory ==
+mobile.home.connect_disabled_reason: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.folders_read_failed: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.greeting: clean | non-ascii: U+2019 U+202F | spacing: ?<-U+202F
+mobile.home.options.apply: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.options.fixed: clean | non-ascii: U+00E9 U+00E9 U+00E9 U+00E0 | no : ; ? !
+mobile.home.options.folder: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.options.title: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.queue.discard: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.queue.restore: clean | non-ascii: U+00E9 | no : ; ? !
+mobile.home.queue.sheet_title: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.queue.view: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.refused_start_fallback: clean | non-ascii: U+2019 | no : ; ? !
+mobile.home.starting: clean | non-ascii: U+00E9 U+2026 | no : ; ? !
+mobile.home.startup_queue.blocked: clean | non-ascii: U+00E9 U+2019 | no : ; ? !
+mobile.home.startup_queue.not_started: clean | non-ascii: U+00E9 U+00E9 | no : ; ? !
+mobile.home.startup_queue.sending: clean | non-ascii: U+2026 | no : ; ? !
+mobile.home.startup_queue.unconfirmed: clean | non-ascii: U+00E9 U+00E9 | no : ; ? !
+mobile.home.suggestion.last_turn: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.suggestion.linear_mcp: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.suggestion.phone_access: clean | non-ascii: U+2019 U+00E8 | no : ; ? !
+mobile.home.suggestion.review_repo: clean | non-ascii: (ascii only) | no : ; ? !
+mobile.home.suggestion.team_of_agents: clean | non-ascii: U+00E9 U+00E9 U+2019 | no : ; ? !
+mobile.home.suggestion.wake_summary: clean | non-ascii: U+00E9 U+00E9 | no : ; ? !
+mobile.home.tip.parallel: clean | non-ascii: U+00E8 | no : ; ? !
+mobile.home.tip.schedule: clean | non-ascii: U+00E0 U+00E9 U+00E9 U+00E8 | no : ; ? !
+mobile.home.tip.search: clean | non-ascii: U+00E9 | no : ; ? !
+mobile.home.transcript.waiting: clean | non-ascii: U+2026 | no : ; ? !
+
+== mobile.home: kept-English / product-token inventory ==
+lop: en=absent | fr=absent
+Local Operator: en=absent | fr=absent
+Radient: en=absent | fr=absent
+Linear MCP: en=mobile.home.suggestion.linear_mcp | fr=mobile.home.suggestion.linear_mcp
+repo: en=mobile.home.suggestion.review_repo | fr=mobile.home.suggestion.review_repo
+prompt: en=mobile.home.tip.schedule | fr=mobile.home.tip.schedule
+surveillance: en=absent | fr=absent
+réveil: en=absent | fr=absent
+planification: en=absent | fr=absent
+
+==================================================================
+## 6. The round-2 claims, re-checked against the CURRENT bytes
+==================================================================
+$ grep -n -A3 'SUGGESTION_CHAR_BUDGET' src/features/home/home-copy.ts | head -5
+78:export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
+79-	en: 24,
+80-	fr: 31,
+81-};
+
+$ grep -n 'TIP_CHAR_BUDGET = ' src/features/home/home-copy.ts
+151:export const TIP_CHAR_BUDGET = 48;
+
+$ sed -n '46,56p' src/features/new-session/startup-transcript.tsx   # is the details label keyed?
+						: "Conversation started"}
+				</Text>
+				<Button
+					label={
+						runtime.projection?.pending
+							? t("mobile.notifications.detail.answer_in_conversation")
+							: t("mobile.session.conversation_details")
+					}
+					variant="quiet"
+					size="sm"
+					testID={CONTROL.startupOpenConversation}
+
+$ python3 -c "print en/fr of mobile.session.conversation_details"
+en: 'Conversation details'
+fr: 'Détails de la conversation'
+
+==================================================================
+## 7. The copy tests that assert these budgets, on these bytes
+==================================================================
+$ npx vitest run src/features/home/home-copy.test.ts src/features/schedules/__tests__/schedules-copy.test.ts src/i18n/__tests__
+ Test Files  7 passed (7)
+      Tests  159 passed (159)
+   Duration  3.15s (transform 74%, import 18%, worker 4%, tests 3%)
+
+==================================================================
+## 8. Every proposed replacement in report.md, parsed and rendered
+##    with the app's own parser before being written down
+==================================================================
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON <scratch>/proposals.ts
+132 chars | params=none | PARSE-OK | mobile.home.options.fixed (A: en direct)
+148 chars | params=none | PARSE-OK | mobile.home.options.fixed (B: conversation en cours)
+132 chars | params=none | PARSE-OK | mobile.home.options.fixed (C: contrôles en direct)
+ 28 chars | params=none | PARSE-OK | mobile.home.suggestion.wake_summary
+ 26 chars | params=none | PARSE-OK | mobile.home.suggestion.last_turn
+ 29 chars | params=none | PARSE-OK | mobile.home.suggestion.phone_access
+ 43 chars | params=none | PARSE-OK | mobile.home.tip.schedule
+ 23 chars | params=none | PARSE-OK | mobile.home.suggestion.review_repo
+ 31 chars | params=broken:text,total:text | PARSE-OK | mobile.schedules.summary.monitors_attention
+      renders -> "1 sur 1 à vérifier"
+240 chars | params=none | PARSE-OK | mobile.schedules.empty.body (elle -> cela)
+ 28 chars | params=cadence:text | PARSE-OK | mobile.schedules.cadence.spent (no restant)
+      renders -> "tous les 1h · plus aucun envoi"
+144 chars | params=none | PARSE-OK | mobile.schedules.supervisor.unsupported (les réveils ci-dessous)
+
+==================================================================
+## Appendix A. Harness source actually executed above (reproduction)
+==================================================================
+--- audit2.ts ---
+/**
+ * Round-2 independent audit harness for the French mobile catalogues.
+ * Reads the CURRENT bytes; uses the app's own parser (src/i18n/messages.ts),
+ * never a third-party formatter.
+ */
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { parseMessage, formatMessage, pluralCategory } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts";
+
+const ROOT = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const sha = (p: string) => createHash("sha256").update(readFileSync(p)).digest("hex");
+const read = (p: string) => readFileSync(p, "utf8");
+const hex = (s: string) => [...s].map((c) => {
+  const cp = c.codePointAt(0)!;
+  return cp < 128 && cp >= 32 ? c : `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
+}).join("");
+
+type Cat = Record<string, string>;
+
+const namespaces = ["mobile.home", "mobile.schedules"] as const;
+
+console.log("== INPUT HASHES (sha256) ==");
+for (const ns of namespaces) {
+  for (const p of [
+    `src/i18n/catalogues/en/${ns}.json`,
+    `src/i18n/catalogues/en/${ns}.context.json`,
+    `src/i18n/catalogues/fr/${ns}.json`,
+  ]) {
+    console.log(`${sha(`${ROOT}/${p}`)}  ${p}`);
+  }
+}
+
+// ---- duplicate-key detection (JSON.parse silently keeps the last) ----
+function duplicateKeys(raw: string): string[] {
+  const seen = new Map<string, number>();
+  // shallow scan: catalogue values never nest objects, so a line scan is exact here
+  for (const line of raw.split("\n")) {
+    const m = line.match(/^\s*"([^"]+)":/);
+    if (m) seen.set(m[1], (seen.get(m[1]) ?? 0) + 1);
+  }
+  return [...seen.entries()].filter(([, n]) => n > 1).map(([k]) => k);
+}
+
+const BIDI = /[\u202A-\u202E\u2066-\u2069\u200E\u200F\u061C]/;
+const ICU_CATEGORIES = ["zero", "one", "two", "few", "many", "other"];
+
+/** Branch keys of the plural/select named `argName`, read off the parsed AST
+ *  (authoritative — the same tree the renderer walks). */
+function branchNames(parsed: any, argName: string): string[] {
+  const out: string[] = [];
+  const walk = (nodes: readonly any[]) => {
+    for (const n of nodes) {
+      if ((n.type === "plural" || n.type === "select") && n.name === argName) {
+        for (const k of n.options.keys()) out.push(k);
+      }
+      if (n.options) for (const body of n.options.values()) walk(body);
+    }
+  };
+  walk(parsed.nodes);
+  return out;
+}
+
+let problems = 0;
+for (const ns of namespaces) {
+  const en: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/en/${ns}.json`));
+  const ctx: Record<string, unknown> = JSON.parse(read(`${ROOT}/src/i18n/catalogues/en/${ns}.context.json`));
+  const fr: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`));
+
+  console.log(`\n===== ${ns} =====`);
+  console.log(`key counts: en=${Object.keys(en).length} context=${Object.keys(ctx).length} fr=${Object.keys(fr).length}`);
+  console.log(`fr duplicate keys: ${JSON.stringify(duplicateKeys(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`)))}`);
+  const missing = Object.keys(en).filter((k) => !(k in fr));
+  const extra = Object.keys(fr).filter((k) => !(k in en));
+  const noCtx = Object.keys(en).filter((k) => !(k in ctx));
+  console.log(`missing in fr: ${JSON.stringify(missing)}`);
+  console.log(`extra in fr: ${JSON.stringify(extra)}`);
+  console.log(`en keys without context: ${JSON.stringify(noCtx)}`);
+
+  console.log("\n-- PER-KEY STRUCTURE --");
+  for (const key of Object.keys(en)) {
+    const e = en[key];
+    const f = fr[key];
+    if (f === undefined) continue;
+    const ep = parseMessage(e);
+    const fp = parseMessage(f);
+    const eParams = [...ep.params.entries()].map(([n, k]) => `${n}:${k}`).sort();
+    const fParams = [...fp.params.entries()].map(([n, k]) => `${n}:${k}`).sort();
+    const namesEqual = eParams.join(",") === fParams.join(",");
+    const eNames = [...ep.params.keys()].sort().join(",");
+    const fNames = [...fp.params.keys()].sort().join(",");
+    const nameOnlyEqual = eNames === fNames;
+    const frBranches: string[] = [];
+    for (const [n, kind] of fp.params) if (kind === "plural") frBranches.push(`${n}=[${branchNames(fp, n).join("|")}]`);
+    for (const [n, kind] of fp.params) if (kind === "select") frBranches.push(`${n}=select[${branchNames(fp, n).join("|")}]`);
+    const pluralCats = [...fp.params.entries()].filter(([, k]) => k === "plural").map(([n]) => {
+      const b = branchNames(fp, n);
+      const frCltd = ["one", "many", "other"].every((c) => b.includes(c));
+      const hasFew = b.includes("few") || b.includes("two") || b.includes("zero");
+      return `${n}:${frCltd ? "fr-CLDR-ok" : "MISSING-FR-CATEGORY"}${hasFew ? "+NON-FR-CATS" : ""}`;
+    });
+    const flags: string[] = [];
+    if (!nameOnlyEqual) flags.push("PLACEHOLDER-NAME-MISMATCH");
+    if (!namesEqual && nameOnlyEqual) flags.push(`TYPE-DIFF en[${eParams}] fr[${fParams}]`);
+    if (BIDI.test(f)) flags.push("BIDI-CONTROL");
+    if (f.includes("'")) flags.push("ASCII-APOSTROPHE");
+    if (pluralCats.some((s) => s.includes("MISSING"))) flags.push("PLURAL-CATEGORY-GAP");
+    console.log(`${key} | params en=[${eParams.join(" ")}] fr=[${fParams.join(" ")}]${frBranches.length ? " | branches " + frBranches.join(" ") : ""}${pluralCats.length ? " | " + pluralCats.join(" ") : ""}${flags.length ? " | FLAGS " + flags.join(" ") : " | ok"}`);
+  }
+}
+
+// ---- executed plural renders ----
+const COUNTS = [0, 1, 2, 1000000, 1500000];
+const PLURAL_KEYS = [
+  "mobile.schedules.count.monitors",
+  "mobile.schedules.count.wakes",
+  "mobile.schedules.cadence.left",
+  "mobile.schedules.show_more.monitors",
+  "mobile.schedules.show_more.wakes",
+  "mobile.schedules.summary.monitors_armed",
+  "mobile.schedules.summary.wakes",
+  "mobile.schedules.tail.failed",
+  "mobile.schedules.truncated",
+] as const;
+
+const frSchedules: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/mobile.schedules.json`));
+const enSchedules: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/en/mobile.schedules.json`));
+
+console.log("\n===== EXECUTED PLURAL RENDERS (app parser, locale fr) =====");
+console.log("pluralCategory(fr, n): " + COUNTS.map((n) => `${n}->${pluralCategory("fr", n)}`).join("  "));
+console.log("pluralCategory(en, n): " + COUNTS.map((n) => `${n}->${pluralCategory("en", n)}`).join("  "));
+for (const key of PLURAL_KEYS) {
+  const text = frSchedules[key];
+  const m = parseMessage(text);
+  const pluralArg = [...m.params.entries()].find(([, k]) => k === "plural")?.[0];
+  if (!pluralArg) { console.log(`${key}: NO PLURAL ARG`); continue; }
+  const otherArgs = [...m.params.keys()].filter((n) => n !== pluralArg);
+  for (const n of COUNTS) {
+    const args: Record<string, string | number> = { [pluralArg]: n };
+    for (const a of otherArgs) args[a] = a === "cadence" ? "tous les 1h" : a === "family" ? "wakes" : a === "total" ? 5 : a === "head" ? "3 réveils" : a === "label" ? "dans 4m" : "X";
+    console.log(`RENDER fr ${key} ${pluralArg}=${n}: ${formatMessage(m, args, "fr")}`);
+  }
+}
+
+// ---- composed fragments, using the app's own due/head keys ----
+console.log("\n===== COMPOSED FRAGMENTS (dueLabel -> nextDueClause equivalent) =====");
+const dueLabelFr = (seconds: number) => {
+  const overdue = seconds < 0;
+  const mag = Math.abs(seconds);
+  let label: string;
+  if (mag < 90) label = `${Math.floor(mag)}s`;
+  else if (mag < 5400) label = `${Math.floor(mag / 60)}m`;
+  else if (mag < 172800) label = `${Math.floor(mag / 3600)}h`;
+  else label = `${Math.floor(mag / 86400)}d`;
+  return formatMessage(parseMessage(frSchedules[overdue ? "mobile.schedules.due.overdue" : "mobile.schedules.due.ahead"]), { label }, "fr");
+};
+const nextDueClauseFr = (head: string, seconds: number) => {
+  const label = dueLabelFr(seconds);
+  const key = seconds < 0 ? "mobile.schedules.head.overdue" : "mobile.schedules.head.next";
+  return formatMessage(parseMessage(frSchedules[key]), { head, label }, "fr");
+};
+const countWakes = (n: number) => formatMessage(parseMessage(frSchedules["mobile.schedules.count.wakes"]), { count: n }, "fr");
+const countMonitors = (n: number) => formatMessage(parseMessage(frSchedules["mobile.schedules.count.monitors"]), { count: n }, "fr");
+for (const [n, secs] of [[3, 240], [1, 30], [2, -7200], [1000000, 240]] as const) {
+  console.log(`COMPOSE head wakes n=${n} secs=${secs}: ${nextDueClauseFr(countWakes(n), secs)}`);
+  console.log(`COMPOSE head monitors n=${n} secs=${secs}: ${nextDueClauseFr(countMonitors(n), secs)}`);
+}
+console.log(`COMPOSE wakeDueWord overdue: ${dueLabelFr(-7200)}   ahead: ${dueLabelFr(240)}`);
+const cadenceLeft = (cadence: string, remaining: number) =>
+  formatMessage(parseMessage(frSchedules["mobile.schedules.cadence.left"]), { cadence, remaining }, "fr");
+for (const r of [1, 2, 1000000]) console.log(`COMPOSE cadence.left remaining=${r}: ${cadenceLeft("tous les 1h", r)}`);
+const attention = (broken: number, total: number) =>
+  formatMessage(parseMessage(frSchedules["mobile.schedules.summary.monitors_attention"]), { broken, total }, "fr");
+for (const [b, t] of [[1, 1], [2, 5], [0, 3]] as const) console.log(`COMPOSE monitors_attention ${b}/${t}: ${attention(b, t)}`);
+const truncated = (shown: number, total: number, family: string) =>
+  formatMessage(parseMessage(frSchedules["mobile.schedules.truncated"]), { shown, total, family }, "fr");
+for (const [s, t, f] of [[3, 12, "wakes"], [1, 1, "monitors"], [3, 5, "monitors"]] as const) console.log(`COMPOSE truncated ${s}/${t}/${f}: ${truncated(s, t, f)}`);
+
+// ---- EN counterparts for the same renders (same-code control) ----
+console.log("\n===== SAME-CODE EN CONTROL (locale en) =====");
+for (const key of PLURAL_KEYS) {
+  const text = enSchedules[key];
+  const m = parseMessage(text);
+  const pluralArg = [...m.params.entries()].find(([, k]) => k === "plural")?.[0];
+  if (!pluralArg) continue;
+  const otherArgs = [...m.params.keys()].filter((n) => n !== pluralArg);
+  for (const n of [0, 1, 1000000]) {
+    const args: Record<string, string | number> = { [pluralArg]: n };
+    for (const a of otherArgs) args[a] = a === "cadence" ? "every 1h" : a === "family" ? "wakes" : a === "total" ? 5 : a === "head" ? "3 wakes" : a === "label" ? "in 4m" : "X";
+    console.log(`RENDER en ${key} ${pluralArg}=${n}: ${formatMessage(m, args, "en")}`);
+  }
+}
+
+// ---- typography + tokens ----
+console.log("\n===== TYPOGRAPHY / CHARACTER AUDIT =====");
+for (const ns of namespaces) {
+  const fr: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`));
+  for (const [key, value] of Object.entries(fr)) {
+    const notes: string[] = [];
+    for (const ch of ["?", "!", ":", ";"]) {
+      let i = -1;
+      while ((i = value.indexOf(ch, i + 1)) >= 0) {
+        const prev = value[i - 1];
+        const prevCp = prev?.codePointAt(0);
+        if (prev === " ") notes.push(`ASCII-SPACE-BEFORE ${ch} at ${i}`);
+        else if (prevCp === 0x202f) { /* required narrow nbsp */ }
+        else if (prevCp === 0xa0) notes.push(`NBSP(U+00A0)-BEFORE ${ch} at ${i}`);
+      }
+    }
+    if (/[\u202A-\u202E\u2066-\u2069\u200E\u200F\u061C]/.test(value)) notes.push("BIDI-CONTROL");
+    if (value.includes("'")) notes.push("ASCII-APOSTROPHE");
+    if (/"/.test(value)) notes.push("ASCII-DOUBLE-QUOTE");
+    if (/\.\.\./.test(value)) notes.push("ASCII-ELLIPSIS");
+    if (notes.length) console.log(`${key}: ${notes.join(" | ")}  :: ${JSON.stringify(value)}`);
+  }
+}
+console.log("\n-- narrow-space inventory (U+202F / U+00A0) per fr key --");
+for (const ns of namespaces) {
+  const fr: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`));
+  for (const [key, value] of Object.entries(fr)) {
+    const u202f = [...value].filter((c) => c.codePointAt(0) === 0x202f).length;
+    const u00a0 = [...value].filter((c) => c.codePointAt(0) === 0xa0).length;
+    const u2019 = [...value].filter((c) => c.codePointAt(0) === 0x2019).length;
+    if (u202f || u00a0 || u2019) console.log(`${key}: U+202F=${u202f} U+00A0=${u00a0} U+2019=${u2019}`);
+  }
+}
+
+// ---- length budgets (UTF-16 .length, the metric the code uses) ----
+console.log("\n===== LENGTH BUDGETS =====");
+const frHome: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/mobile.home.json`));
+const enHome: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/en/mobile.home.json`));
+const CHIP_BUDGET = { en: 24, fr: 31 } as const;
+const CHIPS = ["mobile.home.suggestion.phone_access", "mobile.home.suggestion.team_of_agents", "mobile.home.suggestion.last_turn", "mobile.home.suggestion.linear_mcp", "mobile.home.suggestion.review_repo", "mobile.home.suggestion.wake_summary"] as const;
+const TIPS = ["mobile.home.tip.schedule", "mobile.home.tip.parallel", "mobile.home.tip.search"] as const;
+for (const k of CHIPS) console.log(`CHIP fr ${k}: ${frHome[k].length}/${CHIP_BUDGET.fr} ${frHome[k].length <= CHIP_BUDGET.fr ? "OK" : "OVER"}   (en ${enHome[k].length}/${CHIP_BUDGET.en} ${enHome[k].length <= CHIP_BUDGET.en ? "OK" : "OVER"})`);
+for (const k of TIPS) console.log(`TIP  fr ${k}: ${frHome[k].length}/48 ${frHome[k].length <= 48 ? "OK" : "OVER"}   (en ${enHome[k].length}/48)`);
+// the two home strings the sidecar constrains without a cell number
+for (const k of ["mobile.home.starting", "mobile.home.startup_queue.not_started", "mobile.home.connect_disabled_reason"]) {
+  console.log(`NOTE fr ${k}: ${frHome[k].length} chars :: ${JSON.stringify(frHome[k])}`);
+}
+console.log("\n-- widest fr strings in each namespace (fit triage) --");
+for (const [ns, cat] of [["mobile.home", frHome], ["mobile.schedules", frSchedules]] as const) {
+  const rows = Object.entries(cat).map(([k, v]) => [k, v.length] as const).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  console.log(ns + ": " + rows.map(([k, n]) => `${k}=${n}`).join("  "));
+}
+
+// ---- technical token preservation ----
+console.log("\n===== TECHNICAL TOKEN PRESERVATION =====");
+const TOKENS = ["lop mobile", "Local Operator", "Radient", "repo", "Linear MCP", "MCP", "prompt", "MCP"];
+for (const ns of namespaces) {
+  const en: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/en/${ns}.json`));
+  const fr: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`));
+  for (const t of TOKENS) {
+    for (const [k, v] of Object.entries(en)) {
+      if (!v.includes(t)) continue;
+      const fv = fr[k] ?? "";
+      console.log(`${k}: token "${t}" en=${v.includes(t)} fr=${fv.includes(t)} :: fr=${JSON.stringify(fv)}`);
+    }
+  }
+}
+// code spans / backticks / commands anywhere
+console.log("\n-- backticks/commands/URLs in the pair --");
+for (const ns of namespaces) {
+  const fr: Cat = JSON.parse(read(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`));
+  for (const [k, v] of Object.entries(fr)) {
+    if (/`|https?:\/\/|\s--[a-z]|\blop\b|%s|\{\{/.test(v)) console.log(`${k}: ${JSON.stringify(v)}`);
+  }
+}
+console.log("\nDONE");
+
+--- render-prod.ts ---
+/**
+ * Round-2 audit, production-path render: goes through the app's OWN runtime
+ * (`renderFor` from src/i18n/runtime.ts), so the catalogue lookup, the
+ * source-locale choice for plural rules and the parser are the shipping ones.
+ */
+import { registerSourceResolver } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/scripts/lib/load-src.ts";
+registerSourceResolver();
+const { renderFor } = (await import("/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/runtime.ts")) as typeof import("/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/runtime.ts");
+
+const keys: Array<[string, Record<string, string | number> | null]> = [
+  ["mobile.home.connect_disabled_reason", null],
+  ["mobile.home.folders_read_failed", null],
+  ["mobile.home.greeting", null],
+  ["mobile.home.options.apply", null],
+  ["mobile.home.options.fixed", null],
+  ["mobile.home.options.folder", null],
+  ["mobile.home.options.title", null],
+  ["mobile.home.queue.discard", null],
+  ["mobile.home.queue.restore", null],
+  ["mobile.home.queue.sheet_title", null],
+  ["mobile.home.queue.view", null],
+  ["mobile.home.refused_start_fallback", null],
+  ["mobile.home.starting", null],
+  ["mobile.home.startup_queue.blocked", null],
+  ["mobile.home.startup_queue.not_started", null],
+  ["mobile.home.startup_queue.sending", null],
+  ["mobile.home.startup_queue.unconfirmed", null],
+  ["mobile.home.suggestion.last_turn", null],
+  ["mobile.home.suggestion.linear_mcp", null],
+  ["mobile.home.suggestion.phone_access", null],
+  ["mobile.home.suggestion.review_repo", null],
+  ["mobile.home.suggestion.team_of_agents", null],
+  ["mobile.home.suggestion.wake_summary", null],
+  ["mobile.home.tip.parallel", null],
+  ["mobile.home.tip.schedule", null],
+  ["mobile.home.tip.search", null],
+  ["mobile.home.transcript.waiting", null],
+  ["mobile.schedules.state.disabled", null],
+  ["mobile.schedules.state.dormant", null],
+  ["mobile.schedules.state.expired", null],
+  ["mobile.schedules.state.stale", null],
+  ["mobile.schedules.state.waiting", null],
+  ["mobile.schedules.empty.title", null],
+  ["mobile.schedules.empty_line.monitors", null],
+  ["mobile.schedules.empty_line.wakes", null],
+  ["mobile.schedules.gone.monitors", null],
+  ["mobile.schedules.gone.wakes", null],
+  ["mobile.schedules.parked.monitors", null],
+  ["mobile.schedules.parked.wakes", null],
+  ["mobile.schedules.read_error.monitors", null],
+  ["mobile.schedules.read_error.wakes", null],
+  ["mobile.schedules.read_unreachable", null],
+  ["mobile.schedules.show_less.monitors", null],
+  ["mobile.schedules.show_less.wakes", null],
+  ["mobile.schedules.supervisor.not_running", null],
+  ["mobile.schedules.supervisor.unsupported", null],
+  ["mobile.schedules.supervisor.unverifiable", null],
+  ["mobile.schedules.cadence.once", null],
+  ["mobile.schedules.cadence.every", { duration: "1h30m" }],
+  ["mobile.schedules.empty.body", null],
+  ["mobile.schedules.due.ahead", { label: "4m" }],
+  ["mobile.schedules.due.overdue", { label: "2h" }],
+  ["mobile.schedules.cadence.spent", { cadence: "tous les 1h" }],
+  ["mobile.schedules.head.next", { head: "3 réveils", label: "dans 4m" }],
+  ["mobile.schedules.head.overdue", { head: "2 réveils", label: "en retard de 2h" }],
+  ["mobile.schedules.summary.monitors_attention", { broken: 1, total: 1 }],
+];
+
+console.log("== PRODUCTION-PATH RENDER, preference 'fr' (renderFor) ==");
+let englishLeaks = 0;
+for (const [key, params] of keys) {
+  const fr = (renderFor as any)(key, params ?? {}, "fr");
+  const en = (renderFor as any)(key, params ?? {}, "en");
+  const same = fr === en;
+  if (same) englishLeaks++;
+  console.log(`${same ? "SAME-AS-EN" : "fr          "} ${key} :: ${JSON.stringify(fr)}`);
+}
+console.log(`keys rendering byte-identical French/English: ${englishLeaks}`);
+
+console.log("\n== PRODUCTION-PATH PLURAL RENDER AT 0/1/2/1000000/1500000 ==");
+const pluralKeys = [
+  "mobile.schedules.count.monitors",
+  "mobile.schedules.count.wakes",
+  "mobile.schedules.cadence.left",
+  "mobile.schedules.show_more.monitors",
+  "mobile.schedules.show_more.wakes",
+  "mobile.schedules.summary.monitors_armed",
+  "mobile.schedules.summary.wakes",
+  "mobile.schedules.tail.failed",
+  "mobile.schedules.truncated",
+] as const;
+const counts = [0, 1, 2, 1000000, 1500000];
+for (const key of pluralKeys) {
+  for (const n of counts) {
+    const argName = key.endsWith("show_more.monitors") || key.endsWith("show_more.wakes") ? "hidden" : key.endsWith("cadence.left") ? "remaining" : key.endsWith("truncated") ? "shown" : "count";
+    const params: Record<string, string | number> = { [argName]: n };
+    if (key.endsWith("cadence.left")) params.cadence = "tous les 1h";
+    if (key.endsWith("truncated")) { params.total = 5; params.family = "wakes"; }
+    console.log(`fr ${key} ${argName}=${n} -> ${JSON.stringify((renderFor as any)(key, params, "fr"))}`);
+  }
+}
+
+console.log("\n== EN CONTROL (same keys, preference 'en') ==");
+for (const key of pluralKeys) {
+  for (const n of [0, 1, 1000000]) {
+    const argName = key.endsWith("show_more.monitors") || key.endsWith("show_more.wakes") ? "hidden" : key.endsWith("cadence.left") ? "remaining" : key.endsWith("truncated") ? "shown" : "count";
+    const params: Record<string, string | number> = { [argName]: n };
+    if (key.endsWith("cadence.left")) params.cadence = "every 1h";
+    if (key.endsWith("truncated")) { params.total = 5; params.family = "wakes"; }
+    console.log(`en ${key} ${argName}=${n} -> ${JSON.stringify((renderFor as any)(key, params, "en"))}`);
+  }
+}
+
+--- chars.ts ---
+/**
+ * Positive character evidence for the round-2 French audit: for every key,
+ * list the non-ASCII codepoints actually present and the banned-character
+ * results, so the log proves the state instead of proving a negative by silence.
+ */
+import { readFileSync } from "node:fs";
+
+const ROOT = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const ns = process.argv[2]!;
+const fr: Record<string, string> = JSON.parse(readFileSync(`${ROOT}/src/i18n/catalogues/fr/${ns}.json`, "utf8"));
+const en: Record<string, string> = JSON.parse(readFileSync(`${ROOT}/src/i18n/catalogues/en/${ns}.json`, "utf8"));
+
+const BIDI = /[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/;
+const fmt = (v: string) =>
+  [...v]
+    .filter((c) => c.codePointAt(0)! > 127)
+    .map((c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`)
+    .join(" ") || "(ascii only)";
+
+console.log(`== ${ns}: per-key character inventory ==`);
+for (const [k, v] of Object.entries(fr)) {
+  const flags = [
+    v.includes("'") ? "ASCII-APOSTROPHE" : "",
+    /"/.test(v) ? "ASCII-QUOTE" : "",
+    /\.\.\./.test(v) ? "ASCII-ELLIPSIS" : "",
+    BIDI.test(v) ? "BIDI-CONTROL" : "",
+  ].filter(Boolean).join(",") || "clean";
+  /* a colon/semicolon/question/exclamation must be preceded by U+202F when the
+     sentence has a preceding character */
+  const spacing: string[] = [];
+  for (let i = 1; i < v.length; i++) {
+    const c = v[i];
+    if (c === ":" || c === ";" || c === "?" || c === "!") {
+      const prev = v.codePointAt(i - 1)!;
+      spacing.push(`${c}<-U+${prev.toString(16).toUpperCase().padStart(4, "0")}`);
+    }
+  }
+  console.log(`${k}: ${flags} | non-ascii: ${fmt(v)} | ${spacing.length ? "spacing: " + spacing.join(" ") : "no : ; ? !"}`);
+}
+
+console.log(`\n== ${ns}: kept-English / product-token inventory ==`);
+for (const token of ["lop", "Local Operator", "Radient", "Linear MCP", "repo", "prompt", "surveillance", "réveil", "planification"]) {
+  const enHits = Object.entries(en).filter(([, v]) => v.includes(token)).map(([k]) => k);
+  const frHits = Object.entries(fr).filter(([, v]) => v.includes(token)).map(([k]) => k);
+  console.log(`${token}: en=${enHits.length ? enHits.join(" ") : "absent"} | fr=${frHits.length ? frHits.join(" ") : "absent"}`);
+}
+

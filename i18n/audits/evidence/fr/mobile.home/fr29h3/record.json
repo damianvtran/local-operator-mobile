@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "audit_id": "fr29h3",
+  "audit_kind": "independent_delta_reaudit_of_audit_finding",
+  "locale": "fr",
+  "namespace": "mobile.home",
+  "audit_date": "2026-10-29",
+  "round": 3,
+  "audited_revision": "79b3fad082c0ae850b06a4437006d445bb1c4887",
+  "audited_revision_note": "Worktree /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n, branch feat/i18n-mobile-locales at that head. The translation change audited here is an uncommitted working-tree modification of src/i18n/catalogues/fr/mobile.home.json ('M' in git status); the i18n/audits evidence tree is a separate untracked/staged stream owned by the manager. Nothing was staged, committed or edited by this audit.",
+  "delta": {
+    "keys": [
+      "mobile.home.options.fixed"
+    ],
+    "reason": "Round 2 (fr29h2) returned changes_requested with one MAJOR, H-01: 'commandes en cours' rendered 'live controls' as a state ('commands in progress'). The round-2 suggested wording 'commandes en direct' was applied to src/i18n/catalogues/fr/mobile.home.json. This round verifies that one key on the current bytes and does not re-audit the other 26 keys.",
+    "prior_finding": "H-01 (bundle fr29h2, severity MAJOR, status open at round 2)",
+    "prior_recommended_wording": "…pour accéder à ses commandes en direct.",
+    "applied_wording": "present verbatim in the current bytes",
+    "scope_note": "delta-only: one key; the other 26 namespace keys are not re-judged here"
+  },
+  "key_count": {
+    "en": 27,
+    "target": 27,
+    "context": 27
+  },
+  "auditor": {
+    "agent": "i18n-auditor",
+    "session": "4191880b0141",
+    "job": "none exposed for this delegation (team child session; report goes to manager)",
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota/429 fallback",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and context from the translator (translator session c66311717837 vs auditor session 4191880b0141). BUT this round verifies wording that this auditor role proposed in round 2; it is not independent of the proposal. Disclosed as a self-confirmation hazard. Not model-diverse from the translator's reported kimi/k3.1-pro for part of the fallback chain. No human native-speaker review and no rendered frame are claimed.",
+    "previous_round_session": "16ebcda69228"
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": "c66311717837",
+    "model": "kimi/k3.1-pro",
+    "actual_model_source": "session id supplied by the requesting manager's brief; model carried from the round-2 record (fr29h2) and not independently observed by this auditor",
+    "date": "2026-10-29"
+  },
+  "previous_round_reference": {
+    "audit_id": "fr29h2",
+    "path": "i18n/audits/evidence/fr/mobile.home/fr29h2",
+    "round1_path": "i18n/audits/evidence/fr/mobile.home/fr29a1",
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 1,
+    "finding_carried": "H-01 (MAJOR) — resolved by this round",
+    "read_for": "the finding text and the recorded round-2 input hashes (used as the comparison basis below)"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.home.json",
+      "sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.home.context.json",
+      "sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/fr/mobile.home.json",
+      "sha256": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39"
+    }
+  },
+  "supporting_reference_hashes": {
+    "note": "The fr style guide and glossary are not files in this mobile repository. They were read from the sibling core checkout inside the same worktree parent: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/core-keyed-route/i18n/. They are supporting reference inputs, not bundle artifacts, and are not copied into this repository.",
+    "style_guide": {
+      "path": "core-keyed-route/i18n/style-guides/fr.md",
+      "sha256": "49010212a65f0d30d49bf532601bb39ad277be28aef5d476715186cf28525990"
+    },
+    "glossary": {
+      "path": "core-keyed-route/i18n/glossary.md",
+      "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+    }
+  },
+  "delta_verification": {
+    "method": "revert the single substituted substring in the CURRENT target bytes and hash the result, then compare with the target sha256 recorded by round 2",
+    "round2_recorded_target_sha256": "6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d",
+    "current_target_sha256": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39",
+    "reverted_substring": {
+      "from": "commandes en direct",
+      "to": "commandes en cours"
+    },
+    "reconstructed_sha256": "6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d",
+    "reconstruction_matches": true,
+    "conclusion": "the WHOLE file hashes to the round-2 value after reverting that one substring, so no other byte and no other key changed; occurrences of the new substring in the file: 1",
+    "byte_sizes": {
+      "current": 2002,
+      "after_revert": 2001
+    },
+    "english_inputs_unchanged_since_round2": true,
+    "git_diff_agrees": "git diff -U0 shows one changed line in src/i18n/catalogues/fr/mobile.home.json and the matching one line in the generated src/i18n/catalogue.gen.ts; nothing else under src/i18n/ is modified"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "blocker_ids": [],
+    "major_ids": [],
+    "minor_ids": [],
+    "nit_ids": [],
+    "verdict_reason": "the applied wording removes the 'commands in progress' reading; it parses, renders through the production path, keeps both sentences, names the destination label byte-exactly, and carries no bidi control or punctuation the fr guide governs. No BLOCKER or MAJOR remains, so mobile.home passes at these bytes."
+  },
+  "mechanical": {
+    "repo_validator": "npm run -s i18n:catalogue:check -> exit 0, 'src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)'",
+    "parser": "parseMessage(fr value) -> OK, params {}, single text node; en params [] and fr params []",
+    "render_path": "renderFor(key, {}, locale) from src/i18n/runtime.ts -> French for fr, fr-CA, FR; English source for en, es, null, de (only fr has a catalogue directory, so this is the expected distribution)",
+    "tests": "npx vitest run src/i18n/__tests__ -> 5 files, 74 tests passed",
+    "json_and_keys": "valid JSON, 27 en / 27 context / 27 fr, no key added or dropped",
+    "characters": "non-ASCII only U+00E9 and U+00E0; no bidi control (U+061C, U+200E/F, U+202A-E, U+2066-9); no U+00A0; no ASCII apostrophe/quote/'...'; no ':', ';', '!', '?' so no U+202F site exists",
+    "fit": "132 UTF-16 characters (was 131); the context sidecar sets no maxCells for this key and it is a role=help wrapping paragraph, so no chip/button/status budget applies; no pixel claim is made"
+  },
+  "language_judgement": {
+    "accuracy": "'commandes' is standard French for controls; 'en direct' is settled French for live/real-time, so the clause now reads as 'the controls that are live'. The round-2 defect is gone: 'en cours' could only read as a status, 'en direct' cannot.",
+    "catalogue_consistency": "mobile.projects.sessions.live renders '{base} · {live} en cours' where {live} is a positive integer, i.e. 'en cours' is this catalogue's word for running. Keeping it distinct from 'en direct' is the correct separation of the two ideas.",
+    "glossary": "no glossary row governs contrôle/commande/détail/live; 'commande' appears nowhere else in the fr catalogues",
+    "register": "vous imperative 'Utilisez', sentence case, no 'Veuillez'; matches fr.md formality section",
+    "typography": "no guillemets, no em dash, no punctuation requiring U+202F; ends with a full stop; two sentences as in English",
+    "destination_label": "fr mobile.session.conversation_details = « Détails de la conversation », present byte-exactly in the sentence; that label is rendered at src/features/new-session/startup-transcript.tsx:52"
+  },
+  "observations_not_findings": [
+    "Unquoted label reference: French typography would normally set the label in guillemets. The capitalised form is unambiguous, no fr catalogue in this app uses guillemets, and round 2 accepted this same form. Disclosed, not filed, to avoid reopening a settled disposition for a preference.",
+    "'en direct' is the only occurrence of the word in the fr corpus; if the programme later standardises live on « en temps réel », this key follows that decision. Not a defect today.",
+    "Out-of-delta keys were not judged: round 2's per-key dispositions stand, and the hash reconstruction shows those bytes are unchanged."
+  ],
+  "second_independent_pass": {
+    "performed": false,
+    "reason": "not requested for this delta round; round 2 recorded one (job de9bf370df7e, actual model radient/auto). Because this round verifies wording this auditor role proposed, an independent second pass by another auditor remains the right instrument if the programme wants independent confirmation of this exact key."
+  },
+  "rendered_artifact": {
+    "captured": false,
+    "reason": "No frame was captured; fit statements rest on executed character counts and the sidecar's absent budget, never on pixels."
+  },
+  "route_disclosure": {
+    "reads": "Ordinary local git/worktree reads only: the catalogue JSON and context sidecars in this worktree, the fr style guide and glossary in the core-keyed-route checkout, and the app's own modules and tests.",
+    "english_inputs_redaction_scan": "zero redaction-marker hits recorded by the manager across the English inputs",
+    "context_sidecar_routing": "English nested-JSON context sidecars are NOT routable through read_public_copy; they were read as ordinary worktree files",
+    "receipts": "No keyed receipt is claimed anywhere for this locale: the only credential-shaped key's clean-core route was refused (mobile.computers.password_placeholder, because the mobile path is not committed in core), so no receipt exists.",
+    "translation_services": "No translation API, SDK, MT service or back-translation was used to compare or produce anything here."
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command; docs/i18n.md records the report in the pull request. No ledger row or keyed receipt is claimed.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "fr",
+      "file_group": "mobile.home",
+      "status": "passed",
+      "auditor": "i18n-auditor",
+      "model": "radient/auto",
+      "source_hash": "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39",
+      "hash_subject": "src/i18n/catalogues/fr/mobile.home.json (target, current bytes)",
+      "round": 3,
+      "note": "R3 delta: options.fixed now 'commandes en direct'; parses, renders, label resolves. Reverting that one substring reproduces R2 hash, so only this key changed. 0 blocker/major.",
+      "note_length": 175,
+      "record_path": "i18n/audits/evidence/fr/mobile.home/fr29h3/record.json"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/report.md",
+      "sha256": "cf6a6ea907ee7103a81888c5da06d49a7ed2943f761e5a05ee2c407b0c2dfe83"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/audit.log",
+      "sha256": "06d96621f431bed3b40e3f4f35cda0c0d735201d7723c92745a8181ed9d51163",
+      "state": "actual command output, not notes; section headers echo the command, text between the markers is verbatim stdout/stderr"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/delta.mjs.txt",
+      "sha256": "32c5d265155d3768d0ed81d19eef29a6fa08a7fdd96de94d988422329a3f7df4",
+      "state": "the check script that produced audit.log section 9"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/render.mjs.txt",
+      "sha256": "d914051078514c3aca0d184ffba7169ac1a0ed6483ef9656f455de5e17f682e4",
+      "state": "the production-path render script (section 10)"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/resolver.mjs.txt",
+      "sha256": "418f8d09bd238c7fd9203ce9dbb226a2c08c3e39e860838fcfcb2d686e446603",
+      "state": "extensionless-specifier resolver, copied from fr/mobile.computers/fr29c2/resolver.mjs.txt"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/register.mjs.txt",
+      "sha256": "3289a5b83f788d7e5c25b40b804e4cb76eb579685dfc2a87d9705dc1d33b8e55",
+      "state": "node --import hook that registers the resolver"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.home/fr29h3/make-log.sh.txt",
+      "sha256": "9ea4bc3ef59453a5722fefef4bbc9178cea027ef41568ae0de7ddee60c9de064",
+      "state": "the script that executed every command in audit.log and wrote its output there"
+    }
+  ],
+  "audit_notes_not_execution_log": {
+    "notes": "report.md and this record's prose fields are the auditor's judgement, not command output.",
+    "execution_log": "audit.log holds the actual commands and their actual stdout/stderr for this bundle.",
+    "not_observed": "Translator session provenance is as supplied by the requesting manager; the translator's model is carried from round 2. This auditor did not observe the translator's run.",
+    "rendered_frames": "None captured; no pixel-level claim is made anywhere in this bundle.",
+    "not_independent_of_proposal": "This round verifies a wording this auditor role proposed in round 2 (different session)."
+  }
+}

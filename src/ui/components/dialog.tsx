@@ -1,5 +1,6 @@
 import {
 	Modal,
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -18,7 +19,9 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
+import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DIALOG_SURFACE_CLASS } from "@/ui/variants";
 
@@ -93,19 +96,31 @@ export const Dialog = ({
 	 *  second full-viewport surface over it — `@/ui/modal-stack` carries the rule and
 	 *  why it is the primitive's job rather than a caller's prop. */
 	const { covered, dims: drawsDim, scope } = useModalStackEntry(visible);
+	/* A dialog returns focus to its opener when its ~250 ms web fade ENDS, and that
+	 *  focus scrolls the opener into view: a failed Sign out revealed its refusal,
+	 *  then lost it to "Sign out" (PR #122 QA round 6, Q9). Reporting the close and
+	 *  the dismissal to the ledger is what lets a screen wait for it. */
+	const shown = visible && !covered;
+	const dismissed = useModalDismissal(shown, Platform.OS === "web");
 
 	return (
 		<ModalScopeContext.Provider value={scope}>
 			<Modal
-				visible={visible && !covered}
+				visible={shown}
 				transparent
 				animationType="fade"
 				onRequestClose={onCancel}
+				onDismiss={Platform.OS === "web" ? dismissed : undefined}
 				accessibilityViewIsModal
 				testID={testID}
 			>
 				<ScopedVariables variables={variables}>
-					<View className="flex-1 items-center justify-center px-6">
+					{/* The direction is re-applied INSIDE the modal: a React Native `Modal`
+					 *  renders through its own root, so it inherits neither the root view's
+					 *  Yoga direction nor (on native) the web document's `dir`; without this
+					 *  a dialog opened in an Urdu session lays its rows out left-to-right
+					 *  while the screen behind it is mirrored. */}
+					<DirectionView className="flex-1 items-center justify-center px-6">
 						{/* Same rule as `Sheet`: one dim per stack, and a hosted dialog's
 						 *  scrim is the press layer with no dim of its own. */}
 						<Pressable
@@ -187,7 +202,7 @@ export const Dialog = ({
 								</View>
 							</View>
 						</View>
-					</View>
+					</DirectionView>
 				</ScopedVariables>
 			</Modal>
 		</ModalScopeContext.Provider>

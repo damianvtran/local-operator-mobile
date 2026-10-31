@@ -1,0 +1,227 @@
+{
+  "provenance": {
+    "kind": "synthetic",
+    "relay_ref": "local-operator 634471def",
+    "modelled_on": "the wire measured at origin/feat/notifications-banner-relay, pinned in src/contracts/__tests__/notifications-live.test.ts",
+    "why": "Synthetic fixture aligned to the real relay wire: epoch-ms notification clocks, lenient stored ask rows, nested session with live+cwd, and body_md/links on the detail."
+  },
+  "items": [
+    {
+      "id": "n_audit",
+      "source": "notify",
+      "priority": "normal",
+      "title": "Nightly audit found 2 broken links",
+      "excerpt": "Two internal links in docs/relay/contract.md now 404. Links: docs/tunnels.md, docs/mobile.md.",
+      "created_at": 1792926900000,
+      "updated_at": 1792926900000,
+      "seq": 9,
+      "revision": 2,
+      "read": false,
+      "read_via": null,
+      "dismissed": false,
+      "repeat_count": 2,
+      "session": {
+        "id": "s_0001",
+        "title": "Aida",
+        "agent_id": "aida",
+        "live": true
+      },
+      "projects": [
+        {
+          "key": "local-operator",
+          "name": "Local Operator",
+          "status": "active"
+        }
+      ],
+      "ask": null,
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "key": "audit",
+      "body_md": "Two internal links in `docs/relay/contract.md` now return **404**. See the repair checklist below.",
+      "links": [
+        {
+          "label": "Relay contract",
+          "url": "https://example.invalid/relay-contract"
+        }
+      ],
+      "anchor_id": ""
+    },
+    {
+      "id": "n_fraud",
+      "source": "notify",
+      "priority": "high",
+      "title": "Fraud attempt blocked on the agent server",
+      "excerpt": "Three signups from one device fingerprint were refused within 90 seconds. Free-credit abuse check held.",
+      "created_at": 1792916100000,
+      "updated_at": 1792916100000,
+      "seq": 8,
+      "revision": 1,
+      "read": false,
+      "read_via": null,
+      "dismissed": false,
+      "repeat_count": 1,
+      "session": {
+        "id": "s_0002",
+        "title": "Credit watch",
+        "agent_id": "aida",
+        "live": false
+      },
+      "projects": [
+        {
+          "key": "radient",
+          "name": "Radient",
+          "status": "active"
+        }
+      ],
+      "ask": null,
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "key": "fraud-watch",
+      "anchor_id": ""
+    },
+    {
+      "id": "n_pr",
+      "source": "notify",
+      "priority": "normal",
+      "title": "PR #1188 needs your review",
+      "excerpt": "An outside contributor opened a fix for the tunnel retry envelope; CI is green and the agent review round is clean.",
+      "created_at": 1792862100000,
+      "updated_at": 1792862100000,
+      "seq": 7,
+      "revision": 1,
+      "read": false,
+      "read_via": null,
+      "dismissed": false,
+      "repeat_count": 1,
+      "session": {
+        "id": "s_0001",
+        "title": "Aida",
+        "agent_id": "aida",
+        "live": true
+      },
+      "projects": [
+        {
+          "key": "local-operator",
+          "name": "Local Operator",
+          "status": "active"
+        }
+      ],
+      "ask": null,
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "key": "pr-review",
+      "anchor_id": ""
+    },
+    {
+      "id": "n_read",
+      "source": "notify",
+      "priority": "normal",
+      "title": "Campaign budget moved to $40/day",
+      "excerpt": "article-search-svc campaign 4 was raised to $40/day after the conversion check passed.",
+      "created_at": 1792836900000,
+      "updated_at": 1792836900000,
+      "seq": 6,
+      "revision": 1,
+      "read": true,
+      "read_via": "explicit",
+      "dismissed": false,
+      "repeat_count": 1,
+      "session": {
+        "id": "s_0001",
+        "title": "Aida",
+        "agent_id": "aida",
+        "live": true
+      },
+      "projects": [],
+      "ask": null,
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "key": "campaign",
+      "anchor_id": ""
+    },
+    {
+      "id": "n_deploy",
+      "source": "notify",
+      "priority": "normal",
+      "title": "Deploy finished",
+      "excerpt": "admin-api v0.18.2 is live on the staging cluster; smoke checks passed.",
+      "created_at": 1792682100000,
+      "updated_at": 1792682100000,
+      "seq": 5,
+      "revision": 1,
+      "read": false,
+      "read_via": null,
+      "dismissed": false,
+      "repeat_count": 1,
+      "session": {
+        "id": "s_0001",
+        "title": "Aida",
+        "agent_id": "aida",
+        "live": true
+      },
+      "projects": [],
+      "ask": null,
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "key": "deploy",
+      "anchor_id": ""
+    }
+  ],
+  "waiting": [
+    {
+      "id": "ask:3f2a9c1b:a1",
+      "source": "ask",
+      "priority": "high",
+      "title": "Which payment provider should the migration target?",
+      "excerpt": "Stripe is the cheaper option at current volume; Adyen already holds the EU merchant account.",
+      "created_at": 1792930500000,
+      "updated_at": 1792930500000,
+      "seq": 10,
+      "revision": 1,
+      "read": false,
+      "read_via": null,
+      "dismissed": false,
+      "repeat_count": 1,
+      "session": {
+        "id": "s_0003",
+        "title": "Payments migration",
+        "agent_id": "aida",
+        "live": true
+      },
+      "projects": [],
+      "ask": {
+        "status": "open",
+        "deadline_at": 0,
+        "question_count": 2,
+        "dismissible": true
+      },
+      "actions": {
+        "dismiss": true,
+        "answer": false,
+        "read": true
+      },
+      "runtime_live": true,
+      "durable": true,
+      "anchor_id": ""
+    }
+  ],
+  "next_cursor": null,
+  "unread_count": 5,
+  "waiting_count": 1,
+  "high_water": 10
+}

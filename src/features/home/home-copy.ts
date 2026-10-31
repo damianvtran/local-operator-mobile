@@ -7,27 +7,38 @@
  * they obey the desktop's own two rules (no two entries share a leading verb;
  * at most one entry creates an agent). The tips are the desktop pool's entries
  * whose move is true on a phone, shortened to the phone row's width.
+ *
+ * EVERY LINE BELOW COMES FROM THE CATALOGUE (`src/i18n/`), and the copy itself
+ * lives in `src/i18n/catalogues/en/mobile.home.json` with its translator context
+ * beside it. Each one is a FUNCTION rather than a constant: a `const` calls `t`
+ * once at import, so a screen already mounted when the relay's language arrives
+ * would keep the language this module was first evaluated in. The budgets stay
+ * constants — they are numbers about layout, not translatable text.
  */
-export const GREETING = "What can I help you with today?";
+import type { StartupPhase } from "@/features/new-session/startup-coordinator";
+import { type NoParamKey, type ShippedLocale, t } from "@/i18n";
+
+export const greeting = (): string => t("mobile.home.greeting");
 
 /** The splash's replacement while the first send is in flight — one line, so
  *  the composer never moves when the splash changes height under it. */
-export const STARTING = "Starting…";
+export const startingLine = (): string => t("mobile.home.starting");
 
 /** The refused-start sentence, verbatim from `/new` (the relay's own sentence
  *  is preferred when it has one — see `home.tsx`). */
-export const REFUSED_START_FALLBACK =
-	"That folder doesn't exist on this computer.";
+export const refusedStartFallback = (): string =>
+	t("mobile.home.refused_start_fallback");
 
 /** The composer's disabled reason when nothing is connected. Also the sentence
  *  the connect action's slot is named for in the spec. */
-export const CONNECT_DISABLED_REASON = "Connect a computer to send.";
+export const connectDisabledReason = (): string =>
+	t("mobile.home.connect_disabled_reason");
 
 /** The folders read failed — the same sentence `/new` uses for the same failure
  *  (`new-session.tsx`), so one failure has one voice. Carried here because the
  *  home also has to clear it on a successful re-read (review M2). */
-export const FOLDERS_READ_FAILED =
-	"We couldn't read this computer's folders just now.";
+export const foldersReadFailed = (): string =>
+	t("mobile.home.folders_read_failed");
 
 /**
  * Whether the composer holds a draft at all.
@@ -41,24 +52,92 @@ export const FOLDERS_READ_FAILED =
  */
 export const draftExistsFor = (draft: string): boolean => draft.trim() !== "";
 
-/** The pool's own character ceiling, asserted. 24 is the spec's number; it is
- *  what keeps a full-width row on one line at 320 pt inside the row's 48 pt. */
-export const SUGGESTION_CHAR_BUDGET = 24;
+/**
+ * The pool's character ceiling PER SHIPPED LOCALE, not one number for all of
+ * them (review m6).
+ *
+ * WHY PER LOCALE. 24 is the spec's number, and it is calibrated on ENGLISH: the
+ * longest English chip ("Create a team of agents", 23) fits one full-width row
+ * inside the row's 48 pt at 320 pt. Applied to French it is a lossy budget, not
+ * a layout rule — the French row physically fits more characters at the same
+ * font size, because the same sentence is 30% longer and the row is measured in
+ * points, not in letters. Forcing French into 24 characters bought
+ * "Créez une équipe" for "Create a team of agents": the agent, which is the
+ * whole point of the chip, was the word that got dropped.
+ *
+ * HOW 31 IS DERIVED. Measured on this head, over all 120 catalogue messages: the
+ * median per-message French/English character ratio is 1.30 (mean 1.42).
+ * 24 × 1.30 = 31.2, so 31 characters of French occupy the same width as 24 of
+ * English — the same one-line row at 320 pt, not a larger budget by feel.
+ *
+ * WHY THE TYPE AND NOT A FALLBACK. `Record<ShippedLocale, number>` makes a
+ * shipped locale with no measured budget a COMPILE error, so a new language
+ * cannot inherit English's number silently; `home-copy.test.ts` asserts each
+ * locale's own chips against its own row.
+ */
+export const SUGGESTION_CHAR_BUDGET: Readonly<Record<ShippedLocale, number>> = {
+	en: 24,
+	fr: 31,
+	/* Measured, not guessed: the pool's longest shipped chip is 27 characters,
+	 * and its widest measured advance is 189.4 pt — a 26-character chip, because
+	 * width decides fit, not length — against a ~254 pt text box. 32 is headroom
+	 * above what the pool uses, the same shape the French budget records. */
+	es: 32,
+	/* Chinese is compact per character: the pool's longest chip is 12
+	 * characters and its widest advance measured 102 px against a ~256 pt box at
+	 * 320 pt, so 14 is headroom over use rather than a scaled Latin number. */
+	"zh-CN": 14,
+	/* Russian measured, not scaled: the pool's longest chip is 26 characters
+	 * (`suggestion.phone_access`), and width decides the row, not length — the
+	 * same reasoning the Spanish budget records, so it takes the same 32. */
+	ru: 32,
+	/* Vietnamese measured: its longest chip is 29 characters and measures
+	 * 196.8 pt in the ~256 pt chip row at `text-body-sm` (14 px/400), the type
+	 * these rows render in; the audit's 212.8 pt was sampled at `text-label`
+	 * 15/600, which these rows do not use. Same 32-character headroom the
+	 * Spanish and Russian entries record. */
+	vi: 32,
+	/* Hindi measured: its longest chip is 24 characters and measures
+	 * ~204.8 pt at text-body-sm in the ~256 pt chip row, so it needs no
+	 * widening beyond English's own 24 — recorded rather than inherited,
+	 * because the next Hindi chip may not be this short. */
+	hi: 24,
+	/* Urdu measured on the same terms: its longest chip is 23 characters
+	 * (`suggestion.wake_summary`, after the audit's rewrite) and the pool's
+	 * widest is `suggestion.linear_mcp` at 22. 24 is English's own ceiling and
+	 * sits one character above what the pool uses — recorded rather than
+	 * inherited, because Nastaliq shapes wider than Latin at the same length and
+	 * the next chip may not be this short. */
+	ur: 24,
+};
+
+/** The row's ceiling for one shipped locale. */
+export const suggestionCharBudget = (locale: ShippedLocale): number =>
+	SUGGESTION_CHAR_BUDGET[locale];
 
 /**
- * The mobile suggestion pool, pinned head first: the first screen shows the
- * head deterministically (a reproducible frame — the desktop's own device), and
- * a sampler over the tail is a follow-up rather than a reason for the first
+ * The mobile suggestion pool's KEYS, pinned head first: the first screen shows
+ * the head deterministically (a reproducible frame — the desktop's own device),
+ * and a sampler over the tail is a follow-up rather than a reason for the first
  * frame to differ per run.
+ *
+ * The KEYS are what is exported as the pool (with `homeSuggestions()` rendering
+ * them) because the pool is asserted per SHIPPED locale, not only in English:
+ * a check that could only see the active language would call a French row fine
+ * until someone ran the app in French.
  */
-export const HOME_SUGGESTIONS = [
-	"Turn on phone access",
-	"Create a team of agents",
-	"Show me the last turn",
-	"Set up Linear MCP",
-	"Review this repo",
-	"Wake me with a summary",
-] as const;
+export const HOME_SUGGESTION_KEYS = [
+	"mobile.home.suggestion.phone_access",
+	"mobile.home.suggestion.team_of_agents",
+	"mobile.home.suggestion.last_turn",
+	"mobile.home.suggestion.linear_mcp",
+	"mobile.home.suggestion.review_repo",
+	"mobile.home.suggestion.wake_summary",
+] as const satisfies readonly NoParamKey[];
+
+/** The pool as the reader's language renders it, resolved per call. */
+export const homeSuggestions = (): readonly string[] =>
+	HOME_SUGGESTION_KEYS.map((key) => t(key));
 
 /** How many rows the splash shows: 3 at 390 pt, 2 at 320 (`>=` keeps the
  *  spec's own pair exact; a 375 pt phone is nearer the 320 case's pressure). */
@@ -94,7 +173,7 @@ export const suggestionSlotFor = (input: {
 	if (draftExistsFor(input.draft)) return { kind: "none" };
 	return {
 		kind: "suggestions",
-		rows: HOME_SUGGESTIONS.slice(0, suggestionCountFor(input.width)),
+		rows: homeSuggestions().slice(0, suggestionCountFor(input.width)),
 	};
 };
 
@@ -109,14 +188,47 @@ export const TIP_CHAR_BUDGET = 48;
  * a control, never announced. The pool is short because the row is: an entry
  * that clips is a fragment, not a tip.
  */
-export const HOME_TIPS = [
-	"set a schedule to run a prompt on a timer",
-	"ask for parallel work to fan out subagents",
-	"search past conversations to reopen a session",
-] as const;
+export const HOME_TIP_KEYS = [
+	"mobile.home.tip.schedule",
+	"mobile.home.tip.parallel",
+	"mobile.home.tip.search",
+] as const satisfies readonly NoParamKey[];
+
+/** The pool as the reader's language renders it, resolved per call. */
+export const homeTips = (): readonly string[] =>
+	HOME_TIP_KEYS.map((key) => t(key));
 
 /** One tip's dwell time. `tipAt` wraps, so the ring's length is the pool's. */
 export const HOME_TIP_ROTATE_MS = 12_000;
 
-export const tipAt = (index: number): string =>
-	HOME_TIPS[index % HOME_TIPS.length] ?? HOME_TIPS[0];
+export const tipAt = (index: number): string => {
+	const tips = homeTips();
+	return tips[index % tips.length] ?? tips[0] ?? "";
+};
+
+/**
+ * What Home says about work that has not left the device — state only, never the
+ * count: the composer's own chip already says "1 queued", and saying it twice on
+ * one screen was UX U2. `null` means this row has nothing to add.
+ *
+ * The important case is `unconfirmed`: the create may or may not have happened,
+ * no session id exists, and no automatic retry is possible. "Waiting to start…"
+ * was a lie there — nothing was waiting and nothing would start — so the copy
+ * names the state instead and the row keeps the queued sheet one tap away.
+ */
+export function startupQueueState(
+	phase: StartupPhase,
+	sessionId: string | null,
+): string | null {
+	/* `null` for `starting`: the splash already paints "Starting…" on the same
+	 * screen, and the row existed twice for one state (UX U2). The row still
+	 * renders there — it keeps the queued sheet reachable — it just adds no words. */
+	if (phase === "starting") return null;
+	if (sessionId !== null)
+		return phase === "blocked"
+			? t("mobile.home.startup_queue.blocked")
+			: t("mobile.home.startup_queue.sending");
+	if (phase === "unconfirmed")
+		return t("mobile.home.startup_queue.unconfirmed");
+	return t("mobile.home.startup_queue.not_started");
+}

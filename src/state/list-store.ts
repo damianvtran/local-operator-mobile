@@ -22,12 +22,15 @@ import { createStore } from "zustand/vanilla";
 
 import type {
 	Capabilities,
+	NotificationsBlock,
 	SessionListFrame,
 	SessionSummary,
 	UnreadBlock,
 } from "../contracts";
 
 export interface ListSnapshot {
+	/** Reset is an identity boundary, even when the same computer reconnects. */
+	connectionGeneration: number;
 	sessions: SessionSummary[];
 	/** The relay's own markers for the durable half of the listing. Empty means
 	 *  healthy; present means say so, because a partial list is not an empty one. */
@@ -38,6 +41,10 @@ export interface ListSnapshot {
 	 *  relay omits the block and that absence means **unknown, never 0** — the
 	 *  badge reads `count` when it is a number and shows no number otherwise. */
 	unread: UnreadBlock | null;
+	/** The inbox's counts off the same frame (`notifications`, contract §5.4).
+	 *  `null` until a frame carries it — an older relay omits the block, and that
+	 *  absence is UNKNOWN, never 0: the entry points draw no number. */
+	notifications: NotificationsBlock | null;
 	/** How many frames have been applied. Surfaced for diagnostics and for a test to
 	 *  assert a repaint happened. */
 	frameCount: number;
@@ -51,8 +58,17 @@ export interface ListActions {
 	/** Applies one full frame. Wholesale replacement, by design. */
 	applyFrame: (
 		frame: Pick<SessionListFrame, "sessions" | "degraded"> &
-			Partial<Pick<SessionListFrame, "capabilities" | "unread">>,
+			Partial<
+				Pick<SessionListFrame, "capabilities" | "unread" | "notifications">
+			>,
 		at?: number,
+		connectionGeneration?: number,
+	) => void;
+	/** Applies the inbox counts a fresher `GET /api/notifications` answer carried,
+	 *  so the badge and the inbox's own count line agree at the same moment. */
+	applyInboxCounts: (
+		block: NotificationsBlock,
+		connectionGeneration: number,
 	) => void;
 	/** Marks the rendered list as no longer live. Never clears it. */
 	markStale: () => void;
@@ -64,10 +80,12 @@ export interface ListActions {
 export type ListStore = ListSnapshot & ListActions;
 
 const INITIAL: ListSnapshot = {
+	connectionGeneration: 0,
 	sessions: [],
 	degraded: [],
 	capabilities: {},
 	unread: null,
+	notifications: null,
 	frameCount: 0,
 	lastFrameAt: null,
 	stale: true,
@@ -75,10 +93,28 @@ const INITIAL: ListSnapshot = {
 
 export function createListStore(deps: { now?: () => number } = {}) {
 	const now = deps.now ?? (() => Date.now());
+	// Keep freshness even while a degraded frame hides the badge. Otherwise an
+	// old healthy answer could revive a stale number after a newer unknown one.
+	let inboxWatermark: number | undefined;
+	const admitCounts = (
+		held: NotificationsBlock | null,
+		block: NotificationsBlock,
+	): NotificationsBlock | null => {
+		const known = notificationsOrNull(block);
+		if (known === null) return null;
+		if (
+			inboxWatermark !== undefined &&
+			(known.high_water === undefined || known.high_water < inboxWatermark)
+		)
+			return held;
+		inboxWatermark = known.high_water;
+		return known;
+	};
 	return createStore<ListStore>()((set, get) => ({
 		...INITIAL,
 
-		applyFrame(frame, at) {
+		applyFrame(frame, at, connectionGeneration = get().connectionGeneration) {
+			if (connectionGeneration !== get().connectionGeneration) return;
 			set({
 				/* Nothing is merged: the frame IS the list. */
 				sessions: frame.sessions,
@@ -94,10 +130,34 @@ export function createListStore(deps: { now?: () => number } = {}) {
 				 * WINS, including when it says `degraded` (count absent, badge darkens
 				 * again). */
 				unread: frame.unread ?? get().unread,
+				/* Same retention rule as `unread`, for the same reason: a relay that
+				 * publishes the inbox block publishes it on every frame, so absence
+				 * means an older relay rather than "the counts vanished". */
+				/* A PRESENT BLOCK WITH NO COUNTS IS UNKNOWN, NOT A ZERO — the core
+				 * answers `{}` when its inbox store cannot be read ("unknown, never
+				 * zero", `daemon.py` `_notifications_block`). Mapping it to `null`
+				 * keeps the badge dark while the block is unreadable, and — because
+				 * the schema now accepts the empty block — the sessions frame this
+				 * list depends on is no longer dropped over it (NC5). */
+				// HTTP and SSE are unordered transports. Both must use the same
+				// watermark; absence retains, but a present empty block is unknown.
+				notifications:
+					frame.notifications === undefined
+						? get().notifications
+						: admitCounts(get().notifications, frame.notifications),
 				frameCount: get().frameCount + 1,
 				lastFrameAt: at ?? now(),
 				stale: false,
 			});
+		},
+
+		applyInboxCounts(block, connectionGeneration) {
+			// A mounted inbox may finish IO after beginRoute resets this store.
+			// Requiring its captured generation prevents counts from crossing
+			// computers/accounts, including a return to the same client identity.
+			if (connectionGeneration !== get().connectionGeneration) return;
+			if (notificationsOrNull(block) === null) return;
+			set({ notifications: admitCounts(get().notifications, block) });
 		},
 
 		markStale() {
@@ -110,7 +170,8 @@ export function createListStore(deps: { now?: () => number } = {}) {
 		},
 
 		reset() {
-			set({ ...INITIAL });
+			inboxWatermark = undefined;
+			set({ ...INITIAL, connectionGeneration: get().connectionGeneration + 1 });
 		},
 	}));
 }
@@ -149,4 +210,15 @@ export function sessionTitle(
 ): string {
 	const name = session.conversation_name.trim();
 	return name.length > 0 ? name : "untitled";
+}
+
+/** The block as the store keeps it: a known count is a block, anything else is
+ *  `null` (unknown). One helper so the SSE path, the cold GET and a reconnect
+ *  cannot read the same `{}` three ways. */
+export function notificationsOrNull(
+	block: NotificationsBlock | null | undefined,
+): NotificationsBlock | null {
+	if (block === null || block === undefined) return null;
+	if (block.unread_count === undefined) return null;
+	return block;
 }

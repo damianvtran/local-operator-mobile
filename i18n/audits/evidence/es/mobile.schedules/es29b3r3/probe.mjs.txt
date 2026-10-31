@@ -1,0 +1,238 @@
+/**
+ * Third-round verification probe for mobile.schedules (es), head bc770ce.
+ *
+ * Uses the APP'S OWN parser/formatter (src/i18n/messages.ts) — no ICU library,
+ * no translation/MT service, no back-translation. Every number printed below is
+ * produced by this run.
+ *
+ * Read-only: reads the catalogue files and the runtime module, writes nothing.
+ */
+import { readFileSync } from "node:fs";
+
+const REPO = "/Users/damian/workspace/es-wave";
+const M = await import(`${REPO}/src/i18n/messages.ts`);
+const CAT = (loc, ns) =>
+	JSON.parse(readFileSync(`${REPO}/src/i18n/catalogues/${loc}/${ns}.json`, "utf8"));
+
+const en = CAT("en", "mobile.schedules");
+const es = CAT("es", "mobile.schedules");
+const ctx = JSON.parse(
+	readFileSync(`${REPO}/src/i18n/catalogues/en/mobile.schedules.context.json`, "utf8"),
+);
+
+const out = [];
+const say = (...a) => { const s = a.join(" "); out.push(s); console.log(s); };
+const H = (t) => { say(""); say("=".repeat(78)); say(t); say("=".repeat(78)); };
+
+const kindOf = (m) => [...m.params.entries()].map(([n, k]) => `${n}:${k}`).sort().join(",");
+const armsOf = (nodes, name) => {
+	const found = [];
+	const walk = (ns) => {
+		for (const n of ns) {
+			if (n.type === "plural" && (name === null || n.name === name)) {
+				found.push({ name: n.name, arms: [...n.options.keys()] });
+			}
+			if (n.type === "plural" || n.type === "select") {
+				for (const [, v] of n.options) walk(v);
+			}
+		}
+	};
+	walk(nodes);
+	return found;
+};
+
+H("0. INPUT IDENTITY");
+say(`en keys: ${Object.keys(en).length} | es keys: ${Object.keys(es).length} | context entries: ${Object.keys(ctx).length}`);
+say("valid JSON: both parsed (this line proves it)");
+
+H("1. KEY PARITY AND ORDER (38/38)");
+const enKeys = Object.keys(en), esKeys = Object.keys(es);
+const missing = enKeys.filter((k) => !(k in es));
+const extra = esKeys.filter((k) => !(k in en));
+say("en key count:", enKeys.length, "| es key count:", esKeys.length);
+say("missing in es:", missing.length ? missing.join(", ") : "(none)");
+say("extra in es:", extra.length ? extra.join(", ") : "(none)");
+say("same order as en:", JSON.stringify(enKeys) === JSON.stringify(esKeys));
+
+H("2. ICU PARSE (es) + PLACEHOLDER NAME/TYPE PARITY vs en");
+let parseFail = 0, paramMismatch = 0;
+for (const k of enKeys) {
+	let pe, ps;
+	try { pe = M.parseMessage(en[k]); } catch (e) { say(`PARSE-FAIL en ${k}: ${e.message}`); parseFail++; continue; }
+	try { ps = M.parseMessage(es[k]); } catch (e) { say(`PARSE-FAIL es ${k}: ${e.message}`); parseFail++; continue; }
+	const a = kindOf(pe), b = kindOf(ps);
+	if (a !== b) { say(`KIND-DIFF (accepted, en plain -> es plural) ${k}: en[${a}] es[${b}]`); paramMismatch++; }
+}
+say(`messages parsed: ${enKeys.length}/${enKeys.length} | parse failures: ${parseFail}`);
+
+function placeholderSet(params) {
+	return [...params.keys()].sort().join(",");
+}
+function paramKindCheck() {
+	let n = 0;
+	for (const k of enKeys) {
+		const pe = M.parseMessage(en[k]), ps = M.parseMessage(es[k]);
+		const a = [...pe.params.keys()].sort().join(","), b = [...ps.params.keys()].sort().join(",");
+		if (a !== b) n++;
+	}
+	return n;
+}
+function paramKindCount() { return paramKindCheck(); }
+say(`placeholder NAME sets identical: ${paramKindCheck() === 0 ? "yes (38/38)" : `${paramKindCheck()} mismatches`}`);
+say(`placeholder KIND differences (en plain -> es plural): ${kindDiffs().map((k) => k.replace("mobile.schedules.", "")).join(", ") || "(none)"}`);
+function kindDiffs() {
+	const out = [];
+	for (const k of enKeys) {
+		const pe = M.parseMessage(en[k]), ps = M.parseMessage(es[k]);
+		for (const [name, kind] of pe.params) {
+			if (ps.params.get(name) !== kind) out.push(`${k}:${name}(${kind}->${ps.params.get(name)})`);
+		}
+	}
+	return out;
+}
+
+H("3. PLURAL ARM STRUCTURE (es) — ALL CLDR CATEGORIES FOR es PRESENT, NO ARM DROPPED");
+const cldr = new Intl.PluralRules("es").resolvedOptions().pluralCategories;
+say("Intl.PluralRules('es').resolvedOptions().pluralCategories =", JSON.stringify(cldr));
+say("app pluralCategory('es', n):",
+	[0, 1, 2, 1000000, 1500000].map((n) => `${n}=${M.pluralCategory("es", n)}`).join(" "));
+let armProblems = 0, pluralMessages = 0, droppedArms = 0;
+for (const k of enKeys) {
+	const ps = M.parseMessage(es[k]);
+	const pe = M.parseMessage(en[k]);
+	const esArms = armsOf(ps.nodes, null), enArms = armsOf(pe.nodes, null);
+	for (let i = 0; i < esArms.length; i++) {
+		pluralMessages++;
+		const p = esArms[i];
+		const need = ["one", "many", "other"];
+		const miss = need.filter((c) => !p.arms.includes(c));
+		const bogus = p.arms.filter((c) => !cldr.includes(c) && !/^=\d+$/.test(c));
+		/* "no arm dropped": every en arm must still exist in es */
+		const enSet = enArms[i]?.arms ?? [];
+		const dropped = enSet.filter((c) => !p.arms.includes(c));
+		if (dropped.length) droppedArms++;
+		const ok = miss.length === 0 && bogus.length === 0 && dropped.length === 0;
+		if (!ok) armProblems++;
+		say(`${(ok ? "ok" : "PROBLEM").padEnd(7)} ${k.replace("mobile.schedules.", "")} [${p.name}] arms=${JSON.stringify(p.arms)}` +
+			(miss.length ? ` MISSING=${JSON.stringify(miss)}` : "") +
+			(bogus.length ? ` NOT-ES-CATEGORY=${JSON.stringify(bogus)}` : "") +
+			(dropped.length ? ` DROPPED-vs-en=${JSON.stringify(dropped)}` : ""));
+	}
+}
+say(`plural messages in es: ${pluralMessages} | with an arm problem: ${armProblems} | arms dropped vs en: ${droppedArms}`);
+
+H("4. {total} RETAINED IN EVERY ARM OF summary.monitors_attention");
+const attention = M.parseMessage(es["mobile.schedules.summary.monitors_attention"]);
+for (const n of attention.nodes) {
+	if (n.type !== "plural") continue;
+	for (const [arm, body] of n.options) {
+		const args = new Set();
+		const walk = (ns) => { for (const x of ns) { if (x.type === "argument") args.add(x.name); if (x.type === "plural" || x.type === "select") for (const [, v] of x.options) walk(v); } };
+		walk(body);
+		say(`arm ${arm.padEnd(6)} args=${JSON.stringify([...args].sort())} keepsTotal=${args.has("total")}`);
+	}
+}
+
+H("5. summary.monitors_attention AT broken=1 AND broken=2");
+for (const [broken, total] of [[1, 40], [2, 40], [1, 1], [0, 40], [1000000, 40]]) {
+	const cat = M.pluralCategory("es", broken);
+	const rendered = M.formatMessage(M.parseMessage(es["mobile.schedules.summary.monitors_attention"]), { broken, total }, "es");
+	say(`broken=${broken} total=${total} es=${cat.padEnd(5)} | ${rendered}`);
+}
+
+H("6. truncated — BOTH FAMILIES");
+for (const family of ["wakes", "monitors"]) {
+	for (const [shown, total] of [[3, 9], [1, 9], [1, 1], [200, 500]]) {
+		const rendered = M.formatMessage(M.parseMessage(es["mobile.schedules.truncated"]), { shown, total, family }, "es");
+		say(`family=${family.padEnd(8)} ${shown}/${total} | ${rendered}`);
+	}
+}
+
+H("7. RENDERED — COUNTED NOUNS (0 / 1 / 2 / 1 000 000)");
+const counted = [
+	"mobile.schedules.count.monitors",
+	"mobile.schedules.count.wakes",
+	"mobile.schedules.summary.monitors_armed",
+	"mobile.schedules.summary.wakes",
+	"mobile.schedules.show_more.monitors",
+	"mobile.schedules.show_more.wakes",
+	"mobile.schedules.tail.failed",
+];
+for (const k of counted) {
+	const arg = k.includes("show_more") ? "hidden" : "count";
+	for (const n of [0, 1, 2, 1000000]) {
+		const cat = M.pluralCategory("es", n);
+		const rendered = M.formatMessage(M.parseMessage(es[k]), { [arg]: n }, "es");
+		const english = M.formatMessage(M.parseMessage(en[k]), { [arg]: n }, "en");
+		say(`${k.replace("mobile.schedules.", "").padEnd(24)} ${String(n).padStart(7)} es=${cat.padEnd(5)} | ${rendered.padEnd(44)} | en: ${english}`);
+	}
+}
+
+H("8. REMEDIATED KEYS — RENDERED WHERE THEY LAND");
+say(`state.stale           | ${es["mobile.schedules.state.stale"]}   (wake row state slot; en '${en["mobile.schedules.state.stale"]}')`);
+for (const fam of ["monitors", "wakes"]) {
+	say(`gone.${fam.padEnd(9)}      | ${es[`mobile.schedules.gone.${fam}`]}`);
+	say(`  composed head line: ${fam === "monitors" ? "Monitors · 2 monitorizaciones" : "Wakes · 5 despertares programados"} / ${es[`mobile.schedules.gone.${fam}`]}`);
+}
+say(`empty.body            | ${es["mobile.schedules.empty.body"]}`);
+
+H("9. MECHANICAL SWEEP");
+const bidi = /[\u202A-\u202E\u2066-\u2069\u200E\u200F\u200B-\u200D\uFEFF]/;
+let bidiHits = 0, markupHits = 0, dblSpace = 0, spaceBeforePunct = 0, bang = 0;
+for (const k of esKeys) {
+	const v = es[k];
+	if (bidi.test(v)) { say(`BIDI ${k}`); bidiHits++; }
+	if (/<\/?[a-z]|<b>|<i>|`/.test(v)) { say(`MARKUP/CODE ${k}: ${v}`); markupHits++; }
+	if (/ {2,}/.test(v)) { say(`DOUBLE-SPACE ${k}`); dblSpace++; }
+	if (/\s[;:?!]/.test(v)) { say(`SPACE-BEFORE-PUNCT ${k}`); spaceBeforePunct++; }
+	if (v.includes("!")) { say(`EXCLAM ${k}`); bang++; }
+}
+say(`bidi controls: ${bidiHits} | markup/backticks: ${markupHits} | double spaces: ${dblSpace} | space-before-punct: ${spaceBeforePunct} | "!" in copy: ${bang}`);
+say("em-dash form (must be ' — '):",
+	esKeys.filter((k) => es[k].includes("—")).map((k) => `${k}=${es[k].includes(" — ") ? "ok" : "BAD"}`).join(" "));
+/* Terminal punctuation is a property of the RENDERED sentence, not of the ICU
+ * source (a plural message's last raw character is "}"). */
+const sample = {
+	"mobile.schedules.cadence.every": { duration: "1d" },
+	"mobile.schedules.cadence.left": { cadence: "cada 1d", remaining: 2 },
+	"mobile.schedules.cadence.spent": { cadence: "cada 1d" },
+	"mobile.schedules.count.monitors": { count: 2 },
+	"mobile.schedules.count.wakes": { count: 2 },
+	"mobile.schedules.due.ahead": { label: "4m" },
+	"mobile.schedules.due.overdue": { label: "2h" },
+	"mobile.schedules.head.next": { head: "2 despertares programados", label: "4m" },
+	"mobile.schedules.head.overdue": { head: "2 despertares programados", label: "2h vencido" },
+	"mobile.schedules.show_more.monitors": { hidden: 2 },
+	"mobile.schedules.show_more.wakes": { hidden: 2 },
+	"mobile.schedules.summary.monitors_armed": { count: 2 },
+	"mobile.schedules.summary.monitors_attention": { broken: 1, total: 40 },
+	"mobile.schedules.summary.wakes": { count: 2 },
+	"mobile.schedules.tail.failed": { count: 2 },
+	"mobile.schedules.truncated": { shown: 3, total: 9, family: "wakes" },
+};
+const terminal = (m, args, loc) => M.formatMessage(M.parseMessage(m), args, loc).trim().slice(-1);
+const punctDiffs = esKeys.filter((k) => terminal(es[k], sample[k] ?? {}, "es") !== terminal(en[k], sample[k] ?? {}, "en"));
+say("rendered terminal-character mismatches vs en:",
+	pdiffs(pdiffs2()));
+function pdiffs2() { return esKeys.filter((k) => terminal(en[k], sample[k] ?? {}, "en") === "." && terminal(es[k], sample[k] ?? {}, "es") !== "."); }
+function pdiffs(a) { return a.map((k) => `${k.replace("mobile.schedules.", "")} en=...${terminal(en[k], sample[k] ?? {}, "en")} es=...${terminal(es[k], sample[k] ?? {}, "es")}`).join(" | ") || "(none)"; }
+say("full stops PRESENT in en but MISSING in es:", pdiffs(pdiffs2()) === "(none)" ? "none" : "see above");
+
+H("10. NEGATIVE CONTROL — these checks can fail");
+const before = JSON.parse(readFileSync("/dev/stdin", "utf8"));
+const oldGone = before["mobile.schedules.gone.monitors"];
+say(`(a) pre-remediation gone.monitors from f1c782f (git): "${oldGone}"`);
+say(`    occurrences of "ya no está" in that one line: ${(oldGone.match(/ya no está/gi) ?? []).length}`);
+const nowGone = es["mobile.schedules.gone.monitors"];
+say(`    at head bc770ce: "${nowGone}" -> occurrences of "ya no está": ${(nowGone.match(/ya no está/gi) ?? []).length}, of "ya no existe": ${(nowGone.match(/ya no existe/g) ?? []).length}`);
+const oldAttention = "{broken} de {total} requieren atención";
+say(`(b) ungrammatical control at broken=1 -> ${M.formatMessage(M.parseMessage(oldAttention), { broken: 1, total: 40 }, "es")}`);
+const tampered = "{count, plural, one {# monitorización} other {# monitorizaciones}}";
+const t = M.parseMessage(tampered);
+const tArms = armsOf(t.nodes, null)[0].arms;
+say(`(c) many-arm-removed control: arms=${JSON.stringify(tArms)} -> missing=${JSON.stringify(["one","many","other"].filter((c) => !tArms.includes(c)))} (expected ["many"]); at 1000000 -> ${M.formatMessage(t, { count: 1000000 }, "es")}`);
+const dropped = "{broken, plural, one {# requiere atención} many {# requieren atención} other {# requieren atención}}";
+say(`(c) {total}-dropped control: params=${kindOf(M.parseMessage(dropped))} vs en ${kindOf(M.parseMessage(en["mobile.schedules.summary.monitors_attention"]))} -> name-parity check flags it: ${placeholderSet(M.parseMessage(dropped).params) !== placeholderSet(M.parseMessage(en["mobile.schedules.summary.monitors_attention"]).params)}`);
+
+H("11. RESULT");
+console.log("\n[end of probe]");

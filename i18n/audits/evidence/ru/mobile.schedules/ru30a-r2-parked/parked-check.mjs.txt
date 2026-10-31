@@ -1,0 +1,87 @@
+// parked-check.mjs — targeted regression check for the TWO parked clauses of
+// mobile.schedules, as part of the group-A ru delta re-audit.
+//
+// This is NOT a namespace audit of mobile.schedules: ru29s1 remains that
+// namespace's audit and its own delta round belongs to its auditor. This checks
+// only `mobile.schedules.parked.monitors` and `.parked.wakes`, which the
+// remediation rewrote beyond RU-SCH-3's prescription.
+//
+// Strings are read through the repository's OWN parser (parseMessage) and
+// renderer (formatMessage), so what is inspected is what the app paints.
+// Read-only: it opens catalogue JSON and prints.
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const REPO = "/Users/damian/workspace/ru-wave";
+const NS = "mobile.schedules";
+const KEYS = ["mobile.schedules.parked.monitors", "mobile.schedules.parked.wakes"];
+const messages = await import(`${REPO}/src/i18n/messages.ts`);
+
+const load = (l) => JSON.parse(readFileSync(`${REPO}/src/i18n/catalogues/${l}/${NS}.json`, "utf8"));
+const ctx = JSON.parse(readFileSync(`${REPO}/src/i18n/catalogues/en/${NS}.context.json`, "utf8"));
+const ru = load("ru");
+const en = load("en");
+const sha = (t) => createHash("sha256").update(t, "utf8").digest("hex");
+
+const isWide = (v) =>
+  (v >= 0x1100 && v <= 0x115f) || (v >= 0x2e80 && v <= 0xa4cf) || (v >= 0xac00 && v <= 0xd7a3) ||
+  (v >= 0xf900 && v <= 0xfaff) || (v >= 0xfe30 && v <= 0xfe6f) || (v >= 0xff00 && v <= 0xff60) ||
+  (v >= 0xffe0 && v <= 0xffe6) || (v >= 0x20000 && v <= 0x3fffd);
+const cells = (s) => [...s].reduce((n, ch) => n + (isWide(ch.codePointAt(0)) ? 2 : 1), 0);
+
+let failed = 0;
+const check = (label, ok, detail = "") => {
+  console.log(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? `  [${detail}]` : ""}`);
+  if (!ok) failed += 1;
+};
+
+for (const key of KEYS) {
+  const a = en[key];
+  const b = ru[key];
+  console.log(`\n=== ${key}`);
+  console.log(`  en     ${JSON.stringify(a)}`);
+  console.log(`  note   ${JSON.stringify(ctx[key]?.note ?? "(none)")}`);
+  console.log(`  ru     ${JSON.stringify(b)}`);
+  console.log(`  role   ${JSON.stringify(ctx[key]?.role ?? "(none)")}`);
+  console.log(`  sha256 ${sha(b)}  cells=${cells(b)}  codePoints=${[...b].length}  utf16=${b.length}`);
+
+  check("both values are non-empty strings", typeof a === "string" && typeof b === "string" && b.length > 0);
+
+  // 1. structure: nothing to substitute, nothing to pluralise
+  const enArgs = [...messages.parseMessage(a).params.keys()];
+  const ruParams = messages.parseMessage(b).params;
+  const ruArgs = [...ruParams.keys()];
+  check("no ICU arguments in the source", enArgs.length === 0, `en=${JSON.stringify(enArgs)}`);
+  check("no ICU arguments in the translation", ruArgs.length === 0, `ru=${JSON.stringify(ruArgs)}`);
+  check("no plural/select node in the translation",
+        !/\{\s*\w+\s*,\s*(plural|select)\s*,/.test(b));
+  const rendered = messages.formatMessage(messages.parseMessage(b), {}, "ru");
+  check("renders byte-identically (no substitution)", rendered === b);
+
+  // 2. the Russian house style
+  check("has the guide's spaced em dash", b.includes(" — "));
+  check("no ASCII hyphen or en dash used as the dash", !/\s-\s/.test(b) && !b.includes("–"));
+  check("no trailing full stop (it is a status clause)", !/[.!?]$/.test(b), b.slice(-1));
+  check("no ASCII dots and no ellipsis at all", !b.includes("...") && !b.includes("…"));
+  check("no exclamation mark", !b.includes("!"));
+  check("no straight quotes", !/["']/.test(b));
+  check("terminal punctuation matches the source", /[.!?…]$/.test(a) === /[.!?…]$/.test(b));
+  check("sentence case (first character capitalised)", b[0] === b[0].toUpperCase());
+  check("Cyrillic script throughout the words", /\p{Script=Cyrillic}/u.test(b));
+  check("no Latin letters smuggled in", !/[A-Za-z]/.test(b));
+
+  // 3. what the sidecar explicitly requires or forbids
+  if (key.endsWith(".wakes")) {
+    check("does not say 'when you open it'", !/откры/iu.test(b),
+          "sidecar: 'Do not say when you open it'");
+    check("names the NEXT turn", /следующ\S* ход/iu.test(b));
+    check("(keeps the pronoun referent 'this conversation')", /этой беседы/iu.test(b));
+  } else {
+    check("names the conversation RUNNING again", /запуст|запущ/iu.test(b));
+    check("does not promise that opening is enough", !/откры/iu.test(b));
+    check("(keeps the pronoun referent 'this conversation')", /эта беседа/iu.test(b));
+  }
+}
+
+console.log(`\n=== SUMMARY parked clauses: 2 keys, ${failed === 0 ? "0 failed" : `${failed} FAILED`} ===`);
+if (failed > 0) process.exitCode = 1;

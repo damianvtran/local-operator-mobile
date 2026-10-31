@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 
 import { commandCopyId, ROLE, tunnelCommandCopyId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
+import { LTR_TEXT } from "@/ui/direction";
 
 /**
  * One command, ready to copy — the component, not a habit.
@@ -68,6 +69,13 @@ export const CommandBlock = ({
 				<Text
 					selectable
 					className="text-mono-sm text-ink"
+					/* A command is the archetypal MIXED CONTENT case: it keeps its own
+					 *  left-to-right grammar inside an Urdu screen, or the bidi algorithm
+					 *  reorders its quotes and flags and the reader copies something that is
+					 *  not the command. The isolation lives here, on the component that
+					 *  renders the value — never as a control character in the catalogue,
+					 *  which a translator cannot see and a formatter would strip. */
+					style={LTR_TEXT}
 					testID={testID ?? commandCopyId(label)}
 				>
 					{command}

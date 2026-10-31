@@ -191,6 +191,17 @@ export interface ScenarioWorld {
 	 */
 	schedules?: Json | FixtureOverride;
 	/**
+	 * The inbox (`GET /api/notifications`, contract §5.4). A bare body seeds the
+	 * mock's notification STORE, so the write routes move it; a recorded answer
+	 * (`FixtureOverride`) pins the response instead — the refusal case, where the
+	 * store must never be consulted.
+	 *
+	 * A scenario silent about notifications serves the synthetic
+	 * `notifications-populated` corpus: a machine with an inbox, which is what a
+	 * capture of the screen is for.
+	 */
+	notifications?: Json | FixtureOverride;
+	/**
 	 * The checkpoint rail's manifest (S5): the whole
 	 * `GET /api/sessions/{id}/checkpoints` body, or a RECORDED RESPONSE
 	 * (`FixtureOverride`) when a cell needs a status the route does not
@@ -350,7 +361,20 @@ export function capabilityBlock(
 	 *  otherwise the app's footer entry is hidden against the only relay this
 	 *  harness can drive. This is the mock's own claim, not a corpus field: the
 	 *  captured `/api/sessions` predates the Library. */
-	next.features = { ...(next.features ?? {}), library: 1 };
+	next.features = {
+		...(next.features ?? {}),
+		library: 1,
+		/* The mock serves the inbox routes, so it must advertise the capability
+		 * the phone gates both entry points on. Without this the desktop and
+		 * relay agree and the harness hides the feature it exists to capture. */
+		notifications: 1,
+		/* The relay's receipt door, advertised as the real build does
+		 * (`3cacd0cad01`: `notifications_seen`). No screen keys on it yet — the
+		 * app ships explicit-read only (D11) — but a mock that stayed silent
+		 * about a door the production relay advertises is the divergence this
+		 * block exists to prevent. */
+		notifications_seen: 1,
+	};
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {
@@ -596,6 +620,71 @@ const ANSWERS: readonly string[] = [
  * `fix` is the object `loadFixtures()` returns.
  */
 export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
+	/**
+	 * One inbox fixture's BODY, without its provenance marker.
+	 *
+	 * The corpus files state their own origin in `provenance`, and that field must
+	 * never reach a client: it describes the FILE, not a relay response. The relay
+	 * strips it again for the default world; doing it here means a scenario that
+	 * pins a body cannot leak it either.
+	 */
+	const inboxBody = (name: string): Json => {
+		const value = fix.payload(name);
+		if (typeof value !== "object" || value === null) return {};
+		const record = { ...(value as Record<string, Json>) };
+		delete record.provenance;
+		return record;
+	};
+
+	/**
+	 * A BUSY INBOX: the same corpus with enough unread updates that the rail's
+	 * count renders as `99+`.
+	 *
+	 * WHY IT EXISTS. The rail's count placement (D22/D23) has two states, and the
+	 * widest count in any fixture was 7 — `countLabel` caps at `99+`, so no captured
+	 * cell could ever leave the symmetric one: of 1200 cells, the 270 that mount the
+	 * count all mounted its mirror too (code review round 10, m-4). A designed state
+	 * that no frame renders cannot be reviewed, so one cell now renders it.
+	 *
+	 * HONEST, not a count bolted onto a short list: the rows are the same synthetic
+	 * updates repeated under distinct ids, all unread, and the counts are DERIVED
+	 * from those rows — so the badge, the inbox screen and the frame agree.
+	 */
+	const floodInbox = (name: string, unread: number): Json => {
+		const body = inboxBody(name) as unknown as {
+			items?: Array<Record<string, Json>>;
+			counts?: Record<string, Json>;
+		};
+		const seed = Array.isArray(body.items) ? body.items : [];
+		if (seed.length === 0) return body as unknown as Json;
+		const items = Array.from({ length: unread }, (_, index) => {
+			const row = seed[index % seed.length] as Record<string, Json>;
+			return {
+				...row,
+				id: `n_flood_${String(index).padStart(3, "0")}`,
+				// DISTINCT KEYS AND ORDER: the store orders by `seq` and keys rows by
+				// id, so repeated seed rows would collide on both (review round 11, m-1).
+				seq: index + 1,
+				revision: index + 1,
+				read: false,
+				read_via: null,
+				dismissed: false,
+				created_at: Number(row.created_at ?? 0) - index * 1000,
+			};
+		});
+		/* NO `counts` BLOCK. The store DERIVES `unread_count` and
+		 *  `waiting_unread_count` from the rows it serves (`notifications.ts`
+		 *  `unreadCount`/`waitingUnreadCount`), so a hand-written block here would be
+		 *  ignored at best and a lie at worst — it said zero waiting while the seed's
+		 *  pinned ask is still served (review round 11, m-1). The badge then reads
+		 *  `120 unread + 1 waiting`, which is what the page and the rail will show. */
+		return {
+			...body,
+			items,
+			high_water: unread,
+		} as unknown as Json;
+	};
+
 	const capabilities = fix.list("sessions-empty").capabilities;
 	const emptyList = () => ({ sessions: [], degraded: [] });
 
@@ -1083,9 +1172,77 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	);
 
 	add(
+		"health-quiet",
+		'The session is running but its owner has gone quiet: `heartbeat_stale: true` with a live pid, so the header\'s status dot reads YELLOW "Not answering" and its sheet says the QUIET sentence (a send can fail and still arrive once the session catches up) — not the degraded one.',
+		/* `S5/health-quiet-sheet` is the same world with the dot\'s sheet OPEN: the
+		 *  quiet sentence is safety copy and until now no frame carried it (review
+		 *  round 4, m3 — the dropped cause had a sheet cell, the quiet one did). */
+		["S5/health-quiet", "S5/health-quiet-sheet"],
+		() => ({
+			projections: {
+				[liveIdle.session_id]: projectionFrom(liveIdle, {
+					heartbeat_stale: true,
+				}),
+			},
+			/* The stream goes silent on purpose: a session that keeps pushing frames
+			 *  cannot be quiet, and the frame that carries `heartbeat_stale` is the
+			 *  last reading before the silence. */
+			stream: { mode: "silent" },
+		}),
+	);
+
+	add(
+		"health-ended",
+		"A conversation opened from history: the projection is a durable rebuild (`pid: 0`, `ended: false`), which the header's dot reads GREY \"Ended\", the composer shows the reopen placeholder, and the dot's sheet offers Resume.",
+		["S5/health-ended", "S5/health-sheet"],
+		() => {
+			const projection = structuredClone(afterDeath);
+			return {
+				projections: { [projection.session_id]: projection },
+				rowOverrides: {
+					section: "previous",
+					streaming: false,
+					ended: true,
+					subagents_running: null,
+					subagents_queued: null,
+				},
+				/* A resumable conversation, so the dot's Resume route has a row the
+				 *  relay will accept: `POST /api/sessions/resume` refuses an id past
+				 *  this list with `resume-unknown`. */
+				past: [
+					{
+						id: projection.session_id,
+						name: projection.conversation_name,
+						mtime: Math.floor(Date.now() / 1000) - 3600,
+						forked: false,
+					},
+				],
+			};
+		},
+	);
+
+	add(
+		"health-drop",
+		'A session the phone HAD a frame for, whose stream is then torn mid-frame on every open (`sse-drop-mid-stream`): each reconnect seeds and tears again, so the phone\'s link keeps dropping after the first frame. The header\'s dot reads YELLOW "Reconnecting" with the word on its state line — never green beside a "connection dropped" band (UX round 1, U4).',
+		/* No registry cell, deliberately: the world needs a torn stream, which a
+		 *  single static frame cannot show — the evidence for it is a real-path
+		 *  probe over time, not a PNG. (It originally cited the core capture step's
+		 *  195-minute bound (the merged plan's derived deadline is 189 min),
+		 *  so the citation was stale — review round 2, m-d.) The world is still
+		 *  served, so a local or QA capture can open it by name
+		 *  (`--scenario health-drop`). */
+		[],
+		() => ({
+			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
+			stream: { mode: "idle" },
+			faults: ["sse-drop-mid-stream"],
+		}),
+	);
+
+	add(
 		"degraded",
 		"The session record is fresh but its runtime is unreachable: the row carries its own receipt (`degraded: true`, the signal a phone-observed SIGSTOP produces) AND `subagents_running` is null while the row stays active.",
-		["S15/degraded-row", "S5/degraded"],
+		["S15/degraded-row", "S5/degraded", "S5/health-dropped-sheet"],
 		() => ({
 			/* BOTH signals, and they are not alternatives. #23 added the ROW's own
 			 * receipt (`SessionSummary.degraded`), which is what the list row reads;
@@ -1504,6 +1661,524 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 							output: "delivered (id peer-4d5e6f708192a3b4c5d6e7f8091a2b3c)",
 						},
 					}),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
+	/* The `bridge` tool's row (Team Bridge posts, DMs, reactions and reads), as
+	 * the relay really sends it: `details.bridge_row` = the tokens, and
+	 * `details.bridge_copy` = the WORDS rendered server-side from the core's
+	 * `wire.tool_rows.bridge.*` catalogue (local-operator #3205,
+	 * `mobile/projection.py::_bridge_copy`).
+	 *
+	 * EVERY string below is verbatim from
+	 * `local_operator/i18n/catalogues/en/wire.tool_rows.bridge.json` at relay head
+	 * `42085b43` (the key is named beside each one), and every summary is what
+	 * `harness/bridge_copy.py::bridge_row_line` produces for those tokens. The
+	 * first shape of this fixture invented its own English; design round 1 (D4)
+	 * measured a refusal card headed "Posted to #leadership" as a result, which
+	 * is a frame proving a sentence the daemon would never send. A fixture is a
+	 * wire contract, so it quotes the wire.
+	 *
+	 * Two turns:
+	 *
+	 *   - the FIRST is complete and a newer turn exists, so it condenses — a
+	 *     bridge post and a `send` side by side, proving the bridge row rolls into
+	 *     the bar like any tool (`turn-condensing.test.ts` pins the count);
+	 *   - the SECOND is the showroom and ENDS on peer-inbox, refusal and a clean
+	 *     post: the list anchors to its tail, and on the 320 pt floor only the
+	 *     last rows (and an expansion opened among them) are in frame.
+	 *
+	 * `shows` is EMPTY, as `imagegen` explains for its own case: a registered S5
+	 * cell needs an app-side state marker, which this row does not add. The frames
+	 * come from ad-hoc cells:
+	 *
+	 *   path:/session/{sessionId}/bridge                     the collapsed tail
+	 *   path:/session/{sessionId}/bridge-expanded            the post opened
+	 *   path:/session/{sessionId}/bridge-outcomes-open       inbox + refusal opened
+	 *   path:/session/{sessionId}?lo-scroll=top/bridge-condensed
+	 *                                                        the condensed turn
+	 *   path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-condensed-open
+	 *                                                        the same turn opened */
+	add(
+		"bridge-tool-row",
+		"Team Bridge tool rows in each outcome of the real wire — a clean post with a markdown body, peer inbox only, refused with its code, delivery unconfirmed, awaiting acceptance, an id-bearing older-relay summary, a row whose words the relay withheld — plus a completed turn mixing bridge and send that condenses.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the bridge-tool-row base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const at = (
+				id: string,
+				kind: Row["kind"],
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id,
+				kind,
+				tool_call_id: kind === "tool" ? id : "",
+				tool_name: "",
+				tool_state: "done",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			/* One bridge call. `row` is the token dict, `copy` the daemon's words —
+			 * both passed whole so each fixture line reads as the wire does. `args`
+			 * carries the call's own op (the args block and the tokens must agree:
+			 * design round 1, N4). */
+			const bridgeRow = (
+				id: string,
+				fixture: {
+					summary: string;
+					row: Record<string, unknown> | null;
+					copy: Record<string, unknown> | null;
+					args: Record<string, unknown>;
+					overrides?: Partial<Row>;
+				},
+			): Row =>
+				at(`tc-${id}`, "tool", {
+					tool_name: "bridge",
+					summary: fixture.summary,
+					elapsed_s: 1.2,
+					details: {
+						args: fixture.args,
+						...(fixture.row === null ? {} : { bridge_row: fixture.row }),
+						...(fixture.copy === null ? {} : { bridge_copy: fixture.copy }),
+						output: "ok",
+					} as Row["details"],
+					...(fixture.overrides ?? {}),
+				});
+			const body =
+				"**Nightly sweep is green.**\n\n- 412 tests passed\n- the flaky `relay-reconnect` case is fixed in #2210\n\nNext cut goes out at 18:00 unless someone objects here.";
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					at("m-bridge-u1", "user", {
+						text: "Tell the release channel the sweep is green, and ping the audit session.",
+					}),
+					bridgeRow("bridge-old", {
+						/* bridge_row_line("Posted in", "#release · Sweep is green", null) */
+						summary: "Posted in #release · Sweep is green",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#release" },
+							preview: "Sweep is green",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							/* wire.tool_rows.bridge.verb_settled.channel_post + target */
+							headline: "Posted in #release",
+							/* wire.tool_rows.bridge.expanded.posted */
+							outcome_sentence: "Posted.",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "release",
+							body: "Sweep is green",
+						},
+						overrides: { elapsed_s: 0.9 },
+					}),
+					at("tc-send-old", "tool", {
+						tool_name: "send",
+						summary: "→ nightly-audit · sweep is green",
+						elapsed_s: 2.1,
+						details: { delivery: { state: "delivered" }, output: "delivered" },
+					}),
+					at("m-bridge-a1", "assistant", {
+						text: "Posted to #release and told the audit session.",
+					}),
+					at("m-bridge-u2", "user", {
+						text: "Now post the full summary, DM Priya, and react to her message.",
+					}),
+					/* A reaction the hub could not confirm. `react` takes a CHANNEL
+					 * target (rows.py; design round 1, R4). */
+					bridgeRow("bridge-unconfirmed", {
+						summary: "Reacted in a conversation · 👍 · delivery unconfirmed",
+						row: {
+							op: "react",
+							action: "react",
+							target: { kind: "channel", label: null },
+							preview: null,
+							count: null,
+							emoji: "👍",
+							outcome: "unconfirmed",
+							code: "send_unconfirmed",
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.unconfirmed */
+							outcome: "delivery unconfirmed",
+							/* verb_settled.react + target.conversation */
+							headline: "Reacted in a conversation",
+							/* expanded.unconfirmed_bare — the error was empty */
+							outcome_sentence: "Delivery unconfirmed.",
+						},
+						args: { op: "react", message_id: "bcmsg_7f2a", emoji: "👍" },
+					}),
+					/* A DM to an agent whose owner has not accepted yet: the outcome
+					 * comes from `dm` with a non-active `recipient_state` (rows.py),
+					 * never from an op that does not exist. */
+					bridgeRow("bridge-awaiting", {
+						summary:
+							"Messaged Sam · Can you review the cut? · awaiting acceptance",
+						row: {
+							op: "dm",
+							action: "dm",
+							target: { kind: "dm", label: "Sam" },
+							preview: "Can you review the cut?",
+							count: null,
+							emoji: null,
+							outcome: "awaiting_acceptance",
+							code: null,
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.awaiting_acceptance */
+							outcome: "awaiting acceptance",
+							/* wire.tool_rows.bridge.expanded.dm_headline */
+							headline: "Direct message to Sam",
+							/* wire.tool_rows.bridge.expanded.awaiting_acceptance */
+							outcome_sentence:
+								"Posted, but the recipient agent is invited — its owner must accept before it is woken.",
+						},
+						args: {
+							op: "dm",
+							recipient: "sam",
+							body: "Can you review the cut?",
+						},
+					}),
+					/* An OLDER relay: its summary still carries the conversation id,
+					 * and so does the headline it rendered. Both must be scrubbed —
+					 * the row paints the summary, the card the headline, so this one
+					 * row proves both paths (design round 1, R5/Q2). */
+					bridgeRow("bridge-stray-id", {
+						summary: "Posted in bcv_01JC9X7Q2M8T · cut list attached",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: null },
+							preview: "cut list attached",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							headline: "Posted in bcv_01JC9X7Q2M8T",
+							outcome_sentence: "Posted.",
+						},
+						args: { op: "channel_post", body: "cut list attached" },
+					}),
+					/* No `bridge_row` and no `bridge_copy` at all: the generic row,
+					 * with an id in its summary so the fallback scrub is exercised. */
+					bridgeRow("bridge-prefield", {
+						summary: "Read bcv_01JC9X7Q2M8T directory",
+						row: null,
+						copy: null,
+						args: { op: "directory" },
+					}),
+					/* Tokens but NO words: the relay's rule is "no chip, never a
+					 * guess", so a refused call shows no caveat here. */
+					bridgeRow("bridge-nocopy", {
+						summary:
+							"Couldn't post in #leadership · Heads-up · refused · not_a_member",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#leadership" },
+							preview: "Heads-up",
+							count: null,
+							emoji: null,
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						copy: null,
+						args: {
+							op: "channel_post",
+							channel_id: "leadership",
+							body: "Heads-up: the cut moves to 18:00.",
+						},
+						overrides: { tool_state: "failed" },
+					}),
+					/* The copy-less AMBER arm (N4): the relay withheld its words, so there
+					 * is no chip — and the row must still read amber with the inbox mark,
+					 * never the success tick. This is R7's peer-inbox arm on screen. */
+					bridgeRow("bridge-inbox-nocopy", {
+						/* No tail: with no words there is no chip to carry one, and the
+						 * relay's localised tail is vocabulary this app does not mint, so
+						 * it cannot be stripped here (the row would cut into `· …`). */
+						summary: "Sent to Priya · Can you look at the cut?",
+						row: {
+							op: "send",
+							action: "send",
+							target: { kind: "dm", label: "Priya" },
+							preview: "Can you look at the cut?",
+							count: null,
+							emoji: null,
+							outcome: "inbox_only",
+							code: null,
+						},
+						copy: null,
+						args: {
+							op: "send",
+							recipient: "priya",
+							body: "Can you look at the cut?",
+						},
+					}),
+					/* The refusal: the sentence carries the error AND the code, as
+					 * `expanded.refused` renders them. */
+					bridgeRow("bridge-refused", {
+						summary:
+							"Couldn't post in #leadership · Heads-up: the cut moves · refused · not_a_member",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#leadership" },
+							preview: "Heads-up: the cut moves",
+							count: null,
+							emoji: null,
+							outcome: "refused",
+							code: "not_a_member",
+						},
+						copy: {
+							/* outcome.refused + the code the relay appends */
+							outcome: "refused · not_a_member",
+							/* verb_failed.channel_post + target */
+							headline: "Couldn't post in #leadership",
+							/* expanded.refused: {error} ({code}) */
+							outcome_sentence:
+								"Refused: not a member of channel_id=#leadership (not_a_member)",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "leadership",
+							body: "Heads-up: the cut moves to 18:00.",
+						},
+						overrides: {
+							tool_state: "failed",
+							error: "not a member of channel_id=#leadership",
+						},
+					}),
+					/* A DM that only reached the peer's inbox: the arm that must
+					 * never read as success. */
+					bridgeRow("bridge-inbox", {
+						summary:
+							"Sent to Priya · Can you look at the cut list? · not posted to a conversation",
+						row: {
+							op: "send",
+							action: "send",
+							target: { kind: "person", label: "Priya" },
+							preview: "Can you look at the cut list?",
+							count: null,
+							emoji: null,
+							outcome: "inbox_only",
+							code: null,
+						},
+						copy: {
+							/* wire.tool_rows.bridge.outcome.inbox_only */
+							outcome: "not posted to a conversation",
+							headline: "Sent to Priya",
+							/* wire.tool_rows.bridge.expanded.inbox_only */
+							outcome_sentence:
+								"Accepted into their inbox — not posted to a conversation or shown in Team Bridge. Use a DM to be seen.",
+						},
+						args: {
+							op: "send",
+							recipient: "priya",
+							body: "Can you look at the cut list before 18:00?",
+						},
+					}),
+					/* The clean post: the showroom's tail, and the row the expanded
+					 * cell opens (a markdown body). */
+					bridgeRow("bridge-post", {
+						summary: "Posted in #release · Nightly sweep is green.",
+						row: {
+							op: "channel_post",
+							action: "channel_post",
+							target: { kind: "channel", label: "#release" },
+							preview: "Nightly sweep is green.",
+							count: null,
+							emoji: null,
+							outcome: null,
+							code: null,
+						},
+						copy: {
+							outcome: "",
+							headline: "Posted in #release",
+							/* wire.tool_rows.bridge.expanded.posted_at */
+							outcome_sentence: "Posted at seq 412",
+						},
+						args: {
+							op: "channel_post",
+							channel_id: "release",
+							body,
+						},
+					}),
+				],
+			});
+			return { projections: { [projection.session_id]: projection } };
+		},
+	);
+
+	/* A TWO-ROW world, for the frames the full showroom cannot give: at 320 pt
+	 * the showroom's second turn ends under the composer, so an expanded card
+	 * opens behind it and the frame is byte-identical to the collapsed one
+	 * (design round 1, D8; review R6). Here one bridge row sits directly under a
+	 * one-line request, so its card has the room to be photographed at the
+	 * narrowest phone in both themes. Same wire strings as `bridge-tool-row`. */
+	add(
+		"bridge-tool-row-compact",
+		"One bridge post under a one-line request, so the expanded card fits a 320 pt frame.",
+		[],
+		() => {
+			const base = structuredClone(everyKind);
+			const template = base.transcript.find((entry) => entry.kind === "tool");
+			if (template === undefined) {
+				throw new Error(
+					"the bridge-tool-row-compact base projection has no tool row to clone",
+				);
+			}
+			type Row = SessionProjection["transcript"][number];
+			const at = (
+				id: string,
+				kind: Row["kind"],
+				overrides: Partial<Row>,
+			): Row => ({
+				...structuredClone(template),
+				id,
+				kind,
+				tool_call_id: kind === "tool" ? id : "",
+				tool_name: "",
+				tool_state: "done",
+				text: "",
+				summary: "",
+				intent: "",
+				diff_added: 0,
+				diff_removed: 0,
+				elapsed_s: 0,
+				error: "",
+				images: [],
+				final: true,
+				text_complete: true,
+				details: {},
+				...overrides,
+			});
+			const projection = projectionFrom(base, {
+				conversation_name: "Release sweep",
+				transcript: [
+					at("m-compact-u1", "user", {
+						text: "Post the sweep summary to #release.",
+					}),
+					at("tc-compact-post", "tool", {
+						tool_name: "bridge",
+						summary: "Posted in #release · Nightly sweep is green.",
+						elapsed_s: 1.2,
+						details: {
+							args: {
+								op: "channel_post",
+								channel_id: "release",
+								body: "**Nightly sweep is green.** 412 tests, no flakes.",
+							},
+							bridge_row: {
+								op: "channel_post",
+								action: "channel_post",
+								target: { kind: "channel", label: "#release" },
+								preview: "Nightly sweep is green.",
+								count: null,
+								emoji: null,
+								outcome: null,
+								code: null,
+							},
+							bridge_copy: {
+								outcome: "",
+								headline: "Posted in #release",
+								outcome_sentence: "Posted at seq 412",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					/* The two PENDING outcomes, so their CARDS can open in a world
+					 * short enough to show one at 320 pt (design round 2, D7): the
+					 * showroom's copies of these rows sit high enough that only their
+					 * collapsed lines fit a narrow frame. */
+					at("tc-compact-awaiting", "tool", {
+						tool_name: "bridge",
+						summary:
+							"Messaged Sam · Can you review the cut? · awaiting acceptance",
+						elapsed_s: 1.2,
+						details: {
+							args: {
+								op: "dm",
+								recipient: "sam",
+								body: "Can you review the cut?",
+							},
+							bridge_row: {
+								op: "dm",
+								action: "dm",
+								target: { kind: "dm", label: "Sam" },
+								preview: "Can you review the cut?",
+								count: null,
+								emoji: null,
+								outcome: "awaiting_acceptance",
+								code: null,
+							},
+							/* The real `wire.tool_rows.bridge.*` sentences (relay lane,
+							 * `relay.transcript.json`): the card paints them verbatim. */
+							bridge_copy: {
+								outcome: "awaiting acceptance",
+								headline: "Direct message to Sam",
+								outcome_sentence:
+									"Posted, but the recipient agent is invited — its owner must accept before it is woken.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					at("tc-compact-unconfirmed", "tool", {
+						tool_name: "bridge",
+						summary: "Reacted in a conversation · 👍 · delivery unconfirmed",
+						elapsed_s: 1.1,
+						details: {
+							args: { op: "react", message_id: "msg-1", emoji: "👍" },
+							bridge_row: {
+								op: "react",
+								action: "react",
+								target: { kind: "channel", label: null },
+								preview: null,
+								count: null,
+								emoji: "👍",
+								outcome: "unconfirmed",
+								code: "send_unconfirmed",
+							},
+							bridge_copy: {
+								outcome: "delivery unconfirmed",
+								headline: "Reacted in a conversation",
+								outcome_sentence: "Delivery unconfirmed.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					at("m-compact-a1", "assistant", { text: "Posted." }),
 				],
 			});
 			return { projections: { [projection.session_id]: projection } };
@@ -2328,7 +3003,132 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		},
 	);
 
+	/* ----------------------------------------------------------- notifications -- */
+
+	add(
+		"notifications-empty",
+		"An inbox with nothing in it: no unread updates, no pinned asks. The screen must say it is all caught up rather than showing an empty frame.",
+		["S18/empty"],
+		() => ({ notifications: inboxBody("notifications-empty") }),
+	);
+
+	add(
+		"notifications-loading",
+		"No inbox read has been answered yet: the routes hold their responses open and the streams stay silent with keepalives only.",
+		["S18/loading"],
+		() => ({ hold: { api: "forever" }, stream: { mode: "keepalive-only" } }),
+	);
+
+	add(
+		"notifications-populated",
+		"The synthetic populated inbox: five updates across today, yesterday and earlier, one of them already read, and one pinned open ask from a live runtime.",
+		["S18/populated", "S18/multi-select", "S18-detail/populated"],
+		() => ({ notifications: inboxBody("notifications-populated") }),
+	);
+
+	add(
+		"notifications-busy",
+		"A machine with a busy inbox and NOTHING OVER IT: the conversations pane's own rail footer is in view, so the count's two placements are photographed — symmetric at 100/135 %, grouped at 200 % where a mirror on each side would push the label under the count.",
+		["S15/notifications-busy"],
+		() => ({
+			...meshWorld(),
+			notifications: floodInbox("notifications-populated", 120),
+		}),
+	);
+
+	add(
+		"notifications-refused",
+		"The inbox store could not be read: the route answers 503 with its own sentence, so the screen must render the refusal rather than an empty inbox.",
+		["S18/error"],
+		() => ({
+			notifications: {
+				status: 503,
+				headers: { "content-type": "application/json; charset=utf-8" },
+				json: {
+					error: "The notification store is busy; try again in a moment.",
+					code: "notification_store_busy",
+				},
+			},
+		}),
+	);
+
 	/* -------------------------------------------------------------- schedules -- */
+
+	/**
+	 * A captured body with its CAPTURE CLOCK rebased onto now, and its live entry
+	 * reduced to the wakes that are genuinely ahead of the reader.
+	 *
+	 * WHY THIS EXISTS. `schedules-populated` was captured on 2026-10-08 and every
+	 * absolute instant in it is an `*_at` epoch, so today every wake in it is overdue
+	 * — and the entry head line's forward arm (`mobile.schedules.head.next`,
+	 * `… · next in 4m`) is unreachable from any frame a rig can pin. The arm is real
+	 * code with real copy, so the answer is a state that reaches it, not a screenshot
+	 * of a state that does not.
+	 *
+	 * TWO MOVES, both stated rather than implied:
+	 *
+	 * 1. **The clock is rebased.** Every non-zero `*_at` epoch moves by the same
+	 *    delta (`now - wakes.generated_at`), so the capture reads as a store
+	 *    observed just now. A uniform shift leaves every RELATIVE field exactly true
+	 *    (`overdue_s`, `due_in_s`, `last_check_age_s` are differences of two shifted
+	 *    epochs), and a zero epoch stays zero — the contract's "no event".
+	 * 2. **The live conversation keeps only its forward-due, non-stale rows.** A
+	 *    store cannot have a stale wake (the supervisor has given up on it) whose
+	 *    instant is in the FUTURE, so carrying the capture's stale and overdue rows
+	 *    into a future-dated frame would put a flag and a clock in contradiction.
+	 *    What remains is a coherent world a real store can be in: the capture's own
+	 *    armed wake, an hour ahead, and no row whose clock contradicts its flag.
+	 *
+	 * Ids, counts, flags, the dormant and ghost conversations and the whole monitors
+	 * half are the capture's own; nothing is invented. The scenario declares the cell
+	 * `schedules-populated` already fills because it is the same screen in a different
+	 * clock, not a new screen.
+	 */
+	const EPOCH_FIELD = /_at$/;
+
+	function shiftEpochs(value: Json, delta: number): Json {
+		if (Array.isArray(value))
+			return value.map((item) => shiftEpochs(item, delta));
+		if (!isRecord(value)) return value;
+		const shifted: Record<string, Json> = {};
+		for (const [key, entry] of Object.entries(value)) {
+			shifted[key] =
+				EPOCH_FIELD.test(key) && typeof entry === "number" && entry > 0
+					? entry + delta
+					: shiftEpochs(entry as Json, delta);
+		}
+		return shifted;
+	}
+
+	function schedulesRebasedOnNow(nowMs: number): Json {
+		const body = fix.body("schedules-populated");
+		const wakes = isRecord(body) ? body.wakes : undefined;
+		const generated = isRecord(wakes) ? wakes.generated_at : undefined;
+		if (typeof generated !== "number") {
+			throw new Error(
+				"schedules-populated has no wakes.generated_at; the capture clock cannot be rebased",
+			);
+		}
+		const rebased = shiftEpochs(body, nowMs - generated);
+		if (!isRecord(rebased) || !isRecord(rebased.wakes)) return rebased;
+		const entries = rebased.wakes.entries;
+		if (!Array.isArray(entries)) return rebased;
+		for (const entry of entries) {
+			if (!isRecord(entry) || entry.dormant === true || entry.ghost === true)
+				continue;
+			const rows = Array.isArray(entry.schedules) ? entry.schedules : [];
+			const ahead = rows.filter((row) => {
+				if (!isRecord(row) || row.stale === true) return false;
+				return typeof row.next_due_at === "number" && row.next_due_at > nowMs;
+			});
+			if (ahead.length === 0) continue;
+			entry.schedules = ahead;
+			entry.next_due_at = Math.min(
+				...ahead.map((row) => (isRecord(row) ? Number(row.next_due_at) : 0)),
+			);
+		}
+		return rebased;
+	}
 
 	add(
 		"schedules-empty",
@@ -2352,6 +3152,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"The captured populated store: wakes armed / overdue / past the staleness bound / dormant / ghost with a hidden patience timer, monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode.",
 		["S17/populated"],
 		() => ({ schedules: fix.body("schedules-populated") }),
+	);
+
+	add(
+		"schedules-future",
+		"The populated capture with its clock rebased onto now: its live conversation keeps only the wake that is genuinely ahead (the capture clock is moved, and a store cannot hold a stale wake whose instant is in the future), so the head line renders `· next …` — the `head.next` arm no frame dated in the past can reach. The dormant and ghost conversations and the monitors half are the capture's own. Registered AFTER `schedules-populated` on purpose: the capture harness takes the FIRST scenario that declares a cell, so the default `S17/populated` frame is unchanged; a rig reaches this one with `--scenario schedules-future`.",
+		["S17/populated"],
+		() => ({ schedules: schedulesRebasedOnNow(Date.now()) }),
 	);
 
 	add(
@@ -2672,7 +3479,14 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		"mesh-move-hold",
 		"A move under way: the transfer route holds its answer, so the sheet's in-flight state is the one a person sees rather than a fabricated one.",
 		["S15/move-progress"],
-		() => ({ ...meshWorld(), transfer: { kind: "receipt", delayMs: 30_000 } }),
+		() => ({
+			...meshWorld(),
+			transfer: { kind: "receipt", delayMs: 30_000 },
+			/* THE CELL THAT FORCES THE GROUPED PLACEMENT (review round 10, m-4): its
+			 *  iphone-se frames are the 247 pt rail pane at 200 % text, where a `99+`
+			 *  count cannot sit beside the label with a mirror on both sides. */
+			notifications: floodInbox("notifications-populated", 120),
+		}),
 	);
 
 	add(

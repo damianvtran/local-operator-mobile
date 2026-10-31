@@ -4,13 +4,13 @@ import {
 	useVideoPlayer,
 	VideoView,
 } from "expo-video";
-import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
 
 import { useSessionRuntime } from "@/features/session/use-session";
 import { CONTROL, SCREEN, SURFACE } from "@/ui/a11y";
 import { IconButton, Screen, Skeleton } from "@/ui/components";
+import { BackIcon } from "@/ui/components/back-icon";
 
 /**
  * The full-screen video player — the flow the surfaces design froze as
@@ -168,7 +168,7 @@ export default function VideoPlayer() {
 					accessibilityLabel={`Back to ${parentName}`}
 					testID={CONTROL.videoBack}
 					onPress={() => router.back()}
-					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
+					icon={({ color, size }) => <BackIcon color={color} size={size} />}
 				/>
 			}
 		>

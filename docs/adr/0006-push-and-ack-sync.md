@@ -1,6 +1,21 @@
 # ADR 0006 — Push notifications and cross-surface acknowledgement
 
-- **Status:** Proposed (for implementation)
+- **Status:** **Accepted (2026-10-29) — implementation not started.** A `Status` change settles the
+  transport, not the build: **no implementation work, no cloud-side schema and no dependency
+  addition exist yet**, and every cloud-side statement below stays marked *(proposal)* for the
+  separate reason that this repository has no access to that code.
+- **Decision record (operator, 2026-10-29): allow FCM only — add Firebase to the EXISTING Radient
+  Google Cloud project for push, and to nothing else.** What that registers is the constraint
+  stated in the next bullet; what it does not permit — no Firebase database, auth or hosting — is
+  §5, "What FCM is here, and what it is not". The operator's own console steps and the slices that
+  follow are in [`docs/publishing/push-setup.md`](../publishing/push-setup.md).
+- **The constraint the present decision answers, stated up front:**
+  **Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+  project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+  Blaze plan once it is billed. Radient's prior **"Radient does not use Firebase"** decision
+  (2026-10-28) therefore ruled out Android background push, and the operator resolved that
+  collision on **2026-10-29** by allowing the registration and nothing further (§5 sets out what it
+  changes and what it does not).
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,
@@ -581,6 +596,32 @@ and why §3.4's content-derived key has something to mint it.
 
 #### 2.2 What the cloud holds, and what it must not
 
+**The store, named.** The cloud-held records below live in **MongoDB Atlas**, the managed database
+Radient's cloud already runs on (operator decision, 2026-10-28: "state is stored in MongoDB Atlas").
+**Custody is not uniform, so each row is read with its own row rather than with this sentence:** the
+**Credential (per device)** row is the *machine's* record — its `device_key` is written to the
+machine's 0600 file and is never stored in Atlas — and the **Credentials** row (the APNs `.p8`,
+the FCM service account) lives in the cloud's **secret store**, not in a collection. Every other row
+is an Atlas collection.
+
+**Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed ([Understand Firebase
+projects](https://firebase.google.com/docs/projects/learn-more), read 2026-10-28). **That
+registration is the operator's decision of 2026-10-29, allowed for the FCM send API only**
+([`docs/publishing/push-setup.md`](../publishing/push-setup.md)); the data layer does not move with
+it, and §5 says exactly where the permission stops.
+
+What the design does use, so that "no Firebase" is not read as more than it is: app state in Atlas,
+Google identity in the Google Cloud project + Identity Toolkit, Microsoft identity in the Azure
+tenant. FCM's one role is the Android push transport (§5, "What FCM is here, and what it is not"),
+and that role ends at the device: it is a delivery rail, not a place state is kept. Its one
+qualification — an accepted message that FCM may hold for up to four weeks by default before the app
+sees it — is in §5 and changes no ownership: the store of record is Atlas. A reader
+who took "FCM + `google-services.json`" to mean this ADR adopts Firebase as the cloud's data layer
+would be reading the opposite of what is designed — which is why the store is named rather than left
+implicit: a record table with no named store is a table an implementer is free to put anywhere.
+
 | Record | Fields | Why it is the minimum |
 |---|---|---|
 | **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** — **not** `credential_live`, which lives in the Credential row below (`n3`, so one fact has one home) | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
@@ -591,8 +632,15 @@ and why §3.4's content-derived key has something to mint it.
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 | **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — **the shape is the note's** ([`docs/push-cloud-ops.md`](../push-cloud-ops.md), its credential-limb paragraph), which owns the grant's record; naming it here stops the two documents deferring to each other ([`docs/push-cloud-ops.md`](../push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working directories,
-model names, prompt text, **read state or read history**, and **no unread count** (§1.5). §4 says
+model names, prompt text, **read state or read history**, **no unread count** (§1.5), and **no
+Firebase-hosted store of any kind** — the store is Atlas, and a second data layer would be a second
+answer to a question this ADR answers once. §4 says
 what it does learn, honestly, including the residue.
+
+**Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed. **Registered, for the FCM send API only** (operator decision,
+2026-10-29), which is the decision this ADR implements and not a licence to keep anything there.
 
 **Two retention rules this ADR adopts, and one honest gap** (designed in the cloud ops note,
 [`docs/push-cloud-ops.md`](../push-cloud-ops.md), PR #15 — the note stays the operational runbook;
@@ -1262,10 +1310,12 @@ from):
 **Token handling.** Device tokens are opaque strings; **the machine never stores them** (P4 — the
 relay forwards the token to the cloud and keeps only the cloud's `device_id` and the metadata a
 Settings list needs: platform, app version, registered/last-seen). The cloud stores tokens encrypted
-at rest, keyed to the account and the computer. The APNs `.p8` and the FCM service account live in
-the cloud's secret store and never in the app or the repository; per this repository's rules,
-`google-services.json` / `GoogleService-Info.plist` are **build inputs injected from CI secrets**,
-never committed (the repo is public; `AGENTS.md`: "Never commit tokens, … certificates").
+at rest **in Atlas** — beside the device row in §2.2, not in a Firebase-side store — keyed to
+the account and the computer. The APNs `.p8` and the FCM service account live in the cloud's secret
+store and never in the app or the repository; per this repository's rules,
+`google-services.json` is a **build input injected from CI secrets**, never committed (the repo is
+public; `AGENTS.md`: "Never commit tokens, … certificates"). iOS needs no equivalent file: it goes
+straight to APNs (§5).
 
 **Revocation, and the stolen phone (P4, and review M9's question answered explicitly).** Five paths,
 and the honest limits of each:
@@ -1576,6 +1626,83 @@ the worker rides on that rather than inventing a second policy.
 - Payload limit 4 KB; `apns-expiration` decides how long an undelivered push is retained. The
   payload above is ~300 bytes, so there is no reason to compress content into it.
 
+**What FCM is here, and what it is not** *(the Google and Android pages cited here were read
+2026-10-28)*. This block exists because a reader can take "FCM + `google-services.json` + a
+cloud-held service account" to mean this project is adopting Firebase as a backend. FCM's one role
+is to carry an already-finished payload to an Android device: the cloud **composes nothing** (§3.2,
+"exactly one composer, the machine") and asks FCM for no state back. That is a claim about who
+authors state and who owns it, and not a claim of zero retention. FCM is not this design's store of
+record, and device, delivery and grant records remain Atlas's (§2.2); but Google does document
+provider-side buffering of an accepted message: "In these cases, FCM stores the message and delivers
+it as soon as possible", and "By default, requests that don't contain this field, last for a maximum
+period of four weeks" ([Set the lifespan of a
+message](https://firebase.google.com/docs/cloud-messaging/customize-messages/setting-message-lifespan),
+read 2026-10-29; a `ttl` of `0` is discarded rather than stored if it cannot be delivered at once).
+**What that means for revocation:** the token drop in §4 rule 1 stops future sends, while a message
+FCM has already accepted can still arrive afterwards — the transport owns it from acceptance, and
+only the app can decline to act on it. The app declines by treating no message as authority: a push
+carries no conversation name and no state (§3.2, P2), so a late one opens a read of the machine, and
+§3.3's rules finish it — the tap is authoritative over the push and the machine over both, so
+nothing is marked or acked that the machine does not already say.
+
+- **The constraint, as precisely as Google states it.** FCM clients "require devices running Android
+  7.0 or higher that also have the Google Play Store app installed" — that is, Google Play services
+  present on the device ([Get started with FCM in Android
+  apps](https://firebase.google.com/docs/cloud-messaging/android/get-started)). Transport rather
+  than preference is the platform's doing: when an app goes into the background "it has a window of
+  several minutes in which it is still allowed to create and use services. At the end of that
+  window, the app is considered to be idle. At this time, the system stops the app's background
+  services, just as if the app had called the services' `Service.stopSelf()` methods", and "the
+  system doesn't allow a background app to create a background service" ([Background Execution
+  Limits](https://developer.android.com/about/versions/oreo/background)). An app therefore cannot
+  hold a long-lived connection of its own from the background, so something outside it has to wake it,
+  and the same page names how: "An app is placed on the allowlist when it handles a task that's
+  visible to the user, such as: Handling a high-priority Firebase Cloud Messaging (FCM) message"
+  (same page). **When the transport is FCM, that wake arrives through the Play services process**,
+  which receives the message and delivers it. The page's own "such as" is why the claim stops there: a
+  user-installed UnifiedPush distributor is the other wake path (the bullet below), and ordinary
+  foreground work needs neither. What is true only of FCM is that it is the pre-installed path — the
+  Play-Store constraint quoted above — which is a statement about distribution, not a rule that only
+  Play services can reach an app.
+- **What that costs, in the same pages' words.** **Android background push via FCM requires adding
+  Firebase to a Google Cloud project** — the same project, which gains a `firebase:enabled` label,
+  shares its IAM with Firebase, and moves to the Blaze plan once it is billed: "Firebase
+  automatically adds to your project a label of firebase:enabled within the IAM & Admin > Labels
+  page of the Google Cloud console"; "IAM permissions and roles for the project are shared across
+  Firebase and Google Cloud. Any access a project member (that is, a principal) has to your Google
+  Cloud project will also apply to your Firebase project (and vice-versa)"; "If billing is enabled
+  on your Google Cloud project, then your Firebase project will be on Firebase's pay-as-you-go Blaze
+  pricing plan" ([Understand Firebase
+  projects](https://firebase.google.com/docs/projects/learn-more)). The registration is also how the
+  send credential and the `google-services.json` build input are issued: the v1 access token "is
+  associated with a service account that belongs to your Firebase project" ([Your server environment
+  and FCM](https://firebase.google.com/docs/cloud-messaging/server-environment)).
+- **The collision, resolved by the operator on 2026-10-29.** **Radient does not use Firebase**
+  (operator decision, 2026-10-28), and as written that decision ruled out Android background push.
+  The choice was between "no Firebase, and therefore no Android push" and "Firebase registered on
+  the existing Google Cloud project for the FCM API alone", and **the operator took the second** —
+  FCM only, on the existing Radient Google Cloud project, with no Firebase database, auth or hosting
+  ([`docs/publishing/push-setup.md`](../publishing/push-setup.md)). That settles the transport this
+  ADR describes; it does not build it (Status), and the remaining gates are the console steps the
+  operator must take and the core/cloud slices in [`docs/push-plan.md`](../push-plan.md).
+- **What using FCM does not require.** No Firebase data product is part of this design — no Cloud
+  Firestore, no Realtime Database, no Firebase Auth, no Hosting, no Cloud Functions, no Analytics.
+  Google identity stays the Google Cloud project + Identity Toolkit, and app state stays Atlas
+  (§2.2). That is a statement about this design's data layer, **and the operator's 2026-10-29
+  decision draws the same boundary**: "allow FCM only" was taken with state in Atlas and the
+  existing identity in place, so this bullet and that decision now say the same thing rather than
+  the decision arriving later and separately.
+- **Where the constraint is narrower than "only FCM".** Two cases sit outside it, and both are
+  already in this design rather than discovered later. *(a)* What FCM needs is **Play services on the
+  device, not Play as the distribution channel** — the same page says "you are not limited to
+  deploying your Android apps through Google Play Store", so sideloaded builds shipped through GitHub
+  Releases and Obtainium (`docs/publishing/other-channels.md` § 8) reach the identical FCM. *(b)* A
+  FOSS distributor app can hold the connection on the app's behalf — UnifiedPush's model, where the
+  notification arrives from a separate app the user installs ([UnifiedPush
+  FAQ](https://unifiedpush.org/users/faq/)). That is a genuine alternative for the `foss` flavour
+  below, and it is not one for the default flavour: it would make notifications conditional on the
+  user installing a second app.
+
 **FCM HTTP v1 (quoted)**
 
 - `notification.tag` replaces an existing notification ("Identifier used to replace existing
@@ -1597,7 +1724,9 @@ the worker rides on that rather than inventing a second policy.
 **Capability and account work, per store**
 
 - **iOS**: the APNs entitlement and the Push Notifications capability on the App ID and provisioning
-  profile; an App Store Connect `.p8` key held by the cloud. The Expo config plugin sets the APNs
+  profile; App Store Connect `.p8` keys held by the cloud, **one per sending environment** — team-scoped
+  keys are restricted to Sandbox or Production, so a single key cannot serve both, and the key's
+  environment has to match the entitlement's (`docs/publishing/push-setup.md` § 2). The Expo config plugin sets the APNs
   entitlement to `development` and Xcode flips it to `production` in an archive ("The iOS APNs
   entitlement is always set to 'development'. Xcode automatically changes this to 'production' in
   the archive generated by a release build." — same page). A background wake additionally needs
@@ -1757,8 +1886,10 @@ want a second reviewer to attack.
 shipped in Radient) and the **organisation developer accounts** (A2–A4: D-U-N-S, Apple Developer
 Program as the organisation, Play organisation account). **Push adds three more of the same kind:**
 
-- an **APNs key** and an **FCM service account** held by Radient — a new credential dependency whose
-  loss breaks a user-visible feature rather than a submission;
+- **APNs keys** (**one per sending environment**, §5) and an **FCM service account** held by Radient —
+  the send credentials issued by the existing Google Cloud project, registered with Firebase for the
+  FCM API only (§5) — a new credential dependency whose loss breaks a user-visible feature rather
+  than a submission;
 - **and a console-side device list**, so a user whose phone is stolen can revoke it without the
   machine (§4 path 2). Same class as A8: a Radient console feature this app cannot ship.
 - **and, unlike A8, the fan-out service is a runtime dependency**: it must be up, it costs money, it

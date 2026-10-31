@@ -1,0 +1,159 @@
+# audit.log — hindi wave 6 · namespace mobile.home · delta audit hi30a1r2
+# repository /Users/damian/workspace/hi-wave at d4e31b1915b558171ded41501c741568f0854f3f; no tracked file differs from HEAD (`git diff HEAD -- src/ i18n/` empty)
+# round-1 audit hi30a1: /Users/damian/workspace/hi-wave/i18n/audits/evidence/hi/mobile.home/hi30a1/
+# every command below ran in this session; the text after each prompt is its captured output
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:41683) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/hi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/hi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/delta_check.py mobile.home
+# namespace mobile.home  round-1 audit hi30a1  audited revision d4e31b1
+
+## inputs (sha256)
+  en         src/i18n/catalogues/en/mobile.home.json  4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+  context    src/i18n/catalogues/en/mobile.home.context.json  db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+  hi (now)   src/i18n/catalogues/hi/mobile.home.json  13c6d5c96861c25a3b5b5f50f98f0f8fbf916ef18da206b7e9a46edb6323150b
+  hi (r1)    src/i18n/catalogues/hi/mobile.home.json  b6c5a5142e9e469912bfd72ffd3813d970d43be57d9fcad6ec2078b7cae2ae59  (from hi30a1/record.json)
+  source unchanged since round 1: en=True context=True
+  target unchanged since round 1: False
+
+## round-1 findings: byte-exact resolution
+  H-01 MAJOR  mobile.home.tip.parallel
+     prior  : साथ-साथ काम कहें, तो उप-एजेंट बँट जाते हैं
+     asked  : साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं
+     now    : साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं
+     byte-exact to the asked wording: True
+     unchanged from round 1       : False
+
+  H-02 MINOR  mobile.home.startup_queue.blocked
+     prior  : कतार के संदेश भेजने के लिए फिर कोशिश करें
+     asked  : कतार के संदेश भेजने के लिए फिर से कोशिश करें
+     now    : कतार के संदेश भेजने के लिए फिर से कोशिश करें
+     byte-exact to the asked wording: True
+     unchanged from round 1       : False
+
+  H-03 MINOR  mobile.home.suggestion.wake_summary
+     prior  : सारांश के साथ जगाएँ
+     asked  : सारांश के साथ मुझे जगाएँ
+     now    : सारांश के साथ मुझे जगाएँ
+     byte-exact to the asked wording: True
+     unchanged from round 1       : False
+
+  H-04 NIT    mobile.home.options.apply
+     prior  : ये विकल्प इस्तेमाल करें
+     asked  : इन विकल्पों का इस्तेमाल करें
+     now    : ये विकल्प इस्तेमाल करें
+     byte-exact to the asked wording: False
+     unchanged from round 1       : True
+
+## structure and predicates on the current bytes
+  [PASS] key set identical — en=27 hi=27
+  [PASS] every key has a context note — ctx=27
+  [INFO] placeholder-bearing messages: 0; plural/select messages: 0
+  [PASS] placeholder surface identical
+  [PASS] ICU arms identical
+  [PASS] NFC
+  [PASS] no ZWJ/ZWNJ/ZWSP
+  [PASS] no bidi controls
+  [PASS] Latin digits only
+  [PASS] no space before punctuation
+  [PASS] U+2026 ellipsis
+  [PASS] danda not ASCII '.'
+  [PASS] curly quotes only
+  [PASS] no तुम/तू
+  [PASS] no double/edge space
+
+## delta diff coverage (old values recovered from the round-1 measurement artifacts)
+  values comparable for this namespace: 23 of 27
+  changed: 6
+   ~ mobile.home.startup_queue.blocked
+       was: कतार के संदेश भेजने के लिए फिर कोशिश करें
+       now: कतार के संदेश भेजने के लिए फिर से कोशिश करें
+   ~ mobile.home.tip.parallel
+       was: साथ-साथ काम कहें, तो उप-एजेंट बँट जाते हैं
+       now: साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं
+   ~ mobile.home.suggestion.wake_summary
+       was: सारांश के साथ जगाएँ
+       now: सारांश के साथ मुझे जगाएँ
+   ~ mobile.home.tip.parallel
+       was: साथ-साथ काम कहें, तो उप-एजेंट बँट जाते हैं
+       now: साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं
+   ~ mobile.home.suggestion.wake_summary
+       was: सारांश के साथ जगाएँ
+       now: सारांश के साथ मुझे जगाएँ
+   ~ mobile.home.startup_queue.blocked
+       was: कतार के संदेश भेजने के लिए फिर कोशिश करें
+       now: कतार के संदेश भेजने के लिए फिर से कोशिश करें
+
+## rendered through the repository's own parseMessage/formatMessage
+  every value in this namespace rendered without error in the group pass
+  (render_group_a.mts: 66 values across group A, 0 failures)
+exit=0
+
+$ swift /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/measure.swift   # CoreText CTLineGetTypographicBounds, AppKit system font
+tip.parallel (round-1 text)	size=12/500	width=203.9pt	cells=29	साथ-साथ काम कहें, तो उप-एजेंट बँट जाते हैं
+tip.parallel (shipped)	size=12/500	width=204.8pt	cells=29	साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं
+tip.parallel alt करने को कहें	size=12/500	width=246.4pt	cells=35	साथ-साथ काम करने को कहें, तो उप-एजेंट बँट जाते हैं
+tip.parallel alt काम के लिए कहें	size=12/500	width=240.0pt	cells=34	साथ-साथ काम के लिए कहें, तो उप-एजेंट बँट जाते हैं
+tip.schedule	size=12/500	width=212.3pt	cells=33	टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें
+tip.search	size=12/500	width=172.1pt	cells=23	पुरानी बातचीत खोजकर सत्र फिर खोलें
+startup_queue.blocked (round-1 text)	size=14/400	width=234.7pt	cells=28	कतार के संदेश भेजने के लिए फिर कोशिश करें
+startup_queue.blocked (shipped)	size=14/400	width=248.0pt	cells=30	कतार के संदेश भेजने के लिए फिर से कोशिश करें
+suggestion.wake_summary (round-1 text)	size=14/400	width=108.2pt	cells=12	सारांश के साथ जगाएँ
+suggestion.wake_summary (shipped)	size=14/400	width=131.3pt	cells=15	सारांश के साथ मुझे जगाएँ
+options.apply (NIT declined)	size=15/600	width=128.9pt	cells=15	ये विकल्प इस्तेमाल करें
+greeting	size=20/600	width=285.2pt	cells=24	आज मैं आपकी किस बात में मदद करूँ?
+
+$ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/render_group_a.mts   # group pass; block for this namespace
+## mobile.home (27 keys)
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/negative_controls.py   # group-level predicate falsifiability
+  66 keys x 10 predicates on real values: PASS (0 failures)
+  [MISMATCH] mobile.session_health:mobile.session_health.still_reopening
+  mismatches in group A: 1
+RESULT: PASS (10/10 controls fired, 0 false positives)
+exit=0
+
+$ ./node_modules/.bin/vitest run src/features/home/home-copy.test.ts
+RUN  v5.0.2 /Users/damian/workspace/hi-wave
+
+ ✓ src/features/home/home-copy.test.ts (31 tests) 8ms
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+   Start at  13:14:02
+   Duration  2.54s (transform 83%, worker 14%, import 2%, tests 1%)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+exit=0
+
+$ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/zero_case.mts   # cross-namespace: the retained zero-count plural
+mobile.schedules.count.wakes
+  message: {count, plural, one {# जागृति} other {# जागृतियाँ}}
+  count=0  CLDR=one   -> 0 जागृति
+  count=1  CLDR=one   -> 1 जागृति
+  count=2  CLDR=other -> 2 जागृतियाँ
+  count=21 CLDR=other -> 21 जागृतियाँ
+
+mobile.schedules.show_more.wakes
+  message: {hidden, plural, one {# और जागृति दिखाएँ} other {# और जागृतियाँ दिखाएँ}}
+  count=0  CLDR=one   -> 0 और जागृति दिखाएँ
+  count=1  CLDR=one   -> 1 और जागृति दिखाएँ
+  count=2  CLDR=other -> 2 और जागृतियाँ दिखाएँ
+  count=21 CLDR=other -> 21 और जागृतियाँ दिखाएँ
+
+the arm list is one/other, as in the English source and core's shipped Hindi
+an explicit =0 arm would render the plural at zero; it is NOT shipped
+exit=0

@@ -90,6 +90,10 @@ export const SCREEN = {
 	 *  the detail is a route of its own; a capture must tell which one drew. */
 	library: "library-screen",
 	libraryDetail: "library-detail-screen",
+	/** The notifications inbox and its pushed item detail. Two roots because the
+	 *  detail is a route of its own; a capture must be able to tell which drew. */
+	notifications: "notifications-screen",
+	notificationDetail: "notification-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
 	notFound: "not-found-screen",
@@ -118,6 +122,17 @@ export const EMPTY = {
 	 *  search-empty surface below). */
 	library: "library-empty",
 	librarySearch: "library-search-empty",
+	/** The inbox with NOTHING in it — the relay answered, the pile is empty and
+	 *  nothing is pinned ("All caught up"). Rendered only under those
+	 *  conditions, so a failed read can never produce it. */
+	notifications: "notifications-empty",
+	/** The same empty ANSWER read on the All filter, which says "Nothing here
+	 *  yet" rather than "All caught up": claiming the store is clear while it
+	 *  holds read history would be a different lie. Two sentences, two ids, so a
+	 *  capture can name which one it drew (`empty` marks the unread one — no cell
+	 *  captures the All variant yet, and this id is how one would). */
+	notificationsAll: "notifications-empty-all",
+	/** The not-found route's blank. */
 	notFound: "not-found-empty",
 } as const;
 
@@ -206,13 +221,17 @@ export const CONTROL = {
 	customPasswordField: "custom-password-field",
 	customConnect: "custom-connect",
 	customInsecureOptIn: "custom-insecure-opt-in",
-	/** The computer switcher (the home header's name, and the panel's own row —
-	 *  two controls, two ids: `computersButton` here and `sidebarSwitcher`). */
+	/** The home header's computer chip (`● Mac mini ▾`), opening the switcher
+	 *  sheet. The panel's header row is `sidebarSwitcher`, its footer row
+	 *  `sidebarComputers`: separate controls, separate ids. */
 	computersButton: "computers-button",
 	settingsButton: "settings-button",
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
 	 *  state rather than inferred from a colour. */
 	computerSelectedMarker: "computer-selected-marker",
+	/** Set on the row being connected while its session is minted: the list stays
+	 *  and the tapped row carries the pending state (PR #121, D1). */
+	computerConnectingMarker: "computer-connecting-marker",
 
 	settingsSignOut: "settings-sign-out",
 	settingsThemeDark: "settings-theme-dark",
@@ -229,7 +248,6 @@ export const CONTROL = {
 	 * would pick arbitrarily), and `e2e/maestro/**` addresses the flow vocabulary
 	 * declared above. --- */
 	setupUseThisComputer: "setup-use-this-computer",
-	newSessionCreate: "new-session-create",
 	computersRetryAction: "computers-retry-action",
 	settingsThemeGroup: "settings-theme-group",
 	computersBanner: "computers-banner",
@@ -242,10 +260,6 @@ export const CONTROL = {
 	splitBody: "split-body",
 	/* --- the list, past-list and new-session controls the flows address. --- */
 	newSessionCwd: "new-session-cwd",
-	newSessionModel: "new-session-model",
-	newSessionModelDefault: "new-session-model-default",
-	newSessionPrompt: "new-session-prompt",
-	newSessionStart: "new-session-start",
 	sessionsSplit: "sessions-split",
 	sessionsNoRoute: "sessions-no-route",
 
@@ -253,6 +267,13 @@ export const CONTROL = {
 	computersStartAgain: "computers-start-again",
 	computersBack: "computers-back",
 	computersRefresh: "computers-refresh",
+	/** The computer switcher's entry points in this slice (M2a): the Computers
+	 *  header's Switch and Settings' "Switch computer". The Home chip and the
+	 *  drawer row (M2b) will open the same sheet under their own names. */
+	computersSwitch: "computers-switch",
+	settingsSwitchComputer: "settings-switch-computer",
+	/** The sheet's own footer action, routing to the own-address and set-up flows. */
+	switcherAddComputer: "switcher-add-computer",
 	ownTunnelBack: "own-tunnel-back",
 	setupCreateTunnel: "setup-create-tunnel",
 	setupTunnelId: "setup-tunnel-id",
@@ -260,9 +281,18 @@ export const CONTROL = {
 	signInUseAddress: "sign-in-use-address",
 	signInTryAnyway: "sign-in-try-anyway",
 	signInBack: "sign-in-back",
-	newSessionBack: "new-session-back",
-	newSessionHomeChip: "new-session-home-chip",
-	newSessionPathChip: "new-session-path-chip",
+	/** The provisional conversation's own controls. They live on the home and
+	 *  `/new` (one shared editor), so they are named once here rather than typed
+	 *  as literals at three call sites — the a11y contract rejects literals so a
+	 *  capture cell cannot invent an id the contract never declared. */
+	startupOptions: "startup-options",
+	startupOptionsApply: "startup-options-apply",
+	startupViewQueue: "startup-view-queue",
+	startupQueueSheet: "startup-queue-sheet",
+	startupQueueRestore: "startup-queue-restore",
+	startupQueueDiscard: "startup-queue-discard",
+	startupOpenConversation: "startup-open-conversation",
+	startupModelOption: "startup-model-option",
 	pastBack: "past-back",
 	pastSearchField: "past-search-field",
 	pastSearch: "past-search",
@@ -311,7 +341,6 @@ export const CONTROL = {
 	settingsRefresh: "settings-refresh",
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
-	settingsRetryLastAction: "settings-retry-last-action",
 	settingsNotificationsEnable: "settings-notifications-enable",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
@@ -358,6 +387,8 @@ export const CONTROL = {
 	 *  controls on different surfaces and a flow reaching for one must not be able
 	 *  to land on the other. */
 	sessionSubagents: "session-subagents-chip",
+	/** The compact status row: the one control that opens working/tasks/agents. */
+	sessionStatusTray: "session-status-tray",
 	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
 	 * secondary region and drops this chip, because the roster header carries the same
 	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
@@ -374,6 +405,25 @@ export const CONTROL = {
 	 *  the bar when a hit is active; edit goes back to the results). Two controls,
 	 *  two names, so a flow cannot pass by pressing the wrong one. --- */
 	sessionFind: "session-find",
+	/* --- the session header's status dot (#3008 port). The title block is ONE
+	 *  control that opens the explanation sheet; Resume lives in that sheet and
+	 *  in the header's overflow menu. The dot itself is decorative (`aria-hidden`)
+	 *  — the control's accessible name carries the state word, so colour is never
+	 *  the only signal. --- */
+	sessionHealth: "session-health",
+	/** The state line under the session title (dot + word) when not live. A
+	 *  frame can assert the word is VISIBLE, not just in the accessible name
+	 *  (UX round 1 U1 / design D3). */
+	sessionHealthWord: "session-health-word",
+	sessionHealthSheet: "session-health-sheet",
+	sessionHealthResume: "session-health-resume",
+	sessionMenu: "session-menu",
+	/* The session HEADER's own overflow sheet — deliberately NOT the pane's
+	 *  long-press menu (`SURFACE.sessionMenuSheet`, a different surface on a
+	 *  different screen). Named for its owner so the two can never be confused
+	 *  in a flow or a frame. */
+	sessionHeaderMenuSheet: "session-header-menu-sheet",
+	sessionMenuResume: "session-menu-resume",
 	findField: "find-field",
 	findEdit: "find-edit",
 	findPrev: "find-prev",
@@ -431,6 +481,9 @@ export const CONTROL = {
 	sidebarSearchField: "sidebar-search-field",
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
+	/** The drawer footer's workspace row: the computer in use, opening the
+	 *  switcher sheet (M2b; ux-flows F5). Same id as the route button it replaced,
+	 *  so a flow addressing "the footer's computer control" still finds it. */
 	sidebarComputers: "sidebar-computers",
 	/** The footer's third route (S16's entry point): `docs/ux/flows.md` draws the
 	 *  projects surface as a peer of `past` off the conversations panel, so it
@@ -446,6 +499,46 @@ export const CONTROL = {
 	 *  failed read (the desktop's own "Try again", kept because a roll of the
 	 *  dice is the one remedy a read failure has). */
 	schedulesBack: "schedules-back",
+	/* --- the notifications inbox (the relay inbox slice). The entry point the
+	 *  home header draws (`homeNotifications`) is separate from the panel's own
+	 *  footer row (`sidebarNotifications`) for the same reason the computer
+	 *  switcher's two are: two controls, two ids, so a flow can press one and
+	 *  prove which it reached. */
+	homeNotifications: "home-notifications",
+	homeNotificationsCount: "home-notifications-count",
+	sidebarNotifications: "sidebar-notifications",
+	sidebarNotificationsCount: "sidebar-notifications-count",
+	/** The invisible mirror of that count, which keeps the row symmetric (D19/D22).
+	 *  It carries no content and is hidden from assistive tech; the id exists so a
+	 *  test can measure the two sides against each other. */
+	sidebarNotificationsSpacer: "sidebar-notifications-spacer",
+	/** The label's own measuring stand-in: out of flow, unpainted, and only there so
+	 *  the row can compare the label's natural width with the space it has (D23). */
+	sidebarNotificationsMeasure: "notifications-label-measure",
+	inboxBack: "notifications-back",
+	inboxList: "notifications-list",
+	inboxLoadMore: "notifications-load-more",
+	inboxLoadMoreRetry: "notifications-load-more-retry",
+	inboxRetry: "notifications-retry",
+	inboxFilterUnread: "notifications-filter-unread",
+	inboxFilterAll: "notifications-filter-all",
+	inboxMarkAll: "notifications-mark-all",
+	inboxSelect: "notifications-select",
+	inboxSelectionDone: "notifications-selection-done",
+	inboxMarkRead: "notifications-mark-read",
+	inboxMarkUnread: "notifications-mark-unread",
+	inboxDismiss: "notifications-dismiss",
+	inboxDetailBack: "notification-back",
+	inboxDetailRetry: "notification-detail-retry",
+	inboxDetailOpen: "notification-open-conversation",
+	/** "Dismiss all n from <conversation>" — the detail's From card door, its
+	 *  confirmation and the receipt's Undo. */
+	inboxDismissAll: "notification-dismiss-all",
+	inboxDismissAllDialog: "notification-dismiss-all-dialog",
+	inboxDismissAllUndo: "notification-dismiss-all-undo",
+	/** The item detail's ask card reuses the session screen's answer surface, so
+	 *  this id names the SECTION that holds it rather than a second answer form. */
+	inboxDetailAsks: "notification-detail-asks",
 	schedulesRetry: "schedules-retry",
 	/* --- the Library (the catalogue slice). The footer entry is `sidebarLibrary`;
 	 *  the list's search/filter/sort controls and the detail's metadata and chat
@@ -555,12 +648,30 @@ export const SURFACE = {
 	teamBridgeThreadEmpty: "team-bridge-thread-empty",
 	teamBridgeThreadLoading: "team-bridge-thread-loading",
 
+	/** The provisional conversation's own surfaces: its queued-count line and the
+	 *  transcript it adopts once the relay has returned a real session. */
+	/** The sheet the compact status row opens. */
+	sessionStatusSheet: "session-status-sheet",
+	startupPending: "startup-pending",
+	startupTranscript: "startup-transcript",
 	/** The Schedules screen's loading skeleton (S17). Its own id because the
 	 *  loading state must be distinguishable from the empty state — and on a
 	 *  320 pt phone the two frames once came out byte-identical on the
 	 *  conversations pane (R-2), which is why every loading state carries a
 	 *  marker of its own. */
 	schedulesLoading: "schedules-loading",
+	/* --- the inbox's own surfaces: its loading skeleton, the multi-select bar
+	 * that floats above the list, and the refusals line. Each is a state a
+	 * capture has to be able to name, so each carries its own id. */
+	inboxLoading: "notifications-loading",
+	inboxSelectionBar: "notifications-selection-bar",
+	inboxSkipped: "notifications-skipped",
+	inboxLoadMoreFailed: "notifications-load-more-failed",
+	inboxError: "notifications-error",
+	inboxDetailLoading: "notification-detail-loading",
+	inboxDetailVanished: "notification-detail-vanished",
+	inboxDetailFrom: "notification-detail-from",
+	inboxDismissAllReceipt: "notification-dismiss-all-receipt",
 	/** The supervisor strip: present ONLY when nothing on this machine would
 	 *  actually fire a cold wake (`supervisorLead` returns "" otherwise). The
 	 *  index alone cannot answer "will these fire" — the strip is that answer,
@@ -580,6 +691,9 @@ export const SURFACE = {
 	libraryDetailLoading: "library-detail-loading",
 	libraryDetailPopulated: "library-detail-populated",
 	libraryFilterSheet: "library-filter-sheet",
+	/** The computer switcher sheet (ux-flows F5). Its rows are the
+	 *  `switcher-row-` family and its two sections are regions below. */
+	computerSwitcherSheet: "computer-switcher-sheet",
 	librarySortSheet: "library-sort-sheet",
 	libraryMoreSheet: "library-more-sheet",
 	libraryEditorSheet: "library-editor-sheet",
@@ -845,6 +959,9 @@ export const SURFACE = {
 	 * invisible to every gate because no action could hold a press).
 	 */
 	sessionMenuSheet: "session-menu-sheet",
+	/** The composer's "Reopening —…" line while a send to an ENDED session is in
+	 *  flight (UX round 1, U2). */
+	composerReopening: "composer-reopening",
 	/* --- the conversation-tags sheet (LOH-11 S3). One marker per state, because
 	 *  a frame asserting "the catalogue is empty" must not also satisfy "the
 	 *  catalogue is loading" or "the write was refused". */
@@ -911,6 +1028,11 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"computer-row-",
 	"computer-row-status-",
 	"computer-row-reachability-",
+	/* The computer switcher: one row per computer, and its health word, keyed by
+	 *  the row's stable key (a registry id, or `radient-<tunnelId>`) — never by an
+	 *  address, which is not a computer's identity (decision a-2a8b). */
+	"switcher-row-",
+	"switcher-row-health-",
 	"tunnel-copy-",
 	"session-empty-",
 	"command-",
@@ -922,6 +1044,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"transcript-image-",
 	"transcript-video-",
 	"imagegen-cancel-",
+	/* One tool row's disclosure, keyed by the entry: the press a capture cell
+	 *  makes to show a row's expansion (the bridge row's markdown body), since
+	 *  the row's own `transcript-row-` id sits on the wrapper, not the control. */
+	"tool-row-toggle-",
 	"attach-option-",
 	/* The Library's parameterised identifiers: one tile per asset, one tag chip
 	 *  per catalogue tag (and one per assigned tag in the editor). */
@@ -971,6 +1097,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  entries sit in different sections with different facts (one shows fire
 	 *  instants, the other watch health). `schedule-more-` is the per-entry
 	 *  disclosure that puts a capped conversation's hidden rows back. */
+	"notification-row-",
+	"notification-select-",
+	"notification-answer-",
+	"notification-dismiss-",
 	"schedule-wake-row-",
 	"schedule-monitor-row-",
 	"schedule-more-",
@@ -1083,6 +1213,10 @@ export const REGION = {
 	searchBodyMatch: "search-result-body-match-marker",
 
 	computersList: "computers-list",
+	/** The switcher's two sections: "On this phone" and "On your Radient account,
+	 *  not connected". */
+	switcherOnPhone: "switcher-on-phone",
+	switcherNotConnected: "switcher-not-connected",
 
 	/** The system-browser hand-off, asserted instead of the browser itself:
 	 *  Maestro cannot drive a system browser (`docs/adr/0003` §"What the harness
@@ -1092,6 +1226,9 @@ export const REGION = {
 	welcomeHeadline: "welcome-headline",
 
 	settingsConnection: "settings-section-connection",
+	/** The Settings Refresh's failure line: discovery failures are account state,
+	 *  not a route refusal (PR #121, D2). */
+	settingsDiscoveryFailure: "settings-discovery-failure",
 	settingsAppearance: "settings-section-appearance",
 	settingsDiagnostics: "settings-section-diagnostics",
 	/** Notifications: the permission state and the honest machine line
@@ -1251,6 +1388,28 @@ export const STATE_MARKER = {
 	 *  a shape the wire cannot send). `read-error` and `truncated` are the two
 	 *  honest-answer strips, each rendered in ITS state only — and the empty
 	 *  state is `EMPTY.schedules`, unreachable while either family errored. */
+	/* The notifications inbox (S18): the piled list, the pinned rows and the
+	 *  states that must never be confused with one another. `populated` is the row
+	 *  family; `multi-select` is the bar that only exists while a selection is
+	 *  active; `error` is the refusal strip, rendered INSTEAD of a list so a
+	 *  failed read can never look like an empty inbox. */
+	notifications: {
+		loading: SURFACE.inboxLoading,
+		empty: EMPTY.notifications,
+		/* The All filter's empty answer is a different sentence under a different
+		 * id; no cell captures it yet, and this entry is how one would (code review
+		 * m5: one marker could not tell the two apart). */
+		"empty-all": EMPTY.notificationsAll,
+		populated: "notification-row-",
+		error: SURFACE.inboxError,
+		"multi-select": SURFACE.inboxSelectionBar,
+	},
+	/* The pushed detail, whose subject is the id prefix `notification-detail-`. */
+	"notification-detail": {
+		loading: SURFACE.inboxDetailLoading,
+		populated: CONTROL.inboxDetailOpen,
+		vanished: SURFACE.inboxDetailVanished,
+	},
 	schedules: {
 		loading: SURFACE.schedulesLoading,
 		empty: EMPTY.schedules,
@@ -1302,6 +1461,17 @@ export const STATE_MARKER = {
 		error: "session-error",
 		degraded: "session-degraded",
 		queued: "session-queued",
+		/* The header dot's YELLOW "quiet" reading (local-operator #3008 port):
+		 *  present only when `heartbeat_stale` is the cause that won, so the
+		 *  `S5/health-quiet` cell can never be satisfied by the degraded look. */
+		"health-quiet": "session-health-quiet",
+		/* The dot's sheet OPEN (S5/health-sheet): the surface itself is the marker,
+		 *  the way the status sheet and the session menu are. */
+		"health-sheet": CONTROL.sessionHealthSheet,
+		/* The dot's YELLOW "Reconnecting" reading: the phone's link dropped AFTER
+		 *  a frame (the `health-drop` world). Present only in that verdict, so a
+		 *  frame cannot pass on a green dot beside a banner (UX round 1, U4). */
+		"health-reconnecting": "session-health-reconnecting",
 		/* The in-conversation find (this slice): one marker per state a cell
 		 *  declares. `find-results` — the sheet open with a query typed and at
 		 *  least one match; `find-related` — the same sheet whose matches include
@@ -1417,6 +1587,14 @@ export const STATE_MARKER = {
 		 *  another device — and `mesh-unreachable` is the unreachable word on such
 		 *  a row. The sheet's four states are each their own marker (see
 		 *  `SURFACE.sessionMove*`). */
+		/* A busy inbox, on the rail row itself. The pane is already `open`, so the
+		 *  affirmative claim this cell needs is the COUNT's pill: it exists only when
+		 *  the relay reported unread items, and its two placements (symmetric, or the
+		 *  grouped pair when a mirror on each side would push the label under it) are
+		 *  the states `S15/notifications-busy` is photographed for. The spacer that
+		 *  mirrors it is a DIFFERENT id for the same reason: a frame must not satisfy
+		 *  this state with the invisible stand-in. */
+		"notifications-busy": CONTROL.sidebarNotificationsCount,
 		"mesh-remote": "session-remote-",
 		"mesh-unreachable": SURFACE.sessionRemoteUnreachable,
 		"move-pick": SURFACE.sessionMoveSheet,
@@ -1634,6 +1812,47 @@ export const librarySourceId = (sessionId: string): string =>
  * AND monitors, and its two entries sit in different sections: a single
  * `schedule-row-<id>` would address two elements.
  */
+/** One inbox row, keyed by the relay's item id (an update's `n_…` or an ask's
+ *  `ask:<session>:<ask_id>`). The id can carry a colon, which is legal in a DOM
+ *  id and in Maestro's `id:` matching, so it is used verbatim rather than
+ *  slugged — two items differing only in punctuation must not share a selector. */
+export const notificationRowId = (itemId: string): string =>
+	`notification-row-${itemId}`;
+
+/** The per-row "Answer" action on an open ask: it opens the item detail, where
+ *  the ask card is. Distinct from `notificationRowId` so a flow presses the verb
+ *  rather than the row. */
+/** The priority chip on an inbox row (a `High` badge: the reader's cue that this
+ *  one is not routine). A cue rather than a control, but a flow that proves the
+ *  badge renders has to reach it, so it gets a stable id like the rest of the row. */
+export const notificationPriorityId = (itemId: string): string =>
+	`notification-priority-${itemId}`;
+
+/** The `×n` repeat count on a row the agent raised more than once. */
+export const notificationRepeatId = (itemId: string): string =>
+	`notification-repeat-${itemId}`;
+
+/** One of a notification's outbound links in the detail, keyed by the href the
+ *  relay sent (core normalises links to http/https). */
+export const notificationLinkId = (url: string): string =>
+	`notification-link-${url}`;
+
+/** The detail's door to the project the source conversation belongs to. */
+export const notificationProjectId = (projectId: string): string =>
+	`notification-project-${projectId}`;
+
+export const notificationAnswerId = (itemId: string): string =>
+	`notification-answer-${itemId}`;
+
+/** The per-row one-click dismiss. Present only on rows the relay admits. */
+export const notificationDismissId = (itemId: string): string =>
+	`notification-dismiss-${itemId}`;
+
+/** The selection checkbox on that row. Its own id, so a flow selects a row
+ *  without pressing through to the detail. */
+export const notificationSelectId = (itemId: string): string =>
+	`notification-select-${itemId}`;
+
 export const scheduleWakeRowId = (sessionId: string): string =>
 	`schedule-wake-row-${sessionId}`;
 
@@ -1683,6 +1902,16 @@ export const commandCopyId = (label: string): string =>
 
 export const tunnelCommandCopyId = (label: string): string =>
 	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+/** A switcher row and its health word. The key is the row's stable key
+ *  (`SwitcherRow.key`); `:` is not in the id alphabet a flow can type, so a
+ *  discovery-only key is spelled with a dash. */
+export const switcherRowIds = (
+	key: string,
+): { row: string; health: string } => {
+	const safe = key.replace(/[^A-Za-z0-9_-]/g, "-");
+	return { row: `switcher-row-${safe}`, health: `switcher-row-health-${safe}` };
+};
 
 export const computerRowIds = (
 	hostname: string,
@@ -1746,6 +1975,10 @@ export const transcriptVideoId = (entryId: string, index: number): string =>
  *  Maestro's `id:` matching would otherwise pick one arbitrarily. */
 export const imagegenCancelId = (entryId: string): string =>
 	`imagegen-cancel-${entryId}`;
+
+/** One tool row's disclosure control, keyed by the entry it belongs to. */
+export const toolRowToggleId = (entryId: string): string =>
+	`tool-row-toggle-${entryId}`;
 
 /** One model in the model sheet. */
 export const modelOptionId = (modelId: string): string =>

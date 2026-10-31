@@ -1,0 +1,60 @@
+# audit.log — hindi wave 6, namespace mobile.account_routing, audit id hi30a4
+# produced by executing the repository's own validator and renderer in this session; not notes
+
+$ cd /Users/damian/workspace/hi-wave && node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/verify_ns.mjs mobile.account_routing   # repository parser + formatter, per-key
+# Hindi audit — namespace mobile.account_routing
+# generated: 2026-10-30T16:47:16.284Z
+# worktree: /Users/damian/workspace/hi-wave  HEAD: 647581a4abd5eafce09914b5b1936982749c16c4
+# git status (porcelain): M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/hi/ | ?? src/i18n/catalogues/hi/
+
+## inputs
+  en       src/i18n/catalogues/en/mobile.account_routing.json  sha256=34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03  keys=14
+  context  src/i18n/catalogues/en/mobile.account_routing.context.json  sha256=2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c  keys=14
+  hi       src/i18n/catalogues/hi/mobile.account_routing.json  sha256=411a1ca9ae52ccc82049c2fb01dcc2e36880cddbba446c1a3f066e90eef7de83  keys=14
+
+## structure
+  [PASS] key set identical — en=14 hi=14
+  [PASS] no key dropped or added
+  [PASS] every key documented in the context sidecar — ctx=14
+  [INFO] placeholder-bearing messages: 0; plural-bearing messages: 0
+  [PASS] placeholder surface identical on every key
+  [PASS] ICU arms identical on every key
+  [PASS] code spans identical on every key
+
+## render through the worktree renderer (parseMessage + formatMessage)
+  [PASS] all 14 values render without error
+
+## typography / Devanagari
+  [PASS] typography predicates clean
+  [INFO] values carrying danda: 8/14; ellipsis U+2026: 2
+
+## mirror check: not a relay namespace (no core mirror required)
+
+## result
+  checks failed: 0
+  VERDICT(mechanical): PASS
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/compose_ns.mjs mobile.account_routing   # composed sentences quoted in report.md
+# composition for mobile.account_routing
+  settings section, in order:
+    खाता रूटिंग
+    बदलाव केवल इस कंप्यूटर पर लागू होते हैं।
+    खाता रूटिंग लोड हो रही है…
+    इस कंप्यूटर पर सहेजा गया।
+    अभी सहेजा नहीं गया।
+    → खाता रूटिंग ⏎ बदलाव केवल इस कंप्यूटर पर लागू होते हैं। ⏎ खाता रूटिंग लोड हो रही है… ⏎ इस कंप्यूटर पर सहेजा गया। ⏎ अभी सहेजा नहीं गया।
+  failure sentence beside the controls it names:
+    बदलाव की पुष्टि नहीं हो सकी। कनेक्शन जाँचें और मौजूदा नीति पढ़ने के लिए फिर लोड करें।
+    नीति फिर पढ़ें
+    फिर कोशिश करें
+    → बदलाव की पुष्टि नहीं हो सकी। कनेक्शन जाँचें और मौजूदा नीति पढ़ने के लिए फिर लोड करें। ⏎ नीति फिर पढ़ें ⏎ फिर कोशिश करें
+exit=0

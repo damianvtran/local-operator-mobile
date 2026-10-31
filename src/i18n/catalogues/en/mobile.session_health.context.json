@@ -1,0 +1,46 @@
+{
+	"mobile.session_health.control_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer."
+	},
+	"mobile.session_health.menu_label": {
+		"role": "button",
+		"note": "Accessible name of the session header's overflow button (the ⋮). Present only when the menu has an item."
+	},
+	"mobile.session_health.menu_hint": {
+		"role": "button",
+		"note": "Accessibility hint for the same overflow button."
+	},
+	"mobile.session_health.menu_title": {
+		"role": "heading",
+		"note": "Title of the overflow menu's sheet. One short noun; not the conversation's name."
+	},
+	"mobile.session_health.reopening": {
+		"role": "status",
+		"note": "The acceptance line after Resume, and under the composer while a send to an ended session is reopening it. The daemon's engage takes seconds, so name the wait rather than showing a bare ellipsis."
+	},
+	"mobile.session_health.still_reopening": {
+		"role": "status",
+		"note": "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed."
+	},
+	"mobile.session_health.resume_refused_title": {
+		"role": "heading",
+		"note": "Title of the sheet's failure notice when Resume did not work."
+	},
+	"mobile.session_health.resume_refused": {
+		"role": "status",
+		"note": "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"."
+	},
+	"mobile.session_health.resume_gone": {
+		"role": "status",
+		"note": "A relay 404 on resume: the conversation is gone. Never invite a retry here — the same words this app's Past sessions screen uses for the same fact."
+	},
+	"mobile.session_health.resume_no_route": {
+		"role": "status",
+		"note": "Resume with no connected computer: names the missing prerequisite rather than blaming the session."
+	},
+	"mobile.session_health.ended_placeholder": {
+		"role": "help",
+		"note": "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence."
+	}
+}

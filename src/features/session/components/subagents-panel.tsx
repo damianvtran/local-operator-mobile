@@ -45,15 +45,15 @@ const MAX_DEPTH_INDENT = 4;
  *  generated roles (`docs/design/components.md` § 22). The steps are 12 pt apart,
  *  which is the smallest separation that still reads as a hierarchy on a phone. */
 const DEPTH_INDENT_CLASSES = [
-	"pl-4",
-	"pl-7",
-	"pl-10",
-	"pl-13",
-	"pl-16",
+	"ps-4",
+	"ps-7",
+	"ps-10",
+	"ps-13",
+	"ps-16",
 ] as const;
 
 const indentClass = (depth: number): string =>
-	DEPTH_INDENT_CLASSES[Math.min(depth, MAX_DEPTH_INDENT)] ?? "pl-4";
+	DEPTH_INDENT_CLASSES[Math.min(depth, MAX_DEPTH_INDENT)] ?? "ps-4";
 
 export const SubagentsPanel = ({
 	subagents,
@@ -177,7 +177,7 @@ export const SubagentsPanel = ({
 										: undefined
 								}
 								className={cx(
-									"min-h-11 flex-row items-start gap-2 py-2 pr-4",
+									"min-h-11 flex-row items-start gap-2 py-2 pe-4",
 									indentClass(row.depth),
 								)}
 							>

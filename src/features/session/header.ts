@@ -1,6 +1,7 @@
+import { healthLabel } from "@/features/session/health";
 import { MIN_HEADER_NAME_CHARS } from "@/features/session/projection";
 import { maxColumnWidth, type Viewport } from "@/ui/column";
-import { HEADER_STACK_WIDTH } from "@/ui/size-class";
+import { headerStacks } from "@/ui/size-class";
 
 /**
  * How many characters of the conversation name the session header can actually
@@ -43,7 +44,54 @@ import { HEADER_STACK_WIDTH } from "@/ui/size-class";
  * The samples and the defect: `docs/ux/audits/2026-10-11-full-surface-pass.md`.
  */
 const HEADER_GUTTERS_PT = 32;
-const HEADER_CHROME_PT = HEADER_GUTTERS_PT + 48 + 8 + 48 + 8;
+/* The leading cluster is `Screen`'s `headerLeading`, and the session screen's
+ * is `<View className="flex-row items-center gap-1">` holding the back
+ * `IconButton` and the `NavigationMark` from #118. The budget used to count only
+ * back + gap (48 + 8), so it promised ~32 pt the row does not have — slack the
+ * advance estimate used to absorb until the ⋮ arrived (review round 2 R2-M1,
+ * design D1, QA Q7: an ended title at 390 pt measured 164 px in a 158 px box and
+ * the platform clipped the tail the middle truncation had kept).
+ *
+ * These are the SAME constants the components render with, not a second copy of
+ * their values: `NAVIGATION_MARK_PT` is `NavigationMark`'s own default `size`,
+ * `LEADING_GAP_PT` is the `gap-1` on that cluster, and the 48s are the web
+ * `IconButton` box the find lever and the back control both take. If the cluster
+ * changes, this sum is the one place that must move with it. */
+const NAVIGATION_MARK_PT = 28;
+const LEADING_GAP_PT = 4;
+const HEADER_CHROME_PT =
+	HEADER_GUTTERS_PT + 48 + LEADING_GAP_PT + NAVIGATION_MARK_PT + 8 + 48 + 8;
+
+/**
+ * **The session-health control's own chrome on the TITLE line** (review round 1
+ * M1, design D1, QA Q7 — the same D2 relapse this module exists to prevent:
+ * the header gained the dot and the ⋮ and this sum did not move, so the title
+ * was middle-truncated for a box ~72 pt wider than it had and the platform
+ * clipped the tail again).
+ *
+ * - `dot` — the LIVE state draws its dot inline before the name: an 8 pt dot
+ *   plus the control's 8 pt gap. Every other state draws its dot on the state
+ *   line UNDER the name (beside the state word), which costs height, not width.
+ * - `menu` — the ⋮ renders only while it has an item (Resume, so: ended): the
+ *   kit's 48 pt `IconButton` plus the cluster's 8 pt gap.
+ *
+ * Both default to absent, so every caller that passes no extras — and every
+ * figure `header.test.ts` pinned before the dot — is unchanged.
+ */
+export type HeaderExtras = { dot?: boolean; menu?: boolean; word?: boolean };
+/* Chrome is rem-spaced, so on web BOTH its width and the glyph advance scale
+ * with the reader. On native the chrome is in pt and only the advance scales;
+ * the caller passes `Platform.OS !== "web"` for that case. */
+const HEALTH_DOT_PT = 8 + 8;
+const HEADER_MENU_PT = 48 + 8;
+const extrasPt = (
+	{ dot = false, menu = false, word = false }: HeaderExtras = {},
+	scale = 1,
+): number =>
+	((dot ? HEALTH_DOT_PT : 0) +
+		(menu ? HEADER_MENU_PT : 0) +
+		(word ? STATE_WORD_PT : 0)) *
+	scale;
 
 /**
  * The wrap margin the stacked case keeps back from the two-line clamp's
@@ -108,6 +156,55 @@ const STACKED_WRAP_SLACK = 4;
  */
 export const DISPLAY_ADVANCE_PT = 14.06;
 
+/* THE STATE WORD BESIDE THE TITLE IN SHORT LANDSCAPE (review round 4, D15 /
+ * QA N3). Since the Q9 fix the word rides the title's own row there, so it takes
+ * width from the flex-1 title — and the budget did not charge it, so a non-live
+ * compact title was middle-truncated to a length that did not fit and the
+ * platform clipped the tail (measured: clientWidth 313 against scrollWidth 351
+ * at 135 %). The price is the WIDEST word the control can say, charged in every
+ * compact state — live included, where no word is drawn — so the title's
+ * truncation is the same in every state and the name does not change shape when
+ * the dot changes colour (D11). Derived from the catalogue's own words rather
+ * than a magic number, and from the `meta` step the word is drawn in. */
+const STATE_WORDS = [
+	healthLabel("not_answering"),
+	healthLabel("reconnecting"),
+	healthLabel("ended"),
+] as const;
+const STATE_WORD_GAP_PT = 8; // the row's `gap-2`
+/* One point of slack on top of the measured ink (design round 6, item 5): the
+ * frame measures 79.22 pt for "Not answering", and a font-metric rounding must
+ * not be able to eat the word's own price. The price is ceil((ink + 1) * 2)/2. */
+const STATE_WORD_SLACK_PT = 1;
+/* THE WORD'S OWN ADVANCE, MEASURED FROM A SHIPPED FRAME (design round 5, D16).
+ * The previous price scaled the display step — `DISPLAY_ADVANCE_PT * 12/28 * 0.62`
+ * = 3.74 pt per character — against a rendered 6.09: a 38 % under-charge, because
+ * the small state word does not carry the display size's advance ratio. It left
+ * "Not answered"/"Reconnecting" 11-15 pt past the title's box at 100 %, where the
+ * middle ellipsis keeps the tail and the platform's own ellipsis then removes it
+ * again — the double-cut class D1 fixed.
+ *
+ * Measured on the shipped bundle (844x390, dark, 100 %): the 13-character run is
+ * 79.22 pt wide, i.e. 6.09 pt/char. This is a MEASUREMENT, not a derivation: if the
+ * meta step's size or tracking changes, re-measure rather than re-scale this.
+ * `header.test.ts` carries the same measured number as its guard, so a cheaper
+ * price cannot ship green again. */
+const META_ADVANCE_PT = 6.09;
+export const STATE_WORD_PT =
+	Math.ceil(
+		(Math.max(...STATE_WORDS.map((word) => word.length)) * META_ADVANCE_PT +
+			STATE_WORD_SLACK_PT) *
+			2,
+	) /
+		2 +
+	STATE_WORD_GAP_PT;
+/** The widest state word the control can draw, for the guard that proves the
+ *  price covers what renders. Exported so the test reads the SAME source the
+ *  price derives from rather than re-listing the words. */
+export const WIDEST_STATE_WORD = STATE_WORDS.reduce((wide, word) =>
+	word.length > wide.length ? word : wide,
+);
+
 /**
  * The character budget for a viewport.
  *
@@ -120,7 +217,12 @@ export const DISPLAY_ADVANCE_PT = 14.06;
  * `MIN_HEADER_NAME_CHARS` characters so both ends of a name survive, so a budget
  * computed below it is raised to it rather than to zero.
  */
-export const headerTitleChars = ({ width, height }: Viewport): number => {
+export const headerTitleChars = (
+	{ width, height }: Viewport,
+	extras: HeaderExtras = {},
+	effectiveScale = 1,
+	nativeChrome = false,
+): number => {
 	/* **Below the stack floor the header STACKS, and the title gets its own
 	 * budget — bounded by the two lines it is allowed to draw.** `Screen` stacks
 	 * when `headerStacks` says so (`src/ui/size-class.ts`); the width half of that
@@ -150,20 +252,51 @@ export const headerTitleChars = ({ width, height }: Viewport): number => {
 	 * `headerStacks` (> 1.4) deliberately does NOT change the budget: that case
 	 * keeps the single-line arithmetic and the title wraps within its two permitted
 	 * lines — the 2x residue this module documents above. */
-	if (width < HEADER_STACK_WIDTH) {
-		const perLineAtLargestScale = Math.floor(
-			(width - HEADER_GUTTERS_PT) / (DISPLAY_ADVANCE_PT * 2),
+	/* The branch is the SCREEN's predicate, not a width check of our own. `Screen`
+	 * stacks on `headerStacks(effectiveScale, width)`, which fires on scale above
+	 * 140 % as well as on a narrow viewport. A 390 pt phone at 200 % therefore
+	 * STACKS — and the old `width < HEADER_STACK_WIDTH` test sent it down the
+	 * inline formula, which then doubled the whole inline chrome the stacked title
+	 * row does not even hold and collapsed the name to the 8-character floor
+	 * (`Hell…der` where main gave 17). Regression against main, review round 2
+	 * R2-M2 / design D1, and the tag-line header shares the same budget. */
+	if (headerStacks(effectiveScale, width)) {
+		/* Stacked, the ⋮ sits on the BACK row (`Screen`'s `stackedActionsBeside`),
+		 *  never beside the title, so only the inline dot narrows the title's own
+		 *  row. */
+		const chromeScale = nativeChrome ? 1 : effectiveScale;
+		/* THE ROW IS THE COLUMN, NOT THE VIEWPORT (CI run 40823746854, job
+		 * 123288151628). The stacked title lives inside the content column, which
+		 * is capped at `maxColumnWidth` (620 pt on a landscape tablet) — budgeting
+		 * the raw viewport promised 68 characters where the rendered box holds 21
+		 * per line, so at `tablet-landscape` 200 % a 65-character name needed three
+		 * of its two permitted lines and the platform clipped the third
+		 * (`content 202px in a 134px box`, U-04/U-07). `compactTitleChars` already
+		 * caps; this branch did not. Below the cap the number is identical, so
+		 * every phone cell keeps the budget it was proved with. */
+		const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
+		const titleRow =
+			row -
+			HEADER_GUTTERS_PT * chromeScale -
+			extrasPt({ dot: extras.dot }, chromeScale);
+		/* Two clamped lines at the ACTUAL scale, less the same wrap slack. The
+		 *  previous budget hard-coded 2x and ignored the scaled dot/gutters; at
+		 *  320/200% it promised 16 chars (2x14.06) while the dot row was left
+		 *  with 16 fewer points than that, so the dot was pushed onto its own
+		 *  line. The kit's 8-char floor still preserves both ends. */
+		const perLine = Math.max(
+			1,
+			Math.floor(titleRow / (DISPLAY_ADVANCE_PT * effectiveScale)),
 		);
-		return Math.max(
-			MIN_HEADER_NAME_CHARS,
-			perLineAtLargestScale * 2 - STACKED_WRAP_SLACK,
-		);
+		return Math.max(MIN_HEADER_NAME_CHARS, perLine * 2 - STACKED_WRAP_SLACK);
 	}
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
-	const available = row - HEADER_CHROME_PT;
+	const chromeScale = nativeChrome ? 1 : effectiveScale;
+	const available =
+		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
 	return Math.max(
 		MIN_HEADER_NAME_CHARS,
-		Math.floor(available / DISPLAY_ADVANCE_PT),
+		Math.floor(available / (DISPLAY_ADVANCE_PT * effectiveScale)),
 	);
 };
 
@@ -180,13 +313,23 @@ export const headerTitleChars = ({ width, height }: Viewport): number => {
  * advance scaled by the role ratio (20/28) and by the text scale.
  */
 const TITLE_TO_DISPLAY = 20 / 28;
+/* THE TITLE'S OWN ADVANCE IN THE COMPACT ROW, MEASURED (design round 6, D19).
+ * The model was `DISPLAY_ADVANCE_PT * 20/28` = 10.04 pt per character, but the
+ * shipped run renders 9.40: promising 10.04 while 9.40 is what paints promised
+ * ~5 more characters than the row can show at 135 %, which is the wide gap the
+ * frame measured. Same rule as `META_ADVANCE_PT`: a measurement, not a
+ * derivation — re-measure if the title step changes. */
+const COMPACT_TITLE_ADVANCE_PT = 9.4;
 export const compactTitleChars = (
 	{ width, height }: Viewport,
 	effectiveScale: number,
+	extras: HeaderExtras = {},
+	nativeChrome = false,
 ): number => {
 	const row = Math.min(width, maxColumnWidth({ width, height }) ?? width);
-	const available = row - HEADER_CHROME_PT;
-	const advance =
-		DISPLAY_ADVANCE_PT * TITLE_TO_DISPLAY * Math.max(1, effectiveScale);
+	const chromeScale = nativeChrome ? 1 : effectiveScale;
+	const available =
+		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
+	const advance = COMPACT_TITLE_ADVANCE_PT * Math.max(1, effectiveScale);
 	return Math.max(MIN_HEADER_NAME_CHARS, Math.floor(available / advance));
 };

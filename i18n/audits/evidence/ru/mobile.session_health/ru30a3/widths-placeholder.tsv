@@ -1,0 +1,11 @@
+# Ended-composer placeholder widths (the only slot the session_health verdict turns on).
+# Same CoreText harness and the same fallback-font caveat as ru30a1/widths.tsv.
+# Compare against the field the sidecar measures: ~348 pt at 390 pt viewport (English
+# 569.6 pt at 200% text scale per mobile.session_health.context.json); the field tracks
+# the viewport, so 320 pt leaves ~278 pt of content box.
+locale	key	step	size	chars	cells	cells_ellipsis_wide	advance_pt	font
+en	mobile.session_health.ended_placeholder	body 16pt/400	16	35	35	36	266.7	.AppleSystemUIFont
+es	mobile.session_health.ended_placeholder	body 16pt/400	16	19	19	20	138.2	.AppleSystemUIFont
+fr	mobile.session_health.ended_placeholder	body 16pt/400	16	15	15	16	120.7	.AppleSystemUIFont
+ru	mobile.session_health.ended_placeholder	body 16pt/400	16	37	37	38	316.0	.AppleSystemUIFont
+zh-CN	mobile.session_health.ended_placeholder	body 16pt/400	16	10	18	20	152.1	.AppleSystemUIFont

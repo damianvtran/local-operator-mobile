@@ -9,18 +9,55 @@ import type {
 	TunnelSession,
 } from "@/connection";
 import {
+	configureStartupAuthorizationStorage,
+	getStartupAuthorization,
+	startupAuthorizationLifecycle,
+} from "@/connection/startup-authorization";
+import { memorySecureStore, SecureStorage } from "@/connection/storage";
+import {
 	ConnectionProvider,
+	configStore,
 	connectionStore,
+	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
+import { headerHealth } from "@/features/session/health";
 import { sessions as sessionProjections } from "@/features/session/runtime";
 import {
 	sessionFactsFrom,
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { activeLocale, preferredLocale } from "@/i18n";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
+import {
+	performSwitcherTap,
+	switcherSections,
+	switcherTap,
+} from "./computer-switcher-view";
+
+// The strict privacy adapter is supplied by the adjacent storage slice. These
+// tests exercise the real provider boundary, not native filesystem/Keychain I/O.
+const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
+const handoff = vi.hoisted(() => ({
+	block: null as Promise<void> | null,
+	started: false,
+}));
+vi.mock("./radient-sign-in", () => ({
+	beginRadientSignIn: async () => {
+		handoff.started = true;
+		await handoff.block;
+		return { ok: true, tokens: oauth };
+	},
+}));
+vi.mock("@/features/session/device-storage", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	clearAuthorizationData: async () => {
+		privacy.calls += 1;
+		if (privacy.fail) throw new Error("Synthetic privacy storage failure");
+	},
+}));
 
 vi.mock("react-native", () => ({
 	Platform: { OS: "web" },
@@ -28,6 +65,11 @@ vi.mock("react-native", () => ({
 }));
 const durable = vi.hoisted(() => ({
 	oauth: null as RadientTokens | null,
+	saved: null as {
+		baseUrl: string;
+		password: string;
+		allowInsecure: boolean;
+	} | null,
 	session: null as TunnelSession | null,
 	events: [] as string[],
 	writeBlock: null as Promise<void> | null,
@@ -35,8 +77,17 @@ const durable = vi.hoisted(() => ({
 	clearBlock: null as Promise<void> | null,
 	clearsStarted: 0,
 }));
+type TunnelStorageModule = typeof import("@/features/auth/tunnel-storage");
+/* The saved-computers registry is the REAL module's (the web runtime, so its
+ *  memory keystore): the switcher tests assert what the provider records there,
+ *  and a stand-in would only prove the stand-in. Credentials stay synthetic. */
+const realRegistry = () =>
+	vi.importActual<TunnelStorageModule>("@/features/auth/tunnel-storage");
 vi.mock("@/features/auth/tunnel-storage", () => ({
-	readSavedTunnel: async () => null,
+	rememberLiveComputer: async (
+		...args: Parameters<TunnelStorageModule["rememberLiveComputer"]>
+	) => (await realRegistry()).rememberLiveComputer(...args),
+	readSavedTunnel: async () => durable.saved,
 	readStoredOauth: async () => durable.oauth,
 	readStoredTunnelSession: async () => durable.session,
 	writeStoredTunnelSession: async (session: TunnelSession) => {
@@ -57,7 +108,11 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 	},
 	removeSavedTunnel: async () => {},
 	writeSavedTunnel: async () => {},
-	writeStoredOauth: async () => ({ persistent: false }),
+	writeStoredOauth: async (tokens: RadientTokens) => {
+		durable.events.push("oauth-write");
+		durable.oauth = tokens;
+		return { persistent: false };
+	},
 }));
 
 /** The existing modal hook tests use ReactDOM's client renderer with a small
@@ -77,9 +132,11 @@ function SessionCapture({ id }: { id: string }) {
 }
 function Capture() {
 	latest = useConnection();
-	return observedSession
-		? createElement(SessionCapture, { id: observedSession })
-		: null;
+	/* `null` means "no session screen"; `""` means "a screen with no conversation
+	 *  yet", which is the case Q10 measured and which must still mount the hook. */
+	return observedSession === null
+		? null
+		: createElement(SessionCapture, { id: observedSession });
 }
 async function mount() {
 	const doc = {
@@ -174,6 +231,9 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		/** Seed one session frame, tear the stream, then refuse every reopen 401 —
+		 *  the round-4 shape (review N1). */
+		refuseSessionStream?: boolean;
 		holdFrame?: boolean;
 		holdHistory?: boolean;
 		holdReloadHistory?: boolean;
@@ -182,6 +242,20 @@ async function relay(
 		privateHistory?: string;
 		emptyFrame?: boolean;
 		frameTitle?: string;
+		/** The initial list read fails while the stream stays healthy (R1-1). */
+		sessionsFailure?: boolean;
+		/** What Radient's `GET /v1/tunnels` lists; empty unless a test needs rows. */
+		tunnels?: unknown[];
+		/** Holds `GET /v1/tunnels` until `releaseTunnels`, so a test can end the
+		 *  account (sign out) while discovery is still in flight. */
+		holdTunnels?: boolean;
+		/** Holds `POST /v1/tunnels/session/code` until `releaseCode`, so a test can
+		 *  look at the store while a pick is minting. */
+		holdCode?: boolean;
+		/** Answers the session code request with a 500: a failed mint. */
+		failCode?: boolean;
+		/** Drops the session code request's connection: a pick made offline. */
+		dropCode?: boolean;
 	} = {},
 ) {
 	const events: string[] = [];
@@ -192,11 +266,27 @@ async function relay(
 	const releaseToken = deferred();
 	const refuseCatalogue = deferred();
 	const releaseHistory = deferred();
+	const tunnelsReceived = deferred();
+	const releaseTunnels = deferred();
+	const codeReceived = deferred();
+	const releaseCode = deferred();
+	/* What `GET /v1/tunnels` answers next: the listed tunnels, or a status a test
+	 *  switches to mid-run to fail a Refresh and then recover it. */
+	let tunnelsAnswer: "list" | 500 | 401 = "list";
+	/* Holds the NEXT `GET /v1/tunnels` only, so a test can sign in normally and
+	 *  then keep a Refresh in flight (R2-m1). */
+	let holdNext = false;
+	const nextTunnelsReceived = deferred();
+	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
+	/* Whether the session code request fails NOW: starts at `options.failCode`, and a
+	 *  test can lift it to retry the same pick against a recovered control plane. */
+	let failCode = options.failCode ?? false;
+	let sessionStreams = 0;
 	let failedStream = false;
 	const server = createServer(async (request, response) => {
 		const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -223,10 +313,36 @@ async function relay(
 			return;
 		}
 		if (path === "/v1/tunnels") {
-			json({ msg: "ok", result: [] });
+			tunnelsReceived.resolve();
+			if (options.holdTunnels) await releaseTunnels.promise;
+			if (holdNext) {
+				holdNext = false;
+				nextTunnelsReceived.resolve();
+				await releaseNextTunnels.promise;
+			}
+			if (tunnelsAnswer === 500) {
+				response.writeHead(500, { "content-type": "text/plain" });
+				response.end("Synthetic control-plane failure");
+				return;
+			}
+			if (tunnelsAnswer === 401) {
+				json({ msg: "unauthorized" }, 401);
+				return;
+			}
+			json({ msg: "ok", result: options.tunnels ?? [] });
 			return;
 		}
 		if (path === "/v1/tunnels/session/code") {
+			codeReceived.resolve();
+			if (options.holdCode) await releaseCode.promise;
+			if (options.dropCode) {
+				request.socket.destroy();
+				return;
+			}
+			if (failCode) {
+				json({ msg: "synthetic mint failure" }, 500);
+				return;
+			}
 			json({ code: `synthetic-code-${++codeCount}` });
 			return;
 		}
@@ -310,6 +426,22 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions/") && path.endsWith("/events")) {
+			/* The round-4 shape (review N1 / QA Q10 / UX U17): a frame lands, the
+			 *  session stream is torn, and the REOPEN is refused 401. The route
+			 *  client records that refusal on the shared route, which is the fact
+			 *  the header must read — the stream's own terminal report does not
+			 *  survive the effect teardown in this shape. */
+			if (options.refuseSessionStream) {
+				sessionStreams += 1;
+				if (sessionStreams > 1) {
+					response.writeHead(401, {
+						"content-type": "application/json",
+						"x-radient-login": "required",
+					});
+					response.end(JSON.stringify({ detail: "Authentication required" }));
+					return;
+				}
+			}
 			// Keep the wire open but deliver no frame: cache presence alone must
 			// not authorize a retained transcript for this new screen/identity.
 			if (options.holdFrame) return;
@@ -328,9 +460,18 @@ async function relay(
 			response.write(
 				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
 			);
+			if (options.refuseSessionStream) {
+				/* Torn mid-stream, exactly as `sse-drop-mid-stream` does on the
+				 *  mock relay: the hook sees a transport error and reopens. */
+				setTimeout(() => response.destroy(), 50);
+			}
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
+			if (options.sessionsFailure) {
+				json({ detail: "Sessions unavailable", reason: "connector" }, 503);
+				return;
+			}
 			json(body("sessions-empty"));
 			return;
 		}
@@ -371,6 +512,7 @@ async function relay(
 		releaseToken.resolve();
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
+		releaseTunnels.resolve();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -386,8 +528,23 @@ async function relay(
 		releaseToken,
 		refuseCatalogue,
 		releaseHistory,
+		tunnelsReceived,
+		releaseTunnels,
+		codeReceived,
+		releaseCode,
+		answerTunnels: (answer: "list" | 500 | 401) => {
+			tunnelsAnswer = answer;
+		},
+		holdNextTunnels: () => {
+			holdNext = true;
+		},
+		nextTunnelsReceived,
+		releaseNextTunnels,
 		allowLogout: () => {
 			failLogout = false;
+		},
+		allowCode: () => {
+			failCode = false;
 		},
 	};
 }
@@ -427,7 +584,18 @@ function transport(controlPlane?: string) {
 	);
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+	privacy.fail = false;
+	handoff.block = null;
+	handoff.started = false;
+	durable.saved = null;
+	const storage = new SecureStorage(memorySecureStore());
+	configureStartupAuthorizationStorage({
+		read: () => storage.readStartupAuthorization(),
+		write: (record) => storage.writeStartupAuthorization(record),
+	});
+	await startupAuthorizationLifecycle.retire();
+	privacy.calls = 0;
 	observedSession = null;
 	wire.length = 0;
 	sessionProjections.getState().reset();
@@ -450,7 +618,111 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
+describe("startup authorization is admitted by the route (R1-1)", () => {
+	it("survives a failed cold-start list read with a healthy stream", async () => {
+		const mock = await relay({ sessionsFailure: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// The read failed: the list says so ...
+		expect(mock.events).toContain("GET /api/sessions");
+		// ... and the route is still authorized to start work, which is what the
+		// startup coordinator opens on.
+		expect(getStartupAuthorization()).not.toBeNull();
+	});
+});
+
 describe("mounted provider authentication retirement", () => {
+	it("reports failed privacy cleanup and keeps replacement admission closed", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(getStartupAuthorization()).not.toBeNull();
+		privacy.fail = true;
+		await act(async () => {
+			expect(await latest.signOut()).toBe(false);
+		});
+		expect(getStartupAuthorization()).toBeNull();
+		expect(connectionStore.getState().surface).toBe("diagnostic");
+		privacy.fail = false;
+	});
+
+	it("ignores an OAuth browser result that arrives after explicit signout", async () => {
+		await mount();
+		const held = deferred();
+		handoff.block = held.promise;
+		cleanup.push(async () => {
+			held.resolve();
+		});
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await until(() => handoff.started);
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		held.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		expect(durable.events).not.toContain("oauth-write");
+		expect(durable.oauth).toBeNull();
+		expect(getStartupAuthorization()).toBeNull();
+		expect(connectionStore.getState().route).toBeNull();
+	});
+
+	it("retains a generation on verified saved-route remount, rotates it on same-URL explicit login", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		const input = {
+			url: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
+		await act(async () => {
+			await latest.connectCustom(input);
+		});
+		const original = getStartupAuthorization()?.scope;
+		expect(original).toBeTruthy();
+		durable.saved = {
+			baseUrl: input.url,
+			password: input.password,
+			allowInsecure: true,
+		};
+		await unmount();
+		await mount();
+		await until(() => getStartupAuthorization() !== null);
+		expect(getStartupAuthorization()?.scope).toBe(original);
+		await act(async () => {
+			await latest.connectCustom(input);
+		});
+		expect(getStartupAuthorization()?.scope).not.toBe(original);
+	});
+
+	it("explicit sign-out invokes verified private-data cleanup even without a selected route", async () => {
+		await mount();
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		expect(privacy.calls).toBeGreaterThan(0);
+		expect(getStartupAuthorization()).toBeNull();
+	});
+
 	it("drains a late native mint, revokes its session, then clears durable credentials", async () => {
 		const mock = await relay({ holdToken: true });
 		transport(mock.origin);
@@ -991,6 +1263,9 @@ describe("mounted provider authentication retirement", () => {
 				expect(await latest.signOut()).toBe(false);
 			});
 			const clear = deferred();
+			cleanup.push(async () => {
+				clear.resolve();
+			});
 			durable.clearBlock = clear.promise;
 			if (mode !== "failure") old.allowLogout();
 			let exiting!: Promise<boolean>;
@@ -1011,20 +1286,25 @@ describe("mounted provider authentication retirement", () => {
 			);
 			expect(completed).toBe(false);
 			const current = mode === "retain" ? null : await relay();
+			let connecting: Promise<void> | undefined;
 			if (current)
 				await act(async () => {
-					await latest.connectCustom({
+					connecting = latest.connectCustom({
 						url: current.origin,
 						password: "test-only",
 						allowInsecure: true,
 					});
 				});
-			const currentClient = latest.relay();
-			const currentCookie = current ? jars.get(current.origin) : null;
+			// Replacement admission now waits for verified privacy/credential
+			// retirement; it may not race a durable clear from the former identity.
+			expect(getStartupAuthorization()).toBeNull();
+			if (current) expect(current.events).not.toContain("POST /login");
 			clear.resolve();
 			await act(async () => {
-				await exiting;
+				await Promise.all([exiting, connecting]);
 			});
+			const currentClient = latest.relay();
+			const currentCookie = current ? jars.get(current.origin) : null;
 			expect(await exiting).toBe(mode === "retain");
 			if (current) {
 				expect(latest.relay()).toBe(currentClient);
@@ -1328,6 +1608,52 @@ describe("session runtime shared-route refusal", () => {
 	);
 });
 
+describe("a 401 on the session stream alone reaches the header", () => {
+	/* REVIEW ROUND 4, N1 / QA Q10 / UX U17. The filed defect: after a frame, a
+	 * 401 on this session's own event stream ends every retry (no request for a
+	 * minute) while the dot still says "Reconnecting — keeps trying".
+	 *
+	 * WHY THIS TEST EXISTS IN THIS SHAPE. The round-3 fix added `streamClosed`
+	 * and its table rows, but those rows assign the flag directly — nothing drove
+	 * the stream's 401 through the hook, so the suite was green while the shipped
+	 * bundle still read `state: "connecting"`. On this path the route client's
+	 * `onResponse` 401 hook records the refusal and flips the source to
+	 * `refused` while `http.open` unwinds, and the session effect's guards drop
+	 * the stream's own terminal report. So this mounts the real hook against a
+	 * relay that seeds a frame, tears the stream and refuses the reopen 401, and
+	 * asserts the reading the header consumes. */
+	it("reads the refused route as a stop, with no request left to make", async () => {
+		const mock = await relay({ refuseSessionStream: true });
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		/* The reopen is refused: the route is refused and the hook's link is a
+		 * stop, which is what `headerHealth` turns into "no dot". */
+		await until(() => sessionReading.link === "stopped");
+		expect(sessionReading.source.reason).toBe("refused");
+		expect(
+			headerHealth(sessionReading.projection, sessionReading.link),
+		).toBeNull();
+		/* And nothing is retrying behind that reading — the false promise the
+		 * dot used to make. */
+		const before = wire.length;
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 300));
+		});
+		expect(
+			wire.slice(before).filter((entry) => entry.path.endsWith("/events")),
+		).toEqual([]);
+	});
+});
+
 describe("session recovery without an owned frame", () => {
 	it("keeps refused first-load recovery honest even when process cache already contains rows", async () => {
 		const mock = await relay({ refuseCatalogue: true, holdFrame: true });
@@ -1468,4 +1794,670 @@ describe("session ownership across routes", () => {
 				});
 		},
 	);
+});
+
+describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () => {
+	/* Two synthetic tunnels in the control plane's own shape, parsed by the real
+	 *  `discoverComputers`. Discovery answers before any route is started — a route
+	 *  is what picking one of these creates — so the list must survive `route ===
+	 *  null`; on `origin/main` the store dropped it and the picker read 0 rows. */
+	const tunnels = ["tun-synthetic-1", "tun-synthetic-2"].map((id, index) => ({
+		id,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${String(index + 1).padStart(32, "0")}-lop.example.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	it("lists the account's computers after sign-in, with no route started", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().route).toBeNull();
+		expect(
+			connectionStore
+				.getState()
+				.computers.map((c) => c.tunnelId)
+				.sort(),
+		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
+	});
+
+	it("lists the account's computers on a cold-start restore of a stored grant", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(() => connectionStore.getState().computers.length === 2);
+		expect(connectionStore.getState().route).toBeNull();
+		expect(latest.restoredAccount).toBe(true);
+	});
+
+	it("drops a discovery result that lands after sign-out (negative control)", async () => {
+		const mock = await relay({ tunnels, holdTunnels: true });
+		transport(mock.origin);
+		await mount();
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await mock.tunnelsReceived.promise;
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		mock.releaseTunnels.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		/* The tunnels WERE served; the provider's authorization fence, not the store,
+		 *  is what keeps them off a signed-out screen. */
+		expect(mock.events).toContain("GET /v1/tunnels");
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().phase).toBe("signed-out");
+	});
+});
+
+describe("the account's computers outlive a pick and a failed refresh (PR #121 round 1)", () => {
+	/* Hostnames the synthetic transport routes to the loopback relay, so a pick
+	 *  can mint against the control plane and then go live against the relay. */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const ids = () =>
+		connectionStore
+			.getState()
+			.computers.map((c) => c.tunnelId)
+			.sort();
+	const listed = ["tun-synthetic-1", "tun-synthetic-2"];
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(ids()).toEqual(listed);
+		return mock;
+	}
+
+	it("keeps the list while the picked computer mints and after it is live (R1-M1, D1)", async () => {
+		const mock = await signedIn({ holdCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		let picking!: Promise<void>;
+		await act(async () => {
+			picking = latest.selectComputer(second);
+		});
+		await mock.codeReceived.promise;
+		try {
+			/* Mid-mint: the route exists, the row is the chosen one, the list is whole. */
+			expect(connectionStore.getState().phase).toBe("minting");
+			expect(connectionStore.getState().tunnelId).toBe(second.tunnelId);
+			expect(ids()).toEqual(listed);
+		} finally {
+			/* Released even when an assertion fails, so a regression reports here
+			 *  rather than as a held mint timing out every later test's teardown. */
+			mock.releaseCode.resolve();
+		}
+		await act(async () => {
+			await picking;
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(ids()).toEqual(listed);
+	});
+
+	it("keeps the list when the mint fails, and names the PICKED computer (R1-m2)", async () => {
+		await signedIn({ failCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(ids()).toEqual(listed);
+		/* `computers[0]` was the subject before; the failure belongs to the second. */
+		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+	});
+
+	it("retries the PICKED computer from the refusal's Try again, and goes live on it (PR #122 Q6/U11)", async () => {
+		/* Every entry point's refusal surface (Settings, Computers, Home) calls the
+		 *  provider's `retry`; a failed switch is only recoverable from Settings if
+		 *  that re-runs the computer the reader picked, not a list read. */
+		const mock = await signedIn({ failCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(latest.refusal?.subject).toBe("Synthetic computer 2");
+		const mints = () =>
+			mock.events.filter((event) => event === "POST /v1/tunnels/session/code")
+				.length;
+		const before = mints();
+		mock.allowCode();
+		await act(async () => {
+			await latest.retry();
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().tunnelId).toBe(second.tunnelId);
+		expect(latest.refusal).toBeNull();
+		/* Exactly one more mint, for that computer. */
+		expect(mints()).toBe(before + 1);
+	});
+
+	it("records a failed Refresh as account state over the cached rows, and a later success clears it (D2)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(500);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(ids()).toEqual(listed);
+		expect(connectionStore.getState().discoveryFailure).toBe("rejected");
+		/* Not a route refusal: nothing on screen blames a computer, and no refusal
+		 *  hides the rows. */
+		expect(connectionStore.getState().surface).toBeNull();
+		expect(latest.refusal).toBeNull();
+		mock.answerTunnels("list");
+		const before = mock.events.filter((e) => e === "GET /v1/tunnels").length;
+		/* What the banner's "Try now" calls. */
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(mock.events.filter((e) => e === "GET /v1/tunnels").length).toBe(
+			before + 1,
+		);
+		expect(connectionStore.getState().discoveryFailure).toBeNull();
+		expect(ids()).toEqual(listed);
+	});
+
+	it("clears the rows when Radient refuses the grant (R1-m1)", async () => {
+		const mock = await signedIn({});
+		mock.answerTunnels(401);
+		await act(async () => {
+			await latest.refreshComputers();
+		});
+		expect(connectionStore.getState().computers).toEqual([]);
+		expect(connectionStore.getState().surface).toBe("sign-in");
+		/* The screen reads this kind to show a sign-in state, not an empty
+		 *  account (QA round 2, Q-r2-1). */
+		expect(latest.refusal?.kind).toBe("sign-in");
+	});
+});
+
+/* The account-problem copy a network failure must never borrow (U5, D11). */
+const CONSOLE_COPY = /console|lop login/i;
+
+describe("a pick and a Refresh do not leave each other's state behind (PR #121 round 2)", () => {
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+
+	async function signedIn(options: Parameters<typeof relay>[0]) {
+		const mock = await relay({ tunnels, ...options });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		return mock;
+	}
+
+	it("lowers `discovering` when a pick retires an in-flight Refresh (R2-m1)", async () => {
+		const mock = await signedIn({});
+		mock.holdNextTunnels();
+		let refreshing!: Promise<void>;
+		await act(async () => {
+			refreshing = latest.refreshComputers();
+		});
+		await mock.nextTunnelsReceived.promise;
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		try {
+			expect(latest.discovering).toBe(true);
+			/* The pick suspends the authorization revision, so the held pass is no
+			 *  longer current when it lands. */
+			await act(async () => {
+				await latest.selectComputer(second);
+			});
+			await until(() => connectionStore.getState().phase === "live");
+		} finally {
+			mock.releaseNextTunnels.resolve();
+		}
+		await act(async () => {
+			await refreshing;
+		});
+		/* Stuck `true` here was an inert Try now and an endless skeleton. */
+		expect(latest.discovering).toBe(false);
+	});
+
+	it("offers Try again, not the Radient console, for a pick made offline (U5, D11)", async () => {
+		await signedIn({ dropCode: true });
+		const second = connectionStore.getState().computers[1];
+		if (!second) throw new Error("no second computer");
+		await act(async () => {
+			await latest.selectComputer(second);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(latest.refusal).toMatchObject({
+			kind: "retry",
+			subject: "Synthetic computer 2",
+			detail: PICK_UNREACHABLE_DETAIL,
+			remedy: null,
+		});
+		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
+	});
+});
+
+describe("the computer switcher's registry (M2a)", () => {
+	/* The registry the provider writes to is the real one over the web runtime's
+	 *  memory keystore, a process singleton: each test starts from an empty list. */
+	beforeEach(async () => {
+		const registry = await vi.importActual<TunnelStorageModule>(
+			"@/features/auth/tunnel-storage",
+		);
+		await registry.clearStoredCredentials();
+	});
+	const saved = async () =>
+		(
+			await vi.importActual<TunnelStorageModule>(
+				"@/features/auth/tunnel-storage",
+			)
+		).readSavedComputers();
+	const tunnels = [
+		{
+			id: "tun-synthetic-1",
+			name: "Synthetic computer 1",
+			hostname: `${"a".repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		},
+	];
+
+	it("remembers a live Radient route by tunnel id and marks it used", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		/* Discovery alone records nothing: the phone has not USED the computer. */
+		expect(await saved()).toEqual([]);
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		const before = Date.now();
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entries = await saved();
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			transport: "radient",
+			tunnelId: "tun-synthetic-1",
+			name: "Synthetic computer 1",
+			hidden: false,
+		});
+		expect(entries[0]?.lastUsedAt).toBeGreaterThanOrEqual(before);
+		/* The store names the live computer by its REGISTRY id, not its address. */
+		expect(connectionStore.getState().computerId).toBe(entries[0]?.id);
+	});
+
+	it("remembers a live custom route by address and marks it used", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		const before = Date.now();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entries = await saved();
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			transport: "custom",
+			baseUrl: mock.origin,
+			allowInsecure: true,
+		});
+		expect(entries[0]?.lastUsedAt).toBeGreaterThanOrEqual(before);
+		expect(connectionStore.getState().computerId).toBe(entries[0]?.id);
+		/* Metadata only: the password never reaches the registry. */
+		expect(JSON.stringify(entries)).not.toContain("test-only");
+	});
+
+	it("does not remember a computer whose route never went live (negative control)", async () => {
+		/* The mint fails, so the pick ends `refused`: a computer this phone never
+		 *  reached is not one it has used, and must not join "On this phone". */
+		const mock = await relay({ tunnels, failCode: true });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		expect(connectionStore.getState().phase).toBe("refused");
+		expect(await saved()).toEqual([]);
+		expect(connectionStore.getState().computerId).toBeNull();
+	});
+
+	it("a tap on a saved custom row starts a custom route to it, keyed by its registry id", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		/* A custom computer the phone used before, then a Radient-less phone state. */
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		const entry = (await saved())[0];
+		if (!entry) throw new Error("not remembered");
+		await act(async () => {
+			connectionStore.getState().endRoute();
+		});
+		expect(connectionStore.getState().route).toBeNull();
+
+		const row = switcherSections({
+			saved: await saved(),
+			discovered: [],
+			probes: {},
+			route: { phase: "signed-out", tunnelId: null },
+			activeComputerId: null,
+			pendingKey: null,
+			radientSignedOut: false,
+		}).onPhone[0];
+		if (!row) throw new Error("no switcher row");
+		const tap = switcherTap(row, {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		});
+		expect(tap.kind).toBe("connect-custom");
+		await act(async () => {
+			await performSwitcherTap(tap, {
+				selectComputer: latest.selectComputer,
+				connectCustom: latest.connectCustom,
+				signInWithRadient: latest.signInWithRadient,
+				unhide: () => {},
+				enterPassword: () => {},
+				openSettings: () => {},
+				openConsole: () => {},
+				close: () => {},
+			});
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route).toMatchObject({
+			mode: "custom",
+			baseUrl: mock.origin,
+		});
+		await until(() => connectionStore.getState().computerId === entry.id);
+		/* The same computer, not a second entry at the same address. */
+		expect(await saved()).toHaveLength(1);
+	});
+});
+
+describe("PR #122 round-1 remediation: the provider's side of the switcher", () => {
+	beforeEach(async () => {
+		const registry = await vi.importActual<TunnelStorageModule>(
+			"@/features/auth/tunnel-storage",
+		);
+		await registry.clearStoredCredentials();
+	});
+	const saved = async () =>
+		(
+			await vi.importActual<TunnelStorageModule>(
+				"@/features/auth/tunnel-storage",
+			)
+		).readSavedComputers();
+	const tunnel = {
+		id: "tun-[redacted]-1",
+		name: "Synthetic computer 1",
+		hostname: `${"a".repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	};
+
+	it("loads the stored Radient grant for a pick made after a cold start on an own address (U3)", async () => {
+		/* The cold start dials the own address and never reads the Radient grant. */
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		durable.oauth = { ...oauth, account_id: "acct-[redacted]" };
+		durable.saved = {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
+		await mount();
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route?.mode).toBe("custom");
+		/* A switcher tap on a saved Radient computer discovery has not listed. */
+		const computerFromRow: DiscoveredComputer = {
+			...computer("x"),
+			tunnelId: tunnel.id,
+			hostname: tunnel.hostname,
+			name: "Synthetic computer 1",
+		};
+		await act(async () => {
+			await latest.selectComputer(computerFromRow);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route).toMatchObject({
+			mode: "radient",
+			tunnelId: tunnel.id,
+		});
+		expect(mock.events).toContain("POST /v1/tunnels/session/code");
+		/* And the route it reached is recorded under that account (M2). */
+		await until(() => connectionStore.getState().computerId !== null);
+		const entry = (await saved()).find(
+			(candidate) => candidate.transport === "radient",
+		);
+		expect(entry).toMatchObject({ account: "acct-[redacted]" });
+	});
+
+	it("refuses a pick with no stored grant as Sign in, not a console dead end (U3 negative control)", async () => {
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.selectComputer({
+				...computer("x"),
+				tunnelId: tunnel.id,
+				hostname: tunnel.hostname,
+			});
+		});
+		expect(connectionStore.getState().surface).toBe("sign-in");
+		expect(mock.events).not.toContain("POST /v1/tunnels/session/code");
+	});
+
+	it("keeps the saved name when switching back from an own address, where discovery is empty (Q2)", async () => {
+		const mock = await relay({ tunnels: [tunnel] });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		await until(() => connectionStore.getState().computerId !== null);
+		expect((await saved())[0]?.name).toBe("Synthetic computer 1");
+		/* Own address: a custom startRoute empties discovery. */
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().route?.mode === "custom");
+		expect(connectionStore.getState().discoveredComputers).toEqual([]);
+		/* Back to the Radient computer through its switcher row (a stand-in pick). */
+		const row = switcherSections({
+			saved: await saved(),
+			discovered: [],
+			probes: {},
+			route: { phase: "live", tunnelId: null },
+			activeComputerId: connectionStore.getState().computerId,
+			pendingKey: null,
+			radientSignedOut: false,
+		}).onPhone.find((candidate) => candidate.transport.kind === "radient");
+		if (!row) throw new Error("no Radient row");
+		await act(async () => {
+			await performSwitcherTap(switcherTap(row, null), {
+				selectComputer: latest.selectComputer,
+				connectCustom: latest.connectCustom,
+				signInWithRadient: latest.signInWithRadient,
+				unhide: () => {},
+				enterPassword: () => {},
+				openSettings: () => {},
+				openConsole: () => {},
+				close: () => {},
+			});
+		});
+		await until(
+			() =>
+				connectionStore.getState().route?.mode === "radient" &&
+				connectionStore.getState().phase === "live",
+		);
+		/* Let the fire-and-forget remember land, then read the name back. */
+		await until(() => connectionStore.getState().computerId === row.savedId);
+		const radientEntry = (await saved()).find(
+			(candidate) => candidate.transport === "radient",
+		);
+		expect(radientEntry?.name).toBe("Synthetic computer 1");
+		expect(radientEntry?.name).not.toBe(tunnel.hostname);
+	});
+});
+
+describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
+	it('mounts the runtime for `""` and issues no request for it', async () => {
+		/* The inbox and its detail read the runtime for a conversation they may not
+		 * have yet, so they pass `""`. That is not an id: it built
+		 * `/api/sessions//events` and `//history`, two 404s and two console errors on
+		 * every mount. The hook must be MOUNTED here (this is a live screen with no
+		 * conversation, not an absent one) and must ask for nothing. */
+		const mock = await relay({});
+		observedSession = "";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// Give the effects the same settle the other cases get.
+		await act(async () => {
+			await new Promise<void>((resolve) => setImmediate(resolve));
+		});
+		// The two requests the empty id used to build, and nothing else for a session.
+		const asked = wire.filter((entry) =>
+			/\/api\/sessions\/\//.test(entry.path),
+		);
+		expect(asked).toEqual([]);
+		/* The shared session LIST stream (`/api/sessions/events`) is the provider's
+		 *  own subscription and opens on every screen; what must not appear is a
+		 *  request for a NAMED session, which is what `""` used to build. */
+		expect(
+			wire
+				.filter(
+					(entry) =>
+						entry.path.startsWith("/api/sessions/") &&
+						entry.path !== "/api/sessions/events",
+				)
+				.map((entry) => entry.path),
+		).toEqual([]);
+	});
+
+	it("still asks for a named session, so the guard is not a blanket mute", async () => {
+		const mock = await relay({});
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		expect(wire).toContainEqual({
+			method: "GET",
+			path: "/api/sessions/synthetic-session/history",
+			status: 200,
+		});
+		// The empty-id case CANNOT be the first assertion's mirror by accident: the
+		// exact request the empty id used to make is named here.
+		expect(
+			wire.filter((entry) => entry.path === "/api/sessions//history"),
+		).toEqual([]);
+	});
+});
+
+/**
+ * The one line that connects the backend's language to `t()`.
+ *
+ * `setLocaleSource(() => configStore.getState().language)` at the top of
+ * `connection-provider.tsx` is the sole link between the relay's resolved
+ * language and the i18n runtime. `runtime.test.ts` exercises the runtime with
+ * stubs and `config-store` has its own tests, so without THIS test deleting the
+ * registration left every file green while the app silently stayed on the
+ * "no frame yet" default. It drives the real provider module's registration, not
+ * a re-statement of it: the only thing applied is a config frame to the store the
+ * provider exports.
+ */
+describe("the i18n runtime reads the provider's config store", () => {
+	afterEach(() => {
+		configStore.getState().reset();
+	});
+
+	it("follows the relay's resolved language frame", () => {
+		expect(preferredLocale()).toBeNull();
+		configStore
+			.getState()
+			.applyFrame({ changed_keys: ["language"], language: "pt_BR" });
+		/* Normalized once by the runtime (`pt_BR` → `pt-BR`); the value arriving at
+		 * all is what proves the registration. */
+		expect(preferredLocale()).toBe("pt-BR");
+		/* Only `en` ships today, so an unshipped preference still renders English
+		 * source rather than the key. */
+		expect(activeLocale()).toBe("en");
+	});
+
+	it("returns to no preference when the store is reset", () => {
+		configStore
+			.getState()
+			.applyFrame({ changed_keys: ["language"], language: "en-GB" });
+		expect(preferredLocale()).toBe("en-GB");
+		configStore.getState().reset();
+		expect(preferredLocale()).toBeNull();
+	});
 });

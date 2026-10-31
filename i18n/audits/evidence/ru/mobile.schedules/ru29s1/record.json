@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "audit_id": "ru29s1",
+  "audit_kind": "initial_translation_audit",
+  "round": 1,
+  "locale": "ru",
+  "namespace": "mobile.schedules",
+  "file_group": "mobile.schedules",
+  "audit_date": "2026-10-30",
+  "audited_head_commit": "ba39018c493dda114d42a6b4d9dfbf337f4110f5",
+  "audited_revision": "ba39018c493dda114d42a6b4d9dfbf337f4110f5",
+  "audited_branch": "feat/i18n-russian",
+  "audited_worktree": "/Users/damian/workspace/ru-wave",
+  "audited_worktree_note": "git ls-tree HEAD -- src/i18n/catalogues/ru is empty: the catalogue directory is untracked at this head. catalogue.gen.ts is modified and in sync (i18n:catalogue:check passes). The audited target is pinned by input_hashes.target.sha256.",
+  "key_count": {
+    "en": 38,
+    "target": 38,
+    "context": 38
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "3cb03947a304",
+    "job": null,
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback reported by the harness. Every command in audit.log ran after the final switch; the first reconnaissance reads are not cited as evidence.",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "fallback_disclosed": true,
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and context from the translator. Not model-diverse: the translator's supplied actual model is also radient/auto. Disclosed, not closed. No human native-speaker review and no rendered UI frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": null,
+    "job": null,
+    "model": "radient/auto",
+    "actual_model_source": "supplied by the requesting manager; not independently observed here",
+    "date": "2026-10-30"
+  },
+  "second_pass": {
+    "performed": true,
+    "job": "c6f22d89a9c1",
+    "label": "ru-group-B-second-opinion",
+    "role": "reviewer",
+    "agent": "reviewer (lopdev subagent, separate session)",
+    "model": "radient/auto",
+    "actual_model_source": "reported in the child's own final message: opened on anthropic/claude-sonnet-5-5, switched three times on provider quota (openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto); the report was written by radient/auto",
+    "independent_from_first_pass": true,
+    "independence_note": "Different agent and session, did not write the translation, worked read-only, and saw only the two contested findings rather than the first auditor's full report. Not model-diverse: both passes ran radient/auto. It did not run the renderer (the executed output was supplied), which is why one of its findings rests on a wrong premise; see severity_differences.",
+    "scope": "the four group-B namespaces, 77 keys, read against the en source, the sidecars, the call sites and core's committed Russian",
+    "summary": "Agreed with both MAJORs and with both proposed replacements; added one MINOR (a dangling possessive in the two parked clauses); proposed one further MINOR that this audit rejects because it would reintroduce the doubled preposition the translator already fixed.",
+    "severity_differences": "The second pass argued that `head.next` should read `{head} · далее через {label}` on the premise that `{label}` is a bare duration ('далее 45s'). Executed, `{label}` is `due.ahead`'s output, already 'через 4m', so the proposed bytes render '3 пробуждения · далее через через 4m' — the exact defect the translator fixed and this audit's negative control reproduces. Rejected on evidence. Its would-be cure for cadence.left ('осталась #', inferred from this audit's wording) was also rejected by the second pass itself, which independently landed on core's uniform 'осталось #'.",
+    "accepted": [
+      "RU-SCH-1 severity MAJOR, replacement '{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}'",
+      "RU-SCH-2 severity MAJOR, replacement '{count, plural, one {# активный} few {# активных} many {# активных} other {# активных}}'",
+      "RU-SCH-4 (new) MINOR, dangling 'её' in parked.monitors / parked.wakes"
+    ],
+    "rejected": [
+      "head.next -> '{head} · далее через {label}' (premise wrong: label already carries 'через'; would double the preposition)"
+    ],
+    "noted_not_filed": "It suggested making sessions.live attributive ('# активная / # активных') for robustness. That key never renders 0 (sessionCountLabel returns the base at live <= 0), so this is a future-proofing note, not a defect at this head; recorded here, not filed as a finding.",
+    "agreement": "It independently confirmed the state.* gender mapping, the monitor-object term, the машина/компьютер split, 77/77 placeholder and ICU parity, all 11 plurals carrying one/few/many/other, and the вы register."
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.json",
+      "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+      "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/ru/mobile.schedules.json",
+      "sha256": "2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508"
+    }
+  },
+  "renderer_provenance": {
+    "parser": "src/i18n/messages.ts (parseMessage/formatMessage/PluralRules)",
+    "runtime": "src/i18n/runtime.ts (renderFor/t)",
+    "composition": "src/features/schedules/schedules-copy.ts and src/features/projects/projects-copy.ts (the real call sites)",
+    "projection": "src/i18n/catalogue.gen.ts",
+    "why_a_copy": "catalogueLocaleFor() filters the relay tag through SHIPPED_LOCALES, so renderFor(..., 'ru') correctly returns ENGLISH at this head: ru is in NOT_YET_SHIPPED_LOCALES. To read the ru sentences the app would paint, the harness ran the same runtime from a scratch copy of src/ whose ONLY change is adding 'ru' to SHIPPED_LOCALES (diff printed in audit.log). The four ru catalogue files are sha256-identical between the copy and the worktree.",
+    "scratch_copy": "ru-copy: src/ copied from the worktree, only src/i18n/locale.ts differs (+\"ru\" in SHIPPED_LOCALES); the copy's node_modules is a symlink to the worktree's tree (shared, not duplicated).",
+    "scratch_copy_locale_ts_sha256": "387841d381eceead1bfc1db76a3eeb727b2c25c3e4c3178c0d78e79db982c780",
+    "sha256": {
+      "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+      "src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+      "src/i18n/catalogue.gen.ts": "d80b048a55c8334738e799b2dd9f0dde2a5f3049e6bc011351ce1873b964fa38",
+      "src/i18n/locale.ts": "87c96ae32668955d55d849e70ec36ff0aa717bda628bce56ae9c7aa5be497d0a",
+      "src/features/schedules/schedules-copy.ts": "fc3f87acb290fd9737142c09af6761456ecabe23917035636e5ad46f59077b52",
+      "src/features/projects/projects-copy.ts": "24d57749edf9b5705a0456e99e6d11d8c39e985854f56fdd647e79a6c95e36f7",
+      "src/ui/theme.css": "adcf404796be061ae5f4040ef6693b9b67906086ddf21073309a3133e1220c23"
+    }
+  },
+  "mechanical": {
+    "repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)'",
+    "repo_gate": "npm run -s i18n:check -> exit 0: catalogue check plus 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d'",
+    "repo_validator_scope": "key parity and message parse; it does not compare placeholders or CLDR arms between locales, so the scoped pair audit below compares every key itself",
+    "gate_test": "node_modules/.bin/vitest run src/i18n/__tests__/catalogues.test.ts -> 1 failed / 37 passed: catalogues.test.ts:187 expects the catalogue directories to equal SHIPPED_LOCALES, and the ru directory exists while ru is still in NOT_YET_SHIPPED_LOCALES. That is the designed directory-vs-shipped gate, not a copy defect; the wave must flip SHIPPED_LOCALES when it ships.",
+    "pair_audit": "77/77 keys parsed in en and ru (38/15/14/10); zero missing/extra parameters; zero parameter-kind changes outside the six text->plural escalations the generator explicitly sanctions; every ru plural carries exactly one/few/many/other; every select node has the source's arm set including other; a duplicate key in the JSON text was counted separately from JSON.parse (none); no bidi controls, no ASCII ellipsis, no non-«» quotes, no double/edge spaces, no zero-width characters; '#' appears only inside a plural",
+    "negative_controls": "12/12 mutated messages tripped the check they target (dropped placeholder, renamed placeholder, missing few arm, non-ru category, missing other, rewritten select arm, bidi control, ASCII ellipsis, straight quotes, double space, literal # outside a plural, unparseable message). The controls run through the same auditPair() the catalogue was audited with, so a green catalogue is evidence.",
+    "escalations": [
+      "mobile.schedules.cadence.left {remaining}: text->plural",
+      "mobile.schedules.summary.monitors_armed {count}: text->plural",
+      "mobile.schedules.summary.monitors_attention {broken}: text->plural",
+      "mobile.schedules.tail.failed {count}: text->plural",
+      "mobile.projects.milestones.count {completed}: text->plural",
+      "mobile.projects.sessions.live {live}: text->plural"
+    ],
+    "escalation_rule": "scripts/i18n/generate.ts parameter-parity allows a translation to turn a plain placeholder into plural/select (a locale whose noun inflects) and fails any other kind change or a dropped plural. All six were rendered at 0/1/2/5/21/1.5/11/22/101 and select the arm their Intl.PluralRules('ru') category names."
+  },
+  "fit": {
+    "scope": "namespace-only, no rendered frame",
+    "maxCells_present": false,
+    "method": "AppKit NSFont.systemFont (the face iOS resolves for -apple-system) advance widths at text-meta 12/500, text-body-sm 14/400, text-heading 17/600 and text-mono-label 11/600 +0.06em, against the 320 pt narrow device minus Screen px-4 = 288 pt of content (schedule rows pl-3 = 276 pt; a badge pill px-2 = 272 pt), plus a greedy word wrap from the measured token advances. Slots read from the call sites, not assumed.",
+    "result": "No catalogue string in this group sits under a one-line clamp and overflows: the project row's meta line (projects.tsx:273, numberOfLines={1}) peaks at 215.8 pt of 288 for the audited shapes, and no unbreakable token in any string exceeds its slot. Median ru/en growth on the same key is 1.28x. Two strings wrap to 2 lines where English takes 1 at 320 pt: the parked clause (453.9 pt) and the truncated strip (294.3 pt); both are unclamped text. The stale badge renders 120.8 pt of a 272 pt pill, so it fits, but it leaves ~165 pt for the project name beside it (en: ~180 pt).",
+    "hint_note": "The native context schema has no maxCells field; the only 'Translator budget' notes in the repository are mobile.session_health.ended_placeholder and the two relay.health state words, none of them in this group."
+  },
+  "out_of_scope": [
+    "src/features/schedules/schedules.tsx hardcodes the section prefixes 'Wakes ·' and 'Monitors ·' (and the screen title 'Schedules', 'Back', 'Try again'), so a ru build shows them in English until the strings programme keys them; the same unkeyed-prefix gap was recorded by the fr/es/zh audits.",
+    "src/features/notifications/notifications.tsx builds the ask count inline in English ('1 question'/'2 questions', line 957) — unkeyed copy, in the scanner's stated blind spot.",
+    "src/i18n/messages.ts renders '#' through String(n): no grouping and no decimal comma, so '1.5' prints with a dot where ru formatting wants a comma. Renderer limitation, not a translation error.",
+    "src/features/projects/projects-copy.ts linkedSessionState passes any relay runtime state other than 'stopped' through untranslated, so 'live' (and 'wedged'/'stale') appear in a ru row; the catalogue defines no key for them."
+  ],
+  "audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log holds the executed command output. Notes never prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered frame and no human native-speaker review. Rendered strings are the app's own parser/formatter/plural rules over the audited bytes; widths are font metrics, not pixels."
+  },
+  "findings": [
+    {
+      "id": "RU-SCH-1",
+      "severity": "major",
+      "status": "open",
+      "key": "mobile.schedules.cadence.left",
+      "current": "{cadence} · {remaining, plural, one {остался #} few {осталось #} many {осталось #} other {осталось #}}",
+      "replacement": "{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
+      "detail": "Executed through the app's renderer: remaining=1 -> «раз в 1d · остался 1», 21 -> «… остался 21», 101 -> «… остался 101». The count names deliveries (its sibling cadence.spent says «доставок больше нет»), and доставка is feminine, so masculine «остался» is the wrong agreement — it is grammatical only under an elided masculine noun («остался 1 раз») that the string never names. Worse than a static error, the same row alternates as the budget counts down: «осталось 3» -> «осталось 2» -> «остался 1», so the gender flips on the last delivery, the one state a reader looks at. Core's committed twin for this phrase, tui.schedule.ends_left, is uniform «осталось #» in all four arms, as are relay.shell.usage.remaining and tui.schedule.ends_until_left. One word changes; the ICU shape stays as the generator already verified it."
+    },
+    {
+      "id": "RU-SCH-2",
+      "severity": "major",
+      "status": "open",
+      "key": "mobile.schedules.summary.monitors_armed",
+      "current": "{count, plural, one {# активен} few {# активны} many {# активны} other {# активны}}",
+      "replacement": "{count, plural, one {# активный} few {# активных} many {# активных} other {# активных}}",
+      "detail": "Executed header shapes: 1 -> «1 активен», 2 -> «2 активны», 5 -> «5 активны», 0 -> «0 активны». The zero case is reachable and is rendered: the Monitors section header prints `Monitors · ${monitorSectionSummary(rows)}` whenever the family is readable, and monitorSectionSummary([]) -> «0 активны» when the monitors family is empty while wakes have rows (executed; the header then reads «Monitors · 0 активны» above «Нет активных мониторов.»). «0 активны» is ungrammatical — zero takes the genitive-plural counter form «0 активных» — and at the other counts a subjectless predicate is a weaker section counter than the adjectival one. The replacement changes no ICU structure and renders «0 активных / 1 активный / 2 активных / 5 активных / 21 активный»."
+    },
+    {
+      "id": "RU-SCH-3",
+      "severity": "minor",
+      "status": "open",
+      "key": "mobile.schedules.parked.wakes + mobile.schedules.parked.monitors",
+      "current": "Приостановлено — пробуждения возобновятся после её следующего хода / Приостановлено — мониторы возобновятся, когда её беседа снова запустится",
+      "replacement": "Приостановлено — пробуждения возобновятся после следующего хода / Приостановлено — мониторы возобновятся, когда эта беседа снова запустится",
+      "detail": "The clause is impersonal («Приостановлено» names no noun), so «её» has no feminine antecedent anywhere in the string, and the clause is the WHOLE head line of the entry — there is no surrounding sentence to supply one. The same catalogue does it right one key over: gone.monitors/ gone.wakes open with «Беседа исчезла —», which gives «её» its noun. Raising «её беседа» in parked.monitors is also circular: the monitors belong to that conversation, so the possessive points at the container itself. Found by the independent second pass and confirmed here; meaning survives, so MINOR, not MAJOR."
+    },
+    {
+      "id": "RU-SCH-4",
+      "severity": "nit",
+      "status": "open",
+      "key": "mobile.schedules.empty.body",
+      "current": "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях.",
+      "replacement": "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за чем-то одним и сообщают об изменениях.",
+      "detail": "English is 'watch one thing'. «объект» reads as a facility or a code object rather than the thing being watched; «за чем-то одним» is the plain phrasing."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 2,
+    "blocker_ids": [],
+    "major_ids": [
+      "RU-SCH-1",
+      "RU-SCH-2"
+    ],
+    "minor_ids": [
+      "RU-SCH-3"
+    ],
+    "nit_ids": [
+      "RU-SCH-4"
+    ],
+    "finding_ids": [
+      "RU-SCH-1",
+      "RU-SCH-2",
+      "RU-SCH-3",
+      "RU-SCH-4"
+    ],
+    "reason": "2 MAJOR, 1 MINOR, 1 NIT. `cadence.left` renders «раз в 1d · остался 1» at remaining=1/21/101 (executed) and the gender flips on the last delivery, where the elided counted thing is доставка; core's committed twin uses «осталось #» in all four arms. `summary.monitors_armed` renders «0 активны» in a reachable header (monitors empty, wakes present) and a subjectless predicate at every other count; the counter form «N активных» fixes both. The MINOR is a dangling «её» in the two parked clauses. Everything else is mechanically and idiomatically clean."
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "local-operator-mobile has no i18n ledger and no audit-ledger command at this head: i18n/ holds only audits/evidence, there is no i18n/ledger.json, and package.json's audit:run/audit:capture are the UX/visual rubric harness (tools/audit, docs/ux/audit-rubric.md), not a translation ledger. docs/i18n.md makes the pull request's audit report the artifact of record. No CLI ledger receipt is claimed; the row below is proposed, not written.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "ru",
+      "file_group": "mobile.schedules",
+      "status": "changes_requested",
+      "auditor": "i18n-auditor",
+      "model": "radient/auto",
+      "source_hash": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f",
+      "target_hash": "2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508",
+      "record_path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1/record.json",
+      "note": "ru mobile.schedules 38 keys: changes_requested 0B/2M/1m/1n — cadence.left «остался 1», monitors_armed «0 активны»; record: i18n/audits/evidence/ru/mobile.schedules/ru29s1/",
+      "note_length": 171
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1/report.md",
+      "sha256": "69fd01f82228bfded5069076509d1a7a9723cb7f4616e6624eeafa0cede207d8"
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1/audit.log",
+      "sha256": "b7e5dcc7a9de90f489b345cb7d3ab1e94a0f4f21fa673dd0c8da8e1459e378b3",
+      "note": "group-wide executed transcript, identical in the four group-B bundles; nothing filtered"
+    }
+  ]
+}

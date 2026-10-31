@@ -50,6 +50,33 @@ export async function releaseScenarioClaim(relayUrl: string): Promise<void> {
  */
 export const HARNESS_CLIENT = `h-${process.pid}-${randomBytes(4).toString("hex")}`;
 
+export async function setRelayFaults(
+	relayUrl: string,
+	faults: string[],
+): Promise<void> {
+	const res = await fetch(new URL("/__mock/fault", relayUrl), {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			"x-lo-harness": HARNESS_CLIENT,
+		},
+		body: JSON.stringify({ faults }),
+	});
+	if (!res.ok) throw new Error(`the mock relay refused faults (${res.status})`);
+}
+
+export async function readRelayRecord(relayUrl: string): Promise<unknown[]> {
+	const res = await fetch(new URL("/__mock/record", relayUrl), {
+		headers: { "x-lo-harness": HARNESS_CLIENT },
+	});
+	if (!res.ok)
+		throw new Error(`the mock relay refused its record (${res.status})`);
+	const body = (await res.json()) as { requests?: unknown[] };
+	if (!Array.isArray(body.requests))
+		throw new Error("the mock relay record has no request array");
+	return body.requests;
+}
+
 export async function selectScenario(
 	relayUrl: string,
 	scenario: string,

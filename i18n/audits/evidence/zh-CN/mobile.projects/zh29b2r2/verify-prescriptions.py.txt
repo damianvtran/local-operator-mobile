@@ -1,0 +1,50 @@
+"""Compare TODAY's zh-CN bytes against each round-1 prescribed replacement.
+
+Round-1 findings are read from the round-1 bundles' record.json (machine-readable
+`current`/`replacement`), so the delta is derived from the record rather than
+from a report paragraph remembered at audit time."""
+import json
+import sys
+
+REPO = "/Users/damian/workspace/zh-wave"
+BUNDLES = {
+    "mobile.schedules": "i18n/audits/evidence/zh-CN/mobile.schedules/zh29b1/record.json",
+    "mobile.projects": "i18n/audits/evidence/zh-CN/mobile.projects/zh29b2/record.json",
+    "mobile.computers": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4/record.json",
+}
+
+def classify(now, before, prescribed):
+    if now == prescribed:
+        return "APPLIED VERBATIM"
+    if now == before:
+        return "UNCHANGED — round-1 bytes still present"
+    return "REWRITTEN — differs from the prescribed wording"
+
+compared = applied = rewritten = unchanged = 0
+only = sys.argv[1] if len(sys.argv) > 1 else None
+for ns, path in BUNDLES.items():
+    if only and ns != only:
+        continue
+    zh = json.load(open(f"{REPO}/src/i18n/catalogues/zh-CN/{ns}.json"))
+    rec = json.load(open(f"{REPO}/{path}"))
+    print(f"\n## {ns}  (round-1 {rec['audit_id']}, verdict {rec['current_report_verdict']['status']})")
+    for f in rec["findings"]:
+        keys = f.get("keys") or [f["key"]]
+        before = f["current"] if isinstance(f["current"], list) else [f["current"]]
+        rx = f["replacement"] if isinstance(f["replacement"], list) else [f["replacement"]]
+        for i, key in enumerate(keys):
+            compared += 1
+            now = zh.get(key, "<KEY ABSENT>")
+            verdict = classify(now, before[i], rx[i])
+            if verdict.startswith("APPLIED"):
+                applied += 1
+            elif verdict.startswith("UNCHANGED"):
+                unchanged += 1
+            else:
+                rewritten += 1
+            print(f"  {f['id']} [{f['severity']}] {key}")
+            print(f"      round1 : {before[i]}")
+            print(f"      now    : {now}")
+            print(f"      rx     : {rx[i]}")
+            print(f"      -> {verdict}")
+print(f"\nkeys compared={compared} applied_verbatim={applied} rewritten={rewritten} unchanged={unchanged}")

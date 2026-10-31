@@ -1,14 +1,29 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	AccessibilityInfo,
+	findNodeHandle,
+	Platform,
+	type ScrollView,
+	Text,
+	View,
+} from "react-native";
 
 import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
+	ADD_COMPUTER_HREF,
+	discoveryFailureMessage,
+	rowState,
+} from "@/features/auth/computers-view";
+import {
+	connectionStore,
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
@@ -21,15 +36,25 @@ import {
 } from "@/ui/components/connection-pill";
 import { Dialog } from "@/ui/components/dialog";
 import { Divider } from "@/ui/components/divider";
+import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
+import { LTR_WRITING, TEXT_END_CLASS } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import type { ThemePreference } from "@/ui/tokens.gen";
 import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
+import {
+	refusalOutOfView,
+	refusalScrollY,
+	retryLanded,
+	retryStillOwned,
+	retryTargetMatches,
+} from "./refusal-in-view";
+import { useRefusalReveal } from "./use-refusal-reveal";
 
 /**
  * Settings (docs/ux/flows.md § 10, F-10).
@@ -61,14 +86,20 @@ export default function Settings() {
 		retry,
 		refreshComputers,
 		refusal,
+		signInWithRadient,
 		streamHealth,
 		lastError,
-		busy,
+		discovering,
 	} = useConnection();
+	const switcher = useComputerSwitcher();
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
+	const phase = useConnectionState((state) => state.phase);
 	const accountLabel = useConnectionState((state) => state.accountLabel);
+	const discoveryFailure = useConnectionState(
+		(state) => state.discoveryFailure,
+	);
 
 	const { theme, setPreference } = useThemePreference();
 	const textScale = useTextScale();
@@ -89,7 +120,123 @@ export default function Settings() {
 		health: streamHealth,
 		refused: refusal !== null,
 		routed: route !== null,
+		minting: phase === "minting",
 	});
+
+	/* U16: a refusal that appears scrolls into view, once — AFTER every closing
+	 *  modal's web dismissal (the switcher's and the sign-out Dialog's, Q9), not
+	 *  just `visible=false`. RNW restores focus to the opener during the later
+	 *  modal unmount, and that focus can scroll an apparently visible refusal
+	 *  off-screen. Measuring on dismissal is the ordering contract; no timer can
+	 *  provide it. Native has no dismissal event and uses close. */
+	const scrollRef = useRef<ScrollView | null>(null);
+	const refusalRef = useRef<View | null>(null);
+	const statusRef = useRef<View | null>(null);
+	/* The arm / disarm / dismissal wait lives in `useRefusalReveal`, so the Node
+	 *  suite drives it beside the real kit modals; this is only the measuring. */
+	useRefusalReveal(refusal !== null, switcher.visible, () => {
+		const scroller = scrollRef.current;
+		const panel = refusalRef.current;
+		const content = scroller?.getInnerViewNode?.();
+		if (!scroller || !panel || !content) return;
+		const viewportBox =
+			(scroller.getNativeScrollRef?.() as View | null) ??
+			(scroller as unknown as View);
+		panel.measureLayout(content, (_x, layoutY) => {
+			panel.measureInWindow((_px, top, _pw, height) => {
+				viewportBox.measureInWindow((_vx, viewTop, _vw, viewHeight) => {
+					if (
+						refusalOutOfView(
+							{ top, height },
+							{ top: viewTop, height: viewHeight },
+						)
+					)
+						scroller.scrollTo({ y: refusalScrollY(layoutY), animated: false });
+				});
+			});
+		});
+	});
+
+	/* U18: after THIS screen's Try now works, focus goes to the Status row that now
+	 *  says so — the button it was on unmounted with the refusal, and focus fell to
+	 *  the document body. `retryTarget` is the computer this retry re-ran, because a
+	 *  pick from the switcher changes it and that pick's own focus return must not
+	 *  be read as this retry landing (review round 4, R4-m1). */
+	const retriedHere = useRef(false);
+	const retrySettled = useRef(false);
+	const retryTarget = useRef<string | null>(null);
+	const disarmRetry = useCallback(() => {
+		retriedHere.current = false;
+		retrySettled.current = false;
+		retryTarget.current = null;
+	}, []);
+	const retryHere = useCallback(() => {
+		retriedHere.current = true;
+		retrySettled.current = false;
+		const target = connectionStore.getState().tunnelId;
+		retryTarget.current = target;
+		void retry().finally(() => {
+			retrySettled.current = true;
+			/* Read the STORE, not this render's closures: they predate the retry and
+			 *  cannot describe its outcome. A retry that settles without going live
+			 *  drops the intent here — no state change follows a failed retry, so the
+			 *  effect below would never re-run to notice, and a later unrelated
+			 *  success would move focus on its behalf. */
+			const now = connectionStore.getState();
+			if (
+				!retryStillOwned({
+					retriedHere: true,
+					retrySettled: true,
+					refused: now.surface !== null,
+					live: now.phase === "live",
+					sameTarget: retryTargetMatches(retryTarget.current, now.tunnelId),
+				})
+			)
+				disarmRetry();
+		});
+	}, [disarmRetry, retry]);
+	useEffect(() => {
+		if (!retriedHere.current) return;
+		/* An account-side retry (started with no computer) adopts the computer its
+		 *  restore lands on, so a later pick of another one still disarms (R5-m2). */
+		if (
+			retryTarget.current === null &&
+			tunnelId !== null &&
+			!retrySettled.current
+		)
+			retryTarget.current = tunnelId;
+		const sameTarget = retryTargetMatches(retryTarget.current, tunnelId);
+		if (
+			retryLanded({
+				retriedHere: true,
+				refused: refusal !== null,
+				live: phase === "live",
+			}) &&
+			sameTarget
+		) {
+			disarmRetry();
+			const row = statusRef.current;
+			if (!row) return;
+			/* The web moves keyboard focus (the row's `focusable` makes it addressable);
+			 *  a phone moves the screen reader's. */
+			if (Platform.OS === "web") row.focus();
+			else {
+				const handle = findNodeHandle(row);
+				if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+			}
+			return;
+		}
+		if (
+			!retryStillOwned({
+				retriedHere: true,
+				retrySettled: retrySettled.current,
+				refused: refusal !== null,
+				live: phase === "live",
+				sameTarget,
+			})
+		)
+			disarmRetry();
+	}, [disarmRetry, phase, refusal, tunnelId]);
 
 	const doSignOut = useCallback(async () => {
 		setConfirmSignOut(false);
@@ -104,6 +251,7 @@ export default function Settings() {
 		<Screen
 			title="Settings"
 			testID={SCREEN.settings}
+			scrollRef={scrollRef}
 			headerLeading={
 				<Button
 					testID={CONTROL.settingsBack}
@@ -162,7 +310,13 @@ export default function Settings() {
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
 					<SectionHeader label="Connection" />
-					<View className="flex-row items-center justify-between">
+					<View
+						ref={statusRef}
+						/* Programmatically focusable, never a Tab stop: the target of U18's
+						 *  focus move after Try now, and nothing else. */
+						tabIndex={-1}
+						className="flex-row items-center justify-between"
+					>
 						<Text className="text-body-sm text-ink-muted">Status</Text>
 						{/* The WORD, not just the dot. In the list the connected state is
 						 *  deliberately silent (it is furniture there), but this is the VALUE
@@ -179,6 +333,35 @@ export default function Settings() {
 						 *  was the defect; one derivation is the fix. */}
 						<ConnectionPill state={status.state} message={status.message} />
 					</View>
+					{/* The route's refusal, under the Status it explains and above the list.
+					 *  The switcher opens from here and CLOSES on a failed pick so the reason
+					 *  is readable behind it (PR #122 M1/U2) — but this screen had nothing
+					 *  behind it except "Not connected", and the reason was painted on the
+					 *  hidden Home (QA round 2, Q6; UX U11). The same surface Computers and
+					 *  Home render, so every entry point shows one sentence for one failure;
+					 *  its own rules decide which remedy a cause gets (no prominent retry for
+					 *  a console-side cause), and "Switch computer" stays just below it. */}
+					{refusal ? (
+						/* The wrapper is what is measured and scrolled to (U16, above);
+						 *  the surface keeps its own `role=alert` live region. */
+						<View ref={refusalRef} collapsable={false}>
+							<RefusalSurface
+								kind={refusal.kind}
+								subject={refusal.subject}
+								detail={refusal.detail}
+								remedy={refusal.remedy}
+								retryAfterMs={refusal.retryAfterMs}
+								/* The provider's retry re-runs what failed — for a pick, that
+								 *  same computer (`noteError`'s closure in `selectComputer`). */
+								onRetry={retryHere}
+								onSignIn={() => void signInWithRadient()}
+								onOpenConsole={() =>
+									void WebBrowser.openBrowserAsync(RADIENT_CONSOLE_TUNNELS_URL)
+								}
+								onUseAnotherAddress={() => router.push("/custom")}
+							/>
+						</View>
+					) : null}
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
 							<Text className="text-body-sm text-ink-muted">Computers</Text>
@@ -194,8 +377,22 @@ export default function Settings() {
 									>
 										{computer.name}
 									</Text>
-									{computer.tunnelId === tunnelId ? (
-										<Badge label="active" tone="success" mono />
+									{/* The picker's own row state, so a pick still minting or
+									 *  refused is not badged "active" here while the store says
+									 *  otherwise (PR #121 UX round 1, U3). */}
+									{rowState(computer, { tunnelId, phase }) === "active" ? (
+										<Badge
+											label={t("mobile.computers.badge.active")}
+											tone="success"
+											mono
+										/>
+									) : rowState(computer, { tunnelId, phase }) ===
+										"connecting" ? (
+										<Badge
+											label={t("mobile.computers.badge.connecting")}
+											tone="info"
+											mono
+										/>
 									) : (
 										<Button
 											testID={CONTROL.settingsUseComputer}
@@ -213,6 +410,18 @@ export default function Settings() {
 							))}
 						</View>
 					) : null}
+					{/* A failed Refresh is an ACCOUNT failure now, not a route refusal (PR
+					 *  #121, D2), so it no longer surfaces as this screen's refusal: the
+					 *  line under the list is where this screen's Refresh reports it. Same
+					 *  sentence as the Computers banner, from one place. */}
+					{discoveryFailure ? (
+						<Text
+							className="text-body-sm text-warning"
+							testID={REGION.settingsDiscoveryFailure}
+						>
+							{discoveryFailureMessage(discoveryFailure, computers.length > 0)}
+						</Text>
+					) : null}
 					{/* `flex-wrap`: two controls side by side are 2 x (label + padding) wide,
 					 *  and at 200 % text that is wider than a 320 pt phone — the row ran to
 					 *  399 px (`U-06`, measured). Wrapping keeps both reachable. */}
@@ -223,12 +432,27 @@ export default function Settings() {
 							onPress={() => void refreshComputers()}
 							variant="outline"
 							size="sm"
-							loading={busy}
+							/* A discovery, not a pick: the same flag the Computers header
+							 *  uses, which also absorbs repeat taps while one is in flight
+							 *  (U4). */
+							loading={discovering}
+						/>
+						{/* Every computer this phone knows, own-address ones included — the
+						 *  rows above are only the account's Radient computers. */}
+						<Button
+							testID={CONTROL.settingsSwitchComputer}
+							label={t("mobile.computers.switch")}
+							onPress={switcher.open}
+							variant="quiet"
+							size="sm"
 						/>
 						<Button
 							testID={CONTROL.settingsAddComputer}
 							label="Add a computer"
-							onPress={() => router.push("/tunnels")}
+							/* The set-up paths, not the list: the list has no add path once
+							 *  the account has a computer (UX round 2, U12), and the switcher's
+							 *  own "Add a computer" goes to the same place. */
+							onPress={() => router.push(ADD_COMPUTER_HREF)}
 							variant="quiet"
 							size="sm"
 						/>
@@ -327,15 +551,12 @@ export default function Settings() {
 						These lines never include a token, a password, or a session's
 						content.
 					</Text>
-					{refusal ? (
-						<Button
-							testID={CONTROL.settingsRetryLastAction}
-							label="Try the last action again"
-							onPress={() => void retry()}
-							variant="outline"
-							size="sm"
-						/>
-					) : null}
+					{/* No second retry here: the refusal surface under Status carries
+					 *  this refusal's remedy, Try again included where retrying can work,
+					 *  and it is always rendered with it. The old Diagnostics retry
+					 *  beside it was two controls for one refusal (PR #122 review round 3,
+					 *  R3-m1) — and offered a retry for the console-side causes the
+					 *  surface deliberately gives none. */}
 				</View>
 
 				<Divider />
@@ -428,12 +649,17 @@ function statusFor(input: {
 	health: ReturnType<typeof useConnection>["streamHealth"];
 	refused: boolean;
 	routed: boolean;
+	/** A computer was picked and its session is still being minted. */
+	minting: boolean;
 }): {
 	state: ConnectionPillState;
 	message: string;
 } {
 	if (!input.routed) return { state: "inactive", message: "No connection yet" };
 	if (input.refused) return { state: "offline", message: "Not connected" };
+	/* No stream exists yet while a session is minted, and an idle stream fell
+	 *  through to "Connected" (U3). */
+	if (input.minting) return { state: "reconnecting", message: "Connecting…" };
 	switch (input.health) {
 		case "connecting":
 			return { state: "reconnecting", message: "Connecting…" };
@@ -452,13 +678,18 @@ const DiagnosticRow = ({ label, value }: { label: string; value: string }) => (
 	<View className="flex-row items-start justify-between gap-4">
 		<Text className="text-body-sm text-ink-muted">{label}</Text>
 		<Text
-			className="flex-1 text-right text-mono-sm text-ink-dim"
+			className={`flex-1 ${TEXT_END_CLASS} text-mono-sm text-ink-dim`}
 			accessibilityRole={ROLE.text}
 			numberOfLines={2}
 			/* `minWidth: 0` lets this column shrink below its content's width — the
 			 *  one lever RN-web honours on every platform for a flex child (`overflow-
 			 *  Wrap` is web-only and is not in the `TextStyle` type). */
-			style={{ minWidth: 0 }}
+			/* MIXED CONTENT: a diagnostic value is a path, a hostname, a model id or a
+			 *  version — left-to-right by its own grammar even inside an Urdu screen.
+			 *  `LTR_WRITING` states that direction without moving the column: the cell
+			 *  keeps its trailing alignment (`TEXT_END_CLASS` above), which flips with the
+			 *  layout while the value inside it stays readable. */
+			style={{ minWidth: 0, ...LTR_WRITING }}
 		>
 			{value}
 		</Text>

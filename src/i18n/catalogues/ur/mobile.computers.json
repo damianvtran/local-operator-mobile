@@ -1,0 +1,12 @@
+{
+	"mobile.computers.add": "کمپیوٹر شامل کریں",
+	"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
+	"mobile.computers.badge.active": "فعال",
+	"mobile.computers.badge.connecting": "منسلک ہو رہا",
+	"mobile.computers.connecting": "منسلک ہو رہا ہے…",
+	"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
+	"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
+	"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
+	"mobile.computers.section.on_phone": "اس فون پر",
+	"mobile.computers.switch": "کمپیوٹر بدلیں"
+}

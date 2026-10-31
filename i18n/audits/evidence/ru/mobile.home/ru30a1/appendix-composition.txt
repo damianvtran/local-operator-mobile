@@ -1,0 +1,45 @@
+=== CONTROL 1: is `ru` renderable through the runtime today? ===
+renderFor(…, "ru") → "What can I help you with today?"
+harness    (…, "ru") → "Чем помочь сегодня?"
+DIFFERENT — renderFor returned the ENGLISH source because `ru` is not in SHIPPED_LOCALES; the harness below is the only path that renders ru
+
+=== CONTROL 2: does the harness equal `renderFor` on a SHIPPED locale? ===
+all 38 zh-CN keys render identically through both paths
+
+=== COMPOSED: nextDueClause (head.next / head.overdue) ===
+ 1 wakes,      240s → 1 пробуждение · далее через 4m   [1 wake, 4m ahead]
+ 2 wakes,      240s → 2 пробуждения · далее через 4m   [2 wakes, 4m ahead]
+ 5 wakes,      240s → 5 пробуждений · далее через 4m   [5 wakes, 4m ahead]
+ 3 wakes,  -691200s → 3 пробуждения · просрочено на 8d   [3 wakes, 8d overdue]
+ 1 wakes,      -45s → 1 пробуждение · просрочено на 45s   [1 wake, 45s overdue]
+
+=== COMPOSED: cadence.left / cadence.spent (dotted clause) ===
+0    → раз в 2h · осталось 0
+1    → раз в 2h · остался 1
+2    → раз в 2h · осталось 2
+5    → раз в 2h · осталось 5
+1.5  → раз в 2h · осталось 1.5
+spent → раз в 2h · доставок больше нет
+
+=== COMPOSED: count clauses + tail.failed ===
+0    wakes=0 пробуждений · monitors=0 мониторов · failed=0 сбоев
+1    wakes=1 пробуждение · monitors=1 монитор · failed=1 сбой
+2    wakes=2 пробуждения · monitors=2 монитора · failed=2 сбоя
+5    wakes=5 пробуждений · monitors=5 мониторов · failed=5 сбоев
+1.5  wakes=1.5 пробуждения · monitors=1.5 монитора · failed=1.5 сбоя
+
+=== COMPOSED: truncated (select family + shown/total) ===
+wakes → Беседы с пробуждениями: показано 3 из 12.
+      en  → Showing 3 of 12 conversations with wakes.
+other → Беседы с мониторами: показано 3 из 12.
+      en  → Showing 3 of 12 conversations with monitors.
+
+=== COMPOSED: summary clauses ===
+1/3 → 1 из 3 требует внимания
+2/3 → 2 из 3 требуют внимания
+5/12 → 5 из 12 требуют внимания
+armed 0  → 0 активны | scheduled → 0 запланировано
+armed 1  → 1 активен | scheduled → 1 запланировано
+armed 2  → 2 активны | scheduled → 2 запланировано
+armed 5  → 5 активны | scheduled → 5 запланировано
+show_more wakes(1) → Показать ещё 1 пробуждение

@@ -1,0 +1,14 @@
+"""The account noun in core's committed zh-CN: 账号 vs 账户."""
+import subprocess
+repo = "/Users/damian/local-operator"
+path = "local_operator/i18n/catalogues/zh-CN/"
+files = [f for f in subprocess.run(["git", "-C", repo, "ls-tree", "-r", "--name-only", "HEAD", "--", path], capture_output=True, text=True).stdout.split() if f.endswith(".json")]
+print(f"core commit {subprocess.run(['git','-C',repo,'rev-parse','HEAD'],capture_output=True,text=True).stdout.strip()}")
+print(f"zh-CN catalogue files: {len(files)}")
+for term in ("账户", "账号"):
+    out = subprocess.run(["git","-C",repo,"grep","-o","--no-color",term,"HEAD","--",path+"*"],capture_output=True,text=True).stdout
+    per = {}
+    for line in out.splitlines():
+        f = line.split(":", 2)[1].split(path)[-1]
+        per[f] = per.get(f, 0) + 1
+    print(f"{term!r}: occurrences={sum(per.values())} files={len(per)} top={sorted(per.items(), key=lambda x: -x[1])[:8]}")

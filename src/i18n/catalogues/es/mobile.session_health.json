@@ -1,0 +1,13 @@
+{
+	"mobile.session_health.control_hint": "Muestra qué significa este estado y qué hace un envío ahora",
+	"mobile.session_health.menu_label": "Acciones de la sesión",
+	"mobile.session_health.menu_hint": "Abre el menú de la sesión",
+	"mobile.session_health.menu_title": "Sesión",
+	"mobile.session_health.reopening": "Reabriendo — esto puede tardar unos segundos.",
+	"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+	"mobile.session_health.resume_refused_title": "No se pudo reanudar",
+	"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
+	"mobile.session_health.resume_gone": "Esta sesión ya no está guardada.",
+	"mobile.session_health.resume_no_route": "Conecta una máquina para reanudar esta sesión.",
+	"mobile.session_health.ended_placeholder": "Envía para reabrir…"
+}

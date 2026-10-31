@@ -58,8 +58,8 @@ export const ReadableColumn = ({
 				alignSelf: "stretch",
 				width: "100%",
 				maxWidth: cap ?? undefined,
-				marginLeft: "auto",
-				marginRight: "auto",
+				marginStart: "auto",
+				marginEnd: "auto",
 				paddingBottom,
 			}}
 		>
@@ -119,8 +119,8 @@ export const SplitView = ({
 		<View
 			className={
 				paneSide === "end"
-					? "border-l border-hairline"
-					: "border-r border-hairline"
+					? "border-s border-hairline"
+					: "border-e border-hairline"
 			}
 			style={{ width: paneWidth, flexGrow: 0, flexShrink: 0 }}
 			testID={
