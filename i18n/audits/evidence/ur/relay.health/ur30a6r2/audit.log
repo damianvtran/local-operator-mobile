@@ -1,0 +1,203 @@
+# audit.log — ur group A DELTA (round 2). Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/run-all.sh run 2026-10-30T23:44:12Z. Shared by all six r2 bundles.
+
+## date: 2026-10-30T23:43:20Z  cwd: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave  HOME(scratch): /var/folders/qd/1q2xkcls0tg60vh97jjngxc40000gn/T/tmp.5Xh1BQbfGH
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ur/
+?? src/i18n/catalogues/ur/
+[exit 0]
+
+$ git rev-parse --short HEAD
+32c76777
+[exit 0]
+
+$ sha256 of every group A input (ur, en, en context)
+108b20000f9a2036c7e5a00e78692d1c9c1361c53770148f6290f93129c32a07  src/i18n/catalogues/ur/mobile.home.json
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+e0183e404ca6555a0cfe29d6083544eb2ac7379dfd684e2627a3a14e6ec485a7  src/i18n/catalogues/ur/mobile.session.json
+8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  src/i18n/catalogues/en/mobile.session.context.json
+c7c08dbd0eb85fb7f06815229295a9f254cb7584d5eabb9f929d6ce875e89f4d  src/i18n/catalogues/ur/mobile.session_health.json
+727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f  src/i18n/catalogues/en/mobile.session_health.json
+df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310  src/i18n/catalogues/en/mobile.session_health.context.json
+5cd4429d292440f3a7d7100625e0ce8a9406d311b10463736568ef17e1df1103  src/i18n/catalogues/ur/mobile.account_routing.json
+34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03  src/i18n/catalogues/en/mobile.account_routing.json
+2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c  src/i18n/catalogues/en/mobile.account_routing.context.json
+80dceb2124ab7dd92919166c27e84263112bd25e62f1af00b894777dee7509f9  src/i18n/catalogues/ur/relay.chrome.json
+e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1  src/i18n/catalogues/en/relay.chrome.json
+195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b  src/i18n/catalogues/en/relay.chrome.context.json
+8588632afd90999a47232def24678eb2db64da3be442f0829012c35182e6aa0e  src/i18n/catalogues/ur/relay.health.json
+65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f  src/i18n/catalogues/en/relay.health.json
+b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec  src/i18n/catalogues/en/relay.health.context.json
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/delta.py
+mobile.home: r1_sha=6181c9bf8198ccc5 now_sha=108b20000f9a2036 identical=False reverted_sha_matches_r1=True changed=3
+   - mobile.home.connect_disabled_reason 
+      r1 : بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔ 
+      now: بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔
+   - mobile.home.suggestion.wake_summary 
+      r1 : مجھے خلاصے سمیت جگائیں 
+      now: مجھے خلاصہ دے کر جگائیں
+   - mobile.home.tip.parallel 
+      r1 : ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں 
+      now: ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں
+   byte-exact mobile.home.connect_disabled_reason: True
+   byte-exact mobile.home.tip.parallel: True
+   byte-exact mobile.home.suggestion.wake_summary: True
+   byte-exact mobile.home.startup_queue.unconfirmed: False
+mobile.session: r1_sha=e0183e404ca6555a now_sha=e0183e404ca6555a identical=True reverted_sha_matches_r1=True changed=0
+mobile.session_health: r1_sha=4651263d664ab5eb now_sha=c7c08dbd0eb85fb7 identical=False reverted_sha_matches_r1=True changed=3
+   - mobile.session_health.still_reopening 
+      r1 : اب بھی کھل رہا ہے — ابھی تیار نہیں ہوا۔ 
+      now: اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔
+   - mobile.session_health.resume_gone 
+      r1 : یہ سیشن اب محفوظ نہیں۔ 
+      now: یہ سیشن اب محفوظ شدہ نہیں ہے۔
+   - mobile.session_health.resume_no_route 
+      r1 : اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہوں۔ 
+      now: اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔
+   byte-exact mobile.session_health.resume_no_route: True
+   byte-exact mobile.session_health.resume_gone: True
+   byte-exact mobile.session_health.still_reopening: True
+mobile.account_routing: r1_sha=d1308a7739a7ff12 now_sha=5cd4429d292440f3 identical=False reverted_sha_matches_r1=True changed=1
+   - mobile.account_routing.disconnected 
+      r1 : اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہوں۔ 
+      now: اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔
+   byte-exact mobile.account_routing.disconnected: True
+relay.chrome: r1_sha=80dceb2124ab7dd9 now_sha=80dceb2124ab7dd9 identical=True reverted_sha_matches_r1=True changed=0
+relay.health: r1_sha=8588632afd90999a now_sha=8588632afd90999a identical=True reverted_sha_matches_r1=True changed=0
+[exit 0]
+
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/render.ts
+mobile.home.connect_disabled_reason 
+  EN: Connect a computer to send. 
+  UR: بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔ | len 40
+mobile.home.tip.parallel 
+  EN: ask for parallel work to fan out subagents 
+  UR: ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں | len 47
+mobile.home.suggestion.wake_summary 
+  EN: Wake me with a summary 
+  UR: مجھے خلاصہ دے کر جگائیں | len 23
+mobile.session_health.resume_no_route 
+  EN: Connect to a computer to resume this session. 
+  UR: اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔ | len 55
+mobile.session_health.resume_gone 
+  EN: This session is no longer saved. 
+  UR: یہ سیشن اب محفوظ شدہ نہیں ہے۔ | len 29
+mobile.session_health.still_reopening 
+  EN: Still reopening — it has not come up yet. 
+  UR: اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔ | len 42
+mobile.account_routing.disconnected 
+  EN: Connect to a computer to change account routing. 
+  UR: اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔ | len 61
+mobile.home.tip.parallel 47 ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں
+mobile.home.tip.schedule 41 ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں
+mobile.home.tip.search 41 گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں
+mobile.home.suggestion.last_turn 16 آخری ٹرن دکھائیں
+mobile.home.suggestion.linear_mcp 22 Linear MCP سیٹ اپ کریں
+mobile.home.suggestion.phone_access 17 فون رسائی آن کریں
+mobile.home.suggestion.review_repo 20 اس repo کا جائزہ لیں
+mobile.home.suggestion.team_of_agents 20 ایجنٹس کی ٹیم بنائیں
+mobile.home.suggestion.wake_summary 23 مجھے خلاصہ دے کر جگائیں
+pluralCategory ur 0,1,2,21: other,one,other,other
+[exit 0]
+
+$ node_modules/.bin/tsx scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+[exit 0]
+
+$ node_modules/.bin/tsx scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+[exit 0]
+
+$ python3 scan.py  (bidi controls / redaction markers / Arabic yeh,kaf over every input read)
+mobile.home ur bidi 0 redact 0 arabic-yeh/kaf 0
+mobile.home en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.home en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.session ur bidi 0 redact 0 arabic-yeh/kaf 0
+mobile.session en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.session en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.session_health ur bidi 0 redact 0 arabic-yeh/kaf 0
+mobile.session_health en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.session_health en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.account_routing ur bidi 0 redact 0 arabic-yeh/kaf 0
+mobile.account_routing en bidi 0 redact 0 arabic-yeh/kaf -
+mobile.account_routing en bidi 0 redact 0 arabic-yeh/kaf -
+relay.chrome ur bidi 0 redact 0 arabic-yeh/kaf 0
+relay.chrome en bidi 0 redact 0 arabic-yeh/kaf -
+relay.chrome en bidi 0 redact 0 arabic-yeh/kaf -
+relay.health ur bidi 0 redact 0 arabic-yeh/kaf 0
+relay.health en bidi 0 redact 0 arabic-yeh/kaf -
+relay.health en bidi 0 redact 0 arabic-yeh/kaf -
+render.out bidi 0 redact 0
+
+########## script sources (as run) ##########
+
+----- run-all.sh -----
+#!/bin/bash
+# Re-runs every verification command for the ur group A delta audit (round 2); output is the audit.log body.
+W=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
+A=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2
+cd $W; export HOME=$(mktemp -d)
+echo "## date: $(date -u +%FT%TZ)  cwd: $PWD  HOME(scratch): $HOME"
+run(){ echo; echo "\$ $*"; "$@" 2>&1; echo "[exit $?]"; }
+run git status --short
+run git rev-parse --short HEAD
+echo; echo '$ sha256 of every group A input (ur, en, en context)'
+for ns in mobile.home mobile.session mobile.session_health mobile.account_routing relay.chrome relay.health; do
+ for p in ur/$ns.json en/$ns.json en/$ns.context.json; do echo "$(shasum -a 256 src/i18n/catalogues/$p | cut -d' ' -f1)  src/i18n/catalogues/$p"; done; done
+run python3 $A/delta.py
+run node_modules/.bin/tsx $A/render.ts
+run node_modules/.bin/tsx scripts/i18n/generate.ts --check
+run node_modules/.bin/tsx scripts/i18n/check-strings.ts
+echo; echo '$ python3 scan.py  (bidi controls / redaction markers / Arabic yeh,kaf over every input read)'
+cat $A/scan.out
+
+----- delta.py -----
+# Delta verification: reconstruct the round-1 bytes by reverting the exact replacement strings from my
+# round-1 findings (fixes.json), hash them against round-1 record.json input_hashes, and diff key-by-key.
+import json,hashlib
+W='/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/'
+ids={'mobile.home':'ur30a1','mobile.session':'ur30a2','mobile.session_health':'ur30a3','mobile.account_routing':'ur30a4','relay.chrome':'ur30a5','relay.health':'ur30a6'}
+fx=json.load(open('/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/fixes.json'))
+out={}
+for ns,i in ids.items():
+    p=f'{W}src/i18n/catalogues/ur/{ns}.json'
+    raw=open(p,encoding='utf-8').read(); cur=json.loads(raw)
+    rec=json.load(open(f'{W}i18n/audits/evidence/ur/{ns}/{i}/record.json'))
+    want=rec['input_hashes']['target']['sha256']; now=hashlib.sha256(raw.encode()).hexdigest()
+    old=dict(cur); rev=raw
+    for fid,f in fx.get(ns,{}).items():
+        if f['replacement'].startswith('(no change'): continue
+        if cur[f['key']]==f['replacement']:
+            old[f['key']]=f['current']; rev=rev.replace(f['replacement'],f['current'])
+    revh=hashlib.sha256(rev.encode()).hexdigest()
+    changed=[k for k in cur if cur[k]!=old[k]]
+    print(f'{ns}: r1_sha={want[:16]} now_sha={now[:16]} identical={want==now} reverted_sha_matches_r1={revh==want} changed={len(changed)}')
+    for k in changed: print('   -',k,'\n      r1 :',old[k],'\n      now:',cur[k])
+    # whole-string byte-exact compare against the prescribed replacements
+    for fid,f in fx.get(ns,{}).items():
+        if f['replacement'].startswith('(no change'): continue
+        print(f'   byte-exact {f["key"]}:', cur[f["key"]].encode()==f['replacement'].encode())
+    out[ns]=dict(r1=want,now=now,changed=changed)
+json.dump(out,open('/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/delta.json','w'),indent=1)
+
+----- render.ts -----
+import { readFileSync } from "node:fs";
+import { formatMessage, parseMessage, pluralCategory } from "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages";
+const C="/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/";
+const keys:Record<string,string[]>={
+ "mobile.home":["connect_disabled_reason","tip.parallel","suggestion.wake_summary"],
+ "mobile.session_health":["resume_no_route","resume_gone","still_reopening"],
+ "mobile.account_routing":["disconnected"]};
+for(const [ns,ks] of Object.entries(keys)){
+  const ur=JSON.parse(readFileSync(`${C}ur/${ns}.json`,"utf8")), en=JSON.parse(readFileSync(`${C}en/${ns}.json`,"utf8"));
+  for(const k of ks){const K=`${ns}.${k}`;
+    console.log(K,"\n  EN:",formatMessage(parseMessage(en[K]),{},"en"),"\n  UR:",formatMessage(parseMessage(ur[K]),{},"ur"),"| len",[...ur[K]].length);}
+}
+// all home tips / chips lengths
+const ur=JSON.parse(readFileSync(`${C}ur/mobile.home.json`,"utf8"));
+for(const p of ["tip.","suggestion."]) for(const [k,v] of Object.entries(ur)) if(k.startsWith("mobile.home."+p)) console.log(k,[...(v as string)].length,v);
+console.log("pluralCategory ur 0,1,2,21:",[0,1,2,21].map(n=>pluralCategory("ur",n)).join(","));

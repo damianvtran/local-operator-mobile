@@ -1,0 +1,101 @@
+{
+ "schema": 1,
+ "audit_kind": "delta_reaudit_round_2",
+ "audit_id": "ur30b2r2",
+ "supersedes_round_1": "ur30b2",
+ "locale": "ur",
+ "namespace": "mobile.projects",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 15,
+  "target": 15,
+  "context": 15
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803-r2",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Same group-B auditor as round 1 (a delta re-audit by design), not the translator; group A bundles were not read. No human native-speaker review and no rendered device frame claimed; renders go through the app parseMessage/formatMessage only."
+ },
+ "route": "Ordinary worktree file reads and git show origin/main of the core repo. read_public_copy refused for src/i18n/**; context sidecars are nested JSON and not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.projects.json",
+   "sha256": "a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.projects.context.json",
+   "sha256": "5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.projects.json",
+   "sha256": "43dc7cba1f2ef704379bbbdd71c801c6d073c6848f190f4dbc11db57c35eeefb"
+  }
+ },
+ "round1_input_hashes_ur": {
+  "path": "src/i18n/catalogues/ur/mobile.projects.json",
+  "sha256": "8beeb0a9d35aba735138bd7c7a9abd126912d19f2611c031f51e9b1b66d38951"
+ },
+ "en_and_context_unchanged_since_round1": true,
+ "hash_revert_proof": "tools/revert.py reverts each prescribed replacement in the current ur file and recomputes sha256; result equals round-1 input_hashes.ur for every group-B namespace (see audit.log), so no other key changed. mobile.notifications has zero replacements and is sha-identical to round 1.",
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "all 12 group-B inputs (ur+en+context x4), audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "generate_check": "scripts/i18n/generate.ts --check rc 0 (catalogue.gen.ts current, 143 keys, 10 namespaces)",
+  "check_strings": "scripts/i18n/check-strings.ts rc 0 (284 findings all baselined, 0 new)",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not yet in SHIPPED_LOCALES; wiring, not copy; same as round 1)",
+  "plural_rules": "Intl.PluralRules(ur): 0 other, 1 one, 2 other, 21 other, 100 other"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.projects/ur30b2r2/audit.log",
+   "sha256": "67e3fb78f26301f3c35a50261760c60d06a3ec183b4f185f3b4609f43c58cf0b",
+   "kind": "actual_execution_log (one run of tools/run2.sh, shared verbatim by all four r2 bundles)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.projects/ur30b2r2/report.md",
+   "kind": "audit report (audit notes, not an execution log)",
+   "sha256": "55cf95ceb65f8814fa20c2b39ce1530911a710f3398dea45b3d844113edafbdf"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.projects/ur30b2r2/tools/",
+   "kind": "scripts actually run: revert.py render2.ts run2.sh scan.py"
+  }
+ ],
+ "delta_verification": [
+  {
+   "id": "P1",
+   "severity": "MAJOR",
+   "key": "mobile.projects.project_name_hint",
+   "applied_text": "لمبائی 1 سے 64 حروف؛ نام میں صرف انگریزی حروف، 0 سے 9 تک ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact and WHOLE: all five source clauses present (1-64, letters, digits, dot/underscore/hyphen, no spaces, no leading hyphen); \"صرف انگریزی حروف\" and \"0 سے 9 تک ہندسے\" now true against ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ (Urdu/accented letters and Arabic-Indic/Devanagari digits all REJECT in the truth table)"
+  },
+  {
+   "id": "P2",
+   "severity": "MINOR",
+   "key": "mobile.projects.draft_kept_note",
+   "applied_text": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact; both sentences intact (kept-from-last-visit + clear-fields-to-start-new)"
+  }
+ ],
+ "open_minors": [],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "P1",
+   "P2"
+  ]
+ }
+}

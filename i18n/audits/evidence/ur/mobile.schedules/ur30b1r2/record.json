@@ -1,0 +1,110 @@
+{
+ "schema": 1,
+ "audit_kind": "delta_reaudit_round_2",
+ "audit_id": "ur30b1r2",
+ "supersedes_round_1": "ur30b1",
+ "locale": "ur",
+ "namespace": "mobile.schedules",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 38,
+  "target": 38,
+  "context": 38
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803-r2",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Same group-B auditor as round 1 (a delta re-audit by design), not the translator; group A bundles were not read. No human native-speaker review and no rendered device frame claimed; renders go through the app parseMessage/formatMessage only."
+ },
+ "route": "Ordinary worktree file reads and git show origin/main of the core repo. read_public_copy refused for src/i18n/**; context sidecars are nested JSON and not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.json",
+   "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+   "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.schedules.json",
+   "sha256": "c12048d5b29743580497347795b278e4350b648a49af8af52e25c424ac32344c"
+  }
+ },
+ "round1_input_hashes_ur": {
+  "path": "src/i18n/catalogues/ur/mobile.schedules.json",
+  "sha256": "aba7a013e25b213a9006bec4e380877714f3ea93be02add83d6878c5c9c5afaa"
+ },
+ "en_and_context_unchanged_since_round1": true,
+ "hash_revert_proof": "tools/revert.py reverts each prescribed replacement in the current ur file and recomputes sha256; result equals round-1 input_hashes.ur for every group-B namespace (see audit.log), so no other key changed. mobile.notifications has zero replacements and is sha-identical to round 1.",
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "all 12 group-B inputs (ur+en+context x4), audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "generate_check": "scripts/i18n/generate.ts --check rc 0 (catalogue.gen.ts current, 143 keys, 10 namespaces)",
+  "check_strings": "scripts/i18n/check-strings.ts rc 0 (284 findings all baselined, 0 new)",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not yet in SHIPPED_LOCALES; wiring, not copy; same as round 1)",
+  "plural_rules": "Intl.PluralRules(ur): 0 other, 1 one, 2 other, 21 other, 100 other"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1r2/audit.log",
+   "sha256": "67e3fb78f26301f3c35a50261760c60d06a3ec183b4f185f3b4609f43c58cf0b",
+   "kind": "actual_execution_log (one run of tools/run2.sh, shared verbatim by all four r2 bundles)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1r2/report.md",
+   "kind": "audit report (audit notes, not an execution log)",
+   "sha256": "f79a9180d3995273e8298caa9cf12ebad465fbbdf8f65e6f615104d71f883c66"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1r2/tools/",
+   "kind": "scripts actually run: revert.py render2.ts run2.sh scan.py"
+  }
+ ],
+ "delta_verification": [
+  {
+   "id": "S1",
+   "severity": "MAJOR",
+   "key": "mobile.schedules.state.dormant",
+   "applied_text": "خوابیدہ",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact; one word, no full stop; distinct from state.disabled «بند» and from the parked clause «رکا ہوا — …»; sidecar satisfied (row STATE, not instruction)"
+  },
+  {
+   "id": "S2",
+   "severity": "MAJOR",
+   "key": "mobile.schedules.supervisor.not_running",
+   "applied_text": "بیداریوں کی نگرانی کرنے والی سروس انسٹال تو ہے مگر چل نہیں رہی، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact and WHOLE sentence: carries installed-but-not-running (انسٹال تو ہے مگر چل نہیں رہی), consequence (نہیں چلیں گی) and the \"below\" scope (نیچے دی گئی); vocabulary now agrees with unsupported/unverifiable («بیداریوں کی نگرانی»); gender سروس/رہی correct"
+  },
+  {
+   "id": "S3",
+   "severity": "MINOR",
+   "key": "mobile.schedules.show_more.wakes / .monitors",
+   "applied_text": "# مزید بیداری/بیداریاں دکھائیں ; # مزید نگرانی/نگرانیاں دکھائیں",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact; renders «1 مزید بیداری دکھائیں», «2/21 مزید بیداریاں دکھائیں», «1 مزید نگرانی دکھائیں», «2/21 مزید نگرانیاں دکھائیں»; singular at 1, plural at 2 and 21 (Intl ur: 1 one, others other), matching the sidecar"
+  }
+ ],
+ "open_minors": [],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "S1",
+   "S2",
+   "S3"
+  ]
+ }
+}

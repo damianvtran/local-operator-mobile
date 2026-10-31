@@ -1,0 +1,13 @@
+{
+	"mobile.session_health.control_hint": "بتاتا ہے کہ اس حالت کا مطلب کیا ہے اور اب بھیجنے پر کیا ہوگا",
+	"mobile.session_health.menu_label": "سیشن کی کارروائیاں",
+	"mobile.session_health.menu_hint": "سیشن مینو کھولتا ہے",
+	"mobile.session_health.menu_title": "سیشن",
+	"mobile.session_health.reopening": "دوبارہ کھل رہا ہے — اس میں چند سیکنڈ لگ سکتے ہیں۔",
+	"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+	"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
+	"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
+	"mobile.session_health.resume_gone": "یہ سیشن اب محفوظ شدہ نہیں ہے۔",
+	"mobile.session_health.resume_no_route": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+	"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…"
+}

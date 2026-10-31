@@ -1,0 +1,112 @@
+{
+ "schema": 1,
+ "audit_kind": "independent_first_pass",
+ "audit_id": "ur30b1",
+ "locale": "ur",
+ "namespace": "mobile.schedules",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 38,
+  "target": 38,
+  "context": 38
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header was observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Not the translator and not the group A auditor; group A bundles were not read. No human native-speaker review and no rendered device frame are claimed; renders are through the app's own parseMessage/formatMessage only."
+ },
+ "route": "Catalogue, sidecars, scripts and generate.ts read by ordinary worktree file reads and `git show origin/main:` of the core repo; NOT the read_public_copy route (refused for src/i18n/**). Context sidecars are nested JSON, not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.json",
+   "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+   "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.schedules.json",
+   "sha256": "aba7a013e25b213a9006bec4e380877714f3ea93be02add83d6878c5c9c5afaa"
+  }
+ },
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "ur+en+context for this namespace (scan.py) and the git-read style guide, glossary, core ur catalogues and projects.py (scan2.sh); both counts in audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "param_parity_via_parseMessage": "0 placeholder-name mismatches across all 77 group-B keys; the only kind difference is mobile.schedules.truncated shown/total text->plural, an escalation generate.ts permits",
+  "generate_check": "scripts/i18n/generate.ts --check: catalogue.gen.ts is current, rc 0 (read-only mode)",
+  "plural_rules": "Intl.PluralRules('ur'): 0 other, 1 one, 2 other, 21 other, 100 other; app pluralCategory agrees",
+  "width": "no maxCells/maxChars hint in any group-B en context sidecar (count 0); no width finding possible",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not in SHIPPED_LOCALES yet; wiring, not copy)"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1/audit.log",
+   "sha256": "1018843c517b81a417b8fef3e135090658c30d0358e6615d128a03dde27bad73",
+   "kind": "actual_execution_log (verbatim concatenation of three captured script runs)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1/report.md",
+   "kind": "audit report (audit notes, not an execution log)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1/tools/",
+   "kind": "the scripts that produced audit.log (shared by ur30b1..4)"
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is audit notes. Only audit.log is an execution log; the same file is copied byte-identically into ur30b1..ur30b4 because one run covered all four namespaces. Scripts are in ur30b1/tools/.",
+ "findings": [
+  {
+   "id": "S1",
+   "severity": "MAJOR",
+   "key": "mobile.schedules.state.dormant",
+   "current": "غیر فعال",
+   "replacement": "خوابیدہ",
+   "why": "Composed-screen contradiction. The monitors header reads «{count} فعال» (armed) and dormant rows are counted in it (monitorAlerting excludes dormant, so the header stays «5 فعال»), while the dormant row's own slot says «غیر فعال» — the literal antonym of فعال — directly beneath. It also spends the standard Urdu word for DISABLED (core uses غیر فعال for disabled) on the weaker state while the stronger state, disabled, is «بند». Rendered: header «5 فعال» + dormant slot «غیر فعال» (before) vs «خوابیدہ» (after). If خوابیدہ is judged too literary: «سویا ہوا». Not «معطل» (collides with the parked clause's meaning).",
+   "verified": "tsx repl.ts 'S1 composed BEFORE/AFTER' lines in audit.log; read of schedules-copy.ts monitorAlerting/monitorSectionSummary; core ur grep for غیر فعال=disabled (wire.errors.desktop.aida_disabled)."
+  },
+  {
+   "id": "S2",
+   "severity": "MAJOR",
+   "key": "mobile.schedules.supervisor.not_running",
+   "current": "بیداریوں کا سپروائزر انسٹال تو ہے مگر چل نہیں رہا، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔",
+   "replacement": "بیداریوں کی نگرانی کرنے والی سروس انسٹال تو ہے مگر چل نہیں رہی، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔",
+   "why": "Glossary inconsistency on one screen. The three supervisor sentences are alternatives of one status line: unsupported/unverifiable say «بیداریوں کی نگرانی» for 'supervised', only not_running introduces a transliterated «سپروائزر». i18n/glossary.md note 7 records, for ur, that 'supervised' is rendered with the existing monitor word نگرانی because none of the locales has a settled word for a supervisor unit and inventing one would give one concept two names; core tui.schedule.notice_supervisor does the same. Replacement keeps that call, names the thing descriptively, and agrees in gender (سروس is feminine: چل نہیں رہی).",
+   "verified": "git show origin/main:i18n/glossary.md note 7; core tui.schedule.notice_supervisor; replacement parsed and rendered via parseMessage/formatMessage in repl.ts."
+  },
+  {
+   "id": "S3",
+   "severity": "MINOR",
+   "key": "mobile.schedules.show_more.wakes / mobile.schedules.show_more.monitors",
+   "current": "{hidden, plural, one {# اور بیداری دکھائیں} other {# اور بیداریاں دکھائیں}} (and the monitors twin)",
+   "replacement": "{hidden, plural, one {# مزید بیداری دکھائیں} other {# مزید بیداریاں دکھائیں}} ; {hidden, plural, one {# مزید نگرانی دکھائیں} other {# مزید نگرانیاں دکھائیں}}",
+   "why": "Numeral + «اور» ('21 اور بیداریاں') parses as the conjunction 'and'; the programme already settled «مزید» for '# more' (core relay.session.tags.more: «# مزید ٹیگ / # مزید ٹیگز»). Number agreement itself is correct at 1, 2, 21.",
+   "verified": "render.ts at hidden=1,2,21; repl.ts after-render; core relay.session.tags.more grep."
+  }
+ ],
+ "observations_not_findings": [
+  "head.next/head.overdue render clean: «3 بیداریاں · اگلی بار 4m بعد», «1 بیداری · 2h سے تاخیر», «2 بیداریاں · اگلی بار 1h30m بعد», «21 بیداریاں · 45s سے تاخیر». No doubled postposition: ahead is «{label} بعد» and next supplies only «اگلی بار» (same wording as core tui.schedule.detail_next/due_in/due_overdue). Overdue drops «اگلی بار» exactly as the sidecar demands.",
+  "truncated: oblique plural after numeral+میں سے is correct («2 گفتگوؤں میں سے»), singular «1 گفتگو میں سے»; shown agrees with the feminine گفتگو («1 … رہی ہے» / «2 … رہی ہیں»); select arms wakes→بیداریوں, other→نگرانیوں grammatical; an unknown family falls to نگرانیوں like English. Counts 0/1/2/21 all read correctly. generate.ts permits the text→plural escalation on shown/total.",
+  "Plural categories: Intl.PluralRules('ur') = one/other only, 0→other; both app formatter and Intl agree (audit.log).",
+  "cadence.* and due.* compose cleanly with duration tokens (ہر 1d · 3 باقی; ہر 1h30m · کوئی ڈیلیوری باقی نہیں); fribidi shows every Latin duration as an intact LTR island."
+ ],
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 2,
+  "finding_ids": [
+   "S1",
+   "S2",
+   "S3"
+  ]
+ }
+}

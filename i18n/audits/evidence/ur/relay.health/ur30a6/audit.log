@@ -1,0 +1,242 @@
+# audit bundle ur/relay.health/ur30a6 — captured 2026-10-30T22:24:46Z
+$ git -C <worktree> rev-parse HEAD
+32c7677715f6a6409b5da05021650c725169c853
+$ git -C <worktree> status --short src/i18n/catalogues/ur
+?? src/i18n/catalogues/ur/
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:47180) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) npx tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/evidence.mts relay.health ur30a6
+== bundle ur/relay.health/ur30a6 — independent Urdu audit, group A
+== command: npx tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/evidence.mts relay.health ur30a6
+== route: catalogue read as ordinary WORKTREE FILES (read_public_copy is refused for src/i18n/**);
+   the en context sidecar is nested JSON ({role,note} objects), not a message map, so it is not routable;
+   NO copy-route receipt was obtained for any input below — none is claimed.
+
+-- inputs
+   en       65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f  <worktree>/src/i18n/catalogues/en/relay.health.json
+   context  b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec  <worktree>/src/i18n/catalogues/en/relay.health.context.json
+   ur       8588632afd90999a47232def24678eb2db64da3be442f0829012c35182e6aa0e  <worktree>/src/i18n/catalogues/ur/relay.health.json
+
+-- key parity: en=8 ur=8 missing=[] unknown=[]
+   JSON validity: both files parsed by JSON.parse above (no exception).
+
+-- plural probe (independent of the catalogue)
+   Intl.PluralRules('ur').select: 0=other 1=one 2=other 21=other
+   app pluralCategory("ur", n):    0=other 1=one 2=other 21=other
+   parameterised keys in relay.health: 0 (no placeholder/plural/select in this namespace)
+   → CLDR category completeness (all categories for the locale) is vacuous here: no plural/select message exists in this namespace.
+
+-- per-key evidence (len = code points; the style guide measures ≈1 terminal cell per character)
+   relay.health.live
+      en(4): Live
+      ur(7): آن لائن
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آن لائن
+      render(renderFor(key,{},'ur')): Live  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   relay.health.live_detail
+      en(55): Running on your computer — messages reach it right away
+      ur(56): آپ کے کمپیوٹر پر چل رہا ہے — پیغامات فوراً پہنچ جاتے ہیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آپ کے کمپیوٹر پر چل رہا ہے — پیغامات فوراً پہنچ جاتے ہیں
+      render(renderFor(key,{},'ur')): Running on your computer — messages reach it right away  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   relay.health.reconnecting
+      en(12): Reconnecting
+      ur(16): پھر منسلک ہو رہا
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): پھر منسلک ہو رہا
+      render(renderFor(key,{},'ur')): Reconnecting  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   relay.health.reconnecting_detail
+      en(152): This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.
+      ur(168): اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔
+      render(renderFor(key,{},'ur')): This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   relay.health.dropped_detail
+      en(148): Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.
+      ur(187): آپ کا کمپیوٹر ابھی اس سیشن تک نہیں پہنچ پا رہا اور مسلسل کوشش کر رہا ہے۔ جب تک یہ پہنچ نہ پائے، بھیجنے پر پیغام فوراً ناکام ہو جاتا ہے اور آپ کا لکھا ہوا متن پیغام کے خانے میں ہی رہتا ہے۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آپ کا کمپیوٹر ابھی اس سیشن تک نہیں پہنچ پا رہا اور مسلسل کوشش کر رہا ہے۔ جب تک یہ پہنچ نہ پائے، بھیجنے پر پیغام فوراً ناکام ہو جاتا ہے اور آپ کا لکھا ہوا متن پیغام کے خانے میں ہی رہتا ہے۔
+      render(renderFor(key,{},'ur')): Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   relay.health.quiet_detail
+      en(172): This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.
+      ur(225): آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔
+      render(renderFor(key,{},'ur')): This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   relay.health.ended_detail
+      en(79): History is kept. Send a message or tap Resume to reopen it in your home folder.
+      ur(98): تاریخچہ محفوظ ہے۔ اسے اپنے ہوم فولڈر میں دوبارہ کھولنے کے لیے پیغام بھیجیں یا “جاری رکھیں” دبائیں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): تاریخچہ محفوظ ہے۔ اسے اپنے ہوم فولڈر میں دوبارہ کھولنے کے لیے پیغام بھیجیں یا “جاری رکھیں” دبائیں۔
+      render(renderFor(key,{},'ur')): History is kept. Send a message or tap Resume to reopen it in your home folder.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   relay.health.ended_send_failed
+      en(113): This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.
+      ur(131): یہ سیشن ختم ہو گیا ہے اور ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں، یا اوپر “ختم ہو گیا” دبائیں اور “جاری رکھیں” منتخب کریں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): یہ سیشن ختم ہو گیا ہے اور ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں، یا اوپر “ختم ہو گیا” دبائیں اور “جاری رکھیں” منتخب کریں۔
+      render(renderFor(key,{},'ur')): This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+
+-- bidi: control-character hits in this namespace = 0 (expected 0; the render layer adds FSI/PDI)
+-- latin runs: 0 in the ur text, 0 not present in the en source (expected 0)
+-- typography: ۔=11 ،=3 ؟=0 “”=6 …(U+2026)=0 | strings containing ASCII "..."=0 | digits=none | Arabic yeh/kaf/heh/marbuta=none
+-- non-ASCII code points used: U+0622 U+0646 U+0644 U+0627 U+0626 U+067E U+06A9 U+06D2 U+0645 U+06CC U+0648 U+0679 U+0631 U+0686 U+06C1 U+2014 U+063A U+062A U+0641 U+064B U+062C U+06BA U+06BE U+0633 U+0634 U+06AF U+062F U+0628 U+06D4 U+061B U+062D U+060C U+062E U+0635 U+0638 U+0688 U+201C U+201D
+-- redaction scan: 0 marker(s) across the three inputs (expected 0)
+
+== end bundle ur/relay.health/ur30a6
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/compose.py relay.health
+-- composed / cross-namespace checks: relay.health
+   reads: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/ur/relay.health.json, the en source and context beside it, sibling namespaces, core catalogues
+
+   mirror verification vs core origin/main local_operator/i18n/catalogues/ur/relay.health.json
+     mobile keys=8 core keys=8 (the mobile file is the subset this app renders)
+     SAME  relay.health.dropped_detail
+        en identical to core en: True
+     SAME  relay.health.ended_detail
+        en identical to core en: True
+     SAME  relay.health.ended_send_failed
+        en identical to core en: True
+     SAME  relay.health.live
+        en identical to core en: True
+     SAME  relay.health.live_detail
+        en identical to core en: True
+     SAME  relay.health.quiet_detail
+        en identical to core en: True
+     SAME  relay.health.reconnecting
+        en identical to core en: True
+     SAME  relay.health.reconnecting_detail
+        en identical to core en: True
+     byte-equal values: 8/8
+
+   recorded width exception (style guide): relay.health.reconnecting
+     ur cells=16 cap=16 → پھر منسلک ہو رہا
+
+   redaction scan: 8 input files read, 0 marker(s) in total (expected 0)
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/scan_all.py
+redaction scan: all inputs — 102 files enumerated below
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/messages.ts
+   read: <worktree>/src/i18n/runtime.ts
+   read: <worktree>/src/i18n/locale.ts
+   read: <worktree>/src/i18n/catalogues.ts
+   read: <worktree>/src/i18n/catalogue.gen.ts
+   read: <worktree>/scripts/i18n/generate.ts
+   read: <worktree>/scripts/i18n/check-strings.ts
+   read: <worktree>/package.json
+   read: <worktree>/src/features/home/home-copy.ts
+   read: <worktree>/src/features/home/home.tsx
+   read: <worktree>/src/features/home/home-splash.tsx
+   read: <worktree>/src/features/session/composer.ts
+   read: <worktree>/src/features/session/health-copy.ts
+   read: <worktree>/src/features/session/components/status-tray.tsx
+   read: <worktree>/src/features/session/components/composer.tsx
+   read: <worktree>/src/features/new-session/startup-transcript.tsx
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.services_status.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.team_bridge.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.account_policy.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.approvals.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.ask.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.asks.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.chrome.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.health.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.library.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.login.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.notifications.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.session.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.session.tags.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.shell.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.transcript.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.asks.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.authoring.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.notifications.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.palette.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.projects_edit.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.review.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.schedule.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.status.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.tags.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.team_authoring.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.transcript.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.viewer.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.welcome.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.desktop.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.notifications.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.settings.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.incidents.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.memory.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.notices.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.radient_saver.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.remote_compute.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.settings.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.slash.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.account_policy.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.chrome.json
+   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.health.json
+   read: /Users/damian/local-operator/i18n/glossary.md
+   read: /Users/damian/local-operator/i18n/style-guides/ur.md
+   read: /Users/damian/local-operator/docs/I18N.md
+redaction scan: all inputs — 0 marker(s) across 102 files (expected 0)
+exit=0

@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "audit_kind": "independent_first_pass",
+ "audit_id": "ur30b4",
+ "locale": "ur",
+ "namespace": "mobile.computers",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 10,
+  "target": 10,
+  "context": 10
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header was observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Not the translator and not the group A auditor; group A bundles were not read. No human native-speaker review and no rendered device frame are claimed; renders are through the app's own parseMessage/formatMessage only."
+ },
+ "route": "Catalogue, sidecars, scripts and generate.ts read by ordinary worktree file reads and `git show origin/main:` of the core repo; NOT the read_public_copy route (refused for src/i18n/**). Context sidecars are nested JSON, not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.computers.json",
+   "sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+   "sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.computers.json",
+   "sha256": "a209bc7ddd6ab3e1a332a017728b29108ab57e0fe49f9f09b1a4feee9a4d4593"
+  }
+ },
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "ur+en+context for this namespace (scan.py) and the git-read style guide, glossary, core ur catalogues and projects.py (scan2.sh); both counts in audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "param_parity_via_parseMessage": "0 placeholder-name mismatches across all 77 group-B keys; the only kind difference is mobile.schedules.truncated shown/total text->plural, an escalation generate.ts permits",
+  "generate_check": "scripts/i18n/generate.ts --check: catalogue.gen.ts is current, rc 0 (read-only mode)",
+  "plural_rules": "Intl.PluralRules('ur'): 0 other, 1 one, 2 other, 21 other, 100 other; app pluralCategory agrees",
+  "width": "no maxCells/maxChars hint in any group-B en context sidecar (count 0); no width finding possible",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not in SHIPPED_LOCALES yet; wiring, not copy)"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.computers/ur30b4/audit.log",
+   "sha256": "1018843c517b81a417b8fef3e135090658c30d0358e6615d128a03dde27bad73",
+   "kind": "actual_execution_log (verbatim concatenation of three captured script runs)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.computers/ur30b4/report.md",
+   "kind": "audit report (audit notes, not an execution log)"
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is audit notes. Only audit.log is an execution log; the same file is copied byte-identically into ur30b1..ur30b4 because one run covered all four namespaces. Scripts are in ur30b1/tools/.",
+ "findings": [
+  {
+   "id": "C1",
+   "severity": "MINOR",
+   "key": "mobile.computers.password_placeholder",
+   "current": "وہ پاس ورڈ جو lop mobile سے ملا",
+   "replacement": "lop mobile سے ملنے والا پاس ورڈ",
+   "why": "Placeholder reads as a half-clause with a past-tense «ملا» ('the password that was got'); the participle phrase is the natural placeholder form, shorter, and keeps `lop mobile` as one intact LTR island (fribidi visual order checked for the current text; the replacement has the same single island).",
+   "verified": "repl.ts render; bidi.sh fribidi output for the current string."
+  }
+ ],
+ "observations_not_findings": [
+  "stays_listed: EN 'It' is ambiguous; the Urdu names «پچھلا کمپیوٹر» as the sidecar and the code flow (adding a computer, 'switch back') require. Correct.",
+  "Outside the catalogue: computers.tsx:654 still hard-codes the English line 'Connected to {name}.' immediately above this sentence, so the Urdu reader gets one English line on that card. Wiring/source scope, not a translation finding.",
+  "badge.connecting «منسلک ہو رہا» is the same wording as the recorded relay.health.reconnecting width exception; no maxCells/maxChars hint exists in these sidecars.",
+  "Test-suite signal (not a copy defect): src/i18n/__tests__/catalogues.test.ts 'ships no locale the runtime cannot render' fails with ur present but not in SHIPPED_LOCALES (68 tests, 67 pass). Wiring scope for the translator/manager."
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "C1"
+  ]
+ }
+}

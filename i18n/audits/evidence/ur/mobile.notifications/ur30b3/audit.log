@@ -1,0 +1,831 @@
+### ur group B audit.log — verbatim concatenation of captured outputs from this session (no reconstruction)
+### part 1/3: run-audit.sh (one script run; header line gives UTC time). Source of scripts: tools/ beside this file
+audit run 2026-10-30T23:32:03Z host=damians-MacBook-Pro
+
+$ git rev-parse --short HEAD
+32c76777
+[exit 0]
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ur/
+?? src/i18n/catalogues/ur/
+[exit 0]
+
+$ shasum -a 256 ur/mobile.schedules.json en/mobile.schedules.json en/mobile.schedules.context.json
+aba7a013e25b213a9006bec4e380877714f3ea93be02add83d6878c5c9c5afaa  ur/mobile.schedules.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  en/mobile.schedules.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.projects.json en/mobile.projects.json en/mobile.projects.context.json
+8beeb0a9d35aba735138bd7c7a9abd126912d19f2611c031f51e9b1b66d38951  ur/mobile.projects.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  en/mobile.projects.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.notifications.json en/mobile.notifications.json en/mobile.notifications.context.json
+100b416e13a6ac4917ddc4dd6183d009156e0b24223d6dcd5d97a069b4d4ecc9  ur/mobile.notifications.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  en/mobile.notifications.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.computers.json en/mobile.computers.json en/mobile.computers.context.json
+a209bc7ddd6ab3e1a332a017728b29108ab57e0fe49f9f09b1a4feee9a4d4593  ur/mobile.computers.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  en/mobile.computers.context.json
+[exit 0]
+
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/parity.ts
+schedules keys 38 38 keyset equal: true
+PARITY DIFF mobile.schedules.truncated family,select,shown,text,total,text | family,select,shown,plural,total,plural
+projects keys 15 15 keyset equal: true
+notifications keys 14 14 keyset equal: true
+computers keys 10 10 keyset equal: true
+keys checked 77 param-parity mismatches 1
+negative control detects drop: true | params example: a,text,b,text
+[exit 0]
+
+$ node_modules/.bin/tsx scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/scan.py
+aba7a013e25b213a bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.schedules.json
+0459a0485ceb2594 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.json
+d3f0d3bba057aacf bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.context.json
+8beeb0a9d35aba73 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.projects.json
+a598ddc447a47476 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.projects.json
+5481687e7c4c089c bidi/zw-ctrl=0 redaction-marker=0 en/mobile.projects.context.json
+100b416e13a6ac49 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.notifications.json
+c6e58c6129727513 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.notifications.json
+240ec6befb692d72 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.notifications.context.json
+a209bc7ddd6ab3e1 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.computers.json
+356f10123aa96d48 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.computers.json
+3ac04e8333c94e9d bidi/zw-ctrl=0 redaction-marker=0 en/mobile.computers.context.json
+TOTAL bidi/zero-width control chars: 0 | TOTAL redaction markers: 0
+script/punctuation scan done
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/dump.py
+===== schedules en 38 ur 38 keydiff [] ctx 38 maxCells/maxChars hints: 0
+-- mobile.schedules.cadence.every
+  EN: every {duration}
+  UR: ہر {duration}
+  CX: meta | Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice.
+-- mobile.schedules.cadence.left
+  EN: {cadence} · {remaining} left
+  UR: {cadence} · {remaining} باقی
+  CX: meta | Cadence with a bounded delivery budget. {cadence} is the already-rendered 'every …' phrase; {remaining} is a positive integer. The middle dot is a separator, keep it.
+-- mobile.schedules.cadence.once
+  EN: once
+  UR: ایک بار
+  CX: meta | A schedule that fires once. One lower-case word; it replaces the whole cadence phrase.
+-- mobile.schedules.cadence.spent
+  EN: {cadence} · no deliveries left
+  UR: {cadence} · کوئی ڈیلیوری باقی نہیں
+  CX: meta | A repeating schedule whose delivery budget is used up. Says 'no deliveries left' rather than '0 left', which would promise a fire that cannot happen.
+-- mobile.schedules.count.monitors
+  EN: {count, plural, one {# monitor} other {# monitors}}
+  UR: {count, plural, one {# نگرانی} other {# نگرانیاں}}
+  CX: meta | Monitor count. {count} is a non-negative integer and drives the plural category; # is that number.
+-- mobile.schedules.count.wakes
+  EN: {count, plural, one {# wake} other {# wakes}}
+  UR: {count, plural, one {# بیداری} other {# بیداریاں}}
+  CX: meta | Wake count. {count} is a non-negative integer and drives the plural category; # is that number.
+-- mobile.schedules.due.ahead
+  EN: in {label}
+  UR: {label} بعد
+  CX: meta | A due instant still in the future. {label} is a relative duration such as '4m' or '1h30m' formatted by the client, not translated here.
+-- mobile.schedules.due.overdue
+  EN: {label} overdue
+  UR: {label} سے تاخیر
+  CX: meta | A due instant already past. {label} is a relative duration such as '2h'. The word 'overdue' is the terminal's own word for this state; do not substitute 'late' or 'missed'.
+-- mobile.schedules.empty.body
+  EN: Ask an agent in chat to do something on a regular basis and it will appear here. Wakes fire a prompt into a conversation at a time; monitors watch one thing and report what changes.
+  UR: چیٹ میں کسی ایجنٹ سے کہیں کہ وہ کوئی کام باقاعدگی سے کرے تو وہ یہاں نظر آئے گا۔ بیداری طے شدہ وقت پر گفتگو میں ایک پرامپٹ بھیجتی ہے؛ نگرانی ایک چیز پر نظر رکھتی ہے اور بتاتی ہے کہ کیا بدلا۔
+  CX: help | The both-families-empty explanation. Two sentences: what to do, then what a wake and a monitor each are. Only shown when BOTH stores read successfully and hold nothing.
+-- mobile.schedules.empty.title
+  EN: Nothing is armed
+  UR: کچھ بھی فعال نہیں
+  CX: heading | Empty-state heading. Short, no final full stop; the body sentence follows it.
+-- mobile.schedules.empty_line.monitors
+  EN: No monitors armed.
+  UR: کوئی نگرانی فعال نہیں۔
+  CX: status | Shown under the monitors header when only the wakes family has content. A sentence with a full stop, unlike the header counters.
+-- mobile.schedules.empty_line.wakes
+  EN: No wakes scheduled.
+  UR: کوئی بیداری شیڈول نہیں۔
+  CX: status | Shown under the wakes header when only the monitors family has content. A sentence with a full stop, unlike the header counters.
+-- mobile.schedules.gone.monitors
+  EN: Gone — its conversation is no longer on this machine, so nothing checks
+  UR: موجود نہیں — اس کی گفتگو اب اس مشین پر نہیں رہی، اس لیے کچھ جانچا نہیں جائے گا
+  CX: status | The conversation a monitor belonged to no longer exists on this machine, so nothing checks it. Deliberately distinct from the parked sentence: nothing can resume this.
+-- mobile.schedules.gone.wakes
+  EN: Gone — its conversation is no longer on this machine, so nothing fires
+  UR: موجود نہیں — اس کی گفتگو اب اس مشین پر نہیں رہی، اس لیے کچھ نہیں چلے گا
+  CX: status | The conversation a wake belonged to no longer exists on this machine, so nothing fires it. Deliberately distinct from the parked sentence.
+-- mobile.schedules.head.next
+  EN: {head} · next {label}
+  UR: {head} · اگلی بار {label}
+  CX: meta | Entry head line: how many schedules, then the soonest future instant. {head} is an already-rendered count phrase; {label} is a relative duration. 'next' is dropped once the instant is overdue.
+-- mobile.schedules.head.overdue
+  EN: {head} · {label}
+  UR: {head} · {label}
+  CX: meta | Entry head line when the soonest instant is already past. {head} is an already-rendered count phrase; {label} is a relative duration ending in the word 'overdue'. No forward-looking word here.
+-- mobile.schedules.parked.monitors
+  EN: Parked — monitors resume when its conversation runs again
+  UR: رکا ہوا — گفتگو کے دوبارہ چلنے پر اس کی نگرانیاں پھر شروع ہو جاتی ہیں
+  CX: status | The conversation is stopped, so its monitors pause. Monitors resume when the conversation next RUNS; opening it is not enough.
+-- mobile.schedules.parked.wakes
+  EN: Parked — wakes resume after its next turn
+  UR: رکا ہوا — اگلے ٹرن کے بعد اس کی بیداریاں پھر شروع ہو جاتی ہیں
+  CX: status | The conversation is stopped, so its wakes are held. Wakes resume after its NEXT TURN; opening the conversation is not enough. Do not say 'when you open it'.
+-- mobile.schedules.read_error.monitors
+  EN: The monitors on this machine could not be read.
+  UR: اس مشین کی نگرانیاں پڑھی نہیں جا سکیں۔
+  CX: status | The monitor store could not be read. Must name the failed family and must never read like an empty list.
+-- mobile.schedules.read_error.wakes
+  EN: The wakes on this machine could not be read.
+  UR: اس مشین کی بیداریاں پڑھی نہیں جا سکیں۔
+  CX: status | The wake store could not be read. Must name the failed family and must never read like an empty list.
+-- mobile.schedules.read_unreachable
+  EN: We couldn't read this machine's schedules just now.
+  UR: ہم ابھی اس مشین کے شیڈول نہیں پڑھ سکے۔
+  CX: status | A read failed with no sentence of its own, i.e. a transport drop. The connection surface owns the cause; this only says the read did not happen.
+-- mobile.schedules.show_less.monitors
+  EN: Show fewer monitors
+  UR: کم نگرانیاں دکھائیں
+  CX: button | Collapse control for the per-entry monitor disclosure. Shown only while expanded.
+-- mobile.schedules.show_less.wakes
+  EN: Show fewer wakes
+  UR: کم بیداریاں دکھائیں
+  CX: button | Collapse control for the per-entry wake disclosure. Shown only while expanded.
+-- mobile.schedules.show_more.monitors
+  EN: {hidden, plural, one {Show # more monitor} other {Show # more monitors}}
+  UR: {hidden, plural, one {# اور نگرانی دکھائیں} other {# اور نگرانیاں دکھائیں}}
+  CX: button | Expand control for hidden monitor rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more monitor', not 'more monitors'.
+-- mobile.schedules.show_more.wakes
+  EN: {hidden, plural, one {Show # more wake} other {Show # more wakes}}
+  UR: {hidden, plural, one {# اور بیداری دکھائیں} other {# اور بیداریاں دکھائیں}}
+  CX: button | Expand control for hidden wake rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more wake', not 'more wakes'.
+-- mobile.schedules.state.disabled
+  EN: disabled
+  UR: بند
+  CX: status | The store's state word for a monitor the user turned off, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop, no sentence around it.
+-- mobile.schedules.state.dormant
+  EN: dormant
+  UR: غیر فعال
+  CX: status | The store's state word for a monitor whose conversation is not running, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop. It must not be confused with the parked CLAUSE that replaces the whole head line.
+-- mobile.schedules.state.expired
+  EN: expired
+  UR: میعاد ختم
+  CX: status | The store's state word for a monitor past its expiry, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop.
+-- mobile.schedules.state.stale
+  EN: stale
+  UR: پرانی
+  CX: status | One word replacing the due clock when the supervisor has given up on a wake. The terminal's own vocabulary for this state.
+-- mobile.schedules.state.waiting
+  EN: waiting
+  UR: انتظار میں
+  CX: status | One word for an armed monitor with no recorded due time. Replaces the slot that would hold a due clock.
+-- mobile.schedules.summary.monitors_armed
+  EN: {count} armed
+  UR: {count} فعال
+  CX: heading | Monitors section header when every monitor is healthy. {count} is the number of monitor rows; no final full stop.
+-- mobile.schedules.summary.monitors_attention
+  EN: {broken} of {total} need attention
+  UR: {total} میں سے {broken} کو توجہ درکار
+  CX: heading | Monitors section header when at least one monitor needs attention. {broken} need attention out of {total} rows. Used instead of the armed counter so the header cannot contradict a row that reads disabled.
+-- mobile.schedules.summary.wakes
+  EN: {count} scheduled
+  UR: {count} شیڈول شدہ
+  CX: heading | Wakes section header. {count} counts wake ROWS, not conversations. No final full stop.
+-- mobile.schedules.supervisor.not_running
+  EN: The wake supervisor is installed but not running, so the wakes below will not fire.
+  UR: بیداریوں کا سپروائزر انسٹال تو ہے مگر چل نہیں رہا، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔
+  CX: status | The supervisor is installed but not running, so nothing will fire. Only shown when the probe could verify the supervisor's state.
+-- mobile.schedules.supervisor.unsupported
+  EN: Wakes are not supervised on this platform yet, so the wakes below only fire while a conversation is running.
+  UR: اس پلیٹ فارم پر بیداریوں کی نگرانی ابھی نہیں ہوتی، اس لیے نیچے دی گئی بیداریاں صرف تب چلیں گی جب ان کی گفتگو چل رہی ہو۔
+  CX: status | This platform has no wake supervisor. Must win over the unverifiable sentence when both apply, because the platform is the real reason.
+-- mobile.schedules.supervisor.unverifiable
+  EN: Nothing supervises the wakes below, so they only fire while their conversation is running.
+  UR: نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔
+  CX: status | The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked.
+-- mobile.schedules.tail.failed
+  EN: {count} failed
+  UR: {count} ناکام
+  CX: status | Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence.
+-- mobile.schedules.truncated
+  EN: Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.
+  UR: {family, select, wakes {بیداریوں} other {نگرانیوں}} والی کل {total, plural, one {# گفتگو} other {# گفتگوؤں}} میں سے {shown, plural, one {# دکھائی جا رہی ہے} other {# دکھائی جا رہی ہیں}}۔
+  CX: status | The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects.
+===== projects en 15 ur 15 keydiff [] ctx 15 maxCells/maxChars hints: 0
+-- mobile.projects.delete_body
+  EN: Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.
+  UR: کیا پروجیکٹ “{name}” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔
+  CX: confirm | Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone.
+-- mobile.projects.draft_kept_note
+  EN: Kept from your last visit. Clear the fields to start something new.
+  UR: آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ نئی چیز شروع کرنے کے لیے خانے صاف کریں۔
+  CX: help | Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor.
+-- mobile.projects.milestone_slash_note
+  EN: Milestone names can't contain a slash. A milestone with one could never be removed.
+  UR: سنگ میل کے نام میں سلیش نہیں ہو سکتا۔ ایسا سنگ میل بعد میں کبھی ہٹایا نہیں جا سکے گا۔
+  CX: help | Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding.
+-- mobile.projects.milestones.count
+  EN: {completed} of {total} milestones
+  UR: {total} میں سے {completed} سنگ میل
+  CX: meta | Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers and both must survive translation. ENGLISH needs no plural agreement because its noun is fixed to the count phrase; a locale whose noun agrees with the completed count must pluralize on {completed} (French: one/many/other) and keep {total} a plain placeholder inside every branch — the generator fails a translation that drops or retypes either name.
+-- mobile.projects.milestones.none
+  EN: no milestones
+  UR: کوئی سنگ میل نہیں
+  CX: meta | Lower-case fragment shown where a milestone count would go when the relay reports zero total milestones. It is joined with a session count, so it carries no final full stop.
+-- mobile.projects.project_name_hint
+  EN: 1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.
+  UR: لمبائی 1 سے 64 حروف؛ نام میں الفبائی حروف، ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔
+  CX: help | The complete project-name grammar stated before the tap. Length range and allowed characters must stay exact: this sentence is the reader's only warning before a refusal.
+-- mobile.projects.remove_milestone_body
+  EN: Remove {name} from this project? The milestone goes for good. The project's sessions and its progress line are not touched.
+  UR: اس پروجیکٹ سے “{name}” ہٹائیں؟ سنگ میل ہمیشہ کے لیے ہٹ جائے گا۔ پروجیکٹ کے سیشنز اور اس کی پیش رفت کی سطر متاثر نہیں ہوں گے۔
+  CX: confirm | Destructive confirmation. Placeholder {name} is the milestone name (user text, may contain spaces). Says what goes and what stays.
+-- mobile.projects.session_state.filed_by
+  EN: filed by
+  UR: درج کرنے والا
+  CX: status | Lower-case two-word fragment marking a coordination row: the session filed the work rather than doing it. Never imply the row is a worker.
+-- mobile.projects.session_state.missing
+  EN: missing
+  UR: موجود نہیں
+  CX: status | Lower-case word for a linked session whose directory is gone. The link is still listed; this names its state.
+-- mobile.projects.session_state.not_running
+  EN: not running
+  UR: چل نہیں رہا
+  CX: status | Lower-case replacement for the relay's 'stopped' runtime state. The ordinary end of a session, not an error.
+-- mobile.projects.sessions.count
+  EN: {count, plural, one {# session} other {# sessions}}
+  UR: {count, plural, one {# سیشن} other {# سیشنز}}
+  CX: meta | Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English.
+-- mobile.projects.sessions.live
+  EN: {base} · {live} live
+  UR: {base} · {live} فعال
+  CX: meta | Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live.
+-- mobile.projects.stale_badge
+  EN: progress stale
+  UR: پیش رفت پرانی
+  CX: status | One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name.
+-- mobile.projects.write_receipt
+  EN: {kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}
+  UR: {kind, select, project {پروجیکٹ “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} milestone {سنگ میل “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} other {“{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔}}
+  CX: status | One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop.
+-- mobile.projects.write_unknown_note
+  EN: We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.
+  UR: ہم آپ کے کمپیوٹر تک نہیں پہنچ سکے، اس لیے نہیں بتا سکتے کہ یہ محفوظ ہوا یا نہیں۔ دوبارہ کوشش کرنے سے پہلے پروجیکٹ دیکھ لیں۔
+  CX: status | Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved.
+===== notifications en 14 ur 14 keydiff [] ctx 14 maxCells/maxChars hints: 0
+-- mobile.notifications.answer
+  EN: Answer
+  UR: جواب دیں
+  CX: button | Button on an ask in the inbox list that opens it to be answered. One word, imperative.
+-- mobile.notifications.back
+  EN: Back
+  UR: واپس
+  CX: button | Accessibility label of the icon-only back button in the inbox header.
+-- mobile.notifications.detail.answer_in_conversation
+  EN: Answer in conversation
+  UR: گفتگو میں جواب دیں
+  CX: button | Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop.
+-- mobile.notifications.detail.conversation_asks
+  EN: This conversation's asks
+  UR: اس گفتگو کے سوالات
+  CX: heading | Section header listing the asks raised in the notification's conversation. "Ask" is the product word for a question the agent puts to the reader.
+-- mobile.notifications.detail.earlier_updates
+  EN: Earlier updates
+  UR: پچھلی اپ ڈیٹس
+  CX: heading | Section header listing earlier revisions of the same notification.
+-- mobile.notifications.detail.from
+  EN: From
+  UR: ماخذ
+  CX: heading | Section header naming the conversation a notification came from. One word.
+-- mobile.notifications.detail.no_asks
+  EN: No asks in this conversation.
+  UR: اس گفتگو میں کوئی سوال نہیں۔
+  CX: status | Empty state under the asks header. Ends with a full stop.
+-- mobile.notifications.detail.nothing_to_dismiss
+  EN: No updates from this conversation to dismiss.
+  UR: اس گفتگو سے ہٹانے کے لیے کوئی اپ ڈیٹ نہیں۔
+  CX: status | Empty state of the dismiss dialog when the conversation has no dismissable updates. Ends with a full stop.
+-- mobile.notifications.detail.projects
+  EN: Projects
+  UR: پروجیکٹس
+  CX: heading | Section header listing the projects a notification relates to.
+-- mobile.notifications.dismiss
+  EN: Dismiss
+  UR: ہٹائیں
+  CX: button | Accessibility label of the icon-only button that clears a notification from the inbox. Imperative.
+-- mobile.notifications.filter_label
+  EN: Show
+  UR: دکھائیں
+  CX: meta | Accessible label of the segmented control that chooses which notifications are listed (unread or all). One word; a verb used as a label.
+-- mobile.notifications.load_failed
+  EN: Couldn't load notifications
+  UR: اطلاعات لوڈ نہیں ہو سکیں
+  CX: heading | Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body.
+-- mobile.notifications.priority_high
+  EN: High
+  UR: اعلیٰ
+  CX: status | Badge on a notification the sender marked high priority. One word.
+-- mobile.notifications.title
+  EN: Notifications
+  UR: اطلاعات
+  CX: heading | Title of the notifications inbox screen.
+===== computers en 10 ur 10 keydiff [] ctx 10 maxCells/maxChars hints: 0
+-- mobile.computers.add
+  EN: Add a computer
+  UR: کمپیوٹر شامل کریں
+  CX: button | Button that starts setting up another computer. Sentence case, no final full stop.
+-- mobile.computers.added.stays_listed
+  EN: It stays listed on this phone, so you can switch back from the computer list.
+  UR: پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔
+  CX: help | Follows "Connected to <computer>." after a newly added computer comes online. Reassures that the previous computer is still listed.
+-- mobile.computers.badge.active
+  EN: active
+  UR: فعال
+  CX: status | Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge.
+-- mobile.computers.badge.connecting
+  EN: connecting
+  UR: منسلک ہو رہا
+  CX: status | Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge.
+-- mobile.computers.connecting
+  EN: Connecting…
+  UR: منسلک ہو رہا ہے…
+  CX: status | Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis.
+-- mobile.computers.none_on_phone
+  EN: No computers on this phone yet.
+  UR: اس فون پر ابھی کوئی کمپیوٹر نہیں۔
+  CX: status | Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop.
+-- mobile.computers.password_placeholder
+  EN: The password from lop mobile
+  UR: وہ پاس ورڈ جو lop mobile سے ملا
+  CX: help | Placeholder of the password field. "lop mobile" is a command typed in a terminal: keep it verbatim in every language.
+-- mobile.computers.section.not_connected
+  EN: On your Radient account, not connected
+  UR: آپ کے Radient اکاؤنٹ پر، منسلک نہیں
+  CX: heading | Section header for computers that belong to the reader's Radient account but are not paired on this phone. "Radient" is a product name: do not translate.
+-- mobile.computers.section.on_phone
+  EN: On this phone
+  UR: اس فون پر
+  CX: heading | Section header for computers already paired on this phone.
+-- mobile.computers.switch
+  EN: Switch computer
+  UR: کمپیوٹر بدلیں
+  CX: button | Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop.
+[exit 0]
+
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/render.ts
+PluralRules ur: 0:other 1:one 2:other 21:other 100:other | pluralCategory: other,one,other,other
+parsed all keys OK 77
+schedules.count.wakes {"count":0} 
+   UR: 0 بیداریاں 
+   EN: 0 wakes
+schedules.count.monitors {"count":0} 
+   UR: 0 نگرانیاں 
+   EN: 0 monitors
+projects.sessions.count {"count":0} 
+   UR: 0 سیشنز 
+   EN: 0 sessions
+schedules.count.wakes {"count":1} 
+   UR: 1 بیداری 
+   EN: 1 wake
+schedules.count.monitors {"count":1} 
+   UR: 1 نگرانی 
+   EN: 1 monitor
+projects.sessions.count {"count":1} 
+   UR: 1 سیشن 
+   EN: 1 session
+schedules.count.wakes {"count":2} 
+   UR: 2 بیداریاں 
+   EN: 2 wakes
+schedules.count.monitors {"count":2} 
+   UR: 2 نگرانیاں 
+   EN: 2 monitors
+projects.sessions.count {"count":2} 
+   UR: 2 سیشنز 
+   EN: 2 sessions
+schedules.count.wakes {"count":21} 
+   UR: 21 بیداریاں 
+   EN: 21 wakes
+schedules.count.monitors {"count":21} 
+   UR: 21 نگرانیاں 
+   EN: 21 monitors
+projects.sessions.count {"count":21} 
+   UR: 21 سیشنز 
+   EN: 21 sessions
+schedules.show_more.wakes {"hidden":1} 
+   UR: 1 اور بیداری دکھائیں 
+   EN: Show 1 more wake
+schedules.show_more.monitors {"hidden":1} 
+   UR: 1 اور نگرانی دکھائیں 
+   EN: Show 1 more monitor
+schedules.show_more.wakes {"hidden":2} 
+   UR: 2 اور بیداریاں دکھائیں 
+   EN: Show 2 more wakes
+schedules.show_more.monitors {"hidden":2} 
+   UR: 2 اور نگرانیاں دکھائیں 
+   EN: Show 2 more monitors
+schedules.show_more.wakes {"hidden":21} 
+   UR: 21 اور بیداریاں دکھائیں 
+   EN: Show 21 more wakes
+schedules.show_more.monitors {"hidden":21} 
+   UR: 21 اور نگرانیاں دکھائیں 
+   EN: Show 21 more monitors
+schedules.truncated {"shown":0,"total":0,"family":"wakes"} 
+   UR: بیداریوں والی کل 0 گفتگوؤں میں سے 0 دکھائی جا رہی ہیں۔ 
+   EN: Showing 0 of 0 conversations with wakes.
+schedules.truncated {"shown":1,"total":1,"family":"wakes"} 
+   UR: بیداریوں والی کل 1 گفتگو میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 1 conversations with wakes.
+schedules.truncated {"shown":1,"total":2,"family":"wakes"} 
+   UR: بیداریوں والی کل 2 گفتگوؤں میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 2 conversations with wakes.
+schedules.truncated {"shown":2,"total":5,"family":"wakes"} 
+   UR: بیداریوں والی کل 5 گفتگوؤں میں سے 2 دکھائی جا رہی ہیں۔ 
+   EN: Showing 2 of 5 conversations with wakes.
+schedules.truncated {"shown":21,"total":22,"family":"wakes"} 
+   UR: بیداریوں والی کل 22 گفتگوؤں میں سے 21 دکھائی جا رہی ہیں۔ 
+   EN: Showing 21 of 22 conversations with wakes.
+schedules.truncated {"shown":3,"total":1,"family":"wakes"} 
+   UR: بیداریوں والی کل 1 گفتگو میں سے 3 دکھائی جا رہی ہیں۔ 
+   EN: Showing 3 of 1 conversations with wakes.
+schedules.truncated {"shown":0,"total":0,"family":"monitors"} 
+   UR: نگرانیوں والی کل 0 گفتگوؤں میں سے 0 دکھائی جا رہی ہیں۔ 
+   EN: Showing 0 of 0 conversations with monitors.
+schedules.truncated {"shown":1,"total":1,"family":"monitors"} 
+   UR: نگرانیوں والی کل 1 گفتگو میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 1 conversations with monitors.
+schedules.truncated {"shown":1,"total":2,"family":"monitors"} 
+   UR: نگرانیوں والی کل 2 گفتگوؤں میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 2 conversations with monitors.
+schedules.truncated {"shown":2,"total":5,"family":"monitors"} 
+   UR: نگرانیوں والی کل 5 گفتگوؤں میں سے 2 دکھائی جا رہی ہیں۔ 
+   EN: Showing 2 of 5 conversations with monitors.
+schedules.truncated {"shown":21,"total":22,"family":"monitors"} 
+   UR: نگرانیوں والی کل 22 گفتگوؤں میں سے 21 دکھائی جا رہی ہیں۔ 
+   EN: Showing 21 of 22 conversations with monitors.
+schedules.truncated {"shown":3,"total":1,"family":"monitors"} 
+   UR: نگرانیوں والی کل 1 گفتگو میں سے 3 دکھائی جا رہی ہیں۔ 
+   EN: Showing 3 of 1 conversations with monitors.
+schedules.truncated {"shown":0,"total":0,"family":"zzz"} 
+   UR: نگرانیوں والی کل 0 گفتگوؤں میں سے 0 دکھائی جا رہی ہیں۔ 
+   EN: Showing 0 of 0 conversations with monitors.
+schedules.truncated {"shown":1,"total":1,"family":"zzz"} 
+   UR: نگرانیوں والی کل 1 گفتگو میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 1 conversations with monitors.
+schedules.truncated {"shown":1,"total":2,"family":"zzz"} 
+   UR: نگرانیوں والی کل 2 گفتگوؤں میں سے 1 دکھائی جا رہی ہے۔ 
+   EN: Showing 1 of 2 conversations with monitors.
+schedules.truncated {"shown":2,"total":5,"family":"zzz"} 
+   UR: نگرانیوں والی کل 5 گفتگوؤں میں سے 2 دکھائی جا رہی ہیں۔ 
+   EN: Showing 2 of 5 conversations with monitors.
+schedules.truncated {"shown":21,"total":22,"family":"zzz"} 
+   UR: نگرانیوں والی کل 22 گفتگوؤں میں سے 21 دکھائی جا رہی ہیں۔ 
+   EN: Showing 21 of 22 conversations with monitors.
+schedules.truncated {"shown":3,"total":1,"family":"zzz"} 
+   UR: نگرانیوں والی کل 1 گفتگو میں سے 3 دکھائی جا رہی ہیں۔ 
+   EN: Showing 3 of 1 conversations with monitors.
+schedules.due.ahead {"label":"4m"} 
+   UR: 4m بعد 
+   EN: in 4m
+schedules.due.overdue {"label":"4m"} 
+   UR: 4m سے تاخیر 
+   EN: 4m overdue
+schedules.due.ahead {"label":"2h"} 
+   UR: 2h بعد 
+   EN: in 2h
+schedules.due.overdue {"label":"2h"} 
+   UR: 2h سے تاخیر 
+   EN: 2h overdue
+schedules.due.ahead {"label":"1h30m"} 
+   UR: 1h30m بعد 
+   EN: in 1h30m
+schedules.due.overdue {"label":"1h30m"} 
+   UR: 1h30m سے تاخیر 
+   EN: 1h30m overdue
+schedules.due.ahead {"label":"45s"} 
+   UR: 45s بعد 
+   EN: in 45s
+schedules.due.overdue {"label":"45s"} 
+   UR: 45s سے تاخیر 
+   EN: 45s overdue
+schedules.due.ahead {"label":"8d"} 
+   UR: 8d بعد 
+   EN: in 8d
+schedules.due.overdue {"label":"8d"} 
+   UR: 8d سے تاخیر 
+   EN: 8d overdue
+HEAD next: 3 بیداریاں · اگلی بار 4m بعد
+HEAD overdue: 3 بیداریاں · 4m سے تاخیر
+HEAD next: 1 بیداری · اگلی بار 2h بعد
+HEAD overdue: 1 بیداری · 2h سے تاخیر
+HEAD next: 2 بیداریاں · اگلی بار 1h30m بعد
+HEAD overdue: 2 بیداریاں · 1h30m سے تاخیر
+HEAD next: 21 بیداریاں · اگلی بار 45s بعد
+HEAD overdue: 21 بیداریاں · 45s سے تاخیر
+CADENCE ہر 1d | ہر 1d · 3 باقی | ہر 1h30m · کوئی ڈیلیوری باقی نہیں | ایک بار
+schedules.summary.monitors_armed {"count":5} 
+   UR: 5 فعال 
+   EN: 5 armed
+schedules.summary.monitors_attention {"broken":2,"total":5} 
+   UR: 5 میں سے 2 کو توجہ درکار 
+   EN: 2 of 5 need attention
+schedules.summary.wakes {"count":3} 
+   UR: 3 شیڈول شدہ 
+   EN: 3 scheduled
+schedules.tail.failed {"count":3} 
+   UR: 3 ناکام 
+   EN: 3 failed
+projects.sessions.count {"count":0} 
+   UR: 0 سیشنز 
+   EN: 0 sessions
+projects.sessions.count {"count":1} 
+   UR: 1 سیشن 
+   EN: 1 session
+projects.sessions.count {"count":2} 
+   UR: 2 سیشنز 
+   EN: 2 sessions
+projects.sessions.count {"count":21} 
+   UR: 21 سیشنز 
+   EN: 21 sessions
+3 سیشنز · 2 فعال
+5 میں سے 2 سنگ میل | کوئی سنگ میل نہیں
+JOIN: 5 میں سے 2 سنگ میل · 3 سیشنز
+projects.delete_body {"name":"my-proj"} 
+   UR: کیا پروجیکٹ “my-proj” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔ 
+   EN: Delete my-proj? The project row goes for good. Its linked sessions and their transcripts are not touched.
+projects.remove_milestone_body {"name":"my-proj"} 
+   UR: اس پروجیکٹ سے “my-proj” ہٹائیں؟ سنگ میل ہمیشہ کے لیے ہٹ جائے گا۔ پروجیکٹ کے سیشنز اور اس کی پیش رفت کی سطر متاثر نہیں ہوں گے۔ 
+   EN: Remove my-proj from this project? The milestone goes for good. The project's sessions and its progress line are not touched.
+project created => پروجیکٹ “alpha” بنایا گیا۔    | EN: Created alpha.
+project completed => پروجیکٹ “alpha” مکمل کیا گیا۔    | EN: Completed alpha.
+project reopened => پروجیکٹ “alpha” دوبارہ کھولا گیا۔    | EN: Reopened alpha.
+project added => پروجیکٹ “alpha” شامل کیا گیا۔    | EN: Added alpha.
+project updated => پروجیکٹ “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+project removed => پروجیکٹ “alpha” ہٹایا گیا۔    | EN: Removed alpha.
+project deleted => پروجیکٹ “alpha” حذف کیا گیا۔    | EN: Deleted alpha.
+project zzz => پروجیکٹ “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+milestone created => سنگ میل “alpha” بنایا گیا۔    | EN: Created milestone alpha.
+milestone completed => سنگ میل “alpha” مکمل کیا گیا۔    | EN: Completed milestone alpha.
+milestone reopened => سنگ میل “alpha” دوبارہ کھولا گیا۔    | EN: Reopened milestone alpha.
+milestone added => سنگ میل “alpha” شامل کیا گیا۔    | EN: Added milestone alpha.
+milestone updated => سنگ میل “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated milestone alpha.
+milestone removed => سنگ میل “alpha” ہٹایا گیا۔    | EN: Removed milestone alpha.
+milestone deleted => سنگ میل “alpha” حذف کیا گیا۔    | EN: Deleted milestone alpha.
+milestone zzz => سنگ میل “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated milestone alpha.
+other created => “alpha” بنایا گیا۔    | EN: Created alpha.
+other completed => “alpha” مکمل کیا گیا۔    | EN: Completed alpha.
+other reopened => “alpha” دوبارہ کھولا گیا۔    | EN: Reopened alpha.
+other added => “alpha” شامل کیا گیا۔    | EN: Added alpha.
+other updated => “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+other removed => “alpha” ہٹایا گیا۔    | EN: Removed alpha.
+other deleted => “alpha” حذف کیا گیا۔    | EN: Deleted alpha.
+other zzz => “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+zzz created => “alpha” بنایا گیا۔    | EN: Created alpha.
+zzz completed => “alpha” مکمل کیا گیا۔    | EN: Completed alpha.
+zzz reopened => “alpha” دوبارہ کھولا گیا۔    | EN: Reopened alpha.
+zzz added => “alpha” شامل کیا گیا۔    | EN: Added alpha.
+zzz updated => “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+zzz removed => “alpha” ہٹایا گیا۔    | EN: Removed alpha.
+zzz deleted => “alpha” حذف کیا گیا۔    | EN: Deleted alpha.
+zzz zzz => “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
+[exit 0]
+
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/repl.ts
+mobile.schedules.state.dormant {}
+  BEFORE: غیر فعال
+  AFTER : خوابیدہ
+  placeholder names vs en (kinds may widen text->plural):  | 
+mobile.computers.password_placeholder {}
+  BEFORE: وہ پاس ورڈ جو lop mobile سے ملا
+  AFTER : lop mobile سے ملنے والا پاس ورڈ
+  placeholder names vs en (kinds may widen text->plural):  | 
+mobile.schedules.supervisor.not_running {}
+  BEFORE: بیداریوں کا سپروائزر انسٹال تو ہے مگر چل نہیں رہا، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔
+  AFTER : بیداریوں کی نگرانی کرنے والی سروس انسٹال تو ہے مگر چل نہیں رہی، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔
+  placeholder names vs en (kinds may widen text->plural):  | 
+mobile.projects.project_name_hint {}
+  BEFORE: لمبائی 1 سے 64 حروف؛ نام میں الفبائی حروف، ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔
+  AFTER : لمبائی 1 سے 64 حروف؛ نام میں صرف انگریزی حروف، 0 سے 9 تک ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔
+  placeholder names vs en (kinds may widen text->plural):  | 
+mobile.schedules.show_more.wakes {"hidden":1}
+  BEFORE: 1 اور بیداری دکھائیں
+  AFTER : 1 مزید بیداری دکھائیں
+  placeholder names vs en (kinds may widen text->plural): hidden,plural | hidden,plural
+mobile.schedules.show_more.wakes {"hidden":21}
+  BEFORE: 21 اور بیداریاں دکھائیں
+  AFTER : 21 مزید بیداریاں دکھائیں
+  placeholder names vs en (kinds may widen text->plural): hidden,plural | hidden,plural
+mobile.schedules.show_more.monitors {"hidden":2}
+  BEFORE: 2 اور نگرانیاں دکھائیں
+  AFTER : 2 مزید نگرانیاں دکھائیں
+  placeholder names vs en (kinds may widen text->plural): hidden,plural | hidden,plural
+mobile.notifications.dismiss {}
+  BEFORE: ہٹائیں
+  AFTER : خارج کریں
+  placeholder names vs en (kinds may widen text->plural):  | 
+mobile.projects.draft_kept_note {}
+  BEFORE: آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ نئی چیز شروع کرنے کے لیے خانے صاف کریں۔
+  AFTER : آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔
+  placeholder names vs en (kinds may widen text->plural):  | 
+S1 composed BEFORE: header «5 فعال» + dormant row slot «غیر فعال» + disabled row slot «بند»
+S1 composed AFTER : header «5 فعال» + dormant row slot «خوابیدہ» + disabled row slot «بند»
+S2 supervisor trio (current):
+    بیداریوں کا سپروائزر انسٹال تو ہے مگر چل نہیں رہا، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔
+    اس پلیٹ فارم پر بیداریوں کی نگرانی ابھی نہیں ہوتی، اس لیے نیچے دی گئی بیداریاں صرف تب چلیں گی جب ان کی گفتگو چل رہی ہو۔
+    نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔
+name-grammar control (core projects._NAME_RE): {"پروجیکٹ":false,"alpha":true,"٣٤":false,"_x":false,".x":false,"-x":false}
+[exit 0]
+
+$ node -e Intl.PluralRules(ur)
+0:other 1:one 2:other 21:other 100:other
+
+$ python3 name-grammar check against core projects.py _NAME_RE (origin/main)
+#: (``teams._NAME_RE``).
+_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+'پروجیکٹ' False
+'alpha' True
+'_x' False
+'.x' False
+'-x' False
+'a b' False
+'xxxxxx…(64)' True
+'xxxxxx…(65)' False
+
+$ core ur precedent greps (origin/main, git -C ~/local-operator)
+## مزید ٹیگ
+  "relay.session.tags.more": "{count, plural, one {# مزید ٹیگ} other {# مزید ٹیگز}}",
+## tui.schedule.due_overdue|tui.schedule.due_in
+  "tui.schedule.due_in": "{duration} بعد",
+  "tui.schedule.due_overdue": "{age} سے تاخیر",
+## relay.notifications.row.dismiss|relay.notifications.detail.section.(projects|history|from)|tui.notifications.hint_dismiss
+  "relay.notifications.row.dismiss": "{title} خارج کریں",
+  "relay.notifications.detail.section.from": "ماخذ",
+  "relay.notifications.detail.section.projects": "متعلقہ پروجیکٹس",
+  "relay.notifications.detail.section.history": "پچھلی اپ ڈیٹس",
+  "tui.notifications.hint_dismiss": "ہٹائیں",
+  "tui.notifications.hint_dismiss_all": "سب ہٹائیں",
+## wire.settings.aida_enabled.choice.false.description
+  "wire.settings.aida_enabled.choice.false.description": "غیر فعال",
+
+$ glossary note 7 (supervised)
+7. Hindi distinguishes watching/monitoring (निगरानी) from a stored monitor
+   object (मॉनिटर), not from the Latin tool name `monitor`. Related: `ur`,
+  `hi` and `vi` render *supervised* with their existing monitor word
+  (`نگرانی`, `निगरानी`, `giám sát`) — recorded deliberately, because none of
+  the three has a settled word for a supervisor *unit*, and inventing one
+  would give the same concept two names in the same CLI. The extension stays
+  safe only while every string around it names the `unit` or the `{scope}`,
+  which the `cli.services_status` copy does; a future surface that says
+  "monitored" about something that is not a supervised process must pick a
+
+$ vitest (scoped, maxWorkers=2, scratch HOME): i18n catalogues + messages tests
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+ RUN  v5.0.2 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
+··················································x·················
+::error file=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render
+AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]
+- Expected
++ Received
+@@ -2,8 +2,9 @@
+    "en",
+    "es",
+    "fr",
+    "hi",
+    "ru",
++   "ur",
+    "vi",
+    "zh-CN",
+  ]
+ ❯ src/i18n/__tests__/catalogues.test.ts:188:23
+    186|    .map((entry) => entry.name)
+    187|    .sort();
+    188|   expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+       |                       ^
+    189|  });
+    190| });
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 67 passed (68)
+   Start at  19:32:26
+   Duration  16.53s (transform 90%, import 8%, tests 2%)
+  Transform  transforming modules took 27.90s · 90% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+[note] the one failure is the 'catalogue directories == SHIPPED_LOCALES' assertion: ur is not yet in SHIPPED_LOCALES (translator/wiring scope, not a copy defect).
+
+$ git -C ur-wave status --short (post-run, proves read-only)
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ur/
+?? src/i18n/catalogues/ur/
+
+### part 2/3: precedent.sh (separate run, after part 1): ASCII-punct scan, core-ur precedent greps, fribidi visual order
+$ python3 ASCII-punctuation scan of ur values (outside {…} placeholders), ns schedules/projects/notifications/computers
+ascii-punct findings: 0
+
+## core ur precedent: dismiss
+  "relay.notifications.row.dismiss": "{title} خارج کریں",
+  "relay.notifications.confirm.dismiss": "خارج کریں",
+  "relay.notifications.detail.dismiss": "خارج کریں",
+  "tui.notifications.dismissed": "{count, plural, one {# اپ ڈیٹ ہٹا دی گئی} other {# اپ ڈیٹس ہٹا دی گئیں}}۔",
+  "tui.notifications.hint_dismiss": "ہٹائیں",
+  "tui.notifications.hint_dismiss_all": "سب ہٹائیں",
+## core ur precedent: more (tags.more)
+  "relay.session.tags.more": "{count, plural, one {# مزید ٹیگ} other {# مزید ٹیگز}}",
+## core ur precedent: schedule due/overdue/cadence
+  "tui.schedule.cadence_every": "ہر {interval}",
+  "tui.schedule.detail_next": "اگلی بار",
+  "tui.schedule.due_in": "{duration} بعد",
+  "tui.schedule.due_overdue": "{age} سے تاخیر",
+## core ur precedent: supervisor sentence
+  "tui.schedule.notice_supervisor": "ان بیداریوں کی نگرانی کوئی نہیں کرتا — یہ صرف اس گفتگو کے چلنے کے دوران چلتی ہیں۔",
+## core ur: any "dormant"/"armed" rendering? (en grep then ur counterpart)
+  "tui.app.parked.dormant": {
+  "tui.app.parked.dormant": " — {parked} dormant until then",
+  "tui.small.wake_panel.monitors_armed": {
+  "tui.small.wake_panel.monitors_armed": "{count, plural, one {{shown} monitor armed} other {{shown} monitors armed}}",
+## core ur: notifications detail sections
+  "relay.notifications.detail.section.from": "ماخذ",
+  "relay.notifications.detail.section.projects": "متعلقہ پروجیکٹس",
+  "relay.notifications.detail.section.history": "پچھلی اپ ڈیٹس",
+
+$ mobile en hard-coded line next to stays_listed (not in catalogue):
+654:								Connected to {appeared?.name ?? "your computer"}.
+
+$ which sites use monitor header count (dormant counted as armed?)
+ *  news — it is the parked clause's business (the whole entry is parked, and
+ *  its explanation sits on the entry head), and calling it attention here
+ *  would double-count it in the section header. The ink rule lives here so the
+ *  row and the section header cannot disagree about which rows "need
+ *  attention". */
+export const monitorAlerting = (row: ScheduleMonitorRow): boolean =>
+	row.state === "disabled" ||
+	row.state === "expired" ||
+	row.unavailable_since > 0 ||
+	row.consecutive_failures > 0;
+
+export const monitorLineView = (
+	row: ScheduleMonitorRow,
+/** The section header's count word. Wakes: `N scheduled` (the TUI band's word
+ *  for its own heading). Monitors: `N armed`, and the broken count is called
+ *  out — `2 of 5 need attention` — because a header reading "5 armed" above a
+ *  row reading `disabled` says something the row itself contradicts (the TUI
+ *  band's design round 1, D7). */
+export const monitorSectionSummary = (rows: MonitorLineView[]): string => {
+	const broken = rows.filter((row) => row.alerting).length;
+	if (broken > 0)
+		return t("mobile.schedules.summary.monitors_attention", {
+			broken,
+			total: rows.length,
+		});
+	return t("mobile.schedules.summary.monitors_armed", { count: rows.length });
+};
+
+
+$ fribidi visual-order check (RTL paragraph)
+fribidi: fribidi (GNU FriBidi) 1.0.16
+LOGICAL: 3 بیداریاں · اگلی بار 4m بعد
+  VISUAL: ﺪﻌﺑ 4m ﺭﺎﺑ ﯽﻠﮔﺍ · ﮞﺎﯾﺭﺍﺪﯿﺑ 3
+LOGICAL: 1 بیداری · 2h سے تاخیر
+  VISUAL: ﺮﯿﺧﺎﺗ ﮯﺳ 2h · ﯼﺭﺍﺪﯿﺑ 1
+LOGICAL: 2 بیداریاں · اگلی بار 1h30m بعد
+  VISUAL: ﺪﻌﺑ 1h30m ﺭﺎﺑ ﯽﻠﮔﺍ · ﮞﺎﯾﺭﺍﺪﯿﺑ 2
+LOGICAL: ہر 1d · 3 باقی
+  VISUAL: ﯽﻗﺎﺑ 1d · 3 ﺮﮨ
+LOGICAL: ہر 1h30m · کوئی ڈیلیوری باقی نہیں
+  VISUAL: ﮟﯿﮩﻧ ﯽﻗﺎﺑ ﯼﺭﻮﯿﻠﯾﮈ ﯽﺋﻮﮐ · 1h30m ﺮﮨ
+LOGICAL: 5 میں سے 2 سنگ میل · 3 سیشنز
+  VISUAL: ﺰﻨﺸﯿﺳ 3 · ﻞﯿﻣ ﮓﻨﺳ 2 ﮯﺳ ﮟﯿﻣ 5
+LOGICAL: 3 سیشنز · 2 فعال
+  VISUAL: ﻝﺎﻌﻓ 2 · ﺰﻨﺸﯿﺳ 3
+LOGICAL: وہ پاس ورڈ جو lop mobile سے ملا
+  VISUAL: ﻼ﻿ﻣ ﮯﺳ lop mobile ﻮﺟ ﮈﺭﻭ ﺱﺎﭘ ﮦﻭ
+LOGICAL: آپ کے Radient اکاؤنٹ پر، منسلک نہیں
+  VISUAL: ﮟﯿﮩﻧ ﮏﻠﺴﻨﻣ ،ﺮﭘ ﭧﻧﺅﺎﮐﺍ Radient ﮯﮐ ﭖﺁ
+LOGICAL: پروجیکٹ “alpha” مکمل کیا گیا۔
+  VISUAL: ۔ﺎﯿﮔ ﺎﯿﮐ ﻞﻤﮑﻣ ”alpha“ ﭧﮑﯿﺟﻭﺮﭘ
+LOGICAL: کیا پروجیکٹ “my-proj” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔
+  VISUAL: ۔ﺎﮔ ﮯﺋﺎﺟ ﭧﮨ ﮯﯿﻟ ﮯﮐ ﮧﺸﯿﻤﮨ ﺝﺍﺭﺪﻧﺍ ﺎﮐ ﭧﮑﯿﺟﻭﺮﭘ ؟ﮟﯾﺮﮐ ﻑﺬﺣ ”my-proj“ ﭧﮑﯿﺟﻭﺮﭘ ﺎﯿﮐ
+
+### part 3/3: scan2.sh (separate run): redaction/bidi scan of git-read inputs
+redaction=0 bidi-ctrl=0 origin/main:i18n/style-guides/ur.md
+redaction=0 bidi-ctrl=0 origin/main:i18n/glossary.md
+redaction=0 bidi-ctrl=0 origin/main:local_operator/i18n/catalogues/ur/tui.schedule.json
+redaction=0 bidi-ctrl=0 origin/main:local_operator/i18n/catalogues/ur/relay.notifications.json
+redaction=0 bidi-ctrl=0 origin/main:local_operator/i18n/catalogues/ur/tui.notifications.json
+redaction=0 bidi-ctrl=0 origin/main:local_operator/projects.py
+TOTAL redaction markers in git-read inputs: 0

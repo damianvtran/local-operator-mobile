@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "audit_id": "ur30a3r2",
+ "round": 2,
+ "delta_of": "ur30a3",
+ "locale": "ur",
+ "namespace": "mobile.session_health",
+ "audit_date": "2026-10-30",
+ "key_count": 11,
+ "kind": "DELTA re-audit (round 2) after the implementer applied round-1 findings",
+ "project": "damianvtran/local-operator-mobile",
+ "branch": "feat/i18n-urdu",
+ "base_commit": "32c7677",
+ "catalogue_state": "uncommitted worktree files; read-only for this auditor",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** — not used",
+  "context_sidecar_routability": "not routable (nested {role,note} objects, not message strings)",
+  "receipt": null,
+  "honest_note": "no copy-route receipt was obtained or claimed"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "b2d033d640d5",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "this session's header (Model: anthropic/claude-sonnet-5-5); no model-switch/fallback notice appeared in this session, so no fallback is claimed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_of_round1_auditor_session": false,
+  "round1_auditor_session": "d24b2e163bcd (radient/auto after provider-quota fallbacks) — this is a different session of the same i18n-auditor role; it verifies its own round-1 findings and is NOT the independent second pass requested for high-visibility groups"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/mobile.session_health.json",
+   "sha256": "c7c08dbd0eb85fb7f06815229295a9f254cb7584d5eabb9f929d6ce875e89f4d"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.json",
+   "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+   "sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+  }
+ },
+ "round1_target_sha256": "4651263d664ab5ebb0dee5612f5ee6b8dfa31bc60b113968d5f9894ed09f0b86",
+ "en_and_context_vs_round1": {
+  "en_identical": true,
+  "context_identical": true
+ },
+ "delta_vs_round1": {
+  "target_identical_to_round1": false,
+  "keys_changed": [
+   "mobile.session_health.resume_no_route",
+   "mobile.session_health.resume_gone",
+   "mobile.session_health.still_reopening"
+  ],
+  "method": "reverted each prescribed replacement (round-1 fixes.json) to its round-1 text in the current file bytes; the result's sha256 equals round-1 record input_hashes.target.sha256 (reverted_sha_matches_r1=True in audit.log) — so the changed-key set is EXACTLY those keys and no other key in the file changed",
+  "no_other_key_changed": true
+ },
+ "verification": [
+  {
+   "key": "mobile.session_health.resume_no_route",
+   "round1_finding": "ur30a3-M1",
+   "severity": "MAJOR",
+   "expected": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+   "byte_exact_match": true,
+   "note": "byte-exact whole string (55 chars). Keeps all clauses: “this session”, “to resume” (جاری رکھنے کے لیے), the missing prerequisite (computer), directive. Names the prerequisite, does not blame the session (sidecar)."
+  },
+  {
+   "key": "mobile.session_health.resume_gone",
+   "round1_finding": "ur30a3-M2",
+   "severity": "MAJOR",
+   "expected": "یہ سیشن اب محفوظ شدہ نہیں ہے۔",
+   "byte_exact_match": true,
+   "note": "byte-exact whole string (29 chars). Reads as “saved”, not “secure”; states the fact and does not invite a retry (sidecar: never invite a retry)."
+  },
+  {
+   "key": "mobile.session_health.still_reopening",
+   "round1_finding": "ur30a3-n1",
+   "severity": "NIT",
+   "expected": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+   "byte_exact_match": true,
+   "note": "byte-exact whole string (42 chars). Both clauses of the source (still reopening / has not come up yet) retained, em dash retained."
+  }
+ ],
+ "new_findings": [],
+ "not_applied_optional": [],
+ "width": null,
+ "mechanical": {
+  "generate_ts_check": "exit 0 — catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)",
+  "check_strings": "exit 0 — 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6",
+  "bidi_controls": 0,
+  "redaction_markers": 0,
+  "arabic_yeh_kaf": 0,
+  "scope_of_scans": "ur, en and en context of all six group A namespaces plus render.out",
+  "pluralCategory_ur_0_1_2_21": "other,one,other,other (zero selecting other is not re-litigated)",
+  "rendered_through": "formatMessage(parseMessage(text),args,'ur') — ur is still NOT_YET_SHIPPED, so renderFor would return English; disclosed, not glossed"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3r2/record.json",
+   "sha256": "self (not applicable)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3r2/report.md",
+   "sha256": "8af975eda4896c1bc5058da1e78238174e5bd3f8279e25e3fcb3becf81bfb29a"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3r2/audit.log",
+   "sha256": "d936abb07191f0a9ce1afcb7cb5ec527451b0ef1690ed447efc2b9f0f83315fb"
+  }
+ ],
+ "execution_log": "i18n/audits/evidence/ur/mobile.session_health/ur30a3r2/audit.log — real stdout/stderr of the commands in it, shared verbatim by the six r2 bundles",
+ "second_pass": {
+  "high_visibility_group": true,
+  "independent_second_auditor": "STILL OUTSTANDING — not claimed here"
+ },
+ "audit_notes_not_execution_log": "report.md prose is judgement, not command output; mechanical claims are backed by audit.log",
+ "ledger_row_draft": {
+  "locale": "ur",
+  "namespace": "mobile.session_health",
+  "source_sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+  "auditor": {
+   "agent": "i18n-auditor",
+   "model": "anthropic/claude-sonnet-5-5",
+   "date": "2026-10-30",
+   "result": "passed",
+   "unresolved_blocker_major": 0
+  },
+  "status": "passed",
+  "note": "ur delta r2 mobile.session_health: round-1 fixes verified byte-exact; 0 BLOCKER/MAJOR; record i18n/audits/evidence/ur/mobile.session_health/ur30a3r2/record.json",
+  "applied": false,
+  "why_not_applied": "mobile repo has no audit-ledger command/ledger.json; read-only auditor; draft for the implementer"
+ }
+}

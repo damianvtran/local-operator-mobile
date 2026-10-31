@@ -1,0 +1,92 @@
+{
+ "schema": 1,
+ "audit_kind": "delta_reaudit_round_2",
+ "audit_id": "ur30b4r2",
+ "supersedes_round_1": "ur30b4",
+ "locale": "ur",
+ "namespace": "mobile.computers",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 10,
+  "target": 10,
+  "context": 10
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803-r2",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Same group-B auditor as round 1 (a delta re-audit by design), not the translator; group A bundles were not read. No human native-speaker review and no rendered device frame claimed; renders go through the app parseMessage/formatMessage only."
+ },
+ "route": "Ordinary worktree file reads and git show origin/main of the core repo. read_public_copy refused for src/i18n/**; context sidecars are nested JSON and not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.computers.json",
+   "sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+   "sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.computers.json",
+   "sha256": "610886d61acfc0a7f6a9e39a9a45338c0ee2d3da8dbd4f916ce4ad4c919e2782"
+  }
+ },
+ "round1_input_hashes_ur": {
+  "path": "src/i18n/catalogues/ur/mobile.computers.json",
+  "sha256": "a209bc7ddd6ab3e1a332a017728b29108ab57e0fe49f9f09b1a4feee9a4d4593"
+ },
+ "en_and_context_unchanged_since_round1": true,
+ "hash_revert_proof": "tools/revert.py reverts each prescribed replacement in the current ur file and recomputes sha256; result equals round-1 input_hashes.ur for every group-B namespace (see audit.log), so no other key changed. mobile.notifications has zero replacements and is sha-identical to round 1.",
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "all 12 group-B inputs (ur+en+context x4), audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "generate_check": "scripts/i18n/generate.ts --check rc 0 (catalogue.gen.ts current, 143 keys, 10 namespaces)",
+  "check_strings": "scripts/i18n/check-strings.ts rc 0 (284 findings all baselined, 0 new)",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not yet in SHIPPED_LOCALES; wiring, not copy; same as round 1)",
+  "plural_rules": "Intl.PluralRules(ur): 0 other, 1 one, 2 other, 21 other, 100 other"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.computers/ur30b4r2/audit.log",
+   "sha256": "67e3fb78f26301f3c35a50261760c60d06a3ec183b4f185f3b4609f43c58cf0b",
+   "kind": "actual_execution_log (one run of tools/run2.sh, shared verbatim by all four r2 bundles)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.computers/ur30b4r2/report.md",
+   "kind": "audit report (audit notes, not an execution log)",
+   "sha256": "4e6e4c5ca837bea6722848c05461aae409aef37a938a2285eaff03d670b053d9"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.computers/ur30b4r2/tools/",
+   "kind": "scripts actually run: revert.py render2.ts run2.sh scan.py"
+  }
+ ],
+ "delta_verification": [
+  {
+   "id": "C1",
+   "severity": "MINOR",
+   "key": "mobile.computers.password_placeholder",
+   "applied_text": "lop mobile سے ملنے والا پاس ورڈ",
+   "result": "VERIFIED_APPLIED",
+   "note": "verified applied byte-exact; «lop mobile» verbatim as the sidecar demands, Latin run at the left edge of the RTL string so no bidi reordering of the command; the name is the placeholder (noun phrase), not an instruction"
+  }
+ ],
+ "open_minors": [],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "C1"
+  ]
+ }
+}

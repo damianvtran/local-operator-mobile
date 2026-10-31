@@ -1,0 +1,208 @@
+audit run 2026-10-30T23:46:10Z host=damians-MacBook-Pro HOME=scratch-mktemp
+
+$ git rev-parse --short HEAD
+32c76777
+[exit 0]
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ur/
+?? src/i18n/catalogues/ur/
+[exit 0]
+
+$ shasum -a 256 ur/mobile.schedules.json en/mobile.schedules.json en/mobile.schedules.context.json
+c12048d5b29743580497347795b278e4350b648a49af8af52e25c424ac32344c  ur/mobile.schedules.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  en/mobile.schedules.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.projects.json en/mobile.projects.json en/mobile.projects.context.json
+43dc7cba1f2ef704379bbbdd71c801c6d073c6848f190f4dbc11db57c35eeefb  ur/mobile.projects.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  en/mobile.projects.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.notifications.json en/mobile.notifications.json en/mobile.notifications.context.json
+100b416e13a6ac4917ddc4dd6183d009156e0b24223d6dcd5d97a069b4d4ecc9  ur/mobile.notifications.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  en/mobile.notifications.context.json
+[exit 0]
+
+$ shasum -a 256 ur/mobile.computers.json en/mobile.computers.json en/mobile.computers.context.json
+610886d61acfc0a7f6a9e39a9a45338c0ee2d3da8dbd4f916ce4ad4c919e2782  ur/mobile.computers.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  en/mobile.computers.context.json
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b2/revert.py
+schedules: swaps=4 current=c12048d5b2974358 reverted=aba7a013e25b213a round1=aba7a013e25b213a MATCH=True
+   en unchanged=True
+   context unchanged=True
+projects: swaps=2 current=43dc7cba1f2ef704 reverted=8beeb0a9d35aba73 round1=8beeb0a9d35aba73 MATCH=True
+   en unchanged=True
+   context unchanged=True
+notifications: swaps=0 current=100b416e13a6ac49 reverted=100b416e13a6ac49 round1=100b416e13a6ac49 MATCH=True
+   en unchanged=True
+   context unchanged=True
+computers: swaps=1 current=610886d61acfc0a7 reverted=a209bc7ddd6ab3e1 round1=a209bc7ddd6ab3e1 MATCH=True
+   en unchanged=True
+   context unchanged=True
+[exit 0]
+
+$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b2/render2.ts
+BYTE-EXACT PASS mobile.schedules.state.dormant (utf8 bytes 14)
+   placeholder names en=[] ur=[] equal=true
+BYTE-EXACT PASS mobile.schedules.supervisor.not_running (utf8 bytes 189)
+   placeholder names en=[] ur=[] equal=true
+BYTE-EXACT PASS mobile.projects.project_name_hint (utf8 bytes 282)
+   placeholder names en=[] ur=[] equal=true
+BYTE-EXACT PASS mobile.schedules.show_more.wakes (utf8 bytes 113)
+   placeholder names en=[hidden,plural] ur=[hidden,plural] equal=true
+BYTE-EXACT PASS mobile.schedules.show_more.monitors (utf8 bytes 113)
+   placeholder names en=[hidden,plural] ur=[hidden,plural] equal=true
+BYTE-EXACT PASS mobile.projects.draft_kept_note (utf8 bytes 150)
+   placeholder names en=[] ur=[] equal=true
+BYTE-EXACT PASS mobile.computers.password_placeholder (utf8 bytes 47)
+   placeholder names en=[] ur=[] equal=true
+
+== head.* with dormant row slot ==
+n=1 next : 1 شیڈول شدہ · اگلی بار 4m بعد
+n=1 overd: 1 شیڈول شدہ · 2h سے تاخیر
+n=3 next : 3 شیڈول شدہ · اگلی بار 4m بعد
+n=3 overd: 3 شیڈول شدہ · 2h سے تاخیر
+n=21 next : 21 شیڈول شدہ · اگلی بار 4m بعد
+n=21 overd: 21 شیڈول شدہ · 2h سے تاخیر
+monitor header: 5 فعال | 5 میں سے 2 کو توجہ درکار | tail 3 ناکام
+state slots side by side: disabled=«بند» dormant=«خوابیدہ» expired=«میعاد ختم» stale=«پرانی» waiting=«انتظار میں»
+parked clause (replaces whole head, distinct from dormant state): رکا ہوا — گفتگو کے دوبارہ چلنے پر اس کی نگرانیاں پھر شروع ہو جاتی ہیں
+EN dormant row: dormant | EN parked: Parked — monitors resume when its conversation runs again
+
+== show_more.* at hidden = 1, 2, 21 ==
+wakes 1: 1 مزید بیداری دکھائیں   | EN: Show 1 more wake
+wakes 2: 2 مزید بیداریاں دکھائیں   | EN: Show 2 more wakes
+wakes 21: 21 مزید بیداریاں دکھائیں   | EN: Show 21 more wakes
+monitors 1: 1 مزید نگرانی دکھائیں   | EN: Show 1 more monitor
+monitors 2: 2 مزید نگرانیاں دکھائیں   | EN: Show 2 more monitors
+monitors 21: 21 مزید نگرانیاں دکھائیں   | EN: Show 21 more monitors
+
+== supervisor.* x3 ==
+not_running:
+   UR: بیداریوں کی نگرانی کرنے والی سروس انسٹال تو ہے مگر چل نہیں رہی، اس لیے نیچے دی گئی بیداریاں نہیں چلیں گی۔
+   EN: The wake supervisor is installed but not running, so the wakes below will not fire.
+unsupported:
+   UR: اس پلیٹ فارم پر بیداریوں کی نگرانی ابھی نہیں ہوتی، اس لیے نیچے دی گئی بیداریاں صرف تب چلیں گی جب ان کی گفتگو چل رہی ہو۔
+   EN: Wakes are not supervised on this platform yet, so the wakes below only fire while a conversation is running.
+unverifiable:
+   UR: نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔
+   EN: Nothing supervises the wakes below, so they only fire while their conversation is running.
+
+== truncated ==
+بیداریوں والی کل 5 گفتگوؤں میں سے 1 دکھائی جا رہی ہے۔
+نگرانیوں والی کل 5 گفتگوؤں میں سے 2 دکھائی جا رہی ہیں۔
+بیداریوں والی کل 21 گفتگوؤں میں سے 21 دکھائی جا رہی ہیں۔
+
+== write_receipt (unchanged key; render all kind x action) ==
+project created => پروجیکٹ “alpha” بنایا گیا۔
+project completed => پروجیکٹ “alpha” مکمل کیا گیا۔
+project reopened => پروجیکٹ “alpha” دوبارہ کھولا گیا۔
+project added => پروجیکٹ “alpha” شامل کیا گیا۔
+project updated => پروجیکٹ “alpha” اپ ڈیٹ کیا گیا۔
+project removed => پروجیکٹ “alpha” ہٹایا گیا۔
+project deleted => پروجیکٹ “alpha” حذف کیا گیا۔
+milestone created => سنگ میل “alpha” بنایا گیا۔
+milestone completed => سنگ میل “alpha” مکمل کیا گیا۔
+milestone reopened => سنگ میل “alpha” دوبارہ کھولا گیا۔
+milestone added => سنگ میل “alpha” شامل کیا گیا۔
+milestone updated => سنگ میل “alpha” اپ ڈیٹ کیا گیا۔
+milestone removed => سنگ میل “alpha” ہٹایا گیا۔
+milestone deleted => سنگ میل “alpha” حذف کیا گیا۔
+
+== project hint / draft note / placeholder ==
+لمبائی 1 سے 64 حروف؛ نام میں صرف انگریزی حروف، 0 سے 9 تک ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔
+آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔
+lop mobile سے ملنے والا پاس ورڈ
+regex ACCEPT  ASCII letters
+regex ACCEPT  mixed case+digit
+regex ACCEPT  dot underscore hyphen inside
+regex ACCEPT  64 chars
+regex REJECT  65 chars
+regex REJECT  empty
+regex REJECT  space
+regex REJECT  leading hyphen
+regex REJECT  leading dot
+regex REJECT  leading underscore
+regex REJECT  Urdu letters
+regex REJECT  accented Latin
+regex REJECT  Arabic-Indic digits
+regex REJECT  Extended Arabic-Indic digits
+regex REJECT  Devanagari digits
+[exit 0]
+
+$ python3 bidi/redaction scan (all 12 inputs)
+c12048d5b2974358 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.schedules.json
+0459a0485ceb2594 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.json
+d3f0d3bba057aacf bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.context.json
+43dc7cba1f2ef704 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.projects.json
+a598ddc447a47476 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.projects.json
+5481687e7c4c089c bidi/zw-ctrl=0 redaction-marker=0 en/mobile.projects.context.json
+100b416e13a6ac49 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.notifications.json
+c6e58c6129727513 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.notifications.json
+240ec6befb692d72 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.notifications.context.json
+610886d61acfc0a7 bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.computers.json
+356f10123aa96d48 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.computers.json
+3ac04e8333c94e9d bidi/zw-ctrl=0 redaction-marker=0 en/mobile.computers.context.json
+TOTAL bidi/zero-width control chars: 0 | TOTAL redaction markers: 0
+script/punctuation scan done
+
+$ Intl.PluralRules(ur)
+0:other 1:one 2:other 21:other 100:other
+
+$ relay regex source (origin/main core)
+84:#: (``teams._NAME_RE``).
+85:_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+306:    if not _NAME_RE.match(candidate):
+
+$ node_modules/.bin/tsx scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+[exit 0]
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+[exit 0]
+
+$ vitest scoped
+ RUN  v5.0.2 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
+··················································x·················
+::error file=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render
+AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]
+- Expected
++ Received
+@@ -2,8 +2,9 @@
+    "en",
+    "es",
+    "fr",
+    "hi",
+    "ru",
++   "ur",
+    "vi",
+    "zh-CN",
+  ]
+ ❯ src/i18n/__tests__/catalogues.test.ts:188:23
+    186|    .map((entry) => entry.name)
+    187|    .sort();
+    188|   expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+       |                       ^
+    189|  });
+    190| });
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 67 passed (68)
+   Start at  19:46:13
+   Duration  461ms (transform 69%, import 19%, tests 10%, worker 1%)
+
+$ git status post-run
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/ur/
+?? src/i18n/catalogues/ur/

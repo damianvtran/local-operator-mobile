@@ -1,0 +1,154 @@
+{
+ "schema": 1,
+ "audit_id": "ur30a3",
+ "locale": "ur",
+ "namespace": "mobile.session_health",
+ "audit_date": "2026-10-30",
+ "key_count": 11,
+ "programme": "ur catalogues wave — group A (mobile.home, mobile.session, mobile.session_health, mobile.account_routing; relay.chrome + relay.health as mirror verification)",
+ "project": "damianvtran/local-operator-mobile",
+ "branch": "feat/i18n-urdu",
+ "base_commit": "32c7677",
+ "catalogue_state": "the translator's UNCOMMITTED catalogue at src/i18n/catalogues/ur/ (audited as worktree files; this auditor changed nothing)",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** — not used",
+  "context_sidecar_routability": "not routable: the en *.context.json maps keys to nested {role,note} JSON objects, not message strings",
+  "receipt": null,
+  "honest_note": "no copy-route receipt was obtained or claimed for any input in this bundle"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "d24b2e163bcd",
+  "model": "radient/auto",
+  "actual_model_source": "session model-switch notices (provider quota fallbacks) in this session's transcript",
+  "model_chain": [
+   "anthropic/claude-sonnet-5-5",
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "ur (native-fluent reader; no MT/API service used anywhere in this audit)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/mobile.session_health.json",
+   "sha256": "4651263d664ab5ebb0dee5612f5ee6b8dfa31bc60b113968d5f9894ed09f0b86"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.json",
+   "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+   "sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+  }
+ },
+ "findings": [
+  {
+   "id": "ur30a3-M1",
+   "key": "mobile.session_health.resume_no_route",
+   "severity": "MAJOR",
+   "kind": "grammar/imperative",
+   "current": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہوں۔",
+   "replacement": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+   "why": "‘ہوں’ is ہونا's 1st-person/3rd-plural subjunctive; with no subject in the sentence the reader supplies ‘I’, so the line reads “so that I be connected”, not “Connect …”. Core does use this shape where the subject is present (‘تجاویز آن ہوں’), which is why it looks plausible — but a directive to آپ needs the polite imperative. ‘ہو جائیں’ keeps the intransitive verb core already uses for connection state (‘دوبارہ منسلک ہو رہا ہے…’) and matches Hindi’s shipped imperative (‘कंप्यूटर से कनेक्ट करें’).",
+   "evidence": "rendered before/after through the app formatter in audit.log"
+  },
+  {
+   "id": "ur30a3-M2",
+   "key": "mobile.session_health.resume_gone",
+   "severity": "MAJOR",
+   "kind": "ambiguity/safety",
+   "current": "یہ سیشن اب محفوظ نہیں۔",
+   "replacement": "یہ سیشن اب محفوظ شدہ نہیں ہے۔",
+   "why": "Copula-less ‘محفوظ نہیں’ is read as the adjective “not safe/secure” before it is read as “not saved”, in a 404 failure notice that must not alarm. ‘محفوظ شدہ’ is the saved-state participle core itself uses (‘یہ محفوظ شدہ کاپی …’); Hindi shipped the same disambiguated shape ‘अब सहेजा हुआ नहीं है’.",
+   "evidence": "rendered before/after; compared with fr/hi shipped siblings and core vocabulary"
+  },
+  {
+   "id": "ur30a3-n1",
+   "key": "mobile.session_health.still_reopening",
+   "severity": "NIT",
+   "kind": "style",
+   "current": "اب بھی کھل رہا ہے — ابھی تیار نہیں ہوا۔",
+   "replacement": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+   "why": "Two bare ‘ابھی’ forms in one line; ‘ابھی تک’ (“yet”) matches the English and reads smoother.",
+   "evidence": "side-by-side reading"
+  }
+ ],
+ "findings_summary": {
+  "BLOCKER": 0,
+  "MAJOR": 2,
+  "MINOR": 0,
+  "NIT": 1
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 2,
+  "finding_ids": [
+   "ur30a3-M1",
+   "ur30a3-M2",
+   "ur30a3-n1"
+  ]
+ },
+ "redaction_scan": {
+  "markers": 0,
+  "expectation": "0; no masked value was accepted"
+ },
+ "mechanical": {
+  "repo_gate_generate_ts_check": "exit 0 — 'catalogue.gen.ts is current (143 keys, 10 namespaces…)' (the generator parses every locale directory, ur included, with the runtime parser)",
+  "repo_gate_check_strings": "exit 0 — '284 finding(s), all baselined; 0 new; no growth vs 32c7677'",
+  "key_parity": "en=11 ur=11; no key added or dropped",
+  "placeholder_icu_parity": "parseMessage() per key: 0 parameterised keys in this namespace — placeholder/plural/select parity is vacuous here, and the repo generator would have failed on a mismatch",
+  "plural_categories": "Intl.PluralRules('ur') and the app's pluralCategory('ur', n) agree: 0=other 1=one 2=other 21=other; no plural message exists in this namespace",
+  "preserved_tokens": "Latin identifiers checked against the en source (Linear MCP / repo / Local Operator / MCP where present); commands, flags, paths: none in this namespace",
+  "unicode": "no bidi control characters, no Arabic yeh/kaf, no digits, no ASCII '...' or ASCII quotes, ellipsis is U+2026, quotes are “ ” and stops are ۔ (see audit.log)",
+  "render_path_note": "ur is still in NOT_YET_SHIPPED_LOCALES (src/i18n/locale.ts:69), so renderFor(key, args, 'ur') returns the English fallback; the ur text was rendered through formatMessage(parseMessage(ur[key]), args, 'ur') — the exact formatter renderFor delegates to — and that difference is recorded rather than glossed over"
+ },
+ "mirror_verification": null,
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3/record.json",
+   "sha256": "self (not applicable)"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3/report.md",
+   "sha256": "2f62627c3d9b574a630e954c723cf4ec8724198bacd9bb6251dbc5aba0f25526"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.session_health/ur30a3/audit.log",
+   "sha256": "005fd55309dda8f8c2160456430232390e65ff135418d4805a47c714eedc30bb"
+  }
+ ],
+ "execution_log": "i18n/audits/evidence/ur/mobile.session_health/ur30a3/audit.log — captured stdout/stderr of the commands recorded inside it",
+ "second_pass": {
+  "high_visibility_group": true,
+  "performed": "same-session second read, whole screen top-to-bottom, after the key-by-key pass",
+  "scope": "re-read every ur line of the screen in display order and re-derived what a native would write; looked for register switches between adjacent lines, translation-only phrasing, and safety/polarity",
+  "conclusion": "no additional findings; it re-confirmed the MAJOR item(s) recorded here and changed nothing",
+  "independent_second_auditor": "OUTSTANDING — a second pass by a different auditor session is still required for this high-visibility namespace and is NOT claimed here; this same session cannot manufacture that independence"
+ },
+ "audit_notes_not_execution_log": "the report.md prose (idiom, register, composed-sentence readings) is judgement recorded as notes, not command output; every mechanical claim above is backed by the audit.log lines it names",
+ "ledger_row_draft": {
+  "locale": "ur",
+  "namespace": "mobile.session_health",
+  "source_sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+  "translator": {
+   "agent": "i18n-translator",
+   "model": "not audited here (translator's own record owns it)"
+  },
+  "auditor": {
+   "agent": "i18n-auditor",
+   "model": "radient/auto",
+   "date": "2026-10-30",
+   "result": "changes_requested",
+   "unresolved_blocker_major": 2
+  },
+  "status": "changes_requested",
+  "note": "Independent ur audit (group A) mobile.session_health 11 keys: 0 BLOCKER, 2 MAJOR, 0 MINOR, 1 NIT; mechanical gates exit 0; record i18n/audits/evidence/ur/mobile.session_health/ur30a3/record.json",
+  "applied": false,
+  "why_not_applied": "damianvtran/local-operator-mobile has no i18n/ledger.json and no audit-ledger command; core's i18n/ledger.json covers core namespaces only, and this auditor is read-only on the catalogue. The row is a draft for the implementer to land with the catalogue commit."
+ }
+}
