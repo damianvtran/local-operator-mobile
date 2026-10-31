@@ -78,7 +78,8 @@
  "artifacts": [
   {
    "path": "i18n/audits/evidence/ur/relay.health/ur30a6/record.json",
-   "sha256": "self (not applicable)"
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash; the record is covered by its siblings’ attestations and by the bundle path in git"
   },
   {
    "path": "i18n/audits/evidence/ur/relay.health/ur30a6/report.md",
@@ -86,7 +87,9 @@
   },
   {
    "path": "i18n/audits/evidence/ur/relay.health/ur30a6/audit.log",
-   "sha256": "c6d06e8f4bfb53a495dab83747c6fcf4c42e71d7e6ca3dd96b6f9967de435076"
+   "sha256": "3e8c7e563a21c1283c0a2c95e363737846f91afbdc30b60381c5e0846bb3de71",
+   "sha256_pre_normalisation": "c6d06e8f4bfb53a495dab83747c6fcf4c42e71d7e6ca3dd96b6f9967de435076",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
   }
  ],
  "execution_log": "i18n/audits/evidence/ur/relay.health/ur30a6/audit.log — captured stdout/stderr of the commands recorded inside it",
@@ -117,5 +120,9 @@
   "note": "Independent ur audit (group A) relay.health 8 keys: 0 BLOCKER, 0 MAJOR, 0 MINOR, 0 NIT; mechanical gates exit 0; record i18n/audits/evidence/ur/relay.health/ur30a6/record.json",
   "applied": false,
   "why_not_applied": "damianvtran/local-operator-mobile has no i18n/ledger.json and no audit-ledger command; core's i18n/ledger.json covers core namespaces only, and this auditor is read-only on the catalogue. The row is a draft for the implementer to land with the catalogue commit."
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
  }
 }

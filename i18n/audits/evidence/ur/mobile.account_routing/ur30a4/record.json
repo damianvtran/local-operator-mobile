@@ -89,7 +89,8 @@
  "artifacts": [
   {
    "path": "i18n/audits/evidence/ur/mobile.account_routing/ur30a4/record.json",
-   "sha256": "self (not applicable)"
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash; the record is covered by its siblings’ attestations and by the bundle path in git"
   },
   {
    "path": "i18n/audits/evidence/ur/mobile.account_routing/ur30a4/report.md",
@@ -97,7 +98,9 @@
   },
   {
    "path": "i18n/audits/evidence/ur/mobile.account_routing/ur30a4/audit.log",
-   "sha256": "cdec1c634f43ffb19b9b9594c9e3037b45bc0f3e703ae399447100445fea555f"
+   "sha256": "e2e0f61ce91bbfa19e7c50070f4335fabae19f101819f98e17ae2948d8ebf844",
+   "sha256_pre_normalisation": "cdec1c634f43ffb19b9b9594c9e3037b45bc0f3e703ae399447100445fea555f",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
   }
  ],
  "execution_log": "i18n/audits/evidence/ur/mobile.account_routing/ur30a4/audit.log — captured stdout/stderr of the commands recorded inside it",
@@ -128,5 +131,14 @@
   "note": "Independent ur audit (group A) mobile.account_routing 14 keys: 0 BLOCKER, 1 MAJOR, 0 MINOR, 0 NIT; mechanical gates exit 0; record i18n/audits/evidence/ur/mobile.account_routing/ur30a4/record.json",
   "applied": false,
   "why_not_applied": "damianvtran/local-operator-mobile has no i18n/ledger.json and no audit-ledger command; core's i18n/ledger.json covers core namespaces only, and this auditor is read-only on the catalogue. The row is a draft for the implementer to land with the catalogue commit."
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
+ },
+ "superseded_by": {
+  "record": "i18n/audits/evidence/ur/mobile.account_routing/ur30a4r2/record.json",
+  "why": "this is a ROUND-1 record: the hash it attests is the catalogue as audited at round 1, before the implementer applied the findings. The shipped file is attested by the round-2 bundle above. The difference is the remediation, not drift.",
+  "shipped_sha256": "5cd4429d292440f3a7d7100625e0ce8a9406d311b10463736568ef17e1df1103"
  }
 }

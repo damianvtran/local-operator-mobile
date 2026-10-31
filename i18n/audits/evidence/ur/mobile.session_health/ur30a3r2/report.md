@@ -19,4 +19,6 @@ Through `formatMessage(parseMessage(·),{},'ur')` (ur not yet shipped, so `rende
 ## Mechanical (audit.log)
 `generate.ts --check` exit 0; `check-strings.ts` exit 0 (284 baselined, 0 new); bidi controls 0; redaction markers 0; Arabic yeh/kaf 0.
 
-Evidence: `audit.log` sha256 `d936abb07191f0a9ce1afcb7cb5ec527451b0ef1690ed447efc2b9f0f83315fb`.
+Evidence: `audit.log` sha256 `9f5fe7d720b0821b252df47a8553473ee79dc258051cb0839f1b4d300098d3d9`.
+
+> Artefact hashes in this report were recomputed after publication path normalisation; see `../NOTE-paths.md` for what changed and why.

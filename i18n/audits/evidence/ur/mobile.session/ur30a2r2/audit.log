@@ -1,6 +1,6 @@
 # audit.log — ur group A DELTA (round 2). Real output of <scratch>/ur-audit-a2/run-all.sh run 2026-10-30T23:44:12Z. Shared by all six r2 bundles.
 
-## date: 2026-10-30T23:43:20Z  cwd: <scratch>/ur-wave  HOME(scratch): /var/folders/qd/1q2xkcls0tg60vh97jjngxc40000gn/T/tmp.5Xh1BQbfGH
+## date: 2026-10-30T23:43:20Z  cwd: <scratch>/ur-wave  HOME(scratch): <tmp>
 
 $ git status --short
  M src/i18n/catalogue.gen.ts

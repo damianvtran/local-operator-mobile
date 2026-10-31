@@ -77,15 +77,19 @@
  "artifacts": [
   {
    "path": "i18n/audits/evidence/ur/relay.chrome/ur30a5r2/record.json",
-   "sha256": "self (not applicable)"
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash; the record is covered by its siblings’ attestations and by the bundle path in git"
   },
   {
    "path": "i18n/audits/evidence/ur/relay.chrome/ur30a5r2/report.md",
-   "sha256": "e2af3e59e8f43d1a999ebfd655de23a631e6c2f7d7556d7ad175dfff87ad80af"
+   "sha256": "0b680b35f926ec10844573567e5103f72ce7f107fe177c52aa5717f0b6d1939f",
+   "sha256_pre_normalisation": "e2af3e59e8f43d1a999ebfd655de23a631e6c2f7d7556d7ad175dfff87ad80af"
   },
   {
    "path": "i18n/audits/evidence/ur/relay.chrome/ur30a5r2/audit.log",
-   "sha256": "d936abb07191f0a9ce1afcb7cb5ec527451b0ef1690ed447efc2b9f0f83315fb"
+   "sha256": "9f5fe7d720b0821b252df47a8553473ee79dc258051cb0839f1b4d300098d3d9",
+   "sha256_pre_normalisation": "d936abb07191f0a9ce1afcb7cb5ec527451b0ef1690ed447efc2b9f0f83315fb",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
   }
  ],
  "execution_log": "i18n/audits/evidence/ur/relay.chrome/ur30a5r2/audit.log — real stdout/stderr of the commands in it, shared verbatim by the six r2 bundles",
@@ -109,5 +113,9 @@
   "note": "ur delta r2 relay.chrome: round-1 fixes verified byte-exact; 0 BLOCKER/MAJOR; record i18n/audits/evidence/ur/relay.chrome/ur30a5r2/record.json",
   "applied": false,
   "why_not_applied": "mobile repo has no audit-ledger command/ledger.json; read-only auditor; draft for the implementer"
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
  }
 }

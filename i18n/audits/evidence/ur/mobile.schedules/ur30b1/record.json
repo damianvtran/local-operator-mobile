@@ -52,8 +52,10 @@
  "artifacts": [
   {
    "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1/audit.log",
-   "sha256": "1018843c517b81a417b8fef3e135090658c30d0358e6615d128a03dde27bad73",
-   "kind": "actual_execution_log (verbatim concatenation of three captured script runs)"
+   "sha256": "e654d102d175cf64ab45ebc14e1e236a4034eb04cda7f31d2566736278178291",
+   "kind": "actual_execution_log (verbatim concatenation of three captured script runs)",
+   "sha256_pre_normalisation": "1018843c517b81a417b8fef3e135090658c30d0358e6615d128a03dde27bad73",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
   },
   {
    "path": "i18n/audits/evidence/ur/mobile.schedules/ur30b1/report.md",
@@ -108,5 +110,9 @@
    "S2",
    "S3"
   ]
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
  }
 }
