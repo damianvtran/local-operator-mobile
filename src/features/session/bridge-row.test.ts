@@ -5,13 +5,16 @@ import {
 	bridgeAccessibleName,
 	bridgeBody,
 	bridgeCardHeadline,
-	bridgeChipBucket,
+	bridgeChipFits,
+	bridgeChipLayout,
+	bridgeChipShowsCode,
 	bridgeCopyOf,
 	bridgeGlyphFor,
 	bridgeMark,
 	bridgeOutcomeView,
 	bridgeRowOf,
 	bridgeRowSummary,
+	bridgeToneOf,
 	isBridgeRow,
 	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
@@ -293,14 +296,15 @@ describe("bridge row: the row line vs the card title", () => {
 		expect(
 			bridgeRowSummary(entry, bridgeCopyOf(entry), bridgeRowOf(entry)),
 		).toBe("Looked up the team directory (2 members)");
-		// no chip at all → nothing to strip, even if the text ends like one
+		/* Round 1 said "no chip → nothing to strip". Round 2's N1 showed the tail
+		 *  is still there without copy — spelled in the machine tokens — and that
+		 *  leaving it cuts the row line into `… · refused · not_a_member` behind a
+		 *  projection ellipsis. It is stripped by TOKEN now. */
 		const noCopy = row(
 			{ ...payload({ outcome: "refused" }) },
 			{ summary: "Posted · refused" },
 		);
-		expect(bridgeRowSummary(noCopy, null, bridgeRowOf(noCopy))).toBe(
-			"Posted · refused",
-		);
+		expect(bridgeRowSummary(noCopy, null, bridgeRowOf(noCopy))).toBe("Posted");
 	});
 
 	it("scrubs every opaque id class on the row line", () => {
@@ -322,6 +326,56 @@ describe("bridge row: the row line vs the card title", () => {
 	it("falls back to the tool name rather than a blank line", () => {
 		const entry = row({}, { summary: "" });
 		expect(bridgeRowSummary(entry, null, null)).toBe("bridge");
+	});
+});
+
+describe("bridge row: N1 — no dangling separator in the row line", () => {
+	const call = (
+		payloadOver: Record<string, unknown>,
+		summary: string,
+		copy: Record<string, unknown> | null = null,
+	) => {
+		const entry = row(
+			{
+				...payload(payloadOver),
+				...(copy === null ? {} : { bridge_copy: copy }),
+			},
+			{ summary },
+		);
+		return bridgeRowSummary(entry, bridgeCopyOf(entry), bridgeRowOf(entry));
+	};
+
+	it("strips a TOKEN-shaped tail when the relay sent no words", () => {
+		/* The copy-less refusal: the projection's own cap cuts the un-stripped
+		 *  tail into `… · Heads-up ·…` — a separator left pointing at nothing. */
+		const outcome = { outcome: "refused", code: "not_a_member" };
+		expect(
+			call(
+				outcome,
+				"Couldn't post in #leadership · Heads-up · refused · not_a_member",
+			),
+		).toBe("Couldn't post in #leadership · Heads-up");
+		expect(call(outcome, "Couldn't post in #leadership · refused")).toBe(
+			"Couldn't post in #leadership",
+		);
+	});
+
+	it("leaves a sentence that merely mentions the outcome alone", () => {
+		expect(
+			call(
+				{ outcome: "refused", code: "not_a_member" },
+				"Couldn't post in #leadership: refused by policy",
+			),
+		).toBe("Couldn't post in #leadership: refused by policy");
+	});
+
+	it("tidies the separator an id left behind", () => {
+		expect(
+			call({ outcome: null }, "Posted in bcv_01JC9X7Q2M8T · cut list attached"),
+		).toBe("Posted in · cut list attached");
+		expect(call({ outcome: null }, "Posted in bcv_01JC9X7Q2M8T")).toBe(
+			"Posted in",
+		);
 	});
 });
 
@@ -360,44 +414,134 @@ describe("bridge row: ink for all five outcomes", () => {
 });
 
 describe("bridge row: the leading glyph", () => {
-	/* R2: this decision used to live inside the component, where no Node test
-	 *  could reach it — and it is where "never a success tick for an unconfirmed
-	 *  write" lives (D2). */
+	/* R2 (round 1): this decision used to live inside the component, where no
+	 *  Node test could reach it — and it is where "never a success tick for an
+	 *  unconfirmed write" lives (D2). R7 (round 2): it is keyed on the TOKEN, so
+	 *  every arm below is asserted WITH and WITHOUT the relay's words. */
 	const glyphOf = (outcome: string | null, words = true) => {
 		const entry = row({
 			...payload({ outcome }),
 			...(words ? { bridge_copy: { outcome: "word" } } : {}),
 		});
-		return bridgeGlyphFor(bridgeRowOf(entry), bridgeCopyOf(entry));
+		return bridgeGlyphFor(bridgeRowOf(entry));
 	};
+	const AMBER = { glyph: "!", inkClass: "text-warning", pulsing: false };
+	const RED = { glyph: "✗", inkClass: "text-danger", pulsing: false };
+
 	it("never shows the green tick for a write nobody confirmed", () => {
-		expect(bridgeGlyphFor(bridgeRowOf(row({})), null)).toEqual({
-			kind: "state",
-		});
-		expect(glyphOf("unconfirmed")).toEqual({ kind: "partial" });
-		expect(glyphOf("awaiting_acceptance")).toEqual({ kind: "partial" });
+		expect(glyphOf(null)).toBeNull();
+		expect(glyphOf("unconfirmed")).toEqual(AMBER);
+		expect(glyphOf("awaiting_acceptance")).toEqual(AMBER);
+		expect(glyphOf("inbox_only")).toEqual(AMBER);
 	});
-	it("keeps the danger mark for a refusal and amber for a peer inbox", () => {
-		expect(glyphOf("refused")).toEqual({ kind: "failed" });
-		expect(glyphOf("failed")).toEqual({ kind: "failed" });
-		expect(glyphOf("inbox_only")).toEqual({ kind: "partial" });
+
+	it("keeps the danger mark for a refusal and a hard failure", () => {
+		expect(glyphOf("refused")).toEqual(RED);
+		expect(glyphOf("failed")).toEqual(RED);
 	});
-	it("falls back to the tool state when the relay sent no words", () => {
-		expect(glyphOf("refused", false)).toEqual({ kind: "state" });
-		expect(glyphOf(null)).toEqual({ kind: "state" });
+
+	it("keeps the mark when the relay sent NO words (R7)", () => {
+		/* The defect: copy was the data channel, so a copy-less peer inbox wore
+		 * the settled tick and a copy-less refusal announced "bridge done". */
+		expect(glyphOf("inbox_only", false)).toEqual(AMBER);
+		expect(glyphOf("awaiting_acceptance", false)).toEqual(AMBER);
+		expect(glyphOf("unconfirmed", false)).toEqual(AMBER);
+		expect(glyphOf("refused", false)).toEqual(RED);
+		expect(glyphOf("failed", false)).toEqual(RED);
+	});
+
+	it("measures the ink from the token for every outcome, words or none", () => {
+		for (const outcome of [
+			"inbox_only",
+			"refused",
+			"failed",
+			"unconfirmed",
+			"awaiting_acceptance",
+		]) {
+			const withWords = bridgeToneOf(bridgeRowOf(row(payload({ outcome }))));
+			const without = bridgeToneOf(
+				bridgeRowOf(row({ ...payload({ outcome }) })),
+			);
+			expect(without).toBe(withWords);
+			/* The table's three tones: a refusal is danger, the two unconfirmed
+			 * outcomes are the muted `pending` pair, the peer inbox is `warning` —
+			 * and every one of them paints AMBER or RED through `bridgeGlyphFor`,
+			 * never the settled ink (R3/D2). */
+			expect(withWords).toBe(
+				outcome === "refused" || outcome === "failed"
+					? "danger"
+					: outcome === "inbox_only"
+						? "warning"
+						: "pending",
+			);
+		}
+		expect(bridgeToneOf(null)).toBeNull();
+		expect(
+			bridgeToneOf(bridgeRowOf(row(payload({ outcome: null })))),
+		).toBeNull();
 	});
 });
 
-describe("bridge row: chip buckets", () => {
-	/* D3: the relay's two container-query thresholds, on the measured row width. */
+describe("bridge row: the mark", () => {
+	/* The identity column's mark is keyed on the token too (R7): a copy-less
+	 *  peer inbox must keep `MessageSquareOff`. */
+	it("marks the peer inbox and the pending acceptance by outcome only", () => {
+		expect(
+			bridgeMark(bridgeRowOf(row(payload({ outcome: "inbox_only" })))),
+		).toBe("message-off");
+		expect(
+			bridgeMark(bridgeRowOf(row(payload({ outcome: "awaiting_acceptance" })))),
+		).toBe("hourglass");
+		expect(
+			bridgeMark(bridgeRowOf(row(payload({ outcome: "refused" })))),
+		).toBeNull();
+		expect(bridgeMark(null)).toBeNull();
+	});
+});
+
+describe("bridge row: the chip's layout", () => {
+	/* Q1 (round 2): the chip's WORD clipped mid-phrase (`not posted to a con…`).
+	 *  The app never re-words the relay's sentence, so a phrase that does not fit
+	 *  is not shown at all: a marked outcome collapses to its mark, an unmarked
+	 *  one takes its own line. */
 	it("sheds the code, then the word, as the row narrows", () => {
-		expect(bridgeChipBucket(390)).toBe("full");
-		expect(bridgeChipBucket(384)).toBe("full");
-		expect(bridgeChipBucket(383)).toBe("capped");
-		expect(bridgeChipBucket(342)).toBe("capped"); // 390 pt phone
-		expect(bridgeChipBucket(288)).toBe("capped");
-		expect(bridgeChipBucket(287)).toBe("mark-only");
-		expect(bridgeChipBucket(272)).toBe("mark-only"); // 320 pt phone
+		expect(bridgeChipShowsCode(390)).toBe(true);
+		expect(bridgeChipShowsCode(384)).toBe(true);
+		expect(bridgeChipShowsCode(383)).toBe(false);
+		expect(bridgeChipShowsCode(272)).toBe(false);
+	});
+
+	it("keeps a short word inline at every phone width", () => {
+		for (const width of [390, 342, 320, 272]) {
+			expect(bridgeChipLayout(width, "refused", false)).toBe("words");
+		}
+	});
+
+	it("collapses a MARKED outcome to its mark where the phrase cannot fit", () => {
+		/* The inbox row: 24 characters, a mark to fall back on. */
+		expect(bridgeChipLayout(342, "not posted to a conversation", true)).toBe(
+			"mark",
+		);
+		expect(bridgeChipLayout(272, "not posted to a conversation", true)).toBe(
+			"mark",
+		);
+	});
+
+	it("gives an UNMARKED long phrase its own line instead of clipping it", () => {
+		/* `delivery unconfirmed` has no mark: clipping it would be the Q1 defect
+		 * and dropping it would hide the caveat, so it moves to its own line. */
+		expect(bridgeChipLayout(272, "delivery unconfirmed", false)).toBe(
+			"own-line",
+		);
+	});
+
+	it("counts the 150 % scale as narrower, never wider", () => {
+		expect(bridgeChipFits(390, "delivery unconfirmed", 1.5)).toBe(false);
+		/* No mark to fall back on, so it takes its own line at any width rather
+		 * than clipping — the one layout Q1 leaves honest. */
+		expect(bridgeChipLayout(390, "delivery unconfirmed", false, 1.5)).toBe(
+			"own-line",
+		);
 	});
 });
 
@@ -429,7 +573,9 @@ describe("bridge row: the accessible name", () => {
 			{ tool_state: "failed", summary: "Post to #leadership" },
 		);
 		expect(bridgeAccessibleName(entry, bridgeRowOf(entry), null)).toBe(
-			"bridge failed, Post to #leadership",
+			/* The token's own words stand in for the withheld sentence, and the
+			 * state is the outcome's — never "done" for a refusal (R7). */
+			"bridge failed, refused, Post to #leadership",
 		);
 	});
 

@@ -944,6 +944,13 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	"path:/session/{sessionId}/bridge-card": [
 		{ click: toolRowToggleId("tc-compact-post") },
 	],
+	/* D7 (design round 2): the two PENDING outcomes with their CARDS OPEN — the
+	 *  88-character awaiting sentence and the Hourglass arm, both of which need a
+	 *  world short enough to leave room for an expansion at 320 pt. */
+	"path:/session/{sessionId}/bridge-pending-open": [
+		{ click: toolRowToggleId("tc-compact-awaiting") },
+		{ click: toolRowToggleId("tc-compact-unconfirmed") },
+	],
 	/* …and the same rows without the card, for the collapsed-first-line case at
 	 *  200 %, where only a few rows fit. */
 	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-bridge-u1/bridge-top-collapsed":

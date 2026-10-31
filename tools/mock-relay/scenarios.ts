@@ -2093,6 +2093,66 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 							output: "ok",
 						} as Row["details"],
 					}),
+					/* The two PENDING outcomes, so their CARDS can open in a world
+					 * short enough to show one at 320 pt (design round 2, D7): the
+					 * showroom's copies of these rows sit high enough that only their
+					 * collapsed lines fit a narrow frame. */
+					at("tc-compact-awaiting", "tool", {
+						tool_name: "bridge",
+						summary:
+							"Messaged Sam · Can you review the cut? · awaiting acceptance",
+						elapsed_s: 1.2,
+						details: {
+							args: {
+								op: "dm",
+								recipient: "sam",
+								body: "Can you review the cut?",
+							},
+							bridge_row: {
+								op: "dm",
+								action: "dm",
+								target: { kind: "dm", label: "Sam" },
+								preview: "Can you review the cut?",
+								count: null,
+								emoji: null,
+								outcome: "awaiting_acceptance",
+								code: null,
+							},
+							/* The real `wire.tool_rows.bridge.*` sentences (relay lane,
+							 * `relay.transcript.json`): the card paints them verbatim. */
+							bridge_copy: {
+								outcome: "awaiting acceptance",
+								headline: "Direct message to Sam",
+								outcome_sentence:
+									"Posted, but the recipient agent is invited — its owner must accept before it is woken.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
+					at("tc-compact-unconfirmed", "tool", {
+						tool_name: "bridge",
+						summary: "Reacted in a conversation · 👍 · delivery unconfirmed",
+						elapsed_s: 1.1,
+						details: {
+							args: { op: "react", message_id: "msg-1", emoji: "👍" },
+							bridge_row: {
+								op: "react",
+								action: "react",
+								target: { kind: "channel", label: null },
+								preview: null,
+								count: null,
+								emoji: "👍",
+								outcome: "unconfirmed",
+								code: "send_unconfirmed",
+							},
+							bridge_copy: {
+								outcome: "delivery unconfirmed",
+								headline: "Reacted in a conversation",
+								outcome_sentence: "Delivery unconfirmed.",
+							},
+							output: "ok",
+						} as Row["details"],
+					}),
 					at("m-compact-a1", "assistant", { text: "Posted." }),
 				],
 			});

@@ -18,7 +18,8 @@ import {
 	bridgeAccessibleName,
 	bridgeBody,
 	bridgeCardHeadline,
-	bridgeChipBucket,
+	bridgeChipLayout,
+	bridgeChipShowsCode,
 	bridgeCopyOf,
 	bridgeGlyphFor,
 	bridgeMark,
@@ -26,6 +27,7 @@ import {
 	bridgeRowOf,
 	bridgeRowSummary,
 	isBridgeRow,
+	isLoneReceiptLine,
 	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
 import { Markdown } from "@/features/session/components/markdown";
@@ -217,6 +219,9 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	const bridgeOutcome = bridgeOutcomeView(bridge, bridgeCopy);
 	const bridgeMessage = bridgeBody(entry);
 	const mark = bridgeMark(bridge);
+	/* The chip's WORD, when the relay sent one — the layout decision needs its
+	 * length, and it is the same string the chip renders. */
+	const chipWord = bridgeOutcomeView(bridge, bridgeCopy)?.word ?? "";
 	/* The ROW keeps the daemon's one-line summary — verb, target and the message
 	 * PREVIEW — with the outcome tail stripped, because the chip beside it says
 	 * that already (design round 1, D1/D10). The CARD prints the daemon's
@@ -234,11 +239,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * Chosen over `onLayout` because it is the same number on the first frame,
 	 * so a chip can never paint wide and then jump. */
 	const rowWidthPt = Math.max(0, useWindowDimensions().width - ROW_CHROME_PT);
-	const chipBucket = bridgeChipBucket(rowWidthPt);
+	const chipLayout = bridgeChipLayout(rowWidthPt, chipWord, mark !== null);
 	/* The daemon's sentence already states the outcome; the raw error and output
 	 * would say it again (design round 1, D5). */
 	const bridgeStated =
 		isBridge && bridgeCopy !== null && bridgeCopy.outcomeSentence !== "";
+
 	/* The icon is an SVG and cannot inherit a text colour (`useTokenColor`'s
 	 * own reason); `ink-muted` matches the tool name it replaces. */
 	const iconInk = useTokenColor("ink-muted");
@@ -252,17 +258,17 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * already earned. */
 	const partial = isPartialDelivery(delivery);
 	/* A bridge outcome overrides the state glyph the same way a partial
-	 * delivery does: `inbox_only` must not keep the tick its settled tool state
-	 * earned, and a refusal that the tool reported as `done` must still read as
-	 * one. The muted pair (unconfirmed, awaiting acceptance) keeps the state's
-	 * own glyph — they are pending facts, not problems. */
-	const glyphDecision = bridgeGlyphFor(bridge, bridgeCopy);
+	 * delivery does, and for the same reason: `inbox_only`,
+	 * `awaiting_acceptance` and `unconfirmed` are writes nobody confirmed, so
+	 * none of them may wear the success tick, and a refusal the tool reported as
+	 * `done` must still read as one. The decision is keyed on
+	 * `bridge_row.outcome` (`bridgeGlyphFor`), NOT on whether the relay sent
+	 * words — a copy-less row keeps its honest mark (design round 2, R7). */
+	const glyphOverride = bridgeGlyphFor(bridge);
 	const tone =
-		partial || glyphDecision.kind === "partial"
+		partial && glyphOverride === null
 			? { glyph: "!", inkClass: "text-warning", pulsing: false }
-			: glyphDecision.kind === "failed"
-				? { glyph: "✗", inkClass: "text-danger", pulsing: false }
-				: toolGlyph(entry.tool_state);
+			: (glyphOverride ?? toolGlyph(entry.tool_state));
 	/* ONE trailing word per row, from whichever arm owns it, so the inline /
 	 * own-line placement below is a single rule. */
 	const trailing: { text: string; inkClass: string } | null =
@@ -298,6 +304,11 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 		cardTitle !== "" ||
 		(bridgeCopy !== null && bridgeCopy.outcomeSentence !== "");
 	const blocks = toolDetailBlocks(entry);
+	/* A bridge card also suppresses a lone RECEIPT token (`ok`): one word that
+	 * says nothing, sitting in a well heavier than the card's own sentence (QA
+	 * round 2, Q2). The no-copy card is the case this exists for — it has no
+	 * sentence, so `bridgeStated` cannot suppress the well for it. */
+	const bridgeLoneReceipt = isBridge && isLoneReceiptLine(blocks.output);
 	/* The bridge body IS the args' substance; printing the args block too would
 	 * say it twice (the diff-first tools' rule, `isDiffFirstTool`). */
 	const showArgs =
@@ -306,6 +317,20 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * may still execute — but it does NOT pulse: the pulse is the "work is
 	 * happening" signal, and nothing is happening while it waits behind a sibling. */
 	const queued = entry.tool_state === "queued";
+	/* The bridge row's SECOND LINE, if any: at the larger text scale the chip's
+	 * word moves down (the `trailing` arm's rule), and below the width where an
+	 * unmarked phrase fits it takes its own line instead of being clipped (Q1).
+	 * One value, so the two reasons can never print the line twice — measured at
+	 * 390 pt, 150 %, where they did. */
+	const bridgeSecondLine =
+		deliveryOnOwnLine && trailing !== null
+			? trailing
+			: bridgeOutcome !== null && chipLayout === "own-line"
+				? {
+						text: bridgeOutcome.text,
+						inkClass: trailing?.inkClass ?? "text-warning",
+					}
+				: null;
 
 	return (
 		<View
@@ -397,6 +422,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					>
 						{headline}
 					</Text>
+
 					{/* The delivery word: the state's own name for what is known (see
 					    `session/delivery.ts`), never a bare verdict. Amber for the two
 					    unsettled-but-not-failed states, danger for `not delivered`.
@@ -407,18 +433,16 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					    rule. The send word is `shrink-0` (design round 1, D1) — it is two
 					    words at most. The bridge chip is longer and carries a mark, so it
 					    is capped and, on a narrow row, sheds its code whole and then its
-					    word (see `bridgeChipBucket`); the word it sheds stays in the
-					    accessible name. */}
+					    word (see `bridgeChipLayout`); the word it sheds stays in the
+					    accessible name, so nothing is only visible. */}
 					{bridgeOutcome !== null &&
 					!deliveryOnOwnLine &&
-					!(chipBucket === "mark-only" && mark !== null) ? (
-						/* The MARK lives in ONE place: the identity column already draws
-						 * MessageSquareOff / Hourglass for the two marked outcomes, so the
-						 * chip is the WORD alone — drawing it again beside the word put two
-						 * identical icons on one row (measured on the 320 pt frame). At the
-						 * narrowest width a marked outcome therefore drops the chip and its
-						 * identity mark carries the caveat; a refusal has no mark, so it
-						 * keeps its word and sheds only the code. */
+					chipLayout === "words" ? (
+						/* The chip is the WORD alone: the MARK lives in the identity
+						 * column (drawing it twice put two identical icons on one row).
+						 * The layout decision above already collapsed or re-lined a word
+						 * that would not fit, so this text is never ellipsised mid-phrase
+						 * (Q1, round 2). */
 						<View
 							className={cx(
 								"min-w-0 shrink flex-row items-center",
@@ -429,7 +453,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							/* A percentage cap did not take effect as a class on this row
 							 * (measured in the shipped frame), so every width here is a
 							 * STYLE — the one place React Native Web always applies it. */
-							style={{ maxWidth: chipBucket === "full" ? "55%" : "40%" }}
+							style={{ maxWidth: rowWidthPt >= 384 ? "55%" : "40%" }}
 						>
 							<Text
 								className={cx(
@@ -439,11 +463,9 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 								numberOfLines={1}
 							>
 								{bridgeOutcome.word}
-								{/* The code is dropped WHOLE at a narrow width, never cut
-								    mid-token (the relay's D3/D9): a reader who sees `not_a_m`
-								    cannot search for it, and the card's sentence repeats it
-								    in full. */}
-								{chipBucket === "full" ? bridgeOutcome.code : null}
+								{/* The code is dropped WHOLE below the widest bucket — never
+								    cut mid-token; the card's sentence repeats it in full. */}
+								{bridgeChipShowsCode(rowWidthPt) ? bridgeOutcome.code : null}
 							</Text>
 						</View>
 					) : null}
@@ -489,7 +511,29 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 				 *  numbers) and the word stays whole. It moves by being a sibling of
 				 *  the line row rather than by wrapping, so the rule is one rule on
 				 *  phone and tablet alike; below the threshold nothing changes. */}
-				{deliveryOnOwnLine && trailing !== null ? (
+				{/* The row's SECOND LINE, when one is needed (design round 1, D1).
+				 *  ONE shape for every arm — the send word and a bridge caveat alike:
+				 *  it sits on the row's own rail, which is the convention this
+				 *  component already documents for line two (the glyph is left-aligned
+				 *  in its box for exactly that reason) and the one U-41 measures.
+				 *
+				 *  D6 (design round 2) asked for the row's TEXT COLUMN instead, 42 pt
+				 *  in. That was built, measured and rejected: 42 pt is off
+				 *  `space.scale` (U-42) and the rail check calls it a drift
+				 *  ("line 2 starts 42pt off the row's rail", 60 FAIL at 390 pt), so
+				 *  the app would then carry two conventions for one thing. The
+				 *  orphan read is answered differently: the line lives inside its own
+				 *  row's pressable and directly under it, so it cannot sit above
+				 *  another row's text or read as that row's. */}
+				{isBridge && bridgeSecondLine !== null ? (
+					<Text
+						className={cx("text-body-sm", bridgeSecondLine.inkClass)}
+						numberOfLines={1}
+					>
+						{bridgeSecondLine.text}
+					</Text>
+				) : null}
+				{!isBridge && deliveryOnOwnLine && trailing !== null ? (
 					<Text
 						className={cx("text-body-sm", trailing.inkClass)}
 						numberOfLines={1}
@@ -576,7 +620,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 					{/* Same rule for the raw output: on a bridge card the tool's text is
 					    the receipt the sentence already states — the `ok` well said
 					    nothing and outranked everything (design round 1, D5). */}
-					{blocks.output.length > 0 && !bridgeStated ? (
+					{blocks.output.length > 0 && !bridgeStated && !bridgeLoneReceipt ? (
 						<TextBlock
 							lines={blocks.output}
 							tone="text-ink-muted"
