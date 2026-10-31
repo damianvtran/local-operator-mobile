@@ -14,6 +14,8 @@ import {
 } from "@/i18n";
 import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.context.json";
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
+import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
+import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
@@ -64,6 +66,14 @@ const NAMESPACES = [
 		messages: accountRouting,
 		context: accountRoutingContext,
 		expected: 14,
+	},
+	{
+		/* The agent picture's two strings: the header picture's name and the
+		 *  "change it on the desktop" hint the phone answers a press with. */
+		name: "mobile.agent_avatar",
+		messages: agentAvatar,
+		context: agentAvatarContext,
+		expected: 2,
 	},
 	{
 		name: "mobile.computers",
@@ -153,7 +163,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(145);
+		expect(total).toBe(147);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

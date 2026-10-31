@@ -1133,6 +1133,18 @@ export const sessionSummarySchema = z.looseObject({
 	placement: z.record(z.string(), z.unknown()).nullable().optional(),
 	origin: z.record(z.string(), z.unknown()).nullable().optional(),
 	last_synced_at: z.number().nullable().optional(),
+	/**
+	 * The agent this conversation is bound to, and the digest of that agent's
+	 * stored profile picture (the agent-profile-picture contract, local-operator
+	 * `agent.yml` `avatar.sha256`). Additive: an older relay, an unbound
+	 * conversation, a remote row and an agent with no picture all omit them or
+	 * send `null`, and every one of those reads as "draw the existing glyph".
+	 * The pair rides the LIST row on purpose so the list never fetches per row
+	 * to learn whether a picture exists — the image route is hit only for a
+	 * digest this frame named, keyed by that digest (`agent-avatar.ts`).
+	 */
+	agent_id: z.string().nullable().optional(),
+	avatar_sha256: z.string().nullable().optional(),
 });
 
 /**

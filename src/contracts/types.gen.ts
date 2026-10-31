@@ -565,6 +565,10 @@ export interface SessionSummary {
 	placement?: Record<string, unknown> | null;
 	origin?: Record<string, unknown> | null;
 	last_synced_at?: number | null;
+	/** The bound agent and its profile picture's digest (agent-profile-picture
+	 *  contract). Additive; absence or `null` means "no picture to draw". */
+	agent_id?: string | null;
+	avatar_sha256?: string | null;
 }
 
 /* ---------------------------------------------------------------- transfer */

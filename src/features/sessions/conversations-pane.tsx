@@ -10,6 +10,8 @@ import {
 	View,
 } from "react-native";
 import type { SessionSummary } from "@/contracts";
+import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { AgentListRow } from "@/features/agent-avatar/agent-avatar-view";
 import {
 	DrawerComputerRow,
 	useComputerEntry,
@@ -61,6 +63,7 @@ import {
 	remoteSessionRowId,
 	STATE_MARKER,
 	SURFACE,
+	sessionRowAvatarId,
 	sessionRowId,
 	sessionTagLineId,
 } from "@/ui/a11y";
@@ -72,7 +75,6 @@ import { ConnectionPill } from "@/ui/components/connection-pill";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { ListRow } from "@/ui/components/list-row";
 import { middleFit } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
 import { SectionHeader } from "@/ui/components/section-header";
@@ -140,6 +142,17 @@ export type ConversationsPaneProps = {
 	 *  home screen (`directories()` is one read, and two readers of one datum is
 	 *  how two labels drift). */
 	homeDirectory?: string | null;
+	/**
+	 * The surface these rows sit on, handed to `ListRow` so a selected agent's
+	 * badge ring matches what is actually behind the row.
+	 *
+	 * The list does not own its background: the same component renders inside the
+	 * screen (`bg-surface`-free, `bg-elevated`-free — the screen's `bg-canvas`) and
+	 * inside the phone drawer's panel (`bg-elevated`). Only the caller knows which, so a
+	 * hardcoded ring was right in exactly one placement (agent review round 2, R2-2).
+	 * Undefined leaves `ListRow`'s own default (the screen canvas) in place.
+	 */
+	surfaceClassName?: string;
 };
 
 /**
@@ -231,6 +244,7 @@ export const ConversationsPane = ({
 	onNewChat,
 	notice,
 	homeDirectory,
+	surfaceClassName,
 }: ConversationsPaneProps) => {
 	const router = useRouter();
 	const { refreshList, relay, busy, streamHealth } = useConnection();
@@ -395,6 +409,19 @@ export const ConversationsPane = ({
 		[filtered, now],
 	);
 	const items = useMemo(() => buildItems(sections), [sections]);
+	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
+	 *  width for its title, so the list's titles share one left edge instead of
+	 *  stepping in and out between pictured and plain rows (design review round 1,
+	 *  D4 / agent review round 1, R2). Decided from the WIRE (`avatar_sha256`), not
+	 *  from which pictures resolved: a row whose digest the relay 404s still reserves,
+	 *  so the column does not move when a picture loads, fails or is removed. */
+	const anyRowPictured = useMemo(
+		() =>
+			items.some(
+				(item) => item.kind === "row" && avatarRefOf(item.session) !== null,
+			),
+		[items],
+	);
 
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
@@ -813,7 +840,11 @@ export const ConversationsPane = ({
 					 * on the row's kind rather than read through the default. */
 					const remote = isRemoteRow(session);
 					return (
-						<ListRow
+						<AgentListRow
+							avatarRef={avatarRefOf(session)}
+							avatarTestID={sessionRowAvatarId(session.session_id)}
+							reserveLeading={anyRowPictured}
+							surfaceClassName={surfaceClassName}
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
 								remote

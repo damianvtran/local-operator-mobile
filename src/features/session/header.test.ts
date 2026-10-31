@@ -265,6 +265,36 @@ describe("the session-health chrome", () => {
 			}
 		}
 	});
+	/* The agent picture (agent-profile-picture contract) belongs to the title's
+	 *  line: inline it is the last mark of the leading cluster, and stacked it leads
+	 *  the TITLE row (design review round 1, D1 — it used to ride the chrome row,
+	 *  which left the disc floating between back and search). Either way it is
+	 *  charged, at that row's own gap: 4 pt in the cluster, 8 pt on the title row. */
+	it("charges the agent picture inline, and only when there is one", () => {
+		const live = headerTitleChars(phone(390), { dot: true });
+		const pictured = headerTitleChars(phone(390), { dot: true, avatar: true });
+		expect(pictured).toBe(Math.floor((198 - 32) / DISPLAY_ADVANCE_PT));
+		expect(pictured).toBeLessThan(live);
+		expect(headerTitleChars(phone(390), { dot: true, avatar: false })).toBe(
+			live,
+		);
+		expect(
+			compactTitleChars({ width: 844, height: 390 }, 1, { avatar: true }),
+		).toBeLessThan(compactTitleChars({ width: 844, height: 390 }, 1));
+	});
+	it("stacked, the agent picture leads the title row and costs it 28 + 8 pt", () => {
+		/* Design review round 1, D1 moved the picture onto the TITLE row when the
+		 *  header stacks, so the two-line budget gives it up there: 28 pt of picture
+		 *  plus the title row's 8 pt gap = 36. At iphone-se 100 % that is 272 pt a
+		 *  line less 36 → 16 per line, two lines less the 4-character wrap slack. */
+		const bare = headerTitleChars(phone(320), { dot: true });
+		const pictured = headerTitleChars(phone(320), { dot: true, avatar: true });
+		expect(pictured).toBeLessThan(bare);
+		const twoLines = (used: number) =>
+			2 * Math.floor((320 - 32 - 16 - used) / MEASURED_WIDEST_ADVANCE) - 4;
+		expect(bare).toBe(twoLines(0));
+		expect(pictured).toBe(twoLines(28 + 8));
+	});
 	it("stacked, only the dot narrows the title row: the menu sits on the back row", () => {
 		expect(headerTitleChars(phone(320), { menu: true })).toBe(
 			headerTitleChars(phone(320)),

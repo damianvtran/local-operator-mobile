@@ -11,6 +11,8 @@ import {
 	View,
 } from "react-native";
 import type { PromptImage } from "@/contracts";
+import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
@@ -146,6 +148,10 @@ export default function Session() {
 	const listRow = useListState((state) =>
 		state.sessions.find((row) => row.session_id === sessionId),
 	);
+	/* The agent picture's reference, off the same list row: the row is the
+	 *  one place the contract publishes `agent_id` + `avatar_sha256`, so the
+	 *  header needs no request of its own to know whether a picture exists. */
+	const headerAvatarRef = listRow === undefined ? null : avatarRefOf(listRow);
 	const router = useRouter();
 	/* The header's tag line is a DISCLOSURE when this conversation is the local
 	 *  one and the relay offers the routes: it opens the same sheet the list
@@ -547,6 +553,21 @@ export default function Session() {
 	 *  control draws two (review M1 — a one-line clamp under a two-line budget
 	 *  cut every stacked name twice). Compact never stacks. */
 	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
+	/* The agent picture is a mark of the TITLE's line, not of the chrome. Inline it
+	 *  is the last item of the leading cluster and the title follows it; stacked, the
+	 *  leading cluster moves to its own row above the title, so leaving it there
+	 *  stranded a 28 pt disc between the back control and search while the health dot
+	 *  — the state marker it belongs beside — sat at the far left of the title line
+	 *  (design review round 1, D1). It renders in exactly ONE of the two places: two
+	 *  mounts would be two elements under one test id and two hooks racing to paint
+	 *  the same picture. Which one is `Screen`'s own stacking decision, so the two
+	 *  cannot disagree. */
+	const agentAvatar = (
+		<HeaderAgentAvatar
+			avatarRef={headerAvatarRef}
+			testID={CONTROL.sessionAgentAvatar}
+		/>
+	);
 	const headerTitle =
 		title.length > 0
 			? middleTruncate(
@@ -563,7 +584,12 @@ export default function Session() {
 								 *  charged here too — the budget promised 356.83 pt
 								 *  into a 341 pt box without it (design round 6,
 								 *  D19). */
-								{ dot: true, menu: ended, word: true },
+								{
+									dot: true,
+									menu: ended,
+									word: true,
+									avatar: headerAvatarRef !== null,
+								},
 								Platform.OS !== "web",
 							)
 						: headerTitleChars(
@@ -572,7 +598,7 @@ export default function Session() {
 								 *  (round 2 D11), so it is charged in every state rather than
 								 *  only on live — and the ⋮ only while it has an item (ended).
 								 *  Review M1, and round 2's D11 layout unification. */
-								{ dot: true, menu: ended },
+								{ dot: true, menu: ended, avatar: headerAvatarRef !== null },
 								effectiveScale,
 								Platform.OS !== "web",
 							),
@@ -974,6 +1000,14 @@ export default function Session() {
 						icon={({ color, size }) => <BackIcon color={color} size={size} />}
 					/>
 					<NavigationMark />
+					{/* The bound agent's picture, LEFT of the conversation name
+					 *  (agent-profile-picture contract) — inline. Stacked it leads the title
+					 *  row instead (`stackedTitleLeading` below), so the picture is a mark of
+					 *  the title's line at every width. Renders nothing without a picture.
+					 *  Not inside the title control: that is one button opening the health
+					 *  sheet, and a second pressable nested in it could not have its own
+					 *  press. */}
+					{headerStacked ? null : agentAvatar}
 				</View>
 			}
 			/* The title block is a CONTROL inside the h1: the conversation name
@@ -998,6 +1032,10 @@ export default function Session() {
 				</SessionHealthControl>
 			}
 			stackedActionsBeside
+			/* Stacked, the picture leads the TITLE row instead of the chrome row
+			 *  (design review round 1, D1) — and the title budget charges it there
+			 *  (`header.ts`'s stacked branch). */
+			stackedTitleLeading={headerStacked ? agentAvatar : undefined}
 			headerAction={
 				<SessionHeaderActions
 					ended={ended}

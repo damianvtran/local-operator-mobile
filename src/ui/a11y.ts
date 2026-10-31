@@ -405,6 +405,9 @@ export const CONTROL = {
 	 *  the bar when a hit is active; edit goes back to the results). Two controls,
 	 *  two names, so a flow cannot pass by pressing the wrong one. --- */
 	sessionFind: "session-find",
+	/** The bound agent's picture in the session header (agent-profile-picture
+	 *  contract). A button: it answers with the "change it on the desktop" hint. */
+	sessionAgentAvatar: "session-agent-avatar",
 	/* --- the session header's status dot (#3008 port). The title block is ONE
 	 *  control that opens the explanation sheet; Resume lives in that sheet and
 	 *  in the header's overflow menu. The dot itself is decorative (`aria-hidden`)
@@ -1722,6 +1725,11 @@ export const sessionRowId = (sessionId: string): string =>
  *  rather than by position. */
 export const sessionTagLineId = (sessionId: string): string =>
 	`session-tags-line-${sessionId}`;
+
+/** One conversation row's agent picture (agent-profile-picture contract), so
+ *  a frame can assert a row drew the picture rather than the plain slot. */
+export const sessionRowAvatarId = (sessionId: string): string =>
+	`session-row-avatar-${sessionId}`;
 
 /** The session header's tag line — a second family because the session screen
  *  and the conversations pane can be mounted at once (the drawer over the

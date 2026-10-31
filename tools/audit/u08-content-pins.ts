@@ -103,7 +103,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/relay.ts":
 		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
-		"86aceaf5d7eb42f168aa98fba43f12482aca94522bf4cfd9606742b491e8a523",
+		"dd7312406f3b0fe2a4c47e94fe1d9d49abc414d382b43c3c0ee8fea71517e917",
 	"tools/mock-relay/account-routing-gate.ts":
 		"2388f03adfea61dd69bcf397428fb899ab5d5977f47574727d81087d8d597379",
 	"tools/mock-relay/account-routing-identity.ts":
@@ -127,14 +127,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
 	"tools/mock-relay/relay.ts":
-		"70631606b69eade3ca73e5080d9c16baff98d53f04f87208391410e489df91ff",
+		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"83f4c75b29fc623c59d9ebcd59a1d9d494036e659ac3fb60b7e2ded4049541cc",
+		"0be0b00d9451014fd45dc3aa989f3f3882f7e15731d8c77fee6ea60e63529bc3",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -369,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "970ae89119efe541d75fdf6c95c5a0a4588d5a7cd8d5f6140f3bbc5bed3dff71",
+	app: "ac18960e1b7055b7922224987139c38e3cd409d5f014af524c76d121d2b75fb5",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -399,7 +399,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Settings shows local signing-out feedback, and all eight locales include
 	 * its keys. `src` only; no instrument or fixture changes. --print recomputed
 	 * after the final source edit; this is identity, not rendered visual proof. */
-	src: "b70a5496056e1b758ca3daad91864f5c40d5beefad9a02774f5862cd5fcc94eb",
+	/* Main convergence 2026-10-31: #143 adds avatar rendering in app/src and
+	 * two catalogue keys; #105 retains Team Bridge and M1/M2 security/pending
+	 * behavior. Digests below identify the mechanical union only. They are NOT
+	 * a review refresh or rendered evidence; convergence QA is still pending. */
+	src: "643ad5ec6187206a4aed63d18087766464259b1d19f186640c504c15ed778eea",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -12,8 +12,10 @@
  * `tools/visual` walk the matrix without a second hand-maintained list.
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 
 import type {
 	Capabilities,
@@ -619,6 +621,68 @@ const ANSWERS: readonly string[] = [
  * Build the scenario registry against a loaded fixture corpus.
  * `fix` is the object `loadFixtures()` returns.
  */
+/**
+ * The mock's agent pictures (agent-profile-picture contract): two tiny,
+ * visibly different PNGs — a teal and an amber disc's worth of pixels — keyed
+ * by agent id, with the digest the contract would write (sha256 of the stored
+ * bytes). Fabricated QA pixels, no real face. `REMOVED_AVATAR_SHA` is a digest
+ * no picture has, so the route answers its own 404 for it.
+ */
+export const AGENT_AVATARS: Record<string, Buffer> = {
+	researcher: solidPng(0x14, 0x8f, 0x86),
+	reviewer: solidPng(0xd9, 0x8a, 0x1c),
+};
+export const AGENT_AVATAR_SHAS: Record<"researcher" | "reviewer", string> = {
+	researcher: createHash("sha256")
+		.update(AGENT_AVATARS.researcher as Buffer)
+		.digest("hex"),
+	reviewer: createHash("sha256")
+		.update(AGENT_AVATARS.reviewer as Buffer)
+		.digest("hex"),
+};
+export const REMOVED_AVATAR_SHA = "0".repeat(64);
+
+/** A 32×32 single-colour PNG, built rather than checked in so the pixels are
+ *  reviewable as code. Unfiltered scanlines, one zlib stream, standard CRCs. */
+function solidPng(r: number, g: number, b: number): Buffer {
+	const size = 32;
+	const crcTable = Array.from({ length: 256 }, (_, n) => {
+		let c = n;
+		for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		return c >>> 0;
+	});
+	const crc = (bytes: Buffer) => {
+		let c = 0xffffffff;
+		for (const byte of bytes)
+			c = (crcTable[(c ^ byte) & 0xff] as number) ^ (c >>> 8);
+		return (c ^ 0xffffffff) >>> 0;
+	};
+	const chunk = (type: string, data: Buffer) => {
+		const length = Buffer.alloc(4);
+		length.writeUInt32BE(data.length);
+		const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+		const sum = Buffer.alloc(4);
+		sum.writeUInt32BE(crc(body));
+		return Buffer.concat([length, body, sum]);
+	};
+	const header = Buffer.alloc(13);
+	header.writeUInt32BE(size, 0);
+	header.writeUInt32BE(size, 4);
+	header[8] = 8; // bit depth
+	header[9] = 2; // truecolour
+	const row = Buffer.concat([
+		Buffer.from([0]),
+		Buffer.from(Array.from({ length: size }, () => [r, g, b]).flat()),
+	]);
+	const raw = Buffer.concat(Array.from({ length: size }, () => row));
+	return Buffer.concat([
+		Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+		chunk("IHDR", header),
+		chunk("IDAT", deflateSync(raw)),
+		chunk("IEND", Buffer.alloc(0)),
+	]);
+}
+
 export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 	/**
 	 * One inbox fixture's BODY, without its provenance marker.
@@ -1067,6 +1131,123 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				rowOverridesById: {
 					[unreadRow.session_id]: { unseen: true, section: "active" },
 					[olderUnread.session_id]: { unseen: true, section: "active" },
+				},
+			};
+		},
+	);
+
+	/* The agent-profile-picture world (local-operator agent-profile-picture
+	 *  contract): rows bound to agents that HAVE a picture in every status the
+	 *  corner badge must keep legible (streaming, waiting on an approval,
+	 *  unread, ended, idle), next to rows that must keep the plain glyph — no
+	 *  agent, an agent without a picture, and a digest the relay answers 404 for
+	 *  (picture removed between frames). The mock serves the bytes at the
+	 *  contract's `/v1/agents/{id}/avatar` from `AGENT_AVATARS` below. */
+	add(
+		"agent-avatars",
+		"Conversation rows bound to agents with profile pictures, in every status (running, waiting for approval, unread, ended, idle), beside rows that keep the glyph: unbound, an agent with no picture, and a picture the relay no longer has.",
+		/* Declared against EXISTING cells, as a second world for them (a cell's
+		 *  default world stays the first scenario that declares it): new cell
+		 *  names would grow the registry every plan figure in the tree is pinned
+		 *  to. Reach it with `--scenario agent-avatars`. */
+		["S15/populated", "S5/populated"],
+		() => {
+			const pictured = (
+				key: string,
+				name: string,
+				base: typeof liveIdle,
+				extra: Record<string, unknown> = {},
+			) =>
+				projectionFrom(base, {
+					session_id: syntheticSessionId(key),
+					conversation_name: name,
+					...extra,
+				});
+			const running = pictured(
+				"avatar-running",
+				"Index the vendor catalogue",
+				everyKind,
+				{
+					streaming: true,
+					activity: "running read",
+					activity_started_s: 12.5,
+				},
+			);
+			const waiting = pictured(
+				"avatar-waiting",
+				"Clean up the staging bucket",
+				approvalFrame,
+			);
+			const unread = pictured(
+				"avatar-unread",
+				"Summarise the weekly notes",
+				liveIdle,
+			);
+			const ended = pictured("avatar-ended", "Yesterday's sweep", afterDeath);
+			/* The idle row keeps the CAPTURED session id, so the session cell
+			 *  (`S5/populated`, which opens that id) shows a pictured header. That cell is
+			 *  the one the comment above means — this world declares no cell of its own,
+			 *  because a new cell name grows the registry every plan figure is pinned to
+			 *  (agent review round 1 R5 / QA round 1 Q2: the comment used to name
+			 *  `S5/agent-avatar-header`, a cell that has never existed). */
+			const idle = projectionFrom(liveIdle, {
+				session_id: CAPTURED_SESSION,
+				conversation_name: "Draft the release notes",
+			});
+			const unbound = pictured(
+				"avatar-unbound",
+				"Plain conversation",
+				liveIdle,
+			);
+			const noPicture = pictured(
+				"avatar-none",
+				"Agent without a picture",
+				liveIdle,
+			);
+			const removed = pictured(
+				"avatar-removed",
+				"Picture since removed",
+				liveIdle,
+			);
+			const bind = (
+				agent: keyof typeof AGENT_AVATAR_SHAS | "ghost",
+				extra = {},
+			) => ({
+				agent_id: agent === "ghost" ? "researcher" : agent,
+				avatar_sha256:
+					agent === "ghost" ? REMOVED_AVATAR_SHA : AGENT_AVATAR_SHAS[agent],
+				...extra,
+			});
+			return {
+				projections: Object.fromEntries(
+					/* THE ORDER IS THE FRAME (agent review round 1 R6 / design round 1 D7).
+					 *  A phone shows four to five rows, and the first version declared every
+					 *  pictured row first — so all three glyph-fallback rows sat below the fold
+					 *  on every phone profile and the scenario's own claim ("rows that must keep
+					 *  the plain glyph") could not be a frame. The wire order is the list's order
+					 *  (`buildItems` re-sorts nothing), so interleaving here is what makes the
+					 *  fallback rows visible: two pictured statuses, two fallbacks, then the
+					 *  rest. It also puts a pictured and a plain row adjacent, which is the
+					 *  mixed-list alignment frame (`ListRow`'s `leadingSlotPt`). */
+					[
+						running,
+						waiting,
+						unbound,
+						noPicture,
+						unread,
+						idle,
+						removed,
+						ended,
+					].map((projection) => [projection.session_id, projection]),
+				),
+				rowOverridesById: {
+					[running.session_id]: bind("researcher"),
+					[waiting.session_id]: bind("reviewer"),
+					[unread.session_id]: bind("researcher", { unseen: true }),
+					[ended.session_id]: bind("reviewer", { section: "previous" }),
+					[idle.session_id]: bind("researcher"),
+					[noPicture.session_id]: { agent_id: "writer", avatar_sha256: null },
+					[removed.session_id]: bind("ghost"),
 				},
 			};
 		},

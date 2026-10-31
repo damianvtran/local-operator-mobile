@@ -53,6 +53,17 @@ export type TextScalePercent = (typeof TEXT_SCALE_PERCENTS)[number];
  */
 export type TextScalePreference = "system" | `${TextScalePercent}`;
 
+/**
+ * One line box of a TYPE STEP in pt at the reader's scale: the step's size times
+ * its line height times `scale`. The one derivation for any box that has to be
+ * exactly one rendered line tall — the session header's reserved state line
+ * (`meta`) and the stacked title row's leading mark (`display`) — so the two
+ * cannot drift into two copies of the same arithmetic (agent review round 3,
+ * R3-3). The scale is the caller's `effectiveScale`, the one the type is drawn at.
+ */
+export const lineBoxPt = (step: TypeStepName, scale: number): number =>
+	TYPE_STEPS[step].size * TYPE_STEPS[step].lineHeight * scale;
+
 /** The floor and ceiling a platform signal is clamped to before it is used.
  * A signal outside this range is a misreported value, not a request: below 0.8
  * type stops being readable and above 3 every layout truncates. */
