@@ -1527,12 +1527,6 @@
 		},
 		{
 			"file": "src/features/settings/settings.tsx",
-			"text": "Sign out",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
 			"text": "Sign out?",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."

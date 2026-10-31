@@ -30,6 +30,8 @@ import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
 import session from "@/i18n/catalogues/en/mobile.session.json";
 import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
+import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
+import teamBridge from "@/i18n/catalogues/en/mobile.team_bridge.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
@@ -43,6 +45,12 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * context, and that the four namespaces do not quietly collide.
  */
 const NAMESPACES = [
+	{
+		name: "mobile.team_bridge",
+		messages: teamBridge,
+		context: teamBridgeContext,
+		expected: 86,
+	},
 	{
 		name: "mobile.home",
 		messages: home,
@@ -163,7 +171,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(147);
+		expect(total).toBe(233);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -224,6 +232,14 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.conversation":
+			"Conversation is also the French noun for a conversation; the correct isolated heading has identical spelling.",
+		"mobile.team_bridge.thread.message":
+			"Message is also the French noun used for a message input label; identical bytes are idiomatic French.",
+		"mobile.team_bridge.thread.notifications":
+			"Notifications is the French platform label too, matching the existing notifications screen title.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical
@@ -236,26 +252,38 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */
 	es: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
 	},

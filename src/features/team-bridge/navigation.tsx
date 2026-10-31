@@ -5,6 +5,7 @@
  */
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
+import { t } from "@/i18n";
 import { useTeamBridgeState } from "@/team-bridge/provider";
 import { CONTROL } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
@@ -15,7 +16,7 @@ export function TeamBridgeEntry({ onNavigate }: { onNavigate?: () => void }) {
 	return (
 		<View className="gap-1">
 			<Button
-				label={unread > 0 ? `Team Bridge · ${unread} unread` : "Team Bridge"}
+				label={t("mobile.team_bridge.navigation.entry", { count: unread })}
 				variant="quiet"
 				size="sm"
 				testID={CONTROL.teamBridgeNavigation}
@@ -25,7 +26,7 @@ export function TeamBridgeEntry({ onNavigate }: { onNavigate?: () => void }) {
 				}}
 			/>
 			<Text className="text-meta text-center text-ink-dim">
-				Your organization, even with your computer asleep
+				{t("mobile.team_bridge.navigation.caption")}
 			</Text>
 		</View>
 	);

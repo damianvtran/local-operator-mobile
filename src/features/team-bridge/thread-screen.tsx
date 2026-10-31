@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
+import { t } from "@/i18n";
 import type { Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -121,8 +122,8 @@ function ThreadContent({
 	}, [actions, organization, directoryState, tenantId]);
 	const title = conversation
 		? (model.conversationTitle(conversation, state.selfAccountId) ??
-			"Conversation")
-		: label || "Conversation";
+			t("mobile.team_bridge.conversation"))
+		: label || t("mobile.team_bridge.conversation");
 	const loadMetadata = useCallback(async () => {
 		if (!conversationId || !organization) return;
 		setMetadataLoading(true);
@@ -131,9 +132,7 @@ function ThreadContent({
 			const answer = await hub.getConversation(tenantId, conversationId);
 			if (isCurrent()) actions.adopt(answer);
 		} catch {
-			setMetadataError(
-				"This conversation could not load. It may no longer be available to you.",
-			);
+			setMetadataError(t("mobile.team_bridge.thread.metadata_error"));
 		} finally {
 			setMetadataLoading(false);
 		}
@@ -222,9 +221,7 @@ function ThreadContent({
 		try {
 			if (await sender.current?.(body)) setDraft("");
 		} catch {
-			setSendError(
-				"Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
-			);
+			setSendError(t("mobile.team_bridge.thread.send_error"));
 		} finally {
 			sendingRef.current = false;
 			setSending(false);
@@ -239,15 +236,13 @@ function ThreadContent({
 			if (!isCurrent()) return;
 			actions.adopt(answer);
 			if (model.isPreview(answer)) {
-				setJoinError(
-					"Joining has not completed. Try again before reading this channel.",
-				);
+				setJoinError(t("mobile.team_bridge.thread.join_pending"));
 				return;
 			}
 			await actions.loadThread(tenantId, conversationId);
 			void actions.loadOrganization(tenantId, { silent: true });
 		} catch {
-			setJoinError("Could not join this channel. Try again.");
+			setJoinError(t("mobile.team_bridge.thread.join_error"));
 		} finally {
 			setJoining(false);
 		}
@@ -260,7 +255,7 @@ function ThreadContent({
 			await actions.setNotify(tenantId, conversationId, notify);
 			setNotifyOpen(false);
 		} catch {
-			setNotifyError("Notification settings were not saved. Try again.");
+			setNotifyError(t("mobile.team_bridge.thread.notify_error"));
 		} finally {
 			setNotifyBusy(false);
 		}
@@ -302,7 +297,7 @@ function ThreadContent({
 					)}
 					{item.message.body === null ? (
 						<Text className="text-body text-ink-muted">
-							Message body unavailable.
+							{t("mobile.team_bridge.thread.body_unavailable")}
 						</Text>
 					) : (
 						<Markdown text={item.message.body} />
@@ -320,7 +315,7 @@ function ThreadContent({
 				admitted ? (
 					<Button
 						variant="quiet"
-						label="Notifications"
+						label={t("mobile.team_bridge.thread.notifications")}
 						testID={CONTROL.teamBridgeNotifications}
 						onPress={() => setNotifyOpen(true)}
 					/>
@@ -336,10 +331,10 @@ function ThreadContent({
 				{!organization ? (
 					<View className="gap-3 p-4">
 						<Text className="text-body text-ink">
-							This organization is not available to this account.
+							{t("mobile.team_bridge.thread.organization_unavailable")}
 						</Text>
 						<Button
-							label="Retry access"
+							label={t("mobile.team_bridge.thread.access_retry")}
 							testID={CONTROL.teamBridgeThreadAccessRetry}
 							onPress={() => {
 								void actions.checkStatus();
@@ -353,7 +348,7 @@ function ThreadContent({
 								className="p-4 text-body text-ink-muted"
 								testID={SURFACE.teamBridgeThreadLoading}
 							>
-								Loading conversation…
+								{t("mobile.team_bridge.thread.loading")}
 							</Text>
 						)}
 						{metadataError && (
@@ -362,7 +357,7 @@ function ThreadContent({
 									{metadataError}
 								</Text>
 								<Button
-									label="Retry conversation"
+									label={t("mobile.team_bridge.thread.retry")}
 									testID={CONTROL.teamBridgeMetadataRetry}
 									onPress={() => {
 										void loadMetadata();
@@ -372,8 +367,7 @@ function ThreadContent({
 						)}
 						{routeId === "new" && !target && !createdId && (
 							<Text className="p-4 text-body text-ink">
-								This message recipient is incomplete. Go back and choose a
-								person or chief of staff.
+								{t("mobile.team_bridge.thread.recipient_incomplete")}
 							</Text>
 						)}
 						{preview ? (
@@ -388,11 +382,11 @@ function ThreadContent({
 									</Text>
 								)}
 								<Text className="text-body text-ink-muted">
-									Join this channel to read its history and send messages.
+									{t("mobile.team_bridge.thread.preview_help")}
 								</Text>
 								{!readOnly && (
 									<Button
-										label="Join channel"
+										label={t("mobile.team_bridge.thread.join")}
 										testID={CONTROL.teamBridgeJoin}
 										loading={joining}
 										onPress={() => {
@@ -447,8 +441,8 @@ function ThreadContent({
 												<Button
 													label={
 														thread.loadingOlder
-															? "Loading older messages…"
-															: "Load older messages"
+															? t("mobile.team_bridge.thread.older_loading")
+															: t("mobile.team_bridge.thread.older_load")
 													}
 													variant="outline"
 													disabled={thread.loadingOlder}
@@ -465,10 +459,10 @@ function ThreadContent({
 														accessibilityRole="alert"
 														className="text-body text-ink"
 													>
-														Older messages could not load.
+														{t("mobile.team_bridge.thread.older_error")}
 													</Text>
 													<Button
-														label="Retry older messages"
+														label={t("mobile.team_bridge.thread.older_retry")}
 														testID={CONTROL.teamBridgeOlderRetry}
 														onPress={() => {
 															if (conversationId)
@@ -486,11 +480,12 @@ function ThreadContent({
 														accessibilityRole="alert"
 														className="text-body text-ink"
 													>
-														Messages could not refresh. Previously loaded
-														messages are shown.
+														{t("mobile.team_bridge.thread.refresh_error")}
 													</Text>
 													<Button
-														label="Retry messages"
+														label={t(
+															"mobile.team_bridge.thread.messages_retry",
+														)}
 														testID={CONTROL.teamBridgeMessagesRetry}
 														onPress={reload}
 													/>
@@ -504,14 +499,14 @@ function ThreadContent({
 											testID={SURFACE.teamBridgeThreadEmpty}
 										>
 											{!conversationId
-												? "No messages yet. Your first send starts the conversation."
+												? t("mobile.team_bridge.thread.new_empty")
 												: !thread ||
 														thread.state === "idle" ||
 														thread.state === "loading"
-													? "Loading messages…"
+													? t("mobile.team_bridge.thread.messages_loading")
 													: thread?.state === "error"
-														? "No messages could be loaded."
-														: "No messages yet. Start the conversation."}
+														? t("mobile.team_bridge.thread.messages_error")
+														: t("mobile.team_bridge.thread.messages_empty")}
 										</Text>
 									}
 								/>
@@ -523,9 +518,8 @@ function ThreadContent({
 									{readOnly ? (
 										<Text className="text-body text-ink-muted">
 											{conversation?.status === "archived"
-												? "This conversation is archived."
-												: "This organization is read only."}{" "}
-											You can read history, but cannot send messages.
+												? t("mobile.team_bridge.thread.archived")
+												: t("mobile.team_bridge.thread.readonly")}
 										</Text>
 									) : (
 										<>
@@ -539,15 +533,22 @@ function ThreadContent({
 												</Text>
 											)}
 											<Textarea
-												label="Message"
-												placeholder={`Message ${title}`}
+												label={t("mobile.team_bridge.thread.message")}
+												placeholder={t(
+													"mobile.team_bridge.thread.placeholder",
+													{ title },
+												)}
 												value={draft}
 												onChangeText={setDraft}
 												disabled={sending}
 												testID={CONTROL.teamBridgeMessageInput}
 											/>
 											<Button
-												label={sendError ? "Retry send" : "Send"}
+												label={
+													sendError
+														? t("mobile.team_bridge.thread.send_retry")
+														: t("mobile.team_bridge.thread.send")
+												}
 												loading={sending}
 												disabled={!draft.trim() || sending}
 												testID={CONTROL.teamBridgeSend}
@@ -566,18 +567,20 @@ function ThreadContent({
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}
-				title="Conversation notifications"
+				title={t("mobile.team_bridge.thread.notify_sheet")}
 				testID={SURFACE.teamBridgeNotifySheet}
 			>
 				<View className="gap-3 p-4">
 					<Text className="text-body text-ink-muted">
-						Current: {conversation ? model.notifyOf(conversation) : "all"}
+						{t("mobile.team_bridge.thread.notify_current", {
+							mode: conversation ? model.notifyOf(conversation) : "all",
+						})}
 					</Text>
 					{(
 						[
-							["all", "All messages"],
-							["mention", "Mentions only"],
-							["mute", "Mute"],
+							["all", t("mobile.team_bridge.thread.notify_all")],
+							["mention", t("mobile.team_bridge.thread.notify_mentions")],
+							["mute", t("mobile.team_bridge.thread.notify_mute")],
 						] as const
 					).map(([value, text]) => (
 						<Button

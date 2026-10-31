@@ -403,7 +403,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * two catalogue keys; #105 retains Team Bridge and M1/M2 security/pending
 	 * behavior. Digests below identify the mechanical union only. They are NOT
 	 * a review refresh or rendered evidence; convergence QA is still pending. */
-	src: "643ad5ec6187206a4aed63d18087766464259b1d19f186640c504c15ed778eea",
+	/* #105 localization 2026-10-31: the same four Team Bridge screens now read
+	 * 86 complete messages from all eight catalogues (233 total keys). Runtime
+	 * copy and generated source moved; auth/lifecycle/Settings bytes did not.
+	 * Source identity only — fresh independent language and rendered review owed. */
+	src: "b9f640abeb86de7f3f0d75233d0895fc09de69950fbdf73bec96f7da6baa2457",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

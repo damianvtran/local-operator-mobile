@@ -1,0 +1,346 @@
+{
+	"mobile.team_bridge.back": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.conversation": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.gate.checking": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: gate / checking. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.connecting": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / connecting. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.console_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: gate / console error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.loading": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: gate / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.manage_plan": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / manage plan. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.plan_description": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / plan description. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.plan_features": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / plan features. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.plan_required": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / plan required. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.sign_in": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: gate / sign in. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.sign_in_error": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / sign in error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.signed_out": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / signed out. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.signed_out_help": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / signed out help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.unavailable": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.unavailable_help": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / unavailable help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.update_help": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / update help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.update_required": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: gate / update required. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.gate.upgrade": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: gate / upgrade. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team."
+	},
+	"mobile.team_bridge.list.channels": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / channels. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.channels_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / channels empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.chief_role": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / chief role. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Chief of staff is the user’s coordinating agent role, not a human job posting."
+	},
+	"mobile.team_bridge.list.chiefs": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / chiefs. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Chief of staff is the user’s coordinating agent role, not a human job posting."
+	},
+	"mobile.team_bridge.list.chiefs_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / chiefs empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.choose": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: list / choose. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.conversations_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / conversations error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.conversations_loading": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / conversations loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.conversations_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: list / conversations retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.directory_incomplete": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / directory incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.groups": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / groups. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.groups_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / groups empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.organization": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / organization. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.organization_label": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / organization label. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.list.organization_selected": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / organization selected. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.list.organizations_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / organizations empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.other_direct": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / other direct. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.paused": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / paused. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.people": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: list / people. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.people_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / people empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.people_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / people error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.people_loading": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / people loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.people_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: list / people retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.person_unavailable": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / person unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.preview": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / preview. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.quiet": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: list / quiet. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.list.self": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: list / self. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.navigation.caption": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: navigation / caption. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.navigation.entry": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.access_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / access retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.archived": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / archived. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.body_unavailable": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / body unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.join": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / join. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.join_error": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / join error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.join_pending": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / join pending. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.loading": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.message": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / message. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.messages_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / messages empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.messages_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / messages error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.messages_loading": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / messages loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.messages_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / messages retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.metadata_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / metadata error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.new_empty": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / new empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notifications": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / notifications. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notify_all": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / notify all. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notify_current": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / notify current. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.thread.notify_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / notify error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notify_mentions": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / notify mentions. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notify_mute": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / notify mute. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.notify_sheet": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: thread / notify sheet. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.older_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / older error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.older_load": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / older load. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.older_loading": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / older loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.older_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / older retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.organization_unavailable": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / organization unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.placeholder": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / placeholder. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.thread.preview_help": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / preview help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.readonly": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / readonly. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.recipient_incomplete": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / recipient incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.refresh_error": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / refresh error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.send": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / send. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.send_error": {
+		"role": "help",
+		"note": "Team Bridge mobile UI: thread / send error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.thread.send_retry": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / send retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.title": {
+		"role": "heading",
+		"note": "Team Bridge mobile UI: title. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
+	},
+	"mobile.team_bridge.unread": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: unread. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	}
+}

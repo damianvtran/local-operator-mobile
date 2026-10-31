@@ -166,6 +166,92 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.team_bridge.back"
+	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.gate.checking"
+	| "mobile.team_bridge.gate.connecting"
+	| "mobile.team_bridge.gate.console_error"
+	| "mobile.team_bridge.gate.loading"
+	| "mobile.team_bridge.gate.manage_plan"
+	| "mobile.team_bridge.gate.plan_description"
+	| "mobile.team_bridge.gate.plan_features"
+	| "mobile.team_bridge.gate.plan_required"
+	| "mobile.team_bridge.gate.sign_in"
+	| "mobile.team_bridge.gate.sign_in_error"
+	| "mobile.team_bridge.gate.signed_out"
+	| "mobile.team_bridge.gate.signed_out_help"
+	| "mobile.team_bridge.gate.unavailable"
+	| "mobile.team_bridge.gate.unavailable_help"
+	| "mobile.team_bridge.gate.update_help"
+	| "mobile.team_bridge.gate.update_required"
+	| "mobile.team_bridge.gate.upgrade"
+	| "mobile.team_bridge.list.channels"
+	| "mobile.team_bridge.list.channels_empty"
+	| "mobile.team_bridge.list.chief_role"
+	| "mobile.team_bridge.list.chiefs"
+	| "mobile.team_bridge.list.chiefs_empty"
+	| "mobile.team_bridge.list.choose"
+	| "mobile.team_bridge.list.conversations_error"
+	| "mobile.team_bridge.list.conversations_loading"
+	| "mobile.team_bridge.list.conversations_retry"
+	| "mobile.team_bridge.list.directory_incomplete"
+	| "mobile.team_bridge.list.groups"
+	| "mobile.team_bridge.list.groups_empty"
+	| "mobile.team_bridge.list.organization"
+	| "mobile.team_bridge.list.organization_label"
+	| "mobile.team_bridge.list.organization_selected"
+	| "mobile.team_bridge.list.organizations_empty"
+	| "mobile.team_bridge.list.other_direct"
+	| "mobile.team_bridge.list.paused"
+	| "mobile.team_bridge.list.people"
+	| "mobile.team_bridge.list.people_empty"
+	| "mobile.team_bridge.list.people_error"
+	| "mobile.team_bridge.list.people_loading"
+	| "mobile.team_bridge.list.people_retry"
+	| "mobile.team_bridge.list.person_unavailable"
+	| "mobile.team_bridge.list.preview"
+	| "mobile.team_bridge.list.quiet"
+	| "mobile.team_bridge.list.self"
+	| "mobile.team_bridge.navigation.caption"
+	| "mobile.team_bridge.navigation.entry"
+	| "mobile.team_bridge.retry"
+	| "mobile.team_bridge.thread.access_retry"
+	| "mobile.team_bridge.thread.archived"
+	| "mobile.team_bridge.thread.body_unavailable"
+	| "mobile.team_bridge.thread.join"
+	| "mobile.team_bridge.thread.join_error"
+	| "mobile.team_bridge.thread.join_pending"
+	| "mobile.team_bridge.thread.loading"
+	| "mobile.team_bridge.thread.message"
+	| "mobile.team_bridge.thread.messages_empty"
+	| "mobile.team_bridge.thread.messages_error"
+	| "mobile.team_bridge.thread.messages_loading"
+	| "mobile.team_bridge.thread.messages_retry"
+	| "mobile.team_bridge.thread.metadata_error"
+	| "mobile.team_bridge.thread.new_empty"
+	| "mobile.team_bridge.thread.notifications"
+	| "mobile.team_bridge.thread.notify_all"
+	| "mobile.team_bridge.thread.notify_current"
+	| "mobile.team_bridge.thread.notify_error"
+	| "mobile.team_bridge.thread.notify_mentions"
+	| "mobile.team_bridge.thread.notify_mute"
+	| "mobile.team_bridge.thread.notify_sheet"
+	| "mobile.team_bridge.thread.older_error"
+	| "mobile.team_bridge.thread.older_load"
+	| "mobile.team_bridge.thread.older_loading"
+	| "mobile.team_bridge.thread.older_retry"
+	| "mobile.team_bridge.thread.organization_unavailable"
+	| "mobile.team_bridge.thread.placeholder"
+	| "mobile.team_bridge.thread.preview_help"
+	| "mobile.team_bridge.thread.readonly"
+	| "mobile.team_bridge.thread.recipient_incomplete"
+	| "mobile.team_bridge.thread.refresh_error"
+	| "mobile.team_bridge.thread.retry"
+	| "mobile.team_bridge.thread.send"
+	| "mobile.team_bridge.thread.send_error"
+	| "mobile.team_bridge.thread.send_retry"
+	| "mobile.team_bridge.title"
+	| "mobile.team_bridge.unread"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
@@ -294,6 +380,86 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.team_bridge.back"
+	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.gate.checking"
+	| "mobile.team_bridge.gate.connecting"
+	| "mobile.team_bridge.gate.console_error"
+	| "mobile.team_bridge.gate.loading"
+	| "mobile.team_bridge.gate.manage_plan"
+	| "mobile.team_bridge.gate.plan_description"
+	| "mobile.team_bridge.gate.plan_features"
+	| "mobile.team_bridge.gate.plan_required"
+	| "mobile.team_bridge.gate.sign_in"
+	| "mobile.team_bridge.gate.sign_in_error"
+	| "mobile.team_bridge.gate.signed_out"
+	| "mobile.team_bridge.gate.signed_out_help"
+	| "mobile.team_bridge.gate.unavailable"
+	| "mobile.team_bridge.gate.unavailable_help"
+	| "mobile.team_bridge.gate.update_help"
+	| "mobile.team_bridge.gate.update_required"
+	| "mobile.team_bridge.gate.upgrade"
+	| "mobile.team_bridge.list.channels"
+	| "mobile.team_bridge.list.channels_empty"
+	| "mobile.team_bridge.list.chief_role"
+	| "mobile.team_bridge.list.chiefs"
+	| "mobile.team_bridge.list.chiefs_empty"
+	| "mobile.team_bridge.list.choose"
+	| "mobile.team_bridge.list.conversations_error"
+	| "mobile.team_bridge.list.conversations_loading"
+	| "mobile.team_bridge.list.conversations_retry"
+	| "mobile.team_bridge.list.directory_incomplete"
+	| "mobile.team_bridge.list.groups"
+	| "mobile.team_bridge.list.groups_empty"
+	| "mobile.team_bridge.list.organization"
+	| "mobile.team_bridge.list.organizations_empty"
+	| "mobile.team_bridge.list.other_direct"
+	| "mobile.team_bridge.list.paused"
+	| "mobile.team_bridge.list.people"
+	| "mobile.team_bridge.list.people_empty"
+	| "mobile.team_bridge.list.people_error"
+	| "mobile.team_bridge.list.people_loading"
+	| "mobile.team_bridge.list.people_retry"
+	| "mobile.team_bridge.list.person_unavailable"
+	| "mobile.team_bridge.list.preview"
+	| "mobile.team_bridge.list.quiet"
+	| "mobile.team_bridge.list.self"
+	| "mobile.team_bridge.navigation.caption"
+	| "mobile.team_bridge.retry"
+	| "mobile.team_bridge.thread.access_retry"
+	| "mobile.team_bridge.thread.archived"
+	| "mobile.team_bridge.thread.body_unavailable"
+	| "mobile.team_bridge.thread.join"
+	| "mobile.team_bridge.thread.join_error"
+	| "mobile.team_bridge.thread.join_pending"
+	| "mobile.team_bridge.thread.loading"
+	| "mobile.team_bridge.thread.message"
+	| "mobile.team_bridge.thread.messages_empty"
+	| "mobile.team_bridge.thread.messages_error"
+	| "mobile.team_bridge.thread.messages_loading"
+	| "mobile.team_bridge.thread.messages_retry"
+	| "mobile.team_bridge.thread.metadata_error"
+	| "mobile.team_bridge.thread.new_empty"
+	| "mobile.team_bridge.thread.notifications"
+	| "mobile.team_bridge.thread.notify_all"
+	| "mobile.team_bridge.thread.notify_error"
+	| "mobile.team_bridge.thread.notify_mentions"
+	| "mobile.team_bridge.thread.notify_mute"
+	| "mobile.team_bridge.thread.notify_sheet"
+	| "mobile.team_bridge.thread.older_error"
+	| "mobile.team_bridge.thread.older_load"
+	| "mobile.team_bridge.thread.older_loading"
+	| "mobile.team_bridge.thread.older_retry"
+	| "mobile.team_bridge.thread.organization_unavailable"
+	| "mobile.team_bridge.thread.preview_help"
+	| "mobile.team_bridge.thread.readonly"
+	| "mobile.team_bridge.thread.recipient_incomplete"
+	| "mobile.team_bridge.thread.refresh_error"
+	| "mobile.team_bridge.thread.retry"
+	| "mobile.team_bridge.thread.send"
+	| "mobile.team_bridge.thread.send_error"
+	| "mobile.team_bridge.thread.send_retry"
+	| "mobile.team_bridge.title"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
@@ -447,6 +613,92 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.team_bridge.back": NoParams;
+	"mobile.team_bridge.conversation": NoParams;
+	"mobile.team_bridge.gate.checking": NoParams;
+	"mobile.team_bridge.gate.connecting": NoParams;
+	"mobile.team_bridge.gate.console_error": NoParams;
+	"mobile.team_bridge.gate.loading": NoParams;
+	"mobile.team_bridge.gate.manage_plan": NoParams;
+	"mobile.team_bridge.gate.plan_description": NoParams;
+	"mobile.team_bridge.gate.plan_features": NoParams;
+	"mobile.team_bridge.gate.plan_required": NoParams;
+	"mobile.team_bridge.gate.sign_in": NoParams;
+	"mobile.team_bridge.gate.sign_in_error": NoParams;
+	"mobile.team_bridge.gate.signed_out": NoParams;
+	"mobile.team_bridge.gate.signed_out_help": NoParams;
+	"mobile.team_bridge.gate.unavailable": NoParams;
+	"mobile.team_bridge.gate.unavailable_help": NoParams;
+	"mobile.team_bridge.gate.update_help": NoParams;
+	"mobile.team_bridge.gate.update_required": NoParams;
+	"mobile.team_bridge.gate.upgrade": NoParams;
+	"mobile.team_bridge.list.channels": NoParams;
+	"mobile.team_bridge.list.channels_empty": NoParams;
+	"mobile.team_bridge.list.chief_role": NoParams;
+	"mobile.team_bridge.list.chiefs": NoParams;
+	"mobile.team_bridge.list.chiefs_empty": NoParams;
+	"mobile.team_bridge.list.choose": NoParams;
+	"mobile.team_bridge.list.conversations_error": NoParams;
+	"mobile.team_bridge.list.conversations_loading": NoParams;
+	"mobile.team_bridge.list.conversations_retry": NoParams;
+	"mobile.team_bridge.list.directory_incomplete": NoParams;
+	"mobile.team_bridge.list.groups": NoParams;
+	"mobile.team_bridge.list.groups_empty": NoParams;
+	"mobile.team_bridge.list.organization": NoParams;
+	"mobile.team_bridge.list.organization_label": { name: string | number; count: number; readOnly: string };
+	"mobile.team_bridge.list.organization_selected": { name: string | number; readOnly: string };
+	"mobile.team_bridge.list.organizations_empty": NoParams;
+	"mobile.team_bridge.list.other_direct": NoParams;
+	"mobile.team_bridge.list.paused": NoParams;
+	"mobile.team_bridge.list.people": NoParams;
+	"mobile.team_bridge.list.people_empty": NoParams;
+	"mobile.team_bridge.list.people_error": NoParams;
+	"mobile.team_bridge.list.people_loading": NoParams;
+	"mobile.team_bridge.list.people_retry": NoParams;
+	"mobile.team_bridge.list.person_unavailable": NoParams;
+	"mobile.team_bridge.list.preview": NoParams;
+	"mobile.team_bridge.list.quiet": NoParams;
+	"mobile.team_bridge.list.self": NoParams;
+	"mobile.team_bridge.navigation.caption": NoParams;
+	"mobile.team_bridge.navigation.entry": { count: number };
+	"mobile.team_bridge.retry": NoParams;
+	"mobile.team_bridge.thread.access_retry": NoParams;
+	"mobile.team_bridge.thread.archived": NoParams;
+	"mobile.team_bridge.thread.body_unavailable": NoParams;
+	"mobile.team_bridge.thread.join": NoParams;
+	"mobile.team_bridge.thread.join_error": NoParams;
+	"mobile.team_bridge.thread.join_pending": NoParams;
+	"mobile.team_bridge.thread.loading": NoParams;
+	"mobile.team_bridge.thread.message": NoParams;
+	"mobile.team_bridge.thread.messages_empty": NoParams;
+	"mobile.team_bridge.thread.messages_error": NoParams;
+	"mobile.team_bridge.thread.messages_loading": NoParams;
+	"mobile.team_bridge.thread.messages_retry": NoParams;
+	"mobile.team_bridge.thread.metadata_error": NoParams;
+	"mobile.team_bridge.thread.new_empty": NoParams;
+	"mobile.team_bridge.thread.notifications": NoParams;
+	"mobile.team_bridge.thread.notify_all": NoParams;
+	"mobile.team_bridge.thread.notify_current": { mode: string };
+	"mobile.team_bridge.thread.notify_error": NoParams;
+	"mobile.team_bridge.thread.notify_mentions": NoParams;
+	"mobile.team_bridge.thread.notify_mute": NoParams;
+	"mobile.team_bridge.thread.notify_sheet": NoParams;
+	"mobile.team_bridge.thread.older_error": NoParams;
+	"mobile.team_bridge.thread.older_load": NoParams;
+	"mobile.team_bridge.thread.older_loading": NoParams;
+	"mobile.team_bridge.thread.older_retry": NoParams;
+	"mobile.team_bridge.thread.organization_unavailable": NoParams;
+	"mobile.team_bridge.thread.placeholder": { title: string | number };
+	"mobile.team_bridge.thread.preview_help": NoParams;
+	"mobile.team_bridge.thread.readonly": NoParams;
+	"mobile.team_bridge.thread.recipient_incomplete": NoParams;
+	"mobile.team_bridge.thread.refresh_error": NoParams;
+	"mobile.team_bridge.thread.retry": NoParams;
+	"mobile.team_bridge.thread.send": NoParams;
+	"mobile.team_bridge.thread.send_error": NoParams;
+	"mobile.team_bridge.thread.send_retry": NoParams;
+	"mobile.team_bridge.title": NoParams;
+	"mobile.team_bridge.unread": { count: number };
 	"relay.chrome.session.resume": NoParams;
 	"relay.chrome.session.resuming": NoParams;
 	"relay.chrome.session.subtitle.ended": NoParams;
@@ -613,6 +865,92 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.team_bridge.back": "Back",
+	"mobile.team_bridge.conversation": "Conversation",
+	"mobile.team_bridge.gate.checking": "Checking Team Bridge…",
+	"mobile.team_bridge.gate.connecting": "Connecting to Radient. Your computer can stay closed.",
+	"mobile.team_bridge.gate.console_error": "Could not open the Radient console.",
+	"mobile.team_bridge.gate.loading": "Loading Team Bridge",
+	"mobile.team_bridge.gate.manage_plan": "Manage your plan in the Radient console",
+	"mobile.team_bridge.gate.plan_description": "Communicate with your team members and their agents, and let agents collaborate with other agents in your organization.",
+	"mobile.team_bridge.gate.plan_features": "Channels for your organization · Direct messages · Chiefs of staff · Team notifications",
+	"mobile.team_bridge.gate.plan_required": "Team Bridge requires a Radient Team plan",
+	"mobile.team_bridge.gate.sign_in": "Sign in",
+	"mobile.team_bridge.gate.sign_in_error": "Sign-in did not complete. Try again.",
+	"mobile.team_bridge.gate.signed_out": "Sign in to Team Bridge",
+	"mobile.team_bridge.gate.signed_out_help": "Connect directly to your team, even when your computer is closed.",
+	"mobile.team_bridge.gate.unavailable": "Team Bridge is unavailable",
+	"mobile.team_bridge.gate.unavailable_help": "We could not reach Team Bridge. Your conversations have not been changed.",
+	"mobile.team_bridge.gate.update_help": "This version cannot read the Team Bridge service. Update the app to continue.",
+	"mobile.team_bridge.gate.update_required": "Update required",
+	"mobile.team_bridge.gate.upgrade": "Upgrade to Team",
+	"mobile.team_bridge.list.channels": "Channels",
+	"mobile.team_bridge.list.channels_empty": "No channels yet.",
+	"mobile.team_bridge.list.chief_role": "Chief of staff",
+	"mobile.team_bridge.list.chiefs": "Chiefs of staff",
+	"mobile.team_bridge.list.chiefs_empty": "No chiefs of staff are available.",
+	"mobile.team_bridge.list.choose": "Choose organization",
+	"mobile.team_bridge.list.conversations_error": "Conversations could not load.",
+	"mobile.team_bridge.list.conversations_loading": "Loading conversations…",
+	"mobile.team_bridge.list.conversations_retry": "Retry conversations",
+	"mobile.team_bridge.list.directory_incomplete": "The directory is incomplete. Pull to refresh for the latest people.",
+	"mobile.team_bridge.list.groups": "Groups",
+	"mobile.team_bridge.list.groups_empty": "No groups yet.",
+	"mobile.team_bridge.list.organization": "Organization",
+	"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · Read only} other {}}{count, plural, =0 {} one { · # unread} other { · # unread}}",
+	"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · Read only} other {}}",
+	"mobile.team_bridge.list.organizations_empty": "No organizations are available.",
+	"mobile.team_bridge.list.other_direct": "Other direct messages",
+	"mobile.team_bridge.list.paused": "Paused",
+	"mobile.team_bridge.list.people": "People",
+	"mobile.team_bridge.list.people_empty": "No people in this organization.",
+	"mobile.team_bridge.list.people_error": "The people directory could not load. Try again to load your organization’s people.",
+	"mobile.team_bridge.list.people_loading": "Loading people…",
+	"mobile.team_bridge.list.people_retry": "Retry people",
+	"mobile.team_bridge.list.person_unavailable": "Hasn’t turned on Team Bridge yet",
+	"mobile.team_bridge.list.preview": "Preview · Join to read",
+	"mobile.team_bridge.list.quiet": "Notifications quiet",
+	"mobile.team_bridge.list.self": "you",
+	"mobile.team_bridge.navigation.caption": "Your organization, even with your computer asleep",
+	"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # unread} other {Team Bridge · # unread}}",
+	"mobile.team_bridge.retry": "Retry",
+	"mobile.team_bridge.thread.access_retry": "Retry access",
+	"mobile.team_bridge.thread.archived": "This conversation is archived. You can read history, but cannot send messages.",
+	"mobile.team_bridge.thread.body_unavailable": "Message body unavailable.",
+	"mobile.team_bridge.thread.join": "Join channel",
+	"mobile.team_bridge.thread.join_error": "Could not join this channel. Try again.",
+	"mobile.team_bridge.thread.join_pending": "Joining has not completed. Try again before reading this channel.",
+	"mobile.team_bridge.thread.loading": "Loading conversation…",
+	"mobile.team_bridge.thread.message": "Message",
+	"mobile.team_bridge.thread.messages_empty": "No messages yet. Start the conversation.",
+	"mobile.team_bridge.thread.messages_error": "No messages could be loaded.",
+	"mobile.team_bridge.thread.messages_loading": "Loading messages…",
+	"mobile.team_bridge.thread.messages_retry": "Retry messages",
+	"mobile.team_bridge.thread.metadata_error": "This conversation could not load. It may no longer be available to you.",
+	"mobile.team_bridge.thread.new_empty": "No messages yet. Your first send starts the conversation.",
+	"mobile.team_bridge.thread.notifications": "Notifications",
+	"mobile.team_bridge.thread.notify_all": "All messages",
+	"mobile.team_bridge.thread.notify_current": "Current: {mode, select, all {All messages} mention {Mentions only} mute {Mute} other {All messages}}",
+	"mobile.team_bridge.thread.notify_error": "Notification settings were not saved. Try again.",
+	"mobile.team_bridge.thread.notify_mentions": "Mentions only",
+	"mobile.team_bridge.thread.notify_mute": "Mute",
+	"mobile.team_bridge.thread.notify_sheet": "Conversation notifications",
+	"mobile.team_bridge.thread.older_error": "Older messages could not load.",
+	"mobile.team_bridge.thread.older_load": "Load older messages",
+	"mobile.team_bridge.thread.older_loading": "Loading older messages…",
+	"mobile.team_bridge.thread.older_retry": "Retry older messages",
+	"mobile.team_bridge.thread.organization_unavailable": "This organization is not available to this account.",
+	"mobile.team_bridge.thread.placeholder": "Message {title}",
+	"mobile.team_bridge.thread.preview_help": "Join this channel to read its history and send messages.",
+	"mobile.team_bridge.thread.readonly": "This organization is read only. You can read history, but cannot send messages.",
+	"mobile.team_bridge.thread.recipient_incomplete": "This message recipient is incomplete. Go back and choose a person or chief of staff.",
+	"mobile.team_bridge.thread.refresh_error": "Messages could not refresh. Previously loaded messages are shown.",
+	"mobile.team_bridge.thread.retry": "Retry conversation",
+	"mobile.team_bridge.thread.send": "Send",
+	"mobile.team_bridge.thread.send_error": "Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
+	"mobile.team_bridge.thread.send_retry": "Retry send",
+	"mobile.team_bridge.title": "Team Bridge",
+	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}",
 	"relay.chrome.session.resume": "Resume",
 	"relay.chrome.session.resuming": "Resuming…",
 	"relay.chrome.session.subtitle.ended": "Ended",
@@ -764,6 +1102,92 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.gate.checking": { role: "status", note: "Team Bridge mobile UI: gate / checking. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.connecting": { role: "help", note: "Team Bridge mobile UI: gate / connecting. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.console_error": { role: "status", note: "Team Bridge mobile UI: gate / console error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.loading": { role: "status", note: "Team Bridge mobile UI: gate / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.manage_plan": { role: "help", note: "Team Bridge mobile UI: gate / manage plan. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.plan_description": { role: "help", note: "Team Bridge mobile UI: gate / plan description. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.plan_features": { role: "help", note: "Team Bridge mobile UI: gate / plan features. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.plan_required": { role: "help", note: "Team Bridge mobile UI: gate / plan required. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.sign_in": { role: "button", note: "Team Bridge mobile UI: gate / sign in. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.sign_in_error": { role: "help", note: "Team Bridge mobile UI: gate / sign in error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.signed_out": { role: "help", note: "Team Bridge mobile UI: gate / signed out. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.signed_out_help": { role: "help", note: "Team Bridge mobile UI: gate / signed out help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.unavailable": { role: "help", note: "Team Bridge mobile UI: gate / unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.unavailable_help": { role: "help", note: "Team Bridge mobile UI: gate / unavailable help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.update_help": { role: "help", note: "Team Bridge mobile UI: gate / update help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.update_required": { role: "help", note: "Team Bridge mobile UI: gate / update required. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.gate.upgrade": { role: "button", note: "Team Bridge mobile UI: gate / upgrade. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
+	"mobile.team_bridge.list.channels": { role: "heading", note: "Team Bridge mobile UI: list / channels. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.channels_empty": { role: "status", note: "Team Bridge mobile UI: list / channels empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.chief_role": { role: "help", note: "Team Bridge mobile UI: list / chief role. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Chief of staff is the user’s coordinating agent role, not a human job posting." },
+	"mobile.team_bridge.list.chiefs": { role: "heading", note: "Team Bridge mobile UI: list / chiefs. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Chief of staff is the user’s coordinating agent role, not a human job posting." },
+	"mobile.team_bridge.list.chiefs_empty": { role: "status", note: "Team Bridge mobile UI: list / chiefs empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.choose": { role: "button", note: "Team Bridge mobile UI: list / choose. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.conversations_error": { role: "status", note: "Team Bridge mobile UI: list / conversations error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.conversations_loading": { role: "status", note: "Team Bridge mobile UI: list / conversations loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.conversations_retry": { role: "button", note: "Team Bridge mobile UI: list / conversations retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.directory_incomplete": { role: "help", note: "Team Bridge mobile UI: list / directory incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.groups": { role: "heading", note: "Team Bridge mobile UI: list / groups. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.groups_empty": { role: "status", note: "Team Bridge mobile UI: list / groups empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.organization": { role: "heading", note: "Team Bridge mobile UI: list / organization. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.organization_label": { role: "help", note: "Team Bridge mobile UI: list / organization label. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.list.organization_selected": { role: "help", note: "Team Bridge mobile UI: list / organization selected. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.list.organizations_empty": { role: "status", note: "Team Bridge mobile UI: list / organizations empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.other_direct": { role: "heading", note: "Team Bridge mobile UI: list / other direct. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.paused": { role: "status", note: "Team Bridge mobile UI: list / paused. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.people": { role: "heading", note: "Team Bridge mobile UI: list / people. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.people_empty": { role: "status", note: "Team Bridge mobile UI: list / people empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.people_error": { role: "status", note: "Team Bridge mobile UI: list / people error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.people_loading": { role: "status", note: "Team Bridge mobile UI: list / people loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.people_retry": { role: "button", note: "Team Bridge mobile UI: list / people retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.person_unavailable": { role: "help", note: "Team Bridge mobile UI: list / person unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.preview": { role: "help", note: "Team Bridge mobile UI: list / preview. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.quiet": { role: "status", note: "Team Bridge mobile UI: list / quiet. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.list.self": { role: "help", note: "Team Bridge mobile UI: list / self. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.navigation.caption": { role: "help", note: "Team Bridge mobile UI: navigation / caption. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.navigation.entry": { role: "help", note: "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.retry": { role: "button", note: "Team Bridge mobile UI: retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.access_retry": { role: "button", note: "Team Bridge mobile UI: thread / access retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.archived": { role: "help", note: "Team Bridge mobile UI: thread / archived. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.body_unavailable": { role: "help", note: "Team Bridge mobile UI: thread / body unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.join": { role: "button", note: "Team Bridge mobile UI: thread / join. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.join_error": { role: "help", note: "Team Bridge mobile UI: thread / join error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.join_pending": { role: "help", note: "Team Bridge mobile UI: thread / join pending. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.loading": { role: "status", note: "Team Bridge mobile UI: thread / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.message": { role: "help", note: "Team Bridge mobile UI: thread / message. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.messages_empty": { role: "status", note: "Team Bridge mobile UI: thread / messages empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.messages_error": { role: "status", note: "Team Bridge mobile UI: thread / messages error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.messages_loading": { role: "status", note: "Team Bridge mobile UI: thread / messages loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.messages_retry": { role: "button", note: "Team Bridge mobile UI: thread / messages retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.metadata_error": { role: "status", note: "Team Bridge mobile UI: thread / metadata error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.new_empty": { role: "status", note: "Team Bridge mobile UI: thread / new empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notifications": { role: "help", note: "Team Bridge mobile UI: thread / notifications. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notify_all": { role: "button", note: "Team Bridge mobile UI: thread / notify all. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notify_current": { role: "status", note: "Team Bridge mobile UI: thread / notify current. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.thread.notify_error": { role: "status", note: "Team Bridge mobile UI: thread / notify error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notify_mentions": { role: "button", note: "Team Bridge mobile UI: thread / notify mentions. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notify_mute": { role: "button", note: "Team Bridge mobile UI: thread / notify mute. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.notify_sheet": { role: "heading", note: "Team Bridge mobile UI: thread / notify sheet. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.older_error": { role: "status", note: "Team Bridge mobile UI: thread / older error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.older_load": { role: "button", note: "Team Bridge mobile UI: thread / older load. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.older_loading": { role: "button", note: "Team Bridge mobile UI: thread / older loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.older_retry": { role: "button", note: "Team Bridge mobile UI: thread / older retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.organization_unavailable": { role: "help", note: "Team Bridge mobile UI: thread / organization unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.placeholder": { role: "help", note: "Team Bridge mobile UI: thread / placeholder. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.thread.preview_help": { role: "help", note: "Team Bridge mobile UI: thread / preview help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.readonly": { role: "help", note: "Team Bridge mobile UI: thread / readonly. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.recipient_incomplete": { role: "help", note: "Team Bridge mobile UI: thread / recipient incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.refresh_error": { role: "status", note: "Team Bridge mobile UI: thread / refresh error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.retry": { role: "button", note: "Team Bridge mobile UI: thread / retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.send": { role: "button", note: "Team Bridge mobile UI: thread / send. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.send_error": { role: "help", note: "Team Bridge mobile UI: thread / send error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.send_retry": { role: "button", note: "Team Bridge mobile UI: thread / send retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.title": { role: "heading", note: "Team Bridge mobile UI: title. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.unread": { role: "status", note: "Team Bridge mobile UI: unread. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
 	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
 	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
 	"relay.chrome.session.subtitle.ended": { role: "status", note: "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim." },
@@ -929,6 +1353,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.team_bridge.back": "Atrás",
+		"mobile.team_bridge.conversation": "Conversación",
+		"mobile.team_bridge.gate.checking": "Comprobando Team Bridge…",
+		"mobile.team_bridge.gate.connecting": "Conectando con Radient. Tu ordenador puede seguir cerrado.",
+		"mobile.team_bridge.gate.console_error": "No se pudo abrir la consola de Radient.",
+		"mobile.team_bridge.gate.loading": "Cargando Team Bridge",
+		"mobile.team_bridge.gate.manage_plan": "Gestiona tu plan en la consola de Radient",
+		"mobile.team_bridge.gate.plan_description": "Comunícate con los miembros de tu equipo y sus agentes, y permite que los agentes colaboren con otros agentes de tu organización.",
+		"mobile.team_bridge.gate.plan_features": "Canales de tu organización · Mensajes directos · Jefes de gabinete · Notificaciones del equipo",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge requiere un plan Radient Team",
+		"mobile.team_bridge.gate.sign_in": "Iniciar sesión",
+		"mobile.team_bridge.gate.sign_in_error": "No se completó el inicio de sesión. Inténtalo de nuevo.",
+		"mobile.team_bridge.gate.signed_out": "Inicia sesión en Team Bridge",
+		"mobile.team_bridge.gate.signed_out_help": "Conecta directamente con tu equipo, incluso con el ordenador cerrado.",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge no está disponible",
+		"mobile.team_bridge.gate.unavailable_help": "No se pudo conectar con Team Bridge. Tus conversaciones no han cambiado.",
+		"mobile.team_bridge.gate.update_help": "Esta versión no puede acceder al servicio Team Bridge. Actualiza la aplicación para continuar.",
+		"mobile.team_bridge.gate.update_required": "Actualización necesaria",
+		"mobile.team_bridge.gate.upgrade": "Mejorar a Team",
+		"mobile.team_bridge.list.channels": "Canales",
+		"mobile.team_bridge.list.channels_empty": "Aún no hay canales.",
+		"mobile.team_bridge.list.chief_role": "Jefe de gabinete",
+		"mobile.team_bridge.list.chiefs": "Jefes de gabinete",
+		"mobile.team_bridge.list.chiefs_empty": "No hay jefes de gabinete disponibles.",
+		"mobile.team_bridge.list.choose": "Elegir organización",
+		"mobile.team_bridge.list.conversations_error": "No se pudieron cargar las conversaciones.",
+		"mobile.team_bridge.list.conversations_loading": "Cargando conversaciones…",
+		"mobile.team_bridge.list.conversations_retry": "Reintentar conversaciones",
+		"mobile.team_bridge.list.directory_incomplete": "El directorio está incompleto. Desliza hacia abajo para actualizar las personas.",
+		"mobile.team_bridge.list.groups": "Grupos",
+		"mobile.team_bridge.list.groups_empty": "Aún no hay grupos.",
+		"mobile.team_bridge.list.organization": "Organización",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · Solo lectura} other {}}{count, plural, =0 {} one { · # sin leer} other { · # sin leer}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · Solo lectura} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "No hay organizaciones disponibles.",
+		"mobile.team_bridge.list.other_direct": "Otros mensajes directos",
+		"mobile.team_bridge.list.paused": "En pausa",
+		"mobile.team_bridge.list.people": "Personas",
+		"mobile.team_bridge.list.people_empty": "No hay personas en esta organización.",
+		"mobile.team_bridge.list.people_error": "No se pudo cargar el directorio. Inténtalo de nuevo para ver a las personas de tu organización.",
+		"mobile.team_bridge.list.people_loading": "Cargando personas…",
+		"mobile.team_bridge.list.people_retry": "Reintentar personas",
+		"mobile.team_bridge.list.person_unavailable": "Aún no ha activado Team Bridge",
+		"mobile.team_bridge.list.preview": "Vista previa · Únete para leer",
+		"mobile.team_bridge.list.quiet": "Notificaciones silenciadas",
+		"mobile.team_bridge.list.self": "tú",
+		"mobile.team_bridge.navigation.caption": "Tu organización, incluso con tu ordenador en reposo",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # sin leer} other {Team Bridge · # sin leer}}",
+		"mobile.team_bridge.retry": "Reintentar",
+		"mobile.team_bridge.thread.access_retry": "Reintentar acceso",
+		"mobile.team_bridge.thread.archived": "Esta conversación está archivada. Puedes leer el historial, pero no enviar mensajes.",
+		"mobile.team_bridge.thread.body_unavailable": "El contenido del mensaje no está disponible.",
+		"mobile.team_bridge.thread.join": "Unirse al canal",
+		"mobile.team_bridge.thread.join_error": "No se pudo acceder al canal. Inténtalo de nuevo.",
+		"mobile.team_bridge.thread.join_pending": "Aún no se ha completado la unión al canal. Inténtalo de nuevo antes de leerlo.",
+		"mobile.team_bridge.thread.loading": "Cargando conversación…",
+		"mobile.team_bridge.thread.message": "Mensaje",
+		"mobile.team_bridge.thread.messages_empty": "Aún no hay mensajes. Inicia la conversación.",
+		"mobile.team_bridge.thread.messages_error": "No se pudo cargar ningún mensaje.",
+		"mobile.team_bridge.thread.messages_loading": "Cargando mensajes…",
+		"mobile.team_bridge.thread.messages_retry": "Reintentar mensajes",
+		"mobile.team_bridge.thread.metadata_error": "No se pudo cargar esta conversación. Puede que ya no tengas acceso a ella.",
+		"mobile.team_bridge.thread.new_empty": "Aún no hay mensajes. Tu primer envío inicia la conversación.",
+		"mobile.team_bridge.thread.notifications": "Notificaciones",
+		"mobile.team_bridge.thread.notify_all": "Todos los mensajes",
+		"mobile.team_bridge.thread.notify_current": "Actual: {mode, select, all {Todos los mensajes} mention {Solo menciones} mute {Silenciar} other {Todos los mensajes}}",
+		"mobile.team_bridge.thread.notify_error": "No se guardaron los ajustes de notificaciones. Inténtalo de nuevo.",
+		"mobile.team_bridge.thread.notify_mentions": "Solo menciones",
+		"mobile.team_bridge.thread.notify_mute": "Silenciar",
+		"mobile.team_bridge.thread.notify_sheet": "Notificaciones de la conversación",
+		"mobile.team_bridge.thread.older_error": "No se pudieron cargar los mensajes anteriores.",
+		"mobile.team_bridge.thread.older_load": "Cargar mensajes anteriores",
+		"mobile.team_bridge.thread.older_loading": "Cargando mensajes anteriores…",
+		"mobile.team_bridge.thread.older_retry": "Reintentar mensajes anteriores",
+		"mobile.team_bridge.thread.organization_unavailable": "Esta organización no está disponible para esta cuenta.",
+		"mobile.team_bridge.thread.placeholder": "Mensaje a {title}",
+		"mobile.team_bridge.thread.preview_help": "Únete a este canal para leer su historial y enviar mensajes.",
+		"mobile.team_bridge.thread.readonly": "Esta organización es de solo lectura. Puedes leer el historial, pero no enviar mensajes.",
+		"mobile.team_bridge.thread.recipient_incomplete": "El destinatario está incompleto. Vuelve atrás y elige una persona o un jefe de gabinete.",
+		"mobile.team_bridge.thread.refresh_error": "No se pudieron actualizar los mensajes. Se muestran los cargados anteriormente.",
+		"mobile.team_bridge.thread.retry": "Reintentar conversación",
+		"mobile.team_bridge.thread.send": "Enviar",
+		"mobile.team_bridge.thread.send_error": "No se confirmó tu mensaje. Tu borrador sigue guardado aquí. Reintentar envía el mismo mensaje de forma segura.",
+		"mobile.team_bridge.thread.send_retry": "Reintentar envío",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, one {# sin leer} other {# sin leer}}",
 		"relay.chrome.session.resume": "Reanudar",
 		"relay.chrome.session.resuming": "Reanudando…",
 		"relay.chrome.session.subtitle.ended": "Finalizada",
@@ -1078,6 +1588,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.team_bridge.back": "Retour",
+		"mobile.team_bridge.conversation": "Conversation",
+		"mobile.team_bridge.gate.checking": "Vérification de Team Bridge…",
+		"mobile.team_bridge.gate.connecting": "Connexion à Radient. Votre ordinateur peut rester fermé.",
+		"mobile.team_bridge.gate.console_error": "Impossible d’ouvrir la console Radient.",
+		"mobile.team_bridge.gate.loading": "Chargement de Team Bridge",
+		"mobile.team_bridge.gate.manage_plan": "Gérez votre forfait dans la console Radient",
+		"mobile.team_bridge.gate.plan_description": "Échangez avec les membres de votre équipe et leurs agents, et permettez aux agents de collaborer entre eux dans votre organisation.",
+		"mobile.team_bridge.gate.plan_features": "Canaux de votre organisation · Messages directs · Chefs de cabinet · Notifications d’équipe",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge nécessite un forfait Radient Team",
+		"mobile.team_bridge.gate.sign_in": "Se connecter",
+		"mobile.team_bridge.gate.sign_in_error": "La connexion n’a pas abouti. Réessayez.",
+		"mobile.team_bridge.gate.signed_out": "Connectez-vous à Team Bridge",
+		"mobile.team_bridge.gate.signed_out_help": "Retrouvez directement votre équipe, même lorsque votre ordinateur est fermé.",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge est indisponible",
+		"mobile.team_bridge.gate.unavailable_help": "Impossible de joindre Team Bridge. Vos conversations n’ont pas été modifiées.",
+		"mobile.team_bridge.gate.update_help": "Cette version ne peut pas accéder au service Team Bridge. Mettez l’application à jour pour continuer.",
+		"mobile.team_bridge.gate.update_required": "Mise à jour requise",
+		"mobile.team_bridge.gate.upgrade": "Passer à Team",
+		"mobile.team_bridge.list.channels": "Canaux",
+		"mobile.team_bridge.list.channels_empty": "Aucun canal pour le moment.",
+		"mobile.team_bridge.list.chief_role": "Chef de cabinet",
+		"mobile.team_bridge.list.chiefs": "Chefs de cabinet",
+		"mobile.team_bridge.list.chiefs_empty": "Aucun chef de cabinet disponible.",
+		"mobile.team_bridge.list.choose": "Choisir une organisation",
+		"mobile.team_bridge.list.conversations_error": "Impossible de charger les conversations.",
+		"mobile.team_bridge.list.conversations_loading": "Chargement des conversations…",
+		"mobile.team_bridge.list.conversations_retry": "Réessayer les conversations",
+		"mobile.team_bridge.list.directory_incomplete": "L’annuaire est incomplet. Tirez vers le bas pour actualiser les personnes.",
+		"mobile.team_bridge.list.groups": "Groupes",
+		"mobile.team_bridge.list.groups_empty": "Aucun groupe pour le moment.",
+		"mobile.team_bridge.list.organization": "Organisation",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · Lecture seule} other {}}{count, plural, =0 {} one { · # non lu} other { · # non lus}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · Lecture seule} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "Aucune organisation disponible.",
+		"mobile.team_bridge.list.other_direct": "Autres messages directs",
+		"mobile.team_bridge.list.paused": "En pause",
+		"mobile.team_bridge.list.people": "Personnes",
+		"mobile.team_bridge.list.people_empty": "Aucune personne dans cette organisation.",
+		"mobile.team_bridge.list.people_error": "Impossible de charger l’annuaire. Réessayez pour voir les membres de votre organisation.",
+		"mobile.team_bridge.list.people_loading": "Chargement des personnes…",
+		"mobile.team_bridge.list.people_retry": "Réessayer l’annuaire",
+		"mobile.team_bridge.list.person_unavailable": "N’a pas encore activé Team Bridge",
+		"mobile.team_bridge.list.preview": "Aperçu · Rejoignez le canal pour lire",
+		"mobile.team_bridge.list.quiet": "Notifications silencieuses",
+		"mobile.team_bridge.list.self": "vous",
+		"mobile.team_bridge.navigation.caption": "Votre organisation, même lorsque votre ordinateur est en veille",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # non lu} other {Team Bridge · # non lus}}",
+		"mobile.team_bridge.retry": "Réessayer",
+		"mobile.team_bridge.thread.access_retry": "Réessayer l’accès",
+		"mobile.team_bridge.thread.archived": "Cette conversation est archivée. Vous pouvez lire l’historique, mais pas envoyer de messages.",
+		"mobile.team_bridge.thread.body_unavailable": "Contenu du message indisponible.",
+		"mobile.team_bridge.thread.join": "Rejoindre le canal",
+		"mobile.team_bridge.thread.join_error": "Impossible de rejoindre ce canal. Réessayez.",
+		"mobile.team_bridge.thread.join_pending": "L’accès au canal n’est pas encore confirmé. Réessayez avant de le lire.",
+		"mobile.team_bridge.thread.loading": "Chargement de la conversation…",
+		"mobile.team_bridge.thread.message": "Message",
+		"mobile.team_bridge.thread.messages_empty": "Aucun message pour le moment. Lancez la conversation.",
+		"mobile.team_bridge.thread.messages_error": "Aucun message n’a pu être chargé.",
+		"mobile.team_bridge.thread.messages_loading": "Chargement des messages…",
+		"mobile.team_bridge.thread.messages_retry": "Réessayer les messages",
+		"mobile.team_bridge.thread.metadata_error": "Impossible de charger cette conversation. Vous n’y avez peut-être plus accès.",
+		"mobile.team_bridge.thread.new_empty": "Aucun message pour le moment. Votre premier envoi lance la conversation.",
+		"mobile.team_bridge.thread.notifications": "Notifications",
+		"mobile.team_bridge.thread.notify_all": "Tous les messages",
+		"mobile.team_bridge.thread.notify_current": "Actuellement : {mode, select, all {Tous les messages} mention {Mentions uniquement} mute {En sourdine} other {Tous les messages}}",
+		"mobile.team_bridge.thread.notify_error": "Les paramètres de notification n’ont pas été enregistrés. Réessayez.",
+		"mobile.team_bridge.thread.notify_mentions": "Mentions uniquement",
+		"mobile.team_bridge.thread.notify_mute": "Mettre en sourdine",
+		"mobile.team_bridge.thread.notify_sheet": "Notifications de la conversation",
+		"mobile.team_bridge.thread.older_error": "Impossible de charger les anciens messages.",
+		"mobile.team_bridge.thread.older_load": "Charger les anciens messages",
+		"mobile.team_bridge.thread.older_loading": "Chargement des anciens messages…",
+		"mobile.team_bridge.thread.older_retry": "Réessayer les anciens messages",
+		"mobile.team_bridge.thread.organization_unavailable": "Cette organisation n’est pas accessible depuis ce compte.",
+		"mobile.team_bridge.thread.placeholder": "Message à {title}",
+		"mobile.team_bridge.thread.preview_help": "Rejoignez ce canal pour lire son historique et envoyer des messages.",
+		"mobile.team_bridge.thread.readonly": "Cette organisation est en lecture seule. Vous pouvez lire l’historique, mais pas envoyer de messages.",
+		"mobile.team_bridge.thread.recipient_incomplete": "Le destinataire est incomplet. Revenez en arrière et choisissez une personne ou un chef de cabinet.",
+		"mobile.team_bridge.thread.refresh_error": "Impossible d’actualiser les messages. Les messages précédemment chargés sont affichés.",
+		"mobile.team_bridge.thread.retry": "Réessayer la conversation",
+		"mobile.team_bridge.thread.send": "Envoyer",
+		"mobile.team_bridge.thread.send_error": "Votre message n’a pas été confirmé. Votre brouillon est conservé ici. Réessayer renvoie le même message sans risque de doublon.",
+		"mobile.team_bridge.thread.send_retry": "Réessayer l’envoi",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, one {# non lu} other {# non lus}}",
 		"relay.chrome.session.resume": "Reprendre",
 		"relay.chrome.session.resuming": "Reprise…",
 		"relay.chrome.session.subtitle.ended": "Terminée",
@@ -1227,6 +1823,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.team_bridge.back": "वापस",
+		"mobile.team_bridge.conversation": "बातचीत",
+		"mobile.team_bridge.gate.checking": "Team Bridge की जाँच हो रही है…",
+		"mobile.team_bridge.gate.connecting": "Radient से जुड़ रहे हैं। आपका कंप्यूटर बंद रह सकता है।",
+		"mobile.team_bridge.gate.console_error": "Radient कंसोल नहीं खुल सका।",
+		"mobile.team_bridge.gate.loading": "Team Bridge लोड हो रहा है",
+		"mobile.team_bridge.gate.manage_plan": "Radient कंसोल में अपना प्लान प्रबंधित करें",
+		"mobile.team_bridge.gate.plan_description": "टीम के सदस्यों और उनके एजेंटों से बात करें और अपने संगठन के एजेंटों को एक-दूसरे के साथ काम करने दें।",
+		"mobile.team_bridge.gate.plan_features": "संगठन के चैनल · सीधे संदेश · चीफ़ ऑफ़ स्टाफ़ · टीम सूचनाएँ",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge के लिए Radient Team प्लान चाहिए",
+		"mobile.team_bridge.gate.sign_in": "साइन इन करें",
+		"mobile.team_bridge.gate.sign_in_error": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें।",
+		"mobile.team_bridge.gate.signed_out": "Team Bridge में साइन इन करें",
+		"mobile.team_bridge.gate.signed_out_help": "कंप्यूटर बंद होने पर भी अपनी टीम से सीधे जुड़ें।",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge उपलब्ध नहीं है",
+		"mobile.team_bridge.gate.unavailable_help": "Team Bridge से संपर्क नहीं हो सका। आपकी बातचीत में कोई बदलाव नहीं हुआ है।",
+		"mobile.team_bridge.gate.update_help": "यह संस्करण Team Bridge सेवा का उपयोग नहीं कर सकता। जारी रखने के लिए ऐप अपडेट करें।",
+		"mobile.team_bridge.gate.update_required": "अपडेट ज़रूरी है",
+		"mobile.team_bridge.gate.upgrade": "Team में अपग्रेड करें",
+		"mobile.team_bridge.list.channels": "चैनल",
+		"mobile.team_bridge.list.channels_empty": "अभी कोई चैनल नहीं है।",
+		"mobile.team_bridge.list.chief_role": "चीफ़ ऑफ़ स्टाफ़",
+		"mobile.team_bridge.list.chiefs": "चीफ़ ऑफ़ स्टाफ़",
+		"mobile.team_bridge.list.chiefs_empty": "कोई चीफ़ ऑफ़ स्टाफ़ उपलब्ध नहीं है।",
+		"mobile.team_bridge.list.choose": "संगठन चुनें",
+		"mobile.team_bridge.list.conversations_error": "बातचीत लोड नहीं हो सकीं।",
+		"mobile.team_bridge.list.conversations_loading": "बातचीत लोड हो रही हैं…",
+		"mobile.team_bridge.list.conversations_retry": "बातचीत फिर लोड करें",
+		"mobile.team_bridge.list.directory_incomplete": "डायरेक्टरी अधूरी है। लोगों की नई सूची के लिए नीचे खींचकर रीफ़्रेश करें।",
+		"mobile.team_bridge.list.groups": "समूह",
+		"mobile.team_bridge.list.groups_empty": "अभी कोई समूह नहीं है।",
+		"mobile.team_bridge.list.organization": "संगठन",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · केवल पढ़ने के लिए} other {}}{count, plural, =0 {} one { · # अपठित} other { · # अपठित}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · केवल पढ़ने के लिए} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "कोई संगठन उपलब्ध नहीं है।",
+		"mobile.team_bridge.list.other_direct": "अन्य सीधे संदेश",
+		"mobile.team_bridge.list.paused": "रुका हुआ",
+		"mobile.team_bridge.list.people": "लोग",
+		"mobile.team_bridge.list.people_empty": "इस संगठन में कोई व्यक्ति नहीं है।",
+		"mobile.team_bridge.list.people_error": "लोगों की डायरेक्टरी लोड नहीं हो सकी। संगठन के लोगों को देखने के लिए फिर कोशिश करें।",
+		"mobile.team_bridge.list.people_loading": "लोगों की सूची लोड हो रही है…",
+		"mobile.team_bridge.list.people_retry": "लोगों की सूची फिर लोड करें",
+		"mobile.team_bridge.list.person_unavailable": "अभी Team Bridge चालू नहीं किया है",
+		"mobile.team_bridge.list.preview": "पूर्वावलोकन · पढ़ने के लिए जुड़ें",
+		"mobile.team_bridge.list.quiet": "सूचनाएँ शांत हैं",
+		"mobile.team_bridge.list.self": "आप",
+		"mobile.team_bridge.navigation.caption": "कंप्यूटर स्लीप में हो, तब भी आपका संगठन आपके साथ",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # अपठित} other {Team Bridge · # अपठित}}",
+		"mobile.team_bridge.retry": "फिर कोशिश करें",
+		"mobile.team_bridge.thread.access_retry": "पहुँच की फिर कोशिश करें",
+		"mobile.team_bridge.thread.archived": "यह बातचीत संग्रहित है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
+		"mobile.team_bridge.thread.body_unavailable": "संदेश का पाठ उपलब्ध नहीं है।",
+		"mobile.team_bridge.thread.join": "चैनल से जुड़ें",
+		"mobile.team_bridge.thread.join_error": "इस चैनल से नहीं जुड़ सके। फिर कोशिश करें।",
+		"mobile.team_bridge.thread.join_pending": "चैनल से जुड़ना अभी पूरा नहीं हुआ। पढ़ने से पहले फिर कोशिश करें।",
+		"mobile.team_bridge.thread.loading": "बातचीत लोड हो रही है…",
+		"mobile.team_bridge.thread.message": "संदेश",
+		"mobile.team_bridge.thread.messages_empty": "अभी कोई संदेश नहीं है। बातचीत शुरू करें।",
+		"mobile.team_bridge.thread.messages_error": "कोई संदेश लोड नहीं हो सका।",
+		"mobile.team_bridge.thread.messages_loading": "संदेश लोड हो रहे हैं…",
+		"mobile.team_bridge.thread.messages_retry": "संदेश फिर लोड करें",
+		"mobile.team_bridge.thread.metadata_error": "यह बातचीत लोड नहीं हो सकी। शायद अब आपको इसकी अनुमति नहीं है।",
+		"mobile.team_bridge.thread.new_empty": "अभी कोई संदेश नहीं है। आपका पहला संदेश बातचीत शुरू करेगा।",
+		"mobile.team_bridge.thread.notifications": "सूचनाएँ",
+		"mobile.team_bridge.thread.notify_all": "सभी संदेश",
+		"mobile.team_bridge.thread.notify_current": "मौजूदा: {mode, select, all {सभी संदेश} mention {सिर्फ़ उल्लेख} mute {म्यूट} other {सभी संदेश}}",
+		"mobile.team_bridge.thread.notify_error": "सूचना सेटिंग सहेजी नहीं गईं। फिर कोशिश करें।",
+		"mobile.team_bridge.thread.notify_mentions": "सिर्फ़ उल्लेख",
+		"mobile.team_bridge.thread.notify_mute": "म्यूट करें",
+		"mobile.team_bridge.thread.notify_sheet": "बातचीत की सूचनाएँ",
+		"mobile.team_bridge.thread.older_error": "पुराने संदेश लोड नहीं हो सके।",
+		"mobile.team_bridge.thread.older_load": "पुराने संदेश लोड करें",
+		"mobile.team_bridge.thread.older_loading": "पुराने संदेश लोड हो रहे हैं…",
+		"mobile.team_bridge.thread.older_retry": "पुराने संदेश फिर लोड करें",
+		"mobile.team_bridge.thread.organization_unavailable": "यह संगठन इस खाते के लिए उपलब्ध नहीं है।",
+		"mobile.team_bridge.thread.placeholder": "{title} को संदेश भेजें",
+		"mobile.team_bridge.thread.preview_help": "इतिहास पढ़ने और संदेश भेजने के लिए इस चैनल से जुड़ें।",
+		"mobile.team_bridge.thread.readonly": "इस संगठन में केवल पढ़ने की अनुमति है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
+		"mobile.team_bridge.thread.recipient_incomplete": "प्राप्तकर्ता की जानकारी अधूरी है। वापस जाकर कोई व्यक्ति या चीफ़ ऑफ़ स्टाफ़ चुनें।",
+		"mobile.team_bridge.thread.refresh_error": "संदेश रीफ़्रेश नहीं हो सके। पहले लोड किए गए संदेश दिख रहे हैं।",
+		"mobile.team_bridge.thread.retry": "बातचीत फिर लोड करें",
+		"mobile.team_bridge.thread.send": "भेजें",
+		"mobile.team_bridge.thread.send_error": "आपके संदेश की पुष्टि नहीं हुई। ड्राफ़्ट यहाँ सुरक्षित है। फिर कोशिश करने पर वही संदेश सुरक्षित तरीके से भेजा जाएगा।",
+		"mobile.team_bridge.thread.send_retry": "भेजने की फिर कोशिश करें",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, one {# अपठित} other {# अपठित}}",
 		"relay.chrome.session.resume": "जारी रखें",
 		"relay.chrome.session.resuming": "खुल रहा है…",
 		"relay.chrome.session.subtitle.ended": "समाप्त",
@@ -1376,6 +2058,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.team_bridge.back": "Назад",
+		"mobile.team_bridge.conversation": "Переписка",
+		"mobile.team_bridge.gate.checking": "Проверка Team Bridge…",
+		"mobile.team_bridge.gate.connecting": "Подключение к Radient. Компьютер можно не открывать.",
+		"mobile.team_bridge.gate.console_error": "Не удалось открыть консоль Radient.",
+		"mobile.team_bridge.gate.loading": "Загрузка Team Bridge",
+		"mobile.team_bridge.gate.manage_plan": "Управляйте тарифом в консоли Radient",
+		"mobile.team_bridge.gate.plan_description": "Общайтесь с участниками команды и их агентами, а агенты смогут сотрудничать с другими агентами вашей организации.",
+		"mobile.team_bridge.gate.plan_features": "Каналы организации · Личные сообщения · Руководители аппарата · Уведомления команды",
+		"mobile.team_bridge.gate.plan_required": "Для Team Bridge нужен тариф Radient Team",
+		"mobile.team_bridge.gate.sign_in": "Войти",
+		"mobile.team_bridge.gate.sign_in_error": "Не удалось завершить вход. Повторите попытку.",
+		"mobile.team_bridge.gate.signed_out": "Войдите в Team Bridge",
+		"mobile.team_bridge.gate.signed_out_help": "Общайтесь с командой напрямую, даже когда компьютер закрыт.",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge недоступен",
+		"mobile.team_bridge.gate.unavailable_help": "Не удалось подключиться к Team Bridge. Ваши переписки не изменены.",
+		"mobile.team_bridge.gate.update_help": "Эта версия не поддерживает сервис Team Bridge. Обновите приложение, чтобы продолжить.",
+		"mobile.team_bridge.gate.update_required": "Требуется обновление",
+		"mobile.team_bridge.gate.upgrade": "Перейти на Team",
+		"mobile.team_bridge.list.channels": "Каналы",
+		"mobile.team_bridge.list.channels_empty": "Каналов пока нет.",
+		"mobile.team_bridge.list.chief_role": "Руководитель аппарата",
+		"mobile.team_bridge.list.chiefs": "Руководители аппарата",
+		"mobile.team_bridge.list.chiefs_empty": "Нет доступных руководителей аппарата.",
+		"mobile.team_bridge.list.choose": "Выбрать организацию",
+		"mobile.team_bridge.list.conversations_error": "Не удалось загрузить переписки.",
+		"mobile.team_bridge.list.conversations_loading": "Загрузка переписок…",
+		"mobile.team_bridge.list.conversations_retry": "Повторить загрузку переписок",
+		"mobile.team_bridge.list.directory_incomplete": "Справочник неполный. Потяните вниз, чтобы обновить список людей.",
+		"mobile.team_bridge.list.groups": "Группы",
+		"mobile.team_bridge.list.groups_empty": "Групп пока нет.",
+		"mobile.team_bridge.list.organization": "Организация",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · Только чтение} other {}}{count, plural, =0 {} one { · # непрочитанное} few { · # непрочитанных} many { · # непрочитанных} other { · # непрочитанных}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · Только чтение} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "Нет доступных организаций.",
+		"mobile.team_bridge.list.other_direct": "Другие личные сообщения",
+		"mobile.team_bridge.list.paused": "Приостановлено",
+		"mobile.team_bridge.list.people": "Люди",
+		"mobile.team_bridge.list.people_empty": "В этой организации нет людей.",
+		"mobile.team_bridge.list.people_error": "Не удалось загрузить справочник. Повторите попытку, чтобы увидеть людей вашей организации.",
+		"mobile.team_bridge.list.people_loading": "Загрузка людей…",
+		"mobile.team_bridge.list.people_retry": "Повторить загрузку людей",
+		"mobile.team_bridge.list.person_unavailable": "Ещё не включил Team Bridge",
+		"mobile.team_bridge.list.preview": "Предпросмотр · Вступите, чтобы читать",
+		"mobile.team_bridge.list.quiet": "Уведомления без звука",
+		"mobile.team_bridge.list.self": "вы",
+		"mobile.team_bridge.navigation.caption": "Ваша организация рядом, даже когда компьютер спит",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # непрочитанное} few {Team Bridge · # непрочитанных} many {Team Bridge · # непрочитанных} other {Team Bridge · # непрочитанных}}",
+		"mobile.team_bridge.retry": "Повторить",
+		"mobile.team_bridge.thread.access_retry": "Повторить проверку доступа",
+		"mobile.team_bridge.thread.archived": "Переписка в архиве. Историю можно читать, но отправлять сообщения нельзя.",
+		"mobile.team_bridge.thread.body_unavailable": "Текст сообщения недоступен.",
+		"mobile.team_bridge.thread.join": "Вступить в канал",
+		"mobile.team_bridge.thread.join_error": "Не удалось вступить в канал. Повторите попытку.",
+		"mobile.team_bridge.thread.join_pending": "Вступление ещё не завершено. Повторите попытку, прежде чем читать канал.",
+		"mobile.team_bridge.thread.loading": "Загрузка переписки…",
+		"mobile.team_bridge.thread.message": "Сообщение",
+		"mobile.team_bridge.thread.messages_empty": "Сообщений пока нет. Начните переписку.",
+		"mobile.team_bridge.thread.messages_error": "Не удалось загрузить сообщения.",
+		"mobile.team_bridge.thread.messages_loading": "Загрузка сообщений…",
+		"mobile.team_bridge.thread.messages_retry": "Повторить загрузку сообщений",
+		"mobile.team_bridge.thread.metadata_error": "Не удалось загрузить эту переписку. Возможно, у вас больше нет к ней доступа.",
+		"mobile.team_bridge.thread.new_empty": "Сообщений пока нет. Первая отправка начнёт переписку.",
+		"mobile.team_bridge.thread.notifications": "Уведомления",
+		"mobile.team_bridge.thread.notify_all": "Все сообщения",
+		"mobile.team_bridge.thread.notify_current": "Сейчас: {mode, select, all {Все сообщения} mention {Только упоминания} mute {Без уведомлений} other {Все сообщения}}",
+		"mobile.team_bridge.thread.notify_error": "Настройки уведомлений не сохранены. Повторите попытку.",
+		"mobile.team_bridge.thread.notify_mentions": "Только упоминания",
+		"mobile.team_bridge.thread.notify_mute": "Без уведомлений",
+		"mobile.team_bridge.thread.notify_sheet": "Уведомления переписки",
+		"mobile.team_bridge.thread.older_error": "Не удалось загрузить предыдущие сообщения.",
+		"mobile.team_bridge.thread.older_load": "Загрузить предыдущие сообщения",
+		"mobile.team_bridge.thread.older_loading": "Загрузка предыдущих сообщений…",
+		"mobile.team_bridge.thread.older_retry": "Повторить загрузку предыдущих сообщений",
+		"mobile.team_bridge.thread.organization_unavailable": "Эта организация недоступна для данного аккаунта.",
+		"mobile.team_bridge.thread.placeholder": "Сообщение: {title}",
+		"mobile.team_bridge.thread.preview_help": "Вступите в канал, чтобы читать историю и отправлять сообщения.",
+		"mobile.team_bridge.thread.readonly": "В организации доступно только чтение. Историю можно читать, но отправлять сообщения нельзя.",
+		"mobile.team_bridge.thread.recipient_incomplete": "Получатель указан не полностью. Вернитесь и выберите человека или руководителя аппарата.",
+		"mobile.team_bridge.thread.refresh_error": "Не удалось обновить сообщения. Показаны ранее загруженные сообщения.",
+		"mobile.team_bridge.thread.retry": "Повторить загрузку переписки",
+		"mobile.team_bridge.thread.send": "Отправить",
+		"mobile.team_bridge.thread.send_error": "Отправка сообщения не подтверждена. Черновик сохранён здесь. Повторная попытка безопасно отправит то же сообщение.",
+		"mobile.team_bridge.thread.send_retry": "Повторить отправку",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}",
 		"relay.chrome.session.resume": "Возобновить",
 		"relay.chrome.session.resuming": "Возобновляем…",
 		"relay.chrome.session.subtitle.ended": "Завершена",
@@ -1525,6 +2293,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.team_bridge.back": "واپس",
+		"mobile.team_bridge.conversation": "گفتگو",
+		"mobile.team_bridge.gate.checking": "Team Bridge کی جانچ ہو رہی ہے…",
+		"mobile.team_bridge.gate.connecting": "Radient سے جڑ رہے ہیں۔ آپ کا کمپیوٹر بند رہ سکتا ہے۔",
+		"mobile.team_bridge.gate.console_error": "Radient کنسول نہیں کھل سکا۔",
+		"mobile.team_bridge.gate.loading": "Team Bridge لوڈ ہو رہا ہے",
+		"mobile.team_bridge.gate.manage_plan": "Radient کنسول میں اپنا پلان منظم کریں",
+		"mobile.team_bridge.gate.plan_description": "اپنی ٹیم کے ارکان اور ان کے ایجنٹس سے بات کریں اور اپنی تنظیم کے ایجنٹس کو ایک دوسرے کے ساتھ کام کرنے دیں۔",
+		"mobile.team_bridge.gate.plan_features": "تنظیم کے چینلز · براہ راست پیغامات · چیف آف اسٹاف · ٹیم کی اطلاعات",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge کے لیے Radient Team پلان درکار ہے",
+		"mobile.team_bridge.gate.sign_in": "سائن ان کریں",
+		"mobile.team_bridge.gate.sign_in_error": "سائن ان مکمل نہیں ہوا۔ دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.gate.signed_out": "Team Bridge میں سائن ان کریں",
+		"mobile.team_bridge.gate.signed_out_help": "کمپیوٹر بند ہونے پر بھی اپنی ٹیم سے براہ راست جڑیں۔",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge دستیاب نہیں ہے",
+		"mobile.team_bridge.gate.unavailable_help": "Team Bridge سے رابطہ نہیں ہو سکا۔ آپ کی گفتگو میں کوئی تبدیلی نہیں ہوئی۔",
+		"mobile.team_bridge.gate.update_help": "یہ ورژن Team Bridge سروس تک رسائی حاصل نہیں کر سکتا۔ جاری رکھنے کے لیے ایپ اپ ڈیٹ کریں۔",
+		"mobile.team_bridge.gate.update_required": "اپ ڈیٹ ضروری ہے",
+		"mobile.team_bridge.gate.upgrade": "Team پر اپ گریڈ کریں",
+		"mobile.team_bridge.list.channels": "چینلز",
+		"mobile.team_bridge.list.channels_empty": "ابھی کوئی چینل نہیں ہے۔",
+		"mobile.team_bridge.list.chief_role": "چیف آف اسٹاف",
+		"mobile.team_bridge.list.chiefs": "چیف آف اسٹاف",
+		"mobile.team_bridge.list.chiefs_empty": "کوئی چیف آف اسٹاف دستیاب نہیں ہے۔",
+		"mobile.team_bridge.list.choose": "تنظیم منتخب کریں",
+		"mobile.team_bridge.list.conversations_error": "گفتگو لوڈ نہیں ہو سکیں۔",
+		"mobile.team_bridge.list.conversations_loading": "گفتگو لوڈ ہو رہی ہیں…",
+		"mobile.team_bridge.list.conversations_retry": "گفتگو دوبارہ لوڈ کریں",
+		"mobile.team_bridge.list.directory_incomplete": "ڈائریکٹری نامکمل ہے۔ تازہ فہرست کے لیے نیچے کھینچ کر ریفریش کریں۔",
+		"mobile.team_bridge.list.groups": "گروپس",
+		"mobile.team_bridge.list.groups_empty": "ابھی کوئی گروپ نہیں ہے۔",
+		"mobile.team_bridge.list.organization": "تنظیم",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · صرف پڑھنے کے لیے} other {}}{count, plural, =0 {} one { · # ان پڑھا} other { · # ان پڑھے}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · صرف پڑھنے کے لیے} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "کوئی تنظیم دستیاب نہیں ہے۔",
+		"mobile.team_bridge.list.other_direct": "دیگر براہ راست پیغامات",
+		"mobile.team_bridge.list.paused": "روکا ہوا",
+		"mobile.team_bridge.list.people": "لوگ",
+		"mobile.team_bridge.list.people_empty": "اس تنظیم میں کوئی شخص نہیں ہے۔",
+		"mobile.team_bridge.list.people_error": "لوگوں کی ڈائریکٹری لوڈ نہیں ہو سکی۔ تنظیم کے لوگوں کو دیکھنے کے لیے دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.list.people_loading": "لوگوں کی فہرست لوڈ ہو رہی ہے…",
+		"mobile.team_bridge.list.people_retry": "لوگوں کی فہرست دوبارہ لوڈ کریں",
+		"mobile.team_bridge.list.person_unavailable": "ابھی Team Bridge فعال نہیں کیا",
+		"mobile.team_bridge.list.preview": "پیش نظارہ · پڑھنے کے لیے شامل ہوں",
+		"mobile.team_bridge.list.quiet": "اطلاعات خاموش ہیں",
+		"mobile.team_bridge.list.self": "آپ",
+		"mobile.team_bridge.navigation.caption": "کمپیوٹر سلیپ میں ہو، تب بھی آپ کی تنظیم آپ کے ساتھ",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # ان پڑھا} other {Team Bridge · # ان پڑھے}}",
+		"mobile.team_bridge.retry": "دوبارہ کوشش کریں",
+		"mobile.team_bridge.thread.access_retry": "رسائی کی دوبارہ کوشش کریں",
+		"mobile.team_bridge.thread.archived": "یہ گفتگو محفوظ شدہ ہے۔ آپ تاریخ پڑھ سکتے ہیں، لیکن پیغامات نہیں بھیج سکتے۔",
+		"mobile.team_bridge.thread.body_unavailable": "پیغام کا متن دستیاب نہیں ہے۔",
+		"mobile.team_bridge.thread.join": "چینل میں شامل ہوں",
+		"mobile.team_bridge.thread.join_error": "اس چینل میں شامل نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.thread.join_pending": "چینل میں شمولیت ابھی مکمل نہیں ہوئی۔ پڑھنے سے پہلے دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.thread.loading": "گفتگو لوڈ ہو رہی ہے…",
+		"mobile.team_bridge.thread.message": "پیغام",
+		"mobile.team_bridge.thread.messages_empty": "ابھی کوئی پیغام نہیں ہے۔ گفتگو شروع کریں۔",
+		"mobile.team_bridge.thread.messages_error": "کوئی پیغام لوڈ نہیں ہو سکا۔",
+		"mobile.team_bridge.thread.messages_loading": "پیغامات لوڈ ہو رہے ہیں…",
+		"mobile.team_bridge.thread.messages_retry": "پیغامات دوبارہ لوڈ کریں",
+		"mobile.team_bridge.thread.metadata_error": "یہ گفتگو لوڈ نہیں ہو سکی۔ شاید اب آپ کو اس تک رسائی نہیں ہے۔",
+		"mobile.team_bridge.thread.new_empty": "ابھی کوئی پیغام نہیں ہے۔ آپ کا پہلا پیغام گفتگو شروع کرے گا۔",
+		"mobile.team_bridge.thread.notifications": "اطلاعات",
+		"mobile.team_bridge.thread.notify_all": "تمام پیغامات",
+		"mobile.team_bridge.thread.notify_current": "موجودہ: {mode, select, all {تمام پیغامات} mention {صرف تذکرے} mute {خاموش} other {تمام پیغامات}}",
+		"mobile.team_bridge.thread.notify_error": "اطلاعات کی ترتیبات محفوظ نہیں ہوئیں۔ دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.thread.notify_mentions": "صرف تذکرے",
+		"mobile.team_bridge.thread.notify_mute": "خاموش کریں",
+		"mobile.team_bridge.thread.notify_sheet": "گفتگو کی اطلاعات",
+		"mobile.team_bridge.thread.older_error": "پرانے پیغامات لوڈ نہیں ہو سکے۔",
+		"mobile.team_bridge.thread.older_load": "پرانے پیغامات لوڈ کریں",
+		"mobile.team_bridge.thread.older_loading": "پرانے پیغامات لوڈ ہو رہے ہیں…",
+		"mobile.team_bridge.thread.older_retry": "پرانے پیغامات دوبارہ لوڈ کریں",
+		"mobile.team_bridge.thread.organization_unavailable": "یہ تنظیم اس اکاؤنٹ کے لیے دستیاب نہیں ہے۔",
+		"mobile.team_bridge.thread.placeholder": "{title} کو پیغام بھیجیں",
+		"mobile.team_bridge.thread.preview_help": "تاریخ پڑھنے اور پیغامات بھیجنے کے لیے اس چینل میں شامل ہوں۔",
+		"mobile.team_bridge.thread.readonly": "یہ تنظیم صرف پڑھنے کے لیے ہے۔ آپ تاریخ پڑھ سکتے ہیں، لیکن پیغامات نہیں بھیج سکتے۔",
+		"mobile.team_bridge.thread.recipient_incomplete": "وصول کنندہ کی معلومات نامکمل ہیں۔ واپس جا کر کوئی شخص یا چیف آف اسٹاف منتخب کریں۔",
+		"mobile.team_bridge.thread.refresh_error": "پیغامات ریفریش نہیں ہو سکے۔ پہلے سے لوڈ شدہ پیغامات دکھائے جا رہے ہیں۔",
+		"mobile.team_bridge.thread.retry": "گفتگو دوبارہ لوڈ کریں",
+		"mobile.team_bridge.thread.send": "بھیجیں",
+		"mobile.team_bridge.thread.send_error": "آپ کے پیغام کی تصدیق نہیں ہوئی۔ مسودہ یہاں محفوظ ہے۔ دوبارہ کوشش کرنے سے وہی پیغام محفوظ طریقے سے بھیجا جائے گا۔",
+		"mobile.team_bridge.thread.send_retry": "دوبارہ بھیجیں",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, one {# ان پڑھا} other {# ان پڑھے}}",
 		"relay.chrome.session.resume": "جاری رکھیں",
 		"relay.chrome.session.resuming": "جاری ہو رہا…",
 		"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
@@ -1674,6 +2528,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.team_bridge.back": "Quay lại",
+		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
+		"mobile.team_bridge.gate.checking": "Đang kiểm tra Team Bridge…",
+		"mobile.team_bridge.gate.connecting": "Đang kết nối với Radient. Bạn không cần mở máy tính.",
+		"mobile.team_bridge.gate.console_error": "Không thể mở bảng điều khiển Radient.",
+		"mobile.team_bridge.gate.loading": "Đang tải Team Bridge",
+		"mobile.team_bridge.gate.manage_plan": "Quản lý gói trong bảng điều khiển Radient",
+		"mobile.team_bridge.gate.plan_description": "Trao đổi với các thành viên và tác tử của họ, đồng thời cho phép các tác tử cộng tác với nhau trong tổ chức.",
+		"mobile.team_bridge.gate.plan_features": "Kênh của tổ chức · Tin nhắn trực tiếp · Chánh văn phòng · Thông báo nhóm",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge yêu cầu gói Radient Team",
+		"mobile.team_bridge.gate.sign_in": "Đăng nhập",
+		"mobile.team_bridge.gate.sign_in_error": "Chưa đăng nhập xong. Hãy thử lại.",
+		"mobile.team_bridge.gate.signed_out": "Đăng nhập vào Team Bridge",
+		"mobile.team_bridge.gate.signed_out_help": "Kết nối trực tiếp với nhóm, ngay cả khi máy tính đang đóng.",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge hiện không khả dụng",
+		"mobile.team_bridge.gate.unavailable_help": "Không thể kết nối với Team Bridge. Các cuộc trò chuyện của bạn không thay đổi.",
+		"mobile.team_bridge.gate.update_help": "Phiên bản này không hỗ trợ dịch vụ Team Bridge. Hãy cập nhật ứng dụng để tiếp tục.",
+		"mobile.team_bridge.gate.update_required": "Cần cập nhật",
+		"mobile.team_bridge.gate.upgrade": "Nâng cấp lên Team",
+		"mobile.team_bridge.list.channels": "Kênh",
+		"mobile.team_bridge.list.channels_empty": "Chưa có kênh nào.",
+		"mobile.team_bridge.list.chief_role": "Chánh văn phòng",
+		"mobile.team_bridge.list.chiefs": "Chánh văn phòng",
+		"mobile.team_bridge.list.chiefs_empty": "Không có chánh văn phòng nào khả dụng.",
+		"mobile.team_bridge.list.choose": "Chọn tổ chức",
+		"mobile.team_bridge.list.conversations_error": "Không thể tải các cuộc trò chuyện.",
+		"mobile.team_bridge.list.conversations_loading": "Đang tải cuộc trò chuyện…",
+		"mobile.team_bridge.list.conversations_retry": "Thử tải lại cuộc trò chuyện",
+		"mobile.team_bridge.list.directory_incomplete": "Danh bạ chưa đầy đủ. Kéo xuống để cập nhật danh sách người.",
+		"mobile.team_bridge.list.groups": "Nhóm",
+		"mobile.team_bridge.list.groups_empty": "Chưa có nhóm nào.",
+		"mobile.team_bridge.list.organization": "Tổ chức",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · Chỉ đọc} other {}}{count, plural, =0 {} other { · # chưa đọc}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · Chỉ đọc} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "Không có tổ chức nào khả dụng.",
+		"mobile.team_bridge.list.other_direct": "Tin nhắn trực tiếp khác",
+		"mobile.team_bridge.list.paused": "Đã tạm dừng",
+		"mobile.team_bridge.list.people": "Mọi người",
+		"mobile.team_bridge.list.people_empty": "Không có ai trong tổ chức này.",
+		"mobile.team_bridge.list.people_error": "Không thể tải danh bạ. Hãy thử lại để tải danh sách người trong tổ chức.",
+		"mobile.team_bridge.list.people_loading": "Đang tải danh sách người…",
+		"mobile.team_bridge.list.people_retry": "Thử tải lại danh sách người",
+		"mobile.team_bridge.list.person_unavailable": "Chưa bật Team Bridge",
+		"mobile.team_bridge.list.preview": "Xem trước · Tham gia để đọc",
+		"mobile.team_bridge.list.quiet": "Thông báo im lặng",
+		"mobile.team_bridge.list.self": "bạn",
+		"mobile.team_bridge.navigation.caption": "Tổ chức luôn bên bạn, ngay cả khi máy tính đang ngủ",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # chưa đọc}}",
+		"mobile.team_bridge.retry": "Thử lại",
+		"mobile.team_bridge.thread.access_retry": "Thử truy cập lại",
+		"mobile.team_bridge.thread.archived": "Cuộc trò chuyện này đã được lưu trữ. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
+		"mobile.team_bridge.thread.body_unavailable": "Không có nội dung tin nhắn.",
+		"mobile.team_bridge.thread.join": "Tham gia kênh",
+		"mobile.team_bridge.thread.join_error": "Không thể tham gia kênh này. Hãy thử lại.",
+		"mobile.team_bridge.thread.join_pending": "Chưa tham gia xong. Hãy thử lại trước khi đọc kênh này.",
+		"mobile.team_bridge.thread.loading": "Đang tải cuộc trò chuyện…",
+		"mobile.team_bridge.thread.message": "Tin nhắn",
+		"mobile.team_bridge.thread.messages_empty": "Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.",
+		"mobile.team_bridge.thread.messages_error": "Không thể tải tin nhắn nào.",
+		"mobile.team_bridge.thread.messages_loading": "Đang tải tin nhắn…",
+		"mobile.team_bridge.thread.messages_retry": "Thử tải lại tin nhắn",
+		"mobile.team_bridge.thread.metadata_error": "Không thể tải cuộc trò chuyện này. Có thể bạn không còn quyền truy cập.",
+		"mobile.team_bridge.thread.new_empty": "Chưa có tin nhắn. Lần gửi đầu tiên sẽ bắt đầu cuộc trò chuyện.",
+		"mobile.team_bridge.thread.notifications": "Thông báo",
+		"mobile.team_bridge.thread.notify_all": "Tất cả tin nhắn",
+		"mobile.team_bridge.thread.notify_current": "Hiện tại: {mode, select, all {Tất cả tin nhắn} mention {Chỉ lượt nhắc đến} mute {Tắt thông báo} other {Tất cả tin nhắn}}",
+		"mobile.team_bridge.thread.notify_error": "Chưa lưu cài đặt thông báo. Hãy thử lại.",
+		"mobile.team_bridge.thread.notify_mentions": "Chỉ lượt nhắc đến",
+		"mobile.team_bridge.thread.notify_mute": "Tắt thông báo",
+		"mobile.team_bridge.thread.notify_sheet": "Thông báo cuộc trò chuyện",
+		"mobile.team_bridge.thread.older_error": "Không thể tải tin nhắn cũ.",
+		"mobile.team_bridge.thread.older_load": "Tải tin nhắn cũ",
+		"mobile.team_bridge.thread.older_loading": "Đang tải tin nhắn cũ…",
+		"mobile.team_bridge.thread.older_retry": "Thử tải lại tin nhắn cũ",
+		"mobile.team_bridge.thread.organization_unavailable": "Tài khoản này không có quyền truy cập tổ chức này.",
+		"mobile.team_bridge.thread.placeholder": "Nhắn tin cho {title}",
+		"mobile.team_bridge.thread.preview_help": "Tham gia kênh này để đọc lịch sử và gửi tin nhắn.",
+		"mobile.team_bridge.thread.readonly": "Tổ chức này ở chế độ chỉ đọc. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
+		"mobile.team_bridge.thread.recipient_incomplete": "Thông tin người nhận chưa đầy đủ. Quay lại và chọn một người hoặc chánh văn phòng.",
+		"mobile.team_bridge.thread.refresh_error": "Không thể làm mới tin nhắn. Các tin nhắn đã tải trước đó được hiển thị.",
+		"mobile.team_bridge.thread.retry": "Thử tải lại cuộc trò chuyện",
+		"mobile.team_bridge.thread.send": "Gửi",
+		"mobile.team_bridge.thread.send_error": "Tin nhắn chưa được xác nhận. Bản nháp vẫn được lưu tại đây. Thử lại sẽ gửi lại cùng tin nhắn một cách an toàn.",
+		"mobile.team_bridge.thread.send_retry": "Thử gửi lại",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, other {# chưa đọc}}",
 		"relay.chrome.session.resume": "Mở lại",
 		"relay.chrome.session.resuming": "Đang mở lại…",
 		"relay.chrome.session.subtitle.ended": "Đã kết thúc",
@@ -1823,6 +2763,92 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.team_bridge.back": "返回",
+		"mobile.team_bridge.conversation": "会话",
+		"mobile.team_bridge.gate.checking": "正在检查 Team Bridge…",
+		"mobile.team_bridge.gate.connecting": "正在连接 Radient，无需打开电脑。",
+		"mobile.team_bridge.gate.console_error": "无法打开 Radient 控制台。",
+		"mobile.team_bridge.gate.loading": "正在加载 Team Bridge",
+		"mobile.team_bridge.gate.manage_plan": "在 Radient 控制台管理套餐",
+		"mobile.team_bridge.gate.plan_description": "与团队成员及其智能体交流，让智能体与组织内的其他智能体协作。",
+		"mobile.team_bridge.gate.plan_features": "组织频道 · 私信 · 幕僚长 · 团队通知",
+		"mobile.team_bridge.gate.plan_required": "Team Bridge 需要 Radient Team 套餐",
+		"mobile.team_bridge.gate.sign_in": "登录",
+		"mobile.team_bridge.gate.sign_in_error": "登录未完成，请重试。",
+		"mobile.team_bridge.gate.signed_out": "登录 Team Bridge",
+		"mobile.team_bridge.gate.signed_out_help": "即使电脑已合上，也能直接与团队联系。",
+		"mobile.team_bridge.gate.unavailable": "Team Bridge 暂不可用",
+		"mobile.team_bridge.gate.unavailable_help": "无法连接 Team Bridge，你的会话未发生更改。",
+		"mobile.team_bridge.gate.update_help": "此版本无法访问 Team Bridge 服务，请更新应用以继续。",
+		"mobile.team_bridge.gate.update_required": "需要更新",
+		"mobile.team_bridge.gate.upgrade": "升级至 Team",
+		"mobile.team_bridge.list.channels": "频道",
+		"mobile.team_bridge.list.channels_empty": "暂无频道。",
+		"mobile.team_bridge.list.chief_role": "幕僚长",
+		"mobile.team_bridge.list.chiefs": "幕僚长",
+		"mobile.team_bridge.list.chiefs_empty": "没有可用的幕僚长。",
+		"mobile.team_bridge.list.choose": "选择组织",
+		"mobile.team_bridge.list.conversations_error": "无法加载会话。",
+		"mobile.team_bridge.list.conversations_loading": "正在加载会话…",
+		"mobile.team_bridge.list.conversations_retry": "重试加载会话",
+		"mobile.team_bridge.list.directory_incomplete": "成员目录不完整，下拉刷新以获取最新成员。",
+		"mobile.team_bridge.list.groups": "群组",
+		"mobile.team_bridge.list.groups_empty": "暂无群组。",
+		"mobile.team_bridge.list.organization": "组织",
+		"mobile.team_bridge.list.organization_label": "{name}{readOnly, select, yes { · 只读} other {}}{count, plural, =0 {} other { · # 条未读}}",
+		"mobile.team_bridge.list.organization_selected": "{name}{readOnly, select, yes { · 只读} other {}}",
+		"mobile.team_bridge.list.organizations_empty": "没有可用的组织。",
+		"mobile.team_bridge.list.other_direct": "其他私信",
+		"mobile.team_bridge.list.paused": "已暂停",
+		"mobile.team_bridge.list.people": "成员",
+		"mobile.team_bridge.list.people_empty": "此组织中没有成员。",
+		"mobile.team_bridge.list.people_error": "无法加载成员目录，请重试以加载组织成员。",
+		"mobile.team_bridge.list.people_loading": "正在加载成员…",
+		"mobile.team_bridge.list.people_retry": "重试加载成员",
+		"mobile.team_bridge.list.person_unavailable": "尚未启用 Team Bridge",
+		"mobile.team_bridge.list.preview": "预览 · 加入后阅读",
+		"mobile.team_bridge.list.quiet": "通知已静音",
+		"mobile.team_bridge.list.self": "你",
+		"mobile.team_bridge.navigation.caption": "即使电脑休眠，也能与组织保持联系",
+		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # 条未读}}",
+		"mobile.team_bridge.retry": "重试",
+		"mobile.team_bridge.thread.access_retry": "重试访问",
+		"mobile.team_bridge.thread.archived": "此会话已归档，你可以阅读历史记录，但无法发送消息。",
+		"mobile.team_bridge.thread.body_unavailable": "消息内容不可用。",
+		"mobile.team_bridge.thread.join": "加入频道",
+		"mobile.team_bridge.thread.join_error": "无法加入此频道，请重试。",
+		"mobile.team_bridge.thread.join_pending": "尚未完成加入，请重试后再阅读此频道。",
+		"mobile.team_bridge.thread.loading": "正在加载会话…",
+		"mobile.team_bridge.thread.message": "消息",
+		"mobile.team_bridge.thread.messages_empty": "暂无消息，开始会话吧。",
+		"mobile.team_bridge.thread.messages_error": "无法加载任何消息。",
+		"mobile.team_bridge.thread.messages_loading": "正在加载消息…",
+		"mobile.team_bridge.thread.messages_retry": "重试加载消息",
+		"mobile.team_bridge.thread.metadata_error": "无法加载此会话，你可能已无权访问。",
+		"mobile.team_bridge.thread.new_empty": "暂无消息，首次发送将开启会话。",
+		"mobile.team_bridge.thread.notifications": "通知",
+		"mobile.team_bridge.thread.notify_all": "所有消息",
+		"mobile.team_bridge.thread.notify_current": "当前：{mode, select, all {所有消息} mention {仅提及} mute {静音} other {所有消息}}",
+		"mobile.team_bridge.thread.notify_error": "通知设置未保存，请重试。",
+		"mobile.team_bridge.thread.notify_mentions": "仅提及",
+		"mobile.team_bridge.thread.notify_mute": "静音",
+		"mobile.team_bridge.thread.notify_sheet": "会话通知",
+		"mobile.team_bridge.thread.older_error": "无法加载更早的消息。",
+		"mobile.team_bridge.thread.older_load": "加载更早的消息",
+		"mobile.team_bridge.thread.older_loading": "正在加载更早的消息…",
+		"mobile.team_bridge.thread.older_retry": "重试加载更早的消息",
+		"mobile.team_bridge.thread.organization_unavailable": "此账户无法访问该组织。",
+		"mobile.team_bridge.thread.placeholder": "给 {title} 发消息",
+		"mobile.team_bridge.thread.preview_help": "加入此频道即可阅读历史记录并发送消息。",
+		"mobile.team_bridge.thread.readonly": "此组织为只读，你可以阅读历史记录，但无法发送消息。",
+		"mobile.team_bridge.thread.recipient_incomplete": "收件人信息不完整，请返回并选择一位成员或幕僚长。",
+		"mobile.team_bridge.thread.refresh_error": "无法刷新消息，当前显示的是先前加载的消息。",
+		"mobile.team_bridge.thread.retry": "重试加载会话",
+		"mobile.team_bridge.thread.send": "发送",
+		"mobile.team_bridge.thread.send_error": "消息尚未确认，草稿已保存在此处。重试会安全地重新发送同一条消息。",
+		"mobile.team_bridge.thread.send_retry": "重试发送",
+		"mobile.team_bridge.title": "Team Bridge",
+		"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}",
 		"relay.chrome.session.resume": "恢复",
 		"relay.chrome.session.resuming": "正在恢复……",
 		"relay.chrome.session.subtitle.ended": "已结束",

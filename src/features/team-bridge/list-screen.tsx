@@ -8,6 +8,7 @@ import {
 	Text,
 	View,
 } from "react-native";
+import { t } from "@/i18n";
 import type { Conversation } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -51,8 +52,10 @@ export function BridgeRow({
 			accessibilityLabel={[
 				label,
 				detail,
-				unread?.count ? `${unread.count} unread` : null,
-				muted ? "Notifications quiet" : null,
+				unread?.count
+					? t("mobile.team_bridge.unread", { count: unread.count })
+					: null,
+				muted ? t("mobile.team_bridge.list.quiet") : null,
 			]
 				.filter(Boolean)
 				.join(", ")}
@@ -138,16 +141,21 @@ function ListContent() {
 			tenantId: conversation.tenant_id,
 			conversationId: conversation.id,
 		});
+	/* Translate presentation here, not protocol/model values. Whole organization
+	 * labels and unread counts let each locale own order and plural grammar. */
 	const conversationRows = (rows: Conversation[], empty: string) =>
 		rows.length ? (
 			rows.map((c) => (
 				<BridgeRow
 					key={c.id}
 					label={
-						model.conversationTitle(c, state.selfAccountId) ?? "Conversation"
+						model.conversationTitle(c, state.selfAccountId) ??
+						t("mobile.team_bridge.conversation")
 					}
 					conversation={c}
-					detail={model.isPreview(c) ? "Preview · Join to read" : null}
+					detail={
+						model.isPreview(c) ? t("mobile.team_bridge.list.preview") : null
+					}
 					onPress={() => existing(c)}
 					testID={teamBridgeConversationId(c.id)}
 				/>
@@ -168,14 +176,17 @@ function ListContent() {
 	};
 	return (
 		<Screen
-			title="Team Bridge"
+			title={t("mobile.team_bridge.title")}
 			headerLeading={<BridgeBack />}
 			scroll={false}
 			testID={SCREEN.teamBridgeList}
 		>
 			<View className="px-4 py-2">
 				<Button
-					label={`${selected?.name ?? "Choose organization"}${selected?.readOnly ? " · Read only" : ""}`}
+					label={t("mobile.team_bridge.list.organization_selected", {
+						name: selected?.name ?? t("mobile.team_bridge.list.choose"),
+						readOnly: selected?.readOnly ? "yes" : "no",
+					})}
 					variant="outline"
 					testID={CONTROL.teamBridgeOrgSwitcher}
 					onPress={() => setSwitching(true)}
@@ -196,7 +207,7 @@ function ListContent() {
 			>
 				{!tenantId && (
 					<Text className="px-4 py-6 text-body text-ink-muted">
-						No organizations are available.
+						{t("mobile.team_bridge.list.organizations_empty")}
 					</Text>
 				)}
 				{tenantId && (
@@ -209,46 +220,49 @@ function ListContent() {
 									className="px-4 py-4 text-body text-ink-muted"
 									testID={SURFACE.teamBridgeConversationsLoading}
 								>
-									Loading conversations…
+									{t("mobile.team_bridge.list.conversations_loading")}
 								</Text>
 							)}
 						{org?.conversationsState === "error" && (
 							<View className="gap-2 px-4">
 								<Text accessibilityRole="alert" className="text-body text-ink">
 									{org.conversationsError?.message ??
-										"Conversations could not load."}
+										t("mobile.team_bridge.list.conversations_error")}
 								</Text>
 								<Button
-									label="Retry conversations"
+									label={t("mobile.team_bridge.list.conversations_retry")}
 									testID={CONTROL.teamBridgeConversationsRetry}
 									onPress={retry}
 								/>
 							</View>
 						)}
-						{heading("Channels")}
+						{heading(t("mobile.team_bridge.list.channels"))}
 						{conversationRows(
 							sections.channels,
-							org?.conversationsState === "ready" ? "No channels yet." : "",
+							org?.conversationsState === "ready"
+								? t("mobile.team_bridge.list.channels_empty")
+								: "",
 						)}
-						{heading("Groups")}
+						{heading(t("mobile.team_bridge.list.groups"))}
 						{conversationRows(
 							sections.groups,
-							org?.conversationsState === "ready" ? "No groups yet." : "",
+							org?.conversationsState === "ready"
+								? t("mobile.team_bridge.list.groups_empty")
+								: "",
 						)}
-						{heading("People")}
+						{heading(t("mobile.team_bridge.list.people"))}
 						{org?.peopleState === "loading" && !people.length && (
 							<Text className="px-4 py-3 text-body text-ink-muted">
-								Loading people…
+								{t("mobile.team_bridge.list.people_loading")}
 							</Text>
 						)}
 						{org?.peopleState === "error" && (
 							<View className="gap-2 px-4">
 								<Text accessibilityRole="alert" className="text-body text-ink">
-									The people directory could not load. Try again to load your
-									organization’s people.
+									{t("mobile.team_bridge.list.people_error")}
 								</Text>
 								<Button
-									label="Retry people"
+									label={t("mobile.team_bridge.list.people_retry")}
 									testID={CONTROL.teamBridgePeopleRetry}
 									onPress={retry}
 								/>
@@ -256,7 +270,7 @@ function ListContent() {
 						)}
 						{!people.length && org?.peopleState === "ready" && (
 							<Text className="px-4 py-3 text-body text-ink-muted">
-								No people in this organization.
+								{t("mobile.team_bridge.list.people_empty")}
 							</Text>
 						)}
 						{people.map((person) => {
@@ -275,7 +289,13 @@ function ListContent() {
 									key={person.account_id}
 									label={label}
 									detail={
-										rowState === "self" ? "you" : model.personReason(rowState)
+										rowState === "self"
+											? t("mobile.team_bridge.list.self")
+											: rowState === "unavailable"
+												? t("mobile.team_bridge.list.person_unavailable")
+												: rowState === "paused"
+													? t("mobile.team_bridge.list.paused")
+													: null
 									}
 									conversation={dm}
 									disabled={rowState === "unavailable" || rowState === "self"}
@@ -295,14 +315,13 @@ function ListContent() {
 						})}
 						{org?.peopleIncomplete && (
 							<Text className="px-4 py-3 text-body text-ink-muted">
-								The directory is incomplete. Pull to refresh for the latest
-								people.
+								{t("mobile.team_bridge.list.directory_incomplete")}
 							</Text>
 						)}
-						{heading("Chiefs of staff")}
+						{heading(t("mobile.team_bridge.list.chiefs"))}
 						{!chiefs.length && org?.peopleState === "ready" && (
 							<Text className="px-4 py-3 text-body text-ink-muted">
-								No chiefs of staff are available.
+								{t("mobile.team_bridge.list.chiefs_empty")}
 							</Text>
 						)}
 						{chiefs.map((chief) => {
@@ -314,7 +333,11 @@ function ListContent() {
 								<BridgeRow
 									key={chief.endpointId}
 									label={chief.label}
-									detail={chief.paused ? "Paused" : "Chief of staff"}
+									detail={
+										chief.paused
+											? t("mobile.team_bridge.list.paused")
+											: t("mobile.team_bridge.list.chief_role")
+									}
 									conversation={dm}
 									testID={teamBridgeChiefId(chief.endpointId)}
 									onPress={() =>
@@ -333,7 +356,7 @@ function ListContent() {
 						})}
 						{sections.directs.some((c) => !represented.has(c.id)) && (
 							<>
-								{heading("Other direct messages")}
+								{heading(t("mobile.team_bridge.list.other_direct"))}
 								{conversationRows(
 									sections.directs.filter((c) => !represented.has(c.id)),
 									"",
@@ -346,7 +369,7 @@ function ListContent() {
 			<Sheet
 				visible={switching}
 				onClose={() => setSwitching(false)}
-				title="Organization"
+				title={t("mobile.team_bridge.list.organization")}
 				testID={SURFACE.teamBridgeOrganizations}
 			>
 				<View className="gap-2 p-4">
@@ -354,7 +377,11 @@ function ListContent() {
 						<Button
 							key={o.tenantId}
 							variant="outline"
-							label={`${o.name}${o.readOnly ? " · Read only" : ""}${o.unread ? ` · ${o.unread} unread` : ""}`}
+							label={t("mobile.team_bridge.list.organization_label", {
+								name: o.name,
+								readOnly: o.readOnly ? "yes" : "no",
+								count: o.unread ?? 0,
+							})}
 							testID={teamBridgeOrganizationId(o.tenantId)}
 							onPress={() => {
 								actions.selectOrganization(o.tenantId);
