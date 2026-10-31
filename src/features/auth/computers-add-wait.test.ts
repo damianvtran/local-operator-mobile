@@ -78,6 +78,10 @@ vi.mock("@/ui/components/refusal-surface", () => ({
 vi.mock("@/ui/components/section-header", () => stub("SectionHeader"));
 vi.mock("@/ui/components/skeleton", () => stub("Skeleton"));
 vi.mock("@/features/auth/sign-in-panel", () => stub("SignInPanel"));
+/* Team Bridge is a separate hub feature, not part of the connector polling
+ * screen's contract. Keep its provider/push native adapters outside this Node
+ * harness instead of inventing a production __DEV__ global for Expo imports. */
+vi.mock("@/team-bridge/navigation", () => ({ TeamBridgeEntry: () => null }));
 vi.mock("@/ui/components/shimmer", () => ({
 	Shimmer: (props: Props) => (props.children ?? null) as React.ReactNode,
 }));
