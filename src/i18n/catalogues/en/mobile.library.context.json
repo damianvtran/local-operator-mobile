@@ -1,0 +1,126 @@
+{
+	"mobile.library.action.add_tag": {
+		"role": "button",
+		"note": "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset."
+	},
+	"mobile.library.action.edit": {
+		"role": "button",
+		"note": "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself."
+	},
+	"mobile.library.action.open_chat": {
+		"role": "button",
+		"note": "Button on an asset that opens the conversation the asset is linked to. Imperative label, no final full stop. 'Chat' is a conversation with the agent."
+	},
+	"mobile.library.browse.any_tag": {
+		"role": "button",
+		"note": "Choice in the tag filter that clears the tag restriction so assets with any tag, or none, are listed. Fragment, no final full stop."
+	},
+	"mobile.library.browse.filter_by_kind": {
+		"role": "meta",
+		"note": "Accessible label of the segmented control that narrows the list by kind of file (images, documents, audio and so on). Not visible text. An imperative; no final full stop."
+	},
+	"mobile.library.browse.filters": {
+		"role": "heading",
+		"note": "Title of the sheet holding the status and tag filters. Plural noun, no final full stop."
+	},
+	"mobile.library.browse.filters_count": {
+		"role": "meta",
+		"note": "Label of the filters chip when at least one filter is active. {count} is the number of active filters, a positive integer; it is a count, not a plural-agreeing noun, so no plural arms. The middle dot is a separator, keep it. Same word as the plain 'Filters' chip and sheet title."
+	},
+	"mobile.library.browse.more_kinds": {
+		"role": "heading",
+		"note": "Title of the sheet listing the kinds of file that did not fit in the main kind control. 'Kinds' are types of file, such as spreadsheet or presentation. No final full stop."
+	},
+	"mobile.library.browse.no_tags": {
+		"role": "status",
+		"note": "Shown in the tag filter when no tag exists. Two sentences. 'The Librarian' is the name of a background helper that labels assets automatically; keep it a proper noun and do not imply the user must create tags."
+	},
+	"mobile.library.browse.refresh": {
+		"role": "button",
+		"note": "Accessible label of an icon-only button that reloads the list from the computer. Not visible text. Imperative, no final full stop."
+	},
+	"mobile.library.browse.search_label": {
+		"role": "meta",
+		"note": "Label of the search field. Imperative, no final full stop. Searches the user's catalogue of assets, not the web."
+	},
+	"mobile.library.browse.search_placeholder": {
+		"role": "help",
+		"note": "Placeholder of the search field: three things the search matches (an asset's name, a tag, or words in its text), in that order. A fragment, not a sentence; no final full stop."
+	},
+	"mobile.library.browse.sort": {
+		"role": "heading",
+		"note": "Title of the sheet that chooses the list order. A verb used as a title, no final full stop."
+	},
+	"mobile.library.browse.status": {
+		"role": "meta",
+		"note": "Label above the choices that filter by an asset's state (for example locked or favourite). A noun, no final full stop; not the status of the connection."
+	},
+	"mobile.library.browse.tag": {
+		"role": "meta",
+		"note": "Label above the choices that filter by tag. A noun (a label attached to an asset), singular, no final full stop; not a verb."
+	},
+	"mobile.library.detail.message_label": {
+		"role": "meta",
+		"note": "Accessible label of the composer field on an asset: the message goes to the conversation linked to the asset, or starts a new one. A fragment, no final full stop."
+	},
+	"mobile.library.detail.missing_file": {
+		"role": "status",
+		"note": "Warning shown when the asset's file is no longer on the computer. Two sentences: what happened (the cause is unknown, so keep 'moved or deleted' together), then what remains. Must not imply the user can recover the file."
+	},
+	"mobile.library.detail.no_source": {
+		"role": "status",
+		"note": "Shown under 'Seen in' when the asset has no recorded conversation of origin. Says nothing was recorded; it does not mean the file is orphaned or unsafe."
+	},
+	"mobile.library.detail.no_tags": {
+		"role": "help",
+		"note": "Shown on an asset with no tags. Two sentences: the state, then the way to fix it. 'Edit the details' refers to the 'Edit' button on this screen; keep it consistent with that label."
+	},
+	"mobile.library.detail.seen_in": {
+		"role": "heading",
+		"note": "Heading above the list of conversations where the asset appeared. Fragment completed by the list below it; no final full stop."
+	},
+	"mobile.library.editor.description": {
+		"role": "meta",
+		"note": "Label of the asset's description field in the edit sheet. A noun, no final full stop."
+	},
+	"mobile.library.editor.discard_title": {
+		"role": "confirm",
+		"note": "Title of the confirmation that appears when the user closes the edit sheet with unsaved edits. A question. The dialog body and buttons are separate strings; the destructive button is not the shared 'Cancel'."
+	},
+	"mobile.library.editor.name": {
+		"role": "meta",
+		"note": "Label of the asset's display-name field in the edit sheet. A noun, no final full stop; the name of the file or asset, not the user's name."
+	},
+	"mobile.library.editor.new_tag": {
+		"role": "meta",
+		"note": "Label of the field where the user types a tag to create. A noun phrase, no final full stop."
+	},
+	"mobile.library.editor.new_tag_placeholder": {
+		"role": "help",
+		"note": "Example tag shown as placeholder text. The SERVER refuses anything outside `^[a-z0-9][a-z0-9_-]{0,23}$` (lower-case ASCII, digits, hyphen, underscore), so this value is a valid example wherever the locale's script is not Latin — do not localise it into non-ASCII. No final full stop."
+	},
+	"mobile.library.editor.tag_limit": {
+		"role": "status",
+		"note": "Shown when the asset already has the maximum number of tags. {limit} is the maximum, a positive integer set by the app (currently 12); keep the placeholder and do not hard-code the number. Plural fixed to the limit."
+	},
+	"mobile.library.editor.tags": {
+		"role": "heading",
+		"note": "Heading above the tag choices in the edit sheet. Plural noun (labels attached to an asset), no final full stop."
+	},
+	"mobile.library.editor.title": {
+		"role": "heading",
+		"note": "Title of the sheet where an asset's name, description and tags are changed. Imperative, no final full stop."
+	},
+	"mobile.library.title": {
+		"role": "heading",
+		"note": "Title of the Library screens (the list and the single-asset view). 'Library' is the name of the feature that catalogues files and images from the user's conversations, not a building or a book collection; no final full stop."
+	},
+	"mobile.library.discard_not_saved": {
+		"role": "confirm",
+		"note": "Body of the dialog that appears when leaving the editor with unsaved changes. States the consequence: the edits are lost. Full sentence with a full stop."
+	},
+	"mobile.library.discard_confirm": {
+		"role": "confirm",
+		"note": "The DESTRUCTIVE confirm button of that dialog. It must read as 'discard' and must NOT reuse the generic Cancel wording; the dialog's Cancel is mobile.common.cancel."
+	}
+}

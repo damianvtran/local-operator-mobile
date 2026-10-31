@@ -1,0 +1,121 @@
+{
+ "schema": 1,
+ "audit_id": "libc-ru-r2",
+ "locale": "ru",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 31,
+ "value_count": 31,
+ "kind": "round 2 DELTA audit - attests the file as it ships (library extraction wave, review R1-1)",
+ "delta_of": "libc-ru-r1",
+ "delta_statement": "Round-1 bundle libc-ru-r1 recorded sha256 fef91c9fac91a98120f0506824651a4830dd89ee3e26ae935e9fcbee3fa2934e; the findings were applied afterwards, so that bundle describes bytes that no longer exist. This bundle attests the CURRENT bytes. Proof that the key list below is exact and complete: reverting exactly those keys to their round-1 text in the shipped raw bytes reproduces the round-1 sha256 (tools/delta.py; audit.log).",
+ "keys_changed_since_round_1": [
+  "mobile.library.discard_not_saved"
+ ],
+ "keys_changed_outside_this_file": [],
+ "round1_findings_disposition": [
+  {
+   "round1_finding": "libc-ru-r1-1",
+   "severity": "MINOR",
+   "key": "mobile.library.discard_not_saved",
+   "round1_text": "Название, описание и теги, которые вы изменили, не сохранятся.",
+   "round1_replacement": "Изменения названия, описания и тегов не будут сохранены.",
+   "shipped_now": "Изменения названия, описания и тегов не будут сохранены.",
+   "byte_exact_applied": true,
+   "disposition": "closed - applied byte-exactly"
+  }
+ ],
+ "round1_findings_without_replacement": [
+  "libc-ru-r1-2"
+ ],
+ "project": "damianvtran/local-operator-mobile",
+ "pr": 145,
+ "worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "base_commit": "4292fa48 (plus uncommitted post-review fixes; read-only for this auditor)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "c1967ad9dd38",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header ('Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "ru (native-fluent reader; no MT or translation service used, no back-translation tool)"
+ },
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** - not used",
+  "context_sidecar_routability": "not routable: the en mobile.library.context.json maps keys to nested {role,note} objects, not message strings",
+  "receipt": null,
+  "honest_note": "no copy-route receipt obtained or claimed for any input in this bundle"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ru/mobile.library.json",
+   "sha256": "b582b67b011623cb46ad8a119cb979a6a4df585a4f16f93a442442e70d7e1fa2"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc"
+  },
+  "round1_target_recorded": {
+   "path": "i18n/audits/evidence/ru/mobile.library/libc-ru-r1/record.json",
+   "sha256": "fef91c9fac91a98120f0506824651a4830dd89ee3e26ae935e9fcbee3fa2934e"
+  },
+  "target_common": {
+   "path": "src/i18n/catalogues/ru/mobile.common.json",
+   "sha256": "cd89f84b4bb9245f70b6324dd1b1958908ea724217f783689e16cbb041ac01bc"
+  }
+ },
+ "file_unchanged_during_audit": "audit.log hashes the target at the start and again as the last command of the scripted run; both equal input_hashes.target.sha256",
+ "call_sites_read": [
+  "src/features/library/library-detail.tsx (open_chat 316-318; seen_in/no_source 349-353; editor Dialog 918-933)",
+  "src/features/library/library-screen.tsx (any_tag chip 584-588; no_tags 576-579; Done buttons 439/550/625)",
+  "src/ui/components/dialog.tsx (Cancel = t(\"mobile.common.cancel\") at 133/191)"
+ ],
+ "ledger_command": "none exists in this repo; status is recorded here in current_report_verdict only. Nothing was written to any ledger file.",
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only. Reads of call sites and sibling catalogues (sed/grep/python) beyond those replayed in audit.log are not execution proof.",
+ "findings": [],
+ "verified_neighbour_spot_check": "all 31 values re-rendered; keys not in keys_changed_since_round_1 are byte-identical to the text round 1 judged (hash reconstruction) and were not re-audited beyond the checks.py mechanics and a read of the rendered list.",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [],
+  "round1_verdict_superseded": "passed",
+  "round1_unresolved_blocker_major_count": 0
+ },
+ "redaction_scan": {
+  "secret_pattern_matches": 0,
+  "patterns_checked": [
+   "sk-*",
+   "ghp_*",
+   "xox[bap]-",
+   "AKIA*",
+   "Bearer <token>",
+   "password[:=]",
+   "api_key[:=]"
+  ],
+  "files": [
+   "audit.log",
+   "report.md"
+  ],
+  "absolute_scratch_paths_present": true,
+  "note": "audit.log carries this run's real absolute scratch paths (not normalised, not claimed as normalised); publication normalisation is for the committer"
+ },
+ "artifacts": {
+  "audit.log": {
+   "path": "i18n/audits/evidence/ru/mobile.library/libc-ru-r2/audit.log",
+   "sha256": "0fd967412fd36ce958f7539b85bb23f3e08d46a776332fc1e221707c1723e96e"
+  },
+  "tools_sha256": {
+   "delta.py": "bafed352f30510f484fc444e998a1d054f5e8d94ed665f1196a84e38b52b3d57",
+   "checks.py": "630f2b41ee326187143b0debb48396f7b21b4fc840c2b0f6d909f338baebc6ce",
+   "render.ts": "e4bc73ae40460d441607c684c295017feb446369bcffcf6458566ef74c4bfa3d",
+   "run.sh": "330b70acf26e58d71095bf3bcd46796b2a1602c41dac687d80636b0ca09a69be"
+  },
+  "report.md": "report.md (hash omitted: it quotes this record)"
+ }
+}

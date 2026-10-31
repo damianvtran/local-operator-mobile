@@ -1,0 +1,140 @@
+# audit.log - delta of libb-hi-r2, locale hi, mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/run.sh hi libb-hi-r2, run 2026-10-31T14:28:56Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own judgments and are not all replayed here.
+
+$ git rev-parse --short HEAD
+4292fa48
+[exit 0]
+
+$ git status --short
+ M src/features/library/library-detail.tsx
+ M src/i18n/catalogue.gen.ts
+ M src/i18n/catalogues/es/mobile.common.json
+?? i18n/audits/evidence/es/mobile.library/libc-es-r2/
+?? i18n/audits/evidence/fr/mobile.library/libc-fr-r2/
+?? i18n/audits/evidence/hi/mobile.library/libb-hi-r3/
+?? i18n/audits/evidence/ru/mobile.library/libc-ru-r2/
+?? i18n/audits/evidence/vi/mobile.library/libc-vi-r2/
+?? i18n/audits/evidence/zh-CN/mobile.library/libc-zh-CN-r2/
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/hi/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/hi/mobile.common.json
+2a76b935b8821328e7de665bcf25214e2e49a38e3af36ab5b2c03ab7f3401add  src/i18n/catalogues/hi/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+104488121a3ba7c655e0fd372c09d5d7856ec43b5a7ba4adb9f75c5e554e5a0c  src/i18n/catalogues/hi/mobile.common.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/delta.py hi libb-hi-r2
+round-1 recorded sha256 : 48235b2ffa9aa6311a27493a0301651ae87967dc99a864053a4540f429fc7367
+shipped now sha256      : 2a76b935b8821328e7de665bcf25214e2e49a38e3af36ab5b2c03ab7f3401add
+round-1 attests shipped : False
+libb-hi-r2-1 MINOR mobile.library.browse.refresh
+   round-1 current    : ताज़ा करें
+   round-1 replacement: लाइब्रेरी ताज़ा करें
+   shipped now        : लाइब्रेरी ताज़ा करें
+   byte-exact applied : True
+libb-hi-r2-2 OBSERVATION (not a locale defect; no catalogue change) mobile.library.discard_not_saved / mobile.library.discard_confirm: no replacement prescribed (keep/observation)
+keys changed since round 1 (derived): ['mobile.library.browse.refresh']
+reconstructed round-1 sha256: 48235b2ffa9aa6311a27493a0301651ae87967dc99a864053a4540f429fc7367
+== recorded round-1 sha256   : True
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/checks.py hi
+en keys 31 sidecar keys 31 sidecar==en True
+hi: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+full-stop mismatch (locale stop vs en): none
+ASCII quote/apostrophe in values: none
+new_tag_placeholder 'topic-name' matches server grammar: True
+common.cancel = 'रद्द करें' | discard_confirm = 'छोड़ें' | equal: False
+common.done = 'हो गया'
+length (chars) of button/chip values (current | en):
+   action.open_chat      12 |   9  बातचीत खोलें
+   browse.any_tag        10 |   7  कोई भी टैग
+   discard_confirm        6 |   7  छोड़ें
+   browse.refresh        20 |  15  लाइब्रेरी ताज़ा करें
+special spaces (NNBSP U+202F / NBSP U+00A0): none
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/render.ts hi
+action.add_tag               {}           => जोड़ें
+action.edit                  {}           => संपादित करें
+action.open_chat             {}           => बातचीत खोलें
+browse.any_tag               {}           => कोई भी टैग
+browse.filter_by_kind        {}           => प्रकार के अनुसार फ़िल्टर करें
+browse.filters               {}           => फ़िल्टर
+browse.filters_count         {"count":1}  => फ़िल्टर · 1
+browse.filters_count         {"count":2}  => फ़िल्टर · 2
+browse.filters_count         {"count":5}  => फ़िल्टर · 5
+browse.more_kinds            {}           => अन्य प्रकार
+browse.no_tags               {}           => अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।
+browse.refresh               {}           => लाइब्रेरी ताज़ा करें
+browse.search_label          {}           => लाइब्रेरी में खोजें
+browse.search_placeholder    {}           => नाम, टैग या शब्द
+browse.sort                  {}           => क्रमबद्ध करें
+browse.status                {}           => स्थिति
+browse.tag                   {}           => टैग
+detail.message_label         {}           => इस संसाधन के बारे में संदेश
+detail.missing_file          {}           => यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।
+detail.no_source             {}           => इस संसाधन के लिए कोई स्रोत बातचीत दर्ज नहीं है।
+detail.no_tags               {}           => अभी कोई टैग नहीं है। जोड़ने के लिए विवरण संपादित करें।
+detail.seen_in               {}           => इन बातचीतों में दिखा
+editor.description           {}           => विवरण
+editor.discard_title         {}           => बदलाव छोड़ें?
+editor.name                  {}           => नाम
+editor.new_tag               {}           => नया टैग
+editor.new_tag_placeholder   {}           => topic-name
+editor.tag_limit             {"limit":12} => एक संसाधन पर टैग की सीमा 12 है।
+editor.tags                  {}           => टैग
+editor.title                 {}           => विवरण संपादित करें
+title                        {}           => लाइब्रेरी
+discard_not_saved            {}           => नाम, विवरण और टैग में किए गए बदलाव सहेजे नहीं जाएँगे।
+discard_confirm              {}           => छोड़ें
+-- mobile.common (the six chrome verbs the Library screens render)
+mobile.common.back           {}           => वापस
+mobile.common.cancel         {}           => रद्द करें
+mobile.common.done           {}           => हो गया
+mobile.common.save           {}           => सहेजें
+mobile.common.send           {}           => भेजें
+mobile.common.try_again      {}           => फिर से कोशिश करें
+[exit 0]
+
+$ grep -n mobile.library.discard\|editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:828:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:919:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:920:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:921:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/hi/mobile.library.json
+2a76b935b8821328e7de665bcf25214e2e49a38e3af36ab5b2c03ab7f3401add  src/i18n/catalogues/hi/mobile.library.json
+[exit 0]
+
+### supplement (hi only): mobile.common.done is claimed unchanged - verified
+
+$ git diff HEAD --stat -- src/i18n/catalogues/hi/
+[exit 0]
+
+$ grep -n mobile.common.done src/i18n/catalogues/hi/mobile.common.json
+4:	"mobile.common.done": "हो गया",
+[exit 0]
+
+$ python3: hi mobile.common bundle hash vs now
+lib-common-hi-r1 recorded: 104488121a3ba7c655e0fd372c09d5d7856ec43b5a7ba4adb9f75c5e554e5a0c
+shipped now              : 104488121a3ba7c655e0fd372c09d5d7856ec43b5a7ba4adb9f75c5e554e5a0c
+bundle attests shipped   : True
+[exit 0]
