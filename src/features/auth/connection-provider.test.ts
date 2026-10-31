@@ -1356,7 +1356,15 @@ describe("mounted provider authentication retirement", () => {
 		expect(latest.relay()).not.toBeNull();
 	});
 
-	it("reserves route logout before a held push retirement without clearing OAuth early", async () => {
+	it("reserves route logout before a held push retirement; a new sign-in waits for the full wipe", async () => {
+		/* Two properties, one test. (1) OAuth is NOT cleared early: push-device
+		 * removal authenticates with the grant, so the clear must not start while
+		 * that retirement is held. (2) A new sign-in is NOT accepted before the old
+		 * credentials are confirmed wiped (#97/#118): `connectCustom` waits for the
+		 * sign-out's `privacy` step, which includes the held push retirement, so the
+		 * replacement login's cookie request only goes out AFTER the clear. The cost
+		 * (a sign-in right after sign-out waits up to the 35 s push ceiling) is the
+		 * accepted fail-closed trade documented at `signOut`. */
 		const mock = await relay();
 		transport();
 		await mount();
@@ -1382,13 +1390,22 @@ describe("mounted provider authentication retirement", () => {
 					password: "new",
 					allowInsecure: true,
 				});
+				// Let the replacement sign-in run as far as it is allowed to.
+				for (let turn = 0; turn < 20; turn += 1)
+					await new Promise<void>((resolve) => setImmediate(resolve));
 			});
-			await until(() => mock.events.includes("login:2:cookie"));
+			// Held push retirement: nothing is cleared and the new login is parked.
 			expect(durable.clearsStarted).toBe(0);
+			expect(mock.events).not.toContain("login:2:cookie");
 			push.resolve();
+			await until(() => mock.events.includes("login:2:cookie"));
+			// The wipe finished before the replacement login reached the relay.
+			expect(durable.events).toContain("clear");
 			await act(async () => {
 				await Promise.all([exiting, second]);
 			});
+			/* `exiting` resolves false here by design: the replacement login's route
+			 * admission supersedes the sign-out's revocation owner. */
 			expect(durable.clearsStarted).toBe(1);
 			expect(jars.get(mock.origin)).toBe("lop_mobile=synthetic-2");
 			expect(mock.events.lastIndexOf("GET /logout")).toBeLessThan(
