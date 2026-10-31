@@ -18,6 +18,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
 	existsSync,
 	mkdtempSync,
@@ -237,8 +238,16 @@ async function historicalCandidates(base: BaseCopy) {
 		if (extract.status !== 0)
 			throw new Error("base snapshot extraction failed");
 		const owned = catalogueValues(snapshot);
+		const scannerPath = "scripts/i18n/scan-strings.ts";
+		const digest = (path: string) =>
+			createHash("sha256").update(readFileSync(path)).digest("hex");
+		// Fingerprints identify the code actually compared; they do not attest that
+		// the base scanner is honest or report every file it silently skips.
+		console.log(
+			`scanner sha256: base=${digest(join(snapshot, scannerPath))} head=${digest(join(ROOT, scannerPath))}`,
+		);
 		const previous = await import(
-			pathToFileURL(join(snapshot, "scripts/i18n/scan-strings.ts")).href
+			pathToFileURL(join(snapshot, scannerPath)).href
 		);
 		const oldFindings = previous.scanTree(snapshot, owned);
 		const newFindings = scanTree(snapshot, owned);

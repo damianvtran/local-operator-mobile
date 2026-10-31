@@ -13,6 +13,8 @@ import { describe, expect, it } from "vitest";
 // A real Git base ensures neither the worktree scanner nor its catalogue can
 // silently substitute for the historical inputs used to classify debt.
 const root = process.cwd();
+const fingerprintsPattern =
+	/scanner sha256: base=[0-9a-f]{64} head=[0-9a-f]{64}/;
 const isolated = (cwd: string) => ({
 	HOME: cwd,
 	NODE_ENV: "test" as const,
@@ -115,7 +117,12 @@ describe("historical scanner migration in Git", () => {
 					entry.ruleVersion === "copy-props-v1",
 			),
 		).toHaveLength(27);
-		expect(run(dir, "--base", "HEAD").status).toBe(0);
+		const first = run(dir, "--base", "HEAD");
+		const second = run(dir, "--base", "HEAD");
+		expect(first.status).toBe(0);
+		const fingerprints = first.stdout.match(fingerprintsPattern)?.[0];
+		expect(fingerprints).toBeDefined();
+		expect(second.stdout).toContain(fingerprints);
 		const file = join(dir, "src", "fresh.tsx");
 		writeFileSync(file, '<Card headline="A fresh headline" />\n');
 		data.findings.push({
@@ -147,7 +154,7 @@ describe("historical scanner migration in Git", () => {
 		);
 		expect(update(dir).status).toBe(0);
 		expect(baseline(dir).findings.length).toBe(count + 26);
-	});
+	}, 30_000);
 	it("fails closed on a missing ref and a broken snapshot scanner", () => {
 		const dir = fixture();
 		expect(run(dir, "--base", "missing-ref").status).not.toBe(0);
