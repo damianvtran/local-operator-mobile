@@ -245,6 +245,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
+	ur: {
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
+	},
 };
 
 describe("a shipped translation is still translated", () => {

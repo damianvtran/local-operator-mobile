@@ -46,13 +46,15 @@ describe("the locale source", () => {
 	});
 
 	it("keeps recognition separate from shipping", () => {
-		/* `ur` is the last language this build RECOGNIZES (direction knows Urdu;
-		 * it is in `SUPPORTED_LOCALES`) but does not ship. The two questions
-		 * must not collapse into one — and `fr`, `es`, `zh-CN` and `ru`, which
-		 * ship with their own catalogues, answer with a catalogue rather than
-		 * English source. */
-		expect(catalogueLocaleFor("ur")).toBeNull();
-		expect(catalogueLocaleFor("ur")).toBeNull();
+		/* EVERY supported locale now ships, so the two questions have to be kept
+		 * apart on a tag that is neither supported nor shipped: recognition is
+		 * "is this a language tag", shipping is "does this build have copy for
+		 * it". `pt` is a real language this build has no catalogue for, so it
+		 * answers null while still normalizing; `ur` answers with its catalogue
+		 * now that it is the last flip. A future target locale re-enters this
+		 * test through `NOT_YET_SHIPPED_LOCALES`. */
+		expect(catalogueLocaleFor("pt")).toBeNull();
+		expect(catalogueLocaleFor("ur")).toBe("ur");
 		expect(catalogueLocaleFor("fr")).toBe("fr");
 		expect(catalogueLocaleFor("fr-FR")).toBe("fr");
 		/* `es` now SHIPS: it answers with its own catalogue, and a regional tag
@@ -81,15 +83,18 @@ describe("the locale source", () => {
 			"ru",
 			"vi",
 			"hi",
+			"ur",
 		]);
 	});
 });
 
 describe("the English floor", () => {
 	it("renders English source for a preference with no shipped catalogue", () => {
-		/* `ur` is supported and pending, not shipped: the reader gets the
+		/* No supported locale is pending any more, so the fallback is exercised
+		 * the way a real unsupported tag reaches it: `pt` is a language the
+		 * relay can resolve and this build cannot render. The reader gets the
 		 * English sentence, not a key and not an empty string. */
-		setLocaleSource(() => "ur");
+		setLocaleSource(() => "pt");
 		expect(activeLocale()).toBe("en");
 		expect(t("mobile.home.greeting")).toBe("What can I help you with today?");
 		expect(t("mobile.schedules.count.wakes", { count: 2 })).toBe("2 wakes");
@@ -108,9 +113,9 @@ describe("the English floor", () => {
 		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "pt")).toBe(
 			"0 wakes",
 		);
-		/* A supported and still-pending locale renders English TEXT with English
-		 * rules — the same guarantee, on the path a relay tag actually takes. */
-		setLocaleSource(() => "ur");
+		/* And through `t()`, on the path a relay tag actually takes: the same
+		 * unsupported tag renders English TEXT with English rules. */
+		setLocaleSource(() => "pt");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
 	});
@@ -260,14 +265,19 @@ describe("direction", () => {
 		expect(directionFor("he")).toBe("ltr");
 	});
 
-	it("follows the ACTIVE catalogue, so an unsupported Urdu preference stays ltr", () => {
-		/* Urdu is recognized for direction but is not shipped, so the copy is
-		 * English and English must not be laid out right-to-left. The resolver
-		 * still answers `rtl` for the tag itself — the day `ur` ships, this flips
-		 * without a call-site change. */
+	it("follows the ACTIVE catalogue: a shipped Urdu preference is rtl, an unsupported one is not", () => {
+		/* This is the assertion the whole slice was built to satisfy, in its
+		 * shipped form: the resolver answered `rtl` for the Urdu TAG while it was
+		 * pending, and the ACTIVE direction followed the catalogue so English
+		 * source stayed left-to-right. Urdu now ships, so the same preference
+		 * reaches the catalogue and the layout flips with no call-site change —
+		 * while an unsupported tag still lays English out left-to-right. */
 		expect(activeDirection()).toBe("ltr");
 		setLocaleSource(() => "ur");
 		expect(directionFor("ur")).toBe("rtl");
+		expect(activeDirection()).toBe("rtl");
+		setLocaleSource(() => "pt");
+		expect(directionFor("pt")).toBe("ltr");
 		expect(activeDirection()).toBe("ltr");
 	});
 });
