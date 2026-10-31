@@ -18,17 +18,26 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
 	type BaselineEntry,
-	baselineGrowth,
 	buildBaseline,
 	entryKey,
+	migrationCandidates,
 	ratchet,
 	unaccountable,
+	validateGrowth,
 } from "./ratchet.ts";
 import { findingKey, scanTree } from "./scan-strings.ts";
 
@@ -38,7 +47,7 @@ const BASELINE = join(ROOT, "scripts", "i18n", "strings-baseline.json");
 const NOTE =
 	"Existing user-facing literals, recorded once so the checker can fail on NEW ones. " +
 	"Shrink-only: `node scripts/i18n/check-strings.ts --update` removes entries that are gone " +
-	"and refuses to add any, and the check fails when an entry appears that the merge base's copy does not have. " +
+	"and only seeds debt proven newly detected in the immutable base by a scanner rule change. " +
 	"Every entry names an owner and the payoff that removes it. Keying a literal is the only way to remove one.";
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
@@ -134,6 +143,17 @@ function resolveBase(
 	if (!shown.ok) {
 		return { skipped: `cannot read ${BASELINE_PATH} at ${ref}`, required };
 	}
+	const resolved = git("rev-parse", "--verify", `${ref}^{commit}`);
+	if (!resolved.ok || !FULL_SHA.test(resolved.out.trim())) {
+		return { skipped: `cannot resolve base commit ${ref}`, required: true };
+	}
+	ref = resolved.out.trim();
+	shown = git("show", `${ref}:${BASELINE_PATH}`);
+	if (!shown.ok)
+		return {
+			skipped: `cannot read ${BASELINE_PATH} at ${ref}`,
+			required: true,
+		};
 	try {
 		const parsed = JSON.parse(shown.out) as { findings?: unknown };
 		if (!Array.isArray(parsed.findings)) throw new Error("no findings array");
@@ -173,8 +193,8 @@ function describe(file: string, line: number, text: string): string {
  * `catalogues.test.ts` proves the mirror is exact. Without this set the checker
  * would demand the same sentence be keyed twice.
  */
-function catalogueValues(): ReadonlySet<string> {
-	const directory = join(ROOT, "src", "i18n", "catalogues", "en");
+function catalogueValues(root = ROOT): ReadonlySet<string> {
+	const directory = join(root, "src", "i18n", "catalogues", "en");
 	const owned = new Set<string>();
 	for (const name of readdirSync(directory)) {
 		if (!name.endsWith(".json")) continue;
@@ -197,18 +217,74 @@ function catalogueValues(): ReadonlySet<string> {
 	return owned;
 }
 
-function main(): void {
+async function historicalCandidates(base: BaseCopy) {
+	// Both scans use the same immutable source and catalogues: comparing scans
+	// on different trees would bless new copy as if it were historical debt.
+	const snapshot = mkdtempSync(
+		join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "i18n-base-"),
+	);
+	try {
+		const archive = spawnSync(
+			"git",
+			["archive", base.ref, "src", "scripts/i18n/scan-strings.ts"],
+			{ cwd: ROOT, maxBuffer: 100 * 1024 * 1024 },
+		);
+		if (archive.status !== 0 || !archive.stdout)
+			throw new Error("git archive failed");
+		const extract = spawnSync("tar", ["-xf", "-", "-C", snapshot], {
+			input: archive.stdout,
+		});
+		if (extract.status !== 0)
+			throw new Error("base snapshot extraction failed");
+		const owned = catalogueValues(snapshot);
+		const previous = await import(
+			pathToFileURL(join(snapshot, "scripts/i18n/scan-strings.ts")).href
+		);
+		const oldFindings = previous.scanTree(snapshot, owned);
+		const newFindings = scanTree(snapshot, owned);
+		if (!Array.isArray(oldFindings) || !Array.isArray(newFindings))
+			throw new Error("scanner returned invalid findings");
+		return migrationCandidates(oldFindings, newFindings, base.entries);
+	} finally {
+		rmSync(snapshot, { recursive: true, force: true });
+	}
+}
+
+async function main(): Promise<void> {
 	const findings = scanTree(ROOT, catalogueValues());
 	const update = process.argv.includes("--update");
 	const created = !existsSync(BASELINE);
 	const baseline = readBaseline(update);
 	const { added, stale } = ratchet(baseline, findings);
+	const base = resolveBase(flag("--base"));
+	if (!("copy" in base))
+		throw new Error(`Cannot resolve base: ${base.skipped}`);
+	const candidates = await historicalCandidates(base.copy);
+	const allowed = new Set(candidates.map(findingKey));
+	const grown = validateGrowth(base.copy.entries, baseline, candidates);
+	const oldKeys = new Set(base.copy.entries.map(entryKey));
+	if (
+		baseline.some(
+			(entry) =>
+				!oldKeys.has(entryKey(entry)) && entry.ruleVersion !== "copy-props-v1",
+		)
+	) {
+		throw new Error(
+			"New historical entries must name ruleVersion copy-props-v1",
+		);
+	}
+	if (grown.length > 0)
+		throw new Error(
+			`The baseline gained ${grown.length} unauthorised entr(ies):\n${grown.map((entry) => `  ${entry.file} ${JSON.stringify(entry.text)}`).join("\n")}`,
+		);
 
 	if (update) {
-		/* CREATING the baseline is the one non-shrinking write, because there is no
-		 * prior state to grow from — it records the tree as it stands once. Every
-		 * later `--update` may only remove. */
-		if (added.length > 0 && !created) {
+		/* Only previously undetected base identities may be seeded; all other
+		 * additions must be keyed even if the working baseline is missing. */
+		const unauthorized = added.filter(
+			(finding) => !allowed.has(findingKey(finding)),
+		);
+		if (unauthorized.length > 0) {
 			console.error(
 				`Refusing to update: ${added.length} literal(s) are not in the baseline. Key them, or extend a rule in scan-strings.ts deliberately.\n${added
 					.map((finding) => describe(finding.file, finding.line, finding.text))
@@ -230,13 +306,13 @@ function main(): void {
 				);
 				process.exit(1);
 			}
-			return { owner, payoff };
+			return { owner, payoff, ruleVersion: "copy-props-v1" };
 		});
 		writeBaseline(next);
 		console.log(
 			created
 				? `Baseline created: ${next.length} entries`
-				: `Baseline updated: ${baseline.length - next.length} removed, 0 added (${next.length} remain)`,
+				: `Baseline updated: ${stale.length} removed, ${next.length - baseline.length + stale.length} added (${next.length} remain)`,
 		);
 		return;
 	}
@@ -251,29 +327,7 @@ function main(): void {
 		process.exit(1);
 	}
 
-	const base = resolveBase(flag("--base"));
-	let compared = "growth check SKIPPED";
-	if ("copy" in base) {
-		const grown = baselineGrowth(base.copy.entries, baseline);
-		if (grown.length > 0) {
-			console.error(
-				`The baseline gained ${grown.length} entr(ies) relative to ${base.copy.ref}. It may only shrink: key the literal instead of exempting it.\n${grown
-					.map(
-						(entry) => `  added: ${entry.file}  ${JSON.stringify(entry.text)}`,
-					)
-					.join("\n")}`,
-			);
-			process.exit(1);
-		}
-		compared = `no growth vs ${base.copy.ref.slice(0, 12)}`;
-	} else if (base.required) {
-		console.error(
-			`Cannot prove the baseline did not grow: ${base.skipped}. Failing closed, because this run is the pull request's gate.`,
-		);
-		process.exit(1);
-	} else {
-		compared = `growth check SKIPPED (${base.skipped})`;
-	}
+	const compared = `verified historical debt vs ${base.copy.ref.slice(0, 12)}`;
 
 	if (added.length > 0) {
 		console.error(
@@ -298,4 +352,7 @@ function main(): void {
 	);
 }
 
-main();
+void main().catch((error: unknown) => {
+	console.error(error);
+	process.exitCode = 1;
+});

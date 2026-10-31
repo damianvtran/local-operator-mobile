@@ -27,6 +27,8 @@ export interface BaselineEntry {
 	readonly owner: string;
 	/** The condition that removes it (what keying it needs, or what retires it). */
 	readonly payoff: string;
+	/** Scanner revision which first exposed this historical debt. */
+	readonly ruleVersion?: string;
 }
 
 export interface RatchetResult {
@@ -95,6 +97,25 @@ export function baselineGrowth(
 ): BaselineEntry[] {
 	const known = new Set(base.map(entryKey));
 	return head.filter((entry) => !known.has(entryKey(entry)));
+}
+
+/** Only debt exposed by the new rule, never old-rule debt or an old exemption. */
+export function migrationCandidates<
+	T extends Pick<BaselineEntry, "file" | "text">,
+>(oldScan: readonly T[], newScan: readonly T[], base: readonly T[]): T[] {
+	const excluded = new Set([...oldScan, ...base].map(entryKey));
+	return newScan.filter((entry) => !excluded.has(entryKey(entry)));
+}
+
+export function validateGrowth(
+	base: readonly Pick<BaselineEntry, "file" | "text">[],
+	head: readonly BaselineEntry[],
+	candidates: readonly Pick<BaselineEntry, "file" | "text">[],
+): BaselineEntry[] {
+	const allowed = new Set(candidates.map(entryKey));
+	return baselineGrowth(base, head).filter(
+		(entry) => !allowed.has(entryKey(entry)),
+	);
 }
 
 /** Entries missing a non-blank `owner` or `payoff`. */

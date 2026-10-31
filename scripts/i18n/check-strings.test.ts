@@ -4,8 +4,10 @@ import {
 	type BaselineEntry,
 	baselineGrowth,
 	buildBaseline,
+	migrationCandidates,
 	ratchet,
 	unaccountable,
+	validateGrowth,
 } from "./ratchet.ts";
 import { scanSource } from "./scan-strings.ts";
 
@@ -196,6 +198,19 @@ describe("the baseline's growth check", () => {
 		text,
 		owner: "o",
 		payoff: "p",
+	});
+
+	it("only permits identities newly detected in the base by the new scanner", () => {
+		const oldEntry = entry("a.tsx", "Old finding");
+		const old = [oldEntry];
+		const newlyDetected = entry("b.tsx", "Historical headline");
+		const fresh = entry("c.tsx", "Fresh headline");
+		const candidates = migrationCandidates(old, [oldEntry, newlyDetected], old);
+		expect(candidates).toEqual([newlyDetected]);
+		expect(validateGrowth(old, [newlyDetected, fresh], candidates)).toEqual([
+			fresh,
+		]);
+		expect(migrationCandidates(old, [oldEntry], [])).toEqual([]);
 	});
 
 	it("reports an entry the base does not have", () => {
