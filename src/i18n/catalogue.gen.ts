@@ -1386,6 +1386,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "اکاؤنٹ روٹنگ",
 		"mobile.account_routing.unavailable": "اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
+		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
+		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
