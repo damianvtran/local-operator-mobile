@@ -1,0 +1,81 @@
+{
+	"schema": 1,
+	"audit_id": "lib-common-fr-r1",
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"locale": "fr",
+	"namespace": "mobile.common",
+	"audit_date": "2026-10-31",
+	"round": 1,
+	"audited_head_commit": "4fd4ad7c053f9e09bb93ca282fc7409e5d19adbf",
+	"audited_worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+	"audited_worktree_note": "detached at 4fd4ad7c plus uncommitted extraction and seven locale translations; the audited files are UNTRACKED working-tree files, identified by input_hashes, not by a commit.",
+	"key_count": {
+		"en": 6,
+		"target": 6
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "cca25211395f",
+		"job": null,
+		"model": "anthropic/claude-sonnet-5-5",
+		"actual_model_source": "session model header; no fallback observed",
+		"independent_from_translator_session": true,
+		"independence": "Did not translate any audited file; translator session and model not observed by this auditor."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.common.json",
+			"sha256": "3d1a8007b0ea260984f2868949859e55bfa31ea14beb2b6574fb2a2c578e604d"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.common.context.json",
+			"sha256": "6d8c765e302f556f53140aae70ac2dba66125cac7fbf04e81dc7fcbf43edf633"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/fr/mobile.common.json",
+			"sha256": "b1be5557e25593e2154b3d71be7799a20b2fbdcf73fbd3740cb13fbd116866e1"
+		}
+	},
+	"route_disclosure": {
+		"read_route": "ordinary worktree reads (cat, python json, shasum, grep); not read_public_copy (refused for src/i18n/**)",
+		"sidecars": "not routable; read as worktree files",
+		"receipt": "none claimed",
+		"redaction_scan": {
+			"count": 0,
+			"scope": "3 audited input files",
+			"method": "grep -c credential-shaped patterns, output in audit.log"
+		},
+		"translation_services": "none"
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": []
+	},
+	"findings": [],
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/fr/mobile.common/lib-common-fr-r1/report.md",
+			"sha256": "a0f08ee9bf4163c86863d2f308c334bb971a951cc40e8efd6d47cacd86207931"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.common/lib-common-fr-r1/audit.log",
+			"sha256": "cd9838448ff30327398df2a5deadc07ae4e418cd2b4ea712982f4f7166ab903b"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.common/lib-common-fr-r1/record.json",
+			"sha256": null,
+			"note": "this record; a self-hash is not meaningful"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and this record are notes. audit.log holds the actual command output (git rev-parse, shasum, generate.ts --check, parse/scan script, grep of call sites, same-locale vocabulary dumps, redaction count). The vitest run is not in audit.log.",
+	"ledger": {
+		"row_written": false,
+		"reason": "no audit-ledger command exists in this repository; the bundle is the artifact of record"
+	},
+	"limitations": [
+		"No native-speaker review.",
+		"No rendered frame; widths are character counts.",
+		"Audited bytes are untracked working-tree bytes."
+	]
+}

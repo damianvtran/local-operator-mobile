@@ -14,10 +14,14 @@ import {
 } from "@/i18n";
 import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.context.json";
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
+import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
+import common from "@/i18n/catalogues/en/mobile.common.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
 import home from "@/i18n/catalogues/en/mobile.home.json";
+import libraryContext from "@/i18n/catalogues/en/mobile.library.context.json";
+import library from "@/i18n/catalogues/en/mobile.library.json";
 import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.context.json";
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
@@ -41,6 +45,18 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * context, and that the four namespaces do not quietly collide.
  */
 const NAMESPACES = [
+	{
+		name: "mobile.common",
+		messages: common,
+		context: commonContext,
+		expected: 6,
+	},
+	{
+		name: "mobile.library",
+		messages: library,
+		context: libraryContext,
+		expected: 31,
+	},
 	{
 		name: "mobile.home",
 		messages: home,
@@ -153,7 +169,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(143);
+		expect(total).toBe(180);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -214,6 +230,11 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		/* French spells these the same as English. `Description` is the French
+		 * word for the same field, not an untranslated value: the asset editor's
+		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
+		"mobile.library.editor.description":
+			"French spells this field the same way — « Description » is the French word for the label, beside « Nom » and « Étiquettes » in the same editor.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical
@@ -230,22 +251,37 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
 	},

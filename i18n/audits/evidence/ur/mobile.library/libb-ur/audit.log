@@ -1,0 +1,251 @@
+# audit.log — libb-ur mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/run.sh ur, run 2026-10-31T12:52:05Z. Auditor reads (git/ls/grep/read) are not in this log; only the commands below.
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ git status --short -- src/i18n/catalogues/ur/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json
+?? src/i18n/catalogues/en/mobile.library.context.json
+?? src/i18n/catalogues/en/mobile.library.json
+?? src/i18n/catalogues/ur/mobile.library.json
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/ur/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json
+22e5cf3611f379dc53ff724228bf8b2ad6e68f218d3138e82fcc9617a91298ce  src/i18n/catalogues/ur/mobile.library.json
+eae4550326593bb4da0773ccd5970583acbc7dd846dd3bd47af0c2030b756ad3  src/i18n/catalogues/en/mobile.library.json
+1c459b0eaa68e314edd5935619480b8f28a5b31d4d52cd9286d7a746e2a31d6c  src/i18n/catalogues/en/mobile.library.context.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (178 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/checks.py
+en keys 29 ctx keys 29 ctx==en keys True
+== ur: keys=29 same_keyset_as_en=True json_valid=True
+bidi/zero-width/format characters in values: 0
+Cf/Cc chars: []
+NFC-stable: True
+placeholder/full-stop defects: none
+sentence keys in source: ['mobile.library.browse.no_tags', 'mobile.library.detail.missing_file', 'mobile.library.detail.no_source', 'mobile.library.detail.no_tags', 'mobile.library.editor.tag_limit']
+Arabic-form yeh/kaf (U+064A/U+0643): 0
+== hi: keys=29 same_keyset_as_en=True json_valid=True
+bidi/zero-width/format characters in values: 0
+Cf/Cc chars: []
+NFC-stable: True
+placeholder/full-stop defects: none
+sentence keys in source: ['mobile.library.browse.no_tags', 'mobile.library.detail.missing_file', 'mobile.library.detail.no_source', 'mobile.library.detail.no_tags', 'mobile.library.editor.tag_limit']
+ZWJ/ZWNJ: 0  non-nukta forms "फिल्टर": 0
+[exit 0]
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/render.ts
+== ur keys=29 sameKeys=true
+action.add_tag {} => شامل کریں
+action.edit {} => ترمیم کریں
+action.open_chat {} => گفتگو کھولیں
+browse.any_tag {} => کوئی بھی ٹیگ
+browse.filter_by_kind {} => قسم کے مطابق فلٹر کریں
+browse.filters {} => فلٹرز
+browse.filters_count {"count":0} => فلٹرز · 0
+browse.filters_count {"count":1} => فلٹرز · 1
+browse.filters_count {"count":2} => فلٹرز · 2
+browse.filters_count {"count":21} => فلٹرز · 21
+browse.more_kinds {} => مزید اقسام
+browse.no_tags {} => ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے ہوئے ٹیگ شامل کرتی ہے۔
+browse.refresh {} => لائبریری تازہ کریں
+browse.search_label {} => لائبریری میں تلاش کریں
+browse.search_placeholder {} => نام، ٹیگ یا الفاظ
+browse.sort {} => ترتیب دیں
+browse.status {} => حالت
+browse.tag {} => ٹیگ
+detail.message_label {} => اس اثاثے کے بارے میں پیغام
+detail.missing_file {} => یہ فائل منتقل ہو گئی ہے یا حذف کر دی گئی ہے۔ اس کا نام، ٹیگز اور تفصیل اب بھی یہاں موجود ہیں۔
+detail.no_source {} => اس اثاثے کے لیے کوئی ماخذ گفتگو درج نہیں ہے۔
+detail.no_tags {} => ابھی کوئی ٹیگ نہیں۔ ایک شامل کرنے کے لیے تفصیلات میں ترمیم کریں۔
+detail.seen_in {} => جن گفتگوؤں میں دیکھا گیا
+editor.description {} => تفصیل
+editor.discard_title {} => تبدیلیاں چھوڑیں؟
+editor.name {} => نام
+editor.new_tag {} => نیا ٹیگ
+editor.new_tag_placeholder {} => موضوع-کا-نام
+editor.tag_limit {"limit":12} => ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 12 ہے۔
+editor.tag_limit {"limit":0} => ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 0 ہے۔
+editor.tag_limit {"limit":1} => ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 1 ہے۔
+editor.tag_limit {"limit":2} => ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 2 ہے۔
+editor.tag_limit {"limit":21} => ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 21 ہے۔
+editor.tags {} => ٹیگز
+editor.title {} => تفصیلات میں ترمیم کریں
+title {} => لائبریری
+bidi/zero-width controls: 0
+== hi keys=29 sameKeys=true
+action.add_tag {} => जोड़ें
+action.edit {} => संपादित करें
+action.open_chat {} => बातचीत खोलें
+browse.any_tag {} => कोई भी टैग
+browse.filter_by_kind {} => प्रकार के अनुसार फ़िल्टर करें
+browse.filters {} => फ़िल्टर
+browse.filters_count {"count":0} => फ़िल्टर · 0
+browse.filters_count {"count":1} => फ़िल्टर · 1
+browse.filters_count {"count":2} => फ़िल्टर · 2
+browse.filters_count {"count":21} => फ़िल्टर · 21
+browse.more_kinds {} => और प्रकार
+browse.no_tags {} => अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।
+browse.refresh {} => लाइब्रेरी रीफ़्रेश करें
+browse.search_label {} => लाइब्रेरी में खोजें
+browse.search_placeholder {} => नाम, टैग या शब्द
+browse.sort {} => क्रमबद्ध करें
+browse.status {} => स्थिति
+browse.tag {} => टैग
+detail.message_label {} => इस संसाधन के बारे में संदेश
+detail.missing_file {} => यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और वर्णन अब भी यहाँ हैं।
+detail.no_source {} => इस संसाधन के लिए कोई स्रोत बातचीत दर्ज नहीं है।
+detail.no_tags {} => अभी कोई टैग नहीं है। जोड़ने के लिए विवरण संपादित करें।
+detail.seen_in {} => इन बातचीतों में दिखा
+editor.description {} => वर्णन
+editor.discard_title {} => बदलाव छोड़ दें?
+editor.name {} => नाम
+editor.new_tag {} => नया टैग
+editor.new_tag_placeholder {} => विषय-नाम
+editor.tag_limit {"limit":12} => एक संसाधन पर टैग की सीमा 12 है।
+editor.tag_limit {"limit":0} => एक संसाधन पर टैग की सीमा 0 है।
+editor.tag_limit {"limit":1} => एक संसाधन पर टैग की सीमा 1 है।
+editor.tag_limit {"limit":2} => एक संसाधन पर टैग की सीमा 2 है।
+editor.tag_limit {"limit":21} => एक संसाधन पर टैग की सीमा 21 है।
+editor.tags {} => टैग
+editor.title {} => विवरण संपादित करें
+title {} => लाइब्रेरी
+bidi/zero-width controls: 0
+[exit 0]
+
+(render.ts prints both locales; only the == ur block is audited here)
+
+### fit: cell widths (rich.cells.cell_len, core .venv)
+
+$ .venv/bin/python /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/fit.py
+== ur
+key                                          en  tgt  ratio
+action.add_tag                                3    9   3.00
+action.edit                                   4   10   2.50
+action.open_chat                              9   12   1.33
+browse.any_tag                                7   12   1.71
+browse.filter_by_kind                        14   22   1.57
+browse.filters                                7    5   0.71
+browse.filters_count                         17   15   0.88
+browse.more_kinds                            10   10   1.00
+browse.no_tags                               60   68   1.13
+browse.refresh                               15   18   1.20
+browse.search_label                          18   22   1.22
+browse.search_placeholder                    18   17   0.94
+browse.sort                                   4    9   2.25
+browse.status                                 6    4   0.67
+browse.tag                                    3    3   1.00
+detail.message_label                         24   26   1.08
+detail.missing_file                          83   93   1.12
+detail.no_source                             50   44   0.88
+detail.no_tags                               41   64   1.56
+detail.seen_in                                7   24   3.43
+editor.description                           11    5   0.45
+editor.discard_title                         16   16   1.00
+editor.name                                   4    3   0.75
+editor.new_tag                                7    7   1.00
+editor.new_tag_placeholder                   10   12   1.20
+editor.tag_limit                             40   54   1.35
+editor.tags                                   4    4   1.00
+editor.title                                 12   22   1.83
+title                                         7    8   1.14
+widest relative to English: [('mobile.library.detail.seen_in', 7, 24), ('mobile.library.action.add_tag', 3, 9), ('mobile.library.action.edit', 4, 10)]
+hints in en sidecar: 0
+== hi
+key                                          en  tgt  ratio
+action.add_tag                                3    2   0.67
+action.edit                                   4    7   1.75
+action.open_chat                              9    7   0.78
+browse.any_tag                                7    7   1.00
+browse.filter_by_kind                        14   19   1.36
+browse.filters                                7    4   0.57
+browse.filters_count                         17   14   0.82
+browse.more_kinds                            10    7   0.70
+browse.no_tags                               60   53   0.88
+browse.refresh                               15   13   0.87
+browse.search_label                          18   10   0.56
+browse.search_placeholder                    18   12   0.67
+browse.sort                                   4    9   2.25
+browse.status                                 6    3   0.50
+browse.tag                                    3    2   0.67
+detail.message_label                         24   18   0.75
+detail.missing_file                          83   59   0.71
+detail.no_source                             50   34   0.68
+detail.no_tags                               41   37   0.90
+detail.seen_in                                7   12   1.71
+editor.description                           11    4   0.36
+editor.discard_title                         16   10   0.62
+editor.name                                   4    2   0.50
+editor.new_tag                                7    5   0.71
+editor.new_tag_placeholder                   10    6   0.60
+editor.tag_limit                             40   29   0.72
+editor.tags                                   4    2   0.50
+editor.title                                 12   12   1.00
+title                                         7    5   0.71
+widest relative to English: [('mobile.library.browse.sort', 4, 9), ('mobile.library.action.edit', 4, 7), ('mobile.library.detail.seen_in', 7, 12)]
+hints in en sidecar: 0
+[exit 0]
+
+### core server tag grammar probe (core repo .venv, read-only import)
+
+$ .venv/bin/python /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/tagprobe.py
+== function-level probe: _normalise_tag_name (the gate create_tag applies)
+en     'topic-name'         -> accepted as 'topic-name'
+es     'nombre-del-tema'    -> accepted as 'nombre-del-tema'
+ru     'тема-файла'         -> REFUSED by the tag grammar ('тема-файла',)
+vi     'ten-chu-de'         -> accepted as 'ten-chu-de'
+hi     'विषय-नाम'           -> REFUSED by the tag grammar ('विषय-नाम',)
+ur     'موضوع-کا-نام'       -> REFUSED by the tag grammar ('موضوع-کا-نام',)
+
+== real-store probe: MetadataStore.create_tag in a throwaway config dir (same call the route makes)
+ur     'موضوع-کا-نام'       -> TagRefused('موضوع-کا-نام',) (route maps 422 موضوع-کا-نام)
+hi     'विषय-नाम'           -> TagRefused('विषय-नाम',) (route maps 422 विषय-नाम)
+en     'topic-name'         -> CREATED id=ae796fa9be name='topic-name'
+[exit 0]
+
+### glossary evidence from core's committed ur catalogues (read-only grep, bounded paths)
+
+$ grep -h -E library_asset_not_found|library_content_missing|library_tag_limit|library_tag_name|librarian.title|library_tag_category|tray.label|description_clear_unsupported|display_narration.label|tui.authoring.discard|tui.authoring.kind|tui.schedule.detail_status|relay.session.tags.more|relay.chrome.drawer.library|tui.tags.empty /Users/damian/local-operator/local_operator/i18n/catalogues/ur/wire.errors.desktop.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/wire.settings.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/tui.authoring.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/tui.schedule.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/tui.tags.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/relay.session.tags.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/relay.chrome.json /Users/damian/local-operator/local_operator/i18n/catalogues/ur/relay.chrome.json
+  "wire.errors.desktop.library_asset_not_found": "یہ اثاثہ لائبریری میں نہیں ہے۔",
+  "wire.errors.desktop.library_content_missing": "اس اثاثے کی فائل اس ڈیوائس پر اب دستیاب نہیں۔",
+  "wire.errors.desktop.library_tag_category": "{category} لائبریری کا ٹیگ زمرہ نہیں ہے۔",
+  "wire.errors.desktop.library_tag_limit": "ایک اثاثے پر زیادہ سے زیادہ {max, number} ٹیگز ہو سکتے ہیں۔",
+  "wire.errors.desktop.library_tag_name": "ٹیگ کے نام 1-24 حروف کے ہوتے ہیں: {name}۔",
+  "wire.settings.display_narration.label": "ٹرن کے دوران بیان",
+  "wire.settings.librarian.title": "Librarian",
+  "tui.authoring.description_clear_unsupported": "یہ فارم ابھی موجودہ تفصیل صاف نہیں کر سکتا۔",
+  "tui.authoring.discard": "تبدیلیاں چھوڑیں؟ y چھوڑیں · n ترمیم جاری رکھیں",
+  "tui.authoring.kind": "نوعیت",
+  "tui.schedule.detail_status": "حالت",
+  "tui.tags.empty": "ابھی کوئی ٹیگ نہیں۔ تیار کر کے لاگو کرنے کے لیے نام لکھیں۔",
+  "relay.session.tags.more": "{count, plural, one {# مزید ٹیگ} other {# مزید ٹیگز}}",
+  "relay.chrome.drawer.library": "لائبریری",
+  "relay.chrome.session.tray.label": "سیشن کی حالت",
+  "relay.chrome.drawer.library": "لائبریری",
+  "relay.chrome.session.tray.label": "سیشن کی حالت",
+[exit 0]
+
+### replacement rendering
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libb/verify-repl.ts ur
+mobile.library.detail.seen_in
+  before: جن گفتگوؤں میں دیکھا گیا
+  after : ان گفتگوؤں میں دیکھا گیا
+  bidi-controls-in-replacement: 0
+mobile.library.editor.new_tag_placeholder
+  before: موضوع-کا-نام
+  after : topic-name
+  bidi-controls-in-replacement: 0
+mobile.library.browse.no_tags
+  before: ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے ہوئے ٹیگ شامل کرتی ہے۔
+  after : ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔
+  bidi-controls-in-replacement: 0
+mobile.library.editor.tag_limit
+  before: ایک اثاثے کے لیے ٹیگز کی زیادہ سے زیادہ حد 12 ہے۔
+  after : ایک اثاثے پر ٹیگز کی حد 12 ہے۔
+  bidi-controls-in-replacement: 0
+[exit 0]
