@@ -389,7 +389,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "84558767a9aa98e43e124a5f6a6d6fb8c8b623ab4930b9d3dcb6fba4178426cd",
+	/* Re-pinned 2026-10-31 for incoming Bridge grouping (#146), deliberately:
+	 * optional wire/parser facts, positive receipt classification and material
+	 * ownership move src. The exact 520-row long-transcript U-08 scene parses
+	 * and produces identical condense/group plans against b51f098a in collapsed,
+	 * first-expanded and all-expanded states (SHA256 93b57ecb3c0caf8b...). This
+	 * is source-plan equivalence, not a new rendered/native proof. --print finds
+	 * only this current render-tree identity changed; instrument/input pins and
+	 * historical ORIGINAL_* incident identities are not altered. */
+	/* DIRTY convergence with main239cada4 (#145 Library i18n): recomputed
+	 * with --print over the combined tree, not either side's isolated digest.
+	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
+	 * identical plans in the three states above (same SHA256); Library labels
+	 * do not enter that measured scene. All other pin tables stay unchanged. */
+	src: "c84927ef257c6c61645eeb7db62bae083b268c190fa9c16dba95c5903f66ba81",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
