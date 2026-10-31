@@ -953,9 +953,8 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	/* …and the same card read from the TOP of the transcript, where its headline is
 	 * in frame at 320 pt (the tail-anchored cell above only has room for the
 	 * sentence). */
-	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-compact-u1/bridge-awaiting-top": [
-		{ click: toolRowToggleId("tc-compact-awaiting") },
-	],
+	"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-compact-u1/bridge-awaiting-top":
+		[{ click: toolRowToggleId("tc-compact-awaiting") }],
 	"path:/session/{sessionId}/bridge-awaiting-open": [
 		{ click: toolRowToggleId("tc-compact-awaiting") },
 	],
