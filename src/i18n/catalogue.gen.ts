@@ -45,6 +45,8 @@ export type CatalogueKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.agent_avatar.edit_hint"
+	| "mobile.agent_avatar.label"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
@@ -191,6 +193,8 @@ export type NoParamKey =
 	| "mobile.account_routing.title"
 	| "mobile.account_routing.unavailable"
 	| "mobile.account_routing.unsaved"
+	| "mobile.agent_avatar.edit_hint"
+	| "mobile.agent_avatar.label"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
@@ -318,6 +322,8 @@ export type MessageParams = {
 	"mobile.account_routing.title": NoParams;
 	"mobile.account_routing.unavailable": NoParams;
 	"mobile.account_routing.unsaved": NoParams;
+	"mobile.agent_avatar.edit_hint": NoParams;
+	"mobile.agent_avatar.label": NoParams;
 	"mobile.computers.add": NoParams;
 	"mobile.computers.added.stays_listed": NoParams;
 	"mobile.computers.badge.active": NoParams;
@@ -480,6 +486,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.title": "Account routing",
 	"mobile.account_routing.unavailable": "Account routing settings are unavailable on this relay. Update Local Operator on this computer.",
 	"mobile.account_routing.unsaved": "Not saved yet.",
+	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
+	"mobile.agent_avatar.label": "Agent picture",
 	"mobile.computers.add": "Add a computer",
 	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
 	"mobile.computers.badge.active": "active",
@@ -627,6 +635,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.title": { role: "heading", note: "Section heading in computer settings; not a provider/model picker." },
 	"mobile.account_routing.unavailable": { role: "status", note: "Confirmed missing relay route only; never use for an offline/unknown tunnel." },
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
+	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
+	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
 	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
 	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
@@ -788,6 +798,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Enrutamiento de cuentas",
 		"mobile.account_routing.unavailable": "Los ajustes de enrutamiento de cuentas no están disponibles en este relé. Actualiza Local Operator en esta máquina.",
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
+		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
+		"mobile.agent_avatar.label": "Imagen del agente",
 		"mobile.computers.add": "Añadir una máquina",
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
@@ -933,6 +945,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Acheminement du compte",
 		"mobile.account_routing.unavailable": "Les paramètres d’acheminement du compte ne sont pas disponibles sur ce relais. Mettez à jour Local Operator sur cet ordinateur.",
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
+		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
+		"mobile.agent_avatar.label": "Photo de l’agent",
 		"mobile.computers.add": "Ajouter un ordinateur",
 		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
 		"mobile.computers.badge.active": "actif",
@@ -1078,6 +1092,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "खाता रूटिंग",
 		"mobile.account_routing.unavailable": "इस रिले पर खाता रूटिंग की सेटिंग उपलब्ध नहीं है। इस कंप्यूटर पर Local Operator अपडेट करें।",
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
+		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
+		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
 		"mobile.computers.add": "कंप्यूटर जोड़ें",
 		"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
 		"mobile.computers.badge.active": "सक्रिय",
@@ -1223,6 +1239,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Маршрутизация аккаунтов",
 		"mobile.account_routing.unavailable": "Настройки маршрутизации аккаунтов недоступны на этом ретрансляторе. Обновите Local Operator на этом компьютере.",
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
+		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
+		"mobile.agent_avatar.label": "Изображение агента",
 		"mobile.computers.add": "Добавить компьютер",
 		"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
 		"mobile.computers.badge.active": "активен",
@@ -1368,6 +1386,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "اکاؤنٹ روٹنگ",
 		"mobile.account_routing.unavailable": "اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
+		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
+		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
@@ -1513,6 +1533,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "Định tuyến tài khoản",
 		"mobile.account_routing.unavailable": "Cài đặt định tuyến tài khoản không khả dụng trên máy chủ chuyển tiếp này. Hãy cập nhật Local Operator trên máy tính này.",
 		"mobile.account_routing.unsaved": "Chưa lưu.",
+		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
+		"mobile.agent_avatar.label": "Ảnh của tác nhân",
 		"mobile.computers.add": "Thêm máy tính",
 		"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
 		"mobile.computers.badge.active": "hoạt động",
@@ -1658,6 +1680,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.title": "账户路由",
 		"mobile.account_routing.unavailable": "此中继不提供账户路由设置。在此电脑上更新Local Operator。",
 		"mobile.account_routing.unsaved": "尚未保存。",
+		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
+		"mobile.agent_avatar.label": "智能体头像",
 		"mobile.computers.add": "添加电脑",
 		"mobile.computers.added.stays_listed": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
 		"mobile.computers.badge.active": "使用中",
