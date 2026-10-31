@@ -6,9 +6,9 @@ $ git -C <worktree> status --short src/i18n/catalogues/ur
 
 $ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/generate.ts --check
 src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
-(node:47180) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+(node:47180) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<scratch>/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/package.json.
+To eliminate this warning, add "type": "module" to <scratch>/ur-wave/package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
 exit=0
 
@@ -16,9 +16,9 @@ $ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/check-strings.ts
 check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
 exit=0
 
-$ cd <worktree> && HOME=$(mktemp -d) npx tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/evidence.mts relay.health ur30a6
+$ cd <worktree> && HOME=$(mktemp -d) npx tsx <scratch>/ur-audit-a/evidence.mts relay.health ur30a6
 == bundle ur/relay.health/ur30a6 — independent Urdu audit, group A
-== command: npx tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/evidence.mts relay.health ur30a6
+== command: npx tsx <scratch>/ur-audit-a/evidence.mts relay.health ur30a6
 == route: catalogue read as ordinary WORKTREE FILES (read_public_copy is refused for src/i18n/**);
    the en context sidecar is nested JSON ({role,note} objects), not a message map, so it is not routable;
    NO copy-route receipt was obtained for any input below — none is claimed.
@@ -104,9 +104,9 @@ $ cd <worktree> && HOME=$(mktemp -d) npx tsx /Users/damian/.local-operator/sessi
 == end bundle ur/relay.health/ur30a6
 exit=0
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/compose.py relay.health
+$ python3 <scratch>/ur-audit-a/compose.py relay.health
 -- composed / cross-namespace checks: relay.health
-   reads: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/ur/relay.health.json, the en source and context beside it, sibling namespaces, core catalogues
+   reads: <scratch>/ur-wave/src/i18n/catalogues/ur/relay.health.json, the en source and context beside it, sibling namespaces, core catalogues
 
    mirror verification vs core origin/main local_operator/i18n/catalogues/ur/relay.health.json
      mobile keys=8 core keys=8 (the mobile file is the subset this app renders)
@@ -134,7 +134,7 @@ $ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audi
    redaction scan: 8 input files read, 0 marker(s) in total (expected 0)
 exit=0
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/scan_all.py
+$ python3 <scratch>/ur-audit-a/scan_all.py
 redaction scan: all inputs — 102 files enumerated below
    read: <worktree>/src/i18n/catalogues/en/mobile.home.json
    read: <worktree>/src/i18n/catalogues/en/mobile.home.context.json
@@ -191,52 +191,52 @@ redaction scan: all inputs — 102 files enumerated below
    read: <worktree>/src/features/session/components/status-tray.tsx
    read: <worktree>/src/features/session/components/composer.tsx
    read: <worktree>/src/features/new-session/startup-transcript.tsx
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.services_status.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/cli.team_bridge.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.account_policy.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.approvals.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.ask.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.asks.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.chrome.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.health.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.library.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.login.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.notifications.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.session.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.session.tags.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.shell.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/relay.transcript.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.asks.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.authoring.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.notifications.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.palette.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.projects_edit.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.review.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.schedule.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.status.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.tags.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.team_authoring.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.transcript.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.viewer.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/tui.welcome.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.desktop.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.notifications.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.errors.settings.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.incidents.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.memory.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.notices.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.radient_saver.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.remote_compute.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.settings.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.slash.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.account_policy.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.chrome.json
-   read: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/core-en/relay.health.json
-   read: /Users/damian/local-operator/i18n/glossary.md
-   read: /Users/damian/local-operator/i18n/style-guides/ur.md
-   read: /Users/damian/local-operator/docs/I18N.md
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.services_status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.team_bridge.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.approvals.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.ask.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.health.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.library.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.login.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.shell.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.palette.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.projects_edit.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.review.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.schedule.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.team_authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.viewer.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.welcome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.desktop.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.incidents.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.memory.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.notices.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.radient_saver.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.remote_compute.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
+   read: <scratch>/ur-audit-a/core-en/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-en/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-en/relay.health.json
+   read: <core>/i18n/glossary.md
+   read: <core>/i18n/style-guides/ur.md
+   read: <core>/docs/I18N.md
 redaction scan: all inputs — 0 marker(s) across 102 files (expected 0)
 exit=0

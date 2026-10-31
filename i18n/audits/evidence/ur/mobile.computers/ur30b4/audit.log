@@ -36,7 +36,7 @@ a209bc7ddd6ab3e1a332a017728b29108ab57e0fe49f9f09b1a4feee9a4d4593  ur/mobile.comp
 3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  en/mobile.computers.context.json
 [exit 0]
 
-$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/parity.ts
+$ node_modules/.bin/tsx <scratch>/ur-audit-b/parity.ts
 schedules keys 38 38 keyset equal: true
 PARITY DIFF mobile.schedules.truncated family,select,shown,text,total,text | family,select,shown,plural,total,plural
 projects keys 15 15 keyset equal: true
@@ -50,7 +50,7 @@ $ node_modules/.bin/tsx scripts/i18n/generate.ts --check
 src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
 [exit 0]
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/scan.py
+$ python3 <scratch>/ur-audit-b/scan.py
 aba7a013e25b213a bidi/zw-ctrl=0 redaction-marker=0 ur/mobile.schedules.json
 0459a0485ceb2594 bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.json
 d3f0d3bba057aacf bidi/zw-ctrl=0 redaction-marker=0 en/mobile.schedules.context.json
@@ -67,7 +67,7 @@ TOTAL bidi/zero-width control chars: 0 | TOTAL redaction markers: 0
 script/punctuation scan done
 [exit 0]
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/dump.py
+$ python3 <scratch>/ur-audit-b/dump.py
 ===== schedules en 38 ur 38 keydiff [] ctx 38 maxCells/maxChars hints: 0
 -- mobile.schedules.cadence.every
   EN: every {duration}
@@ -382,7 +382,7 @@ $ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audi
   CX: button | Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop.
 [exit 0]
 
-$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/render.ts
+$ node_modules/.bin/tsx <scratch>/ur-audit-b/render.ts
 PluralRules ur: 0:other 1:one 2:other 21:other 100:other | pluralCategory: other,one,other,other
 parsed all keys OK 77
 schedules.count.wakes {"count":0} 
@@ -599,7 +599,7 @@ zzz deleted => “alpha” حذف کیا گیا۔    | EN: Deleted alpha.
 zzz zzz => “alpha” اپ ڈیٹ کیا گیا۔    | EN: Updated alpha.
 [exit 0]
 
-$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b/repl.ts
+$ node_modules/.bin/tsx <scratch>/ur-audit-b/repl.ts
 mobile.schedules.state.dormant {}
   BEFORE: غیر فعال
   AFTER : خوابیدہ
@@ -692,9 +692,9 @@ $ vitest (scoped, maxWorkers=2, scratch HOME): i18n catalogues + messages tests
 (!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
   - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
- RUN  v5.0.2 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
+ RUN  v5.0.2 <scratch>/ur-wave
 ··················································x·················
-::error file=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
+::error file=<scratch>/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
  FAIL  src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render
 AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]

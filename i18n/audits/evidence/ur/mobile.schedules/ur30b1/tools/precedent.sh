@@ -1,11 +1,11 @@
 #!/bin/bash
 # Second real-run section: ASCII-punctuation scan, core-precedent greps, fribidi visual order.
-W=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
-S=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b
+W=<scratch>/ur-wave
+S=<scratch>/ur-audit-b
 echo '$ python3 ASCII-punctuation scan of ur values (outside {…} placeholders), ns schedules/projects/notifications/computers'
 python3 - <<'P'
 import json,re
-C='/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/ur/'
+C='<scratch>/ur-wave/src/i18n/catalogues/ur/'
 n=0
 for ns in ['schedules','projects','notifications','computers']:
     for k,v in json.load(open(f'{C}mobile.{ns}.json',encoding='utf8')).items():
@@ -15,7 +15,7 @@ for ns in ['schedules','projects','notifications','computers']:
         if m: print('ASCII , ; ?',k,m); n+=1
 print('ascii-punct findings:',n)
 P
-G="git -C /Users/damian/local-operator grep -hE"
+G="git -C <core> grep -hE"
 echo; echo '## core ur precedent: dismiss'; $G 'relay.notifications.(row.dismiss|confirm.dismiss"|detail.dismiss")|tui.notifications.(hint_dismiss|dismissed)' origin/main -- 'local_operator/i18n/catalogues/ur/*.json' | cut -c1-170
 echo '## core ur precedent: more (tags.more)'; $G 'relay.session.tags.more' origin/main -- 'local_operator/i18n/catalogues/ur/*.json' | cut -c1-170
 echo '## core ur precedent: schedule due/overdue/cadence'; $G '"tui.schedule.(due_in|due_overdue|cadence_every|detail_next)"' origin/main -- 'local_operator/i18n/catalogues/ur/tui.schedule.json'

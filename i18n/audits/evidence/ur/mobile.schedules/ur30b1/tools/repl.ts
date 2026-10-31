@@ -1,8 +1,8 @@
 // Renders each proposed replacement through the app's own parseMessage/formatMessage
 // (no placeholder drift, parses, renders) next to the current string.
 import { readFileSync } from "node:fs";
-import { formatMessage, parseMessage } from "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages";
-const C="/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/";
+import { formatMessage, parseMessage } from "<scratch>/ur-wave/src/i18n/messages";
+const C="<scratch>/ur-wave/src/i18n/catalogues/";
 const ld=(ns:string,l="ur")=>JSON.parse(readFileSync(`${C}${l}/mobile.${ns}.json`,"utf8"));
 const REPL:[string,string,any][]=[
  ["schedules","mobile.schedules.state.dormant","خوابیدہ",{}],

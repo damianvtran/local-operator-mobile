@@ -9,8 +9,8 @@ import json
 import os
 import shutil
 
-S = "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b"
-W = "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave"
+S = "<scratch>/ur-audit-b"
+W = "<scratch>/ur-wave"
 E = W + "/i18n/audits/evidence/ur"
 C = W + "/src/i18n/catalogues/"
 

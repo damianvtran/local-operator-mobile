@@ -1,7 +1,7 @@
 // Delta render for group B round 2. Absolute imports; read-only on the worktree.
 import { readFileSync } from "node:fs";
-import { formatMessage, parseMessage } from "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages";
-const C="/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/";
+import { formatMessage, parseMessage } from "<scratch>/ur-wave/src/i18n/messages";
+const C="<scratch>/ur-wave/src/i18n/catalogues/";
 const ld=(ns:string,l="ur")=>JSON.parse(readFileSync(`${C}${l}/mobile.${ns}.json`,"utf8"));
 const U={...ld("schedules"),...ld("projects"),...ld("notifications"),...ld("computers")};
 const E={...ld("schedules","en"),...ld("projects","en"),...ld("notifications","en"),...ld("computers","en")};

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { parseMessage } from "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages";
-const C="/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/";
+import { parseMessage } from "<scratch>/ur-wave/src/i18n/messages";
+const C="<scratch>/ur-wave/src/i18n/catalogues/";
 let n=0,bad=0;
 for(const ns of ["schedules","projects","notifications","computers"]){
  const en=JSON.parse(readFileSync(`${C}en/mobile.${ns}.json`,"utf8")),ur=JSON.parse(readFileSync(`${C}ur/mobile.${ns}.json`,"utf8"));

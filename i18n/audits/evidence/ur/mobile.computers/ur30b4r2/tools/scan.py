@@ -1,5 +1,5 @@
 import re,sys,hashlib
-W='/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/'
+W='<scratch>/ur-wave/src/i18n/catalogues/'
 files=[]
 for ns in ['schedules','projects','notifications','computers']:
     for l,e in [('ur','.json'),('en','.json'),('en','.context.json')]:

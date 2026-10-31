@@ -104,10 +104,11 @@ describe("the English floor", () => {
 		/* The discriminating case needs a preference whose own rules differ from
 		 * English at a count we assert — and it does NOT have to be a supported
 		 * locale. Any tag the shipped set does not resolve reaches the same
-		 * fallback path, so an unsupported tag supplies the case that the last
-		 * pending locale (`ur`, `other` at 0 like English) cannot:
-		 * Portuguese selects `one` for 0 where English selects `other`.
-		 * With the reader's rules wired in, this renders "0 wake". */
+		 * fallback path, so an unsupported tag supplies what no supported locale
+		 * can now that every one of them ships: Portuguese selects `one` for 0
+		 * where English selects `other`, and with the reader's rules wired in this
+		 * renders "0 wake". The source is set ONCE — the tag is passed to
+		 * `renderFor` below and read through `t()` after it. */
 		setLocaleSource(() => "pt");
 		expect(activeLocale()).toBe("en");
 		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "pt")).toBe(
@@ -115,7 +116,6 @@ describe("the English floor", () => {
 		);
 		/* And through `t()`, on the path a relay tag actually takes: the same
 		 * unsupported tag renders English TEXT with English rules. */
-		setLocaleSource(() => "pt");
 		expect(t("mobile.schedules.count.wakes", { count: 21 })).toBe("21 wakes");
 		expect(t("mobile.projects.sessions.count", { count: 1 })).toBe("1 session");
 	});
@@ -279,5 +279,12 @@ describe("direction", () => {
 		setLocaleSource(() => "pt");
 		expect(directionFor("pt")).toBe("ltr");
 		expect(activeDirection()).toBe("ltr");
+		/* HONEST LIMIT (review round 1, m1): with `ur` shipped and no RTL locale
+		 * pending, nothing here separates "direction of the ACTIVE catalogue" from
+		 * "direction of the raw preference" — the two agree on every tag this
+		 * build can see. The separation is restored by the first RTL locale that
+		 * lands in `NOT_YET_SHIPPED_LOCALES`, and it is why that list is kept
+		 * rather than deleted. Until then the invariant is structural:
+		 * `activeDirection()` is `directionFor(activeLocale())` and nothing else. */
 	});
 });

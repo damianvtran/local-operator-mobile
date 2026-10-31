@@ -1,7 +1,7 @@
 # Revert each prescribed replacement in the CURRENT ur file (textual, on the raw bytes) and compare
 # sha256 with the round-1 record.json input_hashes.ur. Equality proves no other key changed.
 import json,hashlib
-W='/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/'
+W='<scratch>/ur-wave/'
 B=W+'i18n/audits/evidence/ur/'
 IDS={'schedules':'ur30b1','projects':'ur30b2','notifications':'ur30b3','computers':'ur30b4'}
 OLDMON="{hidden, plural, one {# اور نگرانی دکھائیں} other {# اور نگرانیاں دکھائیں}}"

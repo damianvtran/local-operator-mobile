@@ -1,6 +1,6 @@
-# audit.log — ur group A DELTA (round 2). Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/run-all.sh run 2026-10-30T23:44:12Z. Shared by all six r2 bundles.
+# audit.log — ur group A DELTA (round 2). Real output of <scratch>/ur-audit-a2/run-all.sh run 2026-10-30T23:44:12Z. Shared by all six r2 bundles.
 
-## date: 2026-10-30T23:43:20Z  cwd: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave  HOME(scratch): /var/folders/qd/1q2xkcls0tg60vh97jjngxc40000gn/T/tmp.5Xh1BQbfGH
+## date: 2026-10-30T23:43:20Z  cwd: <scratch>/ur-wave  HOME(scratch): /var/folders/qd/1q2xkcls0tg60vh97jjngxc40000gn/T/tmp.5Xh1BQbfGH
 
 $ git status --short
  M src/i18n/catalogue.gen.ts
@@ -32,7 +32,7 @@ e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1  src/i18n/catal
 65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f  src/i18n/catalogues/en/relay.health.json
 b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec  src/i18n/catalogues/en/relay.health.context.json
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/delta.py
+$ python3 <scratch>/ur-audit-a2/delta.py
 mobile.home: r1_sha=6181c9bf8198ccc5 now_sha=108b20000f9a2036 identical=False reverted_sha_matches_r1=True changed=3
    - mobile.home.connect_disabled_reason 
       r1 : بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔ 
@@ -70,7 +70,7 @@ relay.chrome: r1_sha=80dceb2124ab7dd9 now_sha=80dceb2124ab7dd9 identical=True re
 relay.health: r1_sha=8588632afd90999a now_sha=8588632afd90999a identical=True reverted_sha_matches_r1=True changed=0
 [exit 0]
 
-$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/render.ts
+$ node_modules/.bin/tsx <scratch>/ur-audit-a2/render.ts
 mobile.home.connect_disabled_reason 
   EN: Connect a computer to send. 
   UR: بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔ | len 40
@@ -138,8 +138,8 @@ render.out bidi 0 redact 0
 ----- run-all.sh -----
 #!/bin/bash
 # Re-runs every verification command for the ur group A delta audit (round 2); output is the audit.log body.
-W=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
-A=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2
+W=<scratch>/ur-wave
+A=<scratch>/ur-audit-a2
 cd $W; export HOME=$(mktemp -d)
 echo "## date: $(date -u +%FT%TZ)  cwd: $PWD  HOME(scratch): $HOME"
 run(){ echo; echo "\$ $*"; "$@" 2>&1; echo "[exit $?]"; }
@@ -159,9 +159,9 @@ cat $A/scan.out
 # Delta verification: reconstruct the round-1 bytes by reverting the exact replacement strings from my
 # round-1 findings (fixes.json), hash them against round-1 record.json input_hashes, and diff key-by-key.
 import json,hashlib
-W='/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/'
+W='<scratch>/ur-wave/'
 ids={'mobile.home':'ur30a1','mobile.session':'ur30a2','mobile.session_health':'ur30a3','mobile.account_routing':'ur30a4','relay.chrome':'ur30a5','relay.health':'ur30a6'}
-fx=json.load(open('/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a/fixes.json'))
+fx=json.load(open('<scratch>/ur-audit-a/fixes.json'))
 out={}
 for ns,i in ids.items():
     p=f'{W}src/i18n/catalogues/ur/{ns}.json'
@@ -182,12 +182,12 @@ for ns,i in ids.items():
         if f['replacement'].startswith('(no change'): continue
         print(f'   byte-exact {f["key"]}:', cur[f["key"]].encode()==f['replacement'].encode())
     out[ns]=dict(r1=want,now=now,changed=changed)
-json.dump(out,open('/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-a2/delta.json','w'),indent=1)
+json.dump(out,open('<scratch>/ur-audit-a2/delta.json','w'),indent=1)
 
 ----- render.ts -----
 import { readFileSync } from "node:fs";
-import { formatMessage, parseMessage, pluralCategory } from "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/messages";
-const C="/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/catalogues/";
+import { formatMessage, parseMessage, pluralCategory } from "<scratch>/ur-wave/src/i18n/messages";
+const C="<scratch>/ur-wave/src/i18n/catalogues/";
 const keys:Record<string,string[]>={
  "mobile.home":["connect_disabled_reason","tip.parallel","suggestion.wake_summary"],
  "mobile.session_health":["resume_no_route","resume_gone","still_reopening"],

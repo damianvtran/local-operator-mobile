@@ -34,7 +34,7 @@ $ shasum -a 256 ur/mobile.computers.json en/mobile.computers.json en/mobile.comp
 3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  en/mobile.computers.context.json
 [exit 0]
 
-$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b2/revert.py
+$ python3 <scratch>/ur-audit-b2/revert.py
 schedules: swaps=4 current=c12048d5b2974358 reverted=aba7a013e25b213a round1=aba7a013e25b213a MATCH=True
    en unchanged=True
    context unchanged=True
@@ -49,7 +49,7 @@ computers: swaps=1 current=610886d61acfc0a7 reverted=a209bc7ddd6ab3e1 round1=a20
    context unchanged=True
 [exit 0]
 
-$ node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-audit-b2/render2.ts
+$ node_modules/.bin/tsx <scratch>/ur-audit-b2/render2.ts
 BYTE-EXACT PASS mobile.schedules.state.dormant (utf8 bytes 14)
    placeholder names en=[] ur=[] equal=true
 BYTE-EXACT PASS mobile.schedules.supervisor.not_running (utf8 bytes 189)
@@ -171,9 +171,9 @@ check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
 [exit 0]
 
 $ vitest scoped
- RUN  v5.0.2 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave
+ RUN  v5.0.2 <scratch>/ur-wave
 ··················································x·················
-::error file=/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
+::error file=<scratch>/ur-wave/src/i18n/__tests__/catalogues.test.ts,title=src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render,line=188,column=23::AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]%0A%0A- Expected%0A+ Received%0A%0A@@ -2,8 +2,9 @@%0A    "en",%0A    "es",%0A    "fr",%0A    "hi",%0A    "ru",%0A+   "ur",%0A    "vi",%0A    "zh-CN",%0A  ]%0A%0A ❯ src/i18n/__tests__/catalogues.test.ts:188:23%0A%0A
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
  FAIL  src/i18n/__tests__/catalogues.test.ts > the English catalogues > ships no locale the runtime cannot render
 AssertionError: expected [ 'en', 'es', 'fr', 'hi', 'ru', …(3) ] to deeply equal [ 'en', 'es', 'fr', 'hi', 'ru', …(2) ]
