@@ -377,7 +377,7 @@ const WakeEntry = ({
 				{entry.name}
 			</Text>
 			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
-			<View className="gap-2 pl-3 pt-2">
+			<View className="gap-2 ps-3 pt-2">
 				{rows.map((row) => (
 					<WakeLine key={row.id} row={row} />
 				))}
@@ -448,7 +448,7 @@ const MonitorEntry = ({
 				{entry.name}
 			</Text>
 			<Text className="text-meta text-ink-dim">{entry.clause}</Text>
-			<View className="gap-2 pl-3 pt-2">
+			<View className="gap-2 ps-3 pt-2">
 				{rows.map((row) => (
 					<MonitorLine key={row.id} row={row} />
 				))}

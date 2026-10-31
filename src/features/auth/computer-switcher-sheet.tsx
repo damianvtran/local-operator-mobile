@@ -247,7 +247,7 @@ const SwitcherRowView = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={`relative flex-row items-center gap-3 border-b border-hairline py-3 pl-2 ${
+					className={`relative flex-row items-center gap-3 border-b border-hairline py-3 ps-2 ${
 						row.active ? "bg-row-selected" : pressed ? "bg-row-hover" : ""
 					}`}
 				>
@@ -258,7 +258,7 @@ const SwitcherRowView = ({
 					 *  non-text floor. Decoration: the check and ", in use" carry it too. */}
 					{row.active ? (
 						<View
-							className="absolute bottom-0 left-0 top-0 w-1 bg-accent"
+							className="absolute bottom-0 start-0 top-0 w-1 bg-accent"
 							aria-hidden
 						/>
 					) : null}

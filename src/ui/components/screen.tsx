@@ -207,7 +207,7 @@ export const Screen = ({
 						<View className="flex-row items-center gap-2">
 							{headerLeading}
 							{stackedActionsBeside ? (
-								<View className="ml-auto flex-row items-center gap-2">
+								<View className="ms-auto flex-row items-center gap-2">
 									{headerAction}
 								</View>
 							) : null}

@@ -22,6 +22,7 @@ import { CONTROL, ROLE, SURFACE, sessionMoveDestId, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
+import { TEXT_END_CLASS } from "@/ui/direction";
 
 /**
  * The move/offload sheet: one conversation's move, copy, or recall.
@@ -602,7 +603,7 @@ const MovedBody = ({
 							progress={phase.progress}
 							name={PHASE_WORDS[phase.phase] ?? phase.phase}
 						/>
-						<Text className="w-12 text-right text-meta text-ink-dim">
+						<Text className={`w-12 ${TEXT_END_CLASS} text-meta text-ink-dim`}>
 							{Math.round(Math.max(0, Math.min(1, phase.progress)) * 100)}%
 						</Text>
 					</View>

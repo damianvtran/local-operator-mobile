@@ -7,15 +7,20 @@ import "../src/ui/theme.css";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
-import { ConnectionProvider } from "@/features/auth/connection-provider";
+import {
+	ConnectionProvider,
+	useLocaleFrame,
+} from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
+import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
+import { DirectionProvider, DirectionView } from "@/ui/direction";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 
 /**
@@ -42,7 +47,7 @@ export default function RootLayout() {
 			<ThemeProvider>
 				<ConnectionProvider>
 					<TextScaleProvider>
-						<View className="flex-1 bg-canvas">
+						<DirectionRoot>
 							<ThemedStatusBar />
 							<SavedComputersHydration />
 							<DeepLinkResolution />
@@ -55,13 +60,56 @@ export default function RootLayout() {
 								<Stack screenOptions={{ headerShown: false }} />
 							</ComputerSwitcherProvider>
 							<ToastHost />
-						</View>
+						</DirectionRoot>
 					</TextScaleProvider>
 				</ConnectionProvider>
 			</ThemeProvider>
 		</SafeAreaProvider>
 	);
 }
+
+/**
+ * The DIRECTION root: the one view every surface inherits its layout direction
+ * from, and the one place the config frame is subscribed for it.
+ *
+ * WHY HERE AND NOT A PROVIDER THAT SUBSCRIBES ITSELF. The direction has a single
+ * source already — the relay's resolved language, read through
+ * `setLocaleSource`/`activeDirection` — and a second subscription would be a
+ * second answer to the same question. So this component subscribes to the frame
+ * exactly as Home's composer does (a language change has to REPAINT, not merely
+ * re-resolve, or the layout would stay behind the copy) and hands the result
+ * down. `activeDirection()` is read at render rather than stored in state for the
+ * same reason the copy readers are: the store already holds it.
+ *
+ * WHY `direction` ON A YOGA ROOT AND NOT `I18nManager.forceRTL`: forceRTL needs
+ * an app restart and the language arrives live. `direction` applies to this
+ * subtree immediately on native, and on the web `DirectionProvider` also writes
+ * `dir`/`lang` onto the document element so portalled modals and an exported
+ * build inherit it. Nothing changes for a left-to-right locale: `ltr` is what
+ * this view already resolved to by default, and the logical utilities in the
+ * screens resolve to the same physical edges they did before.
+ *
+ * Privately declared for the same reason as `ThemedStatusBar`: a route file's
+ * export surface belongs to the router.
+ */
+const DirectionRoot = ({ children }: { children: ReactNode }) => {
+	/* Called for the SUBSCRIPTION only: a language frame re-renders this component,
+	 * and `activeDirection()` below then reads the same store live. A lookup that
+	 * cheap needs no memo (and a memo would need a lint waiver for the trigger). */
+	useLocaleFrame();
+	const direction = activeDirection();
+	/* The rendered locale, not the raw preference: an unshipped tag renders
+	 * English source, and `lang` describes what is on screen. Read from the same
+	 * subscription, so the document tag moves with the copy. */
+	const locale = activeLocale();
+	return (
+		<DirectionProvider direction={direction} locale={locale}>
+			{/* `DirectionView` puts the direction on both channels (style + `dir` prop);
+			 *  why both is documented there. */}
+			<DirectionView className="flex-1 bg-canvas">{children}</DirectionView>
+		</DirectionProvider>
+	);
+};
 
 /**
  * The deep-link resolver, mounted once above the router so it outlives every

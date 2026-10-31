@@ -1,5 +1,4 @@
 import { useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
@@ -43,6 +42,7 @@ import {
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackIcon } from "@/ui/components/back-icon";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -330,7 +330,9 @@ export default function NotificationDetail({ itemId }: { itemId: string }) {
 				<IconButton
 					accessibilityLabel="Back"
 					onPress={back}
-					icon={({ color, size }) => <ChevronLeft color={color} size={size} />}
+					icon={({ color, size }) => (
+						<BackIcon color={color} size={size} glyph="chevron" />
+					)}
 					testID={CONTROL.inboxDetailBack}
 				/>
 			}

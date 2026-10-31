@@ -2,10 +2,22 @@
  * Text direction, resolved in ONE place so the later RTL pass has one thing to
  * read.
  *
- * THIS SLICE WIRES NOTHING. `I18nManager`, a direction-aware layout, mirrored
- * icons and bidi isolation are all deliberately out of scope: they change pixels
- * on every screen, and this slice's contract is that `en` output stays
- * byte-identical. What ships is the resolver and its tests.
+ * WHAT CONSUMES THE ANSWER. `app/_layout.tsx` reads it once, per config frame,
+ * and puts it on the root view (`direction` is a Yoga style, so it is live) and —
+ * through `src/ui/direction.tsx` — on the document for the web build. The same
+ * module gives components the two things a CSS direction cannot express: the
+ * mirrored back icon (`src/ui/components/back-icon.tsx`) and the mixed-content
+ * isolation used by code blocks and command blocks. `directionFor` stays a pure
+ * function of a tag so a test can pin the resolver without a store.
+ *
+ * `I18nManager.forceRTL` is NOT the mechanism and must not become one: it needs
+ * an app RESTART, and this language arrives live from the relay's config frame —
+ * a reader whose computer switched to Urdu would see the copy change and the
+ * layout stay English until they quit the app.
+ *
+ * OUT OF SCOPE, deliberately, and recorded in `docs/i18n.md`: the conversations
+ * drawer's physical slide, the table's physical scroll metrics, and native
+ * iOS/Android layout, which this host cannot run.
  *
  * URDU IS THE ONLY RTL CLAIM. The programme supports one RTL locale so far, so
  * returning `rtl` for Arabic, Hebrew or Persian would be a promise no catalogue,

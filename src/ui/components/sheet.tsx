@@ -25,6 +25,7 @@ import {
 	ModalScopeContext,
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
+import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
@@ -357,7 +358,10 @@ export const Sheet = ({
 				 *  applied one level down; on native it merely re-provides the same
 				 *  context. */}
 				<ScopedVariables variables={variables}>
-					<View
+					{/* Same rule as `Dialog`: the modal root is a separate root, so the
+					 *  direction is re-applied here or a sheet opened in an Urdu session keeps
+					 *  its leading/trailing chrome on the English edges. */}
+					<DirectionView
 						className="flex-1 justify-end"
 						onLayout={(event) =>
 							setColumnHeight(event.nativeEvent.layout.height)
@@ -579,7 +583,7 @@ export const Sheet = ({
 								</View>
 							) : null}
 						</Animated.View>
-					</View>
+					</DirectionView>
 				</ScopedVariables>
 			</Modal>
 		</ModalScopeContext.Provider>

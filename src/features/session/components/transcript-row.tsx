@@ -157,7 +157,7 @@ export const TranscriptRow = ({
 						isSteer
 							? // No fill, no accent edge: a quiet right-aligned block.
 								"px-1"
-							: "rounded-md border border-hairline border-l-2 border-l-accent bg-surface px-3 py-1.5",
+							: "rounded-md border border-hairline border-s-2 border-s-accent bg-surface px-3 py-1.5",
 					)}
 				>
 					{entry.text.length > 0 ? (
@@ -237,7 +237,7 @@ export const TranscriptRow = ({
 		<View className="px-4 py-1" testID={testID}>
 			<View
 				className={cx(
-					"border-l-2 pl-2",
+					"border-s-2 ps-2",
 					kind === "subagent" ? "border-hairline" : "border-accent",
 				)}
 			>

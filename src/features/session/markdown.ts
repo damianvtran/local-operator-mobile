@@ -520,3 +520,33 @@ export function tablePricing(
 		columns * 2 * TABLE_CELL_PADDING_X_PT;
 	return { minWidths, shares, naturalWidth };
 }
+
+/**
+ * Where a table's scroll-cue fade sits and which end of it is opaque.
+ *
+ * The cue is stated in READING order (`end` = where the next column would be) but
+ * a fade is PAINTED in physical coordinates: its gradient runs left to right
+ * whatever the layout direction is. So the logical edge is resolved to a physical
+ * one here, and the position and the opaque stop follow the same answer — a fade
+ * that moved only its `left`/`right` would leave its solid end on the wrong side
+ * and read as a second edge instead of a continuation. Kept pure (no React Native
+ * import) so both directions are pinned by a test. In `ltr` this is the identity:
+ * `end` is the right edge, exactly what the fade drew before direction existed.
+ */
+export const tableFadeGeometry = (
+	edge: "start" | "end",
+	rtl: boolean,
+): {
+	/** The physical side the band is pinned to. */
+	side: "left" | "right";
+	/** Opacity of the gradient's left (`near`) and right (`far`) stops. */
+	nearOpacity: 0 | 1;
+	farOpacity: 0 | 1;
+} => {
+	const atEndEdge = rtl ? edge === "start" : edge === "end";
+	return {
+		side: atEndEdge ? "right" : "left",
+		nearOpacity: atEndEdge ? 0 : 1,
+		farOpacity: atEndEdge ? 1 : 0,
+	};
+};

@@ -369,7 +369,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "9de587781189d0122a94ca24105a0aceed6ea5fa50324c12a766e4855a8bade3",
+	app: "2ffdb99852f38846a87727e38132a3e55037a54bbe8b025bde1104b1c1fa6955",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -389,7 +389,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
-	src: "eb6a1af4b99d371ca9e0bc9557639950a659d856b808d621b10d164d82b914ed",
+	src: "7879983174b87cd789fea698597ba5fe875c6924c227db4b46ab6b626e5cf167",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
