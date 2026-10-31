@@ -24,8 +24,11 @@ import {
 
 /** `createElement` cannot see a third-argument child as the required `children`
  *  prop, so the provider is built through this one place. */
-const provide = (direction: "ltr" | "rtl", children: ReactNode) =>
-	h(DirectionProvider, { direction, children });
+const provide = (
+	direction: "ltr" | "rtl",
+	children: ReactNode,
+	locale = "en",
+) => h(DirectionProvider, { direction, locale, children });
 
 const Probe = () =>
 	h("i", { "data-dir": useDirection(), "data-rtl": String(useIsRTL()) }, null);
@@ -108,11 +111,11 @@ describe("the document attributes (web half of the provider)", () => {
 		delete globals.__container;
 	});
 
-	const mount = (direction: "ltr" | "rtl" | null) => {
+	const mount = (direction: "ltr" | "rtl" | null, locale = "en") => {
 		const root = createRoot(globals.__container as never);
-		const render = (next: "ltr" | "rtl" | null) =>
+		const render = (next: "ltr" | "rtl" | null, nextLocale = locale) =>
 			act(async () => {
-				root.render(next === null ? null : provide(next, null));
+				root.render(next === null ? null : provide(next, null, nextLocale));
 			});
 		return { root, render, first: render(direction) };
 	};
@@ -133,6 +136,26 @@ describe("the document attributes (web half of the provider)", () => {
 		 * writing `ltr` would still leave `lang="en"` where the page had `xx`. */
 		expect(attrs.get("dir")).toBe("ltr");
 		expect(attrs.get("lang")).toBe("xx");
+	});
+
+	it('follows a LOCALE change that keeps the direction (QA Q1: French under lang="en")', async () => {
+		/* The defect this pins: the effect depended on `direction` alone, so a
+		 * shipped LTR locale never re-ran it and a French screen announced itself
+		 * as English. Language and direction move independently, which is the whole
+		 * point of two attributes. */
+		const view = mount("ltr", "en");
+		await view.first;
+		expect(attrs.get("dir")).toBe("ltr");
+		expect(attrs.get("lang")).toBe("en");
+
+		await view.render("ltr", "fr");
+		expect(attrs.get("dir")).toBe("ltr");
+		expect(attrs.get("lang")).toBe("fr");
+
+		/* and it can fail: a locale that writes the same tag leaves the old one,
+		 * so the assertion above is not passing on an unconditional write. */
+		await view.render("ltr", "hi");
+		expect(attrs.get("lang")).toBe("hi");
 	});
 
 	it("removes an attribute the document did not have, rather than leaving the provider's value", async () => {

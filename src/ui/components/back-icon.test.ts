@@ -28,7 +28,7 @@ const render = (
 	return renderToStaticMarkup(
 		direction === null
 			? children
-			: h(DirectionProvider, { direction, children }),
+			: h(DirectionProvider, { direction, locale: "en", children }),
 	);
 };
 

@@ -68,9 +68,15 @@ export const useIsRTL = (): boolean => useContext(DirectionContext) === "rtl";
  */
 export const DirectionProvider = ({
 	direction,
+	locale,
 	children,
 }: {
 	direction: TextDirection;
+	/** The locale whose copy will render — the ACTIVE catalogue locale, not the
+	 *  relay's raw preference: an unshipped tag renders English, and `lang` must
+	 *  describe the text that is on screen. Passed in rather than read here so the
+	 *  provider has ONE source of truth and one subscription, in the root. */
+	locale: string;
 	children: ReactNode;
 }) => {
 	useEffect(() => {
@@ -81,7 +87,7 @@ export const DirectionProvider = ({
 			lang: root.getAttribute("lang"),
 		};
 		root.setAttribute("dir", direction);
-		root.setAttribute("lang", activeLocale());
+		root.setAttribute("lang", locale);
 		/* Put back what the document had: this effect re-runs on every direction
 		 * change and a test or story mounts the provider more than once, so an
 		 * unmount that left `dir="rtl"` behind would lay the NEXT tree out
@@ -92,7 +98,11 @@ export const DirectionProvider = ({
 				else root.setAttribute(name, value);
 			}
 		};
-	}, [direction]);
+		/* BOTH values are dependencies. `lang` follows the locale, and a locale
+		 * change that keeps the direction (French, Hindi, any LTR target) would
+		 * otherwise leave a screen reader announcing French copy in English — the
+		 * defect QA found: a cold `fr` load rendered French under `lang="en"`. */
+	}, [direction, locale]);
 
 	return (
 		<DirectionContext.Provider value={direction}>

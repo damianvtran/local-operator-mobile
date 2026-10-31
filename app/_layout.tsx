@@ -16,7 +16,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
-import { activeDirection } from "@/i18n";
+import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
@@ -98,8 +98,12 @@ const DirectionRoot = ({ children }: { children: ReactNode }) => {
 	 * cheap needs no memo (and a memo would need a lint waiver for the trigger). */
 	useLocaleFrame();
 	const direction = activeDirection();
+	/* The rendered locale, not the raw preference: an unshipped tag renders
+	 * English source, and `lang` describes what is on screen. Read from the same
+	 * subscription, so the document tag moves with the copy. */
+	const locale = activeLocale();
 	return (
-		<DirectionProvider direction={direction}>
+		<DirectionProvider direction={direction} locale={locale}>
 			{/* `DirectionView` puts the direction on both channels (style + `dir` prop);
 			 *  why both is documented there. */}
 			<DirectionView className="flex-1 bg-canvas">{children}</DirectionView>
