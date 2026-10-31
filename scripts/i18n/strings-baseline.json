@@ -1,5 +1,5 @@
 {
-	"$comment": "Existing user-facing literals, recorded once so the checker can fail on NEW ones. Shrink-only: `node scripts/i18n/check-strings.ts --update` removes entries that are gone and refuses to add any, and the check fails when an entry appears that the merge base's copy does not have. Every entry names an owner and the payoff that removes it. Keying a literal is the only way to remove one.",
+	"$comment": "Existing user-facing literals, recorded once so the checker can fail on NEW ones. Shrink-only: `node scripts/i18n/check-strings.ts --update` removes entries that are gone and only seeds debt proven newly detected in the immutable base by a scanner rule change. Every entry names an owner and the payoff that removes it. Keying a literal is the only way to remove one.",
 	"findings": [
 		{
 			"file": "src/features/auth/computers.tsx",
@@ -42,6 +42,13 @@
 			"text": "This computer is not running the Local Operator harness.",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/auth/computers.tsx",
+			"text": "This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/auth/computers.tsx",
@@ -432,6 +439,97 @@
 			"text": "Settings",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Go back and pick another one.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "The Library is not on this computer yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "This asset is no longer in your library.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-detail.tsx",
+			"text": "Update Local Operator on the computer you are connected to, then reopen this asset.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Clear them to see the whole catalogue.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Images, documents and highlighted files appear here as you work in conversations.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "No assets match these filters.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "The Library is not on this computer yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Update Local Operator on the computer you are connected to, then reopen this screen.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/library/library-screen.tsx",
+			"text": "Your library is empty.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notifications.tsx",
+			"text": "Nothing here yet",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notifications.tsx",
+			"text": "Notifications aren't available here",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notifications.tsx",
+			"text": "This computer's relay does not offer the inbox. Update Local Operator on it to use notifications.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/past/past.tsx",
@@ -1023,6 +1121,13 @@
 		},
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "A session is one conversation with the agent on your machine. Start one and it will appear here.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "Close conversations",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -1050,6 +1155,27 @@
 			"text": "New chat",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "No computer is connected yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "No sessions yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Nothing matches that.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
@@ -1083,15 +1209,36 @@
 		},
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "Search covers the loaded sessions' names, ids and folders.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "Tags…",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/sessions/conversations-pane.tsx",
+			"text": "This app drives the sessions on your own computer, so it needs one first.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",
 			"text": "Move or copy to",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "No answer yet — not a failure.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",
@@ -1125,9 +1272,37 @@
 		},
 		{
 			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "That move was refused.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
+			"text": "The session is busy.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/move-sheet.tsx",
 			"text": "This app can offer the devices your sessions show. A device with no",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "Created on desktop.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "No categories yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/tags-sheet.tsx",
@@ -1152,6 +1327,13 @@
 			"text": "Tags",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/sessions/tags-sheet.tsx",
+			"text": "This clears every category from this conversation. The categories themselves stay in the desktop app.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/tags-sheet.tsx",
@@ -1338,6 +1520,13 @@
 			"text": "Theme",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/settings/settings.tsx",
+			"text": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/settings/settings.tsx",
