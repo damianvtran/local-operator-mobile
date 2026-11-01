@@ -145,3 +145,36 @@ describe("sanitized first-failure diagnostics", () => {
 		);
 	});
 });
+it("runtime-sanitizes adversarial lifecycle fields instead of serializing dynamic values", async () => {
+	const root = fresh();
+	await expect(
+		withProofDiagnostics(root, async () => {
+			const diag = activeProofDiagnostics!;
+			diag.finish(diag.begin("install"), "timeout", 0, null, {
+				budgetMs: secret,
+				exitAfterMs: secret,
+				closeAfterMs: secret,
+				timerAfterMs: secret,
+				stdoutEndAfterMs: secret,
+				stderrEndAfterMs: secret,
+				exitCode: secret,
+				exitSignal: secret,
+				killResult: secret,
+			} as unknown as import("./auth-retirement-diagnostics.ts").CommandLifecycle);
+			throw new Error(secret);
+		}),
+	).rejects.toThrow();
+	const text = readFileSync(join(root, "failure.json"), "utf8");
+	expect(text).not.toContain(secret);
+	expect(JSON.parse(text).command.lifecycle).toEqual({
+		budgetMs: 0,
+		exitAfterMs: null,
+		closeAfterMs: null,
+		timerAfterMs: null,
+		stdoutEndAfterMs: null,
+		stderrEndAfterMs: null,
+		exitCode: null,
+		exitSignal: "other",
+		killResult: "other",
+	});
+});

@@ -323,6 +323,7 @@ jobs:
           path: |
             ${{ runner.temp }}/auth-retirement-proof/proof.json
             ${{ runner.temp }}/auth-retirement-proof/cleanup.json
+            ${{ runner.temp }}/auth-retirement-proof/cleanup-first.json
             ${{ runner.temp }}/auth-retirement-proof/failure.json
           if-no-files-found: error
 

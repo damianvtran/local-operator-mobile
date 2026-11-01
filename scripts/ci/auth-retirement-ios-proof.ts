@@ -20,6 +20,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	activeProofDiagnostics,
+	type CommandLifecycle,
 	commandCategory,
 	withProofDiagnostics,
 } from "./auth-retirement-diagnostics.ts";
@@ -171,6 +172,20 @@ export async function command(
 ): Promise<string> {
 	const diagnostic = activeProofDiagnostics;
 	const observation = diagnostic?.begin(commandCategory(executable, args));
+	const started = performance.now();
+	const elapsed = () => Math.max(0, performance.now() - started);
+	const lifecycle: CommandLifecycle = {
+		budgetMs: timeout,
+		exitAfterMs: null,
+		closeAfterMs: null,
+		timerAfterMs: null,
+		stdoutEndAfterMs: null,
+		stderrEndAfterMs: null,
+		exitCode: null,
+		exitSignal: null,
+		killResult: "not-attempted",
+	};
+
 	return new Promise((yes, no) => {
 		const env = Object.fromEntries(
 			Object.entries(process.env).filter(
@@ -198,12 +213,23 @@ export async function command(
 			if (child.pid)
 				try {
 					process.kill(-child.pid, "SIGKILL");
-				} catch {
-					/* already exited */
+					if (lifecycle.killResult === "not-attempted")
+						lifecycle.killResult = "sent";
+				} catch (error) {
+					if (lifecycle.killResult === "not-attempted") {
+						const code = (error as NodeJS.ErrnoException).code;
+						lifecycle.killResult =
+							code === "ESRCH"
+								? "already-gone"
+								: code === "EPERM"
+									? "denied"
+									: "other";
+					}
 				}
 		};
 		const timer = setTimeout(() => {
 			timedOut = true;
+			lifecycle.timerAfterMs = elapsed();
 			kill();
 		}, timeout);
 		child.stdout.on("data", (b) => {
@@ -216,16 +242,41 @@ export async function command(
 		// Errors deliberately exclude command output/args: no accidental native log
 		// or controlled token response may enter uploaded evidence.
 		child.stderr.resume();
+		child.stdout.on("end", () => {
+			lifecycle.stdoutEndAfterMs = elapsed();
+		});
+		child.stderr.on("end", () => {
+			lifecycle.stderrEndAfterMs = elapsed();
+		});
+		child.on("exit", (code, signal) => {
+			lifecycle.exitAfterMs = elapsed();
+			lifecycle.exitCode = code;
+			lifecycle.exitSignal =
+				signal === "SIGTERM" || signal === "SIGKILL"
+					? signal
+					: signal
+						? "other"
+						: null;
+		});
+
 		child.on("error", () => {
 			clearTimeout(timer);
 			kill();
 			if (!done) {
 				done = true;
-				if (observation) diagnostic?.finish(observation, "start-failure");
+				if (observation)
+					diagnostic?.finish(
+						observation,
+						"start-failure",
+						null,
+						null,
+						lifecycle,
+					);
 				no(new Error("Proof subprocess could not start"));
 			}
 		});
 		child.on("close", (code, signal) => {
+			lifecycle.closeAfterMs = elapsed();
 			clearTimeout(timer);
 			kill();
 			if (done) return;
@@ -242,6 +293,7 @@ export async function command(
 								: "success",
 					code,
 					signal,
+					lifecycle,
 				);
 			// Buffered stdout can arrive after the producer has already exited 0.
 			// Killing its group is not proof of rejection: the cap itself is final.
@@ -258,7 +310,14 @@ export async function command(
 				kill();
 				clearTimeout(timer);
 				done = true;
-				if (observation) diagnostic?.finish(observation, "journal-failure");
+				if (observation)
+					diagnostic?.finish(
+						observation,
+						"journal-failure",
+						null,
+						null,
+						lifecycle,
+					);
 				no(new Error("Creation PID journal failed before native request"));
 			}
 		} else child.stdin.end();

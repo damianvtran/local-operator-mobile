@@ -51,7 +51,49 @@ type Outcome =
 	| "start-failure"
 	| "output-cap"
 	| "journal-failure";
+/** All times are monotonic host CALLBACK observations, not kernel timestamps. */
+export interface CommandLifecycle {
+	budgetMs: number;
+	exitAfterMs: number | null;
+	closeAfterMs: number | null;
+	timerAfterMs: number | null;
+	stdoutEndAfterMs: number | null;
+	stderrEndAfterMs: number | null;
+	exitCode: number | null;
+	exitSignal: "SIGTERM" | "SIGKILL" | "other" | null;
+	killResult: "not-attempted" | "sent" | "already-gone" | "denied" | "other";
+}
+const observedTime = (v: unknown): number | null =>
+	typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+function safeLifecycle(l: CommandLifecycle): CommandLifecycle {
+	return {
+		budgetMs: observedTime(l.budgetMs) ?? 0,
+		exitAfterMs: observedTime(l.exitAfterMs),
+		closeAfterMs: observedTime(l.closeAfterMs),
+		timerAfterMs: observedTime(l.timerAfterMs),
+		stdoutEndAfterMs: observedTime(l.stdoutEndAfterMs),
+		stderrEndAfterMs: observedTime(l.stderrEndAfterMs),
+		exitCode:
+			Number.isSafeInteger(l.exitCode) &&
+			Number(l.exitCode) >= 0 &&
+			Number(l.exitCode) <= 255
+				? l.exitCode
+				: null,
+		exitSignal:
+			l.exitSignal === "SIGTERM" || l.exitSignal === "SIGKILL"
+				? l.exitSignal
+				: l.exitSignal
+					? "other"
+					: null,
+		killResult: ["not-attempted", "sent", "already-gone", "denied"].includes(
+			l.killResult,
+		)
+			? l.killResult
+			: "other",
+	};
+}
 export interface CommandObservation {
+	lifecycle?: CommandLifecycle;
 	category: Category;
 	outcome: Outcome;
 	exitCode: number | null;
@@ -88,7 +130,7 @@ export function commandCategory(
 	return "unknown";
 }
 export class ProofDiagnostics {
-	private readonly started = Date.now();
+	private readonly started = performance.now();
 	private checkpointName: (typeof CHECKPOINTS)[number] = "preflight";
 	private phaseName: (typeof PHASES)[number] | null = null;
 	private sequence = 0;
@@ -116,15 +158,17 @@ export class ProofDiagnostics {
 		started: number;
 		sequence: number;
 	} {
-		return { category, started: Date.now(), sequence: ++this.sequence };
+		return { category, started: performance.now(), sequence: ++this.sequence };
 	}
 	finish(
 		attempt: ReturnType<ProofDiagnostics["begin"]>,
 		outcome: Outcome,
 		exitCode: unknown = null,
 		signal: unknown = null,
+		lifecycle?: CommandLifecycle,
 	): void {
 		this.lastCommand = {
+			...(lifecycle ? { lifecycle: safeLifecycle(lifecycle) } : {}),
 			category: CATEGORIES.includes(attempt.category)
 				? attempt.category
 				: "unknown",
@@ -141,7 +185,7 @@ export class ProofDiagnostics {
 					: signal
 						? "other"
 						: null,
-			elapsedMs: Math.max(0, Date.now() - attempt.started),
+			elapsedMs: Math.max(0, performance.now() - attempt.started),
 			sequence: attempt.sequence,
 		};
 		if (outcome !== "success") this.fail();
@@ -157,7 +201,7 @@ export class ProofDiagnostics {
 					classification: "BLOCKED",
 					checkpoint: this.checkpointName,
 					phase: this.phaseName,
-					elapsedMs: Math.max(0, Date.now() - this.started),
+					elapsedMs: Math.max(0, performance.now() - this.started),
 					command: this.lastCommand,
 				},
 				null,

@@ -8,9 +8,11 @@ import {
 	closeSync,
 	existsSync,
 	fsyncSync,
+	linkSync,
 	openSync,
 	readFileSync,
 	renameSync,
+	unlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -150,6 +152,81 @@ function alive(pid: number): boolean {
 		throw new Error("Cannot establish creator process state");
 	}
 }
+/** Evidence only, never deletion authority. Atomic link publishes a fully
+ * flushed first receipt without replacing a pre-existing foreign/racing file. */
+function firstCleanup(
+	root: string,
+	intent: CreationIntent,
+): { udid: string } | null {
+	const file = join(root, "cleanup-first.json");
+	if (!existsSync(file)) return null;
+	const value = JSON.parse(readFileSync(file, "utf8"));
+	if (
+		value.kind !== "owned-first-cleanup" ||
+		value.nonce !== intent.nonce ||
+		value.runId !== intent.runId ||
+		value.hostPid !== intent.hostPid ||
+		!uuid.test(value.udid ?? "") ||
+		value.udid === intent.templateUdid ||
+		value.postDeleteInventory !== "UNOBSERVED"
+	)
+		throw new Error("First cleanup receipt identity refused");
+	const leasePath = join(root, "simulator-lease.json");
+	if (existsSync(leasePath)) {
+		const lease = JSON.parse(readFileSync(leasePath, "utf8"));
+		if (
+			lease.udid !== value.udid ||
+			lease.nonce !== intent.nonce ||
+			lease.runId !== intent.runId ||
+			lease.hostPid !== intent.hostPid
+		)
+			throw new Error("First cleanup/lease mismatch");
+	}
+	return { udid: value.udid };
+}
+function publishFirstCleanup(
+	root: string,
+	intent: CreationIntent,
+	udid: string,
+): void {
+	const first = firstCleanup(root, intent);
+	if (first) {
+		if (first.udid !== udid)
+			throw new Error("Conflicting first cleanup receipt");
+		return;
+	}
+	const file = join(root, "cleanup-first.json"),
+		temporary = join(root, `cleanup-first.${process.pid}.next`);
+	const value = {
+		kind: "owned-first-cleanup",
+		nonce: intent.nonce,
+		runId: intent.runId,
+		hostPid: intent.hostPid,
+		udid,
+		cleanupFailed: false,
+		recoveredFromIntent: true,
+		postDeleteInventory: "UNOBSERVED",
+	};
+	writeDurable(temporary, value, true);
+	try {
+		try {
+			linkSync(temporary, file);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+			const existing = firstCleanup(root, intent);
+			if (existing?.udid !== udid)
+				throw new Error("Conflicting first cleanup receipt");
+		}
+		const dir = openSync(root, "r");
+		try {
+			fsyncSync(dir);
+		} finally {
+			closeSync(dir);
+		}
+	} finally {
+		unlinkSync(temporary);
+	}
+}
 export async function recoverCreation(
 	root: string,
 	nonce: string,
@@ -165,6 +242,7 @@ export async function recoverCreation(
 	}
 	const intent = JSON.parse(readFileSync(file, "utf8")) as CreationIntent;
 	validate(intent, nonce, runId);
+	const first = firstCleanup(root, intent);
 	// Do not kill a potentially reused PID. Wait for the exact gated client to
 	// resolve; a still-live/unknown client is BLOCKED, never "nothing to clean".
 	if (intent.hostPid !== process.pid && isAlive(intent.hostPid))
@@ -216,9 +294,12 @@ export async function recoverCreation(
 			)
 				throw new Error("Lease/intent/inventory mismatch");
 		}
+		if (first && first.udid !== device.udid)
+			throw new Error("First cleanup/inventory mismatch");
 		if (device.state !== "Shutdown")
 			await run("xcrun", ["simctl", "shutdown", device.udid]);
 		await run("xcrun", ["simctl", "delete", device.udid]);
+		publishFirstCleanup(root, intent, device.udid);
 	} else if (intent.state === "in-flight" || intent.state === "uncertain") {
 		// Service-side completion may outlive a killed client. An empty observation
 		// after an uncertain request cannot establish rollback: leave intent intact
@@ -232,5 +313,7 @@ export async function recoverCreation(
 		hostPid: intent.hostPid,
 		cleanupFailed: false,
 		recoveredFromIntent: true,
+		identityComplete: !!firstCleanup(root, intent),
+		postDeleteInventory: "UNOBSERVED",
 	});
 }

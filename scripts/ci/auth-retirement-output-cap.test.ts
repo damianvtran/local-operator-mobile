@@ -5,9 +5,14 @@ import { EventEmitter } from "node:events";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const boundary = vi.hoisted(() => ({ bytes: 1, code: 0 }));
+const boundary = vi.hoisted(() => ({
+	bytes: 1,
+	code: 0,
+	hold: false,
+	close: null as (() => void) | null,
+}));
 vi.mock("node:child_process", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:child_process")>();
 	return {
@@ -25,7 +30,9 @@ vi.mock("node:child_process", async (importOriginal) => {
 					queueMicrotask(() => {
 						// No PID: the modeled producer is already gone; no real process is killed.
 						child.stdout.emit("data", Buffer.alloc(boundary.bytes, "x"));
-						child.emit("close", boundary.code, null);
+						child.emit("exit", boundary.code, null);
+						boundary.close = () => child.emit("close", boundary.code, null);
+						if (!boundary.hold) boundary.close();
 					}),
 			};
 			return child;
@@ -46,6 +53,8 @@ const root = () =>
 beforeEach(() => {
 	boundary.bytes = 1;
 	boundary.code = 0;
+	boundary.hold = false;
+	boundary.close = null;
 });
 it("rejects late over-cap stdout even with zero close status; cannot complete proof", async () => {
 	const dir = root(),
@@ -88,5 +97,37 @@ it("accepts normal under-cap zero exit without a BLOCKED receipt", async () => {
 	expect(existsSync(join(dir, "failure.json"))).toBe(false);
 	expect(JSON.parse(readFileSync(join(dir, "proof.json"), "utf8"))).toEqual({
 		complete: true,
+	});
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.useRealTimers();
+});
+it("records controlled callback lateness, not an inferred kernel exit time", async () => {
+	vi.useFakeTimers();
+	const clock = vi.spyOn(performance, "now").mockReturnValue(0);
+	boundary.hold = true;
+	const dir = root();
+	const result = withProofDiagnostics(dir, () =>
+		command("xcrun", ["simctl", "install"], 1000),
+	).then(
+		() => "resolved",
+		() => "rejected",
+	);
+	await Promise.resolve();
+	clock.mockReturnValue(1800);
+	await vi.advanceTimersByTimeAsync(1000);
+	boundary.close?.();
+	expect(await result).toBe("rejected");
+	const receipt = JSON.parse(readFileSync(join(dir, "failure.json"), "utf8"));
+	expect(receipt.command).toMatchObject({
+		outcome: "timeout",
+		lifecycle: {
+			budgetMs: 1000,
+			exitAfterMs: 0,
+			timerAfterMs: 1800,
+			closeAfterMs: 1800,
+		},
 	});
 });

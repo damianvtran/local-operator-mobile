@@ -261,3 +261,97 @@ describe("gated owned create-client lifecycle (local subprocess only)", () => {
 		expect(existsSync(sentinel)).toBe(true);
 	});
 });
+
+it("retains first validated cleanup identity across absent-device fallback", async () => {
+	const root = fixture();
+	let present = true;
+	const run = async (_exe: string, args: string[]) => {
+		if (args[1] === "list")
+			return JSON.stringify({
+				devices: {
+					[intent.runtime]: present
+						? [
+								{
+									udid,
+									name: intent.name,
+									state: "Shutdown",
+									deviceTypeIdentifier: intent.deviceType,
+								},
+							]
+						: [],
+				},
+			});
+		if (args[1] === "delete") present = false;
+		return "";
+	};
+	await cleanupLease(root, { run, isAlive: () => false });
+	const first = readFileSync(join(root, "cleanup-first.json"), "utf8");
+	expect(JSON.parse(first)).toMatchObject({
+		udid,
+		nonce,
+		runId,
+		hostPid: intent.hostPid,
+		postDeleteInventory: "UNOBSERVED",
+	});
+	await cleanupLease(root, { run, isAlive: () => false });
+	expect(readFileSync(join(root, "cleanup-first.json"), "utf8")).toBe(first);
+});
+it("refuses a foreign first-cleanup receipt without overwriting it or deleting", async () => {
+	const root = fixture(),
+		file = join(root, "cleanup-first.json"),
+		foreign = JSON.stringify({ nonce: "foreign", udid });
+	writeFileSync(file, foreign);
+	const calls: string[][] = [];
+	await expect(
+		cleanupLease(root, {
+			run: async (_exe, args) => {
+				calls.push(args);
+				return JSON.stringify({ devices: {} });
+			},
+			isAlive: () => false,
+		}),
+	).rejects.toThrow();
+	expect(readFileSync(file, "utf8")).toBe(foreign);
+	expect(calls.some((a) => a[1] === "delete")).toBe(false);
+});
+it("labels absent-device recovery without a first receipt incomplete, not inventory proof", async () => {
+	const root = fixture();
+	await cleanupLease(root, {
+		run: async () => JSON.stringify({ devices: {} }),
+		isAlive: () => false,
+	});
+	const summary = JSON.parse(readFileSync(join(root, "cleanup.json"), "utf8"));
+	expect(summary).toMatchObject({
+		udid: null,
+		identityComplete: false,
+		postDeleteInventory: "UNOBSERVED",
+	});
+});
+it("rejects a same-run first receipt mismatching the completed lease", async () => {
+	const root = fixture();
+	writeFileSync(
+		join(root, "simulator-lease.json"),
+		JSON.stringify({ udid, nonce, runId, hostPid: intent.hostPid }),
+	);
+	const foreign = JSON.stringify({
+		kind: "owned-first-cleanup",
+		udid: "33333333-3333-3333-3333-333333333333",
+		nonce,
+		runId,
+		hostPid: intent.hostPid,
+		postDeleteInventory: "UNOBSERVED",
+	});
+	writeFileSync(join(root, "cleanup-first.json"), foreign);
+	const calls: string[][] = [];
+	await expect(
+		cleanupLease(root, {
+			run: async (_exe, args) => {
+				calls.push(args);
+				return JSON.stringify({ devices: {} });
+			},
+			isAlive: () => false,
+		}),
+	).rejects.toThrow();
+	expect(calls).toEqual([]);
+	expect(readFileSync(join(root, "cleanup-first.json"), "utf8")).toBe(foreign);
+});
