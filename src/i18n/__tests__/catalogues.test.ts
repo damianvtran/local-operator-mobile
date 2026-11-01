@@ -53,7 +53,7 @@ const NAMESPACES = [
 		name: "mobile.team_bridge",
 		messages: teamBridge,
 		context: teamBridgeContext,
-		expected: 86,
+		expected: 87,
 	},
 	{
 		name: "mobile.common",
@@ -187,7 +187,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(270);
+		expect(total).toBe(271);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

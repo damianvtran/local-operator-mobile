@@ -27,6 +27,7 @@
  */
 
 import { RADIENT_API_BASE } from "@/connection/discovery";
+import { t } from "@/i18n/runtime";
 import { resolveFetch } from "@/relay/platform-fetch";
 import {
 	type AccountUnread,
@@ -175,7 +176,11 @@ function queryString(query: Query | undefined): string {
 /** Read the hub's error body, tolerating a non-JSON one. */
 async function errorFrom(response: Response): Promise<HubError> {
 	let code: string | null = null;
-	let message = `Radient refused the request (HTTP ${response.status}).`;
+	// Resolve at refusal time: a client can survive a language change, and a
+	// non-JSON proxy response must not fall back to un-keyed English prose.
+	let message = t("mobile.team_bridge.error.http_status", {
+		status: response.status,
+	});
 	let field: string | null = null;
 	let rule: string | null = null;
 	try {

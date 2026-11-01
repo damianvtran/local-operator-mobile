@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "Отправка сообщения не подтверждена. Черновик сохранён здесь. Повторная попытка безопасно отправит то же сообщение.",
 	"mobile.team_bridge.thread.send_retry": "Повторить отправку",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}",
+	"mobile.team_bridge.error.http_status": "Radient отклонил запрос (HTTP {status})."
 }

@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "No se confirmó tu mensaje. Tu borrador sigue guardado aquí. Reintentar envía el mismo mensaje de forma segura.",
 	"mobile.team_bridge.thread.send_retry": "Reintentar envío",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# sin leer} other {# sin leer}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+	"mobile.team_bridge.error.http_status": "Radient ha rechazado la solicitud (HTTP {status})."
 }

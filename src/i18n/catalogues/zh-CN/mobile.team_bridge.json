@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "消息尚未确认，草稿已保存在此处。重试会安全地重新发送同一条消息。",
 	"mobile.team_bridge.thread.send_retry": "重试发送",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}"
+	"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}",
+	"mobile.team_bridge.error.http_status": "Radient 拒绝了该请求（HTTP {status}）。"
 }

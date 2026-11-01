@@ -423,7 +423,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	src: "540cc0c266891e7748748fede20f25dc59c3e5444637af89d9720e8a3f730f0c",
+	src: "e31e03d11901a09da8f85c169faa4ae2530c93cd61e29625ee870d3054ae5202",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

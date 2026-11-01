@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
 	"mobile.team_bridge.thread.send_retry": "Retry send",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}",
+	"mobile.team_bridge.error.http_status": "Radient refused the request (HTTP {status})."
 }

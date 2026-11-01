@@ -205,6 +205,7 @@ export type CatalogueKey =
 	| "mobile.session_health.still_reopening"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.error.http_status"
 	| "mobile.team_bridge.gate.checking"
 	| "mobile.team_bridge.gate.connecting"
 	| "mobile.team_bridge.gate.console_error"
@@ -724,6 +725,7 @@ export type MessageParams = {
 	"mobile.session_health.still_reopening": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
+	"mobile.team_bridge.error.http_status": { status: string | number };
 	"mobile.team_bridge.gate.checking": NoParams;
 	"mobile.team_bridge.gate.connecting": NoParams;
 	"mobile.team_bridge.gate.console_error": NoParams;
@@ -1013,6 +1015,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
+	"mobile.team_bridge.error.http_status": "Radient refused the request (HTTP {status}).",
 	"mobile.team_bridge.gate.checking": "Checking Team Bridge…",
 	"mobile.team_bridge.gate.connecting": "Connecting to Radient. Your computer can stay closed.",
 	"mobile.team_bridge.gate.console_error": "Could not open the Radient console.",
@@ -1287,6 +1290,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.error.http_status": { role: "help", note: "Fallback only when the Radient HTTP response has no usable server error body. Shown inside an existing error surface. Preserve the Radient product name and HTTP protocol token. {status} is the numeric HTTP response status, not a message count; do not pluralize or translate that placeholder." },
 	"mobile.team_bridge.gate.checking": { role: "status", note: "Team Bridge mobile UI: gate / checking. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
 	"mobile.team_bridge.gate.connecting": { role: "help", note: "Team Bridge mobile UI: gate / connecting. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
 	"mobile.team_bridge.gate.console_error": { role: "status", note: "Team Bridge mobile UI: gate / console error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
@@ -1575,6 +1579,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
+		"mobile.team_bridge.error.http_status": "Radient ha rechazado la solicitud (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Comprobando Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Conectando con Radient. Tu ordenador puede seguir cerrado.",
 		"mobile.team_bridge.gate.console_error": "No se pudo abrir la consola de Radient.",
@@ -1847,6 +1852,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
+		"mobile.team_bridge.error.http_status": "Radient a refusé la requête (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Vérification de Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Connexion à Radient. Votre ordinateur peut rester fermé.",
 		"mobile.team_bridge.gate.console_error": "Impossible d’ouvrir la console Radient.",
@@ -2119,6 +2125,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
+		"mobile.team_bridge.error.http_status": "Radient ने अनुरोध अस्वीकार कर दिया (HTTP {status})।",
 		"mobile.team_bridge.gate.checking": "Team Bridge की जाँच हो रही है…",
 		"mobile.team_bridge.gate.connecting": "Radient से जुड़ रहे हैं। आपका कंप्यूटर बंद रह सकता है।",
 		"mobile.team_bridge.gate.console_error": "Radient कंसोल नहीं खुल सका।",
@@ -2391,6 +2398,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
+		"mobile.team_bridge.error.http_status": "Radient отклонил запрос (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Проверка Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Подключение к Radient. Компьютер можно не открывать.",
 		"mobile.team_bridge.gate.console_error": "Не удалось открыть консоль Radient.",
@@ -2663,6 +2671,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
+		"mobile.team_bridge.error.http_status": "Radient نے درخواست مسترد کر دی (HTTP {status})۔",
 		"mobile.team_bridge.gate.checking": "Team Bridge کی جانچ ہو رہی ہے…",
 		"mobile.team_bridge.gate.connecting": "Radient سے جڑ رہے ہیں۔ آپ کا کمپیوٹر بند رہ سکتا ہے۔",
 		"mobile.team_bridge.gate.console_error": "Radient کنسول نہیں کھل سکا۔",
@@ -2935,6 +2944,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
+		"mobile.team_bridge.error.http_status": "Radient đã từ chối yêu cầu (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Đang kiểm tra Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Đang kết nối với Radient. Bạn không cần mở máy tính.",
 		"mobile.team_bridge.gate.console_error": "Không thể mở bảng điều khiển Radient.",
@@ -3207,6 +3217,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
+		"mobile.team_bridge.error.http_status": "Radient 拒绝了该请求（HTTP {status}）。",
 		"mobile.team_bridge.gate.checking": "正在检查 Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "正在连接 Radient，无需打开电脑。",
 		"mobile.team_bridge.gate.console_error": "无法打开 Radient 控制台。",

@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "Votre message n’a pas été confirmé. Votre brouillon est conservé ici. Réessayer renvoie le même message sans risque de doublon.",
 	"mobile.team_bridge.thread.send_retry": "Réessayer l’envoi",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# non lu} other {# non lus}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# non lu} other {# non lus}}",
+	"mobile.team_bridge.error.http_status": "Radient a refusé la requête (HTTP {status})."
 }

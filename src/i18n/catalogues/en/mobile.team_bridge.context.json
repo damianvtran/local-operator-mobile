@@ -342,5 +342,9 @@
 	"mobile.team_bridge.unread": {
 		"role": "status",
 		"note": "Team Bridge mobile UI: unread. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
+	},
+	"mobile.team_bridge.error.http_status": {
+		"role": "help",
+		"note": "Fallback only when the Radient HTTP response has no usable server error body. Shown inside an existing error surface. Preserve the Radient product name and HTTP protocol token. {status} is the numeric HTTP response status, not a message count; do not pluralize or translate that placeholder."
 	}
 }

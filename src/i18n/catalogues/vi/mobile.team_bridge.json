@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "Tin nhắn chưa được xác nhận. Bản nháp vẫn được lưu tại đây. Thử lại sẽ gửi lại cùng tin nhắn một cách an toàn.",
 	"mobile.team_bridge.thread.send_retry": "Thử gửi lại",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, other {# chưa đọc}}"
+	"mobile.team_bridge.unread": "{count, plural, other {# chưa đọc}}",
+	"mobile.team_bridge.error.http_status": "Radient đã từ chối yêu cầu (HTTP {status})."
 }

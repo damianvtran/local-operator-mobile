@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "आपके संदेश की पुष्टि नहीं हुई। ड्राफ़्ट यहाँ सुरक्षित है। फिर कोशिश करने पर वही संदेश सुरक्षित तरीके से भेजा जाएगा।",
 	"mobile.team_bridge.thread.send_retry": "भेजने की फिर कोशिश करें",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# अपठित} other {# अपठित}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# अपठित} other {# अपठित}}",
+	"mobile.team_bridge.error.http_status": "Radient ने अनुरोध अस्वीकार कर दिया (HTTP {status})।"
 }

@@ -84,5 +84,6 @@
 	"mobile.team_bridge.thread.send_error": "آپ کے پیغام کی تصدیق نہیں ہوئی۔ مسودہ یہاں محفوظ ہے۔ دوبارہ کوشش کرنے سے وہی پیغام محفوظ طریقے سے بھیجا جائے گا۔",
 	"mobile.team_bridge.thread.send_retry": "دوبارہ بھیجیں",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# نا پڑھا گیا پیغام} other {# نا پڑھے گئے پیغامات}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# نا پڑھا گیا پیغام} other {# نا پڑھے گئے پیغامات}}",
+	"mobile.team_bridge.error.http_status": "Radient نے درخواست مسترد کر دی (HTTP {status})۔"
 }
