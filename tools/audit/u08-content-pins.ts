@@ -410,7 +410,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
 	 * messages, their projection and regressions only. Component/auth bytes
 	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
-	src: "7421f2e1d211b5b6be8f0eb9deade886507b2aa1038f10fe132a82a4d0b22740",
+	src: "038d73efc89fc41f7a4e19567d7929b9ec70a526a1c27e27d8dde80da89eff5d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
