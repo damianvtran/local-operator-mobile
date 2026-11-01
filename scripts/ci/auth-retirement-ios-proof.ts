@@ -19,6 +19,11 @@ import { createServer } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	activeProofDiagnostics,
+	commandCategory,
+	withProofDiagnostics,
+} from "./auth-retirement-diagnostics.ts";
+import {
 	assertInstalledArtifact,
 	assertOwnedLease,
 	assertProofBuild,
@@ -28,7 +33,6 @@ import {
 	type ProofBuildIdentity,
 	type ProofProcessIdentity,
 } from "./auth-retirement-proof-contract.ts";
-
 import {
 	createFromIntent,
 	prepareCreation,
@@ -165,6 +169,8 @@ export async function command(
 	timeout = 30000,
 	beforeStart?: (pid: number) => void,
 ): Promise<string> {
+	const diagnostic = activeProofDiagnostics;
+	const observation = diagnostic?.begin(commandCategory(executable, args));
 	return new Promise((yes, no) => {
 		const env = Object.fromEntries(
 			Object.entries(process.env).filter(
@@ -186,6 +192,7 @@ export async function command(
 		);
 		let output = "",
 			timedOut = false,
+			outputCapped = false,
 			done = false;
 		const kill = () => {
 			if (child.pid)
@@ -201,7 +208,10 @@ export async function command(
 		}, timeout);
 		child.stdout.on("data", (b) => {
 			output += b;
-			if (output.length > 1024 * 1024) kill();
+			if (output.length > 1024 * 1024) {
+				outputCapped = true;
+				kill();
+			}
 		});
 		// Errors deliberately exclude command output/args: no accidental native log
 		// or controlled token response may enter uploaded evidence.
@@ -211,14 +221,28 @@ export async function command(
 			kill();
 			if (!done) {
 				done = true;
+				if (observation) diagnostic?.finish(observation, "start-failure");
 				no(new Error("Proof subprocess could not start"));
 			}
 		});
-		child.on("close", (code) => {
+		child.on("close", (code, signal) => {
 			clearTimeout(timer);
 			kill();
 			if (done) return;
 			done = true;
+			if (observation)
+				diagnostic?.finish(
+					observation,
+					timedOut
+						? "timeout"
+						: outputCapped
+							? "output-cap"
+							: code !== 0
+								? "nonzero-exit"
+								: "success",
+					code,
+					signal,
+				);
 			if (code !== 0 || timedOut)
 				no(new Error("Proof subprocess failed or timed out"));
 			else yes(output.trim());
@@ -232,6 +256,7 @@ export async function command(
 				kill();
 				clearTimeout(timer);
 				done = true;
+				if (observation) diagnostic?.finish(observation, "journal-failure");
 				no(new Error("Creation PID journal failed before native request"));
 			}
 		} else child.stdin.end();
@@ -284,9 +309,19 @@ export async function runNativeProof(
 	root: string,
 	templateUdid: string,
 ): Promise<void> {
+	return withProofDiagnostics(root, () =>
+		runNativeProofBody(app, root, templateUdid),
+	);
+}
+async function runNativeProofBody(
+	app: string,
+	root: string,
+	templateUdid: string,
+): Promise<void> {
 	requireManualProof();
 	if (process.platform !== "darwin")
 		throw new Error("Native CI runner required");
+	activeProofDiagnostics?.checkpoint("candidate-identity");
 	const frozen = JSON.parse(
 		readFileSync(join(root, "frozen-artifact.json"), "utf8"),
 	) as ProofBuildIdentity & { appPath: string };
@@ -302,6 +337,7 @@ export async function runNativeProof(
 			throw new Error("Compiled proof marker absent");
 	// The incoming UDID is read-only template metadata, NEVER execution/cleanup
 	// authority. Create a new device and keep the resulting lease private to us.
+	activeProofDiagnostics?.checkpoint("template-selection");
 	const devices = JSON.parse(
 		await command("xcrun", [
 			"simctl",
@@ -323,6 +359,7 @@ export async function runNativeProof(
 	) as { devicetypes: Array<{ name: string; identifier: string }> };
 	const type = types.devicetypes.find((d) => d.name === template.name);
 	if (!type) throw new Error("Template device type unavailable");
+	activeProofDiagnostics?.checkpoint("creation-intent");
 	const intent = prepareCreation(root, {
 		nonce: frozen.nonce,
 		runId: process.env.GITHUB_RUN_ID!,
@@ -340,11 +377,15 @@ export async function runNativeProof(
 	let cleanupFailed = false;
 	let phaseFailed: unknown;
 	try {
+		activeProofDiagnostics?.checkpoint("create");
 		owned = await createFromIntent(root, intent, command);
 		udid = owned.udid;
+		activeProofDiagnostics?.checkpoint("boot");
 		await command("xcrun", ["simctl", "boot", udid]);
+		activeProofDiagnostics?.checkpoint("boot-ready");
 		await command("xcrun", ["simctl", "bootstatus", udid, "-b"], 90000);
 		assertInstalledArtifact(await measureArtifact(frozen.appPath), frozen);
+		activeProofDiagnostics?.checkpoint("install");
 		await command("xcrun", ["simctl", "install", udid, frozen.appPath]);
 		async function installedIdentity(): Promise<ProofBuildIdentity> {
 			assertOwnedLease(owned, owned);
@@ -363,6 +404,7 @@ export async function runNativeProof(
 			return measured;
 		}
 
+		activeProofDiagnostics?.checkpoint("receiver-setup");
 		let waiting: ((r: Record<string, unknown>) => void) | null = null;
 		let phase = "",
 			tokenRequests = 0;
@@ -451,6 +493,7 @@ export async function runNativeProof(
 				"fresh-replace",
 				"fresh-restore",
 			]) {
+				activeProofDiagnostics?.checkpoint("phase", name);
 				phase = name;
 				const beforeTokens = tokenRequests;
 				await installedIdentity();
@@ -564,8 +607,10 @@ export async function runNativeProof(
 			);
 		}
 	} catch (error) {
+		activeProofDiagnostics?.fail();
 		phaseFailed = error;
 	} finally {
+		activeProofDiagnostics?.checkpoint("cleanup");
 		try {
 			await recoverCreation(
 				root,
