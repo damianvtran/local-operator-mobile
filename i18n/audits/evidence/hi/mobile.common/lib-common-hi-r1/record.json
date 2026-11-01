@@ -1,0 +1,103 @@
+{
+	"schema": 1,
+	"audit_id": "lib-common-hi-r1",
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"locale": "hi",
+	"namespace": "mobile.common",
+	"audit_date": "2026-10-31",
+	"round": 1,
+	"audited_head_commit": "4fd4ad7c053f9e09bb93ca282fc7409e5d19adbf",
+	"audited_worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+	"audited_worktree_note": "detached at 4fd4ad7c plus uncommitted extraction and seven locale translations; the audited files are UNTRACKED working-tree files, identified by input_hashes, not by a commit.",
+	"key_count": {
+		"en": 6,
+		"target": 6
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "cca25211395f",
+		"job": null,
+		"model": "anthropic/claude-sonnet-5-5",
+		"actual_model_source": "session model header; no fallback observed",
+		"independent_from_translator_session": true,
+		"independence": "Did not translate any audited file; translator session and model not observed by this auditor."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.common.json",
+			"sha256": "3d1a8007b0ea260984f2868949859e55bfa31ea14beb2b6574fb2a2c578e604d"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.common.context.json",
+			"sha256": "6d8c765e302f556f53140aae70ac2dba66125cac7fbf04e81dc7fcbf43edf633"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/hi/mobile.common.json",
+			"sha256": "104488121a3ba7c655e0fd372c09d5d7856ec43b5a7ba4adb9f75c5e554e5a0c"
+		}
+	},
+	"route_disclosure": {
+		"read_route": "ordinary worktree reads (cat, python json, shasum, grep); not read_public_copy (refused for src/i18n/**)",
+		"sidecars": "not routable; read as worktree files",
+		"receipt": "none claimed",
+		"redaction_scan": {
+			"count": 0,
+			"scope": "3 audited input files",
+			"method": "grep -c credential-shaped patterns, output in audit.log"
+		},
+		"translation_services": "none"
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [
+			"lib-common-hi-r1-m1",
+			"lib-common-hi-r1-n1"
+		]
+	},
+	"findings": [
+		{
+			"id": "lib-common-hi-r1-m1",
+			"severity": "MINOR",
+			"key": "mobile.common.try_again",
+			"current": "फिर से कोशिश करें",
+			"replacement": "(none required) keep",
+			"why": "The core relay catalogue and the desktop UI render English 'Try again' as 'फिर कोशिश करें' (no 'से'; core relay.notifications.error.retry, ui x22), while the shipped mobile catalogue already uses 'फिर से कोशिश करें' for mobile.account_routing.retry and mobile.session_health.resume_refused. The common key matches the same-locale mobile precedent and is the more natural Hindi, so it is kept; the cross-product variance is recorded, not a defect. Verified by the same-locale vocabulary dump in audit.log.",
+			"status": "open_nongating"
+		},
+		{
+			"id": "lib-common-hi-r1-n1",
+			"severity": "NIT",
+			"key": "mobile.common.back",
+			"current": "वापस",
+			"replacement": "(none required) keep",
+			"why": "The desktop UI renders Back as 'पीछे' (ui.onboarding.modal.action.back); mobile.notifications.back and core relay.* use 'वापस'. The mobile/core pair wins; a bare 'वापस' is acceptable as a text button on a header.",
+			"status": "open_nongating"
+		}
+	],
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/hi/mobile.common/lib-common-hi-r1/report.md",
+			"sha256": "654ebb2711c4d2e7464f2f73da1522c8cfc5995268bfcd9742726eba423015d4"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.common/lib-common-hi-r1/audit.log",
+			"sha256": "78ec61bf9eeb0ac8e9f5618b4d624af85a8ccf0ad7fc105a1ab96bef472d7e5b"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.common/lib-common-hi-r1/record.json",
+			"sha256": null,
+			"note": "this record; a self-hash is not meaningful"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and this record are notes. audit.log holds the actual command output (git rev-parse, shasum, generate.ts --check, parse/scan script, grep of call sites, same-locale vocabulary dumps, redaction count). The vitest run is not in audit.log.",
+	"ledger": {
+		"row_written": false,
+		"reason": "no audit-ledger command exists in this repository; the bundle is the artifact of record"
+	},
+	"limitations": [
+		"No native-speaker review.",
+		"No rendered frame; widths are character counts.",
+		"Audited bytes are untracked working-tree bytes."
+	]
+}

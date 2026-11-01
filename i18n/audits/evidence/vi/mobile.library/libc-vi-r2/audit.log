@@ -1,0 +1,123 @@
+# audit.log - delta of libc-vi-r1, locale vi, mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/run.sh vi libc-vi-r1, run 2026-10-31T14:28:52Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own judgments and are not all replayed here.
+
+$ git rev-parse --short HEAD
+4292fa48
+[exit 0]
+
+$ git status --short
+ M src/features/library/library-detail.tsx
+ M src/i18n/catalogue.gen.ts
+ M src/i18n/catalogues/es/mobile.common.json
+?? i18n/audits/evidence/es/mobile.library/libc-es-r2/
+?? i18n/audits/evidence/fr/mobile.library/libc-fr-r2/
+?? i18n/audits/evidence/ru/mobile.library/libc-ru-r2/
+?? i18n/audits/evidence/vi/mobile.library/libc-vi-r2/
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/vi/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/vi/mobile.common.json
+3e3099d83c23237193d2ecb55b9f36a7fb169974b041a17c5e0f2c4fa12aa00e  src/i18n/catalogues/vi/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+b9da046daf528bd72809c3b2b7492c01721210dc8f60d06e4adffa7c166139b1  src/i18n/catalogues/vi/mobile.common.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/delta.py vi libc-vi-r1
+round-1 recorded sha256 : fa3c0d94b6c639cf7297d925c2fa714fe16cf028cd2395278786f39738994e5e
+shipped now sha256      : 3e3099d83c23237193d2ecb55b9f36a7fb169974b041a17c5e0f2c4fa12aa00e
+round-1 attests shipped : False
+libc-vi-r1-1 NIT mobile.library.detail.message_label
+   round-1 current    : Nhắn về tài nguyên này
+   round-1 replacement: Tin nhắn về tài nguyên này
+   shipped now        : Tin nhắn về tài nguyên này
+   byte-exact applied : True
+libc-vi-r1-2 NIT browse.tag / editor.tags / action.add_tag: no replacement prescribed (keep/observation)
+keys changed since round 1 (derived): ['mobile.library.detail.message_label']
+reconstructed round-1 sha256: fa3c0d94b6c639cf7297d925c2fa714fe16cf028cd2395278786f39738994e5e
+== recorded round-1 sha256   : True
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/checks.py vi
+en keys 31 sidecar keys 31 sidecar==en True
+vi: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+full-stop mismatch (locale stop vs en): none
+ASCII quote/apostrophe in values: none
+new_tag_placeholder 'topic-name' matches server grammar: True
+common.cancel = 'Hủy' | discard_confirm = 'Bỏ thay đổi' | equal: False
+common.done = 'Xong'
+length (chars) of button/chip values (current | en):
+   action.open_chat      18 |   9  Mở cuộc trò chuyện
+   browse.any_tag         7 |   7  Mọi thẻ
+   discard_confirm       11 |   7  Bỏ thay đổi
+   browse.refresh        16 |  15  Làm mới thư viện
+special spaces (NNBSP U+202F / NBSP U+00A0): none
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/render.ts vi
+action.add_tag               {}           => Thêm
+action.edit                  {}           => Chỉnh sửa
+action.open_chat             {}           => Mở cuộc trò chuyện
+browse.any_tag               {}           => Mọi thẻ
+browse.filter_by_kind        {}           => Lọc theo loại
+browse.filters               {}           => Bộ lọc
+browse.filters_count         {"count":1}  => Bộ lọc · 1
+browse.filters_count         {"count":2}  => Bộ lọc · 2
+browse.filters_count         {"count":5}  => Bộ lọc · 5
+browse.more_kinds            {}           => Các loại khác
+browse.no_tags               {}           => Chưa có thẻ nào. Thủ thư sẽ thêm thẻ khi sắp xếp các tài nguyên.
+browse.refresh               {}           => Làm mới thư viện
+browse.search_label          {}           => Tìm kiếm trong thư viện
+browse.search_placeholder    {}           => Tên, thẻ hoặc từ trong nội dung
+browse.sort                  {}           => Sắp xếp
+browse.status                {}           => Trạng thái
+browse.tag                   {}           => Thẻ
+detail.message_label         {}           => Tin nhắn về tài nguyên này
+detail.missing_file          {}           => Tệp này đã bị di chuyển hoặc xóa. Tên, thẻ và mô tả của nó vẫn còn ở đây.
+detail.no_source             {}           => Chưa ghi nhận cuộc trò chuyện nguồn nào cho tài nguyên này.
+detail.no_tags               {}           => Chưa có thẻ nào. Hãy chỉnh sửa chi tiết để thêm thẻ.
+detail.seen_in               {}           => Xuất hiện trong
+editor.description           {}           => Mô tả
+editor.discard_title         {}           => Bỏ thay đổi?
+editor.name                  {}           => Tên
+editor.new_tag               {}           => Thẻ mới
+editor.new_tag_placeholder   {}           => topic-name
+editor.tag_limit             {"limit":12} => Mỗi tài nguyên có tối đa 12 thẻ.
+editor.tags                  {}           => Thẻ
+editor.title                 {}           => Chỉnh sửa chi tiết
+title                        {}           => Thư viện
+discard_not_saved            {}           => Tên, mô tả và thẻ bạn đã thay đổi sẽ không được lưu.
+discard_confirm              {}           => Bỏ thay đổi
+-- mobile.common (the six chrome verbs the Library screens render)
+mobile.common.back           {}           => Quay lại
+mobile.common.cancel         {}           => Hủy
+mobile.common.done           {}           => Xong
+mobile.common.save           {}           => Lưu
+mobile.common.send           {}           => Gửi
+mobile.common.try_again      {}           => Thử lại
+[exit 0]
+
+$ grep -n mobile.library.discard\|editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:828:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:919:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:920:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:921:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/vi/mobile.library.json
+3e3099d83c23237193d2ecb55b9f36a7fb169974b041a17c5e0f2c4fa12aa00e  src/i18n/catalogues/vi/mobile.library.json
+[exit 0]

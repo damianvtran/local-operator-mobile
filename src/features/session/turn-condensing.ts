@@ -76,7 +76,9 @@
 import type { TranscriptEntry } from "@/contracts";
 import { entryComplete } from "@/features/session/completion-visibility";
 import {
+	bridgeReceiptLabel,
 	hubLabel,
+	isBridgeReceipt,
 	isHubReceipt,
 	peerLabel,
 } from "@/features/session/projection";
@@ -595,18 +597,19 @@ const isQuietToolRow = (entry: TranscriptEntry): boolean =>
  * textless (imageless) assistant row is a boundary.
  *
  * WHY NOTICE IS A BOUNDARY HERE, where the shared vocabulary can call a wake
- * receipt a group member: this wire flattens every notice class — the shared
- * vocabulary's completion markers, incidents, wake receipts, gate and job
- * notices — into ONE `notice` kind, and the native definition's trigger set
- * is the receipt kind itself (`peer_message`). Re-splitting the flattened
- * class would mean guessing from severity and sentence text, so the fold
- * takes the conservative direction instead: a notice never hides inside a bar
- * that does not mention it.
+ * receipt a group member. Only a positive producer custom_type (or the older
+ * custom_kind display marker) admits incoming Bridge notices here; generic
+ * notices, incidents and operator boundaries remain visible. The envelope's
+ * wording, admission guidance and attachment counts are never provenance.
  */
 const breaksPeerRun = (entry: TranscriptEntry): boolean => {
+	// Material stays on its source row; a receipt's attachment COUNT is not
+	// an admitted image, and no envelope grants ownership of another row's media.
+	if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) return true;
 	if (
 		entry.kind === "peer_message" ||
 		isHubReceipt(entry) ||
+		isBridgeReceipt(entry) ||
 		entry.kind === "tool"
 	)
 		return false;
@@ -692,15 +695,23 @@ function groupFactsOf(
 		if (item === undefined || item.kind !== "entry") continue;
 		const entry = item.entry;
 		rowIds.push(entry.id);
-		if (entry.kind === "peer_message" || isHubReceipt(entry)) {
+		if (
+			entry.kind === "peer_message" ||
+			isHubReceipt(entry) ||
+			isBridgeReceipt(entry)
+		) {
 			count += 1;
-			const hub = entry.kind !== "peer_message";
+			const hub = isHubReceipt(entry);
 			if (hub) {
 				hubCount += 1;
 				if (entry.details.expects_reply === true) replyRequested += 1;
 				if (entry.details.steer === true) steered += 1;
 			}
-			const label = hub ? hubLabel(entry) : peerLabel(entry.details.sender);
+			const label = isBridgeReceipt(entry)
+				? bridgeReceiptLabel(entry)
+				: hub
+					? hubLabel(entry)
+					: peerLabel(entry.details.sender);
 			senders.set(label, (senders.get(label) ?? 0) + 1);
 			continue;
 		}

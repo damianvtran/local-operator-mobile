@@ -410,7 +410,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
 	 * messages, their projection and regressions only. Component/auth bytes
 	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
-	src: "038d73efc89fc41f7a4e19567d7929b9ec70a526a1c27e27d8dde80da89eff5d",
+	/* Re-pinned 2026-10-31 for incoming Bridge grouping (#146), deliberately:
+	 * optional wire/parser facts, positive receipt classification and material
+	 * ownership move src. The exact 520-row long-transcript U-08 scene parses
+	 * and produces identical condense/group plans against b51f098a in collapsed,
+	 * first-expanded and all-expanded states (SHA256 93b57ecb3c0caf8b...). This
+	 * is source-plan equivalence, not a new rendered/native proof. --print finds
+	 * only this current render-tree identity changed; instrument/input pins and
+	 * historical ORIGINAL_* incident identities are not altered. */
+	/* DIRTY convergence with main239cada4 (#145 Library i18n): recomputed
+	 * with --print over the combined tree, not either side's isolated digest.
+	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
+	 * identical plans in the three states above (same SHA256); Library labels
+	 * do not enter that measured scene. All other pin tables stay unchanged. */
+	src: "540cc0c266891e7748748fede20f25dc59c3e5444637af89d9720e8a3f730f0c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

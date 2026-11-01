@@ -1,0 +1,57 @@
+## audit.log lib-common-hi-r1  date=2026-10-31  session=cca25211395f  model=anthropic/claude-sonnet-5-5 (no fallback observed)
+$ git rev-parse HEAD
+4fd4ad7c053f9e09bb93ca282fc7409e5d19adbf
+$ sha256 of audited inputs
+3d1a8007b0ea260984f2868949859e55bfa31ea14beb2b6574fb2a2c578e604d  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave/src/i18n/catalogues/en/mobile.common.json
+6d8c765e302f556f53140aae70ac2dba66125cac7fbf04e81dc7fcbf43edf633  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave/src/i18n/catalogues/en/mobile.common.context.json
+104488121a3ba7c655e0fd372c09d5d7856ec43b5a7ba4adb9f75c5e554e5a0c  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave/src/i18n/catalogues/hi/mobile.common.json
+$ node scripts/i18n/generate.ts --check   (read-only check; no write)
+src/i18n/catalogue.gen.ts is current (178 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+(node:29666) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+$ mechanical: json validity, key-set equality, placeholders, control/bidi chars
+keys en/target: 6 6 equal: True
+  mobile.common.back: 'वापस' len=4 controls=[] icu_chars=[] trailing_stop=False
+  mobile.common.cancel: 'रद्द करें' len=9 controls=[] icu_chars=[] trailing_stop=False
+  mobile.common.done: 'हो गया' len=6 controls=[] icu_chars=[] trailing_stop=False
+  mobile.common.save: 'सहेजें' len=6 controls=[] icu_chars=[] trailing_stop=False
+  mobile.common.send: 'भेजें' len=5 controls=[] icu_chars=[] trailing_stop=False
+  mobile.common.try_again: 'फिर से कोशिश करें' len=17 controls=[] icu_chars=[] trailing_stop=False
+$ call-site roles (src/features/library)
+src/features/library/library-screen.tsx:224:					label={t("mobile.common.back")}
+src/features/library/library-screen.tsx:344:								label={t("mobile.common.try_again")}
+src/features/library/library-screen.tsx:439:						label={t("mobile.common.done")}
+src/features/library/library-screen.tsx:550:					label={t("mobile.common.done")}
+src/features/library/library-screen.tsx:625:					label={t("mobile.common.done")}
+src/features/library/library-detail.tsx:200:					label={t("mobile.common.back")}
+src/features/library/library-detail.tsx:224:						label={t("mobile.common.try_again")}
+src/features/library/library-detail.tsx:679:					label={t("mobile.common.send")}
+src/features/library/library-detail.tsx:825:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:832:								label={t("mobile.common.save")}
+$ same-locale shipped mobile.* vocabulary (back/retry/dismiss/save) vs common
+  mobile.notifications.back = 'वापस'
+  mobile.notifications.dismiss = 'हटाएँ'
+  mobile.account_routing.retry = 'फिर से कोशिश करें'
+  mobile.account_routing.save = 'नीति सहेजें'
+  mobile.account_routing.saving = 'सहेजा जा रहा है…'
+  common.back 'वापस'  common.try_again 'फिर से कोशिश करें'  common.save 'सहेजें'
+$ same locale, desktop UI catalogue (local-operator-ui) and core, value for English Back/Try again/Retry/Done/Cancel/Send/Save
+  ui Back: {'पीछे': 2}
+  ui Try again: {'फिर कोशिश करें': 22}
+  ui Retry: {'फिर कोशिश करें': 21}
+  ui Done: {'पूरा': 1, 'पूर्ण': 1, 'हो गया': 3, 'पूरा हुआ': 1}
+  ui Cancel: {'रद्द करें': 40}
+  ui Send: {'भेजें': 4}
+  ui Save: {'सहेजें': 5}
+  core Back: {}
+  core Try again: {'फिर कोशिश करें': 1}
+  core Retry: {}
+  core Done: {}
+  core Cancel: {'रद्द करें': 3}
+  core Send: {}
+  core Save: {}
+$ redaction scan: credential-shaped tokens in the three audited input files (count of matches)
+0

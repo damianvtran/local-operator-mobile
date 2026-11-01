@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "audit_id": "libb-ur-r2",
+ "locale": "ur",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 31,
+ "kind": "round 2 (delta) independent audit, library extraction wave, Audit D",
+ "supersedes": {
+  "audit_id": "libb-ur",
+  "status_there": "changes_requested",
+  "statement": "Round 1 (libb-ur) attests a 29-key text whose sha256 is 22e5cf3611f379dc53ff724228bf8b2ad6e68f218d3138e82fcc9617a91298ce; its findings were applied afterwards and two keys were added, so that record describes text that no longer exists and is NOT a verdict on the current file. This round replaces it.",
+  "keys_changed_since_round_1": [
+   "browse.no_tags",
+   "detail.seen_in",
+   "editor.new_tag_placeholder",
+   "editor.tag_limit"
+  ],
+  "keys_added_since_round_1": [
+   "mobile.library.discard_not_saved",
+   "mobile.library.discard_confirm"
+  ]
+ },
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "base_commit": "4fd4ad7c (plus uncommitted extraction; read-only for this auditor)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "2e0f57f5a781",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header (system prompt 'Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "ur (native-fluent reader; no MT or translation service used)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/mobile.library.json",
+   "sha256": "6f7cd3c398ed2a2b8545baec51d25ca1818159c863a682bc83ae292efb153917"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc"
+  }
+ },
+ "round1_findings_status": {
+  "libb-ur-1 MAJOR new_tag_placeholder": "fixed (byte-exact: topic-name)",
+  "libb-ur-2 MAJOR detail.seen_in": "fixed (byte-exact: ان گفتگوؤں میں دیکھا گیا)",
+  "libb-ur-3 MAJOR browse.no_tags": "fixed (byte-exact: کرتے وقت)",
+  "libb-ur-4 MINOR editor.tag_limit": "fixed (byte-exact: ایک اثاثے پر ٹیگز کی حد {limit} ہے۔)"
+ },
+ "findings": [
+  {
+   "id": "libb-ur-r2-1",
+   "severity": "MINOR",
+   "key": "mobile.library.discard_confirm",
+   "current": "چھوڑ دیں",
+   "replacement": "چھوڑیں",
+   "why": "Same verb as the dialog title «تبدیلیاں چھوڑیں؟» (editor.discard_title) and as core's committed confirmation (tui.authoring.discard, tui.team_authoring.discard: «تبدیلیاں چھوڑیں؟ y چھوڑیں …»). «چھوڑ دیں» is grammatical and does not reuse mobile.common.cancel («منسوخ کریں»), so it is not unsafe; the compound adds a softener and splits title and button wording on one dialog. Optional polish.",
+   "verified": "bounded grep of core ur catalogues + render in audit.log"
+  },
+  {
+   "id": "libb-ur-r2-2",
+   "severity": "OBSERVATION (not a locale defect; no catalogue change)",
+   "key": "mobile.library.discard_not_saved / mobile.library.discard_confirm",
+   "current": "library-detail.tsx:917-919 still passes body=\"The name, description and tags you changed will not be saved.\" and confirmLabel=\"Discard\" as English literals; src/ui/components/dialog.tsx:190 (and :132 scrim accessibilityLabel) hard-codes label=\"Cancel\"",
+   "why": "Neither new key has a t() call site in src (grep: 0 .tsx hits), and the Dialog's Cancel button is a literal 'Cancel', not mobile.common.cancel. So today an ur/hi user sees an English body, English 'Discard' and English 'Cancel' under a translated title. The catalogue text below is judged for when it is wired; the wiring (body={t('mobile.library.discard_not_saved')}, confirmLabel={t('mobile.library.discard_confirm')}, and Dialog Cancel -> t('mobile.common.cancel')) belongs to the coder.",
+   "verified": "audit.log: usage grep + sed of library-detail.tsx 914-919 and dialog.tsx grep"
+  }
+ ],
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only.",
+ "artifacts": {
+  "audit.log": "real transcript of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libd-r2/run.sh (check.py, render.ts, generate.ts --check, byte-exact round-1 comparison)",
+  "audit.log_sha256": "52fd14292d5ed030d6799dbfe01b2de5b44fe2a8ebf5f5453549029987d57e18"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "libb-ur-r2-1",
+   "libb-ur-r2-2"
+  ]
+ }
+}

@@ -1650,3 +1650,101 @@ describe("the quiet-group derivation matches the shared parity fixture, case by 
 		});
 	}
 });
+
+describe("typed incoming Bridge receipt grouping", () => {
+	it("groups metadata-only receipts with actions, never generic notices or user/final boundaries", () => {
+		const bridge = (id: string) =>
+			row({
+				id,
+				kind: "notice",
+				text: "Metadata card, not admitted body",
+				custom_type: "team_bridge_message",
+				details: {
+					bridge_receipt: {
+						v: 1,
+						sender: { name: "Example member", kind: "human" },
+						conversation: { kind: "dm" },
+						attachment_count: 1,
+					},
+				},
+			});
+		const items: TranscriptItem[] = [
+			bridge("bridge-1"),
+			tool("history"),
+			bridge("bridge-2"),
+			tool("post"),
+			tool("send"),
+		].map((entry) => ({ kind: "entry", id: entry.id, entry }));
+		const grouped = quietGroupsOf(items);
+		expect(grouped).toHaveLength(1);
+		expect(grouped[0]?.count).toBe(2);
+		expect(grouped[0]?.actions).toBe(3);
+		for (const boundary of [
+			user("operator"),
+			answer("final"),
+			notice("generic", "team_bridge_message"),
+		]) {
+			const split: TranscriptItem[] = [
+				bridge("before"),
+				boundary,
+				bridge("after"),
+			].map((entry) => ({ kind: "entry", id: entry.id, entry }));
+			expect(quietGroupsOf(split)).toHaveLength(0);
+		}
+	});
+});
+
+it("keeps admitted Bridge history screenshots outside incoming receipt groups", () => {
+	const receipt = (id: string) =>
+		row({
+			id,
+			kind: "notice",
+			custom_type: "team_bridge_message",
+			text: "Metadata only",
+			details: { bridge_receipt: { v: 1, attachment_count: 1 } },
+		});
+	const material = row({
+		id: "history-image",
+		kind: "tool",
+		tool_name: "bridge",
+		images: [{ index: 0, mime_type: "image/png" }],
+	});
+	const items: TranscriptItem[] = [
+		receipt("before-image"),
+		material,
+		receipt("after-image"),
+	].map((entry) => ({ kind: "entry", id: entry.id, entry }));
+	expect(quietGroupsOf(items)).toHaveLength(0);
+});
+
+it("accepts the actual live Bridge projection notice and drops only malformed optional display metadata", async () => {
+	const { transcriptEntrySchema } = await import("@/contracts/schemas");
+	const raw = {
+		...row({ id: "projection-bridge", kind: "notice", text: "Metadata only" }),
+		custom_type: "team_bridge_message",
+		details: {
+			notice_kind: "cross_session_boundary",
+			custom_kind: "team_bridge_message",
+			bridge_receipt: {
+				v: 1,
+				sender: { name: "Example member", kind: "human" },
+				conversation: { kind: "dm" },
+				attachment_count: 1,
+			},
+		},
+	};
+	const parsed = transcriptEntrySchema.safeParse(raw);
+	expect(parsed.success).toBe(true);
+	if (parsed.success)
+		expect(parsed.data.details.bridge_receipt?.sender?.kind).toBe("human");
+	const malformed = transcriptEntrySchema.safeParse({
+		...raw,
+		details: {
+			...raw.details,
+			bridge_receipt: { ...raw.details.bridge_receipt, body: "Never admitted" },
+		},
+	});
+	expect(malformed.success).toBe(true);
+	if (malformed.success)
+		expect(malformed.data.details.bridge_receipt).toBeUndefined();
+});

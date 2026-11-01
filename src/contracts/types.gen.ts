@@ -138,7 +138,18 @@ export interface SendDeliveryDetails {
 	reason?: string;
 }
 
+/** Display-only incoming Bridge metadata. No body/admission/media fields exist. */
+export interface BridgeReceiptDisplay {
+	v: 1;
+	sender?: { name?: string; kind?: "human" | "agent"; organization?: string };
+	conversation?: { kind?: "dm" | "group" | "channel"; label?: string };
+	attachment_count?: number;
+}
+
 export interface TranscriptEntryDetails {
+	bridge_receipt?: BridgeReceiptDisplay;
+	/** Older core non-peer notices carried the type here, not at top level. */
+	custom_kind?: string;
 	/** An object as often as a string — never assume `.split()` exists. */
 	args?: string | Record<string, unknown>;
 	output?: string;
@@ -154,7 +165,7 @@ export interface TranscriptEntryDetails {
 	expects_reply?: boolean;
 	steer?: boolean;
 	severity?: "info" | "warning" | "error";
-	notice_kind?: "wake";
+	notice_kind?: "wake" | "cross_session_boundary";
 	/** The `send` tool's settled delivery state (see `SendDeliveryDetails`). */
 	delivery?: SendDeliveryDetails;
 	user_run?: boolean;
@@ -183,6 +194,8 @@ export interface TranscriptEntryDetails {
 
 export interface TranscriptEntry {
 	id: string;
+	/** Positive receipt classification; absent on an older relay. */
+	custom_type?: string;
 	kind: EntryKind;
 	text: string;
 	tool_call_id: string;

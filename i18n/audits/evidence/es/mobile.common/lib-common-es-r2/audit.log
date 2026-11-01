@@ -1,0 +1,99 @@
+# audit.log - delta of lib-common-es-r1, locale es, mobile.common. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/common_run.sh, run 2026-10-31T14:32:35Z. Judgments are the auditor's own.
+
+$ git rev-parse --short HEAD
+4292fa48
+[exit 0]
+
+$ git diff HEAD -- src/i18n/catalogues/es/mobile.common.json
+diff --git a/src/i18n/catalogues/es/mobile.common.json b/src/i18n/catalogues/es/mobile.common.json
+index 67c0355d..e7812689 100644
+--- a/src/i18n/catalogues/es/mobile.common.json
++++ b/src/i18n/catalogues/es/mobile.common.json
+@@ -1,7 +1,7 @@
+ {
+ 	"mobile.common.back": "Atrás",
+ 	"mobile.common.cancel": "Cancelar",
+-	"mobile.common.done": "Listo",
++	"mobile.common.done": "Hecho",
+ 	"mobile.common.save": "Guardar",
+ 	"mobile.common.send": "Enviar",
+ 	"mobile.common.try_again": "Reintentar"
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/es/mobile.common.json src/i18n/catalogues/en/mobile.common.json src/i18n/catalogues/en/mobile.common.context.json
+7a7984bee951441f16fb3c461863ea62896621c49219bc60c8362ca237e75880  src/i18n/catalogues/es/mobile.common.json
+3d1a8007b0ea260984f2868949859e55bfa31ea14beb2b6574fb2a2c578e604d  src/i18n/catalogues/en/mobile.common.json
+6d8c765e302f556f53140aae70ac2dba66125cac7fbf04e81dc7fcbf43edf633  src/i18n/catalogues/en/mobile.common.context.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/common_delta.py
+round-1 recorded sha256 : ed13003eed33e826439bcf11cca0c85089df3585a20226b0f7782d1373b313c2
+shipped now sha256      : 7a7984bee951441f16fb3c461863ea62896621c49219bc60c8362ca237e75880
+round-1 attests shipped : False
+keys changed since round 1 (derived): ['mobile.common.done']  Listo -> Hecho
+reconstructed round-1 sha256: ed13003eed33e826439bcf11cca0c85089df3585a20226b0f7782d1373b313c2
+== recorded round-1 sha256   : True
+keys: 6 same_keyset_as_en: True sidecar==en: True all non-empty str: True
+Cf/Cc: [] NFC: True trim-clean: True
+placeholders/ICU/trailing stop: none
+distinct values (no two verbs collapse): True {'mobile.common.back': 'Atrás', 'mobile.common.cancel': 'Cancelar', 'mobile.common.done': 'Hecho', 'mobile.common.save': 'Guardar', 'mobile.common.send': 'Enviar', 'mobile.common.try_again': 'Reintentar'}
+[exit 0]
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/common_render.ts
+mobile.common.back         {} => Atrás
+mobile.common.cancel       {} => Cancelar
+mobile.common.done         {} => Hecho
+mobile.common.save         {} => Guardar
+mobile.common.send         {} => Enviar
+mobile.common.try_again    {} => Reintentar
+[exit 0]
+
+$ grep -rn mobile.common.done src --include=*.tsx --include=*.ts --exclude=catalogue.gen.ts
+src/features/library/library-screen.tsx:439:						label={t("mobile.common.done")}
+src/features/library/library-screen.tsx:550:					label={t("mobile.common.done")}
+src/features/library/library-screen.tsx:625:					label={t("mobile.common.done")}
+[exit 0]
+
+$ grep -n relay.session.tags.done /Users/damian/local-operator/local_operator/i18n/catalogues/es/relay.session.tags.json /Users/damian/local-operator/local_operator/i18n/catalogues/en/relay.session.tags.json
+/Users/damian/local-operator/local_operator/i18n/catalogues/es/relay.session.tags.json:19:  "relay.session.tags.done": "Hecho",
+/Users/damian/local-operator/local_operator/i18n/catalogues/en/relay.session.tags.json:19:  "relay.session.tags.done": "done",
+[exit 0]
+
+$ grep -n -A3 relay.session.tags.done /Users/damian/local-operator/local_operator/i18n/catalogues/en/relay.session.tags.context.json
+87:  "relay.session.tags.done": {
+88-    "role": "tag sheet's closing button",
+89-    "tone": "lowercase, imperative.",
+90-    "note": "Owned relay SPA session copy. Closes the sheet; every assignment already landed as its own write."
+[exit 0]
+
+$ grep -n -A3 mobile.common.done src/i18n/catalogues/en/mobile.common.context.json
+10:	"mobile.common.done": {
+11-		"role": "button",
+12-		"note": "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'."
+13-	},
+[exit 0]
+
+$ grep -n Listo\|Hecho src/i18n/catalogues/es/mobile.account_routing.json src/i18n/catalogues/es/mobile.common.json src/i18n/catalogues/es/mobile.computers.json src/i18n/catalogues/es/mobile.home.json src/i18n/catalogues/es/mobile.library.json src/i18n/catalogues/es/mobile.notifications.json src/i18n/catalogues/es/mobile.projects.json src/i18n/catalogues/es/mobile.schedules.json src/i18n/catalogues/es/mobile.session.json src/i18n/catalogues/es/mobile.session_health.json
+src/i18n/catalogues/es/mobile.common.json:4:	"mobile.common.done": "Hecho",
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/common_stale.py
+every mobile.common bundle: recorded target sha256 vs shipped bytes (r2 bundle of es excluded: it is this one)
+  es     lib-common-es-r1   target-match=False en-match=True ctx-match=True
+  fr     lib-common-fr-r1   target-match=True en-match=True ctx-match=True
+  hi     lib-common-hi-r1   target-match=True en-match=True ctx-match=True
+  ru     lib-common-ru-r1   target-match=True en-match=True ctx-match=True
+  ur     lib-common-ur-r1   target-match=True en-match=True ctx-match=True
+  vi     lib-common-vi-r1   target-match=True en-match=True ctx-match=True
+  zh-CN  lib-common-zh-CN-r1 target-match=True en-match=True ctx-match=True
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/es/mobile.common.json
+7a7984bee951441f16fb3c461863ea62896621c49219bc60c8362ca237e75880  src/i18n/catalogues/es/mobile.common.json
+[exit 0]

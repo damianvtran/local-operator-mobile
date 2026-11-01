@@ -16,10 +16,14 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
+import common from "@/i18n/catalogues/en/mobile.common.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
 import home from "@/i18n/catalogues/en/mobile.home.json";
+import libraryContext from "@/i18n/catalogues/en/mobile.library.context.json";
+import library from "@/i18n/catalogues/en/mobile.library.json";
 import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.context.json";
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
@@ -50,6 +54,18 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		expected: 86,
+	},
+	{
+		name: "mobile.common",
+		messages: common,
+		context: commonContext,
+		expected: 6,
+	},
+	{
+		name: "mobile.library",
+		messages: library,
+		context: libraryContext,
+		expected: 31,
 	},
 	{
 		name: "mobile.home",
@@ -171,7 +187,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(233);
+		expect(total).toBe(270);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -240,6 +256,11 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Notifications is the French platform label too, matching the existing notifications screen title.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* French spells these the same as English. `Description` is the French
+		 * word for the same field, not an untranslated value: the asset editor's
+		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
+		"mobile.library.editor.description":
+			"French spells this field the same way — « Description » is the French word for the label, beside « Nom » and « Étiquettes » in the same editor.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical
@@ -260,30 +281,45 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	"zh-CN": {
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
 	},
