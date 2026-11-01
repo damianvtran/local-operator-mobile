@@ -10,12 +10,30 @@ describe("Team Bridge copy", () => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		expect(keys).toHaveLength(86);
+		expect(keys).toHaveLength(87);
 		for (const key of keys)
 			expect(
 				CATALOGUES[locale][key as keyof (typeof CATALOGUES)[typeof locale]],
 			).toBeTruthy();
 	});
+	// HTTP codes are protocol identifiers, not quantities or untranslated wire
+	// enums. Exercise the newly keyed refusal alongside the strict count above
+	// so adding a message cannot leave this namespace guard on its old cardinality.
+	it.each(SHIPPED_LOCALES)(
+		"formats the fallback HTTP status without leaking placeholders in %s",
+		(locale) => {
+			const refusal = renderFor(
+				"mobile.team_bridge.error.http_status",
+				{ status: 503 },
+				locale,
+			);
+			expect(refusal).toContain("Radient");
+			expect(refusal).toContain("HTTP 503");
+			expect(refusal).not.toContain("{");
+			expect(refusal).not.toContain("undefined");
+			expect(refusal).not.toContain("plural");
+		},
+	);
 	it.each(SHIPPED_LOCALES)(
 		"renders unread counts, names and protocol selects in %s",
 		(locale) => {
