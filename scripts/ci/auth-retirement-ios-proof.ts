@@ -342,7 +342,7 @@ export async function prepareProofBuild(root: string): Promise<void> {
 	const entry = "auth-retirement-proof.entry.js";
 	writeFileSync(
 		entry,
-		`import React from 'react';\nimport { registerRootComponent } from 'expo';\nimport { View } from 'react-native';\nimport { installAuthRetirementProof } from './src/testing/auth-retirement-proof';\ninstallAuthRetirementProof();\nregisterRootComponent(function RetirementProof(){return React.createElement(View,{style:{flex:1,backgroundColor:'#ffffff'}});});\n`,
+		`import React from 'react';\nimport { registerRootComponent } from 'expo';\nimport { View } from 'react-native';\nimport { installAuthRetirementProof } from './src/testing/auth-retirement-proof.ts';\ninstallAuthRetirementProof();\nregisterRootComponent(function RetirementProof(){return React.createElement(View,{style:{flex:1,backgroundColor:'#ffffff'}});});\n`,
 	);
 	const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 	pkg.main = `./${entry}`;

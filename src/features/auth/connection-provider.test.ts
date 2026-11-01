@@ -585,6 +585,10 @@ function transport(controlPlane?: string) {
 }
 
 beforeEach(async () => {
+	// Finish the real registry module's one-time authorization-storage setup
+	// BEFORE installing this test's synthetic adapter. Its lazy import from
+	// rememberLiveComputer must not replace the adapter during route admission.
+	await realRegistry();
 	privacy.fail = false;
 	handoff.block = null;
 	handoff.started = false;
@@ -699,6 +703,9 @@ describe("mounted provider authentication retirement", () => {
 		});
 		const original = getStartupAuthorization()?.scope;
 		expect(original).toBeTruthy();
+		// Controlled lazy-import completion: the registry module must not steal
+		// the test's configured authorization adapter before a remount.
+		await realRegistry();
 		durable.saved = {
 			baseUrl: input.url,
 			password: input.password,
