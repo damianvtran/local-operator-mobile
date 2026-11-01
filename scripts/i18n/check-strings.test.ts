@@ -4,8 +4,10 @@ import {
 	type BaselineEntry,
 	baselineGrowth,
 	buildBaseline,
+	migrationCandidates,
 	ratchet,
 	unaccountable,
+	validateGrowth,
 } from "./ratchet.ts";
 import { scanSource } from "./scan-strings.ts";
 
@@ -104,6 +106,29 @@ describe("the scanner", () => {
 		);
 	});
 
+	it("finds copy-bearing component props without treating identifiers as copy", () => {
+		const props = [
+			"headline",
+			"next",
+			"subtitle",
+			"caption",
+			"body",
+			"message",
+			"hint",
+			"description",
+			"detail",
+		];
+		const source = props
+			.map((prop) => `<Card ${prop}="Visible human copy" />`)
+			.join("\n");
+		expect(scanSource(FILE, source).map((finding) => finding.text)).toEqual(
+			props.map(() => "Visible human copy"),
+		);
+		expect(
+			scanSource(FILE, '<Card testID="technical identifier value" />'),
+		).toHaveLength(0);
+	});
+
 	it("finds a sentence added to a copy module", () => {
 		const findings = scanSource(
 			COPY_FILE,
@@ -173,6 +198,19 @@ describe("the baseline's growth check", () => {
 		text,
 		owner: "o",
 		payoff: "p",
+	});
+
+	it("only permits identities newly detected in the base by the new scanner", () => {
+		const oldEntry = entry("a.tsx", "Old finding");
+		const old = [oldEntry];
+		const newlyDetected = entry("b.tsx", "Historical headline");
+		const fresh = entry("c.tsx", "Fresh headline");
+		const candidates = migrationCandidates(old, [oldEntry, newlyDetected], old);
+		expect(candidates).toEqual([newlyDetected]);
+		expect(validateGrowth(old, [newlyDetected, fresh], candidates)).toEqual([
+			fresh,
+		]);
+		expect(migrationCandidates(old, [oldEntry], [])).toEqual([]);
 	});
 
 	it("reports an entry the base does not have", () => {
