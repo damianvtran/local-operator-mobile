@@ -37,6 +37,7 @@ import {
 	conversationSchema,
 	type Directory,
 	directorySchema,
+	ENDPOINT_AVATAR_PATH,
 	hubEnvelopeSchema,
 	hubErrorSchema,
 	type MemberInput,
@@ -315,11 +316,20 @@ export function createHubClient(deps: HubClientDeps) {
 		}
 	}
 
+	// Cancellation is cleanup, not permission to consume a refusal body. Some
+	// native fetches expose no cancellable stream; keep the classified refusal
+	// and never call json()/arrayBuffer() there regardless of this capability.
+	function cancelPhotoBody(response?: Response): void {
+		const body = response?.body;
+		if (typeof body?.cancel === "function")
+			void body.cancel().catch(() => undefined);
+	}
+
 	type RequestOptions = {
 		query?: Query;
 		body?: unknown;
 		signal?: AbortSignal;
-		raw?: { root: string; accept: string };
+		raw?: { root: string; accept: string; photo?: true };
 	};
 
 	/** Token, one request, one forced refresh on 401, and the refusal class. */
@@ -340,7 +350,17 @@ export function createHubClient(deps: HubClientDeps) {
 				});
 			}
 		};
+		// Photo authorization is part of its single deadline. Token work may not
+		// support cancellation, so also guard AFTER it resolves: a retired read
+		// must not issue a late GET or forced-refresh retry.
+		const assertPhotoActive = (response?: Response) => {
+			if (!options.raw?.photo || !options.signal?.aborted) return;
+			cancelPhotoBody(response);
+			throw options.signal.reason ?? photoDownloadError(null);
+		};
+		assertPhotoActive();
 		let token = await access();
+		assertPhotoActive();
 		if (!token) {
 			throw new HubError({
 				kind: "sign_in",
@@ -356,10 +376,15 @@ export function createHubClient(deps: HubClientDeps) {
 			options.signal,
 			options.raw,
 		);
+		assertPhotoActive(response);
 		if (response.status === 401) {
+			// Photo refusals carry no image identity. Never parse/cache the first
+			// 401 body while acquiring the one permitted refresh.
+			if (options.raw?.photo) cancelPhotoBody(response);
 			/* One forced refresh, one retry. A token revoked server-side before its
 			 * local expiry is the case this exists for. */
 			token = await access(true);
+			assertPhotoActive();
 			if (!token) {
 				throw new HubError({
 					kind: "sign_in",
@@ -377,7 +402,23 @@ export function createHubClient(deps: HubClientDeps) {
 				options.raw,
 			);
 		}
-		if (!response.ok) throw await errorFrom(response);
+		assertPhotoActive(response);
+		if (!response.ok) {
+			if (options.raw?.photo) {
+				// No JSON/error-page reads on the closed photo path: otherwise an
+				// endless or oversized refusal bypasses the successful-image cap.
+				// Status and Retry-After suffice for photo retry policy; eligibility
+				// still uses the normal JSON status endpoint and its coded errors.
+				cancelPhotoBody(response);
+				throw new HubError({
+					kind: hubErrorKind(response.status, null),
+					message: photoDownloadError(response.status).message,
+					status: response.status,
+					retryAfterMs: retryAfterMs(response),
+				});
+			}
+			throw await errorFrom(response);
+		}
 		return response;
 	}
 
@@ -416,6 +457,148 @@ export function createHubClient(deps: HubClientDeps) {
 				status: response.status,
 			});
 		}
+	}
+
+	// A closed account/endpoint target, never a directory-supplied URL. Sharing
+	// this reader keeps auth refresh, stream cap, MIME sniffing and the complete
+	// headers+body deadline identical for both routes (including the documented
+	// non-streaming native limitation). The endpoint wrapper validates identity
+	// before even obtaining a bearer.
+	const photoDownloadError = (status: number | null, timedOut = false) =>
+		new HubError({
+			kind: "unreachable",
+			message: timedOut
+				? "The profile photo took too long to download."
+				: "The profile photo could not be downloaded.",
+			status,
+		});
+	const unreadableAvatar = (status: number | null) =>
+		new HubError({
+			kind: "malformed",
+			message: "Radient returned a profile photo this app could not read.",
+			status,
+		});
+	async function readAvatarBytes(
+		target: { kind: "account" | "endpoint"; id: string },
+		hash: string,
+		size: 64 | 256,
+		signal?: AbortSignal,
+	): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+		/*
+		 * ONE deadline over the headers AND the body. `once()` disarms its
+		 * timer when the headers arrive, which is right for a small JSON
+		 * body but would let a body that stalls mid-stream hold the photo's
+		 * cache slot forever. The caller's own abort is forwarded in.
+		 *
+		 * WHAT IS ACTUALLY CANCELLED, by runtime (review round 2, R2-3):
+		 * - Where `response.body` is a stream (browsers, the web target, Node
+		 *   tests), it is read chunk by chunk with a running byte count, and
+		 *   the reader is cancelled the moment the count passes
+		 *   `AVATAR_MAX_BYTES` or the deadline fires. Nothing past the cap is
+		 *   buffered, and a stalled body stops being read.
+		 * - React Native's XHR-backed `fetch` exposes no body stream. There,
+		 *   `Content-Length` is the only early refusal, `arrayBuffer()` is
+		 *   checked after the read, and the deadline settles THIS call (the
+		 *   slot is freed) but cannot stop the platform finishing a download
+		 *   it already started. The hub's variants are a few KB, so that
+		 *   residual is a bound on waste, not on memory held by this app.
+		 */
+		const deadline = new AbortController();
+		let timedOut = false;
+		let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+		const timer = setTimeout(() => {
+			timedOut = true;
+			deadline.abort();
+			void reader?.cancel().catch(() => undefined);
+		}, timeoutMs);
+		const forward = () => deadline.abort();
+		if (signal?.aborted) deadline.abort();
+		else signal?.addEventListener("abort", forward, { once: true });
+		const unreachable = (status: number | null) =>
+			photoDownloadError(status, timedOut);
+		const tooLarge = (status: number) =>
+			new HubError({
+				kind: "malformed",
+				message: "Radient returned a profile photo larger than this app reads.",
+				status,
+			});
+		/* Settles when the deadline fires, for the reads below that the abort
+		 * alone may not reject on every runtime. */
+		const aborted = new Promise<never>((_, reject) => {
+			const fire = () => reject(unreachable(null));
+			if (deadline.signal.aborted) fire();
+			else deadline.signal.addEventListener("abort", fire, { once: true });
+		});
+		aborted.catch(() => undefined);
+		let bytes: Uint8Array;
+		let status: number;
+		try {
+			const response = await Promise.race([
+				authorized(
+					"GET",
+					target.kind === "account"
+						? `/accounts/${encodeURIComponent(target.id)}/avatar`
+						: `/endpoints/${encodeURIComponent(target.id)}/avatar`,
+					{
+						query: { v: hash, size },
+						raw: {
+							root: target.kind === "account" ? "/v1" : "/v1/messaging",
+							accept: "image/png, image/jpeg",
+							photo: true,
+						},
+						signal: deadline.signal,
+					},
+				),
+				aborted,
+			]);
+			status = response.status;
+			const declared = Number(response.headers.get("content-length"));
+			if (Number.isFinite(declared) && declared > AVATAR_MAX_BYTES) {
+				cancelPhotoBody(response);
+				throw tooLarge(status);
+			}
+			if (response.body && typeof response.body.getReader === "function") {
+				reader = response.body.getReader();
+				const chunks: Uint8Array[] = [];
+				let total = 0;
+				for (;;) {
+					const next = await Promise.race([reader.read(), aborted]);
+					if (next.done) break;
+					total += next.value.byteLength;
+					if (total > AVATAR_MAX_BYTES) {
+						void reader.cancel().catch(() => undefined);
+						throw tooLarge(status);
+					}
+					chunks.push(next.value);
+				}
+				bytes = new Uint8Array(total);
+				let offset = 0;
+				for (const chunk of chunks) {
+					bytes.set(chunk, offset);
+					offset += chunk.byteLength;
+				}
+			} else {
+				const body = await Promise.race([response.arrayBuffer(), aborted]);
+				if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
+				bytes = new Uint8Array(body);
+			}
+		} catch (error) {
+			/* The caller's own abort propagates as itself (an unmounted view).
+			 * The deadline turns a hung read into a retryable state; a refusal
+			 * the hub classified keeps its class. */
+			if (signal?.aborted && !timedOut) throw error;
+			if (timedOut) throw unreachable(null);
+			if (isHubError(error)) throw error;
+			throw unreachable(null);
+		} finally {
+			clearTimeout(timer);
+			signal?.removeEventListener("abort", forward);
+		}
+		const mime = sniffImageMime(bytes);
+		if (!mime) {
+			throw unreadableAvatar(status);
+		}
+		return { mime, bytes };
 	}
 
 	return {
@@ -589,129 +772,39 @@ export function createHubClient(deps: HubClientDeps) {
 		 * that sniff as anything else (an edge's HTML error page) are `malformed`
 		 * and never handed to an image view.
 		 */
-		async avatarBytes(
+		avatarBytes(
 			accountId: string,
 			hash: string,
 			size: 64 | 256,
 			signal?: AbortSignal,
 		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
-			/*
-			 * ONE deadline over the headers AND the body. `once()` disarms its
-			 * timer when the headers arrive, which is right for a small JSON
-			 * body but would let a body that stalls mid-stream hold the photo's
-			 * cache slot forever. The caller's own abort is forwarded in.
-			 *
-			 * WHAT IS ACTUALLY CANCELLED, by runtime (review round 2, R2-3):
-			 * - Where `response.body` is a stream (browsers, the web target, Node
-			 *   tests), it is read chunk by chunk with a running byte count, and
-			 *   the reader is cancelled the moment the count passes
-			 *   `AVATAR_MAX_BYTES` or the deadline fires. Nothing past the cap is
-			 *   buffered, and a stalled body stops being read.
-			 * - React Native's XHR-backed `fetch` exposes no body stream. There,
-			 *   `Content-Length` is the only early refusal, `arrayBuffer()` is
-			 *   checked after the read, and the deadline settles THIS call (the
-			 *   slot is freed) but cannot stop the platform finishing a download
-			 *   it already started. The hub's variants are a few KB, so that
-			 *   residual is a bound on waste, not on memory held by this app.
-			 */
-			const deadline = new AbortController();
-			let timedOut = false;
-			let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-			const timer = setTimeout(() => {
-				timedOut = true;
-				deadline.abort();
-				void reader?.cancel().catch(() => undefined);
-			}, timeoutMs);
-			const forward = () => deadline.abort();
-			if (signal?.aborted) deadline.abort();
-			else signal?.addEventListener("abort", forward, { once: true });
-			const unreachable = (status: number | null) =>
-				new HubError({
-					kind: "unreachable",
-					message: timedOut
-						? "The profile photo took too long to download."
-						: "The profile photo could not be downloaded.",
-					status,
-				});
-			const tooLarge = (status: number) =>
-				new HubError({
-					kind: "malformed",
-					message:
-						"Radient returned a profile photo larger than this app reads.",
-					status,
-				});
-			/* Settles when the deadline fires, for the reads below that the abort
-			 * alone may not reject on every runtime. */
-			const aborted = new Promise<never>((_, reject) => {
-				const fire = () => reject(unreachable(null));
-				if (deadline.signal.aborted) fire();
-				else deadline.signal.addEventListener("abort", fire, { once: true });
-			});
-			aborted.catch(() => undefined);
-			let bytes: Uint8Array;
-			let status: number;
-			try {
-				const response = await authorized(
-					"GET",
-					`/accounts/${encodeURIComponent(accountId)}/avatar`,
-					{
-						query: { v: hash, size },
-						raw: { root: "/v1", accept: "image/png, image/jpeg" },
-						signal: deadline.signal,
-					},
-				);
-				status = response.status;
-				const declared = Number(response.headers.get("content-length"));
-				if (Number.isFinite(declared) && declared > AVATAR_MAX_BYTES) {
-					void response.body?.cancel().catch(() => undefined);
-					throw tooLarge(status);
-				}
-				if (response.body && typeof response.body.getReader === "function") {
-					reader = response.body.getReader();
-					const chunks: Uint8Array[] = [];
-					let total = 0;
-					for (;;) {
-						const next = await Promise.race([reader.read(), aborted]);
-						if (next.done) break;
-						total += next.value.byteLength;
-						if (total > AVATAR_MAX_BYTES) {
-							void reader.cancel().catch(() => undefined);
-							throw tooLarge(status);
-						}
-						chunks.push(next.value);
-					}
-					bytes = new Uint8Array(total);
-					let offset = 0;
-					for (const chunk of chunks) {
-						bytes.set(chunk, offset);
-						offset += chunk.byteLength;
-					}
-				} else {
-					const body = await Promise.race([response.arrayBuffer(), aborted]);
-					if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
-					bytes = new Uint8Array(body);
-				}
-			} catch (error) {
-				/* The caller's own abort propagates as itself (an unmounted view).
-				 * The deadline turns a hung read into a retryable state; a refusal
-				 * the hub classified keeps its class. */
-				if (signal?.aborted && !timedOut) throw error;
-				if (timedOut) throw unreachable(null);
-				if (isHubError(error)) throw error;
-				throw unreachable(null);
-			} finally {
-				clearTimeout(timer);
-				signal?.removeEventListener("abort", forward);
-			}
-			const mime = sniffImageMime(bytes);
-			if (!mime) {
-				throw new HubError({
-					kind: "malformed",
-					message: "Radient returned a profile photo this app could not read.",
-					status,
-				});
-			}
-			return { mime, bytes };
+			return readAvatarBytes(
+				{ kind: "account", id: accountId },
+				hash,
+				size,
+				signal,
+			);
+		},
+
+		/** Endpoint-owned picture, fixed to the hub; no owner-image fallback. */
+		async endpointAvatarBytes(
+			endpointId: string,
+			hash: string,
+			size: 64 | 256,
+			signal?: AbortSignal,
+		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+			const canonical = `/v1/messaging/endpoints/${endpointId}/avatar?v=${hash}`;
+			if (
+				!ENDPOINT_AVATAR_PATH.test(canonical) ||
+				(size !== 64 && size !== 256)
+			)
+				throw unreadableAvatar(null);
+			return readAvatarBytes(
+				{ kind: "endpoint", id: endpointId },
+				hash,
+				size,
+				signal,
+			);
 		},
 
 		/** One organization's people. The tenant is REQUIRED: there is no implicit org. */

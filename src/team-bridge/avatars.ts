@@ -33,8 +33,8 @@
  */
 
 import { isHubError } from "@/team-bridge/client";
-import type { DirectoryMember } from "@/team-bridge/contract";
-import { AVATAR_PATH } from "@/team-bridge/contract";
+import type { DirectoryAgent, DirectoryMember } from "@/team-bridge/contract";
+import { AVATAR_PATH, ENDPOINT_AVATAR_PATH } from "@/team-bridge/contract";
 
 /** Rows use the 64 px variant, the profile card the 256 px one (§2). */
 export type AvatarPixels = 64 | 256;
@@ -65,6 +65,62 @@ export const avatarKey = (
 	hash: string,
 	size: AvatarPixels,
 ): string => `${accountId}:${hash}:${size}`;
+
+/**
+ * An agent is an endpoint identity, never its owner's account-photo identity.
+ * An omitted URL may be rebuilt from valid own metadata; an invalid-present
+ * URL (the schema's null sentinel) or any disagreement refuses the image.
+ */
+export function endpointAvatarVersion(
+	agent: DirectoryAgent | null | undefined,
+): { endpointId: string; hash: string } | null {
+	if (!agent?.avatar) return null;
+	const { endpoint_id: endpointId, avatar } = agent;
+	const canonical = `/v1/messaging/endpoints/${endpointId}/avatar?v=${avatar.hash}`;
+	if (!ENDPOINT_AVATAR_PATH.test(canonical)) return null;
+	if (agent.avatar_url !== undefined && agent.avatar_url !== canonical)
+		return null;
+	return { endpointId, hash: avatar.hash };
+}
+
+/** Separate namespace even when an account and endpoint share an opaque id. */
+export const endpointAvatarKey = (
+	endpointId: string,
+	hash: string,
+	size: AvatarPixels,
+): string => `endpoint:${endpointId}:${hash}:${size}`;
+
+// Four parts distinguish an endpoint key from an account literally named
+// "endpoint". Derive retention from the identity, so queue recursion and an
+// accidental legacy load() call cannot turn a private endpoint into ready cache.
+const ENDPOINT_KEY = /^endpoint:[A-Za-z0-9_-]{1,128}:[0-9a-f]{16}:(64|256)$/;
+
+export type EndpointAvatarSnapshot = {
+	cache: object;
+	epoch: number;
+	key: string;
+	uri: string | null;
+};
+
+/**
+ * Check during render, not just in effect cleanup. A new principal, endpoint,
+ * hash, variant or absent metadata must paint the glyph on its very first frame.
+ * This pure boundary is also testable without pretending Node drives native UI.
+ */
+export function endpointDisplayUri(
+	held: EndpointAvatarSnapshot | null,
+	cache: object,
+	epoch: number,
+	key: string | null,
+): string | null {
+	return key &&
+		ENDPOINT_KEY.test(key) &&
+		held?.cache === cache &&
+		held.epoch === epoch &&
+		held.key === key
+		? held.uri
+		: null;
+}
 
 /** Why a read failed, as far as the cache's retry policy cares. */
 export type AvatarFailure = "permanent" | "transient";
@@ -117,6 +173,22 @@ export function avatarFailure(error: unknown): AvatarFailure {
 		default:
 			return "permanent";
 	}
+}
+
+/**
+ * Endpoint permissions can recover without changing the photo hash (rejoin,
+ * resume, sign-in). Keep those negative results only for the bounded transient
+ * cooldown/Retry-After, while corrupt bytes and decoder failures stay permanent.
+ * The account-photo policy above is intentionally unchanged.
+ */
+export function endpointAvatarFailure(error: unknown): AvatarFailure {
+	if (
+		isHubError(error) &&
+		error.status !== null &&
+		[401, 403, 404].includes(error.status)
+	)
+		return "transient";
+	return avatarFailure(error);
 }
 
 type Entry =
@@ -269,10 +341,14 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		fetchUri: () => Promise<string>,
 		classify: (error: unknown) => AvatarFailure,
 	): Promise<string | null> => {
+		const retainReady = !ENDPOINT_KEY.test(key);
 		const held = entries.get(key);
 		if (held?.state === "ready") {
-			touch(key, held);
-			return Promise.resolve(held.uri);
+			if (retainReady) {
+				touch(key, held);
+				return Promise.resolve(held.uri);
+			}
+			remove(key);
 		}
 		if (held?.state === "loading") return held.promise;
 		if (held?.state === "failed") {
@@ -295,7 +371,7 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		const promise = fetchUri()
 			.then(
 				(uri) => {
-					if (started !== epoch) return uri;
+					if (started !== epoch) return retainReady ? uri : null;
 					remove(key);
 					/* A URI over the WHOLE budget is refused before anything is
 					 * evicted: storing it would empty the cache and still not fit,
@@ -306,6 +382,10 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 						remember(key, Number.POSITIVE_INFINITY, true);
 						return null;
 					}
+					// Co-member endpoint reads are private/no-cache. A mounted view
+					// may show its newly authorized result, but a later mount must
+					// read the hub again (withdrawal may now answer 404).
+					if (!retainReady) return uri;
 					if (!makeRoom(1, uri.length)) return uri;
 					heldBytes += uri.length;
 					entries.set(key, { state: "ready", uri, bytes: uri.length });
@@ -328,8 +408,14 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 	};
 
 	return {
-		/** A held photo's URI, without starting a read. */
+		/** Display state binds to this retirement generation, not just a key. */
+		get epoch(): number {
+			return epoch;
+		},
+
+		/** A held account photo's URI; endpoint authorization is never cached. */
 		peek(key: string): string | null {
+			if (ENDPOINT_KEY.test(key)) return null;
 			const entry = entries.get(key);
 			if (entry?.state !== "ready") return null;
 			touch(key, entry);
@@ -346,6 +432,19 @@ export function createAvatarCache(options: AvatarCacheOptions = {}) {
 		 * `"transient"` is treated as permanent for this key.
 		 */
 		load,
+
+		/**
+		 * Share an active authorized endpoint read, never reusable ready bytes.
+		 * Failed entries still honor bounded cooldown and the existing size rules.
+		 */
+		loadEndpoint(
+			key: string,
+			fetchUri: () => Promise<string>,
+			classify: (error: unknown) => AvatarFailure,
+		): Promise<string | null> {
+			if (!ENDPOINT_KEY.test(key)) return Promise.resolve(null);
+			return load(key, fetchUri, classify);
+		},
 
 		fail,
 

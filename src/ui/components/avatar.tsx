@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Image, Text, View } from "react-native";
 
 import { AVATAR_SIZES, type AvatarSize, avatarClasses } from "@/ui/variants";
@@ -8,7 +9,9 @@ import { AVATAR_SIZES, type AvatarSize, avatarClasses } from "@/ui/variants";
  * `radius.full` — a circle is what the avatar IS, and `full` is the kit's token
  * for that (tokens.json § radius.assignment).
  *
- * A photo when the caller has one, initials otherwise. The primitive never
+ * A photo when the caller has one, initials (or an explicit agent glyph)
+ * otherwise. An agent glyph declares a different kind of identity; it is not
+ * a placeholder account portrait. The primitive never
  * fetches: `imageUri` is an already-resolved local URI (Team Bridge hands it
  * the `data:` URI of bytes read with the bearer, `src/team-bridge/avatars.ts`),
  * because a remote URL here would be fetched without auth. Initials stay
@@ -24,6 +27,8 @@ import { AVATAR_SIZES, type AvatarSize, avatarClasses } from "@/ui/variants";
 export type AvatarProps = {
 	/** One or two characters. Derived from the account label by the caller. */
 	initials: string;
+	/** An explicit decorative identity glyph, e.g. an agent, never its owner. */
+	fallback?: ReactNode;
 	size?: AvatarSize;
 	/** A local (`data:`/`file:`) URI to show over the initials. Never a remote URL. */
 	imageUri?: string | null;
@@ -60,6 +65,7 @@ export const initialsOf = (label: string): string => {
 
 export const Avatar = ({
 	initials,
+	fallback,
 	size = "md",
 	imageUri,
 	onImageError,
@@ -73,14 +79,23 @@ export const Avatar = ({
 		accessibilityLabel={accessibilityLabel}
 		testID={testID}
 	>
-		<Text
-			className={`${AVATAR_SIZES[size].text} font-semibold text-accent-active dark:text-accent-hover`}
-			// The initials are a rendering of the label, not a second name for it.
-			accessibilityElementsHidden
-			importantForAccessibility="no"
-		>
-			{initials}
-		</Text>
+		{fallback != null ? (
+			<View
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+			>
+				{fallback}
+			</View>
+		) : (
+			<Text
+				className={`${AVATAR_SIZES[size].text} font-semibold text-accent-active dark:text-accent-hover`}
+				// The initials are a rendering of the label, not a second name for it.
+				accessibilityElementsHidden
+				importantForAccessibility="no"
+			>
+				{initials}
+			</Text>
+		)}
 		{imageUri ? (
 			<Image
 				source={{ uri: imageUri }}

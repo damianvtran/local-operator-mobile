@@ -163,15 +163,35 @@ export const accountUnreadSchema = z.looseObject({
 });
 export type AccountUnread = z.infer<typeof accountUnreadSchema>;
 
+/** Only the hub-owned, hash-pinned endpoint route is an avatar identity. */
+export const ENDPOINT_AVATAR_PATH =
+	/^\/v1\/messaging\/endpoints\/([A-Za-z0-9_-]{1,128})\/avatar\?v=([0-9a-f]{16})$/;
+
 /**
- * A person's chief of staff, when the directory publishes one (the CoS
- * directory slice, not on main yet). A malformed agent object costs the person
- * their chief-of-staff row, never their People row.
+ * A person's chief of staff, when the directory publishes one. Malformed photo
+ * enrichment costs only the photo, not the agent row or its owner's People row.
  */
 export const directoryAgentSchema = z.looseObject({
 	endpoint_id: id,
 	name: z.string().max(128),
 	state: z.string().min(1).max(32),
+	// Endpoint-owned enrichment is optional. A corrupt photo must not remove a
+	// valid chief-of-staff row or let it borrow the owner's account identity.
+	avatar: z
+		.object({
+			hash: z.string().regex(/^[0-9a-f]{16}$/),
+			updated_at: z.string().datetime({ offset: true }),
+		})
+		.optional()
+		.catch(undefined),
+	// Preserve invalid-present as null: erasing it to undefined would confuse a
+	// rejected URL with an absent optional URL and admit a metadata-only fetch.
+	avatar_url: z
+		.string()
+		.regex(ENDPOINT_AVATAR_PATH)
+		.nullable()
+		.optional()
+		.catch(null),
 });
 export type DirectoryAgent = z.infer<typeof directoryAgentSchema>;
 

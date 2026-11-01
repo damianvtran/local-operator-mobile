@@ -12,7 +12,7 @@
  * scrim) and its own modal accessibility scope.
  */
 import { useRouter } from "expo-router";
-import { Clock, MessageSquare } from "lucide-react-native";
+import { Bot, Clock, MessageSquare } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
@@ -21,6 +21,11 @@ import {
 	avatarFailure,
 	avatarKey,
 	avatarVersion,
+	type EndpointAvatarSnapshot,
+	endpointAvatarFailure,
+	endpointAvatarKey,
+	endpointAvatarVersion,
+	endpointDisplayUri,
 } from "@/team-bridge/avatars";
 import type { DirectoryMember } from "@/team-bridge/contract";
 import type * as model from "@/team-bridge/model";
@@ -36,7 +41,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
-import type { AvatarSize } from "@/ui/variants";
+import { AVATAR_SIZES, type AvatarSize } from "@/ui/variants";
 import { ProfileDetails } from "./profile-details";
 
 /** Rows read the 64 px variant; only the card's large mark reads 256 px. */
@@ -124,6 +129,106 @@ export function PersonAvatar({
 }
 
 /**
+ * Endpoint photos are authorized on the hub, not inherited from the owner.
+ * Never initialize from ready cache: the endpoint route is private/no-cache.
+ * Display binds to cache instance, retirement epoch and the complete photo key,
+ * so changing owner/endpoint/hash/size cannot flash the old result for a frame.
+ */
+export function useEndpointAvatarUri(
+	member: DirectoryMember | null | undefined,
+	size: AvatarSize,
+): { uri: string | null; onError: () => void } {
+	const { hub, avatars } = useTeamBridge();
+	const version = endpointAvatarVersion(member?.agent);
+	const endpointId = version?.endpointId ?? null;
+	const hash = version?.hash ?? null;
+	const pixels = PIXELS[size];
+	const key =
+		endpointId && hash ? endpointAvatarKey(endpointId, hash, pixels) : null;
+	const epoch = avatars.epoch;
+	const [loaded, setLoaded] = useState<EndpointAvatarSnapshot | null>(null);
+	useEffect(() => {
+		setLoaded(null);
+		if (!key || !endpointId || !hash) return;
+		let live = true;
+		void avatars
+			.loadEndpoint(
+				key,
+				async () => {
+					const { mime, bytes } = await hub.endpointAvatarBytes(
+						endpointId,
+						hash,
+						pixels,
+					);
+					return `data:${mime};base64,${toBase64(bytes)}`;
+				},
+				endpointAvatarFailure,
+			)
+			.then((uri) => {
+				if (live && avatars.epoch === epoch)
+					setLoaded({ cache: avatars, epoch, key, uri });
+			});
+		return () => {
+			live = false;
+		};
+	}, [avatars, hub, key, endpointId, hash, pixels, epoch]);
+	const onError = useCallback(() => {
+		// A late decoder callback from an old scope must not poison the new one.
+		if (key && avatars.epoch === epoch) avatars.fail(key, "permanent");
+		setLoaded((previous) =>
+			previous?.cache === avatars &&
+			previous.epoch === epoch &&
+			previous.key === key
+				? null
+				: previous,
+		);
+	}, [avatars, key, epoch]);
+	return {
+		uri: endpointDisplayUri(loaded, avatars, epoch, key),
+		onError,
+	};
+}
+
+function AgentAvatar({
+	member,
+	size,
+}: {
+	member: DirectoryMember;
+	size: AvatarSize;
+}) {
+	const { uri, onError } = useEndpointAvatarUri(member, size);
+	const ink = useTokenColor("accent-active");
+	return (
+		<Avatar
+			initials=""
+			size={size}
+			imageUri={uri}
+			onImageError={onError}
+			fallback={<Bot size={AVATAR_SIZES[size].px / 2} color={ink} />}
+		/>
+	);
+}
+
+/** One identity selector for list marks, author runs and the profile sheet. */
+export function ProfileSubjectAvatar({
+	subject,
+	size = "md",
+}: {
+	subject: ProfileSubject;
+	size?: AvatarSize;
+}) {
+	return subject.agent ? (
+		<AgentAvatar member={subject.person} size={size} />
+	) : (
+		<PersonAvatar
+			member={subject.person}
+			label={subjectMarkLabel(subject)}
+			size={size}
+		/>
+	);
+}
+
+/**
  * Navigation to a Team Bridge target: an existing conversation by id, or a
  * draft DM (`conversationId: "new"`) that the thread creates on first send.
  * The ONE spelling of that route, shared by the list rows and the card.
@@ -171,11 +276,7 @@ export function ProfileAvatarButton({
 			onPress={() => onOpen(subject)}
 			testID={testID}
 		>
-			<PersonAvatar
-				member={subject.person}
-				label={subjectMarkLabel(subject)}
-				size={size}
-			/>
+			<ProfileSubjectAvatar subject={subject} size={size} />
 		</Pressable>
 	);
 }
@@ -237,11 +338,7 @@ export function ProfileAuthorPhoto({
 			hitSlop={6}
 			onPress={() => onOpen(subject)}
 		>
-			<PersonAvatar
-				member={subject.person}
-				label={subjectMarkLabel(subject)}
-				size="sm"
-			/>
+			<ProfileSubjectAvatar subject={subject} size="sm" />
 		</Pressable>
 	);
 }
@@ -320,13 +417,7 @@ export function ProfileSheet({
 				<ProfileDetails
 					card={card}
 					clock={<Clock size={14} color={mutedInk} />}
-					photo={
-						<PersonAvatar
-							member={subject.person}
-							label={card.markLabel}
-							size="lg"
-						/>
-					}
+					photo={<ProfileSubjectAvatar subject={subject} size="lg" />}
 				/>
 			)}
 		</Sheet>
