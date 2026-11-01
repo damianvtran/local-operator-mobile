@@ -243,7 +243,9 @@ export async function command(
 					code,
 					signal,
 				);
-			if (code !== 0 || timedOut)
+			// Buffered stdout can arrive after the producer has already exited 0.
+			// Killing its group is not proof of rejection: the cap itself is final.
+			if (code !== 0 || timedOut || outputCapped)
 				no(new Error("Proof subprocess failed or timed out"));
 			else yes(output.trim());
 		});
