@@ -28,6 +28,7 @@ export const REFUSED_REASONS = [
 	"flavor-mismatch",
 	"source-mismatch",
 	"coarse-type",
+	"stage-unknown",
 ] as const;
 export const PHASE_CAUSES = [
 	"receipt-timeout",
@@ -100,7 +101,8 @@ export function receiptRefusal(
 			return "coarse-type";
 	if ("stage" in value) {
 		if (typeof value.stage !== "string") return "coarse-type";
-		value.stage = appStage(value.stage);
+		if (!APP_STAGES.some((stage) => stage === value.stage))
+			return "stage-unknown";
 	}
 	return null;
 }
@@ -137,11 +139,33 @@ export async function observeOwnedProcess(
 			"launchctl",
 			"list",
 		]);
-		return output
-			.split("\n")
-			.some((line) =>
-				line.includes("com.localoperator.mobile.retirementproof"),
-			);
+		// launchctl retains stopped jobs with PID "-". A label alone is not
+		// liveness, and substring matches would admit another application's job.
+		const proofId = "com.localoperator.mobile.retirementproof";
+		const uiLabel = `UIKitApplication:${proofId}`;
+		let alive = false;
+		for (const line of output.split("\n")) {
+			const columns = line.split("\t");
+			// Locate a possible label even on a malformed non-tab-separated row;
+			// such a matching row is UNOBSERVED, never evidence of absence.
+			const label = (
+				columns.length >= 3 ? columns.at(-1) : line.trim().split(/\s+/).at(-1)
+			)?.trim();
+			if (
+				label !== proofId &&
+				label !== uiLabel &&
+				!label?.startsWith(`${uiLabel}[`)
+			)
+				continue;
+			if (columns.length !== 3 || !/^-?\d+$/.test(columns[1]?.trim() ?? ""))
+				return "UNOBSERVED";
+			const pid = columns[0]?.trim();
+			if (pid === "-") continue;
+			if (!/^[1-9]\d*$/.test(pid ?? "") || !Number.isSafeInteger(Number(pid)))
+				return "UNOBSERVED";
+			alive = true;
+		}
+		return alive;
 	} catch {
 		return "UNOBSERVED";
 	}

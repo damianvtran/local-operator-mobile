@@ -62,10 +62,29 @@ describe("native proof observation vocabulary and privacy", () => {
 			expect(appStage(stage)).toBe(stage);
 		},
 	);
-	it("normalizes unknown string stages to other and refuses non-string stages", () => {
+	it("refuses unknown free-text stages and keeps diagnostic fallback separate", () => {
 		const r = { ...valid(), stage: secret };
-		expect(receiptRefusal(r, "seed", r.flavor, r.sourceSha)).toBeNull();
-		expect(r.stage).toBe("other");
+		expect(receiptRefusal(r, "seed", r.flavor, r.sourceSha)).toBe(
+			"stage-unknown",
+		);
+		expect(appStage(r.stage)).toBe("other");
+		const root = fresh(),
+			diag = new ProofDiagnostics(root),
+			counts = refusedCounts();
+		countRefused(counts, "stage-unknown");
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			refused: counts,
+		});
+		diag.fail();
+		for (const file of ["failure.json", "proof.json"])
+			expect(readFileSync(join(root, file), "utf8")).not.toContain(secret);
+		expect(
+			JSON.parse(readFileSync(join(root, "failure.json"), "utf8")).phaseFailure
+				.refused["stage-unknown"],
+		).toBe(1);
 		expect(
 			receiptRefusal(
 				{ ...valid(), stage: {} },
@@ -123,26 +142,71 @@ describe("native proof observation vocabulary and privacy", () => {
 		).toBe("durable-unconfirmed");
 		expect(receiptCause("seed", valid(), 0)).toBeNull();
 	});
-	it.each([true, false, "UNOBSERVED"] as const)(
-		"observes process state %s through only the owned-UDID command",
-		async (result) => {
-			const calls: unknown[][] = [];
-			const actual = await observeOwnedProcess(
-				"owned-udid",
-				async (...args) => {
-					calls.push(args);
-					if (result === "UNOBSERVED") throw new Error(secret);
-					return result
-						? "123 0 UIKitApplication:com.localoperator.mobile.retirementproof"
-						: "456 0 unrelated";
-				},
-			);
-			expect(actual).toBe(result);
-			expect(calls).toEqual([
-				["xcrun", ["simctl", "spawn", "owned-udid", "launchctl", "list"]],
-			]);
-		},
-	);
+	it.each([
+		[
+			"direct running",
+			"123\t0\tcom.localoperator.mobile.retirementproof",
+			true,
+		],
+		[
+			"UIKit running",
+			"123\t0\tUIKitApplication:com.localoperator.mobile.retirementproof[example]",
+			true,
+		],
+		[
+			"UIKit exact",
+			"123\t0\tUIKitApplication:com.localoperator.mobile.retirementproof",
+			true,
+		],
+		[
+			"stopped",
+			"-\t0\tUIKitApplication:com.localoperator.mobile.retirementproof[example]",
+			false,
+		],
+		["absent", "456\t0\tunrelated", false],
+		[
+			"malformed pid",
+			"bad\t0\tcom.localoperator.mobile.retirementproof",
+			"UNOBSERVED",
+		],
+		[
+			"zero pid",
+			"0\t0\tcom.localoperator.mobile.retirementproof",
+			"UNOBSERVED",
+		],
+		[
+			"malformed status",
+			"123\tbad\tcom.localoperator.mobile.retirementproof",
+			"UNOBSERVED",
+		],
+		[
+			"non-tab row",
+			"123 0 UIKitApplication:com.localoperator.mobile.retirementproof",
+			"UNOBSERVED",
+		],
+		[
+			"unrelated substring",
+			"123\t0\tother.com.localoperator.mobile.retirementproof",
+			false,
+		],
+		[
+			"unrelated suffix",
+			"123\t0\tUIKitApplication:com.localoperator.mobile.retirementproof.other",
+			false,
+		],
+		["command failure", null, "UNOBSERVED"],
+	] as const)("observes owned process: %s", async (_name, output, expected) => {
+		const calls: unknown[][] = [];
+		const actual = await observeOwnedProcess("owned-udid", async (...args) => {
+			calls.push(args);
+			if (output === null) throw new Error(secret);
+			return output;
+		});
+		expect(actual).toBe(expected);
+		expect(calls).toEqual([
+			["xcrun", ["simctl", "spawn", "owned-udid", "launchctl", "list"]],
+		]);
+	});
 	it("writes no free text to failure.json, including enrichment after a command already failed", () => {
 		const root = fresh(),
 			diag = new ProofDiagnostics(root);
