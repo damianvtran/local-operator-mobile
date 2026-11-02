@@ -231,6 +231,16 @@ export type CatalogueKey =
 	| "mobile.oauth.invalid"
 	| "mobile.oauth.received"
 	| "mobile.oauth.return"
+	| "mobile.projects.create.description"
+	| "mobile.projects.create.description_placeholder"
+	| "mobile.projects.create.name"
+	| "mobile.projects.create.name_placeholder"
+	| "mobile.projects.create.status"
+	| "mobile.projects.create.submit"
+	| "mobile.projects.create.tags"
+	| "mobile.projects.create.tags_help"
+	| "mobile.projects.create.tags_placeholder"
+	| "mobile.projects.create.title"
 	| "mobile.projects.delete_body"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
@@ -244,6 +254,13 @@ export type CatalogueKey =
 	| "mobile.projects.sessions.count"
 	| "mobile.projects.sessions.live"
 	| "mobile.projects.stale_badge"
+	| "mobile.projects.status.active"
+	| "mobile.projects.status.archived"
+	| "mobile.projects.status.done"
+	| "mobile.projects.status.paused"
+	| "mobile.projects.status.planning"
+	| "mobile.projects.status.qa"
+	| "mobile.projects.status.validation"
 	| "mobile.projects.write_receipt"
 	| "mobile.projects.write_unknown_note"
 	| "mobile.schedules.cadence.every"
@@ -688,6 +705,16 @@ export type NoParamKey =
 	| "mobile.oauth.invalid"
 	| "mobile.oauth.received"
 	| "mobile.oauth.return"
+	| "mobile.projects.create.description"
+	| "mobile.projects.create.description_placeholder"
+	| "mobile.projects.create.name"
+	| "mobile.projects.create.name_placeholder"
+	| "mobile.projects.create.status"
+	| "mobile.projects.create.submit"
+	| "mobile.projects.create.tags"
+	| "mobile.projects.create.tags_help"
+	| "mobile.projects.create.tags_placeholder"
+	| "mobile.projects.create.title"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
 	| "mobile.projects.milestones.none"
@@ -696,6 +723,13 @@ export type NoParamKey =
 	| "mobile.projects.session_state.missing"
 	| "mobile.projects.session_state.not_running"
 	| "mobile.projects.stale_badge"
+	| "mobile.projects.status.active"
+	| "mobile.projects.status.archived"
+	| "mobile.projects.status.done"
+	| "mobile.projects.status.paused"
+	| "mobile.projects.status.planning"
+	| "mobile.projects.status.qa"
+	| "mobile.projects.status.validation"
 	| "mobile.projects.write_unknown_note"
 	| "mobile.schedules.cadence.once"
 	| "mobile.schedules.empty.body"
@@ -1101,6 +1135,16 @@ export type MessageParams = {
 	"mobile.oauth.invalid": NoParams;
 	"mobile.oauth.received": NoParams;
 	"mobile.oauth.return": NoParams;
+	"mobile.projects.create.description": NoParams;
+	"mobile.projects.create.description_placeholder": NoParams;
+	"mobile.projects.create.name": NoParams;
+	"mobile.projects.create.name_placeholder": NoParams;
+	"mobile.projects.create.status": NoParams;
+	"mobile.projects.create.submit": NoParams;
+	"mobile.projects.create.tags": NoParams;
+	"mobile.projects.create.tags_help": NoParams;
+	"mobile.projects.create.tags_placeholder": NoParams;
+	"mobile.projects.create.title": NoParams;
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
@@ -1114,6 +1158,13 @@ export type MessageParams = {
 	"mobile.projects.sessions.count": { count: number };
 	"mobile.projects.sessions.live": { base: string | number; live: number };
 	"mobile.projects.stale_badge": NoParams;
+	"mobile.projects.status.active": NoParams;
+	"mobile.projects.status.archived": NoParams;
+	"mobile.projects.status.done": NoParams;
+	"mobile.projects.status.paused": NoParams;
+	"mobile.projects.status.planning": NoParams;
+	"mobile.projects.status.qa": NoParams;
+	"mobile.projects.status.validation": NoParams;
 	"mobile.projects.write_receipt": { subject: string | number; action: string; kind: string };
 	"mobile.projects.write_unknown_note": NoParams;
 	"mobile.schedules.cadence.every": { duration: string | number };
@@ -1584,6 +1635,16 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.oauth.invalid": "This sign-in request was not accepted.",
 	"mobile.oauth.received": "Sign-in response received. Return to the app.",
 	"mobile.oauth.return": "Return to Local Operator",
+	"mobile.projects.create.description": "Description",
+	"mobile.projects.create.description_placeholder": "What this project is for",
+	"mobile.projects.create.name": "Name",
+	"mobile.projects.create.name_placeholder": "my-project",
+	"mobile.projects.create.status": "Status",
+	"mobile.projects.create.submit": "Create",
+	"mobile.projects.create.tags": "Tags",
+	"mobile.projects.create.tags_help": "Separate with commas or spaces.",
+	"mobile.projects.create.tags_placeholder": "ios, q4",
+	"mobile.projects.create.title": "New project",
 	"mobile.projects.delete_body": "Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.",
 	"mobile.projects.draft_kept_note": "Kept from your last visit. Clear the fields to start something new.",
 	"mobile.projects.milestone_slash_note": "Milestone names can't contain a slash. A milestone with one could never be removed.",
@@ -1597,6 +1658,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
 	"mobile.projects.sessions.live": "{base} · {live} live",
 	"mobile.projects.stale_badge": "progress stale",
+	"mobile.projects.status.active": "active",
+	"mobile.projects.status.archived": "archived",
+	"mobile.projects.status.done": "done",
+	"mobile.projects.status.paused": "paused",
+	"mobile.projects.status.planning": "planning",
+	"mobile.projects.status.qa": "qa",
+	"mobile.projects.status.validation": "validation",
 	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}",
 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.",
 	"mobile.schedules.cadence.every": "every {duration}",
@@ -2052,6 +2120,16 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.oauth.invalid": { role: "status", note: "Generic body for malformed/wrong-state on-device callback request. Never reflect the URL or explain which secret field matched." },
 	"mobile.oauth.received": { role: "status", note: "On-device browser callback page after a validated HTTP callback, BEFORE token exchange. Do not claim the user is signed in. No code, state or identity appears." },
 	"mobile.oauth.return": { role: "button", note: "Link on on-device callback page. Returns to the installed Local Operator app using a package-targeted control URI with no OAuth payload. Keep brand Local Operator." },
+	"mobile.projects.create.description": { role: "meta", note: "Label for an optional project description." },
+	"mobile.projects.create.description_placeholder": { role: "help", note: "Placeholder prompting an optional project description." },
+	"mobile.projects.create.name": { role: "meta", note: "Label for the project identifier field; the nearby help states its grammar." },
+	"mobile.projects.create.name_placeholder": { role: "help", note: "Example of a valid project identifier; preserve the hyphen and use only letters, digits, dot, underscore or hyphen, never starting with a hyphen." },
+	"mobile.projects.create.status": { role: "heading", note: "Label for the project status choices." },
+	"mobile.projects.create.submit": { role: "button", note: "Submits the new project form." },
+	"mobile.projects.create.tags": { role: "meta", note: "Label for optional project tags." },
+	"mobile.projects.create.tags_help": { role: "help", note: "Explains how to separate multiple project tags." },
+	"mobile.projects.create.tags_placeholder": { role: "help", note: "Examples of two tags, separated by a comma; use valid short tag examples." },
+	"mobile.projects.create.title": { role: "heading", note: "Title of the sheet for creating a project." },
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
@@ -2065,6 +2143,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.sessions.count": { role: "meta", note: "Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English." },
 	"mobile.projects.sessions.live": { role: "meta", note: "Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live." },
 	"mobile.projects.stale_badge": { role: "status", note: "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name." },
+	"mobile.projects.status.active": { role: "status", note: "Display label for the project status code active; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.archived": { role: "status", note: "Display label for the project status code archived; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.done": { role: "status", note: "Display label for the project status code done; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.paused": { role: "status", note: "Display label for the project status code paused; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.planning": { role: "status", note: "Display label for the project status code planning; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.qa": { role: "status", note: "Display label for the project status code qa; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
+	"mobile.projects.status.validation": { role: "status", note: "Display label for the project status code validation; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
 	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop." },
 	"mobile.projects.write_unknown_note": { role: "status", note: "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved." },
 	"mobile.schedules.cadence.every": { role: "meta", note: "Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice." },
@@ -2534,6 +2619,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "No se ha aceptado esta solicitud de inicio de sesión.",
 		"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
 		"mobile.oauth.return": "Volver a Local Operator",
+		"mobile.projects.create.description": "Descripción",
+		"mobile.projects.create.description_placeholder": "Para qué es este proyecto",
+		"mobile.projects.create.name": "Nombre",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "Estado",
+		"mobile.projects.create.submit": "Crear",
+		"mobile.projects.create.tags": "Etiquetas",
+		"mobile.projects.create.tags_help": "Sepáralas con comas o espacios.",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "Nuevo proyecto",
 		"mobile.projects.delete_body": "¿Eliminar {name}? La fila del proyecto se borra para siempre. Sus sesiones vinculadas y sus transcripciones no se tocan.",
 		"mobile.projects.draft_kept_note": "Se conservó de tu última visita. Vacía los campos para empezar algo nuevo.",
 		"mobile.projects.milestone_slash_note": "Los nombres de hito no pueden contener una barra. Un hito con barra nunca podría quitarse.",
@@ -2547,6 +2642,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# sesión} many {# de sesiones} other {# sesiones}}",
 		"mobile.projects.sessions.live": "{base} · {live} en curso",
 		"mobile.projects.stale_badge": "progreso obsoleto",
+		"mobile.projects.status.active": "activo",
+		"mobile.projects.status.archived": "archivado",
+		"mobile.projects.status.done": "completado",
+		"mobile.projects.status.paused": "pausado",
+		"mobile.projects.status.planning": "planificación",
+		"mobile.projects.status.qa": "control de calidad",
+		"mobile.projects.status.validation": "validación",
 		"mobile.projects.write_receipt": "{kind, select, project {Proyecto {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} milestone {Hito {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} other {{subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.}}",
 		"mobile.projects.write_unknown_note": "No pudimos llegar a tu máquina, así que no sabemos si se guardó. Revisa el proyecto antes de volver a intentarlo.",
 		"mobile.schedules.cadence.every": "cada {duration}",
@@ -3000,6 +3102,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Cette demande de connexion n’a pas été acceptée.",
 		"mobile.oauth.received": "Réponse de connexion reçue. Revenez à l’application.",
 		"mobile.oauth.return": "Revenir à Local Operator",
+		"mobile.projects.create.description": "Description",
+		"mobile.projects.create.description_placeholder": "À quoi sert ce projet",
+		"mobile.projects.create.name": "Nom",
+		"mobile.projects.create.name_placeholder": "mon-projet",
+		"mobile.projects.create.status": "Statut",
+		"mobile.projects.create.submit": "Créer",
+		"mobile.projects.create.tags": "Étiquettes",
+		"mobile.projects.create.tags_help": "Séparez-les par des virgules ou des espaces.",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "Nouveau projet",
 		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
 		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
 		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
@@ -3013,6 +3125,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
 		"mobile.projects.sessions.live": "{base} · {live} en cours",
 		"mobile.projects.stale_badge": "progression obsolète",
+		"mobile.projects.status.active": "actif",
+		"mobile.projects.status.archived": "archivé",
+		"mobile.projects.status.done": "terminé",
+		"mobile.projects.status.paused": "en pause",
+		"mobile.projects.status.planning": "planification",
+		"mobile.projects.status.qa": "contrôle qualité",
+		"mobile.projects.status.validation": "validation",
 		"mobile.projects.write_receipt": "{kind, select, project {Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} milestone {Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} other {{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.}}",
 		"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.",
 		"mobile.schedules.cadence.every": "tous les {duration}",
@@ -3466,6 +3585,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "यह साइन-इन अनुरोध स्वीकार नहीं किया गया।",
 		"mobile.oauth.received": "साइन-इन का जवाब मिल गया है। ऐप पर लौटें।",
 		"mobile.oauth.return": "Local Operator पर लौटें",
+		"mobile.projects.create.description": "विवरण",
+		"mobile.projects.create.description_placeholder": "यह प्रोजेक्ट किस लिए है",
+		"mobile.projects.create.name": "नाम",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "स्थिति",
+		"mobile.projects.create.submit": "बनाएँ",
+		"mobile.projects.create.tags": "टैग",
+		"mobile.projects.create.tags_help": "कॉमा या स्पेस से अलग करें।",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "नया प्रोजेक्ट",
 		"mobile.projects.delete_body": "{name} मिटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
 		"mobile.projects.draft_kept_note": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।",
 		"mobile.projects.milestone_slash_note": "पड़ाव के नाम में स्लैश नहीं हो सकता। स्लैश वाला पड़ाव कभी हटाया नहीं जा सकेगा।",
@@ -3479,6 +3608,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# सत्र} other {# सत्र}}",
 		"mobile.projects.sessions.live": "{base} · {live} सक्रिय",
 		"mobile.projects.stale_badge": "प्रगति पुरानी",
+		"mobile.projects.status.active": "सक्रिय",
+		"mobile.projects.status.archived": "संग्रहीत",
+		"mobile.projects.status.done": "पूरा",
+		"mobile.projects.status.paused": "रुका हुआ",
+		"mobile.projects.status.planning": "योजना",
+		"mobile.projects.status.qa": "QA",
+		"mobile.projects.status.validation": "सत्यापन",
 		"mobile.projects.write_receipt": "{kind, select, project {“{subject}” प्रोजेक्ट {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} milestone {“{subject}” पड़ाव {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} other {“{subject}” {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।}}",
 		"mobile.projects.write_unknown_note": "आपके कंप्यूटर तक नहीं पहुँच सके, इसलिए यह नहीं बता सकते कि वह सहेजा गया या नहीं। दोबारा कोशिश करने से पहले प्रोजेक्ट जाँच लें।",
 		"mobile.schedules.cadence.every": "हर {duration}",
@@ -3932,6 +4068,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Этот запрос на вход не принят.",
 		"mobile.oauth.received": "Ответ для входа получен. Вернитесь в приложение.",
 		"mobile.oauth.return": "Вернуться в Local Operator",
+		"mobile.projects.create.description": "Описание",
+		"mobile.projects.create.description_placeholder": "Для чего этот проект",
+		"mobile.projects.create.name": "Имя",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "Статус",
+		"mobile.projects.create.submit": "Создать",
+		"mobile.projects.create.tags": "Теги",
+		"mobile.projects.create.tags_help": "Разделяйте запятыми или пробелами.",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "Новый проект",
 		"mobile.projects.delete_body": "Удалить «{name}»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются.",
 		"mobile.projects.draft_kept_note": "Сохранено с прошлого раза. Очистите поля, чтобы начать новое.",
 		"mobile.projects.milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
@@ -3945,6 +4091,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# сессия} few {# сессии} many {# сессий} other {# сессии}}",
 		"mobile.projects.sessions.live": "{base} · {live, plural, one {# активна} few {# активны} many {# активны} other {# активны}}",
 		"mobile.projects.stale_badge": "прогресс устарел",
+		"mobile.projects.status.active": "активен",
+		"mobile.projects.status.archived": "в архиве",
+		"mobile.projects.status.done": "завершён",
+		"mobile.projects.status.paused": "на паузе",
+		"mobile.projects.status.planning": "планирование",
+		"mobile.projects.status.qa": "тестирование",
+		"mobile.projects.status.validation": "проверка",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {Добавлен проект} updated {Обновлён проект} removed {Удалён проект} deleted {Удалён проект} other {Обновлён проект}} «{subject}».} milestone {{action, select, created {Создана веха} completed {Завершена веха} reopened {Возобновлена веха} added {Добавлена веха} updated {Обновлена веха} removed {Удалена веха} deleted {Удалена веха} other {Обновлена веха}} «{subject}».} other {{action, select, created {Создано} completed {Завершено} reopened {Возобновлено} added {Добавлено} updated {Обновлено} removed {Удалено} deleted {Удалено} other {Обновлено}} «{subject}».}}",
 		"mobile.projects.write_unknown_note": "Не удалось связаться с компьютером, поэтому неизвестно, сохранилось ли изменение. Проверьте проект, прежде чем повторять попытку.",
 		"mobile.schedules.cadence.every": "раз в {duration}",
@@ -4398,6 +4551,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "یہ سائن اِن درخواست قبول نہیں کی گئی۔",
 		"mobile.oauth.received": "سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔",
 		"mobile.oauth.return": "Local Operator پر واپس جائیں",
+		"mobile.projects.create.description": "تفصیل",
+		"mobile.projects.create.description_placeholder": "یہ پروجیکٹ کس لیے ہے",
+		"mobile.projects.create.name": "نام",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "حیثیت",
+		"mobile.projects.create.submit": "بنائیں",
+		"mobile.projects.create.tags": "ٹیگز",
+		"mobile.projects.create.tags_help": "کوما یا اسپیس سے الگ کریں۔",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "نیا پروجیکٹ",
 		"mobile.projects.delete_body": "کیا پروجیکٹ “{name}” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔",
 		"mobile.projects.draft_kept_note": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
 		"mobile.projects.milestone_slash_note": "سنگ میل کے نام میں سلیش نہیں ہو سکتا۔ ایسا سنگ میل بعد میں کبھی ہٹایا نہیں جا سکے گا۔",
@@ -4411,6 +4574,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, one {# سیشن} other {# سیشنز}}",
 		"mobile.projects.sessions.live": "{base} · {live} فعال",
 		"mobile.projects.stale_badge": "پیش رفت پرانی",
+		"mobile.projects.status.active": "فعال",
+		"mobile.projects.status.archived": "آرکائیو شدہ",
+		"mobile.projects.status.done": "مکمل",
+		"mobile.projects.status.paused": "موقوف",
+		"mobile.projects.status.planning": "منصوبہ بندی",
+		"mobile.projects.status.qa": "معیار کی جانچ",
+		"mobile.projects.status.validation": "توثیق",
 		"mobile.projects.write_receipt": "{kind, select, project {پروجیکٹ “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} milestone {سنگ میل “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} other {“{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔}}",
 		"mobile.projects.write_unknown_note": "ہم آپ کے کمپیوٹر تک نہیں پہنچ سکے، اس لیے نہیں بتا سکتے کہ یہ محفوظ ہوا یا نہیں۔ دوبارہ کوشش کرنے سے پہلے پروجیکٹ دیکھ لیں۔",
 		"mobile.schedules.cadence.every": "ہر {duration}",
@@ -4864,6 +5034,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "Yêu cầu đăng nhập này không được chấp nhận.",
 		"mobile.oauth.received": "Đã nhận phản hồi đăng nhập. Hãy quay lại ứng dụng.",
 		"mobile.oauth.return": "Quay lại Local Operator",
+		"mobile.projects.create.description": "Mô tả",
+		"mobile.projects.create.description_placeholder": "Mục đích của dự án này",
+		"mobile.projects.create.name": "Tên",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "Trạng thái",
+		"mobile.projects.create.submit": "Tạo",
+		"mobile.projects.create.tags": "Thẻ",
+		"mobile.projects.create.tags_help": "Phân cách bằng dấu phẩy hoặc dấu cách.",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "Dự án mới",
 		"mobile.projects.delete_body": "Xóa {name}? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.",
 		"mobile.projects.draft_kept_note": "Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.",
 		"mobile.projects.milestone_slash_note": "Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.",
@@ -4877,6 +5057,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, other {# phiên}}",
 		"mobile.projects.sessions.live": "{base} · {live} đang chạy",
 		"mobile.projects.stale_badge": "tiến độ cũ",
+		"mobile.projects.status.active": "đang thực hiện",
+		"mobile.projects.status.archived": "đã lưu trữ",
+		"mobile.projects.status.done": "hoàn thành",
+		"mobile.projects.status.paused": "tạm dừng",
+		"mobile.projects.status.planning": "lập kế hoạch",
+		"mobile.projects.status.qa": "QA",
+		"mobile.projects.status.validation": "xác thực",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.} milestone {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} mốc {subject}.} other {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.}}",
 		"mobile.projects.write_unknown_note": "Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại.",
 		"mobile.schedules.cadence.every": "mỗi {duration}",
@@ -5330,6 +5517,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.invalid": "未接受此登录请求。",
 		"mobile.oauth.received": "已收到登录响应。请返回应用。",
 		"mobile.oauth.return": "返回 Local Operator",
+		"mobile.projects.create.description": "描述",
+		"mobile.projects.create.description_placeholder": "此项目的用途",
+		"mobile.projects.create.name": "名称",
+		"mobile.projects.create.name_placeholder": "my-project",
+		"mobile.projects.create.status": "状态",
+		"mobile.projects.create.submit": "创建",
+		"mobile.projects.create.tags": "标签",
+		"mobile.projects.create.tags_help": "用逗号或空格分隔。",
+		"mobile.projects.create.tags_placeholder": "ios, q4",
+		"mobile.projects.create.title": "新建项目",
 		"mobile.projects.delete_body": "删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。",
 		"mobile.projects.draft_kept_note": "已保留上次填写的内容。清空各字段即可重新开始。",
 		"mobile.projects.milestone_slash_note": "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。",
@@ -5343,6 +5540,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.sessions.count": "{count, plural, other {# 个会话}}",
 		"mobile.projects.sessions.live": "{base} · {live}个进行中",
 		"mobile.projects.stale_badge": "进度已过期",
+		"mobile.projects.status.active": "进行中",
+		"mobile.projects.status.archived": "已归档",
+		"mobile.projects.status.done": "已完成",
+		"mobile.projects.status.paused": "已暂停",
+		"mobile.projects.status.planning": "规划中",
+		"mobile.projects.status.qa": "质量测试",
+		"mobile.projects.status.validation": "验证中",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}项目“{subject}”。} milestone {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}里程碑“{subject}”。} other {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}“{subject}”。}}",
 		"mobile.projects.write_unknown_note": "无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。",
 		"mobile.schedules.cadence.every": "每{duration}",
