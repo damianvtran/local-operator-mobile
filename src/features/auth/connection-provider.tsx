@@ -66,6 +66,7 @@ import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
+import { agentAvatarCache } from "@/features/agent-avatar/agent-avatar";
 import {
 	clearStoredCredentials,
 	clearStoredOauth,
@@ -458,6 +459,7 @@ export const ConnectionProvider = ({
 			radientAccessRef.current?.replace(null);
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
+			agentAvatarCache.clear();
 			streamRef.current?.stop();
 			configRef.current?.stop();
 			clientRef.current = null;
@@ -501,8 +503,9 @@ export const ConnectionProvider = ({
 	 *  `afterCleanup` is for the credential that is genuinely dead (an expired
 	 *  grant), never for private content. */
 	const revokeAuthorization = useCallback(
-		(afterRevoke?: () => Promise<void>): Promise<boolean> =>
-			startupAuthorizationLifecycle.revoke(afterRevoke).then(
+		(afterRevoke?: () => Promise<void>): Promise<boolean> => {
+			agentAvatarCache.clear();
+			return startupAuthorizationLifecycle.revoke(afterRevoke).then(
 				() => true,
 				() => {
 					if (mountedRef.current) {
@@ -513,7 +516,8 @@ export const ConnectionProvider = ({
 					}
 					return false;
 				},
-			),
+			);
+		},
 		[],
 	);
 
@@ -543,19 +547,23 @@ export const ConnectionProvider = ({
 		(
 			preserveUnscoped = false,
 			afterCleanup?: () => Promise<void>,
-		): Promise<boolean> =>
-			startupAuthorizationLifecycle.retire(preserveUnscoped, afterCleanup).then(
-				() => true,
-				() => {
-					if (mountedRef.current) {
-						setBusy(false);
-						connectionStore
-							.getState()
-							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
-					}
-					return false;
-				},
-			),
+		): Promise<boolean> => {
+			agentAvatarCache.clear();
+			return startupAuthorizationLifecycle
+				.retire(preserveUnscoped, afterCleanup)
+				.then(
+					() => true,
+					() => {
+						if (mountedRef.current) {
+							setBusy(false);
+							connectionStore
+								.getState()
+								.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+						}
+						return false;
+					},
+				);
+		},
 		[],
 	);
 
@@ -751,6 +759,9 @@ export const ConnectionProvider = ({
 	 * is useful for loading/refusal UI, but must not carry protected requests. */
 	const beginRoute = useCallback(
 		(route: RouteProfile): StartupRouteAdmission => {
+			// Route changes include account/computer switches. Retire image bytes
+			// before the next credential can address the same agent id and hash.
+			agentAvatarCache.clear();
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;

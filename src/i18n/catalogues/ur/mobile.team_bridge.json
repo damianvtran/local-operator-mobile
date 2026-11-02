@@ -84,5 +84,12 @@
 	"mobile.team_bridge.thread.send_error": "آپ کے پیغام کی تصدیق نہیں ہوئی۔ مسودہ یہاں محفوظ ہے۔ دوبارہ کوشش کرنے سے وہی پیغام محفوظ طریقے سے بھیجا جائے گا۔",
 	"mobile.team_bridge.thread.send_retry": "دوبارہ بھیجیں",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# نا پڑھا گیا پیغام} other {# نا پڑھے گئے پیغامات}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# نا پڑھا گیا پیغام} other {# نا پڑھے گئے پیغامات}}",
+	"mobile.team_bridge.error.http_status": "Radient نے درخواست مسترد کر دی (HTTP {status})۔",
+	"mobile.team_bridge.delivery.recipient": "ایجنٹ",
+	"mobile.team_bridge.delivery.held": "{recipient}: ترسیل کا انتظار ہے۔",
+	"mobile.team_bridge.delivery.refused": "{recipient}: پہنچایا نہیں گیا۔{category, select, manipulation { (جوڑ توڑ)} personal_info { (ذاتی معلومات)} abusive { (توہین آمیز مواد)} unsafe_content { (غیر محفوظ مواد)} out_of_scope { (دائرۂ کار سے باہر)} other {}}",
+	"mobile.team_bridge.delivery.help": "ہر وصول کنندہ کا ایجنٹ پیغامات قبول کرنے سے پہلے انہیں جانچتا ہے۔ اگر کوئی پیغام قبول نہ ہو تو آپ اسے دوسرے الفاظ میں لکھ کر نیا پیغام بھیج سکتے ہیں۔",
+	"mobile.team_bridge.delivery.help_action": "پیغامات کی ترسیل کے بارے میں",
+	"mobile.team_bridge.delivery.help_title": "پیغامات کی ترسیل"
 }

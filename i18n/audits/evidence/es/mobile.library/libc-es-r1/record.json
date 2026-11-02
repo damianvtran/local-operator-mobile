@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "audit_id": "libc-es-r1",
+ "locale": "es",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 31,
+ "value_count": 31,
+ "kind": "initial independent audit (library extraction wave, Audit C)",
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "base_commit": "4fd4ad7c (plus uncommitted extraction and translations; read-only for this auditor)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "e89500535af7",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header ('Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "es (native-fluent reader; no MT or translation service used, no back-translation tool)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/es/mobile.library.json",
+   "sha256": "b8548f22e7bdc8a38922ed08296d07822d10a5a1b8069d4cefcc531ac1f0c67d"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc"
+  }
+ },
+ "file_unchanged_during_audit": "audit.log hashes the target at the start and again as its last command; both equal input_hashes.target.sha256",
+ "call_sites_read": [
+  "src/features/library/library-detail.tsx (editor sheet 815-910, Dialog 914-929, detail 238-370)",
+  "src/features/library/library-screen.tsx (chips 280-310, sheets 435-640)",
+  "src/ui/components/dialog.tsx (Cancel = t(\"mobile.common.cancel\"), confirmLabel prop, danger variant)"
+ ],
+ "ledger_command": "none exists in this repo (no 'ledger' in docs/i18n.md, package.json scripts or scripts/i18n); status is recorded here in current_report_verdict only. Nothing was written to any ledger file.",
+ "findings": [
+  {
+   "id": "libc-es-r1-1",
+   "severity": "MINOR",
+   "key": "mobile.library.browse.no_tags",
+   "current": "Aún no hay etiquetas. El bibliotecario las añade al organizar los recursos.",
+   "replacement": "Aún no hay etiquetas. El Bibliotecario las añade al organizar los recursos.",
+   "why": "The sidecar says to keep \"The Librarian\" a proper noun; core es capitalises it everywhere (wire.settings.librarian.title «Bibliotecario», wire.errors.desktop.librarian_* «el Bibliotecario», wire.slash.library.librarian_help). Lower-case here reads as a generic librarian. Borderline: meaning is intact, so MINOR; promote to MAJOR if the programme treats the sidecar instruction as binding.",
+   "verified": "core es grep (bounded, read-only) + before/after render in audit.log"
+  },
+  {
+   "id": "libc-es-r1-2",
+   "severity": "MINOR",
+   "key": "mobile.library.action.open_chat",
+   "current": "Abrir chat",
+   "replacement": "Abrir conversación",
+   "why": "The same screen calls the conversation «conversación de origen» (detail.no_source) and the es catalogue uses «conversación» ~200x in core and in mobile (session.conversation_details «Detalles de la conversación»); «chat» appears once in mobile (schedules.empty.body «en el chat») and 3x in core. English also splits \"chat\"/\"conversation\", so «Abrir chat» mirrors the source and is understandable; the replacement removes the split. Width 18 chars vs 10: fits the wrap-row button.",
+   "verified": "core + mobile es grep; before/after render in audit.log"
+  }
+ ],
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only. Reads of call sites and sibling catalogues (sed/grep/python) are not replayed in audit.log. Out-of-catalogue observation, not a finding on this file: library-screen.tsx:300 still builds the Sort chip as the English literal `Sort: ${...}` (and \"Recently seen\"), and library-detail.tsx has English literals \"Back to the library\", \"Favorite(d)\", \"A conversation\", \"Clear filters\" - no key exists for them, so this bundle cannot judge them.",
+ "execution_note": "the first foreground attempt of run.sh timed out (node startup under load); the five audit.log files are the complete reruns, each with 8 commands all exit 0.",
+ "artifacts": {
+  "audit.log": {
+   "path": "i18n/audits/evidence/es/mobile.library/libc-es-r1/audit.log",
+   "sha256": "b9a404e26c69b9a1f0c3b59b60a9d7f9baad8610a72d3500020b8d3002e210fc"
+  },
+  "tools_sha256": {
+   "checks.py": "32ccf5277c5ec848f19d3a202db68b15efbf679f2130a19b18bd7e1ab43220b5",
+   "es.repl.json": "f2fc8816380a736ef144a3268c365aa3d4fbea20ec93731d16d96be01baf34f2",
+   "render.ts": "b6c0152dd00a2202c7af90249aa9d31c8c4de9bb6f344941536717e9613096fb",
+   "run.sh": "f255781e0ae2ac6471fbb1c9b2a299ef71c23af028ec1e3c24c2d1a5c849bff2"
+  },
+  "report.md": "report.md (hash omitted: it quotes this record)"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "libc-es-r1-1",
+   "libc-es-r1-2"
+  ]
+ }
+}

@@ -84,5 +84,12 @@
 	"mobile.team_bridge.thread.send_error": "消息尚未确认，草稿已保存在此处。重试会安全地重新发送同一条消息。",
 	"mobile.team_bridge.thread.send_retry": "重试发送",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}"
+	"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}",
+	"mobile.team_bridge.error.http_status": "Radient 拒绝了该请求（HTTP {status}）。",
+	"mobile.team_bridge.delivery.recipient": "智能体",
+	"mobile.team_bridge.delivery.held": "{recipient}：等待送达。",
+	"mobile.team_bridge.delivery.refused": "{recipient}：未送达。{category, select, manipulation { (操纵)} personal_info { (个人信息)} abusive { (辱骂内容)} unsafe_content { (不安全内容)} out_of_scope { (超出范围)} other {}}",
+	"mobile.team_bridge.delivery.help": "每位收件人的智能体都会在接受消息前进行检查。如果消息未被接受，您可以重新措辞并发送一条新消息。",
+	"mobile.team_bridge.delivery.help_action": "关于消息送达",
+	"mobile.team_bridge.delivery.help_title": "消息送达"
 }

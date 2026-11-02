@@ -366,7 +366,10 @@ export const ConversationsPane = ({
 	 *  row — the only thing that tells `ended` from `populated` — was entirely
 	 *  below the fold (`S15` refused the capture on 2026-10-27). The number of
 	 *  destinations comes from the relay's own flags, so an older relay with fewer
-	 *  routes keeps the pinned footer it has always had (R7-01). */
+	 *  routes keeps the pinned footer it has always had (R7-01). The richer rail
+	 *  can also exhaust a short pane at ordinary text sizes: its caption and
+	 *  connection status do not disappear when largeText is false. The shared
+	 *  policy therefore spends this same route budget before the first paint. */
 	const pinnedRoutes =
 		/* Team Bridge's entry is pinned in the same footer and is always shown
 		 *  (a hub destination, not a relay capability), so it counts as a route

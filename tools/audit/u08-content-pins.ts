@@ -126,8 +126,20 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * browser run can render a non-English catalogue at all. Those are exactly the files
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
+	/* Reviewed selected-response helper in both render drivers’ relay import
+	 * closure. Test cleanup code is not an instrument and is not pinned. */
+	/* Actual standard --print over the complete intent-listed candidate: quiet
+	 * delivery/help/schema and all-eight-locale generated keys move src; native
+	 * formatting moves these two mock instrument bytes. Historical ORIGINAL
+	 * declarations remain unchanged. This identity is not rendered QA evidence. */
+	/* QA delta: fresh mutable barrier-state guard, preserved cancellation fence,
+	 * native-icon SSR adapter and synchronous account/route help identity.
+	 * Import organization also changes instrument bytes. Values below come from
+	 * actual standard --print; tests/pixels and historical declarations are distinct. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/relay.ts":
-		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
+		"4c031deb02229da44dc55b0d03be9b17614953fc9e643c7bc57e1c2fdbd2ffe8",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -410,7 +422,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
 	 * messages, their projection and regressions only. Component/auth bytes
 	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
-	src: "ba305e512d09314b3ee9aebf5f48796543dcd91b0470c0f2c9953b7b0e2b9813",
+	/* Re-pinned 2026-10-31 for incoming Bridge grouping (#146), deliberately:
+	 * optional wire/parser facts, positive receipt classification and material
+	 * ownership move src. The exact 520-row long-transcript U-08 scene parses
+	 * and produces identical condense/group plans against b51f098a in collapsed,
+	 * first-expanded and all-expanded states (SHA256 93b57ecb3c0caf8b...). This
+	 * is source-plan equivalence, not a new rendered/native proof. --print finds
+	 * only this current render-tree identity changed; instrument/input pins and
+	 * historical ORIGINAL_* incident identities are not altered. */
+	/* DIRTY convergence with main239cada4 (#145 Library i18n): recomputed
+	 * with --print over the combined tree, not either side's isolated digest.
+	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
+	 * identical plans in the three states above (same SHA256); Library labels
+	 * do not enter that measured scene. All other pin tables stay unchanged. */
+	/* Source-only union with main e56ce71 (relay picture privacy). Both the
+	 * relay cache retirement and Radient/device-retirement seams are retained.
+	 * Derived across all 613 indexed src members, not either parent SHA.
+	 * Instrument/input and historical incident identities are unchanged; this
+	 * records source admission, not fresh auth, rendered or native evidence. */
+	/* #147 union retains explicit fixture-only native retirement proof plus
+	 * current #105 shared source. Re-derived with the normal CLI over the
+	 * actual indexed union; this is identity closure, not native execution. */
+	src: "0e47bb6aa154336145c05d39201d8bfdd4b613c52c2f03057035241bbb0d182f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

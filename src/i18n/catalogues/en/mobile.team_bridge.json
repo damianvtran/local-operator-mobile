@@ -84,5 +84,12 @@
 	"mobile.team_bridge.thread.send_error": "Your message was not confirmed. Your draft is saved here. Retry sends the same message safely.",
 	"mobile.team_bridge.thread.send_retry": "Retry send",
 	"mobile.team_bridge.title": "Team Bridge",
-	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}"
+	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}",
+	"mobile.team_bridge.error.http_status": "Radient refused the request (HTTP {status}).",
+	"mobile.team_bridge.delivery.recipient": "Agent",
+	"mobile.team_bridge.delivery.held": "{recipient}: Waiting for delivery.",
+	"mobile.team_bridge.delivery.refused": "{recipient}: Not delivered.{category, select, manipulation { (Manipulation)} personal_info { (Personal information)} abusive { (Abusive content)} unsafe_content { (Unsafe content)} out_of_scope { (Out of scope)} other {}}",
+	"mobile.team_bridge.delivery.help": "Each recipient’s agent checks messages before accepting them. If a message is not accepted, you can rephrase it and send a new message.",
+	"mobile.team_bridge.delivery.help_action": "About message delivery",
+	"mobile.team_bridge.delivery.help_title": "Message delivery"
 }

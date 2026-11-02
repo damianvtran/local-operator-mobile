@@ -75,6 +75,7 @@ import {
 	libraryUpdateState,
 } from "@/features/library/library-updates";
 import { useLibraryList } from "@/features/library/use-library-list";
+import { t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
 import {
 	CONTROL,
@@ -215,12 +216,12 @@ export default function Library() {
 
 	return (
 		<Screen
-			title="Library"
+			title={t("mobile.library.title")}
 			testID={SCREEN.library}
 			headerLeading={
 				<Button
 					testID={CONTROL.libraryBack}
-					label="Back"
+					label={t("mobile.common.back")}
 					onPress={() => router.back()}
 					variant="quiet"
 					size="sm"
@@ -228,7 +229,7 @@ export default function Library() {
 			}
 			headerAction={
 				<IconButton
-					accessibilityLabel="Refresh library"
+					accessibilityLabel={t("mobile.library.browse.refresh")}
 					testID={CONTROL.libraryRetry}
 					onPress={() => list.refresh()}
 					icon={({ color, size }) => <RefreshCw color={color} size={size} />}
@@ -246,16 +247,16 @@ export default function Library() {
 					<View className="gap-2 pb-2">
 						<Input
 							testID={CONTROL.librarySearchField}
-							label="Search the library"
+							label={t("mobile.library.browse.search_label")}
 							value={browse.query}
 							onChangeText={(query) =>
 								setBrowse((current) => ({ ...current, query }))
 							}
-							placeholder="Name, tag or words"
+							placeholder={t("mobile.library.browse.search_placeholder")}
 							returnKeyType="search"
 						/>
 						<Segmented
-							label="Filter by kind"
+							label={t("mobile.library.browse.filter_by_kind")}
 							options={segments}
 							value={browse.segment}
 							onChange={changeSegment}
@@ -284,7 +285,13 @@ export default function Library() {
 						</ScrollView>
 						<View className="flex-row flex-wrap items-center gap-2">
 							<Chip
-								label={filterCount > 0 ? `Filters · ${filterCount}` : "Filters"}
+								label={
+									filterCount > 0
+										? t("mobile.library.browse.filters_count", {
+												count: filterCount,
+											})
+										: t("mobile.library.browse.filters")
+								}
 								onPress={() => setFiltersOpen(true)}
 								selected={filterCount > 0}
 								testID={CONTROL.libraryFilters}
@@ -334,7 +341,7 @@ export default function Library() {
 								{list.error}
 							</Alert>
 							<Button
-								label="Try again"
+								label={t("mobile.common.try_again")}
 								onPress={() => list.retry()}
 								variant="outline"
 								testID={CONTROL.libraryRetry}
@@ -425,11 +432,11 @@ export default function Library() {
 			<Sheet
 				visible={moreOpen}
 				onClose={() => setMoreOpen(false)}
-				title="More kinds"
+				title={t("mobile.library.browse.more_kinds")}
 				testID={SURFACE.libraryMoreSheet}
 				footer={
 					<Button
-						label="Done"
+						label={t("mobile.common.done")}
 						onPress={() => setMoreOpen(false)}
 						testID={CONTROL.libraryMoreDone}
 					/>
@@ -536,11 +543,11 @@ function FilterSheet({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
-			title="Filters"
+			title={t("mobile.library.browse.filters")}
 			testID={SURFACE.libraryFilterSheet}
 			footer={
 				<Button
-					label="Done"
+					label={t("mobile.common.done")}
 					onPress={onClose}
 					testID={CONTROL.libraryFiltersDone}
 				/>
@@ -548,7 +555,9 @@ function FilterSheet({
 		>
 			<View className="gap-4">
 				<View className="gap-2">
-					<Text className="text-body-sm text-ink-muted">Status</Text>
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.library.browse.status")}
+					</Text>
 					<View className="flex-row flex-wrap gap-2">
 						{LIBRARY_STATUSES.map((option) => (
 							<Chip
@@ -562,15 +571,17 @@ function FilterSheet({
 					</View>
 				</View>
 				<View className="gap-2">
-					<Text className="text-body-sm text-ink-muted">Tag</Text>
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.library.browse.tag")}
+					</Text>
 					{tags.length === 0 ? (
 						<Text className="text-body-sm text-ink-dim">
-							No tags yet. The Librarian adds them as it organizes assets.
+							{t("mobile.library.browse.no_tags")}
 						</Text>
 					) : (
 						<View className="flex-row flex-wrap gap-2">
 							<Chip
-								label="Any tag"
+								label={t("mobile.library.browse.any_tag")}
 								selected={tag === null}
 								onPress={() => onTag(null)}
 								testID={CONTROL.libraryFilterTagAny}
@@ -607,11 +618,11 @@ function SortSheet({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
-			title="Sort"
+			title={t("mobile.library.browse.sort")}
 			testID={SURFACE.librarySortSheet}
 			footer={
 				<Button
-					label="Done"
+					label={t("mobile.common.done")}
 					onPress={onClose}
 					testID={CONTROL.librarySortDone}
 				/>
