@@ -1,0 +1,69 @@
+{
+  "timestamp_utc": "2026-11-02T01:04:41.112468+00:00",
+  "marker_scan": {
+    "pattern": "(?i)\\[redacted[^\\]]*\\]|<redacted[^>]*>|\\*\\*\\*redacted\\*\\*\\*",
+    "worktree_and_both_commits": {
+      "src/i18n/catalogues/en/mobile.projects.json": 0,
+      "src/i18n/catalogues/ur/mobile.projects.json": 0,
+      "src/i18n/catalogues/en/mobile.projects.context.json": 0
+    }
+  },
+  "context": "Reused previously scanned, directly read context; same SHA-256 at both commits and checkout.",
+  "public_copy_receipts": [
+    {
+      "tool_call_id": "call_652cdad516ec48ff8438a785ac00a602:73e2831c841844a38283351f08a7ee07",
+      "tool_name": "read_public_copy",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.archived\": \"archived\"\n}"
+        }
+      ],
+      "details": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.archived",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "5924c0b7ec528c0930c5f787fdd560b534a864b8ac1c5221dbba1030ae205644",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "543111e908ea9a5657236e5ded084810d235775e",
+        "checkout_head": "543111e908ea9a5657236e5ded084810d235775e"
+      },
+      "duration_s": 0.7151967499958118,
+      "is_error": false,
+      "useless": false
+    },
+    {
+      "tool_call_id": "call_652cdad516ec48ff8438a785ac00a602:1cd9e7062ae44b75bb0763fdc4d101c3",
+      "tool_name": "read_public_copy",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.archived\": \"آرکائیو شدہ\"\n}"
+        }
+      ],
+      "details": {
+        "path": "src/i18n/catalogues/ur/mobile.projects.json",
+        "key": "mobile.projects.status.archived",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "56aa7a88d54ac1c273e563395c9fd0bf1336257efa3b9e1701056a9a293c7a40",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "543111e908ea9a5657236e5ded084810d235775e",
+        "checkout_head": "543111e908ea9a5657236e5ded084810d235775e"
+      },
+      "duration_s": 0.8546789579995675,
+      "is_error": false,
+      "useless": false
+    }
+  ],
+  "changed_keys": [
+    "mobile.projects.status.archived"
+  ]
+}

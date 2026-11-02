@@ -1,0 +1,670 @@
+{
+  "schema": 1,
+  "audit_id": "fr-create-b26665b40e",
+  "audit_kind": "independent_translation_delta",
+  "locale": "fr",
+  "namespace": "mobile.projects",
+  "auditor": {
+    "identity": "translation-auditor",
+    "model": "openai/gpt-6.1-terra",
+    "session": "043e21550a18"
+  },
+  "translator": {
+    "identity": "translator (delegation brief)",
+    "model": "openai/gpt-6.1-terra",
+    "job": "0ce612caa381"
+  },
+  "audited_revision": "194558899182dedf18198eb9db9876131fa190a5",
+  "worktree_note": "French catalogue uncommitted; hashes pin worktree bytes, not HEAD. Audit independently derived from git diff after keyed route refusal.",
+  "keys": [
+    "mobile.projects.create.description",
+    "mobile.projects.create.description_placeholder",
+    "mobile.projects.create.name",
+    "mobile.projects.create.name_placeholder",
+    "mobile.projects.create.status",
+    "mobile.projects.create.submit",
+    "mobile.projects.create.tags",
+    "mobile.projects.create.tags_help",
+    "mobile.projects.create.tags_placeholder",
+    "mobile.projects.create.title",
+    "mobile.projects.status.active",
+    "mobile.projects.status.archived",
+    "mobile.projects.status.done",
+    "mobile.projects.status.paused",
+    "mobile.projects.status.planning",
+    "mobile.projects.status.qa",
+    "mobile.projects.status.validation"
+  ],
+  "files_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/i18n/catalogues/fr/mobile.projects.json": "bd12b356d5cc17fd690c2a26fba7cdf6e0fae881d24cace65323d7fc1066aab7",
+    "src/features/projects/project-create.tsx": "a0b45434e9d06fb343f88ad05649e0c8a7d8e6e018e5fac27bbfadee5deaa8f6"
+  },
+  "guide_sha256": {
+    "fr.md": "ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226",
+    "glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "routes": [
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.description",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "1ddce66c66c67c6a0be7ff11e3913b1648d5bf2a86c59e20d514a77716c06fb5",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.description\": \"Description\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description_placeholder",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.description_placeholder",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "27265e1eb644618f16aeffa7d857c02e2f281726cf2cee5670a2959a9dd3eeea",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.description_placeholder\": \"What this project is for\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.name",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "1a55e310db4db6b6da3c76134ec40feadd9a0e434413fcbfab739d7f4ad49b4b",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.name\": \"Name\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name_placeholder",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.name_placeholder",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.name_placeholder\": \"my-project\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.status",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.status",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "de7a795b39d5f6f65cc51c12bbc9d79fcb25e0d4a18f859b84f0bbecb8e30f24",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.status\": \"Status\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.submit",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.submit",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "022a3e1ec0037f3aef10e70df0f31737de70dd02a036121f0d6982c80415fdfd",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.submit\": \"Create\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.tags",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "f2b9c80059e84d2bf75327fe13df61e389a8f534bb5f6fb9fc062a4d12e51c9e",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.tags\": \"Tags\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_help",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.tags_help",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "296753671d0c859ed5157d58f1a7c6ea8b061f922e4e78026c17371da1ed04f2",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.tags_help\": \"Separate with commas or spaces.\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_placeholder",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.tags_placeholder",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.tags_placeholder\": \"ios, q4\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.title",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.create.title",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "ec06af38551e30e24abf519b0001d579b7a9c72fe9ccb944fbc4c62e6c6cb46c",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.create.title\": \"New project\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.active",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.active",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "db0262692454347b63b58ab695bcd0320fb427e484e04bfa3baa0e9bcac0b7a6",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.active\": \"active\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.archived",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.archived",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "5924c0b7ec528c0930c5f787fdd560b534a864b8ac1c5221dbba1030ae205644",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.archived\": \"archived\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.done",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.done",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "0df884ec5d4061010e8993117f1906f02ec4185864ccab21bda8e4d8f70ef051",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.done\": \"done\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.paused",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.paused",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "e8f3ff1151104ca4fc0e6f81854784aee9fc51d04b13e12cfe2ed040ffddb022",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.paused\": \"paused\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.planning",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.planning",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "698a3e8e48e342d33b3cdddad0c7eaa4f39a3dcbb028f1cd0f46b002959a6d54",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.planning\": \"planning\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.qa",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.qa",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "1f0ab64c03052caa97eb8f32682f49b73ad50f45e25c5cc2a5712ab2e399df3f",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.qa\": \"qa\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.validation",
+      "success": true,
+      "receipt": {
+        "path": "src/i18n/catalogues/en/mobile.projects.json",
+        "key": "mobile.projects.status.validation",
+        "public_copy": true,
+        "policy": "docs/security/redaction-policy.md",
+        "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+        "sha256": "481a844fb8db41faba4931d85e93f04756b9c82bebbd2fba0d841721cbf12e34",
+        "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+        "repository": "damianvtran/local-operator-mobile",
+        "repository_verified": true,
+        "commit": "194558899182dedf18198eb9db9876131fa190a5",
+        "checkout_head": "194558899182dedf18198eb9db9876131fa190a5"
+      },
+      "result": [
+        {
+          "type": "text",
+          "text": "{\n \"mobile.projects.status.validation\": \"validation\"\n}"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.description",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.description_placeholder",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.name",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.name_placeholder",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.status",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.submit",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.tags",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.tags_help",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.tags_placeholder",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.create.title",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.active",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.archived",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.done",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.paused",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.planning",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.qa",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    },
+    {
+      "locale": "fr",
+      "key": "mobile.projects.status.validation",
+      "success": false,
+      "receipt": null,
+      "result": [
+        {
+          "type": "text",
+          "text": "refused: src/i18n/catalogues/fr/mobile.projects.json differs from HEAD; commit the public copy before auditing it"
+        }
+      ]
+    }
+  ],
+  "context_route": "direct file read after marker check, not keyed",
+  "french_route": "17 keyed requests refused because worktree differs from HEAD; reviewed already displayed git diff, not a successful keyed route",
+  "limitations": [
+    "No Node, tests, browser, install, native rendering, or native-speaker validation",
+    "Widths are Unicode code point counts, not measured pixels"
+  ],
+  "verdict": "clean with width follow-up; no blockers or majors",
+  "public_path_normalization": "Local home-directory prefixes in captured receipt paths were replaced with ~/ for public portability; receipt content and audit conclusions are otherwise unchanged."
+}
