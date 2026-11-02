@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { parsePayload } from "@/contracts";
 import {
@@ -109,9 +109,9 @@ describe("createAvatarCache: one fetch per digest", () => {
 		await expect(cache.get(ref(), load)).resolves.toBe(
 			"data:image/png;base64,AAAA",
 		);
-		/* Two agents sharing one picture share its bytes: the key is the digest. */
+		/* Content identity does not grant another agent permission to reuse it. */
 		await cache.get(ref(SHA_A, "other-agent"), load);
-		expect(calls).toBe(1);
+		expect(calls).toBe(2);
 		expect(cache.peek(ref())).toBe("data:image/png;base64,AAAA");
 	});
 
@@ -194,7 +194,7 @@ const createCacheWith = async (
 	const cache = createAvatarCache();
 	for (const entry of entries) {
 		await cache
-			.get({ agentId: "agent", sha256: entry.key }, async () => {
+			.get({ agentId: "researcher", sha256: entry.key }, async () => {
 				if (entry.value === null) throw relayMissing();
 				return entry.value;
 			})
@@ -314,8 +314,7 @@ const STACKED_TITLE_PICTURE =
 	/stackedTitleLeading=\{headerStacked \? agentAvatar : undefined\}/;
 const INLINE_ONLY_PICTURE = /\{headerStacked \? null : agentAvatar\}/;
 /* R1: a ref change repaints from the cache rather than keeping the old URI. */
-const RESET_ON_REF_CHANGE =
-	/useState<string \| null>\(\(\) =>\s*paintedPicture\(avatarCache, ref\),?\s*\)[\s\S]*setUri\(paintedPicture\(avatarCache, key\)\)/;
+const RESET_ON_REF_CHANGE = /return paintedPicture\(avatarCache, ref\);/;
 /* R2/D4: a mixed list reserves the picture's width on the rows without one. */
 const RESERVE_WIRED =
 	/leadingSlotPt=\{reserveLeading \? ROW_AVATAR_PT : undefined\}/;
@@ -458,5 +457,116 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 	it("the badge's danger dot never dims under 3:1 (D3)", () => {
 		expect(ROW).toMatch(BADGE_PULSE);
 		expect(ROW).toMatch(PULSE_USES_FLOOR);
+	});
+});
+
+describe("account-scoped bounded pictures", () => {
+	it("evicts by retained URI bytes, even below the entry limit", async () => {
+		const cache = createAvatarCache(48, 4, 12);
+		await cache.get(ref(SHA_A), async () => "AAAA");
+		await cache.get(ref(SHA_B), async () => "BBBB");
+		expect(cache.peek(ref(SHA_A))).toBeUndefined();
+		expect(cache.peek(ref(SHA_B))).toBe("BBBB");
+		expect(cache.bytes()).toBe(8);
+	});
+	it("does not repeatedly load a picture too large to retain", async () => {
+		const cache = createAvatarCache(48, 4, 4);
+		const load = vi.fn(async () => "too large");
+		await expect(cache.get(ref(), load)).resolves.toBeNull();
+		await expect(cache.get(ref(), load)).resolves.toBeNull();
+		expect(load).toHaveBeenCalledTimes(1);
+		expect(cache.bytes()).toBe(0);
+	});
+	it.each([401, 403])(
+		"remembers refusal %s for this agent/hash only",
+		async (status) => {
+			const cache = createAvatarCache();
+			const load = vi.fn(async () => {
+				throw new RelayError("transport", "refused", { status });
+			});
+			await expect(cache.get(ref(), load)).resolves.toBeNull();
+			await expect(cache.get(ref(), load)).resolves.toBeNull();
+			expect(load).toHaveBeenCalledTimes(1);
+			await expect(
+				cache.get(ref(SHA_A, "other"), async () => "allowed"),
+			).resolves.toBe("allowed");
+			await expect(
+				cache.get(ref(SHA_B), async () => "new picture"),
+			).resolves.toBe("new picture");
+		},
+	);
+	it("sign-out/account clear drops settled bytes and negatives and fences late replies", async () => {
+		const cache = createAvatarCache();
+		await cache.get(ref(), async () => "old account");
+		await cache.get(ref(SHA_B), async () => {
+			throw relayMissing();
+		});
+		let finish!: (value: string) => void;
+		const pending = cache.get(
+			ref(SHA_A, "late"),
+			() =>
+				new Promise<string>((resolve) => {
+					finish = resolve;
+				}),
+		);
+		const notified = vi.fn();
+		const unsubscribe = cache.subscribe(notified);
+		cache.clear();
+		expect(cache.revision()).toBe(1);
+		expect(notified).toHaveBeenCalledTimes(1);
+		expect(cache.size()).toBe(0);
+		expect(cache.bytes()).toBe(0);
+		expect(cache.peek(ref())).toBeUndefined();
+		expect(cache.peek(ref(SHA_B))).toBeUndefined();
+		finish("private late reply");
+		await expect(pending).resolves.toBeNull();
+		expect(cache.size()).toBe(0);
+		await expect(cache.get(ref(), async () => "new account")).resolves.toBe(
+			"new account",
+		);
+		unsubscribe();
+	});
+	it("does not dispatch old queued requests after account clear", async () => {
+		const cache = createAvatarCache(48, 1);
+		let finish!: (value: string) => void;
+		const pending = cache.get(
+			ref(),
+			() =>
+				new Promise<string>((resolve) => {
+					finish = resolve;
+				}),
+		);
+		const queued = vi.fn(async () => "old queue");
+		const second = cache.get(ref(SHA_B), queued);
+		cache.clear();
+		finish("old account");
+		await Promise.all([pending, second]);
+		expect(queued).not.toHaveBeenCalled();
+		expect(cache.size()).toBe(0);
+	});
+});
+
+const CLEAR_ROUTE =
+	/const beginRoute[\s\S]*?agentAvatarCache.clear\(\);[\s\S]*?startupAuthorizationLifecycle.suspend\(\)/;
+const SIGNOUT_RETIRES =
+	/const signOut = useCallback[\s\S]*?retireAuthorization\(false/;
+const CLEAR_RETIREMENT =
+	/const retireAuthorization = useCallback[\s\S]*?agentAvatarCache.clear\(\);[\s\S]*?startupAuthorizationLifecycle/;
+const CLEAR_REFUSAL =
+	/const revokeAuthorization = useCallback[\s\S]*?agentAvatarCache.clear\(\);[\s\S]*?startupAuthorizationLifecycle.revoke/;
+
+// The pure cache owns invalidation mechanics; the provider must actually call it
+// at the credential boundary, not merely clear a screen-local picture hook.
+describe("picture privacy lifecycle wiring", () => {
+	const provider = read("../auth/connection-provider.tsx");
+	it("clears on route/account changes before publishing new admission", () => {
+		expect(provider).toMatch(CLEAR_ROUTE);
+	});
+	it("sign-out retires authorization and retirement synchronously clears pictures", () => {
+		expect(provider).toMatch(SIGNOUT_RETIRES);
+		expect(provider).toMatch(CLEAR_RETIREMENT);
+	});
+	it("refusal clears pictures too, not only explicit sign-out", () => {
+		expect(provider).toMatch(CLEAR_REFUSAL);
 	});
 });
