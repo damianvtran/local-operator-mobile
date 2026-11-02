@@ -1,0 +1,95 @@
+{
+  "status": "clean_linguistic_width_check_outstanding",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "created_utc": "2026-11-02T00:56:45.560576+00:00",
+  "commit": "5d48015a75804c50638063492ecd6742ddf61af0",
+  "scope_counts": {
+    "mobile.projects.create": 10,
+    "mobile.projects.status": 7
+  },
+  "keys_read": 17,
+  "input_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/vi/mobile.projects.json": "873fc26d8f8c5bcfad5d7cb112140511407040eb2333392d219eca1a1066fed2",
+    "src/features/projects/project-create.tsx": "a0b45434e9d06fb343f88ad05649e0c8a7d8e6e018e5fac27bbfadee5deaa8f6",
+    "src/features/projects/__tests__/project-create-i18n.test.ts": "e6516480bb9fee4dd6a03fc8c5ea017b8a4a314dfe19acf00525568b86d148db"
+  },
+  "redaction_scan": "literal [REDACTED] byte marker absent in all four inputs before content read",
+  "route": "read_public_copy keyed calls: 34 successful; detailed receipts audit.log",
+  "sidecar": "not invoked; prior blocked bundle described it as unroutable; no fresh verification",
+  "pairs": {
+    "mobile.projects.create.description": {
+      "en": "Description",
+      "vi": "Mô tả"
+    },
+    "mobile.projects.create.description_placeholder": {
+      "en": "What this project is for",
+      "vi": "Mục đích của dự án này"
+    },
+    "mobile.projects.create.name": {
+      "en": "Name",
+      "vi": "Tên"
+    },
+    "mobile.projects.create.name_placeholder": {
+      "en": "my-project",
+      "vi": "my-project"
+    },
+    "mobile.projects.create.status": {
+      "en": "Status",
+      "vi": "Trạng thái"
+    },
+    "mobile.projects.create.submit": {
+      "en": "Create",
+      "vi": "Tạo"
+    },
+    "mobile.projects.create.tags": {
+      "en": "Tags",
+      "vi": "Thẻ"
+    },
+    "mobile.projects.create.tags_help": {
+      "en": "Separate with commas or spaces.",
+      "vi": "Phân cách bằng dấu phẩy hoặc dấu cách."
+    },
+    "mobile.projects.create.tags_placeholder": {
+      "en": "ios, q4",
+      "vi": "ios, q4"
+    },
+    "mobile.projects.create.title": {
+      "en": "New project",
+      "vi": "Dự án mới"
+    },
+    "mobile.projects.status.active": {
+      "en": "active",
+      "vi": "đang thực hiện"
+    },
+    "mobile.projects.status.archived": {
+      "en": "archived",
+      "vi": "đã lưu trữ"
+    },
+    "mobile.projects.status.done": {
+      "en": "done",
+      "vi": "hoàn thành"
+    },
+    "mobile.projects.status.paused": {
+      "en": "paused",
+      "vi": "tạm dừng"
+    },
+    "mobile.projects.status.planning": {
+      "en": "planning",
+      "vi": "lập kế hoạch"
+    },
+    "mobile.projects.status.qa": {
+      "en": "qa",
+      "vi": "QA"
+    },
+    "mobile.projects.status.validation": {
+      "en": "validation",
+      "vi": "xác thực"
+    }
+  },
+  "limitations": [
+    "Rendered widths not measured",
+    "No tests, Node, install, or browser"
+  ]
+}

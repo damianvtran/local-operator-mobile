@@ -1,0 +1,292 @@
+{
+  "audit_id": "zh-create-c5e41b9f7f26-r2",
+  "date_utc": "2026-11-02T00:51:53.880700+00:00",
+  "auditor": "translation-auditor",
+  "session": "c5e41b9f7f26",
+  "model": "openai/gpt-6.1-terra",
+  "translator_job": "9c9b184d11aa",
+  "namespace": "mobile.projects",
+  "head": "8d0ee6a4082a2b9c19b331eab724637797150798",
+  "scope": "17 create/status keys",
+  "keys": [
+    "mobile.projects.create.description",
+    "mobile.projects.create.description_placeholder",
+    "mobile.projects.create.name",
+    "mobile.projects.create.name_placeholder",
+    "mobile.projects.create.status",
+    "mobile.projects.create.submit",
+    "mobile.projects.create.tags",
+    "mobile.projects.create.tags_help",
+    "mobile.projects.create.tags_placeholder",
+    "mobile.projects.create.title",
+    "mobile.projects.status.active",
+    "mobile.projects.status.archived",
+    "mobile.projects.status.done",
+    "mobile.projects.status.paused",
+    "mobile.projects.status.planning",
+    "mobile.projects.status.qa",
+    "mobile.projects.status.validation"
+  ],
+  "sha256_files": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/i18n/catalogues/zh-CN/mobile.projects.json": "16958c9ec2266267db29b90d92e349b63e3ed9544eb883867ac366aa75db9ae6"
+  },
+  "keyed_receipts": [
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:9857822a63a246099292d76f7a1b35f4",
+      "returned_sha256": "1ddce66c66c67c6a0be7ff11e3913b1648d5bf2a86c59e20d514a77716c06fb5",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description_placeholder",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:da97128152ce48d79d8b8dc9c58c410b",
+      "returned_sha256": "27265e1eb644618f16aeffa7d857c02e2f281726cf2cee5670a2959a9dd3eeea",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:ab122e04bf714588b3e22352f005807c",
+      "returned_sha256": "1a55e310db4db6b6da3c76134ec40feadd9a0e434413fcbfab739d7f4ad49b4b",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name_placeholder",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:914e131f035e489291d06d1a975e91cd",
+      "returned_sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.status",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:ea11e09105a44bf58b57e6b5a692c99d",
+      "returned_sha256": "de7a795b39d5f6f65cc51c12bbc9d79fcb25e0d4a18f859b84f0bbecb8e30f24",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.submit",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:c9424ed6a9534056a02003a56a42f7b5",
+      "returned_sha256": "022a3e1ec0037f3aef10e70df0f31737de70dd02a036121f0d6982c80415fdfd",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:9fea251f5151436cae0b56bb6e5abb0a",
+      "returned_sha256": "f2b9c80059e84d2bf75327fe13df61e389a8f534bb5f6fb9fc062a4d12e51c9e",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_help",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:ee88b1b92b914ae59c2b608ee49961c6",
+      "returned_sha256": "296753671d0c859ed5157d58f1a7c6ea8b061f922e4e78026c17371da1ed04f2",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_placeholder",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:555d386e028a4d03a1a1b9bf13c3c585",
+      "returned_sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.title",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:3d424db5f68e4509a783c4e9691bc232",
+      "returned_sha256": "ec06af38551e30e24abf519b0001d579b7a9c72fe9ccb944fbc4c62e6c6cb46c",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.active",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:7736ddb437fe473b909ca782727dee03",
+      "returned_sha256": "db0262692454347b63b58ab695bcd0320fb427e484e04bfa3baa0e9bcac0b7a6",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.archived",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:be284ab43a974f5ea9204f0412c6b33c",
+      "returned_sha256": "5924c0b7ec528c0930c5f787fdd560b534a864b8ac1c5221dbba1030ae205644",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.done",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:87709633b636419cbcc3940f7122914c",
+      "returned_sha256": "0df884ec5d4061010e8993117f1906f02ec4185864ccab21bda8e4d8f70ef051",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.paused",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:21e9c68e5bf04d15b664b7e765d993c2",
+      "returned_sha256": "e8f3ff1151104ca4fc0e6f81854784aee9fc51d04b13e12cfe2ed040ffddb022",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.planning",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:e66eb4a148c74d37980a0228443c270e",
+      "returned_sha256": "698a3e8e48e342d33b3cdddad0c7eaa4f39a3dcbb028f1cd0f46b002959a6d54",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.qa",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:333864af5ee64d0992431f6f95dd5c8c",
+      "returned_sha256": "1f0ab64c03052caa97eb8f32682f49b73ad50f45e25c5cc2a5712ab2e399df3f",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.validation",
+      "tool_call_id": "call_d11b51572cf8401bb9a6b5bdb20201fd:464789c0579147a495bdca28061687d6",
+      "returned_sha256": "481a844fb8db41faba4931d85e93f04756b9c82bebbd2fba0d841721cbf12e34",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.description",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:7de9fb7c2c6e408c86b255b5779202a2",
+      "returned_sha256": "aeecbb28d5706f0c4a1ab299ccc0c6be49ec64d78974183a895143482f7af5a2",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.description_placeholder",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:7d883b13bd10473ab4aa111975aa35a5",
+      "returned_sha256": "6c51178f191880a27e0582274f7419bdd803437fe7cd67ba1164392aadb3c6fc",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.name",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:addd173f35694f90b997eba9c2294d5e",
+      "returned_sha256": "225217c456fda08f26588907fb16adcf95a69c25fde052269e69f55272af265d",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.name_placeholder",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:3edac11105e04a00b30748f4a9dabd4b",
+      "returned_sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.status",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:83e9588937c14051bad564bb25ce8994",
+      "returned_sha256": "7a2e8bbdde029eec8c72328de8415a9bf94a178c05c111aebfbd0cf37ba5f155",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.submit",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:ff5de975f4dd4d0ab929247dc35d82cd",
+      "returned_sha256": "06fe5794aa8250a4e1d14fb6a733c24db98669b6aa55afedc1c13d3b4dc03844",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.tags",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:9e72405578024cd8a47acb690ca824f4",
+      "returned_sha256": "879f6906c0e76efa38600a10ada96d46d2fb0fecc81dcdf6dd9a6297eb1c9469",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.tags_help",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:1640c57fd4b8462397f69248651dd65f",
+      "returned_sha256": "56b4be5e5ac9a40519d2d859f103a35d7cc72c048e2921efc97ec184e19a3be7",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.tags_placeholder",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:001235b2b79e4827a4d36bec76802408",
+      "returned_sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.create.title",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:b76791b420ed44e6b4221b908aa740a0",
+      "returned_sha256": "83b7e49092332ba4774763390d3f3587af9789948e130750ae94ea55d354f328",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.active",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:0390dc3ddfbc474c8d4cff873807a843",
+      "returned_sha256": "b57be98bc9e232e80eb965acb5a3e092dba48ae5c09084aad326cb2898568be8",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.archived",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:e51a918f21bd4344aeaf4f10881fd529",
+      "returned_sha256": "95d08c65499b0703aeada5694d0f325b289c27d9b74bd19d6f4888a12c9e25ad",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.done",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:c4837025395d4be6ae96954ff8a2e8f4",
+      "returned_sha256": "da011dcb133cc3406c54b968c06ccd05b7c13537dcee3fa07c6f51cdb75efacb",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.paused",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:c5a45f3d956046b1abba6fad79052751",
+      "returned_sha256": "cdfd7f5f3533bed65b9230080835f23c92f1e566ef41cc8519fd67e69d5d7f1e",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.planning",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:941fcd6f30e94decab3c5d4490e81cec",
+      "returned_sha256": "7b5905a2994a74b7f37df0d2ed61c74995dd99c06080a179248960427844919a",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.qa",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:0d5b02d4472c463dad118b34fd3c3777",
+      "returned_sha256": "6ce6ccc3b981fb833832bf85b6d90ce42e7cc4b93b091c08420145ca0a417263",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    },
+    {
+      "locale": "zh-CN",
+      "key": "mobile.projects.status.validation",
+      "tool_call_id": "call_10f83f7d49d648369d1dd32bc009eff0:bc61ffee6e8042d69a6bf1ad2b86f23e",
+      "returned_sha256": "fdc5b9014b867ab5b1bcdd0c3d94b91374872ed6f768ea8a43d0039bb682badb",
+      "commit": "8d0ee6a4082a2b9c19b331eab724637797150798"
+    }
+  ],
+  "verdict": "clean with non-blocking width check",
+  "limitations": [
+    "No native-speaker certification",
+    "No rendered width check, tests, Node, installs or browser",
+    "Glossary consistency checked against mobile.projects catalogue only; no locale-specific style guide or glossary found at previously checked paths",
+    "No ICU/plural or substitution placeholders in these 17 source keys; example placeholder fields are checked",
+    "Marker scan checked [redacted] and <redacted> case-insensitively, not a comprehensive secret scan"
+  ],
+  "findings": [
+    {
+      "severity": "minor",
+      "key": "mobile.projects.status.qa",
+      "current": "质量测试",
+      "proposed": "QA",
+      "reason": "Four CJK characters are materially wider than the two-letter source in a selectable status chip; QA is a concise alternative, or verify the current text in a rendered chip."
+    }
+  ]
+}
