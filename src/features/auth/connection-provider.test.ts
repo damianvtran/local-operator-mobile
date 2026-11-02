@@ -14,6 +14,7 @@ import {
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
 import { memorySecureStore, SecureStorage } from "@/connection/storage";
+import { agentAvatarCache } from "@/features/agent-avatar/agent-avatar";
 import {
 	ConnectionProvider,
 	configStore,
@@ -619,6 +620,49 @@ describe("startup authorization is admitted by the route (R1-1)", () => {
 		// startup coordinator opens on.
 		expect(getStartupAuthorization()).not.toBeNull();
 	});
+});
+
+describe("mounted provider picture privacy", () => {
+	it.each(["sign-out", "replacement-route", "unmount"])(
+		"clears retained picture bytes on %s",
+		async (boundary) => {
+			const first = await relay();
+			transport();
+			await mount();
+			await act(async () => {
+				await latest.connectCustom({
+					url: first.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			const picture = { agentId: "synthetic-agent", sha256: "a".repeat(64) };
+			await agentAvatarCache.get(
+				picture,
+				async () => "data:image/png;base64,cHJpdmF0ZQ==",
+			);
+			expect(agentAvatarCache.peek(picture)).not.toBeNull();
+			expect(agentAvatarCache.bytes()).toBeGreaterThan(0);
+			if (boundary === "unmount") await unmount();
+			else if (boundary === "sign-out")
+				await act(async () => {
+					expect(await latest.signOut()).toBe(true);
+				});
+			else {
+				const replacement = await relay();
+				await act(async () => {
+					await latest.connectCustom({
+						url: replacement.origin,
+						password: "test-only",
+						allowInsecure: true,
+					});
+				});
+			}
+			expect(agentAvatarCache.size()).toBe(0);
+			expect(agentAvatarCache.bytes()).toBe(0);
+			expect(agentAvatarCache.peek(picture)).toBeUndefined();
+		},
+	);
 });
 
 describe("mounted provider authentication retirement", () => {
