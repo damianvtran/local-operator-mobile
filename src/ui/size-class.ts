@@ -127,6 +127,14 @@ const PINNED_ROUTE_ROW = 60;
  *  away from every short portrait phone on an older relay, which is the regression
  *  review round 7 named (R7-01).
  *
+ *  The same conservative floor also protects short panes with six or more
+ *  destinations at ordinary text sizes. The current rail includes a wrapping
+ *  Team Bridge caption and connection status: actual 320×568 captures at 100%
+ *  and 135% left zero list height despite the 200% path already scrolling.
+ *  Text size is therefore not proof that this richer footer fits. Keeping one
+ *  pre-paint route budget avoids a measured-layout toggle/reflow; ordinary
+ *  five-route relays retain their previous pinned behavior.
+ *
  *  `layout.height` is the VIEWPORT height, not the pane's. On native the safe-area
  *  insets come out of the pane, so a phone a little above the floor (780 with a
  *  large top inset, say) can still be short of the height the derivation needs. The
@@ -139,11 +147,10 @@ export const pinnedRoutesPaneFloor = (routes: number): number =>
 /** Whether the stacked secondary routes scroll WITH the list instead of being
  *  pinned beneath it.
  *
- * Two cases cannot keep them pinned: short landscape, where the pane is shorter
- * than its own chrome (the rule that also rejects a split pane there), and large
- * text in a short portrait pane, where the routes grow with the reader's text
- * size and would take the list's height — the same reasoning the landscape rule
- * records, applied to the axis the text scale stretches.
+ * Short landscape cannot keep them pinned, nor can a short portrait pane whose
+ * richer footer exhausts the route budget. Large text has always used this
+ * floor; six-or-more-route footers must use it at ordinary text sizes too.
+ * Otherwise the smaller-text setting can make a list less reachable than 200%.
  *
  * A PREDICATE, deliberately: switching this after measuring the list would move
  * the footer on the second paint, and the capture's own check ("frames that
@@ -157,7 +164,7 @@ export const sidebarFooterScrolls = (
 ): boolean => {
 	if (layout.split) return false;
 	if (layout.orientation === "landscape") return true;
-	if (options.largeText !== true) return false;
+	if (options.largeText !== true && options.routes <= 5) return false;
 	return layout.height < pinnedRoutesPaneFloor(options.routes);
 };
 

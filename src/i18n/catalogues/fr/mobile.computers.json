@@ -8,5 +8,7 @@
 	"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 	"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 	"mobile.computers.section.on_phone": "Sur ce téléphone",
+	"mobile.computers.sign_out": "Se déconnecter",
+	"mobile.computers.signing_out": "Déconnexion en cours…",
 	"mobile.computers.switch": "Changer d’ordinateur"
 }

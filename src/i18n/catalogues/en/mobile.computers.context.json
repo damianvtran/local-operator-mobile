@@ -35,6 +35,14 @@
 		"role": "heading",
 		"note": "Section header for computers already paired on this phone."
 	},
+	"mobile.computers.sign_out": {
+		"role": "button",
+		"note": "Settings action opening the sign-out confirmation. Sentence case."
+	},
+	"mobile.computers.signing_out": {
+		"role": "status",
+		"note": "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis."
+	},
 	"mobile.computers.switch": {
 		"role": "button",
 		"note": "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop."

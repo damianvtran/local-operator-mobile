@@ -1,0 +1,44 @@
+{
+  "name": "S15__populated__iphone-se__dark__200",
+  "viewport": {
+    "width": 320,
+    "height": 568,
+    "dpr": 2
+  },
+  "theme": "dark",
+  "scale": "200",
+  "frames": [
+    {
+      "file": "S15__populated__iphone-se__dark__200-f0.png",
+      "sha": "b4eb8588bfa4f25f",
+      "bytes": 4376
+    },
+    {
+      "file": "S15__populated__iphone-se__dark__200-f250.png",
+      "sha": "881fadd69b597f64",
+      "bytes": 73802
+    },
+    {
+      "file": "S15__populated__iphone-se__dark__200-settled.png",
+      "sha": "586054355d3ea825",
+      "bytes": 73651
+    }
+  ],
+  "paneGeometry": {
+    "paneHeight": 568,
+    "paneWidth": 264,
+    "listTop": 124,
+    "listHeight": 0,
+    "listClientHeight": 0,
+    "listScrollHeight": 185,
+    "listScrollTop": 0,
+    "footerTop": 124,
+    "footerHeight": 449.78125,
+    "rowCount": 1,
+    "visibleRows": 0,
+    "firstRowTop": 170.40625,
+    "firstRowHeight": 138.984375
+  },
+  "ciJob": "119395910829",
+  "branchHead": "4dd8d0f6c8e45b8dd324a3ea1bc0621b5f476280"
+}

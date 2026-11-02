@@ -8,5 +8,7 @@
 	"mobile.computers.password_placeholder": "来自lop mobile的密码",
 	"mobile.computers.section.not_connected": "Radient账户下，未连接",
 	"mobile.computers.section.on_phone": "此手机",
+	"mobile.computers.sign_out": "退出登录",
+	"mobile.computers.signing_out": "正在退出登录…",
 	"mobile.computers.switch": "切换电脑"
 }

@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
-
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
@@ -47,6 +47,8 @@ export default function Welcome() {
 						did. Your code never leaves it.
 					</Text>
 				</View>
+
+				<TeamBridgeEntry />
 
 				<SignInPanel
 					state={signInState}
