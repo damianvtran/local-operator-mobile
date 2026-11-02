@@ -1,22 +1,15 @@
 # Store submission — Apple enrollment and hosted preflight
 
-**Status (2026-11-02): Apple-only enrollment hold lifted; Google Play remains
-parked.** The organization account is accessible, but a current license update
-still needs the authorized human's acceptance before Developer resources and
-App Store Connect can be used. Signing and TestFlight delivery are not ready. Publishing
-will happen under the operator's **legal entity** — Radient Inc. as named in
-`checklist.md` A1 — which, **per the operator (2026-10-09), already holds a
-D-U-N-S number**. It will **not** be published under the individual team that
-signs the desktop app.
-
-**Human boundary:** enrollment, payment, legal-authority attestations and Apple
-agreements belong to the authorized human. Stop account work at a login prompt;
-never substitute the individual desktop-signing team. The release environment
-exists, but its secrets and protection rules still need checking before use.
+**Status (2026-11-02): Apple organization enrolled and release secrets configured;
+Google Play remains parked.** The App Store Connect app record exists. This is
+account setup, not signed-build evidence: archive/export remains unproven until
+its first protected run. Publishing uses the organization, never the individual
+desktop-signing team. Human enrollment, payment, legal-authority attestations and
+agreements remain human-only; stop account work at any new login/agreement prompt.
 
 The approved identity is **Local Operator**, bundle **`com.localoperator.mobile`**,
-already matching `app.config.ts`. Register that exact identity under the correct
-organization and confirm its App Store Connect app record before any upload.
+already matching `app.config.ts`. Keep that exact registered identity
+and confirm its App Store Connect app record before any upload.
 A build-only hosted preflight needs neither Apple access nor a tag (below).
 
 ---
@@ -60,14 +53,19 @@ A build-only hosted preflight needs neither Apple access nor a tag (below).
    signing assets and upload builds — Admin is the role Apple requires to
    generate the key at all; App Manager is the narrower alternative if the
    console offers it.
-   **iOS signing is separate, not proved by those four secrets.** The pipeline
-   passes the API key to `xcodebuild -allowProvisioningUpdates` and exports with
-   automatic signing, but does not import a signing certificate/private key.
-   Confirm generated-project automatic signing, signing-resource permissions and
-   a valid identity on the fresh runner before archive/export. An API `.p8` is
-   not an Apple Distribution identity. If the command-line/account route needs
-   a local identity, add reviewed secure certificate/keychain setup first.
-   The desktop notarization credential is a different credential again.
+   **Signing uses a different private key.** Also configure
+   `APPLE_DIST_CERT_P12_BASE64` and `APPLE_DIST_CERT_PASSWORD`: an existing valid
+   Apple Distribution certificate **with its private key**, exported as .p12.
+   The six names are checked in both signed paths. The API `.p8` authenticates
+   readonly profile download; it is not the Distribution signing identity.
+   An existing App Store profile must authorize this certificate, exact bundle,
+   team and production Push Notifications capability. `IOS_PROFILE_NAME` selects
+   its exact name (default `Local Operator iOS App Store`); do not commit account
+   or resource IDs. The shared `ios-signed-ipa` action imports the certificate into
+   an ephemeral keychain, downloads the profile **readonly**, changes only the
+   application target's Release signing settings, archives and exports manually,
+   then checks the IPA signature, embedded profile and production entitlements.
+   Cleanup always removes credentials and restores the prior keychain settings.
 5. **The release workflow's platform selection is landed** — PR #75 merged
    2026-10-09. `RELEASE_PLATFORMS=ios` (a repository variable) is read by the
    `credentials` job, which now checks only the enabled platforms' secrets. See
@@ -84,59 +82,75 @@ A build-only hosted preflight needs neither Apple access nor a tag (below).
    trader status), A7 (legal review of the store copy — `store/`, which still
    carries `DRAFT — not submitted` markers that must be removed) and A10.
 
-## Hosted build/validate-only native preflight (no Apple access)
+## Hosted validation modes and explicit upload authorization
 
-Use the existing **iOS** workflow's manual dispatch, not the Release workflow:
+The **iOS** workflow has three main-only dispatch modes. With no inputs, any
+reviewed branch can use the existing unsigned simulator smoke, with no secrets
+or release environment:
 
 ```sh
 gh workflow run ios.yml --ref <reviewed-branch-or-main>
 ```
 
-This runs the unsigned **Release-configuration simulator** build, not a device
-archive or App Store validation. It installs CocoaPods after clean Expo prebuild,
-resolves the resulting workspace, compiles with `CODE_SIGNING_ALLOWED=NO`, boots
-and launches the app, checks launch logs and captures settled frames. The
-`ios-simulator` artifact contains the app and frames; inspect the run's toolchain
-output and its native launch/frame summary. Use the run's head SHA to identify
-what was actually built. No tag, Apple secrets, release environment, GitHub
-Release or store upload is used: both secret-bearing jobs require **push to
-main**, so they are skipped even for a manual dispatch selecting `main`.
-A fork PR receives only the same secret-free simulator job.
+It installs the pods after clean Expo prebuild, resolves the workspace, compiles
+Release with `CODE_SIGNING_ALLOWED=NO`, boots/launches and captures settled frames.
+The `ios-simulator` artifact includes the app, frames and selected Xcode's help;
+the logs record actual Xcode/SDK/CocoaPods versions. Identify the built source by
+the run head SHA. This proves neither device signing nor live OAuth/push.
 
-A passing simulator smoke does **not** establish device signing, production
-push delivery or live OAuth. Keep checklist A10 open until real-device sign-in
-proves the current `lop` loopback-client path; a custom scheme is not an accepted
-replacement in the server registration (ADR 0002). Do not enable held experimental
-native fixtures to make the smoke pass.
+After reviewed code is on **main**, validate signing without an upload:
 
-### Archive/export audit and remaining signed prerequisite
+```sh
+gh workflow run ios.yml --ref main -f signed_export_only=true
+```
 
-Reviewed against Apple's [distribution guidance](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
-and [cloud-managed certificate guidance](https://developer.apple.com/help/account/certificates/cloud-managed-certificates)
-(2026-11-02): archive precedes distribution/export, and cloud-managed signing
-requires the appropriate account permissions. The latter explicitly describes
-the **Organizer** distribution workflow; it is not proof of this repository's
-fresh-runner API-key-only command-line signing.
+This runs the same simulator gate, then protected credential and signed-export
+jobs in `environment: release`. Both `.p12` import and readonly profile download
+must work; the IPA must have a valid Apple Distribution signature, the selected
+embedded App Store profile, matching bundle/team, `aps-environment=production`
+and `get-task-allow=false`. The `ios-ipa` artifact is attached, but the TestFlight
+step is **skipped**. Export-only takes precedence even if both inputs are true.
+The environment allows only main and release tags; never loosen that rule to
+obtain secrets on a PR branch.
 
-The signed lane uses a Release scheme with `generic/platform=iOS` to create an
-`.xcarchive`, then `xcodebuild -exportArchive -archivePath ... -exportPath ...
--exportOptionsPlist ...` with automatic `app-store-connect` export. Apple's
-[command-line FAQ](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
-documents this export command and directs users to **the selected Xcode's
-`xcodebuild -help`** for supported export keys. The FAQ is archived, not a current
-Xcode flag reference: the preflight captures the actual hosted version and help
-text so the signing owner can inspect authentication flags and export options
-for that installed Xcode before enabling signed validation. No signed validation
-or upload is added to this build-only entry point.
+An upload is a separate, intentional action, only after export validation:
 
-`-allowProvisioningUpdates` plus `-authenticationKeyPath`, `-authenticationKeyID`
-and `-authenticationKeyIssuerID` authenticate provisioning requests; the API
-key is not a certificate/private-key signing identity. The existing export
-plist requests automatic signing and `destination=export`, not upload. Confirm
-identity availability, capability/profile compatibility and successful archive
-**and** export on the actual organization before running any store lane. The
-existing `fastlane ios testflight` skips waiting for processing; upload success
-is not proof that processing, tester distribution or installation completed.
+```sh
+gh workflow run ios.yml --ref main -f testflight_upload=true
+```
+
+A merge/push to main alone **does not sign or upload** while repository variable
+`IOS_INTERNAL_UPLOAD` is unset (the default). Setting that variable to the exact
+string `true` explicitly opts future main pushes into the existing signed/upload
+lane. Review that choice before setting it. PRs and feature-branch dispatches
+cannot reach signing, even with signed inputs. Tag-triggered **Release** semantics
+are unchanged: a `v*` tag still builds, creates a GitHub Release and uploads.
+Never use a tag or Release `dry_run` as a supposedly harmless native preflight.
+
+`fastlane ios testflight` skips waiting for processing. Upload success is not
+proof of processing, tester delivery or installation. Keep checklist A10 open
+until real-device sign-in proves the `lop` loopback-client path (ADR 0002).
+Google, held experimental native fixtures and other parked work stay parked.
+
+### Archive/export signing audit
+
+Apple's [distribution guidance](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
+and [cloud-managed certificates](https://developer.apple.com/help/account/certificates/cloud-managed-certificates)
+(read 2026-11-02) distinguish provisioning authentication from signing identity.
+The selected Xcode26.6 help confirms automatic signing can create provisioning
+resources, but that is not proof that a fresh archive can use the template's
+developer identity without a device. These lanes instead import an existing
+Distribution identity and set manual signing on the app target only, not Pods.
+
+The shared action archives a Release scheme for `generic/platform=iOS`, then
+uses `xcodebuild -exportArchive` with `method=app-store-connect`, manual signing,
+an explicit bundle/profile mapping and `destination=export` (never upload).
+It does not pass provisioning-update/device-registration flags or create Apple
+resources. The selected runner's `xcodebuild-help.txt` is retained because
+Apple's [archived CLI FAQ](https://developer.apple.com/library/archive/technotes/tn2339/_index.html)
+defers current flag/export-key definitions to installed `xcodebuild -help`.
+The first protected export run is still required evidence; synthetic tests
+and the unsigned smoke are not signed-build proof.
 
 ## Resume checklist — Google Play (organization path)
 
@@ -175,7 +189,7 @@ Organization accounts are outside that page's scope.
 job checks only the enabled platforms' secrets, the platform jobs are skipped
 when not enabled, and `publish` tolerates a skipped platform — landed in PR #75
 (merged 2026-10-09). A `v*` tag with the variable at its default therefore
-requires **only the four `APPLE_*` secrets**; the five Play/Android names become
+requires **only the six Apple signing/API secrets**; the five Play/Android names become
 required once `android` is enabled.
 
 ---
