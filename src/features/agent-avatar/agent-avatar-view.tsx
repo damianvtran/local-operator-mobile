@@ -7,11 +7,17 @@
  * pointing there instead of opening anything (`mobile.agent_avatar.edit_hint`).
  */
 
-import { type ComponentProps, useEffect, useId, useState } from "react";
+import {
+	type ComponentProps,
+	useEffect,
+	useId,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import { Image, Platform, Pressable, Text } from "react-native";
 import {
 	type AgentAvatarRef,
-	createAvatarCache,
+	agentAvatarCache,
 	paintedPicture,
 } from "@/features/agent-avatar/agent-avatar";
 import { useConnection } from "@/features/auth/connection-provider";
@@ -24,8 +30,8 @@ import { ListRow } from "@/ui/components/list-row";
 import { TOUCH_FLOOR } from "@/ui/layout";
 
 /** One cache for the process: every row and the header share it, so the list
- *  and the open conversation never fetch the same digest twice. */
-const avatarCache = createAvatarCache();
+ *  and the open conversation reuse each resident agent/hash entry. */
+const avatarCache = agentAvatarCache;
 
 /**
  * The picture's URI for a row, or `null` while there is none to draw.
@@ -40,35 +46,25 @@ export const useAgentAvatarUri = (
 	ref: AgentAvatarRef | null,
 ): string | null => {
 	const { relay } = useConnection();
+	const client = relay();
 	const agentId = ref?.agentId ?? null;
 	const sha256 = ref?.sha256 ?? null;
-	const [uri, setUri] = useState<string | null>(() =>
-		paintedPicture(avatarCache, ref),
+	const revision = useSyncExternalStore(
+		avatarCache.subscribe,
+		avatarCache.revision,
+		avatarCache.revision,
 	);
+	// State only wakes the renderer. Read the URI from the current key every
+	// render, never from state left over from a different ref or account.
+	const [, repaint] = useState(0);
 
 	useEffect(() => {
-		if (agentId === null || sha256 === null) {
-			setUri(null);
-			return;
-		}
+		// A clear can happen between render and commit during route retirement.
+		if (revision !== avatarCache.revision()) return;
+		if (agentId === null || sha256 === null) return;
 		const key = { agentId, sha256 };
 		const settled = avatarCache.peek(key);
-		/* A REF CHANGE CANNOT KEEP THE OLD PICTURE. `uri` is state and survives the
-		 *  key change, while the new digest's bytes are a round trip away — so the
-		 *  previous ref's face painted under the new name in the meantime (review
-		 *  round 1, R1; reachable in place, because a picture edited on the desktop
-		 *  only changes `avatar_sha256` on the row that is already mounted). Re-ask
-		 *  what THIS ref paints, exactly as a fresh mount would: the settled picture,
-		 *  or the glyph. */
-		setUri(paintedPicture(avatarCache, key));
-		if (settled !== undefined) return;
-		const client = relay();
-		/* No usable route (signed out, switching computers): keep the glyph and
-		 *  let the next frame — which re-renders this row — try again. */
-		if (client === null) {
-			setUri(null);
-			return;
-		}
+		if (settled !== undefined || client === null) return;
 		let cancelled = false;
 		avatarCache
 			.get(key, async (target) => {
@@ -80,20 +76,19 @@ export const useAgentAvatarUri = (
 				 *  the authority, PNG the fallback for a relay that sent none. */
 				return `data:${mimeType ?? "image/png"};base64,${toBase64(bytes)}`;
 			})
-			.then((value) => {
-				if (!cancelled) setUri(value);
+			.then(() => {
+				if (!cancelled) repaint((value) => value + 1);
 			})
 			.catch(() => {
-				/* Transport failure: glyph now, retried on the next render (the cache
+				/* Transport failure: glyph now, retried on the next connection/ref change (the cache
 				 *  does not remember a failure — see `createAvatarCache`). */
-				if (!cancelled) setUri(null);
 			});
 		return () => {
 			cancelled = true;
 		};
-	}, [agentId, sha256, relay]);
+	}, [agentId, sha256, client, revision]);
 
-	return uri;
+	return paintedPicture(avatarCache, ref);
 };
 
 /** A round picture. Decorative: every place it appears names the agent or the

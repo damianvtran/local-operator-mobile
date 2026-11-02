@@ -423,7 +423,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	src: "29bb6f752eda80fbc2f64fbc6b6bd8c12d87dd7dffec8e978e869ec25ef188d9",
+	/* Source-only union with main e56ce71 (relay picture privacy). Both the
+	 * relay cache retirement and Radient/device-retirement seams are retained.
+	 * Derived across all 613 indexed src members, not either parent SHA.
+	 * Instrument/input and historical incident identities are unchanged; this
+	 * records source admission, not fresh auth, rendered or native evidence. */
+	src: "8eb496ee2220764120f02e9ddfbba68915e5f1f5b2fa85d11c721bb2574931b9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
