@@ -126,8 +126,20 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * browser run can render a non-English catalogue at all. Those are exactly the files
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
+	/* Reviewed selected-response helper in both render drivers’ relay import
+	 * closure. Test cleanup code is not an instrument and is not pinned. */
+	/* Actual standard --print over the complete intent-listed candidate: quiet
+	 * delivery/help/schema and all-eight-locale generated keys move src; native
+	 * formatting moves these two mock instrument bytes. Historical ORIGINAL
+	 * declarations remain unchanged. This identity is not rendered QA evidence. */
+	/* QA delta: fresh mutable barrier-state guard, preserved cancellation fence,
+	 * native-icon SSR adapter and synchronous account/route help identity.
+	 * Import organization also changes instrument bytes. Values below come from
+	 * actual standard --print; tests/pixels and historical declarations are distinct. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/relay.ts":
-		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
+		"4c031deb02229da44dc55b0d03be9b17614953fc9e643c7bc57e1c2fdbd2ffe8",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -428,7 +440,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Derived across all 613 indexed src members, not either parent SHA.
 	 * Instrument/input and historical incident identities are unchanged; this
 	 * records source admission, not fresh auth, rendered or native evidence. */
-	src: "8eb496ee2220764120f02e9ddfbba68915e5f1f5b2fa85d11c721bb2574931b9",
+	src: "0716d895a31f5885547413f41448ff51d241a275e893b626c616e59470811720",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

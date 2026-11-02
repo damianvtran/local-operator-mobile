@@ -85,5 +85,11 @@
 	"mobile.team_bridge.thread.send_retry": "Reintentar envío",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, one {# sin leer} other {# sin leer}}",
-	"mobile.team_bridge.error.http_status": "Radient ha rechazado la solicitud (HTTP {status})."
+	"mobile.team_bridge.error.http_status": "Radient ha rechazado la solicitud (HTTP {status}).",
+	"mobile.team_bridge.delivery.recipient": "Agente",
+	"mobile.team_bridge.delivery.held": "{recipient}: En espera de entrega.",
+	"mobile.team_bridge.delivery.refused": "{recipient}: No se entregó.{category, select, manipulation { (Manipulación)} personal_info { (Información personal)} abusive { (Contenido abusivo)} unsafe_content { (Contenido inseguro)} out_of_scope { (Fuera de alcance)} other {}}",
+	"mobile.team_bridge.delivery.help": "El agente de cada destinatario revisa los mensajes antes de aceptarlos. Si un mensaje no se acepta, puedes reformularlo y enviar un mensaje nuevo.",
+	"mobile.team_bridge.delivery.help_action": "Acerca de la entrega de mensajes",
+	"mobile.team_bridge.delivery.help_title": "Entrega de mensajes"
 }

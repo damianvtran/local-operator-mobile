@@ -643,6 +643,7 @@ export const SURFACE = {
 	teamBridgeDayDivider: "team-bridge-day-divider",
 	teamBridgeGateSkeleton: "team-bridge-gate-skeleton",
 	teamBridgeMessages: "team-bridge-messages",
+	teamBridgeDeliveryHelpSheet: "team-bridge-delivery-help-sheet",
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
 	teamBridgePlanConsole: "team-bridge-plan-console",
@@ -2080,5 +2081,14 @@ export const teamBridgeOrganizationId = (value: string): string =>
 	`team-bridge-org-${value}`;
 export const teamBridgeMessageId = (value: string): string =>
 	`team-bridge-message-${value}`;
+/** Stable identity across recipient label, locale and state changes. */
+export const teamBridgeDeliveryId = (
+	message: string,
+	endpoint: string,
+): string =>
+	`team-bridge-delivery-${encodeURIComponent(JSON.stringify([message, endpoint]))}`;
+/** One labelled explanation action per message, not per recipient. */
+export const teamBridgeDeliveryHelpId = (message: string): string =>
+	`team-bridge-delivery-help-${encodeURIComponent(message)}`;
 export const teamBridgeNotifyId = (value: string): string =>
 	`team-bridge-notify-${value}`;

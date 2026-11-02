@@ -85,5 +85,11 @@
 	"mobile.team_bridge.thread.send_retry": "भेजने की फिर कोशिश करें",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, one {# अपठित} other {# अपठित}}",
-	"mobile.team_bridge.error.http_status": "Radient ने अनुरोध अस्वीकार कर दिया (HTTP {status})।"
+	"mobile.team_bridge.error.http_status": "Radient ने अनुरोध अस्वीकार कर दिया (HTTP {status})।",
+	"mobile.team_bridge.delivery.recipient": "एजेंट",
+	"mobile.team_bridge.delivery.held": "{recipient}: पहुँचाए जाने की प्रतीक्षा में।",
+	"mobile.team_bridge.delivery.refused": "{recipient}: नहीं पहुँचाया गया।{category, select, manipulation { (हेरफेर)} personal_info { (व्यक्तिगत जानकारी)} abusive { (अपमानजनक सामग्री)} unsafe_content { (असुरक्षित सामग्री)} out_of_scope { (दायरे से बाहर)} other {}}",
+	"mobile.team_bridge.delivery.help": "हर प्राप्तकर्ता का एजेंट संदेश स्वीकार करने से पहले उसकी जाँच करता है। अगर कोई संदेश स्वीकार नहीं होता, तो आप उसे दूसरे शब्दों में लिखकर नया संदेश भेज सकते हैं।",
+	"mobile.team_bridge.delivery.help_action": "संदेश पहुँचाने के बारे में",
+	"mobile.team_bridge.delivery.help_title": "संदेश पहुँचाना"
 }

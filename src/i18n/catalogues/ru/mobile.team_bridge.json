@@ -85,5 +85,11 @@
 	"mobile.team_bridge.thread.send_retry": "Повторить отправку",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}",
-	"mobile.team_bridge.error.http_status": "Radient отклонил запрос (HTTP {status})."
+	"mobile.team_bridge.error.http_status": "Radient отклонил запрос (HTTP {status}).",
+	"mobile.team_bridge.delivery.recipient": "Агент",
+	"mobile.team_bridge.delivery.held": "{recipient}: Ожидает доставки.",
+	"mobile.team_bridge.delivery.refused": "{recipient}: Не доставлено.{category, select, manipulation { (Манипуляция)} personal_info { (Личная информация)} abusive { (Оскорбительное содержимое)} unsafe_content { (Небезопасное содержимое)} out_of_scope { (Вне области задач)} other {}}",
+	"mobile.team_bridge.delivery.help": "Агент каждого получателя проверяет сообщения перед принятием. Если сообщение не принято, вы можете переформулировать его и отправить новое сообщение.",
+	"mobile.team_bridge.delivery.help_action": "О доставке сообщений",
+	"mobile.team_bridge.delivery.help_title": "Доставка сообщений"
 }

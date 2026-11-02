@@ -85,5 +85,11 @@
 	"mobile.team_bridge.thread.send_retry": "Thử gửi lại",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, other {# chưa đọc}}",
-	"mobile.team_bridge.error.http_status": "Radient đã từ chối yêu cầu (HTTP {status})."
+	"mobile.team_bridge.error.http_status": "Radient đã từ chối yêu cầu (HTTP {status}).",
+	"mobile.team_bridge.delivery.recipient": "Tác nhân",
+	"mobile.team_bridge.delivery.held": "{recipient}: Đang chờ gửi đến.",
+	"mobile.team_bridge.delivery.refused": "{recipient}: Chưa được gửi đến.{category, select, manipulation { (Thao túng)} personal_info { (Thông tin cá nhân)} abusive { (Nội dung lăng mạ)} unsafe_content { (Nội dung không an toàn)} out_of_scope { (Ngoài phạm vi)} other {}}",
+	"mobile.team_bridge.delivery.help": "Tác nhân của mỗi người nhận kiểm tra tin nhắn trước khi chấp nhận. Nếu tin nhắn không được chấp nhận, bạn có thể diễn đạt lại và gửi một tin nhắn mới.",
+	"mobile.team_bridge.delivery.help_action": "Về việc gửi tin nhắn",
+	"mobile.team_bridge.delivery.help_title": "Gửi tin nhắn"
 }

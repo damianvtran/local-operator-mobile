@@ -31,6 +31,7 @@ import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
 import { BridgeBack, BridgeGate } from "./gate";
+import { MessageDelivery } from "./message-delivery";
 import { createMessageSender } from "./message-sender";
 
 const single = (value: string | string[] | undefined): string =>
@@ -70,6 +71,11 @@ function ThreadContent({
 	const sendingRef = useRef(false);
 	const [sendError, setSendError] = useState<string | null>(null);
 	const [notifyOpen, setNotifyOpen] = useState(false);
+	const [deliveryHelp, setDeliveryHelp] = useState<{
+		identity: string;
+		opener: string;
+		open: boolean;
+	} | null>(null);
 	const [notifyError, setNotifyError] = useState<string | null>(null);
 	const [notifyBusy, setNotifyBusy] = useState(false);
 	const [joining, setJoining] = useState(false);
@@ -80,6 +86,13 @@ function ThreadContent({
 	const activeNow = useRef(AppState.currentState === "active");
 	const mounted = useRef(true);
 	const accountId = state.selfAccountId;
+	// Derive visibility synchronously from the actual account/route identity,
+	// not a passive reset effect: even the first boundary render cannot display
+	// another account's help or return focus to its opener.
+	const deliveryHelpIdentity = JSON.stringify([accountId, routeId, tenantId]);
+	const currentDeliveryHelp =
+		deliveryHelp?.identity === deliveryHelpIdentity ? deliveryHelp : null;
+
 	useEffect(() => {
 		mounted.current = true;
 		return () => {
@@ -302,6 +315,16 @@ function ThreadContent({
 					) : (
 						<Markdown text={item.message.body} />
 					)}
+					<MessageDelivery
+						message={item.message}
+						onHelp={(opener) => {
+							setDeliveryHelp({
+								identity: deliveryHelpIdentity,
+								opener,
+								open: true,
+							});
+						}}
+					/>
 				</View>
 			</View>
 		);
@@ -564,6 +587,30 @@ function ThreadContent({
 					</>
 				)}
 			</KeyboardAvoidingView>
+			<Sheet
+				visible={currentDeliveryHelp?.open === true}
+				onClose={() =>
+					setDeliveryHelp((current) =>
+						current ? { ...current, open: false } : null,
+					)
+				}
+				onDismiss={() =>
+					setDeliveryHelp((current) =>
+						current?.identity === deliveryHelpIdentity && !current.open
+							? null
+							: current,
+					)
+				}
+				focusTitle
+				titleLines={2}
+				returnFocusTestID={currentDeliveryHelp?.opener}
+				title={t("mobile.team_bridge.delivery.help_title")}
+				testID={SURFACE.teamBridgeDeliveryHelpSheet}
+			>
+				<Text className="p-4 text-body text-ink-muted">
+					{t("mobile.team_bridge.delivery.help")}
+				</Text>
+			</Sheet>
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}

@@ -346,5 +346,29 @@
 	"mobile.team_bridge.error.http_status": {
 		"role": "help",
 		"note": "Fallback only when the Radient HTTP response has no usable server error body. Shown inside an existing error surface. Preserve the Radient product name and HTTP protocol token. {status} is the numeric HTTP response status, not a message count; do not pluralize or translate that placeholder."
+	},
+	"mobile.team_bridge.delivery.recipient": {
+		"role": "status",
+		"note": "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches."
+	},
+	"mobile.team_bridge.delivery.held": {
+		"role": "status",
+		"note": "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches."
+	},
+	"mobile.team_bridge.delivery.refused": {
+		"role": "status",
+		"note": "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches."
+	},
+	"mobile.team_bridge.delivery.help": {
+		"role": "help",
+		"note": "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance."
+	},
+	"mobile.team_bridge.delivery.help_action": {
+		"role": "button",
+		"note": "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance."
+	},
+	"mobile.team_bridge.delivery.help_title": {
+		"role": "heading",
+		"note": "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance."
 	}
 }

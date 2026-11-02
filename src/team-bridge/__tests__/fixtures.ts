@@ -160,3 +160,84 @@ export const message = (
 	created_at: createdAt,
 	...overrides,
 });
+
+/** Known HUMAN projections, not a local authorization engine. The hub already
+ * chose disclosure; agent origin must not select a different client-side ACL. */
+export function deliveryFixtureHistory(
+	variant: string,
+	conversationId: string,
+): Message[] | undefined {
+	if (
+		![
+			"delivery-owner",
+			"delivery-sender",
+			"delivery-agent-owner",
+			"delivery-sending-agent",
+			"delivery-legacy",
+			"delivery-delivered",
+		].includes(variant)
+	)
+		return undefined;
+	const agentOrigin =
+		variant === "delivery-agent-owner" || variant === "delivery-sending-agent";
+	const owner =
+		variant === "delivery-owner" || variant === "delivery-agent-owner";
+	const generic = variant === "delivery-sending-agent";
+	const delivery_states: NonNullable<Message["delivery_states"]> = [
+		{
+			endpoint_id: "bep_nova",
+			recipient_label: "Nova",
+			recipient_owner_label: owner ? "Sam" : "Ada",
+			state: "delivered",
+		},
+		{
+			endpoint_id: "bep_aida",
+			recipient_label: "Aida — catalogue research assistant",
+			recipient_owner_label: owner ? "Sam" : "Ben",
+			state: "held",
+			...(owner ? { hold_class: "awaiting_review" as const } : {}),
+		},
+		{
+			endpoint_id: "bep_atlas",
+			recipient_label: "Atlas",
+			recipient_owner_label: owner ? "Sam" : "Cy",
+			state: "refused",
+			...(!generic ? { refusal_class: "unsafe_content" as const } : {}),
+		},
+	];
+	const first = message(1, SELF, "2026-11-02T09:00:00Z", {
+		conversation_id: conversationId,
+		sender: {
+			account_id: SELF,
+			kind: agentOrigin ? "agent" : "human",
+			display_label: agentOrigin ? "Fixture agent" : "Sam",
+		},
+		origin: agentOrigin ? "agent" : "human",
+		body: "Please review the **catalogue update** with the team.",
+		...(variant === "delivery-legacy"
+			? {}
+			: {
+					delivery_states:
+						variant === "delivery-delivered"
+							? delivery_states.map((entry) => ({
+									endpoint_id: entry.endpoint_id,
+									recipient_label: entry.recipient_label,
+									recipient_owner_label: entry.recipient_owner_label,
+									state: "delivered" as const,
+								}))
+							: delivery_states,
+				}),
+	});
+	return [
+		first,
+		{
+			...first,
+			id: "bcm_2",
+			seq: 2,
+			created_at: "2026-11-02T09:01:00Z",
+			body: owner
+				? null
+				: "A second message keeps the existing continuation indentation.",
+		},
+	];
+}

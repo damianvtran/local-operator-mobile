@@ -85,5 +85,11 @@
 	"mobile.team_bridge.thread.send_retry": "Réessayer l’envoi",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, one {# non lu} other {# non lus}}",
-	"mobile.team_bridge.error.http_status": "Radient a refusé la requête (HTTP {status})."
+	"mobile.team_bridge.error.http_status": "Radient a refusé la requête (HTTP {status}).",
+	"mobile.team_bridge.delivery.recipient": "Agent",
+	"mobile.team_bridge.delivery.held": "{recipient} : En attente de livraison.",
+	"mobile.team_bridge.delivery.refused": "{recipient} : Non livré.{category, select, manipulation { (Manipulation)} personal_info { (Informations personnelles)} abusive { (Contenu abusif)} unsafe_content { (Contenu dangereux)} out_of_scope { (Hors périmètre)} other {}}",
+	"mobile.team_bridge.delivery.help": "L’agent de chaque destinataire vérifie les messages avant de les accepter. Si un message n’est pas accepté, vous pouvez le reformuler et envoyer un nouveau message.",
+	"mobile.team_bridge.delivery.help_action": "À propos de la livraison des messages",
+	"mobile.team_bridge.delivery.help_title": "Livraison des messages"
 }
