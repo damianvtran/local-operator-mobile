@@ -21,6 +21,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	accessTokenNeedsRefresh,
+	accountIdFromIdToken,
 	authorizationUrl,
 	base64Url,
 	CALLBACK_PORT,
@@ -486,6 +487,82 @@ describe("token refresh keeps a rotated refresh token", () => {
 		expect(accessTokenNeedsRefresh(tokens, 500)).toBe(true);
 		expect(isSignedOut(tokens)).toBe(false);
 		expect(isSignedOut({ ...tokens, refresh: null })).toBe(true);
+	});
+});
+
+describe("the Radient account id comes from the id_token's sub (PR #122 M2)", () => {
+	/* A placeholder JWT: header.payload.signature, base64url. Never a real token. */
+	const jwt = (claims: object) =>
+		`e30.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.sig`;
+
+	it("reads sub on the refresh grant, and never the email", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at2",
+				expires_in: 3600,
+				id_token: jwt({ sub: "acct_placeholder", email: "x@example.com" }),
+			}),
+		);
+		const tokens = await refreshRadientTokens(
+			{ ...TOKENS, refresh: "rt1" },
+			{ fetchImpl, now: () => 0 },
+		);
+		expect(tokens.account_id).toBe("acct_placeholder");
+	});
+
+	it("reads sub on the authorization-code grant too (review round 2, m2)", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at1",
+				refresh_token: "rt1",
+				expires_in: 3600,
+				id_token: jwt({ sub: "acct_code_placeholder", email: "x@example.com" }),
+			}),
+		);
+		const tokens = await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+			fetchImpl,
+			now: () => 0,
+		});
+		expect(tokens.account_id).toBe("acct_code_placeholder");
+		/* A sign-in with no id_token knows no account, rather than guessing one. */
+		const bare = recordingFetch(() =>
+			jsonResponse({ access_token: "at1", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+					fetchImpl: bare.fetchImpl,
+					now: () => 0,
+				})
+			).account_id,
+		).toBeNull();
+	});
+
+	it("keeps the previous id when a refresh carries no id_token, and is null when none was ever known", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "at2", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1", account_id: "acct_kept" },
+					{ fetchImpl, now: () => 0 },
+				)
+			).account_id,
+		).toBe("acct_kept");
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1" },
+					{ fetchImpl, now: () => 0 },
+				)
+			).account_id,
+		).toBeNull();
+	});
+
+	it("reads nothing from a malformed token rather than failing sign-in", () => {
+		for (const bad of [undefined, 42, "", "a.b", "a.!!!.c", jwt({ sub: "  " })])
+			expect(accountIdFromIdToken(bad)).toBeNull();
 	});
 });
 

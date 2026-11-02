@@ -1,0 +1,239 @@
+/**
+ * zh-CN group B — final executed evidence.
+ * Uses the app's own parseMessage/formatMessage over the authored JSON. Read-only.
+ */
+import { readFileSync } from "node:fs";
+import { formatMessage, parseMessage } from "/Users/damian/workspace/zh-wave/src/i18n/messages.ts";
+
+const ROOT = "/Users/damian/workspace/zh-wave/src/i18n/catalogues";
+const NS = ["mobile.schedules", "mobile.projects", "mobile.notifications", "mobile.computers"] as const;
+const EN: Record<string, string> = {};
+const ZH: Record<string, string> = {};
+const CTX: Record<string, { role: string; note: string }> = {};
+for (const ns of NS) {
+	Object.assign(EN, JSON.parse(readFileSync(`${ROOT}/en/${ns}.json`, "utf8")));
+	Object.assign(ZH, JSON.parse(readFileSync(`${ROOT}/zh-CN/${ns}.json`, "utf8")));
+	Object.assign(CTX, JSON.parse(readFileSync(`${ROOT}/en/${ns}.context.json`, "utf8")));
+}
+
+type Node = any;
+const CLDR = new Intl.PluralRules("zh-CN").resolvedOptions().pluralCategories;
+
+function collectText(nodes: Node[], into: string[] = []): string[] {
+	for (const n of nodes) {
+		if (n.type === "text") into.push(n.value);
+		else if (n.type === "plural" || n.type === "select") {
+			for (const [, arms] of n.options as Map<string, Node[]>) collectText(arms, into);
+		}
+	}
+	return into;
+}
+function selectSignatures(nodes: Node[], into: string[][] = []): string[][] {
+	for (const n of nodes) {
+		if (n.type === "select") {
+			into.push([...n.options.keys()]);
+			for (const [, arms] of n.options as Map<string, Node[]>) selectSignatures(arms, into);
+		} else if (n.type === "plural") {
+			for (const [, arms] of n.options as Map<string, Node[]>) selectSignatures(arms, into);
+		}
+	}
+	return into;
+}
+function pluralArms(nodes: Node[], into: string[][] = []): string[][] {
+	for (const n of nodes) {
+		if (n.type === "plural") {
+			into.push([...n.options.keys()]);
+			for (const [, arms] of n.options as Map<string, Node[]>) pluralArms(arms, into);
+		} else if (n.type === "select") {
+			for (const [, arms] of n.options as Map<string, Node[]>) pluralArms(arms, into);
+		}
+	}
+	return into;
+}
+const chars = (s: string): number => [...s].length;
+const isWide = (ch: string): boolean => {
+	const cp = ch.codePointAt(0)!;
+	return (
+		(cp >= 0x1100 && cp <= 0x115f) ||
+		(cp >= 0x2e80 && cp <= 0xa4cf) ||
+		(cp >= 0xac00 && cp <= 0xd7a3) ||
+		(cp >= 0xf900 && cp <= 0xfaff) ||
+		(cp >= 0xfe10 && cp <= 0xfe19) ||
+		(cp >= 0xfe30 && cp <= 0xfe6f) ||
+		(cp >= 0xff00 && cp <= 0xff60) ||
+		(cp >= 0xffe0 && cp <= 0xffe6)
+	);
+};
+const cells = (s: string): number => [...s].reduce((n, ch) => n + (isWide(ch) ? 2 : 1), 0);
+
+const render = (key: string, params: Record<string, string | number> = {}): string =>
+	formatMessage(parseMessage(ZH[key]), params, "zh-CN");
+const renderEn = (key: string, params: Record<string, string | number> = {}): string =>
+	formatMessage(parseMessage(EN[key]), params, "en");
+const row = (cells: Array<string | number>): string => `| ${cells.join(" | ")} |`;
+
+console.log(`CLDR zh-CN plural categories: ${JSON.stringify(CLDR)}`);
+console.log(`KEYS en=${Object.keys(EN).length} zh=${Object.keys(ZH).length} context=${Object.keys(CTX).length}`);
+console.log(`MISSING=${JSON.stringify(Object.keys(EN).filter((k) => !(k in ZH)))}`);
+console.log(`EXTRA=${JSON.stringify(Object.keys(ZH).filter((k) => !(k in EN)))}`);
+console.log(`CONTEXT_MISSING=${JSON.stringify(Object.keys(EN).filter((k) => !(k in CTX)))}`);
+
+let mechFail = 0;
+for (const key of Object.keys(EN)) {
+	const en = parseMessage(EN[key]);
+	const zh = parseMessage(ZH[key]);
+	const problems: string[] = [];
+	const enArgs = [...en.params.entries()].map(([n, k]) => `${n}:${k}`);
+	const zhArgs = [...zh.params.entries()].map(([n, k]) => `${n}:${k}`);
+	if (enArgs.join("|") !== zhArgs.join("|")) problems.push(`args en=[${enArgs}] zh=[${zhArgs}]`);
+	const enSel = JSON.stringify(selectSignatures(en.nodes));
+	const zhSel = JSON.stringify(selectSignatures(zh.nodes));
+	if (enSel !== zhSel) problems.push(`selects en=${enSel} zh=${zhSel}`);
+	const zhPlural = pluralArms(zh.nodes);
+	for (const arms of zhPlural) {
+		const extra = arms.filter((a) => !CLDR.includes(a) && !a.startsWith("="));
+		const missing = CLDR.filter((a) => !arms.includes(a));
+		if (extra.length || missing.length) problems.push(`plural arms=${JSON.stringify(arms)} extra=${JSON.stringify(extra)} missing=${JSON.stringify(missing)}`);
+	}
+	const text = collectText(zh.nodes).join("");
+	const latin = text.replace(/lop mobile|Radient/g, "").match(/[A-Za-z]+/g);
+	if (latin) problems.push(`latin text=${latin.join(",")}`);
+	if (/[\u202A-\u202E\u2066-\u2069]/.test(ZH[key])) problems.push("bidi control");
+	if (/[,.;:!?()]/.test(text)) problems.push("ascii prose punctuation");
+	const status = problems.length === 0 ? "PASS" : "FAIL";
+	if (problems.length) mechFail += 1;
+	console.log(
+		`MECH ${key}: ${status}; args=${zhArgs.join(",") || "none"}; selects=${selectSignatures(zh.nodes).length}; plural=${JSON.stringify(zhPlural)}; chars_en=${chars(EN[key])}; chars_zh=${chars(ZH[key])}; cells_zh=${cells(ZH[key])}${problems.length ? `; ${problems.join("; ")}` : ""}`,
+	);
+}
+console.log(`MECH_FAILURES=${mechFail}`);
+
+console.log(`\n## COUNTS — zh-CN (app parser), en comparator`);
+console.log(row(["key", "0", "1", "2", "1000000"]));
+const countKeys = [
+	"mobile.schedules.count.wakes",
+	"mobile.schedules.count.monitors",
+	"mobile.schedules.show_more.wakes",
+	"mobile.schedules.show_more.monitors",
+	"mobile.schedules.summary.wakes",
+	"mobile.schedules.summary.monitors_armed",
+	"mobile.schedules.tail.failed",
+	"mobile.projects.sessions.count",
+];
+for (const key of countKeys) {
+	const vals = [0, 1, 2, 1000000].map((n) =>
+		JSON.stringify(render(key, key.includes("show_more") ? { hidden: n } : { count: n })),
+	);
+	console.log(row([key, ...vals]));
+}
+console.log(`\n## PROJECT LIVE COUNT`);
+for (const live of [1, 2, 1000000]) {
+	const base = render("mobile.projects.sessions.count", { count: 2 });
+	console.log(`${live}: ${JSON.stringify(render("mobile.projects.sessions.live", { base, live }))}  | en: ${JSON.stringify(renderEn("mobile.projects.sessions.live", { base: renderEn("mobile.projects.sessions.count", { count: 2 }), live }))}`);
+}
+console.log(`\n## MILESTONES`);
+console.log(row(["completed/total", "zh-CN", "en"]));
+for (const [completed, total] of [[0, 0], [0, 3], [1, 2], [2, 3], [3, 3], [1000000, 1000000]] as const) {
+	console.log(row([`${completed}/${total}`, JSON.stringify(render("mobile.projects.milestones.count", { completed, total })), JSON.stringify(renderEn("mobile.projects.milestones.count", { completed, total }))]));
+}
+console.log(`\n## ATTENTION`);
+console.log(row(["broken/total", "zh-CN", "en"]));
+for (const [broken, total] of [[0, 3], [1, 3], [2, 3], [3, 3], [1000000, 1000000]] as const) {
+	console.log(row([`${broken}/${total}`, JSON.stringify(render("mobile.schedules.summary.monitors_attention", { broken, total })), JSON.stringify(renderEn("mobile.schedules.summary.monitors_attention", { broken, total }))]));
+}
+console.log(`\n## TRUNCATED`);
+for (const family of ["wakes", "monitors"] as const) {
+	for (const [shown, total] of [[1, 1], [3, 10], [1, 1000000]] as const) {
+		console.log(`${family} ${shown}/${total}: ${JSON.stringify(render("mobile.schedules.truncated", { shown, total, family }))}  | en: ${JSON.stringify(renderEn("mobile.schedules.truncated", { shown, total, family }))}`);
+	}
+}
+console.log(`\n## RECEIPTS — all action codes x project/milestone/other`);
+console.log(row(["action", "project", "milestone", "other"]));
+for (const action of ["created", "completed", "reopened", "added", "updated", "removed", "deleted", "archived"] as const) {
+	const cells = ["project", "milestone", "other"].map((kind) =>
+		JSON.stringify(render("mobile.projects.write_receipt", { action, subject: kind === "milestone" ? "beta cut" : "payments-migration", kind })),
+	);
+	console.log(row([action, ...cells]));
+}
+console.log(`\n## COMPOSITION — dueLabel/nextDueClause mirrored from schedules-copy.ts`);
+const dueLabel = (seconds: number): string => {
+	const magnitude = Math.abs(seconds);
+	let label: string;
+	if (magnitude < 90) label = `${Math.floor(magnitude)}s`;
+	else if (magnitude < 5400) label = `${Math.floor(magnitude / 60)}m`;
+	else if (magnitude < 172800) label = `${Math.floor(magnitude / 3600)}h`;
+	else label = `${Math.floor(magnitude / 86400)}d`;
+	return seconds < 0 ? render("mobile.schedules.due.overdue", { label }) : render("mobile.schedules.due.ahead", { label });
+};
+const dueLabelEn = (seconds: number): string => {
+	const magnitude = Math.abs(seconds);
+	let label: string;
+	if (magnitude < 90) label = `${Math.floor(magnitude)}s`;
+	else if (magnitude < 5400) label = `${Math.floor(magnitude / 60)}m`;
+	else if (magnitude < 172800) label = `${Math.floor(magnitude / 3600)}h`;
+	else label = `${Math.floor(magnitude / 86400)}d`;
+	return seconds < 0 ? renderEn("mobile.schedules.due.overdue", { label }) : renderEn("mobile.schedules.due.ahead", { label });
+};
+const nextDueClause = (head: string, seconds: number): string => {
+	const label = dueLabel(seconds);
+	return seconds < 0
+		? render("mobile.schedules.head.overdue", { head, label })
+		: render("mobile.schedules.head.next", { head, label });
+};
+const nextDueClauseEn = (head: string, seconds: number): string => {
+	const label = dueLabelEn(seconds);
+	return seconds < 0
+		? renderEn("mobile.schedules.head.overdue", { head, label })
+		: renderEn("mobile.schedules.head.next", { head, label });
+};
+console.log(row(["count", "due", "head.next/overdue zh-CN", "en"]));
+for (const [n, seconds] of [[1, 240], [3, 60], [1000000, -7200], [5, -259200]] as const) {
+	const headZh = render("mobile.schedules.count.wakes", { count: n });
+	const headEn = renderEn("mobile.schedules.count.wakes", { count: n });
+	console.log(row([`wakes ${n} @${seconds}s`, dueLabel(seconds), JSON.stringify(nextDueClause(headZh, seconds)), JSON.stringify(nextDueClauseEn(headEn, seconds))]));
+}
+for (const [n, seconds] of [[1, 60], [3, -7200]] as const) {
+	const headZh = render("mobile.schedules.count.monitors", { count: n });
+	const headEn = renderEn("mobile.schedules.count.monitors", { count: n });
+	console.log(row([`monitors ${n} @${seconds}s`, dueLabel(seconds), JSON.stringify(nextDueClause(headZh, seconds)), JSON.stringify(nextDueClauseEn(headEn, seconds))]));
+}
+console.log(`\n## CADENCE / STATE / STATUS`);
+console.log(`cadence.every(1h30m): ${JSON.stringify(render("mobile.schedules.cadence.every", { duration: "1h30m" }))}`);
+console.log(`cadence.left 1: ${JSON.stringify(render("mobile.schedules.cadence.left", { cadence: render("mobile.schedules.cadence.every", { duration: "1h" }), remaining: 1 }))}`);
+console.log(`cadence.left 1000000: ${JSON.stringify(render("mobile.schedules.cadence.left", { cadence: render("mobile.schedules.cadence.every", { duration: "1h" }), remaining: 1000000 }))}`);
+console.log(`cadence.spent: ${JSON.stringify(render("mobile.schedules.cadence.spent", { cadence: render("mobile.schedules.cadence.every", { duration: "1h" }) }))}`);
+console.log(`cadence.once: ${JSON.stringify(render("mobile.schedules.cadence.once"))}`);
+for (const key of ["mobile.schedules.state.disabled", "mobile.schedules.state.dormant", "mobile.schedules.state.expired", "mobile.schedules.state.stale", "mobile.schedules.state.waiting"]) {
+	console.log(`${key}: ${JSON.stringify(render(key))}`);
+}
+for (const key of [
+	"mobile.schedules.empty.title",
+	"mobile.schedules.empty.body",
+	"mobile.schedules.empty_line.wakes",
+	"mobile.schedules.empty_line.monitors",
+	"mobile.schedules.gone.wakes",
+	"mobile.schedules.gone.monitors",
+	"mobile.schedules.parked.wakes",
+	"mobile.schedules.parked.monitors",
+	"mobile.schedules.read_error.wakes",
+	"mobile.schedules.read_error.monitors",
+	"mobile.schedules.read_unreachable",
+	"mobile.schedules.show_less.wakes",
+	"mobile.schedules.show_less.monitors",
+	"mobile.schedules.supervisor.not_running",
+	"mobile.schedules.supervisor.unsupported",
+	"mobile.schedules.supervisor.unverifiable",
+]) {
+	console.log(`${key}: ${JSON.stringify(render(key))}`);
+}
+console.log(`\n## PROJECT / NOTIFICATION / COMPUTER STRINGS`);
+for (const key of Object.keys(ZH).filter((k) => !k.startsWith("mobile.schedules."))) {
+	if (key === "mobile.projects.write_receipt") continue;
+	let params: Record<string, string | number> = {};
+	if (key === "mobile.projects.delete_body") params = { name: "payments-migration" };
+	else if (key === "mobile.projects.remove_milestone_body") params = { name: "beta cut" };
+	else if (key === "mobile.projects.sessions.live") params = { base: render("mobile.projects.sessions.count", { count: 2 }), live: 1 };
+	else if (key === "mobile.projects.milestones.count") params = { completed: 2, total: 3 };
+	else if (key === "mobile.projects.sessions.count") params = { count: 2 };
+	console.log(`${key}: ${JSON.stringify(render(key, params))}`);
+}

@@ -1,5 +1,9 @@
 # Mobile components
 
+Native conversation/navigation refinements are governed by
+[native interaction guidelines](native-interaction-guidelines.md), including the
+scoped white-disk identity exception. All other kit rules remain in force.
+
 The primitive spec for the native Local Operator app: anatomy, sizes, states, and
 where each one already exists in the shipped phone web client.
 

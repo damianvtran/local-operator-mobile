@@ -1,0 +1,290 @@
+# audit bundle ur/mobile.account_routing/ur30a4 — captured 2026-10-30T22:24:37Z
+$ git -C <worktree> rev-parse HEAD
+32c7677715f6a6409b5da05021650c725169c853
+$ git -C <worktree> status --short src/i18n/catalogues/ur
+?? src/i18n/catalogues/ur/
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:46617) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<scratch>/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <scratch>/ur-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) npx tsx <scratch>/ur-audit-a/evidence.mts mobile.account_routing ur30a4
+== bundle ur/mobile.account_routing/ur30a4 — independent Urdu audit, group A
+== command: npx tsx <scratch>/ur-audit-a/evidence.mts mobile.account_routing ur30a4
+== route: catalogue read as ordinary WORKTREE FILES (read_public_copy is refused for src/i18n/**);
+   the en context sidecar is nested JSON ({role,note} objects), not a message map, so it is not routable;
+   NO copy-route receipt was obtained for any input below — none is claimed.
+
+-- inputs
+   en       34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03  <worktree>/src/i18n/catalogues/en/mobile.account_routing.json
+   context  2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c  <worktree>/src/i18n/catalogues/en/mobile.account_routing.context.json
+   ur       d1308a7739a7ff12c0196989b26d223748007a049dcd189180ec679ba769054b  <worktree>/src/i18n/catalogues/ur/mobile.account_routing.json
+
+-- key parity: en=14 ur=14 missing=[] unknown=[]
+   JSON validity: both files parsed by JSON.parse above (no exception).
+
+-- plural probe (independent of the catalogue)
+   Intl.PluralRules('ur').select: 0=other 1=one 2=other 21=other
+   app pluralCategory("ur", n):    0=other 1=one 2=other 21=other
+   parameterised keys in mobile.account_routing: 0 (no placeholder/plural/select in this namespace)
+   → CLDR category completeness (all categories for the locale) is vacuous here: no plural/select message exists in this namespace.
+
+-- per-key evidence (len = code points; the style guide measures ≈1 terminal cell per character)
+   mobile.account_routing.disconnected
+      en(48): Connect to a computer to change account routing.
+      ur(56): اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہوں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہوں۔
+      render(renderFor(key,{},'ur')): Connect to a computer to change account routing.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.error
+      en(94): The change could not be confirmed. Check the connection and reload to read the current policy.
+      ur(91): تبدیلی کی تصدیق نہیں ہو سکی۔ کنکشن چیک کریں اور موجودہ پالیسی پڑھنے کے لیے دوبارہ لوڈ کریں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): تبدیلی کی تصدیق نہیں ہو سکی۔ کنکشن چیک کریں اور موجودہ پالیسی پڑھنے کے لیے دوبارہ لوڈ کریں۔
+      render(renderFor(key,{},'ur')): The change could not be confirmed. Check the connection and reload to read the current policy.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.load_error
+      en(67): Could not load account routing. Check the connection and try again.
+      ur(63): اکاؤنٹ روٹنگ لوڈ نہیں ہو سکی۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اکاؤنٹ روٹنگ لوڈ نہیں ہو سکی۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔
+      render(renderFor(key,{},'ur')): Could not load account routing. Check the connection and try again.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.loading
+      en(24): Loading account routing…
+      ur(27): اکاؤنٹ روٹنگ لوڈ ہو رہی ہے…
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اکاؤنٹ روٹنگ لوڈ ہو رہی ہے…
+      render(renderFor(key,{},'ur')): Loading account routing…  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.rejected
+      en(84): The change was not saved. Check the value or this computer’s settings and try again.
+      ur(91): تبدیلی محفوظ نہیں ہوئی۔ درج کی گئی قدر یا اس کمپیوٹر کی ترتیبات چیک کر کے دوبارہ کوشش کریں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): تبدیلی محفوظ نہیں ہوئی۔ درج کی گئی قدر یا اس کمپیوٹر کی ترتیبات چیک کر کے دوبارہ کوشش کریں۔
+      render(renderFor(key,{},'ur')): The change was not saved. Check the value or this computer’s settings and try again.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.reload
+      en(13): Reload policy
+      ur(22): پالیسی دوبارہ لوڈ کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): پالیسی دوبارہ لوڈ کریں
+      render(renderFor(key,{},'ur')): Reload policy  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.account_routing.retry
+      en(9): Try again
+      ur(16): دوبارہ کوشش کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): دوبارہ کوشش کریں
+      render(renderFor(key,{},'ur')): Try again  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.account_routing.save
+      en(11): Save policy
+      ur(17): پالیسی محفوظ کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): پالیسی محفوظ کریں
+      render(renderFor(key,{},'ur')): Save policy  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.account_routing.saved
+      en(23): Saved on this computer.
+      ur(31): اس کمپیوٹر پر محفوظ کر لیا گیا۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس کمپیوٹر پر محفوظ کر لیا گیا۔
+      render(renderFor(key,{},'ur')): Saved on this computer.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.saving
+      en(7): Saving…
+      ur(16): محفوظ ہو رہا ہے…
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): محفوظ ہو رہا ہے…
+      render(renderFor(key,{},'ur')): Saving…  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.account_routing.scope
+      en(36): Changes apply only to this computer.
+      ur(40): تبدیلیاں صرف اسی کمپیوٹر پر لاگو ہوں گی۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): تبدیلیاں صرف اسی کمپیوٹر پر لاگو ہوں گی۔
+      render(renderFor(key,{},'ur')): Changes apply only to this computer.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   mobile.account_routing.title
+      en(15): Account routing
+      ur(12): اکاؤنٹ روٹنگ
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اکاؤنٹ روٹنگ
+      render(renderFor(key,{},'ur')): Account routing  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=heading
+   mobile.account_routing.unavailable
+      en(95): Account routing settings are unavailable on this relay. Update Local Operator on this computer.
+      ur(89): اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔
+      render(renderFor(key,{},'ur')): Account routing settings are unavailable on this relay. Update Local Operator on this computer.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.account_routing.unsaved
+      en(14): Not saved yet.
+      ur(24): ابھی محفوظ نہیں کیا گیا۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): ابھی محفوظ نہیں کیا گیا۔
+      render(renderFor(key,{},'ur')): Not saved yet.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+
+-- bidi: control-character hits in this namespace = 0 (expected 0; the render layer adds FSI/PDI)
+-- latin runs: 2 in the ur text, 0 not present in the en source (expected 0)
+-- typography: ۔=12 ،=0 ؟=0 “”=0 …(U+2026)=2 | strings containing ASCII "..."=0 | digits=none | Arabic yeh/kaf/heh/marbuta=none
+-- non-ASCII code points used: U+0627 U+06A9 U+0624 U+0646 U+0679 U+0631 U+0648 U+06AF U+062A U+0628 U+062F U+06CC U+0644 U+06D2 U+0633 U+0645 U+067E U+06C1 U+06BA U+06D4 U+0635 U+0642 U+0634 U+0686 U+062C U+0691 U+06BE U+0688 U+2026 U+062D U+0641 U+0638 U+0626
+-- redaction scan: 0 marker(s) across the three inputs (expected 0)
+
+-- proposed replacements, parsed and rendered by the app's own formatter
+   ur30a4-M1 MAJOR mobile.account_routing.disconnected  (56 → 61 chars)
+      before: اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہوں۔
+      after : اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔
+      round-trip stable=true  bidi-controls-in-replacement=false
+
+== end bundle ur/mobile.account_routing/ur30a4
+exit=0
+
+$ python3 <scratch>/ur-audit-a/compose.py mobile.account_routing
+-- composed / cross-namespace checks: mobile.account_routing
+   reads: <scratch>/ur-wave/src/i18n/catalogues/ur/mobile.account_routing.json, the en source and context beside it, sibling namespaces, core catalogues
+
+   this namespace mirrors core's committed relay.account_policy
+     MOBILE-ONLY  mobile.account_routing.disconnected
+     DIFFERS      mobile.account_routing.error
+        core  : تبدیلی کی تصدیق نہیں ہو سکی۔ کنکشن چیک کریں اور موجودہ پالیسی پڑھنے کے لیے صفحہ دوبارہ لوڈ کریں۔
+        mobile: تبدیلی کی تصدیق نہیں ہو سکی۔ کنکشن چیک کریں اور موجودہ پالیسی پڑھنے کے لیے دوبارہ لوڈ کریں۔
+        en identical: True
+     IDENTICAL    mobile.account_routing.load_error  (en also identical: True)
+     IDENTICAL    mobile.account_routing.loading  (en also identical: True)
+     IDENTICAL    mobile.account_routing.rejected  (en also identical: True)
+     MOBILE-ONLY  mobile.account_routing.reload
+     IDENTICAL    mobile.account_routing.retry  (en also identical: True)
+     IDENTICAL    mobile.account_routing.save  (en also identical: True)
+     IDENTICAL    mobile.account_routing.saved  (en also identical: True)
+     IDENTICAL    mobile.account_routing.saving  (en also identical: True)
+     IDENTICAL    mobile.account_routing.scope  (en also identical: True)
+     DIFFERS      mobile.account_routing.title
+        core  : کمپیوٹر کی ترتیبات
+        mobile: اکاؤنٹ روٹنگ
+        en identical: False
+     IDENTICAL    mobile.account_routing.unavailable  (en also identical: True)
+     MOBILE-ONLY  mobile.account_routing.unsaved
+     totals: identical=9 differs=2 mobile-only=3 of 14
+
+   redaction scan: 6 input files read, 0 marker(s) in total (expected 0)
+exit=0
+
+$ python3 <scratch>/ur-audit-a/scan_all.py
+redaction scan: all inputs — 102 files enumerated below
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/messages.ts
+   read: <worktree>/src/i18n/runtime.ts
+   read: <worktree>/src/i18n/locale.ts
+   read: <worktree>/src/i18n/catalogues.ts
+   read: <worktree>/src/i18n/catalogue.gen.ts
+   read: <worktree>/scripts/i18n/generate.ts
+   read: <worktree>/scripts/i18n/check-strings.ts
+   read: <worktree>/package.json
+   read: <worktree>/src/features/home/home-copy.ts
+   read: <worktree>/src/features/home/home.tsx
+   read: <worktree>/src/features/home/home-splash.tsx
+   read: <worktree>/src/features/session/composer.ts
+   read: <worktree>/src/features/session/health-copy.ts
+   read: <worktree>/src/features/session/components/status-tray.tsx
+   read: <worktree>/src/features/session/components/composer.tsx
+   read: <worktree>/src/features/new-session/startup-transcript.tsx
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.services_status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.team_bridge.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.approvals.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.ask.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.health.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.library.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.login.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.shell.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.palette.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.projects_edit.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.review.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.schedule.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.team_authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.viewer.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.welcome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.desktop.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.incidents.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.memory.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.notices.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.radient_saver.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.remote_compute.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
+   read: <scratch>/ur-audit-a/core-en/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-en/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-en/relay.health.json
+   read: <core>/i18n/glossary.md
+   read: <core>/i18n/style-guides/ur.md
+   read: <core>/docs/I18N.md
+redaction scan: all inputs — 0 marker(s) across 102 files (expected 0)
+exit=0

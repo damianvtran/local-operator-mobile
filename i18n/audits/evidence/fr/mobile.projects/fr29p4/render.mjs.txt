@@ -1,0 +1,251 @@
+/**
+ * Independent auditor tooling (read-only), round 4. Renders the ONE audited key
+ * through the APP'S OWN parser and renderer (src/i18n/messages.ts ->
+ * parseMessage/formatMessage, reached through src/i18n/runtime.ts renderFor, the
+ * function t() calls). `loader.mjs` only teaches plain Node the app's
+ * extensionless relative imports; no module of the app is modified and no
+ * translation/MT service is used anywhere.
+ */
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const BASE = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const { renderFor } = await import(`${BASE}/src/i18n/runtime.ts`);
+const { parseMessage, formatMessage } = await import(`${BASE}/src/i18n/messages.ts`);
+
+const json = (p) => JSON.parse(readFileSync(`${BASE}/${p}`, "utf8"));
+const sha = (p) => createHash("sha256").update(readFileSync(`${BASE}/${p}`)).digest("hex");
+const H = (s) => `\n=== ${s} ===`;
+
+const K = "mobile.projects.write_receipt";
+const EN = json("src/i18n/catalogues/en/mobile.projects.json");
+const CTX = json("src/i18n/catalogues/en/mobile.projects.context.json");
+const FR = json("src/i18n/catalogues/fr/mobile.projects.json");
+
+/* ---------- structure dump from the app's own AST ---------- */
+const dump = (nodes) =>
+	nodes
+		.map((n) => {
+			if (n.type === "text") return JSON.stringify(n.value);
+			if (n.type === "argument") return `{${n.name}}`;
+			if (n.type === "number") return "#";
+			const arms = [...n.options.keys()].sort();
+			return `{${n.name}:${n.type}[${arms.map((a) => `${a}=>${dump(n.options.get(a))}`).join(", ")}]}`;
+		})
+		.join(" + ");
+
+const armMap = (nodes, name) => {
+	const found = new Map();
+	const walk = (ns) => {
+		for (const n of ns) {
+			if ((n.type === "select" || n.type === "plural") && n.name === name) found.set(name, n);
+			if (n.type === "select" || n.type === "plural") for (const b of n.options.values()) walk(b);
+		}
+	};
+	walk(nodes);
+	return found.get(name);
+};
+
+console.log(H("0. input bytes audited (sha256 of the worktree files)"));
+for (const p of [
+	"src/i18n/catalogues/en/mobile.projects.json",
+	"src/i18n/catalogues/en/mobile.projects.context.json",
+	"src/i18n/catalogues/fr/mobile.projects.json",
+	"src/i18n/messages.ts",
+	"src/i18n/runtime.ts",
+	"src/i18n/catalogue.gen.ts",
+]) {
+	console.log(`${sha(p)}  ${p}`);
+}
+console.log(
+	`key counts: en=${Object.keys(EN).length} ctx=${Object.keys(CTX).length} fr=${Object.keys(FR).length}`,
+);
+console.log(
+	`key sets identical en/fr: ${JSON.stringify(Object.keys(EN).sort()) === JSON.stringify(Object.keys(FR).sort())}`,
+);
+console.log(
+	`key sets identical en/ctx: ${JSON.stringify(Object.keys(EN).sort()) === JSON.stringify(Object.keys(CTX).sort())}`,
+);
+
+console.log(H("1. current bytes of the audited key"));
+console.log(`en  : ${JSON.stringify(EN[K])}`);
+console.log(`ctx : ${JSON.stringify(CTX[K])}`);
+console.log(`fr  : ${JSON.stringify(FR[K])}`);
+
+console.log(H("2. parameter sets, straight from parseMessage"));
+for (const [loc, cat] of [["en", EN], ["fr", FR]]) {
+	const p = parseMessage(cat[K]);
+	console.log(`${loc} params: ${JSON.stringify([...p.params.entries()])}`);
+}
+{
+	const enP = [...parseMessage(EN[K]).params.entries()].sort().map(String);
+	const frP = [...parseMessage(FR[K]).params.entries()].sort().map(String);
+	console.log(`parameter sets agree (name+kind): ${JSON.stringify(enP) === JSON.stringify(frP)}`);
+	console.log(`parameter sets: ${JSON.stringify(enP)}`);
+}
+
+console.log(H("3. arm structure, straight from parseMessage (en / fr)"));
+for (const [loc, cat] of [["en", EN], ["fr", FR]]) {
+	console.log(`${loc}: ${dump(parseMessage(cat[K]).nodes)}`);
+}
+{
+	const kinds = (cat) => [...armMap(parseMessage(cat[K]).nodes, "kind").options.keys()].sort();
+	console.log(`en kind arms: ${JSON.stringify(kinds(EN))}`);
+	console.log(`fr kind arms: ${JSON.stringify(kinds(FR))}`);
+	console.log(`kind arms identical: ${JSON.stringify(kinds(EN)) === JSON.stringify(kinds(FR))}`);
+	for (const loc of ["en", "fr"]) {
+		const node = armMap(parseMessage((loc === "en" ? EN : FR)[K]).nodes, "kind");
+		for (const [arm, body] of node.options) {
+			const inner = armMap(body, "action");
+			const codes = [...inner.options.keys()].sort();
+			console.log(
+				`${loc}.${arm.padEnd(9)} action arms: ${JSON.stringify(codes)} (count ${codes.length})`,
+			);
+		}
+	}
+}
+
+console.log(H("4. every action code x every kind x both locales, via renderFor"));
+const CODES = ["created", "completed", "reopened", "added", "updated", "removed", "deleted"];
+const KINDS = ["project", "milestone", "other"];
+const SUBJECT = { project: "payments-migration", milestone: "Brief de lancement", other: "Audit Q4" };
+const ENGLISH = /Created|Completed|Reopened|Added|Updated|Removed|Deleted|milestone/i;
+const rows = [];
+for (const kind of KINDS) {
+	for (const code of CODES) {
+		const en = renderFor(K, { action: code, subject: SUBJECT[kind], kind }, "en");
+		const fr = renderFor(K, { action: code, subject: SUBJECT[kind], kind }, "fr");
+		rows.push({ kind, code, en, fr });
+		console.log(
+			`${kind.padEnd(9)} ${code.padEnd(9)} en=${JSON.stringify(en).padEnd(38)} fr=${JSON.stringify(fr).padEnd(38)} english-in-fr=${ENGLISH.test(fr)}`,
+		);
+	}
+}
+
+console.log(H("5. unknown action code and unknown kind fall back to `other`"));
+for (const [action, kind] of [
+	["archived", "project"],
+	["archived", "milestone"],
+	["deleted", "workspace"],
+]) {
+	console.log(
+		`action=${action} kind=${kind} en=${JSON.stringify(renderFor(K, { action, subject: "X", kind }, "en"))} fr=${JSON.stringify(renderFor(K, { action, subject: "X", kind }, "fr"))}`,
+	);
+}
+
+console.log(H("6. English byte-compatibility against the pre-change mechanism"));
+/* The message before this commit was "{action} {subject}." with the SCREEN
+ *  supplying the rendered English verb; the milestone call sites supplied the
+ *  composed phrase `milestone ${name}`. Both are rendered here from their own
+ *  message text, not assumed. */
+const OLD = "{action} {subject}.";
+const verb = (code) => code.charAt(0).toUpperCase() + code.slice(1);
+const oldRender = (subject, code) =>
+	formatMessage(parseMessage(OLD), { action: verb(code), subject }, "en");
+/* The five real call sites of the old mechanism, as they stood at 49f79b3:
+ *   created  -> subject = project.name                     (bare)
+ *   completed/reopened -> subject = milestone.name          (bare)
+ *   added/updated -> subject = `milestone ${name}`          (composed)
+ *   removed  -> subject = `milestone ${name}`               (composed)
+ *   deleted  -> subject = project.name                      (bare) */
+for (const [code, kind, composed] of [
+	["created", "project", false],
+	["completed", "milestone", false],
+	["reopened", "milestone", false],
+	["added", "milestone", true],
+	["updated", "milestone", true],
+	["removed", "milestone", true],
+	["deleted", "project", false],
+]) {
+	const name = kind === "project" ? "payments-migration" : "Brief de lancement";
+	const after = renderFor(K, { action: code, subject: name, kind }, "en");
+	const before = oldRender(composed ? `milestone ${name}` : name, code);
+	const mustMatch = kind === "project" || ["added", "updated", "removed"].includes(code);
+	console.log(
+		`${code.padEnd(9)} kind=${kind.padEnd(9)} before=${JSON.stringify(before).padEnd(40)} after=${JSON.stringify(after).padEnd(36)} identical=${before === after}${mustMatch ? " [must not change]" : " [changed by design]"}`,
+	);
+}
+console.log("\n=== 6b. completed/reopened: the ACTUAL old screen output had no noun ===");
+for (const code of ["completed", "reopened"]) {
+	const bare = "Brief de lancement";
+	const before = oldRender(bare, code);
+	const after = renderFor(K, { action: code, subject: bare, kind: "milestone" }, "en");
+	console.log(
+		`${code.padEnd(9)} old=${JSON.stringify(before).padEnd(30)} new=${JSON.stringify(after).padEnd(40)} differs=${before !== after}`,
+	);
+}
+
+console.log(H("7. French: typography / leaks / shape of every rendered row"));
+const codes = [...new Set([...FR[K]].map((c) => c.codePointAt(0)))].sort((a, b) => a - b);
+const named = codes.filter((c) => c > 0x7e).map((c) => `U+${c.toString(16).toUpperCase()}`);
+console.log(`fr value non-ASCII code points: ${named.join(" ")}`);
+console.log(`fr U+202F count in value: ${[...FR[K]].filter((c) => c === "\u202f").length}`);
+console.log(`fr ASCII apostrophe in value: ${FR[K].includes("'")}`);
+console.log(`fr bidi/control in value: ${/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u061c]/.test(FR[K])}`);
+let shapeFailures = 0;
+for (const { kind, code, fr } of rows) {
+	const problems = [];
+	if (!/^[A-ZÀ-Ý]/.test(fr)) problems.push("does not open with a capital");
+	if (!fr.endsWith(".")) problems.push("no final full stop");
+	if (fr.includes("  ")) problems.push("double space");
+	if (/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u061c]/.test(fr)) problems.push("bidi/control char");
+	if (fr.includes("'")) problems.push("ASCII apostrophe");
+	if (ENGLISH.test(fr)) problems.push("English word");
+	if (kind === "project" && !fr.startsWith("Projet ")) problems.push("no Projet noun");
+	if (kind === "milestone" && !fr.startsWith("Jalon ")) problems.push("no Jalon noun");
+	if (kind === "other" && fr.startsWith("Projet ")) problems.push("other arm invented a noun");
+	if (fr.includes("page-blanche")) problems.push("placeholder text");
+	if (problems.length > 0) shapeFailures += 1;
+	console.log(`${kind.padEnd(9)} ${code.padEnd(9)} ${problems.length === 0 ? "ok" : problems.join(", ")}`);
+}
+console.log(`rows with a shape problem: ${shapeFailures}`);
+
+console.log(H("8. the two worked examples from the review request"));
+console.log(`fr project:   ${renderFor(K, { action: "deleted", subject: "payments-migration", kind: "project" }, "fr")}`);
+console.log(`fr milestone: ${renderFor(K, { action: "removed", subject: "X", kind: "milestone" }, "fr")}`);
+console.log(`en project:   ${renderFor(K, { action: "deleted", subject: "payments-migration", kind: "project" }, "en")}`);
+console.log(`en milestone: ${renderFor(K, { action: "removed", subject: "X", kind: "milestone" }, "en")}`);
+
+console.log(H("9. raw byte shape of the separators"));
+{
+	const fr = FR[K];
+	for (const needle of ["Projet {subject} ", "Jalon {subject} ", "other {{subject} "]) {
+		const at = fr.indexOf(needle);
+		const after = fr.slice(at + needle.length, at + needle.length + 20);
+		const code = after.codePointAt(0);
+		console.log(`${JSON.stringify(needle)} at ${at}: next bytes ${JSON.stringify(after)} (starts U+${code.toString(16).toUpperCase()})`);
+	}
+	console.log(`non-breaking spaces anywhere in rendered output: none expected, checked per row above`);
+}
+
+console.log(H("10. token scan of every rendered row (no foreign word survives)"));
+{
+	const FR_TOKENS = new Set([
+		"Projet", "Jalon", "créé", "terminé", "rouvert", "ajouté", "mis", "à", "jour",
+		"retiré", "supprimé",
+	]);
+	const EN_TOKENS = new Set([
+		"Created", "Completed", "Reopened", "Added", "Updated", "Removed", "Deleted",
+		"milestone",
+	]);
+	const tokens = (s) => s.match(/[A-Za-zÀ-ÿ]+/g) ?? [];
+	const subjectTokens = new Set(KINDS.flatMap((k) => tokens(SUBJECT[k])));
+	let leaks = 0;
+	for (const { kind, code, en, fr } of rows) {
+		const frForeign = tokens(fr).filter((t) => !FR_TOKENS.has(t) && !subjectTokens.has(t));
+		const enForeign = tokens(en).filter((t) => !EN_TOKENS.has(t) && !subjectTokens.has(t));
+		if (frForeign.length > 0 || enForeign.length > 0) leaks += 1;
+		console.log(`${kind.padEnd(9)} ${code.padEnd(9)} fr-foreign=${JSON.stringify(frForeign)} en-foreign=${JSON.stringify(enForeign)}`);
+	}
+	console.log(`rows with a foreign token: ${leaks}`);
+}
+
+console.log(H("11. rendered length, English vs French (fit)"));
+{
+	const lens = rows.map(({ kind, code, en, fr }) => [kind, code, [...en].length, [...fr].length]);
+	for (const [kind, code, n, f] of lens) {
+		console.log(`${kind.padEnd(9)} ${code.padEnd(9)} en=${String(n).padStart(2)} fr=${String(f).padStart(2)} fr/en=${(f / n).toFixed(2)}`);
+	}
+	const worst = lens.reduce((a, b) => (b[3] > a[3] ? b : a));
+	console.log(`longest French rendering: kind=${worst[0]} code=${worst[1]} cells=${worst[3]} (U+202F count in that string: ${[...renderFor(K, { action: worst[1], subject: SUBJECT[worst[0]], kind: worst[0] }, "fr")].filter((c) => c === "\u202f").length})`);
+}

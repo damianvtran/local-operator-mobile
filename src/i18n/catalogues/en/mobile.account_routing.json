@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "Connect to a computer to change account routing.",
+	"mobile.account_routing.error": "The change could not be confirmed. Check the connection and reload to read the current policy.",
+	"mobile.account_routing.load_error": "Could not load account routing. Check the connection and try again.",
+	"mobile.account_routing.loading": "Loading account routing…",
+	"mobile.account_routing.rejected": "The change was not saved. Check the value or this computer’s settings and try again.",
+	"mobile.account_routing.reload": "Reload policy",
+	"mobile.account_routing.retry": "Try again",
+	"mobile.account_routing.save": "Save policy",
+	"mobile.account_routing.saved": "Saved on this computer.",
+	"mobile.account_routing.saving": "Saving…",
+	"mobile.account_routing.scope": "Changes apply only to this computer.",
+	"mobile.account_routing.title": "Account routing",
+	"mobile.account_routing.unavailable": "Account routing settings are unavailable on this relay. Update Local Operator on this computer.",
+	"mobile.account_routing.unsaved": "Not saved yet."
+}

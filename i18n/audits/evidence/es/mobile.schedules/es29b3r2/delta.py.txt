@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""What changed between the round-1 audited text and the current bytes.
+
+The round-1 audited es file was UNTRACKED at c5f491e (it is committed only in
+f1c782f), so its bytes cannot be recovered from git. The only witness to them is
+the round-1 bundle: i18n/audits/evidence/es/mobile.schedules/es29b3/report.md,
+whose per-key table records the exact es value for all 38 keys. This script
+parses that table and diffs it against the current file — so the "18 changed /
+20 unchanged" count in the report is executed, not eyeballed.
+"""
+import json
+import re
+
+REPO = "/Users/damian/workspace/es-wave"
+OLD = f"{REPO}/i18n/audits/evidence/es/mobile.schedules/es29b3/report.md"
+NEW = f"{REPO}/src/i18n/catalogues/es/mobile.schedules.json"
+
+rows = []
+for line in open(OLD, encoding="utf-8"):
+    m = re.match(r"^\|\s*(\d+)\s*\|\s*`(mobile\.schedules\.[a-z_.]+)`\s*\|", line)
+    if not m:
+        continue
+    parts = [p.strip() for p in line.strip().strip("|").split("|")]
+    rows.append((int(m.group(1)), m.group(2), parts[2], parts[3], parts[4]))
+
+print(f"round-1 table rows parsed: {len(rows)} (expect 38)")
+cur = json.load(open(NEW, encoding="utf-8"))
+changed, unchanged = [], []
+for n, key, role, en, old in rows:
+    (changed if cur[key] != old else unchanged).append((key, old, cur[key]))
+
+print(f"keys in current file: {len(cur)}")
+print(f"changed since round 1: {len(changed)}")
+for key, old, new in changed:
+    print(f"  - {key}")
+    print(f"      old: {old}")
+    print(f"      new: {new}")
+print(f"unchanged: {len(unchanged)}")
+for key, _, _ in unchanged:
+    print(f"  = {key}")
+
+# ---------------------------------------------------------------- gender census
+# Which values carry a gender-marked token, and which way. Executed so the
+# report's "the only feminine wake-side word is state.stale" is checkable.
+FEM = re.compile(r"\b(la|las|una|activa|activas|inactiva|desactivada|caducada|obsoleta|monitorizaci[oó]n(es)?)\b")
+MASC = re.compile(r"\b(el|los|lo|un|despertar(es)?|programado|programados|los)\b")
+print("\n--- gender census over the 38 es values ---")
+fem_keys, masc_keys, mixed = [], [], []
+for key in sorted(cur):
+    v = cur[key]
+    f = sorted(set(m.group(0) for m in FEM.finditer(v)))
+    m = sorted(set(m.group(0) for m in MASC.finditer(v)))
+    if f or m:
+        tags = ("F:" + ",".join(f) if f else "") + (" " if f and m else "") + ("M:" + ",".join(m) if m else "")
+        print(f"  {key:56} {tags}")
+        if f and m:
+            mixed.append(key)
+        elif f:
+            fem_keys.append(key)
+        else:
+            masc_keys.append(key)
+print(f"values with a gender-marked token: {len(fem_keys) + len(masc_keys) + len(mixed)}")
+print(f"  feminine only: {len(fem_keys)} -> {fem_keys}")
+print(f"  masculine only: {len(masc_keys)} -> {masc_keys}")
+print(f"  both (sentence names both families): {len(mixed)} -> {mixed}")

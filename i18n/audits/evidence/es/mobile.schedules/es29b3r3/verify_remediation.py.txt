@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Round-3 verification: did the shipped bytes equal round 2's EXACT replacement strings?
+
+Reads the round-2 report's `Exact replacement` rows (the authoritative statement of
+what was requested) and the es catalogue at the audited head, and compares BYTES.
+The expected strings are parsed out of report.md; nothing is retyped by hand.
+
+Also proves the ONLY changes to the es file between the round-2 audited head
+(f1c782f) and the round-3 head (bc770ce) are the three remediated findings.
+"""
+import json
+import re
+import subprocess
+import sys
+
+REPO = "/Users/damian/workspace/es-wave"
+R2 = f"{REPO}/i18n/audits/evidence/es/mobile.schedules/es29b3r2/report.md"
+import os
+ES = os.environ.get("ES_OVERRIDE", f"{REPO}/src/i18n/catalogues/es/mobile.schedules.json")
+R2_HEAD = "f1c782f22a1f4a3f31f025282849cc62ba41b8c6"
+
+report = open(R2, encoding="utf-8").read()
+
+def show(s: str) -> str:
+    """Escape the non-ASCII characters that matter here, so the log is unambiguous."""
+    return s.replace("—", "\\u2014").replace("…", "\\u2026")
+
+lines = report.splitlines()
+
+def find_line(pattern: str) -> str:
+    hits = [l for l in lines if re.search(pattern, l)]
+    assert len(hits) == 1, f"expected exactly one line matching {pattern!r}, got {len(hits)}"
+    return hits[0]
+
+def spans(line: str):
+    return re.findall(r"`([^`]+)`", line)
+
+# --- parse the round-2 replacement rows --------------------------------------
+stale_line = find_line(r"^- \*\*Exact replacement:\*\* `obsoleto`$")
+gone_mon_line = find_line(r"^\s+- `gone\.monitors` → `Ya no está")
+gone_wak_line = find_line(r"^\s+- `gone\.wakes` → `Ya no está")
+empty_line = find_line(r"^- \*\*Exact replacement:\*\* `…; cada monitorización")
+
+# The gone rows put the key first and the value second; take the LAST span (the value).
+expected = {
+    "mobile.schedules.state.stale": spans(stale_line)[-1],
+    "mobile.schedules.gone.monitors": spans(gone_mon_line)[-1],
+    "mobile.schedules.gone.wakes": spans(gone_wak_line)[-1],
+    # Round 2 wrote the tail of the sentence with a leading ellipsis and said
+    # "rest of the value unchanged"; the ellipsis is elided prose, not a byte.
+    "mobile.schedules.empty.body": spans(empty_line)[-1].lstrip("…").lstrip().removeprefix(";").lstrip(),
+}
+
+es = json.load(open(ES, encoding="utf-8"))
+before_all = json.loads(subprocess.run(
+    ["git", "-C", REPO, "show", f"{R2_HEAD}:src/i18n/catalogues/es/mobile.schedules.json"],
+    capture_output=True, text=True, check=True).stdout)
+
+print("=" * 78)
+print("ROUND-2 'EXACT REPLACEMENT' ROWS, PARSED FROM report.md (not retyped)")
+print("=" * 78)
+for k, v in expected.items():
+    print(f"{k}\n    requested = {show(v)}")
+
+print()
+print("=" * 78)
+print("SHIPPED BYTES AT THE ROUND-3 HEAD (bc770ce), COMPARED WITH THE REQUEST")
+print("=" * 78)
+all_ok = True
+for k, want in expected.items():
+    got = es[k]
+    if k == "mobile.schedules.empty.body":
+        # "rest of the value unchanged": compose the round-2-head prefix before
+        # the "; " that opens the replaced clause, then the requested tail.
+        before = before_all[k]
+        prefix = before[: before.index("; ") + 2]
+        want = prefix + want
+        print(f"{k}\n    composed = {show(want)}")
+    ok = got == want
+    all_ok &= ok
+    print(f"  {'MATCH  ' if ok else 'MISMATCH'} {k}")
+    print(f"    shipped  = {show(got)}")
+    if not ok:
+        for i, (a, b) in enumerate(zip(got, want)):
+            if a != b:
+                print(f"    first difference at char {i}: shipped {a!r} != requested {b!r}")
+                break
+        print(f"    lengths: shipped {len(got)} requested {len(want)}")
+
+print()
+print("=" * 78)
+print("DELTA f1c782f..HEAD ON THE es mobile.schedules FILE")
+print("=" * 78)
+diff = subprocess.run(
+    ["git", "-C", REPO, "diff", "--unified=0", f"{R2_HEAD}..HEAD", "--",
+     "src/i18n/catalogues/es/mobile.schedules.json"],
+    capture_output=True, text=True, check=True,
+).stdout
+add = [l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++")]
+rem = [l[1:] for l in diff.splitlines() if l.startswith("-") and not l.startswith("---")]
+print(f"changed lines: {len(add)} added, {len(rem)} removed")
+for a, r in zip(add, rem):
+    print("  - " + r.strip())
+    print("  + " + a.strip())
+changed_keys = []
+for a, r in zip(add, rem):
+    ka = json.loads("{" + a.strip().rstrip(",") + "}")
+    kr = json.loads("{" + r.strip().rstrip(",") + "}")
+    (ka_key,) = ka
+    assert list(kr) == [ka_key], f"delta pairing mismatch: {ka_key} vs {list(kr)}"
+    changed_keys.append(ka_key)
+print()
+print("changed keys:", sorted(changed_keys))
+ok_delta = sorted(changed_keys) == sorted(expected)
+print("exactly the three findings' four keys, nothing else:",
+      "YES" if ok_delta else f"NO (extra/missing: {set(changed_keys) ^ set(expected)})")
+
+print()
+print("VERDICT:", "the three findings are remediated exactly as specified, with no collateral change"
+      if all_ok and ok_delta else "NOT VERIFIED")
+sys.exit(0 if all_ok and ok_delta else 1)

@@ -33,6 +33,19 @@
  */
 
 import { Platform } from "react-native";
+import { getStartupAuthorization } from "@/connection/startup-authorization";
+import {
+	awaitCommandOperations,
+	reopenDispatch,
+	withdrawDispatch,
+} from "@/relay/command-lifecycle";
+import {
+	awaitPrivateWrites,
+	reopenPrivateWrites,
+	runPrivateWrite,
+	scopedStore,
+	withdrawPrivateWrites,
+} from "./scoped-storage";
 
 /** The port. Identical in shape to `retry-envelope.ts`'s `EnvelopeStore`, which
  *  is why the envelope store takes this object directly rather than an adapter. */
@@ -189,12 +202,16 @@ export const deviceStore: DeviceStore = {
 		return isWeb() ? webGet(key) : nativeGet(key);
 	},
 	async set(key, value) {
-		if (isWeb()) webSet(key, value);
-		else await nativeSet(key, value);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webSet(key, value);
+			else await nativeSet(key, value);
+		});
 	},
 	async remove(key) {
-		if (isWeb()) webRemove(key);
-		else await nativeRemove(key);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webRemove(key);
+			else await nativeRemove(key);
+		});
 	},
 	async keys() {
 		if (isWeb()) return webKeys();
@@ -210,11 +227,19 @@ export const deviceStore: DeviceStore = {
 
 /**
  * Draft keys. A separate prefix from the envelope's (`lo-mobile-command:`) on
- * purpose, because the two have DIFFERENT lifetimes on a `401`: the envelope is
- * scoped to the identity that has just gone and is cleared with it, while the
- * draft is the reader's own unfinished sentence and survives to be sent after they
- * sign back in (`docs/ux/flows.md` § `C5` — "Never clear drafts on an auth blip";
- * the web client's rule, kept).
+ * purpose: they are different FAMILIES with different clearance rules, and the
+ * explicit purge names both.
+ *
+ * **On a `401` neither family is sent, and neither is adopted again (R1-5).**
+ * The generation is revoked, so every scoped key — drafts included — stays
+ * present but inaccessible: the record that would let anyone read it belongs to
+ * an owner who is no longer in force, and the next admission mints a NEW
+ * generation rather than reusing the old scope. Recovering that work after a
+ * reauthentication requires a proven same-person signal, which this app does not
+ * have yet: that is StageB work and it is not approved. Until it is, the honest
+ * contract is "unfinished work from an expired sign-in is quarantined, not
+ * recoverable", and `docs/ux/flows.md` § C5 says so instead of promising
+ * otherwise.
  */
 export const DRAFT_KEY_PREFIX = "lo-mobile-draft:";
 
@@ -234,7 +259,12 @@ export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
 
 export const readHomeDraft = async (): Promise<string> => {
 	try {
-		return (await deviceStore.get(HOME_DRAFT_KEY)) ?? "";
+		return (
+			(await scopedStore(
+				deviceStore,
+				getStartupAuthorization()?.scope ?? null,
+			).get(HOME_DRAFT_KEY)) ?? ""
+		);
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
 		 * best-effort here because a failed READ has lost nothing. */
@@ -243,14 +273,24 @@ export const readHomeDraft = async (): Promise<string> => {
 };
 
 export const writeHomeDraft = (text: string): Promise<void> =>
-	deviceStore.set(HOME_DRAFT_KEY, text);
+	scopedStore(deviceStore, getStartupAuthorization()?.scope ?? null).set(
+		HOME_DRAFT_KEY,
+		text,
+	);
 
 export const clearHomeDraft = (): Promise<void> =>
-	deviceStore.remove(HOME_DRAFT_KEY);
+	scopedStore(deviceStore, getStartupAuthorization()?.scope ?? null).remove(
+		HOME_DRAFT_KEY,
+	);
 
-export const readDraft = async (sessionId: string): Promise<string> => {
+export const readDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<string> => {
 	try {
-		return (await deviceStore.get(draftKey(sessionId))) ?? "";
+		return (
+			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ?? ""
+		);
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
 		 * best-effort here because a failed READ has lost nothing. */
@@ -261,16 +301,75 @@ export const readDraft = async (sessionId: string): Promise<string> => {
 export const writeDraft = async (
 	sessionId: string,
 	text: string,
-): Promise<void> => deviceStore.set(draftKey(sessionId), text);
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> =>
+	scopedStore(deviceStore, scope).set(draftKey(sessionId), text);
 
-export const clearDraft = async (sessionId: string): Promise<void> =>
-	deviceStore.remove(draftKey(sessionId));
+export const clearDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> => scopedStore(deviceStore, scope).remove(draftKey(sessionId));
 
 /**
  * Clears every draft. Called on an EXPLICIT sign-out and on an identity change —
  * the two cases the rule above names — and never on a `401`, which is the case
  * that reads like one but is not.
  */
+/** Auth retirement is fail-closed, unlike ordinary best-effort draft reads.
+ * Never turn blocked enumeration/deletion into a successful account switch.
+ * This is invoked ONLY by an explicit auth boundary, not an upgrade migration:
+ * legacy unknown-owner keys remain quarantined until that privacy boundary. */
+export const clearAuthorizationData = async (): Promise<void> => {
+	/* Withdraw first, drain second, delete third (review R1-4). A writer that was
+	 * already past its admission check still runs to completion — its bytes are
+	 * written and then removed, which is the only order that can promise the purge
+	 * left nothing behind. */
+	withdrawPrivateWrites();
+	await awaitPrivateWrites();
+	/* Dispatch is the second half of the same promise. An envelope is not just a
+	 * key: `client.command` may still be on the wire, and deleting the envelope
+	 * before its disposition is written loses an admitted command (success) or
+	 * untracks ambiguity (lost reply). Withdraw refuses new sends; the await covers
+	 * every accepted one through its final settle (review round 2, R1-4). */
+	withdrawDispatch();
+	await awaitCommandOperations();
+	const privateKey = (key: string) =>
+		key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith("lo-mobile-command:");
+	if (Platform.OS === "web") {
+		const storage = globalThis.localStorage;
+		if (!storage) throw new Error("private storage cannot be enumerated");
+		const keys: string[] = [];
+		for (let index = 0; index < storage.length; index++) {
+			const key = storage.key(index);
+			if (key !== null && privateKey(key)) keys.push(key);
+		}
+		for (const key of keys) storage.removeItem(key);
+	} else {
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists) {
+			for (const entry of directory.list()) {
+				if (!(entry instanceof File) || !entry.name.endsWith(".json")) continue;
+				const key = decodeURIComponent(entry.name.slice(0, -5));
+				if (privateKey(key)) entry.delete();
+			}
+		}
+	}
+	/* A late writer can also have created the native directory after the listing
+	 * above; removing it is safe because the barrier has already drained the tails
+	 * and no new write may start. */
+	if (Platform.OS !== "web") {
+		const { Directory, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists && directory.list().length === 0) directory.delete();
+	}
+	for (const key of memory.keys()) if (privateKey(key)) memory.delete(key);
+	/* Justified by the caller's contract: a caller that keeps using the store after
+	 * a purge is starting a new owner's work, and must say so through admission. */
+	reopenPrivateWrites();
+	reopenDispatch();
+};
+
 export const clearAllDrafts = async (): Promise<void> => {
 	for (const key of await deviceStore.keys()) {
 		if (key.startsWith(DRAFT_KEY_PREFIX)) await deviceStore.remove(key);

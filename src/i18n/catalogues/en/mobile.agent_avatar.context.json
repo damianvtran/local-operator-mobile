@@ -1,0 +1,10 @@
+{
+	"mobile.agent_avatar.edit_hint": {
+		"role": "help",
+		"note": "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop."
+	},
+	"mobile.agent_avatar.label": {
+		"role": "button",
+		"note": "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop."
+	}
+}

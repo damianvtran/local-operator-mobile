@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
-import { COMPOSER_COPY, composerControls } from "@/features/session/composer";
+import { composerControls, composerCopy } from "@/features/session/composer";
 import {
 	composerStateFlags,
 	type SessionStateFacts,
@@ -41,6 +41,9 @@ const facts = (over: Partial<SessionStateFacts> = {}): SessionStateFacts => ({
 	subagents: 0,
 	entries: 2,
 	voice: false,
+	healthQuiet: false,
+	healthReconnecting: false,
+	healthSheet: false,
 	supplements: {},
 	supplementPid: 1,
 	...over,
@@ -208,8 +211,10 @@ describe("composerStateFlags", () => {
 			),
 		).toEqual({ idle: false, steering: false, sending: true, ended: false });
 
+		/* An ended session is not a disabled composer any more (a send reopens it),
+		 * so the marker reads the controls' own `ended`, not a disabled reason. */
 		const ended = composerControls({ ...input, ended: true });
-		expect(ended.disabledReason).toBe(COMPOSER_COPY.endedSession);
+		expect(ended.disabledReason).toBeNull();
 		expect(composerStateFlags(ended)).toEqual({
 			idle: false,
 			steering: false,
@@ -483,6 +488,9 @@ const STATE_KEY: Record<keyof SessionStateFlags, string> = {
 	populated: "populated",
 	idle: "idle",
 	voice: "voice",
+	healthQuiet: "health-quiet",
+	healthReconnecting: "health-reconnecting",
+	healthSheet: "health-sheet",
 	supplementPreparing: "supplement-preparing",
 	supplementPopulated: "supplement-populated",
 	supplementFiles: "supplement-files",

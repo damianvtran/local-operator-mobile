@@ -1,0 +1,95 @@
+# Spanish audit A — execution log
+# namespace:   mobile.computers
+# audit id:    es29a2
+# audit date:  2026-10-29
+# auditor:     i18n-auditor (lopdev team); session c58fa60fdb20
+# model:       radient/auto (ACTUAL; fallback trail anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider quota fallback)
+# translator:  i18n-translator; session c53616dcee1c; actual model radient/auto (as supplied by the requesting manager)
+# independence: different agent/session/context from the translator; same served model for part of the run, disclosed
+# read-only:   this audit wrote nothing outside i18n/audits/evidence/es/mobile.computers/es29a2/
+# route:       ordinary worktree reads; nested-JSON sidecars are not routable through read_public_copy; no keyed receipt claimed
+# limits:      no native-speaker review; no rendered frame
+
+$ git -C /Users/damian/workspace/es-wave rev-parse HEAD && git -C /Users/damian/workspace/es-wave branch --show-current && git -C /Users/damian/workspace/es-wave status --short
+c5f491ece9db11ec2dc7d136e7de88f93781acff
+feat/i18n-spanish
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/es/
+?? src/i18n/catalogues/es/
+
+$ node --version
+v24.22.1
+EXIT=0
+
+# The repository's own validator (key parity + message parse + strings ratchet).
+
+$ npm run -s i18n:check   # run in /Users/damian/workspace/es-wave
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:59962) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db
+EXIT=0
+
+# Per-key mechanical check: JSON, key/context parity, placeholders, ICU presence,
+# bidi controls, typography codepoints, technical tokens, character counts.
+# The metric is UTF-16 .length — the same metric home-copy.ts budgets use.
+
+$ python3 /Users/damian/.local-operator/sessions/c58fa60fdb20/scratchpad/es-ns-check.py mobile.computers
+JSON mobile.computers: en/context/es parse PASS
+KEYS mobile.computers: en=10 target=10 context=10; missing=[]; extra=[]; context_parity=True; context_missing=[]
+MECH mobile.computers.add: PASS; role=button; params=True; icu=False; chars_en=14; chars_es=18; ratio=1.29
+MECH mobile.computers.added.stays_listed: PASS; role=help; params=True; icu=False; chars_en=77; chars_es=75; ratio=0.97
+MECH mobile.computers.badge.active: PASS; role=status; params=True; icu=False; chars_en=6; chars_es=6; ratio=1.00
+MECH mobile.computers.badge.connecting: PASS; role=status; params=True; icu=False; chars_en=10; chars_es=10; ratio=1.00
+MECH mobile.computers.connecting: PASS; role=status; params=True; icu=False; chars_en=11; chars_es=11; ratio=1.00
+MECH mobile.computers.none_on_phone: PASS; role=status; params=True; icu=False; chars_en=31; chars_es=37; ratio=1.19
+MECH mobile.computers.password_placeholder: PASS; role=help; params=True; icu=False; chars_en=28; chars_es=27; ratio=0.96
+MECH mobile.computers.section.not_connected: PASS; role=heading; params=True; icu=False; chars_en=38; chars_es=37; ratio=0.97
+MECH mobile.computers.section.on_phone: PASS; role=heading; params=True; icu=False; chars_en=13; chars_es=16; ratio=1.23
+MECH mobile.computers.switch: PASS; role=button; params=True; icu=False; chars_en=15; chars_es=18; ratio=1.20
+SHA256 mobile.computers en src/i18n/catalogues/en/mobile.computers.json 356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643
+SHA256 mobile.computers context src/i18n/catalogues/en/mobile.computers.context.json 3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5
+SHA256 mobile.computers es src/i18n/catalogues/es/mobile.computers.json f4eab295061dac8e3d373fd4c0de67051d05a45bb7febf7e9317085f510587c4
+SUMMARY mobile.computers: keys=10; mechanical_failures=0; placeholders_in_namespace=0
+EXIT=0
+
+# Core Spanish catalogue cross-check for the terms this namespace reuses or asserts.
+# Read from the core repository's committed main (origin/main), not a working tree.
+
+$ git -C /Users/damian/local-operator ls-tree -r --name-only origin/main -- local_operator/i18n/catalogues/es/ | wc -l
+      80
+EXIT=0
+
+$ for f in relay.chrome relay.health cli.mobile_help wire.settings wire.settings.account_policy; do echo "--- $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json 2>/dev/null | grep -E 'máquina|teléfono' | head -8; done
+--- relay.chrome ---
+  "relay.chrome.drawer.status": "{state, select, online {Conectado · este teléfono} retrying {Sin conexión · reintentando} other {Conectando…}}",
+  "relay.chrome.list.empty_hint": "Empieza una con el botón Nuevo, o desde Local Operator en tu máquina",
+--- relay.health ---
+  "relay.health.live_detail": "Se ejecuta en tu máquina — tus mensajes le llegan de inmediato",
+  "relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+  "relay.health.dropped_detail": "Tu máquina no logra comunicarse con esta sesión ahora mismo y sigue intentándolo. Hasta que lo consiga, cualquier envío falla de inmediato y lo que escribiste se queda en el campo de texto.",
+  "relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
+--- cli.mobile_help ---
+  "cli.mobile_help.mobile": "Acceso desde el teléfono: controlar las sesiones de lop de esta máquina",
+  "cli.mobile_help.devices": "Listar los dispositivos push de esta máquina o revocar/anular la revocación de uno",
+--- wire.settings ---
+  "wire.settings.asks.description": "Preguntas que un agente deja en cola para ti. Un cambio se aplica de inmediato en la terminal, la aplicación de escritorio y tu teléfono.",
+  "wire.settings.bash_memory_mode.help": "'auto' deriva el límite máximo de la memoria libre del dispositivo en este momento, así que se reduce solo cuando la máquina está ocupada. 'manual' lo fija al número de abajo.",
+  "wire.settings.retry_connectivitymaxretries.help": "Presupuesto paciente para una máquina que se quedó sin conexión; distinto del máximo de reintentos.",
+  "wire.settings.supplements_denyprefixes.help": "Requiere Destacados activado. Carpetas separadas por comas cuyos archivos nunca se listan ni se envían a un modelo de decisión; úsalo en una máquina con datos de clientes.",
+  "wire.settings.team_bridge_enabled.label": "Activado en esta máquina",
+--- wire.settings.account_policy ---
+  "wire.settings.account_policy.error.write_failed": "No se pudo guardar el ajuste. Comprueba los permisos de configuración en esta máquina y vuelve a intentarlo."
+EXIT=0
+
+$ for f in relay.chrome relay.health; do echo "--- sha256 $f ---"; git -C /Users/damian/local-operator show origin/main:local_operator/i18n/catalogues/es/$f.json | shasum -a 256; done
+--- sha256 relay.chrome ---
+a2d25deb40633c2b478babb7c9fd0dd3bdc0b2cd77c4010fedd1c205b9840097  -
+--- sha256 relay.health ---
+563c533f52fbc21b240979fba164e4e0768ff57f2882025d592280fc56638c62  -
+EXIT=0
+
+# Verdict for this namespace is recorded in record.json and argued in report.md.
+# This file is actual command output, not notes.

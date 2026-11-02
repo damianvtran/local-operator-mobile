@@ -157,7 +157,7 @@ const RailMarkView = ({
 				className="absolute items-center justify-center"
 				style={{
 					top: yPt - GLYPH_PT / 2,
-					right: 0,
+					end: 0,
 					width: RAIL_COLUMN_PT,
 					height: GLYPH_PT,
 				}}
@@ -186,7 +186,7 @@ const RailMarkView = ({
 			className="absolute rounded-full"
 			style={{
 				top: yPt - height / 2,
-				right: 0,
+				end: 0,
 				width,
 				height,
 				backgroundColor: background,
@@ -300,7 +300,7 @@ export const CheckpointRail = ({
 					// straight through to the transcript beneath).
 					pointerEvents="none"
 					className="absolute inset-y-0"
-					style={{ right: RAIL_EDGE_PT, width: RAIL_COLUMN_PT }}
+					style={{ end: RAIL_EDGE_PT, width: RAIL_COLUMN_PT }}
 					aria-hidden={state.kind !== "error" ? true : undefined}
 				>
 					{building ? (
@@ -308,7 +308,7 @@ export const CheckpointRail = ({
 							className="absolute rounded-full"
 							style={{
 								top: HEAD_Y_PT - 1.25,
-								right: 0,
+								end: 0,
 								width: 6,
 								height: 2.5,
 								backgroundColor: colors.inkMuted,
@@ -325,7 +325,7 @@ export const CheckpointRail = ({
 							className="absolute items-center justify-center"
 							style={{
 								top: HEAD_Y_PT - GLYPH_PT / 2,
-								right: 0,
+								end: 0,
 								width: RAIL_COLUMN_PT,
 								height: GLYPH_PT,
 							}}

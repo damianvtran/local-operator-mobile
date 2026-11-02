@@ -1,0 +1,249 @@
+{
+	"schema": 1,
+	"audit_id": "zh29a4r2",
+	"audit_kind": "independent_delta_current_byte_namespace_audit",
+	"locale": "zh-CN",
+	"namespace": "mobile.account_routing",
+	"audit_date": "2026-10-30",
+	"audited_revision": "d3c39d8d2df2bccc78af82df9253776b4c933ad8",
+	"audited_revision_note": "Branch feat/i18n-chinese at d3c39d8d2df2bccc78af82df9253776b4c933ad8 (the Chinese-ship commit). The catalogues are committed and the worktree had no source or catalogue changes when this audit began (git status --porcelain -- src/ empty; git diff --stat HEAD -- src/ empty). Target bytes are pinned by input_hashes.target.",
+	"previous_round": {
+		"audit_id": "zh29a4",
+		"record": "i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4/record.json",
+		"report": "i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4/report.md",
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 1,
+		"findings": {
+			"AR-01": "MAJOR",
+			"AR-02": "MINOR",
+			"AR-03": "MINOR"
+		},
+		"target_sha256": "9570e834f23fda2f3d2d948374bebdaf0b2e7ddd196da7e605d432c4f059dfb0"
+	},
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "2fdd9a1e0a55",
+		"job": "not exposed to this subagent (delegated team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto; each switch a provider-quota HTTP 429 fallback. Two read-only survey calls ran before the first switch; every judgement, measurement and bundle in this audit was produced under radient/auto.",
+		"independent_from_translator_session": true,
+		"independent_from_translator": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is also the translator's served model; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "9b2d25113c21",
+		"label": "zh-delta-second-pass",
+		"agent": "reviewer (lopdev team)",
+		"session": "0a3293bdab48",
+		"selection": "parent model (anthropic/claude-sonnet-5-5 primary)",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "the worker's own report: opened as anthropic/claude-sonnet-5-5 and ran to completion as radient/auto after three quota-driven fallbacks",
+		"scope": "all 41 keys across mobile.account_routing and mobile.home, read without this auditor's findings; independent scans, counts and destination-name check",
+		"independence": "Different agent/session and a separate context; not model-diverse (same served model as this auditor and the translator) — disclosed, not closed.",
+		"verdicts": {
+			"mobile.account_routing": "passed",
+			"mobile.home": "passed (H-02 carried as an open MINOR)"
+		},
+		"agreements": [
+			"AR-01, AR-02 and AR-03 are resolved on the shipped bytes; AR-01 counted as 5 账户 / 0 账号 in the namespace and 42 账户 / 0 账号 across core's 93 files — independently reached",
+			"H-01 is resolved by the exact round-1 replacement; 请 gone, actionable 可在…中调整, destination name intact",
+			"H-02 is still open: the shipped value is unchanged 审查此仓库 and the zh-CN guide has no repo/仓库 record — independently reached",
+			"conversation_details is byte-identical inside options.fixed: 对话详情 = U+5BF9 U+8BDD U+8BE6 U+60C5",
+			"all mechanical facts: 14/14/14 and 27/27/27 key parity, 41/41 values parse, no placeholders/ICU/markup, no ASCII punctuation or bidi controls, ellipses doubled"
+		],
+		"reconciliations": []
+	},
+	"translator": {
+		"agent": "i18n-translator (as named by the requesting manager)",
+		"session": "not supplied to this auditor",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.json",
+			"sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.context.json",
+			"sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/zh-CN/mobile.account_routing.json",
+			"sha256": "6b1cb4e01ee57342b8402eee0bfe4d8c76bec5480557cb41ad1f8f17c7a811d7",
+			"previous_sha256": "9570e834f23fda2f3d2d948374bebdaf0b2e7ddd196da7e605d432c4f059dfb0"
+		}
+	},
+	"delta": {
+		"method": "reconstructed the seven round-1 values inside the shipped catalogue and hashed the repository's own serialisation; equality with the round-1 target hash proves the delta is exactly those values",
+		"reconstructed_previous_sha256": "9570e834f23fda2f3d2d948374bebdaf0b2e7ddd196da7e605d432c4f059dfb0",
+		"matches_previous_target": true,
+		"changed_keys": [
+			"mobile.account_routing.title",
+			"mobile.account_routing.loading",
+			"mobile.account_routing.load_error",
+			"mobile.account_routing.disconnected",
+			"mobile.account_routing.unavailable",
+			"mobile.account_routing.scope",
+			"mobile.account_routing.saved"
+		],
+		"changed_count": 7,
+		"unchanged_count": 7
+	},
+	"verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": []
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [],
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [],
+		"nit_ids": [],
+		"prior_findings_resolved": [
+			"AR-01",
+			"AR-02",
+			"AR-03"
+		],
+		"prior_findings_open": [],
+		"new_findings": [],
+		"verdict_reason": "AR-01 (MAJOR) is resolved in all five keys: the namespace now has 5 账户 / 0 账号, matching core's committed 42 账户 / 0 账号. AR-02 and AR-03 are resolved with core-byte-identical renderings. No meaning, safety or polarity defect; no new finding. The delta is exactly the seven prescribed values: reconstructing the round-1 bytes yields the round-1 target hash."
+	},
+	"findings": [
+		{
+			"id": "AR-01",
+			"severity": "MAJOR",
+			"status": "resolved",
+			"key": [
+				"mobile.account_routing.title",
+				"mobile.account_routing.loading",
+				"mobile.account_routing.load_error",
+				"mobile.account_routing.disconnected",
+				"mobile.account_routing.unavailable"
+			],
+			"round_1": "账号 in five keys where core uses 账户",
+			"shipped": "账户路由 · 正在加载账户路由…… · 无法加载账户路由。检查连接后重试。 · 连接电脑后才能更改账户路由。 · 此中继不提供账户路由设置。在此电脑上更新Local Operator。",
+			"check": "namespace 5 账户 / 0 账号 / 0 帐户; core origin/main 42 账户 / 0 账号 / 0 帐户 across 10 files",
+			"note": "Reads naturally; the only change is the noun. The minimal replacement preserves the confirmed-missing-route meaning and the imperative remedy."
+		},
+		{
+			"id": "AR-02",
+			"severity": "MINOR",
+			"status": "resolved",
+			"key": "mobile.account_routing.scope",
+			"round_1": "更改仅应用到此电脑。",
+			"shipped": "更改仅对此电脑生效。",
+			"check": "byte-identical to core's committed rendering of the identical English sentence",
+			"note": "Correctly limits the change to this computer; never implies a phone-global policy."
+		},
+		{
+			"id": "AR-03",
+			"severity": "MINOR",
+			"status": "resolved",
+			"key": "mobile.account_routing.saved",
+			"round_1": "已保存到此电脑。",
+			"shipped": "已保存在此电脑上。",
+			"check": "byte-identical to core's committed rendering",
+			"note": "A confirmation only; matches the same sentence on the desktop."
+		}
+	],
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0, 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)'",
+		"strings_ratchet": "node scripts/i18n/check-strings.ts -> exit 0, '284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161'",
+		"tests": "./node_modules/.bin/vitest run src/features/home/home-copy.test.ts src/i18n/__tests__/catalogues.test.ts src/i18n/__tests__/runtime.test.ts -> 3 files passed, 78 tests passed",
+		"parser": "the app's own parser: 14/14 target values parse, 0 keys with params; en 14/14 parse; key parity 14/14/14 (en / zh-CN / context)",
+		"scoped_checks": "valid JSON; exact key parity; placeholder/ICU/markup parity; bidi and control characters; full-width vs ASCII punctuation; CJK quotation balance; ellipsis U+2026 pairs; 请/您/！ scan; CJK–Latin spacing; character and cell counts",
+		"fit_metric": "Unicode cell arithmetic (CJK and full-width punctuation = 2 cells, typographic quotes = 2, U+2026 = 2), not CoreText. `unavailable` is the longest value at 35 characters / 56 cells, a wrapping status sentence with no maxCells hint; buttons 4–12 cells.",
+		"no_rendered_frame": "no rendered frame; no pixel-level or clipping claim is made"
+	},
+	"terminal_evidence": {
+		"delta_reconstruction": "current 6b1cb4e01ee57342b8402eee0bfe4d8c76bec5480557cb41ad1f8f17c7a811d7; reconstructed previous 9570e834f23fda2f3d2d948374bebdaf0b2e7ddd196da7e605d432c4f059dfb0; matches round-1 target true",
+		"account_term_counts": {
+			"namespace": {
+				"账户": 5,
+				"账号": 0,
+				"帐户": 0
+			},
+			"core_committed": {
+				"source": "origin/main c83556ae57ea3233449e14b98dcfd8da0c0e12cf",
+				"files": 93,
+				"账户": 42,
+				"账号": 0,
+				"帐户": 0,
+				"files_with_账户": 10
+			}
+		}
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/report.md",
+			"sha256": "37968eb02354f4cf700cc55dd1d1bf63cd610022fa30689b901d48751484424e"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/audit.log",
+			"sha256": "86a053cc63c0b4a961b737c71984656de6988dbef1557ff9aaffdfa424c6ce7a",
+			"state": "actual command output, not notes"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This repository has no i18n ledger and no audit-ledger command (verified: package.json scripts, scripts/i18n/, docs/i18n.md). docs/i18n.md records the report in the pull request; this bundle is the durable record.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "zh-CN",
+			"namespace": "mobile.account_routing",
+			"source_sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 0
+			},
+			"note": "zh-CN mobile.account_routing delta r2 passed: AR-01/AR-02/AR-03 resolved on shipped d3c39d8; 0 BLOCKER, 0 MAJOR; i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/record.json; radient/auto fallback run."
+		}
+	},
+	"route_disclosure": {
+		"reads": "ordinary worktree reads (catalogues, context sidecars, this repository's own validator and parser, git show/grep in the local core clone)",
+		"english_context_sidecars": "nested-JSON context sidecars are NOT routable through read_public_copy; read as ordinary worktree files",
+		"credential_shaped_keys": "none in this namespace",
+		"receipts": "no keyed public-copy or credential receipt claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; no pixel-level or clipping claim is made. Width statements are Unicode cell arithmetic plus the context hints, not CoreText.",
+		"translator_observation": "translator provenance is as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"shipping_state": "zh-CN is in SHIPPED_LOCALES (en, fr, es, zh-CN) at d3c39d8; the per-locale chip budget assertion now covers it and passed."
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output."
+}

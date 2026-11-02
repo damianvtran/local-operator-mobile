@@ -1,0 +1,12 @@
+# relay.chrome: every key, round-1 rendered bytes vs commit 2921aea bytes
+# round-1 bundle: i18n/audits/evidence/ru/relay.chrome/ru30a5m/audit.log (rendered-section)
+# the round-1 ru file was UNTRACKED at ba39018, so the old bytes come from that log's own
+# formatMessage render; the namespace carries no plural/select nodes, so rendered == raw.
+# keys: round1=4 now=4; key-set identical=True
+
+same     relay.chrome.session.resume
+same     relay.chrome.session.resuming
+same     relay.chrome.session.subtitle.ended
+same     relay.chrome.session.subtitle.not_answering
+
+# values differing: 0

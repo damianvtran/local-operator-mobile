@@ -150,8 +150,16 @@ export function askStateLine(
 ): { text: string; tone: AskTone } {
 	const status = String(row.status || "open");
 	const left = remainingMs(row, nowMs);
+	/* `expires_at: 0` (or an absent one) means NO DEADLINE, not a deadline in
+	 * 1970: the producer publishes 0 when nothing was set, and rendering a
+	 * sentence about it produced "20752 d ago" (QA round 4, O2). "open" without a
+	 * deadline is simply queued. */
+	const undated = !(Number(row.expires_at) > 0);
 	switch (status) {
 		case "open": {
+			if (undated) {
+				return { text: "Queued — the agent is continuing", tone: "wait" };
+			}
 			if (left <= 0) {
 				/* The runtime has not folded the deadline yet (it folds on its own
 				   ≤60 s tick), so this is a race window measured in seconds — but it

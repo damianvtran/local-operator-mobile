@@ -1,0 +1,37 @@
+# Why the three ru tips are a fit defect (mobile.home), and what fixes them.
+
+## The slot, from the repository's own numbers
+- src/features/home/home-splash.tsx renders the tip as `text-meta` (12 pt/500) inside a
+  `flex-row items-center gap-1.5` holding a 12 pt Info icon, inside a ScrollView whose
+  content container is `px-4`: at the narrowest supported phone (320 pt) the row is
+  320 - 32 = 288 pt, and the text box loses the icon and the gap (~270 pt).
+- The row is clamped: `numberOfLines={largeText ? 2 : 1}` — ONE line at 100 % text scale,
+  so an over-wide entry is ellipsized, not wrapped.
+- src/features/home/home-copy.ts fixes the ceiling: "the phone row is ~288 pt of
+  `text-meta` at its narrowest, which is about 48 characters", TIP_CHAR_BUDGET = 48.
+
+## Measured advances (CoreText; see widths.tsv and its font caveat)
+
+tip/parallel: en=239.5pt  fr=262.3pt  es=201.4pt  zh-CN=178.8pt  ru=296.2pt
+tip/schedule: en=238.0pt  fr=259.8pt  es=226.6pt  zh-CN=154.9pt  ru=313.8pt
+tip/search: en=267.7pt  fr=256.4pt  es=245.3pt  zh-CN=154.9pt  ru=306.0pt
+
+English's own longest tip measures 267.7 pt — the width the 48-character budget was calibrated on.
+fr and es stay under it in every entry; ru exceeds the 288 pt row in all three:
+  tip/parallel               ru  296.2 pt  (+8.2 pt vs the row, +11% vs the English maximum)
+  tip/schedule               ru  313.8 pt  (+25.8 pt vs the row, +17% vs the English maximum)
+  tip/search                 ru  306.0 pt  (+18.0 pt vs the row, +14% vs the English maximum)
+
+## Consequence
+At 100 % text scale on a 320 pt phone all three ru tips are ellipsized, which the ru
+style guide forbids ("Never truncate"). At 375 pt and above (row 343 pt, text box ~325 pt)
+they fit, so the defect is bounded to the narrowest supported width — the same width the
+suggestion-chip budget in home-copy.ts was measured against.
+
+## Replacements, measured at the same 12 pt step
+  tip.parallel  попросите раздать работу субагентам      234.3 pt
+  tip.schedule  настройте запуск промпта по расписанию   258.0 pt
+  tip.search    поищите сессию в прошлых беседах         223.3 pt
+All three are at or below English's 267.7 pt maximum, so they fit the row at 320 pt with
+headroom, and none loses a meaning the source carries.
+

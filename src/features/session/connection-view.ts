@@ -162,6 +162,11 @@ export interface ConnectionViewInput {
 	/** Why the last open ended, as `sse.ts` recorded it. A clean `eof` is never a
 	 *  fault, whatever its length. */
 	lastEnd: "eof" | "error" | "stopped" | undefined;
+	/** The SAME graced drop the dot reads (`droppedSinceFrame`, held behind
+	 *  `OUTAGE_GRACE_MS`): C2 fires on this, not on the raw `lastEnd`, so the
+	 *  banner and the dot cannot disagree — before QA round 3 (Q11) a blip under
+	 *  2.5 s painted "The connection dropped" beside a green `Live` dot. */
+	droppedSinceFrame?: boolean;
 	/** A reconnect has outlived `RECONNECT_DEADLINE_MS` without a snapshot. */
 	reconnectExpired: boolean;
 	/** The last failure the connection layer resolved, if any. It already carries
@@ -191,6 +196,19 @@ export interface ConnectionViewInput {
 	phaseSurface?: ErrorSurface | null;
 	/** The session ended: terminal, and NOT the same thing as not-answering. */
 	ended: boolean;
+	/**
+	 * The session header's status dot is reporting this session's liveness, so
+	 * `C3` ("Not answering") is not drawn as a band as well. The relay retired
+	 * its degraded band with the dot (#3008) for exactly this reason, and native
+	 * kept both: the band said "Not answering — last update 1m ago" beside a
+	 * GREEN dot on an idle session and beside a GREY "Ended" one on a history
+	 * rebuild (UX round 1 U6, design D6) — two words for one state, and one of
+	 * them false. The dot reads the relay's own measurements (`degraded`,
+	 * `heartbeat_stale`); a quiet SOCKET is the SSE layer's silence watchdog's
+	 * job, which reopens it and lands in `C2`. Optional and off by default, so
+	 * every other caller (the home screen) keeps `C3`.
+	 */
+	healthDotShown?: boolean;
 }
 
 /**
@@ -315,8 +333,8 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 		);
 	}
 
-	/* ---- C2: a transport error, or a reconnect that produced nothing ---- */
-	if (input.lastEnd === "error") {
+	/* ---- C2: the graced drop, or a reconnect that produced nothing ---- */
+	if (input.droppedSinceFrame === true) {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
 	if (input.stream === "connecting" && input.reconnectExpired) {
@@ -344,6 +362,7 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 	}
 
 	/* ---- C3: an open stream that has gone quiet, or a snapshot that is old ---- */
+	if (input.healthDotShown === true) return NOTHING_VISIBLE;
 	const quietFor =
 		input.ageS !== null && input.ageS >= KEEPALIVE_GRACE_S ? input.ageS : null;
 	if (quietFor !== null || input.stale) {

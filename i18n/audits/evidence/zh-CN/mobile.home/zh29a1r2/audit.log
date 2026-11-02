@@ -1,0 +1,225 @@
+# zh-CN delta re-audit — namespace=mobile.home
+# audit_id=zh29a1r2  previous_round=zh29a1
+# run at 2026-10-30T07:11:21Z by session 2fdd9a1e0a55 (i18n-auditor, lopdev team)
+# cwd=/Users/damian/workspace/zh-wave
+# Actual command output. Prose judgement is in report.md.
+
+$ python3 /Users/damian/.local-operator/sessions/2fdd9a1e0a55/scratchpad/probe_prev.py mobile.home zh29a1
+# script source:
+import json
+import sys
+ns, aid = sys.argv[1], sys.argv[2]
+base = "/Users/damian/workspace/zh-wave/i18n/audits/evidence/zh-CN"
+r = json.load(open(f"{base}/{ns}/{aid}/record.json"))
+c = r["current_report_verdict"]
+print(f"previous audit_id={r['audit_id']}")
+print(f"previous status={c['status']}")
+print(f"previous unresolved_blocker_major_count={c['unresolved_blocker_major_count']}")
+print(f"previous blocker_ids={c['blocker_ids']}")
+print(f"previous major_ids={c['major_ids']}")
+print(f"previous minor_ids={c['minor_ids']}")
+print(f"previous nit_ids={c['nit_ids']}")
+print(f"previous target sha256={r['input_hashes']['zh-CN']['sha256']}")
+--- output ---
+previous audit_id=zh29a1
+previous status=passed
+previous unresolved_blocker_major_count=0
+previous blocker_ids=[]
+previous major_ids=[]
+previous minor_ids=['H-01', 'H-02']
+previous nit_ids=['H-03', 'H-04', 'H-05']
+previous target sha256=24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033
+[exit=0]
+
+$ git -C /Users/damian/workspace/zh-wave rev-parse --abbrev-ref HEAD && git -C /Users/damian/workspace/zh-wave log -1 --format='%H %s'
+feat/i18n-chinese
+d3c39d8d2df2bccc78af82df9253776b4c933ad8 feat(i18n): ship Simplified Chinese across the mobile catalogue
+[exit=0]
+
+$ git -C /Users/damian/workspace/zh-wave status --porcelain -- src/ && echo '(no src entries)'
+(no src entries)
+[exit=0]
+
+$ git -C /Users/damian/workspace/zh-wave diff --stat HEAD -- src/ && echo '(no src diff)'
+(no src diff)
+[exit=0]
+
+$ git -C /Users/damian/workspace/zh-wave status --porcelain -- i18n/
+?? i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/
+?? i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/
+[exit=0]
+
+$ shasum -a 256 /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.home.json /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.home.context.json /Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/mobile.home.json
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.home.context.json
+af7ff4eb76ddaf5d6af4bfd78ddf6646015c49810b4d7375630de0d577cd9c27  /Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/mobile.home.json
+[exit=0]
+
+$ cd /Users/damian/workspace/zh-wave && node scripts/i18n/generate.ts --check 2>&1 | grep -E 'catalogue.gen.ts is current|error|Error'
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+[exit=0]
+
+$ cd /Users/damian/workspace/zh-wave && node scripts/i18n/check-strings.ts 2>&1 | tail -1
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+[exit=0]
+
+$ cd /Users/damian/workspace/zh-wave && ./node_modules/.bin/vitest run src/features/home/home-copy.test.ts src/i18n/__tests__/catalogues.test.ts src/i18n/__tests__/runtime.test.ts 2>&1 | grep -E 'Test Files|Tests  '
+ Test Files  3 passed (3)
+      Tests  78 passed (78)
+[exit=0]
+
+$ cd /Users/damian/workspace/zh-wave && node /Users/damian/.local-operator/sessions/2fdd9a1e0a55/scratchpad/probe_parse.mjs 2>&1 | grep -E '^(namespace|  )'
+namespace=mobile.account_routing en=14 zh=14 key_parity=true
+  parsed_target=14/14 keys_with_params=[]
+  missing=[] extra=[]
+namespace=mobile.home en=27 zh=27 key_parity=true
+  parsed_target=27/27 keys_with_params=[]
+  missing=[] extra=[]
+[exit=0]
+
+$ python3 /Users/damian/.local-operator/sessions/2fdd9a1e0a55/scratchpad/probe_width.py mobile.home
+# script source:
+import json
+import sys
+import unicodedata
+
+ns = sys.argv[1]
+zh = json.load(open(f"/Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/{ns}.json"))
+
+def cells(s):
+    n = 0
+    for ch in s:
+        if unicodedata.east_asian_width(ch) in ("W", "F") or ch in "“”":
+            n += 2
+        else:
+            n += 1
+    return n
+
+for key in sorted(zh):
+    value = zh[key]
+    print(f"{key} chars={len(value)} cells={cells(value)}")
+--- output ---
+mobile.home.connect_disabled_reason chars=10 cells=20
+mobile.home.folders_read_failed chars=14 cells=28
+mobile.home.greeting chars=12 cells=24
+mobile.home.options.apply chars=6 cells=12
+mobile.home.options.fixed chars=29 cells=58
+mobile.home.options.folder chars=8 cells=16
+mobile.home.options.title chars=4 cells=8
+mobile.home.queue.discard chars=6 cells=12
+mobile.home.queue.restore chars=9 cells=18
+mobile.home.queue.sheet_title chars=4 cells=8
+mobile.home.queue.view chars=6 cells=12
+mobile.home.refused_start_fallback chars=11 cells=22
+mobile.home.starting chars=6 cells=10
+mobile.home.startup_queue.blocked chars=9 cells=18
+mobile.home.startup_queue.not_started chars=3 cells=6
+mobile.home.startup_queue.sending chars=10 cells=18
+mobile.home.startup_queue.unconfirmed chars=5 cells=10
+mobile.home.suggestion.last_turn chars=5 cells=10
+mobile.home.suggestion.linear_mcp chars=12 cells=14
+mobile.home.suggestion.phone_access chars=6 cells=12
+mobile.home.suggestion.review_repo chars=5 cells=10
+mobile.home.suggestion.team_of_agents chars=7 cells=14
+mobile.home.suggestion.wake_summary chars=6 cells=12
+mobile.home.tip.parallel chars=15 cells=30
+mobile.home.tip.schedule chars=13 cells=26
+mobile.home.tip.search chars=13 cells=26
+mobile.home.transcript.waiting chars=8 cells=14
+[exit=0]
+
+$ python3 /Users/damian/.local-operator/sessions/2fdd9a1e0a55/scratchpad/probe_delta_home.py
+# script source:
+import hashlib
+import json
+
+BASE = "/Users/damian/workspace/zh-wave"
+path = f"{BASE}/src/i18n/catalogues/zh-CN/mobile.home.json"
+zh = json.load(open(path))
+prior = dict(zh)
+prior["mobile.home.options.fixed"] = "此对话的起始选项已固定。实时控制项请在“对话详情”中查看。"
+payload = json.dumps(prior, ensure_ascii=False, indent="\t") + "\n"
+recon_hash = hashlib.sha256(payload.encode()).hexdigest()
+current_hash = hashlib.sha256(open(path, "rb").read()).hexdigest()
+changed = sorted(k for k in zh if zh[k] != prior[k])
+print(f"current target sha256={current_hash}")
+print(f"reconstructed prior sha256={recon_hash}")
+print(f"matches round-1 target= {recon_hash == '24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033'}")
+print(f"changed_keys={changed}")
+print(f"changed_count={len(changed)} unchanged_count={len(zh) - len(changed)}")
+print(f"review_repo={zh['mobile.home.suggestion.review_repo']}")
+print(f"review_repo_hash={hashlib.sha256(zh['mobile.home.suggestion.review_repo'].encode()).hexdigest()}")
+
+session = json.load(open(f"{BASE}/src/i18n/catalogues/zh-CN/mobile.session.json"))
+label = session["mobile.session.conversation_details"]
+fixed = zh["mobile.home.options.fixed"]
+print(f"conversation_details={label!r} codepoints={[hex(ord(c)) for c in label]}")
+print(f"options.fixed={fixed!r}")
+print(f"quoted substring present={'“' + label + '”' in fixed}")
+print(f"bare substring present={label in fixed}")
+--- output ---
+current target sha256=af7ff4eb76ddaf5d6af4bfd78ddf6646015c49810b4d7375630de0d577cd9c27
+reconstructed prior sha256=24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033
+matches round-1 target= True
+changed_keys=['mobile.home.options.fixed']
+changed_count=1 unchanged_count=26
+review_repo=审查此仓库
+review_repo_hash=7ef76566dd6c137a4b0ae22134d6d59ad49e7a54611f8b11d6ef485a110563fa
+conversation_details='对话详情' codepoints=['0x5bf9', '0x8bdd', '0x8be6', '0x60c5']
+options.fixed='此对话的起始选项已固定。实时控制项可在“对话详情”中调整。'
+quoted substring present=True
+bare substring present=True
+[exit=0]
+
+$ git -C /Users/damian/local-operator log -1 --format='%h %ad %s' --date=short -- i18n/style-guides/zh-CN.md
+ad1de332210 2026-10-10 docs(i18n): add locale style guides and glossary
+[exit=0]
+
+$ grep -nE 'repo|仓库' /Users/damian/local-operator/i18n/style-guides/zh-CN.md || echo 'NO repo/仓库 line in the zh-CN guide'
+NO repo/仓库 line in the zh-CN guide
+[exit=0]
+
+$ git -C /Users/damian/local-operator diff origin/main -- i18n/style-guides/zh-CN.md | wc -l
+       0
+[exit=0]
+
+$ cd /Users/damian/local-operator/local_operator/i18n/catalogues/zh-CN && grep -l '仓库' *.json
+cli.update_help.json
+wire.remote_compute.json
+wire.settings.json
+[exit=0]
+
+$ python3 /Users/damian/.local-operator/sessions/2fdd9a1e0a55/scratchpad/probe_verdict_home.py
+# script source:
+import json
+print(json.dumps({
+    "audit_id": "zh29a1r2",
+    "namespace": "mobile.home",
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "prior_findings": {
+        "H-01": "resolved",
+        "H-02": "open_minor",
+        "H-03": "carried_nit",
+        "H-04": "carried_nit",
+        "H-05": "carried_nit",
+    },
+    "new_findings": [],
+}, ensure_ascii=False, indent=2))
+--- output ---
+{
+  "audit_id": "zh29a1r2",
+  "namespace": "mobile.home",
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "prior_findings": {
+    "H-01": "resolved",
+    "H-02": "open_minor",
+    "H-03": "carried_nit",
+    "H-04": "carried_nit",
+    "H-05": "carried_nit"
+  },
+  "new_findings": []
+}
+[exit=0]
+

@@ -10,15 +10,15 @@ import {
 
 import {
 	draftExistsFor,
-	GREETING,
+	greeting,
 	HOME_TIP_ROTATE_MS,
-	STARTING,
+	startingLine,
 	suggestionSlotFor,
 	tipAt,
 } from "@/features/home/home-copy";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { BrandMark } from "@/ui/components/brand-mark";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -71,30 +71,32 @@ export type HomeSplashProps = {
  * full-width targets (the spec's "full-width ghost rows"); they borrow the
  * variant's own classes so the press feedback is the kit's, not a new one.
  *
- * **The rest boundary is a rule under the row** (design D5): without one the
- * rows read as static centred copy rather than as a control, and the kit already
- * has this grammar for a full-width row — the panel's own New chat row rules
- * itself the same way. It is painted INLINE from the `hairline` token rather
- * than with `border-hairline`: the row borrows the `quiet` variant's classes,
- * and that variant paints `border-transparent` — both are border-colour
- * utilities, the compiler orders them, and the measured result was
- * `border-hairline` LOSING and the rule not painting at all. Inline wins
- * deterministically and reads the same token. The rule is decorative (the row
- * is full-bleed and every pixel of its width is the target), which is exactly
- * the hairline's role; it is never a control's sole boundary. */
+ * **No rule between rows** (user feedback, this batch). A hairline under each row
+ * turned a stack of controls into a table: the divider is the desktop's list
+ * grammar, not its suggestion grammar. The desktop's measured stack does exactly
+ * what these rows do now — text at rest, a `bg-elevated` surface on the row under
+ * the pointer — and the kit's `quiet` variant already paints the pressed surface
+ * from the same token. The row stays full-bleed with its 44 pt floor, so the whole
+ * width is still the target and no boundary is needed to find it.
+ *
+ * The one-line cap was calibrated at 100 % text scale. Large text instead gets
+ * two centred lines, matching the tip's rule, so longer localized labels remain
+ * readable rather than ending in an ellipsis. The minimum touch height stays a
+ * floor: the row and its pressed surface grow with the wrapped label. */
 const SuggestionRow = ({
 	label,
+	largeText,
 	onPress,
 	testID,
 }: {
 	label: string;
+	largeText: boolean;
 	onPress: () => void;
 	/** Set on the offline state's Connect row (`homeConnect`); the suggestion
 	 *  rows themselves carry no ids — they are content, and a flow presses them
 	 *  by their label. */
 	testID?: string;
 }) => {
-	const rowEdge = useTokenColor("hairline");
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -104,8 +106,15 @@ const SuggestionRow = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={cx(buttonClasses("quiet", "md", { pressed }), "w-full")}
-					style={{ borderBottomColor: rowEdge, borderBottomWidth: 1 }}
+					className={cx(
+						buttonClasses("quiet", "md", { pressed }),
+						/* The pressed surface carries the row's edge feedback now that the rule
+						 * is gone: `elevated` is the token the desktop's `hover:bg-elevated`
+						 * uses, so one gesture means one thing on both clients. */
+						"w-full",
+						pressed && "bg-elevated",
+					)}
+					style={{ borderRadius: 8 }}
 				>
 					{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
 					 *  `text-ink-muted` inherits the stylesheet's fixed 14 px: it never reads a
@@ -126,8 +135,9 @@ const SuggestionRow = ({
 						className={cx(
 							"text-body-sm",
 							pressed ? "text-ink" : "text-ink-muted",
+							largeText && "text-center",
 						)}
-						numberOfLines={1}
+						numberOfLines={largeText ? 2 : 1}
 					>
 						{label}
 					</Text>
@@ -228,7 +238,7 @@ export const HomeSplash = ({
 					className="text-body text-ink-muted"
 					testID={SURFACE.homeStarting}
 				>
-					{STARTING}
+					{startingLine()}
 				</Text>
 			</View>
 		);
@@ -255,12 +265,12 @@ export const HomeSplash = ({
 						setContentHeight(event.nativeEvent.layout.height)
 					}
 				>
-					{level < 2 ? <BrandMark size={32} color={markColor} /> : null}
+					{level < 2 ? <NavigationMark size={32} /> : null}
 					<Text
 						className="text-center text-title text-ink"
 						testID={SURFACE.homeGreeting}
 					>
-						{GREETING}
+						{greeting()}
 					</Text>
 					{slot.kind === "suggestions" ? (
 						<View className="w-full gap-3" testID={SURFACE.homeSuggestions}>
@@ -268,6 +278,7 @@ export const HomeSplash = ({
 								<SuggestionRow
 									key={label}
 									label={label}
+									largeText={largeText}
 									onPress={() => onPick(label)}
 								/>
 							))}
@@ -279,6 +290,7 @@ export const HomeSplash = ({
 						 *  nothing); only the suggestions hide — see `suggestionSlotFor`. */
 						<SuggestionRow
 							label="Connect a computer"
+							largeText={largeText}
 							onPress={onConnect}
 							testID={CONTROL.homeConnect}
 						/>

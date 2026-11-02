@@ -16,6 +16,7 @@ import { Bot, Clock, MessageSquare } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
+import { t } from "@/i18n";
 import {
 	type AvatarPixels,
 	avatarFailure,
@@ -271,7 +272,7 @@ export function ProfileAvatarButton({
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityLabel={`View profile for ${label}`}
+			accessibilityLabel={t("mobile.team_bridge.profile.open", { name: label })}
 			hitSlop={6}
 			onPress={() => onOpen(subject)}
 			testID={testID}
@@ -304,7 +305,7 @@ export function ProfileAuthorName({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
-			accessibilityHint="Opens their profile"
+			accessibilityHint={t("mobile.team_bridge.profile.opens_hint")}
 			onPress={() => onOpen(subject)}
 			testID={testID}
 			className="-my-2.5 py-2.5"
@@ -388,13 +389,13 @@ export function ProfileSheet({
 			/* "Profile", not the name: the title row is one line and truncates,
 			 * and a long name or "Agent (Owner)" pair was cut there (design D1).
 			 * The full name is the body's first heading and wraps. */
-			title="Profile"
+			title={t("mobile.team_bridge.profile.title")}
 			testID={SURFACE.teamBridgeProfile}
 			footer={
 				target ? (
 					<View className="p-4">
 						<Button
-							label="Message"
+							label={t("mobile.team_bridge.profile.message")}
 							leadingIcon={({ color, size }) => (
 								<MessageSquare color={color} size={size} />
 							)}

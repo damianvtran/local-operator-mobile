@@ -1,5 +1,9 @@
 # Brand kit
 
+Native conversation/navigation refinements are governed by
+[native interaction guidelines](native-interaction-guidelines.md), including the
+scoped white-disk identity exception. All other kit rules remain in force.
+
 What the Local Operator mobile app looks like, why, and which decisions are
 already made. This file is the *why*; [`components.md`](./components.md) is the
 *what* for each primitive, and `design/tokens/tokens.json` is the *values*.

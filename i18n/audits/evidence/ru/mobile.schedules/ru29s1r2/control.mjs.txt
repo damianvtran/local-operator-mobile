@@ -1,0 +1,38 @@
+// Negative controls for the delta round: the same parser/renderer that passes
+// the shipped bytes must still surface the round-1 defects when they are fed
+// back in. Expected values are the round-1 measured outputs, not prose.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const REPO = "/Users/damian/workspace/ru-wave";
+const { registerSourceResolver } = await import(join(REPO, "scripts/lib/load-src.ts"));
+registerSourceResolver();
+const { parseMessage, formatMessage } = await import(join(REPO, "src/i18n/index.ts"));
+
+const ru = JSON.parse(readFileSync(join(REPO, "src/i18n/catalogues/ru/mobile.schedules.json"), "utf8"));
+const ruP = JSON.parse(readFileSync(join(REPO, "src/i18n/catalogues/ru/mobile.projects.json"), "utf8"));
+const render = (text, params) => formatMessage(parseMessage(text), params, "ru");
+
+// Round-1 audited strings (from the round-1 records, byte for byte).
+const R1_CADENCE = "{cadence} · {remaining, plural, one {остался #} few {осталось #} many {осталось #} other {осталось #}}";
+const R1_ARMED = "{count, plural, one {# активен} few {# активны} many {# активны} other {# активны}}";
+const R1_HINT = "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов, и не может начинаться с дефиса.";
+
+const cases = [
+  ["defect  RU-SCH-1 at remaining=1 must still read masculine", R1_CADENCE, { cadence: "раз в 1d", remaining: 1 }, (v) => v === "раз в 1d · остался 1"],
+  ["defect  RU-SCH-2 at count=0 must still read '0 активны'", R1_ARMED, { count: 0 }, (v) => v === "0 активны"],
+  ["defect  RU-PRJ-2 must still carry the ', и не может' join", R1_HINT, {}, (v) => v.includes(", и не может начинаться")],
+  ["shipped RU-SCH-1 at remaining=1 reads neutral", ru["mobile.schedules.cadence.left"], { cadence: "раз в 1d", remaining: 1 }, (v) => v === "раз в 1d · осталось 1"],
+  ["shipped RU-SCH-2 at count=0 reads adjectival", ru["mobile.schedules.summary.monitors_armed"], { count: 0 }, (v) => v === "0 активных"],
+  ["shipped RU-PRJ-2 has no ', и' join", ruP["mobile.projects.project_name_hint"], {}, (v) => !/, и /.test(v)],
+];
+
+let bad = 0;
+for (const [name, text, params, ok] of cases) {
+  const got = render(text, params);
+  const pass = ok(got);
+  if (!pass) bad++;
+  console.log(`${pass ? "PASS" : "FAIL"}  ${name}  ->  ${got}`);
+}
+console.log(`controls: ${cases.length - bad}/${cases.length} as expected`);
+if (bad) process.exitCode = 1;

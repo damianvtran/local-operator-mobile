@@ -99,6 +99,25 @@ export const isHubReceipt = (entry: TranscriptEntry): boolean =>
 	(entry.details.direction === "to_child" ||
 		entry.details.direction === "to_parent");
 
+/** A typed Bridge receipt is incoming traffic, never a peer certificate. */
+export const isBridgeReceipt = (entry: TranscriptEntry): boolean =>
+	entry.kind === "notice" &&
+	(entry.custom_type || entry.details.custom_kind) === "team_bridge_message";
+
+/** Only receiver-projected display metadata names an incoming organization member. */
+export function bridgeReceiptLabel(entry: TranscriptEntry): string {
+	const receipt = entry.details.bridge_receipt;
+	if (receipt?.v !== 1) return "Team Bridge";
+	const name = receipt.sender?.name;
+	return typeof name === "string"
+		? [...name]
+				.filter((char) => !isHubIdentityControl(char.codePointAt(0) ?? 0))
+				.join("")
+				.trim()
+				.slice(0, 240) || "Team Bridge"
+		: "Team Bridge";
+}
+
 /** Display identity rejects control/bidi code points, never authored body.
  * Numeric ranges make that boundary explicit without a regex whose embedded
  * control escapes violate the pinned linter's source-safety rule. */

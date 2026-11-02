@@ -89,7 +89,12 @@ jobs:
             echo "native=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          # No `--depth`: the three-dot diff needs a merge base, and the checkout
+          # above already holds full history. A `--depth=1` fetch of a base that
+          # has moved past the PR merge ref's parent grafts the new tip in with
+          # no parents, makes the clone shallow, and `git diff` then dies with
+          # `fatal: FETCH_HEAD...HEAD: no merge base` (exit 128) — PR #126.
+          git fetch --no-tags origin "$BASE_REF"
           files=$(git diff --name-only "FETCH_HEAD...HEAD")
           if [ -z "$files" ]; then
             # An empty diff is not evidence that nothing native changed.

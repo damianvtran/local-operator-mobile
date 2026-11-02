@@ -1,0 +1,58 @@
+{
+	"mobile.account_routing.title": {
+		"role": "heading",
+		"note": "Section heading in computer settings; not a provider/model picker."
+	},
+	"mobile.account_routing.scope": {
+		"role": "help",
+		"note": "Scope note below the selected computer; never imply a phone-global routing policy."
+	},
+	"mobile.account_routing.disconnected": {
+		"role": "status",
+		"note": "No usable selected-route client; do not call the relay outdated or claim an empty policy."
+	},
+	"mobile.account_routing.loading": {
+		"role": "status",
+		"note": "Read in flight; no policy choice is asserted before the backend answers."
+	},
+	"mobile.account_routing.save": {
+		"role": "button",
+		"note": "Explicitly saves this temporary draft to the selected computer only."
+	},
+	"mobile.account_routing.saving": {
+		"role": "button",
+		"note": "Write pending; never a saved confirmation."
+	},
+	"mobile.account_routing.saved": {
+		"role": "status",
+		"note": "Only after a validated response confirms the requested value on the same route."
+	},
+	"mobile.account_routing.unsaved": {
+		"role": "status",
+		"note": "A selected draft differs from the backend value; changing radio alone does not persist."
+	},
+	"mobile.account_routing.retry": {
+		"role": "button",
+		"note": "Retry a failed read; not a blind automatic retry of an uncertain save."
+	},
+	"mobile.account_routing.reload": {
+		"role": "button",
+		"note": "After an uncertain or rejected save: GET the computer's committed policy and replace the draft; never repeat the write blindly."
+	},
+	"mobile.account_routing.unavailable": {
+		"role": "status",
+		"note": "Confirmed missing relay route only; never use for an offline/unknown tunnel."
+	},
+	"mobile.account_routing.load_error": {
+		"role": "status",
+		"note": "Read failed for another reason, distinct from a confirmed old relay."
+	},
+	"mobile.account_routing.error": {
+		"role": "status",
+		"note": "Unknown save outcome or mismatched confirmation; do not assert not-saved or success."
+	},
+	"mobile.account_routing.rejected": {
+		"role": "status",
+		"note": "Definitive backend refusal; preserve any backend error text separately, not as a descriptor."
+	}
+}

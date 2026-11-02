@@ -66,6 +66,7 @@ import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { renderGallery } from "./gallery.ts";
 import { findIdenticalFrames } from "./identical-states.ts";
+import { runInboxReturnFlow } from "./inbox-return-flow.ts";
 import {
 	ALL_DEVICES,
 	CELL_OPENERS,
@@ -84,6 +85,10 @@ import {
 	SCREEN_ROOTS,
 	SCREENS,
 	THEMES,
+	/* The id→factor lookup, imported rather than kept: see `verifyTextScale` and
+	 * `judgeTextScale` for the two places a second copy of it had drifted into the
+	 * arithmetic. */
+	textScaleFactor,
 	UNSCROLLED_CONTROLS,
 } from "./matrix.ts";
 import { runS15FlowProof } from "./s15-flow.ts";
@@ -114,8 +119,8 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 1128 cells, `core` plans 3384 cells, `full` plans
- * 12408 cells — so none of them starts by accident; the CI job passes `--yes` for
+ * every tier on purpose — `ci` plans 1272 cells, `core` plans 3816 cells, `full` plans
+ * 13992 cells — so none of them starts by accident; the CI job passes `--yes` for
  * exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a ~120-minute command, and
@@ -130,7 +135,7 @@ const CONFIRM_THRESHOLD = 120;
  * the floor a small plan still gets.
  *
  * WHY THE DEFAULT IS DERIVED RATHER THAN FIXED. It used to be a flat 900 s, which
- * holds about 400 cells: a `core` run (3384 cells) or a dispatched `full` run (12408)
+ * holds about 400 cells: a `core` run (3816 cells) or a dispatched `full` run (13992)
  * was therefore cut off by the harness's own default and reported hundreds of cells
  * as having no frame — a bound firing on a plan it was never sized for, which reads
  * like a finding about the app and is not one. Deriving it from the plan makes the
@@ -1424,6 +1429,9 @@ function rgbEquals(
 export interface CaptureOptions {
 	/** Optional CI interaction delta; shares this capture's browser and relay. */
 	s15FlowProof?: boolean;
+	/** One return-flow scenario, not a new audit matrix axis. */
+	inboxReturnProof?: boolean;
+	inboxBaselineDir?: string;
 	dir: string;
 	out: string;
 	relay?: string | undefined;
@@ -1581,7 +1589,10 @@ export interface CaptureRecord {
 export async function runCapture(options: CaptureOptions) {
 	// This optional proof is the CI path when an operator browser host cannot
 	// render the flow. It must not silently start a local interaction rig.
-	if (options.s15FlowProof && process.env.GITHUB_ACTIONS !== "true") {
+	if (
+		(options.s15FlowProof || options.inboxReturnProof) &&
+		process.env.GITHUB_ACTIONS !== "true"
+	) {
 		throw new Error("--s15-flow-proof is available only in GitHub Actions");
 	}
 	const outDir = options.out;
@@ -2046,6 +2057,49 @@ export async function runCapture(options: CaptureOptions) {
 					console.log(`      console: ${error.slice(0, 200)}`);
 			}
 		}
+		if (options.inboxReturnProof) {
+			if (!options.relay)
+				throw new Error("Inbox return proof requires the mock relay");
+			// Reuse this browser, fixture bootstrap, and final teardown. The base
+			// export changes only app bytes, never the driver or assertions.
+			for (const baseline of [true, false]) {
+				if (baseline && !options.inboxBaselineDir) continue;
+				const before =
+					baseline && options.inboxBaselineDir
+						? await serveDir(options.inboxBaselineDir, { proxy: options.relay })
+						: null;
+				try {
+					const flow = await withDeadline(
+						runInboxReturnFlow({
+							browser: chrome,
+							previous: page,
+							baseUrl: before?.url ?? server.url,
+							relay: options.relay,
+							out: join(
+								options.out,
+								"inbox-return",
+								baseline ? "before" : "after",
+							),
+							baseline,
+						}),
+						180_000,
+						`Inbox return proof ${baseline ? "before" : "after"}`,
+					);
+					if (flow.ok) page = flow.value;
+					else {
+						abandoned.push({
+							cell: `S18/return-${baseline ? "before" : "after"}`,
+							reason: flow.reason,
+						});
+						// A deadline must end this browser's work, not leave an orphan
+						// driver using it beside another journey. Outer finally reaps it.
+						break;
+					}
+				} finally {
+					await before?.close();
+				}
+			}
+		}
 		if (options.s15FlowProof) {
 			if (!options.relay)
 				throw new Error("S15 flow proof requires a synthetic relay");
@@ -2290,6 +2344,23 @@ export async function runCapture(options: CaptureOptions) {
 			deviceProfile: DEVICES,
 			scaleProfile: SCALES,
 			screens: SCREENS,
+			/*
+			 * WHICH RELAY WORLDS DECLARE EACH CELL, as this run's relay answered it.
+			 *
+			 * A cell's state is a fact about a WORLD as much as about a URL: `S8/populated-long`
+			 * renders a 65-character name only in `long-names`, and `S5/populated-long` renders a
+			 * 520-row transcript only in `long-transcript`. The capture records the world it
+			 * pinned per cell (`records[].pinnedScenario`) and the audit replays it — but nothing
+			 * carried the registry's own answer, so a pin that names a world which does NOT
+			 * declare that cell (a manifest from an older head, or a hand-edited one — this run
+			 * refuses a `--scenario` that does not declare the cell, so a same-head capture cannot
+			 * record one) could only be discovered by noticing the page looked wrong. This map is what
+			 * lets the audit refuse it by name, from the manifest alone, with no relay running.
+			 *
+			 * `null` for a run with no relay: an ad-hoc `path:` matrix declares no worlds, and
+			 * claiming an empty registry would refuse every record in it.
+			 */
+			cellWorlds: state?.cellScenarios ?? null,
 		},
 		themeProblems,
 		readinessProblems,
@@ -2551,21 +2622,16 @@ export async function runCapture(options: CaptureOptions) {
 
 /**
  * The factor the guard's two scale ids declare, read from `SCALES` rather than written
- * as a 2 — see the call site for why. The lookup cannot fail for the pair the guard
- * pairs: `SCALES` declares every id a run can ask for, and every tier's list derives
- * from it.
+ * as a 2 — see the call site for why.
+ *
+ * Delegated to `matrix.ts` `textScaleFactor`, which is the ONE lookup: this file used to
+ * carry its own `factorOf` here, and a second resolution of the same table is how the
+ * hard-coded `* 2` / `/ 2` in `judgeTextScale` survived — the lookup moved with the table
+ * while the arithmetic beside it did not. It cannot fail for the pair the guard pairs:
+ * `SCALES` declares every id a run can ask for, and every tier's list derives from it.
  */
 function declaredScaleFactor(): number {
-	const factorOf = (id: string) => {
-		const scale = SCALES.find((entry) => entry.id === id);
-		// A plain Error, not a CaptureFailure: this is a programming error in this file's
-		// own pairing, not a finding about a captured cell (CaptureFailure carries the
-		// per-cell evidence a run reports).
-		if (scale === undefined)
-			throw new Error(`no declared scale with id '${id}'`);
-		return scale.factor;
-	};
-	return factorOf("200") / factorOf("100");
+	return textScaleFactor("200") / textScaleFactor("100");
 }
 
 /**
@@ -2725,8 +2791,16 @@ function roleReading(
 	return { histogram, rootPx: root };
 }
 
-/** One cell's per-role comparison, naming every role that did not line up. */
-function judgeTextScale(
+/**
+ * One cell's per-role comparison, naming every role that did not line up.
+ *
+ * EXPORTED for its own test, which is the only way to exercise the arithmetic with a
+ * factor the live table does not declare today: `SCALES` has 200/100 = 2, so a run of the
+ * real harness cannot tell `rem / 2` from `rem / factor` — the two only diverge for a
+ * factor the table is free to change, which is exactly the drift this function was fixed
+ * for. The test drives it at 1.5 (the `150` row) and asserts which branch fires.
+ */
+export function judgeTextScale(
 	key: string,
 	at100: Map<number, number>,
 	at200: Map<number, number>,
@@ -2756,7 +2830,7 @@ function judgeTextScale(
 	// The whole page frozen: the 200 % frame renders the 100 % frame's sizes exactly.
 	// Reported as that single fact rather than as per-role diffs, which is both
 	// truer and what a reader wants first.
-	if (sameSizes(at100, at200, rootPx100)) {
+	if (sameSizes(at100, at200, rootPx100, factor)) {
 		return {
 			key,
 			live: false,
@@ -2776,8 +2850,8 @@ function judgeTextScale(
 	//
 	//   * the role is still there at its OLD size — a node that ignored the root font
 	//     size. This is a role that did not scale, and the cell FAILS on it. In rem
-	//     terms that node's key halves (its px held while the root doubled), which is
-	//     exactly the `rem / 2` lookup below.
+	//     terms that node's key divides by the factor (its px held while the root grew
+	//     by it), which is exactly the `rem / factor` lookup below.
 	//   * the role is absent from the 200 % frame entirely — a layout that drops a label at
 	//     200 %, a state that settled differently between the two frames, OR a node
 	//     RESIZED to a size the factor does not produce (`calc()`/`clamp()`/an `em` under a
@@ -2795,22 +2869,29 @@ function judgeTextScale(
 	const problems: string[] = [];
 	const notes: string[] = [];
 	// A size the 200 % frame shows is expressed in THAT frame's px, which is what a
-	// reader sees in a screenshot (`px(rem) * 2`). Reporting it in the 100 % frame's
+	// reader sees in a screenshot (`px(rem) * factor`). Reporting it in the 100 % frame's
 	// scale would name a size nothing renders at — a frozen 14 px node would be filed
 	// as "7px text", which is the opposite of the honest reading.
-	const px200 = (rem: number) => Math.round(rem * rootPx100 * 2 * 100) / 100;
+	//
+	// THE FACTOR IS THE TABLE'S, NOT A 2. This line, the `rem / factor` lookup below and
+	// the two messages after it read `2` while the table held a literal 2 for `200`, so
+	// an arithmetic constant and an id→factor lookup agreed by coincidence — and only for
+	// a run that pairs 100 against 200. They now read the same `factor` the 200 % root was
+	// asserted against, so a table that stops declaring 2 moves this arithmetic with it.
+	const px200 = (rem: number) =>
+		Math.round(rem * rootPx100 * factor * 100) / 100;
 	for (const [rem, count] of at100) {
 		// `hasApprox` on BOTH halves of the question: the scaled lookup was exact while the
 		// frozen one allowed a tolerance, so a role that scaled but whose four-decimal
 		// quotient drifted was filed as absent rather than as scaled.
-		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is twice its 100 % px
-		if (hasApprox(at200, rem / 2))
+		if (hasApprox(at200, rem)) continue; // scaled — its 200 % px is the factor times its 100 % px
+		if (hasApprox(at200, rem / factor))
 			problems.push(
-				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * 2}px was expected`,
+				`the ${px(rem)}px role (${count} node(s)) did not scale: the 200% frame still renders ${px(rem)}px text where ${px(rem) * factor}px was expected`,
 			);
 		else
 			notes.push(
-				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * 2}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
+				`the ${px(rem)}px role (${count} node(s)) has no ${px(rem) * factor}px counterpart at 200% — a node the layout drops or clips away at that scale, or one that grew by a size the factor does not produce`,
 			);
 	}
 	for (const [rem, count] of at200) {
@@ -2835,11 +2916,17 @@ function hasApprox(map: Map<number, number>, value: number) {
  * Whether the 200 % frame renders the same text SIZES as the 100 % frame — the
  * whole-page inert case. Compares in px (each scale's own root), so a page whose
  * every role stayed put is recognised as one fact rather than as per-role diffs.
+ *
+ * `factor` is the table's 200-over-100 ratio, the same one `judgeTextScale` asserted
+ * the 200 % root against: a `2` here was the fourth place this arithmetic assumed the
+ * pair's factor, so a page that pinned its root read as inert rather than as a harness
+ * failure once the table moved.
  */
 function sameSizes(
 	at100: Map<number, number>,
 	at200: Map<number, number>,
 	rootPx100: number,
+	factor: number,
 ) {
 	const inPx = (histogram: Map<number, number>, root: number) => {
 		const out = new Map<number, number>();
@@ -2850,7 +2937,7 @@ function sameSizes(
 		return out;
 	};
 	const a = inPx(at100, rootPx100);
-	const b = inPx(at200, rootPx100 * 2);
+	const b = inPx(at200, rootPx100 * factor);
 	if (a.size !== b.size) return false;
 	for (const [size, count] of a) if (b.get(size) !== count) return false;
 	return true;
@@ -2900,11 +2987,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 1128 cells, both themes, scales 100,",
-				"                              135 and 200 (~42 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 3384 cells, both themes,",
+				"                        ci    2 of 19 profiles — 1272 cells, both themes, scales 100,",
+				"                              135 and 200 (~45 min) — the per-push CI job's sample",
+				"                        core  5 of 19 profiles — 3816 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 12408 cells",
+				"                        full  19 of 19 profiles — 13992 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",
@@ -2912,6 +2999,8 @@ if (isMain) {
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
+				"  --inbox-return-proof  read/dismiss/Undo returns, both themes, same browser (CI only)",
+				"  --inbox-baseline-dir  optional base export for before frames with the same driver",
 				"  --s15-flow-proof    also prove S15 footer navigation/return on the same browser (CI only)",
 				"  --plan              print the frame list and exit without capturing",
 				"  --yes               allow a run above the confirmation threshold",
@@ -2928,12 +3017,12 @@ if (isMain) {
 	// Which devices a run covers. `core` is the sample the operator's rule asks to be
 	// run first — smallest phone, a typical phone, phone landscape, a tablet in each
 	// orientation — `ci` is the bounded sample the per-push job takes (matrix.ts
-	// `CI_DEVICES`, 1128 cells — ~42 minutes at the 2.24 s/cell this harness measured on
+	// `CI_DEVICES`, 1200 cells — ~45 minutes at the 2.24 s/cell this harness measured on
 	// the runner), and `--full` covers every size. `--devices`
 	// overrides any of them.
 	//
 	// An unknown tier is an ERROR rather than a silent fall back to `core`: a typo'd
-	// `--tier ci` that quietly ran 3384 cells would spend ~126 minutes on a capture the
+	// `--tier ci` that quietly ran 3600 cells would spend ~134 minutes on a capture the
 	// caller did not ask for, and the whole point of naming the sample is that the
 	// run you get is the one you asked for.
 	const tierFlag = bool(flags, "full") ? "full" : str(flags, "tier", "core");
@@ -2945,6 +3034,30 @@ if (isMain) {
 		process.exit(2);
 	}
 	const tier: "ci" | "core" | "full" = tierFlag;
+	/*
+	 * AN UNDECLARED `--scales` VALUE IS REFUSED, NOT DROPPED.
+	 *
+	 * The ids are filtered through `SCALES` when the options are built, so an id the
+	 * table does not declare used to vanish there: `--scales 175` built an EMPTY scale
+	 * list, the plan was empty, the run planned 0 frames and exited 0. A caller asking
+	 * for a large-text run it did not get got a green exit and no frames — the silent
+	 * empty-axis failure this harness refuses elsewhere (`--tier`, the plan itself) and
+	 * had left open in the one flag that filters rather than errors. Refused here, before
+	 * the plan is built and therefore before any planning output: a run that prints a
+	 * plan and then refuses has already told the caller the plan exists.
+	 */
+	const undeclaredScales = scaleIds.filter(
+		(id) => !SCALES.some((scale) => scale.id === id),
+	);
+	if (undeclaredScales.length > 0) {
+		console.error(
+			`unknown --scales ${undeclaredScales.map((id) => `'${id}'`).join(", ")}: ` +
+				`the declared scales are ${SCALES.map((scale) => scale.id).join(", ")} ` +
+				"(tools/visual/matrix.ts SCALES); an id the table does not declare would drop " +
+				"out of the plan and leave a run with no frames",
+		);
+		process.exit(2);
+	}
 	const requestedDevices = csv(flags, "devices");
 	const defaultDevices =
 		tier === "full" ? ALL_DEVICES : tier === "ci" ? CI_DEVICES : CORE_DEVICES;
@@ -2963,6 +3076,8 @@ if (isMain) {
 		consecutive: bool(flags, "consecutive"),
 		settleMs: num(flags, "settle", 1200),
 		s15FlowProof: bool(flags, "s15-flow-proof"),
+		inboxReturnProof: bool(flags, "inbox-return-proof"),
+		inboxBaselineDir: str(flags, "inbox-baseline-dir", undefined),
 		// The web build's own relay-override parameters: the harness puts the app's
 		// `lo-relay*` names on the page, and #11's `webRelayOverride()` adopts them.
 		seed: {

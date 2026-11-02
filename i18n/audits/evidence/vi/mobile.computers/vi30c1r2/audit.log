@@ -1,0 +1,363 @@
++ set -u
++ REPO=/Users/damian/workspace/vi-wave
++ S=/Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta
++ CTRL=/Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl-vi
++ echo '=== environment ==='
+=== environment ===
++ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-10-30T12:17:46Z
++ node --version
+v24.22.1
++ uname -sm
+Darwin arm64
++ echo '=== audited revision ==='
+=== audited revision ===
++ git -C /Users/damian/workspace/vi-wave rev-parse HEAD
+fb4d8bcbc50c68301af624407e09b1789896e571
++ git -C /Users/damian/workspace/vi-wave branch --show-current
+feat/i18n-vietnamese
++ git -C /Users/damian/workspace/vi-wave status --short
+?? i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/
+?? i18n/audits/evidence/vi/mobile.computers/vi30c1r2/
+?? i18n/audits/evidence/vi/mobile.home/vi30a1r2/
+?? i18n/audits/evidence/vi/mobile.notifications/vi30n1r2/
+?? i18n/audits/evidence/vi/mobile.projects/vi30p1r2/
+?? i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/
+?? i18n/audits/evidence/vi/mobile.session/vi30a2r2/
+?? i18n/audits/evidence/vi/mobile.session_health/vi30a3r2/
+?? i18n/audits/evidence/vi/relay.chrome/vi30a5r2/
+?? i18n/audits/evidence/vi/relay.health/vi30a6r2/
++ echo '=== input hashes (en, context, vi) for the four group-B namespaces ==='
+=== input hashes (en, context, vi) for the four group-B namespaces ===
++ cd /Users/damian/workspace/vi-wave
++ for ns in mobile.schedules mobile.projects mobile.notifications mobile.computers
++ shasum -a 256 src/i18n/catalogues/en/mobile.schedules.json src/i18n/catalogues/en/mobile.schedules.context.json src/i18n/catalogues/vi/mobile.schedules.json
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  src/i18n/catalogues/en/mobile.schedules.context.json
+69ad8d482ad5a11830a380e1812f9fa04db12d99f92f8a676be616267987e9ec  src/i18n/catalogues/vi/mobile.schedules.json
++ for ns in mobile.schedules mobile.projects mobile.notifications mobile.computers
++ shasum -a 256 src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json src/i18n/catalogues/vi/mobile.projects.json
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+4f3b2a5c88356864e6df23c909bc9a717d4f0fd0f7c5dfeda21f6fa091ab63d5  src/i18n/catalogues/vi/mobile.projects.json
++ for ns in mobile.schedules mobile.projects mobile.notifications mobile.computers
++ shasum -a 256 src/i18n/catalogues/en/mobile.notifications.json src/i18n/catalogues/en/mobile.notifications.context.json src/i18n/catalogues/vi/mobile.notifications.json
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+a50da99c7431bdd30629bd172af9677a7e47c208e1c7a34be8d5ad2d6c60d6b3  src/i18n/catalogues/vi/mobile.notifications.json
++ for ns in mobile.schedules mobile.projects mobile.notifications mobile.computers
++ shasum -a 256 src/i18n/catalogues/en/mobile.computers.json src/i18n/catalogues/en/mobile.computers.context.json src/i18n/catalogues/vi/mobile.computers.json
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+ff1fa7f6b5294c2a240bd5af5827aad0c86989be42ebb4a6fbfed2c1edc7e0a1  src/i18n/catalogues/vi/mobile.computers.json
++ echo '=== what the fix commit actually changed (code scope) ==='
+=== what the fix commit actually changed (code scope) ===
++ git -C /Users/damian/workspace/vi-wave diff --stat 31f2ae4..fb4d8bc -- src/features/schedules
++ echo schedules_code_diff_exit=0
+schedules_code_diff_exit=0
++ git -C /Users/damian/workspace/vi-wave diff --stat 31f2ae4..fb4d8bc -- src app scripts package.json
+ src/features/home/home-copy.ts                     |   5 +
+ src/i18n/__tests__/catalogues.test.ts              |   4 +
+ src/i18n/__tests__/runtime.test.ts                 |  24 ++--
+ src/i18n/catalogue.gen.ts                          | 145 +++++++++++++++++++++
+ src/i18n/catalogues/vi/mobile.account_routing.json |  16 +++
+ src/i18n/catalogues/vi/mobile.computers.json       |  12 ++
+ src/i18n/catalogues/vi/mobile.home.json            |  29 +++++
+ src/i18n/catalogues/vi/mobile.notifications.json   |  16 +++
+ src/i18n/catalogues/vi/mobile.projects.json        |  17 +++
+ src/i18n/catalogues/vi/mobile.schedules.json       |  40 ++++++
+ src/i18n/catalogues/vi/mobile.session.json         |   4 +
+ src/i18n/catalogues/vi/mobile.session_health.json  |  13 ++
+ src/i18n/catalogues/vi/relay.chrome.json           |   6 +
+ src/i18n/catalogues/vi/relay.health.json           |  10 ++
+ src/i18n/locale.ts                                 |   2 +-
+ 15 files changed, 330 insertions(+), 13 deletions(-)
++ echo '=== round-1 byte heredity + delta scoping proof ==='
+=== round-1 byte heredity + delta scoping proof ===
++ python3 -
+mobile.computers (vi30c1): target SAME | en SAME | context SAME
+mobile.notifications (vi30n1): target SAME | en SAME | context SAME
+mobile.projects (vi30p1): target SAME | en SAME | context SAME
+mobile.schedules (vi30s1): target CHANGED | en SAME | context SAME
+  r1 target 2981717fd7638c1e7c5c9175bd59b6c742502e24c3c8959920802cfc7b5154f8
+  r2 target 69ad8d482ad5a11830a380e1812f9fa04db12d99f92f8a676be616267987e9ec
+reconstruction: round-1 current values restored -> sha256 2981717fd7638c1e7c5c9175bd59b6c742502e24c3c8959920802cfc7b5154f8
+  equals round-1 audited target hash: True
+  deltas, round-1 -> round-2 (unified diff of the JSON lines):
+--- vi30s1 (r1)
++++ fb4d8bc (r2)
+@@ -10 +10 @@
+-	"mobile.schedules.empty.body": "Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộc trò chuyện vào thời điểm đã hẹn; giám sát theo dõi một thứ và báo khi có thay đổi.",
++	"mobile.schedules.empty.body": "Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.",
+@@ -16 +16 @@
+-	"mobile.schedules.head.next": "{head} · lần tới {label}",
++	"mobile.schedules.head.next": "{head} · {label}",
+@@ -23,2 +23,2 @@
+-	"mobile.schedules.show_less.monitors": "Hiện ít giám sát hơn",
+-	"mobile.schedules.show_less.wakes": "Hiện ít lần thức dậy hơn",
++	"mobile.schedules.show_less.monitors": "Ẩn bớt giám sát",
++	"mobile.schedules.show_less.wakes": "Ẩn bớt lần thức dậy",
++ echo '=== repo validator: generate.ts --check (key parity, parse, placeholder names/kinds) ==='
+=== repo validator: generate.ts --check (key parity, parse, placeholder names/kinds) ===
++ cd /Users/damian/workspace/vi-wave
++ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+(node:90214) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/vi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/vi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ echo generate_check_exit=0
+generate_check_exit=0
++ echo '=== repo gate: check-strings.ts ==='
+=== repo gate: check-strings.ts ===
++ cd /Users/damian/workspace/vi-wave
++ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d
++ echo check_strings_exit=0
+check_strings_exit=0
++ echo '=== affected test suite: src/i18n/__tests__ ==='
+=== affected test suite: src/i18n/__tests__ ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/vitest run src/i18n/__tests__
++ tail -8
+   Start at  08:17:54
+   Duration  2.55s (transform 85%, import 8%, tests 4%, worker 3%)
+
+  Transform  transforming modules took 4.33s · 85% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
++ echo vitest_exit=0
+vitest_exit=0
++ echo '=== structural verifier: placeholders, select arms, plural arms, NFC, key order ==='
+=== structural verifier: placeholders, select arms, plural arms, NFC, key order ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/verify.mts
+{
+  "keyCount": 77,
+  "pluralNodes": 5,
+  "selectNodes": 5,
+  "problemCount": 0,
+  "problems": []
+}
++ echo verify_exit=0
+verify_exit=0
++ echo '=== vi CLDR plural categories ==='
+=== vi CLDR plural categories ===
++ node -e 'console.log(JSON.stringify(new Intl.PluralRules('\''vi'\'').resolvedOptions().pluralCategories))'
+["other"]
++ echo '=== production render: real t()/renderFor with vi SHIPPED, real clause functions ==='
+=== production render: real t()/renderFor with vi SHIPPED, real clause functions ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/render.mts
++ tee /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/renders.r2.tsv
+## schedules — production clause functions, vi (delta round 2)
+head.next 3 wakes, +240s	3 lần thức dậy · sau 4m
+head.next 1 wake, +240s	1 lần thức dậy · sau 4m
+head.next 2 wakes, +5400s	2 lần thức dậy · sau 1h
+head.overdue 3 wakes, -7200s	3 lần thức dậy · trễ 2h
+head.overdue 1 wake, -60s	1 lần thức dậy · trễ 60s
+due.ahead 4m	sau 4m
+due.overdue 2h	trễ 2h
+count.wakes 1	1 lần thức dậy
+count.wakes 2	2 lần thức dậy
+count.wakes 21	21 lần thức dậy
+count.monitors 1	1 giám sát
+count.monitors 2	2 giám sát
+empty.title	Chưa có gì được bật
+empty.body	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.
+empty_line.wakes	Chưa lên lịch lần thức dậy nào.
+empty_line.monitors	Chưa bật giám sát nào.
+show_more.wakes 1	Hiện thêm 1 lần thức dậy
+show_more.wakes 4	Hiện thêm 4 lần thức dậy
+show_more.monitors 1	Hiện thêm 1 giám sát
+show_more.monitors 4	Hiện thêm 4 giám sát
+show_less.wakes	Ẩn bớt lần thức dậy
+show_less.monitors	Ẩn bớt giám sát
+read_error.wakes	Không đọc được các lần thức dậy trên máy này.
+read_error.monitors	Không đọc được các giám sát trên máy này.
+read_unreachable	Vừa rồi không đọc được lịch trên máy này.
+truncated wakes 8/20	Đang hiện 8 trên 20 cuộc trò chuyện có lần thức dậy.
+truncated monitors 3/10	Đang hiện 3 trên 10 cuộc trò chuyện có giám sát.
+parked.wakes	Tạm gác — các lần thức dậy tiếp tục sau lượt tiếp theo của cuộc trò chuyện
+parked.monitors	Tạm gác — giám sát tiếp tục khi cuộc trò chuyện của nó chạy lại
+gone.wakes	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kích hoạt
+gone.monitors	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kiểm tra
+HEADER wakes 3	Wakes · 3 đã lên lịch
+HEADER wakes 1	Wakes · 1 đã lên lịch
+HEADER wakes 0	Wakes · 0 đã lên lịch
+HEADER monitors 2 healthy	Monitors · 2 đang bật
+HEADER monitors 1/5 alerting	Monitors · 1 trên 5 cần chú ý
+HEADER monitors 5/5 alerting	Monitors · 5 trên 5 cần chú ý
+HEADER monitors 0	Monitors · 0 đang bật
+supervisor.unsupported	Nền tảng này chưa giám sát các lần thức dậy, nên các lần thức dậy bên dưới chỉ chạy khi cuộc trò chuyện đang chạy.
+supervisor.not_running	Bộ giám sát các lần thức dậy đã được cài nhưng không hoạt động, nên các lần thức dậy bên dưới sẽ không chạy.
+supervisor.unverifiable	Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.
+supervisor.quiet (running)	
+
+## English twin — same production functions
+EN head.next 3 wakes, +240s	3 wakes · next in 4m
+EN head.overdue 3 wakes, -7200s	3 wakes · 2h overdue
+EN empty.body	Ask an agent in chat to do something on a regular basis and it will appear here. Wakes fire a prompt into a conversation at a time; monitors watch one thing and report what changes.
+EN show_less.wakes	Show fewer wakes
+EN show_more.wakes 4	Show 4 more wakes
+
+## widths (code points)
+WIDTH empty.body	vi=215 en=181 ratio=1.19
+WIDTH head.next composed	vi=23 en=20 ratio=1.15
+WIDTH show_less.wakes	vi=19 en=16 ratio=1.19
+WIDTH show_less.monitors	vi=15 en=19 ratio=0.79
++ echo render_exit=0
+render_exit=0
++ echo '=== render diff against round-1 renders.tsv (schedules section) ==='
+=== render diff against round-1 renders.tsv (schedules section) ===
++ python3 -
+labels only in r1: ['cadence.every 1d', 'cadence.left 3 remaining', 'cadence.once', 'cadence.spent', 'count.monitors 0', 'state.disabled', 'state.dormant', 'state.expired', 'state.stale', 'state.waiting', 'tail.failed 2', 'truncated monitors 1/2', 'truncated monitors 10/42', 'truncated wakes 10/42', 'truncated wakes 3/4']
+labels only in r2: ['supervisor.quiet (running)', 'truncated monitors 3/10', 'truncated wakes 8/20']
+compared 39 shared rows; changed 6:
+  empty.body
+    r1: Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộc trò chuyện vào thời điểm đã hẹn; giám sát theo dõi một thứ và báo khi có thay đổi.
+    r2: Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.
+  head.next 1 wake, +240s
+    r1: 1 lần thức dậy · lần tới sau 4m
+    r2: 1 lần thức dậy · sau 4m
+  head.next 2 wakes, +5400s
+    r1: 2 lần thức dậy · lần tới sau 1h
+    r2: 2 lần thức dậy · sau 1h
+  head.next 3 wakes, +240s
+    r1: 3 lần thức dậy · lần tới sau 4m
+    r2: 3 lần thức dậy · sau 4m
+  show_less.monitors
+    r1: Hiện ít giám sát hơn
+    r2: Ẩn bớt giám sát
+  show_less.wakes
+    r1: Hiện ít lần thức dậy hơn
+    r2: Ẩn bớt lần thức dậy
++ echo '=== typography / width ==='
+=== typography / width ===
++ cd /Users/damian/workspace/vi-wave
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/typography.mts
+## typography problems
+(none)
+
+## width table, delta-touched keys (plain-text code points)
+mobile.schedules.empty.body	en=181	vi=215	ratio=1.19	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.
+mobile.schedules.head.next	en=6	vi=1	ratio=0.17	·
+mobile.schedules.head.overdue	en=1	vi=1	ratio=1.00	·
+mobile.schedules.show_less.wakes	en=16	vi=19	ratio=1.19	Ẩn bớt lần thức dậy
+mobile.schedules.show_less.monitors	en=19	vi=15	ratio=0.79	Ẩn bớt giám sát
+mobile.schedules.show_more.wakes	en=28	vi=24	ratio=0.86	{hidden, plural, other }
+mobile.schedules.show_more.monitors	en=28	vi=24	ratio=0.86	{hidden, plural, other }
+
+## all group-B keys: n=77 mean ratio=1.09 max=2.25
+
+## words >= 18 chars (narrow-row risk):
+(none)
++ echo typography_exit=0
+typography_exit=0
++ echo '=== core'\''s committed vi for the due words the head line now relies on ==='
+=== core's committed vi for the due words the head line now relies on ===
++ grep -n 'due_in\|due_overdue' /Users/damian/local-operator/local_operator/i18n/catalogues/vi/tui.schedule.json
++ head -4
+11:  "tui.schedule.due_in": "sau {duration}",
+13:  "tui.schedule.due_overdue": "trễ {age}",
++ echo '=== EmptyState body has no line clamp (the fit claim in the report) ==='
+=== EmptyState body has no line clamp (the fit claim in the report) ===
++ grep -rn numberOfLines /Users/damian/workspace/vi-wave/src/ui/components/empty-state.tsx
++ echo numberOfLines_grep_exit=1
+numberOfLines_grep_exit=1
++ echo '=== font-metric tooling availability (why widths are code points, not pixels) ==='
+=== font-metric tooling availability (why widths are code points, not pixels) ===
++ python3 -c 'import objc'
++ tail -1
+ModuleNotFoundError: No module named 'objc'
++ python3 -c 'import objc'
++ echo pyobjc=absent
+pyobjc=absent
++ echo '=== NEGATIVE CONTROL: verifier must fail on a mutated schedules catalogue ==='
+=== NEGATIVE CONTROL: verifier must fail on a mutated schedules catalogue ===
++ rm -rf /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl-vi
++ cp -R /Users/damian/workspace/vi-wave/src/i18n/catalogues/vi /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl-vi
++ python3 -
++ cd /Users/damian/workspace/vi-wave
++ VI_DIR=/Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl-vi
++ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/verify.mts
++ echo control_verify_exit=1
+control_verify_exit=1
++ grep -m2 -E 'plural arms|unreachable' /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl.out
+    "mobile.schedules/mobile.schedules.count.wakes: plural arms at $/{count,plural}: [one,other] != vi categories [other]"
++ rm -rf /Users/damian/.local-operator/sessions/bb04cc6cb19a/scratchpad/vi-delta/ctrl-vi
++ echo control_scratch_removed=0
+control_scratch_removed=0
++ echo '=== glossary counts: group B (vi) vs core'\''s committed vi ==='
+=== glossary counts: group B (vi) vs core's committed vi ===
++ cd /Users/damian/workspace/vi-wave/src/i18n/catalogues/vi
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ grep -o mốc mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-16s %s\n' mốc 4
+mốc            4
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ grep -o 'bộ giám sát' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-16s %s\n' 'bộ giám sát' 0
+bộ giám sát  0
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ grep -o 'giám sát' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-16s %s\n' 'giám sát' 11
+giám sát       11
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ grep -o 'lần thức dậy' mobile.schedules.json mobile.projects.json mobile.notifications.json mobile.computers.json
+++ wc -l
+++ tr -d ' '
++ printf '%-16s %s\n' 'lần thức dậy' 12
+lần thức dậy 12
++ cd /Users/damian/local-operator/local_operator/i18n/catalogues/vi
++ echo core:
+core:
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ wc -l
+++ grep -o mốc cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-16s %s\n' mốc 17
+mốc            17
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ wc -l
+++ grep -o 'bộ giám sát' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
+++ tr -d ' '
++ printf '%-16s %s\n' 'bộ giám sát' 1
+bộ giám sát  1
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ wc -l
+++ tr -d ' '
+++ grep -o 'giám sát' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
++ printf '%-16s %s\n' 'giám sát' 12
+giám sát       12
++ for term in "mốc" "bộ giám sát" "giám sát" "lần thức dậy"
+++ wc -l
+++ tr -d ' '
+++ grep -o 'lần thức dậy' cli.exec_remote_help.json cli.services_status.json relay.account_policy.json relay.approvals.json relay.ask.json relay.asks.json relay.chrome.json relay.health.json relay.library.json relay.notifications.json relay.session.json relay.session.tags.json relay.shell.json relay.transcript.json tui.asks.json tui.authoring.json tui.notices.json tui.notifications.json tui.palette.json tui.projects_edit.json tui.review.json tui.schedule.json tui.status.json tui.tags.json tui.team_authoring.json tui.transcript.json tui.viewer.json tui.welcome.json wire.errors.desktop.json wire.errors.json wire.errors.notifications.json wire.errors.settings.json wire.incidents.json wire.memory.json wire.notices.json wire.radient_saver.json wire.remote_compute.json wire.settings.json wire.slash.json wire.slash.notifications_page.json
++ printf '%-16s %s\n' 'lần thức dậy' 16
+lần thức dậy 16
++ echo '=== git status after the audit (evidence bundles only) ==='
+=== git status after the audit (evidence bundles only) ===
++ git -C /Users/damian/workspace/vi-wave status --short
+?? i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/
+?? i18n/audits/evidence/vi/mobile.computers/vi30c1r2/
+?? i18n/audits/evidence/vi/mobile.home/vi30a1r2/
+?? i18n/audits/evidence/vi/mobile.notifications/vi30n1r2/
+?? i18n/audits/evidence/vi/mobile.projects/vi30p1r2/
+?? i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/
+?? i18n/audits/evidence/vi/mobile.session/vi30a2r2/
+?? i18n/audits/evidence/vi/mobile.session_health/vi30a3r2/
+?? i18n/audits/evidence/vi/relay.chrome/vi30a5r2/
+?? i18n/audits/evidence/vi/relay.health/vi30a6r2/
++ echo '=== done ==='
+=== done ===
++ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-10-30T12:18:04Z

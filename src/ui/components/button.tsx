@@ -24,6 +24,13 @@ import {
  */
 export type ButtonProps = {
 	label: string;
+	/** Clamp the label to ONE line with an ellipsis.
+	 *
+	 *  For a control whose width can be taken by something else on the same line —
+	 *  the rail's Notifications row, where a wide count shares the row at large
+	 *  text and the LABEL is the part that gives (code review round 10, m-5). The
+	 *  default is unchanged: a label wraps as it always has. */
+	labelLines?: 1;
 	onPress: () => void;
 	variant?: ButtonVariant;
 	size?: ButtonSize;
@@ -47,6 +54,7 @@ const ICON_SIZE: Record<ButtonSize, number> = {
 
 export const Button = ({
 	label,
+	labelLines,
 	onPress,
 	variant = "primary",
 	size = "md",
@@ -116,7 +124,11 @@ export const Button = ({
 						</View>
 					) : null}
 					{size === "icon" || size === "fab" ? null : (
-						<Text className={buttonLabelClasses(size, disabled, variant)}>
+						<Text
+							className={buttonLabelClasses(size, disabled, variant)}
+							numberOfLines={labelLines}
+							ellipsizeMode={labelLines === 1 ? "tail" : undefined}
+						>
 							{label}
 						</Text>
 					)}

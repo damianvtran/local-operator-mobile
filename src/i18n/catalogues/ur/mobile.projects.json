@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "کیا پروجیکٹ “{name}” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔",
+	"mobile.projects.draft_kept_note": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
+	"mobile.projects.milestone_slash_note": "سنگ میل کے نام میں سلیش نہیں ہو سکتا۔ ایسا سنگ میل بعد میں کبھی ہٹایا نہیں جا سکے گا۔",
+	"mobile.projects.milestones.count": "{total} میں سے {completed} سنگ میل",
+	"mobile.projects.milestones.none": "کوئی سنگ میل نہیں",
+	"mobile.projects.project_name_hint": "لمبائی 1 سے 64 حروف؛ نام میں صرف انگریزی حروف، 0 سے 9 تک ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔",
+	"mobile.projects.remove_milestone_body": "اس پروجیکٹ سے “{name}” ہٹائیں؟ سنگ میل ہمیشہ کے لیے ہٹ جائے گا۔ پروجیکٹ کے سیشنز اور اس کی پیش رفت کی سطر متاثر نہیں ہوں گے۔",
+	"mobile.projects.session_state.filed_by": "درج کرنے والا",
+	"mobile.projects.session_state.missing": "موجود نہیں",
+	"mobile.projects.session_state.not_running": "چل نہیں رہا",
+	"mobile.projects.sessions.count": "{count, plural, one {# سیشن} other {# سیشنز}}",
+	"mobile.projects.sessions.live": "{base} · {live} فعال",
+	"mobile.projects.stale_badge": "پیش رفت پرانی",
+	"mobile.projects.write_receipt": "{kind, select, project {پروجیکٹ “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} milestone {سنگ میل “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} other {“{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔}}",
+	"mobile.projects.write_unknown_note": "ہم آپ کے کمپیوٹر تک نہیں پہنچ سکے، اس لیے نہیں بتا سکتے کہ یہ محفوظ ہوا یا نہیں۔ دوبارہ کوشش کرنے سے پہلے پروجیکٹ دیکھ لیں۔"
+}

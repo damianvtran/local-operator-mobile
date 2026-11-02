@@ -1,0 +1,77 @@
+#!/bin/bash
+# Auditor tooling, round 4 (read-only on the repository). Prints the commands this
+# audit ran and their ACTUAL output. Lines starting with "# note:" are explanation,
+# never command output. No translation API, SDK or MT service is used anywhere.
+set -uo pipefail
+REPO=/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+HERE="$(cd "$(dirname "$0")" && pwd)"
+cd "$REPO" || exit 1
+
+echo "audit fr29p4 — mobile.projects — fr — 2026-10-29"
+echo "audited head: $(git rev-parse HEAD)"
+echo "worktree: $REPO"
+echo "tracked tree: $(git status --porcelain | grep -v '^?? i18n/audits' | wc -l | tr -d ' ') modified tracked path(s) outside the untracked evidence bundles"
+echo "auditor: i18n-auditor (lopdev team child session a95ed4b473ca), ACTUAL model radient/auto"
+echo "model provenance: harness model-switch notices in this transcript — anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,"
+echo "                  each reported as 'provider failure: quota'. The pinned Sonnet model did not run this audit."
+echo "route: ordinary local git/worktree reads; no network, no translation service, no rendered frame."
+echo "# note: every line after a '\$ ' prompt is a command actually run; the lines below it are that command's output."
+echo "# note: loader.mjs only teaches plain Node the app's extensionless relative imports, so src/i18n/runtime.ts runs UNMODIFIED."
+echo
+
+echo "=== §1 repository i18n gate (generate --check + strings check) ==="
+echo '$ npm run -s i18n:check'
+npm run -s i18n:check 2>&1 | grep -v MODULE_TYPELESS_PACKAGE_JSON | grep -v "Reparsing as ES module" | grep -v "To eliminate this warning" | grep -v "trace-warnings" | grep -v "^(node:"
+echo "exit=${PIPESTATUS[0]}"
+echo
+
+echo "=== §2 targeted tests (i18n runtime + projects copy) ==="
+echo '$ npx vitest run src/i18n src/features/projects'
+npx vitest run src/i18n src/features/projects 2>&1 | grep -E "Test Files|Tests |FAIL|✗"
+echo
+
+echo "=== §3 delta since the round-3 bundle head (49f79b3) ==="
+echo '$ git log --oneline 49f79b3..HEAD'
+git log --oneline 49f79b3..HEAD
+echo '$ git diff --stat 49f79b3..HEAD'
+git diff --stat 49f79b3..HEAD
+echo
+echo '$ git diff 49f79b3..HEAD -- src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/fr/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json'
+git diff 49f79b3..HEAD -- src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/fr/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json
+echo
+
+echo "=== §4 byte and structure checks, independent of the renderer (python3 checks.py) ==="
+echo '$ python3 checks.py'
+python3 "$HERE/checks.py"
+echo
+
+echo "=== §5 the app's own parser and renderer (node --import ./loader.mjs render.mjs) ==="
+echo '# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.'
+echo '# note: renderFor is the function t() calls; parseMessage is the parser the key generator also reads.'
+echo '$ node --import ./loader.mjs render.mjs'
+node --import "$HERE/loader.mjs" "$HERE/render.mjs" 2>/dev/null
+echo
+
+echo "=== §6 call sites: the audited head, and the round-3 head for contrast ==="
+echo '$ grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx'
+grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx
+echo '$ git show 49f79b3:src/features/projects/project-detail.tsx | grep -n "writeReceipt"'
+git show 49f79b3:src/features/projects/project-detail.tsx | grep -n "writeReceipt"
+echo '$ git show 49f79b3:src/features/projects/project-create.tsx | grep -n "writeReceipt"'
+git show 49f79b3:src/features/projects/project-create.tsx | grep -n "writeReceipt"
+echo '$ sed -n "168,175p;229,236p;252,256p;276,280p" src/features/projects/project-detail.tsx'
+sed -n '168,175p;229,236p;252,256p;276,280p' src/features/projects/project-detail.tsx
+echo
+
+echo "=== §7 typecheck (the call sites are typed against the generated parameter list) ==="
+echo '$ npx tsc --noEmit ; echo exit=$?'
+npx tsc --noEmit 2>&1 | tail -3
+echo "exit=${PIPESTATUS[0]}"
+echo
+
+echo "=== §8 worktree state after the audit (read-only proof) ==="
+echo '$ git status --porcelain'
+git status --porcelain
+echo '$ git diff --stat HEAD'
+git diff --stat HEAD
+echo '# note: the only untracked paths are the evidence bundles, which this audit writes and never commits.'

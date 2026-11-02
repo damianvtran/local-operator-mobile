@@ -39,6 +39,62 @@ const contrast = (foreground: string, background: string): number => {
 	return (light + 0.05) / (dark + 0.05);
 };
 
+describe("the navigation control edge", () => {
+	/* The switcher's two entry points both paint `border-control`: the Home chip
+	 * sits on `canvas`, the drawer footer's row on `surface`. This block exists
+	 * because the pair is load-bearing rather than decorative — at 200 % text the
+	 * chip drops its chevron, so this edge is the ONLY thing that says "this opens
+	 * a picker", and in the light palette the role the remediation first used
+	 * (`panel-edge`) is the same string as `hairline` (design round 2, D8). */
+	const NON_TEXT_FLOOR = 3;
+	const grounds = ["canvas", "surface"] as const;
+
+	it("clears the non-text floor on both grounds, in both themes", () => {
+		for (const theme of ["light", "dark"] as const) {
+			for (const ground of grounds) {
+				expect(
+					contrast(
+						resolveColor("border-control", theme),
+						resolveColor(ground, theme),
+					),
+					`border-control on ${ground} (${theme})`,
+				).toBeGreaterThanOrEqual(NON_TEXT_FLOOR);
+			}
+		}
+	});
+
+	it("is a different role from the hairline in the light palette", () => {
+		/* The root cause in one assertion: `panel-edge` and `hairline` share
+		 * `#dad5cb` in light, so adopting the former changed nothing there. */
+		expect(resolveColor("border-control", "light")).not.toBe(
+			resolveColor("hairline", "light"),
+		);
+	});
+
+	it("would fail on a hairline-weight edge (negative control)", () => {
+		/* A floor only means something if the value it replaced fails it. Measured:
+		 * light `panel-edge` 1.25:1 on canvas and 1.34:1 on surface; light `hairline`
+		 * is the same value. Dark `panel-edge` already cleared (3.90:1) — which is
+		 * exactly why D8 was a light-theme finding and why the dark half is asserted
+		 * as unchanged above rather than re-derived. */
+		for (const ground of grounds) {
+			expect(
+				contrast(
+					resolveColor("panel-edge", "light"),
+					resolveColor(ground, "light"),
+				),
+				`panel-edge on ${ground} (light)`,
+			).toBeLessThan(NON_TEXT_FLOOR);
+		}
+		expect(
+			contrast(
+				resolveColor("hairline", "light"),
+				resolveColor("canvas", "light"),
+			),
+		).toBeLessThan(NON_TEXT_FLOOR);
+	});
+});
+
 describe("theme resolution", () => {
 	it("uses the preference whenever it names a theme", () => {
 		expect(resolveTheme("light", "dark")).toBe("light");

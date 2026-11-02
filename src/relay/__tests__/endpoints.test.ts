@@ -20,6 +20,7 @@ import { parsePayload } from "../../contracts";
 import { loadFixture } from "../../testing/fixtures";
 import {
 	HISTORY_LIMIT,
+	isRelayMissing,
 	RelayEndpoints,
 	RelayError,
 	RelayHttpClient,
@@ -333,5 +334,44 @@ describe("an error from a real http client still arrives as one typed error", ()
 		const image = await client.image("9ed9e2f534cd", "abc-123", 0);
 		expect(image.mimeType).toBe("image/png");
 		expect(Array.from(image.bytes)).toEqual([0x89, 0x50]);
+	});
+
+	/* The agent-profile-picture route: the path is the contract's own and the
+	 *  digest rides `v`, so the URL is content-addressed; a relay without the
+	 *  route (or a removed picture) answers its own 404, which callers read as
+	 *  "draw the glyph" through `isRelayMissing`. */
+	it("fetches an agent picture by id with the row's digest as `v`", async () => {
+		const seen: string[] = [];
+		const fetchImpl = (async (url: string) => {
+			seen.push(url);
+			return new Response(new Uint8Array([0x89, 0x50]), {
+				status: 200,
+				headers: { "content-type": "image/png", etag: `"${"a".repeat(64)}"` },
+			});
+		}) as unknown as typeof globalThis.fetch;
+		const client = new RelayEndpoints(
+			new RelayHttpClient({ baseUrl: BASE, auth: () => auth, fetchImpl }),
+		);
+		const picture = await client.agentAvatar("research/er", "a".repeat(64));
+		expect(seen).toEqual([
+			`${BASE}/v1/agents/research%2Fer/avatar?v=${"a".repeat(64)}`,
+		]);
+		expect(picture.mimeType).toBe("image/png");
+		expect(Array.from(picture.bytes)).toEqual([0x89, 0x50]);
+	});
+
+	it("an unset picture is the relay's own 404", async () => {
+		const fetchImpl = (async () =>
+			new Response(JSON.stringify({ error: "not_found" }), {
+				status: 404,
+				headers: { "content-type": "application/json" },
+			})) as unknown as typeof globalThis.fetch;
+		const client = new RelayEndpoints(
+			new RelayHttpClient({ baseUrl: BASE, auth: () => auth, fetchImpl }),
+		);
+		const error = await client
+			.agentAvatar("researcher", "a".repeat(64))
+			.catch((caught: unknown) => caught);
+		expect(isRelayMissing(error)).toBe(true);
 	});
 });

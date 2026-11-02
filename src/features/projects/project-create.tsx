@@ -4,12 +4,12 @@ import { Text, View } from "react-native";
 import { PROJECT_STATUS_ORDER } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
-	DRAFT_KEPT_NOTE,
-	PROJECT_NAME_HINT,
+	draftKeptNote,
 	parseTags,
+	projectNameHint,
 	projectRefusalSentence,
-	WRITE_UNKNOWN_NOTE,
 	writeReceipt,
+	writeUnknownNote,
 } from "@/features/projects/projects-copy";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, projectCreateStatusId, SURFACE } from "@/ui/a11y";
@@ -46,7 +46,7 @@ import { Textarea } from "@/ui/components/textarea";
  * moment the write refused, on a surface with no undo. The write's own answer is
  * what this sheet renders instead (the created row's name, in the receipt), and
  * the one state in between is the action's own in-flight one, named in the
- * button. A write the app could not make is `WRITE_UNKNOWN_NOTE`, which says the
+ * button. A write the app could not make is `writeUnknownNote()`, which says the
  * outcome is unknown rather than claiming nothing happened.
  */
 export const ProjectCreateSheet = ({
@@ -73,7 +73,7 @@ export const ProjectCreateSheet = ({
 	 *  survive a dismissal by construction — and that is the rule this slice chose
 	 *  deliberately: a stray tap on the scrim must not throw away a filled form,
 	 *  which is the failure the milestone editor's reset sat on the other side of.
-	 *  What was missing is the reader being TOLD (`DRAFT_KEPT_NOTE`), and this flag
+	 *  What was missing is the reader being TOLD (`draftKeptNote()`), and this flag
 	 *  gates that sentence. */
 	const [keptDraft, setKeptDraft] = useState(false);
 	/*
@@ -149,7 +149,7 @@ export const ProjectCreateSheet = ({
 			/* The receipt names the row the RELAY created, not the text that was
 			 *  typed: a store that normalised something would otherwise be reported
 			 *  as the string this screen holds. */
-			showToast(writeReceipt("Created", answer.project.name));
+			showToast(writeReceipt("created", answer.project.name, "project"));
 			setName("");
 			setDescription("");
 			setStatus("active");
@@ -160,7 +160,7 @@ export const ProjectCreateSheet = ({
 			/* The relay's own sentence when it wrote one — a taken name is a `409
 			 *  project_name_exists` and a refused value a `422 project_invalid`, and
 			 *  both are sentences written for a reader. */
-			setProblem(projectRefusalSentence(error) ?? WRITE_UNKNOWN_NOTE);
+			setProblem(projectRefusalSentence(error) ?? writeUnknownNote());
 		} finally {
 			setBusy(false);
 		}
@@ -214,14 +214,14 @@ export const ProjectCreateSheet = ({
 						testID={SURFACE.projectCreateDraftNote}
 						className="text-meta text-ink-muted"
 					>
-						{DRAFT_KEPT_NOTE}
+						{draftKeptNote()}
 					</Text>
 				) : null}
 
 				{/* The name grammar, said BEFORE the tap: the relay's own 422 sentence
 				 *  names it too, but a reader should not spend a round trip to learn
 				 *  that a space is not allowed. */}
-				<Text className="text-meta text-ink-dim">{PROJECT_NAME_HINT}</Text>
+				<Text className="text-meta text-ink-dim">{projectNameHint()}</Text>
 
 				<Input
 					testID={CONTROL.projectCreateName}

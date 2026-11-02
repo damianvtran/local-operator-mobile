@@ -1,0 +1,156 @@
+{
+	"schema": 1,
+	"audit_id": "vi30a5",
+	"audit_kind": "independent_mirror_verification_against_core",
+	"locale": "vi",
+	"namespace": "relay.chrome",
+	"audit_date": "2026-10-30",
+	"wave": "vi wave 5 — damianvtran/local-operator-mobile, branch feat/i18n-vietnamese",
+	"audited_revision": "31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b",
+	"audited_revision_note": "The vi catalogue directory is untracked at this revision; the target bytes are pinned by input_hashes.vi.",
+	"key_count": {
+		"en": 4,
+		"target": 4,
+		"context": 4
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "8bfd6a5224bd",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback; every command captured in these bundles ran on radient/auto",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is the translator's served model too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (vi wave 5)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/relay.chrome.json",
+			"sha256": "e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/relay.chrome.context.json",
+			"sha256": "195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b"
+		},
+		"vi": {
+			"path": "src/i18n/catalogues/vi/relay.chrome.json",
+			"sha256": "ce983a6b24f733722ab74f6dfa5dfb2b575b22a6ccf941c3cd86e773f4aa45d9"
+		}
+	},
+	"core_reference": {
+		"repo": "damianvtran/local-operator",
+		"origin_main": "0f8e3d101116b40252b4c6eea8ac4f6c6980b73b",
+		"paths": "local_operator/i18n/catalogues/{en,vi}/relay.chrome.json"
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:check -> exit 0 (catalogue.gen.ts current, 143 keys, 10 namespaces; check-strings 284 baselined findings, 0 new)",
+		"validator_scope": "the validator checks key parity, message parse and the strings ratchet; it does not compare placeholders or ICU arms between locales, so this audit parsed both sides with the repository's own parser and compared the parameter surface and the arms itself",
+		"scoped_checks": "valid JSON; key and context parity; placeholder name/kind parity; every plural carries the 'other' arm and no foreign category; select arms match en; code spans and --flags byte-identical; NFC; no combining marks; no double spaces; no edge whitespace; no space before punctuation; no ASCII ellipsis; no straight quotes; no bidi controls; no control characters",
+		"renderer": "parseMessage/formatMessage/pluralCategory/renderFor imported from the worktree and driven per key; every group A value round-trips byte-identically",
+		"fit_metric": "glyph advance widths measured with CoreText/AppKit (system font; the app's own token sizes: meta 12/500, label 15/600, title 20/600) against boxes read from home-splash.tsx, home-copy.ts and design/tokens at 320 pt",
+		"no_rendered_frame": "widths are measured text advances, not a rendered frame; the claim is the comparison with the row boxes, not a screenshot"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "3d25b56e136a",
+		"agent": "reviewer subagent (label vi-a-second-pass)",
+		"pinned_model": "anthropic/claude-sonnet-5-5",
+		"actual_model": "radient/auto",
+		"actual_model_source": "the subagent's own report: the session opened on anthropic/claude-sonnet-5-5 and fell back through openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto on provider quota",
+		"scope": "all 45 values of the four group-A namespaces, read blind to this audit's findings (the bundles did not exist when it started)",
+		"verdict": "clean — no BLOCKER, no MAJOR; 3 MINOR + 2 NIT",
+		"agreement": "independently reproduced the tip.parallel overflow (its measurement 278.1 pt against a 270 pt slot; this audit 278.6 pt) and the options.fixed 'de xem' narrowing (it rated that NIT where this audit rates MAJOR); it also found the review chip's core-term drift (H-06), which this audit had accepted until re-checking core's tui.review.* namespace",
+		"disagreements": [
+			"V2-03 ended_placeholder: it wants 'Gui de mo lai…' because French/Spanish/Chinese/Russian dropped the destination. This audit rejects that: the vi string is 259 pt against English's 266.7 pt, so vi cannot be the cause of an English-source 200% clip, and dropping 'trong thu muc home' would lose information the English keeps.",
+			"V2-04 rejected: it reads 'chua duoc luu' as 'not saved yet' and wants 'khong duoc luu'. The string is byte-identical to core's relay.account_policy.rejected; changing it in this client alone would split the surfaces the mirror rule keeps aligned. Recorded, not changed.",
+			"chip type role: its chip widths were measured at body-sm 14/400; the rows use buttonClasses('quiet','md') -> text-label 15/600, which is what this audit measured. Both agree every chip fits."
+		]
+	},
+	"findings": [],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [],
+		"nit_ids": [],
+		"finding_ids": [],
+		"reason": "passed — 4/4 values byte-identical to core's committed vi at origin/main (0f8e3d101116)"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/vi/relay.chrome/vi30a5/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/relay.chrome/vi30a5/report.md",
+			"sha256": "4f7c194c812021278957f7949df663bfea8c7bfd79408393434d4dbea328f0df"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/relay.chrome/vi30a5/audit.log",
+			"sha256": "be247998580f531167a0dc65357ebd39ab1bcdbdcf7189b166273ab27a756886",
+			"state": "actual command output, not notes"
+		}
+	],
+	"terminology": {
+		"core_reference": "core vi catalogues at origin/main 0f8e3d101116b40252b4c6eea8ac4f6c6980b73b",
+		"terms_checked": [
+			"tài khoản",
+			"máy tính",
+			"phiên",
+			"cuộc trò chuyện",
+			"mốc",
+			"giám sát",
+			"bộ giám sát",
+			"định tuyến tài khoản",
+			"lần thức dậy"
+		],
+		"core_matched_english_values": 0,
+		"divergences": 0,
+		"note": "counts and the full table are in i18n/audits/evidence/vi/mobile.home/vi30a1/report.md (Appendix); this wave derives its terms from core's committed vi, not from a fresh reading of the glossary"
+	},
+	"ledger": {
+		"command": "absent",
+		"note": "No audit-ledger command and no i18n ledger exist in this repository at this head (i18n/ holds audits/ only; scripts/i18n/ has generate.ts and check-strings.ts, no ledger writer) and there is no i18n/audits/evidence/README.md contract in this checkout. The served record is this record.json under i18n/audits/evidence/<locale>/<namespace>/<id>/, matching the es/ru wave records.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "vi",
+			"namespace": "relay.chrome",
+			"source_sha256": "e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 0
+			},
+			"note": "vi relay.chrome passed: mirror 4/4 byte-identical to core; i18n/audits/evidence/vi/relay.chrome/vi30a5/record.json; radient/auto fallback run"
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root (no tracked manifest maps a different root)",
+		"reads": "ordinary worktree reads; core's committed bytes via `git show origin/main:<path>`; the repository's own validator, renderer and test runner; local CoreText measurement",
+		"english_context_sidecars": "nested-JSON context sidecars are not routable through read_public_copy; read as ordinary worktree files",
+		"receipts": "no keyed public-copy receipt is claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured",
+		"translator_observation": "the translator's run was not observed by this auditor",
+		"wave_state": "At this head src/i18n/catalogues/vi/ is untracked and vi sits in NOT_YET_SHIPPED_LOCALES, so `npx vitest run src/i18n src/features/home` fails exactly one assertion — catalogues.test.ts 'ships no locale the runtime cannot render' expects the catalogue directories to equal SHIPPED_LOCALES. That is the guard working as designed; it clears when the wave flips the shipped set after every audit passes. Shipping vi also requires a measured `vi` entry in SUGGESTION_CHAR_BUDGET (Record<ShippedLocale, number>) and removal of vi from NOT_YET_SHIPPED_LOCALES. `npx tsc --noEmit` exits 0 at this head."
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output."
+}

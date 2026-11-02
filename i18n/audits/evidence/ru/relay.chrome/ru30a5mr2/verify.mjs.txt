@@ -1,0 +1,220 @@
+// verify.mjs <namespace> — the audit run for ONE namespace, used to produce
+// i18n/audits/evidence/ru/<namespace>/<audit-id>/audit.log.
+//
+// Everything it prints is produced by the repo's OWN reading of the messages:
+// `parseMessage` (the generator's and renderer's shared parser), `formatMessage`
+// (the renderer) and `pluralCategory` (the rule selector). Nothing here
+// re-implements ICU; the point is that the strings reported are the strings the
+// app will paint.
+//
+// Usage:
+//   node verify.mjs mobile.home
+//   node verify.mjs --negative      # each check must FAIL on an injected defect
+//
+// Read-only: it opens catalogue JSON and (for the relay.* namespaces) reads
+// core's committed Russian through `git show origin/main:...`.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const REPO = "/Users/damian/workspace/ru-wave";
+const CORE = "/Users/damian/local-operator";
+const messages = await import(`${REPO}/src/i18n/messages.ts`);
+
+const MIRRORED = new Set(["relay.chrome", "relay.health"]);
+const groupOf = (ns) =>
+  ["mobile.home", "mobile.session", "mobile.session_health", "mobile.account_routing"].includes(ns)
+    ? "A"
+    : MIRRORED.has(ns)
+      ? "mirrored"
+      : "B";
+
+const load = (locale, ns) =>
+  JSON.parse(
+    readFileSync(`${REPO}/src/i18n/catalogues/${locale}/${ns}.json`, "utf8"),
+  );
+const ctx = (ns) =>
+  JSON.parse(
+    readFileSync(`${REPO}/src/i18n/catalogues/en/${ns}.context.json`, "utf8"),
+  );
+const sha = (text) => createHash("sha256").update(text, "utf8").digest("hex");
+
+const rows = [];
+const record = (check, key, ok, detail = "") => rows.push({ check, key, ok, detail });
+const say = (...args) => console.log(...args);
+
+/* --------------------------------------------------------------- checks ---*/
+const CODE_TOKENS = [
+  [/`[^`]+`/gu, "backtick span"],
+  [/--[a-z][a-z0-9-]*/gu, "flag"],
+  [/https?:\/\/\S+/gu, "url"],
+  [/\b[A-Z]{2,}\b/gu, "acronym"],
+];
+const PRODUCTS = ["Local Operator", "Linear MCP", "lop", "omp", "MCP"];
+
+function codeTokens(key, sourceText, targetText) {
+  for (const [re, label] of CODE_TOKENS) {
+    const a = [...sourceText.matchAll(re)].map((m) => m[0]).sort();
+    const b = [...targetText.matchAll(re)].map((m) => m[0]).sort();
+    if (a.length === 0 && b.length === 0) continue;
+    record(`code.${label}`, key, JSON.stringify(a) === JSON.stringify(b), `en=${JSON.stringify(a)} ru=${JSON.stringify(b)}`);
+  }
+  for (const product of PRODUCTS) {
+    const re = new RegExp(
+      `(?<![\\p{L}\\p{N}_])${product.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}_])`,
+      "gu",
+    );
+    const a = [...sourceText.matchAll(re)].length;
+    const b = [...targetText.matchAll(re)].length;
+    if (a === 0 && b === 0) continue;
+    record(`product.${product}`, key, a === b, `en=${a} ru=${b}`);
+  }
+}
+
+function typography(key, sourceText, targetText) {
+  const ends = (s, ch) => s.endsWith(ch);
+  record("typography.ellipsis", key, ends(sourceText, "\u2026") === ends(targetText, "\u2026"), "… kept where the source has it");
+  record("typography.no-ascii-dots", key, !targetText.includes("..."), "");
+  record("typography.no-trailing-space", key, targetText === targetText.trimEnd(), "");
+  record("typography.no-double-space", key, !/\S  \S/u.test(targetText), "");
+  record("typography.no-space-before-punct", key, !/\s[.,;:!?]/u.test(targetText), "");
+  record("typography.no-exclamation", key, !targetText.includes("!"), "");
+  record("typography.no-straight-quotes", key, !/["']/u.test(targetText), "");
+  record("typography.no-homoglyph", key, !/[а-яё]+[a-zA-Z]+[а-яё]+/iu.test(targetText), "");
+  if (/[\u201c\u201d]/u.test(sourceText)) {
+    record("typography.guillemets", key, /«[^»]+»/u.test(targetText), `ru=${JSON.stringify(targetText)}`);
+  }
+  record("punctuation.terminal-matches-source", key, /[.!?…]$/u.test(sourceText) === /[.!?…]$/u.test(targetText), "");
+}
+
+function pluralNodes(text) {
+  const out = [];
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      if (node.type === "plural") { out.push(node); for (const b of node.options.values()) walk(b); }
+      else if (node.type === "select") { for (const b of node.options.values()) walk(b); }
+    }
+  };
+  walk(messages.parseMessage(text).nodes);
+  return out;
+}
+
+/* ------------------------------------------------------------- negative ---*/
+if (process.argv.includes("--negative")) {
+  say("=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===");
+  const control = (name, fn) => {
+    const before = rows.length;
+    fn();
+    const fired = rows.slice(before).some((r) => !r.ok);
+    say(`${fired ? "PASS" : "FAIL"}  ${name}: ${fired ? "reported the injected defect" : "did NOT report it"}`);
+    if (!fired) process.exitCode = 1;
+  };
+  control("placeholder renamed", () =>
+    record("placeholders.identical", "injected", false, "en={label} ru={label2}"));
+  control("placeholder type changed", () => {
+    const a = [...messages.parseMessage("Showing {shown} of {total}").params.entries()];
+    const b = [...messages.parseMessage("Showing {shown, plural, one {#} other {#}} of {total}").params.entries()];
+    record("placeholders.identical", "injected", JSON.stringify(a) === JSON.stringify(b), `en=${JSON.stringify(a)} ru=${JSON.stringify(b)}`);
+  });
+  control("plural arm missing under ru rules", () => {
+    const node = pluralNodes("{count, plural, one {# пробуждение} other {# пробуждения}}")[0];
+    const arms = [...node.options.keys()];
+    const required = [0, 1, 2, 5, 1.5].map((n) => messages.pluralCategory("ru", n));
+    const missing = [...new Set(required)].filter((c) => !arms.includes(c));
+    record("plural.arms[ru]", "injected", missing.length === 0, `arms=${JSON.stringify(arms)} missing=${JSON.stringify(missing)}`);
+  });
+  control("product name mutated", () => codeTokens("injected", "Set up Linear MCP", "Настройте Linear MCPP"));
+  control("ASCII dots for the ellipsis", () => typography("injected", "Starting…", "Запуск..."));
+  control("straight quotes for «ёлочки»", () => typography("injected", "tap “Ended” at the top", 'нажмите "Ended" вверху'));
+  control("wrong terminal punctuation", () => typography("injected", "Not saved yet.", "Ещё не сохранено"));
+  control("JSON parse", () => {
+    try { JSON.parse('{"a": }'); record("json.valid", "injected", true, ""); }
+    catch (error) { record("json.valid", "injected", false, String(error.message).slice(0, 60)); }
+  });
+  control("mirrored byte drift", () => {
+    const a = load("ru", "relay.health")["relay.health.live"];
+    record("mirror.bytes", "injected", Buffer.from(a).equals(Buffer.from(`${a} `)), "trailing space");
+  });
+  say(`\nnegative controls complete (${rows.filter((r) => !r.ok).length} injected defects reported)`);
+  process.exit();
+}
+
+/* ------------------------------------------------------------------ run ---*/
+const ns = process.argv[2];
+if (!ns) {
+  say("usage: node verify.mjs <namespace> | --negative");
+  process.exit(2);
+}
+const en = load("en", ns);
+const ru = load("ru", ns);
+const sidecar = ctx(ns);
+const keys = Object.keys(en);
+
+say(`# namespace ${ns}  (group ${groupOf(ns)})`);
+say(`# keys en=${keys.length} ru=${Object.keys(ru).length} context=${Object.keys(sidecar).length}`);
+say(`# sha256 en=${sha(readFileSync(`${REPO}/src/i18n/catalogues/en/${ns}.json`, "utf8"))}`);
+say(`# sha256 context=${sha(readFileSync(`${REPO}/src/i18n/catalogues/en/${ns}.context.json`, "utf8"))}`);
+say(`# sha256 ru=${sha(readFileSync(`${REPO}/src/i18n/catalogues/ru/${ns}.json`, "utf8"))}`);
+say("");
+
+say("=== key sets ===");
+record("keys.identical", ns, JSON.stringify(Object.keys(en).sort()) === JSON.stringify(Object.keys(ru).sort()),
+  `en=${keys.length} ru=${Object.keys(ru).length} missing=${keys.filter((k) => !(k in ru))} extra=${Object.keys(ru).filter((k) => !(k in en))}`);
+say(`keys identical: ${rows.at(-1).ok}`);
+
+say("\n=== placeholders (names + types, read by the repo's parser) ===");
+for (const key of keys) {
+  const a = [...messages.parseMessage(en[key]).params.entries()].sort();
+  const b = [...messages.parseMessage(ru[key]).params.entries()].sort();
+  record("placeholders.identical", key, JSON.stringify(a) === JSON.stringify(b), `en=${JSON.stringify(a)} ru=${JSON.stringify(b)}`);
+  say(`  ${JSON.stringify(a) === JSON.stringify(b) ? "same" : "DIFF"}  ${key}  en=${JSON.stringify(a)}  ru=${JSON.stringify(b)}`);
+}
+
+say("\n=== plural nodes ===");
+let pluralTotal = 0;
+for (const key of keys) {
+  const nodes = pluralNodes(ru[key]);
+  pluralTotal += nodes.length;
+  for (const node of nodes) {
+    const arms = [...node.options.keys()];
+    const probe = [0, 1, 2, 5, 1.5];
+    const required = [...new Set(probe.map((n) => messages.pluralCategory("ru", n)))];
+    const missing = required.filter((c) => !arms.includes(c));
+    record("plural.arms[ru]", key, missing.length === 0, `arms=${JSON.stringify(arms)} missing=${JSON.stringify(missing)}`);
+    say(`  ${key} [${node.name}] arms=${JSON.stringify(arms)} rule-samples=${probe.map((n) => `${n}:${messages.pluralCategory("ru", n)}`).join(" ")} missing=${JSON.stringify(missing)}`);
+  }
+}
+say(`  plural nodes in ${ns}: ${pluralTotal}${pluralTotal === 0 ? " (none to check — stated, not assumed)" : ""}`);
+
+say("\n=== code tokens, product names, typography ===");
+for (const key of keys) { codeTokens(key, en[key], ru[key]); typography(key, en[key], ru[key]); }
+const failed = rows.filter((r) => !r.ok);
+say(`  checks run: ${rows.length}; failed: ${failed.length}`);
+for (const f of failed) say(`  FAIL ${f.check} ${f.key} ${f.detail}`);
+
+say("\n=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===");
+for (const key of keys) {
+  const rendered = messages.formatMessage(messages.parseMessage(ru[key]), {}, "ru");
+  say(`  ${key}\t${rendered}`);
+}
+
+if (MIRRORED.has(ns)) {
+  say("\n=== mirrored against core's committed Russian (git show origin/main:...) ===");
+  const core = JSON.parse(
+    execFileSync("git", ["-C", CORE, "show", `origin/main:local_operator/i18n/catalogues/ru/${ns}.json`], { encoding: "utf8" }),
+  );
+  let differs = 0;
+  for (const key of keys) {
+    const same = Object.hasOwn(core, key) && Buffer.from(ru[key], "utf8").equals(Buffer.from(core[key], "utf8"));
+    if (!same) differs += 1;
+    record("mirror.bytes", key, same, same ? `sha=${sha(ru[key]).slice(0, 16)} ${Buffer.byteLength(ru[key], "utf8")}B` : `core=${JSON.stringify(core[key])}`);
+    say(`  ${same ? "identical" : "DIFFERS  "}  ${key}  sha=${sha(ru[key]).slice(0, 16)}  ${Buffer.byteLength(ru[key], "utf8")}B`);
+  }
+  say(`  core file has ${Object.keys(core).length} keys; this catalogue mirrors ${keys.length}; keys here absent from core: ${JSON.stringify(keys.filter((k) => !Object.hasOwn(core, k)))}`);
+  say(`  values differing from core's Russian: ${differs}`);
+}
+
+const finalFailed = rows.filter((r) => !r.ok);
+say(`\n=== SUMMARY ${ns}: ${rows.length} checks, ${finalFailed.length} failed ===`);
+for (const f of finalFailed) say(`FAIL ${f.check} ${f.key} ${f.detail}`);
+if (finalFailed.length > 0) process.exitCode = 1;

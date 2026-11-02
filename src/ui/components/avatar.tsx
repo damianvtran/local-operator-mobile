@@ -108,7 +108,8 @@ export const Avatar = ({
 				style={{
 					position: "absolute",
 					top: 0,
-					left: 0,
+					// Cover from logical start in both directions, not physical left.
+					start: 0,
 					width: AVATAR_SIZES[size].px,
 					height: AVATAR_SIZES[size].px,
 				}}

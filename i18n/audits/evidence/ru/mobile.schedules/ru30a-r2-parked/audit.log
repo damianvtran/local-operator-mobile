@@ -1,0 +1,69 @@
+# audit id: ru30a-r2-parked   (cross-namespace REGRESSION CHECK, not a namespace audit)
+# locale: ru   namespace: mobile.schedules (2 of 38 keys)   audit date: 2026-10-30
+# auditor: i18n-auditor (lopdev team), session c9aa2aca8837
+# ru29s1 remains the audit of mobile.schedules; this checks only the two parked
+# clauses, which the remediation rewrote beyond RU-SCH-3's prescription.
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
+
++ cd /Users/damian/workspace/ru-wave
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ shasum -a 256 src/i18n/catalogues/ru/mobile.schedules.json
++ cut '-d ' -f1
+f95a0e2167f0f74bdd46d4479ae53eabb2ffa01b972c97e6e7132ac513c97090
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/parked-check.mjs
+
+=== mobile.schedules.parked.monitors
+  en     "Parked — monitors resume when its conversation runs again"
+  note   "The conversation is stopped, so its monitors pause. Monitors resume when the conversation next RUNS; opening it is not enough."
+  ru     "Приостановлено — мониторы возобновятся, когда снова запустится эта беседа"
+  role   "status"
+  sha256 35c2996fb7673600709c03547bf3ef97afa4fd0e21e864cc224fe2487b287ec3  cells=73  codePoints=73  utf16=73
+  PASS  both values are non-empty strings
+  PASS  no ICU arguments in the source  [en=[]]
+  PASS  no ICU arguments in the translation  [ru=[]]
+  PASS  no plural/select node in the translation
+  PASS  renders byte-identically (no substitution)
+  PASS  has the guide's spaced em dash
+  PASS  no ASCII hyphen or en dash used as the dash
+  PASS  no trailing full stop (it is a status clause)  [а]
+  PASS  no ASCII dots and no ellipsis at all
+  PASS  no exclamation mark
+  PASS  no straight quotes
+  PASS  terminal punctuation matches the source
+  PASS  sentence case (first character capitalised)
+  PASS  Cyrillic script throughout the words
+  PASS  no Latin letters smuggled in
+  PASS  names the conversation RUNNING again
+  PASS  does not promise that opening is enough
+  PASS  (keeps the pronoun referent 'this conversation')
+
+=== mobile.schedules.parked.wakes
+  en     "Parked — wakes resume after its next turn"
+  note   "The conversation is stopped, so its wakes are held. Wakes resume after its NEXT TURN; opening the conversation is not enough. Do not say 'when you open it'."
+  ru     "Приостановлено — пробуждения возобновятся после следующего хода этой беседы"
+  role   "status"
+  sha256 b6321309845926d4ce3e94e9db0a6a7644b9d4ea27cc4813b12595d0aa04a5c3  cells=75  codePoints=75  utf16=75
+  PASS  both values are non-empty strings
+  PASS  no ICU arguments in the source  [en=[]]
+  PASS  no ICU arguments in the translation  [ru=[]]
+  PASS  no plural/select node in the translation
+  PASS  renders byte-identically (no substitution)
+  PASS  has the guide's spaced em dash
+  PASS  no ASCII hyphen or en dash used as the dash
+  PASS  no trailing full stop (it is a status clause)  [ы]
+  PASS  no ASCII dots and no ellipsis at all
+  PASS  no exclamation mark
+  PASS  no straight quotes
+  PASS  terminal punctuation matches the source
+  PASS  sentence case (first character capitalised)
+  PASS  Cyrillic script throughout the words
+  PASS  no Latin letters smuggled in
+  PASS  does not say 'when you open it'  [sidecar: 'Do not say when you open it']
+  PASS  names the NEXT turn
+  PASS  (keeps the pronoun referent 'this conversation')
+
+=== SUMMARY parked clauses: 2 keys, 0 failed ===
++ set +x

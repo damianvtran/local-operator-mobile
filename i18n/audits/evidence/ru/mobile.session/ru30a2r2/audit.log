@@ -1,0 +1,56 @@
+# audit id: ru30a2r2   (delta round 2 of mobile.session)
+# locale: ru   namespace: mobile.session   audit date: 2026-10-30
+# auditor: i18n-auditor (lopdev team), session c9aa2aca8837
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
+
++ cd /Users/damian/workspace/ru-wave
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ shasum -a 256 src/i18n/catalogues/ru/mobile.session.json
++ cut '-d ' -f1
+750d27a55262c02fe7ebfebe5b3f1071cdb6a33ec2e081f0059d698dd1377cae
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
++ npm run -s i18n:strings:check
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs mobile.session
+# namespace mobile.session  (group A)
+# keys en=2 ru=2 context=2
+# sha256 en=8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8
+# sha256 context=6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1
+# sha256 ru=750d27a55262c02fe7ebfebe5b3f1071cdb6a33ec2e081f0059d698dd1377cae
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.session.conversation_details  en=[]  ru=[]
+  same  mobile.session.status_tray.hint  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.session: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 21; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.session.conversation_details	Детали беседы
+  mobile.session.status_tray.hint	Открывает строку текущей работы, задачи и субагентов
+
+=== SUMMARY mobile.session: 21 checks, 0 failed ===
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)
++ set +x

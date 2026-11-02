@@ -698,10 +698,17 @@ async function main() {
 
 		const authed = await client.get("/api/sessions");
 		check("the cookie authenticates /api/sessions", authed.status, 200);
+		/* THE KEY SET IS THE LIVE PAYLOAD'S, and it includes the inbox block: the
+		 *  relay builds `"notifications": _notifications_block()` straight into the
+		 *  list payload (local-operator `mobile/daemon.py:5295`, contract §5.4), so a
+		 *  mock without it diverges from the thing it stands in for. Round 2 shipped
+		 *  the block WITHOUT this expectation and 81 assertions failed on the mock's
+		 *  own honesty check. Optional on the wire and never defaulted: an older
+		 *  relay omits it, which means "unknown". */
 		check(
-			"list body has sessions + degraded + capabilities + unread",
+			"list body has sessions + degraded + capabilities + unread + notifications",
 			Object.keys(bag(authed.json)).sort().join(","),
-			"capabilities,degraded,sessions,unread",
+			"capabilities,degraded,notifications,sessions,unread",
 		);
 		check(
 			"degraded is present and empty when nothing is wrong",
@@ -1048,7 +1055,7 @@ async function main() {
 			Object.keys(listFrames[0]?.data ?? {})
 				.sort()
 				.join(","),
-			"capabilities,degraded,sessions,unread",
+			"capabilities,degraded,notifications,sessions,unread",
 		);
 
 		const proj = await readStream(relay.base, `/api/sessions/${SID}/events`, {
@@ -1283,7 +1290,7 @@ async function main() {
 		check(
 			`scenario '${name}' answers a well-formed list`,
 			Object.keys(bag(list.json)).sort().join(","),
-			"capabilities,degraded,sessions,unread",
+			"capabilities,degraded,notifications,sessions,unread",
 		);
 		check(
 			`scenario '${name}' declares its own row count`,

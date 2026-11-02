@@ -15,11 +15,13 @@ import {
 	parseInline,
 	parseMarkdown,
 	TABLE_CELL_PADDING_X_PT,
+	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
@@ -107,12 +109,19 @@ const TABLE_FADE_PT = 24;
 let fadeSeq = 0;
 
 const TableFade = ({
-	side,
+	edge,
 	colour,
 }: {
-	side: "left" | "right";
+	/** The READING edge the cue sits on: `end` is where the next column would be,
+	 *  `start` is the one the reader has already scrolled past. */
+	edge: "start" | "end";
 	colour: string;
 }) => {
+	const rtl = useIsRTL();
+	/* The gradient below runs `x1 0% -> x2 100%` (physical, left to right), so the
+	 *  reading edge is resolved to a physical side once, in a pure function that a
+	 *  test pins for both directions. */
+	const { side, nearOpacity, farOpacity } = tableFadeGeometry(edge, rtl);
 	const id = useRef("");
 	if (id.current === "") {
 		fadeSeq += 1;
@@ -145,13 +154,13 @@ const TableFade = ({
 								key="near"
 								offset="0"
 								stopColor={colour}
-								stopOpacity={side === "right" ? 0 : 1}
+								stopOpacity={nearOpacity}
 							/>,
 							<Stop
 								key="far"
 								offset="1"
 								stopColor={colour}
-								stopOpacity={side === "right" ? 1 : 0}
+								stopOpacity={farOpacity}
 							/>,
 						]}
 					</LinearGradient>
@@ -197,7 +206,15 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	/** The `lo-md-scroll=bring` viewer has run for this table (it runs once). */
 	const broughtIntoView = useRef(false);
 
-	/* The two booleans §1.6 names. `bleeds`: the priced row is wider than the
+	/* The two booleans §1.6 names, stated in READING order: `moreAhead` is the cue
+	 *  at the reading end, `moreBehind` the one at the reading start. Both are
+	 *  computed from PHYSICAL scroll metrics (`contentOffset.x` is offset from the
+	 *  physical left edge, which is what RN normalizes to), and in an `ltr` layout
+	 *  the two are the identities `showRight = !atEnd` and `showLeft = x > 0` the
+	 *  frames were designed against. Under `rtl` the browser moves the scroll
+	 *  origin, so the pair is a READING-ORDER mapping rather than a measured one —
+	 *  flagged in `docs/i18n.md` as the one table behaviour `ur` must re-measure.
+	 *  `bleeds`: the priced row is wider than the
 	 * column, so the viewport runs to the screen's right edge (the cut edge).
 	 * `scrolls`: it is ALSO wider than the bleeded viewport, i.e. there is
 	 * content the reader cannot reach without scrolling — only then is the fade
@@ -313,6 +330,8 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 
 	const showRight = scrolls && !atEnd;
 	const showLeft = scrolls && scrollX > 0.5;
+	const moreAhead = showRight;
+	const moreBehind = showLeft;
 
 	const cellStyle = (column: number) => {
 		// `box-sizing: border-box` (React Native's own default) means the cell's
@@ -334,7 +353,7 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 			key={column}
 			testID={SURFACE.mdTableCell}
 			style={cellStyle(column)}
-			className={cx("px-3 py-2", column > 0 && "border-l border-hairline")}
+			className={cx("px-3 py-2", column > 0 && "border-s border-hairline")}
 		>
 			<Inline
 				text={cell}
@@ -352,7 +371,7 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 		<View onLayout={onColumnLayout}>
 			<View
 				testID={SURFACE.mdTable}
-				style={bleeds ? { marginRight: -TABLE_RAIL_PT } : undefined}
+				style={bleeds ? { marginEnd: -TABLE_RAIL_PT } : undefined}
 			>
 				{/* The frame: 1pt `border-border-control` (the `control` colour role's utility), because on a phone the grid is what
 			    makes a row-and-column read as rows and columns, and a hairline is
@@ -407,8 +426,8 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 						</View>
 					</ScrollView>
 				</View>
-				{showRight ? <TableFade side="right" colour={canvas} /> : null}
-				{showLeft ? <TableFade side="left" colour={canvas} /> : null}
+				{moreAhead ? <TableFade edge="end" colour={canvas} /> : null}
+				{moreBehind ? <TableFade edge="start" colour={canvas} /> : null}
 			</View>
 		</View>
 	);
@@ -457,7 +476,14 @@ const CodeBlock = ({
 				    reads as different code. The block itself is what scrolls, so the
 				    column never widens (the transcript's own overflow guard). */}
 				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-					<Text className="px-2 py-1 font-mono text-mono-sm text-ink-muted">
+					<Text
+						className="px-2 py-1 font-mono text-mono-sm text-ink-muted"
+						/* Code keeps its own direction inside an Urdu transcript: the block
+						 *  is the canonical mixed-content case — a bidi algorithm given no
+						 *  hint reorders the punctuation of `git commit -m "…"` and the
+						 *  listing stops being the code the reader must copy. */
+						style={LTR_TEXT}
+					>
 						{copied && language.length === 0 ? "copied\n" : ""}
 						{body}
 					</Text>
@@ -523,7 +549,7 @@ export const Markdown = ({ text }: { text: string }) => {
 						);
 					case "quote":
 						return (
-							<View key={index} className="border-l-2 border-hairline pl-2">
+							<View key={index} className="border-s-2 border-hairline ps-2">
 								<Inline text={block.text} base="text-body-sm text-ink-muted" />
 							</View>
 						);

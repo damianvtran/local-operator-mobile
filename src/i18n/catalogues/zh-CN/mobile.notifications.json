@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "回答",
+	"mobile.notifications.back": "返回",
+	"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
+	"mobile.notifications.detail.conversation_asks": "此对话的问题",
+	"mobile.notifications.detail.earlier_updates": "较早的更新",
+	"mobile.notifications.detail.from": "来自",
+	"mobile.notifications.detail.no_asks": "此对话中没有问题。",
+	"mobile.notifications.detail.nothing_to_dismiss": "此对话没有可忽略的更新。",
+	"mobile.notifications.detail.projects": "项目",
+	"mobile.notifications.dismiss": "忽略",
+	"mobile.notifications.filter_label": "显示",
+	"mobile.notifications.load_failed": "无法加载通知",
+	"mobile.notifications.priority_high": "高",
+	"mobile.notifications.title": "通知"
+}

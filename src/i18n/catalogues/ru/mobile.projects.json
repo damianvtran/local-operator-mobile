@@ -1,0 +1,17 @@
+{
+	"mobile.projects.delete_body": "Удалить «{name}»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются.",
+	"mobile.projects.draft_kept_note": "Сохранено с прошлого раза. Очистите поля, чтобы начать новое.",
+	"mobile.projects.milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
+	"mobile.projects.milestones.count": "{completed, plural, one {# веха из {total}} few {# вехи из {total}} many {# вех из {total}} other {# вехи из {total}}}",
+	"mobile.projects.milestones.none": "вех нет",
+	"mobile.projects.project_name_hint": "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.",
+	"mobile.projects.remove_milestone_body": "Удалить веху «{name}» из этого проекта? Веха исчезнет навсегда. Сессии проекта и его строка прогресса не затрагиваются.",
+	"mobile.projects.session_state.filed_by": "завела работу",
+	"mobile.projects.session_state.missing": "не найдена",
+	"mobile.projects.session_state.not_running": "не запущена",
+	"mobile.projects.sessions.count": "{count, plural, one {# сессия} few {# сессии} many {# сессий} other {# сессии}}",
+	"mobile.projects.sessions.live": "{base} · {live, plural, one {# активна} few {# активны} many {# активны} other {# активны}}",
+	"mobile.projects.stale_badge": "прогресс устарел",
+	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {Добавлен проект} updated {Обновлён проект} removed {Удалён проект} deleted {Удалён проект} other {Обновлён проект}} «{subject}».} milestone {{action, select, created {Создана веха} completed {Завершена веха} reopened {Возобновлена веха} added {Добавлена веха} updated {Обновлена веха} removed {Удалена веха} deleted {Удалена веха} other {Обновлена веха}} «{subject}».} other {{action, select, created {Создано} completed {Завершено} reopened {Возобновлено} added {Добавлено} updated {Обновлено} removed {Удалено} deleted {Удалено} other {Обновлено}} «{subject}».}}",
+	"mobile.projects.write_unknown_note": "Не удалось связаться с компьютером, поэтому неизвестно, сохранилось ли изменение. Проверьте проект, прежде чем повторять попытку."
+}

@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react-native";
 import { Text, View } from "react-native";
 
-import { CONTROL, REGION, ROLE, SURFACE } from "@/ui/a11y";
+import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -118,9 +118,17 @@ const NEXT: Record<RefusalKind, () => string> = {
 	console: () =>
 		"Open the Radient console to fix it there. Signing in on this phone will not change it.",
 	password: () => "Check the relay password on the computer, then try again.",
+	/* R1-5: a 401 revokes the authorization generation, so unfinished work is
+	 *  quarantined — not sent, not adopted again by signing back in. The sentence
+	 *  has to say that, because "we kept your draft" would be a promise the storage
+	 *  scoping cannot keep. */
 	"sign-in": () =>
-		"The browser finishes the sign-in, so the app never sees your password.",
-	retry: () => "It clears by itself — this will keep trying.",
+		"Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
+	/* No promise of an automatic retry: nothing on the paths that raise this
+	 *  surface (a cold-start restore that could not reach Radient, a mint's network
+	 *  failure) schedules one, and a driven wait saw ONE request in 30 s (PR #121
+	 *  design round 1, D2/D3). The button below is the retry. */
+	retry: () => "Usually a passing network problem. Try again in a moment.",
 	diagnostic: () =>
 		"Nothing on this screen can fix it; this is a bug in the app.",
 	"certificate-rejected": () =>
@@ -185,7 +193,17 @@ export const RefusalSurface = ({
 	const { effectiveScale } = useTextScale();
 
 	return (
-		<View className="gap-3 py-6" testID={testID}>
+		<View
+			className="gap-3 py-6"
+			testID={testID}
+			/* Announced when it appears, as the kit's `Banner` is: a failed switch
+			 *  closes the sheet onto this surface while focus returns to the control
+			 *  that opened it, so without a live region a screen-reader user heard the
+			 *  button and not the reason (PR #122 UX round 2, U14). Polite, because the
+			 *  reader's own tap caused it; the headline keeps its `header` role. */
+			accessibilityRole={ROLE.alert}
+			accessibilityLiveRegion={LIVE_REGION.polite}
+		>
 			<View className="flex-row items-start gap-2">
 				<AlertTriangle
 					color={danger}
@@ -224,15 +242,15 @@ export const RefusalSurface = ({
 					<Text className="text-mono-sm text-ink-muted">{remedy}</Text>
 				</View>
 			) : null}
-			{kind === "retry" ? (
+			{/* Only the server's own backoff is worth a line, and it is stated as
+			 *  advice, not as a retry this screen schedules — none is scheduled (D2). */}
+			{kind === "retry" && waitSeconds ? (
 				<View className="flex-row items-center gap-2">
 					<Text
 						className="text-body-sm text-ink-dim"
 						testID={REGION.connectionErrorClearsByItself}
 					>
-						{waitSeconds
-							? `Trying again in about ${waitSeconds}s.`
-							: "Trying again in a moment."}
+						{`Wait about ${waitSeconds}s before trying again.`}
 					</Text>
 				</View>
 			) : null}

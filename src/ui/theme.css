@@ -217,6 +217,37 @@
 	}
 }
 
+/*
+ * The composer's placeholder, on the web build: ONE line, ellipsized.
+ *
+ * A `<textarea>`'s `::placeholder` wraps, and the composer holds its empty
+ * field to one body line (`placeholderMaxLines={1}`, §2.5 D1) — so a placeholder
+ * longer than the line was cut THROUGH the glyphs of its second line at 320 pt
+ * ("folder" half visible) and silently lost its tail at 200 % ("Send to reopen",
+ * no ellipsis), losing exactly the words that say WHERE a send reopens an ended
+ * session (design round 1 D4, UX round 1 U9). The copy is verbatim safety copy
+ * and must not be shortened, so the field says it on one line and shows that it
+ * continues. Scoped to the composer's field by its stable test id; native
+ * `TextInput` placeholders are single-line already.
+ *
+ * WHY THE FIELD IS AN `<input>` ON WEB (UX round 2, U9): Chrome computes
+ * `text-overflow: clip` on a textarea's `::placeholder` whatever the sheet
+ * says, and on the textarea ITSELF the declaration computes while the
+ * placeholder still wraps and clips — measured on this build, including a
+ * bare isolated textarea. An `<input>` with the same box ellipsizes
+ * correctly, so the empty one-placeholder-line field renders as one
+ * (`Textarea`). The selector is deliberately not scoped to `textarea`: the
+ * element changes. `:placeholder-shown` keeps it off any typed draft.
+ */
+@layer base {
+	[data-testid="composer-input"]:placeholder-shown {
+		white-space: pre;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		line-height: 1.5;
+	}
+}
+
 /* Each step names its own face, from that step's own `face` token. */
 @layer utilities {
 	.text-display { font-family: var(--font-sans); }

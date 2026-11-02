@@ -1,0 +1,56 @@
+{
+	"schema": 1,
+	"audit_id": "fr29b4",
+	"audit_kind": "initial_translation_audit",
+	"locale": "fr",
+	"namespace": "mobile.projects",
+	"audit_date": "2026-10-29",
+	"key_count": {
+		"en": 15,
+		"target": 15
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "e4ac0d5aa232",
+		"job": null,
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "session model header: temporary fallback from anthropic/claude-sonnet-5-5 due to provider quota HTTP 429",
+		"independent_from_translator_session": true,
+		"independence": "Independent agent/context from translator session c66311717837 (job fbde6318e480). Different agent, different session. Model diversity: same model family (kimi/k3.1-pro) as translator's fallback — disclosed, not closed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "temporary fallback (served model)",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "catalogues/en/mobile.projects.json",
+			"sha256": "8218f1fcea96270ce2f9df4431e1eb0c749475305a9656b03d2c34a71c88bb93"
+		},
+		"context": {
+			"path": "catalogues/en/mobile.projects.context.json",
+			"sha256": "6a9e4b4c9fd4a45c47825bc341b937c1774930abd42f2210d9bf3526e1d40f97"
+		},
+		"target": {
+			"path": "catalogues/fr/mobile.projects.json",
+			"sha256": "cb4cc4d83dccc79172ac275987fc875b15e4a3db7091228c68af8243cbd67892"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": ["FR-PROJ-1", "FR-PROJ-2", "FR-PROJ-3", "FR-PROJ-4"]
+	},
+	"artifacts": ["record.json", "report.md", "audit.log"],
+	"route_disclosure": {
+		"read_route": "ordinary mobile git/worktree reads",
+		"english_context_sidecars": "nested-JSON context sidecars NOT routable through read_public_copy",
+		"credential_shaped_keys": "no credential-shaped key applies",
+		"redaction_scan": "14 English source/context inputs scanned by manager with zero redaction-marker hits"
+	},
+	"audit_notes_not_execution_log": "report.md contains per-key reasoning and findings; audit.log captures actual command output for JSON/key/ICU checks and hashes. No native speaker review or rendered-proof claim is made."
+}

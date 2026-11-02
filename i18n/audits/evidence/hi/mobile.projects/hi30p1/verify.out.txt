@@ -1,0 +1,28 @@
+mobile.schedules: en=38 hi=38 context=38
+  order-note mobile.schedules.summary.monitors_attention: en=['broken', 'total'] hi=['total', 'broken']
+  order-note mobile.schedules.truncated: en=['shown', 'total', 'family'] hi=['family', 'total', 'shown']
+mobile.projects: en=15 hi=15 context=15
+  order-note mobile.projects.milestones.count: en=['completed', 'total'] hi=['total', 'completed']
+  order-note mobile.projects.write_receipt: en=['kind', 'action', 'subject', 'action', 'subject', 'action', 'subject'] hi=['kind', 'subject', 'action', 'subject', 'action', 'subject', 'action']
+mobile.notifications: en=14 hi=14 context=14
+mobile.computers: en=10 hi=10 context=10
+
+77 keys checked, 0 problem(s)
+
+--- negative controls (5 mutations, expect exit 1) ---
+mobile.schedules: en=38 hi=38 context=38
+  order-note mobile.schedules.summary.monitors_attention: en=['broken', 'total'] hi=['total', 'broken']
+  order-note mobile.schedules.truncated: en=['shown', 'total', 'family'] hi=['family', 'total', 'shown']
+mobile.projects: en=15 hi=15 context=15
+  order-note mobile.projects.milestones.count: en=['completed', 'total'] hi=['completed']
+  order-note mobile.projects.write_receipt: en=['kind', 'action', 'subject', 'action', 'subject', 'action', 'subject'] hi=['kind', 'subject', 'action', 'subject', 'action', 'subject', 'action']
+mobile.notifications: en=14 hi=14 context=14
+mobile.computers: en=10 hi=10 context=10
+
+FAIL: mobile.schedules.count.wakes: node/arm structure differs en=[('plural', 'count', ('one', 'other'))] hi=[('plural', 'count', ('other',))]
+FAIL: mobile.projects.milestones.count: placeholder names/kinds differ en=[('completed', 'text'), ('total', 'text')] hi=[('completed', 'text')]
+FAIL: mobile.projects.write_receipt: node/arm structure differs en=[('select', 'kind', ('milestone', 'other', 'project')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated'))] hi=[('select', 'kind', ('ms', 'other', 'project')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated')), ('select', 'action', ('added', 'completed', 'created', 'deleted', 'other', 'removed', 'reopened', 'updated'))]
+FAIL: mobile.notifications.priority_high: value is not NFC
+FAIL: mobile.computers.add: contains U+200D ZWJ
+77 keys checked, 5 problem(s)
+negative-control exit=1

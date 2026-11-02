@@ -1,0 +1,68 @@
++ echo '# audit id: ru30a2'
+# audit id: ru30a2
++ echo '# locale: ru   namespace: mobile.session   audit date: 2026-10-30'
+# locale: ru   namespace: mobile.session   audit date: 2026-10-30
++ echo '# auditor: i18n-auditor (lopdev team), session 68877acd3c8a'
+# auditor: i18n-auditor (lopdev team), session 68877acd3c8a
+++ git -C /Users/damian/workspace/ru-wave rev-parse --abbrev-ref HEAD
+++ git -C /Users/damian/workspace/ru-wave rev-parse HEAD
++ echo '# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5'
+# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5
+++ cut '-d ' -f1
+++ shasum -a 256 /Users/damian/workspace/ru-wave/src/i18n/catalogues/ru/mobile.session.json
++ echo '# ru catalogue sha256: b1bd4b7104fb7d0a156b736d6f588182729502a7e39258e62eb1fa4c580f7d43'
+# ru catalogue sha256: b1bd4b7104fb7d0a156b736d6f588182729502a7e39258e62eb1fa4c580f7d43
++ echo '# This file is the captured transcript of the commands below (bash set -x), not a summary.'
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
++ echo
+
++ set -x
++ cd /Users/damian/workspace/ru-wave
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:29236) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs mobile.session
+# namespace mobile.session  (group A)
+# keys en=2 ru=2 context=2
+# sha256 en=8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8
+# sha256 context=6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1
+# sha256 ru=b1bd4b7104fb7d0a156b736d6f588182729502a7e39258e62eb1fa4c580f7d43
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.session.conversation_details  en=[]  ru=[]
+  same  mobile.session.status_tray.hint  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.session: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 21; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.session.conversation_details	Детали беседы
+  mobile.session.status_tray.hint	Открывает текущую работу, задачи и субагентов
+
+=== SUMMARY mobile.session: 21 checks, 0 failed ===
+(node:29237) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)

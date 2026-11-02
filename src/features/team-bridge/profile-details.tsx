@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
+import { t } from "@/i18n";
 import type { ProfileCard } from "@/team-bridge/profile";
 import { SURFACE } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
@@ -47,7 +48,9 @@ export function ProfileDetails({
 						</View>
 					)}
 					<Text className="min-w-0 flex-1 text-meta text-ink-muted">
-						Local time {card.localTime}
+						{t("mobile.team_bridge.profile.local_time", {
+							time: card.localTime,
+						})}
 					</Text>
 				</View>
 			)}

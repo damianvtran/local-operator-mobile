@@ -1,0 +1,79 @@
+import AppKit
+
+struct Case {
+  let group: String
+  let label: String
+  let text: String
+  let size: CGFloat
+  let weight: NSFont.Weight
+  let tracking: CGFloat
+  let avail: CGFloat
+  let note: String
+}
+
+let cases: [Case] = [
+  // schedules
+  Case(group:"schedules", label:"empty.body", text:"在对话中让智能体定期做某件事，它就会出现在这里。唤醒会在指定时间向对话发送提示词；监控会持续观察某一项内容并报告变化。", size:14, weight:.regular, tracking:0, avail:288, note:"body-sm, wraps"),
+  Case(group:"schedules", label:"supervisor.not_running", text:"唤醒监管程序已安装但未运行，因此下方唤醒不会触发。", size:14, weight:.regular, tracking:0, avail:288, note:"Alert body, wraps"),
+  Case(group:"schedules", label:"supervisor.unsupported", text:"此平台尚未支持唤醒监管，因此下方唤醒仅在对话运行时触发。", size:14, weight:.regular, tracking:0, avail:288, note:"Alert body, wraps"),
+  Case(group:"schedules", label:"supervisor.unverifiable", text:"下方唤醒没有监管程序，因此仅在其对话运行时触发。", size:14, weight:.regular, tracking:0, avail:288, note:"Alert body, wraps"),
+  Case(group:"schedules", label:"truncated 3/10 wakes", text:"显示3/10个设有唤醒的对话。", size:12, weight:.medium, tracking:0, avail:288, note:"text-meta strip, wraps"),
+  Case(group:"schedules", label:"head.next 3 wakes +4m", text:"3 个唤醒 · 下次4m后", size:12, weight:.medium, tracking:0, avail:288, note:"entry clause, wraps"),
+  Case(group:"schedules", label:"head.overdue 3 wakes 2h", text:"3 个唤醒 · 已逾期2h", size:12, weight:.medium, tracking:0, avail:288, note:"entry clause, wraps"),
+  Case(group:"schedules", label:"summary.wakes 3", text:"3个已定时", size:11, weight:.semibold, tracking:0.06, avail:288, note:"section header fragment"),
+  Case(group:"schedules", label:"summary.monitors_attention 1/3", text:"1/3个需要处理", size:11, weight:.semibold, tracking:0.06, avail:288, note:"section header fragment"),
+  Case(group:"schedules", label:"show_more 3 wakes", text:"再显示3个唤醒", size:12, weight:.medium, tracking:0, avail:288, note:"quiet button sm"),
+  Case(group:"schedules", label:"empty_line.monitors", text:"未启用任何监控。", size:14, weight:.regular, tracking:0, avail:288, note:"body-sm"),
+  Case(group:"schedules", label:"gone.monitors", text:"已失效——其对话已不在此机器上，因此不会检查", size:12, weight:.medium, tracking:0, avail:288, note:"entry clause, wraps"),
+
+  // projects
+  Case(group:"projects", label:"row meta 2/3 + 2 + 1 live", text:"2/3个里程碑 · 2 个会话 · 1个进行中", size:12, weight:.medium, tracking:0, avail:288, note:"ONE-LINE clamp (numberOfLines=1)"),
+  Case(group:"projects", label:"row meta 12/150 + 120 + 8", text:"12/150个里程碑 · 120 个会话 · 8个进行中", size:12, weight:.medium, tracking:0, avail:288, note:"ONE-LINE clamp (numberOfLines=1)"),
+  Case(group:"projects", label:"row meta none + 2", text:"无里程碑 · 2 个会话", size:12, weight:.medium, tracking:0, avail:288, note:"ONE-LINE clamp"),
+  Case(group:"projects", label:"receipt reopened milestone", text:"已重新打开里程碑“payments-migration”。", size:14, weight:.regular, tracking:0, avail:236, note:"Toast pill, wraps (no clamp)"),
+  Case(group:"projects", label:"receipt created project", text:"已创建项目“payments-migration”。", size:14, weight:.regular, tracking:0, avail:236, note:"Toast pill, wraps"),
+  Case(group:"projects", label:"delete_body", text:"删除“payments-migration”？项目行将永久移除。其关联会话和会话记录不受影响。", size:14, weight:.regular, tracking:0, avail:288, note:"Alert body, wraps"),
+  Case(group:"projects", label:"remove_milestone_body", text:"从此项目中移除“beta cut”？该里程碑将永久移除。项目的会话和进度行不受影响。", size:14, weight:.regular, tracking:0, avail:288, note:"Alert body, wraps"),
+  Case(group:"projects", label:"project_name_hint", text:"1-64个字符：字母、数字、点、下划线或连字符。不能包含空格，也不能以连字符开头。", size:14, weight:.regular, tracking:0, avail:288, note:"help, wraps"),
+  Case(group:"projects", label:"write_unknown_note", text:"无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。", size:14, weight:.regular, tracking:0, avail:288, note:"problem text, wraps"),
+  Case(group:"projects", label:"stale_badge", text:"进度已过期", size:11, weight:.semibold, tracking:0.06, avail:288, note:"badge"),
+
+  // notifications
+  Case(group:"notifications", label:"detail.answer_in_conversation", text:"在对话中回答", size:15, weight:.semibold, tracking:-0.005, avail:288, note:"primary button"),
+  Case(group:"notifications", label:"detail.conversation_asks", text:"此对话的问题", size:11, weight:.semibold, tracking:0.06, avail:288, note:"section header"),
+  Case(group:"notifications", label:"detail.nothing_to_dismiss", text:"此对话没有可忽略的更新。", size:14, weight:.regular, tracking:0, avail:288, note:"dialog body, wraps"),
+  Case(group:"notifications", label:"load_failed", text:"无法加载通知", size:14, weight:.semibold, tracking:0, avail:288, note:"alert title"),
+  Case(group:"notifications", label:"priority_high", text:"高", size:11, weight:.semibold, tracking:0.06, avail:288, note:"badge"),
+
+  // computers
+  Case(group:"computers", label:"section.not_connected", text:"Radient账号中，未连接", size:17, weight:.semibold, tracking:-0.006, avail:288, note:"settings section header"),
+  Case(group:"computers", label:"added.stays_listed", text:"它仍会保留在此手机列表中，可从电脑列表切回。", size:14, weight:.regular, tracking:0, avail:288, note:"help, wraps"),
+  Case(group:"computers", label:"password_placeholder", text:"来自lop mobile的密码", size:14, weight:.regular, tracking:0, avail:288, note:"field placeholder"),
+  Case(group:"computers", label:"connecting", text:"正在连接……", size:14, weight:.regular, tracking:0, avail:288, note:"inline status"),
+]
+
+func font(_ size: CGFloat, _ weight: NSFont.Weight) -> NSFont {
+  if let base = NSFont(name: "PingFang SC", size: size) {
+    let traits: NSFontTraitMask = weight >= .semibold ? .boldFontMask : []
+    return NSFontManager.shared.convert(base, toHaveTrait: traits)
+  }
+  return NSFont.systemFont(ofSize: size, weight: weight)
+}
+func width(_ c: Case, _ scale: CGFloat) -> CGFloat {
+  let size = c.size * scale
+  let f = font(size, c.weight)
+  let w = (c.text as NSString).size(withAttributes: [.font: f]).width
+  return w + c.tracking * size * CGFloat(max(0, c.text.count - 1))
+}
+print("group\tlabel\tchars\tcells\tpx@100\tavail\tlines@100\tpx@200\tlines@200\tnote")
+for c in cases {
+  let w1 = width(c, 1.0)
+  let w2 = width(c, 2.0)
+  let chars = c.text.count
+  let cells = c.text.unicodeScalars.reduce(0) { n, u in
+    let v = u.value
+    let wide = (v >= 0x1100 && v <= 0x115f) || (v >= 0x2e80 && v <= 0xa4cf) || (v >= 0xac00 && v <= 0xd7a3) || (v >= 0xf900 && v <= 0xfaff) || (v >= 0xfe10 && v <= 0xfe19) || (v >= 0xfe30 && v <= 0xfe6f) || (v >= 0xff00 && v <= 0xff60) || (v >= 0xffe0 && v <= 0xffe6)
+    return n + (wide ? 2 : 1)
+  }
+  print(String(format:"%@\t%@\t%d\t%d\t%.1f\t%.0f\t%d\t%.1f\t%d\t%@", c.group, c.label, chars, cells, w1, c.avail, Int(ceil(w1/c.avail)), w2, Int(ceil(w2/c.avail)), c.note))
+}

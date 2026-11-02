@@ -1094,6 +1094,75 @@ function isGhost(node: AuditNode): boolean {
 }
 
 /**
+ * The frame's TEXT AND CONTROL BOXES — the set every "did this frame paint anything?"
+ * question reads, and the set `U-08` pairs.
+ *
+ * ONE DEFINITION, because there are now two questions over it: whether two boxes collide
+ * (`u08Overlap`) and whether there is anything to measure at all (`paintedNothing`). A
+ * second spelling here is how the two would disagree about a frame the instrument is
+ * already unsure of.
+ *
+ * The members are what the rubric's rules are over: a node that carries its OWN text (a
+ * container holding a child's text is measured through the child) or that the user can
+ * operate. Ghosts are excluded first — a node clipped to nothing by an ancestor, or an
+ * `aria-hidden` node painting no ink, is not a box the user can see (see `isGhost`).
+ */
+export function textAndControlBoxes(state: AuditState): AuditNode[] {
+	return state.nodes.filter((n) => !isGhost(n) && (n.ownText || n.interactive));
+}
+
+/**
+ * Whether a frame PAINTED NOTHING: no text box, no control box, nowhere for a rule to
+ * read. Named as its own predicate because the checks that short-circuit on an empty set
+ * have to say this out loud rather than return their cleanest verdict.
+ */
+export function paintedNothing(state: AuditState): boolean {
+	return textAndControlBoxes(state).length === 0;
+}
+
+/**
+ * Cells that legitimately render NO text and NO control, exempted from the
+ * painted-nothing rule BY NAME.
+ *
+ * EMPTY, and that is a measured statement rather than an unconsidered one: every cell the
+ * matrix declares draws at least one text or control box on the ci tier (the smallest set
+ * any cell produced is recorded in the PR that added this rule, and the audit's own
+ * `0 text/control boxes` rows were the frames that painted nothing by ACCIDENT — the
+ * 150 %-text variance this rule exists to catch, not a state without content). A screen
+ * that is honestly contentless would be a placeholder or a spinner-only state, and this
+ * matrix does not have one.
+ *
+ * It stays as the ONE place to say otherwise. An entry here is a claim that a cell's
+ * emptiness is the state rather than a failed render, so it needs the same comment a
+ * `PENDING_CELLS` entry needs — and it is deliberately narrower than weakening the rule: a
+ * blanket "a cell with no boxes passes" is exactly the green this rule removes.
+ */
+export const DESIGN_EMPTY_CELLS: readonly string[] = [];
+
+/**
+ * Whether this CELL is one the matrix declares as contentless by design.
+ *
+ * The key is the harness's own cell name (`S8/populated-long`), the same one `PENDING_CELLS`
+ * and the manifest's `declaredSkips` use, so an exemption is addressable in the vocabulary a
+ * reviewer already reads.
+ */
+export function designEmpty(state: AuditState): boolean {
+	if (state.screen === undefined || state.state === undefined) return false;
+	return DESIGN_EMPTY_CELLS.includes(`${state.screen}/${state.state}`);
+}
+
+/**
+ * Whether this frame has nothing to measure AND was not declared contentless by design.
+ *
+ * The one predicate both halves read — the per-rule row (`u08Overlap`) and the cell-level
+ * gate (`audit.ts`, which blocks every row of such a cell) — so a frame the instrument
+ * cannot measure cannot be measured by one half and passed by the other.
+ */
+export function frameHasNothingToMeasure(state: AuditState): boolean {
+	return paintedNothing(state) && !designEmpty(state);
+}
+
+/**
  * The box a rule about PAINTED geometry measures, or `null` when nothing is painted.
  *
  * A check that measures a layout box measures a claim about a drawing that may not
@@ -1134,6 +1203,15 @@ export const U08_SUPPRESSION = {
 	 *  pair (the drawer's panel ground over the scrim beneath it). */
 	MODAL_SURFACE:
 		"the dialog's own opaque surface covers the pair where it overlaps",
+	/** CROSS-MODAL: the two sides belong to DIFFERENT modal layers, and the lower
+	 *  one lies entirely under an opaque surface of the later-presented layer.
+	 *  Two modals can be stacked — a move sheet over the conversations drawer — and
+	 *  then a row of the drawer under the sheet is hidden by it, not colliding with
+	 *  it. `aria-modal` describes only the app/dialog boundary, so neither branch
+	 *  above can see this pair: both sides are inside SOME dialog, and no single
+	 *  side's surface has to cover the region they share. */
+	CROSS_MODAL:
+		"a later modal layer's opaque surface covers the pair's lower side entirely",
 } as const;
 
 function dialogSeparator(
@@ -1183,6 +1261,60 @@ function dialogSeparator(
 	return null;
 }
 
+/**
+ * The document index of the node's `aria-modal` ROOT, or `null` outside a dialog.
+ *
+ * READ, not inferred. `index` is the element's position in the probe's
+ * document-order list, so a LARGER root index is a dialog presented LATER and
+ * painted above the earlier one. The probe records the root from the DOM, which
+ * is why two subtrees of the SAME dialog always answer with one number: an
+ * earlier version walked the node's emitted ancestors and took the topmost dialog
+ * ancestor that happened to be in the frame, so a dialog whose own root was
+ * dropped (zero-size, `display: none`, `opacity: 0`) handed its two subtrees
+ * different "layers" and the cross-modal exemption could excuse a real
+ * same-dialog collision (code review round 8, R8-01; fixture in
+ * `paint-fragments.test.ts`).
+ */
+function modalLayerRoot(node: AuditNode): number | null {
+	return node.modalRoot;
+}
+
+/**
+ * An opaque surface of the HIGHER modal layer that covers `low` entirely, or
+ * `null`.
+ *
+ * `low`'s PAINTED box is the region that has to be covered: what is hidden is
+ * what is drawn, and a node whose painting was clipped away is not drawn under
+ * anything. The cover is a surface of the higher layer, not an ancestor of the
+ * covered node — an ancestor of it would paint BEHIND it, and a shared ancestor
+ * of both would separate nothing.
+ */
+function crossModalCover(
+	higherRoot: number,
+	low: AuditNode,
+	state: AuditState,
+): AuditNode | null {
+	const lowBox = paintedBox(low);
+	if (lowBox === null) return null;
+	for (const candidate of state.nodes) {
+		if (candidate.index === low.index) continue;
+		if (modalLayerRoot(candidate) !== higherRoot) continue;
+		if (!isOpaque(candidate)) continue;
+		if (low.ancestors.includes(candidate.index)) continue;
+		const box = paintedBox(candidate);
+		if (box === null) continue;
+		if (
+			box.x > lowBox.x + 1 ||
+			box.y > lowBox.y + 1 ||
+			box.x + box.w < lowBox.x + lowBox.w - 1 ||
+			box.y + box.h < lowBox.y + lowBox.h - 1
+		)
+			continue;
+		return candidate;
+	}
+	return null;
+}
+
 /** U-08 — meaningful boxes must not overlap. */
 function u08Overlap(state: AuditState): CheckRow[] {
 	// The rubric's rule is pairwise over *text and interactive* boxes, so a label
@@ -1192,9 +1324,7 @@ function u08Overlap(state: AuditState): CheckRow[] {
 	//
 	// The rule is over boxes the user can SEE, which is `visibleRect` and not `rect`:
 	// see `AuditNode.visibleRect` for why a layout box is the wrong question.
-	const meaningful = state.nodes.filter(
-		(n) => !isGhost(n) && (n.ownText || n.interactive),
-	);
+	const meaningful = textAndControlBoxes(state);
 	const failures: CheckRow[] = [];
 	/**
 	 * Pairs the layout geometry would report, whose PAINTED regions do not overlap.
@@ -1213,6 +1343,9 @@ function u08Overlap(state: AuditState): CheckRow[] {
 	 * the true count and the whole per-reason breakdown on every one of them (the cap
 	 * never bit on this manifest: the largest cell count was 8).
 	 */
+	/** Element index to node, for the layer walks below (the probe's list is not
+	 *  dense: the checks see a subset of the document). */
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	const suppressed: CheckRow[] = [];
 	const reasons = new Map<string, number>();
 	const suppress = (
@@ -1299,6 +1432,29 @@ function u08Overlap(state: AuditState): CheckRow[] {
 				continue;
 			}
 			if (a.inModalDialog && b.inModalDialog) {
+				/* CROSS-MODAL, before the same-layer surface test: two stacked modals put
+				 * the pair in different layers, and the higher layer's opaque surface can
+				 * hide the lower side entirely. WHY THIS IS NOT A DEFECT, in the shape it
+				 * was measured: `S15/move-progress` on iPhone SE at 200 % (ci run
+				 * 40446249353) has the conversations drawer open under the move sheet;
+				 * a drawer row and the sheet's body text are both inside THEIR OWN
+				 * dialog, so `MODAL_LAYER` cannot apply (neither side is the covered
+				 * app) and `MODAL_SURFACE` cannot either (both are in dialogs, and no
+				 * surface of one side has to cover the region the pair shares). The
+				 * sheet is opaque and hides that row completely — there is no visual
+				 * defect in the frame — so the pair is the layering the second modal
+				 * exists to draw. Partial coverage, a translucent cover, or a cover in
+				 * the same or a lower layer still FAILS. */
+				const layerA = modalLayerRoot(a);
+				const layerB = modalLayerRoot(b);
+				if (layerA !== null && layerB !== null && layerA !== layerB) {
+					const higherRoot = Math.max(layerA, layerB);
+					const low = layerA > layerB ? b : a;
+					if (crossModalCover(higherRoot, low, state) !== null) {
+						suppress(a, b, U08_SUPPRESSION.CROSS_MODAL, layoutNote);
+						continue;
+					}
+				}
 				const separator = dialogSeparator(a, b, state);
 				if (separator !== null) {
 					suppress(a, b, U08_SUPPRESSION.MODAL_SURFACE, layoutNote);
@@ -1373,6 +1529,58 @@ function u08Overlap(state: AuditState): CheckRow[] {
 		}
 	}
 	if (failures.length === 0 && suppressed.length === 0) {
+		/*
+		 * A FRAME WITH NOTHING IN IT IS NOT A CLEAN FRAME.
+		 *
+		 * This branch used to return the rule's best verdict over an EMPTY set —
+		 * `0 text/control boxes, no pair overlapping >25%`, PASS — and that row is the
+		 * false green of this whole slice: it is what the report says when a render
+		 * painted nothing at all. Measured, not supposed: two runs of the SAME ci
+		 * manifest at 150 % text measured 10 boxes for a cell in one and 0 in the other,
+		 * three of four U-08 rows differing between the runs, and the run that painted
+		 * nothing reported PASS on a page with nothing on it. A rule that cannot fail
+		 * because it has nothing to measure is the vacuity this instrument exists to
+		 * remove, so the empty set is reported as what it is — the check could not
+		 * measure, and the row says so by name. `U-09` has always taken this branch for
+		 * `0 interactive AX nodes`; this is the same statement about a smaller set.
+		 *
+		 * The COUNT STAYS in `measured` even with no pair to pair: a reader comparing two
+		 * runs needs the number that moved, and "0 text/control boxes" is that number.
+		 */
+		/*
+		 * A cell the MATRIX declares contentless is a different statement from a failed
+		 * render: the emptiness IS the state, so the rule does not apply and must not read
+		 * as a measurement gap.
+		 *
+		 * AND BOTH BRANCHES READ THE SHARED PREDICATE, not a second spelling of it: this
+		 * block used to re-derive `paintedNothing && !designEmpty` beside the helper that
+		 * says exactly that, which is the drift the note above `textAndControlBoxes` warns
+		 * about (review round 1, F3).
+		 */
+		if (designEmpty(state) || frameHasNothingToMeasure(state)) {
+			if (designEmpty(state)) {
+				return [
+					{
+						check: "U-08",
+						verdict: "BLOCKED",
+						blockedKind: "not-applicable",
+						measured: "0 text/control boxes",
+						detail:
+							"this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so there are no boxes for this rule",
+					},
+				];
+			}
+			return [
+				{
+					check: "U-08",
+					verdict: "BLOCKED",
+					blockedKind: "unmeasurable",
+					measured: "0 text/control boxes",
+					detail:
+						"the frame painted nothing: no text box and no control box, so this rule had no pair to measure — that is not a pass",
+				},
+			];
+		}
 		return [
 			{
 				check: "U-08",
@@ -1407,9 +1615,16 @@ function u09AccessibleName(state: AuditState): CheckRow[] {
 			{
 				check: "U-09",
 				verdict: "BLOCKED",
-				blockedKind: "unmeasurable",
+				/* A cell the MATRIX declares contentless has no control by DESIGN, so this rule
+				 * does not apply to it — the same distinction `U-08` draws, and the reason the
+				 * exemption can mean what its name says: `unmeasurable` here would make the
+				 * first legitimately contentless cell fail the run through this rule alone
+				 * (review round 1, F2). */
+				blockedKind: designEmpty(state) ? "not-applicable" : "unmeasurable",
 				measured: "0 interactive AX nodes",
-				detail: "no interactive nodes to name",
+				detail: designEmpty(state)
+					? "this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so it has no control to name"
+					: "no interactive nodes to name",
 			},
 		];
 	}
@@ -1452,9 +1667,13 @@ function u10LabelInName(state: AuditState): CheckRow[] {
 			{
 				check: "U-10",
 				verdict: "BLOCKED",
-				blockedKind: "unmeasurable",
+				// `not-applicable` for a cell declared contentless by design, for the reason
+				// `U-09` gives beside it.
+				blockedKind: designEmpty(state) ? "not-applicable" : "unmeasurable",
 				measured: "0 interactive nodes in this frame",
-				detail: "",
+				detail: designEmpty(state)
+					? "this cell is declared to render no text and no controls (`DESIGN_EMPTY_CELLS`), so it has no label to compare"
+					: "",
 			},
 		];
 	}
@@ -1580,6 +1799,26 @@ export const U42_EXEMPTIONS: Array<{
 	reason: string;
 }> = [
 	{
+		/* The tool row's expansion container (`components/tool-row.tsx`,
+		 * `flex flex-col gap-1.5 pb-1 pl-6`): the 6 pt step between an expanded
+		 * row's blocks. It predates the bridge row (identical on `origin/main`),
+		 * and the bridge cell is simply the first audited cell that OPENS a tool
+		 * row, which is why it scores now. 6 pt sits between the 4 and 8 steps in
+		 * `space.scale`; moving it re-spaces every expanded tool row in the app,
+		 * so it belongs to the same UI-wide vocabulary sweep the records below
+		 * name. Recorded rather than passed (design round 1, U-42). */
+		path: "div.css-g5y9jx.rounded-sm>div.css-g5y9jx.flex",
+		value: 6,
+		properties: ["row-gap", "column-gap"],
+		reason:
+			"the tool row's expanded-card gap (`tool-row.tsx`, `flex flex-col gap-1.5`; the node " +
+			"reads as `div.rounded-sm > div.flex` in the audit's path because RN Web compiles the " +
+			"utilities into one hashed class) — a " +
+			"pre-existing 6 pt block step, unchanged by the bridge row, which only made it " +
+			"visible by opening a tool row in an audited cell; re-spacing it touches every " +
+			"expanded card in the app and belongs to the vocabulary sweep, not to this row.",
+	},
+	{
 		path: ">div.css-g5y9jx.gap-1.5",
 		value: 6,
 		properties: ["row-gap", "column-gap"],
@@ -1668,6 +1907,26 @@ export const U42_EXEMPTIONS: Array<{
 			"blocks, and both carry the §3.4 `gap-1.5` exemption",
 	},
 
+	{
+		/* The inbox filter's wrapper (`items-stretch`) — round 2 moved the toolbar
+		 * into the list's header, and the old `gap-2 > flex-row` fragment stopped
+		 * matching, which turned this recorded exemption into 64 FAILs on the same
+		 * kit-owned 2 pt inset. Keyed on a marker the screen keeps for this purpose. */
+		path: "gap-2>div.css-g5y9jx.flex-row",
+		value: 2,
+		properties: [
+			"padding-top",
+			"padding-right",
+			"padding-bottom",
+			"padding-left",
+		],
+		reason:
+			"the kit's Segmented track inset (`ui/variants.ts` `segmentedTrackClasses` p-0.5, 2pt) — " +
+			"the selected-pill inset the COMPONENT owns, rendered on the inbox's filter row but not " +
+			"introduced by this screen; absorbing it would change the control on every surface that " +
+			"renders it. The fragment names the nesting round 3 left when the verbs moved into the " +
+			"header: the filter is the list header's direct `gap-2` child, with no verb row between",
+	},
 	{
 		path: "div.css-g5y9jx.px-4>div.css-g5y9jx.rounded-md",
 		value: 10,
@@ -2743,6 +3002,9 @@ export interface AuditNode {
 	 *  own surface is not content under a safe-area edge, and pairs that straddle the
 	 *  dialog's boundary (or are separated by its opaque surface) are its layering,
 	 *  not a collision. */
+	/** The `aria-modal` root's document index, or null outside a dialog. One number
+	 *  per dialog, read from the DOM by the probe (R8-01). */
+	modalRoot: number | null;
 	inModalDialog: boolean;
 	ownInk: boolean;
 	interactive: boolean;

@@ -1,0 +1,375 @@
+audit fr29p4 — mobile.projects — fr — 2026-10-29
+audited head: 615b24f4e3cbc41acefade9bfa39ff5702a2f398
+worktree: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+tracked tree: 0 modified tracked path(s) outside the untracked evidence bundles
+auditor: i18n-auditor (lopdev team child session a95ed4b473ca), ACTUAL model radient/auto
+model provenance: harness model-switch notices in this transcript — anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto,
+                  each reported as 'provider failure: quota'. The pinned Sonnet model did not run this audit.
+route: ordinary local git/worktree reads; no network, no translation service, no rendered frame.
+# note: every line after a '$ ' prompt is a command actually run; the lines below it are that command's output.
+# note: loader.mjs only teaches plain Node the app's extensionless relative imports, so src/i18n/runtime.ts runs UNMODIFIED.
+
+=== §1 repository i18n gate (generate --check + strings check) ===
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 15ede63ace5d
+exit=0
+
+=== §2 targeted tests (i18n runtime + projects copy) ===
+$ npx vitest run src/i18n src/features/projects
+ Test Files  6 passed (6)
+      Tests  98 passed (98)
+
+=== §3 delta since the round-3 bundle head (49f79b3) ===
+$ git log --oneline 49f79b3..HEAD
+615b24f fix(i18n): name the receipt's subject kind so French can order and inflect it
+$ git diff --stat 49f79b3..HEAD
+ .../projects/__tests__/projects-copy.test.ts       | 121 ++++++++++++++-------
+ src/features/projects/project-create.tsx           |   2 +-
+ src/features/projects/project-detail.tsx           |  13 ++-
+ src/features/projects/projects-copy.ts             |  33 +++++-
+ src/i18n/catalogue.gen.ts                          |   8 +-
+ .../catalogues/en/mobile.projects.context.json     |   2 +-
+ src/i18n/catalogues/en/mobile.projects.json        |   2 +-
+ src/i18n/catalogues/fr/mobile.projects.json        |   2 +-
+ 8 files changed, 126 insertions(+), 57 deletions(-)
+
+$ git diff 49f79b3..HEAD -- src/i18n/catalogues/en/mobile.projects.json src/i18n/catalogues/fr/mobile.projects.json src/i18n/catalogues/en/mobile.projects.context.json
+diff --git a/src/i18n/catalogues/en/mobile.projects.context.json b/src/i18n/catalogues/en/mobile.projects.context.json
+index 4ec81ea..b8fefca 100644
+--- a/src/i18n/catalogues/en/mobile.projects.context.json
++++ b/src/i18n/catalogues/en/mobile.projects.context.json
+@@ -53,7 +53,7 @@
+ 	},
+ 	"mobile.projects.write_receipt": {
+ 		"role": "status",
+-		"note": "One-line success receipt. {action} is a stable CODE the screen selects — created, completed, reopened, added, updated, removed or deleted — and never a rendered word: the catalogue turns the code into the verb, so each locale supplies its own. other catches an unknown code as Updated. {subject} is the thing acted on. Ends with a full stop."
++		"note": "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop."
+ 	},
+ 	"mobile.projects.write_unknown_note": {
+ 		"role": "status",
+diff --git a/src/i18n/catalogues/en/mobile.projects.json b/src/i18n/catalogues/en/mobile.projects.json
+index 8564f3b..d48882a 100644
+--- a/src/i18n/catalogues/en/mobile.projects.json
++++ b/src/i18n/catalogues/en/mobile.projects.json
+@@ -12,6 +12,6 @@
+ 	"mobile.projects.sessions.count": "{count, plural, one {# session} other {# sessions}}",
+ 	"mobile.projects.sessions.live": "{base} · {live} live",
+ 	"mobile.projects.stale_badge": "progress stale",
+-	"mobile.projects.write_receipt": "{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.",
++	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}",
+ 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again."
+ }
+diff --git a/src/i18n/catalogues/fr/mobile.projects.json b/src/i18n/catalogues/fr/mobile.projects.json
+index 1d8207f..fedf262 100644
+--- a/src/i18n/catalogues/fr/mobile.projects.json
++++ b/src/i18n/catalogues/fr/mobile.projects.json
+@@ -12,6 +12,6 @@
+ 	"mobile.projects.sessions.count": "{count, plural, one {# session} many {# de sessions} other {# sessions}}",
+ 	"mobile.projects.sessions.live": "{base} · {live} en cours",
+ 	"mobile.projects.stale_badge": "progression obsolète",
+-	"mobile.projects.write_receipt": "{action, select, created {Créé} completed {Terminé} reopened {Rouvert} added {Ajouté} updated {Mis à jour} removed {Retiré} deleted {Supprimé} other {Mis à jour}} {subject}.",
++	"mobile.projects.write_receipt": "{kind, select, project {Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} milestone {Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} other {{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.}}",
+ 	"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer."
+ }
+
+=== §4 byte and structure checks, independent of the renderer (python3 checks.py) ===
+$ python3 checks.py
+=== A. files ===
+src/i18n/catalogues/en/mobile.projects.json: valid JSON, no duplicate keys, 15 keys, sha256 a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09
+src/i18n/catalogues/en/mobile.projects.context.json: valid JSON, no duplicate keys, 15 keys, sha256 5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99
+src/i18n/catalogues/fr/mobile.projects.json: valid JSON, no duplicate keys, 15 keys, sha256 48c868a951090e12d6b47ad600036262524ae5a8f710868b5303c5d95451ff59
+
+=== B. key sets ===
+en keys 15, ctx keys 15, fr keys 15
+en == fr key set: True
+en == ctx key set: True
+keys added since 49f79b3: []
+keys dropped since 49f79b3: []
+
+=== C. arm inventory of the audited key (raw text, brace-scanned) ===
+en: kind arms ['milestone', 'other', 'project']; each arm body:
+  en.milestone action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.'
+  en.other     action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.'
+  en.project   action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.'
+en: {subject} x3; {kind, select x1; {action, select x3; starts {kind, select: True; ends '.}': True
+fr: kind arms ['milestone', 'other', 'project']; each arm body:
+  fr.milestone action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.'
+  fr.other     action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.'
+  fr.project   action arms 7 ['created', 'completed', 'reopened', 'added', 'updated', 'removed', 'deleted'] ; body='Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.'
+fr: {subject} x3; {kind, select x1; {action, select x3; starts {kind, select: True; ends '.}': True
+
+=== D. action arms per locale, byte for byte against the expected words ===
+en: every code maps to exactly one expected word: True
+  en created   -> ['Created']
+  en completed -> ['Completed']
+  en reopened  -> ['Reopened']
+  en added     -> ['Added']
+  en updated   -> ['Updated']
+  en removed   -> ['Removed']
+  en deleted   -> ['Deleted']
+fr: every code maps to exactly one expected word: True
+  fr created   -> ['créé']
+  fr completed -> ['terminé']
+  fr reopened  -> ['rouvert']
+  fr added     -> ['ajouté']
+  fr updated   -> ['mis à jour']
+  fr removed   -> ['retiré']
+  fr deleted   -> ['supprimé']
+
+=== E. English inner arms vs the pre-change value ===
+old en value: "{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}."
+new en value: "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}"
+old action arms: 7; new inner action arms: 21
+the new arm set repeats the old seven verb words exactly: True
+old en message skeleton: 'completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.'
+
+=== F. typography / hygiene scan of the French value ===
+non-ASCII code points: ['U+00E0', 'U+00E9']
+U+202F count: 0
+U+00A0 count: 0
+ASCII apostrophe present: False
+ASCII double quote present: False
+double space present: False
+tab present: False
+trailing space present: False
+bidi/control present: False
+contains 'milestone': True
+occurrences of 'milestone': 1 (an ICU option label is expected; no rendered branch may contain it)
+  context: ...' à jour}}.} milestone {Jalon {sub'...
+contains any English receipt verb: False
+
+=== G. context sidecar of the audited key ===
+role: 'status'; maxCells: None; fields: ['note', 'role']
+note names all three parameters: True
+
+=== H. contrast: the pre-change French value ===
+old fr value: "{action, select, created {Cr\u00e9\u00e9} completed {Termin\u00e9} reopened {Rouvert} added {Ajout\u00e9} updated {Mis \u00e0 jour} removed {Retir\u00e9} deleted {Supprim\u00e9} other {Mis \u00e0 jour}} {subject}."
+old fr contains 'milestone': False
+
+=== §5 the app's own parser and renderer (node --import ./loader.mjs render.mjs) ===
+# note: render.mjs / loader.mjs are retained beside this log as render.mjs.txt and loader.mjs.txt.
+# note: renderFor is the function t() calls; parseMessage is the parser the key generator also reads.
+$ node --import ./loader.mjs render.mjs
+
+=== 0. input bytes audited (sha256 of the worktree files) ===
+a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09  src/i18n/catalogues/en/mobile.projects.json
+5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99  src/i18n/catalogues/en/mobile.projects.context.json
+48c868a951090e12d6b47ad600036262524ae5a8f710868b5303c5d95451ff59  src/i18n/catalogues/fr/mobile.projects.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4  src/i18n/runtime.ts
+f4992113c851de901f6dd63bf7987e6f05328922aca5a83f5c1dcf31e705869c  src/i18n/catalogue.gen.ts
+key counts: en=15 ctx=15 fr=15
+key sets identical en/fr: true
+key sets identical en/ctx: true
+
+=== 1. current bytes of the audited key ===
+en  : "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}"
+ctx : {"role":"status","note":"One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop."}
+fr  : "{kind, select, project {Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} milestone {Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} other {{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.}}"
+
+=== 2. parameter sets, straight from parseMessage ===
+en params: [["action","select"],["subject","text"],["kind","select"]]
+fr params: [["subject","text"],["action","select"],["kind","select"]]
+parameter sets agree (name+kind): true
+parameter sets: ["action,select","kind,select","subject,text"]
+
+=== 3. arm structure, straight from parseMessage (en / fr) ===
+en: {kind:select[milestone=>{action:select[added=>"Added", completed=>"Completed", created=>"Created", deleted=>"Deleted", other=>"Updated", removed=>"Removed", reopened=>"Reopened", updated=>"Updated"]} + " milestone " + {subject} + ".", other=>{action:select[added=>"Added", completed=>"Completed", created=>"Created", deleted=>"Deleted", other=>"Updated", removed=>"Removed", reopened=>"Reopened", updated=>"Updated"]} + " " + {subject} + ".", project=>{action:select[added=>"Added", completed=>"Completed", created=>"Created", deleted=>"Deleted", other=>"Updated", removed=>"Removed", reopened=>"Reopened", updated=>"Updated"]} + " " + {subject} + "."]}
+fr: {kind:select[milestone=>"Jalon " + {subject} + " " + {action:select[added=>"ajouté", completed=>"terminé", created=>"créé", deleted=>"supprimé", other=>"mis à jour", removed=>"retiré", reopened=>"rouvert", updated=>"mis à jour"]} + ".", other=>{subject} + " " + {action:select[added=>"ajouté", completed=>"terminé", created=>"créé", deleted=>"supprimé", other=>"mis à jour", removed=>"retiré", reopened=>"rouvert", updated=>"mis à jour"]} + ".", project=>"Projet " + {subject} + " " + {action:select[added=>"ajouté", completed=>"terminé", created=>"créé", deleted=>"supprimé", other=>"mis à jour", removed=>"retiré", reopened=>"rouvert", updated=>"mis à jour"]} + "."]}
+en kind arms: ["milestone","other","project"]
+fr kind arms: ["milestone","other","project"]
+kind arms identical: true
+en.project   action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+en.milestone action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+en.other     action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+fr.project   action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+fr.milestone action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+fr.other     action arms: ["added","completed","created","deleted","other","removed","reopened","updated"] (count 8)
+
+=== 4. every action code x every kind x both locales, via renderFor ===
+project   created   en="Created payments-migration."          fr="Projet payments-migration créé."      english-in-fr=false
+project   completed en="Completed payments-migration."        fr="Projet payments-migration terminé."   english-in-fr=false
+project   reopened  en="Reopened payments-migration."         fr="Projet payments-migration rouvert."   english-in-fr=false
+project   added     en="Added payments-migration."            fr="Projet payments-migration ajouté."    english-in-fr=false
+project   updated   en="Updated payments-migration."          fr="Projet payments-migration mis à jour." english-in-fr=false
+project   removed   en="Removed payments-migration."          fr="Projet payments-migration retiré."    english-in-fr=false
+project   deleted   en="Deleted payments-migration."          fr="Projet payments-migration supprimé."  english-in-fr=false
+milestone created   en="Created milestone Brief de lancement." fr="Jalon Brief de lancement créé."       english-in-fr=false
+milestone completed en="Completed milestone Brief de lancement." fr="Jalon Brief de lancement terminé."    english-in-fr=false
+milestone reopened  en="Reopened milestone Brief de lancement." fr="Jalon Brief de lancement rouvert."    english-in-fr=false
+milestone added     en="Added milestone Brief de lancement."  fr="Jalon Brief de lancement ajouté."     english-in-fr=false
+milestone updated   en="Updated milestone Brief de lancement." fr="Jalon Brief de lancement mis à jour." english-in-fr=false
+milestone removed   en="Removed milestone Brief de lancement." fr="Jalon Brief de lancement retiré."     english-in-fr=false
+milestone deleted   en="Deleted milestone Brief de lancement." fr="Jalon Brief de lancement supprimé."   english-in-fr=false
+other     created   en="Created Audit Q4."                    fr="Audit Q4 créé."                       english-in-fr=false
+other     completed en="Completed Audit Q4."                  fr="Audit Q4 terminé."                    english-in-fr=false
+other     reopened  en="Reopened Audit Q4."                   fr="Audit Q4 rouvert."                    english-in-fr=false
+other     added     en="Added Audit Q4."                      fr="Audit Q4 ajouté."                     english-in-fr=false
+other     updated   en="Updated Audit Q4."                    fr="Audit Q4 mis à jour."                 english-in-fr=false
+other     removed   en="Removed Audit Q4."                    fr="Audit Q4 retiré."                     english-in-fr=false
+other     deleted   en="Deleted Audit Q4."                    fr="Audit Q4 supprimé."                   english-in-fr=false
+
+=== 5. unknown action code and unknown kind fall back to `other` ===
+action=archived kind=project en="Updated X." fr="Projet X mis à jour."
+action=archived kind=milestone en="Updated milestone X." fr="Jalon X mis à jour."
+action=deleted kind=workspace en="Deleted X." fr="X supprimé."
+
+=== 6. English byte-compatibility against the pre-change mechanism ===
+created   kind=project   before="Created payments-migration."            after="Created payments-migration."        identical=true [must not change]
+completed kind=milestone before="Completed Brief de lancement."          after="Completed milestone Brief de lancement." identical=false [changed by design]
+reopened  kind=milestone before="Reopened Brief de lancement."           after="Reopened milestone Brief de lancement." identical=false [changed by design]
+added     kind=milestone before="Added milestone Brief de lancement."    after="Added milestone Brief de lancement." identical=true [must not change]
+updated   kind=milestone before="Updated milestone Brief de lancement."  after="Updated milestone Brief de lancement." identical=true [must not change]
+removed   kind=milestone before="Removed milestone Brief de lancement."  after="Removed milestone Brief de lancement." identical=true [must not change]
+deleted   kind=project   before="Deleted payments-migration."            after="Deleted payments-migration."        identical=true [must not change]
+
+=== 6b. completed/reopened: the ACTUAL old screen output had no noun ===
+completed old="Completed Brief de lancement." new="Completed milestone Brief de lancement." differs=true
+reopened  old="Reopened Brief de lancement." new="Reopened milestone Brief de lancement." differs=true
+
+=== 7. French: typography / leaks / shape of every rendered row ===
+fr value non-ASCII code points: U+E0 U+E9
+fr U+202F count in value: 0
+fr ASCII apostrophe in value: false
+fr bidi/control in value: false
+project   created   ok
+project   completed ok
+project   reopened  ok
+project   added     ok
+project   updated   ok
+project   removed   ok
+project   deleted   ok
+milestone created   ok
+milestone completed ok
+milestone reopened  ok
+milestone added     ok
+milestone updated   ok
+milestone removed   ok
+milestone deleted   ok
+other     created   ok
+other     completed ok
+other     reopened  ok
+other     added     ok
+other     updated   ok
+other     removed   ok
+other     deleted   ok
+rows with a shape problem: 0
+
+=== 8. the two worked examples from the review request ===
+fr project:   Projet payments-migration supprimé.
+fr milestone: Jalon X retiré.
+en project:   Deleted payments-migration.
+en milestone: Removed milestone X.
+
+=== 9. raw byte shape of the separators ===
+"Projet {subject} " at 24: next bytes "{action, select, cre" (starts U+7B)
+"Jalon {subject} " at 217: next bytes "{action, select, cre" (starts U+7B)
+"other {{subject} " at 398: next bytes "{action, select, cre" (starts U+7B)
+non-breaking spaces anywhere in rendered output: none expected, checked per row above
+
+=== 10. token scan of every rendered row (no foreign word survives) ===
+project   created   fr-foreign=[] en-foreign=[]
+project   completed fr-foreign=[] en-foreign=[]
+project   reopened  fr-foreign=[] en-foreign=[]
+project   added     fr-foreign=[] en-foreign=[]
+project   updated   fr-foreign=[] en-foreign=[]
+project   removed   fr-foreign=[] en-foreign=[]
+project   deleted   fr-foreign=[] en-foreign=[]
+milestone created   fr-foreign=[] en-foreign=[]
+milestone completed fr-foreign=[] en-foreign=[]
+milestone reopened  fr-foreign=[] en-foreign=[]
+milestone added     fr-foreign=[] en-foreign=[]
+milestone updated   fr-foreign=[] en-foreign=[]
+milestone removed   fr-foreign=[] en-foreign=[]
+milestone deleted   fr-foreign=[] en-foreign=[]
+other     created   fr-foreign=[] en-foreign=[]
+other     completed fr-foreign=[] en-foreign=[]
+other     reopened  fr-foreign=[] en-foreign=[]
+other     added     fr-foreign=[] en-foreign=[]
+other     updated   fr-foreign=[] en-foreign=[]
+other     removed   fr-foreign=[] en-foreign=[]
+other     deleted   fr-foreign=[] en-foreign=[]
+rows with a foreign token: 0
+
+=== 11. rendered length, English vs French (fit) ===
+project   created   en=27 fr=31 fr/en=1.15
+project   completed en=29 fr=34 fr/en=1.17
+project   reopened  en=28 fr=34 fr/en=1.21
+project   added     en=25 fr=33 fr/en=1.32
+project   updated   en=27 fr=37 fr/en=1.37
+project   removed   en=27 fr=33 fr/en=1.22
+project   deleted   en=27 fr=35 fr/en=1.30
+milestone created   en=37 fr=30 fr/en=0.81
+milestone completed en=39 fr=33 fr/en=0.85
+milestone reopened  en=38 fr=33 fr/en=0.87
+milestone added     en=35 fr=32 fr/en=0.91
+milestone updated   en=37 fr=36 fr/en=0.97
+milestone removed   en=37 fr=32 fr/en=0.86
+milestone deleted   en=37 fr=34 fr/en=0.92
+other     created   en=17 fr=14 fr/en=0.82
+other     completed en=19 fr=17 fr/en=0.89
+other     reopened  en=18 fr=17 fr/en=0.94
+other     added     en=15 fr=16 fr/en=1.07
+other     updated   en=17 fr=20 fr/en=1.18
+other     removed   en=17 fr=16 fr/en=0.94
+other     deleted   en=17 fr=18 fr/en=1.06
+longest French rendering: kind=project code=updated cells=37 (U+202F count in that string: 0)
+
+=== §6 call sites: the audited head, and the round-3 head for contrast ===
+$ grep -n "writeReceipt" src/features/projects/project-create.tsx src/features/projects/project-detail.tsx
+src/features/projects/project-create.tsx:11:	writeReceipt,
+src/features/projects/project-create.tsx:152:			showToast(writeReceipt("created", answer.project.name, "project"));
+src/features/projects/project-detail.tsx:23:	writeReceipt,
+src/features/projects/project-detail.tsx:171:				writeReceipt(
+src/features/projects/project-detail.tsx:231:				writeReceipt(
+src/features/projects/project-detail.tsx:254:			showToast(writeReceipt("removed", name, "milestone"));
+src/features/projects/project-detail.tsx:278:			showToast(writeReceipt("deleted", project.name, "project"));
+$ git show 49f79b3:src/features/projects/project-detail.tsx | grep -n "writeReceipt"
+23:	writeReceipt,
+171:				writeReceipt(completing ? "completed" : "reopened", milestone.name),
+227:				writeReceipt(
+249:			showToast(writeReceipt("removed", `milestone ${name}`));
+273:			showToast(writeReceipt("deleted", project.name));
+$ git show 49f79b3:src/features/projects/project-create.tsx | grep -n "writeReceipt"
+11:	writeReceipt,
+152:			showToast(writeReceipt("created", answer.project.name));
+$ sed -n "168,175p;229,236p;252,256p;276,280p" src/features/projects/project-detail.tsx
+			});
+			setProject(answer.project);
+			showToast(
+				writeReceipt(
+					completing ? "completed" : "reopened",
+					milestone.name,
+					"milestone",
+				),
+			setProject(answer.project);
+			showToast(
+				writeReceipt(
+					editor.editingName === null ? "added" : "updated",
+					name,
+					"milestone",
+				),
+			);
+			const answer = await client.removeProjectMilestone(project.id, name);
+			setProject(answer.project);
+			showToast(writeReceipt("removed", name, "milestone"));
+			setConfirmRemove(false);
+			setEditor(null);
+			 *  here. */
+			await client.deleteProject(project.id, project.name);
+			showToast(writeReceipt("deleted", project.name, "project"));
+			setConfirmDelete(false);
+			router.back();
+
+=== §7 typecheck (the call sites are typed against the generated parameter list) ===
+$ npx tsc --noEmit ; echo exit=$?
+exit=0
+
+=== §8 worktree state after the audit (read-only proof) ===
+$ git status --porcelain
+?? i18n/audits/evidence/fr/mobile.home/fr29h4/
+?? i18n/audits/evidence/fr/mobile.projects/fr29p3/
+?? i18n/audits/evidence/fr/mobile.projects/fr29p4/
+$ git diff --stat HEAD
+# note: the only untracked paths are the evidence bundles, which this audit writes and never commits.

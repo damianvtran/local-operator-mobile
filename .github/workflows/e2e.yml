@@ -358,10 +358,10 @@ jobs:
     # (run 37379067992, this job, the tiers as they stand): setup and checkouts 21 s +
     # install 4 s + typecheck 1 s + EXPORT 34 s + RELAY START 1 s + capture 1044 s +
     # canary 81 s + stop relay 0 s + upload of the 91 MB artifact 6 s = 1192 s, the job's
-    # whole measured wall time, plus the audit at its own measured rate — 1128 cells x
-    # 1.25 s = 1,410 s, which is DERIVED rather than taken from that run, whose capture
-    # failed the identical-state gate before the audit step ran. That is ~2,602 s ≈ 43
-    # min against the 85 below, so the bound is ~2.0x the work: the headroom is the point.
+    # whole measured wall time, plus the audit at its own measured rate — 1272 cells x
+    # 1.25 s = 1,590 s, which is DERIVED rather than taken from that run, whose capture
+    # failed the identical-state gate before the audit step ran. That is ~2,722 s ≈ 45.4
+    # min against the 90 below, so the bound is ~2.0x the work: the headroom is the point.
     # THE OLD FORM WAS FALSE, not merely imprecise:
     # `install + typecheck 10 + capture 40 + audit 20 + canary 5 < 80` sums to exactly
     # 60, so `< 60` is untrue, and it omits the export and the relay start entirely —
@@ -393,7 +393,7 @@ jobs:
     # and the in-flight writes — so shrinking them is not an option the way a scale or
     # a device is, and the numbers above are re-derived from this head's own `--plan`
     # rather than scaled.
-    timeout-minutes: 85
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
 
@@ -421,11 +421,36 @@ jobs:
         timeout-minutes: 10
         run: pnpm e2e:typecheck
 
+      # The SAME driver runs against base and head app bytes. A differing lock
+      # cannot share dependencies honestly; record that reason rather than install
+      # a second tree. This adds one serial export, not another matrix or browser.
+      - name: Export the PR base for inbox return before frames
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 5
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: |
+          mkdir -p "$RUNNER_TEMP/frames/inbox-return"
+          git fetch --no-tags origin "$BASE_SHA"
+          git worktree add --detach .worktrees/inbox-before "$BASE_SHA"
+          trap 'git worktree remove --force .worktrees/inbox-before' EXIT
+          if ! cmp -s pnpm-lock.yaml .worktrees/inbox-before/pnpm-lock.yaml; then
+            echo 'BLOCKED: base lockfile differs; no shared-dependency baseline export' > "$RUNNER_TEMP/frames/inbox-return/baseline.txt"
+            exit 0
+          fi
+          ln -s ../../node_modules .worktrees/inbox-before/node_modules
+          (cd .worktrees/inbox-before && node_modules/.bin/expo export --platform web --clear --output-dir "$RUNNER_TEMP/inbox-before")
+          echo "INBOX_BASELINE_DIR=$RUNNER_TEMP/inbox-before" >> "$GITHUB_ENV"
+          printf 'base=%s\nhead=%s\n' "$BASE_SHA" "$GITHUB_SHA" > "$RUNNER_TEMP/frames/inbox-return/source.txt"
+
       - name: Export the web target
         # The harness drives the EXPORT, not a dev server: the export is what a
         # reviewer's bundle would be, and a dev server's on-the-fly transform is a
         # second variable in a job whose whole point is reproducibility.
-        run: pnpm export:web
+        env:
+          NODE_OPTIONS: --max-old-space-size=1536
+        run: pnpm export:web --clear
 
       - name: Start the mock relay on an ephemeral port
         # One relay per job, on a port the OS picks (never the operator's own
@@ -454,9 +479,9 @@ jobs:
         # 36669731994) without GitHub reaping it, so the run said only that it was
         # still going. Measured again on 2026-10-03 (run 37098393675), the capture
         # costs 2.24 s/cell — 403 cells / 1209 frames in 903.1 s — so the `core`
-        # plan of 3384 cells needs ~126 min and cannot finish inside this bound. The
-        # `--tier ci` sample can: 1128 cells, ~42 min at the same rate, which leaves
-        # the audit and the canary their own steps below. (`full` is 12408 cells, and
+        # plan of 3816 cells needs ~134 min and cannot finish inside this bound. The
+        # `--tier ci` sample can: 1272 cells, ~45 min at the same rate, which leaves
+        # the audit and the canary their own steps below. (`full` is 13992 cells, and
         # stays a dispatched or local run.)
         #
         # RAISED 20 -> 30 WITH THE CI AXIS, and the two move together: `CI_SCALES`
@@ -482,10 +507,15 @@ jobs:
         # main, took it to 948 — a derived deadline of 948 x 3 s = 47.4 min, leaving
         # the 50 only 2.6 min of room — so the bound moved 50 -> 55, keeping the same
         # ~1.5x over the measured cost (948 x 2.24 s ≈ 35.4 min). The supplement
-        # slice's five S5 cells one more took it to 1128 — a derived deadline of
-        # 1128 x 3 s = 56.4 min, 3.6 min inside the 60 — so the bound moved 55 -> 60,
-        # keeping ~1.4x over the measured cost (1128 x 2.24 s ≈ 42.1 min).
-        timeout-minutes: 60
+        # slice's five S5 cells one more took it to 1,128 — a derived deadline of
+        # 1,128 x 3 s = 56.4 min, 3.6 min inside the 60 — so the bound moved 55 -> 60,
+        # keeping ~1.4x over the measured cost (1,128 x 2.24 s ≈ 42.1 min). The inbox
+        # slice's six cells (S18 and S18-detail) took it to 1,200 — a derived deadline
+        # of 1,200 x 3 s = 60 min, which EQUALED the 60 the step carried — so the bound
+        # moved 60 -> 65, keeping ~1.4x over the measured cost (1,200 x 2.24 s ≈ 44.8
+        # min) and staying above the plan's own deadline, which is the property every
+        # step bound here has to keep.
+        timeout-minutes: 65
         # THE DOCUMENTED INVOCATION, through the harness's own script
         # (`docs/e2e/ci-notes.md` §3). An earlier version derived the cell list here
         # and passed `--cells`, working around a mismatch between what the capture
@@ -502,15 +532,20 @@ jobs:
         #
         # Frames are written outside the repository and uploaded — never committed
         # (ADR 0003).
-        run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes
+        run: |
+          baseline=()
+          if [ -n "${INBOX_BASELINE_DIR:-}" ]; then
+            baseline=(--inbox-baseline-dir "$INBOX_BASELINE_DIR")
+          fi
+          pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes --inbox-return-proof "${baseline[@]}"
 
       - name: Audit the frames against the rubric
-        timeout-minutes: 35
+        timeout-minutes: 40
         # BOUND DERIVED FROM THE MEASURED RATE AT THIS PLAN SIZE, not from the rate
         # the tier carried when it was small. Run 39315504735 (head 34e386a, job
         # 118285708967) was killed by the 28 at ~1,680 s with `1090/1128 cells
-        # audited` — no FAIL row, just the bound — which is 1.54 s/cell at the
-        # 1128-cell `ci` plan: 1128 x 1.54 s = 1,738 s ≈ 28.9 min, ABOVE the 28 the
+        # audited` — no FAIL row, just the bound — which is 1.54 s/cell at the ci plan
+        # of that head (1,128 cells then): 1,128 x 1.54 s = 1,737 s ≈ 28.9 min, ABOVE the 28 the
         # step carried. The 1.25 s/cell the previous derivation used was measured on
         # 250 of 256 cells (run 37167390506, 312 s) and did not hold at the size the
         # tier reached; re-derive from a run at the CURRENT plan size, never by
@@ -521,8 +556,9 @@ jobs:
         # cells (504 -> 612), 20 -> 25 with the fold's cells (756 -> 816) — kept at
         # 25 by the mesh slice's seven (816 -> 900), the checkpoint fold's four (900
         # -> 948) and the supplement slice's five (948 -> 1008) — and 25 -> 28 at
-        # 1128; 28 -> 35 now that a run at 1128 measured the rate rather than
-        # inferring it. At 5 it was killed with six cells to go: a bound below the
+        # 1,128; 28 -> 35 once a run at that size measured the rate rather than
+        # inferring it, and 35 -> 40 with the inbox slice's six cells: 1,200 x 1.47 s
+        # = 1,940 s ≈ 32.3 min, so 40 keeps ~1.36x over the measured need. At 5 it was killed with six cells to go: a bound below the
         # work it contains, the same shape that made the capture's deadline derive
         # from its own plan. It is DERIVED, not COMPUTED at runtime: GitHub evaluates
         # `timeout-minutes` before any step runs, and the count that matters is the
@@ -561,6 +597,7 @@ jobs:
             kill -9 "$pid" 2>/dev/null || true
           fi
           echo "relay stopped; any remaining listener on the port was never this job's"
+          rm -rf "$RUNNER_TEMP/inbox-before" dist
 
       - name: Upload the frames, the manifest and the audit report
         if: always()
@@ -669,24 +706,24 @@ jobs:
     # WHY THIS JOB EXISTS. The operator's requirement is QA "across a variety of different
     # device sizes of phone … and tablets both vertical and horizontal", and until this job
     # nothing automated covered it: the per-push `web-audit` job runs `--tier ci`, which is
-    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3384 cells) and
-    # `full` (19 / 12408) were local or dispatched only. This job captures and audits `core`,
+    # 2 of the matrix's 19 declared profiles, and both `core` (5 profiles / 3816 cells) and
+    # `full` (19 / 13992) were local or dispatched only. This job captures and audits `core`,
     # on the NIGHTLY schedule only, so the per-push path is untouched and the `ci` job keeps
     # its own 55-minute capture bound rather than being stretched to fit a 120-minute one.
     #
     # SIZED FROM THE MEASUREMENT, NOT FROM HOPE. The runner's own rate is 2.24 s/cell
     # (403 cells / 1209 frames in 903.1 s, run 37098393675, a plan of 403 cells then),
     # which is also the number `docs/e2e/README.md` uses to say a `core` run is ~113
-    # minutes: 3384 cells x 2.24 s = 7,580 s.
+    # minutes: 3,816 cells x 2.24 s = 8,548 s.
     # The plan this job holds is the one the capture prints before it renders anything, so
     # the bound is checked against THAT rather than against a table, and each plan is
     # pinned to the ref that printed it: at 85b2785 `--plan --tier core --consecutive`
     # printed 858 cells x 3 frame(s) = 2574 frames (85b2785, a plan of 858 cells then)
     # with a derived deadline of 2574 s (85b2785), and
-    # at THIS head it prints `3384 cells x 3 frame(s) = 10152 frames` and `deadline: 10152 s`
-    # (3000 ms/cell). The capture step's 175 is above both derived deadlines (so the step
+    # at THIS head it prints `3816 cells x 3 frame(s) = 11448 frames` and `deadline: 11448 s`
+    # (3000 ms/cell). The capture step's 195 is above both derived deadlines (so the step
     # cannot cut short the budget the run computed for itself) and ~1.4x the ~126 min the
-    # 3384 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
+    # 3816 cells cost at 2.24 s/cell. It moved 95 -> 100 in round 3, and 100 -> 110 in
     # round 5: the fold's four extra cells took the derived deadline to 6264 s = 104.4 min,
     # ABOVE the 100 the job had carried, and a bound below its own deadline is the defect
     # this comment refuses one level up — the step would cut short the budget the run
@@ -704,17 +741,16 @@ jobs:
     # capture moved 150 -> 160 and the job bound 225 -> 240 with it,
     # then inside the bound (`160 + 70 = 230 < 240`). The per-push steps carry the same
     # relationship: capture
-    # 60 against a derived 3384 s (56.4 min) and audit 28 against 1128 x 1.25 s (23.5 min).
+    # 60 against a derived 3600 s (60 min) and audit 28 against 1,200 x 1.25 s (25 min).
     # The per-push audit's rate is 1.25 s/cell (250 of the 256 cells the tier held then
     # in 312 s, run 37167390506) — but `core` is not that sample: its own audit measured
-    # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3384 cells x
-    # 1.47 s = 4,974 s ≈ 78 min; the step bound moved to 95, and the step caps no
-    # longer sum under the job: `161 + 95 = 256 > 241`, where they summed to 230 of
-    # 241 before this change — but the caps are ceilings, and the REAL requirement is
-    # what the guard asserts: capture 161 + the audit's measured ~83 = 258 < 241.
-    # Measured, the job is ~126 min of capture + ~83 min of audit ≈ 198 min; if either
-    # step ever binds, the job cap has to move with it. This is a nightly job; it does
-    # not run on a pull request.
+    # 1.47 s/cell and was killed at the old 70-minute bound (below). So 3,816 cells x
+    # 1.47 s = 5,610 s ≈ 93.5 min. On THIS merged head the caps are capture 190 and
+    # audit 115, and they deliberately no longer sum under the job's 290: the caps are
+    # ceilings, and the REAL requirement is what the guard asserts — capture 190 + the
+    # audit's measured ~93 = 283 < 290. Measured, the job is ~141 min of capture + ~93
+    # min of audit ≈ 234 min; if either step ever binds, the job cap has to move with
+    # it. This is a nightly job; it does not run on a pull request.
     #
     # EXPECTED FIRST-RUN VERDICT: THIS JOB IS RED, AND THAT IS WHAT IT IS FOR. It has
     # never executed (schedule/dispatch only). A real local `--tier core --consecutive`
@@ -756,7 +792,7 @@ jobs:
     # measured on this host.
     if: ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (inputs.proof_mode || 'full') == 'full') || (github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'core-audit-only')
     runs-on: ubuntu-latest
-    timeout-minutes: 270
+    timeout-minutes: 290
     steps:
       - uses: actions/checkout@v7
 
@@ -799,12 +835,16 @@ jobs:
         # `--tier core` names the sample the run states for itself: the capture prints its own
         # device coverage, so this job's log says which of the 19 declared profiles it covered
         # and which it did not, rather than leaving a green job to read as the whole matrix.
-        # 160 (not 150): the mesh slice's seven cells, the checkpoint rail's four, folded
-        # from main, and the supplement slice's five together took the plan's own derived
-        # deadline to
-        # 10152 s = 160.2 min, and a step bound the plan's deadline can exceed would cut
-        # short the budget the run computes for itself.
-        timeout-minutes: 175
+        # 195 (was 180, then 190): the merged plan's own derived deadline is
+        # 11448 s = 189 min, which 180 no longer held. 195 keeps ~3 % over that
+        # deadline — the smallest raise that clears it, by the 45->50 and 50->55
+        # precedent for a step whose cost is a ceiling and not a budget (QA round 3,
+        # Q13: 190 left only 60 s). NOTHING MACHINE-CHECKS THIS PAIR: no test
+        # compares this step's bound to the plan's derived deadline, so the sentence
+        # that used to claim "the guard above fails on exactly that" was false and is
+        # gone. The property is kept by hand, and the worst case still fits the job:
+        # 195 + the audit's ~93 min = 288 < the job's 290.
+        timeout-minutes: 195
         run: pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier core --consecutive --yes
 
       - name: Audit the frames against the rubric
@@ -814,15 +854,15 @@ jobs:
         #   run 38530472075 (head 80ed4a35, job 115741848014) was killed at 70m12s
         #   (4,212 s) with `2870/3024 cells audited` — a steady 40.9 cells/min = 1.47
         #   s/cell (first third 40.3/min, last third 46.0/min, so not degrading), so
-        #   3384 cells x 1.47 s = 4,974 s ≈ 78 min. Killed, the audit never writes its
+        #   3,816 cells x 1.47 s = 5,610 s ≈ 93 min. Killed, the audit never writes its
         #   summary: the rubric rows it exists to report are not visible, which is the
         #   failure mode a bound below the work has.
         #
-        # 105, not 83: the ~20% headroom is a FLOOR THE GUARD ENFORCES — the bound
-        # must clear ceil(82.9 x 1.2) = 100 min, and 105 sits above it — because a
-        # bound that fires every run
-        # stops being a signal. A step bound the audit's own cost can exceed would
-        # cut short the audit itself — the defect the capture bound above refuses.
+        # 115, not 110: the ~20% headroom is a FLOOR THE GUARD ENFORCES, and at the
+        # merged 3816-cell plan the audit needs ceil(92.46 x 1.2) = 111 min, which 110
+        # does not clear. 115 sits above it — a bound that fires every run stops being
+        # a signal. A step bound the audit's own cost can exceed would cut short the
+        # audit itself — the defect the capture bound above refuses.
         #
         # IT WAS LAST SIZED FOR AN EARLIER PLAN. The last core audit to run to
         # completion finished 1728 cells in 38m35s = 44.8 cells/min (the 2026-10-08
@@ -830,7 +870,7 @@ jobs:
         # re-derived; scaling that rate lands at 67.5 min, inside the 70 — but the audit
         # at THIS size measured 1.47 s/cell and did not fit. RE-DERIVE THIS BOUND WHEN
         # THE PLAN GROWS.
-        timeout-minutes: 105
+        timeout-minutes: 115
         run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Stop the mock relay

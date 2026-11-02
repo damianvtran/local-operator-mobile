@@ -1,0 +1,53 @@
+# zh-CN group-A audit probe — namespace=mobile.session case=session
+# run at 2026-10-30T06:31:54Z (UTC) by session 6de17b1d6bbd
+# cwd=/Users/damian/workspace/zh-wave
+
+$ git rev-parse --abbrev-ref HEAD HEAD
+feat/i18n-chinese
+a57fb8cbe16101d828b68edd422b56317523ac7d
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/zh-CN/
+?? src/i18n/catalogues/zh-CN/
+
+$ shasum -a 256 src/i18n/catalogues/{en/mobile.session.json,en/mobile.session.context.json,zh-CN/mobile.session.json}
+8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  src/i18n/catalogues/en/mobile.session.context.json
+544349288b1bdb27e163798fd35909b4d092668c0d0001e473e25a8ba9db9891  src/i18n/catalogues/zh-CN/mobile.session.json
+
+$ node scripts/i18n/generate.ts --check 2>&1 | head -1
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+
+$ node scripts/i18n/check-strings.ts 2>&1 | tail -1
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+
+$ python3 /Users/damian/workspace/zh-check.py mobile.session
+namespace=mobile.session en=2 zh=2 context=2
+key_parity=True missing=[] extra=[]
+context_covers_every_key=True
+placeholder_tokens: en=0 zh=0
+placeholder_mismatches=[]
+icu_structs_en=[]
+icu_structures_in_zh=[]
+bidi_or_control_chars=[]
+style_findings=[]
+key	chars	cells	value
+mobile.session.conversation_details	4	8	对话详情
+mobile.session.status_tray.hint	15	30	打开工作状态行、任务和子智能体
+max_cells=(30, 'mobile.session.status_tray.hint')
+
+$ node /Users/damian/workspace/zh-audit-parse.mjs mobile.session  (stdout; node's type-stripping warning is on stderr)
+namespace=mobile.session parsed=2/2 keys_with_params=[]
+
+$ grep -rn 'mobile.session.conversation_details\|mobile.session.status_tray.hint' src/features --include=*.ts --include=*.tsx | head -5
+src/features/new-session/startup-transcript.tsx:52:							: t("mobile.session.conversation_details")
+src/features/session/components/status-tray.tsx:79:			accessibilityHint={t("mobile.session.status_tray.hint")}
+
+$ node -e '...'  # the destination label as rendered, plus the shipping state
+{
+ "mobile.session.conversation_details": "对话详情",
+ "mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体"
+}
+
+# end of probe — exit at 2026-10-30T06:31:58Z

@@ -29,7 +29,10 @@ import {
 import { retirementAccessForAccount } from "@/team-bridge/push-account";
 import { createPushLifecycle } from "@/team-bridge/push-lifecycle";
 import { teamBridgeThreadPath } from "@/team-bridge/push-payload";
-import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
+import {
+	registerTeamBridgeRetirement,
+	retireTeamBridgeScope,
+} from "@/team-bridge/retirement";
 import {
 	createTeamBridgeStore,
 	type TeamBridgeState,
@@ -135,7 +138,9 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		};
 	}, [fixture, connection.radientAccountId]);
 	useEffect(() => {
-		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
+		const remove = registerTeamBridgeRetirement(() =>
+			retireTeamBridgeScope(value),
+		);
 		return () => {
 			// Account replacement unmounts this provider; drop its photos now
 			// rather than waiting for the collector, and retire reads in flight.

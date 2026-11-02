@@ -1,0 +1,16 @@
+{
+	"mobile.notifications.answer": "جواب دیں",
+	"mobile.notifications.back": "واپس",
+	"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
+	"mobile.notifications.detail.conversation_asks": "اس گفتگو کے سوالات",
+	"mobile.notifications.detail.earlier_updates": "پچھلی اپ ڈیٹس",
+	"mobile.notifications.detail.from": "ماخذ",
+	"mobile.notifications.detail.no_asks": "اس گفتگو میں کوئی سوال نہیں۔",
+	"mobile.notifications.detail.nothing_to_dismiss": "اس گفتگو سے ہٹانے کے لیے کوئی اپ ڈیٹ نہیں۔",
+	"mobile.notifications.detail.projects": "پروجیکٹس",
+	"mobile.notifications.dismiss": "ہٹائیں",
+	"mobile.notifications.filter_label": "دکھائیں",
+	"mobile.notifications.load_failed": "اطلاعات لوڈ نہیں ہو سکیں",
+	"mobile.notifications.priority_high": "اعلیٰ",
+	"mobile.notifications.title": "اطلاعات"
+}

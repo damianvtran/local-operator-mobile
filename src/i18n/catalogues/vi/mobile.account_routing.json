@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "Kết nối máy tính để thay đổi định tuyến tài khoản.",
+	"mobile.account_routing.error": "Không thể xác nhận thay đổi. Hãy kiểm tra kết nối và tải lại để đọc chính sách hiện tại.",
+	"mobile.account_routing.load_error": "Không thể tải định tuyến tài khoản. Hãy kiểm tra kết nối rồi thử lại.",
+	"mobile.account_routing.loading": "Đang tải định tuyến tài khoản…",
+	"mobile.account_routing.rejected": "Thay đổi chưa được lưu. Hãy kiểm tra giá trị hoặc cài đặt của máy tính này rồi thử lại.",
+	"mobile.account_routing.reload": "Tải lại chính sách",
+	"mobile.account_routing.retry": "Thử lại",
+	"mobile.account_routing.save": "Lưu chính sách",
+	"mobile.account_routing.saved": "Đã lưu trên máy tính này.",
+	"mobile.account_routing.saving": "Đang lưu…",
+	"mobile.account_routing.scope": "Thay đổi chỉ áp dụng cho máy tính này.",
+	"mobile.account_routing.title": "Định tuyến tài khoản",
+	"mobile.account_routing.unavailable": "Cài đặt định tuyến tài khoản không khả dụng trên máy chủ chuyển tiếp này. Hãy cập nhật Local Operator trên máy tính này.",
+	"mobile.account_routing.unsaved": "Chưa lưu."
+}

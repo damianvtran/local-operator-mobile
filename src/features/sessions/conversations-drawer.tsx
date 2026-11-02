@@ -56,6 +56,13 @@ import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
  * caps it instead of killing it (a press is a press); the scrim fades on
  * `duration.fast`. Same pattern as `Sheet`, deliberately — one motion idiom.
  */
+/** The panel's fill, named ONCE: it paints the panel AND is the surface the rows'
+ *  corner badge rings itself in (`ConversationsPane`'s `surfaceClassName`). Two
+ *  literals of one fact let the ring drift off the fill with a single edit — the
+ *  R2-2 halo — so both sites read this (agent review round 3, R3-1). A full
+ *  class literal, so the stylesheet compiler still sees the class. */
+const PANEL_SURFACE = "bg-elevated";
+
 export type ConversationsDrawerProps = {
 	visible: boolean;
 	onClose: () => void;
@@ -248,7 +255,7 @@ export const ConversationsDrawer = ({
 						}}
 					>
 						<View
-							className="flex-1 border-panel-edge border-r bg-elevated"
+							className={`flex-1 border-panel-edge border-r ${PANEL_SURFACE}`}
 							style={{
 								paddingTop: insets.top,
 								paddingBottom: insets.bottom,
@@ -292,6 +299,10 @@ export const ConversationsDrawer = ({
 									onNewChat={onNewChat ? newChat : undefined}
 									notice={notice}
 									homeDirectory={homeDirectory}
+									/* The rows are painted on THIS panel's fill, not on the
+									 *  screen's canvas: the corner badge's ring must be the same
+									 *  colour or it reads as a halo (agent review round 2, R2-2). */
+									surfaceClassName={PANEL_SURFACE}
 								/>
 							</TextScaleProvider>
 						</View>

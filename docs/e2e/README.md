@@ -23,7 +23,7 @@ That figure is **load-dependent, and it is the one to quote**: `pnpm e2e:relay`
 against ~13 minutes on a quiet one. The README, `tools/lib/doc-commands.ts` and
 `tools/mock-relay/verify.ts` all state that single figure; if you change one,
 change all three. The app-build capture block — the other candidate for slowest —
-is bounded to a 188-frame sample: the whole declared cell list (94 cells on today's
+is bounded to a 188-frame sample: the whole declared cell list (106 cells on today's
 registry) at one device, one theme and two scales (`--devices iphone-15 --themes
 dark --scales 100,200`), so the gate can pass for the reason the block declares
 instead of by timing out. A command this
@@ -77,7 +77,7 @@ the three answer different questions:
 | `notMeasurableCells` | cells that did NOT, each with its reasons. A finding about the harness or the app. |
 | `declaredSkips` | cells whose state this head does not render yet, each with the work that owns it. NOT a gap, and NOT evidence. |
 
-One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 94
+One device and theme (`--devices iphone-15 --themes dark --scales 100`) plans 106
 cells on today's registry — 36 when the run below was taken — so that output is
 quoted from the run that produced it rather than re-derived from today's count:
 
@@ -182,7 +182,7 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 3384 cells, one frame each, which is ~126 minutes at the measured 2.24 s/cell and is
+# 3,816 cells, one frame each, which is ~134 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
 # REFUSED without `--yes`, and even with it no documentation gate may spend 120 minutes
 # on one command. One phone, one theme, one scale is 94 frames, and it still proves what
@@ -267,6 +267,19 @@ The scenario is recorded the same way. The mock relay holds **one** scenario at 
 the capture pins each cell's before rendering it and writes the name to
 `records[].pinnedScenario`; the audit pins the same one before re-driving, or the page is
 whatever the previous cell left behind.
+
+**The pin is checked against the registry that made the frames.** A cell's state is a
+property of a world and not only of a URL — `S8/populated-long` shows its 65-character
+conversation title only in `long-names`, and `S5/populated-long` shows the 520-row
+transcript only in `long-transcript` — so a pin naming a world that does not DECLARE the
+cell would re-drive a page the cell never named, with every row still carrying the cell's
+name. The capture writes the registry's own answer to `meta.cellWorlds` and `audit.ts`
+refuses such a manifest by name (`exit 2`), listing the worlds that do declare the cell.
+The same admission covers the text scale: a record's id is resolved against `matrix.ts`
+`SCALES`, and a manifest whose recorded factor for that id (`meta.scaleProfile`) is not
+the factor today's table declares is refused with both numbers, because `135` once meant
+1.35 and means 1.3529411765 now. A manifest that records neither field — one written
+before they existed — carries nothing to compare and is still audited.
 
 The origin must also be **stable across runs**, which is what `--port` is for: the
 harness serves the build on an ephemeral port by default, so each run's serve origin —
@@ -408,6 +421,7 @@ second hand-maintained list.
 | `schedules-empty` | S17/empty | `GET /api/schedules` answers the captured empty listing: both families readable and holding nothing, so the screen shows its own empty state — never a strip standing in for one. |
 | `schedules-loading` | S17/loading | No schedules read has been answered yet: `hold: { api: "forever" }` plus `keepalive-only`, the same shape as `projects-loading` — the loading frame is an unanswered read, not a body the app pretends about. |
 | `schedules-populated` | S17/populated | The captured populated store: wakes armed / overdue / stale / dormant / ghost with a hidden patience timer, monitors armed / dormant / disabled / expired, one never-checked watch and one unavailable episode. |
+| `schedules-future` | S17/populated | The populated capture with its clock rebased onto now, its live conversation reduced to the wakes that are genuinely ahead (a store cannot hold a stale wake due in the future), so the head line's `· next …` arm renders — the arm no past-dated frame can reach. Pin it with `--scenario schedules-future`; the default `S17/populated` frame stays `schedules-populated`'s. |
 | `schedules-truncated` | S17/truncated | The captured BOUNDED answer: 205 wake-carrying conversations against the route's 200 cap, so the screen must say "Showing 200 of 205" rather than imply the store holds only what it sent. |
 | `schedules-read-error` | S17/read-error | The captured unreadable-wakes answer (directory mode `000`): `wakes.read_error: true`, monitors readable. The cell exists to prove the screen renders the strip — an unreadable store must NEVER paint as "Nothing is armed". |
 | `mesh-rows` | S15/mesh-remote, S15/mesh-unreachable, S15/move-pick | Another device's sessions, appended below the local row and ONLY for a client that asked `include_peers` (the flag is read by the mock exactly as the relay reads it — the both-transports rule is what keeps a repaint from dropping rows): one busy reachable row, one unreachable row (the word and the glossed reason), and an old-build row whose clocks are the no-claim zeros. The sheet's pick state is reached from the same world by a press (`CELL_OPENERS`). |
@@ -648,12 +662,12 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 3384 cells, which is ~126 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 3600 cells, which is ~134 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
 # the per-push CI job takes — every declared cell at two device profiles, both themes and
-# three scales, 1128 cells — and `--full` is all 19 profiles at 12408 cells.
+# three scales, 1272 cells — and `--full` is all 19 profiles at 13992 cells.
 #
 # The bound is DERIVED FROM THE PLAN unless you name one: `--deadline` defaults to
 # 3000 ms/cell with a 900 s floor, so a bound always holds the plan it was computed for,
@@ -833,7 +847,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 3384 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 3600 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -841,14 +855,20 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1128 | the per-push CI job's sample. The step is bound at 60 minutes — above the plan's own derived deadline (1128 × 3 s = 56.4 min) — and the measured rate is 2.24 s/cell, so a 3384-cell `core` run cannot fit; this one lands ~42 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
-| `core` | the 5 `core` profiles, both themes, every scale | 3384 | the default, and the local sample the operator's rule asks for. |
-| `full` | all 19 profiles | 12408 | the dispatched/nightly sample. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1272 | the per-push CI job's sample. The step is bound at 65 minutes — above the plan's own derived deadline (1272 × 3 s = 63.6 min) — and the measured rate is 2.24 s/cell, so a 3,816-cell `core` run cannot fit; this one lands ~45 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `core` | the 5 `core` profiles, both themes, every scale | 3816 | the default, and the local sample the operator's rule asks for. |
+| `full` | all 19 profiles | 13992 | the dispatched/nightly sample. |
 
 `--tier <ci|core|full>` or `--full` selects one; `--devices`, `--themes` and
 `--scales` override any of them. The whole-run `--deadline` is derived from the
 plan's size (3000 ms/cell, floor 900 s) unless you name one, so the default bound
 always holds the plan it was computed for.
+
+**An id `--scales` does not recognise is REFUSED, not filtered out.** The ids are matched
+against `matrix.ts` `SCALES` when the plan is built, so an undeclared one used to vanish
+there: `--scales 175` planned 0 frames and exited 0, which reads as a green run in a log
+and leaves the caller with no stills for the size they asked about. It now exits 2 before
+any plan output, naming the value and every id the table declares.
 
 **A run states the bound it took, and so does the artifact it leaves.** The per-push
 `web-audit` job captures the `ci` tier — **2 of the 19 profiles above** — and a green job
@@ -863,7 +883,7 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 3384 cells / 10,152 frames and ~126 minutes at the measured 2.24 s/cell —
+the 19 profiles, 3816 cells / 10,908 frames and ~134 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
 own 55-minute capture bound; neither job is stretched to cover the other's tier.
 
@@ -1192,6 +1212,21 @@ required to be RECORDED with its reason, so a pair that quietly stopped overlapp
 cannot pass as a working rule. `#status-row-dot` is deliberately **not** in that list:
 what proves its silence is the U-03 colour-only-status rule, not the painted-region
 rule, so listing it here would credit this rule with another rule's fixture.
+
+### A frame that painted nothing is not a clean frame
+
+Every rule reads something, and a page that rendered nothing gives every one of them an
+empty set to read. `U-08` used to answer that with its best verdict —
+`0 text/control boxes, no pair overlapping >25%`, PASS — which is what a run reports when
+a render paints nothing at all, and it is a false green: measured, two runs of ONE `ci`
+manifest at 150 % text produced 10 text/control boxes for a cell in one run and 0 in the
+other. So an empty text/control set is reported as what it is: `U-08` returns
+`BLOCKED`/`unmeasurable` with the count (`U-09` has always done this for
+`0 interactive AX nodes`), and the audit blocks EVERY row of that cell and counts it as a
+gap, because no rule on such a frame measured anything. A cell whose emptiness really is
+its state can say so by name in `DESIGN_EMPTY_CELLS` (`tools/audit/checks.ts`), which is
+empty on this head: every declared cell paints text or a control, and the blank frames the
+audit found were accidents rather than states.
 
 ### A measurement outside the captured frame says so
 

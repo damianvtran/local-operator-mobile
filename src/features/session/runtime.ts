@@ -31,6 +31,13 @@ export interface StreamFacts {
 	ageMs: number | null;
 	/** A reconnect opened, no snapshot landed, and the deadline has passed. */
 	overdue: boolean;
+	/** A transport error ended an open since the last accepted frame. STICKY
+	 *  until a frame lands — unlike `lastEnd`, which the reopen's `connecting`
+	 *  status overwrites before anything has arrived. The header's dot reads it
+	 *  (`healthLink`): the relay's own rule is "connected: false on any outage,
+	 *  until a fresh frame", and a dot that turned green again on the reopen
+	 *  ATTEMPT would promise a link nothing has proven (UX round 1, U4). */
+	droppedSinceFrame: boolean;
 }
 
 export const INITIAL_STREAM_FACTS: StreamFacts = {
@@ -38,6 +45,7 @@ export const INITIAL_STREAM_FACTS: StreamFacts = {
 	lastEnd: undefined,
 	ageMs: null,
 	overdue: false,
+	droppedSinceFrame: false,
 };
 
 /* ------------------------------------------------------------- image loading */

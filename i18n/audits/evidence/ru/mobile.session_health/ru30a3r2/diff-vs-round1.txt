@@ -1,0 +1,21 @@
+# mobile.session_health: every key, round-1 rendered bytes vs commit 2921aea bytes
+# round-1 bundle: i18n/audits/evidence/ru/mobile.session_health/ru30a3/audit.log (rendered-section)
+# the round-1 ru file was UNTRACKED at ba39018, so the old bytes come from that log's own
+# formatMessage render; the namespace carries no plural/select nodes, so rendered == raw.
+# keys: round1=11 now=11; key-set identical=True
+
+same     mobile.session_health.control_hint
+CHANGED  mobile.session_health.ended_placeholder
+   r1 : Отправка откроет её в домашней папке…
+   now: Отправка откроет её…
+same     mobile.session_health.menu_hint
+same     mobile.session_health.menu_label
+same     mobile.session_health.menu_title
+same     mobile.session_health.reopening
+same     mobile.session_health.resume_gone
+same     mobile.session_health.resume_no_route
+same     mobile.session_health.resume_refused
+same     mobile.session_health.resume_refused_title
+same     mobile.session_health.still_reopening
+
+# values differing: 1

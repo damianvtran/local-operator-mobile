@@ -391,7 +391,7 @@ export const PendingCard = ({
 											</Text>
 										) : null}
 									</Text>
-									{option.description.length > 0 ? (
+									{(option.description ?? "").length > 0 ? (
 										<Text className="text-meta text-ink-dim">
 											{option.description}
 										</Text>

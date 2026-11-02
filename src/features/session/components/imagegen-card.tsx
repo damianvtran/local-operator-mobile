@@ -177,7 +177,7 @@ const IndeterminateTrack = ({ trackWidth }: { trackWidth: number }) => {
  *  width only; a percentage numeral would be a second, redundant measurement. */
 const DeterminateTrack = ({ fraction }: { fraction: number }) => (
 	<View
-		className="absolute bottom-0 left-0 top-0 rounded-full bg-accent"
+		className="absolute bottom-0 start-0 top-0 rounded-full bg-accent"
 		style={{ width: `${Math.round(fraction * 100)}%` }}
 	/>
 );
@@ -215,7 +215,7 @@ const GeneratingFrame = ({
 			aria-valuenow={fraction === null ? undefined : Math.round(fraction * 100)}
 		>
 			<View
-				className="absolute bottom-0 left-0 right-0 h-1 bg-elevated"
+				className="absolute bottom-0 end-0 start-0 h-1 bg-elevated"
 				onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
 			>
 				{fraction === null ? (
@@ -403,12 +403,12 @@ export const ImageGenCard = ({
 				) : null}
 			</View>
 			{phase === "queued" ? (
-				<View className="pb-1.5 pl-6">
+				<View className="pb-1.5 ps-6">
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
 				</View>
 			) : null}
 			{liveTone ? (
-				<View className="gap-1.5 pb-1.5 pl-6">
+				<View className="gap-1.5 pb-1.5 ps-6">
 					{/* The word shimmers while the call is still moving — the kit's
 					 *  own "still arriving" signal, shared with the streaming row —
 					 *  and stops at its resting frame under reduced motion like
@@ -428,7 +428,7 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "done" ? (
-				<View className="flex-row items-center gap-2 pb-1.5 pl-6">
+				<View className="flex-row items-center gap-2 pb-1.5 ps-6">
 					{/* The finished image through the EXISTING transcript image path:
 					 *  artifact blocks are indexed like images and served by the same
 					 *  route, so the card hands `TranscriptImage` the same two facts
@@ -459,7 +459,7 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "failed" ? (
-				<View className="gap-1 pb-1.5 pl-6">
+				<View className="gap-1 pb-1.5 ps-6">
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
 					{/* The platform's own sentence, verbatim — the one place on this
 					 *  card where the machine speaks. WITHHELD for the
@@ -473,7 +473,7 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "cancelled" ? (
-				<View className="gap-1 pb-1.5 pl-6">
+				<View className="gap-1 pb-1.5 ps-6">
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
 					{/* Affordance slot: restart / steer (v1 = interrupt + a NEW
 					 *  generate call) mounts HERE once its op is defined. NOT wired:

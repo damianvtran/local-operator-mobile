@@ -1,0 +1,14 @@
+/** Renders one key through the production runtime path (renderFor), read-only. */
+import { renderFor } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/runtime.ts";
+
+const key = "mobile.home.options.fixed";
+const show = (loc) => {
+	const out = renderFor(key, {}, loc);
+	const isFrench = /\bLes options\b/.test(out) && !/\bThis conversation/.test(out);
+	console.log(`${String(loc).padEnd(6)} ${isFrench ? "FR " : "EN "} ${JSON.stringify(out)}`);
+};
+
+show("fr");
+show("en");
+show(null);
+for (const loc of ["es", "de", "fr-CA", "FR"]) show(loc);

@@ -97,6 +97,27 @@ describe("drawer New chat dismissal handoff", () => {
 		expect(intent.current).toBe(false);
 		expect(old).not.toHaveBeenCalled();
 	});
+	it("survives a re-render between request and dismissal only with a stable owner", () => {
+		// The drawer's `[onNewChat]` effect cancels the pending intent when the prop's
+		// identity changes, and Home re-renders (`setPanelOpen(false)`) between the tap
+		// and `onDismiss`. A closure rebuilt per render therefore cancels the request
+		// the tap just made; a memoised one survives the same re-render.
+		const close = vi.fn();
+
+		const churned = { current: false };
+		requestDrawerNewChat("web", churned, close, () => undefined); // inline: new f
+		cancelDrawerNewChat(churned); // the [onNewChat] effect's cleanup, post-render
+		const stale = vi.fn();
+		finishDrawerDismiss(churned, stale);
+		expect(stale).not.toHaveBeenCalled();
+
+		const stable = vi.fn();
+		const kept = { current: false };
+		requestDrawerNewChat("web", kept, close, stable);
+		// same identity across the re-render: the effect does not re-run
+		finishDrawerDismiss(kept, stable);
+		expect(stable).toHaveBeenCalledOnce();
+	});
 	it.each(["ios", "android"])(
 		"keeps %s immediate native behavior without depending on onDismiss",
 		(platform) => {

@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
+import {
+	getStartupAuthorization,
+	subscribeStartupAuthorization,
+} from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
 import {
@@ -11,9 +22,9 @@ import type { AttachSource } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
-	COMPOSER_COPY,
 	chooseOp,
 	composerControls,
+	composerCopy,
 	receiptForError,
 } from "@/features/session/composer";
 import {
@@ -132,19 +143,38 @@ export const useComposer = (input: {
 	capabilities: Capabilities | null | undefined;
 	/** Bumped by the screen when a pending card needs the draft left alone. */
 	onSent?: () => void;
+	/** An adopted provisional editor keeps its identity while this host adds the
+	 * normal session actions, dictation and slash controls around it. */
+	editor?: {
+		draft: string;
+		images: PromptImage[];
+		setDraft(text: string): void;
+		setImages(
+			value: PromptImage[] | ((current: PromptImage[]) => PromptImage[]),
+		): void;
+	};
 }): ComposerState => {
 	// `onSent` is destructured rather than kept as `input`: an object prop in a
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
 	const endpoints = source.endpoints;
+	const authorization = useSyncExternalStore(
+		subscribeStartupAuthorization,
+		getStartupAuthorization,
+		getStartupAuthorization,
+	);
+	const scope = authorization?.scope ?? null;
+	const storageIdentity = JSON.stringify([scope, sessionId]);
+	const editor = input.editor;
 
 	/* ONE store per session, shared process-wide: two instances on one session
 	 * would each mint an id for the same typed instruction, which is the duplicate
 	 * POST the retry envelope exists to prevent. See `envelope-store.ts`. */
-	const envelopeStore = envelopeStoreFor(sessionId);
+	const envelopeStore = envelopeStoreFor(sessionId, scope);
 
-	const [draft, setDraftState] = useState("");
+	const [privateDraft, setPrivateDraft] = useState("");
+	const draft = editor?.draft ?? privateDraft;
 	/* Keyed by the session it was read for, not a bare boolean: a session switch
 	 * re-points this hook without remounting it, and a boolean left `true` from the
 	 * previous session would read the NEW session's still-unread draft as known.
@@ -156,7 +186,33 @@ export const useComposer = (input: {
 	 * every cross-conversation navigation mounts a fresh screen - which is why the
 	 * clear is a one-line belt, not a repair of a seen defect. */
 	const [draftReadFor, setDraftReadFor] = useState<string | null>(null);
-	const [images, setImages] = useState<PromptImage[]>([]);
+	const [privateImages, setPrivateImages] = useState<PromptImage[]>([]);
+	const images = editor?.images ?? privateImages;
+	/* Both writers stay STABLE while targeting whichever surface currently owns the
+	 * bytes. A plain `editor?.setter ?? setState` changes identity on every render,
+	 * which both invalidates the memoized callbacks below and can write through a
+	 * stale editor after adoption — the one handoff that must not lose a keystroke. */
+	const editorRef = useRef(editor);
+	editorRef.current = editor;
+	const draftRefForWrite = useRef(draft);
+	draftRefForWrite.current = draft;
+	const imagesRefForWrite = useRef(images);
+	imagesRefForWrite.current = images;
+	const setDraftState = useCallback((text: string) => {
+		const owner = editorRef.current;
+		if (owner === undefined) setPrivateDraft(text);
+		else owner.setDraft(text);
+	}, []);
+	const setImages = useCallback(
+		(next: PromptImage[] | ((current: PromptImage[]) => PromptImage[])) => {
+			const current = editorRef.current?.images ?? imagesRefForWrite.current;
+			const value = typeof next === "function" ? next(current) : next;
+			const owner = editorRef.current;
+			if (owner === undefined) setPrivateImages(value);
+			else owner.setImages(value);
+		},
+		[],
+	);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
 	const [sending, setSending] = useState(false);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
@@ -191,9 +247,9 @@ export const useComposer = (input: {
 	 * that writes once per send instead. */
 	useEffect(() => {
 		let cancelled = false;
-		setDraftState("");
+		setPrivateDraft("");
 		setDraftReadFor(null);
-		setImages([]);
+		setPrivateImages([]);
 		setError(null);
 		setNotice(null);
 		/* The draft window RESTARTS here too. The route carries no `getId`/`key` on
@@ -203,10 +259,10 @@ export const useComposer = (input: {
 		 * with A's `input_path`: immutable identity written onto a durable row (agent
 		 * review round 1, M1). It resets with the rest of the per-session state. */
 		provenanceRef.current = resetOnSessionSwitch();
-		readDraft(sessionId).then((stored) => {
+		readDraft(sessionId, scope).then((stored) => {
 			if (cancelled) return;
-			setDraftState(stored);
-			setDraftReadFor(sessionId);
+			setPrivateDraft(stored);
+			setDraftReadFor(storageIdentity);
 		});
 		// The retained envelope is re-read from storage rather than kept in memory:
 		// that is the point of it being durable, and it is how a retry survives a
@@ -214,12 +270,12 @@ export const useComposer = (input: {
 		envelopeStore.peek(sessionId).then((held) => {
 			if (cancelled) return;
 			setRetained(held);
-			if (held !== null) setError(COMPOSER_COPY.retainedError);
+			if (held !== null) setError(composerCopy().retainedError);
 		});
 		return () => {
 			cancelled = true;
 		};
-	}, [sessionId, envelopeStore]);
+	}, [sessionId, envelopeStore, scope, storageIdentity]);
 
 	/** Writes the draft and its persistence WITHOUT touching provenance. Used by the
 	 *  dictation append, whose edit is a dictation, not typing — routing it through
@@ -227,9 +283,12 @@ export const useComposer = (input: {
 	const commitDraft = useCallback(
 		(text: string) => {
 			setDraftState(text);
-			void writeDraft(sessionId, text);
+			if (editor === undefined && scope !== null)
+				void writeDraft(sessionId, text, scope).catch(() =>
+					setError("Could not save the draft on this device."),
+				);
 		},
-		[sessionId],
+		[sessionId, scope, editor, setDraftState],
 	);
 
 	/** Classifies one USER-driven draft change (typing, a slash fill, an ack clear):
@@ -361,7 +420,7 @@ export const useComposer = (input: {
 					 * It is kept for that race, deliberately not deleted, and it is the only
 					 * path that reaches this sentence — so it stays untested end-to-end
 					 * rather than being claimed as a live flow. */
-					setNotice(COMPOSER_COPY.reusedDraftNotice);
+					setNotice(composerCopy().reusedDraftNotice);
 				} else if (
 					// Only clear the visible draft when the acknowledged bytes ARE the
 					// visible draft. If the reader edited while the request was out, the ack
@@ -381,7 +440,7 @@ export const useComposer = (input: {
 					setDraft("");
 					setImages([]);
 				} else {
-					setNotice(COMPOSER_COPY.retryAckNotice);
+					setNotice(composerCopy().retryAckNotice);
 				}
 				onSent?.();
 			} catch (failure) {
@@ -396,10 +455,18 @@ export const useComposer = (input: {
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(receipt.message);
+					/* On an ENDED session the generic "try again" is not the whole story:
+					 * a send is resume-then-send (the daemon wakes a host for a prompt with
+					 * no live entry), so a failure here means that WAKE failed, and the
+					 * honest remedies are send again or Resume from the status sheet. */
+					setError(ended ? composerCopy().endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
-					setError(ambiguousMessage(streaming));
+					setError(
+						ended
+							? composerCopy().endedSendFailed
+							: ambiguousMessage(streaming),
+					);
 				}
 			} finally {
 				inFlight.current = false;
@@ -409,14 +476,17 @@ export const useComposer = (input: {
 		// `streaming` is a real dependency, not a lint appeasement: `ambiguousMessage`
 		// and `chooseOp` both read it, so a stale closure here would ask the reader
 		// "couldn't continue this conversation" about a live turn — or send a second
-		// prompt into a streaming session where a steer was meant.
+		// prompt into a streaming session where a steer was meant. `ended` selects
+		// the reopen-failure sentence.
 		[
 			endpoints,
 			sessionId,
 			envelopeStore,
 			setDraft,
+			setImages,
 			onSent,
 			streaming,
+			ended,
 			cancelDictationForSend,
 		],
 	);
@@ -459,9 +529,30 @@ export const useComposer = (input: {
 				});
 				void result;
 				setRetained(null);
-				// The replayed instruction is the ENVELOPE's, so the visible draft is
-				// never the thing that was delivered: it stays for the reader to send.
-				setNotice(COMPOSER_COPY.retryAckNotice);
+				/* The replayed instruction is the ENVELOPE's. When the visible draft is
+				 * BYTE-IDENTICAL to it, the draft IS what was just delivered — the
+				 * failed send left the text in the box and the reader pressed Retry
+				 * without touching it. Leaving it there under "your edited draft is
+				 * ready to send" invited a duplicate send of a delivered message (UX
+				 * round 1, U7). Same comparison the send's acknowledgement uses; an
+				 * edited draft still stays, as the next command. */
+				if (
+					acknowledgedCurrentDraft(
+						{
+							text: held.text,
+							...(held.images ? { images: held.images } : {}),
+						},
+						{
+							text: draftRef.current.trim(),
+							...(held.images ? { images: imagesRef.current } : {}),
+						},
+					)
+				) {
+					setDraft("");
+					setImages([]);
+				} else {
+					setNotice(composerCopy().retryAckNotice);
+				}
 			} catch (failure) {
 				if (isRelayError(failure)) {
 					const receipt = receiptForError(failure);
@@ -470,17 +561,30 @@ export const useComposer = (input: {
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(receipt.message);
+					setError(ended ? composerCopy().endedSendFailed : receipt.message);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
-					setError(ambiguousMessage(streaming));
+					setError(
+						ended
+							? composerCopy().endedSendFailed
+							: ambiguousMessage(streaming),
+					);
 				}
 			} finally {
 				inFlight.current = false;
 				setSending(false);
 			}
 		})();
-	}, [endpoints, envelopeStore, sessionId, streaming, cancelDictationForSend]);
+	}, [
+		endpoints,
+		envelopeStore,
+		sessionId,
+		streaming,
+		cancelDictationForSend,
+		setDraft,
+		setImages,
+		ended,
+	]);
 
 	/**
 	 * The turn interrupt — the stop button's action, and the whole cancel
@@ -506,8 +610,8 @@ export const useComposer = (input: {
 		} catch (failure) {
 			setError(
 				isRelayError(failure)
-					? (failure.displayableMessage ?? COMPOSER_COPY.steerError)
-					: COMPOSER_COPY.steerError,
+					? (failure.displayableMessage ?? composerCopy().steerError)
+					: composerCopy().steerError,
 			);
 			return false;
 		}
@@ -531,8 +635,8 @@ export const useComposer = (input: {
 				} catch (failure) {
 					setError(
 						isRelayError(failure)
-							? (failure.displayableMessage ?? COMPOSER_COPY.continuationError)
-							: COMPOSER_COPY.continuationError,
+							? (failure.displayableMessage ?? composerCopy().continuationError)
+							: composerCopy().continuationError,
 					);
 				} finally {
 					setSending(false);
@@ -558,8 +662,8 @@ export const useComposer = (input: {
 				} catch (failure) {
 					setError(
 						isRelayError(failure)
-							? (failure.displayableMessage ?? COMPOSER_COPY.continuationError)
-							: COMPOSER_COPY.continuationError,
+							? (failure.displayableMessage ?? composerCopy().continuationError)
+							: composerCopy().continuationError,
 					);
 				} finally {
 					setSending(false);
@@ -569,57 +673,63 @@ export const useComposer = (input: {
 		[endpoints, sessionId],
 	);
 
-	const attach = useCallback((source: AttachSource) => {
-		void (async () => {
-			setAttaching(true);
-			/* A new attach supersedes the last failure the way `home.tsx`'s copies of
-			 * this handler already do (`setComposerError(null)`): without it, "No image
-			 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
-			 * described a state the composer was no longer in (agent review round 1,
-			 * R3). */
-			setError(null);
-			try {
-				const image =
-					source === "library"
-						? await pickImageFromLibrary()
-						: source === "paste"
-							? await pasteImage()
-							: await pickImageFromFiles();
-				if (image !== null) {
-					setImages((current) => [...current, image]);
-				} else if (source === "paste") {
-					/* The one arm that is not a cancel: the reader pressed Paste and no
-					 *  image came back. Told, because a press with no outcome reads as a
-					 *  broken control — the same rule `attachError` follows. */
-					setError(COMPOSER_COPY.pasteEmpty);
+	const attach = useCallback(
+		(source: AttachSource) => {
+			void (async () => {
+				setAttaching(true);
+				/* A new attach supersedes the last failure the way `home.tsx`'s copies of
+				 * this handler already do (`setComposerError(null)`): without it, "No image
+				 * was pasted…" stayed up after a later SUCCESSFUL attach, so the error line
+				 * described a state the composer was no longer in (agent review round 1,
+				 * R3). */
+				setError(null);
+				try {
+					const image =
+						source === "library"
+							? await pickImageFromLibrary()
+							: source === "paste"
+								? await pasteImage()
+								: await pickImageFromFiles();
+					if (image !== null) {
+						setImages((current) => [...current, image]);
+					} else if (source === "paste") {
+						/* The one arm that is not a cancel: the reader pressed Paste and no
+						 *  image came back. Told, because a press with no outcome reads as a
+						 *  broken control — the same rule `attachError` follows. */
+						setError(composerCopy().pasteEmpty);
+					}
+				} catch {
+					setError(composerCopy().attachError);
+				} finally {
+					setAttaching(false);
 				}
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+			})();
+		},
+		[setImages],
+	);
 
 	/** The web paste EVENT's file. Same failure copy as the pickers, same strip
 	 *  as its destination: the event and the sheet's Paste row are two doors into
 	 *  one attachment path. */
-	const pasteFile = useCallback((file: File) => {
-		void (async () => {
-			setAttaching(true);
-			/* Same clear as `attach` above, for the same reason: this is the session
-			 * view's copy of home's handler and the two must not disagree. */
-			setError(null);
-			try {
-				const image = await readWebImageFile(file);
-				setImages((current) => [...current, image]);
-			} catch {
-				setError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+	const pasteFile = useCallback(
+		(file: File) => {
+			void (async () => {
+				setAttaching(true);
+				/* Same clear as `attach` above, for the same reason: this is the session
+				 * view's copy of home's handler and the two must not disagree. */
+				setError(null);
+				try {
+					const image = await readWebImageFile(file);
+					setImages((current) => [...current, image]);
+				} catch {
+					setError(composerCopy().attachError);
+				} finally {
+					setAttaching(false);
+				}
+			})();
+		},
+		[setImages],
+	);
 
 	const slash = useCallback(
 		(command: SlashCommand) => {
@@ -687,10 +797,12 @@ export const useComposer = (input: {
 	);
 
 	return {
-		draft,
-		draftReady: draftReadFor === sessionId,
+		draft:
+			editor !== undefined || draftReadFor === storageIdentity ? draft : "",
+		draftReady: editor !== undefined || draftReadFor === storageIdentity,
 		setDraft,
-		images,
+		images:
+			editor !== undefined || draftReadFor === storageIdentity ? images : [],
 		addImage: (image) => setImages((current) => [...current, image]),
 		removeImage: (index) =>
 			setImages((current) => current.filter((_, at) => at !== index)),

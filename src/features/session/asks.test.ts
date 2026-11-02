@@ -102,6 +102,25 @@ describe("askStateLine", () => {
 		expect(line.tone).toBe("wait");
 	});
 
+	it("reports NO deadline when the ask carries none (round 5, m6)", () => {
+		/* `expires_at: 0` is the producer's "nothing set". Rendering it through the
+		 * countdown produced a 1970 sentence and "20752 d ago" in the reel; an
+		 * undated open ask is simply queued. */
+		expect(askStateLine(ask({ expires_at: 0 }), 1_792_926_900_000).text).toBe(
+			"Queued — the agent is continuing",
+		);
+		expect(
+			askStateLine(ask({ expires_at: undefined }), 1_792_926_900_000).text,
+		).toBe("Queued — the agent is continuing");
+		/* And a real deadline still counts down. */
+		expect(
+			askStateLine(
+				ask({ expires_at: 1_792_926_900_000 + 42 * 60_000 }),
+				1_792_926_900_000,
+			).text,
+		).toBe("Queued — the agent is continuing; expires in 42 m");
+	});
+
 	it("says delivering until the runtime has delivered the response rows", () => {
 		expect(
 			askStateLine(ask({ status: "answered", delivered: false }), 1).text,

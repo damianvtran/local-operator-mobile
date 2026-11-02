@@ -1,23 +1,35 @@
-import { randomUUID } from "expo-crypto";
 import { useRouter } from "expo-router";
-import { Menu, Settings } from "lucide-react-native";
+import { Bell, BellDot, Menu, Settings } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry, PromptImage } from "@/contracts";
+import { HeaderComputerChip } from "@/features/auth/computer-entry-points";
 import {
 	useConnection,
 	useConnectionState,
 	useListState,
+	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import {
-	CONNECT_DISABLED_REASON,
-	FOLDERS_READ_FAILED,
-	REFUSED_START_FALLBACK,
+	headerBellShowsCount,
+	headerBellShowsDot,
+} from "@/features/home/header-fit";
+import {
+	connectDisabledReason,
+	foldersReadFailed,
+	refusedStartFallback,
+	startupQueueState,
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeSplash } from "@/features/home/home-splash";
+import { StartupTranscript } from "@/features/new-session/startup-transcript";
+import { useStartup } from "@/features/new-session/use-startup";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -29,31 +41,36 @@ import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import type { ComposerControls } from "@/features/session/composer";
-import { COMPOSER_COPY } from "@/features/session/composer";
+import { composerCopy } from "@/features/session/composer";
 import { connectionView } from "@/features/session/connection-view";
-import {
-	clearHomeDraft,
-	readHomeDraft,
-	writeHomeDraft,
-} from "@/features/session/device-storage";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
-import { unreadBadgeCount } from "@/features/sessions/session-projection";
+import {
+	inboxBadgeCount,
+	unreadBadgeCount,
+} from "@/features/sessions/session-projection";
+import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import { RelayError } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
+import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { IconButton } from "@/ui/components/icon-button";
+import { Input } from "@/ui/components/input";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
+import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
  * The composer home: `/` since the Part 2 slice, and the default destination
@@ -87,6 +104,7 @@ import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
  * composer that can never send (the old list's D3 lesson, moved verbatim).
  */
 export type HomeProps = {
+	newSession?: boolean;
 	/** `/conversations` renders the home with the panel open — the programmatic
 	 *  open ADR 0006 § 6.6 needs (a deep link the computer does not know lands on
 	 *  the panel with one honest sentence). On a docked layout the list is always
@@ -96,8 +114,24 @@ export type HomeProps = {
 	notice?: string | null;
 };
 
+/** The bell glyph inside the header's composite notifications control. Its ink is
+ *  the icon-only control's own role (`ink-muted`), read from the theme rather than
+ *  inherited, because an SVG takes colour as a prop. */
+function BellIcon({ waiting = false }: { waiting?: boolean }) {
+	const color = useTokenColor("ink-muted");
+	/* SHAPE, NOT COLOUR. Where the count pill yields (D24) a waiting inbox is
+	 *  signalled by the icon set's own bell-with-dot, in the control's normal ink:
+	 *  no separate painted node and no semantic colour, so the audit's U-03 rule
+	 *  (status carried by colour alone) has nothing to flag — the previous 6 pt
+	 *  dot was exactly that and failed 96 of 1212 cells. Size and ink are the
+	 *  plain bell's, so it also scales with the type step like every other glyph. */
+	const Glyph = waiting ? BellDot : Bell;
+	return <Glyph color={color} size={20} />;
+}
+
 export default function Home({
 	forcePanelOpen = false,
+	newSession = false,
 	notice = null,
 }: HomeProps) {
 	const router = useRouter();
@@ -118,11 +152,25 @@ export default function Home({
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
 	const unread = useListState((state) => state.unread);
+	const inbox = useListState((state) => state.notifications);
+	/* The resolved language, subscribed so a config frame re-renders this screen.
+	 * It is not read here as a string — `t()` resolves the locale itself — but it is
+	 * a DEPENDENCY of every memo below that caches rendered copy (review M3): a memo
+	 * whose list omits it keeps the previous language's sentences for as long as the
+	 * language is the only thing that changed. */
+	const language = useLocaleFrame();
+	const inboxEnabled = notificationsEnabled(
+		useListState((state) => state.capabilities),
+	);
 	const showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
-	const [draft, setDraftState] = useState("");
-	const [images, setImages] = useState<PromptImage[]>([]);
+	const [optionsOpen, setOptionsOpen] = useState(false);
+	const [queueOpen, setQueueOpen] = useState(false);
+	const [optionPath, setOptionPath] = useState("");
+	const [optionModel, setOptionModel] = useState<ModelEntry | null>(null);
+	const [running, setRunning] = useState(false);
+	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [attaching, setAttaching] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
 	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
@@ -130,7 +178,36 @@ export default function Home({
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
 	const [topModel, setTopModel] = useState<ModelEntry | null>(null);
 	const [modelsLoaded, setModelsLoaded] = useState(false);
-	const [starting, setStarting] = useState(false);
+	const selection = useMemo(
+		() =>
+			homeDirectory === null || !modelsLoaded
+				? null
+				: {
+						cwd: homeDirectory,
+						...(topModel
+							? { provider: topModel.provider, model_id: topModel.model_id }
+							: {}),
+					},
+		[homeDirectory, topModel, modelsLoaded],
+	);
+	const startup = useStartup(selection);
+	const draft = startup.snapshot.draft.text;
+	const images = startup.snapshot.draft.images;
+	const setDraft = startup.setText;
+	const setImages = startup.setImages;
+	const starting = startup.snapshot.phase === "starting";
+	const queueLine = startupQueueState(
+		startup.snapshot.phase,
+		startup.snapshot.sessionId,
+	);
+	const { effectiveScale } = useTextScale();
+	/* The folder/model/options controls are the reader's while the request is still
+	 * theirs to change. A `refused` create never happened, so it belongs in that set
+	 * with `draft` — the copy already asks them to check the folder, and QA found the
+	 * controls disabled at exactly that moment (a dead end: retry re-posted the same
+	 * invalid selection). */
+	const selectionEditable =
+		startup.snapshot.phase === "draft" || startup.snapshot.phase === "refused";
 	const [problem, setProblem] = useState<string | null>(null);
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
@@ -172,6 +249,7 @@ export default function Home({
 			.models()
 			.then((catalogue) => {
 				if (!live) return;
+				setModels(catalogue.models);
 				setTopModel(catalogue.models[0] ?? null);
 				setModelsLoaded(true);
 			})
@@ -185,25 +263,6 @@ export default function Home({
 
 	const retryDirectories = useCallback(() => {
 		setDirectoriesAttempt((attempt) => attempt + 1);
-	}, []);
-
-	/* The home's draft, restored once. If the reader has already typed by the
-	 * time the read resolves, what they have typed wins — the store is storage,
-	 * not an authority over the live field. */
-	useEffect(() => {
-		let live = true;
-		void readHomeDraft().then((text) => {
-			if (live && text !== "")
-				setDraftState((current) => (current === "" ? text : current));
-		});
-		return () => {
-			live = false;
-		};
-	}, []);
-
-	const setDraft = useCallback((text: string) => {
-		setDraftState(text);
-		void writeHomeDraft(text);
 	}, []);
 
 	/* A cold start with no route belongs on the welcome surface — the list's own
@@ -239,6 +298,9 @@ export default function Home({
 	 * never rendered as 0. The conversations pane's degraded banner is the
 	 * "says so". */
 	const badgeCount = unreadBadgeCount(unread);
+	/* The inbox's own number, from the same frame (contract §5.4). Same absence
+	 * rule: `null` draws no numeral, never a 0 the machine did not send. */
+	const inboxCount = inboxBadgeCount(inbox);
 
 	/* The banner: only the states the product has sentences for. A refusal renders
 	 * its own fuller surface below (and nothing here duplicates it); the
@@ -275,80 +337,105 @@ export default function Home({
 		[offline, computers, tunnelId, route],
 	);
 
-	const attach = useCallback((source: AttachSource) => {
-		void (async () => {
-			setAttaching(true);
-			setComposerError(null);
-			try {
-				const image =
-					source === "library"
-						? await pickImageFromLibrary()
-						: source === "paste"
-							? await pasteImage()
-							: await pickImageFromFiles();
-				if (image !== null) {
-					setImages((current) => [...current, image]);
-				} else if (source === "paste") {
-					/* A press with no outcome reads as a broken control — the same rule
-					 *  `attachError` follows in the other direction. */
-					setComposerError(COMPOSER_COPY.pasteEmpty);
+	const attach = useCallback(
+		(source: AttachSource) => {
+			void (async () => {
+				setAttaching(true);
+				setComposerError(null);
+				try {
+					const image =
+						source === "library"
+							? await pickImageFromLibrary()
+							: source === "paste"
+								? await pasteImage()
+								: await pickImageFromFiles();
+					if (image !== null) {
+						setImages((current) => [...current, image]);
+					} else if (source === "paste") {
+						/* A press with no outcome reads as a broken control — the same rule
+						 *  `attachError` follows in the other direction. */
+						setComposerError(composerCopy().pasteEmpty);
+					}
+				} catch {
+					/* Said, never swallowed — the composer's own error line. */
+					setComposerError(composerCopy().attachError);
+				} finally {
+					setAttaching(false);
 				}
-			} catch {
-				/* Said, never swallowed — the composer's own error line. */
-				setComposerError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+			})();
+		},
+		[setImages],
+	);
 
 	/** The web paste event's image file: same strip, same failure line as the
 	 *  sheet's own rows (`use-composer.ts`'s `pasteFile` is the session view's
 	 *  copy of this handler). */
-	const pasteFile = useCallback((file: File) => {
-		void (async () => {
-			setAttaching(true);
-			setComposerError(null);
-			try {
-				const image = await readWebImageFile(file);
-				setImages((current) => [...current, image]);
-			} catch {
-				setComposerError(COMPOSER_COPY.attachError);
-			} finally {
-				setAttaching(false);
-			}
-		})();
-	}, []);
+	const pasteFile = useCallback(
+		(file: File) => {
+			void (async () => {
+				setAttaching(true);
+				setComposerError(null);
+				try {
+					const image = await readWebImageFile(file);
+					setImages((current) => [...current, image]);
+				} catch {
+					setComposerError(composerCopy().attachError);
+				} finally {
+					setAttaching(false);
+				}
+			})();
+		},
+		[setImages],
+	);
 
+	/* `language` is a dependency here because this memo holds RENDERED COPY: the
+	 * disabled sentence is a `t()` reading, resolved at call time. Without it a
+	 * language frame repaints this screen and the memo hands back the sentence of
+	 * the locale it was last computed in (review M3).
+	 *
+	 * The lint rule cannot see that link: `t()` reads the preference from the
+	 * module-level source in `src/i18n/locale.ts`, so the body never MENTIONS
+	 * `language` and biome calls the dependency unnecessary. It is a TRIGGER — the
+	 * same shape as `use-refusal-reveal.ts`'s `owed` — so the rule is silenced with
+	 * the reason here rather than satisfied by deleting a dependency that matters. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: the copy readers read the locale live, so it must re-run the memo (see above)
 	const controls: ComposerControls = useMemo(
 		() => ({
 			primary: {
 				kind: "send",
 				/* Same morph as a session's: `…` while a send is in flight, `↑`
 				 * otherwise, and the word lives in the accessible label. */
-				label: starting ? "…" : "↑",
+				label: "↑",
 				op: "prompt",
-				disabled:
-					starting ||
-					!connected ||
-					homeDirectory === null ||
-					(draft.trim() === "" && images.length === 0),
-				accessibilityLabel: starting ? "Sending" : "Send message",
+				disabled: draft.trim() === "" && images.length === 0,
+				accessibilityLabel: starting ? "Queue message" : "Send message",
 			},
-			stopVisible: false,
-			sending: starting,
+			stopVisible: running,
+			sending: false,
 			/* The one sentence the composer says when it cannot send: with nothing
 			 * connected there is nothing to send to. An empty draft is disabled for
 			 * the self-evident reason and says nothing. */
-			disabledReason: connected ? null : CONNECT_DISABLED_REASON,
+			disabledReason: connected ? null : connectDisabledReason(),
+			/* The home has no session and no health dot, so it can never be ended:
+			 *  the placeholder never switches to the reopen hint here. */
+			ended: false,
 		}),
-		[connected, draft, homeDirectory, images.length, starting],
+		/* See the trigger note above: `t()` reads the locale live, so the rendered
+		 * sentence must be recomputed when `language` changes. */
+		[connected, draft, images.length, starting, running, language],
 	);
 
+	/* NO locale dependency here, and that is deliberate rather than an oversight:
+	 * `composerChipLabels` (`src/features/session/chip-labels.ts`) renders no
+	 * catalogue text — its strings are the model's own name, `n/a` and the English
+	 * accessibility labels — so nothing in this memo goes stale with the language.
+	 * The day those labels are keyed, this list gains `language` for the same
+	 * reason the controls' list has it. */
 	const chips = useMemo(
 		() =>
 			composerChipLabels({
-				model: topModel?.selector ?? null,
+				model:
+					startup.snapshot.selection?.model_id ?? topModel?.selector ?? null,
 				effort: null,
 				connection: modelsLoaded
 					? "connected"
@@ -356,83 +443,28 @@ export default function Home({
 						? "loading"
 						: "unreachable",
 			}),
-		[topModel, modelsLoaded, connected],
+		[topModel, modelsLoaded, connected, startup.snapshot.selection?.model_id],
 	);
 
-	const send = useCallback(() => {
-		void (async () => {
-			const active = relay();
-			const text = draft.trim();
-			if (
-				active === null ||
-				!connected ||
-				homeDirectory === null ||
-				starting ||
-				(text === "" && images.length === 0)
-			) {
-				return;
-			}
-			setStarting(true);
-			setProblem(null);
-			setComposerError(null);
-			try {
-				const started = await active.startSession({
-					cwd: homeDirectory,
-					...(topModel !== null
-						? { provider: topModel.provider, model_id: topModel.model_id }
-						: {}),
-				});
-				try {
-					await active.command(started.session_id, {
-						op: "prompt",
-						command_id: randomUUID(),
-						text,
-						...(images.length > 0 ? { images } : {}),
-					});
-					/* Delivered: the draft and its attachments are cleared because
-					 * the same text travelled as the first prompt — never both. */
-					await clearHomeDraft();
-					setDraftState("");
-					setImages([]);
-				} catch {
-					/* The session exists either way; the reader is taken to it and
-					 * the draft is KEPT (it was not delivered). */
-					showToast(
-						"The session started, but your first message was not sent.",
-					);
-				}
-				setPanelOpen(false);
-				router.push(`/session/${started.session_id}`);
-			} catch (error) {
-				/* The relay's own sentence when it has one (it names the folder or the
-				 * reason), and never a runtime's prose — `/new`'s rule, verbatim. */
-				setProblem(
-					error instanceof RelayError
-						? error.displayableMessage
-						: REFUSED_START_FALLBACK,
-				);
-			} finally {
-				setStarting(false);
-			}
-		})();
-	}, [
-		relay,
-		connected,
-		homeDirectory,
-		starting,
-		draft,
-		images,
-		topModel,
-		router,
-		showToast,
-	]);
+	// The coordinator freezes the submitted bytes; later typing stays editable.
+	const send = startup.send;
 
+	/* A STABLE identity, with the latest coordinator behind it. The drawer carries the
+	 * New-chat intent across the close and acts on it in `onDismiss` — by which time
+	 * Home has already re-rendered for `setPanelOpen(false)` — and it drops that
+	 * intent whenever this callback's identity changes. An inline closure is a new
+	 * function on every render, so closing the drawer cancelled the request: the
+	 * sheet went away and the old session (and its coordinator) stayed. `useStartup`
+	 * returns fresh functions per render, so the reference is refreshed on each render
+	 * and the stable callback always calls the current one. */
+	const newConversationRef = useRef(startup.newConversation);
+	newConversationRef.current = startup.newConversation;
 	const newChat = useCallback(() => {
 		setPanelOpen(false);
-		/* After the drawer's own frame: focusing a field under a modal that is
-		 * still mounted is a no-op on iOS, and the reader pressed New chat to
-		 * TYPE. */
-		requestAnimationFrame(() => fieldRef.current?.focus());
+		void newConversationRef
+			.current()
+			.then(() => requestAnimationFrame(() => fieldRef.current?.focus()))
+			.catch(() => setComposerError("Could not open a new draft safely."));
 	}, []);
 
 	const pane = (
@@ -479,13 +511,46 @@ export default function Home({
 				/>
 			) : null}
 
-			<HomeSplash
-				draft={draft}
-				connected={connected}
-				onPick={setDraft}
-				onConnect={() => router.push("/tunnels")}
-				starting={starting}
-			/>
+			{startup.snapshot.sessionId ? (
+				<StartupTranscript
+					sessionId={startup.snapshot.sessionId}
+					onStreaming={setRunning}
+				/>
+			) : (
+				<HomeSplash
+					draft={draft}
+					connected={connected}
+					onPick={setDraft}
+					onConnect={() => router.push("/tunnels")}
+					starting={starting}
+				/>
+			)}
+			{/* State only, and only while there is something to say: the count is the
+			 *  composer chip's (UX U2), an unconfirmed start is named rather than
+			 *  described as "waiting" (UX U1), and the queued sheet stays one tap
+			 *  away whenever it holds anything. */}
+			{startup.snapshot.queue.length > 0 ||
+			startup.snapshot.phase === "unconfirmed" ? (
+				<View className="px-4 py-2" testID={SURFACE.startupPending}>
+					{queueLine !== null ? (
+						<Text
+							accessibilityLiveRegion="polite"
+							className="text-body-sm text-ink-muted"
+						>
+							{queueLine}
+						</Text>
+					) : null}
+					{startup.snapshot.queue.length > 0 ? (
+						<Button
+							label={t("mobile.home.queue.view")}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.startupViewQueue}
+							onPress={() => setQueueOpen(true)}
+						/>
+					) : null}
+				</View>
+			) : null}
 
 			{/* A folders read that failed leaves the composer unsendable; the sentence
 			 *  is `/new`'s verbatim line and the retry is the path the failure never
@@ -494,7 +559,7 @@ export default function Home({
 			{directoriesFailed && homeDirectory === null ? (
 				<Banner
 					tone="warning"
-					message={FOLDERS_READ_FAILED}
+					message={foldersReadFailed()}
 					action={{
 						label: "Retry",
 						onPress: retryDirectories,
@@ -525,19 +590,51 @@ export default function Home({
 					onPasteFile={pasteFile}
 					attaching={attaching}
 					onSend={send}
-					onStop={() => undefined}
-					retainedMessage={null}
+					onStop={() => {
+						const sid = startup.snapshot.sessionId;
+						const active = relay();
+						if (sid && active)
+							void active
+								.command(sid, { op: "abort" })
+								.catch(() => setComposerError("Could not stop the turn."));
+					}}
+					retainedMessage={
+						startup.snapshot.phase === "blocked"
+							? "Your queued message is retained."
+							: null
+					}
 					notice={null}
-					onRetry={() => undefined}
+					onRetry={startup.retry}
 					showResume={false}
 					onResume={() => undefined}
-					error={composerError}
-					queuedCount={0}
+					error={startup.snapshot.error ?? composerError}
+					queuedCount={startup.snapshot.queue.length}
 					leadingChip={
 						homeDirectory !== null ? (
 							<Chip
-								label={homeShortened(homeDirectory, homeDirectory)}
-								onPress={() => router.push("/new")}
+								label={homeShortened(
+									startup.snapshot.selection?.cwd ?? homeDirectory,
+									homeDirectory,
+								)}
+								onPress={() => {
+									setOptionPath(
+										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+									);
+									setOptionModel(
+										models.find(
+											(model) =>
+												model.provider ===
+													startup.snapshot.selection?.provider &&
+												model.model_id === startup.snapshot.selection?.model_id,
+										) ?? topModel,
+									);
+									setOptionsOpen(true);
+								}}
+								/* The same quiet disclosure the model chip uses: one row of
+								 *  disclosures should not mix a filled, bordered chip with flat
+								 *  text (final audit, D2). Paint only — the 44 pt target, the
+								 *  hint and the options sheet behind it are unchanged. */
+								quiet
 								accessibilityLabel={`Working in ${homeDirectory}`}
 								accessibilityHint="Choose another folder"
 								testID={CONTROL.homeTargetFolder}
@@ -546,7 +643,19 @@ export default function Home({
 					}
 					modelChip={chips.model}
 					effortChip={null}
-					onOpenModels={() => router.push("/new")}
+					onOpenModels={() => {
+						setOptionPath(
+							startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+						);
+						setOptionModel(
+							models.find(
+								(model) =>
+									model.provider === startup.snapshot.selection?.provider &&
+									model.model_id === startup.snapshot.selection?.model_id,
+							) ?? topModel,
+						);
+						setOptionsOpen(true);
+					}}
 					onOpenEffort={() => undefined}
 					slashQuery={null}
 					slashSheet={null}
@@ -559,7 +668,7 @@ export default function Home({
 	return (
 		<>
 			<Screen
-				testID={SCREEN.home}
+				testID={newSession ? SCREEN.newSession : SCREEN.home}
 				scroll={false}
 				/* The cap comes off only when the split is real — the list pane then
 				 *  owns its own width and the measure belongs to the composer column
@@ -569,6 +678,14 @@ export default function Home({
 				headerLeading={
 					split ? undefined : (
 						<View className="flex-row items-center gap-1">
+							<IconButton
+								accessibilityLabel="Open conversations"
+								onPress={() => setPanelOpen(true)}
+								icon={({ color, size }) => <Menu color={color} size={size} />}
+								size={22}
+								testID={CONTROL.homeSidebar}
+							/>
+							<NavigationMark />
 							{badgeCount !== null && badgeCount > 0 ? (
 								<Badge
 									label={`${badgeCount}`}
@@ -580,41 +697,74 @@ export default function Home({
 									accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
 								/>
 							) : null}
-							<IconButton
-								accessibilityLabel="Open conversations"
-								onPress={() => setPanelOpen(true)}
-								icon={({ color, size }) => <Menu color={color} size={size} />}
-								testID={CONTROL.homeSidebar}
-							/>
 						</View>
 					)
 				}
 				headerAction={
 					<View className="min-w-0 flex-1 flex-row items-center gap-2">
-						{/* The computer this will run on, and the switcher: the same
-						 *  `listLabel` ladder the panel's row uses, so the two cannot
-						 *  name one machine differently. */}
-						<Pressable
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={`${listLabel(computers, tunnelId, route)} — choose a computer`}
-							onPress={() => router.push("/tunnels")}
-							testID={CONTROL.computersButton}
-							className="min-w-0 flex-1 justify-center"
-							style={{ minHeight: TOUCH_FLOOR }}
-						>
-							<Text
-								className="text-mono-sm text-ink-muted"
-								numberOfLines={1}
-								ellipsizeMode="tail"
-							>
-								{listLabel(computers, tunnelId, route)}
-							</Text>
-						</Pressable>
+						{/* The computer this will run on, and the switcher's primary entry
+						 *  point (ux-flows F5): `● Mac mini ▾`, opening the ONE sheet rather
+						 *  than navigating away. It keeps this slot's `min-w-0 flex-1` and
+						 *  its both-axis TOUCH_FLOOR (design round 9, D24) — see
+						 *  `HeaderComputerChip`; the name comes from the same saved/account-scoped
+						 *  selector the switcher sheet uses. The width floor is only honourable
+						 *  because the BELL yields its pill at large text (and the chip its
+						 *  chevron at the same step), so nothing overflows the 320 pt row. */}
+						<HeaderComputerChip testID={CONTROL.computersButton} />
 						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
 						 *  came from the same label as the computer name beside it, and a
 						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
 						 *  Settings. The gear says what the control does; the accessible name
 						 *  still comes from the caller's label. */}
+						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
+						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
+						 *  button's box — an inert fifth control the reader tries to tap
+						 *  (design review round 2 D10). An absolutely-positioned badge
+						 *  fixed the distance but OVERLAPPED the pressable's own box by
+						 *  94 pt² (audit U-08 on S4/idle), so the count is a trailing
+						 *  accessory INSIDE one pressable: a single 44 pt target, no
+						 *  overlap, and the number reads as part of the bell. */}
+						{inboxEnabled ? (
+							<Pressable
+								accessibilityRole={ROLE.button}
+								accessibilityLabel={
+									inboxCount === null
+										? "Notifications"
+										: `Notifications, ${inboxCount} unread`
+								}
+								onPress={() => router.push("/notifications")}
+								testID={CONTROL.homeNotifications}
+								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+								className="flex-row items-center justify-center gap-1 px-2"
+							>
+								<BellIcon
+									waiting={headerBellShowsDot(effectiveScale, inboxCount)}
+								/>
+								{/* THE PILL YIELDS FIRST, at and above 200 % text. The bell keeps
+								 *  its 44 pt target and its accessible name keeps the count
+								 *  ("Notifications, 120 unread"), while the ~55 pt the pill
+								 *  was taking goes to the computer switcher, which otherwise
+								 *  cannot hold its own floor (D24). Nothing is lost silently:
+								 *  the same number is on the rail's row inside the pane. */}
+								{inboxCount !== null &&
+								inboxCount > 0 &&
+								headerBellShowsCount(effectiveScale) ? (
+									<View testID={CONTROL.homeNotificationsCount}>
+										<Badge
+											/* THE APP'S ONE CAP: a four-digit count would widen the pill
+											 *  until it took width from the label (R7-02/D21). */
+											label={countLabel(inboxCount)}
+											/* The same 300 % step the rail's count passes (D25). */
+											scale={effectiveScale}
+											tone="warning"
+											emphasis
+											mono
+											accessibilityLabel={`${inboxCount} unread notifications`}
+										/>
+									</View>
+								) : null}
+							</Pressable>
+						) : null}
 						<IconButton
 							accessibilityLabel="Settings"
 							onPress={() => router.push("/settings")}
@@ -635,6 +785,109 @@ export default function Home({
 					composerColumn
 				)}
 			</Screen>
+
+			<Sheet
+				visible={optionsOpen}
+				onClose={() => setOptionsOpen(false)}
+				title={t("mobile.home.options.title")}
+				testID={CONTROL.startupOptions}
+			>
+				<View className="gap-3 py-2">
+					<Input
+						label={t("mobile.home.options.folder")}
+						value={optionPath}
+						onChangeText={setOptionPath}
+						disabled={!selectionEditable}
+						testID={CONTROL.newSessionCwd}
+					/>
+					{models.map((model) => (
+						<Button
+							key={model.selector}
+							label={model.label ?? model.name ?? model.selector}
+							variant={
+								optionModel?.selector === model.selector ? "primary" : "quiet"
+							}
+							onPress={() => setOptionModel(model)}
+							disabled={!selectionEditable}
+							testID={CONTROL.startupModelOption}
+						/>
+					))}
+					<Button
+						label={t("mobile.home.options.apply")}
+						disabled={!selectionEditable || optionPath.trim() === ""}
+						onPress={() => {
+							setHomeDirectory(optionPath.trim());
+							setTopModel(optionModel);
+							setOptionsOpen(false);
+							void startup.configure({
+								cwd: optionPath.trim(),
+								...(optionModel
+									? {
+											provider: optionModel.provider,
+											model_id: optionModel.model_id,
+										}
+									: {}),
+							});
+						}}
+						testID={CONTROL.startupOptionsApply}
+					/>
+					{!selectionEditable ? (
+						<Text className="text-body-sm text-ink-muted">
+							{t("mobile.home.options.fixed")}
+						</Text>
+					) : null}
+				</View>
+			</Sheet>
+
+			<Sheet
+				visible={queueOpen}
+				onClose={() => setQueueOpen(false)}
+				title={t("mobile.home.queue.sheet_title")}
+				testID={CONTROL.startupQueueSheet}
+			>
+				<View className="gap-4 py-2">
+					{startup.snapshot.queue.map((message, index) => (
+						<View key={message.command_id} className="gap-1">
+							<Text className="text-meta text-ink-muted">
+								Queued message {index + 1}
+							</Text>
+							<Text selectable className="text-body text-ink">
+								{message.text}
+							</Text>
+							{message.images?.length ? (
+								<Text className="text-body-sm text-ink-muted">
+									{message.images.length} image attachments retained
+								</Text>
+							) : null}
+						</View>
+					))}
+					{/* UX U1: a queue that cannot drain must not be a dead end. These are
+					    the reader's own bytes — they can go back to the editor, or go
+					    away on an explicit word, and neither happens behind their back. */}
+					<View className="gap-2">
+						<Button
+							label={t("mobile.home.queue.restore")}
+							variant="quiet"
+							testID={CONTROL.startupQueueRestore}
+							onPress={() => {
+								void startup.restoreQueueToDraft().then((done) => {
+									if (done) setQueueOpen(false);
+								});
+							}}
+						/>
+						<Button
+							label={t("mobile.home.queue.discard")}
+							variant="quiet"
+							testID={CONTROL.startupQueueDiscard}
+							onPress={() => {
+								void startup.discardQueue().then((done) => {
+									if (done) setQueueOpen(false);
+								});
+							}}
+						/>
+					</View>
+				</View>
+			</Sheet>
 
 			<HomeStateMarkers draft={draft} offline={offline || !connected} />
 

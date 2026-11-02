@@ -7,6 +7,7 @@ import {
 	TABLE_MONO_ADVANCE_PT,
 	TABLE_SANS_ADVANCE_PT,
 	TABLE_TOKEN_CAP,
+	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
 
@@ -315,5 +316,44 @@ describe("column pricing", () => {
 		expect(min200).toBeCloseTo(min100 * 2, 4);
 		expect(ms200).toBeCloseTo(ms100 * 2, 4);
 		expect(at200.naturalWidth).not.toBeCloseTo(at100.naturalWidth, 0);
+	});
+});
+
+describe("tableFadeGeometry (the scroll-cue fade, both directions)", () => {
+	/* The gradient is painted left to right in physical coordinates, so the opaque
+	 * stop has to agree with the side the band is pinned to. */
+	it("ltr is the identity: end is the right edge, solid at the right", () => {
+		expect(tableFadeGeometry("end", false)).toEqual({
+			side: "right",
+			nearOpacity: 0,
+			farOpacity: 1,
+		});
+		expect(tableFadeGeometry("start", false)).toEqual({
+			side: "left",
+			nearOpacity: 1,
+			farOpacity: 0,
+		});
+	});
+
+	it("rtl swaps the sides, and the opaque stop moves with the band", () => {
+		expect(tableFadeGeometry("end", true)).toEqual({
+			side: "left",
+			nearOpacity: 1,
+			farOpacity: 0,
+		});
+		expect(tableFadeGeometry("start", true)).toEqual({
+			side: "right",
+			nearOpacity: 0,
+			farOpacity: 1,
+		});
+	});
+
+	it("never leaves the solid end on the opposite side to the band", () => {
+		for (const rtl of [false, true]) {
+			for (const edge of ["start", "end"] as const) {
+				const g = tableFadeGeometry(edge, rtl);
+				expect(g.side === "right" ? g.farOpacity : g.nearOpacity).toBe(1);
+			}
+		}
 	});
 });

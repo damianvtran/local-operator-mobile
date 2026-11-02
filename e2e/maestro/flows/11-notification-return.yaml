@@ -1,0 +1,165 @@
+# The notifications inbox, driven on a real device: open a row's detail, come
+# back, and let the detail's read and its dismiss-all show up in the list.
+#
+# WHY THIS FLOW EXISTS: the inbox is a list with a PUSHED detail route, so the
+# list stays mounted underneath and only a re-read can make it agree with the
+# store. The web proof (`--inbox-return-proof`) proves that path in a browser;
+# this flow is the NATIVE half — a real Back press and a real detail route on an
+# Android emulator, which is the only place a device back gesture exists at all.
+# QA round 1 (`PR #127`) recorded the native return cell as BLOCKED, and a
+# build-and-launch job cannot answer it, so every state below is reached by a
+# press.
+#
+# THE SCENARIO IS `idle`: `/api/notifications` is always served from the inbox
+# store, seeded from the `notifications-populated` corpus, and `idle`'s
+# capability block advertises the inbox feature. So this flow needs no scenario
+# pin and is safe in the nightly set (`config.yaml`'s `flows:` glob).
+#
+# ASSERTIONS ARE ABOUT PRESENCE, NOT PIXELS. The row's unread dot is 8 pt of
+# round geometry with no accessibility name of its own, so "is it read" is not a
+# selector; what a flow can honestly assert is that the row is still listed after
+# Back, that the dismissed conversation is gone and the other one survived, and
+# that the empty sentence never appears in place of rows.
+#
+# IDENTIFIERS: every `id:` here is in `src/ui/a11y.ts`, which
+# `src/ui/a11y.e2e.test.ts` checks these flows against. `notification-row-<id>`
+# is a declared family member; the item ids are the corpus's own.
+#
+# CI-only: needs a booted emulator and an app build (ADR 0003).
+appId: ${APP_ID}
+name: "Notifications — detail read and dismiss-all return to the list"
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "home-notifications"
+- extendedWaitUntil:
+    visible:
+      id: "notifications-screen"
+    timeout: 15000
+# The filter row is drawn by the list itself, so waiting for it is what proves
+# the first read landed rather than the route merely mounting.
+- extendedWaitUntil:
+    visible:
+      id: "notifications-filter-all"
+    timeout: 15000
+- tapOn:
+    id: "notifications-filter-all"
+- extendedWaitUntil:
+    visible:
+      id: "notification-row-n_fraud"
+    timeout: 15000
+# The unread pile and the All pile both hold these two rows, so the negative
+# control is the empty sentence: a list that emptied itself would still "pass" a
+# row assertion written against the wrong filter.
+- assertNotVisible:
+    id: "notifications-empty"
+- takeScreenshot: "11-00-inbox-populated"
+# OPENING THE LOADED DETAIL IS THE EXPLICIT READ (D11): nothing on the reel
+# writes a read, so this press is what puts the item into the store as read.
+- tapOn:
+    id: "notification-row-n_audit"
+- extendedWaitUntil:
+    visible:
+      id: "notification-back"
+    timeout: 15000
+# The From card — which owns this conversation's dismiss-all — sits BELOW the
+# fold on a phone: measured on this flow's own first hosted run, where a bare
+# assertVisible failed against a correct screen (run 40796483025, step 37). Scroll
+# to it rather than assume it is in view.
+- scrollUntilVisible:
+    element:
+      id: "notification-dismiss-all"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "notification-dismiss-all"
+- takeScreenshot: "11-01-detail-read"
+# A REAL device Back, not a history call: the list was never unmounted, so the
+# re-read this PR added is the only thing making it agree with the store. The
+# header control has scrolled away by now, so it is scrolled back INTO view first.
+- scrollUntilVisible:
+    element:
+      id: "notification-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "notification-back"
+- extendedWaitUntil:
+    visible:
+      id: "notification-row-n_audit"
+    timeout: 15000
+- assertNotVisible:
+    id: "notifications-empty"
+- takeScreenshot: "11-02-read-return"
+# The same return again, this time after a WRITE the detail ran: dismiss all from
+# this conversation, which removes every one of its rows while n_fraud (a second
+# conversation) must survive.
+- tapOn:
+    id: "notification-row-n_audit"
+- extendedWaitUntil:
+    visible:
+      id: "notification-back"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "notification-dismiss-all"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "notification-dismiss-all"
+- extendedWaitUntil:
+    visible:
+      id: "notification-dismiss-all-dialog"
+    timeout: 15000
+- tapOn:
+    id: "dialog-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "notification-dismiss-all-undo"
+    timeout: 15000
+- takeScreenshot: "11-03-dismiss-detail"
+- scrollUntilVisible:
+    element:
+      id: "notification-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "notification-back"
+# The dismissed conversation is gone from the list on return, and the row the
+# confirmation promised is not silently re-painted from a stale answer.
+- extendedWaitUntil:
+    notVisible:
+      id: "notification-row-n_audit"
+    timeout: 15000
+- assertVisible:
+    id: "notification-row-n_fraud"
+- assertNotVisible:
+    id: "notifications-empty"
+- takeScreenshot: "11-04-dismiss-return"
+# A second return after ANOTHER read, on the surviving conversation: the same
+# re-read path, reached from a list that has already changed once. Two returns
+# are the point — a fix that re-reads only on the first Back would pass a
+# single-return assertion and still strand the second.
+- tapOn:
+    id: "notification-row-n_fraud"
+- extendedWaitUntil:
+    visible:
+      id: "notification-back"
+    timeout: 15000
+- tapOn:
+    id: "notification-back"
+- extendedWaitUntil:
+    visible:
+      id: "notification-row-n_fraud"
+    timeout: 15000
+- assertNotVisible:
+    id: "notification-row-n_audit"
+- assertNotVisible:
+    id: "notifications-empty"
+- takeScreenshot: "11-05-second-return"

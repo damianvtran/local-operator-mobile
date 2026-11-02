@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "audit_id": "libc-fr-r1",
+ "locale": "fr",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 31,
+ "value_count": 31,
+ "kind": "initial independent audit (library extraction wave, Audit C)",
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/lib-wave",
+ "base_commit": "4fd4ad7c (plus uncommitted extraction and translations; read-only for this auditor)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "e89500535af7",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "session header ('Model: anthropic/claude-sonnet-5-5'); no model-switch notice seen in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "fr (native-fluent reader; no MT or translation service used, no back-translation tool)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/fr/mobile.library.json",
+   "sha256": "e07c70d5566e4af4b1d78e47a5d1411a5f7db64f6948f270fc0d0797c385fe9d"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc"
+  }
+ },
+ "file_unchanged_during_audit": "audit.log hashes the target at the start and again as its last command; both equal input_hashes.target.sha256",
+ "call_sites_read": [
+  "src/features/library/library-detail.tsx (editor sheet 815-910, Dialog 914-929, detail 238-370)",
+  "src/features/library/library-screen.tsx (chips 280-310, sheets 435-640)",
+  "src/ui/components/dialog.tsx (Cancel = t(\"mobile.common.cancel\"), confirmLabel prop, danger variant)"
+ ],
+ "ledger_command": "none exists in this repo (no 'ledger' in docs/i18n.md, package.json scripts or scripts/i18n); status is recorded here in current_report_verdict only. Nothing was written to any ledger file.",
+ "findings": [
+  {
+   "id": "libc-fr-r1-1",
+   "severity": "NIT",
+   "key": "mobile.library.browse.any_tag",
+   "current": "Toute étiquette",
+   "replacement": "Toutes les étiquettes",
+   "why": "Filter choice that lifts the tag restriction; French filter lists say « Toutes les … ». « Toute étiquette » is grammatical but reads as an English calque (\"any tag\").",
+   "verified": "render in audit.log (unchanged value shown); judgment only, no catalogue term conflicts"
+  },
+  {
+   "id": "libc-fr-r1-2",
+   "severity": "NIT",
+   "key": "mobile.library.browse.no_tags",
+   "current": "Aucune étiquette pour l’instant. Le bibliothécaire en ajoute en organisant les éléments.",
+   "replacement": "Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.",
+   "why": "« en ajoute en organisant » stacks two « en » (partitive pronoun, then gerund) and stumbles when read aloud; « les ajoute » is cleaner. Meaning and lower-case « bibliothécaire » (core fr wire.settings.librarian / librarian_* errors) are right.",
+   "verified": "before/after rendered through messages.ts in audit.log"
+  }
+ ],
+ "audit_notes": "audit_notes_not_execution_log: judgments are mine; command output is in audit.log only. Reads of call sites and sibling catalogues (sed/grep/python) are not replayed in audit.log. Out-of-catalogue observation, not a finding on this file: library-screen.tsx:300 still builds the Sort chip as the English literal `Sort: ${...}` (and \"Recently seen\"), and library-detail.tsx has English literals \"Back to the library\", \"Favorite(d)\", \"A conversation\", \"Clear filters\" - no key exists for them, so this bundle cannot judge them.",
+ "execution_note": "the first foreground attempt of run.sh timed out (node startup under load); the five audit.log files are the complete reruns, each with 8 commands all exit 0.",
+ "artifacts": {
+  "audit.log": {
+   "path": "i18n/audits/evidence/fr/mobile.library/libc-fr-r1/audit.log",
+   "sha256": "e30573194e9046057f357a3114faf3576fe238148dee3ed613383fb500f84c08"
+  },
+  "tools_sha256": {
+   "checks.py": "32ccf5277c5ec848f19d3a202db68b15efbf679f2130a19b18bd7e1ab43220b5",
+   "fr.repl.json": "8e378f6e0c275cbf11c53310171dd31628fad7fa5f6bea40735a73d5f87b5bea",
+   "render.ts": "b6c0152dd00a2202c7af90249aa9d31c8c4de9bb6f344941536717e9613096fb",
+   "run.sh": "f255781e0ae2ac6471fbb1c9b2a299ef71c23af028ec1e3c24c2d1a5c849bff2"
+  },
+  "report.md": "report.md (hash omitted: it quotes this record)"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "libc-fr-r1-1",
+   "libc-fr-r1-2"
+  ]
+ }
+}

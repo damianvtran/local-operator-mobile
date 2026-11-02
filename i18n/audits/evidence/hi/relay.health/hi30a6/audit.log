@@ -1,0 +1,68 @@
+# audit.log — hindi wave 6, namespace relay.health, audit id hi30a6
+# produced by executing the repository's own validator and renderer in this session; not notes
+
+$ cd /Users/damian/workspace/hi-wave && node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/verify_ns.mjs relay.health   # repository parser + formatter, per-key
+# Hindi audit — namespace relay.health
+# generated: 2026-10-30T16:47:23.089Z
+# worktree: /Users/damian/workspace/hi-wave  HEAD: 647581a4abd5eafce09914b5b1936982749c16c4
+# git status (porcelain): M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/hi/ | ?? src/i18n/catalogues/hi/
+
+## inputs
+  en       src/i18n/catalogues/en/relay.health.json  sha256=65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f  keys=8
+  context  src/i18n/catalogues/en/relay.health.context.json  sha256=b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec  keys=8
+  hi       src/i18n/catalogues/hi/relay.health.json  sha256=50c9867895623370ad918f20876fe4513c721579314e26c8670bd851d1bcee78  keys=8
+
+## structure
+  [PASS] key set identical — en=8 hi=8
+  [PASS] no key dropped or added
+  [PASS] every key documented in the context sidecar — ctx=8
+  [INFO] placeholder-bearing messages: 0; plural-bearing messages: 0
+  [PASS] placeholder surface identical on every key
+  [PASS] ICU arms identical on every key
+  [PASS] code spans identical on every key
+
+## render through the worktree renderer (parseMessage + formatMessage)
+  [PASS] all 8 values render without error
+
+## typography / Devanagari
+  [PASS] typography predicates clean
+  [INFO] values carrying danda: 5/8; ellipsis U+2026: 0
+
+## mirror check against core's committed Hindi (git -C core show origin/main:<path>)
+  [INFO] core origin/main = 8076c56acd56f07f1cabf90fd7fca8bf0e5acdff
+  [PASS] byte-identical relay.health.dropped_detail
+  [PASS] byte-identical relay.health.ended_detail
+  [PASS] byte-identical relay.health.ended_send_failed
+  [PASS] byte-identical relay.health.live
+  [PASS] byte-identical relay.health.live_detail
+  [PASS] byte-identical relay.health.quiet_detail
+  [PASS] byte-identical relay.health.reconnecting
+  [PASS] byte-identical relay.health.reconnecting_detail
+  [INFO] core keys not mirrored by the mobile catalogue: 0
+
+## result
+  checks failed: 0
+  VERDICT(mechanical): PASS
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/compose_ns.mjs relay.health   # composed sentences quoted in report.md
+# composition for relay.health
+  values as the shared component renders them:
+    ऑनलाइन
+    आपके कंप्यूटर पर चल रहा है — संदेश तुरंत पहुँच जाते हैं
+    फिर से कनेक्ट हो रहा
+    इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।
+    आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है।
+    आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।
+    इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ।
+    यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।
+    → ऑनलाइन ⏎ आपके कंप्यूटर पर चल रहा है — संदेश तुरंत पहुँच जाते हैं ⏎ फिर से कनेक्ट हो रहा ⏎ इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है। ⏎ आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है। ⏎ आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा। ⏎ इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ। ⏎ यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।
+exit=0

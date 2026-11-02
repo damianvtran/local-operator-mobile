@@ -1,0 +1,137 @@
+## schedules — production clause functions, vi
+head.next 3 wakes, +240s	3 lần thức dậy · lần tới sau 4m
+head.next 1 wake, +240s	1 lần thức dậy · lần tới sau 4m
+head.next 2 wakes, +5400s	2 lần thức dậy · lần tới sau 1h
+head.overdue 3 wakes, -7200s	3 lần thức dậy · trễ 2h
+head.overdue 1 wake, -60s	1 lần thức dậy · trễ 60s
+due.ahead 4m	sau 4m
+due.overdue 2h	trễ 2h
+cadence.every 1d	mỗi 1d
+cadence.left 3 remaining	mỗi 1d · còn 3
+cadence.spent	mỗi 1d · không còn lượt gửi
+cadence.once	không lặp
+parked.wakes	Tạm gác — các lần thức dậy tiếp tục sau lượt tiếp theo của cuộc trò chuyện
+parked.monitors	Tạm gác — giám sát tiếp tục khi cuộc trò chuyện của nó chạy lại
+gone.wakes	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kích hoạt
+gone.monitors	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kiểm tra
+count.wakes 1	1 lần thức dậy
+count.wakes 2	2 lần thức dậy
+count.wakes 21	21 lần thức dậy
+count.monitors 1	1 giám sát
+count.monitors 2	2 giám sát
+count.monitors 0	0 giám sát
+truncated wakes 10/42	Đang hiện 10 trên 42 cuộc trò chuyện có lần thức dậy.
+truncated monitors 10/42	Đang hiện 10 trên 42 cuộc trò chuyện có giám sát.
+truncated wakes 3/4	Đang hiện 3 trên 4 cuộc trò chuyện có lần thức dậy.
+truncated monitors 1/2	Đang hiện 1 trên 2 cuộc trò chuyện có giám sát.
+HEADER wakes 3	Wakes · 3 đã lên lịch
+HEADER wakes 1	Wakes · 1 đã lên lịch
+HEADER wakes 0	Wakes · 0 đã lên lịch
+HEADER monitors 2 healthy	Monitors · 2 đang bật
+HEADER monitors 1/5 alerting	Monitors · 1 trên 5 cần chú ý
+HEADER monitors 5/5 alerting	Monitors · 5 trên 5 cần chú ý
+HEADER monitors 0	Monitors · 0 đang bật
+empty.title	Chưa có gì được bật
+empty.body	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộc trò chuyện vào thời điểm đã hẹn; giám sát theo dõi một thứ và báo khi có thay đổi.
+empty_line.wakes	Chưa lên lịch lần thức dậy nào.
+empty_line.monitors	Chưa bật giám sát nào.
+show_more.wakes 1	Hiện thêm 1 lần thức dậy
+show_more.wakes 4	Hiện thêm 4 lần thức dậy
+show_more.monitors 1	Hiện thêm 1 giám sát
+show_more.monitors 4	Hiện thêm 4 giám sát
+show_less.wakes	Hiện ít lần thức dậy hơn
+show_less.monitors	Hiện ít giám sát hơn
+read_error.wakes	Không đọc được các lần thức dậy trên máy này.
+read_error.monitors	Không đọc được các giám sát trên máy này.
+read_unreachable	Vừa rồi không đọc được lịch trên máy này.
+supervisor.not_running	Bộ giám sát các lần thức dậy đã được cài nhưng không hoạt động, nên các lần thức dậy bên dưới sẽ không chạy.
+supervisor.unsupported	Nền tảng này chưa giám sát các lần thức dậy, nên các lần thức dậy bên dưới chỉ chạy khi cuộc trò chuyện đang chạy.
+supervisor.unverifiable	Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.
+state.disabled	đã tắt
+state.dormant	tạm nghỉ
+state.expired	hết hạn
+state.stale	cũ
+state.waiting	đang chờ
+tail.failed 2	2 thất bại
+
+## projects — production functions, vi
+milestones.none	chưa có mốc
+milestones.count 2/3	2 trên 3 mốc
+milestones.count 0/1	0 trên 1 mốc
+milestones.count 1/1	1 trên 1 mốc
+sessions.count 1	1 phiên
+sessions.count 3	3 phiên
+sessions.live 3/2	3 phiên · 2 đang chạy
+stale_badge	tiến độ cũ
+delete_body	Xóa dự án Alpha? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+delete_body (slash name)	Xóa alpha/beta? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+remove_milestone_body	Xóa mốc beta khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+write_unknown_note	Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại.
+draft_kept_note	Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.
+milestone_slash_note	Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.
+project_name_hint	1-64 ký tự: chữ cái, chữ số, dấu chấm, gạch dưới hoặc gạch nối. Không có dấu cách và không được bắt đầu bằng gạch nối.
+session_state.filed_by	ghi nhận bởi
+session_state.missing	không còn
+session_state.not_running	không chạy
+write_receipt project/created	Đã tạo Thanh toán Q4.
+write_receipt project/completed	Đã hoàn thành Thanh toán Q4.
+write_receipt project/reopened	Đã mở lại Thanh toán Q4.
+write_receipt project/added	Đã thêm Thanh toán Q4.
+write_receipt project/updated	Đã cập nhật Thanh toán Q4.
+write_receipt project/removed	Đã xóa Thanh toán Q4.
+write_receipt project/deleted	Đã xóa Thanh toán Q4.
+write_receipt milestone/created	Đã tạo mốc Thanh toán Q4.
+write_receipt milestone/completed	Đã hoàn thành mốc Thanh toán Q4.
+write_receipt milestone/reopened	Đã mở lại mốc Thanh toán Q4.
+write_receipt milestone/added	Đã thêm mốc Thanh toán Q4.
+write_receipt milestone/updated	Đã cập nhật mốc Thanh toán Q4.
+write_receipt milestone/removed	Đã xóa mốc Thanh toán Q4.
+write_receipt milestone/deleted	Đã xóa mốc Thanh toán Q4.
+write_receipt other/created	Đã tạo Thanh toán Q4.
+write_receipt other/completed	Đã hoàn thành Thanh toán Q4.
+write_receipt other/reopened	Đã mở lại Thanh toán Q4.
+write_receipt other/added	Đã thêm Thanh toán Q4.
+write_receipt other/updated	Đã cập nhật Thanh toán Q4.
+write_receipt other/removed	Đã xóa Thanh toán Q4.
+write_receipt other/deleted	Đã xóa Thanh toán Q4.
+
+## notifications — t(), vi
+mobile.notifications.answer	Trả lời
+mobile.notifications.back	Quay lại
+mobile.notifications.detail.answer_in_conversation	Trả lời trong cuộc trò chuyện
+mobile.notifications.detail.conversation_asks	Câu hỏi trong cuộc trò chuyện này
+mobile.notifications.detail.earlier_updates	Cập nhật trước đó
+mobile.notifications.detail.from	Nguồn
+mobile.notifications.detail.no_asks	Không có câu hỏi nào trong cuộc trò chuyện này.
+mobile.notifications.detail.nothing_to_dismiss	Không có cập nhật nào từ cuộc trò chuyện này để bỏ qua.
+mobile.notifications.detail.projects	Dự án
+mobile.notifications.dismiss	Bỏ qua
+mobile.notifications.filter_label	Hiển thị
+mobile.notifications.load_failed	Không thể tải thông báo
+mobile.notifications.priority_high	Cao
+mobile.notifications.title	Thông báo
+
+## computers — t(), vi
+mobile.computers.add	Thêm máy tính
+mobile.computers.added.stays_listed	Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.
+mobile.computers.badge.active	hoạt động
+mobile.computers.badge.connecting	đang kết nối
+mobile.computers.connecting	Đang kết nối…
+mobile.computers.none_on_phone	Chưa có máy tính nào trên điện thoại này.
+mobile.computers.password_placeholder	Mật khẩu từ lop mobile
+mobile.computers.section.not_connected	Trong tài khoản Radient của bạn, chưa kết nối
+mobile.computers.section.on_phone	Trên điện thoại này
+mobile.computers.switch	Chuyển máy tính
+
+## English twin — same production functions
+head.next 3 wakes, +240s	3 wakes · next in 4m
+head.overdue 3 wakes, -7200s	3 wakes · 2h overdue
+HEADER wakes 3	Wakes · 3 scheduled
+HEADER monitors 1/5 alerting	Monitors · 1 of 5 need attention
+delete_body	Delete Alpha? The project row goes for good. Its linked sessions and their transcripts are not touched.
+remove_milestone_body	Remove beta from this project? The milestone goes for good. The project's sessions and its progress line are not touched.
+write_receipt milestone/deleted	Deleted milestone beta.
+
+## renderer gate
+renderFor('vi') returns	Chưa có gì được bật
+LOCALISED_MESSAGES.vi keys: 143

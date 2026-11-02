@@ -49,9 +49,19 @@
  */
 
 import type { InputMode, PromptImage } from "../contracts";
+import {
+	DispatchClosedError,
+	isDispatchWithdrawn,
+	runCommandOperation,
+} from "./command-lifecycle";
 import type { RelayEndpoints } from "./endpoints";
 import { isRelayError, RelayError, transportError } from "./errors";
-import type { ContinuationOp, RetryEnvelopeStore } from "./retry-envelope";
+import {
+	type ContinuationEnvelope,
+	type ContinuationOp,
+	EnvelopeStorageError,
+	type RetryEnvelopeStore,
+} from "./retry-envelope";
 
 export interface SendResult {
 	/** The relay's own sentence: `prompt admitted`, or `already admitted` on a
@@ -70,6 +80,9 @@ export interface SendCommandInput {
 	op: ContinuationOp;
 	text: string;
 	images?: PromptImage[];
+	/** A durable outbox owns this identity across helper cleanup/expiry. Never
+	 * replace it with holdNew's UUID or displace a different unresolved item. */
+	envelope?: ContinuationEnvelope;
 	/** The silent annotation (design §2.1): `input_mode` and, when a dictation ran,
 	 *  the `input_path` the transcribe response returned. Part of the instruction's
 	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
@@ -117,6 +130,7 @@ function registryFor(envelopes: RetryEnvelopeStore): Map<string, InFlightSend> {
  *  same image with its fields in a different order are still one instruction. */
 function payloadKeyOf(input: SendCommandInput): string {
 	return JSON.stringify([
+		input.envelope?.command_id ?? null,
 		input.op,
 		input.text,
 		(input.images ?? []).map((image) => [image.mime_type, image.data_b64]),
@@ -133,7 +147,17 @@ function begin(
 	predecessor: InFlightSend | undefined,
 	payload: string,
 ): InFlightSend {
-	const finished = (async (): Promise<Settled> => {
+	/* The whole hold -> HTTP -> settle lifecycle is the registered operation. Doing
+	 * it here rather than in `runSend` is what makes "through final settle" exact: a
+	 * purge that starts mid-flight waits for the envelope's disposition to be
+	 * written (or deliberately kept as ambiguity), never for a half of it. */
+	/* A closed barrier is a REFUSAL TO START, not a failed send: nothing was put on
+	 * the wire and nothing must be recorded as ambiguity. It therefore joins the
+	 * existing non-rejecting `Settled` channel rather than arriving as a rejected
+	 * operation — a rejected `finished` also made the registry's cleanup chain an
+	 * unhandled rejection (review round 3, R3-1), because `void finished.then(...)`
+	 * has no rejection arm and the failure is already reported through `outcomeOf`. */
+	const lifecycle = async (): Promise<Settled> => {
 		if (predecessor) {
 			const settled = await predecessor.finished;
 			/* A DIFFERENT instruction must not take the single envelope slot while the
@@ -165,7 +189,13 @@ function begin(
 					: transportError(cause, "send command"),
 			};
 		}
-	})();
+	};
+	const finished: Promise<Settled> = isDispatchWithdrawn()
+		? Promise.resolve<Settled>({
+				ok: false,
+				error: new DispatchClosedError(),
+			})
+		: runCommandOperation(lifecycle);
 	const entry: InFlightSend = { payload, finished };
 	registry.set(input.sessionId, entry);
 	void finished.then(() => {
@@ -221,8 +251,10 @@ export async function sendPersistedCommand(
 	const payload = payloadKeyOf(input);
 	if (unresolved && unresolved.payload === payload) {
 		/* The same instruction: join it. The joiner's own bytes ARE what is being
-		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. */
-		return outcomeOf(await unresolved.finished);
+		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. The
+		 * wait is registered as an operation, because a purge that starts now still
+		 * has to see this settle before it may delete the envelope. */
+		return outcomeOf(await runCommandOperation(() => unresolved.finished));
 	}
 	return outcomeOf(await begin(input, registry, unresolved, payload).finished);
 }
@@ -230,13 +262,36 @@ export async function sendPersistedCommand(
 /** The one place an envelope is held, sent and settled. */
 async function runSend(input: SendCommandInput): Promise<SendResult> {
 	const { client, envelopes, sessionId } = input;
-	const held = await envelopes.holdNew(
-		sessionId,
-		input.op,
-		input.text,
-		input.images,
-		{ input_mode: input.input_mode, input_path: input.input_path },
-	);
+	let held: { envelope: ContinuationEnvelope; reused: boolean };
+	if (input.envelope) {
+		const expected = input.envelope;
+		const existing = await envelopes.peek(sessionId);
+		const expectedPayload = payloadKeyOf({
+			...input,
+			...expected,
+			envelope: expected,
+		});
+		if (
+			expectedPayload !== payloadKeyOf(input) ||
+			(existing &&
+				payloadKeyOf({ ...input, ...existing, envelope: existing }) !==
+					expectedPayload)
+		) {
+			throw new EnvelopeStorageError(
+				"a different unresolved instruction owns this session",
+			);
+		}
+		await envelopes.hold(sessionId, expected);
+		held = { envelope: expected, reused: false };
+	} else {
+		held = await envelopes.holdNew(
+			sessionId,
+			input.op,
+			input.text,
+			input.images,
+			{ input_mode: input.input_mode, input_path: input.input_path },
+		);
+	}
 	const { envelope } = held;
 	try {
 		const ack = await client.command(sessionId, {

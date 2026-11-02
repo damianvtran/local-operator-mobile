@@ -13,6 +13,7 @@
  * no field to carry it, so no card can render it even from a hand-built row.
  */
 
+import { activeLocale, t } from "@/i18n";
 import type { Conversation, DirectoryMember } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 
@@ -86,7 +87,7 @@ const present = (value: string | undefined): string | null =>
  */
 export function subjectMarkLabel(subject: ProfileSubject): string {
 	return subject.agent
-		? subject.person.agent?.name.trim() || "Chief of staff"
+		? subject.person.agent?.name.trim() || t("mobile.team_bridge.profile.chief")
 		: model.personLabel(subject.person);
 }
 
@@ -109,21 +110,32 @@ export function profileCard(
 	const personName = model.personLabel(person);
 	const profile = person.profile;
 	const agentName = subject.agent
-		? person.agent?.name.trim() || "Chief of staff"
+		? person.agent?.name.trim() || t("mobile.team_bridge.profile.chief")
 		: null;
 	return {
-		name: agentName ? `${agentName} (${personName})` : personName,
+		name: agentName
+			? t("mobile.team_bridge.profile.name_with_owner", {
+					agent: agentName,
+					owner: personName,
+				})
+			: personName,
 		markLabel: subjectMarkLabel(subject),
 		kind: agentName ? "agent" : "human",
-		badge: agentName ? "Agent" : "Person",
+		badge: agentName
+			? t("mobile.team_bridge.profile.badge_agent")
+			: t("mobile.team_bridge.profile.badge_person"),
 		/* Just the role: the heading already reads "Agent (Owner)" and the
 		 * details sit under "About {owner}", so naming the owner a third time
 		 * pushed their details below the fold for long names (design D8). */
-		owner: agentName ? "Chief of staff" : null,
-		detailsLabel: agentName ? `About ${personName}` : null,
+		owner: agentName ? t("mobile.team_bridge.profile.chief") : null,
+		detailsLabel: agentName
+			? t("mobile.team_bridge.profile.about_owner", { owner: personName })
+			: null,
 		title: present(profile?.title),
 		description: present(profile?.description),
-		localTime: localTime(profile?.timezone, now, locale),
+		// Format in the catalogue's resolved language, not a different device
+		// locale; explicit test/caller locale still takes precedence.
+		localTime: localTime(profile?.timezone, now, locale ?? activeLocale()),
 	};
 }
 
