@@ -44,7 +44,9 @@ const oldSha = AGENT_AVATAR_SHAS.researcher;
 const newSha = AGENT_AVATAR_SHAS.reviewer;
 const avatar = (agent: Agent = "researcher", sha = oldSha) =>
 	`/v1/agents/${agent}/avatar?v=${sha}`;
-const rigs: Awaited<ReturnType<typeof start>>[] = [];
+// The cleanup registry owns only close(), not the factory's full inferred shape.
+// This capability boundary also prevents a recursive start/registry type cycle.
+const rigs: { close(): Promise<void> }[] = [];
 
 async function start() {
 	const relay = createRelay({

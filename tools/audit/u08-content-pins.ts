@@ -438,7 +438,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Recompute from the actual union: endpoint-owned avatar retirement and
 	 * localized profile controls plus current delivery/help/schema/fixtures.
 	 * Neither parent digest proves this merged corpus; runtime pins stay exact. */
-	src: "929d0644d525e48de83075b3fd221ca9c1f9c4b818c2bfb517a6bc9b38cbfaa9",
+	src: "73e6b6b05ae0d1b7d217de0f7441327b9c79361e8cc9180b615e88e3819c811f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

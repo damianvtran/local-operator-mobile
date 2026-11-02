@@ -53,7 +53,8 @@ const NAMESPACES = [
 		name: "mobile.team_bridge",
 		messages: teamBridge,
 		context: teamBridgeContext,
-		expected: 98,
+		// Current union: endpoint-profile keys plus six delivery/help keys.
+		expected: 104,
 	},
 	{
 		name: "mobile.common",
@@ -187,7 +188,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(282);
+		expect(total).toBe(288);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -256,6 +257,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Agent is also the French term for a software agent; this role badge is an idiomatic cognate, not an English fallback.",
 		"mobile.team_bridge.profile.message":
 			"Message is also the French noun for the profile contact action; opening the message composer does not send a message.",
+		"mobile.team_bridge.delivery.recipient":
+			"Agent is also the French noun for the recipient agent; identical spelling is intentional, not an English fallback.",
 		"mobile.team_bridge.conversation":
 			"Conversation is also the French noun for a conversation; the correct isolated heading has identical spelling.",
 		"mobile.team_bridge.thread.message":
