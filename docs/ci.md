@@ -759,3 +759,34 @@ afternoon.
 | `ios` fails in `xcodebuild` with a signing error | Only the `internal` job signs. Check `APPLE_TEAM_ID`, and that the App Store Connect key has not been revoked. |
 | `release.yml` stops at "Check the signing and store credentials, by name" | Exactly what it is for: the message lists every missing variable name. Set them, then re-run. |
 | `e2e` jobs are `skipped` | The detector job failed because the audit harness is not on this ref, and the suites behind it were skipped for that reason (`needs`). The detector's annotation names every missing piece, and the workflow conclusion is **failure**, not success — a green `e2e` means the suites ran. |
+
+
+## Targeted native Urdu project-create proof
+
+`e2e.yml` offers `proof_mode = projects-create-ios-proof` (dispatch only, not
+full E2E). It exists because the project-create sheet's Urdu copy
+(right-to-left, native text shaping) had web-export evidence but no native
+frame, and the development host has no simulator.
+
+- **What it does:** downloads an already-built `ios-simulator` artifact (inputs
+  `native_run_id`, `native_artifact_name`, `native_artifact_sha256`), verifies
+  the digest twice, extracts it with `scripts/ci/account-routing-artifact.py`'s
+  safe extractor, boots ONE fresh owned simulator and runs
+  `e2e/maestro/projects-create-proof/` (outside the default `flows/*.yaml`
+  suite): connect, sidebar, Projects list frame, open the sheet, assert the
+  literal Urdu title/status labels/submit, capture light and dark frames
+  (first/settled/lower fields) and a hierarchy dump. It never submits.
+- **Language:** the app takes its language from the relay's config stream, not
+  the device locale, and the stream does not push later changes, so the mock
+  relay starts with `--language ur` before the app connects. A second relay with
+  `en` runs the same walk as a negative control (Urdu title must be absent).
+- **Never builds.** A missing, expired or mismatching artifact fails the job.
+  The GitHub token reaches the download step only; the proof process runs with an
+  allowlisted token-free environment and a run-only password (0600 file, masked).
+- **Provenance caveat:** the default artifact (run 41506698136) was built from
+  merge ref `e84f31dc`, whose tree `32e3d23d` equals PR #150 head `91a3cbca`'s
+  tree. Report both facts; never call it literal-head provenance.
+- **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=projects-create-ios-proof`.
+- **Output:** artifact `projects-create-ios-<run id>`: `receipt.json` (incl.
+  cleanup receipt), `commands.json`, command logs, PNG frames, hierarchy dumps.
+  A pass is simulator evidence for those frames only; reviewers must view the PNGs.

@@ -1,0 +1,39 @@
+# Shared walk to the open create sheet. NOT a standalone flow (never named in the
+# config's `flows:`), it is run via `runFlow` by the two proof flows.
+#
+# The app takes its language from the RELAY's config stream, not the device
+# locale, and the stream does not push later changes: so the relay is started
+# with its language BEFORE this connect, and the connect screens below are still
+# English (no config frame yet). Only after the connect does the language apply.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: ../account-routing-proof/connect-relay-ios.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "sidebar-projects"
+    timeout: 15000
+- tapOn:
+    id: "sidebar-projects"
+- extendedWaitUntil:
+    visible:
+      id: "projects-screen"
+    timeout: 15000
+# The listing BEFORE the sheet: the sheet's language is only meaningful beside
+# the screen that opened it.
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: ${SHOT_DIR}/projects-list
+- tapOn:
+    id: "projects-new"
+- extendedWaitUntil:
+    visible:
+      id: "project-create-sheet"
+    timeout: 15000

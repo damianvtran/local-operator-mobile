@@ -1,0 +1,10 @@
+# Workspace config for the targeted Urdu project-create proof ONLY.
+#
+# WHY A SEPARATE CONFIG. e2e/maestro/config.yaml globs `flows/*.yaml`, which is
+# the default Android suite. This proof is native-iOS-only, dispatch-only and
+# reads synthetic relay state, so it must never join that suite: the flows below
+# live outside `flows/` and are selected by NAME on the command line by
+# scripts/ci/projects-create-ios-proof.ts. Nothing here is globbed.
+flows:
+  - "urdu-sheet.yaml"
+  - "english-control.yaml"
