@@ -205,6 +205,12 @@ export type CatalogueKey =
 	| "mobile.session_health.still_reopening"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.delivery.held"
+	| "mobile.team_bridge.delivery.help"
+	| "mobile.team_bridge.delivery.help_action"
+	| "mobile.team_bridge.delivery.help_title"
+	| "mobile.team_bridge.delivery.recipient"
+	| "mobile.team_bridge.delivery.refused"
 	| "mobile.team_bridge.error.http_status"
 	| "mobile.team_bridge.gate.checking"
 	| "mobile.team_bridge.gate.connecting"
@@ -466,6 +472,10 @@ export type NoParamKey =
 	| "mobile.session_health.still_reopening"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.delivery.help"
+	| "mobile.team_bridge.delivery.help_action"
+	| "mobile.team_bridge.delivery.help_title"
+	| "mobile.team_bridge.delivery.recipient"
 	| "mobile.team_bridge.gate.checking"
 	| "mobile.team_bridge.gate.connecting"
 	| "mobile.team_bridge.gate.console_error"
@@ -743,6 +753,12 @@ export type MessageParams = {
 	"mobile.session_health.still_reopening": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
+	"mobile.team_bridge.delivery.held": { recipient: string | number };
+	"mobile.team_bridge.delivery.help": NoParams;
+	"mobile.team_bridge.delivery.help_action": NoParams;
+	"mobile.team_bridge.delivery.help_title": NoParams;
+	"mobile.team_bridge.delivery.recipient": NoParams;
+	"mobile.team_bridge.delivery.refused": { recipient: string | number; category: string };
 	"mobile.team_bridge.error.http_status": { status: string | number };
 	"mobile.team_bridge.gate.checking": NoParams;
 	"mobile.team_bridge.gate.connecting": NoParams;
@@ -1044,6 +1060,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
+	"mobile.team_bridge.delivery.held": "{recipient}: Waiting for delivery.",
+	"mobile.team_bridge.delivery.help": "Each recipient’s agent checks messages before accepting them. If a message is not accepted, you can rephrase it and send a new message.",
+	"mobile.team_bridge.delivery.help_action": "About message delivery",
+	"mobile.team_bridge.delivery.help_title": "Message delivery",
+	"mobile.team_bridge.delivery.recipient": "Agent",
+	"mobile.team_bridge.delivery.refused": "{recipient}: Not delivered.{category, select, manipulation { (Manipulation)} personal_info { (Personal information)} abusive { (Abusive content)} unsafe_content { (Unsafe content)} out_of_scope { (Out of scope)} other {}}",
 	"mobile.team_bridge.error.http_status": "Radient refused the request (HTTP {status}).",
 	"mobile.team_bridge.gate.checking": "Checking Team Bridge…",
 	"mobile.team_bridge.gate.connecting": "Connecting to Radient. Your computer can stay closed.",
@@ -1330,6 +1352,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.delivery.held": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
+	"mobile.team_bridge.delivery.help": { role: "help", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
+	"mobile.team_bridge.delivery.help_action": { role: "button", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
+	"mobile.team_bridge.delivery.help_title": { role: "heading", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
+	"mobile.team_bridge.delivery.recipient": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
+	"mobile.team_bridge.delivery.refused": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
 	"mobile.team_bridge.error.http_status": { role: "help", note: "Fallback only when the Radient HTTP response has no usable server error body. Shown inside an existing error surface. Preserve the Radient product name and HTTP protocol token. {status} is the numeric HTTP response status, not a message count; do not pluralize or translate that placeholder." },
 	"mobile.team_bridge.gate.checking": { role: "status", note: "Team Bridge mobile UI: gate / checking. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
 	"mobile.team_bridge.gate.connecting": { role: "help", note: "Team Bridge mobile UI: gate / connecting. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Radient and Team Bridge are product names; Team is a plan name, not a translated generic team." },
@@ -1630,6 +1658,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
+		"mobile.team_bridge.delivery.held": "{recipient}: En espera de entrega.",
+		"mobile.team_bridge.delivery.help": "El agente de cada destinatario revisa los mensajes antes de aceptarlos. Si un mensaje no se acepta, puedes reformularlo y enviar un mensaje nuevo.",
+		"mobile.team_bridge.delivery.help_action": "Acerca de la entrega de mensajes",
+		"mobile.team_bridge.delivery.help_title": "Entrega de mensajes",
+		"mobile.team_bridge.delivery.recipient": "Agente",
+		"mobile.team_bridge.delivery.refused": "{recipient}: No se entregó.{category, select, manipulation { (Manipulación)} personal_info { (Información personal)} abusive { (Contenido abusivo)} unsafe_content { (Contenido inseguro)} out_of_scope { (Fuera de alcance)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient ha rechazado la solicitud (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Comprobando Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Conectando con Radient. Tu ordenador puede seguir cerrado.",
@@ -1914,6 +1948,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
+		"mobile.team_bridge.delivery.held": "{recipient} : En attente de livraison.",
+		"mobile.team_bridge.delivery.help": "L’agent de chaque destinataire vérifie les messages avant de les accepter. Si un message n’est pas accepté, vous pouvez le reformuler et envoyer un nouveau message.",
+		"mobile.team_bridge.delivery.help_action": "À propos de la livraison des messages",
+		"mobile.team_bridge.delivery.help_title": "Livraison des messages",
+		"mobile.team_bridge.delivery.recipient": "Agent",
+		"mobile.team_bridge.delivery.refused": "{recipient} : Non livré.{category, select, manipulation { (Manipulation)} personal_info { (Informations personnelles)} abusive { (Contenu abusif)} unsafe_content { (Contenu dangereux)} out_of_scope { (Hors périmètre)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient a refusé la requête (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Vérification de Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Connexion à Radient. Votre ordinateur peut rester fermé.",
@@ -2198,6 +2238,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
+		"mobile.team_bridge.delivery.held": "{recipient}: पहुँचाए जाने की प्रतीक्षा में।",
+		"mobile.team_bridge.delivery.help": "हर प्राप्तकर्ता का एजेंट संदेश स्वीकार करने से पहले उसकी जाँच करता है। अगर कोई संदेश स्वीकार नहीं होता, तो आप उसे दूसरे शब्दों में लिखकर नया संदेश भेज सकते हैं।",
+		"mobile.team_bridge.delivery.help_action": "संदेश पहुँचाने के बारे में",
+		"mobile.team_bridge.delivery.help_title": "संदेश पहुँचाना",
+		"mobile.team_bridge.delivery.recipient": "एजेंट",
+		"mobile.team_bridge.delivery.refused": "{recipient}: नहीं पहुँचाया गया।{category, select, manipulation { (हेरफेर)} personal_info { (व्यक्तिगत जानकारी)} abusive { (अपमानजनक सामग्री)} unsafe_content { (असुरक्षित सामग्री)} out_of_scope { (दायरे से बाहर)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient ने अनुरोध अस्वीकार कर दिया (HTTP {status})।",
 		"mobile.team_bridge.gate.checking": "Team Bridge की जाँच हो रही है…",
 		"mobile.team_bridge.gate.connecting": "Radient से जुड़ रहे हैं। आपका कंप्यूटर बंद रह सकता है।",
@@ -2482,6 +2528,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
+		"mobile.team_bridge.delivery.held": "{recipient}: Ожидает доставки.",
+		"mobile.team_bridge.delivery.help": "Агент каждого получателя проверяет сообщения перед принятием. Если сообщение не принято, вы можете переформулировать его и отправить новое сообщение.",
+		"mobile.team_bridge.delivery.help_action": "О доставке сообщений",
+		"mobile.team_bridge.delivery.help_title": "Доставка сообщений",
+		"mobile.team_bridge.delivery.recipient": "Агент",
+		"mobile.team_bridge.delivery.refused": "{recipient}: Не доставлено.{category, select, manipulation { (Манипуляция)} personal_info { (Личная информация)} abusive { (Оскорбительное содержимое)} unsafe_content { (Небезопасное содержимое)} out_of_scope { (Вне области задач)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient отклонил запрос (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Проверка Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Подключение к Radient. Компьютер можно не открывать.",
@@ -2766,6 +2818,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
+		"mobile.team_bridge.delivery.held": "{recipient}: ترسیل کا انتظار ہے۔",
+		"mobile.team_bridge.delivery.help": "ہر وصول کنندہ کا ایجنٹ پیغامات قبول کرنے سے پہلے انہیں جانچتا ہے۔ اگر کوئی پیغام قبول نہ ہو تو آپ اسے دوسرے الفاظ میں لکھ کر نیا پیغام بھیج سکتے ہیں۔",
+		"mobile.team_bridge.delivery.help_action": "پیغامات کی ترسیل کے بارے میں",
+		"mobile.team_bridge.delivery.help_title": "پیغامات کی ترسیل",
+		"mobile.team_bridge.delivery.recipient": "ایجنٹ",
+		"mobile.team_bridge.delivery.refused": "{recipient}: پہنچایا نہیں گیا۔{category, select, manipulation { (جوڑ توڑ)} personal_info { (ذاتی معلومات)} abusive { (توہین آمیز مواد)} unsafe_content { (غیر محفوظ مواد)} out_of_scope { (دائرۂ کار سے باہر)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient نے درخواست مسترد کر دی (HTTP {status})۔",
 		"mobile.team_bridge.gate.checking": "Team Bridge کی جانچ ہو رہی ہے…",
 		"mobile.team_bridge.gate.connecting": "Radient سے جڑ رہے ہیں۔ آپ کا کمپیوٹر بند رہ سکتا ہے۔",
@@ -3050,6 +3108,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
+		"mobile.team_bridge.delivery.held": "{recipient}: Đang chờ gửi đến.",
+		"mobile.team_bridge.delivery.help": "Tác nhân của mỗi người nhận kiểm tra tin nhắn trước khi chấp nhận. Nếu tin nhắn không được chấp nhận, bạn có thể diễn đạt lại và gửi một tin nhắn mới.",
+		"mobile.team_bridge.delivery.help_action": "Về việc gửi tin nhắn",
+		"mobile.team_bridge.delivery.help_title": "Gửi tin nhắn",
+		"mobile.team_bridge.delivery.recipient": "Tác nhân",
+		"mobile.team_bridge.delivery.refused": "{recipient}: Chưa được gửi đến.{category, select, manipulation { (Thao túng)} personal_info { (Thông tin cá nhân)} abusive { (Nội dung lăng mạ)} unsafe_content { (Nội dung không an toàn)} out_of_scope { (Ngoài phạm vi)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient đã từ chối yêu cầu (HTTP {status}).",
 		"mobile.team_bridge.gate.checking": "Đang kiểm tra Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "Đang kết nối với Radient. Bạn không cần mở máy tính.",
@@ -3334,6 +3398,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
+		"mobile.team_bridge.delivery.held": "{recipient}：等待送达。",
+		"mobile.team_bridge.delivery.help": "每位收件人的智能体都会在接受消息前进行检查。如果消息未被接受，您可以重新措辞并发送一条新消息。",
+		"mobile.team_bridge.delivery.help_action": "关于消息送达",
+		"mobile.team_bridge.delivery.help_title": "消息送达",
+		"mobile.team_bridge.delivery.recipient": "智能体",
+		"mobile.team_bridge.delivery.refused": "{recipient}：未送达。{category, select, manipulation { (操纵)} personal_info { (个人信息)} abusive { (辱骂内容)} unsafe_content { (不安全内容)} out_of_scope { (超出范围)} other {}}",
 		"mobile.team_bridge.error.http_status": "Radient 拒绝了该请求（HTTP {status}）。",
 		"mobile.team_bridge.gate.checking": "正在检查 Team Bridge…",
 		"mobile.team_bridge.gate.connecting": "正在连接 Radient，无需打开电脑。",

@@ -126,8 +126,20 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * browser run can render a non-English catalogue at all. Those are exactly the files
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
+	/* Reviewed selected-response helper in both render drivers’ relay import
+	 * closure. Test cleanup code is not an instrument and is not pinned. */
+	/* Actual standard --print over the complete intent-listed candidate: quiet
+	 * delivery/help/schema and all-eight-locale generated keys move src; native
+	 * formatting moves these two mock instrument bytes. Historical ORIGINAL
+	 * declarations remain unchanged. This identity is not rendered QA evidence. */
+	/* QA delta: fresh mutable barrier-state guard, preserved cancellation fence,
+	 * native-icon SSR adapter and synchronous account/route help identity.
+	 * Import organization also changes instrument bytes. Values below come from
+	 * actual standard --print; tests/pixels and historical declarations are distinct. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/relay.ts":
-		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
+		"4c031deb02229da44dc55b0d03be9b17614953fc9e643c7bc57e1c2fdbd2ffe8",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -423,16 +435,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	/* #119 source convergence with #105 d83: endpoint-owned avatars, keyed
-	 * profile copy in all eight locales, and synchronous media retirement.
-	 * Derived from all 625 indexed src members after generation/formatting;
-	 * no selector, instrument, input or historical evidence identity changed.
-	 * This is source admission, not new rendered/native proof. */
-	/* The first actual merged-source run reproduced identity-policy and RTL
-	 * failures: reasoned per-key exceptions preserve strict equality checks,
-	 * a prose sentinel protects placeholder-only entries, and the image uses
-	 * logical start. Re-derived across the same 625 src members. */
-	src: "0ba2b61bea6d9acc0a6dddefadd8cc90563dd446f68d267116546f70c2e2dcd1",
+	/* Recompute from the actual union: endpoint-owned avatar retirement and
+	 * localized profile controls plus current delivery/help/schema/fixtures.
+	 * Neither parent digest proves this merged corpus; runtime pins stay exact. */
+	src: "929d0644d525e48de83075b3fd221ca9c1f9c4b818c2bfb517a6bc9b38cbfaa9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

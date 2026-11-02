@@ -108,27 +108,86 @@ export const conversationListSchema = z.looseObject({
 });
 export type ConversationList = z.infer<typeof conversationListSchema>;
 
-export const messageSchema = z.looseObject({
-	id,
-	conversation_id: id,
-	seq: z.number().int().nonnegative(),
-	sender: z.looseObject({
-		account_id: z.string(),
-		kind: z.enum(["human", "agent"]),
-		display_label: z.string().max(256),
-	}),
-	/*
-	 * Nullable on the wire. A human member's history carries the body, and an
-	 * agent member's carries `null` until that agent admitted the message. This
-	 * app always reads as the human, but "no body" is still a state the row
-	 * renders, never a crash.
-	 */
-	body: z.string().nullable(),
-	body_hash: z.string().optional(),
-	origin: z.enum(["human", "agent", "system"]),
-	agent_label: z.string().optional(),
-	created_at: z.string(),
-});
+/** Human-read delivery projection from BridgeConversationDeliveryStateView.
+ * Unlike other additive hub objects, this privacy boundary strips unknown fields:
+ * screening internals must never reach annotation consumers through passthrough.
+ * The hub already applied owner/sender disclosure policy, including agent-origin
+ * messages read by a human recipient owner; do not reconstruct that ACL here. */
+const deliveryStateEntrySchema = z
+	.object({
+		endpoint_id: id,
+		// Erased or unavailable identities can legitimately have empty labels. The
+		// renderer owns their localized fallback, never a raw endpoint-ID fallback.
+		recipient_label: z.string(),
+		recipient_owner_label: z.string(),
+		state: z.enum(["delivered", "held", "refused"]),
+		hold_class: z
+			.enum(["screening_unavailable", "awaiting_review", "delivery_pending"])
+			.optional()
+			.catch(undefined),
+		refusal_class: z
+			.enum([
+				"manipulation",
+				"personal_info",
+				"abusive",
+				"unsafe_content",
+				"out_of_scope",
+			])
+			.optional()
+			.catch(undefined),
+	})
+	.transform((entry) => {
+		// Future optional classes degrade to a generic annotation. Remove the keys
+		// rather than retaining unknown enum values or inventing a screening cause.
+		if (entry.state !== "held" || entry.hold_class === undefined)
+			delete entry.hold_class;
+		if (entry.state !== "refused" || entry.refusal_class === undefined)
+			delete entry.refusal_class;
+		return entry;
+	});
+export type DeliveryState = z.infer<typeof deliveryStateEntrySchema>;
+
+const deliveryStatesSchema = z.preprocess((input) => {
+	if (!Array.isArray(input)) return undefined;
+	const entries: DeliveryState[] = [];
+	for (const candidate of input) {
+		const parsed = deliveryStateEntrySchema.safeParse(candidate);
+		if (parsed.success) entries.push(parsed.data);
+	}
+	// Malformed REQUIRED entry fields omit only that entry. An optional
+	// annotation cannot make otherwise valid history unavailable to its reader.
+	return entries;
+}, z.array(deliveryStateEntrySchema).optional());
+
+export const messageSchema = z
+	.looseObject({
+		id,
+		conversation_id: id,
+		seq: z.number().int().nonnegative(),
+		sender: z.looseObject({
+			account_id: z.string(),
+			kind: z.enum(["human", "agent"]),
+			display_label: z.string().max(256),
+		}),
+		/*
+		 * Nullable on the wire. A human member's history carries the body, and an
+		 * agent member's carries `null` until that agent admitted the message. This
+		 * app always reads as the human, but "no body" is still a state the row
+		 * renders, never a crash.
+		 */
+		body: z.string().nullable(),
+		body_hash: z.string().optional(),
+		origin: z.enum(["human", "agent", "system"]),
+		agent_label: z.string().optional(),
+		created_at: z.string(),
+		delivery_states: deliveryStatesSchema,
+	})
+	.transform((message) => {
+		// A malformed non-array projection is absence, not an authorized empty
+		// attestation. Zod parses a fresh object; the caller's wire input is intact.
+		if (message.delivery_states === undefined) delete message.delivery_states;
+		return message;
+	});
 export type Message = z.infer<typeof messageSchema>;
 
 export const messagePageSchema = z.looseObject({
