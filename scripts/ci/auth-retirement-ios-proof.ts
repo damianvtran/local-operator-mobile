@@ -46,7 +46,7 @@ import {
  * booted dedicated device and skips ios.yml's ordinary warm boot. Apple's
  * first-boot data migration is host-dependent (reported at minutes on iOS 26
  * runners); these bounds cover only those two cold-start gates, not proof
- * phases. The unchanged ten-minute step ceiling still ends the worst case,
+ * phases. The fifteen-minute step ceiling lets inner failures classify first,
  * with the existing always() owned-lease cleanup step as fallback. */
 export const BOOT_READY_BUDGET_MS = 300000;
 export const FIRST_INSTALL_BUDGET_MS = 120000;

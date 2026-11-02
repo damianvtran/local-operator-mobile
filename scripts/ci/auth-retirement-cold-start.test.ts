@@ -1,6 +1,7 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
 	activeProofDiagnostics,
 	commandCategory,
@@ -20,6 +21,13 @@ import {
 
 const udid = "11111111-1111-1111-1111-111111111111";
 const app = "synthetic-proof.app";
+const roots: string[] = [];
+afterEach(() => {
+	// Retire only private children this file actually created, never the shared
+	// harness/runner/temp parent. Failed setup/assertions must also clean up.
+	for (const root of roots.splice(0))
+		rmSync(root, { recursive: true, force: true });
+});
 
 describe("dedicated-device cold-start gates, injected SDK boundary", () => {
 	it("waits for the exact owned device with only boot-ready's first-boot budget", async () => {
@@ -87,9 +95,15 @@ describe("dedicated-device cold-start gates, injected SDK boundary", () => {
 		async (failedOperation) => {
 			// Exercise the real diagnostics and ownership-recovery code, not xcrun.
 			// This proves host control flow only; it is not simulator/native evidence.
-			const scratch = process.env.LOCAL_OPERATOR_SCRATCHPAD;
-			if (!scratch) throw new Error("Owned fixture scratch directory required");
-			const root = mkdtempSync(join(scratch, "cold-start-regression-"));
+			const root = mkdtempSync(
+				join(
+					process.env.LOCAL_OPERATOR_SCRATCHPAD ??
+						process.env.RUNNER_TEMP ??
+						tmpdir(),
+					"cold-start-regression-",
+				),
+			);
+			roots.push(root);
 			const fields = {
 				nonce: "a".repeat(32),
 				runId: "123456",
