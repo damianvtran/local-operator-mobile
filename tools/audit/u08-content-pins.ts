@@ -440,7 +440,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Derived across all 613 indexed src members, not either parent SHA.
 	 * Instrument/input and historical incident identities are unchanged; this
 	 * records source admission, not fresh auth, rendered or native evidence. */
-	src: "0716d895a31f5885547413f41448ff51d241a275e893b626c616e59470811720",
+	src: "cbac143ff5e87fb6c6367a7f407f7c3faa0c1aec2fc68413fba9e36e8ae83b1d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -53,7 +53,8 @@ const NAMESPACES = [
 		name: "mobile.team_bridge",
 		messages: teamBridge,
 		context: teamBridgeContext,
-		expected: 87,
+		// Six delivery annotation/help keys extend the reviewed namespace budget.
+		expected: 93,
 	},
 	{
 		name: "mobile.common",
@@ -187,7 +188,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(271);
+		expect(total).toBe(277);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -248,6 +249,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.delivery.recipient":
+			"Agent is also the French noun for the recipient agent; identical spelling is intentional, not an English fallback.",
 		"mobile.team_bridge.conversation":
 			"Conversation is also the French noun for a conversation; the correct isolated heading has identical spelling.",
 		"mobile.team_bridge.thread.message":
