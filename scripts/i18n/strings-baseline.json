@@ -586,66 +586,6 @@
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Create",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Description",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Name",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "New project",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Separate with commas or spaces.",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Status",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "Tags",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "What this project is for",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "ios, q4",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-create.tsx",
-			"text": "my-project",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
 			"file": "src/features/projects/project-detail.tsx",
 			"text": "Add milestone",
 			"owner": "damianvtran",

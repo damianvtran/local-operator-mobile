@@ -402,7 +402,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	src: "e22f809693df4abf6ed1bc5a7bab845ba31904841c7fc2d8fb395e1acd9ad950",
+	/* Project creation i18n changes the create sheet and catalogue projection;
+	 * both are in src, so the broad render-tree identity must follow the final
+	 * source. This is not evidence of U-08 rendered-scene equivalence. The other
+	 * instrument, input and render identities matched --print unchanged. */
+	src: "e76afa9b7571979dff2850b79f9958882d09d7fe002f4e7b1d5713b2103b5018",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
