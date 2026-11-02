@@ -1,0 +1,28 @@
+Independent audit fr-create-b26665b40e
+Marker checks: source catalogue, translation catalogue and source context: [redacted], <redacted>, ***redacted*** absent (case-insensitive byte check).
+Keyed route: English 17 successes; French 17 refusals, file differs from HEAD.
+French read route: ordinary git diff; already displayed prior to keyed refusal.
+Sidecar direct read: src/i18n/catalogues/en/mobile.projects.context.json
+Hashes:
+src/i18n/catalogues/en/mobile.projects.json b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b
+src/i18n/catalogues/en/mobile.projects.context.json 5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b
+src/i18n/catalogues/fr/mobile.projects.json bd12b356d5cc17fd690c2a26fba7cdf6e0fae881d24cace65323d7fc1066aab7
+src/features/projects/project-create.tsx a0b45434e9d06fb343f88ad05649e0c8a7d8e6e018e5fac27bbfadee5deaa8f6
+Per-key EN | FR | codepoint lengths EN/FR | placeholder/markup token match:
+mobile.projects.create.description: 'Description' | 'Description' | 11/11 | True
+mobile.projects.create.description_placeholder: 'What this project is for' | 'À quoi sert ce projet' | 24/21 | True
+mobile.projects.create.name: 'Name' | 'Nom' | 4/3 | True
+mobile.projects.create.name_placeholder: 'my-project' | 'mon-projet' | 10/10 | True
+mobile.projects.create.status: 'Status' | 'Statut' | 6/6 | True
+mobile.projects.create.submit: 'Create' | 'Créer' | 6/5 | True
+mobile.projects.create.tags: 'Tags' | 'Étiquettes' | 4/10 | True
+mobile.projects.create.tags_help: 'Separate with commas or spaces.' | 'Séparez-les par des virgules ou des espaces.' | 31/44 | True
+mobile.projects.create.tags_placeholder: 'ios, q4' | 'ios, q4' | 7/7 | True
+mobile.projects.create.title: 'New project' | 'Nouveau projet' | 11/14 | True
+mobile.projects.status.active: 'active' | 'actif' | 6/5 | True
+mobile.projects.status.archived: 'archived' | 'archivé' | 8/7 | True
+mobile.projects.status.done: 'done' | 'terminé' | 4/7 | True
+mobile.projects.status.paused: 'paused' | 'en pause' | 6/8 | True
+mobile.projects.status.planning: 'planning' | 'planification' | 8/13 | True
+mobile.projects.status.qa: 'qa' | 'contrôle qualité' | 2/16 | True
+mobile.projects.status.validation: 'validation' | 'validation' | 10/10 | True

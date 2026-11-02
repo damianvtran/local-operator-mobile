@@ -1,0 +1,26 @@
+{
+  "audit_id": "ru-create-0ef5a4755d1f",
+  "timestamp_utc": "2026-11-02T00:52:07.150951+00:00",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "translator_job": "bf74d41ccb23",
+  "keys_read": 17,
+  "paths": {
+    "english": "src/i18n/catalogues/en/mobile.projects.json",
+    "russian": "src/i18n/catalogues/ru/mobile.projects.json",
+    "context": "src/i18n/catalogues/en/mobile.projects.context.json"
+  },
+  "sha256": {
+    "english": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "russian": "755e426d237e4835b2d97cd1458e56454220aca1aef656f36ed2c38e45e09b0d",
+    "context": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b"
+  },
+  "public_copy_successes": 17,
+  "public_copy_refusals": 17,
+  "direct_routes": [
+    "redaction-scanned Russian catalogue, because read_public_copy refused dirty file",
+    "redaction-scanned English context sidecar"
+  ],
+  "head_at_evidence": "8d0ee6a4082a2b9c19b331eab724637797150798",
+  "public_path_normalization": "Local home-directory prefixes in captured receipt paths were replaced with ~/ for public portability; receipt content and audit conclusions are otherwise unchanged."
+}
