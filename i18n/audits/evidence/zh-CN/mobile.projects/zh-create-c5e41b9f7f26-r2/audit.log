@@ -1,0 +1,4 @@
+Input marker scan: [redacted] and <redacted>, case-insensitive: 0 in each of English catalogue, context, zh-CN catalogue.
+English and zh-CN: 17 successful read_public_copy keyed calls each, all pinned to 8d0ee6a4082a2b9c19b331eab724637797150798. Per-call IDs and returned-content SHA-256 in record.json; central receipt log ~/.local-operator/audit/public-copy-reads.jsonl.
+Prior attempt: context sidecar refused by public copy route due to non-string values; directly read after scan. Target was previously refused while dirty, not bypassed.
+Current target full catalogue also read via sanctioned route for namespace consistency. No tests, Node, installs or browser.

@@ -1,0 +1,43 @@
+{
+  "audit_id": "es-create-ab307ede7fe5",
+  "date_utc": "2026-11-02T00:48:14.372619+00:00",
+  "auditor": "translation-auditor",
+  "session": "ab307ede7fe5",
+  "model": "openai/gpt-6.1-terra",
+  "translator_job": "18c2bf0471c7",
+  "namespace": "mobile.projects",
+  "scope": "17 new create/status keys",
+  "keys": [
+    "mobile.projects.create.description",
+    "mobile.projects.create.description_placeholder",
+    "mobile.projects.create.name",
+    "mobile.projects.create.name_placeholder",
+    "mobile.projects.create.status",
+    "mobile.projects.create.submit",
+    "mobile.projects.create.tags",
+    "mobile.projects.create.tags_help",
+    "mobile.projects.create.tags_placeholder",
+    "mobile.projects.create.title",
+    "mobile.projects.status.active",
+    "mobile.projects.status.archived",
+    "mobile.projects.status.done",
+    "mobile.projects.status.paused",
+    "mobile.projects.status.planning",
+    "mobile.projects.status.qa",
+    "mobile.projects.status.validation"
+  ],
+  "sha256_files": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/i18n/catalogues/es/mobile.projects.json": "fc7cf36f697081132b97a676d7ae11cb19d27411adee0151caddfed99e9e4081"
+  },
+  "source_head": "194558899182dedf18198eb9db9876131fa190a5",
+  "route": "English keys read through read_public_copy, 17 successful keyed receipts at ~/.local-operator/audit/public-copy-reads.jsonl; Spanish keyed request refused because worktree differs from HEAD; Spanish and context read directly after marker scan. Context sidecar not routable.",
+  "verdict": "clean with non-blocking rendered-width check",
+  "limitations": [
+    "No native-speaker certification",
+    "No rendered check, tests, Node, installs or browser per scope",
+    "Only 17 new keys, not full-catalogue terminology audit",
+    "Token scan is lexical; no ICU or placeholders present in these strings"
+  ]
+}
