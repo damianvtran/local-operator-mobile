@@ -1,4 +1,14 @@
 {
+	"mobile.projects.create.description": "Descripción",
+	"mobile.projects.create.description_placeholder": "Para qué es este proyecto",
+	"mobile.projects.create.name": "Nombre",
+	"mobile.projects.create.name_placeholder": "my-project",
+	"mobile.projects.create.status": "Estado",
+	"mobile.projects.create.submit": "Crear",
+	"mobile.projects.create.tags": "Etiquetas",
+	"mobile.projects.create.tags_help": "Sepáralas con comas o espacios.",
+	"mobile.projects.create.tags_placeholder": "ios, q4",
+	"mobile.projects.create.title": "Nuevo proyecto",
 	"mobile.projects.delete_body": "¿Eliminar {name}? La fila del proyecto se borra para siempre. Sus sesiones vinculadas y sus transcripciones no se tocan.",
 	"mobile.projects.draft_kept_note": "Se conservó de tu última visita. Vacía los campos para empezar algo nuevo.",
 	"mobile.projects.milestone_slash_note": "Los nombres de hito no pueden contener una barra. Un hito con barra nunca podría quitarse.",
@@ -12,6 +22,13 @@
 	"mobile.projects.sessions.count": "{count, plural, one {# sesión} many {# de sesiones} other {# sesiones}}",
 	"mobile.projects.sessions.live": "{base} · {live} en curso",
 	"mobile.projects.stale_badge": "progreso obsoleto",
+	"mobile.projects.status.active": "activo",
+	"mobile.projects.status.archived": "archivado",
+	"mobile.projects.status.done": "completado",
+	"mobile.projects.status.paused": "pausado",
+	"mobile.projects.status.planning": "planificación",
+	"mobile.projects.status.qa": "control de calidad",
+	"mobile.projects.status.validation": "validación",
 	"mobile.projects.write_receipt": "{kind, select, project {Proyecto {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} milestone {Hito {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} other {{subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.}}",
 	"mobile.projects.write_unknown_note": "No pudimos llegar a tu máquina, así que no sabemos si se guardó. Revisa el proyecto antes de volver a intentarlo."
 }

@@ -1,4 +1,14 @@
 {
+	"mobile.projects.create.description": "Mô tả",
+	"mobile.projects.create.description_placeholder": "Mục đích của dự án này",
+	"mobile.projects.create.name": "Tên",
+	"mobile.projects.create.name_placeholder": "my-project",
+	"mobile.projects.create.status": "Trạng thái",
+	"mobile.projects.create.submit": "Tạo",
+	"mobile.projects.create.tags": "Thẻ",
+	"mobile.projects.create.tags_help": "Phân cách bằng dấu phẩy hoặc dấu cách.",
+	"mobile.projects.create.tags_placeholder": "ios, q4",
+	"mobile.projects.create.title": "Dự án mới",
 	"mobile.projects.delete_body": "Xóa {name}? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.",
 	"mobile.projects.draft_kept_note": "Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.",
 	"mobile.projects.milestone_slash_note": "Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.",
@@ -12,6 +22,13 @@
 	"mobile.projects.sessions.count": "{count, plural, other {# phiên}}",
 	"mobile.projects.sessions.live": "{base} · {live} đang chạy",
 	"mobile.projects.stale_badge": "tiến độ cũ",
+	"mobile.projects.status.active": "đang thực hiện",
+	"mobile.projects.status.archived": "đã lưu trữ",
+	"mobile.projects.status.done": "hoàn thành",
+	"mobile.projects.status.paused": "tạm dừng",
+	"mobile.projects.status.planning": "lập kế hoạch",
+	"mobile.projects.status.qa": "QA",
+	"mobile.projects.status.validation": "xác thực",
 	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.} milestone {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} mốc {subject}.} other {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.}}",
 	"mobile.projects.write_unknown_note": "Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại."
 }
