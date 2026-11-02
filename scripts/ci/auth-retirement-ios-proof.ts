@@ -41,6 +41,38 @@ import {
 	recoverCreation,
 } from "./auth-retirement-simulator.ts";
 
+/** Run 41523920765 exhausted 90s at boot-ready; run 41260071341 passed
+ * boot but exhausted the default 30s at install. This proof creates a never-
+ * booted dedicated device and skips ios.yml's ordinary warm boot. Apple's
+ * first-boot data migration is host-dependent (reported at minutes on iOS 26
+ * runners); these bounds cover only those two cold-start gates, not proof
+ * phases. The unchanged ten-minute step ceiling still ends the worst case,
+ * with the existing always() owned-lease cleanup step as fallback. */
+export const BOOT_READY_BUDGET_MS = 300000;
+export const FIRST_INSTALL_BUDGET_MS = 120000;
+
+/** Shared production path with an injected command boundary for SDK-free
+ * regressions. Re-verify immutable content BETWEEN readiness and installation;
+ * a boot budget must never weaken artifact or owned-device admission. */
+export async function prepareOwnedSimulator(
+	udid: string,
+	app: string,
+	verifyArtifact: () => Promise<void>,
+	run: Run = command,
+): Promise<void> {
+	activeProofDiagnostics?.checkpoint("boot");
+	await run("xcrun", ["simctl", "boot", udid]);
+	activeProofDiagnostics?.checkpoint("boot-ready");
+	await run(
+		"xcrun",
+		["simctl", "bootstatus", udid, "-b"],
+		BOOT_READY_BUDGET_MS,
+	);
+	await verifyArtifact();
+	activeProofDiagnostics?.checkpoint("install");
+	await run("xcrun", ["simctl", "install", udid, app], FIRST_INSTALL_BUDGET_MS);
+}
+
 const PROOF_ID = "com.localoperator.mobile.retirementproof";
 const FLAVOR = "auth-retirement-proof";
 /** Deliberately non-rotating synthetic protocol. Returned values are never
@@ -441,13 +473,9 @@ async function runNativeProofBody(
 		activeProofDiagnostics?.checkpoint("create");
 		owned = await createFromIntent(root, intent, command);
 		udid = owned.udid;
-		activeProofDiagnostics?.checkpoint("boot");
-		await command("xcrun", ["simctl", "boot", udid]);
-		activeProofDiagnostics?.checkpoint("boot-ready");
-		await command("xcrun", ["simctl", "bootstatus", udid, "-b"], 90000);
-		assertInstalledArtifact(await measureArtifact(frozen.appPath), frozen);
-		activeProofDiagnostics?.checkpoint("install");
-		await command("xcrun", ["simctl", "install", udid, frozen.appPath]);
+		await prepareOwnedSimulator(udid, frozen.appPath, async () => {
+			assertInstalledArtifact(await measureArtifact(frozen.appPath), frozen);
+		});
 		async function installedIdentity(): Promise<ProofBuildIdentity> {
 			assertOwnedLease(owned, owned);
 			const installed = await command("xcrun", [
