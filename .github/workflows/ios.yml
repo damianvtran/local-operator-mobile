@@ -30,6 +30,9 @@ on:
     branches:
       - main
   pull_request:
+  # Manual dispatch is BUILD/VALIDATE ONLY: the credential and internal jobs
+  # below require a push to main, even when this dispatch selects main itself.
+  # Reuse the simulator's build/launch/frame proof without a tag or Apple login.
   workflow_dispatch:
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
@@ -152,6 +155,20 @@ jobs:
 
       - name: Derive the version from the ref
         run: node scripts/ci/version.ts --write
+
+      - name: Record the hosted native toolchain
+        # Capture actual image inputs rather than treating macos-26 as a fixed
+        # Xcode patch version. This secret-free job cannot prove signing identity.
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          pod --version
+          xcodebuild -help > "$RUNNER_TEMP/xcodebuild-help.txt" 2>&1
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo '## Build/validate-only native preflight' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Simulator build, launch and frames only. No signing, credentials, release or store upload.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform ios --clean --no-install
@@ -356,6 +373,7 @@ jobs:
           name: ios-simulator
           path: |
             ${{ runner.temp }}/frames/*.png
+            ${{ runner.temp }}/xcodebuild-help.txt
             ${{ runner.temp }}/DerivedData/Build/Products/Release-iphonesimulator/*.app
           retention-days: 14
 

@@ -44,7 +44,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: "Run the gate and the credential check, then stop before any build or upload"
+        description: "Check version and credential presence only; no full gate, build or upload"
         required: false
         type: boolean
         default: false
@@ -364,6 +364,12 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm exec expo prebuild --platform ios --clean --no-install
+
+      # Prebuild deliberately skips dependency installation; a fresh runner has
+      # no CocoaPods workspace until this runs. Match ios.yml's native path so
+      # signing cannot fail first on an unrelated missing-workspace error.
+      - name: Install the iOS pods
+        run: cd ios && pod install
 
       - name: Resolve the workspace and scheme
         id: project
