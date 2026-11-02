@@ -11,7 +11,7 @@ import {
 	writeReceipt,
 	writeUnknownNote,
 } from "@/features/projects/projects-copy";
-import { t } from "@/i18n";
+import { activeLocale, t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, projectCreateStatusId, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -260,15 +260,17 @@ export const ProjectCreateSheet = ({
 					<Text className="text-body-sm text-ink-muted">
 						{t("mobile.projects.create.status")}
 					</Text>
-					{/* Chips rather than a picker: seven words that fit two rows at the
-					 *  narrowest column, each a 44 pt target, and the selected one is
-					 *  announced as selected rather than only painted. */}
+					{/* Chips wrap with the available width and keep full touch targets;
+					 *  the shared control also carries its selection state. */}
 					<View className="flex-row flex-wrap gap-2">
 						{PROJECT_STATUS_ORDER.map((option) => (
 							<Chip
 								key={option}
 								testID={projectCreateStatusId(option)}
 								label={t(STATUS_LABEL_KEYS[option])}
+								/* The mono face breaks Arabic joining; use the app's prose stack
+								 * for Urdu without changing machine-word chips elsewhere. */
+								labelTypography={activeLocale() === "ur" ? "prose" : "mono"}
 								selected={option === status}
 								disabled={busy}
 								onPress={() => setStatus(option)}

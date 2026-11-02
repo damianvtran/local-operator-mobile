@@ -18,6 +18,8 @@ import { chipClasses, chipLabelClasses } from "@/ui/variants";
  */
 export type ChipProps = {
 	label: string;
+	/** Prose labels can require a script-shaping font rather than a machine-word mono face. */
+	labelTypography?: "mono" | "prose";
 	onPress: () => void;
 	/** Selection is never colour alone; the chip is also announced as selected. */
 	selected?: boolean;
@@ -44,6 +46,7 @@ export type ChipProps = {
 
 export const Chip = ({
 	label,
+	labelTypography = "mono",
 	onPress,
 	selected = false,
 	disabled = false,
@@ -89,7 +92,7 @@ export const Chip = ({
 			>
 				{leadingIcon ? <View pointerEvents="none">{leadingIcon}</View> : null}
 				<Text
-					className={`text-mono-sm ${chipLabelClasses({ selected, disabled })}${shrink ? " min-w-0 truncate" : ""}`}
+					className={`${labelTypography === "prose" ? "text-body-sm" : "text-mono-sm"} ${chipLabelClasses({ selected, disabled })}${shrink ? " min-w-0 truncate" : ""}`}
 					numberOfLines={shrink ? 1 : undefined}
 					ellipsizeMode={shrink ? "tail" : undefined}
 				>

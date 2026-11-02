@@ -406,7 +406,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * both are in src, so the broad render-tree identity must follow the final
 	 * source. This is not evidence of U-08 rendered-scene equivalence. The other
 	 * instrument, input and render identities matched --print unchanged. */
-	src: "e76afa9b7571979dff2850b79f9958882d09d7fe002f4e7b1d5713b2103b5018",
+	/* Round-one remediation gives Urdu project status chips a shaping-safe
+	 * prose font and tightens the catalogue and mapping tests. Those source
+	 * changes move src; they do not by themselves establish visual equivalence. */
+	src: "4fea1e0b1afe6c2173993f1389bbb0b365d98d3548eb113a8f7d4a5168ce424f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

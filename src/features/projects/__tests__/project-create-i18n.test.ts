@@ -14,7 +14,8 @@ describe("project creation copy", () => {
 			"mobile.projects.create.name": "Name",
 			"mobile.projects.create.name_placeholder": "my-project",
 			"mobile.projects.create.description": "Description",
-			"mobile.projects.create.description_placeholder": "What this project is for",
+			"mobile.projects.create.description_placeholder":
+				"What this project is for",
 			"mobile.projects.create.status": "Status",
 			"mobile.projects.create.tags": "Tags",
 			"mobile.projects.create.tags_placeholder": "ios, q4",
@@ -33,19 +34,50 @@ describe("project creation copy", () => {
 	});
 
 	it("uses catalogued copy for sheet props and status chips", () => {
-		const source = readFileSync(new URL("../project-create.tsx", import.meta.url), "utf8");
+		const source = readFileSync(
+			new URL("../project-create.tsx", import.meta.url),
+			"utf8",
+		);
 		for (const prop of ["title", "label", "placeholder"]) {
-			expect(source).not.toMatch(new RegExp(`${prop}="(?:New project|Create|Name|my-project|Description|What this project is for|Tags|ios, q4)"`));
+			expect(source).not.toMatch(
+				new RegExp(
+					`${prop}="(?:New project|Create|Name|my-project|Description|What this project is for|Tags|ios, q4)"`,
+				),
+			);
 		}
 		for (const key of [
-			"title", "submit", "name", "name_placeholder", "description",
-			"description_placeholder", "status", "tags", "tags_placeholder", "tags_help",
+			"title",
+			"submit",
+			"name",
+			"name_placeholder",
+			"description",
+			"description_placeholder",
+			"status",
+			"tags",
+			"tags_placeholder",
+			"tags_help",
 		]) {
 			expect(source).toContain(`t("mobile.projects.create.${key}")`);
 		}
-		for (const status of PROJECT_STATUS_ORDER) {
-			expect(source).toContain(`"mobile.projects.status.${status}"`);
-		}
+		const mappingsMatch = (text: string) =>
+			PROJECT_STATUS_ORDER.every((status) =>
+				text.includes(`${status}: "mobile.projects.status.${status}"`),
+			);
+		expect(mappingsMatch(source)).toBe(true);
+		/* A swapped code-to-label mapping must fail even if both keys remain. */
+		const swapped = source
+			.replace(
+				'planning: "mobile.projects.status.planning"',
+				'planning: "mobile.projects.status.active"',
+			)
+			.replace(
+				'active: "mobile.projects.status.active"',
+				'active: "mobile.projects.status.planning"',
+			);
+		expect(mappingsMatch(swapped)).toBe(false);
+		expect(source).toContain(
+			'labelTypography={activeLocale() === "ur" ? "prose" : "mono"}',
+		);
 		expect(source).toContain("label={t(STATUS_LABEL_KEYS[option])}");
 		expect(source).toContain("testID={projectCreateStatusId(option)}");
 		expect(source).toContain("setStatus(option)");
