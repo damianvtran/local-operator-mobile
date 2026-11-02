@@ -29,6 +29,31 @@ import {
 	writeStoredOauth,
 } from "@/features/auth/tunnel-storage";
 
+/** Closed check-site codes only: native errors/values never enter callbacks. */
+export const PROOF_APP_STAGES = [
+	"seed-store-not-empty",
+	"seed-write-not-persistent",
+	"replace-not-persisted",
+	"retire-held-mismatch",
+	"retire-no-bearer",
+	"retire-still-present",
+	"restore-write-not-persistent",
+	"restore-account-mismatch",
+	"restore-persist-control",
+	"restore-fresh",
+	"restore-retired",
+	"exception",
+	"other",
+] as const;
+type AppStage = (typeof PROOF_APP_STAGES)[number];
+class ProofCheckFailure extends Error {
+	readonly stage: AppStage;
+	constructor(stage: AppStage) {
+		super("Native proof check failed");
+		this.stage = stage;
+	}
+}
+
 const FLAVOR = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_FLAVOR;
 const NONCE = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_NONCE;
 const SOURCE = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_SOURCE;
@@ -118,13 +143,16 @@ async function run(
 		invalidGrant: () => false,
 		serialize: (op) => nativeCredentialRetirement.retire(null, op),
 	});
-	const check = (yes: unknown) => {
-		if (!yes) throw new Error("Native primitive proof phase failed");
+	const check = (yes: unknown, stage: AppStage) => {
+		if (!yes) throw new ProofCheckFailure(stage);
 	};
 	if (phase === "seed") {
 		// Explicit first setup only. The host MUST NOT invoke this after retirement.
-		check((await store.readOauth()) === null);
-		check((await writeStoredOauth(synthetic(true))).persistent);
+		check((await store.readOauth()) === null, "seed-store-not-empty");
+		check(
+			(await writeStoredOauth(synthetic(true))).persistent,
+			"seed-write-not-persistent",
+		);
 		return {
 			phase,
 			ok: true,
@@ -142,6 +170,7 @@ async function run(
 			await lifecycle.replaceCredentialsIfCurrent(lifecycle.getRevision(), () =>
 				accessor.persist(synthetic()),
 			),
+			"replace-not-persisted",
 		);
 		return {
 			phase,
@@ -151,19 +180,19 @@ async function run(
 	}
 	if (phase === "retire") {
 		const held = await readStoredOauth();
-		check(held?.account_id === ACCOUNT);
+		check(held?.account_id === ACCOUNT, "retire-held-mismatch");
 		accessor.replace(held);
 		// Production refresh parser/transport + single-flight accessor, not a fake
 		// rotated record write. No provider refresh-concurrency claim is made.
 		const bearer = await accessor.access({ force: true });
-		check(bearer !== null);
+		check(bearer !== null, "retire-no-bearer");
 		await lifecycle.retire(false, () =>
 			nativeCredentialRetirement.retire(null, async () => {
 				accessor.replace(null);
 				await clearStoredCredentials();
 			}),
 		);
-		check((await store.readOauth()) === null);
+		check((await store.readOauth()) === null, "retire-still-present");
 		return {
 			phase,
 			ok: true,
@@ -175,7 +204,10 @@ async function run(
 	const outcome = await carryOutRestore({
 		readOauth: readStoredOauth,
 		writeOauth: async (t) => {
-			check((await writeStoredOauth(t)).persistent);
+			check(
+				(await writeStoredOauth(t)).persistent,
+				"restore-write-not-persistent",
+			);
 		},
 		clearOauth: async () => {
 			deletes += 1;
@@ -183,7 +215,7 @@ async function run(
 		},
 		refresh,
 		discover: async (t) => {
-			check(t.account_id === ACCOUNT);
+			check(t.account_id === ACCOUNT, "restore-account-mismatch");
 			publishes += 1;
 		},
 	});
@@ -191,10 +223,12 @@ async function run(
 	if (phase === "persist-control")
 		check(
 			outcome.restored && rawOauthPresent && refreshes === 1 && publishes === 1,
+			"restore-persist-control",
 		);
 	if (phase === "fresh-restore")
 		check(
 			outcome.restored && rawOauthPresent && refreshes === 0 && publishes === 1,
+			"restore-fresh",
 		);
 	if (phase === "retired-restore")
 		check(
@@ -203,6 +237,7 @@ async function run(
 				refreshes === 0 &&
 				publishes === 0 &&
 				deletes === 0,
+			"restore-retired",
 		);
 	return {
 		phase,
@@ -231,8 +266,12 @@ export function installAuthRetirementProof(): void {
 		let receipt: Record<string, unknown>;
 		try {
 			receipt = await run(request.phase, request.callback);
-		} catch {
-			receipt = { phase: request.phase, ok: false };
+		} catch (error) {
+			receipt = {
+				phase: request.phase,
+				ok: false,
+				stage: error instanceof ProofCheckFailure ? error.stage : "exception",
+			};
 		}
 		// Bounded receiver transport; never surface exception text or credentials.
 		const abort = new AbortController();

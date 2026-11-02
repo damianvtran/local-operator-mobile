@@ -2,8 +2,10 @@
  * stdout/stderr, URLs, paths, tokens or arbitrary labels enter this receipt.
  * A first failure is immutable across cleanup so recovery cannot mask its cause.
  * This is an evidence repair, NOT a native retirement root-cause fix. */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+import { sanitizePhaseFailure } from "./auth-retirement-phase-diagnostics.ts";
 
 const CHECKPOINTS = [
 	"preflight",
@@ -136,6 +138,7 @@ export class ProofDiagnostics {
 	private sequence = 0;
 	private lastCommand: CommandObservation | null = null;
 	private failed = false;
+	private phaseFailureObservation: Record<string, unknown> | null = null;
 	private readonly root: string;
 	constructor(root: string) {
 		// This module is also loaded directly by Node's native type stripping;
@@ -190,6 +193,19 @@ export class ProofDiagnostics {
 		};
 		if (outcome !== "success") this.fail();
 	}
+	observePhaseFailure(input: Record<string, unknown>): void {
+		const value = sanitizePhaseFailure(input);
+		this.phaseFailureObservation = value;
+		// Enrich only the same frozen phase; cleanup cannot replace attribution.
+		if (this.failed) {
+			const file = join(this.root, "failure.json");
+			const receipt = JSON.parse(readFileSync(file, "utf8"));
+			if (receipt.phase === value.phase) {
+				receipt.phaseFailure = value;
+				writeFileSync(file, JSON.stringify(receipt, null, 2));
+			}
+		}
+	}
 	fail(): void {
 		if (this.failed) return;
 		this.failed = true;
@@ -203,6 +219,9 @@ export class ProofDiagnostics {
 					phase: this.phaseName,
 					elapsedMs: Math.max(0, performance.now() - this.started),
 					command: this.lastCommand,
+					...(this.phaseFailureObservation
+						? { phaseFailure: this.phaseFailureObservation }
+						: {}),
 				},
 				null,
 				2,

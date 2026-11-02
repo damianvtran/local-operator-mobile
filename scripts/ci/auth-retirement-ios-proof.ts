@@ -25,6 +25,16 @@ import {
 	withProofDiagnostics,
 } from "./auth-retirement-diagnostics.ts";
 import {
+	appStage,
+	countRefused,
+	observeOwnedProcess,
+	type PhaseCause,
+	type RefusedReason,
+	receiptCause,
+	receiptRefusal,
+	refusedCounts,
+} from "./auth-retirement-phase-diagnostics.ts";
+import {
 	assertInstalledArtifact,
 	assertOwnedLease,
 	assertProofBuild,
@@ -497,12 +507,17 @@ async function runNativeProofBody(
 		let waiting: ((r: Record<string, unknown>) => void) | null = null;
 		let phase = "",
 			tokenRequests = 0;
+		let refused = refusedCounts();
 		const server = createServer(async (req, res) => {
+			let refusal: RefusedReason = "json";
 			try {
 				let body = "";
 				for await (const chunk of req) {
 					body += chunk;
-					if (body.length > 8192) throw new Error("body cap");
+					if (body.length > 8192) {
+						refusal = "body-cap";
+						throw new Error("body cap");
+					}
 				}
 				if (req.method === "POST" && req.url === "/token") {
 					const value = JSON.parse(body);
@@ -516,50 +531,31 @@ async function runNativeProofBody(
 					res.end(JSON.stringify(syntheticTokenReply(value.refresh_token)));
 					return;
 				}
-				if (
-					req.method !== "POST" ||
-					req.url !== "/receipt" ||
-					req.headers["x-proof-nonce"] !== actual.nonce ||
-					!waiting
-				)
+				if (req.method !== "POST" || req.url !== "/receipt") {
+					refusal = "method-or-path";
 					throw new Error("Invalid receipt");
+				}
+				if (req.headers["x-proof-nonce"] !== actual.nonce) {
+					refusal = "nonce";
+					throw new Error("Invalid receipt");
+				}
+				if (!waiting) {
+					refusal = "no-waiter";
+					throw new Error("Invalid receipt");
+				}
 				const r = JSON.parse(body) as Record<string, unknown>;
-				const allowed = new Set([
-					"phase",
-					"ok",
-					"flavor",
-					"sourceSha",
-					"rawOauthPresent",
-					"durableRetired",
-					"restored",
-					"refreshes",
-					"publishes",
-					"deletes",
-				]);
-				if (
-					Object.keys(r).some((k) => !allowed.has(k)) ||
-					r.phase !== phase ||
-					r.flavor !== FLAVOR ||
-					r.sourceSha !== actual.sourceSha
-				)
-					throw new Error("Receipt identity refused");
-				for (const k of ["rawOauthPresent", "durableRetired", "restored"])
-					if (k in r && typeof r[k] !== "boolean")
-						throw new Error("Invalid coarse state");
-				for (const k of ["refreshes", "publishes", "deletes"])
-					if (
-						k in r &&
-						(!Number.isSafeInteger(r[k]) ||
-							Number(r[k]) < 0 ||
-							Number(r[k]) > 8)
-					)
-						throw new Error("Invalid coarse count");
+				const invalid = receiptRefusal(r, phase, FLAVOR, actual.sourceSha);
+				if (invalid) {
+					refusal = invalid;
+					throw new Error("Invalid receipt");
+				}
 				const receive = waiting;
 				waiting = null;
 				res.writeHead(204);
 				res.end();
 				receive(r);
 			} catch {
+				countRefused(refused, refusal);
 				res.writeHead(400);
 				res.end();
 			}
@@ -584,89 +580,121 @@ async function runNativeProofBody(
 			]) {
 				activeProofDiagnostics?.checkpoint("phase", name);
 				phase = name;
-				const beforeTokens = tokenRequests;
-				await installedIdentity();
-				const launch = await command("xcrun", [
-					"simctl",
-					"launch",
-					"--terminate-running-process",
-					udid,
-					PROOF_ID,
-				]);
-				const pid = Number(/:\s*(\d+)\s*$/.exec(launch)?.[1]);
-				const identity = { ...(await installedIdentity()), udid, pid };
-				if (previous) assertRestartIdentity(previous, identity);
-				previous = identity;
-				let timer: ReturnType<typeof setTimeout>;
-				const answer = new Promise<Record<string, unknown>>((yes, no) => {
-					waiting = yes;
-					timer = setTimeout(() => {
-						waiting = null;
-						no(new Error("Native phase receipt timed out"));
-					}, 60000);
-				});
-				// Attach rejection handling before the process-launch operation can fail.
-				void answer.catch(() => undefined);
+				refused = refusedCounts();
+				let phaseCause: PhaseCause = "launch-identity";
+				let rejectedStage: unknown;
+				let launchStart: number | null = null,
+					openurlStart: number | null = null;
 				try {
-					const url = new URL("loretirementproof://run");
-					url.searchParams.set("nonce", actual.nonce);
-					url.searchParams.set("phase", name);
-					url.searchParams.set(
-						"callback",
-						`http://127.0.0.1:${address.port}/receipt`,
-					);
-					await command("xcrun", ["simctl", "openurl", udid, url.toString()]);
-					const receipt = await answer;
-					if (receipt.ok !== true) throw new Error("Native phase rejected");
-					const outbound = tokenRequests - beforeTokens;
-					if (
-						(name === "persist-control" && outbound !== 1) ||
-						(name === "retire" && outbound !== 1) ||
-						(!["persist-control", "retire"].includes(name) && outbound !== 0)
-					)
-						throw new Error("Unexpected native auth transport count");
-					if (name === "seed" || name === "fresh-replace")
-						if (receipt.rawOauthPresent !== true)
-							throw new Error("Persistence control absent");
-					if (
-						name === "retire" &&
-						(receipt.durableRetired !== true ||
-							receipt.rawOauthPresent !== false)
-					)
-						throw new Error("Durable retirement unconfirmed");
-					if (name === "persist-control") {
-						const negative = join(root, "negative-control.json");
-						writeFileSync(
-							negative,
-							JSON.stringify({ ...receipt, phase: "retired-restore" }),
-						);
-						if (verifierProcess(negative) !== "expected-rejection")
-							throw new Error(
-								"Negative verifier BLOCKED or accepted authorized state",
-							);
-						negativeControlPassed = true;
-					}
-					if (name === "retired-restore") {
-						const positive = join(root, "positive-control.json");
-						writeFileSync(positive, JSON.stringify(receipt));
-						if (verifierProcess(positive) !== "accepted")
-							throw new Error(
-								"Positive verifier BLOCKED or rejected retired state",
-							);
-					}
-
-					evidence.push({
-						phase: name,
-						pid,
+					const beforeTokens = tokenRequests;
+					await installedIdentity();
+					launchStart = performance.now();
+					const launch = await command("xcrun", [
+						"simctl",
+						"launch",
+						"--terminate-running-process",
 						udid,
-						sourceSha: actual.sourceSha,
-						bundleSha256: identity.bundleSha256,
-						...receipt,
-						authTransportRequests: outbound,
+						PROOF_ID,
+					]);
+					const pid = Number(/:\s*(\d+)\s*$/.exec(launch)?.[1]);
+					const identity = { ...(await installedIdentity()), udid, pid };
+					if (previous) assertRestartIdentity(previous, identity);
+					previous = identity;
+					phaseCause = "other";
+					let timer: ReturnType<typeof setTimeout>;
+					const answer = new Promise<Record<string, unknown>>((yes, no) => {
+						waiting = yes;
+						timer = setTimeout(() => {
+							if (waiting) phaseCause = "receipt-timeout";
+							waiting = null;
+							no(new Error("Native phase receipt timed out"));
+						}, 60000);
 					});
-				} finally {
-					clearTimeout(timer!);
-					waiting = null;
+					// Attach rejection handling before the process-launch operation can fail.
+					void answer.catch(() => undefined);
+					try {
+						const url = new URL("loretirementproof://run");
+						url.searchParams.set("nonce", actual.nonce);
+						url.searchParams.set("phase", name);
+						url.searchParams.set(
+							"callback",
+							`http://127.0.0.1:${address.port}/receipt`,
+						);
+						openurlStart = performance.now();
+						await command("xcrun", ["simctl", "openurl", udid, url.toString()]);
+						const receipt = await answer;
+						const outbound = tokenRequests - beforeTokens;
+						const invalid = receiptCause(name, receipt, outbound);
+						if (invalid) {
+							phaseCause = invalid;
+							rejectedStage = appStage(receipt.stage);
+							throw new Error("Native phase rejected");
+						}
+						if (name === "persist-control") {
+							const negative = join(root, "negative-control.json");
+							writeFileSync(
+								negative,
+								JSON.stringify({ ...receipt, phase: "retired-restore" }),
+							);
+							if (verifierProcess(negative) !== "expected-rejection") {
+								phaseCause = "verifier-negative";
+								throw new Error(
+									"Negative verifier BLOCKED or accepted authorized state",
+								);
+							}
+							negativeControlPassed = true;
+						}
+						if (name === "retired-restore") {
+							const positive = join(root, "positive-control.json");
+							writeFileSync(positive, JSON.stringify(receipt));
+							if (verifierProcess(positive) !== "accepted") {
+								phaseCause = "verifier-positive";
+								throw new Error(
+									"Positive verifier BLOCKED or rejected retired state",
+								);
+							}
+						}
+
+						evidence.push({
+							phase: name,
+							pid,
+							udid,
+							sourceSha: actual.sourceSha,
+							bundleSha256: identity.bundleSha256,
+							...receipt,
+							authTransportRequests: outbound,
+						});
+					} finally {
+						clearTimeout(timer!);
+						waiting = null;
+					}
+				} catch (error) {
+					const outcomeAt = performance.now();
+					const observation = {
+						phase: name,
+						cause: phaseCause,
+						appStage: rejectedStage,
+						refused: { ...refused },
+						launchToOpenurlMs:
+							launchStart !== null && openurlStart !== null
+								? openurlStart - launchStart
+								: null,
+						openurlToOutcomeMs:
+							openurlStart !== null ? outcomeAt - openurlStart : null,
+						processAliveAtTimeout: "UNOBSERVED" as boolean | "UNOBSERVED",
+					};
+					// Freeze attribution BEFORE a readiness probe can itself fail. Its
+					// stdout is inspected transiently, never included in diagnostics.
+					activeProofDiagnostics?.observePhaseFailure(observation);
+					activeProofDiagnostics?.fail();
+					if (phaseCause === "receipt-timeout") {
+						observation.processAliveAtTimeout = await observeOwnedProcess(
+							udid,
+							command,
+						);
+						activeProofDiagnostics?.observePhaseFailure(observation);
+					}
+					throw error;
 				}
 			}
 		} finally {
