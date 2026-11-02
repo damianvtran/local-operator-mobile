@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, request } from "node:http";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -18,8 +19,10 @@ vi.mock("node:http", async (original) => {
 const rigs: ReturnType<typeof createTeamBridgeFixture>[] = [];
 const directories: string[] = [];
 async function rig() {
-	const scratch = process.env.LOCAL_OPERATOR_SCRATCHPAD;
-	if (!scratch) throw new Error("owned fixture scratch directory required");
+	// Ordinary pnpm test and clean CI runners have no Local Operator environment.
+	// Honor its scratch root when supplied, otherwise Node's TMPDIR-aware root;
+	// mkdtemp owns a private child, and cleanup removes only that child.
+	const scratch = process.env.LOCAL_OPERATOR_SCRATCHPAD || tmpdir();
 	await mkdir(scratch, { recursive: true });
 	const root = await mkdtemp(join(scratch, "hub-fixture-test-"));
 	directories.push(root);
