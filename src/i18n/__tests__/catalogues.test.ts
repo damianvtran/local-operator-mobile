@@ -69,7 +69,7 @@ const NAMESPACES = [
 		name: "mobile.projects",
 		messages: projects,
 		context: projectsContext,
-		expected: 15,
+		expected: 32,
 	},
 	{
 		name: "mobile.schedules",
@@ -179,7 +179,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(182);
+		expect(total).toBe(199);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -235,11 +235,27 @@ describe("the English catalogues", () => {
  * untranslated, and an entry that is no longer identical fails as stale, so an
  * exemption cannot quietly become permanent.
  */
+/* These are valid ASCII identifiers and tag examples, not untranslated prose.
+ * List them per locale below so a changed translation is still caught as stale. */
+const PROJECT_NAME_EXAMPLE = {
+	"mobile.projects.create.name_placeholder":
+		"Valid project-name example: the relay accepts ASCII letters, digits, dot, underscore or hyphen and the example preserves that grammar.",
+};
+const PROJECT_TAG_EXAMPLE = {
+	"mobile.projects.create.tags_placeholder":
+		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
+};
+
 const IDENTICAL_BY_DESIGN: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
 	en: {},
 	fr: {
+		...PROJECT_TAG_EXAMPLE,
+		"mobile.projects.create.description":
+			"Description is the same French word for the project description field, not English fallback.",
+		"mobile.projects.status.validation":
+			"Validation is the same French word for the project lifecycle status, not English fallback.",
 		/* French spells these the same as English. `Description` is the French
 		 * word for the same field, not an untranslated value: the asset editor's
 		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
@@ -257,10 +273,14 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */
 	es: {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -268,6 +288,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -275,6 +297,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -282,6 +306,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -289,6 +315,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",

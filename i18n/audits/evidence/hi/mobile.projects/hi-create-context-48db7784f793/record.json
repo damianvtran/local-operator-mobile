@@ -1,0 +1,27 @@
+{
+  "created_utc": "2026-11-02T01:03:06.548223+00:00",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "session": "de7352a477ae",
+  "translator_job": "9e1563031717",
+  "revision": "5d48015a75804c50638063492ecd6742ddf61af0",
+  "keys_read": 17,
+  "values_read": 34,
+  "context_entries_read": 17,
+  "verdict": "clean_translation_rendered_width_unverified",
+  "prior_bundle": "i18n/audits/evidence/hi/mobile.projects/hi-create-7def18afc31d",
+  "prior_record_sha256": "93d108d59405979d3f26d6ae7c8da0830037744fb39db0167f37ea0136a28f33",
+  "input_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/hi/mobile.projects.json": "05cccabc2cbc7cb87614f2a3284efc845c31df268a9e4d5587809ba2f551211f",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/features/projects/project-create.tsx": "a0b45434e9d06fb343f88ad05649e0c8a7d8e6e018e5fac27bbfadee5deaa8f6"
+  },
+  "receipt_source": "prior_bundle/record.json",
+  "context_method": "Operator-authorized direct read of 17 nested JSON objects after marker scan; string-only public-copy parser does not support sidecar",
+  "prior_incident": "Broad grep inadvertently surfaced context snippets after refusal; not relied upon.",
+  "artifact_sha256": {
+    "report.md": "b858af41a7ae6528e6e51d0e55cdfbb878040a359e4f522c00738d865360711f",
+    "audit.log": "a1772674c34445396b1623c59e72c07534b6e8a829f1735f5c2e8894eefcc316"
+  }
+}

@@ -1,0 +1,4 @@
+2026-11-02T00:54:34.461255+00:00 literal [REDACTED] byte scan: en=false vi=false
+2026-11-02T00:54:34.461255+00:00 read_public_copy en key=* -> refused: key not found in this catalogue: *
+2026-11-02T00:54:34.461255+00:00 read_public_copy vi key=* -> refused: src/i18n/catalogues/vi/mobile.projects.json differs from HEAD; commit the public copy before auditing it
+2026-11-02T00:54:34.461255+00:00 sidecar unroutable; not attempted. Audit blocked; keys read=0.

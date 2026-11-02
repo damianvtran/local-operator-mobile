@@ -1,0 +1,25 @@
+{
+  "audit_id": "ur-archived-delta-cfdfcc3969a1",
+  "timestamp_utc": "2026-11-02T01:04:41.112468+00:00",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "session_id": "37d4a14cbda7",
+  "translator_job": "c9c413086a50",
+  "base": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+  "head": "543111e908ea9a5657236e5ded084810d235775e",
+  "locale": "ur",
+  "key": "mobile.projects.status.archived",
+  "keys_read": 1,
+  "verdict": "clean",
+  "inputs_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/ur/mobile.projects.json": "1d481f80d65fe6941ce1176e97d0eefda9acbf97ef910bfaf2edb3186de5bdc0",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b"
+  },
+  "artifact_sha256": {
+    "report.md": "2e7da61e4c22958450c71031113e8a83137ce3c0a4f7771ab1e2022fa3ac3166",
+    "audit.log": "54218791f3d5e0ffcadf8a88710158f166eb446ded8c0d8ec87eba6657c90203"
+  },
+  "prior_evidence": "i18n/audits/evidence/ur/mobile.projects/ur-create-d0494d395526",
+  "public_path_normalization": "Local home-directory prefixes in captured receipt paths were replaced with ~/ for public portability; receipt content and audit conclusions are otherwise unchanged."
+}

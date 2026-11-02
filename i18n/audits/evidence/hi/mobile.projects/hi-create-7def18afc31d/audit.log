@@ -1,0 +1,6 @@
+Audit UTC: 2026-11-02T00:57:39.776103+00:00
+checkout HEAD: 5d48015a75804c50638063492ecd6742ddf61af0
+Redaction scan: [redacted], <redacted>, redaction, ***redacted*** case-insensitively; zero in en catalogue, hi catalogue, en context, project-create.tsx, projects.tsx, AGENTS.md.
+read_public_copy: 34 success (17 English + 17 Hindi); 17 sidecar requests refused: catalogue keys and values must be strings.
+Incident: broad src grep inadvertently surfaced context excerpts after refusal; no use in conclusions.
+No Node/tests/install/browser. Chip source lines 263–276 read; rendered fit not established.

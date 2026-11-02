@@ -1,0 +1,43 @@
+{
+  "audit_id": "ur-create-d0494d395526",
+  "timestamp_utc": "2026-11-02T01:02:21.497767+00:00",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "session_id": "37d4a14cbda7",
+  "translator_job": "c9c413086a50",
+  "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+  "repository": "damianvtran/local-operator-mobile",
+  "locale": "ur",
+  "keys": [
+    "mobile.projects.create.description",
+    "mobile.projects.create.description_placeholder",
+    "mobile.projects.create.name",
+    "mobile.projects.create.name_placeholder",
+    "mobile.projects.create.status",
+    "mobile.projects.create.submit",
+    "mobile.projects.create.tags",
+    "mobile.projects.create.tags_help",
+    "mobile.projects.create.tags_placeholder",
+    "mobile.projects.create.title",
+    "mobile.projects.status.active",
+    "mobile.projects.status.archived",
+    "mobile.projects.status.done",
+    "mobile.projects.status.paused",
+    "mobile.projects.status.planning",
+    "mobile.projects.status.qa",
+    "mobile.projects.status.validation"
+  ],
+  "key_pairs_read": 17,
+  "public_copy_reads": 34,
+  "source_file_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/ur/mobile.projects.json": "24186049f6568330047866bd1ee4b4f4b6e3c25ec67d65fde840d390b9ed1a01",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b"
+  },
+  "artifact_sha256": {
+    "report.md": "cd3e84a16dbffcf04ac2ce82d9a2754e4e18bb79fa318d91350a467f6d0daf91",
+    "audit.log": "c9f444511ecb93e65bf3852b80aae7427bcd7bb6f0cbd368a9bb71ffdd981513"
+  },
+  "verdict": "findings",
+  "public_path_normalization": "Local home-directory prefixes in captured receipt paths were replaced with ~/ for public portability; receipt content and audit conclusions are otherwise unchanged."
+}

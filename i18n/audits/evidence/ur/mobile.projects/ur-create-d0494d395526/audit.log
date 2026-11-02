@@ -1,0 +1,1034 @@
+{
+  "timestamp_utc": "2026-11-02T01:02:21.497767+00:00",
+  "marker_scan": {
+    "method": "case-insensitive [redacted...], <redacted...>, ***redacted***",
+    "counts": {
+      "src/i18n/catalogues/en/mobile.projects.json": 0,
+      "src/i18n/catalogues/ur/mobile.projects.json": 0,
+      "src/i18n/catalogues/en/mobile.projects.context.json": 0
+    }
+  },
+  "context_access": "ordinary direct read explicitly permitted after scan",
+  "public_copy_receipts": [
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:8102efd64efa4e2487f6140dc7f9034f",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.description\": \"Description\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.description",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "1ddce66c66c67c6a0be7ff11e3913b1648d5bf2a86c59e20d514a77716c06fb5",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.9514327079959912,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.description_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:0f881cec3be2424eabb59239fb046581",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.description_placeholder\": \"What this project is for\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.description_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "27265e1eb644618f16aeffa7d857c02e2f281726cf2cee5670a2959a9dd3eeea",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.7265851670090342,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:6abe2add082243ef9fd5d458f5bae047",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.name\": \"Name\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.name",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "1a55e310db4db6b6da3c76134ec40feadd9a0e434413fcbfab739d7f4ad49b4b",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.9049523330031661,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.name_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:8e9d15cd3476468796cc0535530f2070",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.name_placeholder\": \"my-project\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.name_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 1.1742059579992201,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.status",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:93b7a0b187534692a77acb055e324c8b",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.status\": \"Status\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.status",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "de7a795b39d5f6f65cc51c12bbc9d79fcb25e0d4a18f859b84f0bbecb8e30f24",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8101150000002235,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.submit",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:c85936b12cdb4005a14da57e63a4fb72",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.submit\": \"Create\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.submit",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "022a3e1ec0037f3aef10e70df0f31737de70dd02a036121f0d6982c80415fdfd",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.6213159170001745,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:67a2a8f3d51d4a2d985872367d08b5ee",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags\": \"Tags\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.tags",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "f2b9c80059e84d2bf75327fe13df61e389a8f534bb5f6fb9fc062a4d12e51c9e",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8422986669902457,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_help",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:d7bc3f0e72524f3aa50985adc2c21b53",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags_help\": \"Separate with commas or spaces.\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.tags_help",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "296753671d0c859ed5157d58f1a7c6ea8b061f922e4e78026c17371da1ed04f2",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.6725468749937136,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.tags_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:6a7817f482fc4c1faa871cde60fef2d8",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags_placeholder\": \"ios, q4\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.tags_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.7162385420087958,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.create.title",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:31ce8afe5e0a48d588cb1e3f094c3cd2",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.title\": \"New project\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.create.title",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "ec06af38551e30e24abf519b0001d579b7a9c72fe9ccb944fbc4c62e6c6cb46c",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.6629218750022119,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.active",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:2360e06948074453b124bcc9f90236ee",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.active\": \"active\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.active",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "db0262692454347b63b58ab695bcd0320fb427e484e04bfa3baa0e9bcac0b7a6",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.7193542920140317,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.archived",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:657decf037344902802f90defe99c0bd",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.archived\": \"archived\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.archived",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "5924c0b7ec528c0930c5f787fdd560b534a864b8ac1c5221dbba1030ae205644",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8076531670085387,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.done",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:8be266f247ee4837b7c2bbebcdb87d1b",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.done\": \"done\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.done",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "0df884ec5d4061010e8993117f1906f02ec4185864ccab21bda8e4d8f70ef051",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8136607500055106,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.paused",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:8dd92e4d411e46c59a512490e4113348",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.paused\": \"paused\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.paused",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "e8f3ff1151104ca4fc0e6f81854784aee9fc51d04b13e12cfe2ed040ffddb022",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.6705667089991039,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.planning",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:b02776a4e76242fc8a147dee9959fb5f",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.planning\": \"planning\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.planning",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "698a3e8e48e342d33b3cdddad0c7eaa4f39a3dcbb028f1cd0f46b002959a6d54",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.7668637499882607,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.qa",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:283ee9b2603e4255b789434b87ffcc26",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.qa\": \"qa\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.qa",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "1f0ab64c03052caa97eb8f32682f49b73ad50f45e25c5cc2a5712ab2e399df3f",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8782749579986557,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "en",
+      "key": "mobile.projects.status.validation",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:26a1b44a4b844c8cba73dce44340180e",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.validation\": \"validation\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/en/mobile.projects.json",
+          "key": "mobile.projects.status.validation",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "481a844fb8db41faba4931d85e93f04756b9c82bebbd2fba0d841721cbf12e34",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.7651665000012144,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.description",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:5cd7cdc183be493cbcb2a52355e76614",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.description\": \"تفصیل\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.description",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "c3156ae9af973a55ced15e4cabafc60242cb6a0ced8f0dcc19a7c5363325390b",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.752671875001397,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.description_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:d70e7f97894648d7b3988a00a2d57026",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.description_placeholder\": \"یہ پروجیکٹ کس لیے ہے\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.description_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "ee20cd6a35843f6550b438c8e3f7da03e7bfc69d38a5ba3d208844abdc5b605a",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.5784877499972936,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.name",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:eaef36756b214dd080e60084c94eabfe",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.name\": \"نام\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.name",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "e4261f33b02328119d93729e7513c943bec89956e687c8836a46730c79d9704a",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.824285124996095,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.name_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:114c2bca895e4e759d404f8c32d17602",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.name_placeholder\": \"my-project\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.name_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.6215547500032699,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.status",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:0286e6d9e63a4401ac3a29487be30d98",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.status\": \"حیثیت\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.status",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "271ce06eed92ed3d700b1fb24e154cc98faea0f3bf8c52ad5780ddbac3b91184",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.5918355839967262,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.submit",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:27de9d17621d452e96d13ae5429452d6",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.submit\": \"بنائیں\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.submit",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "d06e7a79d6b803f59f86c151b48181a6098a70b9512a62f75da6a0310537b973",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.5521855830011191,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.tags",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:fc28c0b54b5a4ed28d93293e2cf7d2a8",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags\": \"ٹیگز\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.tags",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "6e455ea3b5cf5ec1786f4411b26900f10019c8ac687e61b8fcef5b88d9079ea2",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.906157457997324,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.tags_help",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:b52fb38d44f648a7840ddaf4317169ee",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags_help\": \"کوما یا اسپیس سے الگ کریں۔\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.tags_help",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "3306bc19da786c005816e10caed93c3442dfd270799aac991154eda93819ee77",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.8096643750031944,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.tags_placeholder",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:1c4d4512a5a54ff591c3a7401799c894",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.tags_placeholder\": \"ios, q4\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.tags_placeholder",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.9689822500076843,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.create.title",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:5911eb4b140e44e8928a5a4d2563fedd",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.create.title\": \"نیا پروجیکٹ\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.create.title",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "8370cc01f8b84faa062743b7ca7483a53b2957890e676a919ea20ace333bb8a9",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 1.2947222919901833,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.active",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:cc364a223a1442c187bf071c686266b4",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.active\": \"فعال\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.active",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "61c876d219734aa672eca65baeb4e1bc961203532e9f50d21cae6a4180f66d68",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.9113262499886332,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.archived",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:aa29bce4e9eb4fc2897bd9e2320ac4be",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.archived\": \"محفوظ شدہ\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.archived",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "2eff996993df073aa102918c671269e553e2e710acb1b19a68f34d27a802141d",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 1.5387476249889005,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.done",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:1f7e62ec282a416187d49324d8b50d9f",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.done\": \"مکمل\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.done",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "2d98b11242c6b8aceac9fe367ae2677f28a77f8e4d159ac38905d499cf3de016",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 1.0832947910093935,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.paused",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:4b986299246b4614882d4fb1893e5afd",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.paused\": \"موقوف\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.paused",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "f3baa2bb0ec70d2d162f16ed936f858436c7f2ba5d5f9961abbd1cc11e648200",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.9352472079917789,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.planning",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:26b0708549b5437689ec899f9e6e0bda",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.planning\": \"منصوبہ بندی\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.planning",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "40a2b86ace68248ad8082c525ce1541714d9c855183e6531b2322c725d3c093e",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.5936793339933502,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.qa",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:efecf231bc9143a9a1a431950a50acae",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.qa\": \"معیار کی جانچ\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.qa",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "d35bfbdd28fa016addd753a61a89c4d8579ad39a3c99c692d79a0de9d04258c2",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.4920774589991197,
+        "is_error": false,
+        "useless": false
+      }
+    },
+    {
+      "locale": "ur",
+      "key": "mobile.projects.status.validation",
+      "response": {
+        "tool_call_id": "call_3a6c2400a9d04e5586fb8c5087fef441:eb7ed2ba0b84469b98b512413edf66aa",
+        "tool_name": "read_public_copy",
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n \"mobile.projects.status.validation\": \"توثیق\"\n}"
+          }
+        ],
+        "details": {
+          "path": "src/i18n/catalogues/ur/mobile.projects.json",
+          "key": "mobile.projects.status.validation",
+          "public_copy": true,
+          "policy": "docs/security/redaction-policy.md",
+          "audit_log": "~/.local-operator/audit/public-copy-reads.jsonl",
+          "sha256": "cf83183eab492f006eb8ddae84200da39b30928c4825e9b19e99291c2e4452fc",
+          "repository_root": "~/local-operator-mobile/.worktrees/i18n-project-create",
+          "repository": "damianvtran/local-operator-mobile",
+          "repository_verified": true,
+          "commit": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d",
+          "checkout_head": "52e26313ca7b7f628b2fb70a42d0a11cf1cc6a4d"
+        },
+        "duration_s": 0.48520308299339376,
+        "is_error": false,
+        "useless": false
+      }
+    }
+  ]
+}
