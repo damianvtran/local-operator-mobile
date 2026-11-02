@@ -1,4 +1,44 @@
 {
+	"mobile.projects.create.description": {
+		"role": "meta",
+		"note": "Label for an optional project description."
+	},
+	"mobile.projects.create.description_placeholder": {
+		"role": "help",
+		"note": "Placeholder prompting an optional project description."
+	},
+	"mobile.projects.create.name": {
+		"role": "meta",
+		"note": "Label for the project identifier field; the nearby help states its grammar."
+	},
+	"mobile.projects.create.name_placeholder": {
+		"role": "help",
+		"note": "Example of a valid project identifier; preserve the hyphen and use only letters, digits, dot, underscore or hyphen, never starting with a hyphen."
+	},
+	"mobile.projects.create.status": {
+		"role": "heading",
+		"note": "Label for the project status choices."
+	},
+	"mobile.projects.create.submit": {
+		"role": "button",
+		"note": "Submits the new project form."
+	},
+	"mobile.projects.create.tags": {
+		"role": "meta",
+		"note": "Label for optional project tags."
+	},
+	"mobile.projects.create.tags_help": {
+		"role": "help",
+		"note": "Explains how to separate multiple project tags."
+	},
+	"mobile.projects.create.tags_placeholder": {
+		"role": "help",
+		"note": "Examples of two tags, separated by a comma; use valid short tag examples."
+	},
+	"mobile.projects.create.title": {
+		"role": "heading",
+		"note": "Title of the sheet for creating a project."
+	},
 	"mobile.projects.delete_body": {
 		"role": "confirm",
 		"note": "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone."
@@ -50,6 +90,34 @@
 	"mobile.projects.stale_badge": {
 		"role": "status",
 		"note": "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name."
+	},
+	"mobile.projects.status.active": {
+		"role": "status",
+		"note": "Display label for the project status code active; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.archived": {
+		"role": "status",
+		"note": "Display label for the project status code archived; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.done": {
+		"role": "status",
+		"note": "Display label for the project status code done; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.paused": {
+		"role": "status",
+		"note": "Display label for the project status code paused; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.planning": {
+		"role": "status",
+		"note": "Display label for the project status code planning; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.qa": {
+		"role": "status",
+		"note": "Display label for the project status code qa; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.validation": {
+		"role": "status",
+		"note": "Display label for the project status code validation; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
 	},
 	"mobile.projects.write_receipt": {
 		"role": "status",
