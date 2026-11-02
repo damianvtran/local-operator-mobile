@@ -6,6 +6,7 @@
  * into a capture rig or forwarding a real bearer to a mock server.
  */
 import { Platform } from "react-native";
+import { TEAM_BRIDGE_FIXTURE_TOKEN } from "@/testing/team-bridge-token";
 
 const VALID_CASE = /^[a-z_-]+$/;
 
@@ -20,9 +21,6 @@ export function teamBridgeFixture(): {
 	if (!scenario || !VALID_CASE.test(scenario)) return null;
 	return {
 		baseUrl: `${location.origin}/mock-hub/${scenario}`,
-		token:
-			scenario === "signed_out"
-				? null
-				: "fixture.eyJzdWIiOiJhY2N0X3NlbGZfMDAwMSJ9.unsigned-not-a-credential",
+		token: scenario === "signed_out" ? null : TEAM_BRIDGE_FIXTURE_TOKEN,
 	};
 }

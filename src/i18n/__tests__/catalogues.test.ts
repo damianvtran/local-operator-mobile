@@ -53,8 +53,8 @@ const NAMESPACES = [
 		name: "mobile.team_bridge",
 		messages: teamBridge,
 		context: teamBridgeContext,
-		// Six delivery annotation/help keys extend the reviewed namespace budget.
-		expected: 93,
+		// Current union: endpoint-profile keys plus six delivery/help keys.
+		expected: 104,
 	},
 	{
 		name: "mobile.common",
@@ -188,7 +188,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(277);
+		expect(total).toBe(288);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -244,11 +244,19 @@ describe("the English catalogues", () => {
  * untranslated, and an entry that is no longer identical fails as stale, so an
  * exemption cannot quietly become permanent.
  */
+const IDENTITY_PROSE = /[\p{L}\p{N}]/u;
+
 const IDENTICAL_BY_DESIGN: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.profile.badge_agent":
+			"Agent is also the French term for a software agent; this role badge is an idiomatic cognate, not an English fallback.",
+		"mobile.team_bridge.profile.message":
+			"Message is also the French noun for the profile contact action; opening the message composer does not send a message.",
 		"mobile.team_bridge.delivery.recipient":
 			"Agent is also the French noun for the recipient agent; identical spelling is intentional, not an English fallback.",
 		"mobile.team_bridge.conversation":
@@ -273,9 +281,11 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
 	},
-	/* Spanish happens to render the placeholder-only template identically —
-	 * `{head} · {label}` has no words of its own — and nothing else. */
+	/* Spanish preserves these placeholder-only templates: names and separators
+	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.schedules.head.overdue":
@@ -291,6 +301,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		/* ASCII example, not an untranslated value */
@@ -300,6 +312,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		/* ASCII example, not an untranslated value */
@@ -309,6 +323,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		/* ASCII example, not an untranslated value */
@@ -318,6 +334,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		/* ASCII example, not an untranslated value */
@@ -340,6 +358,18 @@ describe("a shipped translation is still translated", () => {
 		expect(identical).toEqual(
 			Object.keys(IDENTICAL_BY_DESIGN[locale] ?? {}).sort(),
 		);
+	});
+
+	it("keeps exempt profile-name templates free of untranslated prose", () => {
+		const key = "mobile.team_bridge.profile.name_with_owner";
+		for (const locale of shipped) {
+			if (!IDENTICAL_BY_DESIGN[locale]?.[key]) continue;
+			// Empty caller names expose only the template itself. A future English
+			// phrase cannot silently inherit this names-and-punctuation exception.
+			expect(renderFor(key, { agent: "", owner: "" }, locale)).not.toMatch(
+				IDENTITY_PROSE,
+			);
+		}
 	});
 
 	it("gives every allowlisted value its reason", () => {

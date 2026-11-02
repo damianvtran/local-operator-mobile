@@ -170,6 +170,7 @@ export const CONTROL = {
 	teamBridgeNotifications: "team-bridge-notifications",
 	teamBridgeOlderRetry: "team-bridge-older-retry",
 	teamBridgeOrgSwitcher: "team-bridge-org-switcher",
+	teamBridgeProfileMessage: "team-bridge-profile-message",
 	teamBridgePeopleRetry: "team-bridge-people-retry",
 	teamBridgeSend: "team-bridge-send",
 	teamBridgeSignIn: "team-bridge-sign-in",
@@ -646,6 +647,8 @@ export const SURFACE = {
 	teamBridgeDeliveryHelpSheet: "team-bridge-delivery-help-sheet",
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
+	teamBridgeProfile: "team-bridge-profile",
+	teamBridgeProfileName: "team-bridge-profile-name",
 	teamBridgePlanConsole: "team-bridge-plan-console",
 	teamBridgeSections: "team-bridge-sections",
 	teamBridgeSendError: "team-bridge-send-error",
@@ -1018,6 +1021,9 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-org-",
 	"team-bridge-message-",
 	"team-bridge-notify-",
+	// One "view profile" control per row or message author, keyed by the row's
+	// own hub id (account, endpoint or message) so it is stable across refreshes.
+	"team-bridge-profile-open-",
 	/* The wave-2 slice's parameterised identifiers: one row per session or
 	 * computer, one copy action per command block. Declared in the same change as
 	 * the controls that carry them, which is what this list's own note asks for. */
@@ -2092,3 +2098,5 @@ export const teamBridgeDeliveryHelpId = (message: string): string =>
 	`team-bridge-delivery-help-${encodeURIComponent(message)}`;
 export const teamBridgeNotifyId = (value: string): string =>
 	`team-bridge-notify-${value}`;
+export const teamBridgeProfileOpenId = (value: string): string =>
+	`team-bridge-profile-open-${value}`;

@@ -258,6 +258,17 @@ export type CatalogueKey =
 	| "mobile.team_bridge.list.self"
 	| "mobile.team_bridge.navigation.caption"
 	| "mobile.team_bridge.navigation.entry"
+	| "mobile.team_bridge.profile.about_owner"
+	| "mobile.team_bridge.profile.badge_agent"
+	| "mobile.team_bridge.profile.badge_person"
+	| "mobile.team_bridge.profile.chief"
+	| "mobile.team_bridge.profile.former_member"
+	| "mobile.team_bridge.profile.local_time"
+	| "mobile.team_bridge.profile.message"
+	| "mobile.team_bridge.profile.name_with_owner"
+	| "mobile.team_bridge.profile.open"
+	| "mobile.team_bridge.profile.opens_hint"
+	| "mobile.team_bridge.profile.title"
 	| "mobile.team_bridge.retry"
 	| "mobile.team_bridge.thread.access_retry"
 	| "mobile.team_bridge.thread.archived"
@@ -508,6 +519,13 @@ export type NoParamKey =
 	| "mobile.team_bridge.list.quiet"
 	| "mobile.team_bridge.list.self"
 	| "mobile.team_bridge.navigation.caption"
+	| "mobile.team_bridge.profile.badge_agent"
+	| "mobile.team_bridge.profile.badge_person"
+	| "mobile.team_bridge.profile.chief"
+	| "mobile.team_bridge.profile.former_member"
+	| "mobile.team_bridge.profile.message"
+	| "mobile.team_bridge.profile.opens_hint"
+	| "mobile.team_bridge.profile.title"
 	| "mobile.team_bridge.retry"
 	| "mobile.team_bridge.thread.access_retry"
 	| "mobile.team_bridge.thread.archived"
@@ -788,6 +806,17 @@ export type MessageParams = {
 	"mobile.team_bridge.list.self": NoParams;
 	"mobile.team_bridge.navigation.caption": NoParams;
 	"mobile.team_bridge.navigation.entry": { count: number };
+	"mobile.team_bridge.profile.about_owner": { owner: string | number };
+	"mobile.team_bridge.profile.badge_agent": NoParams;
+	"mobile.team_bridge.profile.badge_person": NoParams;
+	"mobile.team_bridge.profile.chief": NoParams;
+	"mobile.team_bridge.profile.former_member": NoParams;
+	"mobile.team_bridge.profile.local_time": { time: string | number };
+	"mobile.team_bridge.profile.message": NoParams;
+	"mobile.team_bridge.profile.name_with_owner": { agent: string | number; owner: string | number };
+	"mobile.team_bridge.profile.open": { name: string | number };
+	"mobile.team_bridge.profile.opens_hint": NoParams;
+	"mobile.team_bridge.profile.title": NoParams;
 	"mobile.team_bridge.retry": NoParams;
 	"mobile.team_bridge.thread.access_retry": NoParams;
 	"mobile.team_bridge.thread.archived": NoParams;
@@ -1084,6 +1113,17 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.list.self": "you",
 	"mobile.team_bridge.navigation.caption": "Your organization, even with your computer asleep",
 	"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # unread} other {Team Bridge · # unread}}",
+	"mobile.team_bridge.profile.about_owner": "About {owner}",
+	"mobile.team_bridge.profile.badge_agent": "Agent",
+	"mobile.team_bridge.profile.badge_person": "Person",
+	"mobile.team_bridge.profile.chief": "Chief of staff",
+	"mobile.team_bridge.profile.former_member": "Former member",
+	"mobile.team_bridge.profile.local_time": "Local time {time}",
+	"mobile.team_bridge.profile.message": "Message",
+	"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+	"mobile.team_bridge.profile.open": "View profile for {name}",
+	"mobile.team_bridge.profile.opens_hint": "Opens their profile",
+	"mobile.team_bridge.profile.title": "Profile",
 	"mobile.team_bridge.retry": "Retry",
 	"mobile.team_bridge.thread.access_retry": "Retry access",
 	"mobile.team_bridge.thread.archived": "This conversation is archived. You can read history, but cannot send messages.",
@@ -1365,6 +1405,17 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.list.self": { role: "help", note: "Team Bridge mobile UI: list / self. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.navigation.caption": { role: "help", note: "Team Bridge mobile UI: navigation / caption. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.navigation.entry": { role: "help", note: "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.profile.about_owner": { role: "help", note: "Heading introducing the human owner of this software agent. {owner} is the caller-provided owner name; preserve the exact placeholder and keep the whole name without translation or ellipsis. The profile description below is user data and must not be translated." },
+	"mobile.team_bridge.profile.badge_agent": { role: "status", note: "Profile badge identifying a software agent, not a real-estate agent or broker. No parameters; do not translate user-provided profile names, titles, descriptions or timezones." },
+	"mobile.team_bridge.profile.badge_person": { role: "status", note: "Profile badge identifying a human person rather than a software agent. No parameters; do not translate user-provided profile names, titles, descriptions or timezones." },
+	"mobile.team_bridge.profile.chief": { role: "status", note: "Primary software-agent role for a person's chief of staff, not the person's employment title. Match the existing chief-of-staff glossary. No parameters; profile names, titles, descriptions and timezones are user data and must never be translated." },
+	"mobile.team_bridge.profile.former_member": { role: "help", note: "Existing identity fallback when the server directory label is missing or unknown, shared by profile, directory row and message sender names. This is not a new membership eligibility or status classification. No parameters. Translate only this fallback label; caller-provided names, profile titles, descriptions and timezones remain user data and must not be translated." },
+	"mobile.team_bridge.profile.local_time": { role: "help", note: "Profile local-time label. {time} is caller-provided, already formatted local time; preserve the exact placeholder without translating or reformatting its value. Profile timezone identifiers are user data and must not be translated." },
+	"mobile.team_bridge.profile.message": { role: "button", note: "Action opening a local direct-message draft or an existing direct conversation with the profile subject. It does not send a message or make a network request before the FIRST SEND; do not translate as Send. No parameters." },
+	"mobile.team_bridge.profile.name_with_owner": { role: "help", note: "Software-agent display name with its human owner. Preserve BOTH exact placeholders {agent} and {owner}; each is a caller-provided name, never translated, shortened or ellipsized. Keep both whole names; punctuation and order may suit the locale." },
+	"mobile.team_bridge.profile.open": { role: "button", note: "Accessibility label for the person or software-agent mark that opens its profile. {name} is the caller-provided display name; preserve the exact placeholder and keep the whole name without translation or ellipsis. This opens a profile, not a conversation." },
+	"mobile.team_bridge.profile.opens_hint": { role: "help", note: "Accessibility hint on a person or software-agent mark: activating it opens their profile. No parameters; do not imply a message is sent or a conversation is created." },
+	"mobile.team_bridge.profile.title": { role: "heading", note: "Profile sheet title for either a person or software agent, not their user-provided job title. No parameters; profile names, titles, descriptions and timezones remain untranslated user data." },
 	"mobile.team_bridge.retry": { role: "button", note: "Team Bridge mobile UI: retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.access_retry": { role: "button", note: "Team Bridge mobile UI: thread / access retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.archived": { role: "help", note: "Team Bridge mobile UI: thread / archived. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
@@ -1660,6 +1711,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "tú",
 		"mobile.team_bridge.navigation.caption": "Tu organización, incluso con tu ordenador en reposo",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # sin leer} other {Team Bridge · # sin leer}}",
+		"mobile.team_bridge.profile.about_owner": "Acerca de {owner}",
+		"mobile.team_bridge.profile.badge_agent": "Agente",
+		"mobile.team_bridge.profile.badge_person": "Persona",
+		"mobile.team_bridge.profile.chief": "Jefe de gabinete",
+		"mobile.team_bridge.profile.former_member": "Antiguo miembro",
+		"mobile.team_bridge.profile.local_time": "Hora local: {time}",
+		"mobile.team_bridge.profile.message": "Mensaje",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "Ver el perfil de {name}",
+		"mobile.team_bridge.profile.opens_hint": "Abre su perfil",
+		"mobile.team_bridge.profile.title": "Perfil",
 		"mobile.team_bridge.retry": "Reintentar",
 		"mobile.team_bridge.thread.access_retry": "Reintentar acceso",
 		"mobile.team_bridge.thread.archived": "Esta conversación está archivada. Puedes leer el historial, pero no enviar mensajes.",
@@ -1939,6 +2001,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "vous",
 		"mobile.team_bridge.navigation.caption": "Votre organisation, même lorsque votre ordinateur est en veille",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # non lu} other {Team Bridge · # non lus}}",
+		"mobile.team_bridge.profile.about_owner": "À propos de {owner}",
+		"mobile.team_bridge.profile.badge_agent": "Agent",
+		"mobile.team_bridge.profile.badge_person": "Personne",
+		"mobile.team_bridge.profile.chief": "Chef de cabinet",
+		"mobile.team_bridge.profile.former_member": "Ancien membre",
+		"mobile.team_bridge.profile.local_time": "Heure locale : {time}",
+		"mobile.team_bridge.profile.message": "Message",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "Voir le profil de {name}",
+		"mobile.team_bridge.profile.opens_hint": "Ouvre son profil",
+		"mobile.team_bridge.profile.title": "Profil",
 		"mobile.team_bridge.retry": "Réessayer",
 		"mobile.team_bridge.thread.access_retry": "Réessayer l’accès",
 		"mobile.team_bridge.thread.archived": "Cette conversation est archivée. Vous pouvez lire l’historique, mais pas envoyer de messages.",
@@ -2218,6 +2291,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "आप",
 		"mobile.team_bridge.navigation.caption": "कंप्यूटर स्लीप में हो, तब भी आपका संगठन आपके साथ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # अपठित} other {Team Bridge · # अपठित}}",
+		"mobile.team_bridge.profile.about_owner": "{owner} के बारे में",
+		"mobile.team_bridge.profile.badge_agent": "एजेंट",
+		"mobile.team_bridge.profile.badge_person": "व्यक्ति",
+		"mobile.team_bridge.profile.chief": "चीफ़ ऑफ़ स्टाफ़",
+		"mobile.team_bridge.profile.former_member": "पूर्व सदस्य",
+		"mobile.team_bridge.profile.local_time": "स्थानीय समय {time}",
+		"mobile.team_bridge.profile.message": "संदेश",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "{name} की प्रोफ़ाइल देखें",
+		"mobile.team_bridge.profile.opens_hint": "उनकी प्रोफ़ाइल खोलता है",
+		"mobile.team_bridge.profile.title": "प्रोफ़ाइल",
 		"mobile.team_bridge.retry": "फिर कोशिश करें",
 		"mobile.team_bridge.thread.access_retry": "पहुँच की फिर कोशिश करें",
 		"mobile.team_bridge.thread.archived": "यह बातचीत संग्रहित है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
@@ -2497,6 +2581,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "вы",
 		"mobile.team_bridge.navigation.caption": "Ваша организация рядом, даже когда компьютер спит",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # непрочитанное} few {Team Bridge · # непрочитанных} many {Team Bridge · # непрочитанных} other {Team Bridge · # непрочитанных}}",
+		"mobile.team_bridge.profile.about_owner": "О пользователе {owner}",
+		"mobile.team_bridge.profile.badge_agent": "Агент",
+		"mobile.team_bridge.profile.badge_person": "Человек",
+		"mobile.team_bridge.profile.chief": "Руководитель аппарата",
+		"mobile.team_bridge.profile.former_member": "Бывший участник",
+		"mobile.team_bridge.profile.local_time": "Местное время: {time}",
+		"mobile.team_bridge.profile.message": "Сообщение",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "Посмотреть профиль: {name}",
+		"mobile.team_bridge.profile.opens_hint": "Открывает профиль",
+		"mobile.team_bridge.profile.title": "Профиль",
 		"mobile.team_bridge.retry": "Повторить",
 		"mobile.team_bridge.thread.access_retry": "Повторить проверку доступа",
 		"mobile.team_bridge.thread.archived": "Переписка в архиве. Историю можно читать, но отправлять сообщения нельзя.",
@@ -2776,6 +2871,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "آپ",
 		"mobile.team_bridge.navigation.caption": "کمپیوٹر سلیپ میں ہو، تب بھی آپ کی تنظیم آپ کے ساتھ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # نا پڑھا گیا پیغام} other {Team Bridge · # نا پڑھے گئے پیغامات}}",
+		"mobile.team_bridge.profile.about_owner": "{owner} کے بارے میں",
+		"mobile.team_bridge.profile.badge_agent": "ایجنٹ",
+		"mobile.team_bridge.profile.badge_person": "شخص",
+		"mobile.team_bridge.profile.chief": "چیف آف اسٹاف",
+		"mobile.team_bridge.profile.former_member": "سابق رکن",
+		"mobile.team_bridge.profile.local_time": "مقامی وقت {time}",
+		"mobile.team_bridge.profile.message": "پیغام",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "{name} کی پروفائل دیکھیں",
+		"mobile.team_bridge.profile.opens_hint": "ان کی پروفائل کھولتا ہے",
+		"mobile.team_bridge.profile.title": "پروفائل",
 		"mobile.team_bridge.retry": "دوبارہ کوشش کریں",
 		"mobile.team_bridge.thread.access_retry": "رسائی کی دوبارہ کوشش کریں",
 		"mobile.team_bridge.thread.archived": "یہ گفتگو محفوظ شدہ ہے۔ آپ تاریخ پڑھ سکتے ہیں، لیکن پیغامات نہیں بھیج سکتے۔",
@@ -3055,6 +3161,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "bạn",
 		"mobile.team_bridge.navigation.caption": "Tổ chức luôn bên bạn, ngay cả khi máy tính đang ngủ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # chưa đọc}}",
+		"mobile.team_bridge.profile.about_owner": "Giới thiệu về {owner}",
+		"mobile.team_bridge.profile.badge_agent": "Tác nhân",
+		"mobile.team_bridge.profile.badge_person": "Người",
+		"mobile.team_bridge.profile.chief": "Chánh văn phòng",
+		"mobile.team_bridge.profile.former_member": "Cựu thành viên",
+		"mobile.team_bridge.profile.local_time": "Giờ địa phương: {time}",
+		"mobile.team_bridge.profile.message": "Tin nhắn",
+		"mobile.team_bridge.profile.name_with_owner": "{agent} ({owner})",
+		"mobile.team_bridge.profile.open": "Xem hồ sơ của {name}",
+		"mobile.team_bridge.profile.opens_hint": "Mở hồ sơ của họ",
+		"mobile.team_bridge.profile.title": "Hồ sơ",
 		"mobile.team_bridge.retry": "Thử lại",
 		"mobile.team_bridge.thread.access_retry": "Thử truy cập lại",
 		"mobile.team_bridge.thread.archived": "Cuộc trò chuyện này đã được lưu trữ. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
@@ -3334,6 +3451,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "你",
 		"mobile.team_bridge.navigation.caption": "即使电脑休眠，也能与组织保持联系",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # 条未读}}",
+		"mobile.team_bridge.profile.about_owner": "关于{owner}",
+		"mobile.team_bridge.profile.badge_agent": "智能体",
+		"mobile.team_bridge.profile.badge_person": "成员",
+		"mobile.team_bridge.profile.chief": "幕僚长",
+		"mobile.team_bridge.profile.former_member": "前成员",
+		"mobile.team_bridge.profile.local_time": "当地时间 {time}",
+		"mobile.team_bridge.profile.message": "消息",
+		"mobile.team_bridge.profile.name_with_owner": "{agent}（{owner}）",
+		"mobile.team_bridge.profile.open": "查看{name}的个人资料",
+		"mobile.team_bridge.profile.opens_hint": "打开其个人资料",
+		"mobile.team_bridge.profile.title": "个人资料",
 		"mobile.team_bridge.retry": "重试",
 		"mobile.team_bridge.thread.access_retry": "重试访问",
 		"mobile.team_bridge.thread.archived": "此会话已归档，你可以阅读历史记录，但无法发送消息。",
