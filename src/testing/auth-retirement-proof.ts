@@ -368,10 +368,16 @@ export function installAuthRetirementProof(): void {
 		}
 	};
 	Linking.addEventListener("url", ({ url }) => {
+		// Native ingress, JS callback entry, and HTTP progress are independent:
+		// postMarker swallows transport errors; release OS log retention can also
+		// omit console.info. Calibrate this same logger before listener-ready.
+		if (staticIdentityValid())
+			console.info("loretirementproof-js-callback-entry");
 		void receive(url);
 	});
 	void Linking.getInitialURL().then((url) => {
 		if (url) void receive(url);
 	});
+	if (staticIdentityValid()) console.info("loretirementproof-js-log-ready");
 	void postMarker("/ready", { kind: "listener-ready" });
 }

@@ -494,7 +494,7 @@ export async function prepareProofBuild(
 	pkg.main = `./${entry}`;
 	writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
 	const config = readFileSync("app.config.ts", "utf8");
-	const replacement = `config.ios = { ...config.ios, bundleIdentifier: ${JSON.stringify(PROOF_ID)}, infoPlist: { ...config.ios?.infoPlist, LORetirementProofFlavor: ${JSON.stringify(FLAVOR)}, LORetirementProofNonce: ${JSON.stringify(nonce)}, LORetirementProofSource: ${JSON.stringify(sourceSha)}, LORetirementProofReceiverPort: ${receiverPort} } };\nconfig.scheme = 'loretirementproof';\nexport default config;`;
+	const replacement = `config.ios = { ...config.ios, bundleIdentifier: ${JSON.stringify(PROOF_ID)}, infoPlist: { ...config.ios?.infoPlist, LORetirementProofFlavor: ${JSON.stringify(FLAVOR)}, LORetirementProofNonce: ${JSON.stringify(nonce)}, LORetirementProofSource: ${JSON.stringify(sourceSha)}, LORetirementProofReceiverPort: ${receiverPort} } };\nconfig.scheme = 'loretirementproof';\nconfig.plugins = [...(config.plugins ?? []), './scripts/ci/auth-retirement-native-markers.cjs'];\nexport default config;`;
 	if (!config.endsWith("export default config;\n"))
 		throw new Error("Unknown app config export shape");
 	writeFileSync(

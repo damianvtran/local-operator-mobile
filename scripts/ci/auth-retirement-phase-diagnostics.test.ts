@@ -288,6 +288,48 @@ describe("native proof observation vocabulary and privacy", () => {
 			),
 		).toEqual({ timeoutHostLoadAvg1m: 383.12, timeoutHostFreeMemMiB: 5 });
 	});
+	it("native marker diagnostics admit booleans only, never a marker string or raw record", () => {
+		const root = fresh(),
+			diag = new ProofDiagnostics(root);
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			nativeIngressSeen: secret,
+			nativeLogReadySeen: { eventMessage: secret },
+		});
+		diag.fail();
+		const text = readFileSync(join(root, "failure.json"), "utf8");
+		expect(text).not.toContain(secret);
+		expect(JSON.parse(text).phaseFailure).toMatchObject({
+			nativeIngressSeen: "UNOBSERVED",
+			nativeLogReadySeen: "UNOBSERVED",
+		});
+	});
+	it("round13 system-process classes are a closed deduplicated set with no raw labels", () => {
+		const root = fresh(),
+			diag = new ProofDiagnostics(root);
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			schemeOpenSeenBySystem: true,
+			schemeOpenSystemProcessClass: [
+				"SpringBoard",
+				secret,
+				"other",
+				"SpringBoard",
+				"log",
+			],
+		});
+		diag.fail();
+		const text = readFileSync(join(root, "failure.json"), "utf8");
+		expect(text).not.toContain(secret);
+		expect(JSON.parse(text).phaseFailure.schemeOpenSystemProcessClass).toEqual([
+			"SpringBoard",
+			"other",
+		]);
+	});
 	it("maps arbitrary phase/cause/timing/process values to closed safe fallbacks", () => {
 		const safe = sanitizePhaseFailure({
 			phase: secret,

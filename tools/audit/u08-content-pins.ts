@@ -443,7 +443,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* #147 union retains explicit fixture-only native retirement proof plus
 	 * current #105 shared source. Re-derived with the normal CLI over the
 	 * actual indexed union; this is identity closure, not native execution. */
-	src: "70af6a0b541e66c5037d7ed9c71d594ca13b11a9b8e037548f19d910bada374f",
+	/* #147 diagnostic-only JS callback/startup constants in the existing proof
+	 * module move this corpus. Derived by --print; no ordinary entry import,
+	 * transport change, instrument exemption or native-execution claim. */
+	src: "5d61d50866409896684e24a1ae4330dd753d3e83f96031a9a36cefbfe684ac07",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

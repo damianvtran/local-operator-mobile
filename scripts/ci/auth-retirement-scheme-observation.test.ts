@@ -175,6 +175,196 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		},
 	);
 	it.each([
+		["log", false, false, []],
+		["launchservicesd", true, false, ["launchservicesd"]],
+		["SpringBoard", true, false, ["SpringBoard"]],
+		["CoreSimulatorBridge", true, false, ["CoreSimulatorBridge"]],
+		["UNSAFE_PROCESS_NAME", true, false, ["other"]],
+		[executable, false, true, []],
+		["catalog", true, false, ["other"]],
+	] as const)(
+		"round13 exact basename %s yields only closed system classes",
+		(name, system, app, classes) => {
+			expect(
+				parseSchemeLogs(ndjson(event(`/synthetic/${name}`)), executable),
+			).toEqual({
+				schemeOpenSeenBySystem: system,
+				schemeOpenSeenByApp: app,
+				schemeOpenSystemProcessClass: classes,
+				schemeLogObservation: "observed",
+				nativeIngressSeen: false,
+				nativeLogReadySeen: false,
+				jsCallbackEntrySeen: false,
+				jsLogReadySeen: false,
+			});
+		},
+	);
+	it("round13 process classes are a deterministic set and self-trace cannot add other", () => {
+		const records = [
+			"log",
+			"SpringBoard",
+			"launchservicesd",
+			"SpringBoard",
+			"CoreSimulatorBridge",
+			"UNSAFE_PROCESS_NAME",
+			executable,
+		]
+			.map((name) => event(`/synthetic/${name}`))
+			.join("\n");
+		expect(parseSchemeLogs(ndjson(records), executable)).toMatchObject({
+			schemeOpenSeenBySystem: true,
+			schemeOpenSeenByApp: true,
+			schemeOpenSystemProcessClass: [
+				"launchservicesd",
+				"SpringBoard",
+				"CoreSimulatorBridge",
+				"other",
+			],
+		});
+	});
+	it.each([
+		[executable, "loretirementproof-native-ingress", true, false],
+		[executable, "loretirementproof-native-log-ready", false, true],
+		[executable, "arbitrary loretirementproof mention", false, false],
+		[executable, "prefix loretirementproof-native-ingress", false, false],
+		["log", "loretirementproof-native-ingress", false, false],
+		["log", "loretirementproof-native-log-ready", false, false],
+		["DifferentApp", "loretirementproof-native-ingress", false, false],
+		["DifferentApp", "loretirementproof-native-log-ready", false, false],
+	] as const)(
+		"native marker exactness %s/%s",
+		(process, message, ingress, ready) => {
+			const output = ndjson(
+				JSON.stringify({
+					...eventRecord(`/synthetic/${process}`),
+					eventMessage: message,
+				}),
+			);
+			expect(parseSchemeLogs(output, executable)).toMatchObject({
+				nativeIngressSeen: ingress,
+				nativeLogReadySeen: ready,
+				schemeLogObservation: "observed",
+			});
+		},
+	);
+	it("native calibration and ingress are independent observations and malformed output discards partial certainty", () => {
+		const marker = (message: string) =>
+			JSON.stringify({
+				...eventRecord(`/synthetic/${executable}`),
+				eventMessage: message,
+			});
+		const both =
+			marker("loretirementproof-native-ingress") +
+			"\n" +
+			marker("loretirementproof-native-log-ready");
+		expect(parseSchemeLogs(ndjson(both), executable)).toMatchObject({
+			nativeIngressSeen: true,
+			nativeLogReadySeen: true,
+		});
+		expect(
+			parseSchemeLogs(ndjson(both + "\nnot-json"), executable),
+		).toMatchObject({
+			nativeIngressSeen: "UNOBSERVED",
+			nativeLogReadySeen: "UNOBSERVED",
+			jsCallbackEntrySeen: "UNOBSERVED",
+			jsLogReadySeen: "UNOBSERVED",
+		});
+		// False/false without calibration is NOT proof of absent native ingress.
+		expect(parseSchemeLogs(ndjson(""), executable)).toMatchObject({
+			nativeIngressSeen: false,
+			nativeLogReadySeen: false,
+			jsCallbackEntrySeen: false,
+			jsLogReadySeen: false,
+		});
+		const root = fresh(),
+			diag = new ProofDiagnostics(root);
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			...parseSchemeLogs(ndjson(both), executable),
+		});
+		diag.fail();
+		const text = readFileSync(join(root, "failure.json"), "utf8");
+		expect(text).not.toContain("loretirementproof-native");
+		expect(text).not.toContain(executable);
+		expect(JSON.parse(text).phaseFailure).toMatchObject({
+			nativeIngressSeen: true,
+			nativeLogReadySeen: true,
+		});
+	});
+	it.each([
+		[executable, "loretirementproof-js-callback-entry", true, false],
+		[executable, "loretirementproof-js-log-ready", false, true],
+		[executable, "loretirementproof-native-ingress", false, false],
+		[executable, "arbitrary loretirementproof mention", false, false],
+		[executable, "prefix loretirementproof-js-callback-entry", false, false],
+		["log", "loretirementproof-js-callback-entry", false, false],
+		["log", "loretirementproof-js-log-ready", false, false],
+		["DifferentApp", "loretirementproof-js-callback-entry", false, false],
+	] as const)("JS marker exactness %s/%s", (process, message, entry, ready) => {
+		const output = ndjson(
+			JSON.stringify({
+				...eventRecord(`/synthetic/${process}`),
+				eventMessage: message,
+			}),
+		);
+		expect(parseSchemeLogs(output, executable)).toMatchObject({
+			jsCallbackEntrySeen: entry,
+			jsLogReadySeen: ready,
+			schemeLogObservation: "observed",
+		});
+	});
+	it("JS startup calibration does not establish entry and malformed logs discard partial JS observations", () => {
+		const marker = (message: string) =>
+			JSON.stringify({
+				...eventRecord(`/synthetic/${executable}`),
+				eventMessage: message,
+			});
+		const both =
+			marker("loretirementproof-js-callback-entry") +
+			"\n" +
+			marker("loretirementproof-js-log-ready");
+		expect(parseSchemeLogs(ndjson(both), executable)).toMatchObject({
+			jsCallbackEntrySeen: true,
+			jsLogReadySeen: true,
+			nativeIngressSeen: false,
+		});
+		expect(
+			parseSchemeLogs(ndjson(both + "\nnot-json"), executable),
+		).toMatchObject({
+			jsCallbackEntrySeen: "UNOBSERVED",
+			jsLogReadySeen: "UNOBSERVED",
+		});
+		// No JS calibration means missing console output is not missing callback.
+		expect(parseSchemeLogs(ndjson(""), executable)).toMatchObject({
+			jsCallbackEntrySeen: false,
+			jsLogReadySeen: false,
+		});
+		const root = fresh(),
+			diag = new ProofDiagnostics(root);
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			...parseSchemeLogs(ndjson(both), executable),
+		});
+		diag.fail();
+		const text = readFileSync(join(root, "failure.json"), "utf8");
+		expect(text).not.toContain("loretirementproof-js");
+		expect(text).not.toContain(executable);
+		expect(JSON.parse(text).phaseFailure).toMatchObject({
+			jsCallbackEntrySeen: true,
+			jsLogReadySeen: true,
+		});
+	});
+	it("round13 self-trace log alone is not system ingress", () => {
+		expect(
+			parseSchemeLogs(ndjson(event("/synthetic/bin/log")), executable)
+				.schemeOpenSeenBySystem,
+		).toBe(false);
+	});
+	it.each([
 		["system-only", event("/system/SpringBoard"), true, false],
 		["app-only", event(`/apps/${executable}`), false, true],
 		["both", event("SpringBoard") + "\n" + event(executable), true, true],
@@ -201,8 +391,13 @@ describe("built scheme and timeout log observations, no SDK", () => {
 			expect(parseSchemeLogs(ndjson(text), executable)).toEqual({
 				schemeOpenSeenBySystem: system,
 				schemeOpenSeenByApp: app,
+				schemeOpenSystemProcessClass: system === true ? ["SpringBoard"] : [],
 				schemeLogObservation:
 					system === "UNOBSERVED" ? "malformed" : "observed",
+				nativeIngressSeen: system === "UNOBSERVED" ? "UNOBSERVED" : false,
+				nativeLogReadySeen: system === "UNOBSERVED" ? "UNOBSERVED" : false,
+				jsCallbackEntrySeen: system === "UNOBSERVED" ? "UNOBSERVED" : false,
+				jsLogReadySeen: system === "UNOBSERVED" ? "UNOBSERVED" : false,
 			});
 		},
 	);
@@ -234,6 +429,7 @@ describe("built scheme and timeout log observations, no SDK", () => {
 					"owned-udid",
 					"log",
 					"show",
+					"--info",
 					"--last",
 					"3m",
 					"--style",
@@ -257,7 +453,12 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		).toEqual({
 			schemeOpenSeenBySystem: "UNOBSERVED",
 			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeOpenSystemProcessClass: [],
 			schemeLogObservation: "error",
+			nativeIngressSeen: "UNOBSERVED",
+			nativeLogReadySeen: "UNOBSERVED",
+			jsCallbackEntrySeen: "UNOBSERVED",
+			jsLogReadySeen: "UNOBSERVED",
 		});
 	});
 	it("typed probe timeout is distinct from malformed output and command error", async () => {
@@ -274,7 +475,12 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		).toEqual({
 			schemeOpenSeenBySystem: "UNOBSERVED",
 			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeOpenSystemProcessClass: [],
 			schemeLogObservation: "timeout",
+			nativeIngressSeen: "UNOBSERVED",
+			nativeLogReadySeen: "UNOBSERVED",
+			jsCallbackEntrySeen: "UNOBSERVED",
+			jsLogReadySeen: "UNOBSERVED",
 		});
 		expect(
 			await observeSchemeAfterTimeout(
@@ -287,7 +493,12 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		).toEqual({
 			schemeOpenSeenBySystem: "UNOBSERVED",
 			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeOpenSystemProcessClass: [],
 			schemeLogObservation: "malformed",
+			nativeIngressSeen: "UNOBSERVED",
+			nativeLogReadySeen: "UNOBSERVED",
+			jsCallbackEntrySeen: "UNOBSERVED",
+			jsLogReadySeen: "UNOBSERVED",
 		});
 	});
 	it("tolerates future simulator keys while skipping the real-shaped trailer", () => {
@@ -299,7 +510,12 @@ describe("built scheme and timeout log observations, no SDK", () => {
 			{
 				schemeOpenSeenBySystem: false,
 				schemeOpenSeenByApp: true,
+				schemeOpenSystemProcessClass: [],
 				schemeLogObservation: "observed",
+				nativeIngressSeen: false,
+				nativeLogReadySeen: false,
+				jsCallbackEntrySeen: false,
+				jsLogReadySeen: false,
 			},
 		);
 	});
@@ -355,6 +571,7 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		expect(JSON.parse(text).phaseFailure).toMatchObject({
 			schemeOpenSeenBySystem: false,
 			schemeOpenSeenByApp: true,
+			schemeOpenSystemProcessClass: [],
 		});
 	});
 	it("read-only current prepare already supplies the proof scheme through installed Expo setScheme", async () => {
@@ -392,6 +609,9 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		};
 		const production = await evaluate(source, "production");
 		expect(schemeRegistered(setScheme(production, {}))).toBe(false);
+		expect(production.plugins).not.toContain(
+			"./scripts/ci/auth-retirement-native-markers.cjs",
+		);
 		vi.stubEnv("GITHUB_EVENT_NAME", "workflow_dispatch");
 		vi.stubEnv("RETIREMENT_PROOF", "true");
 		vi.stubEnv("GITHUB_ENV", join(root, "github-env"));
@@ -409,5 +629,8 @@ describe("built scheme and timeout log observations, no SDK", () => {
 			"prepared",
 		);
 		expect(schemeRegistered(setScheme(prepared, {}))).toBe(true);
+		expect(prepared.plugins).toContain(
+			"./scripts/ci/auth-retirement-native-markers.cjs",
+		);
 	});
 });

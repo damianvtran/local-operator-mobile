@@ -9,6 +9,7 @@ import {
 } from "./auth-retirement-launch.ts";
 import { sanitizeProgress } from "./auth-retirement-progress.ts";
 import { safeUrlProgress } from "./auth-retirement-readiness.ts";
+import { SCHEME_SYSTEM_PROCESS_CLASSES } from "./auth-retirement-scheme-observation.ts";
 import type { Run } from "./auth-retirement-simulator.ts";
 export const PROBE_OBSERVATIONS = [
 	"observed",
@@ -282,6 +283,31 @@ export function sanitizePhaseFailure(
 					: 0,
 			]),
 		),
+		schemeOpenSystemProcessClass: SCHEME_SYSTEM_PROCESS_CLASSES.filter(
+			(value) =>
+				Array.isArray(input.schemeOpenSystemProcessClass) &&
+				input.schemeOpenSystemProcessClass.includes(value),
+		),
+		// Neither explicit marker seen means the collector may have missed native
+		// logging entirely; false ingress without calibration is NOT conclusive.
+		// JS console calibration is separate from native NSLog calibration. Missing
+		// JS entry without JS calibration cannot establish missing callback entry.
+		jsCallbackEntrySeen:
+			typeof input.jsCallbackEntrySeen === "boolean"
+				? input.jsCallbackEntrySeen
+				: "UNOBSERVED",
+		jsLogReadySeen:
+			typeof input.jsLogReadySeen === "boolean"
+				? input.jsLogReadySeen
+				: "UNOBSERVED",
+		nativeIngressSeen:
+			typeof input.nativeIngressSeen === "boolean"
+				? input.nativeIngressSeen
+				: "UNOBSERVED",
+		nativeLogReadySeen:
+			typeof input.nativeLogReadySeen === "boolean"
+				? input.nativeLogReadySeen
+				: "UNOBSERVED",
 		schemeOpenSeenBySystem:
 			typeof input.schemeOpenSeenBySystem === "boolean"
 				? input.schemeOpenSeenBySystem
