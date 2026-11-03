@@ -16,6 +16,13 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   var providerConnections: [NWConnection] = []
   let mode = ProcessInfo.processInfo.environment["PROOF_MODE"] ?? "positive"
   let label = UILabel()
+  let startButton = UIButton(type: .system)
+  var started = false
+  var stage = "ready"
+  var startedAt: Date?
+  var providerAt: Date?
+  var callbackAt: Date?
+  var nativePreparedAt: Date?
 
   func application(_ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     let window = UIWindow(frame: UIScreen.main.bounds)
@@ -23,19 +30,32 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     controller.view.backgroundColor = .systemBackground
     label.frame = CGRect(x: 20, y: 150, width: 350, height: 160)
     label.numberOfLines = 0
-    label.text = "Synthetic OAuth callback proof"
+    label.text = "Ready \(mode)"
     label.accessibilityIdentifier = "proof.status"
     controller.view.addSubview(label)
+    startButton.frame = CGRect(x: 20, y: 330, width: 350, height: 60)
+    startButton.setTitle("Start \(mode)", for: .normal)
+    startButton.accessibilityIdentifier = "proof.start"
+    startButton.addTarget(self, action: #selector(start), for: .touchUpInside)
+    controller.view.addSubview(startButton)
     window.rootViewController = controller
     window.makeKeyAndVisible()
     self.window = window
-    transport.timeoutSeconds = mode == "timeout" ? 8 : 45
+    // Launch is deliberately inert. Maestro must be fully running and observe
+    // Ready before it taps Start; UI-driver cold start is not an auth timeout.
     transport.onRejectedRequest = { self.rejected += 1 }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.start() }
+    persist()
     return true
   }
 
-  func start() {
+  @objc func start() {
+    guard !started else { return }
+    started = true
+    startedAt = Date()
+    stage = "starting"
+    label.text = "Starting \(mode)"
+    startButton.isHidden = true
+    persist()
     do {
       let parameters = NWParameters.tcp
       parameters.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: .any)
@@ -68,8 +88,34 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
             let target = request.components(separatedBy: " ").dropFirst().first,
             let parts = URLComponents(string: "http://127.0.0.1\(target)"),
             let redirect = parts.queryItems?.first(where: { $0.name == "redirect_uri" })?.value else { return }
-      if target.hasPrefix("/wait?") { return }
+      if !self.served { self.providerAt = Date() }
       self.served = true
+      self.stage = "browser-ready"
+      self.persist()
+      if !target.hasPrefix("/complete?") {
+        // A real browser page is an observable readiness barrier before callbacks.
+        // The timeout case deliberately leaves the production five-minute timer
+        // unchanged; cancel is driven through the system sheet's Cancel control.
+        let title = self.mode == "timeout" || self.mode == "cancel"
+          ? "Synthetic callback waiting" : "Complete test sign-in"
+        let path = "/complete?redirect_uri=\(redirect.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!)"
+        let body = "<html><body><h1>Browser ready</h1><a href='\(path)'>\(title)</a></body></html>"
+        self.sendProvider(connection, body: body)
+        return
+      }
+      self.callbackAt = Date()
+      self.stage = "callback-triggered"
+      self.persist()
+      if self.mode == "legacy" {
+        // Count non-delivery only AFTER an observed browser request triggers the
+        // callback. This cannot pass merely because consent was never handled.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
+          if !self.completed {
+            self.legacy?.cancel()
+            self.record(self.served && self.callbackAt != nil, detail: "legacy-http-callback-not-delivered")
+          }
+        }
+      }
       let good = "\(redirect)?code=synthetic-only&state=proof-state"
       let bad = "\(redirect)?code=synthetic-attacker&state=wrong-state"
       // Browser GETs the wrong state first. Even though CORS hides its response,
@@ -77,12 +123,19 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
       let body = self.mode == "positive"
         ? "<script>fetch('\(bad)').catch(()=>{}).finally(()=>{location.href='\(good)'});</script>"
         : "<script>location.href='\(good)'</script>"
-      let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)"
-      connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
+      self.sendProvider(connection, body: body)
     }
   }
 
+  func sendProvider(_ connection: NWConnection, body: String) {
+    let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n\(body)"
+    connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
+  }
+
   func prepare() {
+    // Use the unmodified production timeout, not a fixture timer made longer
+    // until a cold UI driver happens to fit. The receipt records its elapsed time.
+    nativePreparedAt = Date()
     transport.prepare { result in
       guard case .success(let redirect) = result, let port = self.provider?.port else {
         self.record(false, detail: "callback-bind-failed"); return
@@ -98,21 +151,19 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
         session.presentationContextProvider = self
         self.legacy = session
         guard session.start() else { self.record(false, detail: "legacy-start-failed"); return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
-          if !self.completed { self.legacy?.cancel(); self.record(self.served, detail: "legacy-http-callback-not-delivered") }
-        }
         return
       }
       if self.mode == "timeout" || self.mode == "cancel" {
         self.transport.open(url: URL(string: "http://127.0.0.1:\(port.rawValue)/wait?redirect_uri=\(redirect.absoluteString)&state=proof-state")!, redirect: redirect) { result in
           if self.mode == "cancel", case .success(nil) = result { self.assertClosed(redirect, detail: "cancel-cleanup", pass: true) }
-          else if self.mode == "timeout", case .failure = result { self.assertClosed(redirect, detail: "timeout-cleanup", pass: true) }
+          else if self.mode == "timeout", case .failure = result {
+            let elapsed = Date().timeIntervalSince(self.nativePreparedAt ?? Date())
+            self.assertClosed(redirect, detail: "timeout-cleanup", pass: self.served && elapsed >= 295 && elapsed < 330)
+          }
           else { self.record(false, detail: "timeout-unexpected-result") }
         }
-        if self.mode == "cancel" {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self.transport.cancel() }
-        }
-        // /wait intentionally receives no response, leaving the system sheet open.
+        // The browser serves a waiting page; Maestro photographs it before
+        // Cancel or the real production timer, rather than racing an auto-cancel.
         return
       }
       self.transport.open(url: authorize.url!, redirect: redirect) { result in
@@ -153,10 +204,23 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     completed = true
     provider?.cancel()
     providerConnections.forEach { $0.cancel() }
-    let receipt: [String: Any] = ["mode": mode, "pass": pass, "detail": detail, "rejected": rejected, "provider_served": served]
-    let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("receipt.json")
-    try? JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: path)
+    stage = "completed"
+    persist(pass: pass, detail: detail)
     label.text = pass ? "PASS \(mode)" : "FAIL \(mode): \(detail)"
+  }
+
+  func persist(pass: Bool? = nil, detail: String = "running") {
+    let receipt: [String: Any] = [
+      "mode": mode, "pass": pass.map { $0 as Any } ?? NSNull(), "detail": detail,
+      "stage": stage, "started": started, "rejected": rejected, "provider_served": served,
+      "callback_triggered": callbackAt != nil,
+      "started_at": startedAt.map { $0.timeIntervalSince1970 as Any } ?? NSNull(),
+      "provider_at": providerAt.map { $0.timeIntervalSince1970 as Any } ?? NSNull(),
+      "callback_at": callbackAt.map { $0.timeIntervalSince1970 as Any } ?? NSNull(),
+      "native_elapsed_seconds": nativePreparedAt.map { Date().timeIntervalSince($0) as Any } ?? NSNull()
+    ]
+    let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("receipt.json")
+    try? JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: path, options: .atomic)
   }
 
   func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor { window! }
