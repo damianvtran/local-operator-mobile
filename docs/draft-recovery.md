@@ -3,7 +3,7 @@
 ## Authority, not a display name
 
 Native recovery is supported only for personal Radient Local Operator tunnels.
-Every admission obtains `GET https://api.radienthq.com/v1/me` with the CURRENT
+An optional background proof obtains `GET https://api.radienthq.com/v1/me` with the CURRENT
 access bearer, `cache: no-store`, explicit HTTP `Cache-Control: no-store, no-cache` and
 `Pragma: no-cache`, `redirect: error`, and no ambient cookies. The HTTP directives
 are required because Expo57 native fetch does not forward the `cache` option.
@@ -17,8 +17,10 @@ account.tenant_id, personal-owner, tunnelId, exact relay origin, local-operator]
 An organization context, custom server, OpenCode tunnel, unknown route fields,
 failed request or incomplete identity document cannot open recovery. The current
 route/admission epoch must still match after every asynchronous boundary. A
-network failure leaves ordinary sign-in usable, with a fresh dispatch generation
-and no restored private work. A saved tuple is comparison metadata, never offline
+network failure leaves ordinary sign-in and writes usable immediately. An active
+exact-route generation keeps its ordinary draft and outbox across restart, even
+without proof. Only a real auth retirement/revoke, changed route, or two differing
+non-null tuples rotates it. A saved tuple is comparison metadata, never offline
 permission to recover.
 
 Server contract inspected in `radient-ml/agent-server` at `785b84ad` (2026-11-03):
@@ -78,9 +80,12 @@ state, model/folder selection or dispatch generation, and never sends. A session
 editor's SID comes from the currently opened authenticated conversation, not from
 a recovered record. Typing while restoration is pending wins over recovered text.
 A different account/tenant/tunnel/backend destroys the prior vault/key before new
-private state becomes visible. Ordinary native generations can be reused across
-restart only with a fresh matching trusted tuple; generation-backed storage is
-not a bypass around failed recovery proof.
+private state becomes visible. Ordinary generation reuse is independent of optional
+proof. Sealed-origin draft records carry encrypted per-record provenance: their
+cached text/images stay hidden until the sealed slot passes fresh matching proof,
+while their ordinary outbox remains intact. Legacy text readers never import vault
+bytes; the startup editor owns all imports and their provenance. Late proof can
+fill only an untouched empty editor and never replaces ordinary typing.
 
 Explicit logout/forget performs the existing privacy purge PLUS vault/key
 cryptographic erasure, attempts all deletions and propagates failure. Clearing a
@@ -92,8 +97,10 @@ not enable this native cross-login recovery feature.
 
 Failed accepted checkpoints retain only an in-memory retry operation. Reauthentication
 retries/drains these before purging the ordinary generation; if that still fails,
-no admission or last-copy purge is allowed. Explicit logout still attempts every
-erasure. Merely reading/restoring a draft does not renew its retention timestamp.
+the last ordinary copy stays encrypted and quarantined under its retired generation;
+optional recovery stays closed, but ordinary sign-in admits a new generation.
+Mirror failure never rejects a successful ordinary save. Explicit logout still
+attempts every erasure, and a failed old checkpoint cannot poison a verified purge. Merely reading/restoring a draft does not renew its retention timestamp.
 
 Native record removal commits an authenticated null tombstone before pruning old
 revisions. The tombstone remains authoritative even when predecessor deletion is
@@ -102,6 +109,18 @@ retire corrupt history without reading/adopting it. Unknown locked-store or mark
 I/O failures quarantine existing ciphertext/key without treating a read error as
 proof of reinstall. Positively missing/corrupt/mismatched installation pairs still
 require verified reset before minting a new installation.
+
+## One-time upgrade data loss (explicit limitation)
+
+Opening this version's native codec permanently deletes the prior plaintext
+`lo-mobile-store` and `lo-mobile-startup` folders. **Existing unsent drafts and
+pending/ambiguous command envelopes from that prior format are lost once on
+upgrade.** The prior unscoped ownership cannot be proven, so they are never adopted
+or replayed. Keeping plaintext quarantine would violate the encrypted-at-rest
+boundary; no migration/recovery UI for an unowned encrypted archive is implemented.
+This differs from the old first-upgrade quarantine rule. It is a disclosed
+privacy-first limitation, not a claim of lossless migration. Ordinary encrypted
+records written by this version retain the restart guarantees above.
 
 ## Validation boundaries
 

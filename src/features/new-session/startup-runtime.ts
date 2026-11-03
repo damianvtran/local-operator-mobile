@@ -5,8 +5,10 @@ import {
 	registerStartupAuthorizationCleanup,
 } from "@/connection/startup-authorization";
 import { promptImageSchema } from "@/contracts/schemas";
+import { draftKey } from "@/features/session/device-storage";
 import {
 	discardRecoveryDraft,
+	getDraftRecoveryAuthority,
 	readRecoveryDraft,
 	writeRecoveryDraft,
 } from "@/features/session/draft-recovery";
@@ -31,6 +33,13 @@ export type StartupAuthorization = Readonly<{
 const coordinators = new Map<string, StartupCoordinator>();
 const opening = new Map<string, Promise<StartupCoordinator>>();
 const recoveryEditors = new Map<string, string>();
+// Provenance is part of encrypted ordinary records, never a generation-level
+// ownership guess. Cached imports stay hidden until their sealed slot proves.
+const recoveryOrigins = new Map<
+	string,
+	{ authority: string | null; hidden: StartupDraft | null }
+>();
+type ProvenanceRecord = StartupRecord & { draftRecoveryAuthority?: string };
 const recoveryDraftSchema = z
 	.object({ text: z.string(), images: z.array(promptImageSchema) })
 	.strict();
@@ -50,20 +59,85 @@ function checkpointEditor(
 			: writeRecoveryDraft(key, JSON.stringify(draft), scope);
 	void write.catch(() => undefined);
 }
+async function recoveredEditor(
+	sessionId: string | null,
+	auth: StartupAuthorization,
+): Promise<string | null> {
+	if (sessionId === null)
+		return readRecoveryDraft("startup:active", auth.scope);
+	const draft = await readRecoveryDraft(
+		`startup:session:${sessionId}`,
+		auth.scope,
+	);
+	if (draft !== null) return draft;
+	const text = await readRecoveryDraft(draftKey(sessionId), auth.scope);
+	return text === null ? null : JSON.stringify({ text, images: [] });
+}
+async function restoreOptionalDraft(
+	owner: StartupCoordinator,
+	key: string,
+	auth: StartupAuthorization,
+): Promise<void> {
+	const authority = getDraftRecoveryAuthority();
+	const origin = recoveryOrigins.get(key);
+	if (
+		authority === null ||
+		!current(auth) ||
+		(origin?.authority != null && origin.authority !== authority)
+	)
+		return;
+	const raw = await recoveredEditor(owner.snapshot().sessionId, auth);
+	if (raw !== null && current(auth))
+		await owner.restoreDraft(recoveryDraftSchema.parse(JSON.parse(raw)), () => {
+			// Keep the bound persistence closure and map on the same provenance object.
+			if (origin) {
+				origin.authority = authority;
+				origin.hidden = null;
+			} else recoveryOrigins.set(key, { authority, hidden: null });
+		});
+	if (current(auth) && owner.hasDraftEdits()) {
+		const sid = owner.snapshot().sessionId;
+		if (sid !== null)
+			checkpointEditor(
+				`startup:session:${sid}`,
+				owner.snapshot().draft,
+				auth.scope,
+			);
+		else if (recoveryEditors.get(auth.scope) === key)
+			checkpointEditor("startup:active", owner.snapshot().draft, auth.scope);
+	}
+}
 function dependencies(
 	key: string,
 	auth: StartupAuthorization,
 	client: RelayEndpoints,
 	recoverDraft = true,
 ): StartupDeps {
+	let origin = recoveryOrigins.get(key);
+	if (!origin) {
+		origin = { authority: null, hidden: null };
+		recoveryOrigins.set(key, origin);
+	}
+	const provenance = origin;
 	return {
 		store: {
 			load: async () => {
 				const value = await startupDeviceStore.get(key);
-				if (value !== null) return JSON.parse(value) as StartupRecord;
+				if (value !== null) {
+					const saved = JSON.parse(value) as ProvenanceRecord;
+					if (saved.draftRecoveryAuthority !== undefined) {
+						if (typeof saved.draftRecoveryAuthority !== "string")
+							throw new Error("invalid recovery provenance");
+						provenance.authority = saved.draftRecoveryAuthority;
+						provenance.hidden = saved.draft;
+						return { ...saved, draft: { text: "", images: [] } };
+					}
+					return saved;
+				}
 				if (!recoverDraft) return null;
 				const recovered = await readRecoveryDraft("startup:active", auth.scope);
 				if (recovered === null || !current(auth)) return null;
+				provenance.authority = getDraftRecoveryAuthority();
 				// A recovered editor is a fresh draft, never a recovered create or
 				// outbox. No old session ID, selection or continuation can dispatch.
 				return {
@@ -76,10 +150,24 @@ function dependencies(
 					draft: recoveryDraftSchema.parse(JSON.parse(recovered)),
 				} as StartupRecord;
 			},
-			save: async (value) => startupDeviceStore.set(key, JSON.stringify(value)),
+			save: async (value) =>
+				startupDeviceStore.set(
+					key,
+					JSON.stringify({
+						...value,
+						draft: provenance.hidden ?? value.draft,
+						draftRecoveryAuthority: provenance.authority ?? undefined,
+					}),
+				),
 		},
-		checkpointDraft: (draft, sessionId) => {
+		checkpointDraft: (draft, sessionId, changed) => {
 			if (!current(auth)) return;
+			if (changed && provenance.hidden !== null) {
+				provenance.hidden = null;
+				provenance.authority = null;
+			}
+			if (changed && draft.text === "" && draft.images.length === 0)
+				provenance.authority = null;
 			if (sessionId !== null)
 				checkpointEditor(`startup:session:${sessionId}`, draft, auth.scope);
 			if (recoveryEditors.get(auth.scope) !== key) return;
@@ -116,7 +204,12 @@ export async function openStartup(
 	fresh = false,
 ): Promise<StartupCoordinator> {
 	const previous = opening.get(auth.scope);
-	if (previous && !fresh) return previous;
+	if (previous && !fresh) {
+		const owner = await previous;
+		const key = recoveryEditors.get(auth.scope);
+		if (key) await restoreOptionalDraft(owner, key, auth);
+		return owner;
+	}
 	const operation = (async () => {
 		if (previous) await previous;
 		const pointerKey = JSON.stringify([auth.scope, "active"]);
@@ -135,6 +228,7 @@ export async function openStartup(
 			coordinators.set(key, coordinator);
 		}
 		await coordinator.ready;
+		await restoreOptionalDraft(coordinator, key, auth);
 		/* An explicit New must open a FRESH editor without destroying what the old one
 		 * holds. `sessionId !== null` is not the only state worth keeping: an
 		 * unconfirmed create (no session id, queued messages) has no automatic
@@ -213,6 +307,7 @@ export async function startupForSession(
 			owner.snapshot().sessionId === sessionId
 		) {
 			owner.bind(dependencies(key, auth, client));
+			await restoreOptionalDraft(owner, key, auth);
 			return owner;
 		}
 	}
@@ -237,12 +332,10 @@ export async function startupForSession(
 			return null;
 		}
 		coordinators.set(mapped, owner);
+		await restoreOptionalDraft(owner, mapped, auth);
 		return owner;
 	}
-	const recovered = await readRecoveryDraft(
-		`startup:session:${sessionId}`,
-		auth.scope,
-	);
+	const recovered = await recoveredEditor(sessionId, auth);
 	if (recovered !== null && current(auth)) {
 		// This new owner is not in the coordinator map yet. Register the WHOLE
 		// import so retirement drains it before purge, including its second write.
@@ -260,7 +353,13 @@ export async function startupForSession(
 				queue: [],
 				draft: recoveryDraftSchema.parse(JSON.parse(recovered)),
 			};
-			await startupDeviceStore.set(key, JSON.stringify(record));
+			await startupDeviceStore.set(
+				key,
+				JSON.stringify({
+					...record,
+					draftRecoveryAuthority: getDraftRecoveryAuthority(),
+				}),
+			);
 			if (!current(auth)) return null;
 			await startupDeviceStore.set(
 				JSON.stringify([auth.scope, "session", sessionId]),
@@ -277,6 +376,7 @@ export async function startupForSession(
 				return null;
 			}
 			coordinators.set(key, owner);
+			await restoreOptionalDraft(owner, key, auth);
 			return owner;
 		});
 	}
@@ -297,5 +397,6 @@ export async function retireStartupCoordinators(): Promise<void> {
 	coordinators.clear();
 	opening.clear();
 	recoveryEditors.clear();
+	recoveryOrigins.clear();
 }
 registerStartupAuthorizationCleanup(retireStartupCoordinators);

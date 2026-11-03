@@ -39,6 +39,7 @@ describe("sealed draft authority lease", () => {
 		const x = fixture();
 		const vault = x.create();
 		await vault.prepare("owner-a", () => true);
+		await vault.write("draft", "older committed draft");
 		const set = x.store.set;
 		let failing = true;
 		x.store.set = async (key, value) => {
@@ -48,6 +49,8 @@ describe("sealed draft authority lease", () => {
 		await expect(vault.write("draft", "latest accepted edit")).rejects.toThrow(
 			"disk unavailable",
 		);
+		expect(vault.available()).toBe(false);
+		await expect(vault.read("draft")).rejects.toThrow("disk unavailable");
 		vault.withdraw();
 		await expect(vault.drain()).rejects.toThrow("disk unavailable");
 		await expect(vault.prepare("owner-a", () => true)).rejects.toThrow(

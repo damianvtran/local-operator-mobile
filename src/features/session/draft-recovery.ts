@@ -35,6 +35,25 @@ startupAuthorizationLifecycle.configureRecoveryBoundary({
 	},
 });
 
+const recoveryListeners = new Set<() => void>();
+let recoveryRevision = 0;
+export const subscribeDraftRecovery = (listener: () => void): (() => void) => {
+	recoveryListeners.add(listener);
+	return () => {
+		recoveryListeners.delete(listener);
+	};
+};
+export const getDraftRecoveryRevision = (): number => recoveryRevision;
+export function notifyDraftRecoveryReady(): void {
+	recoveryRevision++;
+	for (const listener of recoveryListeners) listener();
+}
+export const getDraftRecoveryAuthority = (): string | null =>
+	getStartupAuthorization() === null ? null : vault.authorityScope();
+export async function prepareOrdinaryPrivateStorage(): Promise<void> {
+	if (Platform.OS !== "web") await clearNativePickerCache();
+}
+
 /** Failure to prove/recover does not block the authenticated relay. It simply
  * leaves the sealed vault closed. No cached identity is promoted offline. */
 export async function prepareDraftRecovery(
@@ -42,14 +61,12 @@ export async function prepareDraftRecovery(
 	isCurrent: () => boolean,
 ): Promise<void> {
 	if (Platform.OS === "web") return;
-	// A killed picker may have left a native temporary image before JS received
-	// its URI. This verified cleanup is mandatory even when owner proof fails.
-	await clearNativePickerCache();
 	if (authority === null || !isCurrent()) {
 		vault.withdraw();
 		return;
 	}
 	try {
+		await vault.drain();
 		await vault.prepare(authority, isCurrent);
 	} catch {
 		vault.withdraw();

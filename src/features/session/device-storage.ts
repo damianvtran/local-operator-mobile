@@ -26,11 +26,7 @@ import {
 	awaitCommandOperations,
 	withdrawDispatch,
 } from "@/relay/command-lifecycle";
-import {
-	discardRecoveryDraft,
-	readRecoveryDraft,
-	writeRecoveryDraft,
-} from "./draft-recovery";
+import { discardRecoveryDraft, writeRecoveryDraft } from "./draft-recovery";
 import { nativePrivateStore } from "./native-private-store";
 import {
 	awaitPrivateWrites,
@@ -187,11 +183,7 @@ export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
 export const readHomeDraft = async (): Promise<string> => {
 	const scope = getStartupAuthorization()?.scope ?? null;
 	try {
-		return (
-			(await scopedStore(deviceStore, scope).get(HOME_DRAFT_KEY)) ??
-			(await readRecoveryDraft(HOME_DRAFT_KEY, scope)) ??
-			""
-		);
+		return (await scopedStore(deviceStore, scope).get(HOME_DRAFT_KEY)) ?? "";
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
 		 * best-effort here because a failed READ has lost nothing. */
@@ -203,7 +195,7 @@ export const writeHomeDraft = async (text: string): Promise<void> => {
 	const scope = getStartupAuthorization()?.scope ?? null;
 	await Promise.all([
 		scopedStore(deviceStore, scope).set(HOME_DRAFT_KEY, text),
-		writeRecoveryDraft(HOME_DRAFT_KEY, text, scope),
+		writeRecoveryDraft(HOME_DRAFT_KEY, text, scope).catch(() => undefined),
 	]);
 };
 
@@ -211,7 +203,7 @@ export const clearHomeDraft = async (): Promise<void> => {
 	const scope = getStartupAuthorization()?.scope ?? null;
 	await Promise.all([
 		scopedStore(deviceStore, scope).remove(HOME_DRAFT_KEY),
-		discardRecoveryDraft(HOME_DRAFT_KEY, scope),
+		discardRecoveryDraft(HOME_DRAFT_KEY, scope).catch(() => undefined),
 	]);
 };
 
@@ -221,9 +213,7 @@ export const readDraft = async (
 ): Promise<string> => {
 	try {
 		return (
-			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ??
-			(await readRecoveryDraft(draftKey(sessionId), scope)) ??
-			""
+			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ?? ""
 		);
 	} catch {
 		/* An unreadable draft is an empty one for this screen; the store is
@@ -239,7 +229,7 @@ export const writeDraft = async (
 ): Promise<void> => {
 	await Promise.all([
 		scopedStore(deviceStore, scope).set(draftKey(sessionId), text),
-		writeRecoveryDraft(draftKey(sessionId), text, scope),
+		writeRecoveryDraft(draftKey(sessionId), text, scope).catch(() => undefined),
 	]);
 };
 
@@ -249,7 +239,7 @@ export const clearDraft = async (
 ): Promise<void> => {
 	await Promise.all([
 		scopedStore(deviceStore, scope).remove(draftKey(sessionId)),
-		discardRecoveryDraft(draftKey(sessionId), scope),
+		discardRecoveryDraft(draftKey(sessionId), scope).catch(() => undefined),
 	]);
 };
 

@@ -83,7 +83,11 @@ import {
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
 import { clearAuthorizationData } from "@/features/session/device-storage";
-import { prepareDraftRecovery } from "@/features/session/draft-recovery";
+import {
+	notifyDraftRecoveryReady,
+	prepareDraftRecovery,
+	prepareOrdinaryPrivateStorage,
+} from "@/features/session/draft-recovery";
 import { clearNativePickerCache } from "@/features/session/picker-cache";
 import { pickerPrivacy } from "@/features/session/picker-privacy";
 import { setLocaleSource } from "@/i18n";
@@ -739,9 +743,9 @@ export const ConnectionProvider = ({
 			 * once; `null` means a newer attempt superseded this one and must not retry. */
 			const accessToken = tokensRef.current?.access;
 			const route = connectionStore.getState().route;
-			const recoveryOwner =
+			const recoveryProof =
 				Platform.OS !== "web" && route?.mode === "radient" && accessToken
-					? await proveRecoveryAuthority(accessToken, {
+					? proveRecoveryAuthority(accessToken, {
 							isCurrent: () =>
 								admission.isCurrent() &&
 								startupAuthorizationLifecycle.isCurrent(
@@ -749,11 +753,7 @@ export const ConnectionProvider = ({
 								) &&
 								tokensRef.current?.access === accessToken,
 						})
-					: null;
-			const recoveryScope =
-				recoveryOwner && route
-					? recoveryAuthorityScope(recoveryOwner, route)
-					: null;
+					: Promise.resolve(null);
 			const admitStartup = async (): Promise<void> => {
 				for (let attempt = 0; attempt < 2; attempt += 1) {
 					if (!isAdmissionActive()) return;
@@ -761,16 +761,8 @@ export const ConnectionProvider = ({
 						await startupAuthorizationLifecycle.admit(
 							admission.routeKey,
 							admission.authorizationRevision,
-							() =>
-								prepareDraftRecovery(
-									recoveryScope,
-									() =>
-										admission.isCurrent() &&
-										startupAuthorizationLifecycle.isCurrent(
-											admission.authorizationRevision,
-										),
-								),
-							Platform.OS === "web" ? undefined : recoveryScope,
+							prepareOrdinaryPrivateStorage,
+							Platform.OS === "web" ? undefined : null,
 						);
 						return;
 					} catch {
@@ -784,6 +776,39 @@ export const ConnectionProvider = ({
 			};
 			const isAdmissionActive = () => admission.isCurrent();
 			await admitStartup();
+			// Recovery is optional: ordinary generation-backed editors/outboxes do
+			// not wait for the control plane. A late proof can import only an untouched
+			// empty editor; restored bytes retain separate proof provenance on disk.
+			void recoveryProof
+				.then(async (owner) => {
+					if (!owner || !route || !isAdmissionActive()) return;
+					const scope = recoveryAuthorityScope(owner, route);
+					if (scope === null) return;
+					const admitted = await startupAuthorizationLifecycle.admit(
+						admission.routeKey,
+						admission.authorizationRevision,
+						() =>
+							prepareDraftRecovery(
+								scope,
+								() =>
+									admission.isCurrent() &&
+									startupAuthorizationLifecycle.isCurrent(
+										admission.authorizationRevision,
+									),
+							),
+						scope,
+					);
+					if (admitted && isAdmissionActive()) notifyDraftRecoveryReady();
+				})
+				.catch(() => {
+					if (
+						isAdmissionActive() &&
+						startupAuthorizationLifecycle.get() === null
+					)
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+				});
 			if (!admission.isCurrent()) return;
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a

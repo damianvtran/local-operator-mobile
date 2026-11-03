@@ -40,6 +40,71 @@ function deferred() {
 }
 
 describe("startup authorization privacy boundary", () => {
+	it.each([
+		["custom restart", "custom-route", null, null],
+		["Radient offline restart", "radient-route", "owner-a", null],
+		["Radient first offline then online", "radient-route", null, "owner-a"],
+	] as const)(
+		"retains ordinary draft/outbox across native-policy %s",
+		async (_name, route, firstProof, nextProof) => {
+			const f = fixture();
+			const firstOwner = f.lifecycle();
+			const first = await firstOwner.admit(
+				route,
+				firstOwner.getRevision(),
+				undefined,
+				firstProof,
+			);
+			const disk = new Map<string, string>();
+			const raw = {
+				get: async (key: string) => disk.get(key) ?? null,
+				set: async (key: string, value: string) => {
+					disk.set(key, value);
+				},
+				remove: async (key: string) => {
+					disk.delete(key);
+				},
+				keys: async () => [...disk.keys()],
+			};
+			const old = scopedStore(raw, first?.scope ?? null);
+			await old.set("draft", "ordinary unfinished");
+			await old.set("outbox", "immutable ambiguous command");
+			firstOwner.suspend();
+			const restart = f.lifecycle();
+			const purge = vi.fn(async () => {
+				disk.clear();
+			});
+			restart.registerCleanup(purge);
+			const next = await restart.admit(
+				route,
+				restart.getRevision(),
+				undefined,
+				nextProof,
+			);
+			expect(next?.scope).toBe(first?.scope);
+			expect(purge).not.toHaveBeenCalled();
+			const current = scopedStore(raw, next?.scope ?? null);
+			expect(await current.get("draft")).toBe("ordinary unfinished");
+			expect(await current.get("outbox")).toBe("immutable ambiguous command");
+			const online = await restart.admit(
+				route,
+				restart.getRevision(),
+				undefined,
+				"owner-a",
+			);
+			expect(online).toBe(next);
+			expect(purge).not.toHaveBeenCalled();
+			const changed = await restart.admit(
+				route,
+				restart.getRevision(),
+				undefined,
+				"owner-b",
+			);
+			expect(changed?.scope).not.toBe(next?.scope);
+			expect(purge).toHaveBeenCalledOnce();
+			expect(disk.size).toBe(0);
+		},
+	);
 	it("retains the ordinary last copy when sealed checkpoint draining fails during reauth", async () => {
 		const owner = fixture().lifecycle();
 		const cleanup = vi.fn(async () => {});
@@ -52,12 +117,14 @@ describe("startup authorization privacy boundary", () => {
 			},
 			clear,
 		});
-		await expect(
-			owner.retire(false, undefined, "reauthenticate"),
-		).rejects.toThrow("checkpoint unavailable");
+		await owner.retire(false, undefined, "reauthenticate");
 		expect(cleanup).not.toHaveBeenCalled();
-		expect(clear).not.toHaveBeenCalled();
-		await expect(owner.retire()).rejects.toThrow("checkpoint unavailable");
+		expect(clear).toHaveBeenCalledWith("reauthenticate");
+		expect(
+			await owner.admit("route-a", owner.getRevision(), undefined, null),
+		).not.toBeNull();
+		expect(cleanup).not.toHaveBeenCalled();
+		await owner.retire();
 		expect(cleanup).toHaveBeenCalledOnce();
 		expect(clear).toHaveBeenCalledWith("retire");
 	});
@@ -90,7 +157,7 @@ describe("startup authorization privacy boundary", () => {
 			"no admitted",
 		);
 	});
-	it("reuses native generation only with fresh matching owner proof", async () => {
+	it("reuses native generation without optional proof and rotates only on proven mismatch", async () => {
 		const f = fixture();
 		const owner = f.lifecycle();
 		const policies: string[] = [];
@@ -120,8 +187,8 @@ describe("startup authorization privacy boundary", () => {
 			undefined,
 			null,
 		);
-		expect(unproven?.scope).not.toBe(first?.scope);
-		expect(policies).toEqual(["reauthenticate"]);
+		expect(unproven?.scope).toBe(first?.scope);
+		expect(policies).toEqual([]);
 		await owner.admit(
 			"route-a",
 			owner.suspend(),

@@ -591,7 +591,15 @@ export async function runStageBDraftProof(
 			join(cwd, "design/app-icon/ios/icon-light-1024.png"),
 		]);
 		await flow("attach-native-photo", attachStageBPhoto());
-		const initial = await snapshot();
+		// Ordinary editor readiness intentionally does not imply optional recovery
+		// readiness. Observe the actual native capability before the positive case.
+		const readyDeadline = Date.now() + 30000;
+		let initial = await snapshot();
+		while (initial.recoveryAdmitted !== true) {
+			if (Date.now() >= readyDeadline)
+				throw new Error("initial optional recovery proof never became ready");
+			initial = await snapshot();
+		}
 		if (
 			!(Number(initial.committed) > 0) ||
 			initial.keyPresent !== true ||

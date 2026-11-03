@@ -20,7 +20,10 @@ export class DraftRecoveryVault {
 		private readonly now: () => number = Date.now,
 		private readonly maxAge = 7 * 24 * 60 * 60 * 1000,
 	) {}
-	available = (): boolean => this.authority !== null && this.current();
+	available = (): boolean =>
+		this.authority !== null && this.current() && this.failedWrites.size === 0;
+	authorityScope = (): string | null =>
+		this.available() ? this.authority : null;
 	withdraw = (): void => {
 		this.authority = null;
 		this.epoch++;
@@ -75,6 +78,7 @@ export class DraftRecoveryVault {
 		const epoch = this.epoch;
 		if (!authority || !this.current()) return null;
 		await this.drain();
+		if (this.failedWrites.has(this.key(authority, key))) return null;
 		const raw = await this.store.get(this.key(authority, key));
 		if (!raw || epoch !== this.epoch || !this.current()) return null;
 		const record: unknown = JSON.parse(raw);

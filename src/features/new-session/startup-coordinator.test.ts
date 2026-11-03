@@ -88,6 +88,37 @@ const setup = (saved: StartupRecord | null = null) => {
 
 // Deferred barriers prove ordering without wall-clock sleeps or a fake successful network.
 describe("durable provisional conversation", () => {
+	it("late optional recovery cannot bypass unreadable ordinary history or an explicit empty edit", async () => {
+		const broken = new StartupCoordinator("synthetic-scope", {
+			store: {
+				load: async () => {
+					throw new Error("corrupt latest");
+				},
+				save: async () => {},
+			},
+			start: async () => ({ session_id: "synthetic-session" }),
+			send: async () => {},
+			isCurrent: () => true,
+			uuid: () => "synthetic-id",
+		});
+		await broken.ready;
+		const mark = vi.fn();
+		expect(
+			await broken.restoreDraft({ text: "old vault bytes", images: [] }, mark),
+		).toBe(false);
+		expect(broken.snapshot().draft.text).toBe("");
+		expect(mark).not.toHaveBeenCalled();
+		const x = setup();
+		await x.coordinator.ready;
+		x.coordinator.edit("", []);
+		expect(
+			await x.coordinator.restoreDraft(
+				{ text: "old vault bytes", images: [] },
+				mark,
+			),
+		).toBe(false);
+		expect(x.coordinator.snapshot().draft.text).toBe("");
+	});
 	it("does not renew recovery retention merely by restoring or configuring a draft", async () => {
 		const x = setup({
 			version: 1,
@@ -110,6 +141,7 @@ describe("durable provisional conversation", () => {
 		expect(x.checkpoint).toHaveBeenCalledWith(
 			{ text: "actual edit", images: [] },
 			null,
+			true,
 		);
 	});
 	it("is editable before configuration and creates only on explicit Send", async () => {

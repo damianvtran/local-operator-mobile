@@ -9,6 +9,7 @@ import type { RelayEndpoints } from "@/relay/endpoints";
 const records = new Map<string, string>();
 const recoveryRecords = new Map<string, string>();
 let authorization: { scope: string; revision: number } | null = null;
+let recoveryAuthority: string | null = "owner-a";
 let counter = 0;
 let scopeCounter = 0;
 let scope = "scope-u1-0";
@@ -33,12 +34,18 @@ vi.mock("@/connection/startup-authorization", () => ({
 	getStartupAuthorization: () => authorization,
 	registerStartupAuthorizationCleanup: () => () => undefined,
 }));
+vi.mock("@/features/session/device-storage", () => ({
+	draftKey: (sid: string) => `lo-mobile-draft:${sid}`,
+}));
 vi.mock("@/features/session/draft-recovery", () => ({
+	getDraftRecoveryAuthority: () => recoveryAuthority,
 	discardRecoveryDraft: async (key: string, scope: string) => {
 		if (authorization?.scope === scope) recoveryRecords.delete(key);
 	},
 	readRecoveryDraft: async (key: string, scope: string) =>
-		authorization?.scope === scope ? (recoveryRecords.get(key) ?? null) : null,
+		authorization?.scope === scope && recoveryAuthority !== null
+			? (recoveryRecords.get(key) ?? null)
+			: null,
 	writeRecoveryDraft: async (key: string, value: string, scope: string) => {
 		if (authorization?.scope === scope) recoveryRecords.set(key, value);
 	},
@@ -70,6 +77,7 @@ describe("an unconfirmed start does not own the next draft", () => {
 	beforeEach(() => {
 		records.clear();
 		recoveryRecords.clear();
+		recoveryAuthority = "owner-a";
 		/* The runtime's maps and this file's storage both outlive a test, so the
 		 * scope must not repeat: a second `scope-u1-1` would hand test two the
 		 * first test's coordinator, which is how this fixture itself went wrong. */
@@ -77,6 +85,92 @@ describe("an unconfirmed start does not own the next draft", () => {
 		authorization = { scope, revision: 1 };
 	});
 
+	it("keeps ordinary native-policy draft and ambiguous outbox on a same-generation offline restart", async () => {
+		recoveryAuthority = null;
+		const first = await openStartup(auth(), client);
+		first.edit("submitted", []);
+		await first.enqueue();
+		await first.configure({ cwd: "/home/fixture" });
+		first.edit("ordinary next draft", []);
+		await first.quiesce();
+		const queue = first.snapshot().queue.map((item) => item.command_id);
+		vi.resetModules();
+		const restarted = await import("./startup-runtime");
+		const offline = await restarted.openStartup(auth(), client);
+		expect(offline.snapshot().draft.text).toBe("ordinary next draft");
+		expect(offline.snapshot().queue.map((item) => item.command_id)).toEqual(
+			queue,
+		);
+		recoveryAuthority = "owner-a";
+		expect(await restarted.openStartup(auth(), client)).toBe(offline);
+		expect(offline.snapshot().draft.text).toBe("ordinary next draft");
+		expect(offline.snapshot().queue.map((item) => item.command_id)).toEqual(
+			queue,
+		);
+	});
+	it("never exposes a sealed-origin ordinary record without fresh proof, but restores it later without generation rotation", async () => {
+		recoveryRecords.set(
+			"startup:active",
+			JSON.stringify({
+				text: "sealed owner-a draft",
+				images: [{ mime_type: "image/png", data_b64: "c3ludGhldGlj" }],
+			}),
+		);
+		const first = await openStartup(auth(), client);
+		await first.configure({ cwd: "/home/fixture" });
+		expect(
+			[...records.values()].some((value) =>
+				value.includes('"draftRecoveryAuthority":"owner-a"'),
+			),
+		).toBe(true);
+		recoveryAuthority = null;
+		vi.resetModules();
+		const restarted = await import("./startup-runtime");
+		const offline = await restarted.openStartup(auth(), client);
+		expect(offline.snapshot().draft).toEqual({ text: "", images: [] });
+		await offline.configure({ cwd: "/home/fixture/other" });
+		expect(
+			[...records.values()].some((value) =>
+				value.includes("sealed owner-a draft"),
+			),
+		).toBe(true);
+		recoveryAuthority = "owner-a";
+		const online = await restarted.openStartup(auth(), client);
+		expect(online).toBe(offline);
+		expect(online.snapshot().draft.text).toBe("sealed owner-a draft");
+		expect(online.snapshot().draft.images).toHaveLength(1);
+		recoveryAuthority = "owner-b";
+		vi.resetModules();
+		const mismatched = await import("./startup-runtime");
+		const hidden = await mismatched.openStartup(auth(), client);
+		expect(hidden.snapshot().draft).toEqual({ text: "", images: [] });
+	});
+	it.each(["new ordinary typing", ""])(
+		"late proof preserves new typing/discard (%j) instead of the cached import",
+		async (edited) => {
+			recoveryRecords.set(
+				"startup:active",
+				JSON.stringify({ text: "sealed old draft", images: [] }),
+			);
+			const first = await openStartup(auth(), client);
+			await first.configure({ cwd: "/home/fixture" });
+			recoveryAuthority = null;
+			vi.resetModules();
+			const restarted = await import("./startup-runtime");
+			const offline = await restarted.openStartup(auth(), client);
+			offline.edit(edited, []);
+			await offline.quiesce();
+			recoveryAuthority = "owner-a";
+			await restarted.openStartup(auth(), client);
+			expect(offline.snapshot().draft.text).toBe(edited);
+			if (edited === "")
+				expect(recoveryRecords.has("startup:active")).toBe(false);
+			else
+				expect(
+					JSON.parse(recoveryRecords.get("startup:active") ?? "null").text,
+				).toBe(edited);
+		},
+	);
 	it("New opens a fresh editor and keeps the old record and queue private", async () => {
 		const first = await openStartup(auth(), client);
 		first.resume();

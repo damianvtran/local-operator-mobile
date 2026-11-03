@@ -46,6 +46,14 @@ not forward the `cache` RequestInit field to native URLSession. Redirect target
 requests are counted **before** authentication so dropping headers cannot fake a
 no-follow pass. Synthetic control endpoints do not exist in the normal app.
 
+Ordinary admission and generation-backed writes do not await this optional
+proof. A null proof keeps the exact-route restart generation/outbox intact;
+sealed-origin draft records remain provenance-gated. Source restart tests cover
+custom, offline Radient, offline-to-online, proven mismatch and hidden cached
+imports. The native positive case separately waits for the observed recovery
+capability; an editable field alone is not proof readiness. A held-proof frame
+now shows the usable ordinary editor, not a blocked auth/loading gate.
+
 ## Native observations (expected matrix, not a run result)
 
 The single installed artifact is checked against compiled bundle/source/nonce

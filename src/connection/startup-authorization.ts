@@ -194,15 +194,19 @@ export class StartupAuthorizationLifecycle {
 	 * A persisted generation is reused ONLY for the exact same validated route
 	 * descriptor (an authorized app restart). Anything else — a different server,
 	 * or a prior revoke — mints a fresh generation, so work recorded under the old
-	 * one is never adopted by the new identity. A `tombstone` record means a purge
-	 * was owed, so that purge is completed before the new generation exists.
+	 * one is never adopted by the new identity. A `tombstone` requires full privacy
+	 * erasure; `revoked`/`reauthenticate` retire the ordinary generation while keeping
+	 * sealed drafts quarantined. An absent optional proof changes neither owner nor
+	 * generation. Only a different route or two differing non-null trusted tuples
+	 * prove a new owner. Recovery provenance on draft records gates restored bytes
+	 * separately, so ordinary restart/outbox retention never depends on /me.
 	 */
 	admit(
 		route: string,
 		revision: number,
 		prepareRecovery?: () => Promise<void>,
-		// undefined preserves legacy/web policy; null explicitly means native
-		// ownership could not be proven and cached draft generations cannot restore.
+		// null/undefined leave ordinary generation ownership unchanged; only a
+		// fresh non-null tuple can open recovery or prove an authority change.
 		recoveryAuthority?: string | null,
 	): Promise<StartupAuthorization | null> {
 		const work = this.tail.then(async () => {
@@ -222,24 +226,28 @@ export class StartupAuthorizationLifecycle {
 			if (
 				record?.state === "active" &&
 				(record.route !== route ||
-					recoveryAuthority === null ||
-					(recoveryAuthority !== undefined &&
+					(typeof recoveryAuthority === "string" &&
+						typeof record.recoveryAuthority === "string" &&
 						record.recoveryAuthority !== recoveryAuthority))
 			) {
-				// A fresh account proof is mandatory for native restoration, including
-				// ordinary generation-backed editors. Failure quarantines the sealed
-				// vault but cannot reuse cached generation bytes as a proof bypass.
-				const provenChange =
-					record.route !== route ||
-					(typeof recoveryAuthority === "string" &&
-						record.recoveryAuthority !== undefined &&
-						record.recoveryAuthority !== recoveryAuthority);
-				await this.storage.write({
-					version: 1,
-					state: provenChange ? "tombstone" : "reauthenticate",
-				});
-				await this.cleanup(provenChange ? "retire" : "reauthenticate");
+				// Absence of an optional recovery proof is NOT an auth boundary. A
+				// proven change withdraws old readers before its mandatory privacy purge.
+				withdrawDispatch();
+				withdrawPrivateWrites();
+				this.recoveryBoundary?.withdraw();
+				this.authorization = null;
+				for (const listener of this.listeners) listener();
+				await this.storage.write({ version: 1, state: "tombstone" });
+				await this.cleanup("retire");
 				record = null;
+			}
+			if (
+				record?.state === "active" &&
+				typeof recoveryAuthority === "string" &&
+				record.recoveryAuthority === undefined
+			) {
+				record = { ...record, recoveryAuthority };
+				await this.storage.write(record);
 			}
 			if (!this.isCurrent(revision)) return null;
 			if (record?.state !== "active") {
@@ -267,11 +275,16 @@ export class StartupAuthorizationLifecycle {
 			this.recoveryBoundary?.admitted?.();
 			reopenPrivateWrites(record.generation);
 			reopenDispatch();
-			this.authorization = Object.freeze({
-				scope: record.generation,
-				revision,
-			});
-			for (const listener of this.listeners) listener();
+			if (
+				this.authorization?.scope !== record.generation ||
+				this.authorization.revision !== revision
+			) {
+				this.authorization = Object.freeze({
+					scope: record.generation,
+					revision,
+				});
+				for (const listener of this.listeners) listener();
+			}
 			return this.authorization;
 		});
 		this.tail = work;
@@ -319,11 +332,15 @@ export class StartupAuthorizationLifecycle {
 		const drained = await Promise.allSettled([
 			this.recoveryBoundary?.drain() ?? Promise.resolve(),
 		]);
-		if (policy === "reauthenticate") {
-			// Never purge the ordinary last copy while an accepted sealed checkpoint
-			// is still uncommitted. Explicit logout must nevertheless attempt erasure.
-			for (const result of drained)
-				if (result.status === "rejected") throw result.reason;
+		if (
+			policy === "reauthenticate" &&
+			drained.some((result) => result.status === "rejected")
+		) {
+			// Optional recovery cannot block sign-in. Keep the ordinary last copy
+			// quarantined under its retired generation instead of deleting it. A new
+			// generation cannot read it; explicit privacy retirement still erases all.
+			await this.recoveryBoundary?.clear(policy);
+			return;
 		}
 		const results = await Promise.allSettled(
 			[...this.cleanups].map((cleanup) => Promise.resolve().then(cleanup)),
@@ -331,7 +348,6 @@ export class StartupAuthorizationLifecycle {
 		// Explicit retirement attempts cryptographic erasure even if another purge
 		// failed; reauthentication retains ONLY the sealed draft vault/key.
 		results.push(
-			...drained,
 			...(await Promise.allSettled([
 				this.recoveryBoundary?.clear(policy) ?? Promise.resolve(),
 			])),

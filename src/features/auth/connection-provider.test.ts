@@ -8,6 +8,7 @@ import type {
 	RadientTokens,
 	TunnelSession,
 } from "@/connection";
+import * as recoveryProof from "@/connection/recovery-authority";
 import {
 	configureStartupAuthorizationStorage,
 	getStartupAuthorization,
@@ -24,6 +25,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
 import { sessions as sessionProjections } from "@/features/session/runtime";
+import { scopedStore } from "@/features/session/scoped-storage";
 import {
 	sessionFactsFrom,
 	sessionStateFlags,
@@ -39,6 +41,7 @@ import {
 
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
+const nativePlatform = vi.hoisted(() => ({ OS: "web" }));
 const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
 const handoff = vi.hoisted(() => ({
 	block: null as Promise<void> | null,
@@ -59,8 +62,11 @@ vi.mock("@/features/session/device-storage", async (importOriginal) => ({
 	},
 }));
 
+vi.mock("@/features/session/picker-cache", () => ({
+	clearNativePickerCache: async () => {},
+}));
 vi.mock("react-native", () => ({
-	Platform: { OS: "web" },
+	Platform: nativePlatform,
 	AppState: { addEventListener: () => ({ remove() {} }) },
 }));
 const durable = vi.hoisted(() => ({
@@ -569,6 +575,7 @@ function transport(controlPlane?: string) {
 }
 
 beforeEach(async () => {
+	nativePlatform.OS = "web";
 	privacy.fail = false;
 	handoff.block = null;
 	handoff.started = false;
@@ -603,6 +610,62 @@ afterEach(async () => {
 });
 
 describe("startup authorization is admitted by the route (R1-1)", () => {
+	it("opens ordinary native writers while optional /me is still pending", async () => {
+		const gate = deferred();
+		vi.spyOn(recoveryProof, "proveRecoveryAuthority").mockReturnValue(
+			gate.promise.then(() => null),
+		);
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		nativePlatform.OS = "ios";
+		// The shared setup leaves an explicit-retire tombstone. This cold-start
+		// case starts with no prior owner, not a request to exercise native erase.
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		await mount();
+		let connecting!: Promise<void>;
+		try {
+			await act(async () => {
+				connecting = latest.selectComputer(computer("a"));
+				await vi.waitFor(() =>
+					expect(getStartupAuthorization()).not.toBeNull(),
+				);
+				const disk = new Map<string, string>();
+				const raw = {
+					get: async (key: string) => disk.get(key) ?? null,
+					set: async (key: string, value: string) => {
+						disk.set(key, value);
+					},
+					remove: async (key: string) => {
+						disk.delete(key);
+					},
+					keys: async () => [...disk.keys()],
+				};
+				const ordinary = scopedStore(
+					raw,
+					getStartupAuthorization()?.scope ?? null,
+				);
+				await ordinary.set("draft", "typed before identity response");
+				expect(await ordinary.get("draft")).toBe(
+					"typed before identity response",
+				);
+				const auth = getStartupAuthorization();
+				gate.resolve();
+				await connecting;
+				expect(getStartupAuthorization()).toBe(auth);
+			});
+		} finally {
+			await act(async () => {
+				gate.resolve();
+				if (connecting) await connecting;
+			});
+			nativePlatform.OS = "web";
+		}
+	});
 	it("survives a failed cold-start list read with a healthy stream", async () => {
 		const mock = await relay({ sessionsFailure: true });
 		transport();
