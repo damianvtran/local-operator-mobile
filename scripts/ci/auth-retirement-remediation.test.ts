@@ -24,6 +24,7 @@ const identity = {
 	bundleId: "com.localoperator.mobile.retirementproof",
 	nonce: "1".repeat(32),
 	sourceSha: "a".repeat(40),
+	receiverPort: 23456,
 	bundleSha256: "b".repeat(64),
 };
 describe("unified native proof review regressions", () => {

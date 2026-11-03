@@ -3,7 +3,7 @@
  * reviewed exact ref and dedicated unsigned artifact are prerequisites. No SDK
  * installation, device erase, credential file, keychain dump or provider claim. */
 import { spawn, spawnSync } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import {
 	appendFileSync,
 	existsSync,
@@ -45,18 +45,28 @@ import {
 	type ProofProcessIdentity,
 } from "./auth-retirement-proof-contract.ts";
 import {
+	createReadyGate,
+	launchWithReady,
+	listenForProofSignals,
+	ReadyTimeout,
+	signalRefusal,
+	urlProgress,
+} from "./auth-retirement-readiness.ts";
+import {
 	createFromIntent,
 	prepareCreation,
 	type Run,
 	recoverCreation,
 } from "./auth-retirement-simulator.ts";
 
+export { READY_BUDGET_MS } from "./auth-retirement-readiness.ts";
+
 /** Run 41523920765 exhausted 90s at boot-ready; run 41260071341 passed
  * boot but exhausted the default 30s at install. This proof creates a never-
  * booted dedicated device and skips ios.yml's ordinary warm boot. Apple's
  * first-boot data migration is host-dependent (reported at minutes on iOS 26
  * runners); these bounds cover only those two cold-start gates, not proof
- * phases. The fifteen-minute step ceiling lets inner failures classify first,
+ * phases. The twenty-minute step ceiling lets inner failures classify first,
  * with the existing always() owned-lease cleanup step as fallback. */
 export const BOOT_READY_BUDGET_MS = 300000;
 export const FIRST_INSTALL_BUDGET_MS = 120000;
@@ -148,6 +158,7 @@ async function measureArtifact(app: string): Promise<ProofBuildIdentity> {
 		bundleId: info.CFBundleIdentifier!,
 		nonce: info.LORetirementProofNonce!,
 		sourceSha: info.LORetirementProofSource!,
+		receiverPort: Number(info.LORetirementProofReceiverPort),
 		bundleSha256: immutableBundleDigest(app),
 	};
 }
@@ -366,18 +377,28 @@ export async function command(
 	});
 }
 
-export async function prepareProofBuild(root: string): Promise<void> {
+export async function prepareProofBuild(
+	root: string,
+	run: Run = command,
+): Promise<void> {
 	if (
 		process.env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
 		process.env.RETIREMENT_PROOF !== "true"
 	)
 		throw new Error("Manual proof opt-in required");
-	if (await command("git", ["status", "--porcelain"]))
+	if (await run("git", ["status", "--porcelain"]))
 		throw new Error("Proof source must start clean");
-	const sourceSha = await command("git", ["rev-parse", "HEAD"]);
+	const sourceSha = await run("git", ["rev-parse", "HEAD"]);
 	const nonce = randomBytes(16).toString("hex");
+	const receiverPort = randomInt(20000, 40000);
 	mkdirSync(root, { recursive: true });
-	const identity = { flavor: FLAVOR, bundleId: PROOF_ID, sourceSha, nonce };
+	const identity = {
+		flavor: FLAVOR,
+		bundleId: PROOF_ID,
+		sourceSha,
+		nonce,
+		receiverPort,
+	};
 	writeFileSync(join(root, "build-identity.json"), JSON.stringify(identity));
 	/* Only this ephemeral CI worktree is rewritten. Ordinary tracked entry and
 	 * config do NOT gain a flag, route, seed command or browser-auth override. */
@@ -390,7 +411,7 @@ export async function prepareProofBuild(root: string): Promise<void> {
 	pkg.main = `./${entry}`;
 	writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
 	const config = readFileSync("app.config.ts", "utf8");
-	const replacement = `config.ios = { ...config.ios, bundleIdentifier: ${JSON.stringify(PROOF_ID)}, infoPlist: { ...config.ios?.infoPlist, LORetirementProofFlavor: ${JSON.stringify(FLAVOR)}, LORetirementProofNonce: ${JSON.stringify(nonce)}, LORetirementProofSource: ${JSON.stringify(sourceSha)} } };\nconfig.scheme = 'loretirementproof';\nexport default config;`;
+	const replacement = `config.ios = { ...config.ios, bundleIdentifier: ${JSON.stringify(PROOF_ID)}, infoPlist: { ...config.ios?.infoPlist, LORetirementProofFlavor: ${JSON.stringify(FLAVOR)}, LORetirementProofNonce: ${JSON.stringify(nonce)}, LORetirementProofSource: ${JSON.stringify(sourceSha)}, LORetirementProofReceiverPort: ${receiverPort} } };\nconfig.scheme = 'loretirementproof';\nexport default config;`;
 	if (!config.endsWith("export default config;\n"))
 		throw new Error("Unknown app config export shape");
 	writeFileSync(
@@ -401,7 +422,7 @@ export async function prepareProofBuild(root: string): Promise<void> {
 	if (!envFile) throw new Error("CI environment output required");
 	appendFileSync(
 		envFile,
-		`EXPO_PUBLIC_RETIREMENT_PROOF_FLAVOR=${FLAVOR}\nEXPO_PUBLIC_RETIREMENT_PROOF_NONCE=${nonce}\nEXPO_PUBLIC_RETIREMENT_PROOF_SOURCE=${sourceSha}\n`,
+		`EXPO_PUBLIC_RETIREMENT_PROOF_FLAVOR=${FLAVOR}\nEXPO_PUBLIC_RETIREMENT_PROOF_NONCE=${nonce}\nEXPO_PUBLIC_RETIREMENT_PROOF_SOURCE=${sourceSha}\nEXPO_PUBLIC_RETIREMENT_PROOF_RECEIVER_PORT=${receiverPort}\n`,
 	);
 }
 
@@ -508,6 +529,8 @@ async function runNativeProofBody(
 		let phase = "",
 			tokenRequests = 0;
 		let refused = refusedCounts();
+		const readyGate = createReadyGate();
+		let phaseUrlProgress = "none";
 		const server = createServer(async (req, res) => {
 			let refusal: RefusedReason = "json";
 			try {
@@ -529,6 +552,42 @@ async function runNativeProofBody(
 					tokenRequests += 1;
 					res.writeHead(200, { "content-type": "application/json" });
 					res.end(JSON.stringify(syntheticTokenReply(value.refresh_token)));
+					return;
+				}
+				if (
+					req.method === "POST" &&
+					(req.url === "/ready" || req.url === "/progress")
+				) {
+					if (req.headers["x-proof-nonce"] !== actual.nonce) {
+						refusal = "nonce";
+						throw new Error("Signal refused");
+					}
+					const signal = JSON.parse(body) as Record<string, unknown>;
+					const invalid = signalRefusal(
+						signal,
+						req.url,
+						phase,
+						FLAVOR,
+						actual.sourceSha,
+					);
+					if (invalid) {
+						refusal = invalid;
+						throw new Error("Signal refused");
+					}
+					if (req.url === "/ready") {
+						if (!readyGate.accept()) {
+							refusal = "no-waiter";
+							throw new Error("Signal refused");
+						}
+					} else {
+						if (!waiting) {
+							refusal = "no-waiter";
+							throw new Error("Signal refused");
+						}
+						phaseUrlProgress = urlProgress(signal);
+					}
+					res.writeHead(204);
+					res.end();
 					return;
 				}
 				if (req.method !== "POST" || req.url !== "/receipt") {
@@ -560,7 +619,7 @@ async function runNativeProofBody(
 				res.end();
 			}
 		});
-		await new Promise<void>((yes) => server.listen(0, "127.0.0.1", yes));
+		await listenForProofSignals(server, actual.receiverPort);
 		const address = server.address();
 		if (!address || typeof address === "string")
 			throw new Error("No owned receiver port");
@@ -581,6 +640,8 @@ async function runNativeProofBody(
 				activeProofDiagnostics?.checkpoint("phase", name);
 				phase = name;
 				refused = refusedCounts();
+				phaseUrlProgress = "none";
+				let readyAt: number | null = null;
 				let phaseCause: PhaseCause = "launch-identity";
 				let rejectedStage: unknown;
 				let launchStart: number | null = null,
@@ -589,13 +650,17 @@ async function runNativeProofBody(
 					const beforeTokens = tokenRequests;
 					await installedIdentity();
 					launchStart = performance.now();
-					const launch = await command("xcrun", [
-						"simctl",
-						"launch",
-						"--terminate-running-process",
-						udid,
-						PROOF_ID,
-					]);
+					const launched = await launchWithReady(readyGate, () =>
+						command("xcrun", [
+							"simctl",
+							"launch",
+							"--terminate-running-process",
+							udid,
+							PROOF_ID,
+						]),
+					);
+					const launch = launched.launch;
+					readyAt = launched.readyAt;
 					const pid = Number(/:\s*(\d+)\s*$/.exec(launch)?.[1]);
 					const identity = { ...(await installedIdentity()), udid, pid };
 					if (previous) assertRestartIdentity(previous, identity);
@@ -669,10 +734,16 @@ async function runNativeProofBody(
 						waiting = null;
 					}
 				} catch (error) {
+					if (error instanceof ReadyTimeout) phaseCause = "ready-timeout";
 					const outcomeAt = performance.now();
 					const observation = {
 						phase: name,
 						cause: phaseCause,
+						readyAfterLaunchMs:
+							readyAt !== null && launchStart !== null
+								? readyAt - launchStart
+								: null,
+						urlProgress: phaseUrlProgress,
 						appStage: rejectedStage,
 						refused: { ...refused },
 						launchToOpenurlMs:

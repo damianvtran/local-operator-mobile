@@ -54,6 +54,27 @@ class ProofCheckFailure extends Error {
 	}
 }
 
+export const READY_KINDS = ["listener-ready"] as const;
+export const PROGRESS_KINDS = ["url-admitted", "url-refused"] as const;
+export const URL_REFUSAL_REASONS = [
+	"identity",
+	"scheme",
+	"nonce",
+	"phase",
+	"callback",
+	"parse",
+] as const;
+type UrlRefusal = (typeof URL_REFUSAL_REASONS)[number];
+class UrlRefused extends Error {
+	readonly reason: UrlRefusal;
+	constructor(reason: UrlRefusal) {
+		super("Proof URL refused");
+		this.reason = reason;
+	}
+}
+const RECEIVER_PORT = Number(
+	process.env.EXPO_PUBLIC_RETIREMENT_PROOF_RECEIVER_PORT,
+);
 const FLAVOR = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_FLAVOR;
 const NONCE = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_NONCE;
 const SOURCE = process.env.EXPO_PUBLIC_RETIREMENT_PROOF_SOURCE;
@@ -77,37 +98,80 @@ const synthetic = (expired = false): RadientTokens => ({
 	account_id: ACCOUNT,
 });
 
+function staticIdentityValid(): boolean {
+	return (
+		Platform.OS === "ios" &&
+		FLAVOR === "auth-retirement-proof" &&
+		/^[a-f0-9]{32}$/.test(NONCE ?? "") &&
+		/^[a-f0-9]{40}$/.test(SOURCE ?? "") &&
+		Number.isInteger(RECEIVER_PORT) &&
+		RECEIVER_PORT >= 20000 &&
+		RECEIVER_PORT <= 39999
+	);
+}
+function knownPhase(url: string): string | undefined {
+	try {
+		const phase = new URL(url).searchParams.get("phase");
+		return phase && PHASES.has(phase) ? phase : undefined;
+	} catch {
+		return undefined;
+	}
+}
 function admit(url: string): { phase: string; callback: string } {
-	if (
-		Platform.OS !== "ios" ||
-		FLAVOR !== "auth-retirement-proof" ||
-		!NONCE ||
-		!/^[a-f0-9]{32}$/.test(NONCE) ||
-		!SOURCE ||
-		!/^[a-f0-9]{40}$/.test(SOURCE)
-	)
-		throw new Error("Proof-only build required");
-	const request = new URL(url);
+	if (!staticIdentityValid()) throw new UrlRefused("identity");
+	let request: URL;
+	try {
+		request = new URL(url);
+	} catch {
+		throw new UrlRefused("parse");
+	}
+	if (request.protocol !== "loretirementproof:" || request.hostname !== "run")
+		throw new UrlRefused("scheme");
+	if (request.searchParams.get("nonce") !== NONCE)
+		throw new UrlRefused("nonce");
 	const phase = request.searchParams.get("phase");
+	if (!phase || !PHASES.has(phase)) throw new UrlRefused("phase");
 	const callback = request.searchParams.get("callback") ?? "";
-	const receiver = new URL(callback);
+	let receiver: URL;
+	try {
+		receiver = new URL(callback);
+	} catch {
+		throw new UrlRefused("callback");
+	}
 	if (
-		request.protocol !== "loretirementproof:" ||
-		request.hostname !== "run" ||
-		request.searchParams.get("nonce") !== NONCE ||
-		!phase ||
-		!PHASES.has(phase) ||
 		receiver.protocol !== "http:" ||
 		receiver.hostname !== "127.0.0.1" ||
-		!receiver.port ||
+		receiver.port !== String(RECEIVER_PORT) ||
 		receiver.pathname !== "/receipt" ||
 		receiver.username ||
 		receiver.password ||
 		receiver.search ||
 		receiver.hash
 	)
-		throw new Error("Proof command refused");
+		throw new UrlRefused("callback");
 	return { phase, callback };
+}
+/** Best-effort coarse progress is bounded and cannot expose a callback URL or
+ * exception. The receiver address is compiled, not obtained from an input URL. */
+async function postMarker(
+	path: "/ready" | "/progress",
+	body: Record<string, unknown>,
+): Promise<void> {
+	if (!staticIdentityValid()) return;
+	const abort = new AbortController(),
+		timer = setTimeout(() => abort.abort(), 10000);
+	try {
+		await fetch(`http://127.0.0.1:${RECEIVER_PORT}${path}`, {
+			method: "POST",
+			headers: { "content-type": "application/json", "x-proof-nonce": NONCE! },
+			body: JSON.stringify({ ...body, flavor: FLAVOR, sourceSha: SOURCE }),
+			signal: abort.signal,
+		});
+	} catch {
+		/* A missing observation is not phase success; the host's budgets decide. */
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 async function run(
@@ -252,17 +316,30 @@ async function run(
 
 /** Install once in the generated proof entry. One command per process prevents
  * duplicate deep-link delivery from accidentally seeding or retiring twice. */
+let listenerInstalled = false;
 export function installAuthRetirementProof(): void {
+	if (listenerInstalled) return;
+	listenerInstalled = true;
 	let consumed = false;
 	const receive = async (url: string) => {
 		if (consumed) return;
 		let request: ReturnType<typeof admit>;
 		try {
 			request = admit(url);
-		} catch {
+		} catch (error) {
+			const phase = knownPhase(url);
+			await postMarker("/progress", {
+				kind: "url-refused",
+				reason: error instanceof UrlRefused ? error.reason : "parse",
+				...(phase ? { phase } : {}),
+			});
 			return;
 		}
 		consumed = true;
+		await postMarker("/progress", {
+			kind: "url-admitted",
+			phase: request.phase,
+		});
 		let receipt: Record<string, unknown>;
 		try {
 			receipt = await run(request.phase, request.callback);
@@ -296,4 +373,5 @@ export function installAuthRetirementProof(): void {
 	void Linking.getInitialURL().then((url) => {
 		if (url) void receive(url);
 	});
+	void postMarker("/ready", { kind: "listener-ready" });
 }

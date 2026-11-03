@@ -1,6 +1,8 @@
 /** Closed diagnostic vocabulary, not a new proof/admission protocol. Never
  * retain native errors, callback URLs, output text, credentials or paths. The
  * app duplicates STAGES because the Node host must not import React Native. */
+
+import { safeUrlProgress } from "./auth-retirement-readiness.ts";
 import type { Run } from "./auth-retirement-simulator.ts";
 export const APP_STAGES = [
 	"seed-store-not-empty",
@@ -29,8 +31,10 @@ export const REFUSED_REASONS = [
 	"source-mismatch",
 	"coarse-type",
 	"stage-unknown",
+	"progress-unknown",
 ] as const;
 export const PHASE_CAUSES = [
+	"ready-timeout",
 	"receipt-timeout",
 	"phase-rejected",
 	"transport-count",
@@ -197,6 +201,8 @@ export function sanitizePhaseFailure(
 					: 0,
 			]),
 		),
+		readyAfterLaunchMs: safeNumber(input.readyAfterLaunchMs),
+		urlProgress: safeUrlProgress(input.urlProgress),
 		launchToOpenurlMs: safeNumber(input.launchToOpenurlMs),
 		openurlToOutcomeMs: safeNumber(input.openurlToOutcomeMs),
 		processAliveAtTimeout:

@@ -55,11 +55,11 @@ describe("proof-only host/controller boundary", () => {
 			if (forbidden !== "ConnectionProvider")
 				expect(controller).not.toContain(forbidden);
 	});
-	it("keeps proof opt-in false and native operation capped at fifteen minutes", () => {
+	it("keeps proof opt-in false and native operation capped at twenty minutes", () => {
 		const workflow = source(".github/workflows/ios.yml");
 		expect(workflow).toContain("retirement_proof:");
 		expect(workflow).toContain("default: false");
-		expect(workflow).toContain("timeout-minutes: 15");
+		expect(workflow).toContain("timeout-minutes: 20");
 		expect(workflow).toContain(
 			"github.event_name == 'workflow_dispatch' && inputs.retirement_proof",
 		);

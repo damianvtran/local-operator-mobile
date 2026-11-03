@@ -4,6 +4,7 @@ export interface ProofBuildIdentity {
 	bundleId: string;
 	nonce: string;
 	sourceSha: string;
+	receiverPort: number;
 	bundleSha256: string;
 }
 export interface ProofProcessIdentity extends ProofBuildIdentity {
@@ -19,6 +20,9 @@ export function assertProofBuild(
 	 * dedicated unsigned proof flavor before any phase command is considered. */
 	for (const identity of [actual, expected]) {
 		if (
+			!Number.isInteger(identity.receiverPort) ||
+			identity.receiverPort < 20000 ||
+			identity.receiverPort > 39999 ||
 			identity.flavor !== "auth-retirement-proof" ||
 			identity.bundleId !== "com.localoperator.mobile.retirementproof" ||
 			!/^[a-f0-9]{32}$/.test(identity.nonce) ||
@@ -33,6 +37,7 @@ export function assertProofBuild(
 		"nonce",
 		"sourceSha",
 		"bundleSha256",
+		"receiverPort",
 	] as const)
 		if (actual[field] !== expected[field])
 			throw new Error(`Retirement proof identity mismatch: ${field}`);

@@ -300,11 +300,11 @@ jobs:
 
       - name: Native durable retirement and restore primitives (manual opt-in)
         if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
-        # Cold boot/install plus six receipt caps require up to 13 minutes.
-        # Let inner caps classify BLOCKED and write receipts before the outer
-        # ceiling; run 41523920765 used 36.1m of the unchanged 60m job budget.
-        # The separate always() owned cleanup retains its two-minute cap.
-        timeout-minutes: 15
+        # Inner caps: 300 boot + 120 install + 6*(45 ready + 60 receipt) = 1050s.
+        # Allow classified BLOCKED receipts before the 20m outer proof ceiling.
+        # Measured envelope: 2.3 pre-build + 29.2 build + 20 proof + 2 cleanup
+        # + ~1 overhead = 54.5m, below the unchanged 60m job cap.
+        timeout-minutes: 20
         env:
           RETIREMENT_PROOF: "true"
         run: |

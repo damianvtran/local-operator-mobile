@@ -13,6 +13,7 @@ const proof: ProofBuildIdentity = {
 	bundleId: "com.localoperator.mobile.retirementproof",
 	nonce: "0123456789abcdef0123456789abcdef",
 	sourceSha: "b14ff5898f1e147ecee6a790bf0720e2455aa98c",
+	receiverPort: 23456,
 	bundleSha256: "a".repeat(64),
 };
 describe("unsigned native retirement proof admission", () => {
