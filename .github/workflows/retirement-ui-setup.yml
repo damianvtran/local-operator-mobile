@@ -18,7 +18,9 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  # A reusable inherits caller github.workflow/event/ref. Namespace INSIDE the
+  # full expression or it queues behind its own parent's active group.
+  group: ${{ format('{0}-retirement-ui-setup-{1}-{2}', github.workflow, github.event_name, github.ref) }}
   cancel-in-progress: false
 jobs:
   compile-only:
