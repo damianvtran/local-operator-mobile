@@ -124,6 +124,8 @@ it("actual direct CLI without the required supervisor exits nonzero BEFORE any s
 			timeout: 5000,
 			maxBuffer: 65536,
 			env: {
+				// Match the augmented ProcessEnv without broad host-secret inheritance.
+				NODE_ENV: process.env.NODE_ENV,
 				PATH: process.env.PATH,
 				HOME: process.env.HOME,
 				TMPDIR: process.env.TMPDIR,
@@ -199,6 +201,8 @@ it("exact production Python watchdog launches bare Node24 through the entire imp
 			timeout: 5000,
 			maxBuffer: 65536,
 			env: {
+				// Match the augmented ProcessEnv without broad host-secret inheritance.
+				NODE_ENV: process.env.NODE_ENV,
 				PATH: process.env.PATH,
 				HOME: process.env.HOME,
 				TMPDIR: process.env.TMPDIR,

@@ -58,24 +58,29 @@ export class NativeScope {
 	): OwnedCommand {
 		if (this.closed) throw new ReplayRefused("closed");
 		const budget = this.deadline.cap(cap);
-		const environment = Object.fromEntries(
-			Object.entries(process.env).filter(([key]) =>
-				[
-					"PATH",
-					"HOME",
-					"USER",
-					"LOGNAME",
-					"TMPDIR",
-					"DEVELOPER_DIR",
-					"LANG",
-					"LC_ALL",
-					"NODE_OPTIONS",
-					"GIT_CONFIG_SYSTEM",
-					"GIT_CONFIG_GLOBAL",
-					"GIT_TERMINAL_PROMPT",
-				].includes(key),
+		// Expo augments ProcessEnv with a required NODE_ENV. Keep that single
+		// non-secret mode explicit, without inheriting the rest of the host env.
+		const environment: NodeJS.ProcessEnv = {
+			NODE_ENV: process.env.NODE_ENV,
+			...Object.fromEntries(
+				Object.entries(process.env).filter(([key]) =>
+					[
+						"PATH",
+						"HOME",
+						"USER",
+						"LOGNAME",
+						"TMPDIR",
+						"DEVELOPER_DIR",
+						"LANG",
+						"LC_ALL",
+						"NODE_OPTIONS",
+						"GIT_CONFIG_SYSTEM",
+						"GIT_CONFIG_GLOBAL",
+						"GIT_TERMINAL_PROMPT",
+					].includes(key),
+				),
 			),
-		);
+		};
 		const child = spawn(
 			process.execPath,
 			[join(import.meta.dirname, "retirement-replay-child.cjs"), exe, ...args],

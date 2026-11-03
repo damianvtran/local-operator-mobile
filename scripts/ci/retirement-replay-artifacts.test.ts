@@ -149,7 +149,8 @@ describe("real ZIP transport and pre-extraction tar guards", () => {
 		const original = zip([{ name: "ok" }]);
 		for (const kind of ["crc", "truncated", "name"]) {
 			const bad = Buffer.from(original);
-			if (kind === "crc") bad[32] ^= 1;
+			// Bounds-checked access makes a broken fixture fail, not mutate undefined.
+			if (kind === "crc") bad.writeUInt8(bad.readUInt8(32) ^ 1, 32);
 			else if (kind === "name") bad[30] = 120;
 			expect(() =>
 				unpackZip(kind === "truncated" ? bad.subarray(0, -1) : bad, ["ok"]),
