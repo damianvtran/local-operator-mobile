@@ -409,7 +409,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * component, layout/style, token, corpus, scene or instrument changed. These
 	 * auth/connection edits therefore do not alter the measured geometry inputs;
 	 * historical ORIGINAL_* identities and every other pin remain unchanged. */
-	src: "80f4b78d272c799e5cd358b6691a023fec401d65cf0394b2c57af47203138fc5",
+	/* Re-pinned 2026-11-03 for PR #157 (right-sized agent avatar variants), with
+	 * --print: `src` only. `agentAvatar` gains an optional `size` query, the avatar
+	 * cache key gains the variant, and the hook picks it from dp x PixelRatio when
+	 * the relay advertises `features.agent_avatar_sizes`. The U-08 mock relay
+	 * advertises no such flag and its scene rows carry no agent picture, so the
+	 * measured transcript renders the same; no layout, style, token, corpus,
+	 * scene or instrument file changed, and every other pin is untouched. */
+	src: "545a2fe3aecf5217f2990d352b98216015d863ad6c7749054b266ba1c3f754a5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
