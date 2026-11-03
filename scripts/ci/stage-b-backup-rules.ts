@@ -1,16 +1,22 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const AAPT_ELEMENT = /^(\s*)E:\s+([\w-]+)/;
-const AAPT_ATTRIBUTE = /^\s*A:\s+([\w:]+)(?:\([^)]*\))?\s*=\s*(.*)/;
+// AOSP tools/aapt2/Debug.cpp prints namespace_uri + ":" + name, not an XML prefix.
+const ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android:";
+const AAPT_ATTRIBUTE = /^\s*A:\s+([^\s=()]+)(?:\(0x[0-9a-f]+\))?\s*=\s*(.*)$/i;
+const ATTRIBUTE_LINE = /^\s*A:/;
+const LOCAL_ATTRIBUTE = /^[a-z_][\w.-]*$/i;
+const RAW_ANNOTATION = /\s+\(Raw:.*$/;
 const QUOTED_VALUE = /"([^"\n]*)"/;
-const XML_RESOURCE = /resource\s+(0x[a-f0-9]+)\s+(?:[\w.]+:)?xml\/([\w_]+)/i;
+const XML_RESOURCE = /resource\s+(0x[a-f0-9]+)\s+((?:[\w.]+:)?xml\/([\w_]+))/i;
 const RESOURCE_BOUNDARY = /\bresource\s+0x/i;
 const REFERENCE_PREFIX = /^@/;
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
+const BACKUP_RESOURCE_NAME = /backup|extraction/i;
 
 type XmlNode = {
 	name: string;
@@ -39,9 +45,19 @@ export function parseAaptXmlTree(text: string): XmlNode[] {
 			continue;
 		}
 		const attribute = AAPT_ATTRIBUTE.exec(line);
+		if (ATTRIBUTE_LINE.test(line) && (!attribute || !stack.length))
+			throw new Error("unrecognized packaged XML attribute");
 		if (attribute && stack.length) {
-			const name = attribute[1] ?? "";
-			const raw = attribute[2] ?? "";
+			const qualified = attribute[1] ?? "";
+			const android = qualified.startsWith(ANDROID_NAMESPACE);
+			const local = android
+				? qualified.slice(ANDROID_NAMESPACE.length)
+				: qualified;
+			if (!LOCAL_ATTRIBUTE.test(local))
+				throw new Error("unknown packaged XML attribute namespace");
+			const name = android ? `android:${local}` : local;
+			// Compiled references win over the optional (Raw: "@xml/...") annotation.
+			const raw = (attribute[2] ?? "").replace(RAW_ANNOTATION, "");
 			const value = QUOTED_VALUE.exec(raw)?.[1] ?? raw.trim();
 			const node = stack.at(-1);
 			if (!node || name in node.attributes)
@@ -60,8 +76,16 @@ function resourceNames(
 	for (const line of resources.split("\n")) {
 		const resource = XML_RESOURCE.exec(line);
 		if (resource) {
-			current = { name: resource[2] ?? "", files: [] };
-			result.set((resource[1] ?? "").toLowerCase(), current);
+			current = { name: resource[3] ?? "", files: [] };
+			for (const alias of new Set([
+				resource[1] ?? "",
+				resource[2] ?? "",
+				`xml/${current.name}`,
+			])) {
+				const key = alias.toLowerCase();
+				if (result.has(key)) throw new Error("ambiguous packaged XML resource");
+				result.set(key, current);
+			}
 		} else if (RESOURCE_BOUNDARY.test(line)) current = null;
 		if (current)
 			for (const match of line.matchAll(/\b(res\/[^\s"']+\.xml)\b/g))
@@ -170,19 +194,69 @@ export function inspectStageBBackupArtifact(options: {
 	generatedManifest?: string;
 	sourceSha: string;
 	variant: "debug" | "release";
+	receiptDirectory: string;
 }) {
 	if (!SOURCE_SHA.test(options.sourceSha))
 		throw new Error("backup artifact requires an exact source SHA");
+	mkdirSync(options.receiptDirectory, { recursive: true });
 	const dump = (kind: string, path?: string) =>
 		execFileSync(
 			options.aapt2,
 			["dump", kind, options.apk, ...(path ? ["--file", path] : [])],
 			{ encoding: "utf8", timeout: 30000, maxBuffer: 32 * 1024 * 1024 },
 		);
+	const retain = (name: string, value: string) =>
+		writeFileSync(join(options.receiptDirectory, name), value, { flag: "wx" });
+	// Save raw instrument output BEFORE interpretation. A failed verifier must
+	// leave the same inspectable evidence as a passing one, not just a stack trace.
+	const manifest = dump("xmltree", "AndroidManifest.xml");
+	retain("manifest.xmltree.txt", manifest);
+	const resources = dump("resources");
+	retain("resources.txt", resources);
+	const index = resourceNames(resources);
+	const candidates = new Set<string>();
+	for (const resource of new Set(index.values()))
+		if (BACKUP_RESOURCE_NAME.test(resource.name))
+			for (const path of resource.files) candidates.add(path);
+	try {
+		for (const node of parseAaptXmlTree(manifest))
+			if (node.name === "application")
+				for (const name of [
+					"android:fullBackupContent",
+					"android:dataExtractionRules",
+				]) {
+					const reference = node.attributes[name];
+					if (reference)
+						for (const path of index.get(
+							reference.replace(REFERENCE_PREFIX, "").toLowerCase(),
+						)?.files ?? [])
+							candidates.add(path);
+				}
+	} catch {
+		/* Preserve the known backup XML too when manifest parsing refuses. */
+	}
+	const xml = new Map<string, string>();
+	const xmlIndex: Record<string, string> = {};
+	const readXml = (path: string): string => {
+		const previous = xml.get(path);
+		if (previous !== undefined) return previous;
+		const value = dump("xmltree", path);
+		const name = `xml-${createHash("sha256").update(path).digest("hex")}.xmltree.txt`;
+		retain(name, value);
+		xml.set(path, value);
+		xmlIndex[path] = name;
+		return value;
+	};
+	// Prefetch both policies before validation can reject the first one.
+	try {
+		for (const path of candidates) readXml(path);
+	} finally {
+		retain("xml-index.json", `${JSON.stringify(xmlIndex, null, 2)}\n`);
+	}
 	const result = verifyAndroidBackupDumps({
-		manifest: dump("xmltree", "AndroidManifest.xml"),
-		resources: dump("resources"),
-		xml: (path) => dump("xmltree", path),
+		manifest,
+		resources,
+		xml: readXml,
 		...(options.generatedManifest
 			? { generatedManifest: readFileSync(options.generatedManifest, "utf8") }
 			: {}),
@@ -221,15 +295,27 @@ if (
 		throw new Error(
 			"required: --apk --aapt2 --source --variant debug|release --output [--generated-manifest]",
 		);
-	const result = inspectStageBBackupArtifact({
-		apk,
-		aapt2,
-		sourceSha,
-		variant: variant as "debug" | "release",
-		...(process.argv.includes("--generated-manifest")
-			? { generatedManifest: arg("generated-manifest") }
-			: {}),
-	});
+	let result: ReturnType<typeof inspectStageBBackupArtifact>;
+	try {
+		result = inspectStageBBackupArtifact({
+			apk,
+			aapt2,
+			sourceSha,
+			variant: variant as "debug" | "release",
+			receiptDirectory: dirname(output),
+			...(process.argv.includes("--generated-manifest")
+				? { generatedManifest: arg("generated-manifest") }
+				: {}),
+		});
+	} catch (error) {
+		mkdirSync(dirname(output), { recursive: true });
+		writeFileSync(
+			output,
+			`${JSON.stringify({ sourceSha, variant, passed: false, error: error instanceof Error ? error.message : "backup verification failed" }, null, 2)}\n`,
+			{ flag: "wx" },
+		);
+		throw error;
+	}
 	writeFileSync(output, `${JSON.stringify(result, null, 2)}\n`, { flag: "wx" });
 	console.log(
 		`PASS packaged ${variant} backup exclusions; release variant verified=${result.releaseVariantVerified}`,

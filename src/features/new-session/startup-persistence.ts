@@ -72,8 +72,8 @@ export class RevisionStore {
 				name !== latest &&
 				// Discard must commit its tombstone before pruning committed history.
 				// An undeletable predecessor may fail cleanup, never revive old text.
-				((validatePrevious && versions.includes(name)) ||
-					name.endsWith(".pending"))
+				validatePrevious &&
+				(versions.includes(name) || name.endsWith(".pending"))
 			)
 				await this.files.remove(name);
 		}

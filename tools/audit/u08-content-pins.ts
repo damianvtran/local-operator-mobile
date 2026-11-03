@@ -410,7 +410,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * input corpus are unchanged. Native recovery is disabled on that fresh web
 	 * fixture route; no transcript or measured control was edited. This is content
 	 * admission reasoning, not a claim of new rendered proof. ORIGINAL_* untouched. */
-	src: "f04a410b332abb3b86504cfdf256c545b67238ae2b63a38b4d4805e19fcc9da8",
+	/* Recomputed after PR #156's native verifier/R4 batch: source drift since
+	 * b383add6 is native pending-file/tombstone handling and its tests, plus the
+	 * orphan-retention comment. The same web U08 subject/instrument stays unchanged. */
+	src: "6b171dbcbf07185bfc2f44fef578e5e04e34d58ad9aad38a7d49d8f0a02cee69",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

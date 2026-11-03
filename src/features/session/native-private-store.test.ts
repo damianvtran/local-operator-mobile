@@ -76,7 +76,9 @@ function filesystemFixture() {
 		info() {
 			return { exists: this.exists };
 		}
-		create() {
+		create(options?: { overwrite?: boolean }) {
+			if (this.exists && !options?.overwrite)
+				throw new Error("file already exists");
 			state.files.set(this.uri, "");
 		}
 		write(value: string) {
@@ -288,6 +290,22 @@ describe("native private adapter with Node platform ports", () => {
 		const next = (await restart()).nativePrivateStore("recovery");
 		expect(await next.get("draft")).toBeNull();
 		expect(key).not.toEqual(oldKey);
+	});
+	it("overwrites only stranded staging bytes when discard follows an interrupted native write", async () => {
+		const store = (await restart()).nativePrivateStore("device");
+		await store.set("draft", "committed private value");
+		state.failWrite = true;
+		await expect(
+			store.set("draft", "interrupted private value"),
+		).rejects.toThrow();
+		state.failWrite = false;
+		expect(
+			[...state.files.keys()].some((path) => path.endsWith(".pending")),
+		).toBe(true);
+		await store.remove("draft");
+		expect(
+			await (await restart()).nativePrivateStore("device").get("draft"),
+		).toBeNull();
 	});
 	it("deletes legacy plaintext rather than adopting it into an authenticated install", async () => {
 		state.dirs.add("document/lo-mobile-store");

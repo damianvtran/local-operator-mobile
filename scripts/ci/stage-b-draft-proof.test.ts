@@ -39,7 +39,7 @@ const env: NodeJS.ProcessEnv = {
 	STAGE_B_SOURCE_SHA: config.sourceSha,
 };
 describe("dedicated Stage B proof preflight", () => {
-	it("admits heavy work only in the separate approved read-only lane after backup proof", () => {
+	it("admits independent native and backup proofs only in the approved read-only lane", () => {
 		const root = fileURLToPath(new URL("../../", import.meta.url));
 		const workflow = readFileSync(
 			join(root, ".github/workflows/stage-b-draft-proof.yml"),
@@ -48,7 +48,13 @@ describe("dedicated Stage B proof preflight", () => {
 		expect(workflow).toContain(
 			"permissions:\n  contents: read\n  actions: read",
 		);
-		expect(workflow).toContain("needs: [preflight, backup-artifact]");
+		const native = workflow
+			.split("\n  native:\n")[1]
+			?.split("\n  backup-artifact:")[0];
+		expect(native).toContain("needs: preflight");
+		expect(native).not.toContain("needs: [preflight, backup-artifact]");
+		expect(workflow).toContain("stage-b-backup/*.txt");
+		expect(workflow).toContain("stage-b-backup/xml-index.json");
 		expect(workflow).toContain("github.event.action == 'labeled'");
 		expect(workflow).toContain("stage-b-native-approved");
 		expect(workflow).toContain("cancel-in-progress: false");

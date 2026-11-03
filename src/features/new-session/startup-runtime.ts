@@ -538,6 +538,7 @@ export async function startupForSession(
 			coordinators.set(key, owner);
 			await restoreOptionalDraft(owner, key, auth);
 			if (await hasOrdinarySessionDraft(sessionId, auth.scope)) {
+				// Keep the committed record/SID pointer: the mapped branch can reopen a fresh owner.
 				owner.pause();
 				coordinators.delete(key);
 				recoveryOrigins.delete(key);

@@ -46,8 +46,8 @@ jobs:
           grep -F "Stage B native execution requires its explicitly approved trusted PR lane" "$RUNNER_TEMP/stage-b-entry-refusal.log"
 
   native:
-    # A bad/missing backup artifact stops admission BEFORE the expensive producer.
-    needs: [preflight, backup-artifact]
+    # Independent proofs: merge still requires BOTH backup and native receipts.
+    needs: preflight
     if: github.event.action == 'labeled' && github.event.label.name == 'stage-b-native-approved' && github.actor == 'damianvtran' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: macos-26
     timeout-minutes: 90
@@ -149,5 +149,7 @@ jobs:
             ${{ runner.temp }}/stage-b-backup/generated-manifest.xml
             ${{ runner.temp }}/stage-b-backup/producer-runs.json
             ${{ runner.temp }}/stage-b-backup/artifact-metadata.json
+            ${{ runner.temp }}/stage-b-backup/*.txt
+            ${{ runner.temp }}/stage-b-backup/xml-index.json
           if-no-files-found: error
           retention-days: 14

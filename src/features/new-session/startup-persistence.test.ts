@@ -36,6 +36,19 @@ function fixture() {
 	};
 }
 describe("native startup revision commits", () => {
+	it("commits discard before sweeping an undeletable stale pending file, including a staging-name collision", async () => {
+		const x = fixture();
+		await x.store.set("private value");
+		x.files.set("000000000002.pending", "interrupted same-name staging");
+		x.files.set("000000000003.pending", "other stranded staging");
+		x.denyRemoval();
+		await expect(x.store.discard("discarded")).rejects.toThrow("remove denied");
+		expect(await x.restart().get()).toBe("discarded");
+		expect(JSON.parse(x.files.get("000000000002.json") ?? "null").value).toBe(
+			"discarded",
+		);
+		expect(x.files.get("000000000003.pending")).toBe("other stranded staging");
+	});
 	it("commits discard before an undeletable older committed predecessor can block pruning", async () => {
 		const x = fixture();
 		await x.store.set("first private value");

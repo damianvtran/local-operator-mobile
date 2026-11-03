@@ -19,12 +19,15 @@ commands/output, reaps exact process groups and deletes its unique owned simulat
 The existing pinned Maestro CLI is provisioned just as in the repository E2E lane.
 No local native execution is authorized by the existence of these files.
 
-The Android backup-artifact job runs first. It reuses the normal Android CI debug
-APK for the exact PR run head, generates manifest selection without Gradle, and
-decodes the **packaged** legacy/cloud/device-transfer resources with preinstalled
-AAPT2. A missing/ambiguous rule, SecureStore inclusion or file-domain inclusion
-fails admission before the expensive iOS producer. The producer run/artifact
-metadata and APK digest are retained. The normal Android PR job may build GitHub's
+The Android backup-artifact and iOS native jobs independently depend on source
+preflight; both successful receipts remain required for merge. The backup job
+reuses the normal Android CI debug APK for the exact PR run head, generates
+manifest selection without Gradle, and decodes the **packaged** legacy/cloud/device-
+transfer resources with preinstalled AAPT2. A missing/ambiguous rule, SecureStore
+inclusion or file-domain inclusion fails that proof without blocking the other
+producer. Producer/artifact metadata and a passing APK digest are retained, plus
+raw manifest/resources/XML dumps and an XML filename index before validation, so
+a rejection retains inspectable policy evidence too. The normal Android PR job may build GitHub's
 merge candidate; the generated head manifest and actual selected packaged rules
 are explicitly compared. This is not a claim that a release APK was validated.
 

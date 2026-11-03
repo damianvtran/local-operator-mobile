@@ -126,7 +126,9 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			},
 			write: async (name, value) => {
 				const file = new File(dir, name);
-				file.create();
+				// A stranded staging file is replaceable; committed .json files are
+				// installed only by move and are never overwritten by this port.
+				file.create({ overwrite: true });
 				file.write(value);
 			},
 			move: async (from, to) => {
