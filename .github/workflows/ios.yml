@@ -32,6 +32,11 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Standard iOS jobs or independent XCTest compile-only setup (never replay)"
+        type: choice
+        options: [standard, retirement-ui-setup]
+        default: standard
       retirement_proof:
         description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
         type: boolean
@@ -70,7 +75,29 @@ env:
   IOS_SIMULATOR_DEVICE: iPhone 17
 
 jobs:
+  manual-mode:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Refuse unknown or contradictory manual setup inputs
+        env:
+          IOS_MANUAL_MODE: ${{ inputs.mode }}
+          IOS_PROOF_JSON: ${{ toJSON(inputs.retirement_proof) }}
+        run: python3 scripts/ci/retirement-ui-route.py
+
+  retirement-ui-setup:
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-ui-setup' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-ui-setup.yml
+    with:
+      mode: setup
+
   changes:
+    # Setup skips this entire app-job dependency tree. PR/push classification,
+    # including any mixed app/native/config/proof diff, stays exactly as before.
+    if: github.event_name != 'workflow_dispatch' || (inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true'))
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
     timeout-minutes: 5
