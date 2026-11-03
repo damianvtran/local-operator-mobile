@@ -4,8 +4,7 @@ set -euo pipefail
 [[ "${CI:-}" == true && "${RUNNER_OS:-}" == macOS ]] || { echo 'Hosted macOS CI required'; exit 1; }
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 OUT="${RUNNER_TEMP:?}/oauth-callback-proof"
-mkdir -p "$OUT/CallbackProof.app" "$OUT/evidence"
-APP="$OUT/CallbackProof.app"
+mkdir -p "$OUT/evidence"
 BUNDLE=dev.localoperator.oauthproof
 read -r DEVICE RUNTIME < <(xcrun simctl list devices available --json | python3 -c '
 import json, sys
@@ -29,167 +28,124 @@ cleanup() {
   xcrun simctl delete "$UDID" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
-SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
-ARCH=$(uname -m)
-xcrun swiftc -sdk "$SDK" -target "${ARCH}-apple-ios16.4-simulator" \
-  "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" \
-  "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" \
-  "$ROOT/scripts/ci/oauth-callback-proof/main.swift" \
-  -o "$APP/CallbackProof" -framework UIKit -framework AuthenticationServices -framework Network
-cat > "$APP/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>dev.localoperator.oauthproof</string>
-<key>CFBundleExecutable</key><string>CallbackProof</string>
-<key>CFBundleName</key><string>Callback Proof</string>
-<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>1.0</string>
-<key>LSRequiresIPhoneOS</key><true/>
-<key>UILaunchScreen</key><dict/>
-<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
-</dict></plist>
-PLIST
-codesign --force --sign - "$APP"
-shasum -a 256 "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" \
-  "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" \
-  "$ROOT/scripts/ci/oauth-callback-proof/main.swift" "$APP/CallbackProof" > "$OUT/evidence/source-and-binary.sha256"
-# Retain the actual signed simulator app, not merely a hash of a missing binary.
-ditto -c -k --keepParent "$APP" "$OUT/evidence/CallbackProof.app.zip"
-cp "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" "$OUT/evidence/LoopbackAuthSession.swift"
-cp "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" "$OUT/evidence/TCPClosureProbe.swift"
-cp "$ROOT/scripts/ci/oauth-callback-proof/main.swift" "$OUT/evidence/FixtureMain.swift"
+SPEC="$ROOT/scripts/ci/oauth-callback-proof"
+XCODEGEN="${XCODEGEN:?The workflow must provide its verified pinned XcodeGen path}"
+[[ "$("$XCODEGEN" --version)" == 'Version: 2.46.0' || "$("$XCODEGEN" --version)" == '2.46.0' ]] || { echo 'Unexpected XcodeGen version'; exit 1; }
+(cd "$SPEC" && "$XCODEGEN" generate --spec project.yml)
+PROJECT="$SPEC/CallbackProof.xcodeproj"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b
+# Exactly one native build. A setup failure stops before any test is dispatched.
+if xcodebuild build-for-testing -project "$PROJECT" -scheme CallbackProof \
+  -configuration Debug -destination "id=$UDID" -derivedDataPath "$OUT/dd" \
+  -parallel-testing-enabled NO > "$OUT/evidence/build-for-testing.log" 2>&1; then
+  cat "$OUT/evidence/build-for-testing.log"
+else
+  cat "$OUT/evidence/build-for-testing.log"
+  exit 1
+fi
+APP="$OUT/dd/Build/Products/Debug-iphonesimulator/CallbackProof.app"
+[[ -f "$APP/CallbackProof" ]] || { echo 'Built fixture app is missing'; exit 1; }
+shasum -a 256 "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" \
+  "$SPEC/TCPClosureProbe.swift" "$SPEC/main.swift" "$SPEC/CallbackProofUITests.swift" \
+  "$APP/CallbackProof" > "$OUT/evidence/source-and-binary.sha256"
+ditto -c -k --keepParent "$APP" "$OUT/evidence/CallbackProof.app.zip"
+cp "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" "$OUT/evidence/LoopbackAuthSession.swift"
+cp "$SPEC/TCPClosureProbe.swift" "$SPEC/main.swift" "$SPEC/CallbackProofUITests.swift" "$SPEC/project.yml" "$OUT/evidence/"
 xcrun simctl install "$UDID" "$APP"
-# Every mode owns an idle Ready screen until the already-running UI driver taps
-# Start. No OAuth deadline may include Maestro's first cold startup.
 FAILURES=0
 for mode in legacy positive cancel timeout; do
-  xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
+  RUN_ID=$(uuidgen)
   CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)
   if [[ -f "$CONTAINER/Documents/receipt.json" ]]; then
     mv "$CONTAINER/Documents/receipt.json" "$OUT/evidence/previous-receipt.json"
   fi
-  LAUNCHED=true
-  RUN_ID=$(uuidgen)
-  if ! SIMCTL_CHILD_PROOF_MODE="$mode" SIMCTL_CHILD_PROOF_RUN_ID="$RUN_ID" xcrun simctl launch "$UDID" "$BUNDLE"; then
-    echo "Fixture launch failed: $mode"
-    LAUNCHED=false
-    FAILURES=1
-  fi
-  # Fresh, atomic native Ready receipt must precede ANY UI tap. Never reuse an
-  # earlier mode's success/port after launch failure or a simulator restart.
-  if [[ "$LAUNCHED" == true ]]; then
-    if python3 - "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-ready.json" "$mode" "$RUN_ID" > "$OUT/begin-uri-$mode.txt" <<'PY'
-import json, pathlib, sys, time
-path, snapshot, mode, run_id = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3], sys.argv[4]
-deadline = time.monotonic() + 60
-while time.monotonic() < deadline:
+  case "$mode" in
+    legacy) METHOD=testLegacy ;;
+    positive) METHOD=testPositive ;;
+    cancel) METHOD=testCancel ;;
+    timeout) METHOD=testTimeout ;;
+  esac
+  DRIVER_EXIT=1
+  # At most one STARTUP-ONLY retry. No assertion/test failure is replayed.
+  for attempt in 1 2; do
+    xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
+    RESULT="$OUT/evidence/$mode-attempt$attempt.xcresult"
+    LOG="$OUT/evidence/$mode-attempt$attempt.log"
+    XCODE_EXIT=0
+    if TEST_RUNNER_PROOF_RUN_ID="$RUN_ID" xcodebuild test-without-building \
+      -project "$PROJECT" -scheme CallbackProof -configuration Debug \
+      -destination "id=$UDID" -derivedDataPath "$OUT/dd" -parallel-testing-enabled NO \
+      -only-testing:"CallbackProofUITests/CallbackProofUITests/$METHOD" \
+      -resultBundlePath "$RESULT" > "$LOG" 2>&1; then :; else XCODE_EXIT=$?; fi
+    DRIVER_EXIT=$XCODE_EXIT
+    cat "$LOG"
+    RECEIPT_KNOWN=false
+    if CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data); then RECEIPT_KNOWN=true; fi
+    if [[ "$RECEIPT_KNOWN" == true && -f "$CONTAINER/Documents/receipt.json" ]]; then
+      cp "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-attempt$attempt-native.json"
+    fi
+    REPORT="$OUT/evidence/$mode-attempt$attempt-tests.json"
+    REPORT_KNOWN=false
+    if xcrun xcresulttool get test-results tests --path "$RESULT" > "$REPORT" 2> "$OUT/evidence/$mode-attempt$attempt-report.log"; then REPORT_KNOWN=true; fi
+    if ! xcrun xcresulttool export attachments --path "$RESULT" \
+      --output-path "$OUT/evidence/$mode-attempt$attempt-attachments" \
+      > "$OUT/evidence/$mode-attempt$attempt-export.log" 2>&1; then
+      echo "::warning::Attachment export failed for $mode attempt $attempt; raw xcresult is retained"
+      if [[ "$XCODE_EXIT" == 0 ]]; then FAILURES=1; fi
+    fi
+    if [[ "$XCODE_EXIT" != 0 && "$attempt" == 1 && "$REPORT_KNOWN" == true && "$RECEIPT_KNOWN" == true ]]; then
+      # Retry predicate: authoritative not-run AND absent/fresh-ready receipt.
+      # Unknown schemas, started test markers, stale identities and any progress fail closed.
+      if python3 - "$REPORT" "$CONTAINER/Documents/receipt.json" "$mode" "$RUN_ID" "$LOG" <<'RETRY_PY'
+import json, pathlib, re, sys
+report_path, receipt_path = map(pathlib.Path, sys.argv[1:3])
+mode, run_id = sys.argv[3:5]
+log_path = pathlib.Path(sys.argv[5])
+try:
+    report = json.loads(report_path.read_text())
+    log = log_path.read_text()
+except (OSError, ValueError):
+    sys.exit(1)
+
+def walk(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from walk(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from walk(child)
+
+known_report = isinstance(report, dict) and isinstance(report.get('testNodes'), list)
+cases = [node for node in walk(report) if str(node.get('nodeType', '')).lower().replace(' ', '').startswith('testcase')]
+not_run_results = {'not run', 'not executed'}
+# Nonempty but unrecognized trees are not evidence that no test ran.
+case_not_run = (all(str(case.get('result', '')).lower() in not_run_results for case in cases)
+                if cases else known_report and not report['testNodes'])
+started_marker = 'PROOF_TEST_STARTED' in log or re.search(r"Test Case .* started[.]", log) is not None
+test_never_ran = known_report and case_not_run and not started_marker
+receipt_ready = not receipt_path.exists()
+if receipt_path.exists():
     try:
-        value = json.loads(path.read_text())
-        port = value.get('provider_port')
-        if (value.get('mode') == mode and value.get('run_id') == run_id and
-                value.get('stage') == 'ready' and value.get('started') is False and
-                isinstance(port, int) and 0 < port < 65536):
-            snapshot.write_text(json.dumps(value, indent=2, sort_keys=True))
-            print('http://127.0.0.1:' + str(port) + '/begin')
-            sys.exit(0)
+        native = json.loads(receipt_path.read_text())
+        receipt_ready = (native.get('mode') == mode and native.get('run_id') == run_id and
+                         native.get('stage') == 'ready' and native.get('started') is False)
     except (OSError, ValueError):
-        pass
-    time.sleep(0.1)
-sys.exit('Fresh native Ready receipt was not observed; refusing to tap Start')
-PY
-    then :; else LAUNCHED=false; FAILURES=1; fi
-  fi
-  if [[ "$LAUNCHED" == true ]]; then
-    BEGIN_URI=$(cat "$OUT/begin-uri-$mode.txt")
-    printf 'http.get("%s");\n' "$BEGIN_URI" > "$OUT/begin-$mode.js"
-  fi
-  title='Complete test sign-in'
-  limit=90000
-  if [[ "$mode" == cancel || "$mode" == timeout ]]; then title='Synthetic callback waiting'; fi
-  # Timeout exercises the production five-minute deadline unchanged. UI-driver
-  # cold start remains outside it; this wait merely observes that real deadline.
-  if [[ "$mode" == timeout ]]; then limit=360000; fi
-  # Maestro resolves these screenshot basenames under the --test-output-dir
-  # supplied below. Absolute siblings under evidence/ fail its path sandbox.
-  # The recursive artifact upload retains that per-mode tree even on failure.
-  cat > "$OUT/flow-$mode.yaml" <<YAML
-appId: $BUNDLE
----
-- extendedWaitUntil:
-    visible: 'Ready $mode'
-    timeout: 60000
-- tapOn:
-    id: proof.start
-- extendedWaitUntil:
-    visible: 'Prepared $mode'
-    timeout: 60000
-- runScript: 'begin-$mode.js'
-- extendedWaitUntil:
-    visible: 'Continue|$title'
-    timeout: 60000
-- runFlow:
-    when:
-      visible: Continue
-    commands:
-      - tapOn:
-          text: Continue
-          waitToSettleTimeoutMs: 0
-- extendedWaitUntil:
-    visible: '$title'
-    timeout: 60000
-- assertVisible: '$title'
-- waitForAnimationToEnd:
-    timeout: 10000
-- takeScreenshot: '$mode-browser-ready'
-YAML
-  if [[ "$mode" == legacy || "$mode" == positive ]]; then
-    cat >> "$OUT/flow-$mode.yaml" <<YAML
-- tapOn:
-    text: 'Complete test sign-in'
-    waitToSettleTimeoutMs: 0
-YAML
-  fi
-  if [[ "$mode" == legacy ]]; then
-    cat >> "$OUT/flow-$mode.yaml" <<YAML
-- extendedWaitUntil:
-    visible: "(?i).*(connect|cannot open|can.t open).*"
-    timeout: 10000
-- waitForAnimationToEnd:
-    timeout: 10000
-- takeScreenshot: 'legacy-browser'
-YAML
-  fi
-  if [[ "$mode" == cancel ]]; then
-    cat >> "$OUT/flow-$mode.yaml" <<YAML
-- tapOn:
-    text: Cancel
-    waitToSettleTimeoutMs: 0
-YAML
-  fi
-  cat >> "$OUT/flow-$mode.yaml" <<YAML
-- extendedWaitUntil:
-    visible: 'PASS $mode|FAIL $mode.*'
-    timeout: $limit
-- assertVisible: 'PASS $mode'
-- waitForAnimationToEnd:
-    timeout: 10000
-- takeScreenshot: '$mode-returned'
-YAML
-  DRIVER_EXIT=0
-  if [[ "$LAUNCHED" == false ]]; then
-    DRIVER_EXIT=1
-    echo "Fixture launch failed before UI-driver interaction" > "$OUT/evidence/$mode-driver.log"
-  elif maestro --device "$UDID" test --test-output-dir "$OUT/evidence/driver-$mode" "$OUT/flow-$mode.yaml" > "$OUT/evidence/$mode-driver.log" 2>&1; then
-    cat "$OUT/evidence/$mode-driver.log"
-  else
-    DRIVER_EXIT=$?
-    cat "$OUT/evidence/$mode-driver.log"
-  fi
-  # Capture BEFORE validation/teardown even when the driver or native case fails.
-  # A failed legacy fixture must never suppress positive/cancel/timeout cases.
-  if [[ -f "$CONTAINER/Documents/receipt.json" ]]; then
+        receipt_ready = False
+allowed = test_never_ran and receipt_ready
+print(json.dumps({'mode': mode, 'test_never_ran': test_never_ran, 'receipt_ready': receipt_ready, 'retry_allowed': allowed}))
+sys.exit(0 if allowed else 1)
+RETRY_PY
+      then
+        echo "::warning::Retrying $mode after startup-only attempt $attempt: target test never ran and native receipt is absent/fresh-ready"
+        continue
+      fi
+    fi
+    break
+  done
+  # Keep each attempt, raw result bundle and final frame even when assertions fail.
+  if [[ -n "$CONTAINER" && -f "$CONTAINER/Documents/receipt.json" ]]; then
     cp "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-native.json"
   fi
   if ! xcrun simctl io "$UDID" screenshot "$OUT/evidence/$mode-final.png"; then FAILURES=1; fi

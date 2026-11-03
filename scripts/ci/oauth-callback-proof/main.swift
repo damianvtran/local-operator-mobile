@@ -20,7 +20,6 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   var probeControlClosed = "not-run"
   var closeProbe = "not-run"
   let label = UILabel()
-  let startButton = UIButton(type: .system)
   var started = false
   var stage = "fixture-starting"
   var startedAt: Date?
@@ -37,24 +36,18 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     label.text = "Preparing fixture \(mode)"
     label.accessibilityIdentifier = "proof.status"
     controller.view.addSubview(label)
-    startButton.frame = CGRect(x: 20, y: 330, width: 350, height: 60)
-    startButton.setTitle("Start \(mode)", for: .normal)
-    startButton.isEnabled = false
-    startButton.accessibilityIdentifier = "proof.start"
-    startButton.addTarget(self, action: #selector(start), for: .touchUpInside)
-    controller.view.addSubview(startButton)
     window.rootViewController = controller
     window.makeKeyAndVisible()
     self.window = window
-    // Launch is deliberately inert. Maestro must be fully running and observe
-    // Ready before it taps Start; UI-driver cold start is not an auth timeout.
+    // Launch is inert: the already-running native test sends fixture /begin
+    // only after observing Ready. Driver startup never enters the auth deadline.
     transport.onRejectedRequest = { self.rejected += 1 }
     persist()
     bindProvider() // Fixture control only: no auth listener/session/deadline.
     return true
   }
 
-  @objc func start() {
+  func start() {
     guard !started else { return }
     started = true
     startedAt = Date()
@@ -66,11 +59,7 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     }
     stage = "prepared"
     label.text = "Prepared \(mode)"
-    startButton.isHidden = true
     persist()
-    // A tap must NOT present a system sheet while Maestro is taking its implicit
-    // post-tap screenshot. The running driver's next HTTP control command begins
-    // presentation after this stable Prepared state; it carries no OAuth payload.
   }
 
   func bindProvider() {
@@ -89,7 +78,7 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
         if case .ready = state, !self.started {
           self.stage = "ready"
           self.label.text = "Ready \(self.mode)"
-          self.startButton.isEnabled = true
+          self.label.accessibilityValue = (self.provider?.port).map { String($0.rawValue) }
           self.persist()
         }
         if case .failed = state { self.record(false, detail: "provider-bind-failed") }
@@ -110,9 +99,11 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
       guard let request = String(data: data, encoding: .utf8),
             let target = request.components(separatedBy: " ").dropFirst().first else { connection.cancel(); return }
       if target == "/begin" {
-        guard self.started, self.stage == "prepared", !self.completed else {
+        guard self.stage == "ready", !self.started, !self.completed else {
           self.sendProvider(connection, body: "not ready"); return
         }
+        self.start()
+        guard !self.completed else { self.sendProvider(connection, body: "not ready"); return }
         self.stage = "browser-starting"
         self.persist()
         self.sendProvider(connection, body: "begin") { self.prepare() }
