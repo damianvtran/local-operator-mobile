@@ -161,13 +161,17 @@ export function validateMembers(members: TarMember[]) {
 		if (member.type === "symlink") {
 			links.add(name);
 			const target = member.link ?? "";
+			// The parent directory ITSELF is outside the extraction root too;
+			// checking only its descendants ("../...") misses this boundary.
+			const destination = posix.normalize(
+				posix.join(posix.dirname(name), target),
+			);
 			if (
 				!target ||
 				posix.isAbsolute(target) ||
 				target.includes("\\") ||
-				posix
-					.normalize(posix.join(posix.dirname(name), target))
-					.startsWith("../")
+				destination === ".." ||
+				destination.startsWith("../")
 			)
 				fail();
 		} else if (member.type !== "file" && member.type !== "directory") fail();

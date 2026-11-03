@@ -178,6 +178,49 @@ describe("independent system-alert runner source/setup guards (NO SDK/replay)", 
 			validateMembers([{ name: "huge", type: "file", size: 1024 ** 3 + 1 }]),
 		).toThrow();
 	});
+	it.each([
+		["link", ".."],
+		["dir/link", "../.."],
+	] as const)(
+		"R15 direct member rejects exact-parent destination %s -> %s",
+		(name, link) => {
+			expect(() =>
+				validateMembers([{ name, type: "symlink", link, size: 0 }]),
+			).toThrow("refused");
+		},
+	);
+	it.each([
+		["link", ".."],
+		["dir/link", "../.."],
+	] as const)(
+		"R15 tar header rejects exact-parent destination %s -> %s",
+		(name, link) => {
+			expect(() =>
+				inspectTarBytes(Buffer.concat([tar(name, "2", link), end])),
+			).toThrow("refused");
+		},
+	);
+	it.each([
+		["link", ".."],
+		["dir/link", "../.."],
+	] as const)(
+		"R15 PAX linkpath rejects exact-parent destination %s -> %s",
+		(name, link) => {
+			const value = `linkpath=${link}\n`;
+			let length = value.length + 2;
+			while (String(length).length + 1 + value.length !== length)
+				length = String(length).length + 1 + value.length;
+			expect(() =>
+				inspectTarBytes(
+					Buffer.concat([
+						tar("PaxHeader", "x", "", Buffer.from(`${length} ${value}`)),
+						tar(name, "2", "safe"),
+						end,
+					]),
+				),
+			).toThrow("refused");
+		},
+	);
 	it("parses real tar headers/checksums before extraction and refuses hardlinks/specials/PAX escapes", () => {
 		expect(
 			inspectTarBytes(
