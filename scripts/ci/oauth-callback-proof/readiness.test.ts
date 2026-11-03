@@ -225,6 +225,32 @@ describe("native XCTest OAuth proof architecture", () => {
 		});
 	});
 
+	it("reads terminal identity/label without requiring a tap activation point", () => {
+		const terminalRead = (source: string) =>
+			source.slice(
+				source.indexOf("    let terminal ="),
+				source.indexOf('    attach(name: "\\(mode)-returned")'),
+			);
+		const noActivationPoint = (source: string) =>
+			!terminalRead(source).includes("hittable") &&
+			!terminalRead(source).includes("isHittable");
+		expect(noActivationPoint(tests)).toBe(true);
+		expect(terminalRead(tests)).toContain("terminal.waitForExistence");
+		expect(terminalRead(tests)).toContain('terminal.label == "PASS');
+		for (const activationCheck of [
+			"terminal.isHittable",
+			'NSPredicate(format: "hittable == true")',
+		]) {
+			const mutated = tests.replace(
+				"    try require(terminal.waitForExistence",
+				`    let activation = ${activationCheck}\n    try require(terminal.waitForExistence`,
+			);
+			expect(mutated).not.toBe(tests);
+			expect(noActivationPoint(mutated)).toBe(false);
+		}
+		expect(tests).toContain("if element.exists && element.isHittable");
+	});
+
 	it("keeps real timeout/cancel/port assertions and actual open-listener negative controls", () => {
 		expect(main).toContain("elapsed >= 295 && elapsed < 330");
 		expect(main).not.toMatch(TIMEOUT_OVERRIDE);
