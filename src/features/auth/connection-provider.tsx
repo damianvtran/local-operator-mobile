@@ -403,11 +403,13 @@ export const ConnectionProvider = ({
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
 	const mountedRef = useRef(true);
+	const signInAbortRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
+			signInAbortRef.current?.abort();
 			startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
@@ -985,12 +987,18 @@ export const ConnectionProvider = ({
 	}, [revokeAuthorization]);
 
 	const signInWithRadient = useCallback(async () => {
-		// Reauthentication still drains and purges every ordinary private family.
-		// Only the separately sealed draft vault survives until fresh owner proof.
+		signInAbortRef.current?.abort();
+		const attempt = new AbortController();
+		signInAbortRef.current = attempt;
+		// Checkpoint the retiring generation before ordinary purge; its vault stays
+		// quarantined. Callback cancellation and the auth epoch both fence adoption.
 		const privacy = retireAuthorization(true, undefined, "reauthenticate");
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const isCurrent = () =>
-			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);
+			mountedRef.current &&
+			!attempt.signal.aborted &&
+			signInAbortRef.current === attempt &&
+			startupAuthorizationLifecycle.isCurrent(revision);
 		cancelledRef.current = true;
 		stopStream();
 		stopConfig();
@@ -1004,6 +1012,7 @@ export const ConnectionProvider = ({
 			await Promise.all([verifiedRetirement(privacy), retired]);
 			if (!isCurrent()) return;
 			const result = await beginRadientSignIn({
+				signal: attempt.signal,
 				onState: (state) => {
 					if (isCurrent()) setSignInState(state);
 				},

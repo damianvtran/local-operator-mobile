@@ -46,9 +46,11 @@ const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
 const handoff = vi.hoisted(() => ({
 	block: null as Promise<void> | null,
 	started: false,
+	signals: [] as AbortSignal[],
 }));
 vi.mock("./radient-sign-in", () => ({
-	beginRadientSignIn: async () => {
+	beginRadientSignIn: async (options?: { signal?: AbortSignal }) => {
+		if (options?.signal) handoff.signals.push(options.signal);
 		handoff.started = true;
 		await handoff.block;
 		return { ok: true, tokens: oauth };
@@ -62,6 +64,32 @@ vi.mock("@/features/session/device-storage", async (importOriginal) => ({
 	},
 }));
 
+vi.mock("@/features/session/native-private-store", () => ({
+	nativePrivateStore: () => ({
+		get: async () => null,
+		set: async () => {},
+		remove: async () => {},
+		keys: async () => [],
+		clear: async () => {},
+	}),
+	eraseNativePrivateInstallation: async () => {},
+}));
+// Native retirement in this test has empty virtual directories, never host FS.
+vi.mock("expo-file-system", () => ({
+	Paths: { cache: "memory://cache", document: "memory://documents" },
+	Directory: class {
+		exists = false;
+		create() {}
+		info() {
+			return { exists: false };
+		}
+		list() {
+			return [];
+		}
+		delete() {}
+	},
+	File: class {},
+}));
 vi.mock("@/features/session/picker-cache", () => ({
 	clearNativePickerCache: async () => {},
 }));
@@ -579,6 +607,7 @@ beforeEach(async () => {
 	privacy.fail = false;
 	handoff.block = null;
 	handoff.started = false;
+	handoff.signals.length = 0;
 	durable.saved = null;
 	const storage = new SecureStorage(memorySecureStore());
 	configureStartupAuthorizationStorage({
@@ -729,6 +758,75 @@ describe("mounted provider picture privacy", () => {
 });
 
 describe("mounted provider authentication retirement", () => {
+	it("combines reauth checkpoint epochs with callback abort: late identity proof and superseded browser success cannot adopt recovery", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		nativePlatform.OS = "ios";
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		const heldProof = deferred();
+		const first = deferred();
+		const second = deferred();
+		const proof = vi
+			.spyOn(recoveryProof, "proveRecoveryAuthority")
+			.mockImplementation(async () => {
+				await heldProof.promise;
+				return { accountId: "owner-a", tenantId: "tenant-a" };
+			});
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery");
+		const publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		let firstAttempt: Promise<void> | undefined;
+		let secondAttempt: Promise<void> | undefined;
+		await mount();
+		try {
+			await act(async () => {
+				await latest.selectComputer(computer("a"));
+			});
+			expect(proof).toHaveBeenCalledOnce();
+			expect(getStartupAuthorization()).not.toBeNull();
+			handoff.block = first.promise;
+			await act(async () => {
+				firstAttempt = latest.signInWithRadient();
+			});
+			await until(() => handoff.signals.length === 1);
+			handoff.block = second.promise;
+			await act(async () => {
+				secondAttempt = latest.signInWithRadient();
+			});
+			await until(() => handoff.signals.length === 2);
+			expect(handoff.signals[0]?.aborted).toBe(true);
+			expect(handoff.signals[1]?.aborted).toBe(false);
+			expect(proof.mock.calls[0]?.[1].isCurrent()).toBe(false);
+			await act(async () => {
+				heldProof.resolve();
+				first.resolve();
+				await firstAttempt;
+			});
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(getStartupAuthorization()).toBeNull();
+			expect(durable.events).not.toContain("oauth-write");
+			await unmount();
+			expect(handoff.signals[1]?.aborted).toBe(true);
+		} finally {
+			await unmount();
+			await act(async () => {
+				heldProof.resolve();
+				first.resolve();
+				second.resolve();
+				await Promise.all([firstAttempt, secondAttempt]);
+			});
+			nativePlatform.OS = "web";
+			prepare.mockRestore();
+			publish.mockRestore();
+			proof.mockRestore();
+		}
+	});
 	it("reports failed privacy cleanup and keeps replacement admission closed", async () => {
 		const mock = await relay();
 		transport();

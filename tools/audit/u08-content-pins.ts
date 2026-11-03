@@ -402,18 +402,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	/* Re-pinned for PR #156 after its final source remediation. Recomputed from
-	 * --print, not copied from CI: the PR base 9f43a47a reproduces e22f8096.
-	 * The drift consists of native auth/storage/recovery, picker cleanup and their
-	 * tests/isolated native-proof fixtures. U-08 still measures the same dark 150%
-	 * long-transcript overlap cell: app/UI styling, tokens/fonts, instrument and
-	 * input corpus are unchanged. Native recovery is disabled on that fresh web
-	 * fixture route; no transcript or measured control was edited. This is content
-	 * admission reasoning, not a claim of new rendered proof. ORIGINAL_* untouched. */
-	/* Recomputed after PR #156's native verifier/R4 batch: source drift since
-	 * b383add6 is native pending-file/tombstone handling and its tests, plus the
-	 * orphan-retention comment. The same web U08 subject/instrument stays unchanged. */
-	src: "6b171dbcbf07185bfc2f44fef578e5e04e34d58ad9aad38a7d49d8f0a02cee69",
+	/* Re-pinned 2026-11-03 for PR #154, deliberately, using --print: only OAuth
+	 * callback transport/state validation and provider cancellation bookkeeping
+	 * changed under src. U-08 measures the long-transcript custom-relay session
+	 * (u08-geometry-proof.ts RECORD/createRelay), not Radient sign-in. No transcript
+	 * component, layout/style, token, corpus, scene or instrument changed. These
+	 * auth/connection edits therefore do not alter the measured geometry inputs;
+	 * historical ORIGINAL_* identities and every other pin remain unchanged. */
+	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
+	src: "7c7b3ab5d74f5deccbe161f53e433f99d318f42c9a5188cfc5c81221b71a3036",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
