@@ -20,6 +20,11 @@ import { createServer } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	type CaptureResult,
+	captureAlongsideReceipt,
+	captureOwned,
+} from "./auth-retirement-capture.ts";
+import {
 	activeProofDiagnostics,
 	type CommandLifecycle,
 	commandCategory,
@@ -724,6 +729,7 @@ async function runNativeProofBody(
 			throw new Error("No owned receiver port");
 		let negativeControlPassed = false;
 		const evidence: Record<string, unknown>[] = [];
+		const captures: CaptureResult[] = [];
 		let seedHost: HostNumbers = {
 			hostLoadAvg1m: "UNOBSERVED",
 			hostFreeMemMiB: "UNOBSERVED",
@@ -749,6 +755,7 @@ async function runNativeProofBody(
 				phase = name;
 				refused = refusedCounts();
 				phaseUrlProgress = "none";
+				let pendingCapture: Promise<CaptureResult> | undefined;
 				let readyAt: number | null = null;
 				let phaseCause: PhaseCause = "launch-identity";
 				let rejectedStage: unknown;
@@ -803,7 +810,11 @@ async function runNativeProofBody(
 						);
 						openurlStart = performance.now();
 						await command("xcrun", ["simctl", "openurl", udid, url.toString()]);
-						const receipt = await answer;
+						const concurrent = captureAlongsideReceipt(answer, () =>
+							captureOwned(root, udid, name, "after-openurl"),
+						);
+						pendingCapture = concurrent.capture;
+						const receipt = await concurrent.answer;
 						const outbound = tokenRequests - beforeTokens;
 						const invalid = receiptCause(name, receipt, outbound);
 						if (invalid) {
@@ -882,6 +893,11 @@ async function runNativeProofBody(
 					activeProofDiagnostics?.observePhaseFailure(observation);
 					activeProofDiagnostics?.fail();
 					if (phaseCause === "receipt-timeout") {
+						// First cause is already durable. Capture must not move its timer,
+						// replace lastCommand, or run after the unrelated log probes.
+						captures.push(
+							await captureOwned(root, udid, name, "receipt-timeout"),
+						);
 						Object.assign(
 							observation,
 							await observeOwnedProcess(udid, command),
@@ -899,6 +915,9 @@ async function runNativeProofBody(
 						activeProofDiagnostics?.observePhaseFailure(observation);
 					}
 					throw error;
+				} finally {
+					// Drain the bounded observation only after receipt attribution.
+					if (pendingCapture) captures.push(await pendingCapture);
 				}
 			}
 		} finally {
@@ -911,6 +930,7 @@ async function runNativeProofBody(
 					{
 						kind: "ios-native-durable-retirement-restore-primitives-only",
 						negativeControlPassed,
+						captures,
 						seedHost,
 						complete: evidence.length === 6 && negativeControlPassed,
 						phases: evidence,

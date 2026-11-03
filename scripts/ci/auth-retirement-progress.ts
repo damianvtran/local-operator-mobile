@@ -101,7 +101,14 @@ let sequence = 0;
  * can be published; there is no simulator/process cleanup boundary here. */
 export function writeEvidenceAtomic(
 	root: string,
-	name: "progress.json" | "failure.json" | "proof.json",
+	// Closed observation filenames reuse the same atomic writer; signal handler
+	// execution is unchanged and never performs screenshot/archive work.
+	name:
+		| "progress.json"
+		| "failure.json"
+		| "proof.json"
+		| "archive-provenance.json"
+		| `${(typeof TIMING_PHASES)[number]}-${"after-openurl" | "receipt-timeout"}-capture.json`,
 	value: Record<string, unknown>,
 ): void {
 	const temporary = join(root, `.${name}-${process.pid}-${++sequence}.tmp`);

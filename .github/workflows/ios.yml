@@ -249,6 +249,7 @@ jobs:
           xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
 
       - name: Freeze proof artifact before installation
+        id: proof_freeze
         if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
         env:
           RETIREMENT_PROOF: "true"
@@ -256,6 +257,17 @@ jobs:
           set -euo pipefail
           app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
           node scripts/ci/auth-retirement-ios-proof.ts --freeze-artifact "$app" "$RUNNER_TEMP/auth-retirement-proof"
+
+      # Fresh build, not reuse of run8. Freeze binds this run's source SHA first.
+      # Historical simulator transports were 30–33MiB; 512MiB compressed plus
+      # 1GiB extracted bounds leave measured margin, not a storage-quota claim.
+      - name: Archive the dedicated synthetic proof before diagnostic execution
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        id: proof_archive
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-archive.ts "$app" "$RUNNER_TEMP/auth-retirement-proof" "$GITHUB_SHA"
 
       - name: Install the app, assert the version it carries, and launch it
         if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
@@ -299,7 +311,8 @@ jobs:
           xcrun simctl launch "$udid" "$bundle"
 
       - name: Native durable retirement and restore primitives (manual opt-in)
-        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        # Archive failure must stay visible without suppressing tiny diagnostics.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof && steps.proof_freeze.outcome == 'success'
         # Budget:
         # Inner worst case: 300 + 120 + 6*(45 + 60) = 1050s vs 20m step.
         # Let inner failures classify BLOCKED and write receipts first.
@@ -332,6 +345,21 @@ jobs:
             ${{ runner.temp }}/auth-retirement-proof/failure.json
             ${{ runner.temp }}/auth-retirement-proof/freeze.json
             ${{ runner.temp }}/auth-retirement-proof/progress.json
+            ${{ runner.temp }}/auth-retirement-proof/captures/*.png
+            ${{ runner.temp }}/auth-retirement-proof/*-capture.json
+            ${{ runner.temp }}/auth-retirement-proof/archive-provenance.json
+          if-no-files-found: error
+
+      # Kept independent of tiny diagnostic artifacts: quota/upload failure must
+      # not hide receipts/PNGs. No continue-on-error; failed upload stays visible.
+      - name: Upload sensitive synthetic proof bundle (one day only)
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof && steps.proof_archive.outputs.upload == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: sensitive-synthetic-retirement-proof-app
+          compression-level: 0
+          path: ${{ runner.temp }}/auth-retirement-proof/proof-bundle/synthetic-proof-app.tar.gz
+          retention-days: 1
           if-no-files-found: error
 
       - name: Capture the frame the app renders, and assert it rendered
