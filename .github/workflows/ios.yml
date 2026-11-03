@@ -313,11 +313,13 @@ jobs:
       - name: Native durable retirement and restore primitives (manual opt-in)
         # Archive failure must stay visible without suppressing tiny diagnostics.
         if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof && steps.proof_freeze.outcome == 'success'
-        # Budget:
-        # Inner worst case: 300 + 120 + 6*(45 + 60) = 1050s vs 20m step.
-        # Let inner failures classify BLOCKED and write receipts first.
-        # Job worst case: ~2.3m pre-build + 29.2m build + 20m proof + 2m cleanup
-        # + ~1m upload = 54.5m vs the unchanged 60m job cap.
+        # Timing diagnostic, NOT an acceptance-budget guarantee:
+        # Wait/probe subtotal 1140s + identity commands 720s + verifiers 20s
+        # = 1880s accounted before setup/cleanup/sync I/O (see launch.ts).
+        # Captures add <=10s command work/phase (<=60s across six phases),
+        # partly concurrent with receipts; validation/I/O are not a full bound.
+        # The unchanged 20m step is a hard stop; always() owns cleanup. Neither
+        # the old 1050s subtotal nor job headroom proves all inner caps bind first.
         timeout-minutes: 20
         env:
           RETIREMENT_PROOF: "true"
@@ -338,6 +340,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: auth-retirement-native-primitives
+          retention-days: 1
           path: |
             ${{ runner.temp }}/auth-retirement-proof/proof.json
             ${{ runner.temp }}/auth-retirement-proof/cleanup.json

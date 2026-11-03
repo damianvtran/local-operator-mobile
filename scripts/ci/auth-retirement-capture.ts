@@ -3,7 +3,14 @@
  * a receipt failure. No UI interaction, retries or private foreground API. */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, mkdirSync, readFileSync } from "node:fs";
+import {
+	lstatSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import {
@@ -116,6 +123,7 @@ export type CaptureResult = {
 	sha256?: string;
 	relativePath?: string;
 	evidencePersisted?: boolean;
+	stagingCleanup?: "completed" | "error";
 	foregroundObservation?: "UNOBSERVED";
 };
 export async function captureOwned(
@@ -135,9 +143,14 @@ export async function captureOwned(
 	const start = performance.now(),
 		relativePath = `captures/${phase}-${point}.png`;
 	let result: CaptureResult;
+	let privateStage: string | undefined;
 	try {
-		mkdirSync(join(root, "captures"), { recursive: true });
-		const path = join(root, relativePath);
+		// Upload globs see ONLY validated, atomically published frames. A private
+		// per-attempt directory also protects an earlier good frame on failure.
+		const stagingRoot = join(root, ".capture-staging");
+		mkdirSync(stagingRoot, { recursive: true, mode: 0o700 });
+		privateStage = mkdtempSync(join(stagingRoot, "attempt-"));
+		const path = join(privateStage, "capture.png");
 		await run(
 			"xcrun",
 			["simctl", "io", udid, "screenshot", "--type=png", path],
@@ -152,6 +165,8 @@ export async function captureOwned(
 			throw new Error("Invalid capture");
 		const bytes = readFileSync(path);
 		validatePng(bytes);
+		mkdirSync(join(root, "captures"), { recursive: true });
+		renameSync(path, join(root, relativePath));
 		result = {
 			phase,
 			point,
@@ -167,7 +182,23 @@ export async function captureOwned(
 			status: error instanceof ObservationTimeout ? "timeout" : "error",
 			elapsedMs: Math.round(performance.now() - start),
 		};
+	} finally {
+		// Only the directory created by THIS attempt is retired; rmSync unlinks
+		// a rejected staged symlink, never follows/deletes its foreign target.
+		if (privateStage)
+			try {
+				rmSync(privateStage, { recursive: true, force: true });
+			} catch {
+				result = {
+					phase,
+					point,
+					status: "error",
+					elapsedMs: Math.round(performance.now() - start),
+					stagingCleanup: "error",
+				};
+			}
 	}
+	if (result.stagingCleanup !== "error") result.stagingCleanup = "completed";
 	try {
 		writeEvidenceAtomic(root, `${closedPhase}-${point}-capture.json`, result);
 		return {

@@ -1,4 +1,13 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -27,6 +36,63 @@ afterEach(() => {
 });
 const png = AGENT_AVATARS.researcher!;
 describe("owned synthetic simulator capture observation", () => {
+	it.each(["invalid", "oversize", "timeout", "symlink"])(
+		"round14 rejected %s never reaches uploaded PNG paths or leaves staged private bytes",
+		async (mode) => {
+			const root = fresh(),
+				foreign = join(root, "foreign-private");
+			writeFileSync(foreign, "PRIVATE_TOKEN");
+			const result = await captureOwned(
+				root,
+				"owned-device",
+				"seed",
+				"after-openurl",
+				async (_exe, args) => {
+					const path = args.at(-1)!;
+					if (mode === "symlink") symlinkSync(foreign, path);
+					else
+						writeFileSync(
+							path,
+							mode === "oversize"
+								? Buffer.alloc(MAX_CAPTURE_BYTES + 1)
+								: Buffer.from("PRIVATE_TOKEN"),
+						);
+					if (mode === "timeout") throw new ObservationTimeout();
+				},
+			);
+			expect(result.status).toBe(mode === "timeout" ? "timeout" : "error");
+			expect(existsSync(join(root, "captures/seed-after-openurl.png"))).toBe(
+				false,
+			);
+			expect(
+				existsSync(join(root, "captures"))
+					? readdirSync(join(root, "captures")).filter((name) =>
+							name.endsWith(".png"),
+						)
+					: [],
+			).toEqual([]);
+			expect(readFileSync(foreign, "utf8")).toBe("PRIVATE_TOKEN");
+			const staged = join(root, ".capture-staging");
+			expect(existsSync(staged) ? readdirSync(staged) : []).toEqual([]);
+		},
+	);
+	it("round14 failed recapture cannot overwrite a previously validated frame", async () => {
+		const root = fresh();
+		mkdirSync(join(root, "captures"));
+		const published = join(root, "captures/seed-after-openurl.png");
+		writeFileSync(published, png);
+		const result = await captureOwned(
+			root,
+			"owned-device",
+			"seed",
+			"after-openurl",
+			async (_exe, args) => {
+				writeFileSync(args.at(-1)!, "PRIVATE_TOKEN");
+			},
+		);
+		expect(result.status).toBe("error");
+		expect(readFileSync(published)).toEqual(png);
+	});
 	it("uses only owned UDID, fixed phase paths, PNG hash and five-second command", async () => {
 		const root = fresh(),
 			calls: unknown[] = [];
@@ -49,11 +115,16 @@ describe("owned synthetic simulator capture observation", () => {
 					"owned-device",
 					"screenshot",
 					"--type=png",
-					join(root, "captures/seed-after-openurl.png"),
+					expect.stringMatching(
+						/\/.capture-staging\/attempt-[^/]+\/capture\.png$/,
+					),
 				],
 				5000,
 			],
 		]);
+		expect(readFileSync(join(root, "captures/seed-after-openurl.png"))).toEqual(
+			png,
+		);
 		expect(CAPTURE_BUDGET_MS).toBe(5000);
 		expect(result).toMatchObject({
 			status: "observed",

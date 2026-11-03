@@ -160,6 +160,22 @@ describe("fresh synthetic proof bundle retention", () => {
 		writeFileSync(join(g.app, ".env"), "SYNTHETIC_PRIVATE");
 		expect(() => bundleInventory(g.app)).toThrow("Sensitive");
 	});
+	it("round14 BOTH upload blocks independently specify one-day retention", () => {
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/ios.yml", import.meta.url),
+			"utf8",
+		);
+		for (const label of [
+			"Upload redacted native primitive evidence",
+			"Upload sensitive synthetic proof bundle (one day only)",
+		]) {
+			const block = workflow
+				.split(`      - name: ${label}\n`)[1]
+				?.split("\n      - name:")[0];
+			expect(block).toBeDefined();
+			expect(block).toContain("retention-days: 1");
+		}
+	});
 	it("workflow keeps tiny diagnostics independent, archive upload always-visible and one-day only", () => {
 		const workflow = readFileSync(
 			new URL("../../.github/workflows/ios.yml", import.meta.url),
