@@ -39,6 +39,137 @@ function deferred() {
 }
 
 describe("startup authorization privacy boundary", () => {
+	it("reuses native generation only with fresh matching owner proof", async () => {
+		const f = fixture();
+		const owner = f.lifecycle();
+		const policies: string[] = [];
+		owner.configureRecoveryBoundary({
+			withdraw: () => {},
+			drain: async () => {},
+			clear: async (policy) => {
+				policies.push(policy);
+			},
+		});
+		const first = await owner.admit(
+			"route-a",
+			owner.suspend(),
+			undefined,
+			"account-a/tenant-a",
+		);
+		const same = await owner.admit(
+			"route-a",
+			owner.suspend(),
+			undefined,
+			"account-a/tenant-a",
+		);
+		expect(same?.scope).toBe(first?.scope);
+		const unproven = await owner.admit(
+			"route-a",
+			owner.suspend(),
+			undefined,
+			null,
+		);
+		expect(unproven?.scope).not.toBe(first?.scope);
+		expect(policies).toEqual(["reauthenticate"]);
+		await owner.admit(
+			"route-a",
+			owner.suspend(),
+			undefined,
+			"account-a/tenant-a",
+		);
+		policies.length = 0;
+		const changed = await owner.admit(
+			"route-a",
+			owner.suspend(),
+			undefined,
+			"account-b/tenant-a",
+		);
+		expect(changed?.scope).not.toBe(unproven?.scope);
+		expect(policies).toEqual(["retire"]);
+	});
+
+	it("drains sealed writes before unchanged purge and retains only the reauth vault", async () => {
+		const f = fixture();
+		const owner = f.lifecycle();
+		const events: string[] = [];
+		const gate = deferred();
+		owner.configureRecoveryBoundary({
+			withdraw: () => {
+				events.push("withdraw");
+			},
+			drain: async () => {
+				events.push("drain");
+				await gate.promise;
+			},
+			clear: async (policy) => {
+				events.push(`vault-${policy}`);
+			},
+		});
+		owner.registerCleanup(async () => {
+			events.push("ordinary-purge");
+		});
+		await owner.admit("route-a", owner.getRevision());
+		const old = owner.get()?.scope;
+		const retiring = owner.retire(false, undefined, "reauthenticate");
+		expect(owner.get()).toBeNull();
+		expect(events[0]).toBe("withdraw");
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(events).not.toContain("ordinary-purge");
+		gate.resolve();
+		await retiring;
+		expect(events.indexOf("drain")).toBeLessThan(
+			events.indexOf("ordinary-purge"),
+		);
+		expect(events.at(-1)).toBe("vault-reauthenticate");
+		expect(await f.store.readStartupAuthorization()).toEqual({
+			version: 1,
+			state: "reauthenticate",
+		});
+		const recovered = await owner.admit("route-a", owner.getRevision());
+		expect(recovered?.scope).not.toBe(old);
+		expect(events).not.toContain("vault-retire");
+	});
+	it("attempts vault erasure even when ordinary cleanup fails and refuses admission", async () => {
+		const f = fixture();
+		const owner = f.lifecycle();
+		const erase = vi.fn(async () => {});
+		owner.configureRecoveryBoundary({
+			withdraw: () => {},
+			drain: async () => {},
+			clear: erase,
+		});
+		owner.registerCleanup(async () => {
+			throw new Error("ordinary purge denied");
+		});
+		await expect(owner.retire()).rejects.toThrow("ordinary purge denied");
+		expect(erase).toHaveBeenCalledWith("retire");
+		await expect(owner.admit("route-a", owner.getRevision())).rejects.toThrow(
+			"ordinary purge denied",
+		);
+	});
+	it("finishes mandatory cleanup before proof import and never publishes a late import", async () => {
+		const f = fixture();
+		const owner = f.lifecycle();
+		const events: string[] = [];
+		await owner.retire();
+		owner.registerCleanup(async () => {
+			events.push("purge");
+		});
+		const gate = deferred();
+		const started = deferred();
+		const admitting = owner.admit("route-a", owner.getRevision(), async () => {
+			events.push("proof-import");
+			started.resolve();
+			await gate.promise;
+		});
+		await started.promise;
+		expect(events).toEqual(["purge", "proof-import"]);
+		owner.suspend();
+		gate.resolve();
+		expect(await admitting).toBeNull();
+		expect(owner.get()).toBeNull();
+	});
 	it("sign-out removes the persisted generation alongside credentials", async () => {
 		const adapter = memorySecureStore();
 		await adapter.setItemAsync(
@@ -95,7 +226,9 @@ describe("startup authorization privacy boundary", () => {
 		});
 		const after = await lifecycle.admit("route-a", lifecycle.suspend());
 		expect(after?.scope).not.toBe(before?.scope);
-		expect(cleanup).not.toHaveBeenCalled();
+		// Recovery is separately sealed; stale generation/outbox families are
+		// retired on the next authenticated admission, never by the 401 itself.
+		expect(cleanup).toHaveBeenCalledOnce();
 	});
 
 	it("quarantines first-upgrade unscoped data without deleting it, but explicit signout purges", async () => {

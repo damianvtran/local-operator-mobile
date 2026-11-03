@@ -5,6 +5,7 @@ import type { PrivateCipher } from "./sealed-value";
  * factory is native-only and lazy so a web/Node import cannot touch a keystore. */
 export async function nativePrivateCipher(
 	keyHex: string,
+	installId: string,
 ): Promise<PrivateCipher> {
 	const { AESEncryptionKey, AESSealedData, aesEncryptAsync, aesDecryptAsync } =
 		await import("expo-crypto");
@@ -16,7 +17,9 @@ export async function nativePrivateCipher(
 				key,
 				{
 					nonce: { length: 12 },
-					additionalData: new TextEncoder().encode(associatedData),
+					additionalData: new TextEncoder().encode(
+						JSON.stringify([installId, associatedData]),
+					),
 				},
 			);
 			return sealed.combined("base64");
@@ -26,7 +29,9 @@ export async function nativePrivateCipher(
 				AESSealedData.fromCombined(ciphertext),
 				key,
 				{
-					additionalData: new TextEncoder().encode(associatedData),
+					additionalData: new TextEncoder().encode(
+						JSON.stringify([installId, associatedData]),
+					),
 				},
 			);
 			return new TextDecoder("utf-8", { fatal: true }).decode(plaintext);

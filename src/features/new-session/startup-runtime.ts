@@ -1,8 +1,14 @@
 import { randomUUID } from "expo-crypto";
+import { z } from "zod";
 import {
 	getStartupAuthorization,
 	registerStartupAuthorizationCleanup,
 } from "@/connection/startup-authorization";
+import { promptImageSchema } from "@/contracts/schemas";
+import {
+	readRecoveryDraft,
+	writeRecoveryDraft,
+} from "@/features/session/draft-recovery";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
 import type { RelayEndpoints } from "@/relay/endpoints";
 import { sendPersistedCommand } from "@/relay/send-command";
@@ -19,6 +25,10 @@ export type StartupAuthorization = Readonly<{
 }>;
 const coordinators = new Map<string, StartupCoordinator>();
 const opening = new Map<string, Promise<StartupCoordinator>>();
+const recoveryEditors = new Map<string, string>();
+const recoveryDraftSchema = z
+	.object({ text: z.string(), images: z.array(promptImageSchema) })
+	.strict();
 
 const current = (auth: StartupAuthorization) => {
 	const admitted = getStartupAuthorization();
@@ -28,14 +38,46 @@ function dependencies(
 	key: string,
 	auth: StartupAuthorization,
 	client: RelayEndpoints,
+	recoverDraft = true,
 ): StartupDeps {
 	return {
 		store: {
 			load: async () => {
 				const value = await startupDeviceStore.get(key);
-				return value === null ? null : (JSON.parse(value) as StartupRecord);
+				if (value !== null) return JSON.parse(value) as StartupRecord;
+				if (!recoverDraft) return null;
+				const recovered = await readRecoveryDraft("startup:active", auth.scope);
+				if (recovered === null || !current(auth)) return null;
+				// A recovered editor is a fresh draft, never a recovered create or
+				// outbox. No old session ID, selection or continuation can dispatch.
+				return {
+					version: 1,
+					scope: key,
+					phase: "draft",
+					sessionId: null,
+					selection: null,
+					queue: [],
+					draft: recoveryDraftSchema.parse(JSON.parse(recovered)),
+				} as StartupRecord;
 			},
 			save: async (value) => startupDeviceStore.set(key, JSON.stringify(value)),
+		},
+		checkpointDraft: (draft, sessionId) => {
+			if (!current(auth)) return;
+			if (sessionId !== null)
+				void writeRecoveryDraft(
+					`startup:session:${sessionId}`,
+					JSON.stringify(draft),
+					auth.scope,
+				).catch(() => undefined);
+			if (recoveryEditors.get(auth.scope) !== key) return;
+			// This call is accepted synchronously while the owner is still admitted;
+			// vault withdrawal will drain it even if normal persistence is delayed.
+			void writeRecoveryDraft(
+				"startup:active",
+				JSON.stringify(sessionId === null ? draft : { text: "", images: [] }),
+				auth.scope,
+			).catch(() => undefined);
 		},
 		uuid: randomUUID,
 		isCurrent: () => current(auth),
@@ -71,6 +113,7 @@ export async function openStartup(
 			throw new Error("invalid provisional identity");
 		if (localId === null) localId = randomUUID();
 		let key = JSON.stringify([auth.scope, localId]);
+		recoveryEditors.set(auth.scope, key);
 		let coordinator = coordinators.get(key);
 		if (!coordinator) {
 			coordinator = new StartupCoordinator(
@@ -121,9 +164,15 @@ export async function openStartup(
 			coordinator.pause();
 			localId = randomUUID();
 			key = JSON.stringify([auth.scope, localId]);
+			recoveryEditors.set(auth.scope, key);
+			await writeRecoveryDraft(
+				"startup:active",
+				JSON.stringify({ text: "", images: [] }),
+				auth.scope,
+			);
 			coordinator = new StartupCoordinator(
 				key,
-				dependencies(key, auth, client),
+				dependencies(key, auth, client, false),
 			);
 			coordinators.set(key, coordinator);
 			await coordinator.ready;
@@ -172,7 +221,7 @@ export async function startupForSession(
 			throw new Error("foreign provisional identity");
 		const owner = new StartupCoordinator(
 			mapped,
-			dependencies(mapped, auth, client),
+			dependencies(mapped, auth, client, false),
 		);
 		await owner.ready;
 		if (!current(auth) || owner.snapshot().sessionId !== sessionId) {
@@ -180,6 +229,41 @@ export async function startupForSession(
 			return null;
 		}
 		coordinators.set(mapped, owner);
+		return owner;
+	}
+	const recovered = await readRecoveryDraft(
+		`startup:session:${sessionId}`,
+		auth.scope,
+	);
+	if (recovered !== null && current(auth)) {
+		// The requested SID comes from the current authenticated conversation, not
+		// from recovery bytes. Rebuild ONLY its editor with an empty fresh outbox.
+		const key = JSON.stringify([auth.scope, randomUUID()]);
+		const record: StartupRecord = {
+			version: 1,
+			scope: key,
+			phase: "ready",
+			sessionId,
+			selection: null,
+			queue: [],
+			draft: recoveryDraftSchema.parse(JSON.parse(recovered)),
+		};
+		await startupDeviceStore.set(key, JSON.stringify(record));
+		await startupDeviceStore.set(
+			JSON.stringify([auth.scope, "session", sessionId]),
+			key,
+		);
+		if (!current(auth)) return null;
+		const owner = new StartupCoordinator(
+			key,
+			dependencies(key, auth, client, false),
+		);
+		await owner.ready;
+		if (!current(auth)) {
+			owner.revoke();
+			return null;
+		}
+		coordinators.set(key, owner);
 		return owner;
 	}
 	const active = await openStartup(auth, client);
@@ -198,5 +282,6 @@ export async function retireStartupCoordinators(): Promise<void> {
 	await startupDeviceStore.clear();
 	coordinators.clear();
 	opening.clear();
+	recoveryEditors.clear();
 }
 registerStartupAuthorizationCleanup(retireStartupCoordinators);

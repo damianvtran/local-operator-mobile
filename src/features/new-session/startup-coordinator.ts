@@ -40,6 +40,9 @@ export type StartupDeps = {
 	send(sessionId: string, message: ContinuationEnvelope): Promise<void>;
 	isCurrent(): boolean;
 	uuid(): string;
+	/** Checkpoint only the editor, synchronously before a later auth withdrawal
+	 * can prevent a queued ordinary persistence operation from starting. */
+	checkpointDraft?(draft: StartupDraft, sessionId: string | null): void;
 };
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -139,6 +142,8 @@ export class StartupCoordinator {
 	};
 	private publish(patch: Partial<StartupSnapshot> = {}) {
 		this.value = { ...this.value, ...patch };
+		if (patch.draft !== undefined)
+			this.deps.checkpointDraft?.(this.value.draft, this.value.sessionId);
 		for (const listener of this.listeners) listener();
 	}
 

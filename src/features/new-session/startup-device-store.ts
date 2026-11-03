@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { RevisionStore } from "./startup-persistence";
+import { nativePrivateStore } from "@/features/session/native-private-store";
 
 /** Startup records contain private text/image bytes. No memory fallback: a Send
  * cannot outrun durable admission merely because Safari storage is unavailable.
@@ -9,39 +9,7 @@ const DIRECTORY = "lo-mobile-startup";
 const MAX_CHARS = 16 * 1024 * 1024;
 const serial = new Map<string, Promise<void>>();
 
-async function nativeStore(key: string): Promise<RevisionStore> {
-	const { Directory, File, Paths } = await import("expo-file-system");
-	const directory = new Directory(
-		Paths.document,
-		DIRECTORY,
-		encodeURIComponent(key),
-	);
-	if (!directory.exists) directory.create({ intermediates: true });
-	return new RevisionStore({
-		list: async () =>
-			directory
-				.list()
-				.filter((entry) => entry instanceof File)
-				.map((entry) => entry.name),
-		read: async (name) => {
-			const file = new File(directory, name);
-			return file.exists ? file.text() : null;
-		},
-		write: async (name, value) => {
-			const file = new File(directory, name);
-			file.create();
-			file.write(value);
-		},
-		move: async (from, to) => {
-			const file = new File(directory, from);
-			file.move(new File(directory, to));
-		},
-		remove: async (name) => {
-			const file = new File(directory, name);
-			if (file.exists) file.delete();
-		},
-	});
-}
+const sealedStartupStore = nativePrivateStore("startup");
 function webStorage(): Storage {
 	if (!globalThis.localStorage)
 		throw new Error("durable startup storage is unavailable");
@@ -52,7 +20,7 @@ export const startupDeviceStore = {
 		await serial.get(key);
 		return Platform.OS === "web"
 			? webStorage().getItem(STARTUP_PREFIX + key)
-			: (await nativeStore(key)).get();
+			: sealedStartupStore.get(key);
 	},
 	async set(key: string, value: string): Promise<void> {
 		if (value.length > MAX_CHARS)
@@ -63,7 +31,7 @@ export const startupDeviceStore = {
 			.then(async () => {
 				if (Platform.OS === "web")
 					webStorage().setItem(STARTUP_PREFIX + key, value);
-				else await (await nativeStore(key)).set(value);
+				else await sealedStartupStore.set(key, value);
 			});
 		serial.set(key, write);
 		try {
@@ -85,6 +53,7 @@ export const startupDeviceStore = {
 			}
 			for (const key of keys) storage.removeItem(key);
 		} else {
+			await sealedStartupStore.clear();
 			const { Directory, Paths } = await import("expo-file-system");
 			const directory = new Directory(Paths.document, DIRECTORY);
 			if (directory.exists) directory.delete();

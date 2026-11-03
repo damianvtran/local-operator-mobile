@@ -27,6 +27,8 @@ export async function proveRecoveryAuthority(
 	},
 ): Promise<RecoveryOwner | null> {
 	if (!accessToken || !options.isCurrent()) return null;
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 8_000);
 	try {
 		const response = await (options.fetcher ?? fetch)(
 			`${CONTROL_PLANE}/v1/me`,
@@ -34,6 +36,8 @@ export async function proveRecoveryAuthority(
 				headers: { Authorization: `Bearer ${accessToken}` },
 				cache: "no-store",
 				redirect: "error",
+				credentials: "omit",
+				signal: controller.signal,
 			},
 		);
 		if (!response.ok || !options.isCurrent()) return null;
@@ -54,6 +58,8 @@ export async function proveRecoveryAuthority(
 	} catch {
 		// Never log a response body: the identity document contains personal data.
 		return null;
+	} finally {
+		clearTimeout(timeout);
 	}
 }
 
@@ -68,6 +74,9 @@ export function recoveryAuthorityScope(
 	if (
 		route.mode !== "radient" ||
 		route.orgId !== undefined ||
+		Object.keys(route).some(
+			(key) => !["mode", "hostname", "tunnelId"].includes(key),
+		) ||
 		!identifier(route.tunnelId) ||
 		!RADIENT_HOST_PATTERN.test(route.hostname) ||
 		!route.hostname.endsWith("-lop.radienthq.com")

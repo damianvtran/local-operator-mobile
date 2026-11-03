@@ -1,0 +1,119 @@
+export interface RecoveryStore {
+	get(key: string): Promise<string | null>;
+	set(key: string, value: string): Promise<void>;
+	remove(key: string): Promise<void>;
+}
+/** Recovery is draft text/images only. The vault never sees a continuation
+ * envelope, session-creation state, dispatch generation or a send callback. */
+export class DraftRecoveryVault {
+	private authority: string | null = null;
+	private epoch = 0;
+	private tail: Promise<unknown> = Promise.resolve();
+	private current: () => boolean = () => false;
+	private erasureFailed = false;
+	constructor(
+		private readonly store: RecoveryStore,
+		private readonly erase: () => Promise<void>,
+		private readonly now: () => number = Date.now,
+		private readonly maxAge = 7 * 24 * 60 * 60 * 1000,
+	) {}
+	withdraw = (): void => {
+		this.authority = null;
+		this.epoch++;
+		this.current = () => false;
+	};
+	drain = async (): Promise<void> => {
+		await Promise.allSettled([this.tail]);
+	};
+
+	/** Serialized with accepted writes. A late proof can never reopen the vault
+	 * after route/account change; a new tuple first erases the prior key+bytes. */
+	prepare(authority: string, isCurrent: () => boolean): Promise<boolean> {
+		const epoch = this.epoch;
+		return this.run(async () => {
+			if (this.erasureFailed)
+				throw new Error("private cleanup requires an explicit retry");
+			if (epoch !== this.epoch || !isCurrent()) return false;
+			const prior = await this.store.get("authority");
+			if (epoch !== this.epoch || !isCurrent()) return false;
+			if (prior !== null && prior !== authority) {
+				this.erasureFailed = true;
+				await this.erase();
+				this.erasureFailed = false;
+			}
+			if (epoch !== this.epoch || !isCurrent()) return false;
+			await this.store.set("authority", authority);
+			if (epoch !== this.epoch || !isCurrent()) return false;
+			this.authority = authority;
+			this.current = isCurrent;
+			return true;
+		});
+	}
+
+	async read(key: string): Promise<string | null> {
+		const authority = this.authority;
+		const epoch = this.epoch;
+		if (!authority || !this.current()) return null;
+		await this.drain();
+		const raw = await this.store.get(this.key(authority, key));
+		if (!raw || epoch !== this.epoch || !this.current()) return null;
+		const record: unknown = JSON.parse(raw);
+		if (
+			typeof record !== "object" ||
+			record === null ||
+			!("version" in record) ||
+			record.version !== 1 ||
+			!("savedAt" in record) ||
+			typeof record.savedAt !== "number" ||
+			!Number.isFinite(record.savedAt) ||
+			!("value" in record) ||
+			typeof record.value !== "string"
+		)
+			throw new Error("recovery draft is unreadable");
+		if (
+			record.savedAt > this.now() ||
+			this.now() - record.savedAt > this.maxAge
+		) {
+			await this.remove(key);
+			return null;
+		}
+		return epoch === this.epoch && this.current() ? record.value : null;
+	}
+	write(key: string, value: string): Promise<void> {
+		if (value.length > 16 * 1024 * 1024)
+			return Promise.reject(new Error("recovery draft capacity reached"));
+		const authority = this.authority;
+		if (!authority || !this.current()) return Promise.resolve();
+		// Capture the authorized destination before enqueueing. Withdrawal stops new
+		// writes but drains already-accepted writes into that OLD sealed destination.
+		return this.run(() =>
+			this.store.set(
+				this.key(authority, key),
+				JSON.stringify({ version: 1, savedAt: this.now(), value }),
+			),
+		);
+	}
+	remove(key: string): Promise<void> {
+		const authority = this.authority;
+		if (!authority || !this.current()) return Promise.resolve();
+		return this.run(() => this.store.remove(this.key(authority, key)));
+	}
+	clear(): Promise<void> {
+		this.withdraw();
+		this.erasureFailed = true;
+		return this.run(async () => {
+			// Serialized after accepted writes, and before any later preparation.
+			// A failed erase is a sticky recovery fence until explicit retry.
+			await this.erase();
+			this.erasureFailed = false;
+		});
+	}
+	private key(authority: string, key: string): string {
+		return JSON.stringify([authority, key]);
+	}
+	private run<T>(operation: () => Promise<T>): Promise<T> {
+		const next = this.tail.catch(() => undefined).then(operation);
+		this.tail = next;
+		return next;
+	}
+}

@@ -60,10 +60,14 @@ export const SECURE_KEYS = {
 	tunnel: "lop.mobile.tunnel",
 	custom: "lop.mobile.custom",
 	startupAuthorization: "lop.mobile.startup-authorization",
+	privateDataKey: "lop.mobile.private-data-key",
 } as const;
 
 /** The value iOS has historically refused. Anything larger is refused here. */
 export const MAX_SECURE_VALUE_CHARS = 2_048;
+const INSTALL_ID =
+	/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+const PRIVATE_KEY_HEX = /^[a-f0-9]{64}$/i;
 
 /** The Radient OAuth set. `expires_at` is epoch ms (the desktop client's unit and
  *  the one `Date.now()` compares against). */
@@ -118,8 +122,19 @@ export interface CustomRouteSet {
  *   marker survives a crash mid-deletion, and the next admission finishes that
  *   cleanup before it may hand out a new generation. */
 export type StartupAuthorizationRecord =
-	| { version: 1; state: "active"; generation: string; route: string }
-	| { version: 1; state: "revoked" | "tombstone" };
+	| {
+			version: 1;
+			state: "active";
+			generation: string;
+			route: string;
+			recoveryAuthority?: string;
+	  }
+	| { version: 1; state: "revoked" | "tombstone" | "reauthenticate" };
+
+/** The install marker lives in the app sandbox; the key lives only in the
+ * platform keystore. Matching both prevents iOS Keychain survival after an
+ * uninstall from silently granting a new installation access to old ciphertext. */
+export type PrivateDataKey = Readonly<{ installId: string; keyHex: string }>;
 
 /** A value that cannot be stored safely, with the reason named. */
 export class SecureStorageError extends Error {
@@ -225,9 +240,12 @@ export class SecureStorage {
 				state?: unknown;
 				generation?: unknown;
 				route?: unknown;
+				recoveryAuthority?: unknown;
 			};
 			if (record.version === 1 && record.state === "tombstone")
 				return { version: 1, state: "tombstone" };
+			if (record.version === 1 && record.state === "reauthenticate")
+				return { version: 1, state: "reauthenticate" };
 			if (record.version === 1 && record.state === "revoked")
 				return { version: 1, state: "revoked" };
 			if (
@@ -236,13 +254,19 @@ export class SecureStorage {
 				typeof record.generation === "string" &&
 				record.generation.length > 0 &&
 				typeof record.route === "string" &&
-				record.route.length > 0
+				record.route.length > 0 &&
+				(record.recoveryAuthority === undefined ||
+					(typeof record.recoveryAuthority === "string" &&
+						record.recoveryAuthority.length > 0))
 			)
 				return {
 					version: 1,
 					state: "active",
 					generation: record.generation,
 					route: record.route,
+					...(typeof record.recoveryAuthority === "string"
+						? { recoveryAuthority: record.recoveryAuthority }
+						: {}),
 				};
 		}
 		throw new SecureStorageError(
@@ -255,6 +279,67 @@ export class SecureStorage {
 		value: StartupAuthorizationRecord,
 	): Promise<void> {
 		await this.write(SECURE_KEYS.startupAuthorization, value);
+	}
+
+	/** Do not use credential discovery's corrupt-item fallback here. A lost or
+	 * malformed key must refuse decryption, never overwrite recoverable bytes. */
+	async readPrivateDataKey(): Promise<PrivateDataKey | null> {
+		const raw = await this.adapter.getItemAsync(
+			SECURE_KEYS.privateDataKey,
+			this.writeOptions(),
+		);
+		if (raw === null) return null;
+		let value: unknown;
+		try {
+			value = JSON.parse(raw);
+		} catch {
+			value = null;
+		}
+		if (
+			typeof value === "object" &&
+			value !== null &&
+			"installId" in value &&
+			typeof value.installId === "string" &&
+			INSTALL_ID.test(value.installId) &&
+			"keyHex" in value &&
+			typeof value.keyHex === "string" &&
+			PRIVATE_KEY_HEX.test(value.keyHex)
+		) {
+			return { installId: value.installId, keyHex: value.keyHex };
+		}
+		throw new SecureStorageError(
+			"The private storage key is unreadable",
+			SECURE_KEYS.privateDataKey,
+		);
+	}
+
+	async clearPrivateDataKey(): Promise<void> {
+		await this.adapter.deleteItemAsync(
+			SECURE_KEYS.privateDataKey,
+			this.writeOptions(),
+		);
+		if (
+			(await this.adapter.getItemAsync(
+				SECURE_KEYS.privateDataKey,
+				this.writeOptions(),
+			)) !== null
+		)
+			throw new SecureStorageError(
+				"Private key removal could not be confirmed",
+				SECURE_KEYS.privateDataKey,
+			);
+	}
+
+	async writePrivateDataKey(value: PrivateDataKey): Promise<void> {
+		if (
+			!INSTALL_ID.test(value.installId) ||
+			!PRIVATE_KEY_HEX.test(value.keyHex)
+		)
+			throw new SecureStorageError(
+				"The private storage key is invalid",
+				SECURE_KEYS.privateDataKey,
+			);
+		await this.write(SECURE_KEYS.privateDataKey, value);
 	}
 
 	/** Sign-out. Clears every item this app owns; unrelated keystore items are

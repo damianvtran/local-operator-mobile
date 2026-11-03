@@ -35,8 +35,9 @@
  * cleanup leaves the lifecycle's own tail rejected — a later login cannot skip
  * that rejection, so admission stays closed rather than half-open.
  *
- * Stage B (encrypted cross-login retention, an account principal) is explicitly
- * NOT here: this module proves a locally generated generation, not a person.
+ * Sealed native draft recovery is a separate capability. This lifecycle drains
+ * that capability before privacy cleanup and accepts fresh trusted-owner metadata
+ * for restart comparison, but never reuses a revoked dispatch generation.
  */
 
 import { reopenPrivateWrites } from "@/features/session/scoped-storage";
@@ -64,6 +65,19 @@ export class StartupAuthorizationLifecycle {
 	private tail: Promise<unknown> = Promise.resolve();
 	private readonly listeners = new Set<() => void>();
 	private readonly cleanups = new Set<() => Promise<void>>();
+	private recoveryBoundary: {
+		withdraw(): void;
+		drain(): Promise<void>;
+		clear(policy: "retire" | "reauthenticate"): Promise<void>;
+	} | null = null;
+
+	/** Recovery is a separate sealed draft capability, never a dispatch scope.
+	 * Withdraw synchronously, then drain before any ordinary privacy purge. */
+	configureRecoveryBoundary(
+		boundary: NonNullable<StartupAuthorizationLifecycle["recoveryBoundary"]>,
+	): void {
+		this.recoveryBoundary = boundary;
+	}
 
 	constructor(
 		private readonly storage: StartupAuthorizationStorage,
@@ -94,6 +108,7 @@ export class StartupAuthorizationLifecycle {
 	/** Synchronous, non-durable close. A remount may restore a persisted
 	 *  generation; a privacy boundary MUST go through `revoke`/`retire` instead. */
 	suspend(): number {
+		this.recoveryBoundary?.withdraw();
 		this.authorization = null;
 		this.revision += 1;
 		for (const listener of this.listeners) listener();
@@ -138,13 +153,17 @@ export class StartupAuthorizationLifecycle {
 	retire(
 		preserveUnscoped = false,
 		afterCleanup?: () => Promise<void>,
+		policy: "retire" | "reauthenticate" = "retire",
 	): Promise<void> {
 		this.suspend();
 		return this.enqueue(async () => {
 			if (preserveUnscoped && (await this.storage.read()) === null) return;
 			const outcomes = await Promise.allSettled([
-				this.storage.write({ version: 1, state: "tombstone" }),
-				this.cleanup(),
+				this.storage.write({
+					version: 1,
+					state: policy === "reauthenticate" ? "reauthenticate" : "tombstone",
+				}),
+				this.cleanup(policy),
 				afterCleanup?.() ?? Promise.resolve(),
 			]);
 			const failures = outcomes.flatMap((outcome) =>
@@ -170,30 +189,70 @@ export class StartupAuthorizationLifecycle {
 	 * one is never adopted by the new identity. A `tombstone` record means a purge
 	 * was owed, so that purge is completed before the new generation exists.
 	 */
-	admit(route: string, revision: number): Promise<StartupAuthorization | null> {
+	admit(
+		route: string,
+		revision: number,
+		prepareRecovery?: () => Promise<void>,
+		// undefined preserves legacy/web policy; null explicitly means native
+		// ownership could not be proven and cached draft generations cannot restore.
+		recoveryAuthority?: string | null,
+	): Promise<StartupAuthorization | null> {
 		const work = this.tail.then(async () => {
 			if (!this.isCurrent(revision)) return null;
 			let record = await this.storage.read();
 			if (!this.isCurrent(revision)) return null;
-			if (record?.state === "tombstone") {
-				await this.cleanup();
+			if (
+				record?.state === "tombstone" ||
+				record?.state === "reauthenticate" ||
+				record?.state === "revoked"
+			) {
+				await this.cleanup(
+					record.state === "tombstone" ? "retire" : "reauthenticate",
+				);
 				record = null;
 			}
-			if (record?.state === "active" && record.route !== route) {
-				// Identity/server change on a still-authorized generation: this is a
-				// privacy boundary, so the old owner's drafts go with it.
-				await this.storage.write({ version: 1, state: "tombstone" });
-				await this.cleanup();
+			if (
+				record?.state === "active" &&
+				(record.route !== route ||
+					recoveryAuthority === null ||
+					(recoveryAuthority !== undefined &&
+						record.recoveryAuthority !== recoveryAuthority))
+			) {
+				// A fresh account proof is mandatory for native restoration, including
+				// ordinary generation-backed editors. Failure quarantines the sealed
+				// vault but cannot reuse cached generation bytes as a proof bypass.
+				const provenChange =
+					record.route !== route ||
+					(typeof recoveryAuthority === "string" &&
+						record.recoveryAuthority !== undefined &&
+						record.recoveryAuthority !== recoveryAuthority);
+				await this.storage.write({
+					version: 1,
+					state: provenChange ? "tombstone" : "reauthenticate",
+				});
+				await this.cleanup(provenChange ? "retire" : "reauthenticate");
 				record = null;
 			}
 			if (!this.isCurrent(revision)) return null;
 			if (record?.state !== "active") {
 				const generation = await this.generation();
 				if (!this.isCurrent(revision)) return null;
-				record = { version: 1, state: "active", generation, route };
+				record = {
+					version: 1,
+					state: "active",
+					generation,
+					route,
+					...(typeof recoveryAuthority === "string"
+						? { recoveryAuthority }
+						: {}),
+				};
 				await this.storage.write(record);
 			}
 			if (!this.isCurrent(revision) || record.state !== "active") return null;
+			// Recovery preparation happens after mandatory purge but before editors
+			// observe admission. The callback cannot restore a dispatch generation.
+			await prepareRecovery?.();
+			if (!this.isCurrent(revision)) return null;
 			/* Admission is the ONLY moment private writes reopen: a purge that ran at
 			 * sign-out closed them, and nothing may write for a scope that no longer
 			 * has an owner. */
@@ -243,10 +302,24 @@ export class StartupAuthorizationLifecycle {
 		);
 	}
 
-	private async cleanup(): Promise<void> {
-		// Every owner runs even if one fails; the joined rejection is the signal.
+	private async cleanup(
+		policy: "retire" | "reauthenticate" = "retire",
+	): Promise<void> {
+		// A sealed draft already being written must commit before plaintext/cache
+		// and command families are removed. Failed draining keeps admission closed.
+		const drained = await Promise.allSettled([
+			this.recoveryBoundary?.drain() ?? Promise.resolve(),
+		]);
 		const results = await Promise.allSettled(
 			[...this.cleanups].map((cleanup) => Promise.resolve().then(cleanup)),
+		);
+		// Explicit retirement attempts cryptographic erasure even if another purge
+		// failed; reauthentication retains ONLY the sealed draft vault/key.
+		results.push(
+			...drained,
+			...(await Promise.allSettled([
+				this.recoveryBoundary?.clear(policy) ?? Promise.resolve(),
+			])),
 		);
 		for (const result of results) {
 			if (result.status === "rejected") throw result.reason;

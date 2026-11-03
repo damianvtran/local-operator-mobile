@@ -61,6 +61,10 @@ import {
 	validateRadientHostname,
 } from "@/connection";
 import {
+	proveRecoveryAuthority,
+	recoveryAuthorityScope,
+} from "@/connection/recovery-authority";
+import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
@@ -79,6 +83,7 @@ import {
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
 import { clearAuthorizationData } from "@/features/session/device-storage";
+import { prepareDraftRecovery } from "@/features/session/draft-recovery";
 import { setLocaleSource } from "@/i18n";
 import {
 	type RelayEndpoints,
@@ -448,10 +453,11 @@ export const ConnectionProvider = ({
 		(
 			preserveUnscoped = false,
 			afterCleanup?: () => Promise<void>,
+			policy: "retire" | "reauthenticate" = "retire",
 		): Promise<boolean> => {
 			agentAvatarCache.clear();
 			return startupAuthorizationLifecycle
-				.retire(preserveUnscoped, afterCleanup)
+				.retire(preserveUnscoped, afterCleanup, policy)
 				.then(
 					() => true,
 					() => {
@@ -729,6 +735,23 @@ export const ConnectionProvider = ({
 			 * to start a conversation — the stream's seed frame does not admit, and
 			 * neither did a later refresh. The retry covers a storage write that failed
 			 * once; `null` means a newer attempt superseded this one and must not retry. */
+			const accessToken = tokensRef.current?.access;
+			const route = connectionStore.getState().route;
+			const recoveryOwner =
+				Platform.OS !== "web" && route?.mode === "radient" && accessToken
+					? await proveRecoveryAuthority(accessToken, {
+							isCurrent: () =>
+								admission.isCurrent() &&
+								startupAuthorizationLifecycle.isCurrent(
+									admission.authorizationRevision,
+								) &&
+								tokensRef.current?.access === accessToken,
+						})
+					: null;
+			const recoveryScope =
+				recoveryOwner && route
+					? recoveryAuthorityScope(recoveryOwner, route)
+					: null;
 			const admitStartup = async (): Promise<void> => {
 				for (let attempt = 0; attempt < 2; attempt += 1) {
 					if (!isAdmissionActive()) return;
@@ -736,6 +759,16 @@ export const ConnectionProvider = ({
 						await startupAuthorizationLifecycle.admit(
 							admission.routeKey,
 							admission.authorizationRevision,
+							() =>
+								prepareDraftRecovery(
+									recoveryScope,
+									() =>
+										admission.isCurrent() &&
+										startupAuthorizationLifecycle.isCurrent(
+											admission.authorizationRevision,
+										),
+								),
+							Platform.OS === "web" ? undefined : recoveryScope,
 						);
 						return;
 					} catch {
@@ -925,7 +958,9 @@ export const ConnectionProvider = ({
 	}, [revokeAuthorization]);
 
 	const signInWithRadient = useCallback(async () => {
-		const privacy = retireAuthorization(true);
+		// Reauthentication still drains and purges every ordinary private family.
+		// Only the separately sealed draft vault survives until fresh owner proof.
+		const privacy = retireAuthorization(true, undefined, "reauthenticate");
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const isCurrent = () =>
 			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);

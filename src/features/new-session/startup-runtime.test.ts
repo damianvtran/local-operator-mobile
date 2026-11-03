@@ -7,6 +7,7 @@ import type { RelayEndpoints } from "@/relay/endpoints";
  * command path. The coordinator itself is the production class. */
 
 const records = new Map<string, string>();
+const recoveryRecords = new Map<string, string>();
 let authorization: { scope: string; revision: number } | null = null;
 let counter = 0;
 let scopeCounter = 0;
@@ -31,6 +32,13 @@ vi.mock("./startup-device-store", () => ({
 vi.mock("@/connection/startup-authorization", () => ({
 	getStartupAuthorization: () => authorization,
 	registerStartupAuthorizationCleanup: () => () => undefined,
+}));
+vi.mock("@/features/session/draft-recovery", () => ({
+	readRecoveryDraft: async (key: string, scope: string) =>
+		authorization?.scope === scope ? (recoveryRecords.get(key) ?? null) : null,
+	writeRecoveryDraft: async (key: string, value: string, scope: string) => {
+		if (authorization?.scope === scope) recoveryRecords.set(key, value);
+	},
 }));
 vi.mock("@/features/session/envelope-store", () => ({
 	envelopeStoreFor: () => ({}),
@@ -58,6 +66,7 @@ const client = {
 describe("an unconfirmed start does not own the next draft", () => {
 	beforeEach(() => {
 		records.clear();
+		recoveryRecords.clear();
 		/* The runtime's maps and this file's storage both outlive a test, so the
 		 * scope must not repeat: a second `scope-u1-1` would hand test two the
 		 * first test's coordinator, which is how this fixture itself went wrong. */
@@ -111,6 +120,54 @@ describe("an unconfirmed start does not own the next draft", () => {
 
 		// The active pointer moved to a different local identity.
 		expect(records.get(activeKey(scope))).not.toBe(oldKey);
+	});
+
+	it("checkpoints the editor before delayed persistence and recovers no dispatch rights", async () => {
+		const first = await openStartup(auth(), client);
+		const image = { mime_type: "image/png", data_b64: "aW1hZ2U=" };
+		first.edit("unsent private text", [image]);
+		// Synchronous checkpoint acceptance matters: auth can withdraw before the
+		// ordinary coordinator persistence tail gets its next turn.
+		expect(JSON.parse(recoveryRecords.get("startup:active") ?? "null")).toEqual(
+			{ text: "unsent private text", images: [image] },
+		);
+		await first.flush();
+		authorization = null;
+		first.revoke();
+		records.clear();
+		authorization = { scope: `scope-recovered-${++scopeCounter}`, revision: 2 };
+		const start = vi.fn(async () => ({
+			ok: true as const,
+			pid: 1,
+			session_id: "never-created",
+		}));
+		const restored = await openStartup(auth(), {
+			startSession: start,
+		} as unknown as RelayEndpoints);
+		restored.resume();
+		await restored.quiesce();
+		expect(restored.snapshot()).toMatchObject({
+			phase: "draft",
+			sessionId: null,
+			selection: null,
+			queue: [],
+			draft: { text: "unsent private text", images: [image] },
+		});
+		expect(start).not.toHaveBeenCalled();
+	});
+
+	it("does not reintroduce a discarded editor from a sealed checkpoint", async () => {
+		const first = await openStartup(auth(), client);
+		first.edit("discard me", []);
+		await first.flush();
+		first.edit("", []);
+		await first.flush();
+		authorization = null;
+		first.revoke();
+		records.clear();
+		authorization = { scope: `scope-discarded-${++scopeCounter}`, revision: 2 };
+		const restored = await openStartup(auth(), client);
+		expect(restored.snapshot().draft).toEqual({ text: "", images: [] });
 	});
 
 	it("New on an untouched empty draft reuses the same owner instead of leaking ids", async () => {
