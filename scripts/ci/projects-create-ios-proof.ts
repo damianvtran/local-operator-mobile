@@ -33,8 +33,10 @@
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createRelay } from "../../tools/mock-relay/relay.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -190,79 +192,164 @@ async function run(
 	return output;
 }
 
-/** A long-lived relay in its own group; the port arrives on stdout. */
-async function startRelay(
-	language: string,
-): Promise<{ port: number; child: ChildProcess }> {
-	const child = spawn(
-		"node",
+type Slot = {
+	origin: string;
+	shutdown: () => Promise<void>;
+	publisher: ChildProcess;
+};
+
+/** A relay reachable by a unique `.local` name, the SAME mechanism the
+ *  account-routing iOS proof uses.
+ *
+ *  WHY NOT 127.0.0.1 (run 41554295782 failed there). The built app's ATS is
+ *  `NSAllowsLocalNetworking` plus CIDR exceptions for 10/8, 100.64/10,
+ *  169.254/16, 172.16/12 and 192.168/16 — 127.0.0.0/8 is not among them — and
+ *  ADR 0002 §5/§7 records that a literal-IP exception is unsettled on iOS. A
+ *  `.local` name is what `NSAllowsLocalNetworking` is documented to admit, so a
+ *  Bonjour record (`dns-sd -P`) points a unique name at the loopback listener.
+ *  No ATS widening, no app change. The relay admits exactly this origin on the
+ *  port the kernel chose, added after `listen()` and before any client connects. */
+async function startRelay(language: string): Promise<Slot> {
+	const nonce = randomBytes(6).toString("hex");
+	const name = `pcp-${language}-${nonce}`;
+	const host = `${name}.local`;
+	const relay = createRelay({
+		scenario: "projects-populated",
+		language,
+		password,
+		quiet: true,
+	});
+	const handle = await relay.listen();
+	const origin = `http://${host}:${handle.port}`;
+	relay.state.allowedOrigins = [...(relay.state.allowedOrigins ?? []), origin];
+	const publisher = spawn(
+		"/usr/bin/dns-sd",
 		[
-			"tools/mock-relay/relay.ts",
-			"--scenario",
-			"projects-populated",
-			"--language",
-			language,
-			"--password",
-			password,
-			"--print-port",
-			"--quiet",
+			"-P",
+			name,
+			"_http._tcp",
+			"local.",
+			String(handle.port),
+			host,
+			"127.0.0.1",
 		],
 		{ env: childEnv, detached: true, stdio: ["ignore", "pipe", "pipe"] },
 	);
-	groups.add(child);
-	let out = "";
-	let err = "";
-	child.stdout?.on("data", (c: Buffer) => {
-		out += c.toString("utf8");
-	});
-	child.stderr?.on("data", (c: Buffer) => {
-		err += c.toString("utf8");
-	});
-	for (let i = 0; i < 120; i++) {
-		const port = Number(out.split("\n")[0]);
-		if (Number.isInteger(port) && port > 0) return { port, child };
-		await new Promise((r) => setTimeout(r, 500));
+	groups.add(publisher);
+	const slot: Slot = {
+		origin,
+		publisher,
+		shutdown: async () => {
+			await relay.shutdown();
+		},
+	};
+	let resolved = false;
+	for (let i = 0; i < 30 && !resolved; i++) {
+		try {
+			const rows = await Promise.race([
+				lookup(host, { all: true }),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error("dns deadline")), 2000),
+				),
+			]);
+			if (
+				rows.length > 0 &&
+				rows.every((r) => r.address === "127.0.0.1" || r.address === "::1")
+			)
+				resolved = true;
+		} catch {
+			await new Promise((r) => setTimeout(r, 250));
+		}
 	}
-	writeFileSync(join(ROOT, "commands", `relay-${language}.err`), redact(err));
-	throw new Error(`relay (${language}) never printed a port`);
+	if (!resolved) {
+		await slot.shutdown();
+		throw new Error(`owned ${host} did not resolve to loopback`);
+	}
+	// Auth boundary: unauthenticated GET must be refused, not served.
+	const unauth = await fetch(`${origin}/api/projects`, {
+		signal: AbortSignal.timeout(5000),
+	});
+	if (unauth.status !== 401) throw new Error("relay auth boundary failed");
+	return slot;
 }
 
 let udid: string | undefined;
-const relays: ChildProcess[] = [];
+const relays: Slot[] = [];
 let failure: string | undefined;
+
+/** Failure-time evidence, taken BEFORE teardown: the screen the driver was
+ *  actually looking at. Best effort and bounded; it never masks the real error. */
+async function captureFailure(label: string) {
+	if (!udid) return;
+	try {
+		await run(
+			`failure-screenshot-${label}`,
+			"xcrun",
+			[
+				"simctl",
+				"io",
+				udid,
+				"screenshot",
+				join(ROOT, "frames", `failure-${label}.png`),
+			],
+			60,
+		);
+	} catch (error) {
+		note(`failure screenshot unavailable: ${String(error).slice(0, 200)}`);
+	}
+	try {
+		const tree = await run(
+			`failure-hierarchy-${label}`,
+			"maestro",
+			["--device", udid, "hierarchy"],
+			120,
+		);
+		writeFileSync(
+			join(ROOT, "hierarchies", `failure-${label}.txt`),
+			redact(tree),
+		);
+	} catch (error) {
+		note(`failure hierarchy unavailable: ${String(error).slice(0, 200)}`);
+	}
+}
 
 async function flowRun(
 	label: string,
-	relayPort: number,
+	relayOrigin: string,
 	file: string,
 	cap: number,
 ) {
 	const shots = join(ROOT, "frames", label);
 	mkdirSync(shots, { recursive: true });
 	const bundle = (receipt.installed as { bundleId: string }).bundleId;
-	await run(
-		`maestro-${label}`,
-		"maestro",
-		[
-			"--device",
-			udid as string,
-			"test",
-			"--config",
-			"e2e/maestro/projects-create-proof/config.yaml",
-			"-e",
-			`APP_ID=${bundle}`,
-			"-e",
-			`RELAY_URL=http://127.0.0.1:${relayPort}`,
-			"-e",
-			`RELAY_PASSWORD=${password}`,
-			"-e",
-			`SHOT_DIR=${shots}`,
-			"--test-output-dir",
-			join(ROOT, "maestro", label),
-			`e2e/maestro/projects-create-proof/${file}`,
-		],
-		cap,
-	);
+	try {
+		await run(
+			`maestro-${label}`,
+			"maestro",
+			[
+				"--device",
+				udid as string,
+				"test",
+				"--config",
+				"e2e/maestro/projects-create-proof/config.yaml",
+				"-e",
+				`APP_ID=${bundle}`,
+				"-e",
+				`RELAY_URL=${relayOrigin}`,
+				"-e",
+				`RELAY_PASSWORD=${password}`,
+				"-e",
+				`SHOT_DIR=${shots}`,
+				"--test-output-dir",
+				join(ROOT, "maestro", label),
+				`e2e/maestro/projects-create-proof/${file}`,
+			],
+			cap,
+		);
+	} catch (error) {
+		await captureFailure(label);
+		throw error;
+	}
 	// The native accessibility tree of the final (open-sheet) state.
 	const tree = await run(
 		`hierarchy-${label}`,
@@ -344,10 +431,10 @@ try {
 	await run("install", "xcrun", ["simctl", "install", udid, app], 180);
 
 	const ur = await startRelay("ur");
-	relays.push(ur.child);
+	relays.push(ur);
 	const en = await startRelay("en");
-	relays.push(en.child);
-	note(`relays: ur=${ur.port} en=${en.port}`);
+	relays.push(en);
+	note(`relays: ur=${ur.origin} en=${en.origin}`);
 
 	// Light then dark for Urdu; the English control runs once. The first maestro
 	// call also pays the cold driver start, hence its larger cap.
@@ -357,21 +444,21 @@ try {
 		["simctl", "ui", udid, "appearance", "light"],
 		60,
 	);
-	await flowRun("ur-light", ur.port, "urdu-sheet.yaml", 900);
+	await flowRun("ur-light", ur.origin, "urdu-sheet.yaml", 900);
 	await run(
 		"appearance-dark",
 		"xcrun",
 		["simctl", "ui", udid, "appearance", "dark"],
 		60,
 	);
-	await flowRun("ur-dark", ur.port, "urdu-sheet.yaml", 300);
+	await flowRun("ur-dark", ur.origin, "urdu-sheet.yaml", 300);
 	await run(
 		"appearance-light-2",
 		"xcrun",
 		["simctl", "ui", udid, "appearance", "light"],
 		60,
 	);
-	await flowRun("en-control", en.port, "english-control.yaml", 300);
+	await flowRun("en-control", en.origin, "english-control.yaml", 300);
 	receipt.verdict = "PASS (assertions only; reviewers must view the PNGs)";
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
@@ -379,7 +466,14 @@ try {
 	note(`FAIL ${failure}`);
 } finally {
 	const failures: string[] = [];
-	for (const relay of relays) await stop(relay);
+	for (const relay of relays) {
+		try {
+			await relay.shutdown();
+		} catch {
+			failures.push("relay-shutdown");
+		}
+		await stop(relay.publisher);
+	}
 	if (udid) {
 		for (const [name, args] of [
 			["shutdown-owned-simulator", ["simctl", "shutdown", udid]],

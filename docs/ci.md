@@ -780,6 +780,13 @@ frame, and the development host has no simulator.
   the device locale, and the stream does not push later changes, so the mock
   relay starts with `--language ur` before the app connects. A second relay with
   `en` runs the same walk as a negative control (Urdu title must be absent).
+- **Reachability:** the first dispatch (run 41554295782) failed to connect to
+  `http://127.0.0.1:<port>`: the built app's ATS allows local networking and
+  private CIDRs but not 127/8. Each relay is therefore published under a unique
+  `.local` name with `dns-sd -P` (the mechanism the account-routing iOS proof
+  uses) and admits exactly that origin. No ATS widening or app change. On any
+  Maestro failure the runner captures a simulator screenshot and the native
+  hierarchy before teardown.
 - **Never builds.** A missing, expired or mismatching artifact fails the job.
   The GitHub token reaches the download step only; the proof process runs with an
   allowlisted token-free environment and a run-only password (0600 file, masked).
