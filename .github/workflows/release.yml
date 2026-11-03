@@ -44,7 +44,7 @@ on:
         required: true
         type: string
       dry_run:
-        description: "Run the gate and the credential check, then stop before any build or upload"
+        description: "Check version and credential presence only; no full gate, build or upload"
         required: false
         type: boolean
         default: false
@@ -185,8 +185,10 @@ jobs:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          APPLE_DIST_CERT_P12_BASE64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          APPLE_DIST_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
         run: |
-          node scripts/ci/check-secrets.ts --mode release --need APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+          node scripts/ci/check-secrets.ts --mode release --need APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64,APPLE_DIST_CERT_P12_BASE64,APPLE_DIST_CERT_PASSWORD
 
       - name: Check the Android signing and Play credentials, by name
         # Not run while `android` is absent from RELEASE_PLATFORMS: a parked
@@ -365,68 +367,30 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm exec expo prebuild --platform ios --clean --no-install
 
+      # Prebuild deliberately skips dependency installation; a fresh runner has
+      # no CocoaPods workspace until this runs. Match ios.yml's native path so
+      # signing cannot fail first on an unrelated missing-workspace error.
+      - name: Install the iOS pods
+        run: cd ios && pod install
+
       - name: Resolve the workspace and scheme
         id: project
         run: node scripts/ci/ios-project.ts --root ios
 
-      - name: Decode the App Store Connect API key
-        env:
-          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          umask 077
-          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
-
-      - name: Write the export options
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          # Generated rather than committed: the team id is part of it, and a
-          # committed copy would put a personal team id in a public repository.
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>uploadSymbols</key><true/>
-            <key>destination</key><string>export</string>
-          </dict>
-          </plist>
-          PLIST
-          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
-
-      - name: Archive and export the IPA
+      - name: Build and verify the manually signed IPA
+        id: export
+        uses: ./.github/actions/ios-signed-ipa
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
-        run: |
-          set -euo pipefail
-          key="$RUNNER_TEMP/asc-api-key.p8"
-          xcodebuild \
-            -workspace "${{ steps.project.outputs.workspace }}" \
-            -scheme "${{ steps.project.outputs.scheme }}" \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$key" \
-            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID" \
-            archive
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/ipa" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$key" \
-            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID"
-          ls -l "$RUNNER_TEMP/ipa"
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          APPLE_DIST_CERT_P12_BASE64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          APPLE_DIST_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
+        with:
+          workspace: ${{ steps.project.outputs.workspace }}
+          scheme: ${{ steps.project.outputs.scheme }}
+          profile-name: ${{ vars.IOS_PROFILE_NAME || 'Local Operator iOS App Store' }}
 
       - name: Upload the IPA
         uses: actions/upload-artifact@v7
@@ -434,10 +398,6 @@ jobs:
           name: ios-ipa
           path: ${{ runner.temp }}/ipa/*.ipa
           retention-days: 90
-
-      - name: Remove the decoded key
-        if: always()
-        run: rm -f "$RUNNER_TEMP/asc-api-key.p8"
 
   publish:
     name: GitHub Release, then the stores

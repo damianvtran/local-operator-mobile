@@ -143,6 +143,15 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		}
 	}
 
+	// Check the built product, not only app.config.ts: a config/plugin omission
+	// otherwise leaves each uploaded build waiting for a manual compliance answer.
+	if (plist.ITSAppUsesNonExemptEncryption !== false) {
+		findings.push({
+			field: "ITSAppUsesNonExemptEncryption",
+			problem: "expected false after the OS-only cryptography dependency audit",
+		});
+	}
+
 	const description = plist.NSLocalNetworkUsageDescription;
 	if (typeof description !== "string" || description.trim().length === 0) {
 		findings.push({

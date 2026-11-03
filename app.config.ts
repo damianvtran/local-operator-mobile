@@ -134,6 +134,11 @@ const config: ExpoConfig = {
 		// unchanged. The string is the prompt iOS shows at the moment the reader
 		// presses the mic — never at first launch.
 		infoPlist: {
+			// Export compliance (§5 in docs/publishing/apple-app-store.md): native
+			// TLS, Keychain and expo-crypto use Apple's OS cryptography. The lockfile's
+			// node-forge belongs to Expo CLI tooling, not the shipped app. Reassess if
+			// a dependency brings its own crypto rather than silently inheriting this.
+			ITSAppUsesNonExemptEncryption: false,
 			NSMicrophoneUsageDescription: MICROPHONE_USAGE,
 			// The local-network ACCESS declaration (ADR 0002 §5). iOS shows this
 			// string in its one-time "allow this app on your network" alert, which

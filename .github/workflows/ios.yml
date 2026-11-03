@@ -17,10 +17,10 @@ name: iOS
 # nobody can trust.
 #
 # WHY THERE ARE TWO JOBS. The simulator job needs no credential and runs on every
-# change; the `internal` job signs and can reach TestFlight, so it runs only on a
-# push to `main` and declares `environment: release`. See android.yml for the
-# full reasoning: the split is what makes the Apple key unreachable from a pull
-# request rather than merely withheld from a fork.
+# change; `internal` signs only on protected main with an explicit dispatch
+# input or IOS_INTERNAL_UPLOAD=true for pushes. Export-only never uploads.
+# `environment: release` plus the main/event guards keep secrets unreachable
+# from a pull request or a default unsigned dispatch.
 #
 # A TAG IS NOT HANDLED HERE. release.yml owns `v*`; a tag that also signed here
 # would upload to TestFlight twice.
@@ -30,7 +30,18 @@ on:
     branches:
       - main
   pull_request:
+  # Default dispatch is unsigned build/validate only. Signed modes require
+  # an explicit input AND main; export-only always takes precedence over upload.
   workflow_dispatch:
+    inputs:
+      signed_export_only:
+        description: "On main only: sign, export and verify an IPA without uploading"
+        type: boolean
+        default: false
+      testflight_upload:
+        description: "On main only: explicitly upload the signed IPA to TestFlight"
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -152,6 +163,20 @@ jobs:
 
       - name: Derive the version from the ref
         run: node scripts/ci/version.ts --write
+
+      - name: Record the hosted native toolchain
+        # Capture actual image inputs rather than treating macos-26 as a fixed
+        # Xcode patch version. This secret-free job cannot prove signing identity.
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          pod --version
+          xcodebuild -help > "$RUNNER_TEMP/xcodebuild-help.txt" 2>&1
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo '## Build/validate-only native preflight' >> "$GITHUB_STEP_SUMMARY"
+            echo 'This job only builds/launches the simulator. Separate protected signing requires an explicit dispatch input; export-only never uploads.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform ios --clean --no-install
@@ -356,6 +381,7 @@ jobs:
           name: ios-simulator
           path: |
             ${{ runner.temp }}/frames/*.png
+            ${{ runner.temp }}/xcodebuild-help.txt
             ${{ runner.temp }}/DerivedData/Build/Products/Release-iphonesimulator/*.app
           retention-days: 14
 
@@ -372,67 +398,40 @@ jobs:
             --regenerated ios
 
   credentials:
-    # ONE POLICY, BOTH PLATFORMS (review M3, QA Q2). Without Apple credentials
-    # there is no signed IPA and no TestFlight upload, so the job that would
-    # produce them is SKIPPED — visible in the job list as a skip, never a green
-    # tick on a job that signed nothing — and this job's annotation says why.
-    # `--mode internal` warns rather than failing, which is what makes the skip the
-    # caller's decision here and a hard failure inside a release run.
     name: Are the Apple credentials configured?
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # THE SAME ENVIRONMENT, AND THE SAME REF SCOPE, AS THE JOB IT GATES. This job
-    # exists to ask whether the secrets are configured, which means it has to read
-    # them — so it must sit behind the same protection as the signing job, or the
-    # claim in this workflow's header ("not even resolved for a job whose ref the
-    # environment's deployment-branch rule does not allow") stops being true of the
-    # workflow as a whole (review round 3, M2; measured: it ran and passed on the
-    # pull-request runs 36755424255 and 36755424075, outside any environment).
-    #
-    # `if:` as well as `environment:`, because the internal job is `main`-only: on a
-    # pull request there is nothing for this gate to decide, and resolving secrets
-    # to answer a question whose answer cannot change the run is cost with no
-    # benefit. So on a pull request this job does not run, and no secret is resolved
-    # anywhere in this workflow.
-    #
-    # WHAT THE ENVIRONMENT BUYS depends on how the operator configures it. The
-    # `release` environment exists (created 2026-10-04; branch `main` and tag `v*`
-    # rules, docs/ci.md "Secrets"), so the credentials stored in it would be
-    # unreachable from a feature branch. Until the credentials are added, this
-    # job's skip is still what keeps `main` green. If it is given required
-    # reviewers, this job will wait for approval BEFORE it can report — the same
-    # prompt the signing job already triggers, twice per release rather than once.
-    # A review-free environment with the same branch rule avoids that at no loss.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Resolve secrets only for explicitly authorized signing on the protected
+    # main ref, never for PRs, branches, or the default unsigned dispatch.
+    # This job shares environment: release with the signer because checking
+    # secret presence must not bypass the environment's access/approval policy.
+    if: >-
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && (inputs.signed_export_only == true || inputs.testflight_upload == true)) || (github.event_name == 'push' && vars.IOS_INTERNAL_UPLOAD == 'true'))
     environment: release
     outputs:
       all_present: ${{ steps.check.outputs.all_present }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Check the signing and upload credentials, by name
+      - name: Check the signing credentials, by name
         id: check
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
           APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          APPLE_DIST_CERT_P12_BASE64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          APPLE_DIST_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
         run: |
-          node scripts/ci/check-secrets.ts --mode internal --need \
-            APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
+          node scripts/ci/check-secrets.ts --mode release --need APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64,APPLE_DIST_CERT_P12_BASE64,APPLE_DIST_CERT_PASSWORD
 
   internal:
-    name: iOS internal release (signed IPA, TestFlight when configured)
+    name: iOS signed IPA (upload requires opt-in)
     needs: [changes, ios, credentials]
-    # Only a push to `main`. Never a pull request, never a tag (release.yml owns
-    # those) — see the header for why the credentials are scoped to this job.
-    #
-    # AND THE CREDENTIALS MUST EXIST, or the job does not run at all: every step
-    # below signs or uploads, and a job that skipped them while concluding
-    # `success` would claim an artefact it never built (QA Q2). The same shape gates
-    # the Android job, so the two platforms cannot disagree about what "no
-    # credentials" means on the same push.
-    if: needs.changes.outputs.native == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.credentials.outputs.all_present == 'true'
+    # A merge alone is not permission to upload. Unset IOS_INTERNAL_UPLOAD
+    # disables the push lane; protected main dispatches can validate export only.
+    if: >-
+      needs.changes.outputs.native == 'true' && needs.credentials.outputs.all_present == 'true' &&
+      github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && (inputs.signed_export_only == true || inputs.testflight_upload == true)) || (github.event_name == 'push' && vars.IOS_INTERNAL_UPLOAD == 'true'))
     runs-on: macos-26
     timeout-minutes: 90
     # Where the Apple credentials live, and where required reviewers can be
@@ -467,44 +466,12 @@ jobs:
         # what a non-release build is allowed to be. See docs/ci.md.
         run: node scripts/ci/version.ts --write
 
-      - name: Assert the signing credentials are present
-        # Belt and braces: the job is only reached when the `credentials` job found
-        # all of them, and this fails hard rather than warning, so an edit that
-        # loosens the gate cannot turn into a silently unsigned build.
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
-          APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
-          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
-        run: |
-          node scripts/ci/check-secrets.ts --mode release --need \
-            APPLE_TEAM_ID,APPLE_ASC_KEY_ID,APPLE_ASC_ISSUER_ID,APPLE_ASC_PRIVATE_KEY_BASE64
-
       - name: Generate the native project
         env:
-          # `app.config.ts` reads the team id from here into `ios.appleTeamId`, so
-          # the generated Xcode project has automatic signing pointed at the right
-          # team without the value being committed to a public repository. The step
-          # below asserts that path really is wired (review M4), because a secret in
-          # a step's environment that no file reads is a defect this pipeline has
-          # been reviewed for twice.
+          # Prebuild knows the team; the shared action then scopes manual
+          # Distribution signing to the app's Release configuration only.
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm exec expo prebuild --platform ios --clean --no-install
-
-      - name: Assert the team id reached the app config
-        # The load-bearing half of M4: it is not enough to set APPLE_TEAM_ID in a
-        # step's environment, the app config has to consume it, so this reads the
-        # config back the same way Expo does and fails if the two are not equal.
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          resolved=$(pnpm exec expo config --json | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ios",{}).get("appleTeamId",""))')
-          echo "ios.appleTeamId resolves to '$resolved'"
-          if [ "$resolved" != "$APPLE_TEAM_ID" ]; then
-            echo "::error::the app config does not carry APPLE_TEAM_ID (got '$resolved'), so the generated project would sign against whatever team Xcode guesses"
-            exit 1
-          fi
 
       - name: Install the pods
         run: cd ios && pod install
@@ -518,68 +485,20 @@ jobs:
         # never ran) or when the project declares more than one scheme.
         run: node scripts/ci/ios-project.ts --root ios
 
-      - name: Decode the App Store Connect API key
-        env:
-          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          umask 077
-          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc-api-key.p8"
-          # A key that is not a key is the failure that wastes an hour, so it is
-          # caught here where the message can name the secret.
-          openssl pkey -in "$RUNNER_TEMP/asc-api-key.p8" -noout -check
-
-      - name: Write the export options
-        # Generated rather than committed, because the team id is part of it and
-        # a committed file would either carry a team id in a public repository or
-        # a placeholder that cannot work.
+      - name: Build and verify the manually signed IPA
+        id: export
+        uses: ./.github/actions/ios-signed-ipa
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>uploadSymbols</key><true/>
-            <key>destination</key><string>export</string>
-          </dict>
-          </plist>
-          PLIST
-          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
-
-      - name: Archive and export the IPA
-        id: export
-        env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
-        run: |
-          set -euo pipefail
-          key="$RUNNER_TEMP/asc-api-key.p8"
-          xcodebuild \
-            -workspace "${{ steps.project.outputs.workspace }}" \
-            -scheme "${{ steps.project.outputs.scheme }}" \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$key" \
-            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID" \
-            archive
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/ipa" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$key" \
-            -authenticationKeyID "$APPLE_ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$APPLE_ASC_ISSUER_ID"
-          find "$RUNNER_TEMP/ipa" -name "*.ipa" -print
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          APPLE_DIST_CERT_P12_BASE64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          APPLE_DIST_CERT_PASSWORD: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
+        with:
+          workspace: ${{ steps.project.outputs.workspace }}
+          scheme: ${{ steps.project.outputs.scheme }}
+          profile-name: ${{ vars.IOS_PROFILE_NAME || 'Local Operator iOS App Store' }}
 
       - name: Upload the IPA
         uses: actions/upload-artifact@v7
@@ -589,30 +508,30 @@ jobs:
           retention-days: 30
 
       - name: Upload to TestFlight (fastlane)
+        id: testflight
+        if: >-
+          inputs.signed_export_only != true && ((github.event_name == 'workflow_dispatch' && inputs.testflight_upload == true) || (github.event_name == 'push' && vars.IOS_INTERNAL_UPLOAD == 'true'))
         env:
           APPLE_ASC_KEY_ID: ${{ secrets.APPLE_ASC_KEY_ID }}
           APPLE_ASC_ISSUER_ID: ${{ secrets.APPLE_ASC_ISSUER_ID }}
-          APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
-          # The directory, not a filename: xcodebuild names the IPA after the
-          # app, and the lane finds it rather than being told a name a rename
-          # would break.
+          APPLE_ASC_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_ASC_PRIVATE_KEY_BASE64 }}
+          APPLE_ASC_PRIVATE_KEY_PATH: ${{ runner.temp }}/asc-upload-key.p8
           LO_IOS_IPA_DIR: ${{ runner.temp }}/ipa
-        run: fastlane ios testflight
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$APPLE_ASC_PRIVATE_KEY_BASE64" | base64 --decode > "$APPLE_ASC_PRIVATE_KEY_PATH"
+          fastlane ios testflight
 
-      - name: Remove the decoded key
+      - name: Remove the upload key even if the upload fails
         if: always()
-        run: rm -f "$RUNNER_TEMP/asc-api-key.p8" "$RUNNER_TEMP/ExportOptions.plist"
+        run: rm -f "$RUNNER_TEMP/asc-upload-key.p8"
 
-      - name: Say what was built, checked and uploaded
+      - name: Say what was actually verified and uploaded
         if: always()
         run: |
           {
-            echo "## iOS internal release"
-            echo
-            echo "This job runs only when every Apple credential is configured (its"
-            echo "\`credentials\` job decides), so every step below signed or uploaded:"
-            echo "there is no branch here in which it silently builds unsigned."
-            echo
-            echo "- signed IPA: ${{ steps.export.outcome == 'success' && 'built and attached to this run' || '**NOT verified** — the archive/export step did not pass' }}"
-            echo "- TestFlight: uploaded by the step above"
+            echo '## iOS signed validation'
+            echo '- archive/export/IPA verification: ${{ steps.export.outcome }}'
+            echo '- TestFlight upload: ${{ steps.testflight.outcome }} (export-only/default dispatch never uploads)'
           } >> "$GITHUB_STEP_SUMMARY"

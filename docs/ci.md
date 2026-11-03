@@ -280,7 +280,9 @@ release → Environment secrets) — see "Where they live, and why" below.
 | `APPLE_TEAM_ID` | `ios.yml` `internal`, `release.yml` | Apple team id. Feeds `ios.appleTeamId` through the app config and the export options. |
 | `APPLE_ASC_KEY_ID` | same | App Store Connect API key id. |
 | `APPLE_ASC_ISSUER_ID` | same | App Store Connect issuer id. |
-| `APPLE_ASC_PRIVATE_KEY_BASE64` | same | The `.p8`, base64. Decoded to `APPLE_ASC_PRIVATE_KEY_PATH`. |
+| `APPLE_ASC_PRIVATE_KEY_BASE64` | same | The `.p8`, base64. Authenticates readonly profile download and explicit store uploads, not signing identity. |
+| `APPLE_DIST_CERT_P12_BASE64` | shared `ios-signed-ipa` action | Existing Apple Distribution certificate **and private key**, base64 .p12; imported into an ephemeral keychain. |
+| `APPLE_DIST_CERT_PASSWORD` | same | Password for the .p12. No value is printed. |
 
 The Android rows and the Apple rows are independent: a release needs only the rows
 of the platforms it releases (see "Which platforms a tag releases" below).
@@ -354,17 +356,18 @@ answers). A review-free environment with the same two deployment rules keeps the
 protection against a feature branch reaching the secrets without the second
 prompt, and is the configuration this pipeline expects.
 
-**STATE (2026-10-09): the environment exists; its secrets do not.** `release`
-was created with a **branch** rule `main` and a **tag** rule `v*` (custom branch
-policies enabled, which is what makes a tag rule possible at all), so the jobs
-above can reach it from tags and from `main`. The credentials, however, are
-still **unset** — the repository and environment secret counts are both 0 — so a
-`v*` tag fails at the `credentials` gate today, by design, naming the missing
-names for the **enabled** platforms (the four `APPLE_*` names with
-`RELEASE_PLATFORMS` at its default `ios`; nine only once `android` is enabled).
-Add them as **environment secrets** when the account work resumes (see
-`docs/publishing/submission-runbook.md`), and decide then whether the environment
-requires reviewers (the paragraph above).
+**STATE (2026-11-02): Apple organization and six signing/API environment secrets
+are configured; signed execution remains unproven until its first run.** `release`
+allows **branch** `main` and **tag** `v*`, not PR branches. Keep that policy.
+`RELEASE_PLATFORMS=ios` leaves Google parked. The shared signing action consumes
+the six Apple names above; Android adds its five names only when enabled.
+`IOS_PROFILE_NAME` optionally selects the existing App Store profile (default
+`Local Operator iOS App Store`). `IOS_INTERNAL_UPLOAD` is **unset by default**:
+a merge alone does not sign/upload. Main-only dispatch can request
+`signed_export_only=true` or explicitly `testflight_upload=true`; export-only
+always wins if both are set. A main push uploads only if the repository variable
+`IOS_INTERNAL_UPLOAD` is the exact string `true`. See the [submission runbook](publishing/submission-runbook.md)
+for commands and the separate unsigned, signed-export and upload evidence.
 
 ### What a missing credential means, per platform
 
@@ -376,8 +379,10 @@ One policy, both platforms, decided by a `credentials` job in each workflow:
   decoded and nothing is built, so the unsigned-path failure this replaces (a
   zero-byte keystore decoded from an empty secret, which failed the job on every
   push to `main`) cannot happen.
-- **`ios.yml`** — without the `APPLE_*` variables, the `internal` job is
-  **skipped** the same way, with the same annotation.
+- **`ios.yml`** — default dispatches, PRs and main pushes without upload opt-in
+  skip both credential/signing jobs. Explicit main-only signing checks all six
+  Apple names and **fails** on missing material; it cannot report a successful
+  signed validation when no identity was available.
 - **A tagged release FAILS rather than skipping** a platform it was asked to
   release: `release.yml`'s credential check runs first and names every missing
   variable of each platform in `RELEASE_PLATFORMS`, so the release path is a hard
@@ -756,6 +761,6 @@ afternoon.
 | `android` fails at "Assert the release merged manifest keeps the local-network configuration", or `ios` at "Assert the built Info.plist carries the local-network configuration" | A declaration `app.config.ts` or a config plugin asks for did not reach the product. The step names the field it could not find (`scripts/ci/native-config.ts` prints one line per finding); fix the config or the plugin and re-run — never the generated native file, which the next `prebuild --clean` discards. |
 | `ios` fails on the same gate, and the diff is only identifiers | That is a **pass** unless the diff shows real content: Xcode addresses objects with 24-hex identifiers and Expo's generator mints fresh ones on every run, so `project.pbxproj` is compared with those normalized to `<object-id>` (measured, run 36737644701 — five font references and their Resources group differed in nothing else). A real difference inside the file still fails, and the printed diff shows it with the identifiers already normalized. |
 | `ios` fails to find a simulator | The runner image moved to a newer iPhone than `IOS_SIMULATOR_DEVICE` in `ios.yml`. The job warns and picks the newest available iPhone; change the name in `ios.yml` to silence it. |
-| `ios` fails in `xcodebuild` with a signing error | Only the `internal` job signs. Check `APPLE_TEAM_ID`, and that the App Store Connect key has not been revoked. |
+| iOS signed archive/export fails | Both signed paths share `ios-signed-ipa`. Check the Distribution .p12/private key and password, readonly profile permissions, exact App Store profile, bundle/team and production push entitlement. Never substitute the API .p8 for a signing identity. |
 | `release.yml` stops at "Check the signing and store credentials, by name" | Exactly what it is for: the message lists every missing variable name. Set them, then re-run. |
 | `e2e` jobs are `skipped` | The detector job failed because the audit harness is not on this ref, and the suites behind it were skipped for that reason (`needs`). The detector's annotation names every missing piece, and the workflow conclusion is **failure**, not success — a green `e2e` means the suites ran. |
