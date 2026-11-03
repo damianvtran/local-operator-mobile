@@ -2,22 +2,21 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { startConfigStream } from "../../src/features/auth/config-stream";
 import {
 	activeLocale,
 	catalogueLocaleFor,
 	resetLocaleSource,
 	setLocaleSource,
-} from "../../src/i18n/locale";
-import { RelayEndpoints } from "../../src/relay/endpoints";
-import { RelayHttpClient } from "../../src/relay/http";
-import { createConfigStore } from "../../src/state/config-store";
-import { createRelay } from "../../tools/mock-relay/relay";
+} from "../../src/i18n/locale.ts";
+import { RelayEndpoints } from "../../src/relay/endpoints.ts";
+import { RelayHttpClient } from "../../src/relay/http.ts";
+import { createConfigStore } from "../../src/state/config-store.ts";
+import { createRelay } from "../../tools/mock-relay/relay.ts";
 import {
 	assertFrameInventory,
 	collectProofFrames,
 	PROJECT_CREATE_FRAMES,
-} from "./projects-create-proof-contract";
+} from "./projects-create-proof-contract.ts";
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -25,6 +24,10 @@ afterEach(async () => {
 	for (const stop of cleanup.splice(0)) await stop();
 });
 
+// Keep the tooling contract at the actual wire client boundary: importing the
+// app's startConfigStream lifecycle pulls @ aliases into the intentionally
+// alias-free tools compilation. Mounted-provider consumption is exercised by
+// the separate registered retirement control, not modeled as native proof here.
 // Use the source catalogs of the EXACT already-built product, not #152's older
 // source tree and not invented UI literals. This is not native render evidence.
 const productHead = "91a3cbca1a2770e78dc5f216c2335b4b8126fe4d";
@@ -72,8 +75,13 @@ it.each(["ur", "ur-PK"])(
 		);
 		const store = createConfigStore();
 		setLocaleSource(() => store.getState().language);
-		const stream = startConfigStream(client, store);
+		const stream = client.configStream({
+			onFrame(frame) {
+				if (frame.kind === "config") store.getState().applyFrame(frame.data);
+			},
+		});
 		cleanup.push(async () => stream.stop());
+		stream.connection.start();
 		await expect
 			.poll(() => store.getState().frameCount, { timeout: 3000 })
 			.toBeGreaterThan(0);
