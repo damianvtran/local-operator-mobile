@@ -47,6 +47,14 @@
 # and infer the app from it (the AAB's package name, the IPA's bundle id). The
 # team id that Xcode needs arrives as APPLE_TEAM_ID through the app config.
 
+# Fastlane executes user lane code from ./fastlane/, unlike action internals.
+# Anchor generated projects and caller-provided relative artifact paths here so
+# root-shell probes cannot give false confidence about a real lane invocation.
+ROOT = File.expand_path("..", __dir__)
+def repo_path(path)
+  File.expand_path(path, ROOT)
+end
+
 default_platform(:android)
 
 def require_env!(name, why)
@@ -63,12 +71,12 @@ end
 platform :android do
   desc "Upload an already-built AAB to the Play internal track"
   lane :internal do
-    aab = require_env!("LO_ANDROID_AAB", "It is the path to the AAB the build job produced.")
-    json_key = require_env!(
+    aab = repo_path(require_env!("LO_ANDROID_AAB", "It is the path to the AAB the build job produced."))
+    json_key = repo_path(require_env!(
       "SUPPLY_JSON_KEY",
       "It is the path to a decoded Play service account JSON, written from "\
         "PLAY_SERVICE_ACCOUNT_JSON_BASE64."
-    )
+    ))
 
     UI.user_error!("no AAB at #{aab}") unless File.exist?(aab)
 
@@ -94,9 +102,9 @@ platform :ios do
     # The app template defaults to a developer identity. A first organization
     # build must not need a registered device or mutate Pods signing settings.
     require "xcodeproj"
-    dir = require_env!("LO_IOS_SIGNING_DIR", "It is the ephemeral signing directory.")
+    dir = repo_path(require_env!("LO_IOS_SIGNING_DIR", "It is the ephemeral signing directory."))
     profile_name = require_env!("LO_IOS_PROFILE_NAME", "It names an existing App Store profile.")
-    projects = Dir["ios/*.xcodeproj"]
+    projects = Dir[File.join(ROOT, "ios", "*.xcodeproj")]
     UI.user_error!("expected exactly one generated app project") unless projects.size == 1
     project = Xcodeproj::Project.open(projects.first)
     targets = project.native_targets.select { |target| target.product_type == "com.apple.product-type.application" }
@@ -149,7 +157,7 @@ platform :ios do
 
   desc "Upload an already-built IPA to TestFlight (internal testers)"
   lane :testflight do
-    dir = require_env!("LO_IOS_IPA_DIR", "It is the directory the export wrote the IPA into.")
+    dir = repo_path(require_env!("LO_IOS_IPA_DIR", "It is the directory the export wrote the IPA into."))
     ipas = Dir[File.join(dir, "*.ipa")].sort
     UI.user_error!("no .ipa in #{dir}") if ipas.empty?
     # Sorted rather than first-match: if an export ever produces more than one,
@@ -161,10 +169,10 @@ platform :ios do
     api_key = app_store_connect_api_key(
       key_id: require_env!("APPLE_ASC_KEY_ID", "It is the App Store Connect API key id."),
       issuer_id: require_env!("APPLE_ASC_ISSUER_ID", "It is the App Store Connect issuer id."),
-      key_filepath: require_env!(
+      key_filepath: repo_path(require_env!(
         "APPLE_ASC_PRIVATE_KEY_PATH",
         "It is the path to the decoded .p8, written from APPLE_ASC_PRIVATE_KEY_BASE64."
-      ),
+      )),
       # This is an App Store Connect key, not an in-house enterprise one.
       in_house: false
     )

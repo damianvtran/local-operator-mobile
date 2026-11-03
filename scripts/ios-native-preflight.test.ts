@@ -26,7 +26,7 @@ function job(source: string, name: string): string {
 }
 function guard(body: string): string {
 	return (
-		body.match(FOLDED_GUARD)?.[1].trim() ?? body.match(JOB_GUARD)?.[1] ?? ""
+		body.match(FOLDED_GUARD)?.[1]?.trim() ?? body.match(JOB_GUARD)?.[1] ?? ""
 	);
 }
 function installsPodsBeforeResolution(body: string): boolean {
@@ -67,6 +67,15 @@ function authorized(
 }
 
 describe("hosted iOS native preflight boundaries", () => {
+	it("executes all Fastfile paths from the actual fastlane lane cwd", () => {
+		const result = spawnSync("ruby", ["scripts/ci/fastlane-path-test.rb"], {
+			encoding: "utf8",
+			timeout: 15_000,
+		});
+		expect(result.stdout).toContain("PASS negative control");
+		expect(result.stdout).toContain("PASS Fastfile lanes from fastlane/");
+		expect(result.status, result.stderr).toBe(0);
+	});
 	it("exercises profile/entitlement, certificate and failed-cleanup controls without Apple access", () => {
 		const result = spawnSync("python3", ["scripts/ci/ios-signing-test.py"], {
 			encoding: "utf8",
@@ -93,7 +102,7 @@ describe("hosted iOS native preflight boundaries", () => {
 		for (const [file, name] of [
 			["ios", "internal"],
 			["release", "ios"],
-		]) {
+		] as const) {
 			const body = job(workflow(file), name);
 			expect(body).toContain(SHARED_ACTION);
 			expect(body).not.toContain("xcodebuild -exportArchive");
@@ -176,7 +185,7 @@ describe("hosted iOS native preflight boundaries", () => {
 	});
 	it("export-only takes precedence; upload requires its own opt-in", () => {
 		const internal = job(workflow("ios"), "internal");
-		const expression = internal.match(UPLOAD_GUARD)?.[1].trim() ?? "";
+		const expression = internal.match(UPLOAD_GUARD)?.[1]?.trim() ?? "";
 		expect(expression).not.toBe("");
 		expect(
 			authorized(

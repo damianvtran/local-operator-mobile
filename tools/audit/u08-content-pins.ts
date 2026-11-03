@@ -413,8 +413,10 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
+	// Deliberate --print re-pin: only the native Info.plist export-compliance
+	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
 	"app.config.ts":
-		"81e92f5315dbc9df56c603c4ac58b54f90f52a64d20f6c0f4f4ab8d3c7cd0332",
+		"8ce01f109064e71382d1d5fdc4b98bfaf6bc6a5b36281d3574d12a157722c1d1",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

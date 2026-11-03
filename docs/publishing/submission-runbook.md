@@ -56,6 +56,13 @@ A build-only hosted preflight needs neither Apple access nor a tag (below).
    **Signing uses a different private key.** Also configure
    `APPLE_DIST_CERT_P12_BASE64` and `APPLE_DIST_CERT_PASSWORD`: an existing valid
    Apple Distribution certificate **with its private key**, exported as .p12.
+   The configured asset was produced with OpenSSL 4.0.3 using
+   `openssl pkcs12 -export -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1`
+   (supply certificate/key/output paths and password securely, never in logs).
+   `openssl pkcs12 -info -noout` confirmed MAC SHA1 and
+   `pbeWithSHA1And3-KeyTripleDES-CBC` for both bags. These legacy PKCS#12 container
+   algorithms are intentional for macOS `security import` compatibility, not
+   application cryptography; do not silently replace them with PBES2/AES defaults.
    The six names are checked in both signed paths. The API `.p8` authenticates
    readonly profile download; it is not the Distribution signing identity.
    An existing App Store profile must authorize this certificate, exact bundle,

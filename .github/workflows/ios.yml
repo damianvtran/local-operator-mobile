@@ -403,6 +403,8 @@ jobs:
     timeout-minutes: 5
     # Resolve secrets only for explicitly authorized signing on the protected
     # main ref, never for PRs, branches, or the default unsigned dispatch.
+    # This job shares environment: release with the signer because checking
+    # secret presence must not bypass the environment's access/approval policy.
     if: >-
       github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && (inputs.signed_export_only == true || inputs.testflight_upload == true)) || (github.event_name == 'push' && vars.IOS_INTERNAL_UPLOAD == 'true'))
     environment: release
