@@ -89,11 +89,32 @@ final class CallbackProofUITests: XCTestCase {
   }
 
   @MainActor private func tapSheetCancel() throws {
-    // Explicit lookup order is part of the architecture decision; hierarchy
-    // attachments settle OS-specific ownership without retrying a failed tap.
-    let cancel = try waitForElement(timeout: 15, description: "System sheet Cancel") {
-      self.firstBrowserElement { $0.buttons["Cancel"].firstMatch }
-    }
+    // The app can expose a stale Close proxy whose isHittable getter itself
+    // records an activation-point failure. Prefer the actual sheet service,
+    // examine every matching control, and use the accessible-frame fallback
+    // before a REAL tap; the native cancelled/closed-port assertions still decide
+    // success. Never retry a delivered tap or cancel through a fixture command.
+    let applications = [safari, springboard, app]
+    let titles = ["Cancel", "Done", "Close"]
+    var selected: XCUIElement?
+    let appears = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+      for application in applications {
+        for title in titles {
+          let controls = application.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", title, title))
+          for candidate in controls.allElementsBoundByIndex {
+            guard candidate.exists else { continue }
+            let frame = candidate.frame
+            guard !frame.isEmpty, !frame.isNull, !frame.isInfinite,
+                  frame.minX >= 0, frame.minY >= 0 else { continue }
+            selected = candidate
+            return true
+          }
+        }
+      }
+      return false
+    }, object: nil)
+    try require(XCTWaiter.wait(for: [appears], timeout: 30) == .completed, "No usable system Cancel/Done/Close control")
+    let cancel = try XCTUnwrap(selected)
     cancel.tap()
   }
 

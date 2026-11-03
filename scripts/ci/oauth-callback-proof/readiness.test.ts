@@ -251,6 +251,40 @@ describe("native XCTest OAuth proof architecture", () => {
 		expect(tests).toContain("if element.exists && element.isHittable");
 	});
 
+	it("selects the first usable sheet control without probing a stale app activation point", () => {
+		const cancel = (source: string) =>
+			source.slice(
+				source.indexOf("  @MainActor private func tapSheetCancel()"),
+				source.indexOf("  @MainActor private func firstBrowserElement("),
+			);
+		const safe = (source: string) => {
+			const selector = cancel(source);
+			return (
+				selector.includes("[safari, springboard, app]") &&
+				selector.includes('["Cancel", "Done", "Close"]') &&
+				selector.includes("candidate.exists") &&
+				selector.includes("!frame.isEmpty") &&
+				selector.includes("!frame.isNull") &&
+				selector.includes("!frame.isInfinite") &&
+				selector.includes("timeout: 30") &&
+				selector.includes("cancel.tap()") &&
+				!selector.includes("self.firstBrowserElement") &&
+				!selector.includes("candidate.isHittable")
+			);
+		};
+		expect(safe(tests)).toBe(true);
+		for (const [before, after] of [
+			["[safari, springboard, app]", "[app, safari, springboard]"],
+			["!frame.isEmpty", "true"],
+			["candidate.exists", "candidate.isHittable"],
+		]) {
+			const mutated = tests.replace(before ?? "", after ?? "");
+			expect(mutated).not.toBe(tests);
+			expect(safe(mutated)).toBe(false);
+		}
+		expect(tests).toContain("attachHierarchies()");
+	});
+
 	it("keeps real timeout/cancel/port assertions and actual open-listener negative controls", () => {
 		expect(main).toContain("elapsed >= 295 && elapsed < 330");
 		expect(main).not.toMatch(TIMEOUT_OVERRIDE);
