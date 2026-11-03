@@ -38,6 +38,28 @@ describe("Android OAuth native-proof contract", () => {
 		);
 	});
 
+	it("enables KVM and fails fast before building or starting the emulator", () => {
+		const e2e = read("../../../.github/workflows/e2e.yml");
+		const start = e2e.indexOf("      - name: Enable KVM");
+		const end = e2e.indexOf("      - uses: pnpm/action-setup@v6", start);
+		const block = e2e.slice(start, end);
+		expect(block).toContain("99-kvm4all.rules");
+		expect(block).toContain("Assert the emulator can use KVM");
+		const guarded = (source: string) =>
+			source.includes(block) &&
+			source.indexOf(block) < source.indexOf("pnpm install --frozen-lockfile");
+		expect(guarded(workflow)).toBe(true);
+		expect(guarded(workflow.replace(block, ""))).toBe(false);
+		expect(
+			guarded(
+				workflow.replace(
+					"if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then",
+					"if false; then",
+				),
+			),
+		).toBe(false);
+	});
+
 	it("requires an installed versioned browser and on-device provider before cases", () => {
 		expect(runner.indexOf("pm list packages com.android.chrome")).toBeLessThan(
 			runner.indexOf("for mode in positive"),
