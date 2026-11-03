@@ -36,16 +36,16 @@ export interface CallbackListener {
 	close(): Promise<void>;
 }
 
-/** The system-browser session, which on iOS is also the callback transport. */
+/** The system-browser adapter, including owned callback transport on iOS/Android. */
 export interface AuthBrowserSession {
 	/** Bind an ephemeral loopback port before constructing the authorize URL. */
 	prepareRedirect?(): Promise<string>;
 	/** Opens `authorizeUrl` and resolves with the URL the platform handed back, or
 	 *  `null` when the platform cannot hand one back. */
 	open(authorizeUrl: string, redirectUri: string): Promise<string | null>;
-	/** False on an Android Custom Tab, which resolves on close and returns no URL.
-	 *  Read by the sign-in flow to decide whether a listener is mandatory rather
-	 *  than optional. */
+	/** True when this adapter owns callback delivery (native listener plus browser).
+	 *  A bare browser without that transport returns false and needs an external
+	 *  listener; merely opening an Android Custom Tab is never sufficient. */
 	readonly returnsCallback: boolean;
 	/** Best-effort dismissal. Never awaited as if it were reliable: Android cannot
 	 *  do it from JavaScript at all. */
@@ -147,9 +147,10 @@ export function parseCallbackUrl(
 	return { code, state };
 }
 
-/** The `expo-web-browser` session, imported lazily so Node never resolves it. */
+/** Native callback-owning sessions, with the existing web development adapter.
+ *  Imports stay lazy so Node never resolves a native implementation. */
 export async function createSystemBrowserSession(): Promise<AuthBrowserSession> {
-	// Keep native loading lazy: Node/web do not have an iOS Expo module. A real
+	// Keep native loading lazy: Node/web do not have the device Expo module. A real
 	// listener, not callbackURLScheme="http", is required for registered redirects.
 	const { Platform } = await import("react-native");
 	if (Platform.OS === "ios" || Platform.OS === "android") {
