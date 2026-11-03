@@ -42,7 +42,7 @@ export function authorizeSystemAlert(
 	a: Authority,
 	actualUDID: string,
 	now: number,
-	alert: { title: string; buttons: string[]; count: number },
+	observedAlert: { title: string; buttons: string[]; count: number },
 ): boolean {
 	if (
 		a.scope !== "owned-retirement-proof-system-open-alert-v1" ||
@@ -71,10 +71,10 @@ export function authorizeSystemAlert(
 	)
 		return false;
 	return (
-		alert.count === 1 &&
-		alert.title === SYSTEM_TITLE &&
-		alert.buttons.length === 2 &&
-		[...alert.buttons].sort().join("\0") === "Cancel\0Open"
+		observedAlert.count === 1 &&
+		observedAlert.title === SYSTEM_TITLE &&
+		observedAlert.buttons.length === 2 &&
+		[...observedAlert.buttons].sort().join("\0") === "Cancel\0Open"
 	);
 }
 export interface ArtifactMetadata {

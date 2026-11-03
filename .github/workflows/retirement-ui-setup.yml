@@ -18,7 +18,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: retirement-ui-setup-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   compile-only:
