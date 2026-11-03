@@ -45,7 +45,10 @@ export interface OwnedCommand {
 export class NativeScope {
 	readonly commands = new Set<OwnedCommand>();
 	closed = false;
-	constructor(readonly deadline: Deadline) {}
+	readonly deadline: Deadline;
+	constructor(deadline: Deadline) {
+		this.deadline = deadline;
+	}
 	start(
 		exe: string,
 		args: string[],

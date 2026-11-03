@@ -132,11 +132,10 @@ jobs:
       observe_only: ${{ inputs.retirement_observe_only }}
 
   changes:
-    needs: manual-mode
-    # Dispatch validation must succeed BEFORE this app-job tree can start, even
-    # for malformed standard+replay inputs. PR/push skip manual-mode; the status
-    # predicate preserves their original classifier while respecting cancellation.
-    if: always() && !cancelled() && (github.event_name != 'workflow_dispatch' || (needs['manual-mode'].result == 'success' && inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true')))
+    # No skipped manual-only ancestor may enter the ordinary PR/push graph.
+    # Dispatch validation is instead the first conditional step, before diff
+    # classification, so malformed standard inputs still cannot start app work.
+    if: github.event_name != 'workflow_dispatch' || (inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true'))
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -146,6 +145,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Validate dispatch before native classification
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          IOS_MANUAL_MODE: ${{ inputs.mode }}
+          IOS_PROOF_JSON: ${{ toJSON(inputs.retirement_proof) }}
+          REPLAY_COMPILE_RUN: ${{ inputs.retirement_compile_run }}
+          REPLAY_RUNNER_ARTIFACT: ${{ inputs.retirement_runner_artifact }}
+          REPLAY_RUNNER_SOURCE: ${{ inputs.retirement_runner_source }}
+          REPLAY_OBSERVE_ONLY_JSON: ${{ toJSON(inputs.retirement_observe_only) }}
+        run: python3 scripts/ci/retirement-ui-route.py
 
       - name: Decide whether the native jobs are worth running
         id: diff

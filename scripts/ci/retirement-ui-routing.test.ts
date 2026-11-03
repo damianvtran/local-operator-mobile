@@ -271,30 +271,117 @@ describe("exclusive retained replay route cross-product", () => {
 	});
 });
 
-it("failed manual validation blocks even standard app jobs with malformed replay fields", () => {
-	expect(route("standard", false, replayInputs).status).not.toBe(0);
-	expect(
-		evaluate(
-			"changes",
-			"workflow_dispatch",
-			"standard",
-			false,
-			"true",
-			"refs/heads/main",
-			"failure",
-		),
-	).toBe(false);
-	expect(block("changes")).toContain("needs: manual-mode");
-	for (const event of ["pull_request", "push"])
-		expect(
+// A job's if expression is NOT its execution state. Resolve the actual YAML
+// needs graph and GitHub's implicit success/transitive-skip behavior as well.
+function graph(
+	event: string,
+	mode: string | undefined,
+	proof: boolean | undefined,
+	validManual = true,
+	ref = "refs/heads/main",
+) {
+	const names = Array.from(
+		workflow.split("\njobs:\n")[1]!.matchAll(/^ {2}([\w-]+):$/gm),
+		(m) => m[1]!,
+	);
+	const states: Record<string, "success" | "failure" | "skipped"> = {};
+	const visiting = new Set<string>();
+	const dependencies = (name: string) => {
+		const field = block(name).match(/^ {4}needs: (.+)$/m)?.[1];
+		return field
+			? field
+					.replace(/[[\]]/g, "")
+					.split(",")
+					.map((v) => v.trim())
+			: [];
+	};
+	const ancestors = (name: string): string[] =>
+		dependencies(name).flatMap((dep) => [dep, ...ancestors(dep)]);
+	const resolve = (name: string): "success" | "failure" | "skipped" => {
+		if (states[name]) return states[name];
+		if (visiting.has(name)) throw new Error("Workflow dependency cycle");
+		visiting.add(name);
+		for (const dep of dependencies(name)) resolve(dep);
+		const defaultStatus = !/\b(always|success|failure|cancelled)\(/.test(
+			condition(name),
+		);
+		const statusAllows =
+			!defaultStatus ||
+			ancestors(name).every((dep) => states[dep] === "success");
+		const eligible =
+			statusAllows &&
 			evaluate(
-				"changes",
+				name,
 				event,
-				undefined,
-				undefined,
+				mode,
+				proof,
 				"true",
-				"refs/heads/main",
-				"skipped",
-			),
-		).toBe(true);
+				ref,
+				states["manual-mode"] ?? "skipped",
+			);
+		states[name] = !eligible
+			? "skipped"
+			: (name === "manual-mode" ||
+						(name === "changes" &&
+							event === "workflow_dispatch" &&
+							block(name).includes(
+								"Validate dispatch before native classification",
+							))) &&
+					!validManual
+				? "failure"
+				: "success";
+		visiting.delete(name);
+		return states[name];
+	};
+	for (const name of names) resolve(name);
+	return { states, dependencies, ancestors };
+}
+describe("resolved actual needs/if/default-status workflow graph", () => {
+	it.each(["pull_request", "push"])(
+		"ordinary %s native iOS remains eligible despite skipped manual-only jobs",
+		(event) => {
+			const result = graph(event, undefined, undefined);
+			expect(result.states["manual-mode"]).toBe("skipped");
+			expect(result.states.changes).toBe("success");
+			expect(result.states.ios).toBe("success");
+			expect(result.ancestors("ios")).not.toContain("manual-mode");
+			expect(result.states.internal).toBe(
+				event === "push" ? "success" : "skipped",
+			);
+		},
+	);
+	it("signed internal push-main graph runs under its existing credential/ref policy", () => {
+		expect(graph("push", undefined, undefined).states.internal).toBe("success");
+		expect(
+			graph("push", undefined, undefined, true, "refs/heads/feature").states
+				.internal,
+		).toBe("skipped");
+	});
+	it("manual replay has ONLY its validated independent lane and no app/release jobs", () => {
+		const r = graph(
+			"workflow_dispatch",
+			"retirement-seed-replay",
+			false,
+		).states;
+		expect(r["retirement-seed-replay"]).toBe("success");
+		for (const name of [
+			"changes",
+			"ios",
+			"credentials",
+			"internal",
+			"retirement-ui-setup",
+		])
+			expect(r[name]).toBe("skipped");
+	});
+	it("invalid standard inputs fail BEFORE native classification without a skipped ancestor in ordinary jobs", () => {
+		expect(route("standard", false, replayInputs).status).not.toBe(0);
+		const r = graph("workflow_dispatch", "standard", false, false).states;
+		expect(r.changes).toBe("failure");
+		expect(r.ios).toBe("skipped");
+		expect(r.internal).toBe("skipped");
+		const text = block("changes");
+		expect(
+			text.indexOf("Validate dispatch before native classification"),
+		).toBeLessThan(text.indexOf("Decide whether the native jobs"));
+	});
 });

@@ -64,11 +64,17 @@ export class ReplayTransport {
 	closed = false;
 	readonly control = createServer((q, s) => void this.rpc(q, s));
 	readonly seed = createServer((q, s) => void this.signal(q, s));
+	readonly identity: OriginalIdentity;
+	readonly session: GrantSession;
+	readonly deadline: Deadline;
 	constructor(
-		readonly identity: OriginalIdentity,
-		readonly session: GrantSession,
-		readonly deadline: Deadline,
+		identity: OriginalIdentity,
+		session: GrantSession,
+		deadline: Deadline,
 	) {
+		this.identity = identity;
+		this.session = session;
+		this.deadline = deadline;
 		if (
 			!/^[a-f0-9]{32}$/.test(identity.nonce) ||
 			!Number.isInteger(identity.receiverPort) ||

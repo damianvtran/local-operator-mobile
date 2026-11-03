@@ -14,6 +14,28 @@ import subprocess
 import time
 
 
+POLICY = json.loads(Path(__file__).with_name('retirement-replay-policy.json').read_text())
+CAUSES = set(POLICY['failureCauses'])
+
+def export_first_cause(root, evidence):
+    cause = None
+    source = root / 'seed-first-failure.json'
+    if source.exists():
+        try:
+            value = json.loads(source.read_text())
+            supplied = value.get('cause') if isinstance(value, dict) else None
+            cause = supplied if isinstance(supplied, str) and supplied in CAUSES else 'other'
+        except (ValueError, OSError): cause = 'other'
+    if cause is not None:
+        try:
+            with (evidence / 'first-failure.json').open('x') as stream:
+                json.dump({'cause': cause}, stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError: pass
+    return cause
+
+
 def cleanup_remaining(root, allowance):
     path = root / 'cleanup-start.json'
     now = time.time() * 1000
@@ -136,10 +158,10 @@ def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=1
     started = time.monotonic()
     first = attempt(cleanup_argv if cleanup_only else work_argv, root, started + work_seconds,
                     cleanup_seconds, cleanup_only)
-    if first['stopReason'] and root.exists():
+    if (first['stopReason'] or first['workerExit'] != 0) and root.exists():
         try:
             with (root / 'seed-first-failure.json').open('x') as stream:
-                json.dump({'cause': 'deadline'}, stream)
+                json.dump({'cause': 'deadline' if first['stopReason'] in ('work-deadline', 'cleanup-deadline') else 'other'}, stream)
         except FileExistsError:
             pass
     # Exactly one fallback consumes only the SAME persisted cleanup allowance.
@@ -155,7 +177,19 @@ def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=1
     root.mkdir(parents=True, exist_ok=True)
     evidence = root / 'evidence'
     evidence.mkdir(mode=0o700, exist_ok=True)
-    (evidence / 'watchdog.json').write_text(json.dumps(result, indent=2) + '\n')
+    # The always() invocation must NEVER replace the killed worker's outcome.
+    # Export first cause independently of worker finally (SIGKILL bypasses it).
+    result['firstCause'] = export_first_cause(root, evidence)
+    candidates = ['watchdog-run.json'] if not cleanup_only else [f'watchdog-cleanup-{n}.json' for n in range(1, 17)]
+    for name in candidates:
+        try:
+            with (evidence / name).open('x') as stream:
+                stream.write(json.dumps(result, indent=2) + '\n')
+                stream.flush()
+                os.fsync(stream.fileno())
+            break
+        except FileExistsError: continue
+    else: raise ValueError('Exclusive watchdog receipt capacity reached')
     return result
 
 

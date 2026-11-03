@@ -4,17 +4,19 @@
  * A public tap cannot atomically lock process lifetime through OS event delivery.
  */
 import { createHash, randomBytes } from "node:crypto";
+import { REPLAY_POLICY } from "./retirement-replay-policy.ts";
 export class ReplayRefused extends Error {
-	constructor(readonly code: string) {
+	readonly code: string;
+	constructor(code: string) {
 		super("Retained seed replay refused");
+		this.code = code;
 	}
 }
 export class Deadline {
 	readonly end: number;
-	constructor(
-		ms: number,
-		readonly clock: () => number = () => performance.now(),
-	) {
+	readonly clock: () => number;
+	constructor(ms: number, clock: () => number = () => performance.now()) {
+		this.clock = clock;
 		this.end = clock() + ms;
 	}
 	remaining() {
@@ -159,8 +161,8 @@ export function validatePermit(
 		throw new ReplayRefused("permit");
 }
 export class GrantSession {
-	readonly id = randomBytes(24).toString("hex");
-	readonly bearer = randomBytes(32).toString("hex");
+	readonly id = randomBytes(REPLAY_POLICY.sessionBytes).toString("hex");
+	readonly bearer = randomBytes(REPLAY_POLICY.bearerBytes).toString("hex");
 	readonly mode: ReplayMode;
 	stage:
 		| "bootstrap"
@@ -180,15 +182,27 @@ export class GrantSession {
 	openAt: number | null = null;
 	receiptEnd: number | null = null;
 	queryPermitExpires: number | null = null;
+	readonly deadline: Deadline;
+	readonly sample: () => Promise<LiveIdentity>;
+	readonly artifactExpiry: () => number;
+	readonly now: () => number;
+	readonly monotonic: () => number;
+	// Bare Node24 strips types, not parameter properties. Keep the production
+	// import chain erasable; Vitest's transform is not the hosted runtime.
 	constructor(
 		mode: ReplayMode,
-		readonly deadline: Deadline,
-		readonly sample: () => Promise<LiveIdentity>,
-		readonly artifactExpiry: () => number,
-		readonly now: () => number = Date.now,
-		readonly monotonic: () => number = () => performance.now(),
+		deadline: Deadline,
+		sample: () => Promise<LiveIdentity>,
+		artifactExpiry: () => number,
+		now: () => number = Date.now,
+		monotonic: () => number = () => performance.now(),
 	) {
 		this.mode = replayMode(mode);
+		this.deadline = deadline;
+		this.sample = sample;
+		this.artifactExpiry = artifactExpiry;
+		this.now = now;
+		this.monotonic = monotonic;
 	}
 	opened() {
 		if (this.stage !== "bootstrap" || !this.runnerReady)

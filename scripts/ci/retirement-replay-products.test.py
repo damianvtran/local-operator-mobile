@@ -60,7 +60,7 @@ class ProductFixtures(unittest.TestCase):
         with API['tarfile'].open(self.root / 'runner-products.tar.gz') as archive:
             archive.extractall(destination)
         environment = self.root / 'private.json'
-        environment.write_text(json.dumps({'LO_REPLAY_MODE': 'seed-replay', 'LO_REPLAY_CONTROL': 'http://127.0.0.1:23456/rpc', 'LO_REPLAY_SESSION': 'a' * 32, 'LO_REPLAY_BEARER': 'b' * 64, 'LO_REPLAY_RUNNER_SOURCE': SOURCE}))
+        environment.write_text(json.dumps({'LO_REPLAY_MODE': 'seed-replay', 'LO_REPLAY_CONTROL': 'http://127.0.0.1:23456/rpc', 'LO_REPLAY_SESSION': 'a' * (API['POLICY']['sessionBytes'] * 2), 'LO_REPLAY_BEARER': 'b' * (API['POLICY']['bearerBytes'] * 2), 'LO_REPLAY_RUNNER_SOURCE': SOURCE}))
         return destination, environment
 
     def test_package_roundtrip_modes_links_full_hashes_and_runner_only_ats(self):

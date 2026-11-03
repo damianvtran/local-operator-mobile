@@ -15,6 +15,9 @@ from urllib.parse import urlsplit
 import tarfile
 
 
+POLICY = json.loads(Path(__file__).with_name('retirement-replay-policy.json').read_text())
+if set(POLICY) != {'sessionBytes', 'bearerBytes', 'failureCauses'} or any(type(POLICY[k]) is not int or not 16 <= POLICY[k] <= 64 for k in ('sessionBytes', 'bearerBytes')): raise ValueError('Replay policy invalid')
+
 def preflight_retained(credential, fetcher=None, now=None):
     """Queue delay can expire the original app. Recheck on the compile host
     BEFORE SDK work; metadata only, never download/rebuild the proof app."""
@@ -156,7 +159,7 @@ def prepare(root, environment, output):
     parsed = urlsplit(private['LO_REPLAY_CONTROL'])
     if private['LO_REPLAY_MODE'] not in ('observe-only', 'seed-replay') or private['LO_REPLAY_RUNNER_SOURCE'] != saved['source']: raise ValueError('Runner mode/source')
     if parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or not parsed.port or parsed.path != '/rpc' or parsed.query or parsed.fragment or parsed.username or parsed.password: raise ValueError('Control must be loopback only')
-    if not re.fullmatch('[a-f0-9]{32}', private['LO_REPLAY_SESSION']) or not re.fullmatch('[a-f0-9]{64}', private['LO_REPLAY_BEARER']): raise ValueError('Session identity')
+    if not re.fullmatch('[a-f0-9]{%d}' % (POLICY['sessionBytes'] * 2), private['LO_REPLAY_SESSION']) or not re.fullmatch('[a-f0-9]{%d}' % (POLICY['bearerBytes'] * 2), private['LO_REPLAY_BEARER']): raise ValueError('Session identity')
     for field in ('EnvironmentVariables', 'TestingEnvironmentVariables'):
         target = value['RetirementSystemAlert'][field]
         for key, item in private.items():

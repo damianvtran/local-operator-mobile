@@ -42,8 +42,8 @@ final class ReplayHostClient {
           let components = URLComponents(string: endpoint), components.scheme == "http",
           components.host == "127.0.0.1", components.port != nil, components.path == "/rpc",
           components.user == nil, components.password == nil, components.query == nil, components.fragment == nil,
-          let url = components.url, let id = environment["LO_REPLAY_SESSION"],
-          let bearer = environment["LO_REPLAY_BEARER"], !bearer.isEmpty,
+          let url = components.url, let id = environment["LO_REPLAY_SESSION"], ReplayPolicy.hex(id, bytes: ReplayPolicy.sessionBytes),
+          let bearer = environment["LO_REPLAY_BEARER"], ReplayPolicy.hex(bearer, bytes: ReplayPolicy.bearerBytes),
           let source = environment["LO_REPLAY_RUNNER_SOURCE"], source.count == 40,
           let device = environment["SIMULATOR_UDID"], !device.isEmpty else { throw ReplayGuardFailure.refused }
     self.url = url; self.sessionID = id; self.bearer = bearer; self.hostSource = source; self.device = device

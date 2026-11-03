@@ -27,30 +27,31 @@ final class ReplayGuardTests: XCTestCase {
   func testUnknownRemoteOriginIsRejectedBeforeNetworking() {
     XCTAssertThrowsError(try ReplayHostClient(environment: ["LO_REPLAY_CONTROL": "https://example.invalid/rpc"]))
   }
+  private var fixtureSession: String { String(repeating: "a", count: ReplayPolicy.sessionBytes * 2) }
   private var measured: HostIdentity {
     HostIdentity(udid: "fixture-owned", pid: 123, label: "fixture-label",
       source: ReplayGuards.source, bundle: ReplayGuards.bundle, hostSource: String(repeating: "c", count: 40))
   }
   private func permit(_ kind: String = "query", issued: Double = 1000,
                       expires: Double = 2000, identity: HostIdentity? = nil) -> HostGrant {
-    HostGrant(version: 1, kind: kind, session: "fixture-session", challenge: String(repeating: "a", count: 64),
+    HostGrant(version: 1, kind: kind, session: fixtureSession, challenge: String(repeating: "a", count: 64),
       issuedAt: issued, expiresAt: expires, phase: "seed", openAt: 900,
       identity: identity ?? measured, fingerprint: exact.fingerprint)
   }
   func testActualUseExpiryIdentityAndClockBoundaries() throws {
-    try ReplayGuards.permit(permit(), session: "fixture-session", kind: "query", identity: measured, received: 5, now: 1500, uptime: 6)
-    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: "fixture-session", kind: "query", identity: measured, received: 5, now: 2000, uptime: 6))
+    try ReplayGuards.permit(permit(), session: fixtureSession, kind: "query", identity: measured, received: 5, now: 1500, uptime: 6)
+    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: fixtureSession, kind: "query", identity: measured, received: 5, now: 2000, uptime: 6))
     XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: "wrong", kind: "query", identity: measured, received: 5, now: 1500, uptime: 6))
-    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: "fixture-session", kind: "tap", identity: measured, received: 5, now: 1500, uptime: 6))
-    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: "fixture-session", kind: "query", identity: measured, received: 5, now: 1500, uptime: 8))
-    XCTAssertThrowsError(try ReplayGuards.permit(permit(issued: .nan), session: "fixture-session", kind: "query", identity: measured, received: 5, now: 1500, uptime: 6))
+    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: fixtureSession, kind: "tap", identity: measured, received: 5, now: 1500, uptime: 6))
+    XCTAssertThrowsError(try ReplayGuards.permit(permit(), session: fixtureSession, kind: "query", identity: measured, received: 5, now: 1500, uptime: 8))
+    XCTAssertThrowsError(try ReplayGuards.permit(permit(issued: .nan), session: fixtureSession, kind: "query", identity: measured, received: 5, now: 1500, uptime: 6))
     let changed = HostIdentity(udid: measured.udid, pid: 456, label: measured.label,
       source: measured.source, bundle: measured.bundle, hostSource: measured.hostSource)
-    XCTAssertThrowsError(try ReplayGuards.permit(permit(identity: changed), session: "fixture-session", kind: "query", identity: measured, received: 5, now: 1500, uptime: 6))
+    XCTAssertThrowsError(try ReplayGuards.permit(permit(identity: changed), session: fixtureSession, kind: "query", identity: measured, received: 5, now: 1500, uptime: 6))
   }
   func testActualClientConsumesOneLocalTapAndFailedAttemptCannotRetry() throws {
-    let environment = ["LO_REPLAY_CONTROL": "http://127.0.0.1:23456/rpc", "LO_REPLAY_SESSION": "fixture-session",
-      "LO_REPLAY_BEARER": "fixture-only", "LO_REPLAY_RUNNER_SOURCE": String(repeating: "c", count: 40), "SIMULATOR_UDID": measured.udid]
+    let environment = ["LO_REPLAY_CONTROL": "http://127.0.0.1:23456/rpc", "LO_REPLAY_SESSION": fixtureSession,
+      "LO_REPLAY_BEARER": String(repeating: "b", count: ReplayPolicy.bearerBytes * 2), "LO_REPLAY_RUNNER_SOURCE": String(repeating: "c", count: 40), "SIMULATOR_UDID": measured.udid]
     let now = Date().timeIntervalSince1970 * 1000
     let tap = permit("tap", issued: now - 1, expires: now + 1000)
     let client = try ReplayHostClient(environment: environment)
@@ -61,5 +62,14 @@ final class ReplayGuardTests: XCTestCase {
     failed.identity = measured; failed.lastReceiptUptime = ProcessInfo.processInfo.systemUptime
     XCTAssertThrowsError(try failed.consume(tap, observation: PromptObservation(count: 0, titles: [], buttons: [])))
     XCTAssertThrowsError(try failed.consume(tap, observation: exact))
+  }
+  func testGeneratedWirePolicyRejectsShortAndLongTokens() {
+    for bytes in [ReplayPolicy.sessionBytes, ReplayPolicy.bearerBytes] {
+      let valid = String(repeating: "a", count: bytes * 2)
+      XCTAssertTrue(ReplayPolicy.hex(valid, bytes: bytes))
+      XCTAssertFalse(ReplayPolicy.hex(String(valid.dropLast(2)), bytes: bytes))
+      XCTAssertFalse(ReplayPolicy.hex(valid + "aa", bytes: bytes))
+      XCTAssertFalse(ReplayPolicy.hex(String(repeating: "A", count: bytes * 2), bytes: bytes))
+    }
   }
 }

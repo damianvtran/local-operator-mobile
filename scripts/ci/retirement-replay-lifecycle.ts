@@ -3,59 +3,9 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Deadline, ReplayRefused } from "./retirement-replay-core.ts";
+import { REPLAY_POLICY } from "./retirement-replay-policy.ts";
 
-const CAUSES = new Set([
-	"deadline",
-	"insufficient-window",
-	"artifact-expired",
-	"artifact-api",
-	"artifact-download",
-	"archive",
-	"runner-source",
-	"runner-artifact",
-	"runner-products",
-	"template",
-	"executable",
-	"compiled-identity",
-	"inputs",
-	"identity",
-	"receiver",
-	"lease",
-	"intent",
-	"inventory",
-	"proof-process",
-	"installed-executable",
-	"stale-sample",
-	"expired-window",
-	"changed-process",
-	"permit",
-	"stage",
-	"challenge",
-	"fingerprint",
-	"prompt-mismatch",
-	"rpc-error",
-	"closed",
-	"launch",
-	"receipt-timeout",
-	"phase-rejected",
-	"transport-count",
-	"persistence-absent",
-	"durable-unconfirmed",
-	"runner-early-exit",
-	"runner-start",
-	"runner-exit",
-	"runner-timeout",
-	"runner-stopped",
-	"command-timeout",
-	"command-exit",
-	"command-start",
-	"command-journal",
-	"command-output-cap",
-	"capture-evidence",
-	"incomplete-evidence",
-	"cleanup",
-	"other",
-]);
+const CAUSES = new Set(REPLAY_POLICY.failureCauses);
 export function coarseCause(error: unknown) {
 	return error instanceof ReplayRefused && CAUSES.has(error.code)
 		? error.code
@@ -64,7 +14,9 @@ export function coarseCause(error: unknown) {
 export class FirstFailure {
 	cause: string | null = null;
 	persisted = true;
-	constructor(readonly root: string) {
+	readonly root: string;
+	constructor(root: string) {
+		this.root = root;
 		const file = join(root, "seed-first-failure.json");
 		if (existsSync(file)) {
 			const v = JSON.parse(readFileSync(file, "utf8"));

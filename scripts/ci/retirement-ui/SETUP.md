@@ -99,3 +99,13 @@ Only `ROOT/evidence/**` is uploaded, sensitive fixed name, one-day retention. To
 | Exclusive no-rebuild workflow | all manual input combinations, ordinary PR classification retained, namespaced concurrency | registered dispatch/job receipts after manager grant |
 
 Successful seed experiment is NOT the six-phase retirement/restore proof, native account-switch validation or provider/UI E2E. Export explicitly states `scope=retained-seed-only` and `fullRetirementProofComplete=false`. No source-only result waives the independent review/QA gate, artifact expiry or single native allocation. Stop a failed compile/setup or replay; no automatic retry, cap increase, replacement app, signing/forwarding change or title fallback.
+
+### Runtime wire policy and independent supervisor receipts
+
+`retirement-replay-policy.json` is the single strict session/bearer byte-length policy. The actual Node generator and Python preparation read it; setup generates and registers `ReplayPolicy.swift` from that same file. Swift validates exact lowercase hex lengths. Do not accept historical alternatives to repair a producer mismatch. Cross-language tests pass actual bare-Node-generated values through the real Python packager/preparer, without logging tokens.
+
+The supported host entry remains bare Node24 under the Python watchdog, with strip-compatible TypeScript throughout its import chain (no implicit Vitest transform or experimental runtime flag). A real supervisor/cleanup smoke must reach the CLI and produce its closed receipt; arbitrary nonzero exits are not successful guard controls.
+
+Ordinary PR/push `changes` has NO dependency on the skipped manual-only job. Standard dispatch validation is its first conditional step before classification. Route tests resolve actual job needs/conditions plus implicit status and transitive skipped ancestors; checking an if-expression alone is insufficient.
+
+Supervisor `watchdog-run.json` is exclusive. Later always-cleanup invocations append distinct bounded `watchdog-cleanup-<n>.json` records and cannot replace it. An allowlisted `first-failure.json` is exported independently of worker finally, preserving the first cause even after SIGKILL. No raw exception/message/body is copied.

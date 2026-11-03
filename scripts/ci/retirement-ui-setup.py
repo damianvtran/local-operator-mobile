@@ -21,10 +21,24 @@ PREFLIGHT = runpy.run_path(str(HERE / 'retirement-replay-products.py'))['preflig
 def project(output):
     output.mkdir(parents=True, exist_ok=False)
     target = 'A00000000000000000000001'
-    files = ['ReplayGuards.swift', 'ReplayHostClient.swift', 'RetainedReplayTests.swift', 'ReplayGuardTests.swift']
+    files = ['ReplayPolicy.swift', 'ReplayGuards.swift', 'ReplayHostClient.swift', 'RetainedReplayTests.swift', 'ReplayGuardTests.swift']
     refs = [f'B{i + 1:023X}' for i in range(len(files))]
     builds = [f'C{i + 1:023X}' for i in range(len(files))]
-    source_refs = '\n'.join(f'{r} = {{isa=PBXFileReference; lastKnownFileType=sourcecode.swift; path={json.dumps(str(HERE / "retirement-ui" / f))}; sourceTree="<absolute>";}};' for r, f in zip(refs, files))
+    policy = json.loads((HERE / 'retirement-replay-policy.json').read_text())
+    generated = output.parent / 'ReplayPolicy.swift'
+    generated_content = ('enum ReplayPolicy {\n  static let sessionBytes = %d\n  static let bearerBytes = %d\n  static func hex(_ value: String, bytes: Int) -> Bool { value.utf8.count == bytes * 2 && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) } }\n}\n' % (policy['sessionBytes'], policy['bearerBytes']))
+    # SOURCE_ROOT is the project parent. Keep generated references relocatable
+    # and deterministic; never overwrite a different pre-existing source file.
+    try:
+        with generated.open('x') as stream: stream.write(generated_content)
+    except FileExistsError:
+        if generated.read_text() != generated_content: raise ValueError('Generated policy source collision')
+    def source_reference(ref, filename):
+        generated_policy = filename == 'ReplayPolicy.swift'
+        path = filename if generated_policy else str(HERE / 'retirement-ui' / filename)
+        tree = 'SOURCE_ROOT' if generated_policy else '<absolute>'
+        return f'{ref} = {{isa=PBXFileReference; lastKnownFileType=sourcecode.swift; path={json.dumps(path)}; sourceTree={json.dumps(tree)};}};'
+    source_refs = '\n'.join(source_reference(r, f) for r, f in zip(refs, files))
     build_refs = '\n'.join(f'{b} = {{isa=PBXBuildFile; fileRef={r};}};' for b, r in zip(builds, refs))
     pbx = '''// !$*UTF8*$!
 {archiveVersion=1; classes={}; objectVersion=56; objects={
