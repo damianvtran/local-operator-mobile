@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import {
 	activeLocale,
@@ -120,10 +121,23 @@ it.each(["ur", "ur-PK"])(
 		);
 	},
 );
-it("discovers uploaded Maestro screenshots and rejects EVERY missing frozen frame", () => {
-	const scratch = process.env.LOCAL_OPERATOR_SCRATCHPAD;
-	if (!scratch) throw new Error("owned scratch is required");
-	const root = mkdtempSync(join(scratch, "frame-contract-"));
+/** CI has no Local Operator scratch variable. Match the other Node tooling
+ * tests' tmpdir/mkdtemp pattern without deleting or writing into a shared root:
+ * only the unique directory returned by mkdtemp is ever recursively removed.
+ * The finally also preserves this boundary when an inventory assertion throws. */
+function withFrameDirectory(
+	scratch: string | undefined,
+	run: (root: string) => void,
+) {
+	const root = mkdtempSync(join(scratch ?? tmpdir(), "frame-contract-"));
+	try {
+		run(root);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+}
+
+function checkFrameDiscovery(root: string) {
 	for (const [label, names] of Object.entries(PROJECT_CREATE_FRAMES)) {
 		const output = join(root, label, "maestro"),
 			shots = join(output, "takeScreenshot");
@@ -145,4 +159,38 @@ it("discovers uploaded Maestro screenshots and rejects EVERY missing frozen fram
 		for (const name of names)
 			expect(existsSync(join(dest, `${name}.png`))).toBe(true);
 	}
-});
+}
+
+it.each(["present", "absent"])(
+	"discovers uploaded Maestro screenshots with scratch override %s and rejects missing frames",
+	(mode) => {
+		const parent = mkdtempSync(
+			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "frame-parent-"),
+		);
+		const sentinel = join(parent, "keep.txt");
+		writeFileSync(sentinel, "owned parent must survive child cleanup");
+		let allocated = "";
+		try {
+			withFrameDirectory(mode === "present" ? parent : undefined, (root) => {
+				allocated = root;
+				expect(dirname(root)).toBe(mode === "present" ? parent : tmpdir());
+				checkFrameDiscovery(root);
+			});
+			expect(allocated).not.toBe("");
+			expect(existsSync(allocated)).toBe(false);
+			expect(existsSync(sentinel)).toBe(true);
+			// An assertion failure must clean only its own unique child as well.
+			expect(() =>
+				withFrameDirectory(parent, (root) => {
+					allocated = root;
+					throw new Error("synthetic frame assertion failure");
+				}),
+			).toThrow("synthetic frame assertion failure");
+			expect(existsSync(allocated)).toBe(false);
+			expect(existsSync(sentinel)).toBe(true);
+		} finally {
+			// This parent was also exclusively created by this test, never borrowed.
+			rmSync(parent, { recursive: true, force: true });
+		}
+	},
+);
