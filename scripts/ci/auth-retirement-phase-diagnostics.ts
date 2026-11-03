@@ -3,6 +3,7 @@
  * app duplicates STAGES because the Node host must not import React Native. */
 
 import { sanitizeHostNumbers } from "./auth-retirement-launch.ts";
+import { sanitizeProgress } from "./auth-retirement-progress.ts";
 import { safeUrlProgress } from "./auth-retirement-readiness.ts";
 import type { Run } from "./auth-retirement-simulator.ts";
 export const APP_STAGES = [
@@ -35,6 +36,7 @@ export const REFUSED_REASONS = [
 	"progress-unknown",
 ] as const;
 export const PHASE_CAUSES = [
+	"step-ceiling",
 	"launch-timeout",
 	"scheme-unregistered",
 	"receiver-bind-failed",
@@ -185,6 +187,16 @@ const safeNumber = (value: unknown): number | null =>
 export function sanitizePhaseFailure(
 	input: Record<string, unknown>,
 ): Record<string, unknown> {
+	if (input.cause === "step-ceiling")
+		return {
+			cause: "step-ceiling",
+			phase: PHASES.find((value) => value === input.phase) ?? null,
+			signal:
+				input.signal === "SIGINT" || input.signal === "SIGTERM"
+					? input.signal
+					: "UNOBSERVED",
+			...sanitizeProgress(input),
+		};
 	if (input.cause === "scheme-unregistered")
 		return {
 			cause: "scheme-unregistered",

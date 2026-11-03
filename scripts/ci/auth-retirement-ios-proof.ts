@@ -13,6 +13,7 @@ import {
 	readFileSync,
 	readlinkSync,
 	realpathSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { createServer } from "node:http";
@@ -79,6 +80,8 @@ export {
 	SEED_READY_BUDGET_MS,
 } from "./auth-retirement-launch.ts";
 
+import { installRunSignalHandlers } from "./auth-retirement-progress.ts";
+
 /** Run 41523920765 exhausted 90s at boot-ready; run 41260071341 passed
  * boot but exhausted the default 30s at install. This proof creates a never-
  * booted dedicated device and skips ios.yml's ordinary warm boot. Apple's
@@ -101,14 +104,36 @@ export async function prepareOwnedSimulator(
 	activeProofDiagnostics?.checkpoint("boot");
 	await run("xcrun", ["simctl", "boot", udid]);
 	activeProofDiagnostics?.checkpoint("boot-ready");
-	await run(
-		"xcrun",
-		["simctl", "bootstatus", udid, "-b"],
-		BOOT_READY_BUDGET_MS,
-	);
+	const bootReadyStart = performance.now();
+	try {
+		await run(
+			"xcrun",
+			["simctl", "bootstatus", udid, "-b"],
+			BOOT_READY_BUDGET_MS,
+		);
+	} finally {
+		activeProofDiagnostics?.setSetupTiming(
+			"bootReadyMs",
+			performance.now() - bootReadyStart,
+		);
+	}
+
 	await verifyArtifact();
 	activeProofDiagnostics?.checkpoint("install");
-	await run("xcrun", ["simctl", "install", udid, app], FIRST_INSTALL_BUDGET_MS);
+	const installStart = performance.now();
+	try {
+		await run(
+			"xcrun",
+			["simctl", "install", udid, app],
+			FIRST_INSTALL_BUDGET_MS,
+		);
+	} finally {
+		activeProofDiagnostics?.setSetupTiming(
+			"firstInstallMs",
+			performance.now() - installStart,
+		);
+	}
+	activeProofDiagnostics?.flushProgress();
 }
 
 const PROOF_ID = "com.localoperator.mobile.retirementproof";
@@ -489,9 +514,16 @@ export async function runNativeProof(
 	root: string,
 	templateUdid: string,
 ): Promise<void> {
-	return withProofDiagnostics(root, () =>
-		runNativeProofBody(app, root, templateUdid),
-	);
+	return withProofDiagnostics(root, async () => {
+		const diagnostics = activeProofDiagnostics!;
+		const removeHandlers = installRunSignalHandlers(diagnostics);
+		try {
+			return await runNativeProofBody(app, root, templateUdid);
+		} finally {
+			removeHandlers();
+			diagnostics.flushProgress();
+		}
+	});
 }
 async function runNativeProofBody(
 	app: string,
@@ -508,6 +540,9 @@ async function runNativeProofBody(
 	if (realpathSync(app) !== frozen.appPath)
 		throw new Error("Candidate path differs from frozen build");
 	assertFrozenContent(app, frozen);
+	// Freeze is a separate workflow invocation. File mtime supplies its wall-
+	// clock boundary; command/phase durations themselves stay monotonic.
+	const frozenAtUnixMs = statSync(join(root, "frozen-artifact.json")).mtimeMs;
 	const measured = await measureArtifact(app);
 	assertInstalledArtifact(measured, frozen);
 	const proofExecutable = measured.executable;
@@ -701,7 +736,12 @@ async function runNativeProofBody(
 				"fresh-replace",
 				"fresh-restore",
 			]) {
-				activeProofDiagnostics?.checkpoint("phase", name);
+				if (name === "seed")
+					activeProofDiagnostics?.setSetupTiming(
+						"freezeToFirstPhaseMs",
+						Math.max(0, Date.now() - frozenAtUnixMs),
+					);
+				activeProofDiagnostics?.beginPhase(name);
 				phase = name;
 				refused = refusedCounts();
 				phaseUrlProgress = "none";
@@ -793,12 +833,14 @@ async function runNativeProofBody(
 							bundleSha256: identity.bundleSha256,
 							...receipt,
 							authTransportRequests: outbound,
+							...activeProofDiagnostics?.finishPhase("passed"),
 						});
 					} finally {
 						clearTimeout(timer!);
 						waiting = null;
 					}
 				} catch (error) {
+					activeProofDiagnostics?.finishPhase("failed");
 					if (phaseCause === "launch-identity")
 						phaseCause = launchFailureCause(error);
 					const outcomeAt = performance.now();
@@ -860,6 +902,12 @@ async function runNativeProofBody(
 						seedHost,
 						complete: evidence.length === 6 && negativeControlPassed,
 						phases: evidence,
+						phaseTimings:
+							activeProofDiagnostics?.progressSnapshot().phases ?? [],
+						setupTimings:
+							activeProofDiagnostics?.progressSnapshot().setupTimings ?? {},
+						commandTimings:
+							activeProofDiagnostics?.progressSnapshot().commandTimings ?? {},
 						notProved: [
 							"native-provider-or-Settings-UI",
 							"browser-authentication",

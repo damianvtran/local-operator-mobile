@@ -2,12 +2,23 @@
  * stdout/stderr, URLs, paths, tokens or arbitrary labels enter this receipt.
  * A first failure is immutable across cleanup so recovery cannot mask its cause.
  * This is an evidence repair, NOT a native retirement root-cause fix. */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { sanitizePhaseFailure } from "./auth-retirement-phase-diagnostics.ts";
 
+import {
+	COMMAND_CATEGORIES,
+	type PhaseTiming,
+	type SetupTiming,
+	sanitizeProgress,
+	TIMING_PHASES,
+	writeEvidenceAtomic,
+	writeProgressAtomic,
+} from "./auth-retirement-progress.ts";
+
 const CHECKPOINTS = [
+	"step-ceiling",
 	"scheme-unregistered",
 	"preflight",
 	"candidate-identity",
@@ -22,30 +33,8 @@ const CHECKPOINTS = [
 	"cleanup",
 	"complete",
 ] as const;
-const PHASES = [
-	"seed",
-	"persist-control",
-	"retire",
-	"retired-restore",
-	"fresh-replace",
-	"fresh-restore",
-] as const;
-const CATEGORIES = [
-	"artifact-metadata",
-	"source-identity",
-	"inventory",
-	"create",
-	"boot",
-	"bootstatus",
-	"install",
-	"installed-app",
-	"launch",
-	"openurl",
-	"shutdown",
-	"delete",
-	"local-process",
-	"unknown",
-] as const;
+const PHASES = TIMING_PHASES;
+const CATEGORIES = COMMAND_CATEGORIES;
 type Category = (typeof CATEGORIES)[number];
 type Outcome =
 	| "success"
@@ -139,6 +128,16 @@ export class ProofDiagnostics {
 	private sequence = 0;
 	private lastCommand: CommandObservation | null = null;
 	private failed = false;
+	private readonly setupTimings: Partial<Record<SetupTiming, number>> = {};
+	private readonly phaseTimings: PhaseTiming[] = [];
+	private phaseCurrent: {
+		phase: PhaseTiming["phase"];
+		started: number;
+	} | null = null;
+	private readonly commandTimings: Partial<
+		Record<Category, { count: number; totalMs: number; maxMs: number }>
+	> = {};
+
 	private phaseFailureObservation: Record<string, unknown> | null = null;
 	private readonly root: string;
 	constructor(root: string) {
@@ -146,6 +145,66 @@ export class ProofDiagnostics {
 		// parameter properties would break the verifier before it can report.
 		this.root = root;
 		mkdirSync(root, { recursive: true });
+	}
+	progressSnapshot() {
+		return sanitizeProgress({
+			setupTimings: this.setupTimings,
+			phases: this.phaseTimings,
+			commandTimings: this.commandTimings,
+			cumulativeElapsedMs: performance.now() - this.started,
+		});
+	}
+	flushProgress(): void {
+		writeProgressAtomic(this.root, this.progressSnapshot());
+	}
+	setSetupTiming(key: SetupTiming, value: number): void {
+		if (Number.isFinite(value) && value >= 0)
+			this.setupTimings[key] = Math.round(value);
+		this.flushProgress();
+	}
+	beginPhase(name: unknown): void {
+		const phase = PHASES.find((value) => value === name);
+		if (!phase || this.phaseCurrent)
+			throw new Error("Invalid phase timing boundary");
+		this.checkpoint("phase", phase);
+		this.phaseCurrent = { phase, started: performance.now() };
+		this.flushProgress();
+	}
+	finishPhase(outcome: "passed" | "failed"): PhaseTiming | undefined {
+		if (!this.phaseCurrent) return;
+		const row = {
+			phase: this.phaseCurrent.phase,
+			elapsedMs: Math.round(
+				Math.max(0, performance.now() - this.phaseCurrent.started),
+			),
+			outcome,
+		};
+		this.phaseTimings.push(row);
+		this.phaseCurrent = null;
+		this.flushProgress();
+		return row;
+	}
+	/** Signal receipt only. No cleanup, reaping, SDK command or async boundary.
+	 * A manual cancel and step timeout share signals; GitHub conclusion decides. */
+	recordStepCeiling(signal: "SIGINT" | "SIGTERM"): void {
+		if (!this.failed) {
+			this.checkpointName = "step-ceiling";
+			this.phaseFailureObservation = sanitizePhaseFailure({
+				cause: "step-ceiling",
+				phase: this.phaseName,
+				signal,
+				...this.progressSnapshot(),
+			});
+			this.fail();
+			// A signal during post-phase cleanup must never leave a complete proof.
+			writeEvidenceAtomic(this.root, "proof.json", {
+				kind: "ios-native-durable-retirement-restore-primitives-only",
+				complete: false,
+				diagnosticOnly: true,
+				phases: this.progressSnapshot().phases,
+			});
+		}
+		this.flushProgress();
 	}
 	checkpoint(name: unknown, phase: unknown = null): void {
 		this.checkpointName = CHECKPOINTS.includes(
@@ -192,6 +251,17 @@ export class ProofDiagnostics {
 			elapsedMs: Math.max(0, performance.now() - attempt.started),
 			sequence: attempt.sequence,
 		};
+		const category = this.lastCommand.category;
+		const duration = Math.round(this.lastCommand.elapsedMs);
+		const aggregate = this.commandTimings[category] ?? {
+			count: 0,
+			totalMs: 0,
+			maxMs: 0,
+		};
+		aggregate.count++;
+		aggregate.totalMs += duration;
+		aggregate.maxMs = Math.max(aggregate.maxMs, duration);
+		this.commandTimings[category] = aggregate;
 		if (outcome !== "success") this.fail();
 	}
 	observePhaseFailure(input: Record<string, unknown>): void {
@@ -203,43 +273,32 @@ export class ProofDiagnostics {
 			const receipt = JSON.parse(readFileSync(file, "utf8"));
 			if (receipt.phase === value.phase) {
 				receipt.phaseFailure = value;
-				writeFileSync(file, JSON.stringify(receipt, null, 2));
+				writeEvidenceAtomic(this.root, "failure.json", receipt);
 			}
 		}
 	}
 	fail(): void {
 		if (this.failed) return;
 		this.failed = true;
-		writeFileSync(
-			join(this.root, "failure.json"),
-			JSON.stringify(
-				{
-					kind: "auth-retirement-proof-failure",
-					classification: "BLOCKED",
-					checkpoint: this.checkpointName,
-					phase: this.phaseName,
-					elapsedMs: Math.max(0, performance.now() - this.started),
-					command: this.lastCommand,
-					...(this.phaseFailureObservation
-						? { phaseFailure: this.phaseFailureObservation }
-						: {}),
-				},
-				null,
-				2,
-			),
-		);
-		// Setup used to fail before the phase-loop finally could create proof.json.
-		// Preserve any real partial receipt; otherwise publish an explicit non-proof.
+		writeEvidenceAtomic(this.root, "failure.json", {
+			kind: "auth-retirement-proof-failure",
+			classification: "BLOCKED",
+			checkpoint: this.checkpointName,
+			phase: this.phaseName,
+			elapsedMs: Math.round(Math.max(0, performance.now() - this.started)),
+			command: this.lastCommand,
+			...(this.phaseFailureObservation
+				? { phaseFailure: this.phaseFailureObservation }
+				: {}),
+			...this.progressSnapshot(),
+		});
 		if (!existsSync(join(this.root, "proof.json")))
-			writeFileSync(
-				join(this.root, "proof.json"),
-				JSON.stringify({
-					kind: "ios-native-durable-retirement-restore-primitives-only",
-					complete: false,
-					diagnosticOnly: true,
-					phases: [],
-				}),
-			);
+			writeEvidenceAtomic(this.root, "proof.json", {
+				kind: "ios-native-durable-retirement-restore-primitives-only",
+				complete: false,
+				diagnosticOnly: true,
+				phases: [],
+			});
 	}
 }
 export let activeProofDiagnostics: ProofDiagnostics | null = null;
