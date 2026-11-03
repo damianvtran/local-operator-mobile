@@ -37,7 +37,7 @@ export const COMMAND_CATEGORIES = [
 export type PhaseTiming = {
 	phase: (typeof TIMING_PHASES)[number];
 	elapsedMs: number;
-	outcome: "passed" | "failed";
+	outcome: "passed" | "failed" | "interrupted";
 };
 export type SetupTiming =
 	| "bootReadyMs"
@@ -73,7 +73,9 @@ export function sanitizeProgress(input: Record<string, unknown>) {
 					elapsedMs = ms(row.elapsedMs);
 				return phase &&
 					elapsedMs !== undefined &&
-					(row.outcome === "passed" || row.outcome === "failed")
+					(row.outcome === "passed" ||
+						row.outcome === "failed" ||
+						row.outcome === "interrupted")
 					? [{ phase, elapsedMs, outcome: row.outcome }]
 					: [];
 			}),

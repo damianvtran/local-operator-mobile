@@ -540,8 +540,10 @@ async function runNativeProofBody(
 	if (realpathSync(app) !== frozen.appPath)
 		throw new Error("Candidate path differs from frozen build");
 	assertFrozenContent(app, frozen);
-	// Freeze is a separate workflow invocation. File mtime supplies its wall-
-	// clock boundary; command/phase durations themselves stay monotonic.
+	// Approximate wall-clock freeze-to-first-phase interval from receipt mtime:
+	// includes I/O, boot/install and intervening workflow time. Touch/copy/clock
+	// adjustments can skew it; NEVER use it in budget arithmetic. Only phase
+	// and command durations below are monotonic elapsed measurements.
 	const frozenAtUnixMs = statSync(join(root, "frozen-artifact.json")).mtimeMs;
 	const measured = await measureArtifact(app);
 	assertInstalledArtifact(measured, frozen);

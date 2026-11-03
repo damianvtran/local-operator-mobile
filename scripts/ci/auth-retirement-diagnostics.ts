@@ -170,7 +170,9 @@ export class ProofDiagnostics {
 		this.phaseCurrent = { phase, started: performance.now() };
 		this.flushProgress();
 	}
-	finishPhase(outcome: "passed" | "failed"): PhaseTiming | undefined {
+	finishPhase(
+		outcome: "passed" | "failed" | "interrupted",
+	): PhaseTiming | undefined {
 		if (!this.phaseCurrent) return;
 		const row = {
 			phase: this.phaseCurrent.phase,
@@ -187,25 +189,56 @@ export class ProofDiagnostics {
 	/** Signal receipt only. No cleanup, reaping, SDK command or async boundary.
 	 * A manual cancel and step timeout share signals; GitHub conclusion decides. */
 	recordStepCeiling(signal: "SIGINT" | "SIGTERM"): void {
+		// Preserve the killed phase's observed monotonic duration, not just the
+		// completed prefix. Clearing phaseCurrent also prevents duplicate rows.
+		this.finishPhase("interrupted");
+		const snapshot = this.progressSnapshot();
 		if (!this.failed) {
 			this.checkpointName = "step-ceiling";
 			this.phaseFailureObservation = sanitizePhaseFailure({
 				cause: "step-ceiling",
 				phase: this.phaseName,
 				signal,
-				...this.progressSnapshot(),
+				...snapshot,
 			});
 			this.fail();
-			// A signal during post-phase cleanup must never leave a complete proof.
-			writeEvidenceAtomic(this.root, "proof.json", {
-				kind: "ios-native-durable-retirement-restore-primitives-only",
-				complete: false,
-				diagnosticOnly: true,
-				phases: this.progressSnapshot().phases,
-			});
+		} else {
+			// Refresh timing evidence ONLY: the first caught error/checkpoint/cause
+			// remains authoritative even when a later stop interrupts its unwind.
+			const first = JSON.parse(
+				readFileSync(join(this.root, "failure.json"), "utf8"),
+			);
+			writeEvidenceAtomic(this.root, "failure.json", { ...first, ...snapshot });
 		}
+		// Invalidation is unconditional: a completed phase loop may have written
+		// complete:true before cleanup failed and set the first-failure guard.
+		const file = join(this.root, "proof.json");
+		const previous = existsSync(file)
+			? JSON.parse(readFileSync(file, "utf8"))
+			: {};
+		const priorRows = Array.isArray(previous.phases) ? previous.phases : [];
+		const phases = snapshot.phases.map((row) => ({
+			...priorRows.find(
+				(value: unknown) =>
+					value &&
+					typeof value === "object" &&
+					"phase" in value &&
+					value.phase === row.phase,
+			),
+			...row,
+		}));
+		writeEvidenceAtomic(this.root, "proof.json", {
+			...previous,
+			kind: "ios-native-durable-retirement-restore-primitives-only",
+			complete: false,
+			diagnosticOnly: true,
+			...snapshot,
+			phases,
+			phaseTimings: snapshot.phases,
+		});
 		this.flushProgress();
 	}
+
 	checkpoint(name: unknown, phase: unknown = null): void {
 		this.checkpointName = CHECKPOINTS.includes(
 			name as (typeof CHECKPOINTS)[number],

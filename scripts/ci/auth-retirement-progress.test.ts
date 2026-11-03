@@ -124,13 +124,64 @@ describe("progressive timing and real run-only signal evidence", () => {
 			expect(failure.phases.map((v: { phase: string }) => v.phase)).toEqual([
 				"seed",
 				"persist-control",
+				"retire",
 			]);
+			expect(failure.phases[2]).toMatchObject({
+				phase: "retire",
+				outcome: "interrupted",
+			});
+			expect(Number.isFinite(failure.phases[2].elapsedMs)).toBe(true);
+			expect(failure.phases[2].elapsedMs).toBeGreaterThanOrEqual(0);
+			expect(read(root, "proof.json").phases).toEqual(failure.phases);
 			expect(read(root, "progress.json").phases).toEqual(failure.phases);
 			expect(read(root, "proof.json").complete).toBe(false);
 			expect(existsSync(join(root, "forbidden-boundary"))).toBe(false);
 			expect(readdirSync(root).some((name) => name.endsWith(".tmp"))).toBe(
 				false,
 			);
+		},
+	);
+	it("PROGRESS-2: a real signal during seed retains its interrupted elapsed time", async () => {
+		const root = fresh();
+		expect((await signalChild(root, "SIGINT", false, "seed")).code).toBe(130);
+		const failure = read(root, "failure.json");
+		expect(failure.phases).toHaveLength(1);
+		expect(failure.phases[0]).toMatchObject({
+			phase: "seed",
+			outcome: "interrupted",
+		});
+		expect(Number.isInteger(failure.phases[0].elapsedMs)).toBe(true);
+		expect(failure.phases[0].elapsedMs).toBeGreaterThanOrEqual(0);
+		expect(read(root, "progress.json").phases).toEqual(failure.phases);
+		expect(read(root, "proof.json").phases).toEqual(failure.phases);
+		expect(existsSync(join(root, "forbidden-boundary"))).toBe(false);
+	});
+	it.each(["SIGINT", "SIGTERM"] as const)(
+		"PROGRESS-1: completed proof then cleanup failure then %s always invalidates completion",
+		async (signal) => {
+			const root = fresh();
+			expect((await signalChild(root, signal, false, "cleanup")).code).toBe(
+				signal === "SIGINT" ? 130 : 143,
+			);
+			expect(read(root, "proof-before-signal.json").complete).toBe(true);
+			const before = read(root, "failure-before-signal.json"),
+				failure = read(root, "failure.json"),
+				proof = read(root, "proof.json");
+			expect(failure.checkpoint).toBe("cleanup");
+			expect(failure.command).toEqual(before.command);
+			expect(failure.phaseFailure).toEqual(before.phaseFailure);
+			expect(failure.command).toMatchObject({
+				category: "delete",
+				outcome: "nonzero-exit",
+			});
+			expect(proof.complete).toBe(false);
+			expect(proof.phases).toHaveLength(6);
+			expect(proof.phases.map((row: { phase: string }) => row.phase)).toEqual(
+				before.phases.map((row: { phase: string }) => row.phase),
+			);
+			expect(proof.phases[0].receiptMarker).toBe(1);
+			expect(proof.phaseTimings).toEqual(read(root, "progress.json").phases);
+			expect(existsSync(join(root, "forbidden-boundary"))).toBe(false);
 		},
 	);
 	it("a real signal after a caught failure preserves the original first cause", async () => {
@@ -196,6 +247,7 @@ async function signalChild(
 	root: string,
 	signal: "SIGINT" | "SIGTERM",
 	failFirst: boolean,
+	mode: "seed" | "cleanup" | "phase3" = "phase3",
 ): Promise<{
 	code: number | null;
 	signal: NodeJS.Signals | null;
@@ -205,9 +257,15 @@ async function signalChild(
 			.href,
 		progress = new URL("./auth-retirement-progress.ts", import.meta.url).href;
 	const carrier = join(root, "signal-carrier.mjs");
+	const setup =
+		mode === "seed"
+			? "diagnostics.beginPhase('seed');"
+			: mode === "cleanup"
+				? `for(const phase of ['seed','persist-control','retire','retired-restore','fresh-replace','fresh-restore']){diagnostics.beginPhase(phase);diagnostics.finishPhase('passed');}writeFileSync(root+'/proof.json',JSON.stringify({complete:true,phases:diagnostics.progressSnapshot().phases.map(row=>({...row,receiptMarker:1})),phaseTimings:diagnostics.progressSnapshot().phases}));diagnostics.checkpoint('cleanup');diagnostics.finish(diagnostics.begin('delete'),'nonzero-exit',1);writeFileSync(root+'/failure-before-signal.json',readFileSync(root+'/failure.json'));writeFileSync(root+'/proof-before-signal.json',readFileSync(root+'/proof.json'));`
+				: "diagnostics.beginPhase('seed');diagnostics.finishPhase('passed');diagnostics.beginPhase('persist-control');diagnostics.finishPhase('passed');diagnostics.beginPhase('retire');";
 	writeFileSync(
 		carrier,
-		`import {writeFileSync} from 'node:fs';import {ProofDiagnostics} from ${JSON.stringify(diag)};import {installRunSignalHandlers} from ${JSON.stringify(progress)};const root=${JSON.stringify(root)};const diagnostics=new ProofDiagnostics(root);installRunSignalHandlers(diagnostics);diagnostics.setSetupTiming('bootReadyMs',1);diagnostics.beginPhase('seed');diagnostics.finishPhase('passed');diagnostics.beginPhase('persist-control');diagnostics.finishPhase('passed');diagnostics.beginPhase('retire');if(${failFirst}){try{throw new Error('fixture');}catch{diagnostics.observePhaseFailure({phase:'retire',cause:'launch-identity'});diagnostics.fail();}}const command=()=>writeFileSync(root+'/forbidden-boundary','command'),cleanup=()=>writeFileSync(root+'/forbidden-boundary','cleanup');setInterval(()=>{},1000);process.send({ready:true});try{await new Promise(()=>{});}finally{command();cleanup();}`,
+		`import {writeFileSync,readFileSync} from 'node:fs';import {ProofDiagnostics} from ${JSON.stringify(diag)};import {installRunSignalHandlers} from ${JSON.stringify(progress)};const root=${JSON.stringify(root)};const diagnostics=new ProofDiagnostics(root);installRunSignalHandlers(diagnostics);diagnostics.setSetupTiming('bootReadyMs',1);${setup}if(${failFirst}){try{throw new Error('fixture');}catch{diagnostics.observePhaseFailure({phase:'retire',cause:'launch-identity'});diagnostics.fail();}}const command=()=>writeFileSync(root+'/forbidden-boundary','command'),cleanup=()=>writeFileSync(root+'/forbidden-boundary','cleanup');setInterval(()=>{},1000);process.send({ready:true});try{await new Promise(()=>{});}finally{command();cleanup();}`,
 	);
 	const child = spawn(process.execPath, [carrier], {
 		stdio: ["ignore", "ignore", "pipe", "ipc"],
