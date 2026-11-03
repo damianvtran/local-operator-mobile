@@ -2,10 +2,23 @@
  * retain native errors, callback URLs, output text, credentials or paths. The
  * app duplicates STAGES because the Node host must not import React Native. */
 
-import { sanitizeHostNumbers } from "./auth-retirement-launch.ts";
+import {
+	ProofCommandTimeout,
+	sanitizeHostNumbers,
+	sanitizeTimeoutHostNumbers,
+} from "./auth-retirement-launch.ts";
 import { sanitizeProgress } from "./auth-retirement-progress.ts";
 import { safeUrlProgress } from "./auth-retirement-readiness.ts";
 import type { Run } from "./auth-retirement-simulator.ts";
+export const PROBE_OBSERVATIONS = [
+	"observed",
+	"timeout",
+	"malformed",
+	"error",
+] as const;
+export type ProbeObservation = (typeof PROBE_OBSERVATIONS)[number];
+const probeObservation = (value: unknown): ProbeObservation =>
+	PROBE_OBSERVATIONS.find((code) => code === value) ?? "error";
 export const APP_STAGES = [
 	"seed-store-not-empty",
 	"seed-write-not-persistent",
@@ -140,7 +153,10 @@ export function receiptCause(
 export async function observeOwnedProcess(
 	udid: string,
 	run: Run,
-): Promise<boolean | "UNOBSERVED"> {
+): Promise<{
+	processAliveAtTimeout: boolean | "UNOBSERVED";
+	processAliveObservation: ProbeObservation;
+}> {
 	try {
 		const output = await run("xcrun", [
 			"simctl",
@@ -168,16 +184,29 @@ export async function observeOwnedProcess(
 			)
 				continue;
 			if (columns.length !== 3 || !/^-?\d+$/.test(columns[1]?.trim() ?? ""))
-				return "UNOBSERVED";
+				return {
+					processAliveAtTimeout: "UNOBSERVED",
+					processAliveObservation: "malformed",
+				};
 			const pid = columns[0]?.trim();
 			if (pid === "-") continue;
 			if (!/^[1-9]\d*$/.test(pid ?? "") || !Number.isSafeInteger(Number(pid)))
-				return "UNOBSERVED";
+				return {
+					processAliveAtTimeout: "UNOBSERVED",
+					processAliveObservation: "malformed",
+				};
 			alive = true;
 		}
-		return alive;
-	} catch {
-		return "UNOBSERVED";
+		return {
+			processAliveAtTimeout: alive,
+			processAliveObservation: "observed",
+		};
+	} catch (error) {
+		return {
+			processAliveAtTimeout: "UNOBSERVED",
+			processAliveObservation:
+				error instanceof ProofCommandTimeout ? "timeout" : "error",
+		};
 	}
 }
 const safeNumber = (value: unknown): number | null =>
@@ -227,6 +256,19 @@ export function sanitizePhaseFailure(
 	return {
 		phase: PHASES.find((value) => value === input.phase) ?? null,
 		...(input.phase === "seed" ? sanitizeHostNumbers(input) : {}),
+		...(input.cause === "receipt-timeout"
+			? sanitizeTimeoutHostNumbers(input)
+			: {}),
+		...("processAliveObservation" in input
+			? {
+					processAliveObservation: probeObservation(
+						input.processAliveObservation,
+					),
+				}
+			: {}),
+		...("schemeLogObservation" in input
+			? { schemeLogObservation: probeObservation(input.schemeLogObservation) }
+			: {}),
 		cause,
 		...(cause === "phase-rejected"
 			? { appStage: appStage(input.appStage) }

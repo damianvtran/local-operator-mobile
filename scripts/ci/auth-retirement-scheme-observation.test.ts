@@ -16,6 +16,7 @@ import {
 	freezeArtifact,
 	prepareProofBuild,
 } from "./auth-retirement-ios-proof.ts";
+import { ProofCommandTimeout } from "./auth-retirement-launch.ts";
 import {
 	observeSchemeAfterTimeout,
 	parseSchemeLogs,
@@ -42,11 +43,43 @@ afterEach(() => {
 });
 const executable = "SyntheticProof";
 const sentinel = "UNSAFE_LOG_SENTINEL";
-const event = (process: string) =>
-	JSON.stringify({
-		processImagePath: process,
-		eventMessage: `loretirementproof ${sentinel}`,
-	});
+// Grounded keys/types ONLY: macOS27.2 `log show --last20s --style ndjson`,
+// captured by parent 2026-11-03. All values below are synthetic placeholders.
+// Simulator log versions can differ, so unrelated extra keys must be tolerated.
+const eventRecord = (process: string) => ({
+	activityIdentifier: 1,
+	backtrace: { frames: [] },
+	bootUUID: "00000000-0000-0000-0000-000000000001",
+	category: "synthetic",
+	eventMessage: `loretirementproof ${sentinel}`,
+	eventType: "logEvent",
+	formatString: "synthetic",
+	launchPersonaID: 0,
+	launchPersonaName: "synthetic",
+	launchPersonaType: 0,
+	machTimestamp: 1,
+	messageType: "Default",
+	parentActivityIdentifier: 0,
+	personaID: 0,
+	personaName: "synthetic",
+	personaType: 0,
+	processID: 123,
+	processImagePath: process,
+	processImageUUID: "00000000-0000-0000-0000-000000000002",
+	senderImagePath: "/synthetic/lib",
+	senderImageUUID: "00000000-0000-0000-0000-000000000003",
+	senderProgramCounter: 1,
+	source: null,
+	subsystem: "synthetic",
+	threadID: 1,
+	timestamp: "2026-11-03T00:00:00Z",
+	timezoneName: "UTC",
+	traceID: 1,
+	userID: 0,
+});
+const event = (process: string) => JSON.stringify(eventRecord(process));
+const ndjson = (events: string) =>
+	`${events}${events ? "\n" : ""}${JSON.stringify({ count: events.split("\n").filter(Boolean).length, finished: 1 })}`;
 
 describe("built scheme and timeout log observations, no SDK", () => {
 	it.each([true, false])(
@@ -145,8 +178,16 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		["system-only", event("/system/SpringBoard"), true, false],
 		["app-only", event(`/apps/${executable}`), false, true],
 		["both", event("SpringBoard") + "\n" + event(executable), true, true],
-		["none", "", false, false],
-		["irrelevant", JSON.stringify({ eventMessage: "unrelated" }), false, false],
+		["trailer-only", "", false, false],
+		[
+			"irrelevant",
+			JSON.stringify({
+				...eventRecord("/synthetic/system"),
+				eventMessage: "unrelated",
+			}),
+			false,
+			false,
+		],
 		["malformed", "not-json", "UNOBSERVED", "UNOBSERVED"],
 		[
 			"missing-process",
@@ -157,9 +198,11 @@ describe("built scheme and timeout log observations, no SDK", () => {
 	] as const)(
 		"parses %s without retaining records",
 		(_name, text, system, app) => {
-			expect(parseSchemeLogs(text, executable)).toEqual({
+			expect(parseSchemeLogs(ndjson(text), executable)).toEqual({
 				schemeOpenSeenBySystem: system,
 				schemeOpenSeenByApp: app,
+				schemeLogObservation:
+					system === "UNOBSERVED" ? "malformed" : "observed",
 			});
 		},
 	);
@@ -178,7 +221,7 @@ describe("built scheme and timeout log observations, no SDK", () => {
 			executable,
 			async (...args) => {
 				calls.push(args);
-				return "";
+				return ndjson("");
 			},
 		);
 		expect(calls).toHaveLength(count);
@@ -214,7 +257,81 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		).toEqual({
 			schemeOpenSeenBySystem: "UNOBSERVED",
 			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeLogObservation: "error",
 		});
+	});
+	it("typed probe timeout is distinct from malformed output and command error", async () => {
+		expect(
+			await observeSchemeAfterTimeout(
+				"receipt-timeout",
+				"none",
+				"owned-udid",
+				executable,
+				async () => {
+					throw new ProofCommandTimeout();
+				},
+			),
+		).toEqual({
+			schemeOpenSeenBySystem: "UNOBSERVED",
+			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeLogObservation: "timeout",
+		});
+		expect(
+			await observeSchemeAfterTimeout(
+				"receipt-timeout",
+				"none",
+				"owned-udid",
+				executable,
+				async () => ndjson("garbage"),
+			),
+		).toEqual({
+			schemeOpenSeenBySystem: "UNOBSERVED",
+			schemeOpenSeenByApp: "UNOBSERVED",
+			schemeLogObservation: "malformed",
+		});
+	});
+	it("tolerates future simulator keys while skipping the real-shaped trailer", () => {
+		const record = {
+			...eventRecord(`/synthetic/${executable}`),
+			futureSimulatorField: "ignored",
+		};
+		expect(parseSchemeLogs(ndjson(JSON.stringify(record)), executable)).toEqual(
+			{
+				schemeOpenSeenBySystem: false,
+				schemeOpenSeenByApp: true,
+				schemeLogObservation: "observed",
+			},
+		);
+	});
+	it("the grounded event fixture has exactly the captured keys/types and a two-key trailer", () => {
+		const record = eventRecord(`/synthetic/${executable}`);
+		expect(Object.keys(record).sort()).toEqual(
+			"activityIdentifier backtrace bootUUID category eventMessage eventType formatString launchPersonaID launchPersonaName launchPersonaType machTimestamp messageType parentActivityIdentifier personaID personaName personaType processID processImagePath processImageUUID senderImagePath senderImageUUID senderProgramCounter source subsystem threadID timestamp timezoneName traceID userID"
+				.split(" ")
+				.sort(),
+		);
+		for (const key of [
+			"activityIdentifier",
+			"launchPersonaID",
+			"launchPersonaType",
+			"machTimestamp",
+			"parentActivityIdentifier",
+			"personaID",
+			"personaType",
+			"processID",
+			"senderProgramCounter",
+			"threadID",
+			"traceID",
+			"userID",
+		] as const)
+			expect(Number.isInteger(record[key])).toBe(true);
+		expect(record.source).toBeNull();
+		expect(typeof record.backtrace).toBe("object");
+		expect(JSON.parse(ndjson("")).count).toBe(0);
+		expect(Object.keys(JSON.parse(ndjson(""))).sort()).toEqual([
+			"count",
+			"finished",
+		]);
 	});
 	it("persists exactly boolean observations without native log text", () => {
 		const root = fresh(),
@@ -223,7 +340,10 @@ describe("built scheme and timeout log observations, no SDK", () => {
 		diag.observePhaseFailure({
 			phase: "seed",
 			cause: "receipt-timeout",
-			...parseSchemeLogs(event(`/apps/${executable}`), executable),
+			...parseSchemeLogs(
+				ndjson(event(`/synthetic/apps/${executable}`)),
+				executable,
+			),
 			log: sentinel,
 			url: `loretirementproof://${sentinel}`,
 		});

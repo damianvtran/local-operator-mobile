@@ -62,11 +62,13 @@ export { READY_BUDGET_MS } from "./auth-retirement-readiness.ts";
 
 import {
 	captureSeedHost,
+	captureTimeoutHost,
 	DEFAULT_COMMAND_BUDGET_MS,
 	type HostNumbers,
 	launchFailureCause,
 	launchProofPhase,
 	ProofCommandTimeout,
+	type TimeoutHostNumbers,
 } from "./auth-retirement-launch.ts";
 import {
 	observeSchemeAfterTimeout,
@@ -750,6 +752,10 @@ async function runNativeProofBody(
 				let readyAt: number | null = null;
 				let phaseCause: PhaseCause = "launch-identity";
 				let rejectedStage: unknown;
+				let timeoutHost: TimeoutHostNumbers = {
+					timeoutHostLoadAvg1m: "UNOBSERVED",
+					timeoutHostFreeMemMiB: "UNOBSERVED",
+				};
 				let launchStart: number | null = null,
 					openurlStart: number | null = null;
 				try {
@@ -777,7 +783,10 @@ async function runNativeProofBody(
 					const answer = new Promise<Record<string, unknown>>((yes, no) => {
 						waiting = yes;
 						timer = setTimeout(() => {
-							if (waiting) phaseCause = "receipt-timeout";
+							if (waiting) {
+								timeoutHost = captureTimeoutHost();
+								phaseCause = "receipt-timeout";
+							}
 							waiting = null;
 							no(new Error("Native phase receipt timed out"));
 						}, 60000);
@@ -850,6 +859,7 @@ async function runNativeProofBody(
 						phase: name,
 						cause: phaseCause,
 						...(name === "seed" ? seedHost : {}),
+						...timeoutHost,
 						readyAfterLaunchMs:
 							readyAt !== null && launchStart !== null
 								? readyAt - launchStart
@@ -872,9 +882,9 @@ async function runNativeProofBody(
 					activeProofDiagnostics?.observePhaseFailure(observation);
 					activeProofDiagnostics?.fail();
 					if (phaseCause === "receipt-timeout") {
-						observation.processAliveAtTimeout = await observeOwnedProcess(
-							udid,
-							command,
+						Object.assign(
+							observation,
+							await observeOwnedProcess(udid, command),
 						);
 						Object.assign(
 							observation,

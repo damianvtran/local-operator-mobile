@@ -66,6 +66,33 @@ export function captureSeedHost(
 		return sanitizeHostNumbers({});
 	}
 }
+export type TimeoutHostNumbers = {
+	timeoutHostLoadAvg1m: number | "UNOBSERVED";
+	timeoutHostFreeMemMiB: number | "UNOBSERVED";
+};
+export function sanitizeTimeoutHostNumbers(
+	value: Record<string, unknown>,
+): TimeoutHostNumbers {
+	const safe = sanitizeHostNumbers({
+		hostLoadAvg1m: value.timeoutHostLoadAvg1m,
+		hostFreeMemMiB: value.timeoutHostFreeMemMiB,
+	});
+	return {
+		timeoutHostLoadAvg1m: safe.hostLoadAvg1m,
+		timeoutHostFreeMemMiB: safe.hostFreeMemMiB,
+	};
+}
+export function captureTimeoutHost(
+	readLoad?: () => number[],
+	readFree?: () => number,
+): TimeoutHostNumbers {
+	// Same free-pages-only caveat as the launch sample; not available headroom.
+	const safe = captureSeedHost(readLoad, readFree);
+	return {
+		timeoutHostLoadAvg1m: safe.hostLoadAvg1m,
+		timeoutHostFreeMemMiB: safe.hostFreeMemMiB,
+	};
+}
 export async function launchProofPhase(
 	name: string,
 	udid: string,

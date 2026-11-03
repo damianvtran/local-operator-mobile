@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProofDiagnostics } from "./auth-retirement-diagnostics.ts";
 import {
+	captureTimeoutHost,
+	ProofCommandTimeout,
+} from "./auth-retirement-launch.ts";
+import {
 	APP_STAGES,
 	appStage,
 	countRefused,
@@ -200,14 +204,26 @@ describe("native proof observation vocabulary and privacy", () => {
 			false,
 		],
 		["command failure", null, "UNOBSERVED"],
+		["command timeout", "TIMEOUT_FIXTURE", "UNOBSERVED"],
 	] as const)("observes owned process: %s", async (_name, output, expected) => {
 		const calls: unknown[][] = [];
 		const actual = await observeOwnedProcess("owned-udid", async (...args) => {
 			calls.push(args);
 			if (output === null) throw new Error(secret);
+			if (output === "TIMEOUT_FIXTURE") throw new ProofCommandTimeout();
 			return output;
 		});
-		expect(actual).toBe(expected);
+		expect(actual).toEqual({
+			processAliveAtTimeout: expected,
+			processAliveObservation:
+				output === null
+					? "error"
+					: output === "TIMEOUT_FIXTURE"
+						? "timeout"
+						: expected === "UNOBSERVED"
+							? "malformed"
+							: "observed",
+		});
 		expect(calls).toEqual([
 			["xcrun", ["simctl", "spawn", "owned-udid", "launchctl", "list"]],
 		]);
@@ -242,6 +258,35 @@ describe("native proof observation vocabulary and privacy", () => {
 			JSON.parse(readFileSync(join(root, "failure.json"), "utf8")).phaseFailure
 				.cause,
 		).toBe("phase-rejected");
+	});
+	it("keeps probe reasons closed and timeout host numbers sanitized in persisted failures", () => {
+		const root = fresh(),
+			diag = new ProofDiagnostics(root);
+		diag.checkpoint("phase", "seed");
+		diag.observePhaseFailure({
+			phase: "seed",
+			cause: "receipt-timeout",
+			processAliveObservation: secret,
+			schemeLogObservation: "timeout",
+			timeoutHostLoadAvg1m: secret,
+			timeoutHostFreeMemMiB: -1,
+			stderr: secret,
+		});
+		diag.fail();
+		const text = readFileSync(join(root, "failure.json"), "utf8");
+		expect(text).not.toContain(secret);
+		expect(JSON.parse(text).phaseFailure).toMatchObject({
+			processAliveObservation: "error",
+			schemeLogObservation: "timeout",
+			timeoutHostLoadAvg1m: "UNOBSERVED",
+			timeoutHostFreeMemMiB: "UNOBSERVED",
+		});
+		expect(
+			captureTimeoutHost(
+				() => [383.123],
+				() => 4.6 * 1048576,
+			),
+		).toEqual({ timeoutHostLoadAvg1m: 383.12, timeoutHostFreeMemMiB: 5 });
 	});
 	it("maps arbitrary phase/cause/timing/process values to closed safe fallbacks", () => {
 		const safe = sanitizePhaseFailure({
