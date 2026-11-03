@@ -31,10 +31,8 @@ import {
 } from "./loopback";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 
-/** The port the desktop client uses, and the one a listener-less platform (iOS,
- *  where the browser session captures the callback itself) advertises. The
- *  redirect must carry an explicit port either way: the console's whitelist and
- *  the control plane's `validOAuthRedirect` both require one. */
+/** Desktop/test fallback only. iOS binds an ephemeral device-local port before
+ * constructing the authorization URL; it never assumes HTTP interception. */
 export const CALLBACK_PORT = 54_549;
 
 export const RADIENT_OAUTH = {
@@ -268,6 +266,7 @@ async function postJson(
  */
 export async function signInWithRadient(deps: {
 	browser: AuthBrowserSession;
+	signal?: AbortSignal;
 	/** Required where the platform cannot return a callback URL — i.e. Android. */
 	listener?: CallbackListener;
 	now?: () => number;
@@ -279,39 +278,51 @@ export async function signInWithRadient(deps: {
 	 *  browser" before the sheet appears. */
 	onAuthorizeUrl?: (url: string) => void;
 }): Promise<RadientTokens> {
-	const now = deps.now ?? (() => Date.now());
-	const cryptoDeps = deps.crypto ?? {};
-	const state = await randomState(cryptoDeps);
-	const pkce = await createPkcePair(cryptoDeps);
-
-	const redirectUri =
-		deps.listener?.redirectUri ?? loopbackRedirectUri(CALLBACK_PORT);
-	if (!deps.listener && !deps.browser.returnsCallback) {
-		/* The platform can neither bind a listener nor hand back the callback URL, so
-		 * the code would go nowhere. Failing here beats a browser sheet the user
-		 * completes for nothing. */
-		throw new RadientAuthError(
-			"rejected",
-			"this platform cannot capture the OAuth callback: no listener and no browser callback",
-		);
-	}
-
-	const authorizeUrl = authorizationUrl({
-		redirectUri,
-		state,
-		challenge: pkce.challenge,
-		authorizeUrl: deps.authorizeUrl,
-	});
-	deps.onAuthorizeUrl?.(authorizeUrl);
-
-	/* Started BEFORE the browser opens: a fast callback must not be missed because
-	 * nothing was listening yet. */
-	const fromListener = deps.listener ? deps.listener.waitForCode() : null;
+	const cancel = () => {
+		void deps.browser.dismiss().catch(() => undefined);
+	};
+	deps.signal?.addEventListener("abort", cancel);
 	try {
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
+		const now = deps.now ?? (() => Date.now());
+		const cryptoDeps = deps.crypto ?? {};
+		const state = await randomState(cryptoDeps);
+		const pkce = await createPkcePair(cryptoDeps);
+
+		const redirectUri =
+			deps.listener?.redirectUri ??
+			(await deps.browser.prepareRedirect?.()) ??
+			loopbackRedirectUri(CALLBACK_PORT);
+		if (!deps.listener && !deps.browser.returnsCallback) {
+			/* The platform can neither bind a listener nor hand back the callback URL, so
+			 * the code would go nowhere. Failing here beats a browser sheet the user
+			 * completes for nothing. */
+			throw new RadientAuthError(
+				"rejected",
+				"this platform cannot capture the OAuth callback: no listener and no browser callback",
+			);
+		}
+
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
+		const authorizeUrl = authorizationUrl({
+			redirectUri,
+			state,
+			challenge: pkce.challenge,
+			authorizeUrl: deps.authorizeUrl,
+		});
+		deps.onAuthorizeUrl?.(authorizeUrl);
+
+		/* Started BEFORE the browser opens: a fast callback must not be missed because
+		 * nothing was listening yet. */
+		const fromListener = deps.listener ? deps.listener.waitForCode() : null;
 		const fromBrowser = await deps.browser.open(authorizeUrl, redirectUri);
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
 		if (fromBrowser) {
-			/* iOS: the session matched the callback itself. */
-			const result = parseCallbackUrl(fromBrowser, state);
+			/* iOS: the device-local listener completed the system browser session. */
+			const result = parseCallbackUrl(fromBrowser, state, redirectUri);
 			return await exchangeCode(result.code, redirectUri, pkce.verifier, {
 				now,
 				fetchImpl: deps.fetchImpl,
@@ -332,6 +343,7 @@ export async function signInWithRadient(deps: {
 			tokenUrl: deps.tokenUrl,
 		});
 	} finally {
+		deps.signal?.removeEventListener("abort", cancel);
 		/* Every exit path, including cancel and timeout: a listener that outlives the
 		 * flow is an open port on the user's device. */
 		await deps.listener?.close().catch(() => undefined);
