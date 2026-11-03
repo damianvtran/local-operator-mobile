@@ -52,7 +52,9 @@ appId: ${APP_ID}
 - tapOn:
     id: "custom-url-field"
 - inputText: ${RELAY_URL}
-# iOS keyboard dismissal: the on-screen Return key. Tapping the "Your own tunnel"
+# iOS keyboard dismissal: the on-screen Return key, selected by its accessibility
+# text `return` (its `Return` resource-id is an OS id, not an app id, and
+# src/ui/a11y.e2e.test.ts rejects flow ids the app never renders). Tapping the "Your own tunnel"
 # text (the account-routing helper's form) does NOT blur a TextInput here: run
 # 41581513521's hierarchy still held `Return`/`inputView` afterwards, and the
 # keyboard then swallowed the opt-in taps as typed `y`s (URL ended `…49515yy`).
@@ -60,9 +62,9 @@ appId: ${APP_ID}
 # the keyboard is gone, and the URL is asserted EXACT (Maestro matches the whole
 # text), so a corrupted field fails here with the failure capture.
 - tapOn:
-    id: "Return"
+    text: "return"
 - assertNotVisible:
-    id: "Return"
+    text: "return"
 - assertVisible: ${RELAY_URL}
 - scrollUntilVisible:
     element:
@@ -73,9 +75,9 @@ appId: ${APP_ID}
     id: "custom-password-field"
 - inputText: ${RELAY_PASSWORD}
 - tapOn:
-    id: "Return"
+    text: "return"
 - assertNotVisible:
-    id: "Return"
+    text: "return"
 - scrollUntilVisible:
     element:
       id: "custom-insecure-opt-in"
