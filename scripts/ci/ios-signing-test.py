@@ -9,6 +9,7 @@ import pathlib
 import plistlib
 import subprocess
 import tempfile
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -155,6 +156,8 @@ class SigningTests(unittest.TestCase):
                 if args[:3] == ["security", "cms", "-D"]:
                     return plistlib.dumps(valid_profile())
                 if "--extract-certificates" in args:
+                    raise AssertionError("separate certificate prefix is parsed as a code path")
+                if any(arg.startswith("--extract-certificates=") for arg in args):
                     (directory / "signing-certificate-0").write_bytes(CERT)
                 if "--entitlements" in args:
                     return plistlib.dumps(entitlements)
@@ -167,6 +170,27 @@ class SigningTests(unittest.TestCase):
                 entitlements["get-task-allow"] = True
                 with self.assertRaisesRegex(signing.SigningError, "entitlement"):
                     signing.verify(directory)
+
+    @unittest.skipUnless(sys.platform == "darwin", "real codesign argument shapes require Darwin")
+    def test_real_codesign_shapes_on_signed_system_app(self):
+        # Apple-signed OS binary, not a fixture we sign or mutate. This proves
+        # the verifier's CLI syntax, not a Distribution identity or IPA profile.
+        app = "/System/Applications/Calculator.app"
+        self.assertTrue(pathlib.Path(app).is_dir())
+        root = os.environ.get("LOCAL_OPERATOR_SCRATCHPAD") or os.environ.get("RUNNER_TEMP")
+        with tempfile.TemporaryDirectory(prefix="codesign-shapes-", dir=root) as temporary:
+            prefix = str(pathlib.Path(temporary) / "cert-")
+            wrong = subprocess.run(["codesign", "-d", "--extract-certificates", prefix, app], capture_output=True)
+            self.assertNotEqual(wrong.returncode, 0)
+            signing.run(["codesign", "--verify", "--deep", "--strict", app])
+            display = subprocess.run(["codesign", "-dv", "--verbose=4", app], capture_output=True)
+            self.assertEqual(display.returncode, 0)
+            self.assertIn(b"Authority=", display.stderr)
+            self.assertIn(b"TeamIdentifier=", display.stderr)
+            signing.run(["codesign", "-d", f"--extract-certificates={prefix}", app])
+            self.assertTrue(pathlib.Path(prefix + "0").is_file())
+            entitlements = plistlib.loads(signing.run(["codesign", "-d", "--entitlements", "-", "--xml", app]))
+            self.assertIsInstance(entitlements, dict)
 
     def test_cleanup_rejects_a_nonowned_directory(self):
         with patch.dict(os.environ, {"LO_IOS_SIGNING_DIR": "/", "RUNNER_TEMP": "/synthetic"}), patch.object(signing.sys, "argv", ["ios-signing.py", "cleanup"]):

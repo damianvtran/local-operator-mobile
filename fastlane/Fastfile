@@ -50,9 +50,9 @@
 # Fastlane executes user lane code from ./fastlane/, unlike action internals.
 # Anchor generated projects and caller-provided relative artifact paths here so
 # root-shell probes cannot give false confidence about a real lane invocation.
-ROOT = File.expand_path("..", __dir__)
+LO_REPO_ROOT = File.expand_path("..", __dir__)
 def repo_path(path)
-  File.expand_path(path, ROOT)
+  File.expand_path(path, LO_REPO_ROOT)
 end
 
 default_platform(:android)
@@ -104,7 +104,7 @@ platform :ios do
     require "xcodeproj"
     dir = repo_path(require_env!("LO_IOS_SIGNING_DIR", "It is the ephemeral signing directory."))
     profile_name = require_env!("LO_IOS_PROFILE_NAME", "It names an existing App Store profile.")
-    projects = Dir[File.join(ROOT, "ios", "*.xcodeproj")]
+    projects = Dir[File.join(LO_REPO_ROOT, "ios", "*.xcodeproj")]
     UI.user_error!("expected exactly one generated app project") unless projects.size == 1
     project = Xcodeproj::Project.open(projects.first)
     targets = project.native_targets.select { |target| target.product_type == "com.apple.product-type.application" }

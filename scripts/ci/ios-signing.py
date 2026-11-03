@@ -173,10 +173,12 @@ def verify(directory):
     if embedded["UUID"] != (directory / "profile-uuid.txt").read_text():
         raise SigningError("IPA embedded profile differs from the selected profile")
     certificate_prefix = str(directory / "signing-certificate-")
-    run(["codesign", "-d", "--extract-certificates", certificate_prefix, app])
+    # codesign's optional prefix must be attached with '='; a separate
+    # argument is parsed as the code path and fails after a successful export.
+    run(["codesign", "-d", f"--extract-certificates={certificate_prefix}", app])
     if (directory / "signing-certificate-0").read_bytes() not in embedded.get("DeveloperCertificates", []):
         raise SigningError("IPA signing certificate is not authorized by its profile")
-    entitlements = plistlib.loads(run(["codesign", "-d", "--entitlements", ":-", app]))
+    entitlements = plistlib.loads(run(["codesign", "-d", "--entitlements", "-", "--xml", app]))
     validate_entitlements(entitlements, team, bundle)
     print("IPA codesign verified: Distribution identity, bundle/team, production aps-environment, get-task-allow=false")
 

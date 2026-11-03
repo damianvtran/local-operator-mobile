@@ -26,7 +26,7 @@ module Xcodeproj
       raise 'project must resolve from repository root' unless path == File.join($fixture, 'ios', 'SyntheticApp.xcodeproj')
       configuration = Struct.new(:name, :build_settings).new('Release', {
         'PRODUCT_BUNDLE_IDENTIFIER' => 'com.example.synthetic',
-        'CODE_SIGN_ENTITLEMENTS' => '$(SRCROOT)/App/App.entitlements'
+        'CODE_SIGN_ENTITLEMENTS' => $entitlement_setting
       })
       target = Struct.new(:product_type, :name, :build_configurations)
       app = target.new('com.apple.product-type.application', 'SyntheticApp', [configuration])
@@ -71,6 +71,14 @@ def supply(**options)
   $called << :play
 end
 
+def evaluate_fastfile(path)
+  # Separate method scope matches the parser's DSL evaluation and isolates
+  # fixture locals from locals introduced by the Fastfile's lane blocks.
+  receiver = Object.new
+  receiver.instance_eval(File.read(path), path)
+  receiver
+end
+
 source = File.expand_path('../../fastlane/Fastfile', __dir__)
 raise 'missing source Fastfile' unless File.file?(source)
 base = ENV['LOCAL_OPERATOR_SCRATCHPAD'] || ENV['RUNNER_TEMP'] || Dir.tmpdir
@@ -87,7 +95,9 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
     # Negative control reproduces the original failure in the actual lane cwd.
     raise 'negative control did not discriminate' unless Dir['ios/*.xcodeproj'].empty?
     puts 'PASS negative control: old relative project glob finds zero projects from fastlane/'
-    load File.join(root, 'fastlane', 'Fastfile')
+    fastfile = File.join(root, 'fastlane', 'Fastfile')
+    # Fastlane evaluates the file in its DSL binding, not through Ruby load.
+    dsl = evaluate_fastfile(fastfile)
     ENV['LO_IOS_SIGNING_DIR'] = 'signing'
     ENV['LO_IOS_PROFILE_NAME'] = 'Synthetic profile'
     ENV['APPLE_TEAM_ID'] = 'SYNTHETIC1'
@@ -97,14 +107,17 @@ Dir.mktmpdir('fastlane-cwd-test-', base) do |root|
     ENV['APPLE_ASC_PRIVATE_KEY_PATH'] = 'signing/asc-api-key.p8'
     ENV['LO_ANDROID_AAB'] = 'artifacts/synthetic.aab'
     ENV['SUPPLY_JSON_KEY'] = 'signing/synthetic.json'
-    $lanes[[:ios, :prepare_distribution]].call
+    ['$(SRCROOT)/App/App.entitlements', '$(PROJECT_DIR)/App/App.entitlements', 'App/App.entitlements'].each do |setting|
+      $entitlement_setting = setting
+      $lanes[[:ios, :prepare_distribution]].call
+    end
     $lanes[[:ios, :testflight]].call
     $lanes[[:android, :internal]].call
-    raise 'missing lane execution' unless $called == [:key, :profile, :settings, :key, :testflight, :play]
+    raise 'missing lane execution' unless $called == ([:key, :profile, :settings] * 3 + [:key, :testflight, :play])
     raise 'bundle output path drifted' unless File.read(File.join(root, 'signing', 'bundle-id.txt')) == 'com.example.synthetic'
     raise 'production push not set' unless JSON.parse(File.read(File.join(root, 'ios', 'App', 'App.entitlements')))['aps-environment'] == 'production'
     absolute = File.join(root, 'artifacts')
-    raise 'absolute path changed' unless repo_path(absolute) == absolute
+    raise 'absolute path changed' unless dsl.repo_path(absolute) == absolute
     puts 'PASS Fastfile lanes from fastlane/: project, entitlements, signing/profile output, IPA/API key, AAB/service key resolve against repository root; absolute paths preserved'
   end
 end
