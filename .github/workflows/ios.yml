@@ -330,6 +330,7 @@ jobs:
             ${{ runner.temp }}/auth-retirement-proof/cleanup.json
             ${{ runner.temp }}/auth-retirement-proof/cleanup-first.json
             ${{ runner.temp }}/auth-retirement-proof/failure.json
+            ${{ runner.temp }}/auth-retirement-proof/freeze.json
           if-no-files-found: error
 
       - name: Capture the frame the app renders, and assert it rendered

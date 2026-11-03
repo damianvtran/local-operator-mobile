@@ -131,6 +131,11 @@ describe("built scheme and timeout log observations, no SDK", () => {
 				expect(text).not.toContain(sentinel);
 				expect(existsSync(join(root, "frozen-artifact.json"))).toBe(false);
 			}
+			const freeze = JSON.parse(
+				readFileSync(join(root, "freeze.json"), "utf8"),
+			);
+			expect(freeze).toEqual({ schemeRegistered: registered });
+			expect(Object.keys(freeze)).toEqual(["schemeRegistered"]);
 			expect(calls).toHaveLength(1);
 			expect(calls[0]?.[0]).toBe("-convert");
 			expect(calls.flat()).not.toContain("install");

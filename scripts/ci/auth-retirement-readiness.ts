@@ -32,14 +32,14 @@ export function createReadyGate(budgetMs = READY_BUDGET_MS) {
 	let receive: ((at: number) => void) | null = null;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	return {
-		arm(): Promise<number> {
+		arm(overrideMs = budgetMs): Promise<number> {
 			if (receive) throw new Error("Ready waiter already armed");
 			const pending = new Promise<number>((yes, no) => {
 				receive = yes;
 				timer = setTimeout(() => {
 					receive = null;
 					no(new ReadyTimeout());
-				}, budgetMs);
+				}, overrideMs);
 			});
 			void pending.catch(() => undefined);
 			return pending;
@@ -61,8 +61,9 @@ export function createReadyGate(budgetMs = READY_BUDGET_MS) {
 export async function launchWithReady<T>(
 	gate: ReturnType<typeof createReadyGate>,
 	launch: () => Promise<T>,
+	readyBudgetMs?: number,
 ): Promise<{ launch: T; readyAt: number }> {
-	const ready = gate.arm(); // Must precede launch: native readiness may arrive during it.
+	const ready = gate.arm(readyBudgetMs); // Must precede launch: native readiness may arrive during it.
 	try {
 		const result = await launch();
 		return { launch: result, readyAt: await ready };

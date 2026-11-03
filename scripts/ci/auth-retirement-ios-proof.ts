@@ -46,9 +46,7 @@ import {
 } from "./auth-retirement-proof-contract.ts";
 import {
 	createReadyGate,
-	launchWithReady,
 	listenForProofSignals,
-	ReadyTimeout,
 	signalRefusal,
 	urlProgress,
 } from "./auth-retirement-readiness.ts";
@@ -62,9 +60,24 @@ import {
 export { READY_BUDGET_MS } from "./auth-retirement-readiness.ts";
 
 import {
+	captureSeedHost,
+	DEFAULT_COMMAND_BUDGET_MS,
+	type HostNumbers,
+	launchFailureCause,
+	launchProofPhase,
+	ProofCommandTimeout,
+} from "./auth-retirement-launch.ts";
+import {
 	observeSchemeAfterTimeout,
 	schemeRegistered,
 } from "./auth-retirement-scheme-observation.ts";
+
+export {
+	DEFAULT_COMMAND_BUDGET_MS,
+	FIRST_LAUNCH_BUDGET_MS,
+	ProofCommandTimeout,
+	SEED_READY_BUDGET_MS,
+} from "./auth-retirement-launch.ts";
 
 /** Run 41523920765 exhausted 90s at boot-ready; run 41260071341 passed
  * boot but exhausted the default 30s at install. This proof creates a never-
@@ -188,6 +201,11 @@ export async function freezeArtifact(
 			readFileSync(join(root, "build-identity.json"), "utf8"),
 		);
 		const actual = await measureArtifact(app, run);
+		writeFileSync(
+			join(root, "freeze.json"),
+			JSON.stringify({ schemeRegistered: actual.schemeRegistered }),
+			{ flag: "wx" },
+		);
 		if (!actual.schemeRegistered) {
 			activeProofDiagnostics?.checkpoint("scheme-unregistered");
 			activeProofDiagnostics?.observePhaseFailure({
@@ -254,7 +272,7 @@ export function verifierProcess(
 export async function command(
 	executable: string,
 	args: string[],
-	timeout = 30000,
+	timeout = DEFAULT_COMMAND_BUDGET_MS,
 	beforeStart?: (pid: number) => void,
 ): Promise<string> {
 	const diagnostic = activeProofDiagnostics;
@@ -385,7 +403,11 @@ export async function command(
 			// Buffered stdout can arrive after the producer has already exited 0.
 			// Killing its group is not proof of rejection: the cap itself is final.
 			if (code !== 0 || timedOut || outputCapped)
-				no(new Error("Proof subprocess failed or timed out"));
+				no(
+					timedOut
+						? new ProofCommandTimeout()
+						: new Error("Proof subprocess failed or timed out"),
+				);
 			else yes(output.trim());
 		});
 		if (beforeStart) {
@@ -663,6 +685,10 @@ async function runNativeProofBody(
 			throw new Error("No owned receiver port");
 		let negativeControlPassed = false;
 		const evidence: Record<string, unknown>[] = [];
+		let seedHost: HostNumbers = {
+			hostLoadAvg1m: "UNOBSERVED",
+			hostFreeMemMiB: "UNOBSERVED",
+		};
 		let previous: ProofProcessIdentity | null = null;
 		try {
 			// Install happened once in the existing unsigned simulator workflow. Never
@@ -688,14 +714,15 @@ async function runNativeProofBody(
 					const beforeTokens = tokenRequests;
 					await installedIdentity();
 					launchStart = performance.now();
-					const launched = await launchWithReady(readyGate, () =>
-						command("xcrun", [
-							"simctl",
-							"launch",
-							"--terminate-running-process",
-							udid,
-							PROOF_ID,
-						]),
+					const launched = await launchProofPhase(
+						name,
+						udid,
+						PROOF_ID,
+						command,
+						readyGate,
+						() => {
+							seedHost = captureSeedHost();
+						},
 					);
 					const launch = launched.launch;
 					readyAt = launched.readyAt;
@@ -772,11 +799,13 @@ async function runNativeProofBody(
 						waiting = null;
 					}
 				} catch (error) {
-					if (error instanceof ReadyTimeout) phaseCause = "ready-timeout";
+					if (phaseCause === "launch-identity")
+						phaseCause = launchFailureCause(error);
 					const outcomeAt = performance.now();
 					const observation = {
 						phase: name,
 						cause: phaseCause,
+						...(name === "seed" ? seedHost : {}),
 						readyAfterLaunchMs:
 							readyAt !== null && launchStart !== null
 								? readyAt - launchStart
@@ -828,6 +857,7 @@ async function runNativeProofBody(
 					{
 						kind: "ios-native-durable-retirement-restore-primitives-only",
 						negativeControlPassed,
+						seedHost,
 						complete: evidence.length === 6 && negativeControlPassed,
 						phases: evidence,
 						notProved: [

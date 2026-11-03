@@ -2,6 +2,7 @@
  * retain native errors, callback URLs, output text, credentials or paths. The
  * app duplicates STAGES because the Node host must not import React Native. */
 
+import { sanitizeHostNumbers } from "./auth-retirement-launch.ts";
 import { safeUrlProgress } from "./auth-retirement-readiness.ts";
 import type { Run } from "./auth-retirement-simulator.ts";
 export const APP_STAGES = [
@@ -34,6 +35,7 @@ export const REFUSED_REASONS = [
 	"progress-unknown",
 ] as const;
 export const PHASE_CAUSES = [
+	"launch-timeout",
 	"scheme-unregistered",
 	"receiver-bind-failed",
 	"ready-timeout",
@@ -212,6 +214,7 @@ export function sanitizePhaseFailure(
 	const cause = PHASE_CAUSES.find((value) => value === input.cause) ?? "other";
 	return {
 		phase: PHASES.find((value) => value === input.phase) ?? null,
+		...(input.phase === "seed" ? sanitizeHostNumbers(input) : {}),
 		cause,
 		...(cause === "phase-rejected"
 			? { appStage: appStage(input.appStage) }

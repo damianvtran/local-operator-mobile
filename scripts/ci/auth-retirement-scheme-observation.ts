@@ -66,8 +66,9 @@ export async function observeSchemeAfterTimeout(
 ): Promise<SchemeSeen> {
 	if (cause !== "receipt-timeout" || progress !== "none" || !executable)
 		return unobserved();
-	// 1050s inner budget +30s launchctl +30s log =1110s, below the 1200s
-	// proof-step ceiling. Keep both probes off the success path; no retry/sleep.
+	// Both probes are bounded at 30s each; see auth-retirement-launch.ts for
+	// budget accounting and why the 20-minute step ceiling is the hard stop.
+	// Keep both probes off the success path; no retry/sleep.
 	try {
 		const output = await run("xcrun", [
 			"simctl",
