@@ -537,7 +537,12 @@ export async function startupForSession(
 			}
 			coordinators.set(key, owner);
 			await restoreOptionalDraft(owner, key, auth);
-			if (await hasOrdinarySessionDraft(sessionId, auth.scope)) return null;
+			if (await hasOrdinarySessionDraft(sessionId, auth.scope)) {
+				owner.pause();
+				coordinators.delete(key);
+				recoveryOrigins.delete(key);
+				return null;
+			}
 			return owner;
 		});
 	}

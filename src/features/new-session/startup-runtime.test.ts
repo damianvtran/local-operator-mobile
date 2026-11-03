@@ -10,6 +10,7 @@ const records = new Map<string, string>();
 const recoveryRecords = new Map<string, string>();
 let authorization: { scope: string; revision: number } | null = null;
 let recoveryAuthority: string | null = "owner-a";
+const legacyRace = { enabled: false, calls: 0 };
 let counter = 0;
 let scopeCounter = 0;
 let scope = "scope-u1-0";
@@ -36,7 +37,8 @@ vi.mock("@/connection/startup-authorization", () => ({
 	registerStartupAuthorizationCleanup: () => () => undefined,
 }));
 vi.mock("@/features/session/device-storage", () => ({
-	hasOrdinarySessionDraft: async () => false,
+	hasOrdinarySessionDraft: async () =>
+		legacyRace.enabled && ++legacyRace.calls > 1,
 	draftKey: (sid: string) => `lo-mobile-draft:${sid}`,
 }));
 vi.mock("@/features/session/draft-recovery", () => ({
@@ -81,6 +83,8 @@ describe("an unconfirmed start does not own the next draft", () => {
 		records.clear();
 		recoveryRecords.clear();
 		recoveryAuthority = "owner-a";
+		legacyRace.enabled = false;
+		legacyRace.calls = 0;
 		/* The runtime's maps and this file's storage both outlive a test, so the
 		 * scope must not repeat: a second `scope-u1-1` would hand test two the
 		 * first test's coordinator, which is how this fixture itself went wrong. */
@@ -88,6 +92,34 @@ describe("an unconfirmed start does not own the next draft", () => {
 		authorization = { scope, revision: 1 };
 	});
 
+	it("pauses and unregisters an imported coordinator when a racing legacy editor wins", async () => {
+		const runtime = await import("./startup-runtime");
+		const { StartupCoordinator } = await import("./startup-coordinator");
+		const pause = vi.spyOn(StartupCoordinator.prototype, "pause");
+		recoveryRecords.set(
+			"startup:session:synthetic-sid",
+			JSON.stringify({ text: "recoverable", images: [] }),
+		);
+		legacyRace.enabled = true;
+		try {
+			expect(
+				await runtime.startupForSession(auth(), client, "synthetic-sid"),
+			).toBeNull();
+			expect(pause).toHaveBeenCalledOnce();
+			const orphan = pause.mock.instances[0];
+			legacyRace.enabled = false;
+			const reopened = await runtime.startupForSession(
+				auth(),
+				client,
+				"synthetic-sid",
+			);
+			expect(reopened).not.toBeNull();
+			expect(reopened).not.toBe(orphan);
+		} finally {
+			legacyRace.enabled = false;
+			pause.mockRestore();
+		}
+	});
 	it("keeps ordinary native-policy draft and ambiguous outbox on a same-generation offline restart", async () => {
 		recoveryAuthority = null;
 		const first = await openStartup(auth(), client);

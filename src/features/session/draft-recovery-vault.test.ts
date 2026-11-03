@@ -35,6 +35,46 @@ function fixture() {
 	};
 }
 describe("sealed draft authority lease", () => {
+	it.each(["current draft", null])(
+		"a clean checkpoint retry (%j) restores same-process recovery without restarting",
+		async (value) => {
+			const x = fixture();
+			const vault = x.create();
+			await vault.prepare("owner-a", () => true);
+			await vault.write("draft", "old draft");
+			vault.withdraw();
+			const remove = x.store.remove;
+			let failing = true;
+			x.store.remove = async (key) => {
+				if (failing) throw new Error("remove denied");
+				await remove(key);
+			};
+			await expect(
+				vault.checkpointRetiring("owner-a", "draft", null),
+			).rejects.toThrow("remove denied");
+			await expect(vault.prepare("owner-a", () => true)).rejects.toThrow(
+				"explicit retry",
+			);
+			failing = false;
+			await vault.checkpointRetiring("owner-a", "draft", value);
+			expect(vault.available()).toBe(false);
+			await vault.prepare("owner-a", () => true);
+			expect(await vault.read("draft")).toBe(value);
+		},
+	);
+	it("a clean checkpoint cannot waive an unrelated failed whole-installation erase", async () => {
+		const x = fixture();
+		const vault = new DraftRecoveryVault(x.store, async () => {
+			throw new Error("erase denied");
+		});
+		await vault.prepare("owner-a", () => true);
+		await vault.write("draft", "old draft");
+		await expect(vault.clear()).rejects.toThrow("erase denied");
+		await vault.checkpointRetiring("owner-a", "draft", "current draft");
+		await expect(vault.prepare("owner-a", () => true)).rejects.toThrow(
+			"explicit retry",
+		);
+	});
 	it("retries an accepted failed checkpoint before ordinary-generation purge", async () => {
 		const x = fixture();
 		const vault = x.create();

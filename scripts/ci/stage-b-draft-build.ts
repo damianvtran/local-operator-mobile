@@ -14,7 +14,7 @@ export function stageBGeneratedSource(config: StageBProofConfig) {
 	const literal = JSON.stringify(config);
 	return {
 		entry: `// Dedicated CI artifact only. Install transport BEFORE real app imports.\nrequire('./src/testing/stage-b-draft-bootstrap.ts').bootStageBDraftProof(${literal}).then(() => require('expo-router/entry')).catch(() => { throw new Error('Dedicated Stage B bootstrap failed'); });\n`,
-		config: `import base from './app.stage-b-original';\nconst proof = ${literal};\nexport default { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true } } }, extra: { ...base.extra, stageBProof: proof } };\n`,
+		config: `import base from './app.stage-b-original.ts';\nconst proof = ${literal};\nexport default { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true } } }, extra: { ...base.extra, stageBProof: proof } };\n`,
 	};
 }
 export function prepareStageBProof(

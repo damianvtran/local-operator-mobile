@@ -36,6 +36,17 @@ function fixture() {
 	};
 }
 describe("native startup revision commits", () => {
+	it("commits discard before an undeletable older committed predecessor can block pruning", async () => {
+		const x = fixture();
+		await x.store.set("first private value");
+		await x.store.set("second private value");
+		x.denyRemoval();
+		await expect(x.store.discard("discarded")).rejects.toThrow("remove denied");
+		expect(await x.restart().get()).toBe("discarded");
+		expect(
+			[...x.files.keys()].filter((name) => name.endsWith(".json")),
+		).toHaveLength(3);
+	});
 	it("keeps a committed discard tombstone when predecessor deletion is interrupted", async () => {
 		const x = fixture();
 		await x.store.set("old private value");

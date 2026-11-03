@@ -12,6 +12,9 @@ export class DraftRecoveryVault {
 	private tail: Promise<unknown> = Promise.resolve();
 	private current: () => boolean = () => false;
 	private erasureFailed = false;
+	// Checkpoint deletion failures are retryable per slot. Do not conflate them
+	// with a failed whole-installation erase, which only verified erasure clears.
+	private readonly checkpointFailures = new Set<string>();
 	/** Failed accepted edits stay in RAM only. Reauthentication must commit them
 	 * before ordinary-generation cleanup; never write a plaintext retry cache. */
 	private readonly failedWrites = new Map<string, () => Promise<void>>();
@@ -53,7 +56,7 @@ export class DraftRecoveryVault {
 	prepare(authority: string, isCurrent: () => boolean): Promise<boolean> {
 		const epoch = this.epoch;
 		return this.run(async () => {
-			if (this.erasureFailed)
+			if (this.erasureFailed || this.checkpointFailures.size > 0)
 				throw new Error("private cleanup requires an explicit retry");
 			if (this.failedWrites.size > 0)
 				throw new Error("draft checkpoint must complete before admission");
@@ -149,6 +152,7 @@ export class DraftRecoveryVault {
 							destination,
 							JSON.stringify({ version: 1, savedAt: this.now(), value }),
 						);
+					this.checkpointFailures.delete(destination);
 					return;
 				} catch {
 					/* Never retain the superseded value as a fallback. */
@@ -173,8 +177,9 @@ export class DraftRecoveryVault {
 				this.failedWrites.delete(destination);
 				try {
 					await this.store.remove(destination);
+					this.checkpointFailures.delete(destination);
 				} catch (error) {
-					this.erasureFailed = true;
+					this.checkpointFailures.add(destination);
 					throw error;
 				}
 			}
@@ -188,6 +193,7 @@ export class DraftRecoveryVault {
 			// A failed erase is a sticky recovery fence until explicit retry.
 			this.failedWrites.clear();
 			await this.erase();
+			this.checkpointFailures.clear();
 			this.erasureFailed = false;
 		});
 	}

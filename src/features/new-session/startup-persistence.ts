@@ -70,7 +70,10 @@ export class RevisionStore {
 		for (const name of await this.files.list()) {
 			if (
 				name !== latest &&
-				(versions.includes(name) || name.endsWith(".pending"))
+				// Discard must commit its tombstone before pruning committed history.
+				// An undeletable predecessor may fail cleanup, never revive old text.
+				((validatePrevious && versions.includes(name)) ||
+					name.endsWith(".pending"))
 			)
 				await this.files.remove(name);
 		}

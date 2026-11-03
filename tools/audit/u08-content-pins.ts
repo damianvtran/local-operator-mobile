@@ -402,7 +402,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	src: "e22f809693df4abf6ed1bc5a7bab845ba31904841c7fc2d8fb395e1acd9ad950",
+	/* Re-pinned for PR #156 after its final source remediation. Recomputed from
+	 * --print, not copied from CI: the PR base 9f43a47a reproduces e22f8096.
+	 * The drift consists of native auth/storage/recovery, picker cleanup and their
+	 * tests/isolated native-proof fixtures. U-08 still measures the same dark 150%
+	 * long-transcript overlap cell: app/UI styling, tokens/fonts, instrument and
+	 * input corpus are unchanged. Native recovery is disabled on that fresh web
+	 * fixture route; no transcript or measured control was edited. This is content
+	 * admission reasoning, not a claim of new rendered proof. ORIGINAL_* untouched. */
+	src: "f04a410b332abb3b86504cfdf256c545b67238ae2b63a38b4d4805e19fcc9da8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

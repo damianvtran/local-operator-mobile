@@ -291,7 +291,10 @@ describe("native private adapter with Node platform ports", () => {
 	});
 	it("deletes legacy plaintext rather than adopting it into an authenticated install", async () => {
 		state.dirs.add("document/lo-mobile-store");
-		state.files.set("document/lo-mobile-store/legacy.json", "legacy-private");
+		state.files.set(
+			["document", "lo-mobile-store", "legacy.json"].join("/"),
+			"legacy-private",
+		);
 		await (await restart()).nativePrivateStore("device").get("draft");
 		expect([...state.files.values()].join("")).not.toContain("legacy-private");
 	});
