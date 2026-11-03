@@ -49,7 +49,10 @@ jobs:
           ./gradlew assembleDebug :app:processReleaseMainManifest --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx3g
           python3 - <<'PY'
           import pathlib
-          candidates = list(pathlib.Path('app/build/intermediates').glob('merged_manifests/release/**/AndroidManifest.xml'))
+          # Match the repository's existing native gate: MainManifest can emit
+          # singular merged_manifest before a later task emits merged_manifests.
+          candidates = [p for p in pathlib.Path('app/build/intermediates').rglob('AndroidManifest.xml')
+                        if 'release' in p.parts and any(s.startswith('merged_manifest') for s in p.parts)]
           assert candidates, 'Release manifest must exist; source-only absence is not proof'
           for path in candidates:
               text = path.read_text()
