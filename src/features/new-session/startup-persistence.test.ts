@@ -24,6 +24,7 @@ function fixture() {
 	return {
 		files,
 		store: new RevisionStore(adapter),
+		restart: () => new RevisionStore(adapter),
 		fail: () => {
 			failWrite = true;
 		},
@@ -38,6 +39,19 @@ describe("native startup revision commits", () => {
 			"disk full",
 		);
 		expect(await x.store.get()).toBe("first committed");
+	});
+	it("ignores an interrupted pending revision after process restart", async () => {
+		const x = fixture();
+		await x.store.set("committed encrypted envelope");
+		// A process can die after writing the pending file but before rename. A
+		// fresh adapter must not treat those incomplete bytes as recoverable work.
+		x.files.set("000000000002.pending", '{"version":1,"value":"partial');
+		expect(await x.restart().get()).toBe("committed encrypted envelope");
+		await x.restart().set("next committed encrypted envelope");
+		expect(await x.restart().get()).toBe("next committed encrypted envelope");
+		expect([...x.files.keys()].some((name) => name.endsWith(".pending"))).toBe(
+			false,
+		);
 	});
 	it("keeps at most two committed revisions and refuses corrupt latest bytes", async () => {
 		const x = fixture();
