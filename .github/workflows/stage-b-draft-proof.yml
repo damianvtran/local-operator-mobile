@@ -1,0 +1,153 @@
+name: Stage B draft recovery proof
+
+# New-only lane: no callback, signing, publishing or release workflow edits.
+# Synchronize is cheap preflight only. A manager explicitly applies this label
+# AFTER other native producers settle; a later source push needs a fresh label.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, labeled]
+    paths:
+      - "src/**"
+      - "app/**"
+      - "scripts/ci/stage-b-*"
+      - "tools/mock-relay/stage-b-*"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/stage-b-draft-proof.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preflight:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Discriminating proof source controls (not another full suite)
+        run: pnpm exec vitest run scripts/ci/stage-b-draft-proof.test.ts scripts/ci/stage-b-backup-rules.test.ts scripts/ci/stage-b-identity-fixture.test.ts src/features/session/picker-privacy.test.ts
+      - name: Exercise the actual TypeScript entry and its negative admission gate
+        run: |
+          set -euo pipefail
+          if env CI=false GITHUB_ACTIONS=false pnpm exec tsx scripts/ci/stage-b-draft-proof.ts > "$RUNNER_TEMP/stage-b-entry-refusal.log" 2>&1; then
+            echo "FAIL: unapproved native entry returned success"
+            exit 1
+          fi
+          grep -F "Stage B native execution requires its explicitly approved trusted PR lane" "$RUNNER_TEMP/stage-b-entry-refusal.log"
+
+  native:
+    # A bad/missing backup artifact stops admission BEFORE the expensive producer.
+    needs: [preflight, backup-artifact]
+    if: github.event.action == 'labeled' && github.event.label.name == 'stage-b-native-approved' && github.actor == 'damianvtran' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-26
+    timeout-minutes: 90
+    concurrency:
+      group: stage-b-draft-native-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      STAGE_B_NATIVE_APPROVED: "true"
+      STAGE_B_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      MAESTRO_VERSION: "2.11.0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pnpm install --frozen-lockfile
+      - name: Provision the existing pinned Maestro driver (never an SDK/runtime)
+        run: |
+          set -euo pipefail
+          curl -fsSL https://get.maestro.mobile.dev | bash
+      - name: One unsigned producer and real-provider native matrix
+        run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts
+      - name: Preserve exact source/artifact/wire/native/frame receipts on all outcomes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stage-b-native-${{ github.event.pull_request.head.sha }}
+          # Never upload DerivedData, isolated HOME or scratch caches. Keep only
+          # the one app plus bounded, source-linked evidence.
+          path: |
+            ${{ runner.temp }}/stage-b-draft-proof-*/receipt.json
+            ${{ runner.temp }}/stage-b-draft-proof-*/commands
+            ${{ runner.temp }}/stage-b-draft-proof-*/frames
+            ${{ runner.temp }}/stage-b-draft-proof-*/*.hierarchy.txt
+            ${{ runner.temp }}/stage-b-draft-proof-*/*.yaml
+            ${{ runner.temp }}/stage-b-draft-proof-*/maestro
+            ${{ runner.temp }}/stage-b-draft-proof-*/candidate-app.tgz
+          if-no-files-found: error
+          retention-days: 14
+
+  backup-artifact:
+    needs: preflight
+    if: github.event.action == 'labeled' && github.event.label.name == 'stage-b-native-approved' && github.actor == 'damianvtran' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Reuse the existing exact-PR Android debug producer (no second build)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/stage-b-backup/apk"
+          gh run list --workflow android.yml --event pull_request --commit "$SOURCE_SHA" --limit 5 --json databaseId,headSha,status,conclusion > "$RUNNER_TEMP/stage-b-backup/producer-runs.json"
+          RUN_ID=$(python3 -c 'import json,os; rows=json.load(open(os.environ["RUNNER_TEMP"]+"/stage-b-backup/producer-runs.json")); matches=[r for r in rows if r["headSha"]==os.environ["SOURCE_SHA"]]; assert matches,"No same-head Android CI producer; do not build another"; print(matches[0]["databaseId"])')
+          gh run watch "$RUN_ID" --exit-status --interval 10
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" > "$RUNNER_TEMP/stage-b-backup/artifact-metadata.json"
+          python3 -c 'import json,os; rows=json.load(open(os.environ["RUNNER_TEMP"]+"/stage-b-backup/artifact-metadata.json"))["artifacts"]; rows=[r for r in rows if r["name"]=="android-debug-apk" and not r["expired"]]; assert len(rows)==1 and rows[0]["workflow_run"]["head_sha"]==os.environ["SOURCE_SHA"],"Artifact provenance mismatch"'
+          gh run download "$RUN_ID" --name android-debug-apk --dir "$RUNNER_TEMP/stage-b-backup/apk"
+      - name: Inspect generated selection and actual packaged backup rules
+        run: |
+          set -euo pipefail
+          # Generation only: no Gradle, emulator, SDK install or second APK producer.
+          pnpm exec expo prebuild --platform android --no-install --clean
+          cp android/app/src/main/AndroidManifest.xml "$RUNNER_TEMP/stage-b-backup/generated-manifest.xml"
+          AAPT2=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -mindepth 2 -maxdepth 2 -name aapt2 -type f | sort | tail -1)
+          test -n "$AAPT2" || { echo "Preinstalled aapt2 missing; no SDK installation is authorized"; exit 1; }
+          APK=$(find "$RUNNER_TEMP/stage-b-backup/apk" -name '*.apk' -type f)
+          test "$(printf '%s\n' "$APK" | wc -l)" -eq 1
+          node scripts/ci/stage-b-backup-rules.ts --apk "$APK" --aapt2 "$AAPT2" --source "$SOURCE_SHA" --variant debug --generated-manifest "$RUNNER_TEMP/stage-b-backup/generated-manifest.xml" --output "$RUNNER_TEMP/stage-b-backup/receipt.json"
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stage-b-backup-${{ github.event.pull_request.head.sha }}
+          # The APK is already retained by its original producer; do not upload
+          # a redundant second copy of that dependency-heavy artifact.
+          path: |
+            ${{ runner.temp }}/stage-b-backup/receipt.json
+            ${{ runner.temp }}/stage-b-backup/generated-manifest.xml
+            ${{ runner.temp }}/stage-b-backup/producer-runs.json
+            ${{ runner.temp }}/stage-b-backup/artifact-metadata.json
+          if-no-files-found: error
+          retention-days: 14
