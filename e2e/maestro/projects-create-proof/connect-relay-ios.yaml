@@ -52,10 +52,18 @@ appId: ${APP_ID}
 - tapOn:
     id: "custom-url-field"
 - inputText: ${RELAY_URL}
-# iOS keyboard dismissal: tap static title text, never `hideKeyboard` (unsupported
-# on iOS by Maestro 2.11.0 — see the file header).
+# iOS keyboard dismissal: the on-screen Return key. Tapping the "Your own tunnel"
+# text (the account-routing helper's form) does NOT blur a TextInput here: run
+# 41581513521's hierarchy still held `Return`/`inputView` afterwards, and the
+# keyboard then swallowed the opt-in taps as typed `y`s (URL ended `…49515yy`).
+# `hideKeyboard` stays unusable on iOS (Maestro 2.11.0). Each dismissal asserts
+# the keyboard is gone, and the URL is asserted EXACT (Maestro matches the whole
+# text), so a corrupted field fails here with the failure capture.
 - tapOn:
-    text: "Your own tunnel"
+    id: "Return"
+- assertNotVisible:
+    id: "Return"
+- assertVisible: ${RELAY_URL}
 - scrollUntilVisible:
     element:
       id: "custom-password-field"
@@ -65,7 +73,9 @@ appId: ${APP_ID}
     id: "custom-password-field"
 - inputText: ${RELAY_PASSWORD}
 - tapOn:
-    text: "Your own tunnel"
+    id: "Return"
+- assertNotVisible:
+    id: "Return"
 - scrollUntilVisible:
     element:
       id: "custom-insecure-opt-in"
@@ -74,26 +84,13 @@ appId: ${APP_ID}
 # The opt-in is a toggle Button whose LABEL carries its state ("Allow a plain
 # http:// address" off, "Plain http:// is allowed" on; own-tunnel.tsx). Run 2
 # (41569220308) showed the tap COMPLETED yet the form still refusing http://, so
-# the state is asserted instead of trusted. Tap once; only if the on-label is
-# still absent tap again (never an unconditional second tap, which would turn a
-# working switch OFF), then fail fast so the failure capture shows the screen.
+# the state is asserted instead of trusted. Tap once; if the on-label is
+# absent fail fast. No retry tap: a retry cannot be told from a toggle-off, and
+# the earlier retry is what typed into the URL field.
 - tapOn:
     id: "custom-insecure-opt-in"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      notVisible: "Plain http:// is allowed"
-    commands:
-      - scrollUntilVisible:
-          element:
-            id: "custom-insecure-opt-in"
-          direction: UP
-          timeout: 15000
-      - tapOn:
-          id: "custom-insecure-opt-in"
-      - waitForAnimationToEnd:
-          timeout: 2000
 - assertVisible: "Plain http:// is allowed"
 - scrollUntilVisible:
     element:
