@@ -1118,11 +1118,22 @@ export class RelayEndpoints {
 	 * relay can never hand back the PREVIOUS picture under the same address.
 	 * A relay without the route, or an agent whose picture was removed, answers
 	 * 404 — the caller reads the relay's own 404 as "draw the glyph".
+	 *
+	 * `size` (64/128/256) asks for the relay's downscaled square variant instead
+	 * of the 512 px original. Send it ONLY when the relay advertises
+	 * `features.agent_avatar_sizes` (`avatarSizesServed`): the caller picks it
+	 * with `avatarVariant` from the rendered dp x `PixelRatio`, so the picture is
+	 * sharp without shipping ~10x the bytes over the tunnel. Omitted, the request
+	 * is byte-for-byte the one an older relay already understands.
 	 */
-	async agentAvatar(agentId: string, sha256: string): Promise<ImageBytes> {
+	async agentAvatar(
+		agentId: string,
+		sha256: string,
+		size?: number,
+	): Promise<ImageBytes> {
 		const result = await this.http.bytes({
 			method: "GET",
-			path: `/v1/agents/${encodeURIComponent(agentId)}/avatar${query({ v: sha256 })}`,
+			path: `/v1/agents/${encodeURIComponent(agentId)}/avatar${query({ v: sha256, size })}`,
 		});
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}

@@ -14,13 +14,18 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-import { Image, Platform, Pressable, Text } from "react-native";
+import { Image, PixelRatio, Platform, Pressable, Text } from "react-native";
 import {
 	type AgentAvatarRef,
 	agentAvatarCache,
+	avatarSizesServed,
+	avatarVariant,
 	paintedPicture,
 } from "@/features/agent-avatar/agent-avatar";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useListState,
+} from "@/features/auth/connection-provider";
 import { HEADER_AVATAR_PT } from "@/features/session/header";
 import { toBase64 } from "@/features/session/runtime";
 import { t } from "@/i18n";
@@ -43,12 +48,20 @@ const avatarCache = agentAvatarCache;
  * view never flashes the glyph.
  */
 export const useAgentAvatarUri = (
-	ref: AgentAvatarRef | null,
+	baseRef: AgentAvatarRef | null,
+	/** The rendered edge in dp; picks the relay variant covering dp x PixelRatio. */
+	dp: number,
 ): string | null => {
 	const { relay } = useConnection();
 	const client = relay();
-	const agentId = ref?.agentId ?? null;
-	const sha256 = ref?.sha256 ?? null;
+	const served = useListState((state) => avatarSizesServed(state.capabilities));
+	/* Read per render: the ratio is fixed for a phone screen, and a render is
+	 *  cheap next to the fetch it decides. */
+	const size = served ? avatarVariant(dp, PixelRatio.get()) : undefined;
+	const agentId = baseRef?.agentId ?? null;
+	const sha256 = baseRef?.sha256 ?? null;
+	const ref: AgentAvatarRef | null =
+		agentId === null || sha256 === null ? null : { agentId, sha256, size };
 	const revision = useSyncExternalStore(
 		avatarCache.subscribe,
 		avatarCache.revision,
@@ -62,7 +75,7 @@ export const useAgentAvatarUri = (
 		// A clear can happen between render and commit during route retirement.
 		if (revision !== avatarCache.revision()) return;
 		if (agentId === null || sha256 === null) return;
-		const key = { agentId, sha256 };
+		const key: AgentAvatarRef = { agentId, sha256, size };
 		const settled = avatarCache.peek(key);
 		if (settled !== undefined || client === null) return;
 		let cancelled = false;
@@ -71,6 +84,7 @@ export const useAgentAvatarUri = (
 				const { bytes, mimeType } = await client.agentAvatar(
 					target.agentId,
 					target.sha256,
+					target.size,
 				);
 				/* The contract stores PNG, or JPEG over the size cap; the header is
 				 *  the authority, PNG the fallback for a relay that sent none. */
@@ -86,7 +100,7 @@ export const useAgentAvatarUri = (
 		return () => {
 			cancelled = true;
 		};
-	}, [agentId, sha256, client, revision]);
+	}, [agentId, sha256, size, client, revision]);
 
 	return paintedPicture(avatarCache, ref);
 };
@@ -158,7 +172,7 @@ export const HeaderAgentAvatar = ({
 	avatarRef: AgentAvatarRef | null;
 	testID?: string;
 }) => {
-	const uri = useAgentAvatarUri(avatarRef);
+	const uri = useAgentAvatarUri(avatarRef, HEADER_AVATAR_PT);
 	const showToast = useUiStore((state) => state.showToast);
 	/* One id per mounted control: react-native-web's `createDOMProps` maps
 	 *  `aria-describedby` to the DOM and has NO mapping for `accessibilityHint`, so
@@ -237,7 +251,7 @@ export const AgentListRow = ({
 	 */
 	reserveLeading?: boolean;
 }) => {
-	const uri = useAgentAvatarUri(avatarRef);
+	const uri = useAgentAvatarUri(avatarRef, ROW_AVATAR_PT);
 	return (
 		<ListRow
 			{...props}
