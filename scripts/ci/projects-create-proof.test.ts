@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -125,11 +132,18 @@ it.each(["ur", "ur-PK"])(
  * tests' tmpdir/mkdtemp pattern without deleting or writing into a shared root:
  * only the unique directory returned by mkdtemp is ever recursively removed.
  * The finally also preserves this boundary when an inventory assertion throws. */
+// Nullish coalescing alone treats empty/whitespace overrides as relative paths.
+// Normalize once for BOTH allocations so CI's blank environment cannot write
+// frame directories beneath the repository's working directory.
+function frameScratchRoot(scratch: string | undefined): string {
+	return scratch?.trim() || tmpdir();
+}
+
 function withFrameDirectory(
 	scratch: string | undefined,
 	run: (root: string) => void,
 ) {
-	const root = mkdtempSync(join(scratch ?? tmpdir(), "frame-contract-"));
+	const root = mkdtempSync(join(frameScratchRoot(scratch), "frame-contract-"));
 	try {
 		run(root);
 	} finally {
@@ -161,19 +175,42 @@ function checkFrameDiscovery(root: string) {
 	}
 }
 
-it.each(["present", "absent"])(
+it.each(["present", "absent", "empty", "whitespace"])(
 	"discovers uploaded Maestro screenshots with scratch override %s and rejects missing frames",
 	(mode) => {
+		const cwdFrameNames = () =>
+			readdirSync(process.cwd())
+				.filter(
+					(name) =>
+						name.startsWith("frame-parent-") ||
+						name.startsWith("frame-contract-"),
+				)
+				.sort();
+		const cwdBefore = cwdFrameNames();
+		const blankOverride = mode === "empty" ? "" : " \t ";
+		const parentOverride = mode === "empty" || mode === "whitespace"
+			? blankOverride
+			: process.env.LOCAL_OPERATOR_SCRATCHPAD;
 		const parent = mkdtempSync(
-			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "frame-parent-"),
+			join(frameScratchRoot(parentOverride), "frame-parent-"),
 		);
 		const sentinel = join(parent, "keep.txt");
 		writeFileSync(sentinel, "owned parent must survive child cleanup");
 		let allocated = "";
 		try {
-			withFrameDirectory(mode === "present" ? parent : undefined, (root) => {
+			const override =
+				mode === "present"
+					? parent
+					: mode === "absent"
+						? undefined
+						: blankOverride;
+			withFrameDirectory(override, (root) => {
 				allocated = root;
 				expect(dirname(root)).toBe(mode === "present" ? parent : tmpdir());
+				// Check while the allocation exists, not only after cleanup could hide it.
+				expect(dirname(root)).not.toBe(process.cwd());
+				expect(dirname(parent)).not.toBe(process.cwd());
+				expect(cwdFrameNames()).toEqual(cwdBefore);
 				checkFrameDiscovery(root);
 			});
 			expect(allocated).not.toBe("");
@@ -188,6 +225,7 @@ it.each(["present", "absent"])(
 			).toThrow("synthetic frame assertion failure");
 			expect(existsSync(allocated)).toBe(false);
 			expect(existsSync(sentinel)).toBe(true);
+			expect(cwdFrameNames()).toEqual(cwdBefore);
 		} finally {
 			// This parent was also exclusively created by this test, never borrowed.
 			rmSync(parent, { recursive: true, force: true });
