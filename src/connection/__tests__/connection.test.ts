@@ -289,7 +289,7 @@ describe("the OAuth callback is verified wherever it arrives", () => {
 	it("reports a refusal the console put in the query string", () => {
 		expect(() =>
 			parseCallbackUrl(
-				"http://127.0.0.1:54549/callback?error=access_denied",
+				"http://127.0.0.1:54549/callback?error=access_denied&state=s1",
 				"s1",
 			),
 		).toThrow(/refused/);
@@ -333,6 +333,84 @@ describe("sign-in hands back tokens, or a cancellation", () => {
 			return url.replace("state=S", `state=${state}`);
 		},
 		dismiss: async () => undefined,
+	});
+
+	it("binds before browser launch and exchanges against the same ephemeral redirect", async () => {
+		const redirect = "http://127.0.0.1:49152/callback";
+		const order: string[] = [];
+		const { calls, fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "synthetic" }),
+		);
+		await signInWithRadient({
+			browser: {
+				returnsCallback: true,
+				prepareRedirect: async () => {
+					order.push("bound");
+					return redirect;
+				},
+				open: async (url, actualRedirect) => {
+					order.push("browser");
+					expect(actualRedirect).toBe(redirect);
+					const params = new URL(url).searchParams;
+					expect(params.get("redirect_uri")).toBe(redirect);
+					return `${redirect}?code=synthetic&state=${params.get("state")}`;
+				},
+				dismiss: async () => {
+					order.push("closed");
+				},
+			},
+			fetchImpl,
+			crypto: fakeCrypto(),
+		});
+		expect(order).toEqual(["bound", "browser", "closed"]);
+		expect(
+			(calls[0]?.body as Record<string, string> | undefined)?.redirect_uri,
+		).toBe(redirect);
+	});
+
+	it("cleans up even when native prepare fails before the browser opens", async () => {
+		let dismissed = false;
+		await expect(
+			signInWithRadient({
+				browser: {
+					returnsCallback: true,
+					prepareRedirect: async () => {
+						throw new Error("bind failed");
+					},
+					open: async () => {
+						throw new Error("must not open");
+					},
+					dismiss: async () => {
+						dismissed = true;
+					},
+				},
+				crypto: fakeCrypto(),
+			}),
+		).rejects.toThrow("bind failed");
+		expect(dismissed).toBe(true);
+	});
+
+	it("aborts an active browser and never exchanges a late callback", async () => {
+		const controller = new AbortController();
+		const { calls, fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "must-not-exchange" }),
+		);
+		await expect(
+			signInWithRadient({
+				signal: controller.signal,
+				browser: {
+					returnsCallback: true,
+					open: async (url) => {
+						controller.abort();
+						return `http://127.0.0.1:54549/callback?code=late&state=${new URL(url).searchParams.get("state")}`;
+					},
+					dismiss: async () => undefined,
+				},
+				fetchImpl,
+				crypto: fakeCrypto(),
+			}),
+		).rejects.toThrow("sign-in was cancelled");
+		expect(calls).toHaveLength(0);
 	});
 
 	it("exchanges the code the browser session returned", async () => {

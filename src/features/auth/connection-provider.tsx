@@ -392,11 +392,13 @@ export const ConnectionProvider = ({
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
 	const mountedRef = useRef(true);
+	const signInAbortRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
+			signInAbortRef.current?.abort();
 			startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
@@ -925,6 +927,9 @@ export const ConnectionProvider = ({
 	}, [revokeAuthorization]);
 
 	const signInWithRadient = useCallback(async () => {
+		signInAbortRef.current?.abort();
+		const attempt = new AbortController();
+		signInAbortRef.current = attempt;
 		const privacy = retireAuthorization(true);
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const isCurrent = () =>
@@ -942,6 +947,7 @@ export const ConnectionProvider = ({
 			await Promise.all([verifiedRetirement(privacy), retired]);
 			if (!isCurrent()) return;
 			const result = await beginRadientSignIn({
+				signal: attempt.signal,
 				onState: (state) => {
 					if (isCurrent()) setSignInState(state);
 				},

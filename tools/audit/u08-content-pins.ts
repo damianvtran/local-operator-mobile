@@ -402,7 +402,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
-	src: "e22f809693df4abf6ed1bc5a7bab845ba31904841c7fc2d8fb395e1acd9ad950",
+	/* Re-pinned 2026-11-03 for PR #154, deliberately, using --print: only OAuth
+	 * callback transport/state validation and provider cancellation bookkeeping
+	 * changed under src. U-08 measures the long-transcript custom-relay session
+	 * (u08-geometry-proof.ts RECORD/createRelay), not Radient sign-in. No transcript
+	 * component, layout/style, token, corpus, scene or instrument changed. These
+	 * auth/connection edits therefore do not alter the measured geometry inputs;
+	 * historical ORIGINAL_* identities and every other pin remain unchanged. */
+	src: "80f4b78d272c799e5cd358b6691a023fec401d65cf0394b2c57af47203138fc5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
