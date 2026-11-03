@@ -124,7 +124,9 @@ describe("native proof observation vocabulary and privacy", () => {
 		expect(
 			sanitizePhaseFailure({ phase: "seed", cause, appStage: "exception" }),
 		).toMatchObject({
-			...(cause === "receiver-bind-failed" ? {} : { phase: "seed" }),
+			...(cause === "receiver-bind-failed" || cause === "scheme-unregistered"
+				? {}
+				: { phase: "seed" }),
 			cause,
 		});
 	});

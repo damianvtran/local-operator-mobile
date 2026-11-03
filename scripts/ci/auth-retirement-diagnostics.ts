@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { sanitizePhaseFailure } from "./auth-retirement-phase-diagnostics.ts";
 
 const CHECKPOINTS = [
+	"scheme-unregistered",
 	"preflight",
 	"candidate-identity",
 	"template-selection",

@@ -34,6 +34,7 @@ export const REFUSED_REASONS = [
 	"progress-unknown",
 ] as const;
 export const PHASE_CAUSES = [
+	"scheme-unregistered",
 	"receiver-bind-failed",
 	"ready-timeout",
 	"receipt-timeout",
@@ -182,6 +183,11 @@ const safeNumber = (value: unknown): number | null =>
 export function sanitizePhaseFailure(
 	input: Record<string, unknown>,
 ): Record<string, unknown> {
+	if (input.cause === "scheme-unregistered")
+		return {
+			cause: "scheme-unregistered",
+			schemeRegistered: input.schemeRegistered === true,
+		};
 	if (input.cause === "receiver-bind-failed") {
 		// Bind failures are setup failures, not listener/phase timeouts. Only the
 		// selected numeric port and closed errno survive; never native error text.
@@ -219,6 +225,14 @@ export function sanitizePhaseFailure(
 					: 0,
 			]),
 		),
+		schemeOpenSeenBySystem:
+			typeof input.schemeOpenSeenBySystem === "boolean"
+				? input.schemeOpenSeenBySystem
+				: "UNOBSERVED",
+		schemeOpenSeenByApp:
+			typeof input.schemeOpenSeenByApp === "boolean"
+				? input.schemeOpenSeenByApp
+				: "UNOBSERVED",
 		readyAfterLaunchMs: safeNumber(input.readyAfterLaunchMs),
 		urlProgress: safeUrlProgress(input.urlProgress),
 		launchToOpenurlMs: safeNumber(input.launchToOpenurlMs),

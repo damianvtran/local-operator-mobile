@@ -61,6 +61,11 @@ import {
 
 export { READY_BUDGET_MS } from "./auth-retirement-readiness.ts";
 
+import {
+	observeSchemeAfterTimeout,
+	schemeRegistered,
+} from "./auth-retirement-scheme-observation.ts";
+
 /** Run 41523920765 exhausted 90s at boot-ready; run 41260071341 passed
  * boot but exhausted the default 30s at install. This proof creates a never-
  * booted dedicated device and skips ios.yml's ordinary warm boot. Apple's
@@ -143,9 +148,14 @@ export function assertFrozenContent(
 		frozen,
 	);
 }
-async function measureArtifact(app: string): Promise<ProofBuildIdentity> {
+async function measureArtifact(
+	app: string,
+	run: Run = command,
+): Promise<
+	ProofBuildIdentity & { schemeRegistered: boolean; executable: string }
+> {
 	const info = JSON.parse(
-		await command("plutil", [
+		await run("plutil", [
 			"-convert",
 			"json",
 			"-o",
@@ -154,6 +164,11 @@ async function measureArtifact(app: string): Promise<ProofBuildIdentity> {
 		]),
 	) as Record<string, string>;
 	return {
+		schemeRegistered: schemeRegistered(info),
+		executable:
+			typeof info.CFBundleExecutable === "string"
+				? info.CFBundleExecutable
+				: "",
 		flavor: info.LORetirementProofFlavor!,
 		bundleId: info.CFBundleIdentifier!,
 		nonce: info.LORetirementProofNonce!,
@@ -162,21 +177,40 @@ async function measureArtifact(app: string): Promise<ProofBuildIdentity> {
 		bundleSha256: immutableBundleDigest(app),
 	};
 }
-export async function freezeArtifact(app: string, root: string): Promise<void> {
+export async function freezeArtifact(
+	app: string,
+	root: string,
+	run: Run = command,
+): Promise<void> {
 	requireManualProof();
-	const expected = JSON.parse(
-		readFileSync(join(root, "build-identity.json"), "utf8"),
-	);
-	const actual = await measureArtifact(app);
-	// Build identity had no compiled digest. Freeze once BEFORE installation;
-	// every subsequent admission uses this independent immutable receipt.
-	assertProofBuild(actual, { ...expected, bundleSha256: actual.bundleSha256 });
-	writeFileSync(
-		join(root, "frozen-artifact.json"),
-		JSON.stringify({ ...actual, appPath: realpathSync(app) }),
-		{ flag: "wx" },
-	);
+	return withProofDiagnostics(root, async () => {
+		const expected = JSON.parse(
+			readFileSync(join(root, "build-identity.json"), "utf8"),
+		);
+		const actual = await measureArtifact(app, run);
+		if (!actual.schemeRegistered) {
+			activeProofDiagnostics?.checkpoint("scheme-unregistered");
+			activeProofDiagnostics?.observePhaseFailure({
+				cause: "scheme-unregistered",
+				schemeRegistered: false,
+			});
+			throw new Error("Proof scheme is not registered");
+		}
+		assertProofBuild(actual, {
+			...expected,
+			bundleSha256: actual.bundleSha256,
+		});
+		// Only the registration boolean is new frozen evidence, not plist contents
+		// or the executable/path used transiently by the timeout-only log probe.
+		const { executable: _executable, ...identity } = actual;
+		writeFileSync(
+			join(root, "frozen-artifact.json"),
+			JSON.stringify({ ...identity, appPath: realpathSync(app) }),
+			{ flag: "wx" },
+		);
+	});
 }
+
 function requireManualProof(): void {
 	if (
 		process.env.GITHUB_ACTIONS !== "true" ||
@@ -452,7 +486,9 @@ async function runNativeProofBody(
 	if (realpathSync(app) !== frozen.appPath)
 		throw new Error("Candidate path differs from frozen build");
 	assertFrozenContent(app, frozen);
-	assertInstalledArtifact(await measureArtifact(app), frozen);
+	const measured = await measureArtifact(app);
+	assertInstalledArtifact(measured, frozen);
+	const proofExecutable = measured.executable;
 	if ((await command("git", ["rev-parse", "HEAD"])) !== frozen.sourceSha)
 		throw new Error("Source revision mismatch");
 	const bundle = readFileSync(join(app, "main.jsbundle"));
@@ -755,6 +791,8 @@ async function runNativeProofBody(
 						openurlToOutcomeMs:
 							openurlStart !== null ? outcomeAt - openurlStart : null,
 						processAliveAtTimeout: "UNOBSERVED" as boolean | "UNOBSERVED",
+						schemeOpenSeenBySystem: "UNOBSERVED" as boolean | "UNOBSERVED",
+						schemeOpenSeenByApp: "UNOBSERVED" as boolean | "UNOBSERVED",
 					};
 					// Freeze attribution BEFORE a readiness probe can itself fail. Its
 					// stdout is inspected transiently, never included in diagnostics.
@@ -764,6 +802,16 @@ async function runNativeProofBody(
 						observation.processAliveAtTimeout = await observeOwnedProcess(
 							udid,
 							command,
+						);
+						Object.assign(
+							observation,
+							await observeSchemeAfterTimeout(
+								phaseCause,
+								phaseUrlProgress,
+								udid,
+								proofExecutable,
+								command,
+							),
 						);
 						activeProofDiagnostics?.observePhaseFailure(observation);
 					}
