@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PrivateDataKey } from "@/connection/storage";
+import { type PrivateDataKey, SecureStorageError } from "@/connection/storage";
 import { openPrivateInstallation } from "./private-installation";
 
 const saved: PrivateDataKey = {
@@ -48,6 +48,34 @@ function fixture(marker: string | null, key: PrivateDataKey | null = saved) {
 	};
 }
 describe("native installation sentinel", () => {
+	it("quarantines transient marker/key read failures without erasing recoverable work", async () => {
+		for (const target of ["marker", "keys"] as const) {
+			const x = fixture(saved.installId);
+			x.deps[target].read = async () => {
+				throw new Error("platform locked");
+			};
+			await expect(openPrivateInstallation(x.deps)).rejects.toThrow(
+				"platform locked",
+			);
+			expect(x.events).toEqual([]);
+		}
+	});
+	it("resets positively identified corrupt key metadata before fresh creation", async () => {
+		const x = fixture(saved.installId);
+		const read = x.deps.keys.read;
+		let first = true;
+		x.deps.keys.read = async () => {
+			if (first) {
+				first = false;
+				throw new SecureStorageError("corrupt key", "synthetic-key");
+			}
+			return read();
+		};
+		expect(await openPrivateInstallation(x.deps)).toEqual(next);
+		expect(x.events.indexOf("key-clear")).toBeLessThan(
+			x.events.indexOf("create"),
+		);
+	});
 	it("uses a surviving key only with its exact existing sandbox sentinel", async () => {
 		const x = fixture(saved.installId);
 		expect(await openPrivateInstallation(x.deps)).toEqual(saved);

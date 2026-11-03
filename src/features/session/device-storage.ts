@@ -24,7 +24,6 @@ import { Platform } from "react-native";
 import { getStartupAuthorization } from "@/connection/startup-authorization";
 import {
 	awaitCommandOperations,
-	reopenDispatch,
 	withdrawDispatch,
 } from "@/relay/command-lifecycle";
 import {
@@ -35,7 +34,6 @@ import {
 import { nativePrivateStore } from "./native-private-store";
 import {
 	awaitPrivateWrites,
-	reopenPrivateWrites,
 	runPrivateWrite,
 	scopedStore,
 	withdrawPrivateWrites,
@@ -310,10 +308,9 @@ export const clearAuthorizationData = async (): Promise<void> => {
 		if (directory.exists && directory.list().length === 0) directory.delete();
 	}
 	for (const key of memory.keys()) if (privateKey(key)) memory.delete(key);
-	/* Justified by the caller's contract: a caller that keeps using the store after
-	 * a purge is starting a new owner's work, and must say so through admission. */
-	reopenPrivateWrites();
-	reopenDispatch();
+	/* Stay closed until actual admission, including its fresh owner proof.
+	 * Reopening here lets a stale captured scopedStore recreate old-generation
+	 * bytes between the purge and the asynchronous recovery/identity check. */
 };
 
 export const clearAllDrafts = async (): Promise<void> => {

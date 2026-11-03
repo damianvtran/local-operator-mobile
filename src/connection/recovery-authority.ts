@@ -28,12 +28,20 @@ export async function proveRecoveryAuthority(
 ): Promise<RecoveryOwner | null> {
 	if (!accessToken || !options.isCurrent()) return null;
 	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 8_000);
+	// Match the relay HTTP client's normal 20-second deadline. Recovery must not
+	// wait indefinitely, nor time out sooner merely because native UI is settling.
+	const timeout = setTimeout(() => controller.abort(), 20_000);
 	try {
 		const response = await (options.fetcher ?? fetch)(
 			`${CONTROL_PLANE}/v1/me`,
 			{
-				headers: { Authorization: `Bearer ${accessToken}` },
+				// Expo's native fetch does not forward RequestInit.cache to URLSession.
+				// HTTP directives are therefore mandatory, not redundant browser hints.
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+					"Cache-Control": "no-store, no-cache",
+					Pragma: "no-cache",
+				},
 				cache: "no-store",
 				redirect: "error",
 				credentials: "omit",

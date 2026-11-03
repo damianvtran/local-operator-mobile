@@ -40,8 +40,11 @@
  * for restart comparison, but never reuses a revoked dispatch generation.
  */
 
-import { reopenPrivateWrites } from "@/features/session/scoped-storage";
-import { reopenDispatch } from "@/relay/command-lifecycle";
+import {
+	reopenPrivateWrites,
+	withdrawPrivateWrites,
+} from "@/features/session/scoped-storage";
+import { reopenDispatch, withdrawDispatch } from "@/relay/command-lifecycle";
 import { randomState } from "./pkce";
 import type { StartupAuthorizationRecord } from "./storage";
 
@@ -69,6 +72,7 @@ export class StartupAuthorizationLifecycle {
 		withdraw(): void;
 		drain(): Promise<void>;
 		clear(policy: "retire" | "reauthenticate"): Promise<void>;
+		admitted?(): void;
 	} | null = null;
 
 	/** Recovery is a separate sealed draft capability, never a dispatch scope.
@@ -108,6 +112,10 @@ export class StartupAuthorizationLifecycle {
 	/** Synchronous, non-durable close. A remount may restore a persisted
 	 *  generation; a privacy boundary MUST go through `revoke`/`retire` instead. */
 	suspend(): number {
+		// Closing only the getter is insufficient: an already-rendered composer
+		// can hold a client/scoped store until React applies the next snapshot.
+		withdrawDispatch();
+		withdrawPrivateWrites();
 		this.recoveryBoundary?.withdraw();
 		this.authorization = null;
 		this.revision += 1;
@@ -256,7 +264,8 @@ export class StartupAuthorizationLifecycle {
 			/* Admission is the ONLY moment private writes reopen: a purge that ran at
 			 * sign-out closed them, and nothing may write for a scope that no longer
 			 * has an owner. */
-			reopenPrivateWrites();
+			this.recoveryBoundary?.admitted?.();
+			reopenPrivateWrites(record.generation);
 			reopenDispatch();
 			this.authorization = Object.freeze({
 				scope: record.generation,
@@ -310,6 +319,12 @@ export class StartupAuthorizationLifecycle {
 		const drained = await Promise.allSettled([
 			this.recoveryBoundary?.drain() ?? Promise.resolve(),
 		]);
+		if (policy === "reauthenticate") {
+			// Never purge the ordinary last copy while an accepted sealed checkpoint
+			// is still uncommitted. Explicit logout must nevertheless attempt erasure.
+			for (const result of drained)
+				if (result.status === "rejected") throw result.reason;
+		}
 		const results = await Promise.allSettled(
 			[...this.cleanups].map((cleanup) => Promise.resolve().then(cleanup)),
 		);

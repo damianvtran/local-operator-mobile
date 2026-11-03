@@ -4,6 +4,7 @@ import { type RevisionFiles, RevisionStore } from "./startup-persistence";
 function fixture() {
 	const files = new Map<string, string>();
 	let failWrite = false;
+	let failRemove = false;
 	const adapter: RevisionFiles = {
 		list: async () => [...files.keys()],
 		read: async (name) => files.get(name) ?? null,
@@ -18,6 +19,7 @@ function fixture() {
 			files.delete(from);
 		},
 		remove: async (name) => {
+			if (failRemove) throw new Error("remove denied");
 			files.delete(name);
 		},
 	};
@@ -25,12 +27,38 @@ function fixture() {
 		files,
 		store: new RevisionStore(adapter),
 		restart: () => new RevisionStore(adapter),
+		denyRemoval: () => {
+			failRemove = true;
+		},
 		fail: () => {
 			failWrite = true;
 		},
 	};
 }
 describe("native startup revision commits", () => {
+	it("keeps a committed discard tombstone when predecessor deletion is interrupted", async () => {
+		const x = fixture();
+		await x.store.set("old private value");
+		x.denyRemoval();
+		await expect(x.store.discard("discarded")).rejects.toThrow("remove denied");
+		expect(await x.restart().get()).toBe("discarded");
+		expect(
+			[...x.files.keys()].filter((name) => name.endsWith(".json")),
+		).toHaveLength(2);
+	});
+	it("explicit discard retires corrupt/unknown history without reading or rolling back to it", async () => {
+		const x = fixture();
+		await x.store.set("old private value");
+		x.files.set(
+			"000000000001.json",
+			JSON.stringify({ version: 2, value: "old private value" }),
+		);
+		await expect(x.store.get()).rejects.toThrow("corrupt");
+		await x.store.discard("discarded");
+		expect(await x.restart().get()).toBe("discarded");
+		expect([...x.files.values()].join("")).not.toContain("old private value");
+		expect([...x.files.keys()]).toEqual(["000000000002.json"]);
+	});
 	it("retains the last complete version after a partial write, never overwriting it", async () => {
 		const x = fixture();
 		await x.store.set("first committed");

@@ -27,6 +27,9 @@ function filesystemFixture() {
 		get exists() {
 			return state.dirs.has(this.uri);
 		}
+		info() {
+			return { exists: this.exists };
+		}
 		create() {
 			const parts = this.uri.split("/");
 			for (let i = 1; i <= parts.length; i++)
@@ -69,6 +72,9 @@ function filesystemFixture() {
 		}
 		get exists() {
 			return state.files.has(this.uri);
+		}
+		info() {
+			return { exists: this.exists };
 		}
 		create() {
 			state.files.set(this.uri, "");
@@ -224,6 +230,20 @@ beforeEach(() => {
 /** Node ports exercise the production adapter + real AES-GCM, not native OS
  * bridges. Native FileSystem/Keychain/reinstall evidence remains a separate gate. */
 describe("native private adapter with Node platform ports", () => {
+	it("retires a native key with an authenticated compact tombstone, never a resurrectable delete", async () => {
+		const store = (await restart()).nativePrivateStore("recovery");
+		await store.set("draft", "private text");
+		await store.set("draft", "edited private text");
+		await store.remove("draft");
+		expect(await store.get("draft")).toBeNull();
+		expect(await store.keys()).toEqual([]);
+		const commits = [...state.files.keys()].filter((name) =>
+			name.endsWith(".json"),
+		);
+		expect(commits).toHaveLength(1);
+		const next = (await restart()).nativePrivateStore("recovery");
+		expect(await next.get("draft")).toBeNull();
+	});
 	it("writes only ciphertext/index ciphertext and survives source process restart", async () => {
 		const first = await restart();
 		const store = first.nativePrivateStore("device");

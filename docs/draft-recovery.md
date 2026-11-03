@@ -4,7 +4,9 @@
 
 Native recovery is supported only for personal Radient Local Operator tunnels.
 Every admission obtains `GET https://api.radienthq.com/v1/me` with the CURRENT
-access bearer, `cache: no-store`, `redirect: error`, and no ambient cookies.
+access bearer, `cache: no-store`, explicit HTTP `Cache-Control: no-store, no-cache` and
+`Pragma: no-cache`, `redirect: error`, and no ambient cookies. The HTTP directives
+are required because Expo57 native fetch does not forward the `cache` option.
 The authenticated server verifies the access JWT and reads its account from the
 database. The client requires nonempty `account.id` and `account.tenant_id`, and
 `identity.account_id === account.id`. It never uses an email, display label,
@@ -45,6 +47,18 @@ ciphertext, verifies deletion, then creates and reads back a new sentinel and
 key. It never reconstructs the sentinel from a Keychain item or ciphertext.
 **OS cache eviction intentionally loses recovery** for the same privacy reason.
 Missing/locked keys and authentication-tag failures have no plaintext fallback.
+
+Expo57's native photo picker necessarily creates a transient plaintext COPY in
+`Paths.cache/ImagePicker` before returning base64 bytes. This is not the user's
+Photos original. Successful/invalid selections synchronously await removal of
+ONLY a proven direct-child cache file in `finally`; unowned/ambiguous URIs are
+refused, never deleted. Startup and privacy cleanup drain active picker operations
+and sweep ONLY the dedicated ImagePicker directory before admission, covering a
+process killed before JavaScript received the URI. Late results cannot attach to
+another owner. This removes retained photo-picker copies; it does not claim that the
+platform SDK never creates temporary plaintext. Photos originals and document
+provider files are never swept.
+
 Android SecureStore backup exclusions must be verified in generated/packaged
 native artifacts, not inferred from source configuration.
 
@@ -75,6 +89,19 @@ cannot resurrect a predecessor. Recovery entries expire seven days after their
 last saved edit; this retention limit is separate from token expiry, which does
 not itself delete a draft. Web retains its existing storage behavior and does
 not enable this native cross-login recovery feature.
+
+Failed accepted checkpoints retain only an in-memory retry operation. Reauthentication
+retries/drains these before purging the ordinary generation; if that still fails,
+no admission or last-copy purge is allowed. Explicit logout still attempts every
+erasure. Merely reading/restoring a draft does not renew its retention timestamp.
+
+Native record removal commits an authenticated null tombstone before pruning old
+revisions. The tombstone remains authoritative even when predecessor deletion is
+interrupted; ordinary corrupt-latest reads never roll back. Explicit discard can
+retire corrupt history without reading/adopting it. Unknown locked-store or marker
+I/O failures quarantine existing ciphertext/key without treating a read error as
+proof of reinstall. Positively missing/corrupt/mismatched installation pairs still
+require verified reset before minting a new installation.
 
 ## Validation boundaries
 

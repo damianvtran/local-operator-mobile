@@ -54,8 +54,10 @@ const setup = (saved: StartupRecord | null = null) => {
 			});
 		},
 	);
+	const checkpoint = vi.fn();
 	const coordinator = new StartupCoordinator("authorization-a/server-a", {
 		store,
+		checkpointDraft: checkpoint,
 		start,
 		send,
 		isCurrent: () => valid,
@@ -64,6 +66,7 @@ const setup = (saved: StartupRecord | null = null) => {
 	});
 	return {
 		coordinator,
+		checkpoint,
 		store,
 		start,
 		send,
@@ -85,6 +88,30 @@ const setup = (saved: StartupRecord | null = null) => {
 
 // Deferred barriers prove ordering without wall-clock sleeps or a fake successful network.
 describe("durable provisional conversation", () => {
+	it("does not renew recovery retention merely by restoring or configuring a draft", async () => {
+		const x = setup({
+			version: 1,
+			scope: "authorization-a/server-a",
+			phase: "draft",
+			sessionId: null,
+			selection: null,
+			queue: [],
+			draft: { text: "retained", images: [] },
+		});
+		await x.coordinator.ready;
+		expect(x.checkpoint).not.toHaveBeenCalled();
+		await x.coordinator.configure({
+			cwd: "/home/fixture",
+			provider: "p",
+			model_id: "m",
+		});
+		expect(x.checkpoint).not.toHaveBeenCalled();
+		x.coordinator.edit("actual edit", []);
+		expect(x.checkpoint).toHaveBeenCalledWith(
+			{ text: "actual edit", images: [] },
+			null,
+		);
+	});
 	it("is editable before configuration and creates only on explicit Send", async () => {
 		const x = setup();
 		await x.coordinator.ready;

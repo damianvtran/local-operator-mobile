@@ -19,6 +19,26 @@ const identity = (account = "account-a", tenant = "tenant-a") => ({
 });
 
 describe("trusted recovery authority", () => {
+	it("bounds a stalled current proof and cancels its timer on completion", async () => {
+		vi.useFakeTimers();
+		try {
+			const fetcher: typeof fetch = async (_input, init) =>
+				new Promise<Response>((_resolve, reject) => {
+					init?.signal?.addEventListener("abort", () =>
+						reject(new Error("aborted")),
+					);
+				});
+			const pending = proveRecoveryAuthority("synthetic", {
+				fetcher,
+				isCurrent: () => true,
+			});
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(await pending).toBeNull();
+			expect(vi.getTimerCount()).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 	const owner = { accountId: "account-a", tenantId: "tenant-a" };
 	const route = {
 		mode: "radient" as const,
@@ -66,7 +86,11 @@ describe("trusted recovery authority", () => {
 		expect(fetcher).toHaveBeenCalledWith(
 			"https://api.radienthq.com/v1/me",
 			expect.objectContaining({
-				headers: { Authorization: "Bearer synthetic-access-token" },
+				headers: {
+					Authorization: "Bearer synthetic-access-token",
+					"Cache-Control": "no-store, no-cache",
+					Pragma: "no-cache",
+				},
 				cache: "no-store",
 				redirect: "error",
 			}),

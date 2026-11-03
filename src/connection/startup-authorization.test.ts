@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { scopedStore } from "@/features/session/scoped-storage";
+import { runCommandOperation } from "@/relay/command-lifecycle";
 import {
 	getStartupAuthorization,
 	StartupAuthorizationLifecycle,
@@ -39,6 +40,56 @@ function deferred() {
 }
 
 describe("startup authorization privacy boundary", () => {
+	it("retains the ordinary last copy when sealed checkpoint draining fails during reauth", async () => {
+		const owner = fixture().lifecycle();
+		const cleanup = vi.fn(async () => {});
+		const clear = vi.fn(async () => {});
+		owner.registerCleanup(cleanup);
+		owner.configureRecoveryBoundary({
+			withdraw: () => {},
+			drain: async () => {
+				throw new Error("checkpoint unavailable");
+			},
+			clear,
+		});
+		await expect(
+			owner.retire(false, undefined, "reauthenticate"),
+		).rejects.toThrow("checkpoint unavailable");
+		expect(cleanup).not.toHaveBeenCalled();
+		expect(clear).not.toHaveBeenCalled();
+		await expect(owner.retire()).rejects.toThrow("checkpoint unavailable");
+		expect(cleanup).toHaveBeenCalledOnce();
+		expect(clear).toHaveBeenCalledWith("retire");
+	});
+	it("synchronously closes captured composer/store callbacks before asynchronous proof", async () => {
+		const owner = fixture().lifecycle();
+		const auth = await owner.admit(
+			"route-a",
+			owner.getRevision(),
+			undefined,
+			"owner-a",
+		);
+		const write = vi.fn(async () => {});
+		const dispatch = vi.fn(async () => {});
+		const captured = scopedStore(
+			{
+				get: async () => "old",
+				set: write,
+				remove: async () => {},
+				keys: async () => [],
+			},
+			auth?.scope ?? null,
+		);
+		owner.suspend();
+		await expect(captured.set("draft", "private")).rejects.toThrow("closed");
+		await expect(runCommandOperation(dispatch)).rejects.toThrow("Sign-out");
+		expect(write).not.toHaveBeenCalled();
+		expect(dispatch).not.toHaveBeenCalled();
+		await owner.admit("route-a", owner.getRevision(), undefined, "owner-b");
+		await expect(captured.set("draft", "private")).rejects.toThrow(
+			"no admitted",
+		);
+	});
 	it("reuses native generation only with fresh matching owner proof", async () => {
 		const f = fixture();
 		const owner = f.lifecycle();

@@ -45,8 +45,8 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 	}
 	async function purgeRoot(): Promise<void> {
 		const directory = await root();
-		if (directory.exists) directory.delete();
-		if (directory.exists)
+		if (directory.info().exists) directory.delete();
+		if (directory.info().exists)
 			throw new Error("private ciphertext removal could not be confirmed");
 	}
 	async function marker() {
@@ -61,7 +61,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 					marker: {
 						read: async () => {
 							const file = await marker();
-							return file.exists ? file.text() : null;
+							return file.info().exists ? file.text() : null;
 						},
 						write: async (id) => {
 							const file = await marker();
@@ -70,8 +70,8 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 						},
 						clear: async () => {
 							const file = await marker();
-							if (file.exists) file.delete();
-							if (file.exists)
+							if (file.info().exists) file.delete();
+							if (file.info().exists)
 								throw new Error("installation marker removal failed");
 						},
 					},
@@ -86,8 +86,8 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 				const { Directory, Paths } = await filesystem();
 				for (const name of ["lo-mobile-store", "lo-mobile-startup"]) {
 					const legacy = new Directory(Paths.document, name);
-					if (legacy.exists) legacy.delete();
-					if (legacy.exists)
+					if (legacy.info().exists) legacy.delete();
+					if (legacy.info().exists)
 						throw new Error("legacy private storage removal failed");
 				}
 				return new SealedValue(
@@ -105,7 +105,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 		const { Directory } = await filesystem();
 		const base = new Directory(await root(), family);
 		const result = name ? new Directory(base, name) : base;
-		if (!result.exists) result.create({ intermediates: true });
+		if (!result.info().exists) result.create({ intermediates: true });
 		return result;
 	}
 	async function revisions(
@@ -122,7 +122,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 					.map((entry) => entry.name),
 			read: async (name) => {
 				const file = new File(dir, name);
-				return file.exists ? file.text() : null;
+				return file.info().exists ? file.text() : null;
 			},
 			write: async (name, value) => {
 				const file = new File(dir, name);
@@ -134,14 +134,14 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			},
 			remove: async (name) => {
 				const file = new File(dir, name);
-				if (file.exists) file.delete();
+				if (file.info().exists) file.delete();
 			},
 		});
 	}
 	async function readEntry(
 		family: Family,
 		name: string,
-	): Promise<{ key: string; value: string } | null> {
+	): Promise<{ key: string; value: string | null } | null> {
 		const cipher = await codec();
 		const raw = await (await revisions(family, name)).get();
 		if (raw === null) return null;
@@ -154,7 +154,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			!("key" in entry) ||
 			typeof entry.key !== "string" ||
 			!("value" in entry) ||
-			typeof entry.value !== "string" ||
+			(entry.value !== null && typeof entry.value !== "string") ||
 			(await hash(entry.key)) !== name
 		)
 			throw new Error("private record authentication failed");
@@ -195,10 +195,15 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			},
 			remove(key: string): Promise<void> {
 				return serialize(`${family}/${key}`, async () => {
-					await codec();
-					const dir = await directory(family, await hash(key));
-					if (dir.exists) dir.delete();
-					if (dir.exists) throw new Error("private record removal failed");
+					const cipher = await codec();
+					const name = await hash(key);
+					// Never recursively delete newest state ahead of its predecessors:
+					// retain an authenticated empty marker through interrupted discard.
+					const tombstone = await cipher.encode(
+						`${family}/${name}`,
+						JSON.stringify({ key, value: null }),
+					);
+					await (await revisions(family, name)).discard(tombstone);
 				});
 			},
 			async keys(): Promise<string[]> {
@@ -209,7 +214,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 					if (!(entry instanceof Directory) || !HASH_NAME.test(entry.name))
 						continue;
 					const saved = await readEntry(family, entry.name);
-					if (saved) keys.push(saved.key);
+					if (saved && saved.value !== null) keys.push(saved.key);
 				}
 				return keys;
 			},
@@ -217,8 +222,8 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 				await Promise.allSettled([...tails.values()]);
 				const { Directory } = await filesystem();
 				const dir = new Directory(await root(), family);
-				if (dir.exists) dir.delete();
-				if (dir.exists) throw new Error("private family removal failed");
+				if (dir.info().exists) dir.delete();
+				if (dir.info().exists) throw new Error("private family removal failed");
 			},
 		};
 	}
@@ -233,8 +238,9 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			privateDataKeys().clear(),
 			(async () => {
 				const file = await marker();
-				if (file.exists) file.delete();
-				if (file.exists) throw new Error("installation marker removal failed");
+				if (file.info().exists) file.delete();
+				if (file.info().exists)
+					throw new Error("installation marker removal failed");
 			})(),
 		]);
 		opening = null;

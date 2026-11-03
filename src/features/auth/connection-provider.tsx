@@ -84,6 +84,8 @@ import {
 } from "@/features/auth/tunnel-storage";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import { prepareDraftRecovery } from "@/features/session/draft-recovery";
+import { clearNativePickerCache } from "@/features/session/picker-cache";
+import { pickerPrivacy } from "@/features/session/picker-privacy";
 import { setLocaleSource } from "@/i18n";
 import {
 	type RelayEndpoints,
@@ -1531,6 +1533,10 @@ export const ConnectionProvider = ({
 		cancelledRef.current = false;
 		void (async () => {
 			try {
+				if (Platform.OS !== "web") {
+					pickerPrivacy.withdraw();
+					await clearNativePickerCache();
+				}
 				const stored = await readSavedTunnel();
 				if (interrupted()) return;
 				if (stored) {

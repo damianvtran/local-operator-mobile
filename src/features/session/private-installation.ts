@@ -1,5 +1,5 @@
 import type { PrivateDataKeys } from "@/connection/private-data-key";
-import type { PrivateDataKey } from "@/connection/storage";
+import { type PrivateDataKey, SecureStorageError } from "@/connection/storage";
 
 export interface InstallationMarker {
 	read(): Promise<string | null>;
@@ -18,15 +18,14 @@ export async function openPrivateInstallation(deps: {
 }): Promise<PrivateDataKey> {
 	let marker: string | null = null;
 	let saved: PrivateDataKey | null = null;
-	try {
-		marker = await deps.marker.read();
-	} catch {
-		/* Locked below. */
-	}
+	// Unknown I/O/locked-store errors are not evidence of reinstall or absence.
+	// Quarantine without deleting recoverable work until the platform can read.
+	marker = await deps.marker.read();
 	try {
 		saved = await deps.keys.read();
-	} catch {
-		/* Corruption is not authority. */
+	} catch (error) {
+		if (!(error instanceof SecureStorageError)) throw error;
+		// A positively identified malformed record is reset, never adopted.
 	}
 	if (marker !== null && saved !== null && marker === saved.installId)
 		return saved;

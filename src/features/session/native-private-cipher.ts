@@ -34,7 +34,7 @@ export async function nativePrivateCipher(
 					),
 				},
 			);
-			return new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+			return new TextDecoder("utf-8").decode(plaintext);
 		},
 	};
 }

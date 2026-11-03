@@ -140,9 +140,13 @@ export class StartupCoordinator {
 			this.listeners.delete(listener);
 		};
 	};
-	private publish(patch: Partial<StartupSnapshot> = {}) {
+	private publish(patch: Partial<StartupSnapshot> = {}, checkpoint = true) {
+		const draftChanged =
+			patch.draft !== undefined && patch.draft !== this.value.draft;
+		const sessionChanged =
+			patch.sessionId !== undefined && patch.sessionId !== this.value.sessionId;
 		this.value = { ...this.value, ...patch };
-		if (patch.draft !== undefined)
+		if (checkpoint && (draftChanged || sessionChanged))
 			this.deps.checkpointDraft?.(this.value.draft, this.value.sessionId);
 		for (const listener of this.listeners) listener();
 	}
@@ -158,12 +162,15 @@ export class StartupCoordinator {
 				// A process may have died after the POST but before saving the SID.
 				if (this.record.phase === "starting" && this.record.sessionId === null)
 					this.record.phase = "unconfirmed";
-				this.publish({
-					...this.record,
-					draft:
-						this.draftRevision === 0 ? this.record.draft : this.value.draft,
-					error: this.record.phase === "unconfirmed" ? UNCONFIRMED : null,
-				});
+				this.publish(
+					{
+						...this.record,
+						draft:
+							this.draftRevision === 0 ? this.record.draft : this.value.draft,
+						error: this.record.phase === "unconfirmed" ? UNCONFIRMED : null,
+					},
+					false,
+				); // Reading a draft must not renew its retention lifetime.
 			}
 		} catch {
 			// Corrupt/foreign state is not an empty form. Never overwrite its bytes.

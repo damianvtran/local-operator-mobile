@@ -34,6 +34,9 @@ vi.mock("@/connection/startup-authorization", () => ({
 	registerStartupAuthorizationCleanup: () => () => undefined,
 }));
 vi.mock("@/features/session/draft-recovery", () => ({
+	discardRecoveryDraft: async (key: string, scope: string) => {
+		if (authorization?.scope === scope) recoveryRecords.delete(key);
+	},
 	readRecoveryDraft: async (key: string, scope: string) =>
 		authorization?.scope === scope ? (recoveryRecords.get(key) ?? null) : null,
 	writeRecoveryDraft: async (key: string, value: string, scope: string) => {

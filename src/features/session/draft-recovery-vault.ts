@@ -11,12 +11,16 @@ export class DraftRecoveryVault {
 	private tail: Promise<unknown> = Promise.resolve();
 	private current: () => boolean = () => false;
 	private erasureFailed = false;
+	/** Failed accepted edits stay in RAM only. Reauthentication must commit them
+	 * before ordinary-generation cleanup; never write a plaintext retry cache. */
+	private readonly failedWrites = new Map<string, () => Promise<void>>();
 	constructor(
 		private readonly store: RecoveryStore,
 		private readonly erase: () => Promise<void>,
 		private readonly now: () => number = Date.now,
 		private readonly maxAge = 7 * 24 * 60 * 60 * 1000,
 	) {}
+	available = (): boolean => this.authority !== null && this.current();
 	withdraw = (): void => {
 		this.authority = null;
 		this.epoch++;
@@ -24,6 +28,20 @@ export class DraftRecoveryVault {
 	};
 	drain = async (): Promise<void> => {
 		await Promise.allSettled([this.tail]);
+		if (this.failedWrites.size === 0) return;
+		await this.run(async () => {
+			const errors: unknown[] = [];
+			for (const [key, retry] of this.failedWrites) {
+				try {
+					await retry();
+					if (this.failedWrites.get(key) === retry)
+						this.failedWrites.delete(key);
+				} catch (error) {
+					errors.push(error);
+				}
+			}
+			if (errors.length) throw errors[0];
+		});
 	};
 
 	/** Serialized with accepted writes. A late proof can never reopen the vault
@@ -33,6 +51,8 @@ export class DraftRecoveryVault {
 		return this.run(async () => {
 			if (this.erasureFailed)
 				throw new Error("private cleanup requires an explicit retry");
+			if (this.failedWrites.size > 0)
+				throw new Error("draft checkpoint must complete before admission");
 			if (epoch !== this.epoch || !isCurrent()) return false;
 			const prior = await this.store.get("authority");
 			if (epoch !== this.epoch || !isCurrent()) return false;
@@ -86,17 +106,17 @@ export class DraftRecoveryVault {
 		if (!authority || !this.current()) return Promise.resolve();
 		// Capture the authorized destination before enqueueing. Withdrawal stops new
 		// writes but drains already-accepted writes into that OLD sealed destination.
-		return this.run(() =>
-			this.store.set(
-				this.key(authority, key),
-				JSON.stringify({ version: 1, savedAt: this.now(), value }),
-			),
+		const destination = this.key(authority, key);
+		const record = JSON.stringify({ version: 1, savedAt: this.now(), value });
+		return this.checkpoint(destination, () =>
+			this.store.set(destination, record),
 		);
 	}
 	remove(key: string): Promise<void> {
 		const authority = this.authority;
 		if (!authority || !this.current()) return Promise.resolve();
-		return this.run(() => this.store.remove(this.key(authority, key)));
+		const destination = this.key(authority, key);
+		return this.checkpoint(destination, () => this.store.remove(destination));
 	}
 	clear(): Promise<void> {
 		this.withdraw();
@@ -104,8 +124,20 @@ export class DraftRecoveryVault {
 		return this.run(async () => {
 			// Serialized after accepted writes, and before any later preparation.
 			// A failed erase is a sticky recovery fence until explicit retry.
+			this.failedWrites.clear();
 			await this.erase();
 			this.erasureFailed = false;
+		});
+	}
+	private checkpoint(key: string, write: () => Promise<void>): Promise<void> {
+		return this.run(async () => {
+			try {
+				await write();
+				this.failedWrites.delete(key);
+			} catch (error) {
+				this.failedWrites.set(key, write);
+				throw error;
+			}
 		});
 	}
 	private key(authority: string, key: string): string {

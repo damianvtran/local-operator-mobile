@@ -35,6 +35,29 @@ function fixture() {
 	};
 }
 describe("sealed draft authority lease", () => {
+	it("retries an accepted failed checkpoint before ordinary-generation purge", async () => {
+		const x = fixture();
+		const vault = x.create();
+		await vault.prepare("owner-a", () => true);
+		const set = x.store.set;
+		let failing = true;
+		x.store.set = async (key, value) => {
+			if (failing) throw new Error("disk unavailable");
+			await set(key, value);
+		};
+		await expect(vault.write("draft", "latest accepted edit")).rejects.toThrow(
+			"disk unavailable",
+		);
+		vault.withdraw();
+		await expect(vault.drain()).rejects.toThrow("disk unavailable");
+		await expect(vault.prepare("owner-a", () => true)).rejects.toThrow(
+			"checkpoint",
+		);
+		failing = false;
+		await vault.drain();
+		await vault.prepare("owner-a", () => true);
+		expect(await vault.read("draft")).toBe("latest accepted edit");
+	});
 	it("quarantines across expiry/restart, then restores only after same fresh proof", async () => {
 		const x = fixture();
 		const first = x.create();
