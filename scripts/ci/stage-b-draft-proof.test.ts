@@ -1,4 +1,15 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	symlinkSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -39,6 +50,84 @@ const env: NodeJS.ProcessEnv = {
 	STAGE_B_SOURCE_SHA: config.sourceSha,
 };
 describe("dedicated Stage B proof preflight", () => {
+	it.each(["expo-loader", "native-esm-control"])(
+		"evaluates generated config with the real Expo CLI (%s), preserving dirname and static context",
+		(mode) => {
+			const fixture = mkdtempSync(
+				join(
+					process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+					"stage-b-config-eval-",
+				),
+			);
+			const root = fileURLToPath(new URL("../../", import.meta.url));
+			const link = join(fixture, "node_modules");
+			symlinkSync(realpathSync(join(root, "node_modules")), link, "dir");
+			try {
+				writeFileSync(
+					join(fixture, "package.json"),
+					JSON.stringify({
+						name: "config-evaluation-fixture",
+						version: "1.0.0",
+					}),
+				);
+				writeFileSync(
+					join(fixture, "app.json"),
+					JSON.stringify({
+						expo: {
+							name: "fixture",
+							slug: "fixture",
+							extra: { staticContext: "preserved" },
+						},
+					}),
+				);
+				writeFileSync(join(fixture, "marker.txt"), "relative-original-data");
+				writeFileSync(
+					join(fixture, "app.stage-b-original.ts"),
+					`import { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\nconst marker = readFileSync(join(__dirname, 'marker.txt'), 'utf8');\nexport default ({ config }) => ({ ...config, ios: { infoPlist: { OriginalMarker: marker } } });\n`,
+				);
+				const source =
+					mode === "expo-loader"
+						? stageBGeneratedSource(config).config
+						: `import base from ${JSON.stringify("./app.stage-b-original.ts")};\nexport default { ...base };\n`;
+				writeFileSync(join(fixture, "app.config.ts"), source);
+				const evaluate = () =>
+					execFileSync(
+						join(link, ".bin/expo"),
+						["config", "--type", "public", "--json"],
+						{
+							cwd: fixture,
+							encoding: "utf8",
+							timeout: 45000,
+							stdio: "pipe",
+							env: {
+								...process.env,
+								CI: "1",
+								EXPO_OFFLINE: "1",
+								EXPO_NO_TELEMETRY: "1",
+							},
+						},
+					);
+				if (mode === "native-esm-control")
+					expect(evaluate).toThrow(
+						"__dirname is not defined in ES module scope",
+					);
+				else {
+					const actual = JSON.parse(evaluate());
+					expect(actual.ios.bundleIdentifier).toBe(STAGE_B_BUNDLE);
+					expect(actual.ios.infoPlist).toMatchObject({
+						OriginalMarker: "relative-original-data",
+						StageBProofSourceSha: config.sourceSha,
+						StageBProofNonce: config.nonce,
+						StageBProofFlavor: config.flavor,
+					});
+					expect(actual.extra.staticContext).toBe("preserved");
+				}
+			} finally {
+				unlinkSync(link);
+				rmSync(fixture, { recursive: true, force: true });
+			}
+		},
+	);
 	it("admits independent native and backup proofs only in the approved read-only lane", () => {
 		const root = fileURLToPath(new URL("../../", import.meta.url));
 		const workflow = readFileSync(

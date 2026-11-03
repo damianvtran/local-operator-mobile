@@ -12,9 +12,13 @@ import {
 export function stageBGeneratedSource(config: StageBProofConfig) {
 	validateStageBProof(config);
 	const literal = JSON.stringify(config);
+	// Expo transpiles its selected dynamic config, not arbitrary Node imports.
+	// Evaluate the backup through that same pinned Expo API and forward context:
+	// native ESM loses __dirname, while extensionless Node require cannot find TS.
+	const originalConfig = JSON.stringify("app.stage-b-original.ts");
 	return {
 		entry: `// Dedicated CI artifact only. Install transport BEFORE real app imports.\nrequire('./src/testing/stage-b-draft-bootstrap.ts').bootStageBDraftProof(${literal}).then(() => require('expo-router/entry')).catch(() => { throw new Error('Dedicated Stage B bootstrap failed'); });\n`,
-		config: `import base from './app.stage-b-original.ts';\nconst proof = ${literal};\nexport default { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true } } }, extra: { ...base.extra, stageBProof: proof } };\n`,
+		config: `import { createRequire } from 'node:module';\nimport { join } from 'node:path';\nconst fromExpo = createRequire(require.resolve('expo/package.json'));\nconst { getDynamicConfig } = fromExpo('@expo/config/build/getConfig.js');\nconst proof = ${literal};\nexport default (context) => { const evaluated = getDynamicConfig(join(__dirname, ${originalConfig}), context); if (!evaluated?.config) throw new Error('Original Expo config could not be evaluated'); const base = evaluated.config; return { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true } } }, extra: { ...base.extra, stageBProof: proof } }; };\n`,
 	};
 }
 export function prepareStageBProof(
