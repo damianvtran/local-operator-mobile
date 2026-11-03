@@ -1,0 +1,79 @@
+name: Android OAuth callback proof
+
+# Manual only: the release owner runs this AFTER the iOS callback proof settles.
+# workflow_call lets the already-registered android.yml dispatch launch this
+# branch-local workflow before a new workflow exists on the default branch.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-oauth-callback-proof-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  browser-native:
+    name: Real Custom Tab to device loopback (debug only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MAESTRO_VERSION: "2.11.0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0
+      - name: Install locked dependencies and generate the real Android app
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          mkdir -p "$RUNNER_TEMP/android-oauth-callback-proof/evidence"
+          pnpm exec expo config --type public --json > "$RUNNER_TEMP/android-oauth-callback-proof/expo-config.json"
+          pnpm exec expo prebuild --platform android --clean --no-install
+      - name: Compile debug APK and prove debug controls are absent from Release manifest
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew assembleDebug :app:processReleaseMainManifest --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx3g
+          python3 - <<'PY'
+          import pathlib
+          candidates = list(pathlib.Path('app/build/intermediates').glob('merged_manifests/release/**/AndroidManifest.xml'))
+          assert candidates, 'Release manifest must exist; source-only absence is not proof'
+          for path in candidates:
+              text = path.read_text()
+              assert 'OAuthProofActivity' not in text and 'OAuthProofControlReceiver' not in text, path
+              assert 'OAuthActivity' in text and 'OAuthReturnActivity' in text, path
+          print('Release manifest: production activities present; debug proof controls absent')
+          PY
+      - name: Install the repository-pinned hosted UI driver
+        run: |
+          set -euo pipefail
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Exercise real browser/provider/socket/lifecycle boundaries
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
+        with:
+          api-level: 36
+          target: google_apis_playstore
+          arch: x86_64
+          profile: pixel_7
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash scripts/ci/android-oauth-callback-proof/run.sh
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: android-oauth-callback-native-${{ github.sha }}
+          path: ${{ runner.temp }}/android-oauth-callback-proof/evidence/
