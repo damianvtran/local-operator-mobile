@@ -9,7 +9,7 @@ appId: ${APP_ID}
 ---
 - launchApp:
     clearState: true
-- runFlow: ../account-routing-proof/connect-relay-ios.yaml
+- runFlow: connect-relay-ios.yaml
 - extendedWaitUntil:
     visible:
       id: "home-screen"
