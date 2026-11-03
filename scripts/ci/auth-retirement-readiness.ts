@@ -114,15 +114,35 @@ export function urlProgress(value: unknown): string {
 		? `refused:${r.reason}`
 		: "none";
 }
+export type ReceiverBindFailure = {
+	cause: "receiver-bind-failed";
+	port: number;
+	code: "EADDRINUSE" | "EACCES" | "other";
+};
 export function listenForProofSignals(
 	server: Server,
 	port: number,
+	onFailure: (failure: ReceiverBindFailure) => void = () => {},
 ): Promise<void> {
 	if (!Number.isInteger(port) || port < 20000 || port > 39999)
 		throw new Error("Proof receiver port refused");
 	return new Promise((yes, no) => {
-		const failed = (error: Error) => {
+		const failed = (error: unknown) => {
 			server.off("listening", listening);
+			const code =
+				error && typeof error === "object" && "code" in error
+					? error.code
+					: undefined;
+			try {
+				onFailure({
+					cause: "receiver-bind-failed",
+					port,
+					code: code === "EADDRINUSE" || code === "EACCES" ? code : "other",
+				});
+			} catch (reportError) {
+				no(reportError);
+				return;
+			}
 			no(error);
 		};
 		const listening = () => {
@@ -131,7 +151,12 @@ export function listenForProofSignals(
 		};
 		server.once("error", failed);
 		server.once("listening", listening);
-		server.listen(port, "127.0.0.1");
+		try {
+			server.listen(port, "127.0.0.1");
+		} catch (error) {
+			server.off("error", failed);
+			failed(error);
+		}
 	});
 }
 

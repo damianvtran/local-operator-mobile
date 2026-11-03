@@ -300,10 +300,11 @@ jobs:
 
       - name: Native durable retirement and restore primitives (manual opt-in)
         if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
-        # Inner caps: 300 boot + 120 install + 6*(45 ready + 60 receipt) = 1050s.
-        # Allow classified BLOCKED receipts before the 20m outer proof ceiling.
-        # Measured envelope: 2.3 pre-build + 29.2 build + 20 proof + 2 cleanup
-        # + ~1 overhead = 54.5m, below the unchanged 60m job cap.
+        # Budget:
+        # Inner worst case: 300 + 120 + 6*(45 + 60) = 1050s vs 20m step.
+        # Let inner failures classify BLOCKED and write receipts first.
+        # Job worst case: ~2.3m pre-build + 29.2m build + 20m proof + 2m cleanup
+        # + ~1m upload = 54.5m vs the unchanged 60m job cap.
         timeout-minutes: 20
         env:
           RETIREMENT_PROOF: "true"

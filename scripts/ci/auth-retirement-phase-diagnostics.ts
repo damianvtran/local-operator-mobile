@@ -34,6 +34,7 @@ export const REFUSED_REASONS = [
 	"progress-unknown",
 ] as const;
 export const PHASE_CAUSES = [
+	"receiver-bind-failed",
 	"ready-timeout",
 	"receipt-timeout",
 	"phase-rejected",
@@ -181,6 +182,23 @@ const safeNumber = (value: unknown): number | null =>
 export function sanitizePhaseFailure(
 	input: Record<string, unknown>,
 ): Record<string, unknown> {
+	if (input.cause === "receiver-bind-failed") {
+		// Bind failures are setup failures, not listener/phase timeouts. Only the
+		// selected numeric port and closed errno survive; never native error text.
+		return {
+			cause: "receiver-bind-failed",
+			port:
+				Number.isInteger(input.port) &&
+				Number(input.port) >= 20000 &&
+				Number(input.port) <= 39999
+					? input.port
+					: null,
+			code:
+				input.code === "EADDRINUSE" || input.code === "EACCES"
+					? input.code
+					: "other",
+		};
+	}
 	const rawCounts =
 		input.refused && typeof input.refused === "object"
 			? (input.refused as Record<string, unknown>)

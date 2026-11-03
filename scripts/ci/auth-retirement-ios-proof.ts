@@ -619,7 +619,9 @@ async function runNativeProofBody(
 				res.end();
 			}
 		});
-		await listenForProofSignals(server, actual.receiverPort);
+		await listenForProofSignals(server, actual.receiverPort, (failure) =>
+			activeProofDiagnostics?.observePhaseFailure({ ...failure }),
+		);
 		const address = server.address();
 		if (!address || typeof address === "string")
 			throw new Error("No owned receiver port");

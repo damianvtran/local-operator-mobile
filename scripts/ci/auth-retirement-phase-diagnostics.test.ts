@@ -123,7 +123,10 @@ describe("native proof observation vocabulary and privacy", () => {
 	it.each(PHASE_CAUSES)("retains the closed host cause %s", (cause) => {
 		expect(
 			sanitizePhaseFailure({ phase: "seed", cause, appStage: "exception" }),
-		).toMatchObject({ phase: "seed", cause });
+		).toMatchObject({
+			...(cause === "receiver-bind-failed" ? {} : { phase: "seed" }),
+			cause,
+		});
 	});
 	it("classifies existing host receipt predicates in their original order", () => {
 		expect(receiptCause("seed", { ok: false }, 5)).toBe("phase-rejected");

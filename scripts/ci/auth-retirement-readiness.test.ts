@@ -257,27 +257,53 @@ describe("proof listener handshake (no SDK/real xcrun)", () => {
 		await listenForProofSignals(new Listener() as unknown as Server, 23456);
 		expect(calls).toEqual([[23456, "127.0.0.1"]]);
 	});
-	it("classifies bind failure at receiver-setup, not as a phase success", async () => {
-		const root = fresh();
-		class Listener extends EventEmitter {
-			listen() {
-				this.emit("error", new Error("fixture bind failed"));
-				return this;
+	it.each(["EADDRINUSE", "EACCES", "UNSAFE_BIND_CODE"])(
+		"classifies bind errno %s without native error text or launch/openurl",
+		async (code) => {
+			const root = fresh();
+			const operations: string[] = [];
+			class Listener extends EventEmitter {
+				listen() {
+					this.emit(
+						"error",
+						Object.assign(new Error("UNSAFE_BIND_MESSAGE"), { code }),
+					);
+					return this;
+				}
 			}
-		}
-		await expect(
-			withProofDiagnostics(root, async () => {
-				activeProofDiagnostics?.checkpoint("receiver-setup");
-				await listenForProofSignals(new Listener() as unknown as Server, 23456);
-			}),
-		).rejects.toThrow("fixture bind failed");
-		expect(
-			JSON.parse(readFileSync(join(root, "failure.json"), "utf8")),
-		).toMatchObject({
-			classification: "BLOCKED",
-			checkpoint: "receiver-setup",
-		});
-	});
+			await expect(
+				withProofDiagnostics(root, async () => {
+					activeProofDiagnostics?.checkpoint("receiver-setup");
+					await listenForProofSignals(
+						new Listener() as unknown as Server,
+						23456,
+						(failure) =>
+							activeProofDiagnostics?.observePhaseFailure({ ...failure }),
+					);
+					operations.push("launch", "openurl");
+				}),
+			).rejects.toThrow("UNSAFE_BIND_MESSAGE");
+			const text = readFileSync(join(root, "failure.json"), "utf8");
+			expect(JSON.parse(text)).toMatchObject({
+				classification: "BLOCKED",
+				checkpoint: "receiver-setup",
+				phaseFailure: {
+					cause: "receiver-bind-failed",
+					port: 23456,
+					code: code === "EADDRINUSE" || code === "EACCES" ? code : "other",
+				},
+			});
+			expect(Object.keys(JSON.parse(text).phaseFailure).sort()).toEqual([
+				"cause",
+				"code",
+				"port",
+			]);
+			expect(text).not.toContain("UNSAFE_BIND_MESSAGE");
+			expect(text).not.toContain("UNSAFE_BIND_CODE");
+			expect(text).not.toContain("stack");
+			expect(operations).toEqual([]);
+		},
+	);
 });
 function awaitlessRecord(
 	root: string,
