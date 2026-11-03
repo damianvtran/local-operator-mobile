@@ -15,7 +15,28 @@ const vault = new DraftRecoveryVault(
 	nativePrivateStore("recovery"),
 	eraseNativePrivateInstallation,
 );
+type RetiringDraftWriter = (key: string, value: string | null) => Promise<void>;
+const retiringCheckpoints = new Set<
+	(generation: string, write: RetiringDraftWriter) => Promise<void>
+>();
+export function registerRetiringDraftCheckpoint(
+	checkpoint: (generation: string, write: RetiringDraftWriter) => Promise<void>,
+): () => void {
+	retiringCheckpoints.add(checkpoint);
+	return () => {
+		retiringCheckpoints.delete(checkpoint);
+	};
+}
 startupAuthorizationLifecycle.configureRecoveryBoundary({
+	checkpoint: async (generation, comparisonAuthority) => {
+		if (Platform.OS === "web") return;
+		// This comparison tuple grants blind writes/deletion only. The vault's
+		// read lease stays withdrawn until a fresh /me proof matches after login.
+		for (const checkpoint of retiringCheckpoints)
+			await checkpoint(generation, (key, value) =>
+				vault.checkpointRetiring(comparisonAuthority, key, value),
+			);
+	},
 	withdraw: () => {
 		vault.withdraw();
 		pickerPrivacy.withdraw();

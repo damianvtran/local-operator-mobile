@@ -40,6 +40,18 @@ export const startupDeviceStore = {
 			if (serial.get(key) === write) serial.delete(key);
 		}
 	},
+	async keys(): Promise<string[]> {
+		await Promise.allSettled([...serial.values()]);
+		if (Platform.OS !== "web") return sealedStartupStore.keys();
+		const storage = webStorage();
+		const keys: string[] = [];
+		for (let i = 0; i < storage.length; i++) {
+			const key = storage.key(i);
+			if (key?.startsWith(STARTUP_PREFIX))
+				keys.push(key.slice(STARTUP_PREFIX.length));
+		}
+		return keys;
+	},
 	async clear(): Promise<void> {
 		// The auth owner revokes coordinators first; this barrier covers writes that
 		// already entered the adapter so none can repopulate a completed purge.

@@ -110,6 +110,39 @@ I/O failures quarantine existing ciphertext/key without treating a read error as
 proof of reinstall. Positively missing/corrupt/mismatched installation pairs still
 require verified reset before minting a new installation.
 
+## Offline edits/discards and actual reauthentication
+
+Every local draft change, including an empty discard, commits an encrypted ordinary
+pending-mirror marker. A later fresh proof reconciles **ordinary → vault** before
+any import; an empty local draft removes the stale slot. Mirror acknowledgement is
+serialized behind ordinary persistence and revision-checked. Recovery eligibility
+is also durable: a locally edited/discarded ordinary editor is not a new empty
+editor merely because JavaScript restarted. Legacy composer text uses an atomic
+versioned ordinary record/tombstone with the same rule; web storage is unchanged.
+
+Before writing the revoked/reauthenticate state or purging ordinary families, the
+auth owner drains the old generation and hands pending edits to the vault using
+that generation's persisted last-proven comparison tuple. **This is a write-only
+retirement capability, never read proof.** Matching fresh `/me` is still required
+for every later restoration. If the generation has no proven tuple, or replacement
+fails, the stale recovery entry is deleted instead. Losing recovery is preferable
+to resurrecting cleared/superseded content. If deletion also fails, retirement
+rejects before invalidating/purging the durable ordinary record; a retry still has
+its pending marker and last copy. Different-owner admission still purges the old
+vault/key. Session handoff also removes superseded legacy text slots so a removed
+modern slot cannot fall back to an older legacy draft.
+
+## Quarantined ordinary residue (explicit retention limitation)
+
+When an accepted sealed checkpoint cannot drain, the existing reauth safety path
+may retain encrypted ordinary drafts/envelopes under their retired generation.
+They are unreachable by the new generation but **remain on disk until explicit
+logout/forget or verified installation reset**. The vault's seven-day retention
+limit does not sweep these ordinary records. No automatic next-admission sweep is
+implemented: current cleanup ports clear whole families, and safely selecting old
+generations across draft, outbox and startup indexes needs a separate coordinated
+sweep rather than deleting the live generation or its last copy.
+
 ## One-time upgrade data loss (explicit limitation)
 
 Opening this version's native codec permanently deletes the prior plaintext

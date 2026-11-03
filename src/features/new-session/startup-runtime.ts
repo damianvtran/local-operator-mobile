@@ -5,11 +5,16 @@ import {
 	registerStartupAuthorizationCleanup,
 } from "@/connection/startup-authorization";
 import { promptImageSchema } from "@/contracts/schemas";
-import { draftKey } from "@/features/session/device-storage";
+import {
+	draftKey,
+	hasOrdinarySessionDraft,
+	reconcileOrdinarySessionDraft,
+} from "@/features/session/device-storage";
 import {
 	discardRecoveryDraft,
 	getDraftRecoveryAuthority,
 	readRecoveryDraft,
+	registerRetiringDraftCheckpoint,
 	writeRecoveryDraft,
 } from "@/features/session/draft-recovery";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
@@ -37,9 +42,19 @@ const recoveryEditors = new Map<string, string>();
 // ownership guess. Cached imports stay hidden until their sealed slot proves.
 const recoveryOrigins = new Map<
 	string,
-	{ authority: string | null; hidden: StartupDraft | null }
+	{
+		authority: string | null;
+		hidden: StartupDraft | null;
+		pending: boolean;
+		eligible: boolean;
+		revision: number;
+	}
 >();
-type ProvenanceRecord = StartupRecord & { draftRecoveryAuthority?: string };
+type ProvenanceRecord = StartupRecord & {
+	draftRecoveryAuthority?: string;
+	draftMirrorPending?: boolean;
+	draftRecoveryEligible?: boolean;
+};
 const recoveryDraftSchema = z
 	.object({ text: z.string(), images: z.array(promptImageSchema) })
 	.strict();
@@ -52,12 +67,10 @@ function checkpointEditor(
 	key: string,
 	draft: StartupDraft,
 	scope: string,
-): void {
-	const write =
-		draft.text === "" && draft.images.length === 0
-			? discardRecoveryDraft(key, scope)
-			: writeRecoveryDraft(key, JSON.stringify(draft), scope);
-	void write.catch(() => undefined);
+): Promise<void> {
+	return draft.text === "" && draft.images.length === 0
+		? discardRecoveryDraft(key, scope)
+		: writeRecoveryDraft(key, JSON.stringify(draft), scope);
 }
 async function recoveredEditor(
 	sessionId: string | null,
@@ -73,6 +86,65 @@ async function recoveredEditor(
 	const text = await readRecoveryDraft(draftKey(sessionId), auth.scope);
 	return text === null ? null : JSON.stringify({ text, images: [] });
 }
+/** A durable local intent wins over the vault, including an empty discard. The
+ * acknowledgement is queued behind ordinary persistence and revision checked so
+ * an older mirror cannot clear a newer edit's pending marker. */
+async function mirrorOrdinaryDraft(
+	owner: StartupCoordinator,
+	key: string,
+	auth: StartupAuthorization,
+): Promise<boolean> {
+	const origin = recoveryOrigins.get(key);
+	const authority = getDraftRecoveryAuthority();
+	if (
+		!origin ||
+		authority === null ||
+		!current(auth) ||
+		(origin.authority !== null && origin.authority !== authority)
+	)
+		return false;
+	const revision = origin.revision;
+	const draft = origin.hidden ?? owner.snapshot().draft;
+	const sid = owner.snapshot().sessionId;
+	try {
+		const writes: Promise<void>[] = [];
+		if (sid !== null) {
+			writes.push(
+				checkpointEditor(`startup:session:${sid}`, draft, auth.scope),
+			);
+			writes.push(discardRecoveryDraft(draftKey(sid), auth.scope));
+		}
+		if (recoveryEditors.get(auth.scope) === key)
+			writes.push(
+				checkpointEditor(
+					"startup:active",
+					sid === null ? draft : { text: "", images: [] },
+					auth.scope,
+				),
+			);
+		await Promise.all(writes);
+		if (
+			!current(auth) ||
+			getDraftRecoveryAuthority() !== authority ||
+			origin.revision !== revision
+		)
+			return false;
+		const saved = await owner.persistRecoveryMetadata(() => {
+			if (
+				current(auth) &&
+				getDraftRecoveryAuthority() === authority &&
+				origin.revision === revision
+			)
+				origin.pending = false;
+		});
+		if (!saved && origin.revision === revision) origin.pending = true;
+		return (
+			saved && !origin.pending && origin.revision === revision && current(auth)
+		);
+	} catch {
+		return false;
+	}
+}
 async function restoreOptionalDraft(
 	owner: StartupCoordinator,
 	key: string,
@@ -86,27 +158,89 @@ async function restoreOptionalDraft(
 		(origin?.authority != null && origin.authority !== authority)
 	)
 		return;
+	if (origin?.pending) {
+		if (!(await mirrorOrdinaryDraft(owner, key, auth))) return;
+		// A locally edited imported draft was deliberately hidden offline. Reveal
+		// its current ordinary value only after matching fresh proof and handoff.
+		if (origin.hidden !== null)
+			await owner.restoreDraft(origin.hidden, () => {
+				origin.hidden = null;
+			});
+		return;
+	}
+	if (origin && !origin.eligible && origin.authority === null) return;
 	const raw = await recoveredEditor(owner.snapshot().sessionId, auth);
 	if (raw !== null && current(auth))
 		await owner.restoreDraft(recoveryDraftSchema.parse(JSON.parse(raw)), () => {
-			// Keep the bound persistence closure and map on the same provenance object.
 			if (origin) {
 				origin.authority = authority;
 				origin.hidden = null;
-			} else recoveryOrigins.set(key, { authority, hidden: null });
+				origin.eligible = false;
+			}
 		});
-	if (current(auth) && owner.hasDraftEdits()) {
-		const sid = owner.snapshot().sessionId;
-		if (sid !== null)
-			checkpointEditor(
-				`startup:session:${sid}`,
-				owner.snapshot().draft,
-				auth.scope,
+}
+
+/** Called only by the serialized auth retirement boundary, after withdrawal and
+ * before ordinary purge. Process one encrypted record at a time; a failed stale
+ * deletion propagates so the last ordinary copy and marker cannot be destroyed. */
+export async function checkpointRetiringDrafts(
+	generation: string,
+	write: (key: string, value: string | null) => Promise<void>,
+): Promise<void> {
+	const belongs = (key: string): boolean => {
+		try {
+			const parts: unknown = JSON.parse(key);
+			return (
+				Array.isArray(parts) &&
+				parts.length === 2 &&
+				parts[0] === generation &&
+				typeof parts[1] === "string" &&
+				LOCAL_ID.test(parts[1])
 			);
-		else if (recoveryEditors.get(auth.scope) === key)
-			checkpointEditor("startup:active", owner.snapshot().draft, auth.scope);
+		} catch {
+			return false;
+		}
+	};
+	for (const [key, owner] of coordinators)
+		if (belongs(key)) await owner.quiesce();
+	const activeId = await startupDeviceStore.get(
+		JSON.stringify([generation, "active"]),
+	);
+	const activeKey =
+		recoveryEditors.get(generation) ??
+		(activeId === null ? null : JSON.stringify([generation, activeId]));
+	const keys = new Set([
+		...(await startupDeviceStore.keys()),
+		...coordinators.keys(),
+	]);
+	for (const key of keys) {
+		if (!belongs(key)) continue;
+		const origin = recoveryOrigins.get(key);
+		const owner = coordinators.get(key);
+		const value = await startupDeviceStore.get(key);
+		const saved =
+			value === null ? null : (JSON.parse(value) as ProvenanceRecord);
+		if (!(origin?.pending || saved?.draftMirrorPending === true)) continue;
+		const draft = recoveryDraftSchema.parse(
+			origin?.pending && owner
+				? (origin.hidden ?? owner.snapshot().draft)
+				: saved?.draft,
+		);
+		const sid = owner?.snapshot().sessionId ?? saved?.sessionId ?? null;
+		const encoded =
+			draft.text === "" && draft.images.length === 0
+				? null
+				: JSON.stringify(draft);
+		if (sid !== null) {
+			await write(`startup:session:${sid}`, encoded);
+			await write(draftKey(sid), null);
+		}
+		if (key === activeKey)
+			await write("startup:active", sid === null ? encoded : null);
 	}
 }
+registerRetiringDraftCheckpoint(checkpointRetiringDrafts);
+
 function dependencies(
 	key: string,
 	auth: StartupAuthorization,
@@ -115,7 +249,13 @@ function dependencies(
 ): StartupDeps {
 	let origin = recoveryOrigins.get(key);
 	if (!origin) {
-		origin = { authority: null, hidden: null };
+		origin = {
+			authority: null,
+			hidden: null,
+			pending: false,
+			eligible: true,
+			revision: 0,
+		};
 		recoveryOrigins.set(key, origin);
 	}
 	const provenance = origin;
@@ -125,6 +265,15 @@ function dependencies(
 				const value = await startupDeviceStore.get(key);
 				if (value !== null) {
 					const saved = JSON.parse(value) as ProvenanceRecord;
+					for (const field of [
+						saved.draftMirrorPending,
+						saved.draftRecoveryEligible,
+					])
+						if (field !== undefined && typeof field !== "boolean")
+							throw new Error("invalid recovery reconciliation state");
+					provenance.pending = saved.draftMirrorPending === true;
+					// Older ordinary records are not evidence that a blank editor is new.
+					provenance.eligible = saved.draftRecoveryEligible === true;
 					if (saved.draftRecoveryAuthority !== undefined) {
 						if (typeof saved.draftRecoveryAuthority !== "string")
 							throw new Error("invalid recovery provenance");
@@ -157,27 +306,26 @@ function dependencies(
 						...value,
 						draft: provenance.hidden ?? value.draft,
 						draftRecoveryAuthority: provenance.authority ?? undefined,
+						draftMirrorPending: provenance.pending,
+						draftRecoveryEligible: provenance.eligible,
 					}),
 				),
 		},
-		checkpointDraft: (draft, sessionId, changed) => {
+		checkpointDraft: (draft, _sessionId, changed) => {
 			if (!current(auth)) return;
+			// This intent must survive JS restart even when the proof-gated vault
+			// correctly refuses a write/remove. A later proof reconciles outward.
+			provenance.pending = true;
+			provenance.eligible = false;
+			provenance.revision++;
 			if (changed && provenance.hidden !== null) {
 				provenance.hidden = null;
 				provenance.authority = null;
 			}
 			if (changed && draft.text === "" && draft.images.length === 0)
 				provenance.authority = null;
-			if (sessionId !== null)
-				checkpointEditor(`startup:session:${sessionId}`, draft, auth.scope);
-			if (recoveryEditors.get(auth.scope) !== key) return;
-			// This call is accepted synchronously while the owner is still admitted;
-			// vault withdrawal will drain it even if normal persistence is delayed.
-			checkpointEditor(
-				"startup:active",
-				sessionId === null ? draft : { text: "", images: [] },
-				auth.scope,
-			);
+			const owner = coordinators.get(key);
+			if (owner) void mirrorOrdinaryDraft(owner, key, auth);
 		},
 		uuid: randomUUID,
 		isCurrent: () => current(auth),
@@ -271,13 +419,15 @@ export async function openStartup(
 			localId = randomUUID();
 			key = JSON.stringify([auth.scope, localId]);
 			recoveryEditors.set(auth.scope, key);
-			await discardRecoveryDraft("startup:active", auth.scope);
 			coordinator = new StartupCoordinator(
 				key,
 				dependencies(key, auth, client, false),
 			);
 			coordinators.set(key, coordinator);
 			await coordinator.ready;
+			// New is a durable empty-editor intent even while proof is unavailable.
+			coordinator.edit("", []);
+			await coordinator.flush();
 		}
 		if (!current(auth)) {
 			coordinator.pause();
@@ -301,6 +451,14 @@ export async function startupForSession(
 	client: RelayEndpoints,
 	sessionId: string,
 ): Promise<StartupCoordinator | null> {
+	// A legacy ordinary editor (including its durable empty discard) is already
+	// authoritative for this generation; do not replace it with a vault import.
+	if (await hasOrdinarySessionDraft(sessionId, auth.scope)) {
+		await reconcileOrdinarySessionDraft(sessionId, auth.scope).catch(
+			() => undefined,
+		);
+		return null;
+	}
 	for (const [key, owner] of coordinators) {
 		if (
 			(JSON.parse(key) as string[])[0] === auth.scope &&
@@ -358,6 +516,8 @@ export async function startupForSession(
 				JSON.stringify({
 					...record,
 					draftRecoveryAuthority: getDraftRecoveryAuthority(),
+					draftMirrorPending: false,
+					draftRecoveryEligible: false,
 				}),
 			);
 			if (!current(auth)) return null;
@@ -377,6 +537,7 @@ export async function startupForSession(
 			}
 			coordinators.set(key, owner);
 			await restoreOptionalDraft(owner, key, auth);
+			if (await hasOrdinarySessionDraft(sessionId, auth.scope)) return null;
 			return owner;
 		});
 	}

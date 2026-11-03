@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("react-native", () => ({ Platform: { OS: "web" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("@/connection/startup-authorization", () => ({
 	getStartupAuthorization: () => ({
 		scope: "ordinary-native-policy",
@@ -15,7 +15,22 @@ const mirror = vi.hoisted(() => ({
 		throw new Error("recovery unavailable");
 	}),
 }));
+const nativeBytes = vi.hoisted(() => new Map<string, string>());
+vi.mock("./native-private-store", () => ({
+	nativePrivateStore: () => ({
+		get: async (key: string) => nativeBytes.get(key) ?? null,
+		set: async (key: string, value: string) => {
+			nativeBytes.set(key, value);
+		},
+		remove: async (key: string) => {
+			nativeBytes.delete(key);
+		},
+		keys: async () => [...nativeBytes.keys()],
+	}),
+}));
 vi.mock("./draft-recovery", () => ({
+	getDraftRecoveryAuthority: () => "owner-a",
+	registerRetiringDraftCheckpoint: () => () => {},
 	writeRecoveryDraft: mirror.write,
 	discardRecoveryDraft: mirror.discard,
 }));

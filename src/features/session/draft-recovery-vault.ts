@@ -2,6 +2,7 @@ export interface RecoveryStore {
 	get(key: string): Promise<string | null>;
 	set(key: string, value: string): Promise<void>;
 	remove(key: string): Promise<void>;
+	keys?(): Promise<string[]>;
 }
 /** Recovery is draft text/images only. The vault never sees a continuation
  * envelope, session-creation state, dispatch generation or a send callback. */
@@ -121,6 +122,63 @@ export class DraftRecoveryVault {
 		if (!authority || !this.current()) return Promise.resolve();
 		const destination = this.key(authority, key);
 		return this.checkpoint(destination, () => this.store.remove(destination));
+	}
+	/** Retirement-only write capability. The tuple comes from the generation's
+	 * persisted last proof, NOT from a caller's display/account hint. It never
+	 * opens read authority. Failed replacement falls back to deleting stale data;
+	 * failed deletion rejects so the ordinary last copy must not be purged. */
+	checkpointRetiring(
+		authority: string | null,
+		key: string,
+		value: string | null,
+	): Promise<void> {
+		return this.run(async () => {
+			let prior: string | null = null;
+			try {
+				prior = await this.store.get("authority");
+			} catch {
+				/* Only blind deletion is safe without readable comparison metadata. */
+			}
+			if (authority !== null && prior === authority) {
+				const destination = this.key(authority, key);
+				this.failedWrites.delete(destination);
+				try {
+					if (value === null) await this.store.remove(destination);
+					else
+						await this.store.set(
+							destination,
+							JSON.stringify({ version: 1, savedAt: this.now(), value }),
+						);
+					return;
+				} catch {
+					/* Never retain the superseded value as a fallback. */
+				}
+			}
+			const destinations = new Set<string>();
+			if (authority !== null) destinations.add(this.key(authority, key));
+			if (prior !== null) destinations.add(this.key(prior, key));
+			if (this.store.keys)
+				for (const candidate of await this.store.keys()) {
+					try {
+						const pair: unknown = JSON.parse(candidate);
+						if (Array.isArray(pair) && pair.length === 2 && pair[1] === key)
+							destinations.add(candidate);
+					} catch {
+						/* The authority header is not a draft key. */
+					}
+				}
+			else if (destinations.size === 0)
+				throw new Error("cannot verify stale recovery deletion");
+			for (const destination of destinations) {
+				this.failedWrites.delete(destination);
+				try {
+					await this.store.remove(destination);
+				} catch (error) {
+					this.erasureFailed = true;
+					throw error;
+				}
+			}
+		});
 	}
 	clear(): Promise<void> {
 		this.withdraw();

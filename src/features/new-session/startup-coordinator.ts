@@ -244,6 +244,13 @@ export class StartupCoordinator {
 		return operation.then(() => success);
 	}
 
+	/** Serialize recovery acknowledgements behind the ordinary write they cover. */
+	persistRecoveryMetadata(update: () => void): Promise<boolean> {
+		return this.persist((record) => {
+			update();
+			return record;
+		});
+	}
 	edit(text: string, images: PromptImage[]) {
 		if (this.revoked) return;
 		this.draftRevision += 1;

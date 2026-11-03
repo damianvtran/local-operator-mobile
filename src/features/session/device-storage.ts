@@ -26,7 +26,12 @@ import {
 	awaitCommandOperations,
 	withdrawDispatch,
 } from "@/relay/command-lifecycle";
-import { discardRecoveryDraft, writeRecoveryDraft } from "./draft-recovery";
+import {
+	discardRecoveryDraft,
+	getDraftRecoveryAuthority,
+	registerRetiringDraftCheckpoint,
+	writeRecoveryDraft,
+} from "./draft-recovery";
 import { nativePrivateStore } from "./native-private-store";
 import {
 	awaitPrivateWrites,
@@ -180,67 +185,148 @@ export const draftKey = (sessionId: string): string =>
  */
 export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
 
+const DRAFT_RECORD_PREFIX = "lo-mobile-draft-record:";
+const draftRecordKey = (key: string) =>
+	DRAFT_RECORD_PREFIX + encodeURIComponent(key);
+type OrdinaryDraft = { version: 1; text: string; pending: boolean };
+const draftEdits = new Map<string, number>();
+function parseOrdinaryDraft(raw: string): OrdinaryDraft {
+	const value = JSON.parse(raw) as OrdinaryDraft;
+	if (
+		value.version !== 1 ||
+		typeof value.text !== "string" ||
+		typeof value.pending !== "boolean"
+	)
+		throw new Error("invalid ordinary draft record");
+	return value;
+}
+async function ordinaryDraft(
+	key: string,
+	scope: string | null,
+): Promise<OrdinaryDraft | null> {
+	if (Platform.OS === "web") return null;
+	const raw = await scopedStore(deviceStore, scope).get(draftRecordKey(key));
+	if (raw === null) return null;
+	return parseOrdinaryDraft(raw);
+}
+export async function hasOrdinarySessionDraft(
+	sessionId: string,
+	scope: string,
+): Promise<boolean> {
+	return (
+		draftEdits.has(JSON.stringify([scope, draftKey(sessionId)])) ||
+		(await ordinaryDraft(draftKey(sessionId), scope)) !== null ||
+		(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) !== null
+	);
+}
+async function saveOrdinaryDraft(
+	key: string,
+	text: string,
+	scope: string | null,
+): Promise<void> {
+	const store = scopedStore(deviceStore, scope);
+	if (Platform.OS === "web") {
+		await store.set(key, text);
+		return;
+	}
+	const identity = JSON.stringify([scope, key]);
+	const revision = (draftEdits.get(identity) ?? 0) + 1;
+	draftEdits.set(identity, revision);
+	await store.set(
+		draftRecordKey(key),
+		JSON.stringify({ version: 1, text, pending: true }),
+	);
+	const authority = getDraftRecoveryAuthority();
+	if (authority === null) return;
+	try {
+		if (text === "") await discardRecoveryDraft(key, scope);
+		else await writeRecoveryDraft(key, text, scope);
+		if (
+			getStartupAuthorization()?.scope === scope &&
+			getDraftRecoveryAuthority() === authority &&
+			draftEdits.get(identity) === revision
+		)
+			await store.set(
+				draftRecordKey(key),
+				JSON.stringify({ version: 1, text, pending: false }),
+			);
+	} catch {
+		/* Ordinary intent is already durable; failed recovery stays pending. */
+	}
+}
+export async function reconcileOrdinarySessionDraft(
+	sessionId: string,
+	scope: string,
+): Promise<void> {
+	const draft = await ordinaryDraft(draftKey(sessionId), scope);
+	if (draft?.pending && getDraftRecoveryAuthority() !== null)
+		await saveOrdinaryDraft(draftKey(sessionId), draft.text, scope);
+}
+registerRetiringDraftCheckpoint(async (generation, write) => {
+	await awaitPrivateWrites();
+	// Ordinary scoped readers are intentionally CLOSED after withdrawal. Only
+	// this auth-owned retirement callback may read the exact old generation's
+	// encrypted records; never reopen the general read gate to perform handoff.
+	const suffix = `:authorization:${encodeURIComponent(generation)}`;
+	for (const key of await deviceStore.keys()) {
+		if (!key.startsWith(DRAFT_RECORD_PREFIX) || !key.endsWith(suffix)) continue;
+		const base = decodeURIComponent(
+			key.slice(DRAFT_RECORD_PREFIX.length, -suffix.length),
+		);
+		const raw = await deviceStore.get(key);
+		if (raw === null) continue;
+		const draft = parseOrdinaryDraft(raw);
+		if (draft.pending) await write(base, draft.text === "" ? null : draft.text);
+	}
+});
 export const readHomeDraft = async (): Promise<string> => {
 	const scope = getStartupAuthorization()?.scope ?? null;
 	try {
-		return (await scopedStore(deviceStore, scope).get(HOME_DRAFT_KEY)) ?? "";
+		return (
+			(await ordinaryDraft(HOME_DRAFT_KEY, scope))?.text ??
+			(await scopedStore(deviceStore, scope).get(HOME_DRAFT_KEY)) ??
+			""
+		);
 	} catch {
-		/* An unreadable draft is an empty one for this screen; the store is
-		 * best-effort here because a failed READ has lost nothing. */
 		return "";
 	}
 };
-
-export const writeHomeDraft = async (text: string): Promise<void> => {
-	const scope = getStartupAuthorization()?.scope ?? null;
-	await Promise.all([
-		scopedStore(deviceStore, scope).set(HOME_DRAFT_KEY, text),
-		writeRecoveryDraft(HOME_DRAFT_KEY, text, scope).catch(() => undefined),
-	]);
-};
-
+export const writeHomeDraft = async (text: string): Promise<void> =>
+	saveOrdinaryDraft(
+		HOME_DRAFT_KEY,
+		text,
+		getStartupAuthorization()?.scope ?? null,
+	);
 export const clearHomeDraft = async (): Promise<void> => {
 	const scope = getStartupAuthorization()?.scope ?? null;
-	await Promise.all([
-		scopedStore(deviceStore, scope).remove(HOME_DRAFT_KEY),
-		discardRecoveryDraft(HOME_DRAFT_KEY, scope).catch(() => undefined),
-	]);
+	await saveOrdinaryDraft(HOME_DRAFT_KEY, "", scope);
+	await scopedStore(deviceStore, scope).remove(HOME_DRAFT_KEY);
 };
-
 export const readDraft = async (
 	sessionId: string,
 	scope = getStartupAuthorization()?.scope ?? null,
 ): Promise<string> => {
 	try {
 		return (
-			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ?? ""
+			(await ordinaryDraft(draftKey(sessionId), scope))?.text ??
+			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ??
+			""
 		);
 	} catch {
-		/* An unreadable draft is an empty one for this screen; the store is
-		 * best-effort here because a failed READ has lost nothing. */
 		return "";
 	}
 };
-
 export const writeDraft = async (
 	sessionId: string,
 	text: string,
 	scope = getStartupAuthorization()?.scope ?? null,
-): Promise<void> => {
-	await Promise.all([
-		scopedStore(deviceStore, scope).set(draftKey(sessionId), text),
-		writeRecoveryDraft(draftKey(sessionId), text, scope).catch(() => undefined),
-	]);
-};
-
+): Promise<void> => saveOrdinaryDraft(draftKey(sessionId), text, scope);
 export const clearDraft = async (
 	sessionId: string,
 	scope = getStartupAuthorization()?.scope ?? null,
 ): Promise<void> => {
-	await Promise.all([
-		scopedStore(deviceStore, scope).remove(draftKey(sessionId)),
-		discardRecoveryDraft(draftKey(sessionId), scope).catch(() => undefined),
-	]);
+	await saveOrdinaryDraft(draftKey(sessionId), "", scope);
+	await scopedStore(deviceStore, scope).remove(draftKey(sessionId));
 };
 
 /**
@@ -266,8 +352,11 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	 * every accepted one through its final settle (review round 2, R1-4). */
 	withdrawDispatch();
 	await awaitCommandOperations();
+	draftEdits.clear();
 	const privateKey = (key: string) =>
-		key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith("lo-mobile-command:");
+		key.startsWith(DRAFT_KEY_PREFIX) ||
+		key.startsWith(DRAFT_RECORD_PREFIX) ||
+		key.startsWith("lo-mobile-command:");
 	if (Platform.OS === "web") {
 		const storage = globalThis.localStorage;
 		if (!storage) throw new Error("private storage cannot be enumerated");
@@ -305,6 +394,7 @@ export const clearAuthorizationData = async (): Promise<void> => {
 
 export const clearAllDrafts = async (): Promise<void> => {
 	for (const key of await deviceStore.keys()) {
-		if (key.startsWith(DRAFT_KEY_PREFIX)) await deviceStore.remove(key);
+		if (key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith(DRAFT_RECORD_PREFIX))
+			await deviceStore.remove(key);
 	}
 };

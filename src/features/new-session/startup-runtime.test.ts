@@ -21,6 +21,7 @@ vi.mock("expo-crypto", () => ({
 vi.mock("./startup-device-store", () => ({
 	STARTUP_PREFIX: "test-startup:",
 	startupDeviceStore: {
+		keys: async () => [...records.keys()],
 		get: async (key: string) => records.get(key) ?? null,
 		set: async (key: string, value: string) => {
 			records.set(key, value);
@@ -35,9 +36,11 @@ vi.mock("@/connection/startup-authorization", () => ({
 	registerStartupAuthorizationCleanup: () => () => undefined,
 }));
 vi.mock("@/features/session/device-storage", () => ({
+	hasOrdinarySessionDraft: async () => false,
 	draftKey: (sid: string) => `lo-mobile-draft:${sid}`,
 }));
 vi.mock("@/features/session/draft-recovery", () => ({
+	registerRetiringDraftCheckpoint: () => () => {},
 	getDraftRecoveryAuthority: () => recoveryAuthority,
 	discardRecoveryDraft: async (key: string, scope: string) => {
 		if (authorization?.scope === scope) recoveryRecords.delete(key);

@@ -73,6 +73,10 @@ export class StartupAuthorizationLifecycle {
 		drain(): Promise<void>;
 		clear(policy: "retire" | "reauthenticate"): Promise<void>;
 		admitted?(): void;
+		checkpoint?(
+			generation: string,
+			comparisonAuthority: string | null,
+		): Promise<void>;
 	} | null = null;
 
 	/** Recovery is a separate sealed draft capability, never a dispatch scope.
@@ -133,7 +137,9 @@ export class StartupAuthorizationLifecycle {
 		this.suspend();
 		return this.enqueue(async () => {
 			const outcomes = await Promise.allSettled([
-				this.storage.write({ version: 1, state: "revoked" }),
+				this.checkpointBeforeReauthentication().then(() =>
+					this.storage.write({ version: 1, state: "revoked" }),
+				),
 				afterRevoke?.() ?? Promise.resolve(),
 			]);
 			const failures = outcomes.flatMap((outcome) =>
@@ -146,6 +152,15 @@ export class StartupAuthorizationLifecycle {
 					"Authorization revocation could not be confirmed",
 				);
 		});
+	}
+
+	private async checkpointBeforeReauthentication(): Promise<void> {
+		const record = await this.storage.read();
+		if (record?.state === "active")
+			await this.recoveryBoundary?.checkpoint?.(
+				record.generation,
+				record.recoveryAuthority ?? null,
+			);
 	}
 
 	/**
@@ -166,6 +181,8 @@ export class StartupAuthorizationLifecycle {
 		this.suspend();
 		return this.enqueue(async () => {
 			if (preserveUnscoped && (await this.storage.read()) === null) return;
+			if (policy === "reauthenticate")
+				await this.checkpointBeforeReauthentication();
 			const outcomes = await Promise.allSettled([
 				this.storage.write({
 					version: 1,
@@ -328,7 +345,8 @@ export class StartupAuthorizationLifecycle {
 		policy: "retire" | "reauthenticate" = "retire",
 	): Promise<void> {
 		// A sealed draft already being written must commit before plaintext/cache
-		// and command families are removed. Failed draining keeps admission closed.
+		// and command families are removed. Failed reauth draining quarantines the
+		// ordinary last copy; explicit retirement still attempts all erasures.
 		const drained = await Promise.allSettled([
 			this.recoveryBoundary?.drain() ?? Promise.resolve(),
 		]);
