@@ -127,6 +127,7 @@ export function verifyArtifactMetadata(data: ArtifactMetadata, nowMs: number) {
 		fail();
 }
 export interface TarMember {
+	mode?: number;
 	name: string;
 	type: "file" | "directory" | "symlink";
 	link?: string;
@@ -155,6 +156,11 @@ export function validateMembers(members: TarMember[]) {
 		if (names.has(name)) fail();
 		names.add(name);
 		if (!Number.isSafeInteger(member.size) || member.size < 0) fail();
+		if (
+			member.mode !== undefined &&
+			(!Number.isInteger(member.mode) || member.mode < 0 || member.mode > 0o777)
+		)
+			fail();
 		size += member.size;
 		if (size > 1024 ** 3) fail();
 		if (member.type !== "file" && member.size !== 0) fail();
@@ -264,6 +270,7 @@ export function inspectTarBytes(bytes: Buffer): TarMember[] {
 		pax = {};
 		if (!["0", "5", "2"].includes(type)) fail();
 		members.push({
+			mode: oct(header.subarray(100, 108)),
 			name,
 			type: type === "0" ? "file" : type === "5" ? "directory" : "symlink",
 			size,

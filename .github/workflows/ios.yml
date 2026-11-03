@@ -33,12 +33,29 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Standard iOS jobs or independent XCTest compile-only setup (never replay)"
+        description: "Standard jobs, independent runner compile, or separately approved retained seed replay"
         type: choice
-        options: [standard, retirement-ui-setup]
+        options: [standard, retirement-ui-setup, retirement-seed-replay]
         default: standard
       retirement_proof:
         description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
+        type: boolean
+        default: false
+
+      retirement_compile_run:
+        description: "Replay ONLY: source-matched successful setup run ID"
+        type: string
+        default: ""
+      retirement_runner_artifact:
+        description: "Replay ONLY: fresh setup runner artifact ID"
+        type: string
+        default: ""
+      retirement_runner_source:
+        description: "Replay ONLY: full reviewed runner/host SHA, equal to this dispatch SHA"
+        type: string
+        default: ""
+      retirement_observe_only:
+        description: "Replay ONLY: observe system alert without requesting tap authority"
         type: boolean
         default: false
 
@@ -85,19 +102,41 @@ jobs:
         env:
           IOS_MANUAL_MODE: ${{ inputs.mode }}
           IOS_PROOF_JSON: ${{ toJSON(inputs.retirement_proof) }}
+          REPLAY_COMPILE_RUN: ${{ inputs.retirement_compile_run }}
+          REPLAY_RUNNER_ARTIFACT: ${{ inputs.retirement_runner_artifact }}
+          REPLAY_RUNNER_SOURCE: ${{ inputs.retirement_runner_source }}
+          REPLAY_OBSERVE_ONLY_JSON: ${{ toJSON(inputs.retirement_observe_only) }}
         run: python3 scripts/ci/retirement-ui-route.py
 
   retirement-ui-setup:
+    permissions:
+      contents: read
+      actions: read
     needs: manual-mode
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-ui-setup' && toJSON(inputs.retirement_proof) == 'false'
     uses: ./.github/workflows/retirement-ui-setup.yml
     with:
       mode: setup
 
+  retirement-seed-replay:
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-seed-replay' && toJSON(inputs.retirement_proof) == 'false'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/retirement-ui-seed-replay.yml
+    with:
+      compile_run: ${{ inputs.retirement_compile_run }}
+      runner_artifact: ${{ inputs.retirement_runner_artifact }}
+      runner_source: ${{ inputs.retirement_runner_source }}
+      observe_only: ${{ inputs.retirement_observe_only }}
+
   changes:
-    # Setup skips this entire app-job dependency tree. PR/push classification,
-    # including any mixed app/native/config/proof diff, stays exactly as before.
-    if: github.event_name != 'workflow_dispatch' || (inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true'))
+    needs: manual-mode
+    # Dispatch validation must succeed BEFORE this app-job tree can start, even
+    # for malformed standard+replay inputs. PR/push skip manual-mode; the status
+    # predicate preserves their original classifier while respecting cancellation.
+    if: always() && !cancelled() && (github.event_name != 'workflow_dispatch' || (needs['manual-mode'].result == 'success' && inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true')))
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
     timeout-minutes: 5

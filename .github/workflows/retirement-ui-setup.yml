@@ -17,6 +17,7 @@ on:
         default: setup
 permissions:
   contents: read
+  actions: read
 concurrency:
   # A reusable inherits caller github.workflow/event/ref. Namespace INSIDE the
   # full expression or it queues behind its own parent's active group.
@@ -35,6 +36,8 @@ jobs:
       # Existing hosted Python/Xcode ONLY: no setup-node, npm, CocoaPods,
       # project-generator dependency, app build/prebuild or retained-app access.
       - name: Compile independent XCTest runner without running tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 scripts/ci/retirement-ui-setup.py --mode setup --output "$RUNNER_TEMP/retirement-ui-setup"
@@ -47,6 +50,4 @@ jobs:
           if-no-files-found: error
           path: |
             ${{ runner.temp }}/retirement-ui-setup/setup-receipt.json
-            ${{ runner.temp }}/retirement-ui-setup/compile.log
-            ${{ runner.temp }}/retirement-ui-setup/DerivedData/Build/Products
-            ${{ runner.temp }}/retirement-ui-setup/setup.xcresult
+            ${{ runner.temp }}/retirement-ui-setup/runner-products.tar.gz

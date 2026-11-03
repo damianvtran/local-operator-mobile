@@ -316,10 +316,23 @@ describe("independent system-alert runner source/setup guards (NO SDK/replay)", 
 			new URL("./retirement-ui/RetainedReplayTests.swift", import.meta.url),
 			"utf8",
 		);
-		expect(swift.indexOf("try ReplayGuards.identity")).toBeLessThan(
+		expect(swift.indexOf("try host.useQuery(query)")).toBeGreaterThan(-1);
+		expect(swift.indexOf("try host.useQuery(query)")).toBeLessThan(
 			swift.indexOf("let springboard"),
 		);
-		expect(swift.indexOf("add(before)")).toBeLessThan(swift.indexOf(".tap()"));
+		expect(
+			swift.indexOf('capture("owned-system-alert-before")'),
+		).toBeGreaterThan(-1);
+		expect(swift.indexOf('capture("owned-system-alert-before")')).toBeLessThan(
+			swift.indexOf(".tap()"),
+		);
+		expect(swift.indexOf('if mode == "observe-only" { return }')).toBeLessThan(
+			swift.indexOf('host.request("authorize-tap"'),
+		);
+		expect(swift.indexOf("try host.consume")).toBeLessThan(
+			swift.indexOf(".tap()"),
+		);
+		expect(swift).not.toContain("LO_REPLAY_AUTHORITY_JSON");
 		expect(swift.match(/\.tap\(\)/g)).toHaveLength(1);
 		expect(swift).not.toContain("addUIInterruptionMonitor");
 		const model = readFileSync(
@@ -333,5 +346,41 @@ describe("independent system-alert runner source/setup guards (NO SDK/replay)", 
 			SYSTEM_TITLE,
 		])
 			expect(model).toContain(value);
+	});
+
+	it("plain loopback transport and actual-use guards share the compiled Swift fixtures", () => {
+		const client = readFileSync(
+			new URL("./retirement-ui/ReplayHostClient.swift", import.meta.url),
+			"utf8",
+		);
+		const model = readFileSync(
+			new URL("./retirement-ui/ReplayGuards.swift", import.meta.url),
+			"utf8",
+		);
+		const fixture = readFileSync(
+			new URL("./retirement-ui/ReplayGuardTests.swift", import.meta.url),
+			"utf8",
+		);
+		expect(client.match(/ReplayGuards.permit\(/g)).toHaveLength(2);
+		expect(client).toContain('kind: "query"');
+		expect(client).toContain('kind: "tap"');
+		expect(client).toContain("consumed = true");
+		expect(client.indexOf("consumed = true")).toBeLessThan(
+			client.lastIndexOf("ReplayGuards.permit("),
+		);
+		expect(client).toContain("URLSessionConfiguration.ephemeral");
+		expect(client).toContain("configuration.urlCredentialStorage = nil");
+		expect(client).toContain("completionHandler(nil)");
+		expect(client).not.toMatch(
+			/LO_REPLAY_AUTHORITY_JSON|PUBLIC_KEY|signature|Curve25519/,
+		);
+		expect(model).toContain("grant.session == session");
+		expect(model).toContain("now < grant.expiresAt");
+		expect(model).toContain("uptime >= received");
+		expect(model).toContain("grant.identity == identity");
+		expect(fixture).toContain("testActualUseExpiryIdentityAndClockBoundaries");
+		expect(fixture).toContain(
+			"testActualClientConsumesOneLocalTapAndFailedAttemptCannotRetry",
+		);
 	});
 });

@@ -7,6 +7,7 @@ Local CLT/source tests are not an SDK compilation receipt.
 import argparse
 import hashlib
 import json
+import runpy
 import os
 import plistlib
 from pathlib import Path
@@ -15,13 +16,14 @@ import subprocess
 import time
 
 HERE = Path(__file__).resolve().parent
+PREFLIGHT = runpy.run_path(str(HERE / 'retirement-replay-products.py'))['preflight_retained']
 
 def project(output):
     output.mkdir(parents=True, exist_ok=False)
     target = 'A00000000000000000000001'
-    files = ['ReplayGuards.swift', 'RetainedReplayTests.swift']
-    refs = ['B00000000000000000000001', 'B00000000000000000000002']
-    builds = ['C00000000000000000000001', 'C00000000000000000000002']
+    files = ['ReplayGuards.swift', 'ReplayHostClient.swift', 'RetainedReplayTests.swift', 'ReplayGuardTests.swift']
+    refs = [f'B{i + 1:023X}' for i in range(len(files))]
+    builds = [f'C{i + 1:023X}' for i in range(len(files))]
     source_refs = '\n'.join(f'{r} = {{isa=PBXFileReference; lastKnownFileType=sourcecode.swift; path={json.dumps(str(HERE / "retirement-ui" / f))}; sourceTree="<absolute>";}};' for r, f in zip(refs, files))
     build_refs = '\n'.join(f'{b} = {{isa=PBXBuildFile; fileRef={r};}};' for b, r in zip(builds, refs))
     pbx = '''// !$*UTF8*$!
@@ -57,6 +59,7 @@ def setup(root):
                'sources': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((HERE / 'retirement-ui').glob('*.swift'))}}
     started = time.monotonic()
     try:
+        receipt['retainedArtifactPreflight'] = PREFLIGHT(os.environ.get('GITHUB_TOKEN', ''))
         receipt['xcodeVersion'] = subprocess.check_output(['xcodebuild', '-version'], text=True, timeout=15).strip()
         receipt['simulatorSDKVersion'] = subprocess.check_output(['xcrun', '--sdk', 'iphonesimulator', '--show-sdk-version'], text=True, timeout=15).strip()
         generated = root / 'RetirementSystemAlert.xcodeproj'
@@ -101,7 +104,14 @@ def setup(root):
             if binary.is_symlink() or not binary.is_file(): raise RuntimeError('Unsupported runner binary')
             receipt['runnerExecutableSHA256'][str(binary.relative_to(root))] = hashlib.sha256(binary.read_bytes()).hexdigest()
 
+        (root / 'setup-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+        remaining = 540 - (time.monotonic() - started)
+        if remaining <= 0: raise RuntimeError('No packaging budget')
+        subprocess.run([os.environ.get('PYTHON_EXECUTABLE', '/usr/bin/python3'), str(HERE / 'retirement-replay-products.py'), 'package', str(root)], check=True, timeout=remaining)
+        receipt = json.loads((root / 'setup-receipt.json').read_text())
+        if receipt.get('packageValidated') is not True: raise RuntimeError('Runner package invalid')
         receipt['compileOutcome'] = 'passed'
+
     except Exception:
         receipt['compileOutcome'] = 'failed'
         raise

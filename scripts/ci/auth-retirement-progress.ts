@@ -108,7 +108,7 @@ export function writeEvidenceAtomic(
 		| "failure.json"
 		| "proof.json"
 		| "archive-provenance.json"
-		| `${(typeof TIMING_PHASES)[number]}-${"after-openurl" | "receipt-timeout"}-capture.json`,
+		| `${(typeof TIMING_PHASES)[number]}-${"after-openurl" | "receipt-timeout" | "after-tap"}-capture.json`,
 	value: Record<string, unknown>,
 ): void {
 	const temporary = join(root, `.${name}-${process.pid}-${++sequence}.tmp`);

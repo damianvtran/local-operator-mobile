@@ -117,7 +117,7 @@ export function validatePng(data: Buffer): void {
 }
 export type CaptureResult = {
 	phase: string;
-	point: "after-openurl" | "receipt-timeout";
+	point: "after-openurl" | "receipt-timeout" | "after-tap";
 	status: "observed" | "timeout" | "error";
 	elapsedMs: number;
 	sha256?: string;
@@ -136,7 +136,7 @@ export async function captureOwned(
 	const closedPhase = TIMING_PHASES.find((value) => value === phase);
 	if (
 		!closedPhase ||
-		!["after-openurl", "receipt-timeout"].includes(point) ||
+		!["after-openurl", "receipt-timeout", "after-tap"].includes(point) ||
 		!udid
 	)
 		throw new Error("Invalid capture identity");

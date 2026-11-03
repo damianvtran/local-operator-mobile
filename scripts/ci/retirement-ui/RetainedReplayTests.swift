@@ -1,39 +1,42 @@
 import XCTest
 
-// This file is COMPILED ONLY by the setup workflow. There is deliberately no
-// setup path that runs this test, opens a URL, launches the proof or taps UI.
+/// Compiled by setup, executed only by a separately granted seed replay. The
+/// query grant precedes ANY SpringBoard query; an observe-only branch never
+/// requests tap authority. Host measurements, not environment JSON, authorize.
 final class RetainedReplayTests: XCTestCase {
-  func testExplicitlyAuthorizedSystemOpenAlert() throws {
-    continueAfterFailure = false
-    let env = ProcessInfo.processInfo.environment
-    guard env["LO_REPLAY_MODE"] == "explicit-system-alert-replay",
-          let json = env["LO_REPLAY_AUTHORITY_JSON"], let data = json.data(using: .utf8),
-          let udid = env["SIMULATOR_UDID"] else { throw ReplayGuardFailure.refused }
-    let authority = try JSONDecoder().decode(ReplayAuthority.self, from: data)
-    try ReplayGuards.identity(authority, udid: udid, now: Date().timeIntervalSince1970)
-    // Public explicit SYSTEM scope, never an interruption monitor or coordinate.
-    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+  private func observation(_ springboard: XCUIApplication) -> PromptObservation {
     let alerts = springboard.alerts
-    let count = alerts.count
-    let before = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-    before.name = "owned-system-alert-before-authorization"
-    before.lifetime = .keepAlways
-    add(before)
-    guard count == 1 else { throw ReplayGuardFailure.refused }
+    guard alerts.count == 1 else { return PromptObservation(count: alerts.count, titles: [], buttons: []) }
     let alert = alerts.element(boundBy: 0)
-    let labels = alert.buttons.allElementsBoundByIndex.map { $0.label }
-    // Match visible title exactly; identifiers alone cannot authorize a tap.
-    let titles = alert.staticTexts.allElementsBoundByIndex.map { $0.label }
-    guard titles == [authority.expectedTitle] else { throw ReplayGuardFailure.refused }
-    try ReplayGuards.alert(title: titles[0], buttons: labels, count: count)
-    try ReplayGuards.identity(authority, udid: udid, now: Date().timeIntervalSince1970)
-    guard alerts.count == 1, alert.buttons.count == 2,
-          alert.buttons["Open"].exists, alert.buttons["Cancel"].exists,
-          alert.staticTexts.allElementsBoundByIndex.map({ $0.label }) == titles else {
-      throw ReplayGuardFailure.refused
-    }
-    // Exactly one user-equivalent action, available only to a separately granted
-    // future replay. Setup build-for-testing never executes this branch.
-    alert.buttons["Open"].tap()
+    return PromptObservation(count: 1,
+      titles: alert.staticTexts.allElementsBoundByIndex.map { ReplayGuards.scalars($0.label) },
+      buttons: alert.buttons.allElementsBoundByIndex.map { ReplayGuards.scalars($0.label) })
+  }
+  private func capture(_ name: String) {
+    let frame = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+    frame.name = name; frame.lifetime = .keepAlways; add(frame)
+  }
+  func testSingleSeedReplay() async throws {
+    continueAfterFailure = false
+    let environment = ProcessInfo.processInfo.environment
+    guard let mode = environment["LO_REPLAY_MODE"], ["observe-only", "seed-replay"].contains(mode) else { throw ReplayGuardFailure.refused }
+    let host = try ReplayHostClient(environment: environment)
+    _ = try await host.request("runner-ready")
+    let query = try await host.request("before-observe")
+    try host.useQuery(query)
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+    let before = observation(springboard)
+    capture("owned-system-alert-before")
+    _ = try await host.request("observed", observation: before)
+    // Physically separate branch: no authorize-tap request/call in observe-only.
+    if mode == "observe-only" { return }
+    guard ReplayGuards.exact(before) else { throw ReplayGuardFailure.refused }
+    let grant = try await host.request("authorize-tap", observation: before)
+    let current = observation(springboard)
+    guard ReplayGuards.exact(current), current.fingerprint == before.fingerprint else { throw ReplayGuardFailure.refused }
+    try host.consume(grant, observation: current)
+    springboard.alerts.element(boundBy: 0).buttons["Open"].tap()
+    capture("owned-system-alert-after")
+    _ = try await host.request("after-tap")
   }
 }
