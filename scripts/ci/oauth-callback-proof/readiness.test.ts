@@ -8,6 +8,22 @@ const runner = readFileSync(new URL("run.sh", root), "utf8");
 const AUTOSTART = /self\.start\(\)/;
 const OPTIONAL = /optional:\s*true/;
 const TIMEOUT_OVERRIDE = /transport\.timeoutSeconds\s*=/;
+const SCREENSHOT = /^- takeScreenshot:\s*(.+)$/gm;
+const OUTER_QUOTES = /^['"]|['"]$/g;
+const BASENAME = /^[a-zA-Z0-9_.-]+$/;
+
+/** Maestro confines screenshots to --test-output-dir. Shell-expanded absolute
+ * destinations can be outside that directory even though both live in evidence.
+ * Accept only basenames (with the known mode interpolation), never a root/path. */
+function screenshotsStayInOutput(source: string): boolean {
+	const names = [...source.matchAll(SCREENSHOT)].map((match) =>
+		(match[1] ?? "").replace(OUTER_QUOTES, "").replaceAll("$mode", "positive"),
+	);
+	return (
+		names.length >= 3 &&
+		names.every((name) => BASENAME.test(name) && !name.includes(".."))
+	);
+}
 
 /** Source-contract tripwire, not native execution evidence. The hosted browser
  * proof supplies that evidence; this catches the cold-driver race cheaply before
@@ -27,6 +43,19 @@ function readinessContract(source: string): boolean {
 }
 
 describe("hosted OAuth proof readiness contract", () => {
+	it("uses screenshot basenames inside Maestro's configured output directory", () => {
+		expect(screenshotsStayInOutput(runner)).toBe(true);
+	});
+
+	it("rejects the old absolute screenshot destination even under the evidence root", () => {
+		const outside = runner.replaceAll(
+			"- takeScreenshot: '",
+			"- takeScreenshot: '$OUT/evidence/",
+		);
+		expect(outside).not.toBe(runner);
+		expect(screenshotsStayInOutput(outside)).toBe(false);
+	});
+
 	it("leaves launch idle until an observable Ready → Start interaction", () => {
 		expect(readinessContract(main)).toBe(true);
 		const coldDriverRace = main.replace(

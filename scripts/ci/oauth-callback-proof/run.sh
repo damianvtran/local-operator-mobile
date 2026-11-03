@@ -72,6 +72,9 @@ for mode in legacy positive cancel timeout; do
   # Timeout exercises the production five-minute deadline unchanged. UI-driver
   # cold start remains outside it; this wait merely observes that real deadline.
   if [[ "$mode" == timeout ]]; then limit=360000; fi
+  # Maestro resolves these screenshot basenames under the --test-output-dir
+  # supplied below. Absolute siblings under evidence/ fail its path sandbox.
+  # The recursive artifact upload retains that per-mode tree even on failure.
   cat > "$OUT/flow-$mode.yaml" <<YAML
 appId: $BUNDLE
 ---
@@ -91,7 +94,7 @@ appId: $BUNDLE
 - extendedWaitUntil:
     visible: '$title'
     timeout: 60000
-- takeScreenshot: '$OUT/evidence/$mode-browser-ready'
+- takeScreenshot: '$mode-browser-ready'
 YAML
   if [[ "$mode" == legacy || "$mode" == positive ]]; then
     cat >> "$OUT/flow-$mode.yaml" <<YAML
@@ -103,7 +106,7 @@ YAML
 - extendedWaitUntil:
     visible: "(?i).*(connect|cannot open|can.t open).*"
     timeout: 10000
-- takeScreenshot: '$OUT/evidence/legacy-browser'
+- takeScreenshot: 'legacy-browser'
 YAML
   fi
   if [[ "$mode" == cancel ]]; then
@@ -116,7 +119,7 @@ YAML
     visible: 'PASS $mode|FAIL $mode.*'
     timeout: $limit
 - assertVisible: 'PASS $mode'
-- takeScreenshot: '$OUT/evidence/$mode-returned'
+- takeScreenshot: '$mode-returned'
 YAML
   DRIVER_EXIT=0
   if [[ "$LAUNCHED" == false ]]; then
