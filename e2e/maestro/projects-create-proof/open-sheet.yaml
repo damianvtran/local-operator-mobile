@@ -30,7 +30,7 @@ appId: ${APP_ID}
 # the screen that opened it.
 - waitForAnimationToEnd:
     timeout: 2000
-- takeScreenshot: ${SHOT_DIR}/projects-list
+- takeScreenshot: projects-list
 - tapOn:
     id: "projects-new"
 - extendedWaitUntil:

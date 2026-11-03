@@ -37,6 +37,7 @@ import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
+import { collectProofFrames } from "./projects-create-proof-contract.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -338,8 +339,6 @@ async function flowRun(
 				`RELAY_URL=${relayOrigin}`,
 				"-e",
 				`RELAY_PASSWORD=${password}`,
-				"-e",
-				`SHOT_DIR=${shots}`,
 				"--test-output-dir",
 				join(ROOT, "maestro", label),
 				`e2e/maestro/projects-create-proof/${file}`,
@@ -350,6 +349,8 @@ async function flowRun(
 		await captureFailure(label);
 		throw error;
 	}
+	const frames = collectProofFrames(join(ROOT, "maestro", label), shots, label);
+	note(`collected ${label}: ${frames.join(",")}`);
 	// The native accessibility tree of the final (open-sheet) state.
 	const tree = await run(
 		`hierarchy-${label}`,

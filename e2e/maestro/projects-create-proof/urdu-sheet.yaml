@@ -9,10 +9,10 @@ appId: ${APP_ID}
     visible:
       text: "نیا پروجیکٹ"
     timeout: 15000
-- takeScreenshot: ${SHOT_DIR}/sheet-first
+- takeScreenshot: sheet-first
 - waitForAnimationToEnd:
     timeout: 2000
-- takeScreenshot: ${SHOT_DIR}/sheet-settled
+- takeScreenshot: sheet-settled
 - assertVisible:
     id: "project-create-status-planning"
     text: "منصوبہ بندی"
@@ -34,6 +34,7 @@ appId: ${APP_ID}
 - assertVisible:
     id: "project-create-status-archived"
     text: "آرکائیو شدہ"
+- takeScreenshot: sheet-archived
 # Lower fields: scroll to the submit control (the tags help line sits above it).
 - scrollUntilVisible:
     element:
@@ -42,4 +43,4 @@ appId: ${APP_ID}
     timeout: 15000
 - assertVisible:
     text: "بنائیں"
-- takeScreenshot: ${SHOT_DIR}/sheet-lower
+- takeScreenshot: sheet-lower

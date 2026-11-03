@@ -11,4 +11,4 @@ appId: ${APP_ID}
     timeout: 15000
 - assertNotVisible:
     text: "نیا پروجیکٹ"
-- takeScreenshot: ${SHOT_DIR}/sheet-settled
+- takeScreenshot: sheet-settled

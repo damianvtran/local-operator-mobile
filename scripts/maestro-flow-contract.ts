@@ -1204,3 +1204,91 @@ export const maestroChecks: [string, () => void][] = [
 if (import.meta.main) {
 	for (const [name, run] of maestroChecks) test(name, run);
 }
+
+/** Maestro owns takeScreenshot's output directory. Keep names portable: a
+ * sibling frames path passed in a variable failed run41607150142 before the
+ * sheet opened. Check parsed commands, including nested helper flows. */
+export function checkScreenshotNames(value: Value): void {
+	if (Array.isArray(value)) {
+		for (const item of value) checkScreenshotNames(item);
+		return;
+	}
+	if (value === null || typeof value !== "object") return;
+	for (const [key, item] of Object.entries(value)) {
+		if (key === "takeScreenshot") {
+			assert(
+				typeof item === "string" &&
+					item.length > 0 &&
+					!item.includes("/") &&
+					!item.includes("$") &&
+					!item.includes("{") &&
+					!item.startsWith("~"),
+				"takeScreenshot requires a bare literal name",
+			);
+		} else checkScreenshotNames(item);
+	}
+}
+test("screenshot names reject the sibling-path failure before native dispatch", () => {
+	for (const bad of [
+		"/frames/projects-list",
+		"${SHOT_DIR}/projects-list",
+		"a/b",
+		"$NAME",
+		"{name}",
+		"~/projects-list",
+	])
+		assert.throws(
+			() => checkScreenshotNames([{ takeScreenshot: bad }]),
+			/bare literal/,
+		);
+	checkScreenshotNames([{ takeScreenshot: "projects-list" }]);
+	const visit = (dir: string) => {
+		for (const row of readdirSync(dir, { withFileTypes: true })) {
+			const path = join(dir, row.name);
+			if (row.isDirectory()) visit(path);
+			else if (row.name.endsWith(".yaml"))
+				checkScreenshotNames(parseFlow(readFileSync(path, "utf8")));
+		}
+	};
+	visit(workspace);
+});
+
+test("project-create flows declare the complete frozen inventory including English", () => {
+	const names = (file: string): string[] => {
+		const result: string[] = [];
+		const visit = (value: Value): void => {
+			if (Array.isArray(value)) {
+				value.forEach(visit);
+				return;
+			}
+			if (!value || typeof value !== "object") return;
+			for (const [key, item] of Object.entries(value)) {
+				if (key === "takeScreenshot") result.push(String(item));
+				else if (key === "runFlow" && typeof item === "string")
+					result.push(...names(item));
+				else visit(item);
+			}
+		};
+		visit(
+			parseFlow(
+				readFileSync(join(workspace, "projects-create-proof", file), "utf8"),
+			),
+		);
+		return result;
+	};
+	for (const file of ["urdu-sheet.yaml", "english-control.yaml"]) {
+		const actual = names(file);
+		const expected =
+			file === "urdu-sheet.yaml"
+				? [
+						"projects-list",
+						"sheet-first",
+						"sheet-settled",
+						"sheet-archived",
+						"sheet-lower",
+					]
+				: ["projects-list", "sheet-settled"];
+		assert.deepEqual(actual, expected);
+		assert.throws(() => assert.deepEqual(actual.slice(1), expected));
+	}
+});
