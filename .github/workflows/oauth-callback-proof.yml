@@ -21,7 +21,11 @@ jobs:
   browser-native:
     name: Real system browser to IPv4 loopback
     runs-on: macos-26
-    timeout-minutes: 20
+    # Serial modes avoid another native runner: allow compile/boot (~6m), four
+    # cold driver sessions (~8m), the REAL 5m timeout, bounded case waits (~6m)
+    # and evidence/reaping (~3m). The observed 20m cutoff interrupted timeout;
+    # this outer 35m budget does not alter any native deadline or PASS assertion.
+    timeout-minutes: 35
     env:
       MAESTRO_VERSION: "2.11.0"
     steps:

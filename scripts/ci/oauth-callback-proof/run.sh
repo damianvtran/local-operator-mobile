@@ -19,6 +19,11 @@ raise SystemExit("No installed iPhone simulator runtime")
 ')
 UDID=$(xcrun simctl create 'OAuth callback proof' "$DEVICE" "$RUNTIME")
 cleanup() {
+  # Preserve live progress if the outer job is interrupted during a long mode.
+  # This raw teardown snapshot is never promoted to acceptance without run-id validation.
+  if [[ -n "${mode:-}" && -n "${CONTAINER:-}" && -f "$CONTAINER/Documents/receipt.json" ]]; then
+    cp "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-teardown-native.json" || true
+  fi
   xcrun simctl terminate "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
   xcrun simctl delete "$UDID" >/dev/null 2>&1 || true
@@ -28,6 +33,7 @@ SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
 ARCH=$(uname -m)
 xcrun swiftc -sdk "$SDK" -target "${ARCH}-apple-ios16.4-simulator" \
   "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" \
+  "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" \
   "$ROOT/scripts/ci/oauth-callback-proof/main.swift" \
   -o "$APP/CallbackProof" -framework UIKit -framework AuthenticationServices -framework Network
 cat > "$APP/Info.plist" <<'PLIST'
@@ -44,10 +50,14 @@ cat > "$APP/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 codesign --force --sign - "$APP"
-shasum -a 256 "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" "$APP/CallbackProof" > "$OUT/evidence/source-and-binary.sha256"
+shasum -a 256 "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" \
+  "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" \
+  "$ROOT/scripts/ci/oauth-callback-proof/main.swift" "$APP/CallbackProof" > "$OUT/evidence/source-and-binary.sha256"
 # Retain the actual signed simulator app, not merely a hash of a missing binary.
 ditto -c -k --keepParent "$APP" "$OUT/evidence/CallbackProof.app.zip"
 cp "$ROOT/modules/radient-loopback/ios/LoopbackAuthSession.swift" "$OUT/evidence/LoopbackAuthSession.swift"
+cp "$ROOT/scripts/ci/oauth-callback-proof/TCPClosureProbe.swift" "$OUT/evidence/TCPClosureProbe.swift"
+cp "$ROOT/scripts/ci/oauth-callback-proof/main.swift" "$OUT/evidence/FixtureMain.swift"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b
 xcrun simctl install "$UDID" "$APP"
@@ -61,10 +71,39 @@ for mode in legacy positive cancel timeout; do
     mv "$CONTAINER/Documents/receipt.json" "$OUT/evidence/previous-receipt.json"
   fi
   LAUNCHED=true
-  if ! SIMCTL_CHILD_PROOF_MODE="$mode" xcrun simctl launch "$UDID" "$BUNDLE"; then
+  RUN_ID=$(uuidgen)
+  if ! SIMCTL_CHILD_PROOF_MODE="$mode" SIMCTL_CHILD_PROOF_RUN_ID="$RUN_ID" xcrun simctl launch "$UDID" "$BUNDLE"; then
     echo "Fixture launch failed: $mode"
     LAUNCHED=false
     FAILURES=1
+  fi
+  # Fresh, atomic native Ready receipt must precede ANY UI tap. Never reuse an
+  # earlier mode's success/port after launch failure or a simulator restart.
+  if [[ "$LAUNCHED" == true ]]; then
+    if python3 - "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-ready.json" "$mode" "$RUN_ID" > "$OUT/begin-uri-$mode.txt" <<'PY'
+import json, pathlib, sys, time
+path, snapshot, mode, run_id = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3], sys.argv[4]
+deadline = time.monotonic() + 60
+while time.monotonic() < deadline:
+    try:
+        value = json.loads(path.read_text())
+        port = value.get('provider_port')
+        if (value.get('mode') == mode and value.get('run_id') == run_id and
+                value.get('stage') == 'ready' and value.get('started') is False and
+                isinstance(port, int) and 0 < port < 65536):
+            snapshot.write_text(json.dumps(value, indent=2, sort_keys=True))
+            print('http://127.0.0.1:' + str(port) + '/begin')
+            sys.exit(0)
+    except (OSError, ValueError):
+        pass
+    time.sleep(0.1)
+sys.exit('Fresh native Ready receipt was not observed; refusing to tap Start')
+PY
+    then :; else LAUNCHED=false; FAILURES=1; fi
+  fi
+  if [[ "$LAUNCHED" == true ]]; then
+    BEGIN_URI=$(cat "$OUT/begin-uri-$mode.txt")
+    printf 'http.get("%s");\n' "$BEGIN_URI" > "$OUT/begin-$mode.js"
   fi
   title='Complete test sign-in'
   limit=90000
@@ -84,21 +123,32 @@ appId: $BUNDLE
 - tapOn:
     id: proof.start
 - extendedWaitUntil:
+    visible: 'Prepared $mode'
+    timeout: 60000
+- runScript: 'begin-$mode.js'
+- extendedWaitUntil:
     visible: 'Continue|$title'
     timeout: 60000
 - runFlow:
     when:
       visible: Continue
     commands:
-      - tapOn: Continue
+      - tapOn:
+          text: Continue
+          waitToSettleTimeoutMs: 0
 - extendedWaitUntil:
     visible: '$title'
     timeout: 60000
+- assertVisible: '$title'
+- waitForAnimationToEnd:
+    timeout: 10000
 - takeScreenshot: '$mode-browser-ready'
 YAML
   if [[ "$mode" == legacy || "$mode" == positive ]]; then
     cat >> "$OUT/flow-$mode.yaml" <<YAML
-- tapOn: 'Complete test sign-in'
+- tapOn:
+    text: 'Complete test sign-in'
+    waitToSettleTimeoutMs: 0
 YAML
   fi
   if [[ "$mode" == legacy ]]; then
@@ -106,12 +156,16 @@ YAML
 - extendedWaitUntil:
     visible: "(?i).*(connect|cannot open|can.t open).*"
     timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 10000
 - takeScreenshot: 'legacy-browser'
 YAML
   fi
   if [[ "$mode" == cancel ]]; then
     cat >> "$OUT/flow-$mode.yaml" <<YAML
-- tapOn: Cancel
+- tapOn:
+    text: Cancel
+    waitToSettleTimeoutMs: 0
 YAML
   fi
   cat >> "$OUT/flow-$mode.yaml" <<YAML
@@ -119,6 +173,8 @@ YAML
     visible: 'PASS $mode|FAIL $mode.*'
     timeout: $limit
 - assertVisible: 'PASS $mode'
+- waitForAnimationToEnd:
+    timeout: 10000
 - takeScreenshot: '$mode-returned'
 YAML
   DRIVER_EXIT=0
@@ -137,16 +193,17 @@ YAML
     cp "$CONTAINER/Documents/receipt.json" "$OUT/evidence/$mode-native.json"
   fi
   if ! xcrun simctl io "$UDID" screenshot "$OUT/evidence/$mode-final.png"; then FAILURES=1; fi
-  if python3 - "$OUT/evidence" "$mode" "$DRIVER_EXIT" <<'PY'
+  if python3 - "$OUT/evidence" "$mode" "$DRIVER_EXIT" "$RUN_ID" <<'PY'
 import json, pathlib, sys
-out, mode, driver_exit = pathlib.Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+out, mode, driver_exit, run_id = pathlib.Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), sys.argv[4]
 path = out / (mode + '-native.json')
 try:
     native = json.loads(path.read_text()) if path.exists() else {'pass': None, 'detail': 'missing-native-receipt'}
 except (OSError, ValueError):
     native = {'pass': None, 'detail': 'unreadable-native-receipt'}
-receipt = {'mode': mode, 'pass': driver_exit == 0 and native.get('pass') is True,
-           'driver_exit': driver_exit, 'native': native}
+fresh = native.get('mode') == mode and native.get('run_id') == run_id
+receipt = {'mode': mode, 'pass': driver_exit == 0 and fresh and native.get('pass') is True,
+           'driver_exit': driver_exit, 'native_receipt_fresh': fresh, 'native': native}
 (out / (mode + '.json')).write_text(json.dumps(receipt, indent=2, sort_keys=True))
 print(json.dumps(receipt, sort_keys=True))
 # Driver/fixture failures are retained separately, not called product regressions.

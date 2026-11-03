@@ -1,10 +1,6 @@
 {
-  "platforms": [
-    "apple"
-  ],
-  "apple": {
-    "modules": [
-      "RadientLoopbackModule"
-    ]
-  }
+	"platforms": ["apple"],
+	"apple": {
+		"modules": ["RadientLoopbackModule"]
+	}
 }

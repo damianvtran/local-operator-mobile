@@ -15,10 +15,14 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   var completed = false
   var providerConnections: [NWConnection] = []
   let mode = ProcessInfo.processInfo.environment["PROOF_MODE"] ?? "positive"
+  let runId = ProcessInfo.processInfo.environment["PROOF_RUN_ID"] ?? UUID().uuidString
+  var probeControlOpen = "not-run"
+  var probeControlClosed = "not-run"
+  var closeProbe = "not-run"
   let label = UILabel()
   let startButton = UIButton(type: .system)
   var started = false
-  var stage = "ready"
+  var stage = "fixture-starting"
   var startedAt: Date?
   var providerAt: Date?
   var callbackAt: Date?
@@ -30,11 +34,12 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     controller.view.backgroundColor = .systemBackground
     label.frame = CGRect(x: 20, y: 150, width: 350, height: 160)
     label.numberOfLines = 0
-    label.text = "Ready \(mode)"
+    label.text = "Preparing fixture \(mode)"
     label.accessibilityIdentifier = "proof.status"
     controller.view.addSubview(label)
     startButton.frame = CGRect(x: 20, y: 330, width: 350, height: 60)
     startButton.setTitle("Start \(mode)", for: .normal)
+    startButton.isEnabled = false
     startButton.accessibilityIdentifier = "proof.start"
     startButton.addTarget(self, action: #selector(start), for: .touchUpInside)
     controller.view.addSubview(startButton)
@@ -45,6 +50,7 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     // Ready before it taps Start; UI-driver cold start is not an auth timeout.
     transport.onRejectedRequest = { self.rejected += 1 }
     persist()
+    bindProvider() // Fixture control only: no auth listener/session/deadline.
     return true
   }
 
@@ -52,10 +58,22 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     guard !started else { return }
     started = true
     startedAt = Date()
-    stage = "starting"
-    label.text = "Starting \(mode)"
+    let control = TCPClosureProbe.negativeControl()
+    probeControlOpen = control.open.label
+    probeControlClosed = control.closed.label
+    guard control.open == .open, control.closed == .refused else {
+      record(false, detail: "closure-probe-negative-control-failed"); return
+    }
+    stage = "prepared"
+    label.text = "Prepared \(mode)"
     startButton.isHidden = true
     persist()
+    // A tap must NOT present a system sheet while Maestro is taking its implicit
+    // post-tap screenshot. The running driver's next HTTP control command begins
+    // presentation after this stable Prepared state; it carries no OAuth payload.
+  }
+
+  func bindProvider() {
     do {
       let parameters = NWParameters.tcp
       parameters.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: .any)
@@ -68,7 +86,12 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
       }
 
       provider.stateUpdateHandler = { state in
-        if case .ready = state { self.prepare() }
+        if case .ready = state, !self.started {
+          self.stage = "ready"
+          self.label.text = "Ready \(self.mode)"
+          self.startButton.isEnabled = true
+          self.persist()
+        }
         if case .failed = state { self.record(false, detail: "provider-bind-failed") }
       }
       provider.start(queue: .main)
@@ -85,8 +108,17 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
         return
       }
       guard let request = String(data: data, encoding: .utf8),
-            let target = request.components(separatedBy: " ").dropFirst().first,
-            let parts = URLComponents(string: "http://127.0.0.1\(target)"),
+            let target = request.components(separatedBy: " ").dropFirst().first else { connection.cancel(); return }
+      if target == "/begin" {
+        guard self.started, self.stage == "prepared", !self.completed else {
+          self.sendProvider(connection, body: "not ready"); return
+        }
+        self.stage = "browser-starting"
+        self.persist()
+        self.sendProvider(connection, body: "begin") { self.prepare() }
+        return
+      }
+      guard let parts = URLComponents(string: "http://127.0.0.1\(target)"),
             let redirect = parts.queryItems?.first(where: { $0.name == "redirect_uri" })?.value else { return }
       if !self.served { self.providerAt = Date() }
       self.served = true
@@ -127,9 +159,12 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
     }
   }
 
-  func sendProvider(_ connection: NWConnection, body: String) {
+  func sendProvider(_ connection: NWConnection, body: String, afterSend: (() -> Void)? = nil) {
     let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n\(body)"
-    connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
+    connection.send(content: Data(response.utf8), completion: .contentProcessed { error in
+      connection.cancel()
+      if error == nil { afterSend?() }
+    })
   }
 
   func prepare() {
@@ -176,25 +211,18 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
   }
 
   func assertClosed(_ redirect: URL, detail: String, pass: Bool) {
-    // Prove a late callback cannot reach a listener left behind by success/cancel/timeout.
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-      let connection = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: UInt16(redirect.port!))!, using: .tcp)
-      connection.stateUpdateHandler = { state in
-        switch state {
-        case .failed(let error):
-          connection.cancel()
-          if case .posix(.ECONNREFUSED) = error { self.record(pass, detail: detail) }
-          else { self.record(false, detail: "unexpected-network-error") }
-        case .ready:
-          connection.cancel()
-          self.record(false, detail: "listener-left-open")
-        default: break
-        }
-      }
-      connection.start(queue: .main)
-      DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-        connection.cancel()
-        if !self.completed { self.record(false, detail: "listener-close-check-timeout") }
+    // Probe actual connect/SO_ERROR off the UI queue. Never equate NW waiting,
+    // a timeout, or "no response bytes" with a refused/closed listener.
+    guard let rawPort = redirect.port, let port = UInt16(exactly: rawPort) else {
+      record(false, detail: "invalid-probe-port"); return
+    }
+    // Retain the prior quarter-second handoff for NWListener.cancel's asynchronous
+    // teardown. After that handoff an accepted/open socket is an immediate FAIL.
+    DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.25) {
+      let outcome = TCPClosureProbe.connect(port: port)
+      DispatchQueue.main.async {
+        self.closeProbe = outcome.label
+        self.record(pass && outcome == .refused, detail: outcome == .refused ? detail : "listener-not-proven-closed")
       }
     }
   }
@@ -211,6 +239,9 @@ final class ProofDelegate: UIResponder, UIApplicationDelegate, ASWebAuthenticati
 
   func persist(pass: Bool? = nil, detail: String = "running") {
     let receipt: [String: Any] = [
+      "run_id": runId, "provider_port": (provider?.port).map { Int($0.rawValue) as Any } ?? NSNull(),
+      "probe_control_open": probeControlOpen, "probe_control_closed": probeControlClosed,
+      "close_probe": closeProbe,
       "mode": mode, "pass": pass.map { $0 as Any } ?? NSNull(), "detail": detail,
       "stage": stage, "started": started, "rejected": rejected, "provider_served": served,
       "callback_triggered": callbackAt != nil,
