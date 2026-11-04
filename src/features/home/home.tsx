@@ -1,8 +1,9 @@
 import { useRouter } from "expo-router";
-import { Bell, BellDot, Menu, Settings } from "lucide-react-native";
+import { Bell, BellDot, Menu } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { ModelEntry, PromptImage } from "@/contracts";
 import { HeaderComputerChip } from "@/features/auth/computer-entry-points";
@@ -62,10 +63,7 @@ import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
-import { Chip } from "@/ui/components/chip";
-import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { NavigationMark } from "@/ui/components/navigation-mark";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
@@ -201,6 +199,11 @@ export default function Home({
 		startup.snapshot.sessionId,
 	);
 	const { effectiveScale } = useTextScale();
+	/* The composer owns the bottom edge and pays this inset itself (record §2.2);
+	 *  `Screen` therefore pays none here (`bottomInset="child"`, its default for a
+	 *  non-scrolling screen). */
+	const insets = useSafeAreaInsets();
+	const menuInk = useTokenColor("ink-muted");
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
 	 * with `draft` — the copy already asks them to check the folder, and QA found the
@@ -609,38 +612,39 @@ export default function Home({
 					onResume={() => undefined}
 					error={startup.snapshot.error ?? composerError}
 					queuedCount={startup.snapshot.queue.length}
-					leadingChip={
-						homeDirectory !== null ? (
-							<Chip
-								label={homeShortened(
-									startup.snapshot.selection?.cwd ?? homeDirectory,
-									homeDirectory,
-								)}
-								onPress={() => {
-									setOptionPath(
-										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
-									);
-									setOptionModel(
-										models.find(
-											(model) =>
-												model.provider ===
-													startup.snapshot.selection?.provider &&
-												model.model_id === startup.snapshot.selection?.model_id,
-										) ?? topModel,
-									);
-									setOptionsOpen(true);
-								}}
-								/* The same quiet disclosure the model chip uses: one row of
-								 *  disclosures should not mix a filled, bordered chip with flat
-								 *  text (final audit, D2). Paint only — the 44 pt target, the
-								 *  hint and the options sheet behind it are unchanged. */
-								quiet
-								accessibilityLabel={`Working in ${homeDirectory}`}
-								accessibilityHint="Choose another folder"
-								testID={CONTROL.homeTargetFolder}
-							/>
-						) : null
+					/* The folder is data, not an element: the composer's meta line
+					 *  decides whether it paints the path or only the folder glyph
+					 *  (record §2.2 yield order). Paint, target, hint and the options
+					 *  sheet behind it are unchanged (final audit, D2). */
+					folderChip={
+						homeDirectory !== null
+							? {
+									label: homeShortened(
+										startup.snapshot.selection?.cwd ?? homeDirectory,
+										homeDirectory,
+									),
+									onPress: () => {
+										setOptionPath(
+											startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+										);
+										setOptionModel(
+											models.find(
+												(model) =>
+													model.provider ===
+														startup.snapshot.selection?.provider &&
+													model.model_id ===
+														startup.snapshot.selection?.model_id,
+											) ?? topModel,
+										);
+										setOptionsOpen(true);
+									},
+									accessibilityLabel: `Working in ${homeDirectory}`,
+									accessibilityHint: "Choose another folder",
+									testID: CONTROL.homeTargetFolder,
+								}
+							: null
 					}
+					bottomInset={insets.bottom}
 					modelChip={chips.model}
 					effortChip={null}
 					onOpenModels={() => {
@@ -677,45 +681,51 @@ export default function Home({
 				capColumn={!split}
 				headerLeading={
 					split ? undefined : (
-						<View className="flex-row items-center gap-1">
-							<IconButton
-								accessibilityLabel="Open conversations"
-								onPress={() => setPanelOpen(true)}
-								icon={({ color, size }) => <Menu color={color} size={size} />}
-								size={22}
-								testID={CONTROL.homeSidebar}
-							/>
-							<NavigationMark />
+						/* ☰ with the unread count as a CORNER badge on the button itself
+						 *  (record §2.4, D-H2): the red "21" was a sibling of the brand
+						 *  mark, attached to no control. Inside the one 44 pt pressable it
+						 *  reads as "this opens what is new" and adds no width. The brand
+						 *  mark left the header (D-H3): three identity marks on one screen,
+						 *  and its 29 pt were what starved the computer chip (D-H1). */
+						<Pressable
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={
+								badgeCount !== null && badgeCount > 0
+									? `Open conversations, ${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`
+									: "Open conversations"
+							}
+							onPress={() => setPanelOpen(true)}
+							testID={CONTROL.homeSidebar}
+							className="items-center justify-center"
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+						>
+							<Menu color={menuInk} size={22} />
 							{badgeCount !== null && badgeCount > 0 ? (
-								<Badge
-									label={`${badgeCount}`}
-									tone="danger"
-									mono
-									/* Sighted readers get the numeral; assistive tech gets the sentence
-									 * it stands for — the row's own state word ("new", per
-									 * `rowAccessibilityLabel`) plus the count (ADR 0006 §1.4). */
-									accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
-								/>
+								<View
+									pointerEvents="none"
+									className="absolute"
+									style={{ top: 2, end: 0 }}
+								>
+									<Badge
+										label={countLabel(badgeCount)}
+										tone="danger"
+										mono
+										scale={effectiveScale}
+									/>
+								</View>
 							) : null}
-						</View>
+						</Pressable>
 					)
 				}
 				headerAction={
 					<View className="min-w-0 flex-1 flex-row items-center gap-2">
 						{/* The computer this will run on, and the switcher's primary entry
-						 *  point (ux-flows F5): `● Mac mini ▾`, opening the ONE sheet rather
-						 *  than navigating away. It keeps this slot's `min-w-0 flex-1` and
-						 *  its both-axis TOUCH_FLOOR (design round 9, D24) — see
-						 *  `HeaderComputerChip`; the name comes from the same saved/account-scoped
-						 *  selector the switcher sheet uses. The width floor is only honourable
-						 *  because the BELL yields its pill at large text (and the chip its
-						 *  chevron at the same step), so nothing overflows the 320 pt row. */}
+						 *  point. It takes ALL the width the ☰ and the bell leave — about
+						 *  281 pt on a 393 pt phone — so "Mac – Local Operator" reads whole
+						 *  (record §2.4: it read "M… Operator" beside the mark, the badge
+						 *  and the gear). The bell still yields its pill at large text
+						 *  (D24), so nothing overflows the 320 pt row. */}
 						<HeaderComputerChip testID={CONTROL.computersButton} />
-						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
-						 *  came from the same label as the computer name beside it, and a
-						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
-						 *  Settings. The gear says what the control does; the accessible name
-						 *  still comes from the caller's label. */}
 						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
 						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
 						 *  button's box — an inert fifth control the reader tries to tap
@@ -765,12 +775,6 @@ export default function Home({
 								) : null}
 							</Pressable>
 						) : null}
-						<IconButton
-							accessibilityLabel="Settings"
-							onPress={() => router.push("/settings")}
-							icon={({ color, size }) => <Settings color={color} size={size} />}
-							testID={CONTROL.settingsButton}
-						/>
 					</View>
 				}
 			>

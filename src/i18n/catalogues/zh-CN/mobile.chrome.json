@@ -1,0 +1,8 @@
+{
+	"mobile.chrome.destination.inbox": "收件箱",
+	"mobile.chrome.destination.past": "历史",
+	"mobile.chrome.destination.schedules": "计划",
+	"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
+	"mobile.chrome.destinations": "目的地",
+	"mobile.chrome.new_chat": "新聊天"
+}

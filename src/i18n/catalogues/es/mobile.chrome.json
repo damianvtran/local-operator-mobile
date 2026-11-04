@@ -1,0 +1,8 @@
+{
+	"mobile.chrome.destination.inbox": "Bandeja",
+	"mobile.chrome.destination.past": "Anteriores",
+	"mobile.chrome.destination.schedules": "Horarios",
+	"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
+	"mobile.chrome.destinations": "Destinos",
+	"mobile.chrome.new_chat": "Nuevo chat"
+}

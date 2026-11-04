@@ -99,3 +99,35 @@ export const healthResumeCopy = () => ({
 });
 
 export type HealthCopyKey = keyof ReturnType<typeof healthCopy>;
+
+/**
+ * The session header's SUBTITLE: one line, always present, under the 17 pt
+ * title (decision record 2026-11-04 §2.3). It is the relay's subtitle in the
+ * relay's own words (`relay.chrome.session.subtitle.*`), so the two clients
+ * name every state one way:
+ *
+ *  - live and working → "Working · 1m 36s" (or "Working" before a start time);
+ *  - live and stopped on a decision → "Waiting for you";
+ *  - live and quiet → "Idle";
+ *  - otherwise the health word: "Not answering", "Reconnecting", "Ended".
+ *
+ * The status this line now carries used to be a second row under the header
+ * ("running hub · 1/1 agents · 10% context ›"), which crowded it (D-S3); the
+ * tasks/agents counts moved above the composer and the context % to its meta
+ * line. Pure apart from the catalogue lookup, so the precedence is table-tested.
+ */
+export const headerSubtitle = (input: {
+	health: "live" | "not_answering" | "reconnecting" | "ended";
+	working: boolean;
+	waiting: boolean;
+	/** Already formatted (`elapsedLabel`), or null when the start is unknown. */
+	elapsed: string | null;
+}): string => {
+	if (input.health !== "live") return healthStateWords()[input.health];
+	if (input.waiting) return t("relay.chrome.session.subtitle.waiting");
+	if (input.working)
+		return input.elapsed === null
+			? t("relay.chrome.session.subtitle.working_plain")
+			: t("relay.chrome.session.subtitle.working", { elapsed: input.elapsed });
+	return t("relay.chrome.session.subtitle.idle");
+};

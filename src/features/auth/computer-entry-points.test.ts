@@ -145,7 +145,7 @@ vi.mock("@/features/auth/connection-provider", async () => {
 });
 
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
-const { DrawerComputerRow, HeaderComputerChip } = await import(
+const { DrawerComputerRow, HeaderComputerChip, headerChipFit } = await import(
 	"./computer-entry-points"
 );
 
@@ -313,7 +313,8 @@ describe("the drawer footer's workspace row", () => {
 /* The header's D24 rules, over the SOURCE (the screen reaches `uniwind` through
  *  `@/ui`, which Node cannot import — `header-fit.test.ts` reasons the same way):
  *  the chip keeps the slot's `min-w-0 flex-1` and its both-axis floor, and the
- *  bell and Settings follow it in the same row. */
+ *  bell follows it in the same row. Settings moved to the sidebar's workspace
+ *  row (decision record 2026-11-04 §2.4), which is what frees the chip's width. */
 describe("the chip in the Home header", () => {
 	const HOME = readFileSync(
 		new URL("../home/home.tsx", import.meta.url),
@@ -323,7 +324,7 @@ describe("the chip in the Home header", () => {
 		new URL("./computer-entry-points.tsx", import.meta.url),
 		"utf8",
 	).replace(/\s+/g, " ");
-	it("sits where the label was, before the bell and Settings", () => {
+	it("sits where the label was, before the bell, with Settings gone from the header", () => {
 		const chip = HOME.indexOf(
 			"<HeaderComputerChip testID={CONTROL.computersButton} />",
 		);
@@ -331,9 +332,9 @@ describe("the chip in the Home header", () => {
 		expect(HOME.indexOf("testID={CONTROL.homeNotifications}")).toBeGreaterThan(
 			chip,
 		);
-		expect(HOME.indexOf("testID={CONTROL.settingsButton}")).toBeGreaterThan(
-			chip,
-		);
+		expect(HOME).not.toContain("testID={CONTROL.settingsButton}");
+		/* D-H3: the brand mark left the header, the ☰ carries the unread count. */
+		expect(HOME).not.toContain("<NavigationMark");
 		expect(HOME).not.toContain("— choose a computer");
 	});
 	it("keeps the both-axis touch floor and yields width, never the bell", () => {
@@ -348,7 +349,27 @@ describe("the chip in the Home header", () => {
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",
 		);
 		expect(header).toContain("numberOfLines={1}");
-		expect(header).toContain("middleFit(label, nameWidth, effectiveScale)");
+		/* D-H1: the head of the name survives, not its middle. */
+		expect(header).toContain("headerChipFit(label, nameWidth, effectiveScale)");
+	});
+});
+
+describe("headerChipFit (D-H1)", () => {
+	it("keeps the whole name when it fits, as at 393 pt / 100 %", () => {
+		// 281 pt is the chip's slot on a 393 pt phone (record §2.4) less its mark
+		// and chevron; the record's own example name.
+		expect(headerChipFit("Mac – Local Operator", 220, 1)).toBe(
+			"Mac – Local Operator",
+		);
+	});
+	it("keeps the HEAD and drops the tail when it does not", () => {
+		const fitted = headerChipFit("Mac – Local Operator", 90, 1);
+		expect(fitted.startsWith("Mac")).toBe(true);
+		expect(fitted.endsWith("…")).toBe(true);
+		expect(fitted).not.toContain("Operator");
+	});
+	it("still keeps a host:port's port (the identifying half)", () => {
+		expect(headerChipFit("127.0.0.1:49892", 70, 1)).toContain(":49892");
 	});
 });
 

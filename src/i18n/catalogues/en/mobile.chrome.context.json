@@ -1,0 +1,26 @@
+{
+	"mobile.chrome.destination.inbox": {
+		"role": "button",
+		"note": "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox."
+	},
+	"mobile.chrome.destination.past": {
+		"role": "button",
+		"note": "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list."
+	},
+	"mobile.chrome.destination.schedules": {
+		"role": "button",
+		"note": "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors."
+	},
+	"mobile.chrome.destination.inbox_count": {
+		"role": "button",
+		"note": "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop."
+	},
+	"mobile.chrome.destinations": {
+		"role": "heading",
+		"note": "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop."
+	},
+	"mobile.chrome.new_chat": {
+		"role": "button",
+		"note": "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop."
+	}
+}

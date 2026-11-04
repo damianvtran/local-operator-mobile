@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
-import { Mic, Square, X } from "lucide-react-native";
+import { Folder, Mic, Paperclip, Square, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
@@ -10,6 +10,7 @@ import {
 	ScrollView,
 	Text,
 	type TextInput,
+	useWindowDimensions,
 	View,
 } from "react-native";
 
@@ -25,6 +26,17 @@ import {
 	type ComposerControls,
 	composerCopy,
 } from "@/features/session/composer";
+import {
+	ATTACH_GLYPH_PT,
+	COMPOSER_ACTION_CLUSTER,
+	COMPOSER_CONTROLS_ROW,
+	COMPOSER_DISC,
+	COMPOSER_LEADING,
+	COMPOSER_META_INLINE,
+	COMPOSER_META_ROW,
+	COMPOSER_META_TEXT,
+	footerFit,
+} from "@/features/session/composer-layout";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
 import { formatDuration } from "@/stt/dictation";
@@ -48,6 +60,12 @@ import {
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
+import {
+	ChromeSurface,
+	useChromeGlass,
+	useKeyboardVisible,
+} from "@/ui/components/chrome-surface";
+import { composerGeometry } from "@/ui/device-corner";
 import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { composerBudget } from "@/ui/size-class";
@@ -198,11 +216,30 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
-	/** A leading chip, before the levers on the receipt line. The composer home
-	 *  passes its target folder here (`homeTargetFolder`); the session view has no
-	 *  leading chip and passes nothing. Additive: the session view's rendering is
-	 *  untouched by its existence. */
-	leadingChip?: React.ReactNode;
+	/** The working-folder chip on the meta line. The composer home passes its
+	 *  target folder (`homeTargetFolder`); the session view passes nothing. Data
+	 *  rather than an element, because the meta line's fit decides how it paints:
+	 *  the full path, or the folder glyph alone when the line is short (record
+	 *  §2.2 yield order). */
+	folderChip?: {
+		label: string;
+		onPress: () => void;
+		accessibilityLabel: string;
+		accessibilityHint: string;
+		testID: string;
+	} | null;
+	/** The context-window reading ("21% context") and the spend ("$0.42"), on
+	 *  the meta line — they were a status strip under the header, which crowded
+	 *  it (D-S3). Each yields from the line before the model does. */
+	contextLabel?: string | null;
+	costLabel?: string | null;
+	/** The bottom safe-area inset this composer must pay, pt. The composer owns
+	 *  the screen's bottom edge (record §2.2): the screen passes `insets.bottom`
+	 *  and the shell pays it as inner padding, so its surface fills the band
+	 *  under the home indicator while no control's box sits in it. Omit for a
+	 *  composer that does not sit on the screen's bottom edge (a split pane's
+	 *  detail column still does; a sheet would not). */
+	bottomInset?: number;
 	/** The two chips, each in one of its three states — value, unavailable, or
 	 *  loading while a projection is still expected. The decision lives in
 	 *  `chip-labels.ts` rather than here, because "loading" and "unavailable" look
@@ -376,7 +413,10 @@ export const Composer = ({
 	ended = false,
 	error,
 	queuedCount,
-	leadingChip,
+	folderChip = null,
+	contextLabel = null,
+	costLabel = null,
+	bottomInset,
 	modelChip,
 	effortChip,
 	onOpenModels,
@@ -579,6 +619,25 @@ export const Composer = ({
 	 *  growth, and the extras scroller gets the rest. `compact.maxHeight` is the whole
 	 *  composer's share of the window (`COMPACT_COMPOSER_SHARE`). */
 	const [receiptHeight, setReceiptHeight] = useState(48);
+	/* The meta line's own width, so `footerFit` decides from the space the layout
+	 *  actually gave it. 0 until measured: the first frame shows every fact. */
+	const [metaWidth, setMetaWidth] = useState(0);
+	const keyboardVisible = useKeyboardVisible();
+	const glass = useChromeGlass();
+	const window = useWindowDimensions();
+	/* The shell's outer geometry: margins, the concentric bottom radius and the
+	 *  inner bottom padding that pays the home-indicator inset (record §2.1/§2.2,
+	 *  `device-corner.ts`). The short-landscape form keeps its own tighter box. */
+	const geometry = composerGeometry({
+		platform: Platform.OS,
+		width: window.width,
+		height: window.height,
+		insetBottom: bottomInset ?? 0,
+		keyboardVisible,
+	});
+	const metaInk = useTokenColor("ink-dim");
+	const dangerInk = useTokenColor("danger");
+	const attachInk = useTokenColor("ink-muted");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
 	 *  give them what they need and no more. */
 	const [extrasHeight, setExtrasHeight] = useState(0);
@@ -590,15 +649,23 @@ export const Composer = ({
 		(rowIsLive(voice.phase) || voice.status !== "");
 	const DICTATION_ROW_MARGIN_PX = 8;
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
-	 *  form and `pt-2 pb-2` everywhere else. The budget spends what the box paints. */
-	const composerPad = compact === null ? 16 : COMPOSER_PAD;
+	 *  form, and `pt-2` plus the inset-paying bottom padding everywhere else. The
+	 *  budget spends what the box paints. */
+	const composerPad =
+		compact === null ? 8 + geometry.paddingBottom : COMPOSER_PAD;
+	/* What sits under the field and never scrolls: the controls row, plus the meta
+	 *  line when it has its own row (resting). With the keyboard up the meta rides
+	 *  the controls row, so only that one 44 pt line is reserved. */
+	const fixedRows = keyboardVisible
+		? Math.max(TOUCH_FLOOR, receiptHeight)
+		: TOUCH_FLOOR + receiptHeight;
 	const bound = compact === null ? limit : compact.maxHeight;
 	const budget =
 		bound === null
 			? null
 			: composerBudget(
 					bound,
-					receiptHeight,
+					fixedRows,
 					extrasHeight,
 					TOUCH_FLOOR,
 					composerPad,
@@ -825,80 +892,273 @@ export const Composer = ({
 		</>
 	);
 
-	// Metadata wraps within the toolbar, never reducing the editor's width.
+	/* ---- row 3: the meta line (record §2.2) ------------------------------
+	 *  `[N queued] [folder] [model] [effort] [context %] [cost]`, ONE line that
+	 *  never wraps. It was a `flex-wrap` "receipt" that also carried the mic, and
+	 *  on a real phone the model chip filled the line and the 44 pt mic wrapped
+	 *  onto a line of its own (TestFlight 365, D-S4). The mic now lives on the
+	 *  controls row; this line yields from its END instead (`footerFit`), and the
+	 *  model chip is the elastic item that truncates last. */
+	const fit = footerFit({
+		width: metaWidth,
+		scale: effectiveScale,
+		queued: queuedCount > 0 ? `${queuedCount} queued` : null,
+		folder: folderChip?.label ?? null,
+		model: modelChip.kind === "loading" ? "model" : modelChip.text,
+		effort:
+			effortChip && effortChip.kind !== "loading" ? effortChip.text : null,
+		context: contextLabel ?? null,
+		cost: costLabel ?? null,
+	});
 	const receipt = (
 		<View
-			onLayout={(event) =>
-				setReceiptHeight(Math.round(event.nativeEvent.layout.height))
-			}
-			className={
-				compact === null
-					? "min-w-0 flex-1 flex-row flex-wrap items-center gap-1"
-					: "min-w-0 flex-1 flex-row flex-wrap items-center gap-1"
-			}
+			onLayout={(event) => {
+				const { width, height } = event.nativeEvent.layout;
+				setReceiptHeight(Math.round(height));
+				setMetaWidth(Math.floor(width));
+			}}
+			className={keyboardVisible ? COMPOSER_META_INLINE : COMPOSER_META_ROW}
+			testID={SURFACE.composerMeta}
 		>
-			{leadingChip}
 			{queuedCount > 0 ? (
 				<Text
-					className="text-mono-sm text-ink-dim"
+					className={COMPOSER_META_TEXT}
+					numberOfLines={1}
 					testID={SURFACE.queuedMessageChip}
 				>
 					{queuedCount} queued
 				</Text>
 			) : null}
-			<ComposerChipButton
-				chip={modelChip}
-				onPress={onOpenModels}
-				chooseHint="Choose the model"
-				// Sized to the settled chip (measured 119.6 pt with a model name):
-				// a bar that is too short makes the swap jump sideways.
-				loadingWidthClassName="w-24"
-				testID={CONTROL.composerModelChip}
-			/>
-			{effortChip ? (
-				<ComposerChipButton
-					chip={effortChip}
-					onPress={onOpenEffort}
-					chooseHint="Choose the effort"
-					loadingWidthClassName="w-7"
-					testID={CONTROL.composerEffortChip}
-				/>
-			) : null}
-			{/* The voice mic: shown only when the relay says voice input can run here AND
-				    this build can record (`voice.micVisible`). Absence of `capabilities.stt`
-				    is unavailable, so an older relay simply never renders it.
-
-				    It sits on the receipt line, NOT in the field's row, because a control in
-				    that row costs the field its width: 48 target + the 8 gap took the 320 pt
-				    field's content box from 166 to 110 px, which wrapped the placeholder to
-				    two lines at 100 % and four at 200 % (breaking mid-word, since even
-				    "Message" no longer fit) and grew the resting composer to 55 % of the
-				    viewport, clipping the last transcript row (design round 1, D1/D2). Here it
-				    costs the field nothing, and the row already wraps (D28) so a 200 % scale
-				    can push it to a second line rather than squeeze the field. */}
-			{voice?.micVisible ? (
-				<IconButton
-					accessibilityLabel={micLabel(voice.phase)}
-					accessibilityHint={MIC_HINT[voice.phase]}
-					disabled={voice.phase === "transcribing"}
-					outlined
-					onPress={voice.press}
-					icon={({ color, size }) =>
-						voice.phase === "recording" ? (
-							<Square color={color} size={size} />
-						) : (
-							<Mic color={color} size={size} />
+			{folderChip ? (
+				<Chip
+					label={fit.folderGlyphOnly ? "~" : folderChip.label}
+					onPress={folderChip.onPress}
+					quiet
+					shrink
+					leadingIcon={
+						fit.folderGlyphOnly ? undefined : (
+							<Folder size={14} color={metaInk} aria-hidden />
 						)
 					}
-					testID={CONTROL.composerMic}
+					accessibilityLabel={folderChip.accessibilityLabel}
+					accessibilityHint={folderChip.accessibilityHint}
+					testID={folderChip.testID}
 				/>
+			) : null}
+			{/* The model is the elastic element: `shrink` lets its label truncate
+			 *  from the tail, and the chip's own 44 pt floor means it never leaves
+			 *  the line (relay rule D10). */}
+			<View className="min-w-0 shrink">
+				<ComposerChipButton
+					chip={modelChip}
+					onPress={onOpenModels}
+					chooseHint="Choose the model"
+					// Sized to the settled chip (measured 119.6 pt with a model name):
+					// a bar that is too short makes the swap jump sideways.
+					loadingWidthClassName="w-24"
+					testID={CONTROL.composerModelChip}
+				/>
+			</View>
+			{effortChip ? (
+				<View className="shrink-0">
+					<ComposerChipButton
+						chip={effortChip}
+						onPress={onOpenEffort}
+						chooseHint="Choose the effort"
+						loadingWidthClassName="w-7"
+						testID={CONTROL.composerEffortChip}
+					/>
+				</View>
+			) : null}
+			{fit.showContext && contextLabel ? (
+				<Text
+					className={COMPOSER_META_TEXT}
+					numberOfLines={1}
+					testID={SURFACE.sessionContext}
+				>
+					{contextLabel}
+				</Text>
+			) : null}
+			{fit.showCost && costLabel ? (
+				<Text className={COMPOSER_META_TEXT} numberOfLines={1}>
+					{costLabel}
+				</Text>
 			) : null}
 		</View>
 	);
 
+	/* ---- row 2: the controls ---------------------------------------------
+	 *  `[attach] [mic] … [stop] [send]`, one 44 pt line. A control here no longer
+	 *  costs the field its width — the field is its own row above — which was the
+	 *  only reason the mic had been exiled to the meta line (design round 1,
+	 *  D1/D2 of the earlier composer). */
+	const mic = voice?.micVisible ? (
+		/* The voice mic: shown only when the relay says voice input can run here
+		 * AND this build can record (`voice.micVisible`). Absence of
+		 * `capabilities.stt` is unavailable, so an older relay never renders it. */
+		<IconButton
+			accessibilityLabel={micLabel(voice.phase)}
+			accessibilityHint={MIC_HINT[voice.phase]}
+			disabled={voice.phase === "transcribing"}
+			onPress={voice.press}
+			icon={({ color, size }) =>
+				voice.phase === "recording" ? (
+					<Square color={color} size={size} />
+				) : (
+					<Mic color={color} size={size} />
+				)
+			}
+			testID={CONTROL.composerMic}
+		/>
+	) : null;
+	const attach = (
+		<Pressable
+			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+			className={COMPOSER_LEADING}
+			accessibilityRole={ROLE.button}
+			accessibilityLabel="Attach an image"
+			accessibilityState={state({ busy: attaching, disabled: attaching })}
+			disabled={attaching}
+			onPress={() => setAttachSheetOpen(true)}
+			testID={CONTROL.composerAttach}
+		>
+			<View className={COMPOSER_DISC}>
+				{/* A 20 pt paperclip, the relay's glyph (D-H5): the "＋" text glyph it
+				 *  replaces read weak beside a 44 pt send disc. The label a reader hears
+				 *  is the button's own ("Attach an image"). */}
+				<Paperclip size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
+			</View>
+		</Pressable>
+	);
+	const actionCluster = (
+		<View className={COMPOSER_ACTION_CLUSTER}>
+			{controls.stopVisible ? (
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel="Stop the running turn"
+					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+					onPress={onStop}
+					testID={CONTROL.composerStop}
+				>
+					{/* A 44 pt `danger-wash` DISC, 2 pt from send (D-S5, the relay's stop):
+					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
+					 *  The wash is quiet enough not to compete with the accent send disc. */}
+					<View className={cx(COMPOSER_DISC, "bg-danger-wash")}>
+						<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
+					</View>
+				</Pressable>
+			) : null}
+			{/* The width is PINNED, whatever the label: a control that grows when it
+			    morphs moves everything after it, which on a phone means it moves under
+			    the thumb about to press it. */}
+			<Pressable
+				accessibilityRole={ROLE.button}
+				accessibilityLabel={controls.primary.accessibilityLabel}
+				style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+				accessibilityState={state({
+					disabled: controls.primary.disabled,
+					busy: controls.sending,
+				})}
+				disabled={controls.primary.disabled}
+				onPress={onSend}
+				testID={CONTROL.composerSend}
+			>
+				<View
+					className={cx(
+						COMPOSER_DISC,
+						controls.primary.disabled ? "bg-sunken" : "bg-accent",
+					)}
+				>
+					{/* The disabled ink is the kit's own constant, not a local choice: this
+				    control is the only one in the app that hand-rolls the primary's
+				    disabled treatment instead of going through `Button`, and it was the
+				    one place still painting a disabled label in `ink-disabled` — 2.42:1 on
+				    `sunken` in light, 2.50:1 in dark. WCAG exempts that (SC 1.4.3, an
+				    inactive control), so this was not a conformance failure but the kit's
+				    own stricter rule being missed: a label NAMES the action, so
+				    `CONTROL_DISABLED_INK` is `ink-dim` and `variants.test.ts` pins it. That
+				    is 5.02:1 light, 6.59:1 dark. */}
+					<Text
+						className={cx(
+							"text-body-sm font-medium",
+							controls.primary.disabled
+								? CONTROL_DISABLED_INK
+								: "text-on-accent",
+						)}
+					>
+						{controls.primary.label}
+					</Text>
+				</View>
+			</Pressable>
+		</View>
+	);
+
+	/* The dictation row (design §2.5): a line that SPANS the composer, holding
+	    one height across recording, transcribing and the three outcome states, so
+			    stopping a recording does not move the line (D3).
+
+			    It is a ROW rather than the previous button-morph alone because a 44 pt
+			    button swap did not read as "the composer is recording" — a reader had to
+			    find the morph to know. The span is the state: a full-width bar with a live
+			    level meter, the word, and the elapsed time.
+
+			    The meter is `flex-1`, so it takes whatever the word, the clock and the
+			    cancel do not: that is what makes the peaks SPAN rather than sit in a corner.
+
+			    It sits directly UNDER the field and OVER the controls row: under the field
+			    because that is the thing it appends to (and the mic that runs it is one row
+			    further down, on the controls row), and never OVER it — defect 1 was that the
+			    draft could not be read while a recording was live, so nothing here masks,
+			    dims or disables the field, which keeps its own height, content and
+			    editability for the whole take.
+
+			    TWO layouts, one box height. At 100 % everything shares one line. Past
+			    `LARGE_TEXT_SCALE` the status takes its own full-width line and the controls
+			    take the next: side by side, the status was squeezed to ~99 pt and clipped
+			    (`Recor…`, `Didn't catch that — tr…`, D3) and the meter's flex bars collapsed
+			    to 0.0 px (D2). The box is fixed rather than content-sized so a one-line
+			    outcome does not shrink the row below the two-line states — the jump the
+			    design round measured (D1). */
+	const dictationRow =
+		voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+			<View
+				className={cx(
+					"mb-2 rounded-sm border px-3",
+					dictationLargeText
+						? "flex-col items-stretch justify-center gap-2"
+						: "flex-row items-center gap-2",
+					rowIsLive(voice.phase)
+						? "border-danger-border bg-danger-wash"
+						: "border-hairline",
+				)}
+				// One height for every state the row can show (D3). At the default scale it
+				// is the touch floor plus the row's border; past `LARGE_TEXT_SCALE` it is the
+				// row's own two-line sum, so neither the meter nor a short outcome sets it.
+				style={{ minHeight: dictationRowBox(effectiveScale) }}
+				testID={SURFACE.composerDictationBar}
+			>
+				{dictationLargeText ? (
+					<>
+						{dictationStatus}
+						<View className="flex-row items-center gap-2">
+							{dictationDot}
+							{dictationControls}
+						</View>
+					</>
+				) : (
+					<>
+						{dictationDot}
+						{dictationStatus}
+						{dictationControls}
+					</>
+				)}
+			</View>
+		) : null;
+
 	const main = (
 		<>
-			<View className="gap-1">
+			<View>
+				{/* ---- row 1: the field, a full-width row of its own ---- */}
 				<View className="w-full min-w-0">
 					<Textarea
 						label="Message"
@@ -926,161 +1186,20 @@ export const Composer = ({
 						testID={CONTROL.composerInput}
 					/>
 				</View>
-				<View className="flex-row items-center gap-1">
-					<Pressable
-						style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Attach an image"
-						accessibilityState={state({ busy: attaching, disabled: attaching })}
-						disabled={attaching}
-						onPress={() => setAttachSheetOpen(true)}
-						testID={CONTROL.composerAttach}
-					>
-						<View className="h-11 w-11 items-center justify-center">
-							{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
-							 *  `text-ink-muted` inherits the stylesheet's fixed 14 px and never reads a
-							 *  `--text-*` role, so the glyph ignored the reader's text size — the same
-							 *  defect the splash's suggestion labels were fixed for. Its cost is to the
-							 *  MEASUREMENT as much as the reader: at 200 % every text node around it
-							 *  doubles and this one does not, so it sits at the 100 %-median height and
-							 *  drags the run-level median down — the drawer's own `S15/populated` 200 %
-							 *  cells were reported UNREADY ("median text 34.796875px at 200% against
-							 *  1.74x the 100% cell"), which makes `audit:capture` exit 1 for any cell
-							 *  set containing the populated drawer. `body-sm` (14 px / 400) is the step
-							 *  the glyph already PAINTS, so 100 % is unchanged and the glyph now scales
-							 *  with everything beside it. `aria-hidden` stays: the label a reader hears
-							 *  is the button's own ("Attach an image"). */}
-							<Text className="text-body-sm text-ink-muted" aria-hidden>
-								＋
-							</Text>
-						</View>
-					</Pressable>
-					{receipt}
-					{controls.stopVisible ? (
-						<Pressable
-							accessibilityRole={ROLE.button}
-							accessibilityLabel="Stop the running turn"
-							style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-							onPress={onStop}
-							testID={CONTROL.composerStop}
-						>
-							{/* A ring inside the composer was a second box in the one place the
-							 *  composer is meant to be a single quiet surface (user feedback,
-							 *  this batch). The stop is a glyph with its press surface, at the
-							 *  same 44 pt target; the danger ink is the affordance, not a ring
-							 *  drawn around it. */}
-							<View className="h-11 w-11 items-center justify-center rounded-full">
-								<Text className="text-danger" aria-hidden>
-									■
-								</Text>
-							</View>
-						</Pressable>
-					) : null}
-					{/* The width is PINNED, whatever the label: a control that grows when it
-				    morphs moves everything after it, which on a phone means it moves under
-				    the thumb about to press it. */}
-					<Pressable
-						accessibilityRole={ROLE.button}
-						accessibilityLabel={controls.primary.accessibilityLabel}
-						style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-						accessibilityState={state({
-							disabled: controls.primary.disabled,
-							busy: controls.sending,
-						})}
-						disabled={controls.primary.disabled}
-						onPress={onSend}
-						testID={CONTROL.composerSend}
-					>
-						<View
-							className={cx(
-								"h-11 w-11 items-center justify-center rounded-full",
-								controls.primary.disabled ? "bg-sunken" : "bg-accent",
-							)}
-						>
-							{/* The disabled ink is the kit's own constant, not a local choice: this
-						    control is the only one in the app that hand-rolls the primary's
-						    disabled treatment instead of going through `Button`, and it was the
-						    one place still painting a disabled label in `ink-disabled` — 2.42:1 on
-						    `sunken` in light, 2.50:1 in dark. WCAG exempts that (SC 1.4.3, an
-						    inactive control), so this was not a conformance failure but the kit's
-						    own stricter rule being missed: a label NAMES the action, so
-						    `CONTROL_DISABLED_INK` is `ink-dim` and `variants.test.ts` pins it. That
-						    is 5.02:1 light, 6.59:1 dark. */}
-							<Text
-								className={cx(
-									"text-body-sm font-medium",
-									controls.primary.disabled
-										? CONTROL_DISABLED_INK
-										: "text-on-accent",
-								)}
-							>
-								{controls.primary.label}
-							</Text>
-						</View>
-					</Pressable>
-				</View>
-			</View>
-			{/* The dictation row (design §2.5): a line that SPANS the composer, holding
-			    one height across recording, transcribing and the three outcome states, so
-			    stopping a recording does not move the line (D3).
-
-			    It is a ROW rather than the previous button-morph alone because a 44 pt
-			    button swap did not read as "the composer is recording" — a reader had to
-			    find the morph to know. The span is the state: a full-width bar with a live
-			    level meter, the word, and the elapsed time.
-
-			    The meter is `flex-1`, so it takes whatever the word, the clock and the
-			    cancel do not: that is what makes the peaks SPAN rather than sit in a corner.
-
-			    It sits directly UNDER the field and OVER the receipt line: under the field
-			    because that is the thing it appends to (and the mic that runs it is one row
-			    further down, on the receipt line), and never OVER it — defect 1 was that the
-			    draft could not be read while a recording was live, so nothing here masks,
-			    dims or disables the field, which keeps its own height, content and
-			    editability for the whole take.
-
-			    TWO layouts, one box height. At 100 % everything shares one line. Past
-			    `LARGE_TEXT_SCALE` the status takes its own full-width line and the controls
-			    take the next: side by side, the status was squeezed to ~99 pt and clipped
-			    (`Recor…`, `Didn't catch that — tr…`, D3) and the meter's flex bars collapsed
-			    to 0.0 px (D2). The box is fixed rather than content-sized so a one-line
-			    outcome does not shrink the row below the two-line states — the jump the
-			    design round measured (D1). */}
-			{voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+				{dictationRow}
 				<View
-					className={cx(
-						"mb-2 rounded-sm border px-3",
-						dictationLargeText
-							? "flex-col items-stretch justify-center gap-2"
-							: "flex-row items-center gap-2",
-						rowIsLive(voice.phase)
-							? "border-danger-border bg-danger-wash"
-							: "border-hairline",
-					)}
-					// One height for every state the row can show (D3). At the default scale it
-					// is the touch floor plus the row's border; past `LARGE_TEXT_SCALE` it is the
-					// row's own two-line sum, so neither the meter nor a short outcome sets it.
-					style={{ minHeight: dictationRowBox(effectiveScale) }}
-					testID={SURFACE.composerDictationBar}
+					className={COMPOSER_CONTROLS_ROW}
+					testID={SURFACE.composerControls}
 				>
-					{dictationLargeText ? (
-						<>
-							{dictationStatus}
-							<View className="flex-row items-center gap-2">
-								{dictationDot}
-								{dictationControls}
-							</View>
-						</>
-					) : (
-						<>
-							{dictationDot}
-							{dictationStatus}
-							{dictationControls}
-						</>
-					)}
+					{attach}
+					{mic}
+					{/* Keyboard up: the meta folds INLINE here with a zero basis (it takes
+					 *  only the leftover width), so the composer is two rows, not three. */}
+					{keyboardVisible ? receipt : null}
+					{actionCluster}
 				</View>
-			) : null}
-
+				{keyboardVisible ? null : receipt}
+			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />
@@ -1125,18 +1244,37 @@ export const Composer = ({
 		</>
 	);
 
+	/* THE SHELL (record §2.1/§2.2). Margin = outer bottom gap = 8 pt and the
+	 *  bottom radius is the display's corner minus 8, so the composer's arc is
+	 *  concentric with the display instead of clipping it (the shipped 12/8/12 pt
+	 *  shell poked 3.8–6.6 pt outside the corner — the operator's "it's cutting
+	 *  off", D-H4). The top corners are `radius.composer` (20) everywhere. The
+	 *  inner bottom padding pays the home-indicator inset, so the surface fills the
+	 *  band under the indicator while every control sits above it.
+	 *
+	 *  Short landscape keeps its tighter box: the device corner is at the SIDE
+	 *  there, and the compact budget was measured against these paddings. */
+	const shellStyle =
+		compact === null
+			? {
+					marginHorizontal: geometry.marginX,
+					marginBottom: geometry.marginBottom,
+					paddingBottom: geometry.paddingBottom,
+				}
+			: { marginHorizontal: geometry.marginX, marginBottom: 4 };
 	return (
-		<View
+		<ChromeSurface
 			ref={rootRef}
+			glass={glass}
+			radii={{
+				top: geometry.radiusTop,
+				bottom: compact === null ? geometry.radiusBottom : geometry.radiusTop,
+			}}
 			onLayout={(event) => {
 				onLayout?.(event);
 				publishBox();
 			}}
-			className={
-				compact === null
-					? "mx-3 mb-2 rounded-xl bg-elevated px-2 pt-2 pb-2"
-					: "mx-3 mb-1 rounded-xl bg-elevated px-2 pt-1 pb-1"
-			}
+			className={compact === null ? "px-2 pt-2" : "px-2 pt-1 pb-1"}
 			testID={testID}
 			/* The budget decides the FIELD's cap; this is the box's own guarantee. The
 			 *  root is the surface the window actually pays for, and a few pixels of
@@ -1144,7 +1282,7 @@ export const Composer = ({
 			 *  field's ceiling arithmetic — [redacted]: 258 painted against a 254
 			 *  limit, bottom 572 in a 568 pt window. The field still scrolls its text,
 			 *  so nothing is hidden by the cap; only the box's tail is bounded. */
-			style={bound === null ? undefined : { maxHeight: bound }}
+			style={bound === null ? shellStyle : { ...shellStyle, maxHeight: bound }}
 		>
 			{/* ONE parent shape in both modes: the extras ScrollView is always here and only
 			    its style and `scrollEnabled` change. Switching between a fragment and a
@@ -1171,6 +1309,6 @@ export const Composer = ({
 				{extras}
 			</ScrollView>
 			{main}
-		</View>
+		</ChromeSurface>
 	);
 };

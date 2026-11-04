@@ -1,0 +1,8 @@
+{
+	"mobile.chrome.destination.inbox": "Inbox",
+	"mobile.chrome.destination.past": "Past",
+	"mobile.chrome.destination.schedules": "Schedules",
+	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
+	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.new_chat": "New chat"
+}

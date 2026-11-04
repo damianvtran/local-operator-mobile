@@ -36,7 +36,9 @@ describe("a shrinkable chip is capped on its own flex item", () => {
 		expect(chip).toContain("numberOfLines={shrink ? 1 : undefined}");
 	});
 
-	it("is the mode the composer's model and effort chips use", () => {
-		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(2);
+	it("is the mode the composer's folder, model and effort chips use", () => {
+		/* The folder chip joined the composer's meta line in the 2026-11-04
+		 *  restructure (it was the home's own leading element before). */
+		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(3);
 	});
 });

@@ -1,0 +1,8 @@
+{
+	"mobile.chrome.destination.inbox": "इनबॉक्स",
+	"mobile.chrome.destination.past": "पिछले",
+	"mobile.chrome.destination.schedules": "शेड्यूल",
+	"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
+	"mobile.chrome.destinations": "गंतव्य",
+	"mobile.chrome.new_chat": "नई चैट"
+}

@@ -377,11 +377,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "19195211af9ae93848aee88eea6deeed3d570a0b2df9ea7f2db1e26110c403eb",
+	app: "53b3954386c8ceec04107547d42f39c904c3206b38e822e0512caf5cc5a34a03",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
+		"2407ec6e4e507ad1a2152843174226e3ca2f468bad87fed925b5723905a1bb79",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -449,7 +449,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "5eb784a67d67a92072533f6c51a8f2e6d12d6b66eb62ffc2f8d9f79c057183af",
+	/* Re-pinned 2026-11-04 with --print for the native chrome pass (decision
+	 * record mobile-design-direction §6, PR 1): `app`, `src`, `design/tokens`,
+	 * package.json and the lockfile all move. UNLIKE the source-boundary re-pins
+	 * above, this one DOES change the U-08 scene's geometry: the session header
+	 * (17 pt title + subtitle, no tag line, no brand mark), the composer (three
+	 * rows, concentric radii, inset-paying padding) and the above-composer stack
+	 * are all inside the measured long-transcript session. The pin records the
+	 * new render identity on purpose; it is NOT a claim that the old U-08
+	 * geometry numbers still hold — the next U-08 geometry proof must measure
+	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
+	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
+	 * identities and the instrument/input pins are untouched. */
+	src: "b9aa87e90a1b0a9213af935949c800b08313f12643de7a63f2d104b3b1018b18",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -467,9 +479,9 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
+		"e7f8eefe80a606d858bc16831c82a95f226fbcef5468d384556cc79f2006ad0a",
 	"pnpm-lock.yaml":
-		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+		"a6680f1b911b580ee77f3ecd9313e83af23a9a94770f80d08b9d148745e45ddb",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

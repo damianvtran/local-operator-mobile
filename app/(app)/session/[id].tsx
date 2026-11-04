@@ -10,6 +10,7 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
@@ -45,6 +46,7 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
+import { StatusChips } from "@/features/session/components/status-chips";
 import {
 	StatusTray,
 	type StatusTrayFacts,
@@ -57,6 +59,7 @@ import { WorkingLine } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { headerHealth } from "@/features/session/health";
+import { headerSubtitle } from "@/features/session/health-copy";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
@@ -78,17 +81,10 @@ import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { isRemoteRow } from "@/features/sessions/session-projection";
-import { SessionTagLine } from "@/features/sessions/tag-line";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
-import {
-	CONTROL,
-	EMPTY,
-	ROLE,
-	SCREEN,
-	SURFACE,
-	sessionHeaderTagLineId,
-} from "@/ui/a11y";
+import { elapsedLabel } from "@/lib/format";
+import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
@@ -97,7 +93,7 @@ import {
 	Skeleton,
 } from "@/ui/components";
 import { BackIcon } from "@/ui/components/back-icon";
-import { NavigationMark } from "@/ui/components/navigation-mark";
+import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
 import {
@@ -503,6 +499,12 @@ export default function Session() {
 		compact,
 	);
 	const { effectiveScale } = useTextScale();
+	/* The composer and the chips above it share one fill decision (glass on iOS 26,
+	 *  solid otherwise), so a capsule never reads as glass beside a solid shell. */
+	const chromeGlass = useChromeGlass();
+	/* The composer pays the bottom inset itself (record §2.2); `Screen` pays none
+	 *  on this non-scrolling screen. */
+	const insets = useSafeAreaInsets();
 	/* The secondary region's own scroller, and what it needs to behave: each child's
 	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
 	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
@@ -1001,8 +1003,10 @@ export default function Session() {
 						onPress={() => router.back()}
 						icon={({ color, size }) => <BackIcon color={color} size={size} />}
 					/>
-					<NavigationMark />
-					{/* The bound agent's picture, LEFT of the conversation name
+					{/* The brand mark LEFT the session header (record §2.3, D-S2): with
+					 *  back, the mark and the avatar there were three leading items in
+					 *  front of a 28 pt title, and the operator called it crunched. The bound
+					 *  agent's picture, LEFT of the conversation name
 					 *  (agent-profile-picture contract) — inline. Stacked it leads the title
 					 *  row instead (`stackedTitleLeading` below), so the picture is a mark of
 					 *  the title's line at every width. Renders nothing without a picture.
@@ -1026,6 +1030,21 @@ export default function Session() {
 					title={headerTitle}
 					compact={compact}
 					stacked={headerStacked}
+					subtitle={
+						health === null
+							? undefined
+							: headerSubtitle({
+									health,
+									working: working !== null,
+									waiting: pending !== null,
+									elapsed:
+										working?.startedS != null
+											? elapsedLabel(
+													Math.max(0, Date.now() / 1000 - working.startedS),
+												)
+											: null,
+								})
+					}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
 					controlRef={healthControlRef}
@@ -1040,6 +1059,9 @@ export default function Session() {
 			stackedTitleLeading={headerStacked ? agentAvatar : undefined}
 			headerAction={
 				<SessionHeaderActions
+					findInMenu={viewportWidth < FIND_FOLD_WIDTH}
+					onFind={find.open}
+					onTags={tagsAssignable ? () => setTagsOpen(true) : undefined}
 					ended={ended}
 					menuOpen={sessionMenuOpen}
 					onMenuOpenChange={setSessionMenuOpen}
@@ -1065,29 +1087,11 @@ export default function Session() {
 					}
 				/>
 			}
-			/* The conversation's tags, in the header's own column. The line is a
-			 *  disclosure on a LOCAL conversation whose relay advertises the routes
-			 *  (review round 1, U1): the tags are already the subject, so the line is
-			 *  the control that opens their sheet. A remote row (or an older relay)
-			 *  keeps it read-only. The LIST frame carries the pair on every relay that
-			 *  has the field; an older relay defaults to `[]`, which paints no line.
-			 *
-			 *  The disclosure is present even when the assignment is EMPTY (review
-			 *  round 2, U8): gating the whole line on `tags.length` left an untagged
-			 *  local conversation with no visible route at all, and the long-press
-			 *  menu is not a route a reader can see. A read-only line keeps the old
-			 *  rule — badges with no assignment are a blank gap, not a fact. */
-			headerDetail={
-				tagsAssignable || (listRow?.tags?.length ?? 0) > 0 ? (
-					<SessionTagLine
-						tags={listRow?.tags ?? []}
-						testID={sessionHeaderTagLineId(sessionId)}
-						onPress={tagsAssignable ? () => setTagsOpen(true) : undefined}
-						actionTestID={CONTROL.sessionHeaderTagsAction}
-						accessibilityHint="Shows the tag choices for this conversation"
-					/>
-				) : undefined
-			}
+			/* The conversation's tags LEFT the header (record §2.3, D-S1): the tag
+			 *  line was laid out under a title block whose `flex-1` collapsed it to
+			 *  ~0 height, so "Tags ⌄" painted over the title on TestFlight 365. They
+			 *  are a row in the ⋮ menu now (`onTags` above), and stay on the
+			 *  sidebar rows; no `headerDetail` is passed. */
 		>
 			<SessionStateMarkers facts={stateFacts} />
 			<HealthAnnouncer health={health} />
@@ -1103,10 +1107,16 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
+			{/* PORTRAIT PHONE: no under-header row. Its facts moved where the relay
+			    puts them (record §2.2, D-S3): the state into the header subtitle, the
+			    Tasks/Agents chips above the composer (`StatusChips` below), and the
+			    context % onto the composer's meta line. Short landscape keeps the
+			    one-line tray — its own budgeted layout, outside this pass. */}
 			{tray ? (
 				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
 				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
 				 *  under the composer at 135-200 % text. */
+				compact &&
 				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
 					<StatusTray
 						facts={trayFacts}
@@ -1339,12 +1349,31 @@ export default function Session() {
 					    unreachable the bar's data is stale and saying so matters more.
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
+					{/* THE ABOVE-COMPOSER STACK (record §2.2): the Tasks/Agents chips, then
+					    the ask bar, in ONE slot — `px-2` so their edges align with the
+					    composer's 8 pt margin, `gap-2` between them. The chips ride the ask
+					    bar's existing wrapper rather than a new sibling: the column's
+					    sibling slots are pinned so the composer is never re-parented
+					    (`transcript-footer.test.ts`), and this wrapper is already measured
+					    as the recovery budget's "after" band, so the chips are charged.
+					    Phone portrait only (short landscape keeps its tray, a tablet its
+					    inline panels); a pending card owns this slot while it is up, the
+					    same yield the tray made (UX U12). */}
 					<View
-						className="px-4 pb-1"
+						className="gap-2 px-2 pb-1"
 						onLayout={(event) =>
 							measureRecovery("after", event.nativeEvent.layout.height)
 						}
 					>
+						{tray && !compact && pendingViewProps === null ? (
+							<View testID={SURFACE.sessionStatusChips}>
+								<StatusChips
+									facts={trayFacts}
+									glass={chromeGlass}
+									onOpen={() => setStatusSheetOpen(true)}
+								/>
+							</View>
+						) : null}
 						<AskBar
 							asks={projection?.asks}
 							onOpen={asksSheet.open}
@@ -1394,6 +1423,15 @@ export default function Session() {
 						ended={ended}
 						error={pending === null ? composer.error : null}
 						queuedCount={projection?.queued_count ?? 0}
+						/* The context % and spend ride the meta line on a phone (D-S3);
+						 *  a tablet keeps its inline status strip, which already shows them. */
+						contextLabel={tray && !compact ? trayFacts.context : null}
+						costLabel={
+							tray && !compact && projection?.cumulative_parent_cost != null
+								? `$${projection.cumulative_parent_cost.toFixed(2)}`
+								: null
+						}
+						bottomInset={insets.bottom}
 						modelChip={chipLabels.model}
 						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
@@ -1512,5 +1550,9 @@ export default function Session() {
 /**
 /** The composer's own sentence for a retained instruction, kept beside the screen
  *  rather than in `composer.ts` because it is passed in as a prop. */
+/** Below this width the header's find button folds into ⋮ (record §2.3): the
+ *  narrowest phones (320 pt) need its 52 pt for the title. */
+const FIND_FOLD_WIDTH = 360;
+
 const COMPOSER_RETAINED =
 	"An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.";

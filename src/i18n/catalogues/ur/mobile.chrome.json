@@ -1,0 +1,8 @@
+{
+	"mobile.chrome.destination.inbox": "ان باکس",
+	"mobile.chrome.destination.past": "گزشتہ",
+	"mobile.chrome.destination.schedules": "شیڈول",
+	"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
+	"mobile.chrome.destinations": "منزلیں",
+	"mobile.chrome.new_chat": "نئی چیٹ"
+}
