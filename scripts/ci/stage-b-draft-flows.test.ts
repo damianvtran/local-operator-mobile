@@ -6,9 +6,9 @@ import {
 	STAGE_B_DRAWN_SCREEN,
 	selectStageBComputer,
 	stageBFlow,
+	stageBHasDrawnScreen,
 } from "./stage-b-draft-flows";
 
-const DRAWN_SCREEN = new RegExp(`^${STAGE_B_DRAWN_SCREEN}$`);
 const steps = (flow: string): Record<string, unknown>[] =>
 	flow
 		.split("\n")
@@ -24,7 +24,9 @@ describe("Stage B foreground-only Maestro flows", () => {
 		({ evidence }) => {
 			const generated = stageBFlow(evidence);
 			const commands = steps(generated);
-			expect(commands[0]).toEqual({ launchApp: { stopApp: false } });
+			expect(commands[0]).toEqual({
+				launchApp: { stopApp: false, permissions: {} },
+			});
 			expect(commands[1]).toEqual({
 				extendedWaitUntil: {
 					visible: { id: STAGE_B_DRAWN_SCREEN },
@@ -59,13 +61,19 @@ describe("Stage B foreground-only Maestro flows", () => {
 			"composer-input",
 			`computer-row-${STAGE_B_HOST}`,
 		])
-			expect(DRAWN_SCREEN.test(id)).toBe(true);
+			expect(stageBHasDrawnScreen(JSON.stringify({ identifier: id }))).toBe(
+				true,
+			);
 		for (const label of [
 			"SpringBoard",
 			"Stage B Draft Proof",
 			"maestro-driver-iosUITests-Runner",
 			`computer-row-${STAGE_B_HOST.replaceAll(".", "x")}`,
 		])
-			expect(DRAWN_SCREEN.test(label)).toBe(false);
+			expect(
+				stageBHasDrawnScreen(
+					JSON.stringify({ application: "SpringBoard", label }),
+				),
+			).toBe(false);
 	});
 });

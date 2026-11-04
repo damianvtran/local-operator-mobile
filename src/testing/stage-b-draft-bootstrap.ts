@@ -10,10 +10,21 @@ import {
 /** PROOF ENTRY ONLY. No ordinary route imports this module, no production env
  * flag enables it, and it never seeds an authority/scope/queue. The real provider
  * must cold-restore synthetic credentials and obtain its own authenticated /me. */
-export async function bootStageBDraftProof(
+export function installStageBDraftProof(
 	config: StageBProofConfig,
-): Promise<void> {
+): () => Promise<void> {
 	validateStageBProof(config);
+	// This MUST run during entry evaluation, before router/provider imports. Seed
+	// I/O belongs behind the registered React root, never before main registration.
+	const nativeFetch = globalThis.fetch.bind(globalThis);
+	globalThis.fetch = stageBTransport(config, nativeFetch);
+	return () => bootStageBDraftProof(config, nativeFetch);
+}
+
+async function bootStageBDraftProof(
+	config: StageBProofConfig,
+	nativeFetch: typeof fetch,
+): Promise<void> {
 	const { default: Constants } = await import("expo-constants");
 	const embedded = Constants.expoConfig?.extra?.stageBProof as
 		| StageBProofConfig
@@ -23,8 +34,6 @@ export async function bootStageBDraftProof(
 		JSON.stringify(embedded) !== JSON.stringify(config)
 	)
 		throw new Error("proof bundle identity does not match compiled config");
-	const nativeFetch = globalThis.fetch.bind(globalThis);
-	globalThis.fetch = stageBTransport(config, nativeFetch);
 	const headers = {
 		"x-stage-b-proof": config.nonce,
 		"content-type": "application/json",

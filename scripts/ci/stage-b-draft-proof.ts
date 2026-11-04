@@ -28,11 +28,11 @@ import {
 	attachStageBPhoto,
 	discardStageBDraft,
 	logoutStageB,
-	STAGE_B_DRAWN_SCREEN,
 	type StageBStep,
 	selectStageBComputer,
 	stageBEditor,
 	stageBFlow,
+	stageBHasDrawnScreen,
 	typeStageBDraft,
 } from "./stage-b-draft-flows.ts";
 
@@ -40,7 +40,6 @@ const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
 const SIMULATOR_ID = /^[a-f0-9-]{36}$/i;
 const LAUNCH_PID = /:\s*(\d+)\s*$/;
-const DRAWN_SCREEN = new RegExp(STAGE_B_DRAWN_SCREEN);
 
 /** Driver installation may foreground SpringBoard. Pay that cost before the
  * tracked launch, then explicitly foreground and prove real app pixels/ids before
@@ -54,7 +53,7 @@ export async function warmStageBDriver(
 	await launch();
 	await foreground();
 	const drawn = await hierarchy("warm-app-readiness", 90);
-	if (!DRAWN_SCREEN.test(drawn))
+	if (!stageBHasDrawnScreen(drawn))
 		throw new Error(
 			"Stage B warm readiness: hierarchy has no drawn app screen id",
 		);

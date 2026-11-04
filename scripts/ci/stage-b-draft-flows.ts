@@ -17,13 +17,21 @@ export const STAGE_B_DRAWN_SCREEN =
 // Account-routing's hosted cold-app sample is 25,869 ms; its shared 3x
 // derivation rounds to 78 s. Driver installation has a separate cold cap.
 export const STAGE_B_COLD_ASSERTION_MS = 78000;
+const DRAWN_SCREEN = new RegExp(STAGE_B_DRAWN_SCREEN);
+/** Share the actual hierarchy gate with tests; an anchored test-only regex would
+ * silently test different matching semantics from the raw native hierarchy. */
+export function stageBHasDrawnScreen(hierarchy: string): boolean {
+	return DRAWN_SCREEN.test(hierarchy);
+}
 export function stageBFlow(steps: StageBStep[]): string {
 	// Generated outside the global Maestro flow glob: these target ONLY the
 	// dedicated bundle and cannot accidentally run against a real user's app.
 	// Maestro 2.11 defaults to stopping the app. Foreground ONLY: restart/PID
 	// evidence belongs to explicit simctl terminate+launch, never this wrapper.
 	const foreground: StageBStep[] = [
-		{ launchApp: { stopApp: false } },
+		// Omitting permissions grants everything in Maestro 2.11, which mutates
+		// simulator privacy and may kill the tracked process. An empty map sets none.
+		{ launchApp: { stopApp: false, permissions: {} } },
 		{
 			extendedWaitUntil: {
 				visible: { id: STAGE_B_DRAWN_SCREEN },

@@ -417,7 +417,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * measured transcript renders the same; no layout, style, token, corpus,
 	 * scene or instrument file changed, and every other pin is untouched. */
 	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
-	src: "10b79c37683bea1662998f6bbda8a090d27fb2154f7f2406d89a74c5d9b97952",
+	// Sync proof-bootstrap/test drift is CI-entry-only; ordinary entry/U08 subject unchanged.
+	src: "9d7e53ee8e9c8948d62adab9cfe5c707eadb9b3b89cfadadb2e61b52188c7ce9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -52,6 +52,25 @@ const env: NodeJS.ProcessEnv = {
 	STAGE_B_SOURCE_SHA: config.sourceSha,
 };
 describe("dedicated Stage B proof preflight", () => {
+	it("wires driver warm-up into the production initial-launch path before evidence", () => {
+		const root = fileURLToPath(new URL("../../", import.meta.url));
+		const source = readFileSync(
+			join(root, "scripts/ci/stage-b-draft-proof.ts"),
+			"utf8",
+		);
+		const start = source.indexOf("export async function runStageBDraftProof(");
+		expect(start).toBeGreaterThan(0);
+		const body = source.slice(start);
+		const warm = body.indexOf("await warmStageBDriver(");
+		const evidence = body.indexOf('await flow("connect-initial"');
+		expect(warm).toBeGreaterThan(0);
+		expect(evidence).toBeGreaterThan(warm);
+		// Ignore the earlier relaunch helper: its explicit launch is intentional.
+		const initial = body.indexOf('await run("phone-light"');
+		expect(initial).toBeGreaterThan(0);
+		expect(initial).toBeLessThan(warm);
+		expect(body.slice(initial, evidence)).not.toContain("await launch();");
+	});
 	it("warms the driver before tracked launch, then requires a foregrounded drawn app", async () => {
 		const calls: unknown[] = [];
 		let hierarchyCalls = 0;
@@ -255,12 +274,14 @@ describe("dedicated Stage B proof preflight", () => {
 				verifyStageBBundle(config, { ...config, ...changed }),
 			).toThrow("mismatch");
 	});
-	it("installs proof transport before importing the real Expo router entry", () => {
+	it("installs transport before registering a gated real Expo router root", () => {
 		const source = stageBGeneratedSource(config);
-		expect(source.entry).toContain(".bootStageBDraftProof(");
-		expect(source.entry).toContain(".then(() => require('expo-router/entry'))");
-		expect(source.entry).not.toContain("AppRegistry");
-		expect(source.entry).not.toContain("View");
+		expect(source.entry).toContain(".installStageBDraftProof(");
+		expect(source.entry).toContain("renderRootComponent(StageBProofRoot)");
+		expect(source.entry).toContain("expo-router/build/qualified-entry");
+		expect(source.entry).not.toContain(
+			".then(() => require('expo-router/entry'))",
+		);
 		expect(source.config).toContain(STAGE_B_BUNDLE);
 		expect(source.config).toContain("StageBProofSourceSha");
 	});
