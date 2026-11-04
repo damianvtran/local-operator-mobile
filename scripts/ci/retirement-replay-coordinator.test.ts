@@ -27,6 +27,7 @@ import {
 	managedRunner,
 } from "./retirement-replay-lifecycle.ts";
 import { NativeScope } from "./retirement-replay-native.ts";
+import { sanitizeRunnerTail } from "./retirement-replay-runner-tail.ts";
 import { deferred } from "./retirement-replay-transport.ts";
 import {
 	cleanupReplay,
@@ -339,10 +340,18 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 			completion: Promise.reject(new ReplayRefused("command-exit")),
 			stop: async () => undefined,
 			prepared: Promise.resolve(),
-			failureTail: () => ({
-				exitCode: 65,
-				lines: ["xcodebuild: error: Failed to launch <redacted>"],
-			}),
+			// A REAL sanitized tail built from raw output carrying the secret, so
+			// the not-contained check below can actually fail (review R23-4).
+			failureTail: () =>
+				sanitizeRunnerTail(
+					65,
+					`LO_REPLAY_BEARER=${secret}\nxcodebuild: error: Failed to launch ${secret}`,
+					{
+						bearer: secret,
+						session: "c".repeat(48),
+						control: "http://127.0.0.1:41999/rpc",
+					},
+				),
 		});
 		const result = await f.start();
 		expect(result.cause).toBe("command-exit");
@@ -357,7 +366,7 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 		).toEqual(["runner-prepare:ok", "runner-launch:failed"]);
 		expect(exported.runnerTail).toEqual({
 			exitCode: 65,
-			lines: ["xcodebuild: error: Failed to launch <redacted>"],
+			lines: ["xcodebuild: error: Failed to launch <bearer>"],
 		});
 		expect(JSON.stringify(exported)).not.toContain(secret);
 		expect(f.events).not.toContain("openurl");

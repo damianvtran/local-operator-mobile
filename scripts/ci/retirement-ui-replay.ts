@@ -207,6 +207,7 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		secondary: string[] = [];
 	let observations: unknown = {};
 	const pending: Promise<unknown>[] = [];
+	let opening: Promise<unknown> | undefined;
 	const record = (error: unknown, stage?: string) => {
 		failure.remember(error);
 		if (stage) secondary.push(stage);
@@ -329,7 +330,7 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		void answer.catch(() => undefined);
 		// Recorded as a phase so a receipt shows openurl was REACHED; the link's
 		// outcome is still judged only by the receipt/observations below.
-		const opening = phases.step("openurl", () =>
+		opening = phases.step("openurl", () =>
 			run(
 				"xcrun",
 				["simctl", "openurl", udid, url.toString()],
@@ -400,13 +401,29 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 				jsLogReadySeen: "UNOBSERVED",
 			};
 		}
+	// A phase still in flight (openurl races the receipt) could fail AFTER the
+	// export and leave seed-replay.json and cleanup.json disagreeing (review
+	// R23-3). Give in-flight phases a short, bounded settle before snapshotting;
+	// one that is still pending afterwards is named in `secondary`, never hidden.
+	if (opening)
+		try {
+			await boundedWait(
+				opening.catch(() => undefined),
+				deadline,
+				deadline.cap(5000),
+			);
+		} catch {
+			secondary.push("phase-pending");
+		}
 	Object.assign(summary, {
 		// The work export below writes seed-replay.json from THIS summary, so the
 		// phase receipt must be in it now (replay 41801686399 exported
 		// failedPhase=null while cleanup.json named the phase).
 		phases: phases.phases,
 		failedPhase: phases.failed,
-		runnerTail: runner?.failureTail?.() ?? null,
+		// Any failed replay reads the tail, including a runner that was killed or
+		// is still hung (null exit code), which the first cut missed (R23-2).
+		runnerTail: runner?.failureTail?.(failure.cause !== null) ?? null,
 		seedPersisted,
 		runnerReportedTap,
 		urlProgress: transport.urlProgress,
@@ -499,11 +516,24 @@ export function launchRunner(
 		completion: command.completion.then(() => undefined),
 		stop: (deadline) => command.stop(deadline),
 		// No secrets known means nothing can be checked, so nothing leaves.
-		failureTail: () => {
+		/*
+		 * `replayFailed`: the replay as a whole failed. Then a runner with no
+		 * exit code (killed by a timeout/stop, or still hung before ready) is
+		 * a failure too and its tail is read (review R23-2). A clean exit 0
+		 * never exports anything.
+		 */
+		failureTail: (replayFailed = false) => {
 			const code = command.exitCode();
-			if (code === 0 || code === null) return null;
+			if (code === 0) return null;
+			if (code === null && !replayFailed && !command.hasExited()) return null;
 			return secrets
-				? sanitizeRunnerTail(code, ring.text(), secrets)
+				? sanitizeRunnerTail(
+						code,
+						ring.text(),
+						secrets,
+						undefined,
+						ring.truncated,
+					)
 				: { exitCode: code, redactionRefused: true };
 		},
 	};

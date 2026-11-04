@@ -58,6 +58,8 @@ export interface OwnedCommand {
 	stop: (deadline: Deadline) => Promise<void>;
 	/** The child's exit code once it exited (null before, or when signalled). */
 	exitCode: () => number | null;
+	/** True once the child exited, was killed, or failed to start. */
+	hasExited: () => boolean;
 }
 export class NativeScope {
 	readonly commands = new Set<OwnedCommand>();
@@ -73,8 +75,8 @@ export class NativeScope {
 		beforeStart?: (pid: number) => void,
 		capture = true,
 		/**
-		 * Runner failure tail ONLY (retirement-replay-runner-tail.ts): stdout AND
-		 * stderr go into this capped in-memory ring and nowhere else (never into
+		 * Runner failure tail ONLY (retirement-replay-runner-tail.ts): stdout and
+		 * (merged) stderr go into this capped in-memory ring and nowhere else (never into
 		 * `completion`'s output). Sanitizing and exporting is the caller's job.
 		 */
 		tail?: TailRing,
@@ -106,11 +108,16 @@ export class NativeScope {
 		};
 		const child = spawn(
 			process.execPath,
-			[join(import.meta.dirname, "retirement-replay-child.cjs"), exe, ...args],
+			[
+				join(import.meta.dirname, "retirement-replay-child.cjs"),
+				...(tail ? ["--merge-stderr"] : []),
+				exe,
+				...args,
+			],
 			{
-				stdio: tail
-					? ["pipe", "pipe", "pipe"]
-					: ["pipe", capture ? "pipe" : "ignore", "ignore"],
+				// Tail mode: the wrapper merges the command's stderr into this one
+				// blocking stdout pipe (retirement-replay-child.cjs, --merge-stderr).
+				stdio: ["pipe", capture || tail ? "pipe" : "ignore", "ignore"],
 				detached: true,
 				env: environment,
 			},
@@ -150,7 +157,6 @@ export class NativeScope {
 			settled = true;
 			clearTimeout(timer);
 			child.stdout?.destroy();
-			child.stderr?.destroy();
 			child.stdin?.destroy();
 			if (error) rejectOutput(error);
 			else resolveOutput(output.toString("utf8").trim());
@@ -164,7 +170,6 @@ export class NativeScope {
 		}, budget);
 		if (tail) {
 			child.stdout?.on("data", (data: Buffer) => tail.push(data));
-			child.stderr?.on("data", (data: Buffer) => tail.push(data));
 		} else
 			child.stdout?.on("data", (data) => {
 				output = Buffer.concat([output, data]);
@@ -216,7 +221,13 @@ export class NativeScope {
 			exitCode = code;
 			kill();
 			resolveExit();
-			if (code !== 0) settle(new ReplayRefused("command-exit"));
+			// Tail mode waits for `close` (both pipes drained) before settling a
+			// nonzero exit: `exit` fires before the pipes drain, and settle()
+			// destroys them, which lost the runner's LAST lines (`Testing failed:`,
+			// `** TEST EXECUTE FAILED **`) under load (review R23-1). Still bounded
+			// by the timer above; `completed()` settles command-exit for a nonzero
+			// code once the group is gone and output closed.
+			if (code !== 0 && !tail) settle(new ReplayRefused("command-exit"));
 			void awaitGroup(this.deadline).then(completed, () =>
 				settle(new ReplayRefused("cleanup")),
 			);
@@ -228,6 +239,7 @@ export class NativeScope {
 		const owned: OwnedCommand = {
 			completion,
 			exitCode: () => exitCode,
+			hasExited: () => exited || retired,
 			stop: async (deadline) => {
 				kill();
 				settle(new ReplayRefused("command-exit"));

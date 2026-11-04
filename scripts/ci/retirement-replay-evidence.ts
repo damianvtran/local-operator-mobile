@@ -192,6 +192,7 @@ export function safeSummary(summary: ExportSummary) {
 				"server-close",
 				"evidence",
 				"cleanup",
+				"phase-pending",
 			].includes(v),
 		),
 		captures: summary.captures.map((c) => ({

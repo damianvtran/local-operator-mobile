@@ -33,8 +33,8 @@ export const MAX_LINES = 24;
 
 /**
  * The only line shapes that may leave. Each names a failure; none is free text
- * from the test's own environment dump. Matched against the line BEFORE
- * redaction (so redaction cannot manufacture a match) and again on export.
+ * from the test's own environment dump. Matched against the raw line (so
+ * redaction cannot manufacture a match) and again by `safeRunnerTail` on export.
  */
 export const ALLOWED_SHAPES: readonly RegExp[] = [
 	/^xcodebuild: error: /,
@@ -43,20 +43,49 @@ export const ALLOWED_SHAPES: readonly RegExp[] = [
 	/^\s*error: /,
 	/^\s*Error Domain=/,
 	/^\s*Underlying Error: /,
-	/^Test Case '.*' failed /,
-	/^.*: error: -\[.*\] : /,
+	/^Test Case '-\[[\w.]+ \w+\]' failed /,
+	// XCTest assertion lines: `<file>.swift:<line>: error: -[Class method] : …`.
+	// Anchored to that exact form: an open `^.*` here let a ring-cut env-dump
+	// line (starting mid-bearer) through (review S23-2 / Q23-2).
+	/^\S+\.swift:\d+: error: -\[[\w.]+ \w+\] : /,
 ];
 
-/** Keeps only the most recent RING_BYTES of everything pushed into it. */
+/**
+ * Line breaks xcodebuild text may contain. `\r?\n` alone let text after a
+ * U+2028 ride along inside an allowlisted line (review S23-1).
+ */
+const LINE_BREAK = /\r\n|[\n\r\u0085\u2028\u2029]/;
+
+/**
+ * Runs of 8+ hex characters are REDACTED to `<hex>`. They may be a piece of the
+ * hex bearer/session: a value split across lines, cut by the ring or the line
+ * cap leaves pieces of ANY length, and 16 still let an 11-char tail through
+ * (measured while fixing review S23-1). Legitimate long hex (addresses, ids)
+ * is not what this tail is for. After this no 8+ hex run can remain, which is
+ * also the secret-free rule the export boundary re-checks (review S23-4).
+ */
+const LONG_HEX = /[0-9a-f]{8,}/i;
+const LONG_HEX_ALL = /[0-9a-f]{8,}/gi;
+/** Fragments of a secret this long are treated as the secret (S23-1). */
+const FRAGMENT = 12;
+
+/** Keeps only the most recent `capacity` bytes of everything pushed into it. */
 export class TailRing {
 	#chunks: Buffer[] = [];
 	#size = 0;
+	readonly capacity: number;
+	constructor(capacity = RING_BYTES) {
+		this.capacity = capacity;
+	}
+	/** True once any byte was evicted: the first line may then start mid-token. */
+	truncated = false;
 	push(chunk: Buffer) {
 		this.#chunks.push(chunk);
 		this.#size += chunk.length;
-		while (this.#size > RING_BYTES && this.#chunks.length > 0) {
+		while (this.#size > this.capacity && this.#chunks.length > 0) {
 			const head = this.#chunks[0]!;
-			const excess = this.#size - RING_BYTES;
+			const excess = this.#size - this.capacity;
+			this.truncated = true;
 			if (head.length <= excess) {
 				this.#chunks.shift();
 				this.#size -= head.length;
@@ -88,6 +117,27 @@ export type RunnerTail =
 function escapeRegExp(value: string) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+function portPattern(port: string, flags = "") {
+	// Digit lookarounds, not `\b`: `%3A54321` has no word boundary before the
+	// port, so `\b` missed the percent-encoded control URL (review S23-3).
+	return new RegExp(`(?<!\\d)${escapeRegExp(port)}(?!\\d)`, flags);
+}
+function percentDecoded(text: string) {
+	try {
+		return decodeURIComponent(text);
+	} catch {
+		return text.replace(/%([0-9a-f]{2})/gi, (_, h) =>
+			String.fromCharCode(Number.parseInt(h, 16)),
+		);
+	}
+}
+function windows(value: string, size: number) {
+	const out: string[] = [];
+	if (value.length <= size) return value ? [value] : [];
+	for (let i = 0; i + size <= value.length; i++)
+		out.push(value.slice(i, i + size));
+	return out;
+}
 function portOf(control: string) {
 	try {
 		return new URL(control).port || null;
@@ -104,28 +154,48 @@ export function redactLine(line: string, secrets: TailSecrets) {
 		[secrets.bearer, "<bearer>"],
 		[secrets.session, "<session>"],
 	] as const)
-		if (value) out = out.split(value).join(token);
+		if (value) out = out.replace(new RegExp(escapeRegExp(value), "gi"), token);
 	const port = portOf(secrets.control);
-	if (port) {
-		out = out.replace(
-			new RegExp(`127\\.0\\.0\\.1:${escapeRegExp(port)}\\b`, "g"),
-			"127.0.0.1:<port>",
-		);
-		out = out.replace(new RegExp(`\\b${escapeRegExp(port)}\\b`, "g"), "<port>");
-	}
+	if (port) out = out.replace(portPattern(port, "g"), "<port>");
+	out = out.replace(LONG_HEX_ALL, "<hex>");
 	// Absolute paths name the runner's temp root and home; keep only the leaf.
 	out = out.replace(/(?:\/[^\s/:'"]+)+\/([^\s/:'"]+)/g, "…/$1");
 	return out.length > LINE_CAP ? `${out.slice(0, LINE_CAP - 1)}…` : out;
 }
 
-/** True when any private value (or the bare control port) appears in `text`. */
+/**
+ * True when ANY trace of a private value survives in `text`: a 12-char
+ * fragment of the bearer/session/control in any case, in raw or
+ * percent-decoded text, a 16-char fragment of their base64, the control port,
+ * or any 16+ hex run. Exact-match-only missed ring cuts, split halves and
+ * uppercase/encoded forms (review S23-1, Q23-1).
+ */
 export function leaksSecret(text: string, secrets: TailSecrets) {
+	const decoded = percentDecoded(text);
+	// Also compare with all whitespace and punctuation removed, so a value
+	// written with separators (`a b c …`, `a-b-c`) is still recognised.
+	const forms = [text, decoded, decoded.replace(/[^0-9a-z]/gi, "")].map((v) =>
+		v.toLowerCase(),
+	);
+	// Fragments only of the two random values. The control URL's only private
+	// part is its port (it is otherwise the fixed loopback `/rpc` shape), which
+	// is checked on its own below; fragmenting it would refuse every line that
+	// mentions `http://127.0.0.1`.
+	const values = [secrets.bearer, secrets.session].filter((v) => v.length > 0);
+	const fragments = values.flatMap((v) => windows(v.toLowerCase(), FRAGMENT));
+	const encoded = values.flatMap((v) =>
+		windows(Buffer.from(v).toString("base64"), 16),
+	);
 	const port = portOf(secrets.control);
 	return (
-		[secrets.control, secrets.bearer, secrets.session].some(
-			(value) => value.length > 0 && text.includes(value),
+		(secrets.control.length > 0 &&
+			forms.some((form) => form.includes(secrets.control.toLowerCase()))) ||
+		forms.some((form) => fragments.some((f) => form.includes(f))) ||
+		[text, percentDecoded(text)].some((form) =>
+			encoded.some((f) => form.includes(f)),
 		) ||
-		(port !== null && new RegExp(`\\b${escapeRegExp(port)}\\b`).test(text))
+		forms.some((form) => LONG_HEX.test(form)) ||
+		(port !== null && forms.some((form) => portPattern(port).test(form)))
 	);
 }
 
@@ -140,10 +210,14 @@ export function sanitizeRunnerTail(
 	secrets: TailSecrets,
 	assertClean: (text: string, secrets: TailSecrets) => boolean = (t, s) =>
 		!leaksSecret(t, s),
+	truncated = false,
 ): RunnerTail | null {
 	if (exitCode === 0) return null;
-	const lines = raw
-		.split(/\r?\n/)
+	const all = raw.split(LINE_BREAK);
+	// After eviction the first line may start mid-token (even mid-bearer, or
+	// mid-UTF-8 character): never consider it (review Q23-2 / Q23-3).
+	if (truncated) all.shift();
+	const lines = all
 		.filter((line) => ALLOWED_SHAPES.some((shape) => shape.test(line)))
 		.slice(-MAX_LINES)
 		.map((line) => redactLine(line, secrets));
@@ -179,12 +253,17 @@ export function safeRunnerTail(value: unknown): RunnerTail | null {
 	if (!Array.isArray(v.lines)) return null;
 	return {
 		exitCode,
+		// Re-applied here without secrets: the allowlist and the long-hex rule
+		// (review S23-4), so the export boundary is a real second gate.
 		lines: v.lines
 			.filter(
 				(line): line is string =>
 					typeof line === "string" &&
 					line.length <= LINE_CAP &&
-					!hasControlCharacter(line),
+					!hasControlCharacter(line) &&
+					!LINE_BREAK.test(line) &&
+					!LONG_HEX.test(line) &&
+					ALLOWED_SHAPES.some((shape) => shape.test(line)),
 			)
 			.slice(-MAX_LINES),
 	};

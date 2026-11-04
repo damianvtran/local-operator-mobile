@@ -187,7 +187,7 @@ export interface RunnerHandle {
 	 */
 	prepared?: Promise<void>;
 	/** Sanitized failure tail of the XCTest command (nonzero exit only). */
-	failureTail?: () => RunnerTail | null;
+	failureTail?: (replayFailed?: boolean) => RunnerTail | null;
 }
 /** stop sets the latch synchronously, BEFORE cancellation or joining prepare.
  * Even an uncooperative prepare resolving after a timeout cannot launch later. */
@@ -213,7 +213,7 @@ export function managedRunner(
 	return {
 		completion,
 		prepared: launched,
-		failureTail: () => actual?.failureTail?.() ?? null,
+		failureTail: (replayFailed) => actual?.failureTail?.(replayFailed) ?? null,
 		stop: (deadline) => {
 			stopped = true;
 			if (!stopPromise)

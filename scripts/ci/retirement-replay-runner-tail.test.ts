@@ -5,7 +5,7 @@
  * miss exports nothing but the exit code and a refusal marker.
  */
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -60,6 +60,22 @@ describe("redaction", () => {
 		const out = redactLine(`xcodebuild: error: ${"x".repeat(5000)}`, s);
 		expect(out.length).toBe(LINE_CAP);
 		expect(out.endsWith("…")).toBe(true);
+	});
+});
+
+describe("TailRing eviction", () => {
+	it("a ring cut never exports its first (possibly mid-token) line", () => {
+		const ring = new TailRing();
+		const s = secrets();
+		ring.push(
+			Buffer.from(
+				`${"x".repeat(RING_BYTES)}error: ${s.bearer}\nTesting failed:\n`,
+			),
+		);
+		expect(ring.truncated).toBe(true);
+		expect(
+			sanitizeRunnerTail(65, ring.text(), s, undefined, ring.truncated),
+		).toEqual({ exitCode: 65, lines: ["Testing failed:"] });
 	});
 });
 
@@ -141,6 +157,100 @@ describe("sanitizeRunnerTail", () => {
 		const out = sanitizeRunnerTail(null, "Testing failed:", secrets());
 		expect(out).toEqual({ exitCode: null, lines: ["Testing failed:"] });
 	});
+});
+
+/*
+ * Round 23 security/QA reproductions (S23-1..4, Q23-1..3). Each was a real leak
+ * through the first cut; each must now be redacted or refused, never exported.
+ */
+describe("round 23 leak reproductions", () => {
+	const s = secrets();
+	const exported = (raw: string, truncated = false) =>
+		JSON.stringify(
+			sanitizeRunnerTail(65, raw, s, undefined, truncated) ?? null,
+		).toLowerCase();
+	const traces = (text: string) =>
+		[s.bearer, s.session].some((v) => {
+			for (let i = 0; i + 12 <= v.length; i++)
+				if (text.includes(v.slice(i, i + 12))) return true;
+			return false;
+		}) || /(?<!\d)47213(?!\d)/.test(decodeURIComponent(text));
+	it("S23-1: a ring cut mid-bearer cannot leave (first line dropped once truncated)", () => {
+		const raw = `${s.bearer.slice(25)} foo: error: -[X y] : boom\nTesting failed:`;
+		expect(traces(exported(raw, true))).toBe(false);
+	});
+	it("S23-1: a bearer split across two allowlisted lines is redacted", () => {
+		const raw = `error: ${s.bearer.slice(0, 32)}\nerror: ${s.bearer.slice(32)}`;
+		const out = exported(raw);
+		expect(traces(out)).toBe(false);
+		expect(out).toContain("<hex>");
+	});
+	it("S23-1: uppercase bearer and session are redacted", () => {
+		const out = exported(
+			`error: ${s.bearer.toUpperCase()} ${s.session.toUpperCase()}`,
+		);
+		expect(traces(out)).toBe(false);
+	});
+	it("S23-1: an uppercase 40-char PREFIX after the line cap is not exported", () => {
+		const out = exported(
+			`error: ${"z".repeat(LINE_CAP - 50)}${s.bearer.toUpperCase()}`,
+		);
+		expect(traces(out)).toBe(false);
+	});
+	it("S23-1: text after a U+2028/U+0085/CR inside an allowlisted line is its own (denied) line", () => {
+		for (const brk of ["\u2028", "\u2029", "\u0085", "\r"]) {
+			const out = exported(`error: fine${brk}LO_REPLAY_BEARER=${s.bearer}`);
+			expect(out).not.toContain("lo_replay");
+			expect(traces(out)).toBe(false);
+		}
+	});
+	it("S23-1: short pieces of a split bearer (any length >= 8) are redacted", () => {
+		for (const cut of [53, 56, 8, 30])
+			expect(
+				traces(
+					exported(
+						`error: ${s.bearer.slice(0, cut)}\nerror: q ${s.bearer.slice(cut)}`,
+					),
+				),
+			).toBe(false);
+	});
+	it("S23-1: a bearer written with separators refuses the whole tail", () => {
+		expect(
+			sanitizeRunnerTail(65, `error: ${s.bearer.split("").join(" ")}`, s),
+		).toEqual({ exitCode: 65, redactionRefused: true });
+	});
+	it("Q23-1: a base64 bearer in an allowlisted line refuses the whole tail", () => {
+		const b64 = Buffer.from(s.bearer).toString("base64");
+		expect(sanitizeRunnerTail(65, `error: token ${b64}`, s)).toEqual({
+			exitCode: 65,
+			redactionRefused: true,
+		});
+	});
+	it("S23-2: the XCTest assertion shape is anchored to file:line", () => {
+		expect(exported(`garbage foo: error: -[X y] : boom`)).toBe(
+			JSON.stringify({ exitCode: 65, lines: [] }).toLowerCase(),
+		);
+		expect(
+			exported(
+				"RetainedReplayTests.swift:24: error: -[RetirementSystemAlert.RetainedReplayTests testSingleSeedReplay] : failed",
+			),
+		).toContain("retainedreplaytests.swift:24");
+	});
+	it("S23-3: a percent-encoded control URL loses its port", () => {
+		const out = exported(
+			`error: could not reach ${encodeURIComponent(s.control)}`,
+		);
+		expect(traces(out)).toBe(false);
+	});
+	it("Q23-3: a ring cut mid-UTF-8 character never reaches the export", () => {
+		const ring = new TailRing();
+		ring.push(Buffer.from("é".repeat(RING_BYTES)));
+		ring.push(Buffer.from("x\nTesting failed:\n"));
+		expect(ring.truncated).toBe(true);
+		const out = sanitizeRunnerTail(65, ring.text(), s, undefined, true);
+		expect(JSON.stringify(out)).not.toContain("\ufffd");
+		expect(out).toEqual({ exitCode: 65, lines: ["Testing failed:"] });
+	});
 	it("refuses the WHOLE tail when the final assert finds a private value: exit code + marker only, never partial", () => {
 		const s = secrets();
 		const out = sanitizeRunnerTail(
@@ -172,10 +282,18 @@ describe("export boundary (safeSummary)", () => {
 		expect(
 			safeRunnerTail({
 				exitCode: 3,
-				lines: ["ok", "x".repeat(LINE_CAP + 1), 7, "bad\u0007bell"],
+				lines: [
+					"Testing failed:",
+					"free text the allowlist never admits",
+					`error: ${"a".repeat(8)}`,
+					"error: x\u2028hidden",
+					`error: ${"x".repeat(LINE_CAP)}`,
+					7,
+					"error: bad\u0007bell",
+				],
 				extra: "dropped",
 			}),
-		).toEqual({ exitCode: 3, lines: ["ok"] });
+		).toEqual({ exitCode: 3, lines: ["Testing failed:"] });
 		expect(safeRunnerTail({ exitCode: "1", lines: [] })).toBeNull();
 	});
 	it("safeSummary exports the tail field and nothing beside it", () => {
@@ -230,6 +348,8 @@ describe("real subprocess through NativeScope + launchRunner's ring", () => {
 		});
 		expect(failing.exitCode()).toBe(65);
 		const tail = sanitizeRunnerTail(failing.exitCode(), ring.text(), s);
+		// NativeScope pipes ONLY the wrapper's stdout in tail mode, and the
+		// wrapper merges the command's stderr into it, in write order.
 		expect(tail).toEqual({
 			exitCode: 65,
 			lines: [
@@ -253,14 +373,138 @@ describe("real subprocess through NativeScope + launchRunner's ring", () => {
 		).toBeNull();
 		await scope.stop(new Deadline(5000));
 	});
-	it("launchRunner with NO secrets refuses the tail rather than exporting unchecked text", async () => {
+});
+
+/*
+ * launchRunner end to end against a FAKE `xcodebuild` first on PATH (NativeScope
+ * passes PATH through), so the real ring, the real exit/close handling and the
+ * real failureTail are exercised without Xcode.
+ */
+describe("launchRunner against a fake xcodebuild", () => {
+	const originalPath = process.env.PATH;
+	afterEach(() => {
+		process.env.PATH = originalPath;
+	});
+	function fakeXcodebuild(script: string) {
+		const directory = mkdtempSync(
+			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "fake-xcb-"),
+		);
+		roots.push(directory);
+		const path = join(directory, "xcodebuild");
+		writeFileSync(path, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+		process.env.PATH = `${directory}:${originalPath}`;
+		return directory;
+	}
+	it("R23-4: with NO secrets the tail is REFUSED (strictly), never unchecked text", async () => {
+		fakeXcodebuild('echo "xcodebuild: error: boom" >&2; exit 65');
 		const scope = new NativeScope(new Deadline(10000));
-		// xcodebuild is absent on hosts without Xcode; either way it exits nonzero
-		// or fails to start, and an unchecked tail must never be produced.
-		const handle = launchRunner("/nonexistent.xctestrun", "x", "/tmp", scope);
+		const handle = launchRunner("/x.xctestrun", "x", "/tmp", scope);
 		await handle.completion.catch(() => undefined);
-		const tail = handle.failureTail?.();
-		expect(tail === null || (tail && "redactionRefused" in tail)).toBe(true);
+		expect(handle.failureTail?.()).toEqual({
+			exitCode: 65,
+			redactionRefused: true,
+		});
 		await scope.stop(new Deadline(5000));
 	});
+	it("R23-1: the LAST lines survive heavy output on both pipes, under parallel load", async () => {
+		const s = secrets();
+		// 200 KB on stdout (newline-terminated, so the marker starts its own
+		// line), then the last lines on BOTH pipes right before a nonzero exit:
+		// exactly what `exit`-before-drain used to cut off.
+		fakeXcodebuild(
+			`head -c 200000 /dev/zero | tr '\\0' n; echo; head -c 200000 /dev/zero | tr '\\0' n >&2; echo >&2; echo "Testing failed:"; echo "** TEST EXECUTE FAILED **" >&2; exit 65`,
+		);
+		// Kept light: the deterministic guard is the O_NONBLOCK test below; this
+		// one only checks the end-to-end tail, without loading sibling suites.
+		for (let round = 0; round < 1; round++) {
+			const tails = await Promise.all(
+				Array.from({ length: 4 }, async () => {
+					const scope = new NativeScope(new Deadline(30000));
+					const handle = launchRunner("/x.xctestrun", "x", "/tmp", scope, s);
+					await handle.completion.catch(() => undefined);
+					const tail = handle.failureTail?.();
+					await scope.stop(new Deadline(5000));
+					return tail;
+				}),
+			);
+			// Merged into one blocking pipe, so the write order is exact.
+			for (const tail of tails)
+				expect(tail).toEqual({
+					exitCode: 65,
+					lines: ["Testing failed:", "** TEST EXECUTE FAILED **"],
+				});
+		}
+	}, 60000);
+	it("R23-1: the command's stdout AND stderr are BLOCKING (no EAGAIN byte loss)", async () => {
+		// Measured before the fix: the inherited stderr was O_NONBLOCK and heavy
+		// stderr writes lost bytes (196608 of 200000 arrived) under load.
+		fakeXcodebuild(
+			`/usr/bin/python3 -c 'import fcntl,os,sys; print("xcodebuild: error: nonblock", [bool(fcntl.fcntl(f, fcntl.F_GETFL) & os.O_NONBLOCK) for f in (1, 2)]); sys.exit(65)'`,
+		);
+		const scope = new NativeScope(new Deadline(20000));
+		const handle = launchRunner("/x.xctestrun", "x", "/tmp", scope, secrets());
+		await handle.completion.catch(() => undefined);
+		expect(handle.failureTail?.()).toEqual({
+			exitCode: 65,
+			lines: ["xcodebuild: error: nonblock [False, False]"],
+		});
+		await scope.stop(new Deadline(5000));
+	});
+	it("R23-1: no byte of 200 KB on EACH pipe is lost", async () => {
+		fakeXcodebuild(
+			`head -c 200000 /dev/zero | tr '\\0' o; head -c 200000 /dev/zero | tr '\\0' e >&2; exit 65`,
+		);
+		const sizes = await Promise.all(
+			Array.from({ length: 4 }, async () => {
+				const scope = new NativeScope(new Deadline(30000));
+				let total = 0;
+				const counting = new TailRing();
+				const push = counting.push.bind(counting);
+				counting.push = (chunk: Buffer) => {
+					total += chunk.length;
+					push(chunk);
+				};
+				const command = scope.start(
+					"xcodebuild",
+					[],
+					20000,
+					undefined,
+					false,
+					counting,
+				);
+				await command.completion.catch(() => undefined);
+				await scope.stop(new Deadline(5000));
+				return total;
+			}),
+		);
+		expect(sizes).toEqual(Array(4).fill(400000));
+	}, 60000);
+	it("R23-2: a runner KILLED before exiting (timeout/stop) still exports its tail", async () => {
+		const s = secrets();
+		fakeXcodebuild(
+			'echo "xcodebuild: error: stuck before ready"; exec sleep 30',
+		);
+		const scope = new NativeScope(new Deadline(30000));
+		const handle = launchRunner("/x.xctestrun", "x", "/tmp", scope, s);
+		void handle.completion.catch(() => undefined);
+		// Poll (bounded) until the hung child's line is in the ring: a fixed
+		// sleep flaked under load.
+		for (let i = 0; i < 200; i++) {
+			const t = handle.failureTail?.(true);
+			if (t && "lines" in t && t.lines.length > 0) break;
+			await new Promise((yes) => setTimeout(yes, 50));
+		}
+		// Hung, not yet exited: nothing unless the replay as a whole failed.
+		expect(handle.failureTail?.(false)).toBeNull();
+		expect(handle.failureTail?.(true)).toEqual({
+			exitCode: null,
+			lines: ["xcodebuild: error: stuck before ready"],
+		});
+		await handle.stop(new Deadline(10000));
+		expect(handle.failureTail?.()).toEqual({
+			exitCode: null,
+			lines: ["xcodebuild: error: stuck before ready"],
+		});
+		await scope.stop(new Deadline(5000));
+	}, 30000);
 });
