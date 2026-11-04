@@ -21,12 +21,14 @@ import {
 	type IdentityScenario,
 	startStageBIdentityFixture,
 } from "../../tools/mock-relay/stage-b-identity-fixture.ts";
+import { capFor } from "./account-routing-proof-contract.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	assertStageBDraft,
 	attachStageBPhoto,
 	discardStageBDraft,
 	logoutStageB,
+	STAGE_B_DRAWN_SCREEN,
 	type StageBStep,
 	selectStageBComputer,
 	stageBEditor,
@@ -38,6 +40,26 @@ const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
 const SIMULATOR_ID = /^[a-f0-9-]{36}$/i;
 const LAUNCH_PID = /:\s*(\d+)\s*$/;
+const DRAWN_SCREEN = new RegExp(STAGE_B_DRAWN_SCREEN);
+
+/** Driver installation may foreground SpringBoard. Pay that cost before the
+ * tracked launch, then explicitly foreground and prove real app pixels/ids before
+ * evidence begins. The cold hierarchy itself need not contain a running app. */
+export async function warmStageBDriver(
+	hierarchy: (name: string, seconds: number) => Promise<string>,
+	launch: () => Promise<void>,
+	foreground: () => Promise<void>,
+): Promise<string> {
+	await hierarchy("warm-maestro-driver-cold", capFor("maestroCold"));
+	await launch();
+	await foreground();
+	const drawn = await hierarchy("warm-app-readiness", 90);
+	if (!DRAWN_SCREEN.test(drawn))
+		throw new Error(
+			"Stage B warm readiness: hierarchy has no drawn app screen id",
+		);
+	return drawn;
+}
 
 export function assertStageBAdmission(env: NodeJS.ProcessEnv): void {
 	if (
@@ -581,7 +603,15 @@ export async function runStageBDraftProof(
 			"appearance",
 			"light",
 		]);
-		await launch();
+		const warmHierarchy = await warmStageBDriver(
+			(name, seconds) =>
+				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
+			launch,
+			() => flow("warm-app-foreground", []),
+		);
+		writeFileSync(join(output, "warm-app.hierarchy.txt"), warmHierarchy);
+		receipt.driverWarmUp =
+			"PASS cold driver before tracked launch; foreground-only drawn app hierarchy";
 		await flow("connect-initial", selectStageBComputer());
 		await flow("type-initial", typeStageBDraft(canary));
 		await run("add-owned-photo", "xcrun", [

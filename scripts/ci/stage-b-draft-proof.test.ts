@@ -17,6 +17,7 @@ import {
 	STAGE_B_BUNDLE,
 	type StageBProofConfig,
 } from "../../src/testing/stage-b-draft-transport";
+import { capFor } from "./account-routing-proof-contract";
 import { stageBGeneratedSource } from "./stage-b-draft-build";
 import {
 	assertStageBDraft,
@@ -27,6 +28,7 @@ import {
 import {
 	assertStageBAdmission,
 	verifyStageBBundle,
+	warmStageBDriver,
 } from "./stage-b-draft-proof";
 
 const SOURCE_EXTENSION = /\.[jt]sx?$/;
@@ -50,6 +52,63 @@ const env: NodeJS.ProcessEnv = {
 	STAGE_B_SOURCE_SHA: config.sourceSha,
 };
 describe("dedicated Stage B proof preflight", () => {
+	it("warms the driver before tracked launch, then requires a foregrounded drawn app", async () => {
+		const calls: unknown[] = [];
+		let hierarchyCalls = 0;
+		const drawn = '{"identifier":"home-screen"}';
+		const result = await warmStageBDriver(
+			async (name, seconds) => {
+				calls.push([name, seconds]);
+				return ++hierarchyCalls === 1
+					? '{"application":"SpringBoard","label":"Stage B Draft Proof"}'
+					: drawn;
+			},
+			async () => {
+				calls.push("tracked-simctl-launch");
+			},
+			async () => {
+				calls.push("foreground-without-restart");
+			},
+		);
+		expect(result).toBe(drawn);
+		expect(calls).toEqual([
+			["warm-maestro-driver-cold", capFor("maestroCold")],
+			"tracked-simctl-launch",
+			"foreground-without-restart",
+			["warm-app-readiness", 90],
+		]);
+	});
+	it("names a readiness failure instead of admitting SpringBoard icons as app UI", async () => {
+		await expect(
+			warmStageBDriver(
+				async () =>
+					'{"application":"SpringBoard","icons":["Stage B Draft Proof","maestro-driver-iosUITests-Runner"]}',
+				async () => {},
+				async () => {},
+			),
+		).rejects.toThrow(
+			"Stage B warm readiness: hierarchy has no drawn app screen id",
+		);
+	});
+	it("does not launch or enter evidence when cold driver startup fails", async () => {
+		let launched = false;
+		let foregrounded = false;
+		await expect(
+			warmStageBDriver(
+				async () => {
+					throw new Error("warm-maestro-driver-cold deadline exceeded");
+				},
+				async () => {
+					launched = true;
+				},
+				async () => {
+					foregrounded = true;
+				},
+			),
+		).rejects.toThrow("warm-maestro-driver-cold deadline exceeded");
+		expect(launched).toBe(false);
+		expect(foregrounded).toBe(false);
+	});
 	it("uses ordinary iOS build parallelism with an owned destination and explicit whole-job headroom", () => {
 		const root = fileURLToPath(new URL("../../", import.meta.url));
 		const source = readFileSync(

@@ -8,17 +8,37 @@ const exactDraft = (text: string) => ({
 	id: "composer-input",
 	text: `^${text.replace(REGEX_META, "\\$&")}$`,
 });
+// Keep this app-owned selector shared by the warm hierarchy gate and every flow.
+// SpringBoard's app icon is not a drawn screen, even when it names our bundle.
+export const STAGE_B_DRAWN_SCREEN =
+	"(welcome-screen|home-screen|composer-input|computer-row-" +
+	STAGE_B_HOST.replaceAll(".", "\\.") +
+	")";
+// Account-routing's hosted cold-app sample is 25,869 ms; its shared 3x
+// derivation rounds to 78 s. Driver installation has a separate cold cap.
+export const STAGE_B_COLD_ASSERTION_MS = 78000;
 export function stageBFlow(steps: StageBStep[]): string {
 	// Generated outside the global Maestro flow glob: these target ONLY the
 	// dedicated bundle and cannot accidentally run against a real user's app.
-	return `appId: ${STAGE_B_BUNDLE}\n---\n${steps.map((step) => `- ${JSON.stringify(step)}`).join("\n")}\n`;
+	// Maestro 2.11 defaults to stopping the app. Foreground ONLY: restart/PID
+	// evidence belongs to explicit simctl terminate+launch, never this wrapper.
+	const foreground: StageBStep[] = [
+		{ launchApp: { stopApp: false } },
+		{
+			extendedWaitUntil: {
+				visible: { id: STAGE_B_DRAWN_SCREEN },
+				timeout: STAGE_B_COLD_ASSERTION_MS,
+			},
+		},
+	];
+	return `appId: ${STAGE_B_BUNDLE}\n---\n${[...foreground, ...steps].map((step) => `- ${JSON.stringify(step)}`).join("\n")}\n`;
 }
 const row = `computer-row-${STAGE_B_HOST}`;
 export const selectStageBComputer = (): StageBStep[] => [
 	{
 		extendedWaitUntil: {
 			visible: { id: `(${row.replaceAll(".", "\\.")}|composer-input)` },
-			timeout: 78000,
+			timeout: STAGE_B_COLD_ASSERTION_MS,
 		},
 	},
 	{
