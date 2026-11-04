@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Text, View } from "react-native";
-
+import { t } from "@/i18n";
 import { CONTROL, REGION, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Shimmer } from "@/ui/components/shimmer";
-
 import type { SignInState } from "./radient-sign-in";
+import type { SignInDiagnostic } from "./sign-in-diagnostics";
 
 /**
  * What Radient sign-in looks like while it runs, and when it cannot.
@@ -26,16 +27,19 @@ import type { SignInState } from "./radient-sign-in";
  */
 export const SignInPanel = ({
 	state,
+	diagnostics = [],
 	onStart,
 	onUseAddress,
 	testID = SURFACE.signInPanel,
 }: {
 	state: SignInState;
+	diagnostics?: readonly SignInDiagnostic[];
 	onStart: () => void;
 	onUseAddress: () => void;
 	testID?: string;
 }) => {
 	const router = useRouter();
+	const [showDiagnostics, setShowDiagnostics] = useState(false);
 	const useAddress = () => {
 		onUseAddress();
 		router.push("/custom");
@@ -70,7 +74,9 @@ export const SignInPanel = ({
 				) : null}
 				{state.kind === "exchanging" ? (
 					<Shimmer active>
-						<Text className="text-body text-ink">Finishing sign-in…</Text>
+						<Text className="text-body text-ink">
+							{t("mobile.signin.progress")}
+						</Text>
 					</Shimmer>
 				) : null}
 				{state.kind === "cancelled" ? (
@@ -99,7 +105,7 @@ export const SignInPanel = ({
 
 			{state.kind === "cancelled" || state.kind === "failed" ? (
 				<Button
-					label="Try again"
+					label={t("mobile.signin.retry")}
 					onPress={onStart}
 					variant="outline"
 					testID={CONTROL.signInTryAgain}
@@ -119,6 +125,31 @@ export const SignInPanel = ({
 						testID={CONTROL.signInTryAnyway}
 					/>
 				</>
+			) : null}
+			{state.kind === "failed" ||
+			state.kind === "cancelled" ||
+			state.kind === "unavailable" ? (
+				<View className="gap-2">
+					<Button
+						label={t("mobile.signin.diagnostics")}
+						testID={CONTROL.signInDiagnostics}
+						variant="quiet"
+						onPress={() => setShowDiagnostics((shown) => !shown)}
+					/>
+					{showDiagnostics ? (
+						<Text
+							className="text-body-sm text-ink-muted"
+							testID={REGION.signInDiagnostics}
+						>
+							{diagnostics
+								.map(
+									(entry) =>
+										`${entry.stage}${entry.errorClass ? ` (${entry.errorClass})` : ""}`,
+								)
+								.join("\n")}
+						</Text>
+					) : null}
+				</View>
 			) : null}
 		</View>
 	);

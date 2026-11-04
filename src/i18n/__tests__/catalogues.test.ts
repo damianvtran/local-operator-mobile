@@ -34,6 +34,8 @@ import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
 import session from "@/i18n/catalogues/en/mobile.session.json";
 import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
+import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
+import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
@@ -47,6 +49,12 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * context, and that the four namespaces do not quietly collide.
  */
 const NAMESPACES = [
+	{
+		name: "mobile.signin",
+		messages: signin,
+		context: signinContext,
+		expected: 5,
+	},
 	{
 		name: "mobile.common",
 		messages: common,
@@ -179,7 +187,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(194);
+		expect(total).toBe(199);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

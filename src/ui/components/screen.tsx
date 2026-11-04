@@ -3,6 +3,7 @@ import { ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { maxColumnWidth } from "@/ui/column";
+import { BrandTitle } from "@/ui/components/brand-title";
 import { Heading } from "@/ui/components/heading";
 import { headerStacks } from "@/ui/size-class";
 import { lineBoxPt } from "@/ui/text-scale";
@@ -243,6 +244,11 @@ export const Screen = ({
 		!compact &&
 		title !== undefined &&
 		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
+	const resolvedTitleNode =
+		titleNode ??
+		(title === "Local Operator" ? (
+			<BrandTitle compact={compact} numberOfLines={titleLines} />
+		) : undefined);
 	return (
 		<View
 			className="flex-1 bg-canvas"
@@ -290,7 +296,7 @@ export const Screen = ({
 						{title !== undefined ? (
 							<StackedTitleRow leading={stackedTitleLeading}>
 								{headerDetail === undefined ? (
-									(titleNode ?? (
+									(resolvedTitleNode ?? (
 										<Heading
 											level={1}
 											className="text-display text-ink"
@@ -301,7 +307,7 @@ export const Screen = ({
 									))
 								) : (
 									<View className="gap-1">
-										{titleNode ?? (
+										{resolvedTitleNode ?? (
 											<Heading
 												level={1}
 												className="text-display text-ink"
@@ -331,7 +337,7 @@ export const Screen = ({
 						{headerLeading}
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								(titleNode ?? (
+								(resolvedTitleNode ?? (
 									<Heading
 										level={1}
 										className={
@@ -346,7 +352,7 @@ export const Screen = ({
 								))
 							) : (
 								<View className="min-w-0 flex-1 gap-1">
-									{titleNode ?? (
+									{resolvedTitleNode ?? (
 										<Heading
 											level={1}
 											className={

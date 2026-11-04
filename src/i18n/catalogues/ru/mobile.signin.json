@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "Вход…",
+	"mobile.signin.retry": "Повторить",
+	"mobile.signin.diagnostics": "Диагностика входа",
+	"mobile.signin.superseded": "Эта попытка входа заменена. Повторите попытку.",
+	"mobile.signin.failed": "Не удалось завершить вход. Повторите попытку."
+}

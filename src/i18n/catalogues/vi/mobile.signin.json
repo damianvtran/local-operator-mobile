@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "Đang đăng nhập…",
+	"mobile.signin.retry": "Thử lại",
+	"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
+	"mobile.signin.superseded": "Lần đăng nhập này đã được thay thế. Vui lòng thử lại.",
+	"mobile.signin.failed": "Không thể hoàn tất đăng nhập. Vui lòng thử lại."
+}

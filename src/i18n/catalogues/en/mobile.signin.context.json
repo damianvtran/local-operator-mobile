@@ -1,0 +1,22 @@
+{
+	"mobile.signin.progress": {
+		"role": "status",
+		"note": "Visible after the native browser returns, during token exchange and credential persistence."
+	},
+	"mobile.signin.retry": {
+		"role": "button",
+		"note": "Retry a failed or cancelled sign-in."
+	},
+	"mobile.signin.diagnostics": {
+		"role": "button",
+		"note": "Reveal a redacted in-memory log containing stage names and error classes only."
+	},
+	"mobile.signin.superseded": {
+		"role": "status",
+		"note": "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI."
+	},
+	"mobile.signin.failed": {
+		"role": "status",
+		"note": "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials."
+	}
+}

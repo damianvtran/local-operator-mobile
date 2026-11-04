@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "Iniciando sesión…",
+	"mobile.signin.retry": "Reintentar",
+	"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
+	"mobile.signin.superseded": "Este inicio de sesión fue reemplazado. Vuelve a intentarlo.",
+	"mobile.signin.failed": "No pudimos iniciar sesión. Vuelve a intentarlo."
+}

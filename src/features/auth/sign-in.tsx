@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 
 import { useConnection } from "@/features/auth/connection-provider";
@@ -24,7 +25,22 @@ import { Screen } from "@/ui/components/screen";
  */
 export default function SignIn() {
 	const router = useRouter();
-	const { signInWithRadient, signInState, busy } = useConnection();
+	const {
+		signInWithRadient,
+		signInState,
+		signInDiagnostics,
+		restoredAccount,
+		busy,
+	} = useConnection();
+	const [initiated, setInitiated] = useState(false);
+	const start = () => {
+		setInitiated(true);
+		void signInWithRadient();
+	};
+	useEffect(() => {
+		if (initiated && restoredAccount && !busy && signInState.kind === "idle")
+			router.replace("/tunnels");
+	}, [initiated, restoredAccount, busy, signInState.kind, router]);
 
 	return (
 		<Screen
@@ -51,14 +67,15 @@ export default function SignIn() {
 
 				<SignInPanel
 					state={signInState}
-					onStart={() => void signInWithRadient()}
+					diagnostics={signInDiagnostics}
+					onStart={start}
 					onUseAddress={() => undefined}
 				/>
 
 				{signInState.kind === "idle" ? (
 					<Button
 						label="Sign in with Radient"
-						onPress={() => void signInWithRadient()}
+						onPress={start}
 						loading={busy}
 						testID={CONTROL.signInStart}
 					/>

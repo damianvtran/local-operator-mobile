@@ -34,6 +34,10 @@ on:
   # an explicit input AND main; export-only always takes precedence over upload.
   workflow_dispatch:
     inputs:
+      signin_app_proof:
+        description: "Simulator-only real Expo app fast OAuth/error/persistence proof"
+        type: boolean
+        default: false
       signed_export_only:
         description: "On main only: sign, export and verify an IPA without uploading"
         type: boolean
@@ -76,6 +80,10 @@ env:
   IOS_SIMULATOR_DEVICE: iPhone 17
 
 jobs:
+  signin-app-proof:
+    if: github.event_name == 'workflow_dispatch' && inputs.signin_app_proof == true
+    uses: ./.github/workflows/signin-app-proof.yml
+
   changes:
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
@@ -126,7 +134,7 @@ jobs:
   ios:
     name: iOS (simulator build, launch and frame)
     needs: changes
-    if: needs.changes.outputs.native == 'true'
+    if: needs.changes.outputs.native == 'true' && inputs.signin_app_proof != true
     # `macos-26` is the image that carries Xcode 26.x, which is what Apple's
     # upload requirement is written against (ADR 0004).
     runs-on: macos-26

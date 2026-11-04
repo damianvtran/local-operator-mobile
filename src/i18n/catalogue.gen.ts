@@ -213,6 +213,11 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.signin.diagnostics"
+	| "mobile.signin.failed"
+	| "mobile.signin.progress"
+	| "mobile.signin.retry"
+	| "mobile.signin.superseded"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
@@ -379,6 +384,11 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.signin.diagnostics"
+	| "mobile.signin.failed"
+	| "mobile.signin.progress"
+	| "mobile.signin.retry"
+	| "mobile.signin.superseded"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
@@ -579,6 +589,11 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.signin.diagnostics": NoParams;
+	"mobile.signin.failed": NoParams;
+	"mobile.signin.progress": NoParams;
+	"mobile.signin.retry": NoParams;
+	"mobile.signin.superseded": NoParams;
 	"relay.chrome.session.resume": NoParams;
 	"relay.chrome.session.resuming": NoParams;
 	"relay.chrome.session.subtitle.ended": NoParams;
@@ -792,6 +807,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.signin.diagnostics": "Sign-in diagnostics",
+	"mobile.signin.failed": "We could not finish signing in. Please retry.",
+	"mobile.signin.progress": "Signing in…",
+	"mobile.signin.retry": "Retry",
+	"mobile.signin.superseded": "This sign-in was superseded. Please retry.",
 	"relay.chrome.session.resume": "Resume",
 	"relay.chrome.session.resuming": "Resuming…",
 	"relay.chrome.session.subtitle.ended": "Ended",
@@ -990,6 +1010,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
+	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
+	"mobile.signin.progress": { role: "status", note: "Visible after the native browser returns, during token exchange and credential persistence." },
+	"mobile.signin.retry": { role: "button", note: "Retry a failed or cancelled sign-in." },
+	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
 	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
 	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
 	"relay.chrome.session.subtitle.ended": { role: "status", note: "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim." },
@@ -1202,6 +1227,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
+		"mobile.signin.failed": "No pudimos iniciar sesión. Vuelve a intentarlo.",
+		"mobile.signin.progress": "Iniciando sesión…",
+		"mobile.signin.retry": "Reintentar",
+		"mobile.signin.superseded": "Este inicio de sesión fue reemplazado. Vuelve a intentarlo.",
 		"relay.chrome.session.resume": "Reanudar",
 		"relay.chrome.session.resuming": "Reanudando…",
 		"relay.chrome.session.subtitle.ended": "Finalizada",
@@ -1398,6 +1428,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.signin.diagnostics": "Diagnostic de connexion",
+		"mobile.signin.failed": "Impossible de terminer la connexion. Réessayez.",
+		"mobile.signin.progress": "Connexion en cours…",
+		"mobile.signin.retry": "Réessayer",
+		"mobile.signin.superseded": "Cette connexion a été remplacée. Réessayez.",
 		"relay.chrome.session.resume": "Reprendre",
 		"relay.chrome.session.resuming": "Reprise…",
 		"relay.chrome.session.subtitle.ended": "Terminée",
@@ -1594,6 +1629,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.signin.diagnostics": "साइन-इन निदान",
+		"mobile.signin.failed": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें।",
+		"mobile.signin.progress": "साइन इन हो रहा है…",
+		"mobile.signin.retry": "फिर कोशिश करें",
+		"mobile.signin.superseded": "इस साइन-इन की जगह दूसरा प्रयास शुरू हुआ। फिर कोशिश करें।",
 		"relay.chrome.session.resume": "जारी रखें",
 		"relay.chrome.session.resuming": "खुल रहा है…",
 		"relay.chrome.session.subtitle.ended": "समाप्त",
@@ -1790,6 +1830,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.signin.diagnostics": "Диагностика входа",
+		"mobile.signin.failed": "Не удалось завершить вход. Повторите попытку.",
+		"mobile.signin.progress": "Вход…",
+		"mobile.signin.retry": "Повторить",
+		"mobile.signin.superseded": "Эта попытка входа заменена. Повторите попытку.",
 		"relay.chrome.session.resume": "Возобновить",
 		"relay.chrome.session.resuming": "Возобновляем…",
 		"relay.chrome.session.subtitle.ended": "Завершена",
@@ -1986,6 +2031,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
+		"mobile.signin.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
+		"mobile.signin.retry": "دوبارہ کوشش کریں",
+		"mobile.signin.superseded": "اس سائن اِن کی جگہ نئی کوشش شروع ہوئی۔ دوبارہ کوشش کریں۔",
 		"relay.chrome.session.resume": "جاری رکھیں",
 		"relay.chrome.session.resuming": "جاری ہو رہا…",
 		"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
@@ -2182,6 +2232,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
+		"mobile.signin.failed": "Không thể hoàn tất đăng nhập. Vui lòng thử lại.",
+		"mobile.signin.progress": "Đang đăng nhập…",
+		"mobile.signin.retry": "Thử lại",
+		"mobile.signin.superseded": "Lần đăng nhập này đã được thay thế. Vui lòng thử lại.",
 		"relay.chrome.session.resume": "Mở lại",
 		"relay.chrome.session.resuming": "Đang mở lại…",
 		"relay.chrome.session.subtitle.ended": "Đã kết thúc",
@@ -2378,6 +2433,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.signin.diagnostics": "登录诊断",
+		"mobile.signin.failed": "无法完成登录。请重试。",
+		"mobile.signin.progress": "正在登录…",
+		"mobile.signin.retry": "重试",
+		"mobile.signin.superseded": "此次登录已被替代。请重试。",
 		"relay.chrome.session.resume": "恢复",
 		"relay.chrome.session.resuming": "正在恢复……",
 		"relay.chrome.session.subtitle.ended": "已结束",

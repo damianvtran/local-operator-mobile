@@ -1718,6 +1718,9 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			await latest.signInWithRadient();
 		});
 		expect(mock.events).toContain("GET /v1/tunnels");
+		// A browser grant must publish the same landing admission as a restored
+		// credential, not merely populate rows behind the welcome screen.
+		expect(latest.restoredAccount).toBe(true);
 		expect(connectionStore.getState().route).toBeNull();
 		expect(
 			connectionStore
@@ -1725,6 +1728,60 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 				.computers.map((c) => c.tunnelId)
 				.sort(),
 		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
+	});
+
+	it("makes native memory-only credential storage a visible retryable failure", async () => {
+		await mount();
+		const { Platform } = await import("react-native");
+		const previous = Platform.OS;
+		Object.defineProperty(Platform, "OS", {
+			value: "ios",
+			writable: true,
+			configurable: true,
+		});
+		try {
+			await act(async () => {
+				await latest.signInWithRadient();
+			});
+			expect(latest.signInState.kind).toBe("failed");
+			expect(latest.restoredAccount).toBe(false);
+			expect(latest.busy).toBe(false);
+			expect(latest.signInDiagnostics.map((entry) => entry.stage)).toContain(
+				"persisting",
+			);
+		} finally {
+			Object.defineProperty(Platform, "OS", {
+				value: previous,
+				writable: true,
+				configurable: true,
+			});
+		}
+	});
+
+	it("shows a superseded attempt instead of silently abandoning a returned browser grant", async () => {
+		await mount();
+		const gate = deferred();
+		handoff.block = gate.promise;
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await until(() => handoff.started);
+		startupAuthorizationLifecycle.suspend();
+		gate.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		expect(latest.signInState).toMatchObject({
+			kind: "failed",
+			errorClass: "SignInSupersededError",
+		});
+		expect(latest.signInDiagnostics.at(-1)).toEqual({
+			stage: "failed",
+			errorClass: "SignInSupersededError",
+		});
+		expect(latest.busy).toBe(false);
+		expect(durable.oauth).toBeNull();
 	});
 
 	it("lists the account's computers on a cold-start restore of a stored grant", async () => {

@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 
 import { useConnection } from "@/features/auth/connection-provider";
@@ -29,7 +30,19 @@ import { Screen } from "@/ui/components/screen";
  */
 export default function Welcome() {
 	const router = useRouter();
-	const { signInWithRadient, signInState, busy } = useConnection();
+	const {
+		signInWithRadient,
+		signInState,
+		signInDiagnostics,
+		restoredAccount,
+		busy,
+	} = useConnection();
+	useEffect(() => {
+		// Welcome is a separate route: updating Home's admission latch alone
+		// cannot navigate a screen that already replaced Home.
+		if (restoredAccount && !busy && signInState.kind === "idle")
+			router.replace("/tunnels");
+	}, [restoredAccount, busy, signInState.kind, router]);
 
 	return (
 		<Screen title="Local Operator" testID={SCREEN.welcome}>
@@ -50,6 +63,7 @@ export default function Welcome() {
 
 				<SignInPanel
 					state={signInState}
+					diagnostics={signInDiagnostics}
 					onStart={() => void signInWithRadient()}
 					onUseAddress={() => undefined}
 				/>

@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "Connexion en cours…",
+	"mobile.signin.retry": "Réessayer",
+	"mobile.signin.diagnostics": "Diagnostic de connexion",
+	"mobile.signin.superseded": "Cette connexion a été remplacée. Réessayez.",
+	"mobile.signin.failed": "Impossible de terminer la connexion. Réessayez."
+}

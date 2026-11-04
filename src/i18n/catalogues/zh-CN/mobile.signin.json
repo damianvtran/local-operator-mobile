@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "正在登录…",
+	"mobile.signin.retry": "重试",
+	"mobile.signin.diagnostics": "登录诊断",
+	"mobile.signin.superseded": "此次登录已被替代。请重试。",
+	"mobile.signin.failed": "无法完成登录。请重试。"
+}

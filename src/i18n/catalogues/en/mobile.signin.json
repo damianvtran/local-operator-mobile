@@ -1,0 +1,7 @@
+{
+	"mobile.signin.progress": "Signing in…",
+	"mobile.signin.retry": "Retry",
+	"mobile.signin.diagnostics": "Sign-in diagnostics",
+	"mobile.signin.superseded": "This sign-in was superseded. Please retry.",
+	"mobile.signin.failed": "We could not finish signing in. Please retry."
+}

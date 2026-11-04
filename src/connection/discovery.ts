@@ -29,6 +29,8 @@ import { resolveFetch } from "../relay/platform-fetch";
 /* Hoisted: discovery runs on every cold start and after every re-auth. */
 const TRAILING_SLASHES = /\/+$/;
 
+import { debugOAuthProofOrigin } from "./oauth-proof-override";
+
 export const RADIENT_API_BASE = "https://api.radienthq.com";
 /** The tunnel console, for the billing and revoked-tunnel copy. */
 export const RADIENT_CONSOLE_TUNNELS_URL =
@@ -209,7 +211,11 @@ export async function discoverComputers(
 	if (!token) return { kind: "unauthorized" };
 
 	const fetchImpl = resolveFetch(deps.fetchImpl);
-	const base = (deps.baseUrl ?? RADIENT_API_BASE).replace(TRAILING_SLASHES, "");
+	const base = (
+		deps.baseUrl ??
+		debugOAuthProofOrigin() ??
+		RADIENT_API_BASE
+	).replace(TRAILING_SLASHES, "");
 
 	let response: Response;
 	try {

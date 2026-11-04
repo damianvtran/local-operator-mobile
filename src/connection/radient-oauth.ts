@@ -277,6 +277,8 @@ export async function signInWithRadient(deps: {
 	/** Fires once the authorize URL is known, so a UI can show "waiting for your
 	 *  browser" before the sheet appears. */
 	onAuthorizeUrl?: (url: string) => void;
+	/** Native sheet closed with a verified callback; token exchange is still pending. */
+	onCallbackReceived?: () => void;
 }): Promise<RadientTokens> {
 	const cancel = () => {
 		void deps.browser.dismiss().catch(() => undefined);
@@ -323,6 +325,7 @@ export async function signInWithRadient(deps: {
 		if (fromBrowser) {
 			/* iOS: the device-local listener completed the system browser session. */
 			const result = parseCallbackUrl(fromBrowser, state, redirectUri);
+			deps.onCallbackReceived?.();
 			return await exchangeCode(result.code, redirectUri, pkce.verifier, {
 				now,
 				fetchImpl: deps.fetchImpl,
@@ -337,6 +340,7 @@ export async function signInWithRadient(deps: {
 		/* Android: the listener collected the code while the tab stayed open, and the
 		 * promise settles once the user returns (or the state check fails). */
 		const result = await fromListener;
+		deps.onCallbackReceived?.();
 		return await exchangeCode(result.code, redirectUri, pkce.verifier, {
 			now,
 			fetchImpl: deps.fetchImpl,

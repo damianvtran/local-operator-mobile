@@ -1,0 +1,51 @@
+name: Real Expo app OAuth fast-path proof
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  signin:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prove adversarial debug override is absent from Release JavaScript
+        env:
+          EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: http://127.0.0.1:54831
+        run: |
+          pnpm exec expo export --platform ios --no-bytecode --output-dir "$RUNNER_TEMP/signin-release" --max-workers 2
+          mkdir -p "$RUNNER_TEMP/signin-app-proof"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          bundles = list((root / 'signin-release' / '_expo').rglob('*.js'))
+          assert bundles, 'No Release JS bundles: cannot claim override stripping'
+          for path in bundles:
+              data = path.read_bytes()
+              assert b'http://127.0.0.1:54831' not in data and b'EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN' not in data, 'Debug OAuth override survived Release bundling'
+          (root / 'signin-app-proof' / 'release-override-check.json').write_text(json.dumps({'pass': True, 'bundles_checked': len(bundles)}))
+          PY
+      - name: Generate real Expo native app and attach isolated UI tests
+        run: |
+          pnpm exec expo prebuild --platform ios --clean --no-install
+          (cd ios && pod install)
+          ruby scripts/ci/signin-app-proof/attach-tests.rb
+      - name: Resolve the simulator
+        id: simulator
+        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17'
+      - name: Build and exercise actual app, native browser, token exchange and Keychain
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+          EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: http://127.0.0.1:54831
+        run: bash scripts/ci/signin-app-proof/run.sh
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: signin-real-app-${{ github.sha }}
+          path: ${{ runner.temp }}/signin-app-proof/

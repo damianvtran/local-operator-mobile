@@ -430,7 +430,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * entries, and the U-08 long-transcript scene has zero supplement beats (same
 	 * world hash on main and head), so no measured transcript row changes.
 	 * Converged onto main 24a3d30f (#157 above): recomputed over the combined tree. */
-	src: "91df4fc1bfc33e6eb07d993ad8cf28a8a71e01f25f2307b5c0b81eb5113e4ffc",
+	/* Re-pinned 2026-11-03 with --print for the real-app sign-in fix: account
+	 * admission, progress/errors/diagnostics and the brand-title lockup. U-08 is
+	 * a custom-relay transcript, not OAuth. Its Screen supplies a custom titleNode
+	 * (session/[id].tsx), so the Local Operator-only default brand title is not
+	 * selected; Heading's new optional metrics callback is undefined there. No
+	 * transcript layout, corpus or instrument changed. This is source-boundary
+	 * judgment, not new rendered U-08 proof; historical identities stay intact. */
+	src: "2612e084ecce4db7ff00773b99aa238876fbe0c299e15affdac3872910697164",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
