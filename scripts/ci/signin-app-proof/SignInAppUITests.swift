@@ -14,12 +14,26 @@ final class SignInAppUITests: XCTestCase {
     try visible("welcome-screen")
     attach("welcome-brand-initial")
     attach("welcome-brand-settled")
-    app.buttons["welcome-connect"].tap()
+    if ProcessInfo.processInfo.environment["PROOF_THEME"] == "light" {
+      // Decline the REAL system authentication prompt, never synthesize a JS
+      // cancellation. No provider request is expected before this permission.
+      app.buttons["welcome-connect"].tap()
+      let cancel = springboard.buttons["Cancel"].firstMatch
+      try require(cancel.waitForExistence(timeout: 60), "Missing system consent Cancel")
+      cancel.tap()
+      try visible("sign-in-try-again")
+      attach("cancelled-and-retry")
+      XCTAssertEqual(try control("/receipt")["authorize"], 0)
+      app.buttons["sign-in-try-again"].tap()
+    } else {
+      app.buttons["welcome-connect"].tap()
+    }
     try consent()
     try text("Signing in…")
     attach("negative-exchanging")
     _ = try control("/release-token")
     try visible("sign-in-try-again")
+    attach("token-500-error-and-retry-collapsed")
     app.buttons["sign-in-diagnostics-toggle"].tap()
     try visible("sign-in-diagnostics")
     let diagnostic = app.descendants(matching: .any).matching(identifier: "sign-in-diagnostics").firstMatch.label
@@ -38,9 +52,9 @@ final class SignInAppUITests: XCTestCase {
     try consent()
     try text("Signing in…")
     attach("positive-exchanging")
-    _ = try control("/release-token")
+    try releaseAndCaptureTransition()
     try visible("computers-screen")
-    try text("OAuth proof computer")
+    try pickerRow()
     attach("positive-tunnel-picker")
     let positive = try control("/receipt")
     XCTAssertEqual(positive["authorize"], 2)
@@ -51,11 +65,47 @@ final class SignInAppUITests: XCTestCase {
     app.terminate()
     app.launch()
     try visible("computers-screen")
-    try text("OAuth proof computer")
+    try pickerRow()
     let restored = try control("/receipt")
     XCTAssertEqual(restored["authorize"], 2)
     XCTAssertGreaterThan(restored["discovery"] ?? 0, positive["discovery"] ?? 0)
     attach("persisted-grant-restored-picker")
+  }
+
+  @MainActor func testDarkLargestWelcome() throws {
+    continueAfterFailure = false
+    app.launch()
+    try visible("welcome-screen")
+    attach("dark-largest-welcome-initial")
+    attach("dark-largest-welcome-settled")
+    app.terminate()
+  }
+
+  @MainActor private func pickerRow() throws {
+    // The native row intentionally groups name/status into ONE accessible
+    // button. Looking for a standalone StaticText is not a product assertion.
+    let id = "computer-row-0123456789abcdef0123456789abcdef-lop.example.com"
+    try visible(id)
+    XCTAssertTrue(app.buttons[id].label.contains("OAuth proof computer"))
+  }
+
+  @MainActor private func releaseAndCaptureTransition() throws {
+    var times: [Double] = []
+    times.append(ProcessInfo.processInfo.systemUptime)
+    attach("transition-0-exchanging")
+    _ = try control("/release-token")
+    for index in 1...3 {
+      // Request ~75ms cadence, but publish actual timestamps: screenshot RPC
+      // latency is not controllable and must not be described as a faster rate.
+      let requested = ProcessInfo.processInfo.systemUptime
+      times.append(requested)
+      attach("transition-\(index)")
+      let remaining = 0.075 - (ProcessInfo.processInfo.systemUptime - requested)
+      if remaining > 0 { Thread.sleep(forTimeInterval: remaining) }
+    }
+    let data = try JSONSerialization.data(withJSONObject: ["requested_interval_seconds": 0.075, "actual_monotonic_starts": times])
+    let trace = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+    trace.name = "transition-frame-timing"; trace.lifetime = .keepAlways; add(trace)
   }
 
   @MainActor private func consent() throws {

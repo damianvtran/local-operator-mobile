@@ -20,7 +20,7 @@ describe("real Expo application OAuth proof boundary", () => {
 				"/bin/bash",
 				[
 					"-c",
-					`set -e\nxcrun() { printf 'reset appearance\\n' >&2; }\n${script}`,
+					`set -e\nxcrun() { printf 'reset appearance accessibility-extra-extra-extra-large\\n' >&2; }\n${script}`,
 				],
 				{
 					env: {
@@ -71,6 +71,19 @@ describe("real Expo application OAuth proof boundary", () => {
 		expect(test).toContain('XCTAssertEqual(positive["pkce_verified"], 2)');
 		expect(test).toContain('XCTAssertEqual(restored["authorize"], 2)');
 		expect(test).toContain('XCTAssertGreaterThan(restored["discovery"]');
+		expect(test).toContain(
+			'XCTAssertTrue(app.buttons[id].label.contains("OAuth proof computer"))',
+		);
+		expect(test).not.toContain('try text("OAuth proof computer")');
+		expect(test).toContain('attach("cancelled-and-retry")');
+		expect(test).toContain('attach("token-500-error-and-retry-collapsed")');
+		expect(test).toContain('"actual_monotonic_starts": times');
+		expect(test).toContain('attach("transition-\\(index)")');
+		expect(read("./run.sh")).toContain('TEST_RUNNER_PROOF_THEME="$theme"');
+		expect(read("./run.sh")).toContain(
+			"content_size accessibility-extra-extra-extra-large",
+		);
+		expect(read("./run.sh")).toContain("testDarkLargestWelcome");
 		// Expo treats offline as another host selector; combining it with
 		// localhost exits before Metro can start, even though --help lists both.
 		expect(read("./run.sh")).toContain("'--localhost'");

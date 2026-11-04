@@ -56,6 +56,7 @@ xcrun simctl help keychain > "$OUT/simctl-keychain-help.txt" 2>&1
 grep -q reset "$OUT/simctl-keychain-help.txt"
 xcrun simctl help ui > "$OUT/simctl-ui-help.txt" 2>&1
 grep -q appearance "$OUT/simctl-ui-help.txt"
+grep -q accessibility-extra-extra-extra-large "$OUT/simctl-ui-help.txt"
 # Match the proven callback-proof UI runner: ad-hoc simulator identities only,
 # no developer team, certificate, provisioning profile or release signing lane.
 SIGNING=(CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
@@ -75,7 +76,7 @@ for theme in light dark; do
   xcrun simctl ui "$UDID" appearance "$theme"
   xcrun simctl ui "$UDID" appearance > "$OUT/$theme-appearance.txt"
   set +e
-  TEST_RUNNER_APP_ID="$APP_ID" xcodebuild -workspace "$WORKSPACE" -scheme SignInAppProof -configuration Debug -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/SignInAppDD" -resultBundlePath "$OUT/$theme.xcresult" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -only-testing:SignInAppUITests/SignInAppUITests/testAlreadySignedInFastPathAndServerError "${SIGNING[@]}" test-without-building > "$OUT/$theme-test.log" 2>&1
+  TEST_RUNNER_APP_ID="$APP_ID" TEST_RUNNER_PROOF_THEME="$theme" xcodebuild -workspace "$WORKSPACE" -scheme SignInAppProof -configuration Debug -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/SignInAppDD" -resultBundlePath "$OUT/$theme.xcresult" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -only-testing:SignInAppUITests/SignInAppUITests/testAlreadySignedInFastPathAndServerError "${SIGNING[@]}" test-without-building > "$OUT/$theme-test.log" 2>&1
   RESULT=$?
   set -e
   if [[ -d "$OUT/$theme.xcresult" ]]; then
@@ -90,3 +91,19 @@ v = json.load(open(sys.argv[1]))
 assert v['authorize'] == 2 and v['token'] == 2 and v['pkce_verified'] == 2 and v['discovery'] >= 2, 'Real-app flow/persistence receipts incomplete (including zero-tests execution)'
 PY
 done
+# The largest size is listed by this runner's captured simctl help. Reuse the
+# exact device/binary; this is a separate welcome-only visual, not auth coverage.
+xcrun simctl terminate "$UDID" "$APP_ID" >/dev/null 2>&1 || true
+xcrun simctl keychain "$UDID" reset
+xcrun simctl ui "$UDID" appearance dark
+xcrun simctl ui "$UDID" content_size accessibility-extra-extra-extra-large
+xcrun simctl ui "$UDID" content_size > "$OUT/dark-largest-content-size.txt"
+set +e
+TEST_RUNNER_APP_ID="$APP_ID" xcodebuild -workspace "$WORKSPACE" -scheme SignInAppProof -configuration Debug -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/SignInAppDD" -resultBundlePath "$OUT/dark-largest.xcresult" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -only-testing:SignInAppUITests/SignInAppUITests/testDarkLargestWelcome "${SIGNING[@]}" test-without-building > "$OUT/dark-largest-test.log" 2>&1
+RESULT=$?
+set -e
+if [[ -d "$OUT/dark-largest.xcresult" ]]; then
+  xcrun xcresulttool export attachments --path "$OUT/dark-largest.xcresult" --output-path "$OUT/frames/dark-largest"
+fi
+cat "$OUT/dark-largest-test.log"
+exit "$RESULT"
