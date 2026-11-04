@@ -443,11 +443,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
 	 * Button's optional expanded state is omitted for existing transcript
 	 * controls. No transcript/corpus/instrument change; historical pins retained. */
-	src: "7db6d009afe5439d45d088510e13f0bc1fce25ddbbecbf1f7a33f3779bd75710",
+	src: "15f6e7785ab022107dc109fa446e5182b172963ecd2e448bf34ec2c2ccbe25e9",
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
-	// iOS picker handoff only; web U08 rendering/animation and scene data unchanged.
+	// iOS picker handoff/reopen cancellation only; web U08 rendering/animation and scene data unchanged.
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

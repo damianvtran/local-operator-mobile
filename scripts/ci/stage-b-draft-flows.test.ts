@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
 import { capFor } from "./account-routing-proof-contract";
 import {
+	attachStageBPhoto,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
 	selectStageBComputer,
@@ -16,6 +17,34 @@ const steps = (flow: string): Record<string, unknown>[] =>
 		.map((line) => JSON.parse(line.slice(2)));
 
 describe("Stage B foreground-only Maestro flows", () => {
+	it("dismisses optional Photos onboarding and selects the first real photo without point taps", () => {
+		const commands = steps(stageBFlow(attachStageBPhoto()));
+		expect(commands).toContainEqual({
+			runFlow: {
+				when: { visible: "Private Access to Photos.*" },
+				commands: [{ tapOn: { text: "Close", index: 0 } }],
+			},
+		});
+		expect(commands).toContainEqual({
+			tapOn: { id: "PXGGridLayout-Info", text: "Photo, .*", index: 0 },
+		});
+		expect(commands).toContainEqual({
+			extendedWaitUntil: {
+				visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
+				timeout: 15000,
+			},
+		});
+		expect(commands).toContainEqual({
+			runFlow: { when: { visible: "Add" }, commands: [{ tapOn: "Add" }] },
+		});
+		expect(commands).toContainEqual({
+			extendedWaitUntil: {
+				visible: { id: "composer-attachment-0" },
+				timeout: 15000,
+			},
+		});
+		expect(JSON.stringify(commands)).not.toContain('"point"');
+	});
 	it.each([
 		{ evidence: [] },
 		{ evidence: [{ assertVisible: { id: "composer-input" } }] },

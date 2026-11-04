@@ -967,7 +967,10 @@ export const Composer = ({
 						accessibilityLabel="Attach an image"
 						accessibilityState={state({ busy: attaching, disabled: attaching })}
 						disabled={attaching}
-						onPress={() => setAttachSheetOpen(true)}
+						onPress={() => {
+							attachmentHandoff.cancel();
+							setAttachSheetOpen(true);
+						}}
 						testID={CONTROL.composerAttach}
 					>
 						<View className="h-11 w-11 items-center justify-center">
@@ -1142,6 +1145,7 @@ export const Composer = ({
 								accessibilityLabel={action.label}
 								onPress={() => {
 									setAttachSheetOpen(false);
+									// The handoff waits for native dismissal; state alone is not that acknowledgement.
 									attachmentHandoff.choose(
 										() => onAttach(action.source),
 										Platform.OS,

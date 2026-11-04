@@ -3,6 +3,8 @@ import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const CANCEL_BEFORE_REOPEN =
+	/onPress=\{\(\) => \{\s*attachmentHandoff\.cancel\(\);\s*setAttachSheetOpen\(true\);/;
 const source = readFileSync(
 	new URL("./components/composer.tsx", import.meta.url),
 	"utf8",
@@ -62,6 +64,24 @@ describe("native attachment sheet handoff", () => {
 		vi.runAllTimers();
 		expect(launch).not.toHaveBeenCalled();
 	});
+	it("cancels an old pending choice when Attach reopens before 500ms", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const stale = vi.fn();
+		const fresh = vi.fn();
+		handoff.choose(stale, "ios");
+		vi.advanceTimersByTime(250);
+		// Production Attach's onPress cancels before opening the sheet again.
+		handoff.cancel();
+		vi.advanceTimersByTime(500);
+		handoff.dismissed();
+		expect(stale).not.toHaveBeenCalled();
+		handoff.choose(fresh, "ios");
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(fresh).toHaveBeenCalledOnce();
+		expect(stale).not.toHaveBeenCalled();
+	});
 	it.each(["android", "web"])("keeps %s selection immediate", (platform) => {
 		vi.useFakeTimers();
 		const handoff = create();
@@ -75,6 +95,10 @@ describe("native attachment sheet handoff", () => {
 	it("wires the real composer choice and native dismissal without changing close/layout", () => {
 		expect(source).toContain("onDismiss={attachmentHandoff.dismissed}");
 		expect(source).toContain("attachmentHandoff.choose(");
+		expect(source).toMatch(CANCEL_BEFORE_REOPEN);
+		expect(source).toContain(
+			"// The handoff waits for native dismissal; state alone is not that acknowledgement.",
+		);
 		expect(source).toContain("() => onAttach(action.source)");
 		expect(source).toContain("onClose={() => setAttachSheetOpen(false)}");
 	});

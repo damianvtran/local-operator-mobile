@@ -83,7 +83,21 @@ export const attachStageBPhoto = (): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	{ tapOn: { id: "attach-option-library" } },
 	{ extendedWaitUntil: { visible: "Photos", timeout: 15000 } },
-	{ tapOn: { point: "18%,28%" } },
+	// iOS 26 inserts an onboarding banner above the grid. Coordinates hit that
+	// banner, not a photo; use the actual PHPicker accessibility tree instead.
+	{
+		runFlow: {
+			when: { visible: "Private Access to Photos.*" },
+			commands: [{ tapOn: { text: "Close", index: 0 } }],
+		},
+	},
+	{
+		extendedWaitUntil: {
+			visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
+			timeout: 15000,
+		},
+	},
+	{ tapOn: { id: "PXGGridLayout-Info", text: "Photo, .*", index: 0 } },
 	{ runFlow: { when: { visible: "Add" }, commands: [{ tapOn: "Add" }] } },
 	{
 		extendedWaitUntil: {
