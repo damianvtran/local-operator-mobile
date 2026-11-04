@@ -374,6 +374,8 @@ export async function runStageBDraftProof(
 			["simctl", "bootstatus", udid, "-b"],
 			240,
 		);
+		// Match the ordinary iOS lane's automatic build parallelism. The measured
+		// uncapped Release build takes ~23–25 min; retain a bounded 45-min ceiling.
 		await run(
 			"unsigned-candidate-producer",
 			"xcodebuild",
@@ -387,11 +389,9 @@ export async function runStageBDraftProof(
 				"-sdk",
 				"iphonesimulator",
 				"-destination",
-				`id=${udid}`,
+				`platform=iOS Simulator,id=${udid}`,
 				"-derivedDataPath",
 				join(output, "DerivedData"),
-				"-jobs",
-				"2",
 				"CODE_SIGNING_ALLOWED=NO",
 				"CODE_SIGNING_REQUIRED=NO",
 				"build",

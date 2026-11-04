@@ -50,6 +50,28 @@ const env: NodeJS.ProcessEnv = {
 	STAGE_B_SOURCE_SHA: config.sourceSha,
 };
 describe("dedicated Stage B proof preflight", () => {
+	it("uses ordinary iOS build parallelism with an owned destination and explicit whole-job headroom", () => {
+		const root = fileURLToPath(new URL("../../", import.meta.url));
+		const source = readFileSync(
+			join(root, "scripts/ci/stage-b-draft-proof.ts"),
+			"utf8",
+		);
+		const start = source.indexOf('"unsigned-candidate-producer"');
+		expect(start).toBeGreaterThan(0);
+		const build = source.slice(start, source.indexOf("const products", start));
+		expect(build).not.toContain('"-jobs"');
+		expect(build).toContain(`platform=iOS Simulator,id=\${udid}`);
+		expect(build).toContain('join(output, "DerivedData")');
+		expect(build).toContain("2700");
+		const workflow = readFileSync(
+			join(root, ".github/workflows/stage-b-draft-proof.yml"),
+			"utf8",
+		);
+		const native = workflow
+			.split("\n  native:\n")[1]
+			?.split("\n  backup-artifact:")[0];
+		expect(native).toContain("timeout-minutes: 120");
+	});
 	it.each(["expo-loader", "native-esm-control"])(
 		"evaluates generated config with the real Expo CLI (%s), preserving dirname and static context",
 		(mode) => {

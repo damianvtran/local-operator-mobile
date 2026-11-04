@@ -50,7 +50,10 @@ jobs:
     needs: preflight
     if: github.event.action == 'labeled' && github.event.label.name == 'stage-b-native-approved' && github.actor == 'damianvtran' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: macos-26
-    timeout-minutes: 90
+    # Ordinary uncapped Release builds measured 22.7–24.9 min on macos-26.
+    # Budget: 45m producer cap + 15m setup/boot + 50m matrix + 10m cleanup/upload.
+    # Flow duration is not yet measured: 90m left too little post-build margin.
+    timeout-minutes: 120
     concurrency:
       group: stage-b-draft-native-${{ github.event.pull_request.number }}
       cancel-in-progress: false
