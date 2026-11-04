@@ -7,6 +7,58 @@
 		"role": "button",
 		"note": "Accessibility label of the icon-only back button in the inbox header."
 	},
+	"mobile.notifications.channel.airy_whistle": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.bubble_chord": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.bubble_pulse": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.description": {
+		"role": "help",
+		"note": "Description shared by every Local Operator notification channel, shown under the channel in Android's notification settings. Explains that the computer's setting, not the phone, chooses which channel (sound) an alert uses. Do not imply the phone can change the sound."
+	},
+	"mobile.notifications.channel.felt_marimba": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.hum_swell": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.signal_handshake": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.silent": {
+		"role": "meta",
+		"note": "Name of the Android notification channel that shows alerts with no sound, used when sound is turned off on the computer. Shown in the system's app notification settings. One or two words."
+	},
+	"mobile.notifications.channel.soft_pulse": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.system": {
+		"role": "meta",
+		"note": "Name of the Android notification channel that plays the phone's own default notification sound, used when the computer's sound is set to the system sound. Shown in the system's app notification settings. Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.tape_warble": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.task_complete": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
+	"mobile.notifications.channel.two_note_chime": {
+		"role": "meta",
+		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
+	},
 	"mobile.notifications.detail.answer_in_conversation": {
 		"role": "button",
 		"note": "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop."

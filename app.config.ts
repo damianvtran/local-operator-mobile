@@ -39,6 +39,24 @@ const color = (path: string, theme: "light" | "dark"): string => {
 	return value;
 };
 
+/**
+ * The bundled notification sounds, as project-relative paths for the
+ * expo-notifications plugin. Read from the export manifest (plain JSON, for
+ * the same reason the tokens are read above) rather than listed by hand, so
+ * the files the plugin copies are exactly the files the manifest pins.
+ */
+const notificationSoundFiles = (): string[] => {
+	const manifest = JSON.parse(
+		readFileSync(
+			join(__dirname, "assets/notification-sounds/manifest.json"),
+			"utf8",
+		),
+	) as { sounds: { file: string }[] };
+	return manifest.sounds.map(
+		(sound) => `./assets/notification-sounds/${sound.file}`,
+	);
+};
+
 // A placeholder reverse-DNS identity. Store submission needs a package name
 // registered to the publisher, which is an account decision rather than a code
 // one (docs/publishing/checklist.md item B2) — changing it later is a store-side
@@ -310,6 +328,15 @@ const config: ExpoConfig = {
 				// payload names (S7) and are not fixed here.
 				icon: "./design/app-icon/android/ic_notification.png",
 				color: color("accent.accent", "light"),
+				// The ten built-in notification sounds, so a push can play the
+				// sound the reader chose on the computer (ADR 0006 §3.2,
+				// `data.sound`). The plugin copies them into the iOS bundle and
+				// Android `res/raw`; the Android channels that play them are
+				// created at app start (`src/notifications/native.ts`). The list
+				// is read from the export manifest, which is tied to the core's
+				// catalog by sha256 (`scripts/sounds/export-mobile.ts`), so a
+				// sound added there cannot be half-registered here.
+				sounds: notificationSoundFiles(),
 				// `enableBackgroundRemoteNotifications` stays OFF, deliberately: the
 				// silent attention wake (ADR 0006 §1.5) is the one push that needs
 				// the mode, and its handler is S6/S7 work — declaring the mode

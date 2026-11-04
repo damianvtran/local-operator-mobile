@@ -123,6 +123,19 @@ export type CatalogueKey =
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
+	| "mobile.notifications.channel.airy_whistle"
+	| "mobile.notifications.channel.bubble_chord"
+	| "mobile.notifications.channel.bubble_pulse"
+	| "mobile.notifications.channel.description"
+	| "mobile.notifications.channel.felt_marimba"
+	| "mobile.notifications.channel.hum_swell"
+	| "mobile.notifications.channel.signal_handshake"
+	| "mobile.notifications.channel.silent"
+	| "mobile.notifications.channel.soft_pulse"
+	| "mobile.notifications.channel.system"
+	| "mobile.notifications.channel.tape_warble"
+	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -336,6 +349,19 @@ export type NoParamKey =
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
+	| "mobile.notifications.channel.airy_whistle"
+	| "mobile.notifications.channel.bubble_chord"
+	| "mobile.notifications.channel.bubble_pulse"
+	| "mobile.notifications.channel.description"
+	| "mobile.notifications.channel.felt_marimba"
+	| "mobile.notifications.channel.hum_swell"
+	| "mobile.notifications.channel.signal_handshake"
+	| "mobile.notifications.channel.silent"
+	| "mobile.notifications.channel.soft_pulse"
+	| "mobile.notifications.channel.system"
+	| "mobile.notifications.channel.tape_warble"
+	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -525,6 +551,19 @@ export type MessageParams = {
 	"mobile.library.title": NoParams;
 	"mobile.notifications.answer": NoParams;
 	"mobile.notifications.back": NoParams;
+	"mobile.notifications.channel.airy_whistle": NoParams;
+	"mobile.notifications.channel.bubble_chord": NoParams;
+	"mobile.notifications.channel.bubble_pulse": NoParams;
+	"mobile.notifications.channel.description": NoParams;
+	"mobile.notifications.channel.felt_marimba": NoParams;
+	"mobile.notifications.channel.hum_swell": NoParams;
+	"mobile.notifications.channel.signal_handshake": NoParams;
+	"mobile.notifications.channel.silent": NoParams;
+	"mobile.notifications.channel.soft_pulse": NoParams;
+	"mobile.notifications.channel.system": NoParams;
+	"mobile.notifications.channel.tape_warble": NoParams;
+	"mobile.notifications.channel.task_complete": NoParams;
+	"mobile.notifications.channel.two_note_chime": NoParams;
 	"mobile.notifications.detail.answer_in_conversation": NoParams;
 	"mobile.notifications.detail.conversation_asks": NoParams;
 	"mobile.notifications.detail.earlier_updates": NoParams;
@@ -756,6 +795,19 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.library.title": "Library",
 	"mobile.notifications.answer": "Answer",
 	"mobile.notifications.back": "Back",
+	"mobile.notifications.channel.airy_whistle": "Airy whistle",
+	"mobile.notifications.channel.bubble_chord": "Bubble chord",
+	"mobile.notifications.channel.bubble_pulse": "Bubble pulse",
+	"mobile.notifications.channel.description": "Alerts from Local Operator. Your computer's sound setting picks which of these channels plays.",
+	"mobile.notifications.channel.felt_marimba": "Felt marimba",
+	"mobile.notifications.channel.hum_swell": "Hum swell",
+	"mobile.notifications.channel.signal_handshake": "Signal handshake",
+	"mobile.notifications.channel.silent": "Silent",
+	"mobile.notifications.channel.soft_pulse": "Soft pulse",
+	"mobile.notifications.channel.system": "System sound",
+	"mobile.notifications.channel.tape_warble": "Tape warble",
+	"mobile.notifications.channel.task_complete": "Task complete",
+	"mobile.notifications.channel.two_note_chime": "Two-note chime",
 	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
 	"mobile.notifications.detail.conversation_asks": "This conversation's asks",
 	"mobile.notifications.detail.earlier_updates": "Earlier updates",
@@ -972,6 +1024,19 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.library.title": { role: "heading", note: "Title of the Library screens (the list and the single-asset view). 'Library' is the name of the feature that catalogues files and images from the user's conversations, not a building or a book collection; no final full stop." },
 	"mobile.notifications.answer": { role: "button", note: "Button on an ask in the inbox list that opens it to be answered. One word, imperative." },
 	"mobile.notifications.back": { role: "button", note: "Accessibility label of the icon-only back button in the inbox header." },
+	"mobile.notifications.channel.airy_whistle": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.bubble_chord": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.bubble_pulse": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.description": { role: "help", note: "Description shared by every Local Operator notification channel, shown under the channel in Android's notification settings. Explains that the computer's setting, not the phone, chooses which channel (sound) an alert uses. Do not imply the phone can change the sound." },
+	"mobile.notifications.channel.felt_marimba": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.hum_swell": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.signal_handshake": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.silent": { role: "meta", note: "Name of the Android notification channel that shows alerts with no sound, used when sound is turned off on the computer. Shown in the system's app notification settings. One or two words." },
+	"mobile.notifications.channel.soft_pulse": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.system": { role: "meta", note: "Name of the Android notification channel that plays the phone's own default notification sound, used when the computer's sound is set to the system sound. Shown in the system's app notification settings. Sentence case, no final full stop." },
+	"mobile.notifications.channel.tape_warble": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.task_complete": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.two_note_chime": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
 	"mobile.notifications.detail.conversation_asks": { role: "heading", note: "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader." },
 	"mobile.notifications.detail.earlier_updates": { role: "heading", note: "Section header listing earlier revisions of the same notification." },
@@ -1202,6 +1267,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Biblioteca",
 		"mobile.notifications.answer": "Responder",
 		"mobile.notifications.back": "Atrás",
+		"mobile.notifications.channel.airy_whistle": "Silbido etéreo",
+		"mobile.notifications.channel.bubble_chord": "Acorde de burbujas",
+		"mobile.notifications.channel.bubble_pulse": "Pulso de burbuja",
+		"mobile.notifications.channel.description": "Alertas de Local Operator. La configuración de sonido de tu ordenador elige cuál de estos canales suena.",
+		"mobile.notifications.channel.felt_marimba": "Marimba de fieltro",
+		"mobile.notifications.channel.hum_swell": "Zumbido creciente",
+		"mobile.notifications.channel.signal_handshake": "Saludo de señales",
+		"mobile.notifications.channel.silent": "Silencio",
+		"mobile.notifications.channel.soft_pulse": "Pulso suave",
+		"mobile.notifications.channel.system": "Sonido del sistema",
+		"mobile.notifications.channel.tape_warble": "Cinta ondulante",
+		"mobile.notifications.channel.task_complete": "Tarea completada",
+		"mobile.notifications.channel.two_note_chime": "Campanilla de dos notas",
 		"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
 		"mobile.notifications.detail.conversation_asks": "Preguntas de esta conversación",
 		"mobile.notifications.detail.earlier_updates": "Actualizaciones anteriores",
@@ -1416,6 +1494,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Bibliothèque",
 		"mobile.notifications.answer": "Répondre",
 		"mobile.notifications.back": "Retour",
+		"mobile.notifications.channel.airy_whistle": "Sifflement léger",
+		"mobile.notifications.channel.bubble_chord": "Accord de bulles",
+		"mobile.notifications.channel.bubble_pulse": "Bulle brève",
+		"mobile.notifications.channel.description": "Alertes de Local Operator. Le réglage du son sur votre ordinateur choisit lequel de ces canaux est utilisé.",
+		"mobile.notifications.channel.felt_marimba": "Marimba feutré",
+		"mobile.notifications.channel.hum_swell": "Bourdon montant",
+		"mobile.notifications.channel.signal_handshake": "Poignée de main",
+		"mobile.notifications.channel.silent": "Silencieux",
+		"mobile.notifications.channel.soft_pulse": "Pulsation douce",
+		"mobile.notifications.channel.system": "Son du système",
+		"mobile.notifications.channel.tape_warble": "Bande ondulante",
+		"mobile.notifications.channel.task_complete": "Tâche terminée",
+		"mobile.notifications.channel.two_note_chime": "Carillon à deux notes",
 		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
 		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
 		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
@@ -1630,6 +1721,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "लाइब्रेरी",
 		"mobile.notifications.answer": "उत्तर दें",
 		"mobile.notifications.back": "वापस",
+		"mobile.notifications.channel.airy_whistle": "हल्की सीटी",
+		"mobile.notifications.channel.bubble_chord": "बुलबुलों का सुर",
+		"mobile.notifications.channel.bubble_pulse": "बुलबुले की धड़कन",
+		"mobile.notifications.channel.description": "Local Operator के अलर्ट। आपके कंप्यूटर की ध्वनि सेटिंग तय करती है कि इनमें से कौन-सा चैनल बजे।",
+		"mobile.notifications.channel.felt_marimba": "मुलायम मारिम्बा",
+		"mobile.notifications.channel.hum_swell": "उभरती गुनगुनाहट",
+		"mobile.notifications.channel.signal_handshake": "सिग्नल हैंडशेक",
+		"mobile.notifications.channel.silent": "बिना आवाज़",
+		"mobile.notifications.channel.soft_pulse": "कोमल धड़कन",
+		"mobile.notifications.channel.system": "सिस्टम ध्वनि",
+		"mobile.notifications.channel.tape_warble": "लहराती टेप",
+		"mobile.notifications.channel.task_complete": "काम पूरा",
+		"mobile.notifications.channel.two_note_chime": "दो सुरों वाली घंटी",
 		"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
 		"mobile.notifications.detail.conversation_asks": "इस बातचीत के सवाल",
 		"mobile.notifications.detail.earlier_updates": "पिछले अपडेट",
@@ -1844,6 +1948,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Библиотека",
 		"mobile.notifications.answer": "Ответить",
 		"mobile.notifications.back": "Назад",
+		"mobile.notifications.channel.airy_whistle": "Лёгкий свист",
+		"mobile.notifications.channel.bubble_chord": "Аккорд пузырьков",
+		"mobile.notifications.channel.bubble_pulse": "Пузырьковый импульс",
+		"mobile.notifications.channel.description": "Оповещения Local Operator. Какой из этих каналов звучит, выбирает настройка звука на вашем компьютере.",
+		"mobile.notifications.channel.felt_marimba": "Войлочная маримба",
+		"mobile.notifications.channel.hum_swell": "Нарастающий гул",
+		"mobile.notifications.channel.signal_handshake": "Обмен сигналами",
+		"mobile.notifications.channel.silent": "Без звука",
+		"mobile.notifications.channel.soft_pulse": "Мягкий импульс",
+		"mobile.notifications.channel.system": "Системный звук",
+		"mobile.notifications.channel.tape_warble": "Плывущая плёнка",
+		"mobile.notifications.channel.task_complete": "Задача выполнена",
+		"mobile.notifications.channel.two_note_chime": "Двухнотный звон",
 		"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
 		"mobile.notifications.detail.conversation_asks": "Вопросы этой беседы",
 		"mobile.notifications.detail.earlier_updates": "Прошлые обновления",
@@ -2058,6 +2175,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "لائبریری",
 		"mobile.notifications.answer": "جواب دیں",
 		"mobile.notifications.back": "واپس",
+		"mobile.notifications.channel.airy_whistle": "ہلکی سیٹی",
+		"mobile.notifications.channel.bubble_chord": "بلبلوں کا سُر",
+		"mobile.notifications.channel.bubble_pulse": "بلبلے کی دھڑکن",
+		"mobile.notifications.channel.description": "Local Operator کے الرٹس۔ آپ کے کمپیوٹر کی آواز کی سیٹنگ طے کرتی ہے کہ ان میں سے کون سا چینل بجے۔",
+		"mobile.notifications.channel.felt_marimba": "نرم ماریمبا",
+		"mobile.notifications.channel.hum_swell": "ابھرتی گنگناہٹ",
+		"mobile.notifications.channel.signal_handshake": "اشاروں کا تبادلہ",
+		"mobile.notifications.channel.silent": "خاموش",
+		"mobile.notifications.channel.soft_pulse": "نرم دھڑکن",
+		"mobile.notifications.channel.system": "سسٹم کی آواز",
+		"mobile.notifications.channel.tape_warble": "لرزتی ٹیپ",
+		"mobile.notifications.channel.task_complete": "کام مکمل",
+		"mobile.notifications.channel.two_note_chime": "دو سُری گھنٹی",
 		"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
 		"mobile.notifications.detail.conversation_asks": "اس گفتگو کے سوالات",
 		"mobile.notifications.detail.earlier_updates": "پچھلی اپ ڈیٹس",
@@ -2272,6 +2402,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Thư viện",
 		"mobile.notifications.answer": "Trả lời",
 		"mobile.notifications.back": "Quay lại",
+		"mobile.notifications.channel.airy_whistle": "Tiếng huýt nhẹ",
+		"mobile.notifications.channel.bubble_chord": "Hợp âm bong bóng",
+		"mobile.notifications.channel.bubble_pulse": "Nhịp bong bóng",
+		"mobile.notifications.channel.description": "Cảnh báo từ Local Operator. Cài đặt âm thanh trên máy tính của bạn chọn kênh nào sẽ phát.",
+		"mobile.notifications.channel.felt_marimba": "Marimba êm",
+		"mobile.notifications.channel.hum_swell": "Tiếng ngân tăng dần",
+		"mobile.notifications.channel.signal_handshake": "Bắt tay tín hiệu",
+		"mobile.notifications.channel.silent": "Im lặng",
+		"mobile.notifications.channel.soft_pulse": "Nhịp êm",
+		"mobile.notifications.channel.system": "Âm thanh hệ thống",
+		"mobile.notifications.channel.tape_warble": "Băng rung",
+		"mobile.notifications.channel.task_complete": "Hoàn tất tác vụ",
+		"mobile.notifications.channel.two_note_chime": "Chuông hai nốt",
 		"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
 		"mobile.notifications.detail.conversation_asks": "Câu hỏi trong cuộc trò chuyện này",
 		"mobile.notifications.detail.earlier_updates": "Cập nhật trước đó",
@@ -2486,6 +2629,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "资料库",
 		"mobile.notifications.answer": "回答",
 		"mobile.notifications.back": "返回",
+		"mobile.notifications.channel.airy_whistle": "轻盈口哨",
+		"mobile.notifications.channel.bubble_chord": "气泡和弦",
+		"mobile.notifications.channel.bubble_pulse": "气泡脉冲",
+		"mobile.notifications.channel.description": "来自 Local Operator 的提醒。由你电脑上的声音设置决定使用哪个渠道。",
+		"mobile.notifications.channel.felt_marimba": "毛毡马林巴",
+		"mobile.notifications.channel.hum_swell": "渐强嗡鸣",
+		"mobile.notifications.channel.signal_handshake": "信号握手",
+		"mobile.notifications.channel.silent": "静音",
+		"mobile.notifications.channel.soft_pulse": "轻柔脉冲",
+		"mobile.notifications.channel.system": "系统声音",
+		"mobile.notifications.channel.tape_warble": "磁带颤音",
+		"mobile.notifications.channel.task_complete": "任务完成",
+		"mobile.notifications.channel.two_note_chime": "双音钟声",
 		"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
 		"mobile.notifications.detail.conversation_asks": "此对话的问题",
 		"mobile.notifications.detail.earlier_updates": "较早的更新",
