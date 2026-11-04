@@ -708,6 +708,20 @@ describe("highlights copy in another locale", () => {
 		expect(withheld(3)).toBe("3 файла не показаны: файл больше не существует");
 		expect(withheld(5)).toBe("5 файлов не показано: файл больше не существует");
 	});
+
+	it("joins several reasons with the locale's own list separator", () => {
+		setLocaleSource(() => "zh-CN");
+		expect(
+			withheldText(
+				doneRow({
+					withheld: [
+						{ name: "a", reason: "outside" },
+						{ name: "b", reason: "sensitive" },
+					],
+				}),
+			),
+		).toBe("2 个文件未显示：不在允许的位置、敏感文件");
+	});
 });
 
 describe("a11y labels", () => {

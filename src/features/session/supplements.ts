@@ -711,8 +711,21 @@ export function withheldText(beat: SupplementBeat): string | null {
 	if (reasons.length === 0) reasons.push(t(WITHHELD_REASON_KEY.outside));
 	return t("mobile.session.highlights.withheld", {
 		count,
-		reasons: reasons.join(", "),
+		reasons: joinReasons(reasons),
 	});
+}
+
+/**
+ * The reasons as a bare list in the reader's locale: folded pairwise through
+ * one catalogue key, so zh-CN gets `、` and ur `، ` without the line growing
+ * an "and". NOT `Intl.ListFormat`: measured on Node's ICU, `type: "unit"`
+ * concatenates zh-CN (`ABC`), space-joins ru (`A B C`) and inserts "et"/"اور"
+ * for fr/ur — so the translator owns the separator instead.
+ */
+function joinReasons(reasons: readonly string[]): string {
+	return reasons.reduce((first, second) =>
+		t("mobile.session.highlights.withheld_reasons_join", { first, second }),
+	);
 }
 
 /** The name a sound is announced and captioned by: its own title, else the

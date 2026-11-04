@@ -11,5 +11,6 @@
 	"mobile.session.highlights.sound_untitled": "Sonido",
 	"mobile.session.highlights.video_open": "Reproducir vídeo {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# sonido más} other {# sonidos más}}",
-	"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}"
+	"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
 }

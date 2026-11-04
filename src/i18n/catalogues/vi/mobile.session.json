@@ -11,5 +11,6 @@
 	"mobile.session.highlights.sound_untitled": "Âm thanh",
 	"mobile.session.highlights.video_open": "Phát video {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, other {Thêm # âm thanh}}",
-	"mobile.session.highlights.sound_refused": "Không thể phát: {reason}"
+	"mobile.session.highlights.sound_refused": "Không thể phát: {reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
 }

@@ -9,7 +9,7 @@
 	},
 	"mobile.session.highlights.withheld": {
 		"role": "status",
-		"note": "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them with a comma. No final full stop."
+		"note": "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them pairwise with mobile.session.highlights.withheld_reasons_join. No final full stop."
 	},
 	"mobile.session.highlights.withheld_outside": {
 		"role": "meta",
@@ -50,5 +50,9 @@
 	"mobile.session.highlights.sound_refused": {
 		"role": "status",
 		"note": "Shown under a sound cell when its bytes could not be fetched. {reason} is the relay's own sentence, passed through untranslated. No final full stop."
+	},
+	"mobile.session.highlights.withheld_reasons_join": {
+		"role": "meta",
+		"note": "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders."
 	}
 }

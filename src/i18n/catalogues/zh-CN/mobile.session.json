@@ -11,5 +11,6 @@
 	"mobile.session.highlights.sound_untitled": "声音",
 	"mobile.session.highlights.video_open": "播放视频{name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, other {还有 # 个声音}}",
-	"mobile.session.highlights.sound_refused": "无法播放：{reason}"
+	"mobile.session.highlights.sound_refused": "无法播放：{reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}、{second}"
 }

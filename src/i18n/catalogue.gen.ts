@@ -198,6 +198,7 @@ export type CatalogueKey =
 	| "mobile.session.highlights.withheld"
 	| "mobile.session.highlights.withheld_missing"
 	| "mobile.session.highlights.withheld_outside"
+	| "mobile.session.highlights.withheld_reasons_join"
 	| "mobile.session.highlights.withheld_sensitive"
 	| "mobile.session.highlights.withheld_too_large"
 	| "mobile.session.status_tray.hint"
@@ -563,6 +564,7 @@ export type MessageParams = {
 	"mobile.session.highlights.withheld": { reasons: string | number; count: number };
 	"mobile.session.highlights.withheld_missing": NoParams;
 	"mobile.session.highlights.withheld_outside": NoParams;
+	"mobile.session.highlights.withheld_reasons_join": { first: string | number; second: string | number };
 	"mobile.session.highlights.withheld_sensitive": NoParams;
 	"mobile.session.highlights.withheld_too_large": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
@@ -775,6 +777,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.highlights.withheld": "{count, plural, one {# file not shown} other {# files not shown}}: {reasons}",
 	"mobile.session.highlights.withheld_missing": "file no longer exists",
 	"mobile.session.highlights.withheld_outside": "outside allowed locations",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.highlights.withheld_sensitive": "sensitive file",
 	"mobile.session.highlights.withheld_too_large": "too large to preview",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
@@ -969,9 +972,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.highlights.sound_untitled": { role: "meta", note: "Stand-in name for a sound with no title, used inside the play/pause labels. One noun." },
 	"mobile.session.highlights.sounds_more": { role: "meta", note: "Line under the sounds grid when the row held back sounds beyond its bound. {count} counts sounds. No final full stop." },
 	"mobile.session.highlights.video_open": { role: "button", note: "Accessibility label of a video tile that starts playback. {name} is the file name, verbatim. No full stop." },
-	"mobile.session.highlights.withheld": { role: "status", note: "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them with a comma. No final full stop." },
+	"mobile.session.highlights.withheld": { role: "status", note: "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them pairwise with mobile.session.highlights.withheld_reasons_join. No final full stop." },
 	"mobile.session.highlights.withheld_missing": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the named file was deleted or never written. Lower case, no full stop." },
 	"mobile.session.highlights.withheld_outside": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file lies outside the folders the app may show. Lower case, no full stop." },
+	"mobile.session.highlights.withheld_reasons_join": { role: "meta", note: "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders." },
 	"mobile.session.highlights.withheld_sensitive": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop." },
 	"mobile.session.highlights.withheld_too_large": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
@@ -1183,6 +1187,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, one {# archivo no mostrado} other {# archivos no mostrados}}: {reasons}",
 		"mobile.session.highlights.withheld_missing": "el archivo ya no existe",
 		"mobile.session.highlights.withheld_outside": "fuera de las ubicaciones permitidas",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "archivo confidencial",
 		"mobile.session.highlights.withheld_too_large": "demasiado grande para previsualizar",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
@@ -1378,6 +1383,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, one {# fichier non affiché} other {# fichiers non affichés}} : {reasons}",
 		"mobile.session.highlights.withheld_missing": "le fichier n’existe plus",
 		"mobile.session.highlights.withheld_outside": "hors des emplacements autorisés",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "fichier sensible",
 		"mobile.session.highlights.withheld_too_large": "trop volumineux pour l’aperçu",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
@@ -1573,6 +1579,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, one {# फ़ाइल नहीं दिखाई गई} other {# फ़ाइलें नहीं दिखाई गईं}}: {reasons}",
 		"mobile.session.highlights.withheld_missing": "फ़ाइल अब मौजूद नहीं है",
 		"mobile.session.highlights.withheld_outside": "अनुमत स्थानों से बाहर",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "संवेदनशील फ़ाइल",
 		"mobile.session.highlights.withheld_too_large": "पूर्वावलोकन के लिए बहुत बड़ी",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
@@ -1768,6 +1775,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, one {# файл не показан} few {# файла не показаны} many {# файлов не показано} other {# файла не показано}}: {reasons}",
 		"mobile.session.highlights.withheld_missing": "файл больше не существует",
 		"mobile.session.highlights.withheld_outside": "за пределами разрешённых мест",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "конфиденциальный файл",
 		"mobile.session.highlights.withheld_too_large": "слишком большой для просмотра",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
@@ -1963,6 +1971,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, one {# فائل نہیں دکھائی گئی} other {# فائلیں نہیں دکھائی گئیں}}: {reasons}",
 		"mobile.session.highlights.withheld_missing": "فائل اب موجود نہیں",
 		"mobile.session.highlights.withheld_outside": "اجازت یافتہ مقامات سے باہر",
+		"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
 		"mobile.session.highlights.withheld_sensitive": "حساس فائل",
 		"mobile.session.highlights.withheld_too_large": "پیش نظارہ کے لیے بہت بڑی",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
@@ -2158,6 +2167,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, other {# tệp không được hiển thị}}: {reasons}",
 		"mobile.session.highlights.withheld_missing": "tệp không còn tồn tại",
 		"mobile.session.highlights.withheld_outside": "nằm ngoài vị trí được phép",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "tệp nhạy cảm",
 		"mobile.session.highlights.withheld_too_large": "quá lớn để xem trước",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
@@ -2353,6 +2363,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld": "{count, plural, other {# 个文件未显示}}：{reasons}",
 		"mobile.session.highlights.withheld_missing": "文件已不存在",
 		"mobile.session.highlights.withheld_outside": "不在允许的位置",
+		"mobile.session.highlights.withheld_reasons_join": "{first}、{second}",
 		"mobile.session.highlights.withheld_sensitive": "敏感文件",
 		"mobile.session.highlights.withheld_too_large": "太大，无法预览",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",

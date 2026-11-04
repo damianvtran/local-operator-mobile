@@ -3941,7 +3941,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 							attachment: "0123456789abcdef0123456789abcdef",
 							mime: "audio/wav",
 							title: "rain-loop.wav",
-							duration_s: 1,
+							duration_s: 8,
 							path: "~/picks/rain-loop.wav",
 							origin: "file",
 						},
@@ -3949,7 +3949,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 							attachment: "fedcba9876543210fedcba9876543210",
 							mime: "audio/wav",
 							title: "Door chime",
-							duration_s: 1,
+							duration_s: 8,
 						},
 					],
 					withheld: [

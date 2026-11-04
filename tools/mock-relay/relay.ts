@@ -169,11 +169,13 @@ const UNDECODABLE_MEDIA = Buffer.from("z".repeat(2048));
  * the mock for every other cell, and cached because it is the same bytes for
  * every digest.
  */
-/** One second of a quiet 440 Hz tone, 8 kHz mono 16-bit PCM: built, not
- *  vendored, so the mock carries no binary asset for its `/sound` route. */
+/** Eight seconds of a quiet 440 Hz tone, 8 kHz mono 16-bit PCM: built, not
+ *  vendored, so the mock carries no binary asset for its `/sound` route. Eight,
+ *  not one: a one-second clip ended before a capture could observe a playing
+ *  cell or a second press pausing the first (design round 1, D2's note). */
 const MOCK_WAV: Buffer = (() => {
 	const rate = 8000;
-	const samples = rate;
+	const samples = rate * 8;
 	const data = Buffer.alloc(samples * 2);
 	for (let i = 0; i < samples; i += 1) {
 		data.writeInt16LE(

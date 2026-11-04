@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list here is regenerated from the same record on each render (the row's own `files`/`components` arrays), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { Pause, Play } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	Image,
@@ -54,6 +55,7 @@ import {
 } from "@/features/session/supplements";
 import { t } from "@/i18n";
 import { CONTROL, SURFACE, supplementFileId } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Input, Shimmer } from "@/ui/components";
 import { cx } from "@/ui/variants";
 
@@ -184,7 +186,7 @@ export const SupplementBlock = ({
 	 */
 	const [sticky, setSticky] = useState(0);
 
-	const { height: windowHeight } = useWindowDimensions();
+	const { height: windowHeight, width: windowWidth } = useWindowDimensions();
 
 	const sendOp = useCallback(
 		async (op: "cancel" | "restart" | "steer", text = ""): Promise<void> => {
@@ -593,11 +595,18 @@ export const SupplementBlock = ({
 		sounds.length > 0 ? (
 			<View className="flex-col gap-1" testID={SURFACE.supplementSounds}>
 				<View className="flex-row flex-wrap gap-2">
-					{sounds.map((sound) => (
+					{sounds.map((sound, index) => (
 						<View
-							key={sound.attachment}
+							/* The digest alone is not unique: the store is content-addressed,
+							   so two byte-identical written files (a `cp`'d copy) share it. */
+							key={`${sound.attachment}:${index}`}
 							className={
-								sounds.length > 1 ? "min-w-0 basis-[48%] grow" : "w-full"
+								/* One column under 360 pt (the relay web's `max-[359px]` rule):
+								   two 140 pt cells give the name away to the clock once one
+								   plays (design round 1, D3). */
+								sounds.length > 1 && windowWidth >= 360
+									? "min-w-0 basis-[48%] grow"
+									: "w-full"
 							}
 						>
 							<SoundCell sound={sound} client={client} />
@@ -713,9 +722,7 @@ function SoundCell({
 				testID={CONTROL.supplementSoundToggle}
 				onPress={() => void load()}
 			>
-				<Text aria-hidden className="text-meta text-ink-dim">
-					▶
-				</Text>
+				<SoundGlyph playing={false} />
 				<Text className="min-w-0 flex-1 text-meta text-ink" numberOfLines={1}>
 					{name}
 				</Text>
@@ -746,11 +753,15 @@ function LoadedSound({
 	const player = useAudioPlayer(uri);
 	const status = useAudioPlayerStatus(player);
 	const [started, setStarted] = useState(false);
+	/* Release the audible slot with the cell, so a pruned row cannot keep a
+	   stale claim that a later `claimPlayback` would try to pause. */
+	useEffect(() => () => releasePlayback(player), [player]);
 	/* The press that fetched the bytes was a press to PLAY: start once the
 	   player has loaded, rather than asking for a second tap. */
 	useEffect(() => {
 		if (!started && status.isLoaded) {
 			setStarted(true);
+			claimPlayback(player);
 			player.play();
 		}
 	}, [started, status.isLoaded, player]);
@@ -765,6 +776,7 @@ function LoadedSound({
 		if (status.duration > 0 && status.currentTime >= status.duration - 0.05) {
 			void player.seekTo(0);
 		}
+		claimPlayback(player);
 		player.play();
 	};
 	const total = status.duration > 0 ? status.duration : sound.durationS;
@@ -777,9 +789,7 @@ function LoadedSound({
 			testID={CONTROL.supplementSoundToggle}
 			onPress={toggle}
 		>
-			<Text aria-hidden className="text-meta text-ink-dim">
-				{playing ? "❚❚" : "▶"}
-			</Text>
+			<SoundGlyph playing={playing} />
 			<Text className="min-w-0 flex-1 text-meta text-ink" numberOfLines={1}>
 				{name}
 			</Text>
@@ -789,6 +799,39 @@ function LoadedSound({
 					: clockText(status.currentTime)}
 			</Text>
 		</Pressable>
+	);
+}
+
+/**
+ * ONE AUDIBLE SOUND AT A TIME, the relay web player's rule
+ * (`mobile/web/src/components/sound-player.tsx`'s `claimPlayback`): a grid of
+ * fourteen cells where each tap starts another voice over the last is noise,
+ * not playback. Module-level on purpose — the cells sit in different blocks
+ * (one per answer), so no component above them all owns the slot.
+ */
+type AudibleSlot = { pause: () => void };
+let audible: AudibleSlot | null = null;
+
+/** Make `player` the one audible sound, pausing whoever held the slot. */
+function claimPlayback(player: AudibleSlot): void {
+	if (audible !== null && audible !== player) audible.pause();
+	audible = player;
+}
+
+/** Release the slot only if it is still ours (a later claim owns it otherwise). */
+function releasePlayback(player: AudibleSlot): void {
+	if (audible === player) audible = null;
+}
+
+/** The play/pause mark for sound cells and video tiles: lucide's, the transcript video's own icon
+ *  language, so the glyph has fixed metrics instead of a font's (and U+25B6
+ *  cannot turn into the colour emoji on iOS — design round 1, D2). */
+function SoundGlyph({ playing }: { playing: boolean }) {
+	const ink = useTokenColor("accent");
+	return playing ? (
+		<Pause aria-hidden color={ink} size={14} />
+	) : (
+		<Play aria-hidden color={ink} size={14} />
 	);
 }
 
@@ -805,12 +848,16 @@ function VideoPreview({ uri }: { uri: string }) {
 		instance.play();
 	});
 	return (
-		<VideoView
-			player={player}
-			nativeControls
-			contentFit="contain"
-			style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 4 }}
-		/>
+		/* The radius rides the token on a wrapper (`rounded-sm`, the image
+		   preview's): `VideoView` takes a style object, not a class. */
+		<View className="w-full overflow-hidden rounded-sm">
+			<VideoView
+				player={player}
+				nativeControls
+				contentFit="contain"
+				style={{ width: "100%", aspectRatio: 16 / 9 }}
+			/>
+		</View>
 	);
 }
 
@@ -864,6 +911,22 @@ async function loadFilePreview(
 			message: `Could not preview: ${refusalText(error)}`,
 		};
 	}
+}
+
+/**
+ * Release a video preview's web object URL when the preview is replaced or its
+ * row unmounts (`playableSource`'s contract: the caller revokes). Without it
+ * every distinct video opened on the web target pins a Blob of up to the
+ * route's 10 MB for the page's life. Native cache files are the OS's to reclaim.
+ */
+function useRevokedPreview(preview: FilePreview | null): void {
+	const uri = preview?.kind === "video" ? preview.uri : null;
+	useEffect(
+		() => () => {
+			if (uri?.startsWith("blob:")) URL.revokeObjectURL(uri);
+		},
+		[uri],
+	);
 }
 
 /** The preview one open callout renders: the fetched bytes (text in a sunken
@@ -947,6 +1010,7 @@ function CalloutRow({
 		fileClass === "text" || fileClass === "image" || fileClass === "video";
 	const [open, setOpen] = useState(false);
 	const [preview, setPreview] = useState<FilePreview | null>(null);
+	useRevokedPreview(preview);
 
 	const toggle = async () => {
 		if (!previewable) return;
@@ -985,17 +1049,20 @@ function CalloutRow({
 						}
 						onPress={() => void toggle()}
 					>
-						<Text className="text-meta text-ink" numberOfLines={1}>
-							{video ? (
-								<Text aria-hidden className="text-ink-dim">
-									{"▶ "}
-								</Text>
-							) : null}
-							{label}
-							{path && name ? (
-								<Text className="text-ink-muted"> {path}</Text>
-							) : null}
-						</Text>
+						<View className="min-w-0 flex-row items-center gap-2">
+							{/* The tile's mark is the transcript video's own lucide Play
+							    (design round 1, D2), not a text glyph. */}
+							{video ? <SoundGlyph playing={false} /> : null}
+							<Text
+								className="min-w-0 flex-1 text-meta text-ink"
+								numberOfLines={1}
+							>
+								{label}
+								{path && name ? (
+									<Text className="text-ink-muted"> {path}</Text>
+								) : null}
+							</Text>
+						</View>
 					</Pressable>
 				) : (
 					<Text
@@ -1040,7 +1107,12 @@ function SummaryFilesLine({
 	client: SupplementClient;
 }) {
 	const [openAt, setOpenAt] = useState<number | null>(null);
+	/* The last fetched preview and the entry it belongs to: kept across a close
+	   so reopening the same name costs no request (and, for a video, no second
+	   Blob) — only a refusal is dropped, so it can be retried (UX round 1, U2). */
 	const [preview, setPreview] = useState<FilePreview | null>(null);
+	const [previewAt, setPreviewAt] = useState<number | null>(null);
+	useRevokedPreview(preview);
 
 	const previewable = (entry: FilesSummaryEntry): boolean => {
 		if (entry.file === null) return false;
@@ -1055,10 +1127,14 @@ function SummaryFilesLine({
 			return;
 		if (openAt === at) {
 			setOpenAt(null);
-			setPreview(null);
+			setPreview((current) => (current?.kind === "refused" ? null : current));
 			return;
 		}
 		setOpenAt(at);
+		if (previewAt === at && preview !== null && preview.kind !== "loading") {
+			return;
+		}
+		setPreviewAt(at);
 		setPreview({ kind: "loading" });
 		setPreview(
 			await loadFilePreview(
@@ -1098,8 +1174,24 @@ function SummaryFilesLine({
 							<Text
 								className="text-meta text-ink-muted"
 								onPress={() => void toggle(at)}
+								/* A video names its action: the label says "Play video …",
+								   and the ▶ run marks it playable before the tap (design
+								   round 1, D1) — an underline alone reads as any file. */
+								accessibilityLabel={
+									entry.file !== null && isVideoFile(entry.file)
+										? videoTileLabel(entry.file)
+										: undefined
+								}
 								style={{ textDecorationLine: "underline" }}
 							>
+								{entry.file !== null && isVideoFile(entry.file) ? (
+									/* Inline in the sentence, so a text run, not the lucide
+									   icon (a View inside Text breaks the wrap on web). U+FE0E
+									   pins the text form: bare U+25B6 is emoji-capable on iOS. */
+									<Text aria-hidden className="text-accent">
+										{"▶\uFE0E "}
+									</Text>
+								) : null}
 								{entry.name}
 							</Text>
 						) : (
@@ -1109,7 +1201,10 @@ function SummaryFilesLine({
 					</Text>
 				))}
 			</View>
-			{openAt !== null && preview !== null && openEntry !== null ? (
+			{openAt !== null &&
+			previewAt === openAt &&
+			preview !== null &&
+			openEntry !== null ? (
 				<PreviewPanel preview={preview} label={openEntry.name} />
 			) : null}
 		</View>

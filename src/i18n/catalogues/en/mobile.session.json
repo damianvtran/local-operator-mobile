@@ -11,5 +11,6 @@
 	"mobile.session.highlights.sound_untitled": "Sound",
 	"mobile.session.highlights.video_open": "Play video {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# more sound} other {# more sounds}}",
-	"mobile.session.highlights.sound_refused": "Could not play: {reason}"
+	"mobile.session.highlights.sound_refused": "Could not play: {reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
 }
