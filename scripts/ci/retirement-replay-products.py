@@ -108,7 +108,21 @@ def package(root):
     # Runner ONLY; the retained proof app is not present in this compile job.
     info_path = runner / 'Info.plist'
     with info_path.open('rb') as stream: info = plistlib.load(stream)
-    if info.get('NSAppTransportSecurity', {}) not in ({}, {'NSAllowsLocalNetworking': True}): raise ValueError('Unexpected runner ATS policy')
+    # WHY THE TEMPLATE VALUE IS RECOGNISED. The UI-test host is Xcode's built-in
+    # XCTRunner template, copied from the platform rather than generated from our
+    # project: GENERATE_INFOPLIST_FILE only shapes the .xctest bundle, and no build
+    # setting reaches the runner's ATS. On Xcode 26.6 / Simulator SDK 26.5 that
+    # template ships {'NSAllowsArbitraryLoads': True} (read from the runner in artifact 13229037660, built by
+    # run 41632496560). That exact value is accepted ONLY as input to the rewrite
+    # below; it is never packaged. Any other shape (an extra key, exception
+    # domains, a non-bool, web-content loads) is still refused, because it means
+    # the template or our project changed and the policy must be looked at again.
+    xcode_runner_template = {'NSAllowsArbitraryLoads': True}
+    current = info.get('NSAppTransportSecurity', {})
+    # `type(...) is bool` because `True == 1` would let an integer through.
+    template = current == xcode_runner_template and type(current.get('NSAllowsArbitraryLoads')) is bool
+    local = current == {'NSAllowsLocalNetworking': True} and type(current.get('NSAllowsLocalNetworking')) is bool
+    if not (current == {} or local or template): raise ValueError('Unexpected runner ATS policy')
     info['NSAppTransportSecurity'] = {'NSAllowsLocalNetworking': True}
     with info_path.open('wb') as stream: plistlib.dump(info, stream)
     with info_path.open('rb') as stream:

@@ -128,12 +128,48 @@ class ProductFixtures(unittest.TestCase):
         binary.write_bytes(b'tampered')
         with self.assertRaises(ValueError): API['prepare'](destination, environment, destination / 'Products/private.xctestrun')
 
-    def test_broad_ats_is_not_silently_relaxed(self):
+    def set_ats(self, value):
         path = self.runner / 'Info.plist'
         info = plistlib.loads(path.read_bytes())
-        info['NSAppTransportSecurity'] = {'NSAllowsArbitraryLoads': True}
+        info['NSAppTransportSecurity'] = value
         path.write_bytes(plistlib.dumps(info))
-        with self.assertRaises(ValueError): API['package'](self.root)
+
+    def packaged_runner_ats(self):
+        # Read the plist member straight from OUR just-built archive: no extraction,
+        # and it works on the hosted /usr/bin/python3, whose tarfile has no extraction `filter=`.
+        with API['tarfile'].open(self.root / 'runner-products.tar.gz') as archive:
+            member = archive.extractfile('Products/Debug-iphonesimulator/RetirementSystemAlert-Runner.app/Info.plist')
+            return plistlib.loads(member.read())['NSAppTransportSecurity']
+
+    def test_xcode_runner_template_ats_is_replaced_with_local_only(self):
+        # Xcode's XCTRunner template value (Xcode 26.6 / SDK 26.5) is rewritten,
+        # never shipped: the packaged runner reads back as local networking only.
+        self.set_ats({'NSAllowsArbitraryLoads': True})
+        API['package'](self.root)
+        self.assertEqual(self.packaged_runner_ats(), {'NSAllowsLocalNetworking': True})
+        receipt = json.loads((self.root / 'setup-receipt.json').read_text())
+        self.assertIs(receipt['localNetworkingOnly'], True)
+        self.assertIs(receipt['packageValidated'], True)
+
+    def test_broad_ats_is_not_silently_relaxed(self):
+        # Anything that is not exactly the template, exactly local-only, or absent
+        # is refused before packaging, so a changed template is looked at again.
+        for value in [
+            {'NSAllowsArbitraryLoads': True, 'NSAllowsLocalNetworking': True},
+            {'NSAllowsArbitraryLoads': True, 'NSExceptionDomains': {'example.com': {'NSExceptionAllowsInsecureHTTPLoads': True}}},
+            {'NSExceptionDomains': {'localhost': {'NSExceptionAllowsInsecureHTTPLoads': True}}},
+            {'NSAllowsArbitraryLoadsInWebContent': True},
+            {'NSAllowsArbitraryLoads': 1},
+            {'NSAllowsArbitraryLoads': 'YES'},
+            {'NSAllowsArbitraryLoads': False},
+            {'NSAllowsLocalNetworking': 1},
+            {'NSAllowsLocalNetworking': False},
+            [],
+        ]:
+            with self.subTest(value=value):
+                self.set_ats(value)
+                with self.assertRaises(ValueError): API['package'](self.root)
+                self.assertFalse((self.root / 'runner-products.tar.gz').exists())
 
     def test_compile_preflight_checks_actual_original_identity_and_remaining_window(self):
         value = {'id': 13225164386, 'expired': False, 'expires_at': '2030-01-01T00:00:00Z', 'workflow_run': {'id': 41620694610, 'head_sha': '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b'}}
