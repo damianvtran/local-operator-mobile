@@ -37,6 +37,7 @@ function exercise(
 	cleanupSeconds: number,
 	cleanupOnly = false,
 	bootstrap = false,
+	bootSeconds = 300,
 ) {
 	const workFile = join(root, "work.cjs"),
 		cleanupFile = join(root, "cleanup.cjs");
@@ -59,7 +60,7 @@ def start(argv,**kwargs):
    time.sleep(0.005)
  return child
 m['subprocess'].Popen=start
-result=m['supervise']([sys.argv[2],sys.argv[3]],[sys.argv[2],sys.argv[4]],m['Path'](sys.argv[5]),float(sys.argv[6]),float(sys.argv[7]),sys.argv[8]=='1')
+result=m['supervise']([sys.argv[2],sys.argv[3]],[sys.argv[2],sys.argv[4]],m['Path'](sys.argv[5]),float(sys.argv[6]),float(sys.argv[7]),sys.argv[8]=='1',float(sys.argv[10]))
 print(json.dumps(result))
 `;
 	const child = spawnSync(
@@ -76,6 +77,7 @@ print(json.dumps(result))
 			String(cleanupSeconds),
 			cleanupOnly ? "1" : "0",
 			bootstrap ? "1" : "0",
+			String(bootSeconds),
 		],
 		{ encoding: "utf8", timeout: 5000, maxBuffer: 65536 },
 	);
@@ -225,3 +227,94 @@ it("exact production Python watchdog launches bare Node24 through the entire imp
 	expect(receipt.first.workerReaped).toBe(true);
 	expect(existsSync(join(run, "creation-intent.json"))).toBe(false);
 }, 6000);
+
+/*
+ * BOOT WINDOW (reviewed fix for replay 41768325986). Simulator boot + readiness
+ * run on their own clock so a cold boot cannot eat the 300s experiment, but:
+ * the window is capped on its own, the work clock resumes with exactly what it
+ * had left, a second window is refused, and a work overrun still fails.
+ */
+const signal = (state: string) =>
+	`fs.writeSync(Number(process.env.LO_REPLAY_SUPERVISOR_FD),JSON.stringify({boot:${JSON.stringify(state)}})+'\\n');`;
+const spin = (ms: number) => `{const e=Date.now()+${ms};while(Date.now()<e){}}`;
+it("a boot window longer than the work budget does not consume it; work resumes with what was left", () => {
+	const root = fixture();
+	// 0.6s work budget; a 0.9s boot window would have killed the old shared clock.
+	const work = `const fs=require('node:fs');${signal("start")}${spin(900)}${signal("end")}${spin(200)}process.exit(0)`;
+	const result = exercise(
+		root,
+		work,
+		"process.exit(0)",
+		0.6,
+		1,
+		false,
+		false,
+		2,
+	);
+	expect(result.first.stopReason).toBeNull();
+	expect(result.first.workerExit).toBe(0);
+	expect(result.first.bootElapsedMs).toBeGreaterThanOrEqual(850);
+	expect(result.bootBudgetSeconds).toBe(2);
+}, 6000);
+it("a boot overrun is classified boot-timeout, not a work deadline", () => {
+	const root = fixture(),
+		run = join(root, "run");
+	const work = `const fs=require('node:fs');${signal("start")}while(true){}`;
+	const result = exercise(
+		root,
+		work,
+		"process.exit(0)",
+		5,
+		1,
+		false,
+		false,
+		0.4,
+	);
+	expect(result.first.stopReason).toBe("boot-deadline");
+	expect(result.elapsedMs).toBeLessThan(2000);
+	expect(
+		JSON.parse(readFileSync(join(run, "seed-first-failure.json"), "utf8")),
+	).toEqual({ cause: "boot-timeout" });
+	expect(result.firstCause).toBe("boot-timeout");
+}, 6000);
+it("a work overrun after boot still fails as a work deadline", () => {
+	const root = fixture(),
+		run = join(root, "run");
+	const work = `const fs=require('node:fs');${signal("start")}${spin(100)}${signal("end")}while(true){}`;
+	const result = exercise(
+		root,
+		work,
+		"process.exit(0)",
+		0.4,
+		1,
+		false,
+		false,
+		2,
+	);
+	expect(result.first.stopReason).toBe("work-deadline");
+	expect(
+		JSON.parse(readFileSync(join(run, "seed-first-failure.json"), "utf8")),
+	).toEqual({ cause: "deadline" });
+}, 6000);
+it("a second boot window is refused, so boot can never renew the work clock", () => {
+	const root = fixture();
+	const work = `const fs=require('node:fs');${signal("start")}${signal("end")}${signal("start")}while(true){}`;
+	const result = exercise(root, work, "process.exit(0)", 3, 1, false, false, 2);
+	expect(result.first.stopReason).toBe("supervisor-refused");
+	expect(result.elapsedMs).toBeLessThan(2500);
+}, 6000);
+it("the boot cap cannot be raised above the mirrored 300s", () => {
+	const root = fixture();
+	const child = spawnSync(
+		"/usr/bin/python3",
+		[
+			"-c",
+			"import runpy,sys;m=runpy.run_path(sys.argv[1]);m['supervise'](['x'],['x'],m['Path'](sys.argv[2]),1,1,False,301)",
+			join(import.meta.dirname, "retirement-replay-watchdog.py"),
+			join(root, "run"),
+		],
+		{ encoding: "utf8", timeout: 5000 },
+	);
+	expect(child.status).not.toBe(0);
+	expect(child.stderr).toContain("Budget refused");
+});

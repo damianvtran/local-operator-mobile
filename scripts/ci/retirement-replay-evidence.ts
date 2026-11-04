@@ -16,7 +16,12 @@ import {
 	ReplayRefused,
 	validateObservation,
 } from "./retirement-replay-core.ts";
-import { coarseCause } from "./retirement-replay-lifecycle.ts";
+import {
+	coarseCause,
+	type PhaseRecord,
+	REPLAY_PHASES,
+	type ReplayPhase,
+} from "./retirement-replay-lifecycle.ts";
 export const MAX_REPLAY_EVIDENCE_BYTES = 16 * 1024 * 1024;
 const JSON_RESERVE = 256 * 1024;
 export interface ExportSummary {
@@ -35,6 +40,26 @@ export interface ExportSummary {
 	captures: CaptureResult[];
 	observations: unknown;
 	secondary: string[];
+	/** Diagnostic pre-openurl phase timings; never part of acceptance. */
+	phases?: PhaseRecord[];
+	failedPhase?: ReplayPhase | null;
+}
+/** Keep only allowlisted phase names, finite non-negative integer timings and
+ * known statuses, so the export can never carry a command line or path. */
+function safePhases(value: unknown) {
+	if (!Array.isArray(value)) return [];
+	return value
+		.filter(
+			(p) =>
+				p &&
+				typeof p === "object" &&
+				(REPLAY_PHASES as readonly string[]).includes(p.name) &&
+				Number.isSafeInteger(p.elapsedMs) &&
+				p.elapsedMs >= 0 &&
+				(p.status === "ok" || p.status === "failed"),
+		)
+		.slice(0, REPLAY_PHASES.length)
+		.map((p) => ({ name: p.name, elapsedMs: p.elapsedMs, status: p.status }));
 }
 export function safeSummary(summary: ExportSummary) {
 	const hash = (v: unknown, length: number) =>
@@ -125,6 +150,13 @@ export function safeSummary(summary: ExportSummary) {
 			summary.cause === null
 				? null
 				: coarseCause(new ReplayRefused(summary.cause)),
+		// WHERE it stopped: the first phase that threw, next to the cause.
+		failedPhase:
+			typeof summary.failedPhase === "string" &&
+			(REPLAY_PHASES as readonly string[]).includes(summary.failedPhase)
+				? summary.failedPhase
+				: null,
+		phases: safePhases(summary.phases),
 		runnerReportedTap: summary.runnerReportedTap === true,
 		urlProgress:
 			/^(admitted|none|refused:(identity|scheme|nonce|phase|callback|parse))$/.test(

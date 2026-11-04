@@ -13,11 +13,37 @@ export class ReplayRefused extends Error {
 	}
 }
 export class Deadline {
-	readonly end: number;
+	#end: number;
+	#paused = false;
 	readonly clock: () => number;
 	constructor(ms: number, clock: () => number = () => performance.now()) {
 		this.clock = clock;
-		this.end = clock() + ms;
+		this.#end = clock() + ms;
+	}
+	get end() {
+		return this.#end;
+	}
+	/**
+	 * Run `work` with this clock STOPPED, then resume with exactly the time that
+	 * was left when it stopped. Never a renewal: the remaining budget after
+	 * `excluding` equals the remaining budget before it.
+	 *
+	 * WHY. Simulator boot gets its own budget (REPLAY_BOOT_BUDGET_MS) so a cold
+	 * boot cannot consume the 300s experiment. `work` must enforce its OWN cap;
+	 * the outer watchdog independently bounds it (boot start/end on its pipe).
+	 * At most one pause per Deadline, and pauses never nest.
+	 */
+	async excluding<T>(work: () => Promise<T>): Promise<T> {
+		if (this.#paused) throw new ReplayRefused("stage");
+		const left = this.remaining();
+		if (left <= 0) throw new ReplayRefused("deadline");
+		this.#paused = true;
+		try {
+			return await work();
+		} finally {
+			this.#end = this.clock() + left;
+			this.#paused = false;
+		}
 	}
 	remaining() {
 		return Math.max(0, this.end - this.clock());

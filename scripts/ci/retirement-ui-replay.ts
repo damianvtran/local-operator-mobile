@@ -46,10 +46,13 @@ import {
 	safeSummary,
 } from "./retirement-replay-evidence.ts";
 import {
+	bootPhase,
 	boundedWait,
 	cleanupBudget,
 	FirstFailure,
 	managedRunner,
+	PhaseLog,
+	REPLAY_BOOT_BUDGET_MS,
 	type RunnerHandle,
 } from "./retirement-replay-lifecycle.ts";
 import {
@@ -57,6 +60,7 @@ import {
 	NativeScope,
 	type SampleContext,
 	sampleOwnedProof,
+	signalBootWindow,
 } from "./retirement-replay-native.ts";
 import { deferred, ReplayTransport } from "./retirement-replay-transport.ts";
 import {
@@ -125,11 +129,14 @@ export interface SeedInput {
 	stopNative?: (deadline: Deadline) => Promise<void>;
 	capture?: (point: "after-openurl" | "after-tap") => Promise<CaptureResult>;
 	closeTransport?: (transport: ReplayTransport) => Promise<void>;
+	/** Diagnostic phase timings; absent in unit fixtures that don't assert them. */
+	phases?: PhaseLog;
 }
 /** Real coordinator with injected native/runner boundaries, not canned HTTP.
  * The original receipt clock is armed ONCE before openURL and never at tap. */
 export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 	const { root, source, udid, deadline, run } = input;
+	const phases = input.phases ?? new PhaseLog();
 	const failure = new FirstFailure(root);
 	let runner: RunnerHandle | undefined,
 		opened = false,
@@ -213,31 +220,40 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 	};
 	try {
 		const control = await transport.listen();
-		runner = input.startRunner(control, session);
-		void runner.completion.catch(() => undefined);
-		await boundedWait(
-			Promise.race([
-				transport.runner.promise,
-				runner.completion.then(() => {
-					throw new ReplayRefused("runner-early-exit");
-				}),
-			]),
-			deadline,
-			40000,
-		);
+		// Assigned OUTSIDE the phase closure so `runner` stays narrowed below, and
+		// is set before any await so cleanup always sees a started runner.
+		const started = input.startRunner(control, session);
+		runner = started;
+		void started.completion.catch(() => undefined);
+		await phases.step("runner-bootstrap", async () => {
+			await boundedWait(
+				Promise.race([
+					transport.runner.promise,
+					started.completion.then(() => {
+						throw new ReplayRefused("runner-early-exit");
+					}),
+				]),
+				deadline,
+				40000,
+			);
+		});
 		// This is the FINAL server expiry refresh, after XCTest actually bootstrapped.
 		await boundedWait(input.refreshArtifacts(), deadline, deadline.cap(20000));
 		transport.armReady();
-		const launch = await run(
-			"xcrun",
-			["simctl", "launch", udid, source.bundleId],
-			deadline.cap(60000),
+		const launch = await phases.step("launch", () =>
+			run(
+				"xcrun",
+				["simctl", "launch", udid, source.bundleId],
+				deadline.cap(60000),
+			),
 		);
 		const pid = Number(/:\s*(\d+)\s*$/.exec(launch)?.[1]);
 		if (!Number.isSafeInteger(pid) || pid <= 0)
 			throw new ReplayRefused("launch");
 		input.setPID(pid);
-		await boundedWait(transport.ready.promise, deadline, 75000);
+		await phases.step("ready", () =>
+			boundedWait(transport.ready.promise, deadline, 75000),
+		);
 		await input.sample();
 		deadline.require(70000);
 		transport.open();
@@ -259,10 +275,14 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 				: error;
 		});
 		void answer.catch(() => undefined);
-		const opening = run(
-			"xcrun",
-			["simctl", "openurl", udid, url.toString()],
-			deadline.cap(30000),
+		// Recorded as a phase so a receipt shows openurl was REACHED; the link's
+		// outcome is still judged only by the receipt/observations below.
+		const opening = phases.step("openurl", () =>
+			run(
+				"xcrun",
+				["simctl", "openurl", udid, url.toString()],
+				deadline.cap(30000),
+			),
 		);
 		void opening.catch(() => undefined);
 		pending.push(opening);
@@ -491,7 +511,10 @@ export async function runSeedReplay(options: ReplayOptions) {
 	mkdirSync(root, { recursive: false });
 	const deadline = new Deadline(300000),
 		workScope = new NativeScope(deadline),
-		run = workScope.run;
+		run = workScope.run,
+		// Separate clock for boot + readiness only; see REPLAY_BOOT_BUDGET_MS.
+		bootScope = new NativeScope(new Deadline(REPLAY_BOOT_BUDGET_MS)),
+		phases = new PhaseLog();
 	let context: SampleContext | undefined;
 	let result: Awaited<ReturnType<typeof executeSeed>> | undefined;
 	try {
@@ -584,17 +607,39 @@ export async function runSeedReplay(options: ReplayOptions) {
 			deviceType: template.deviceTypeIdentifier,
 			templateUdid: template.udid,
 		});
-		const lease = await createFromIntent(root, intent, run);
-		await run("xcrun", ["simctl", "boot", lease.udid]);
-		await run(
-			"xcrun",
-			["simctl", "bootstatus", lease.udid, "-b"],
-			deadline.cap(300000),
+		const lease = await phases.step("create", () =>
+			createFromIntent(root, intent, run),
 		);
-		await run(
-			"xcrun",
-			["simctl", "install", lease.udid, retained.app],
-			deadline.cap(120000),
+		// Boot + readiness run on their OWN clock (REPLAY_BOOT_BUDGET_MS, mirrors
+		// the proof harness's BOOT_READY_BUDGET_MS) with the 300s work clock
+		// stopped, so a cold simulator cannot eat the experiment's budget. The
+		// boot scope's groups register with the same watchdog pipe; it is stopped
+		// in `finally` beside the work scope.
+		await deadline.excluding(() =>
+			bootPhase(async () => {
+				signalBootWindow("start");
+				try {
+					await phases.step("boot", () =>
+						bootScope.run("xcrun", ["simctl", "boot", lease.udid], 60000),
+					);
+					await phases.step("bootstatus", () =>
+						bootScope.run(
+							"xcrun",
+							["simctl", "bootstatus", lease.udid, "-b"],
+							REPLAY_BOOT_BUDGET_MS,
+						),
+					);
+				} finally {
+					signalBootWindow("end");
+				}
+			}),
+		);
+		await phases.step("install", () =>
+			run(
+				"xcrun",
+				["simctl", "install", lease.udid, retained.app],
+				deadline.cap(120000),
+			),
 		);
 		const info = JSON.parse(
 			await run("plutil", [
@@ -680,6 +725,7 @@ export async function runSeedReplay(options: ReplayOptions) {
 			run,
 			deadline,
 			mode: options.mode,
+			phases,
 			startRunner: (control, session) => {
 				const envPath = join(root, "private-runner-env.json");
 				writeFileSync(
@@ -722,7 +768,8 @@ export async function runSeedReplay(options: ReplayOptions) {
 	} finally {
 		const cleanup = cleanupBudget(root);
 		try {
-			await workScope.stop(cleanup);
+			// Both scopes share the ONE persisted cleanup allowance; no renewal.
+			await Promise.all([workScope.stop(cleanup), bootScope.stop(cleanup)]);
 		} catch (error) {
 			new FirstFailure(root).remember(error);
 		}
@@ -771,6 +818,8 @@ export async function runSeedReplay(options: ReplayOptions) {
 				secondary: [],
 			};
 		try {
+			result.phases = phases.phases;
+			result.failedPhase = phases.failed;
 			finishCleanupEvidence(root, result, device, cleanup);
 		} catch {
 			result.acceptanceComplete = false;

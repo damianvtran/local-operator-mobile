@@ -69,7 +69,16 @@ def cleanup_remaining(root, allowance):
     return max(0, min(remaining, end - time.monotonic()))
 
 
-def attempt(argv, root, work_end, allowance, cleanup_only=False):
+# Simulator boot + readiness run on their OWN clock, outside the 300s work budget.
+# The worker announces the window on the private pipe ({"boot": "start"|"end"});
+# while it is open the work deadline is frozen and the window itself is capped at
+# BOOT_SECONDS. It MIRRORS REPLAY_BOOT_BUDGET_MS (retirement-replay-lifecycle.ts),
+# which mirrors the proof harness's BOOT_READY_BUDGET_MS; a test pins them equal.
+# Only ONE boot window is accepted per attempt, so it cannot be used to renew time.
+BOOT_SECONDS = 300
+
+
+def attempt(argv, root, work_end, allowance, cleanup_only=False, boot_seconds=BOOT_SECONDS):
     read_fd, write_fd = os.pipe()
     os.set_blocking(read_fd, False)
     environment = os.environ.copy()
@@ -82,11 +91,12 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False):
     pending = b''
     stopped = None
     cleanup_end = None
+    boot = {'started': None, 'end': None, 'used': False, 'elapsed': 0.0}
     if cleanup_only:
         cleanup_end = time.monotonic() + cleanup_remaining(root, allowance)
 
     def drain():
-        nonlocal pending
+        nonlocal pending, work_end
         while True:
             try:
                 data = os.read(read_fd, 4096)
@@ -99,6 +109,17 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False):
             while b'\n' in pending:
                 line, pending = pending.split(b'\n', 1)
                 value = json.loads(line)
+                if set(value) == {'boot'}:
+                    now = time.monotonic()
+                    if value['boot'] == 'start' and boot['started'] is None and not boot['used'] and not cleanup_only:
+                        boot.update(started=now, end=now + boot_seconds, used=True)
+                    elif value['boot'] == 'end' and boot['started'] is not None:
+                        # Resume the work clock with exactly the time it had left.
+                        paused = now - boot['started']
+                        work_end += paused
+                        boot.update(started=None, end=None, elapsed=boot['elapsed'] + paused)
+                    else: raise ValueError('Invalid boot window')
+                    continue
                 if set(value) not in ({'group'}, {'retired'}): raise ValueError('Invalid owned registry')
                 pid = next(iter(value.values()))
                 if type(pid) is not int or pid <= 0 or pid in (os.getpid(), os.getpgrp()): raise ValueError('Invalid owned group')
@@ -116,9 +137,14 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False):
             drain()
             if cleanup_end is None and (root / 'cleanup-start.json').exists():
                 cleanup_end = time.monotonic() + cleanup_remaining(root, allowance)
-            end = cleanup_end if cleanup_end is not None else work_end
+            if cleanup_end is not None:
+                end, reason = cleanup_end, 'cleanup-deadline'
+            elif boot['started'] is not None:
+                end, reason = boot['end'], 'boot-deadline'
+            else:
+                end, reason = work_end, 'work-deadline'
             if time.monotonic() >= end:
-                stopped = 'cleanup-deadline' if cleanup_end is not None else 'work-deadline'
+                stopped = reason
                 break
             select.select([read_fd], [], [], min(0.1, max(0, end - time.monotonic())))
     except Exception:
@@ -148,20 +174,22 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False):
             if outstanding: time.sleep(min(0.02, max(0, join_end - time.monotonic())))
         if outstanding: stopped = stopped or 'cleanup-deadline'
         os.close(read_fd)
-    return {'workerExit': code, 'stopReason': stopped, 'ownedGroupsTerminated': len(groups), 'groupsAbsent': not outstanding, 'workerReaped': reaped}
+    return {'workerExit': code, 'stopReason': stopped, 'ownedGroupsTerminated': len(groups), 'groupsAbsent': not outstanding, 'workerReaped': reaped,
+            'bootElapsedMs': round(boot['elapsed'] * 1000)}
 
 
-def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=120, cleanup_only=False):
+def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=120, cleanup_only=False, boot_seconds=BOOT_SECONDS):
     # Tests may shorten these caps; CLI exposes NO override or retry parameter.
-    if work_seconds <= 0 or work_seconds > 300 or cleanup_seconds <= 0 or cleanup_seconds > 120:
+    if work_seconds <= 0 or work_seconds > 300 or cleanup_seconds <= 0 or cleanup_seconds > 120 or boot_seconds <= 0 or boot_seconds > BOOT_SECONDS:
         raise ValueError('Budget refused')
     started = time.monotonic()
     first = attempt(cleanup_argv if cleanup_only else work_argv, root, started + work_seconds,
-                    cleanup_seconds, cleanup_only)
+                    cleanup_seconds, cleanup_only, boot_seconds)
     if (first['stopReason'] or first['workerExit'] != 0) and root.exists():
         try:
             with (root / 'seed-first-failure.json').open('x') as stream:
-                json.dump({'cause': 'deadline' if first['stopReason'] in ('work-deadline', 'cleanup-deadline') else 'other'}, stream)
+                cause = {'work-deadline': 'deadline', 'cleanup-deadline': 'deadline', 'boot-deadline': 'boot-timeout'}.get(first['stopReason'], 'other')
+                json.dump({'cause': cause}, stream)
         except FileExistsError:
             pass
     # Exactly one fallback consumes only the SAME persisted cleanup allowance.
@@ -172,7 +200,7 @@ def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=1
             fallback = attempt(cleanup_argv, root, time.monotonic(), cleanup_seconds, True)
         else:
             fallback = {'workerExit': 1, 'stopReason': 'cleanup-deadline', 'workerReaped': True}
-    result = {'workBudgetSeconds': work_seconds, 'totalCleanupBudgetSeconds': cleanup_seconds,
+    result = {'workBudgetSeconds': work_seconds, 'bootBudgetSeconds': boot_seconds, 'totalCleanupBudgetSeconds': cleanup_seconds,
               'first': first, 'fallback': fallback, 'elapsedMs': round((time.monotonic() - started) * 1000)}
     root.mkdir(parents=True, exist_ok=True)
     evidence = root / 'evidence'

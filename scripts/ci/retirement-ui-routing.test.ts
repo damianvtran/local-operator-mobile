@@ -249,7 +249,10 @@ describe("exclusive retained replay route cross-product", () => {
 		expect(child).not.toContain("workflow_dispatch:");
 		expect(child).toContain("-retirement-seed-replay-");
 		expect(child).toContain("cancel-in-progress: false");
-		expect(child).toContain("timeout-minutes: 12");
+		// 18 = boot 300s + work 300s + cleanup 120s + checkout/upload envelope.
+		expect(child).toContain("timeout-minutes: 18");
+		expect(child).toContain("timeout-minutes: 14");
+		expect(child).toContain("timeout-minutes: 3");
 		expect(
 			child.match(/retirement-replay-watchdog.py --mode run --root/g),
 		).toHaveLength(1);

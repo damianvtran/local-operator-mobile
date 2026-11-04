@@ -28,9 +28,12 @@ jobs:
   seed-only:
     runs-on: macos-26
     # Checkout/upload envelope, not additional native-work authority. The outer
-    # watchdog enforces 300s work + ONE persisted120s total cleanup. Step guards
-    # leave only enough time for the watchdog to publish its closed receipts.
-    timeout-minutes: 12
+    # watchdog enforces a separate <=300s simulator boot window (mirrors the proof
+    # harness's BOOT_READY_BUDGET_MS) + 300s work + ONE persisted 120s total
+    # cleanup. Step guards leave only enough time for the watchdog to publish its
+    # closed receipts. Raised from 12 for the boot window only (replay
+    # 41768325986 timed out pre-openurl with boot inside the 300s work budget).
+    timeout-minutes: 18
     env:
       REPLAY_COMPILE_RUN: ${{ inputs.compile_run }}
       REPLAY_RUNNER_ARTIFACT: ${{ inputs.runner_artifact }}
@@ -46,7 +49,9 @@ jobs:
         run: python3 scripts/ci/retirement-ui-route.py
       - name: One retained seed experiment under the independent watchdog
         id: replay
-        timeout-minutes: 8
+        # boot 300s + work 300s + in-step cleanup 120s = 12 min, +2 min margin
+        # for Node/Python start-up and receipt writes. Was 8 before the boot window.
+        timeout-minutes: 14
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPLAY_MODE: ${{ inputs.observe_only && 'observe-only' || 'seed-replay' }}

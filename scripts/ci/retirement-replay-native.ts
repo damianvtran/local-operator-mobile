@@ -29,6 +29,20 @@ export function registerOwnedGroup(pid: number) {
 		writeSync(fd, JSON.stringify({ group: pid }) + "\n");
 	}
 }
+/**
+ * Tell the watchdog the simulator-boot window opened or closed. The watchdog
+ * stops the 300s work clock for that window and bounds it by its own boot cap
+ * instead (REPLAY_BOOT_BUDGET_MS); see `supervise` in retirement-replay-watchdog.py.
+ * No supervisor (unit tests) means nothing to tell.
+ */
+export function signalBootWindow(state: "start" | "end") {
+	const raw = process.env.LO_REPLAY_SUPERVISOR_FD;
+	if (raw === undefined) return;
+	const fd = Number(raw);
+	if (!Number.isInteger(fd) || fd < 3)
+		throw new ReplayRefused("command-journal");
+	writeSync(fd, JSON.stringify({ boot: state }) + "\n");
+}
 function retireOwnedGroup(pid: number) {
 	const raw = process.env.LO_REPLAY_SUPERVISOR_FD;
 	if (raw !== undefined)

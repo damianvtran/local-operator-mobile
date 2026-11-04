@@ -44,6 +44,7 @@
 		"runner-timeout",
 		"runner-stopped",
 		"command-timeout",
+		"boot-timeout",
 		"command-exit",
 		"command-start",
 		"command-journal",
