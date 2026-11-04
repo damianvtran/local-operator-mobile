@@ -330,3 +330,49 @@ harness is not", and the repository's own rule about evidence).
   sessions. The mock relay exists so that nothing in CI needs them.
 - Never commit the operator's tunnel hostname, account id, email or a token: the
   repository is public. The mock's tunnels are synthetic 32-hex labels.
+
+## Project-create native proof failure ledger and next control (not admitted)
+
+PR #152's helper is separate from product PR #150. Native Urdu evidence remains
+required; the headless contracts below are not native/rendered evidence.
+
+| Run | Observed stop | Limit |
+| --- | --- | --- |
+| 41554295782 | Connected absent | No failure frame; network cause unknown |
+| 41569220308 | Plain-http opt-in off | Failure frame; hierarchy timed out |
+| 41581513521 | Opt-in off; keyboard present; URL ends `yy` | Wrong-target taps supported; precise focus history unknown |
+| 41607150142 | Connected/home/Projects passed; sibling screenshot path rejected | Failure frame shows retirement diagnostic, not proof of Projects HTTP failure |
+
+All raw failure artifacts and local receipts are retained unchanged. No successful
+Urdu sheet, dark/settled/archived evidence or English-control native set exists.
+
+The last failure PNG's English headline is the connection refusal surface. The
+mounted cleanup-rejection control reached diagnostic state and dispatched no
+login/Projects request; its exact-sentence rig assertion incorrectly read the
+connection store, which does not own the sentence (receipt `cd2facc1`). The exact
+native retirement operation that rejected is still UNKNOWN. A successful actual
+Projects client read (HTTP200/six rows) cannot explain or dismiss that failure.
+
+The repaired source contract uses the registered `projects-populated` fixture,
+actual RelayEndpoints list/create schemas and config stream for `ur`/`ur-PK`.
+Four sheet source-key translations are checked against the pinned #150 catalog
+commit `91a3cbca1a2770e78dc5f216c2335b4b8126fe4d`, not invented UI strings or
+#152's older catalogs. Create is exercised ONLY in the headless synthetic contract;
+the native walk continues to forbid submit.
+
+Maestro owns screenshot containment: flows now use bare names, never sibling
+absolute paths or variables. The generic parsed-flow guard rejects the known bad
+path class locally. Complete Urdu light/dark and English inventories are frozen
+in `PROJECT_CREATE_FRAMES`; the runner discovers only regular PNGs beneath the
+Maestro `takeScreenshot` directory and copies them into the existing uploaded
+`frames/**/*.png` tree. Missing/duplicate frames fail instead of claiming success.
+Synthetic contract files are explicitly NOT screenshots or native proof.
+
+One possible later control, ONLY after independent review and explicit allocation:
+verify the retirement-success path separately before the English/Urdu no-submit
+walk; capture the pinned product artifact with list, first/settled, archived and
+lower-field frames in both themes plus English control; inspect every PNG and
+sanitized hierarchy; require clean teardown. Any recurrence of retirement refusal
+must STOP with bounded diagnostic evidence, not fabricated populated content,
+credential injection, weakened ATS or automatic dispatch retries. This plan is
+not permission to run a workflow or spend native capacity.

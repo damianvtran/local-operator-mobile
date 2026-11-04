@@ -126,15 +126,21 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * browser run can render a non-English catalogue at all. Those are exactly the files
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
+	/* Re-pinned 2026-11-03 for PR #159 (highlights deliverables) with --print: the
+	 * relay gained a digest-scoped `/sound` route and `.mp4` on the supplement file
+	 * route; scenarios gained `supplement-deliverables`. U-08's pinned scene
+	 * (`long-transcript`) builds a byte-identical world on main and on this head
+	 * (JSON SHA256 prefix 967777106c5eff28, 0 supplement beats), so the measured
+	 * input is unchanged. */
 	"tools/mock-relay/relay.ts":
-		"813e5a0fae9ded1aa872246b554d0598dd390c5ad2cefc79dd549ead2cb8c505",
+		"2b0ea70b8b1b522d1ea3cb8a4091051278f9d8fb8b16b39e908ac00505e0a3f6",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"0be0b00d9451014fd45dc3aa989f3f3882f7e15731d8c77fee6ea60e63529bc3",
+		"b3761b32c16b06d64e6febcf8668911392a30a4a01169fffe4d2d906fce19b86",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -369,7 +375,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "80e1501d11893f35d0d7e27e4f1c1dfb40165adaa7e1de3c2fda9483f530580b",
+	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
+	 * session screen's one-line `loadSound` client wiring. */
+	app: "19195211af9ae93848aee88eea6deeed3d570a0b2df9ea7f2db1e26110c403eb",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -416,9 +424,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * advertises no such flag and its scene rows carry no agent picture, so the
 	 * measured transcript renders the same; no layout, style, token, corpus,
 	 * scene or instrument file changed, and every other pin is untouched. */
+	/* Re-pinned 2026-11-03 for PR #159 with --print: `src` carries the supplement
+	 * block's sounds/video/withheld rendering, its parser and 12 catalogue keys.
+	 * All of it renders only for a beat carrying sounds, a video file or withheld
+	 * entries, and the U-08 long-transcript scene has zero supplement beats (same
+	 * world hash on main and head), so no measured transcript row changes.
+	 * Converged onto main 24a3d30f (#157 above): recomputed over the combined tree. */
 	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
-	src: "514a5c0452a4f648555ebdfda81ba3d195685eb2faf6a689265d59e9de0320ca",
+	src: "84f1389eaa1ff6da77e7d37942cc5ddd0edd8f30e0f75f0e59285f5b8673fcde",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

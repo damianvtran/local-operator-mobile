@@ -114,6 +114,8 @@ export interface SessionRuntime {
 	loadSupplementDocument: (digest: string) => Promise<string>;
 	/** One recorded callout's bytes, by the row's own index. */
 	loadSupplementFile: (job: string, index: number) => Promise<ImageBytes>;
+	/** One supplement sound's bytes, by its `sounds[].attachment` digest. */
+	loadSupplementSound: (digest: string) => Promise<ImageBytes>;
 	/** `supplement_cancel|restart|steer` over the session command route — the
 	 *  same route every other mutation uses. */
 	supplementCommand: (
@@ -745,6 +747,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	const loadSupplementSound = useCallback(
+		(digest: string): Promise<ImageBytes> => {
+			if (endpoints === null) {
+				return Promise.reject(new Error("no relay route"));
+			}
+			return endpoints.supplementSound(sessionId, digest);
+		},
+		[endpoints, sessionId],
+	);
+
 	const supplementCommand = useCallback(
 		async (
 			op: "cancel" | "restart" | "steer",
@@ -825,6 +837,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		projectionPid: projection?.pid ?? 0,
 		loadSupplementDocument,
 		loadSupplementFile,
+		loadSupplementSound,
 		supplementCommand,
 		reload,
 	};

@@ -432,6 +432,10 @@ export const CONTROL = {
 	/** A callout row's preview lever (`Preview` for text/image; the row is a
 	 *  text line for every other class). */
 	supplementFileOpen: "supplement-file-open",
+	/** A written video's play tile (highlights deliverables). */
+	supplementVideoOpen: "supplement-video-open",
+	/** One sound cell's play/pause control. */
+	supplementSoundToggle: "supplement-sound-toggle",
 
 	/* --- the composer home and the conversations panel (the Part 2 slice).
 	 *
@@ -862,6 +866,10 @@ export const SURFACE = {
 	supplementPreview: "supplement-preview",
 	/** The components half of a settled block (the frames' container). */
 	supplementComponents: "supplement-components",
+	/** The sounds grid, outside every disclosure. */
+	supplementSounds: "supplement-sounds",
+	/** The quiet "N files not shown: …" notice. */
+	supplementWithheld: "supplement-withheld",
 
 	/* --- the subagent detail route (stream D2), adopted with the session view's
 	 * vocabulary above. The drill-down flow asserts these by name

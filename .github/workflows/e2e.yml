@@ -49,6 +49,7 @@ on:
           - u08-fragment-verification
           - account-routing-ios-proof
           - account-routing-android-proof
+          - projects-create-ios-proof
       proof_stage:
         description: "Targeted iOS proof only; never a full-E2E verdict"
         type: choice
@@ -57,6 +58,20 @@ on:
           - preflight
           - setup
           - full
+      # Inputs of projects-create-ios-proof ONLY; ignored by every other mode. The
+      # defaults pin the artifact PR #150's native Urdu frame was requested against.
+      native_run_id:
+        description: "projects-create-ios-proof: run that built the iOS simulator artifact"
+        type: string
+        default: "41506698136"
+      native_artifact_name:
+        description: "projects-create-ios-proof: artifact name in that run"
+        type: string
+        default: ios-simulator
+      native_artifact_sha256:
+        description: "projects-create-ios-proof: expected sha256 of the artifact zip"
+        type: string
+        default: 080c27c8554638317baafbea91a163b049ead1ecdf7c3f78194d31e037c1c1fe
   schedule:
     # Nightly, off-peak: the emulator job is the slowest thing here and the least
     # useful on a branch nobody is waiting for.
@@ -144,6 +159,8 @@ jobs:
             # an operator mistake rather than a request to run part of it. This mirrors
             # the contract's `selectProof`, which rejects a stage for this mode.
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            # One fixed walk, no stages: a stage argument is an operator mistake.
+            projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1536,6 +1553,105 @@ jobs:
             ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/core-bootstrap.json
             ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/frames/**/*.png
             ${{ runner.temp }}/account-routing-proof-${{ github.run_id }}/hierarchies/
+          retention-days: 14
+          if-no-files-found: warn
+  # NATIVE URDU PROJECT-CREATE PROOF (manual, targeted, NOT full E2E).
+  #
+  # WHY IT EXISTS: PR #150 localised the project-create sheet and has web-export
+  # evidence, but Urdu is right-to-left and native text shaping differs from the
+  # web, while the development host has no simulator. This job runs one fixed
+  # Maestro walk on a fresh iOS simulator against an ALREADY-BUILT artifact and
+  # uploads frames, hierarchy dumps, command outcomes and a cleanup receipt.
+  #
+  # CONSTRAINTS: it never rebuilds (no automatic build fallback: a missing or
+  # mismatching artifact fails the job); the GitHub token is exposed to the
+  # artifact-download step alone and is absent from the proof process; the relay
+  # password is a run-only random value in a 0600 file; the relay starts with
+  # `--language ur` before the app connects, because the app's language comes from
+  # the relay config stream, not the device. An `en` relay is the negative control.
+  # It shares nothing with the account-routing proof except the archive-safety
+  # helper. Provenance: the default artifact was built from merge ref e84f31dc,
+  # whose tree 32e3d23d equals PR #150 head 91a3cbca's tree. That is tree
+  # equality, not literal-head provenance, and must be reported as such.
+  projects-create-ios-proof:
+    name: Targeted native Urdu project-create proof (NOT full E2E)
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'projects-create-ios-proof'
+    runs-on: macos-26
+    # Overall ceiling. The runner script spends at most 45 minutes on proof
+    # operations and reserves cleanup beyond that; setup steps fit in the rest.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PROOF_MODE: projects-create-ios-proof
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Provision the existing pinned Maestro driver
+        run: |
+          set -euo pipefail
+          export MAESTRO_VERSION
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Download and verify the already-built artifact (the only step holding the token)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+          NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
+          NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
+        run: |
+          set -euo pipefail
+          # Inputs are data: shape-check before use, refuse rather than sanitise.
+          [[ "$NATIVE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::native_run_id must be digits"; exit 1; }
+          [[ "$NATIVE_ARTIFACT_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::bad artifact name"; exit 1; }
+          [[ "$NATIVE_ARTIFACT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad digest"; exit 1; }
+          dir="$RUNNER_TEMP/projects-create-artifact"
+          mkdir -m 700 "$dir"
+          meta=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID/artifacts" \
+            --jq "[.artifacts[] | select(.name == \"$NATIVE_ARTIFACT_NAME\" and .expired == false)] | if length == 1 then .[0] else error(\"expected exactly one live artifact\") end | \"\(.id) \(.digest)\"")
+          id="${meta% *}"; api_digest="${meta#* }"
+          echo "artifact id=$id api-digest=$api_digest expected=sha256:$NATIVE_ARTIFACT_SHA256"
+          [ "$api_digest" = "sha256:$NATIVE_ARTIFACT_SHA256" ] || { echo "::error::artifact digest differs from the expected digest"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/artifact.zip"
+          actual=$(shasum -a 256 "$dir/artifact.zip" | cut -d' ' -f1)
+          [ "$actual" = "$NATIVE_ARTIFACT_SHA256" ] || { echo "::error::downloaded zip digest $actual differs"; exit 1; }
+          echo "PROOF_ARTIFACT_ZIP=$dir/artifact.zip" >> "$GITHUB_ENV"
+      - name: Run-only relay password (0600, masked before any use)
+        run: |
+          set -euo pipefail
+          umask 077
+          value=$(openssl rand -hex 24)
+          echo "::add-mask::$value"
+          printf '%s\n' "$value" > "$RUNNER_TEMP/projects-create-password"
+          echo "PROOF_PASSWORD_FILE=$RUNNER_TEMP/projects-create-password" >> "$GITHUB_ENV"
+      - name: Native Urdu walk (token-free environment) with negative control
+        env:
+          PROOF_NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+          PROOF_NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
+          PROOF_NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
+          PROOF_PROVENANCE_NOTE: "built from merge ref e84f31dc (tree 32e3d23d) which equals PR 150 head 91a3cbca tree; not literal-head provenance"
+        run: node scripts/ci/projects-create-ios-proof.ts
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: projects-create-ios-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/projects-create-proof/receipt.json
+            ${{ runner.temp }}/projects-create-proof/commands.json
+            ${{ runner.temp }}/projects-create-proof/commands/*.log
+            ${{ runner.temp }}/projects-create-proof/frames/**/*.png
+            ${{ runner.temp }}/projects-create-proof/hierarchies/*.txt
           retention-days: 14
           if-no-files-found: warn
   u08-geometry-proof:

@@ -6,5 +6,53 @@
 	"mobile.session.status_tray.hint": {
 		"role": "help",
 		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."
+	},
+	"mobile.session.highlights.withheld": {
+		"role": "status",
+		"note": "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them pairwise with mobile.session.highlights.withheld_reasons_join. No final full stop."
+	},
+	"mobile.session.highlights.withheld_outside": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file lies outside the folders the app may show. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_sensitive": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_missing": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the named file was deleted or never written. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_too_large": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop."
+	},
+	"mobile.session.highlights.sound_play": {
+		"role": "button",
+		"note": "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop."
+	},
+	"mobile.session.highlights.sound_pause": {
+		"role": "button",
+		"note": "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop."
+	},
+	"mobile.session.highlights.sound_untitled": {
+		"role": "meta",
+		"note": "Stand-in name for a sound with no title, used inside the play/pause labels. One noun."
+	},
+	"mobile.session.highlights.video_open": {
+		"role": "button",
+		"note": "Accessibility label of a video tile that starts playback. {name} is the file name, verbatim. No full stop."
+	},
+	"mobile.session.highlights.sounds_more": {
+		"role": "meta",
+		"note": "Line under the sounds grid when the row held back sounds beyond its bound. {count} counts sounds. No final full stop."
+	},
+	"mobile.session.highlights.sound_refused": {
+		"role": "status",
+		"note": "Shown under a sound cell when its bytes could not be fetched. {reason} is the relay's own sentence, passed through untranslated. No final full stop."
+	},
+	"mobile.session.highlights.withheld_reasons_join": {
+		"role": "meta",
+		"note": "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders."
 	}
 }

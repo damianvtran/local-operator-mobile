@@ -169,6 +169,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				...Object.keys(baseline.jobs),
 				PROOF_MODE,
 				ANDROID_PROOF_MODE,
+				"projects-create-ios-proof",
 				"u08-geometry-proof",
 			].sort(),
 		);
@@ -219,6 +220,34 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 					event === MANUAL && mode === ANDROID_PROOF_MODE,
 				);
 	});
+	it("the Urdu project-create job fires only on its own manual dispatch and never holds the token in the proof step", () => {
+		const text = source(".github/workflows/e2e.yml");
+		const job = jobs(text)["projects-create-ios-proof"];
+		if (!job) throw new Error("missing projects-create job");
+		for (const event of ["pull_request", "push", "schedule", MANUAL])
+			for (const mode of [
+				"",
+				"full",
+				"s15-proof",
+				PROOF_MODE,
+				ANDROID_PROOF_MODE,
+				"projects-create-ios-proof",
+			])
+				expect(evaluate(job.condition, event, mode)).toBe(
+					event === MANUAL && mode === "projects-create-ios-proof",
+				);
+		expect(job.body).toContain("actions: read");
+		expect(job.body).not.toContain("secrets.");
+		expect(job.body).not.toContain("contents: write");
+		// The token appears in exactly ONE step (the artifact download) and that
+		// step is not the one that runs the proof script.
+		expect(job.body.match(/github\.token/g)?.length).toBe(1);
+		const proofStep = job.body.split("- name: Native Urdu walk")[1] ?? "";
+		expect(proofStep.split("- uses: actions/upload-artifact")[0]).not.toMatch(
+			/github\.token|GH_TOKEN|GITHUB_TOKEN/,
+		);
+		expect(job.body).not.toMatch(/xcodebuild|expo prebuild|pnpm install/);
+	});
 	it("every dispatchable proof mode has an arm in the Validate-proof-selection shell", async () => {
 		// WHY THIS EXISTS: the truth table above reads the JOB `if:` conditions, and
 		// the harness job's own `Validate proof selection` step is a SHELL `case` it
@@ -245,6 +274,10 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			["account-routing-ios-proof", "preflight", true],
 			["account-routing-ios-proof", "setup", true],
 			["account-routing-android-proof", "full", true],
+			// The Urdu project-create proof is one fixed walk: no stage argument.
+			["projects-create-ios-proof", "full", true],
+			["projects-create-ios-proof", "setup", false],
+			["projects-create-ios-proof", "preflight", false],
 			// Stage arguments that must be refused rather than silently accepted.
 			["account-routing-android-proof", "setup", false],
 			["account-routing-android-proof", "preflight", false],

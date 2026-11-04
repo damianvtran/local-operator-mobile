@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { resetLocaleSource, setLocaleSource } from "@/i18n";
 
 import {
 	acceptFrameMessage,
@@ -24,6 +26,7 @@ import {
 	frameBudgetPx,
 	HEIGHT_HINT_MAX,
 	HEIGHT_HINT_MIN,
+	isVideoFile,
 	MORE_MAX,
 	moreText,
 	NATIVE_SHIM_MARKER,
@@ -33,6 +36,9 @@ import {
 	type SupplementBeat,
 	type SupplementComponent,
 	showAllText,
+	soundControlLabel,
+	soundName,
+	soundsFrom,
 	sourceLine,
 	supplementDisposition,
 	supplementFileClass,
@@ -41,7 +47,11 @@ import {
 	supplementsFromWire,
 	supplementThemeFor,
 	THEME_VARIABLE_NAMES,
+	videoTileLabel,
 	WATCHDOG_MS,
+	WITHHELD_MAX,
+	withheldListFrom,
+	withheldText,
 } from "./supplements";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -506,5 +516,255 @@ describe("the copy table", () => {
 		expect(COPY_FAILED).toBe("Couldn't prepare highlights");
 		expect(WATCHDOG_MS).toBe(5000);
 		expect(MORE_MAX).toBe(20);
+	});
+});
+
+/* ---------------------------------------------------------------------------
+ * Highlights deliverables: sounds[], withheld[] and written videos
+ *
+ * Hand-built rows ON PURPOSE: the vendored C0 fixtures predate `sounds[]` and
+ * `withheld[]` and are byte-exact copies that must not be edited here (their
+ * README). The shapes below are the highlights contract's row shape
+ * (`supplement_v1` details: sounds {attachment, mime, title, duration_s,
+ * path?, origin?, pinned?}, withheld {name, reason}).
+ * ------------------------------------------------------------------------- */
+
+const DIGEST_A = "0123456789abcdef0123456789abcdef";
+const DIGEST_B = "fedcba9876543210fedcba9876543210";
+
+const doneRow = (extra: Record<string, unknown>): SupplementBeat => {
+	const parsed = beatFromWire({
+		anchor: "a1",
+		job: "j1",
+		version: 1,
+		state: "done",
+		files: [],
+		components: [],
+		...extra,
+	});
+	if (parsed === null) throw new Error("row did not parse");
+	return parsed;
+};
+
+describe("sounds[]", () => {
+	it("reads a generated and a written sound, defaults filled", () => {
+		expect(
+			soundsFrom([
+				{
+					attachment: DIGEST_A,
+					mime: "audio/wav",
+					title: "Rain",
+					duration_s: 4.5,
+				},
+				{
+					attachment: DIGEST_B,
+					title: "",
+					duration_s: 0,
+					path: "~/picks/b.mp3",
+					origin: "file",
+					pinned: true,
+				},
+			]),
+		).toEqual([
+			{
+				attachment: DIGEST_A,
+				mime: "audio/wav",
+				title: "Rain",
+				durationS: 4.5,
+				path: "",
+				origin: "",
+				pinned: false,
+			},
+			{
+				attachment: DIGEST_B,
+				mime: "audio/mpeg",
+				title: "",
+				durationS: 0,
+				path: "~/picks/b.mp3",
+				origin: "file",
+				pinned: true,
+			},
+		]);
+	});
+
+	it("drops malformed entries the way filesFrom does, and tolerates a non-array", () => {
+		expect(
+			soundsFrom([
+				null,
+				"x",
+				{ attachment: "not-a-digest" },
+				{ attachment: DIGEST_A.toUpperCase() },
+				{ title: "no digest" },
+				{ attachment: DIGEST_A, duration_s: Number.NaN, pinned: "yes" },
+			]),
+		).toEqual([
+			{
+				attachment: DIGEST_A,
+				mime: "audio/mpeg",
+				title: "",
+				durationS: 0,
+				path: "",
+				origin: "",
+				pinned: false,
+			},
+		]);
+		expect(soundsFrom(undefined)).toEqual([]);
+		expect(soundsFrom({ attachment: DIGEST_A })).toEqual([]);
+	});
+
+	it("is not capped by the reader (a batch is every artifact)", () => {
+		const many = Array.from({ length: 14 }, (_, i) => ({
+			attachment: i.toString(16).padStart(32, "0"),
+		}));
+		expect(soundsFrom(many)).toHaveLength(14);
+	});
+
+	it("carries sounds_more on the beat, and 0 for a bad count", () => {
+		expect(doneRow({ sounds_more: 3 }).soundsMore).toBe(3);
+		expect(doneRow({ sounds_more: -1 }).soundsMore).toBe(0);
+		expect(doneRow({ sounds_more: 1.5 }).soundsMore).toBe(0);
+		expect(doneRow({}).soundsMore).toBe(0);
+	});
+
+	it("counts as content: a sounds-only done row is a block, a live one paints above its line", () => {
+		const row = doneRow({ sounds: [{ attachment: DIGEST_A }] });
+		expect(supplementDisposition(row, false)).toBe("block");
+		const running = { ...row, state: "running" };
+		expect(supplementDisposition(running, true)).toBe("files_preparing");
+	});
+});
+
+describe("withheld[]", () => {
+	it("reads names and the four reasons, dropping unknown reasons and nameless entries", () => {
+		expect(
+			withheldListFrom([
+				{ name: "x.key", reason: "sensitive" },
+				{ name: "a.mp4", reason: "too-large" },
+				{ name: "gone.md", reason: "missing" },
+				{ name: "far.png", reason: "outside" },
+				{ name: "huh", reason: "forbidden" },
+				{ name: "", reason: "outside" },
+				{ reason: "outside" },
+				null,
+			]),
+		).toEqual([
+			{ name: "x.key", reason: "sensitive" },
+			{ name: "a.mp4", reason: "too-large" },
+			{ name: "gone.md", reason: "missing" },
+			{ name: "far.png", reason: "outside" },
+		]);
+		expect(withheldListFrom("nope")).toEqual([]);
+	});
+
+	it("bounds the list at the producer's cap", () => {
+		const many = Array.from({ length: 15 }, (_, i) => ({
+			name: `f${i}`,
+			reason: "outside",
+		}));
+		expect(withheldListFrom(many)).toHaveLength(WITHHELD_MAX);
+	});
+
+	it("a withheld-only done row still renders (never silent)", () => {
+		const row = doneRow({ withheld: [{ name: "x.key", reason: "outside" }] });
+		expect(supplementDisposition(row, true)).toBe("block");
+		expect(supplementDisposition(doneRow({}), true)).toBe("nothing");
+	});
+
+	it("says the count and the distinct reasons in one line", () => {
+		expect(
+			withheldText(
+				doneRow({ withheld: [{ name: "x.key", reason: "outside" }] }),
+			),
+		).toBe("1 file not shown: outside allowed locations");
+		expect(
+			withheldText(
+				doneRow({
+					withheld: [
+						{ name: "a", reason: "outside" },
+						{ name: "b", reason: "sensitive" },
+						{ name: "c", reason: "outside" },
+					],
+					withheld_more: 2,
+				}),
+			),
+		).toBe("5 files not shown: outside allowed locations, sensitive file");
+		expect(withheldText(doneRow({}))).toBeNull();
+	});
+});
+
+describe("highlights copy in another locale", () => {
+	afterEach(() => resetLocaleSource());
+
+	it("uses the locale's plural rules (ru few/many)", () => {
+		setLocaleSource(() => "ru");
+		const withheld = (n: number) =>
+			withheldText(
+				doneRow({
+					withheld: [{ name: "a", reason: "missing" }],
+					withheld_more: n - 1,
+				}),
+			);
+		expect(withheld(1)).toBe("1 файл не показан: файл больше не существует");
+		expect(withheld(3)).toBe("3 файла не показаны: файл больше не существует");
+		expect(withheld(5)).toBe("5 файлов не показано: файл больше не существует");
+	});
+
+	it("joins several reasons with the locale's own list separator", () => {
+		setLocaleSource(() => "zh-CN");
+		expect(
+			withheldText(
+				doneRow({
+					withheld: [
+						{ name: "a", reason: "outside" },
+						{ name: "b", reason: "sensitive" },
+					],
+				}),
+			),
+		).toBe("2 个文件未显示：不在允许的位置、敏感文件");
+	});
+});
+
+describe("a11y labels", () => {
+	const sound = (over: Record<string, unknown>) =>
+		soundsFrom([{ attachment: DIGEST_A, ...over }])[0] as NonNullable<
+			ReturnType<typeof soundsFrom>[number]
+		>;
+
+	it("name the action AND the sound, title first, then the file's basename, then a noun", () => {
+		expect(soundControlLabel(sound({ title: "Rain" }), false)).toBe(
+			"Play Rain",
+		);
+		expect(soundControlLabel(sound({ title: "Rain" }), true)).toBe(
+			"Pause Rain",
+		);
+		expect(soundName(sound({ path: "~/picks/b.mp3" }))).toBe("b.mp3");
+		expect(soundControlLabel(sound({}), false)).toBe("Play Sound");
+	});
+
+	it("strips control sequences from a model-authored title before announcing it", () => {
+		expect(
+			soundControlLabel(sound({ title: "\u001b[2JRain\u202e" }), false),
+		).toBe("Play Rain");
+	});
+
+	it("label a written video's tile, by kind or by suffix", () => {
+		const [byKind, bySuffix, notVideo] =
+			beatFromWire({
+				anchor: "a",
+				state: "done",
+				files: [
+					{ path: "out/clip.bin", name: "clip.bin", kind: "video" },
+					{ path: "out/demo.MOV", name: "demo.MOV" },
+					{ path: "out/a.png", name: "a.png", kind: "image" },
+				],
+				components: [],
+			})?.files ?? [];
+		if (!byKind || !bySuffix || !notVideo)
+			throw new Error("files did not parse");
+		expect(isVideoFile(byKind)).toBe(true);
+		expect(isVideoFile(bySuffix)).toBe(true);
+		expect(isVideoFile(notVideo)).toBe(false);
+		expect(videoTileLabel(byKind)).toBe("Play video clip.bin");
+		expect(supplementFileClass("demo.webm")).toBe("video");
 	});
 });
