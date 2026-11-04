@@ -37,6 +37,9 @@ describe("Android OAuth native-proof contract", () => {
 	it("never creates an automatic extra emulator wave or enters signing", () => {
 		expect(workflow).toContain("workflow_dispatch:");
 		expect(workflow).toContain("workflow_call:");
+		// github.workflow names the caller under workflow_call; a callee suffix
+		// avoids holding the parent's lane while waiting for its child to start.
+		expect(workflow).toContain("}-oauth-callback-proof-");
 		expect(workflow).not.toContain("pull_request:");
 		expect(workflow).not.toContain("secrets:");
 		expect(workflow).not.toContain("environment: release");
