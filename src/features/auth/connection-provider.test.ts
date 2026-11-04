@@ -330,7 +330,10 @@ async function relay(
 				json({ msg: "synthetic mint failure" }, 500);
 				return;
 			}
-			json({ code: `synthetic-code-${++codeCount}` });
+			json({
+				msg: "Authorization code created",
+				result: { code: `synthetic-code-${++codeCount}` },
+			});
 			return;
 		}
 		if (path === "/v1/tunnels/session/token") {

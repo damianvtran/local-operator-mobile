@@ -804,7 +804,10 @@ describe("the tunnel session lifecycle", () => {
 
 	const mintHandler = () => (url: string) =>
 		url.includes("/session/code")
-			? jsonResponse({ code: "one-time", state: "s", callback_uri: `${url}` })
+			? jsonResponse({
+					msg: "success",
+					result: { code: "one-time", state: "s", callback_uri: `${url}` },
+				})
 			: jsonResponse({
 					access_token: "grant",
 					refresh_token: "handle",

@@ -162,9 +162,9 @@ session itself, with PKCE, entirely against public endpoints:
 
 | Call | Body | Success | Errors |
 | --- | --- | --- | --- |
-| `POST /v1/tunnels/session/code` | `{tunnel_id, hostname, state, code_challenge, code_challenge_method:"S256"}` | one-time 2-minute code, bound to hostname + challenge + state | validation errors; the code is stored hashed and consumed with `FindOneAndDelete`, so a wrong `code_verifier` **burns the code** (`radient-ml:internal/tunnels/store.go:185-191`) |
-| `POST /v1/tunnels/session/token` | `{code, code_verifier, hostname}` | raw `{access_token, refresh_token, token_type:"Bearer", expires_in:300, refresh_expires_in}` + `Cache-Control: no-store` (`radient-ml:internal/tunnels/session.go:122-158`) | `400 invalid_grant`; `endpointError` for target problems |
-| `POST /v1/tunnels/session/refresh` | `{refresh_token, hostname}` | same raw shape; **the same refresh token comes back — it is deliberately not rotated** (`session.go:159-183`) | `401 invalid_grant` when empty/unknown/expired/hostname-version mismatch |
+| `POST /v1/tunnels/session/code` | `{tunnel_id, hostname, state, code_challenge, code_challenge_method:"S256"}` | `{msg,result:{code,state,callback_uri}}`, a one-time 2-minute code bound to hostname + challenge + state (`session.go:114`, `responses.WriteJSON`) | validation errors; the code is stored hashed and consumed with `FindOneAndDelete`, so a wrong `code_verifier` **burns the code** (`radient-ml:internal/tunnels/store.go:185-191`) |
+| `POST /v1/tunnels/session/token` | `{code, code_verifier, hostname}` | raw `{access_token, refresh_token, token_type:"Bearer", expires_in:300, refresh_expires_in}` + `Cache-Control: no-store` (`radient-ml:internal/tunnels/session.go:199-209`) | `400 invalid_grant`; `endpointError` for target problems |
+| `POST /v1/tunnels/session/refresh` | `{refresh_token, hostname}` | same raw `c.JSON` shape (`session.go:209`); **the same refresh token comes back — it is deliberately not rotated** (`session.go:159-183`) | `401 invalid_grant` when empty/unknown/expired/hostname-version mismatch |
 | `POST /v1/tunnels/session/logout` | `{refresh_token, hostname}` | `200 {}`; idempotent (`session.go:185-198`) | `200` even when absent |
 
 These three session endpoints are **public and per-IP rate limited**; the owner
@@ -286,6 +286,23 @@ Owner APIs that settle it (all `Authorization: Bearer <Radient access token>`;
 - `POST /v1/tunnels/billing/activate` `{accepted_monthly_price_usd}`
   (`service.go:205-221`).
 
+**Session responses are not uniformly enveloped.** Owner-authenticated
+`POST /v1/tunnels/session/code` and `GET /v1/tunnels/session/request` use
+`responses.WriteJSON`, so their payload is under `{msg,result}`
+(`session.go:114` and `:86-94`; route: `service.go:118`). Token/refresh call
+`writeGrant`, which returns **raw** `c.JSON` (`session.go:199-209`). The phone
+unwraps code only, retaining older raw code responses for compatibility. A 200
+response that fails schema parsing is an app contract error: Retry and redacted
+details, never a console or `lop login radient` remedy.
+
+Codes are **account-owner scoped**, not device approvals: `sessionTarget` calls
+`store.Get(ctx, accountID, id)` (`session.go:60-84`). The owner signed into Radient
+on this phone needs no extra allow-list approval, including when already paired
+through mobile relay. A missing owner-scoped record can mean another account OR
+a deleted tunnel; do not invent an approval screen. Explicit 402 billing, 403
+disabled tunnel and 404 missing harness responses should name the billing,
+tunnel-enable or Local Operator harness setting to change in the console.
+
 `BillingStatus` is `{active, eligible, monthly_cost_usd, monthly_price_usd,
 balance_usd, amount_due_usd, next_charge_at}` (`service.go:24-32`); `eligible`
 requires an active billing account, credits > −1.0, and `amount_due == 0`.
@@ -296,7 +313,8 @@ after creation), `enabled` (desired state), `version` (bumps on every change),
 `hostname`, `harnesses[]` (`{id: "local-operator"|"opencode", enabled, port,
 hostname, url}`, 1–2 entries), `status`
 (`pending|active|reconciling|disabled|suspended|revoking|deleted|error`),
-`created_at`, `updated_at`, optional `revoked_at`, optional `billing`.
+`created_at`, `updated_at`, optional `revoked_at`, optional `billing`. `updated_at`
+is the record-edit time, not connector presence: never present it as “last seen”.
 
 > **The one thing the API cannot tell you: whether the machine is awake.**
 > `status: "active"` means the *cloud route is provisioned*; it is explicitly
@@ -304,8 +322,11 @@ hostname, url}`, 1–2 entries), `status`
 > The connector's own liveness exists only as a **loopback-only** endpoint on the
 > machine (`GET http://127.0.0.1:<gateway_port>/_lop_tunnel/health` →
 > `{"ok":bool,"connected":bool}` + `detail`/`reason` — `gateway.py:555-569`),
-> which is unreachable through the tunnel. A phone therefore learns "the computer
-> is offline" only by *failing to reach it*, never by asking.
+> which is unreachable through the tunnel. The edge also protects `/healthz`:
+> unauthenticated 401 “Sign in with Radient to access this tunnel” is not evidence
+> that the connector failed to answer. Show neutral “sign-in protected” before a
+> pick. Only a request with the minted grant cookie (§2.1) establishes relay
+> reachability; never infer presence from control-plane record edits.
 
 ---
 

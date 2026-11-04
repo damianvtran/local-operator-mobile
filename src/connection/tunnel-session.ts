@@ -29,7 +29,7 @@
 
 import { z } from "zod";
 import { resolveFetch } from "../relay/platform-fetch";
-import { RADIENT_API_BASE } from "./discovery";
+import { envelopeSchema, RADIENT_API_BASE } from "./discovery";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 import { RADIENT_COOKIES } from "./profile";
 
@@ -80,8 +80,14 @@ export interface TunnelSession {
 export type TunnelSessionFailure =
 	/** 402: this tunnel's billing is inactive, so no session can be minted. */
 	| "billing"
-	/** 401/403 from the session endpoints: the OAuth token is not accepted. */
+	/** 401: the phone's OAuth token is not accepted. */
 	| "oauth"
+	/** Server-owned refusals have distinct remedies; none imply device pairing. */
+	| "disabled"
+	| "harness"
+	| "account"
+	/** A successful response violated this app's wire contract. */
+	| "contract"
 	/** Any other refusal, carrying the server's sentence. */
 	| "rejected"
 	/** No answer at all. */
@@ -180,11 +186,23 @@ async function postSession(
 			402,
 		);
 	}
-	if (response.status === 401 || response.status === 403) {
+	if (response.status === 401) {
 		throw new TunnelSessionError(
 			"oauth",
 			`${what} was refused: sign in with Radient again`,
 			response.status,
+		);
+	}
+	if (response.status === 403) {
+		throw new TunnelSessionError("disabled", "tunnel is unavailable", 403);
+	}
+	if (response.status === 404) {
+		const missingHarness =
+			describeEnvelope(parsed)?.includes("harness") === true;
+		throw new TunnelSessionError(
+			missingHarness ? "harness" : "account",
+			"tunnel access was refused",
+			404,
 		);
 	}
 	if (!response.ok) {
@@ -199,7 +217,8 @@ async function postSession(
  *  is `msg`, and it is sometimes the only explanation for a refusal. */
 function describeEnvelope(value: unknown): string | null {
 	if (typeof value !== "object" || value === null) return null;
-	const msg = (value as { msg?: unknown }).msg;
+	const body = value as { msg?: unknown; message?: unknown };
+	const msg = body.msg ?? body.message;
 	return typeof msg === "string" && msg.length > 0 ? msg : null;
 }
 
@@ -255,10 +274,15 @@ export async function mintTunnelSession(
 		input.oauthAccessToken,
 	);
 
-	const code = sessionCodeSchema.safeParse(codeBody);
+	// issueSessionCode uses responses.WriteJSON ({msg,result}); token/refresh
+	// use c.JSON directly. Unwrap this endpoint only, retaining older raw servers.
+	const envelope = envelopeSchema.safeParse(codeBody);
+	const code = sessionCodeSchema.safeParse(
+		envelope.success ? envelope.data.result : codeBody,
+	);
 	if (!code.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned a session code this app could not read",
 		);
 	}
@@ -277,7 +301,7 @@ export async function mintTunnelSession(
 	const tokens = sessionTokenSchema.safeParse(tokenBody);
 	if (!tokens.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned session tokens this app could not read",
 		);
 	}
@@ -308,7 +332,7 @@ export async function refreshTunnelSession(
 	const tokens = sessionTokenSchema.safeParse(body);
 	if (!tokens.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned session tokens this app could not read",
 		);
 	}

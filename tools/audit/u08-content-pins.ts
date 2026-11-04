@@ -443,7 +443,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
 	 * Button's optional expanded state is omitted for existing transcript
 	 * controls. No transcript/corpus/instrument change; historical pins retained. */
-	src: "2367569cee7f486a25ee91223d8aaaabd9f586e5ee40d9eb03154f4f23526f6e",
+	/* Reprinted after staging the session-envelope/UX repair. Mint parsing,
+	 * failure surfaces and unprobed Radient health words are not exercised by
+	 * U-08's healthy custom-relay transcript. The new neutral protected mark is
+	 * not selected by that scene; existing custom-route carriers are unchanged.
+	 * This is source compatibility judgment, not new geometry evidence. All
+	 * historical identities and corpus/instrument pins remain untouched. */
+	src: "94d1b2b5c907dabb57311fe852170f717651a1c7e31767df3600dfb4c8c6f220",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

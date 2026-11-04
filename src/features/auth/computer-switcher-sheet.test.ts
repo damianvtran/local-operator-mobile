@@ -276,7 +276,34 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
+it("keeps Radient rows sign-in protected and never probes them without a grant", async () => {
+	await render();
+	await flush();
+	await render();
+	expect(words()).toContain("Sign-in protected");
+	expect(host.probes.size).toBe(0);
+	expect(host.texts).not.toContain("Asleep");
+	expect(host.texts).not.toContain("Online");
+});
+
 describe("the switcher sheet's health words resolve (B1/D1/Q1/U1)", () => {
+	// Own-address health is still probed; Radient health requires a minted grant.
+	beforeEach(() => {
+		host.saved = host.saved.map(
+			(entry): SavedComputer => ({
+				id: entry.id,
+				name: entry.name,
+				addedAt: entry.addedAt,
+				lastUsedAt: entry.lastUsedAt,
+				hidden: entry.hidden,
+				identity: entry.identity,
+				transport: "custom",
+				allowInsecure: false,
+				baseUrl: `https://${entry.transport === "radient" ? entry.hostname : "fixture.example"}`,
+			}),
+		);
+	});
+
 	it("shows Online and Asleep once the probes answer, after the sheet has re-rendered many times", async () => {
 		await render();
 		await flush();
@@ -440,7 +467,7 @@ describe("reopening after an account switch shows and probes only the new accoun
 		await flush();
 		await render();
 		expect(words()).toContain("Account A computer");
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 
 		/* Close, then "Sign in again" as B: the registry and the grant both move. */
 		visible = false;
@@ -458,13 +485,13 @@ describe("reopening after an account switch shows and probes only the new accoun
 		expect(words()).not.toContain("Account A computer");
 		/* Nor a "No computers" answer the read has not given yet. */
 		expect(words()).not.toContain("No computers on this phone yet.");
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 		await act(async () => landRead());
 		await flush();
 		await render();
 		expect(words()).not.toContain("Account A computer");
-		/* A's host was probed once, for A's open, and never again. */
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		/* Neither owner-scoped Radient record was probed without a grant. */
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 	});
 });
 

@@ -8,5 +8,17 @@
 	"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 	"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 	"mobile.computers.section.on_phone": "Sur ce téléphone",
-	"mobile.computers.switch": "Changer d’ordinateur"
+	"mobile.computers.switch": "Changer d’ordinateur",
+	"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
+	"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
+	"mobile.computers.account_mismatch": "Cet ordinateur appartient à un autre compte Radient ou a été supprimé.",
+	"mobile.computers.account_help": "Connectez-vous avec le compte propriétaire. S’il a été supprimé, choisissez un autre ordinateur.",
+	"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
+	"mobile.computers.disabled_help": "Dans la console Radient, activez ce tunnel dans ses paramètres.",
+	"mobile.computers.harness_help": "Dans la console Radient, activez Local Operator pour ce tunnel.",
+	"mobile.computers.protected": "Connexion requise",
+	"mobile.computers.retry": "Réessayer",
+	"mobile.computers.show_details": "Afficher les détails",
+	"mobile.computers.hide_details": "Masquer les détails",
+	"mobile.computers.connection_response": "Réponse de connexion"
 }

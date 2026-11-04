@@ -38,5 +38,53 @@
 	"mobile.computers.switch": {
 		"role": "button",
 		"note": "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop."
+	},
+	"mobile.computers.session_error": {
+		"role": "heading",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.session_error_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.account_mismatch": {
+		"role": "heading",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.account_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.billing_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.disabled_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.harness_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.protected": {
+		"role": "status",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.retry": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.show_details": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.hide_details": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.connection_response": {
+		"role": "meta",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
 	}
 }

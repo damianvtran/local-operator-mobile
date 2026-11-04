@@ -53,15 +53,27 @@ export type CatalogueKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.computers.account_help"
+	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.billing_help"
 	| "mobile.computers.connecting"
+	| "mobile.computers.connection_response"
+	| "mobile.computers.disabled_help"
+	| "mobile.computers.harness_help"
+	| "mobile.computers.hide_details"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.protected"
+	| "mobile.computers.retry"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.session_error"
+	| "mobile.computers.session_error_help"
+	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
@@ -268,15 +280,27 @@ export type NoParamKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.computers.account_help"
+	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.billing_help"
 	| "mobile.computers.connecting"
+	| "mobile.computers.connection_response"
+	| "mobile.computers.disabled_help"
+	| "mobile.computers.harness_help"
+	| "mobile.computers.hide_details"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.protected"
+	| "mobile.computers.retry"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.session_error"
+	| "mobile.computers.session_error_help"
+	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
@@ -455,15 +479,27 @@ export type MessageParams = {
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.computers.account_help": NoParams;
+	"mobile.computers.account_mismatch": NoParams;
 	"mobile.computers.add": NoParams;
 	"mobile.computers.added.stays_listed": NoParams;
 	"mobile.computers.badge.active": NoParams;
 	"mobile.computers.badge.connecting": NoParams;
+	"mobile.computers.billing_help": NoParams;
 	"mobile.computers.connecting": NoParams;
+	"mobile.computers.connection_response": NoParams;
+	"mobile.computers.disabled_help": NoParams;
+	"mobile.computers.harness_help": NoParams;
+	"mobile.computers.hide_details": NoParams;
 	"mobile.computers.none_on_phone": NoParams;
 	"mobile.computers.password_placeholder": NoParams;
+	"mobile.computers.protected": NoParams;
+	"mobile.computers.retry": NoParams;
 	"mobile.computers.section.not_connected": NoParams;
 	"mobile.computers.section.on_phone": NoParams;
+	"mobile.computers.session_error": NoParams;
+	"mobile.computers.session_error_help": NoParams;
+	"mobile.computers.show_details": NoParams;
 	"mobile.computers.switch": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
@@ -686,15 +722,27 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
+	"mobile.computers.account_help": "Sign in with the account that owns it. If it was removed, choose another computer.",
+	"mobile.computers.account_mismatch": "This computer belongs to another Radient account, or was removed.",
 	"mobile.computers.add": "Add a computer",
 	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
 	"mobile.computers.badge.active": "active",
 	"mobile.computers.badge.connecting": "connecting",
+	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
 	"mobile.computers.connecting": "Connecting…",
+	"mobile.computers.connection_response": "Connection response",
+	"mobile.computers.disabled_help": "In the Radient console, enable this tunnel in its settings.",
+	"mobile.computers.harness_help": "In the Radient console, enable the Local Operator harness for this tunnel.",
+	"mobile.computers.hide_details": "Hide details",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
 	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.protected": "Sign-in protected",
+	"mobile.computers.retry": "Retry",
 	"mobile.computers.section.not_connected": "On your Radient account, not connected",
 	"mobile.computers.section.on_phone": "On this phone",
+	"mobile.computers.session_error": "The app couldn't connect to this computer.",
+	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
+	"mobile.computers.show_details": "Show details",
 	"mobile.computers.switch": "Switch computer",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
@@ -902,15 +950,27 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.computers.account_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.account_mismatch": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
 	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
+	"mobile.computers.billing_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.connecting": { role: "status", note: "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis." },
+	"mobile.computers.connection_response": { role: "meta", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.disabled_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.harness_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.hide_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
+	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.retry": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.section.not_connected": { role: "heading", note: "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate." },
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
+	"mobile.computers.session_error": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
@@ -1132,15 +1192,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otro equipo.",
+		"mobile.computers.account_mismatch": "Este equipo pertenece a otra cuenta de Radient o se ha eliminado.",
 		"mobile.computers.add": "Añadir una máquina",
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
+		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
 		"mobile.computers.connecting": "Conectando…",
+		"mobile.computers.connection_response": "Respuesta de conexión",
+		"mobile.computers.disabled_help": "En la consola de Radient, activa este túnel en su configuración.",
+		"mobile.computers.harness_help": "En la consola de Radient, activa Local Operator para este túnel.",
+		"mobile.computers.hide_details": "Ocultar detalles",
 		"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
+		"mobile.computers.protected": "Requiere inicio de sesión",
+		"mobile.computers.retry": "Reintentar",
 		"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 		"mobile.computers.section.on_phone": "En este teléfono",
+		"mobile.computers.session_error": "La app no pudo conectarse a este equipo.",
+		"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
+		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
@@ -1346,15 +1418,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.computers.account_help": "Connectez-vous avec le compte propriétaire. S’il a été supprimé, choisissez un autre ordinateur.",
+		"mobile.computers.account_mismatch": "Cet ordinateur appartient à un autre compte Radient ou a été supprimé.",
 		"mobile.computers.add": "Ajouter un ordinateur",
 		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
 		"mobile.computers.badge.active": "actif",
 		"mobile.computers.badge.connecting": "connexion",
+		"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
 		"mobile.computers.connecting": "Connexion…",
+		"mobile.computers.connection_response": "Réponse de connexion",
+		"mobile.computers.disabled_help": "Dans la console Radient, activez ce tunnel dans ses paramètres.",
+		"mobile.computers.harness_help": "Dans la console Radient, activez Local Operator pour ce tunnel.",
+		"mobile.computers.hide_details": "Masquer les détails",
 		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.protected": "Connexion requise",
+		"mobile.computers.retry": "Réessayer",
 		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
+		"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
+		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
+		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
@@ -1560,15 +1644,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.computers.account_help": "इसके मालिक के खाते से साइन इन करें। अगर इसे हटा दिया गया है, तो दूसरा कंप्यूटर चुनें।",
+		"mobile.computers.account_mismatch": "यह कंप्यूटर किसी दूसरे Radient खाते का है या हटा दिया गया है।",
 		"mobile.computers.add": "कंप्यूटर जोड़ें",
 		"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
 		"mobile.computers.badge.active": "सक्रिय",
 		"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
+		"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
 		"mobile.computers.connecting": "कनेक्ट हो रहा है…",
+		"mobile.computers.connection_response": "कनेक्शन की प्रतिक्रिया",
+		"mobile.computers.disabled_help": "Radient कंसोल में इस टनल की सेटिंग में इसे चालू करें।",
+		"mobile.computers.harness_help": "Radient कंसोल में इस टनल के लिए Local Operator चालू करें।",
+		"mobile.computers.hide_details": "विवरण छिपाएँ",
 		"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
+		"mobile.computers.protected": "साइन इन आवश्यक",
+		"mobile.computers.retry": "दोबारा कोशिश करें",
 		"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
+		"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
+		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
+		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
@@ -1774,15 +1870,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
+		"mobile.computers.account_help": "Войдите в аккаунт владельца. Если компьютер удалён, выберите другой.",
+		"mobile.computers.account_mismatch": "Этот компьютер принадлежит другому аккаунту Radient или был удалён.",
 		"mobile.computers.add": "Добавить компьютер",
 		"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
 		"mobile.computers.badge.active": "активен",
 		"mobile.computers.badge.connecting": "подключается",
+		"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
 		"mobile.computers.connecting": "Подключение…",
+		"mobile.computers.connection_response": "Ответ подключения",
+		"mobile.computers.disabled_help": "В консоли Radient включите этот туннель в его настройках.",
+		"mobile.computers.harness_help": "В консоли Radient включите Local Operator для этого туннеля.",
+		"mobile.computers.hide_details": "Скрыть сведения",
 		"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
+		"mobile.computers.protected": "Требуется вход",
+		"mobile.computers.retry": "Повторить",
 		"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 		"mobile.computers.section.on_phone": "На этом телефоне",
+		"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
+		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
+		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
@@ -1988,15 +2096,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.computers.account_help": "مالک کے اکاؤنٹ سے سائن ان کریں۔ اگر اسے ہٹا دیا گیا ہے تو دوسرا کمپیوٹر منتخب کریں۔",
+		"mobile.computers.account_mismatch": "یہ کمپیوٹر کسی دوسرے Radient اکاؤنٹ کا ہے یا ہٹا دیا گیا ہے۔",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
 		"mobile.computers.badge.connecting": "منسلک ہو رہا",
+		"mobile.computers.billing_help": "Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔",
 		"mobile.computers.connecting": "منسلک ہو رہا ہے…",
+		"mobile.computers.connection_response": "کنکشن کا جواب",
+		"mobile.computers.disabled_help": "Radient کنسول میں اس ٹنل کو اس کی ترتیبات سے فعال کریں۔",
+		"mobile.computers.harness_help": "Radient کنسول میں اس ٹنل کے لیے Local Operator فعال کریں۔",
+		"mobile.computers.hide_details": "تفصیلات چھپائیں",
 		"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
+		"mobile.computers.protected": "سائن ان درکار ہے",
+		"mobile.computers.retry": "دوبارہ کوشش کریں",
 		"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
 		"mobile.computers.section.on_phone": "اس فون پر",
+		"mobile.computers.session_error": "ایپ اس کمپیوٹر سے منسلک نہیں ہو سکی۔",
+		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
+		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
@@ -2202,15 +2322,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.computers.account_help": "Đăng nhập bằng tài khoản chủ sở hữu. Nếu máy tính đã bị xóa, hãy chọn máy khác.",
+		"mobile.computers.account_mismatch": "Máy tính này thuộc tài khoản Radient khác hoặc đã bị xóa.",
 		"mobile.computers.add": "Thêm máy tính",
 		"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
 		"mobile.computers.badge.active": "hoạt động",
 		"mobile.computers.badge.connecting": "đang kết nối",
+		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
 		"mobile.computers.connecting": "Đang kết nối…",
+		"mobile.computers.connection_response": "Phản hồi kết nối",
+		"mobile.computers.disabled_help": "Trong bảng điều khiển Radient, bật đường hầm này trong phần cài đặt.",
+		"mobile.computers.harness_help": "Trong bảng điều khiển Radient, bật Local Operator cho đường hầm này.",
+		"mobile.computers.hide_details": "Ẩn chi tiết",
 		"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+		"mobile.computers.protected": "Yêu cầu đăng nhập",
+		"mobile.computers.retry": "Thử lại",
 		"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
+		"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
+		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
+		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
@@ -2416,15 +2548,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
+		"mobile.computers.account_help": "请使用电脑所有者的账户登录。如果电脑已被移除，请选择其他电脑。",
+		"mobile.computers.account_mismatch": "这台电脑属于另一个 Radient 账户，或已被移除。",
 		"mobile.computers.add": "添加电脑",
 		"mobile.computers.added.stays_listed": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
 		"mobile.computers.badge.active": "使用中",
 		"mobile.computers.badge.connecting": "连接中",
+		"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
 		"mobile.computers.connecting": "正在连接……",
+		"mobile.computers.connection_response": "连接响应",
+		"mobile.computers.disabled_help": "在 Radient 控制台的设置中启用此隧道。",
+		"mobile.computers.harness_help": "在 Radient 控制台中为此隧道启用 Local Operator。",
+		"mobile.computers.hide_details": "隐藏详细信息",
 		"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
+		"mobile.computers.protected": "需要登录",
+		"mobile.computers.retry": "重试",
 		"mobile.computers.section.not_connected": "Radient账户下，未连接",
 		"mobile.computers.section.on_phone": "此手机",
+		"mobile.computers.session_error": "应用无法连接到这台电脑。",
+		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
+		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.switch": "切换电脑",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",

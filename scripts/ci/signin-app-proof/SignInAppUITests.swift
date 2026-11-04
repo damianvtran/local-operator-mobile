@@ -72,6 +72,35 @@ final class SignInAppUITests: XCTestCase {
     XCTAssertEqual(restored["authorize"], 2)
     XCTAssertGreaterThan(restored["discovery"] ?? 0, positive["discovery"] ?? 0)
     attach("persisted-grant-restored-picker")
+    // Persisted OAuth is not a connected relay. Drive the owner's actual pick,
+    // a bad server contract, in-app Retry, then a grant-authenticated list.
+    let computer = app.buttons["computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"]
+    XCTAssertTrue(computer.label.contains("Sign-in protected"))
+    _ = try control("/control?session=malformed")
+    computer.tap()
+    try visible("connection-details-toggle")
+    XCTAssertFalse(app.buttons["connection-error-console-link"].exists)
+    XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "connection-error-machine-remedy").firstMatch.exists)
+    attach("tunnel-contract-error-and-retry")
+    app.buttons["connection-details-toggle"].tap()
+    try visible("connection-details")
+    let details = app.descendants(matching: .any).matching(identifier: "connection-details").firstMatch.label
+    XCTAssertTrue(details.contains("TunnelSessionError"))
+    XCTAssertFalse(details.contains("fixture-session-code"))
+    attach("tunnel-contract-details")
+    _ = try control("/control?session=success")
+    app.buttons["refusal-sign-in"].tap()
+    try visible("home-screen")
+    app.buttons["home-sidebar"].tap()
+    try visible("conversations-list")
+    try visible("session-row-b3535011f562")
+    attach("connected-session-list")
+    let connected = try control("/receipt")
+    XCTAssertEqual(connected["session_code"], 2)
+    XCTAssertEqual(connected["session_token"], 1)
+    XCTAssertEqual(connected["session_pkce_verified"], 1)
+    XCTAssertGreaterThan(connected["relay_requests"] ?? 0, 0)
+
   }
 
   @MainActor func testDarkLargestWelcome() throws {
@@ -86,7 +115,7 @@ final class SignInAppUITests: XCTestCase {
   @MainActor private func pickerRow() throws {
     // The native row intentionally groups name/status into ONE accessible
     // button. Looking for a standalone StaticText is not a product assertion.
-    let id = "computer-row-0123456789abcdef0123456789abcdef-lop.example.com"
+    let id = "computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"
     try visible(id)
     XCTAssertTrue(app.buttons[id].label.contains("OAuth proof computer"))
   }
