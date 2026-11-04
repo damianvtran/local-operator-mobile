@@ -56,6 +56,7 @@ describe("Stage B foreground-only Maestro flows", () => {
 	});
 	it("recognizes only app-drawn screen ids, never SpringBoard app/driver labels", () => {
 		for (const id of [
+			"stage-b-proof-gate",
 			"welcome-screen",
 			"home-screen",
 			"composer-input",

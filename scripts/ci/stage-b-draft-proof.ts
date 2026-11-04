@@ -16,6 +16,7 @@ import {
 	STAGE_B_HOST,
 	STAGE_B_OTHER_HOST,
 	type StageBProofConfig,
+	stageBDiagnosticText,
 } from "../../src/testing/stage-b-draft-transport.ts";
 import {
 	type IdentityScenario,
@@ -23,6 +24,11 @@ import {
 } from "../../tools/mock-relay/stage-b-identity-fixture.ts";
 import { capFor } from "./account-routing-proof-contract.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
+import {
+	awaitStageBSeed,
+	captureStageBFailure,
+	stageBFlowCap,
+} from "./stage-b-draft-diagnostics.ts";
 import {
 	assertStageBDraft,
 	attachStageBPhoto,
@@ -108,11 +114,7 @@ function treeDigest(root: string): string {
 	walk(root);
 	return digest(chunks.join("\n"));
 }
-const redact = (value: string) =>
-	value.replace(
-		/stage-b-synthetic-[a-f0-9]{32}-[^\s"']+/g,
-		"<synthetic-credential>",
-	);
+const redact = stageBDiagnosticText;
 const pause = (ms: number) =>
 	new Promise<void>((resolve) => setTimeout(resolve, ms));
 async function until<T>(
@@ -517,7 +519,7 @@ export async function runStageBDraftProof(
 					join(output, "maestro"),
 					path,
 				],
-				180,
+				stageBFlowCap(steps, name === "warm-app-foreground"),
 			);
 		};
 		const frame = async (name: string) => {
@@ -608,7 +610,18 @@ export async function runStageBDraftProof(
 			launch,
 			() => flow("warm-app-foreground", []),
 		);
-		writeFileSync(join(output, "warm-app.hierarchy.txt"), warmHierarchy);
+		writeFileSync(
+			join(output, "warm-app.hierarchy.txt"),
+			stageBDiagnosticText(warmHierarchy),
+		);
+		await awaitStageBSeed(warmHierarchy, (seconds) =>
+			run(
+				"warm-seed-state",
+				maestro,
+				["--device", udid ?? "", "hierarchy"],
+				seconds,
+			),
+		);
 		receipt.driverWarmUp =
 			"PASS cold driver before tracked launch; foreground-only drawn app hierarchy";
 		await flow("connect-initial", selectStageBComputer());
@@ -952,10 +965,20 @@ export async function runStageBDraftProof(
 	} catch (error) {
 		failed = error;
 		receipt.status = "FAIL";
-		receipt.error = error instanceof Error ? error.message : "proof failed";
+		receipt.error = stageBDiagnosticText(
+			error instanceof Error ? error.message : "proof failed",
+		);
 	} finally {
 		for (const child of children) reap(child);
 		if (udid) {
+			if (failed)
+				receipt.failureDiagnostics = await captureStageBFailure(
+					(name, command, args, seconds) =>
+						run(name, command, args, seconds, true),
+					udid,
+					output,
+					maestro,
+				);
 			try {
 				await run(
 					"cleanup-shutdown-owned-simulator",

@@ -11,7 +11,7 @@ const exactDraft = (text: string) => ({
 // Keep this app-owned selector shared by the warm hierarchy gate and every flow.
 // SpringBoard's app icon is not a drawn screen, even when it names our bundle.
 export const STAGE_B_DRAWN_SCREEN =
-	"(welcome-screen|home-screen|composer-input|computer-row-" +
+	"(stage-b-proof-gate|welcome-screen|home-screen|composer-input|computer-row-" +
 	STAGE_B_HOST.replaceAll(".", "\\.") +
 	")";
 // Account-routing's hosted cold-app sample is 25,869 ms; its shared 3x

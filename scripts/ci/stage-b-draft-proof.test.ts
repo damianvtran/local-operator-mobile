@@ -221,6 +221,15 @@ describe("dedicated Stage B proof preflight", () => {
 						StageBProofFlavor: config.flavor,
 					});
 					expect(actual.extra.staticContext).toBe("preserved");
+					expect(actual.extra.stageBProof.fixtureOrigin).toBe(
+						config.fixtureOrigin,
+					);
+					expect(actual.ios.infoPlist.NSAppTransportSecurity).toEqual({
+						NSAllowsLocalNetworking: true,
+						NSExceptionDomains: {
+							"127.0.0.1": { NSExceptionAllowsInsecureHTTPLoads: true },
+						},
+					});
 				}
 			} finally {
 				unlinkSync(link);

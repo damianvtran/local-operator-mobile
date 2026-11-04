@@ -21,31 +21,37 @@ export function stageBGeneratedSource(config: StageBProofConfig) {
 		// App until seed completion. Importing the real provider earlier races its
 		// cold credential restore; awaiting seed before registration races native main.
 		entry: `// Dedicated CI artifact only. Install transport BEFORE real app imports.
-const initialize = require('./src/testing/stage-b-draft-bootstrap.ts').installStageBDraftProof(${literal});
+const proof = require('./src/testing/stage-b-draft-bootstrap.ts');
+const initialize = proof.installStageBDraftProof(${literal});
 require('@expo/metro-runtime');
 const React = require('react');
-const { View, ActivityIndicator } = require('react-native');
+const { View, Text, ActivityIndicator } = require('react-native');
 const { renderRootComponent } = require('expo-router/build/renderRootComponent');
 let startup;
+let stage = 'registered';
 function StageBProofRoot() {
-  const [state, setState] = React.useState({ ready: false, error: null });
+  const [state, setState] = React.useState({ ready: false, stage, error: null });
   React.useEffect(() => {
     let active = true;
-    (startup ??= initialize()).then(
-      () => { if (active) setState({ ready: true, error: null }); },
-      () => { if (active) setState({ ready: false, error: new Error('Dedicated Stage B bootstrap failed') }); }
+    (startup ??= initialize((next) => { stage = next; if (active) setState((previous) => ({ ...previous, stage })); })).then(
+      () => { if (active) setState({ ready: true, stage: 'complete', error: null }); },
+      (reason) => {
+        const error = proof.stageBSeedFailure(reason);
+        console.error('Stage B seed failed stage=' + stage + ' cause=' + error.name + ': ' + error.message);
+        if (active) setState({ ready: false, stage, error });
+      }
     );
     return () => { active = false; };
   }, []);
-  if (state.error) throw state.error;
-  if (!state.ready) return React.createElement(View, { testID: 'stage-b-bootstrap-loading' }, React.createElement(ActivityIndicator));
+  const status = 'stage=' + state.stage + ' cause=' + (state.error ? state.error.name + ': ' + state.error.message : 'pending');
+  if (!state.ready) return React.createElement(View, { testID: 'stage-b-proof-gate', accessible: true, accessibilityLabel: status }, React.createElement(Text, { testID: 'stage-b-proof-status' }, status), state.error ? null : React.createElement(ActivityIndicator));
   const { App } = require('expo-router/build/qualified-entry');
   return React.createElement(App);
 }
 // Synchronous registration: async seed/receipts cannot postpone native main.
 renderRootComponent(StageBProofRoot);
 `,
-		config: `import { createRequire } from 'node:module';\nimport { join } from 'node:path';\nconst fromExpo = createRequire(require.resolve('expo/package.json'));\nconst { getDynamicConfig } = fromExpo('@expo/config/build/getConfig.js');\nconst proof = ${literal};\nexport default (context) => { const evaluated = getDynamicConfig(join(__dirname, ${originalConfig}), context); if (!evaluated?.config) throw new Error('Original Expo config could not be evaluated'); const base = evaluated.config; return { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true } } }, extra: { ...base.extra, stageBProof: proof } }; };\n`,
+		config: `import { createRequire } from 'node:module';\nimport { join } from 'node:path';\nconst fromExpo = createRequire(require.resolve('expo/package.json'));\nconst { getDynamicConfig } = fromExpo('@expo/config/build/getConfig.js');\nconst proof = ${literal};\nexport default (context) => { const evaluated = getDynamicConfig(join(__dirname, ${originalConfig}), context); if (!evaluated?.config) throw new Error('Original Expo config could not be evaluated'); const base = evaluated.config; return { ...base, name: 'Stage B Draft Proof', scheme: 'stagebdraftproof', ios: { ...base.ios, bundleIdentifier: '${STAGE_B_BUNDLE}', infoPlist: { ...base.ios?.infoPlist, StageBProofSourceSha: proof.sourceSha, StageBProofNonce: proof.nonce, StageBProofFlavor: proof.flavor, NSAppTransportSecurity: { NSAllowsLocalNetworking: true, NSExceptionDomains: { '127.0.0.1': { NSExceptionAllowsInsecureHTTPLoads: true } } } } }, extra: { ...base.extra, stageBProof: proof } }; };\n`,
 	};
 }
 export function prepareStageBProof(

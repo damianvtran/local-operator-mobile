@@ -1,5 +1,5 @@
 import {
-	STAGE_B_BUNDLE,
+	assertStageBEmbeddedConfig,
 	STAGE_B_HOST,
 	type StageBProofConfig,
 	stageBTransport,
@@ -7,39 +7,91 @@ import {
 	validateStageBProof,
 } from "./stage-b-draft-transport";
 
+export { stageBSeedFailure } from "./stage-b-draft-transport";
+
 /** PROOF ENTRY ONLY. No ordinary route imports this module, no production env
  * flag enables it, and it never seeds an authority/scope/queue. The real provider
  * must cold-restore synthetic credentials and obtain its own authenticated /me. */
 export function installStageBDraftProof(
 	config: StageBProofConfig,
-): () => Promise<void> {
+): (report?: (stage: string) => void) => Promise<void> {
 	validateStageBProof(config);
 	// This MUST run during entry evaluation, before router/provider imports. Seed
 	// I/O belongs behind the registered React root, never before main registration.
 	const nativeFetch = globalThis.fetch.bind(globalThis);
 	globalThis.fetch = stageBTransport(config, nativeFetch);
-	return () => bootStageBDraftProof(config, nativeFetch);
+	return (report = () => {}) =>
+		bootStageBDraftProof(config, nativeFetch, report);
 }
 
 async function bootStageBDraftProof(
 	config: StageBProofConfig,
 	nativeFetch: typeof fetch,
+	report: (stage: string) => void,
 ): Promise<void> {
-	const { default: Constants } = await import("expo-constants");
+	const stage = (name: string) => {
+		report(name);
+		console.info(`Stage B bootstrap stage=${name}`);
+	};
+	const bounded = async <T>(
+		name: string,
+		operation: () => Promise<T>,
+	): Promise<T> => {
+		stage(name);
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				operation(),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(
+						() => reject(new Error(`bootstrap deadline exceeded at ${name}`)),
+						30000,
+					);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	};
+	// Embedded non-lazy bundles already contain these modules. Synchronous require
+	// avoids depending on Metro's async-loading policy during the seed gate.
+	stage("constants-module");
+	const { default: Constants } =
+		require("expo-constants") as typeof import("expo-constants");
 	const embedded = Constants.expoConfig?.extra?.stageBProof as
 		| StageBProofConfig
 		| undefined;
-	if (
-		Constants.expoConfig?.ios?.bundleIdentifier !== STAGE_B_BUNDLE ||
-		JSON.stringify(embedded) !== JSON.stringify(config)
-	)
-		throw new Error("proof bundle identity does not match compiled config");
+	stage("embedded-identity");
+	assertStageBEmbeddedConfig(
+		embedded,
+		Constants.expoConfig?.ios?.bundleIdentifier,
+		config,
+	);
 	const headers = {
 		"x-stage-b-proof": config.nonce,
 		"content-type": "application/json",
 	};
-	const control = (path: string, init?: RequestInit) =>
-		nativeFetch(`${config.fixtureOrigin}/proof/${path}`, { ...init, headers });
+	const control = async (path: string, init?: RequestInit) => {
+		const controller = new AbortController();
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				nativeFetch(`${config.fixtureOrigin}/proof/${path}`, {
+					...init,
+					headers,
+					signal: controller.signal,
+				}),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => {
+						controller.abort();
+						reject(new Error(`fixture ${path} deadline exceeded`));
+					}, 20000);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	};
 	const receipt = async (
 		kind: string,
 		values: Record<string, string | number | boolean>,
@@ -50,20 +102,31 @@ async function bootStageBDraftProof(
 		});
 		if (!response.ok) throw new Error("proof receipt refused");
 	};
-	const storage = await import("@/features/auth/tunnel-storage");
-	const { privateDataKeys } = await import("@/connection/private-data-key");
-	const { File, Directory, Paths } = await import("expo-file-system");
-	const crypto = await import("expo-crypto");
+	stage("storage-module");
+	const storage =
+		require("@/features/auth/tunnel-storage") as typeof import("@/features/auth/tunnel-storage");
+	stage("key-module");
+	const { privateDataKeys } =
+		require("@/connection/private-data-key") as typeof import("@/connection/private-data-key");
+	stage("filesystem-module");
+	const { File, Directory, Paths } =
+		require("expo-file-system") as typeof import("expo-file-system");
+	stage("crypto-module");
+	const crypto = require("expo-crypto") as typeof import("expo-crypto");
 	const sentinel = () =>
 		new File(Paths.cache, "lo-mobile-private-installation-v1");
 	const hash = (value: string) =>
 		crypto.digestStringAsync(crypto.CryptoDigestAlgorithm.SHA256, value);
-	const priorKey = await privateDataKeys().read();
+	const priorKey = await bounded("private-key-read", () =>
+		privateDataKeys().read(),
+	);
+	stage("startup-receipt");
 	await receipt("startup", {
 		survivingKey: priorKey !== null,
 		sentinelPresent: sentinel().exists,
 		installFingerprint: priorKey ? await hash(priorKey.installId) : "none",
 	});
+	stage("fixture-seed");
 	const response = await control("seed");
 	if (!response.ok) throw new Error("synthetic credential seed unavailable");
 	const seed = (await response.json()) as {
@@ -85,24 +148,29 @@ async function bootStageBDraftProof(
 	)
 		throw new Error("non-synthetic credential seed refused");
 	const now = Date.now();
-	await storage.writeStoredOauth({
-		access: String(seed.access),
-		refresh: syntheticValue(config, "oauth-refresh"),
-		expires_at: seed.expiredAccess === true ? now - 1 : now + 3600000,
-		scope: "openid",
-		token_type: "Bearer",
-		account_label: "Stage B synthetic account",
-		account_id: null,
-	});
-	await storage.writeStoredTunnelSession({
-		grant: String(seed.grant),
-		grantExpiresAt: now + 300000,
-		refreshHandle: String(seed.refreshHandle),
-		refreshExpiresAt: now + 2592000000,
-		hostname: STAGE_B_HOST,
-		tunnelId: "stage-b-personal-tunnel",
-		mintedAt: now,
-	});
+	await bounded("oauth-write", () =>
+		storage.writeStoredOauth({
+			access: String(seed.access),
+			refresh: syntheticValue(config, "oauth-refresh"),
+			expires_at: seed.expiredAccess === true ? now - 1 : now + 3600000,
+			scope: "openid",
+			token_type: "Bearer",
+			account_label: "Stage B synthetic account",
+			account_id: null,
+		}),
+	);
+	await bounded("tunnel-write", () =>
+		storage.writeStoredTunnelSession({
+			grant: String(seed.grant),
+			grantExpiresAt: now + 300000,
+			refreshHandle: String(seed.refreshHandle),
+			refreshExpiresAt: now + 2592000000,
+			hostname: STAGE_B_HOST,
+			tunnelId: "stage-b-personal-tunnel",
+			mintedAt: now,
+		}),
+	);
+	stage("seeded-receipt");
 	await receipt("seeded", { nativeSecureStorage: true });
 
 	const canary = `stage-b-private-draft-${config.nonce}`;
@@ -142,6 +210,7 @@ async function bootStageBDraftProof(
 	positive.delete();
 	if (!detected)
 		throw new Error("plaintext observer failed its positive control");
+	stage("observer-control");
 	await receipt("observer-control", { detected, removed: !positive.exists });
 	let running = false;
 	setInterval(() => {
@@ -245,4 +314,5 @@ async function bootStageBDraftProof(
 				running = false;
 			});
 	}, 400);
+	stage("complete");
 }

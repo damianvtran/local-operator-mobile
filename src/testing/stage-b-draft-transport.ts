@@ -13,6 +13,68 @@ export interface StageBProofConfig {
 	nonce: string;
 	fixtureOrigin: string;
 }
+// Proof diagnostics are uploaded and drawn on-screen. Keep nonce-derived auth,
+// canaries, bearer/JWT material and long opaque key values out of both surfaces.
+export function stageBDiagnosticText(value: string): string {
+	return value
+		.replace(
+			/stage-b-(?:synthetic|private-draft)-[^\s"'\\]+/gi,
+			"[redacted-proof-value]",
+		)
+		.replace(/Bearer\s+[^\s"'\\]+/gi, "Bearer [redacted]")
+		.replace(
+			/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]+/g,
+			"[redacted-jwt]",
+		)
+		.replace(
+			/\b(?:access|refresh|grant|token|password|authorization|nonce)\b["']?\s*[:=]\s*["']?[^\s,"'}\\]+/gi,
+			"[redacted-credential]",
+		)
+		.replace(/[a-f0-9]{24,}/gi, "[redacted-opaque]")
+		.replace(/[A-Za-z0-9+/_-]{40,}={0,2}/g, "[redacted-key]");
+}
+export function stageBSeedFailure(error: unknown): {
+	name: string;
+	message: string;
+} {
+	const record =
+		error && typeof error === "object"
+			? (error as { name?: unknown; message?: unknown })
+			: null;
+	return {
+		name: stageBDiagnosticText(
+			typeof record?.name === "string" ? record.name : "Error",
+		).slice(0, 80),
+		message: stageBDiagnosticText(
+			typeof record?.message === "string"
+				? record.message
+				: String(error ?? "bootstrap failed"),
+		)
+			.replace(/[\r\n]/g, " ")
+			.slice(0, 240),
+	};
+}
+/** Native Constants may reserialize dictionaries in a different property order.
+ * Compare the exact identity fields, never JSON encoding order or guessed labels. */
+export function assertStageBEmbeddedConfig(
+	embedded: unknown,
+	bundleId: unknown,
+	config: StageBProofConfig,
+): void {
+	const keys = Object.keys(config) as (keyof StageBProofConfig)[];
+	const fail = (fields: string) => {
+		throw new Error(
+			`proof bundle identity does not match compiled config: ${fields}`,
+		);
+	};
+	if (bundleId !== STAGE_B_BUNDLE) fail("bundle-identifier");
+	if (!embedded || typeof embedded !== "object")
+		fail("embedded-config-unavailable");
+	const value = embedded as Record<string, unknown>;
+	if (Object.keys(value).length !== keys.length) fail("unexpected-field-count");
+	const mismatch = keys.filter((key) => value[key] !== config[key]);
+	if (mismatch.length) fail(`fields=${mismatch.join(",")}`);
+}
 const SHA = /^[a-f0-9]{40}$/;
 const NONCE = /^[a-f0-9]{32}$/;
 export function validateStageBProof(config: StageBProofConfig): void {

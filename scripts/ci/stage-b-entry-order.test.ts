@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	STAGE_B_BUNDLE,
 	type StageBProofConfig,
+	stageBSeedFailure,
 } from "../../src/testing/stage-b-draft-transport";
 import { stageBGeneratedSource } from "./stage-b-draft-build";
 
@@ -20,14 +21,21 @@ function evaluateEntry(entry: string) {
 	const registry = new Map<string, () => () => unknown>();
 	const calls: string[] = [];
 	let resolveSeed!: () => void;
-	let rejectSeed!: () => void;
+	let rejectSeed!: (error?: unknown) => void;
 	const seed = new Promise<void>((resolve, reject) => {
 		resolveSeed = resolve;
 		rejectSeed = reject;
 	});
 	let transport = false;
 	let seeded = false;
-	let state: { ready: boolean; error: Error | null } | undefined;
+	let state:
+		| {
+				ready: boolean;
+				stage: string;
+				error: { name: string; message: string } | null;
+		  }
+		| undefined;
+	const logs: string[] = [];
 	let effect: (() => unknown) | undefined;
 	const App = () => "real-router";
 	const AppRegistry = {
@@ -36,13 +44,15 @@ function evaluateEntry(entry: string) {
 			registry.set(name, factory);
 		},
 	};
-	const initialize = () => {
+	const initialize = (report?: (stage: string) => void) => {
 		calls.push("async-seed");
+		report?.("private-key-read");
 		return seed;
 	};
 	const requireModule = (id: string): unknown => {
 		if (id === "./src/testing/stage-b-draft-bootstrap.ts")
 			return {
+				stageBSeedFailure,
 				installStageBDraftProof: () => {
 					transport = true;
 					calls.push("install-transport");
@@ -62,8 +72,17 @@ function evaluateEntry(entry: string) {
 					state ??= initial;
 					return [
 						state,
-						(next: typeof state) => {
-							state = next;
+						(
+							next:
+								| typeof state
+								| ((
+										previous: NonNullable<typeof state>,
+								  ) => NonNullable<typeof state>),
+						) => {
+							state =
+								typeof next === "function"
+									? next(state as NonNullable<typeof state>)
+									: next;
 						},
 					];
 				},
@@ -102,10 +121,15 @@ function evaluateEntry(entry: string) {
 		}
 		throw new Error(`Unexpected entry dependency ${id}`);
 	};
-	runInNewContext(entry, { require: requireModule, Error });
+	runInNewContext(entry, {
+		require: requireModule,
+		Error,
+		console: { error: (message: string) => logs.push(message) },
+	});
 	return {
 		registry,
 		calls,
+		logs,
 		render: () => registry.get("main")?.()(),
 		mountEffect: () => effect?.(),
 		resolve: async () => {
@@ -114,8 +138,8 @@ function evaluateEntry(entry: string) {
 			await seed;
 			await Promise.resolve();
 		},
-		reject: async () => {
-			rejectSeed();
+		reject: async (error?: unknown) => {
+			rejectSeed(error);
 			await seed.catch(() => {});
 			await Promise.resolve();
 		},
@@ -135,7 +159,7 @@ describe("dedicated Stage B entry registration", () => {
 		expect(entry.calls).toEqual(["install-transport", "register-main"]);
 		expect(entry.render()).toMatchObject({
 			type: "View",
-			props: { testID: "stage-b-bootstrap-loading" },
+			props: { testID: "stage-b-proof-gate" },
 		});
 		entry.mountEffect();
 		expect(entry.calls).toEqual([
@@ -162,8 +186,18 @@ describe("dedicated Stage B entry registration", () => {
 		requireSynchronousMain(entry.registry);
 		entry.render();
 		entry.mountEffect();
-		await entry.reject();
-		expect(entry.render).toThrow("Dedicated Stage B bootstrap failed");
+		await entry.reject(new TypeError("keychain token=secret-never-log"));
+		expect(entry.render()).toMatchObject({
+			type: "View",
+			props: {
+				testID: "stage-b-proof-gate",
+				accessibilityLabel: expect.stringContaining(
+					"stage=private-key-read cause=TypeError:",
+				),
+			},
+		});
+		expect(entry.logs[0]).toContain("stage=private-key-read");
+		expect(entry.logs.join(" ")).not.toContain("secret-never-log");
 		expect(entry.calls).not.toContain("import-real-router");
 	});
 });
