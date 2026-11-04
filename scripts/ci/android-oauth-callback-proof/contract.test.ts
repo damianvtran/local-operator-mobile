@@ -254,7 +254,10 @@ describe("Android OAuth native-proof contract", () => {
 	it("also exercises the real Expo provider through failure, retry, picker and cold restore", () => {
 		expect(runner).toContain("android-oauth-callback-proof/real-app.sh");
 		expect(prepareApp).toContain("signin-app-proof/prepare-entry.ts");
-		expect(prepareApp).toContain("--dev true");
+		expect(prepareApp).toContain("--dev false");
+		expect(prepareApp).toContain("EXPO_PUBLIC_ANDROID_EMBEDDED_PROOF=true");
+		expect(prepareApp).toContain("trap restore_origin EXIT");
+		expect(prepareApp).toContain('"js_dev":false');
 		expect(prepareApp).toContain("src/debug/assets/index.android.bundle");
 		expect(workflow).toContain("android-oauth-callback-proof/prepare-app.sh");
 		expect(realApp).toContain("embedded-bundle.sha256");

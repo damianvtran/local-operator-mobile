@@ -1,5 +1,11 @@
+import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
 import { describe, expect, it } from "vitest";
-import { embeddedEntry, embeddedHost } from "./embedded-host.ts";
+import {
+	embeddedEntry,
+	embeddedHost,
+	embeddedOverride,
+} from "./embedded-host.ts";
 
 const template = `class MainApplication { val reactHost = ExpoReactHostFactory.getDefaultReactHost(
   context = applicationContext,
@@ -20,8 +26,13 @@ describe("hosted embedded Android proof host", () => {
 		const logs: string[] = [];
 		const execute = (url: string) =>
 			run(
-				true,
-				{ env: { EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: "http://127.0.0.1:54831" } },
+				false,
+				{
+					env: {
+						EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: "http://127.0.0.1:54831",
+						EXPO_PUBLIC_ANDROID_EMBEDDED_PROOF: "true",
+					},
+				},
 				(name: string) =>
 					name === "react-native"
 						? {
@@ -45,6 +56,40 @@ describe("hosted embedded Android proof host", () => {
 		expect(routed).toBe(1);
 		expect(() => embeddedEntry(source)).toThrow();
 	});
+	it("admits only the explicit proof define in its temporary helper; normal Release stays closed", () => {
+		const original = readFileSync(
+			new URL(
+				"../../../src/connection/oauth-proof-override.ts",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		const patched = embeddedOverride(original);
+		const run = (source: string, enabled: string, origin: string) => {
+			const js = stripTypeScriptTypes(source).replace(
+				"export function",
+				"function",
+			);
+			return new Function(
+				"__DEV__",
+				"process",
+				`${js};return debugOAuthProofOrigin();`,
+			)(false, {
+				env: {
+					EXPO_PUBLIC_ANDROID_EMBEDDED_PROOF: enabled,
+					EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: origin,
+				},
+			});
+		};
+		expect(run(patched, "true", "http://127.0.0.1:54831")).toBe(
+			"http://127.0.0.1:54831",
+		);
+		expect(run(patched, "false", "http://127.0.0.1:54831")).toBeUndefined();
+		expect(run(patched, "true", "https://example.com")).toBeUndefined();
+		expect(run(original, "true", "http://127.0.0.1:54831")).toBeUndefined();
+		expect(() => embeddedOverride(patched)).toThrow();
+	});
+
 	it("selects the real Expo embedded loader, independently of the library's DEBUG default", () => {
 		const result = embeddedHost(template);
 		expect(result).toContain("useDevSupport = false,");

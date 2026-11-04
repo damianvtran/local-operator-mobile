@@ -97,11 +97,15 @@ retains process/logcat evidence and correctly recognises Android16's `Hist  #`
 spacing when checking for orphaned auth tabs.
 
 The real-app proof embeds the existing E2E JavaScript in the debug APK and uses
-an explicitly asset-loading generated Expo host. JS `dev=true` preserves the
-existing Debug+E2E gate; native packager support is false. This job-only host is
-not production source and changes no Release build. Expo56's default is the
-React Native AAR's `ReactBuildConfig.DEBUG`, so warm Metro/reverse ports alone do
-not prove that a debug application will choose Metro. The proof continues through
+an explicitly asset-loading generated Expo host. JS `dev=false` and native
+packager support=false are intentional: Expo57's async-require message socket
+rejects an embedded DEV bundle before the application entry executes. Only the
+job-generated entry and a temporary copy of the origin-admission helper use the
+explicit `EXPO_PUBLIC_ANDROID_EMBEDDED_PROOF=true` define. URL validation remains
+unchanged, the original helper bytes are restored after export even on failure,
+and a normal Release retains its Debug-only admission guard. Before/after helper
+source is archived with the bundle. This does not enable proof hooks in normal
+Release builds or require Metro; a runtime asset-URL marker must confirm loading. The proof continues through
 token500/Retry, persisted picker and a grant-authenticated populated session list.
 
 Source/JS tests are not native proof. Successful compilation, rendered interaction,
