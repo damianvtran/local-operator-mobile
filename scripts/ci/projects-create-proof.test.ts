@@ -188,9 +188,10 @@ it.each(["present", "absent", "empty", "whitespace"])(
 				.sort();
 		const cwdBefore = cwdFrameNames();
 		const blankOverride = mode === "empty" ? "" : " \t ";
-		const parentOverride = mode === "empty" || mode === "whitespace"
-			? blankOverride
-			: process.env.LOCAL_OPERATOR_SCRATCHPAD;
+		const parentOverride =
+			mode === "empty" || mode === "whitespace"
+				? blankOverride
+				: process.env.LOCAL_OPERATOR_SCRATCHPAD;
 		const parent = mkdtempSync(
 			join(frameScratchRoot(parentOverride), "frame-parent-"),
 		);
