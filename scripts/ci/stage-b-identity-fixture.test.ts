@@ -7,11 +7,15 @@ import {
 } from "../../src/connection/recovery-authority";
 import {
 	STAGE_B_HOST,
+	stageBContainsDraftCanary,
+	stageBDraftCanary,
 	stageBTransport,
 	syntheticValue,
 } from "../../src/testing/stage-b-draft-transport";
 import { startStageBIdentityFixture } from "../../tools/mock-relay/stage-b-identity-fixture";
+import { stageBFlow, typeStageBDraft } from "./stage-b-draft-flows";
 
+const PUBLIC_CANARY = /^stage-b-private-draft-[a-f0-9]{32}$/;
 const servers: Awaited<ReturnType<typeof startStageBIdentityFixture>>[] = [];
 afterEach(async () => {
 	await Promise.all(servers.splice(0).map((server) => server.close()));
@@ -22,6 +26,58 @@ async function fixture() {
 	return { ...server, transport: stageBTransport(server.config, fetch) };
 }
 describe("Stage B real-socket synthetic authority fixture", () => {
+	it("accepts the native keychain preflight evidence as a boolean startup receipt", async () => {
+		const x = await fixture();
+		const response = await fetch(`${x.config.fixtureOrigin}/proof/receipt`, {
+			method: "POST",
+			headers: {
+				"x-stage-b-proof": x.config.nonce,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify({
+				kind: "startup",
+				sourceSha: x.config.sourceSha,
+				keychainPreflight: true,
+			}),
+		});
+		expect(response.status).toBe(200);
+		expect(x.receipts).toEqual([
+			expect.objectContaining({ keychainPreflight: true }),
+		]);
+	});
+	it("shares an independent public canary between flow YAML and the plaintext scanner", async () => {
+		const x = await fixture();
+		const readSeed = async () =>
+			(
+				await fetch(`${x.config.fixtureOrigin}/proof/seed`, {
+					headers: { "x-stage-b-proof": x.config.nonce },
+				})
+			).json();
+		const seed = await readSeed();
+		const canary = stageBDraftCanary(seed.canary, x.config.nonce);
+		expect(canary).toBe(x.canary);
+		expect(canary).toMatch(PUBLIC_CANARY);
+		const yaml = stageBFlow(typeStageBDraft(canary));
+		expect(yaml).toContain(canary);
+		expect(yaml).not.toContain(x.config.nonce);
+		expect(
+			stageBContainsDraftCanary(
+				`prefix ${canary}-typed-while-loading suffix`,
+				canary,
+			),
+		).toBe(true);
+		expect(
+			stageBContainsDraftCanary("encrypted-envelope-placeholder", canary),
+		).toBe(false);
+		x.scenario("account-b");
+		expect((await readSeed()).canary).toBe(canary); // Relaunch/scenario must not desync the observer.
+		expect(() =>
+			stageBDraftCanary(
+				`stage-b-private-draft-${x.config.nonce}`,
+				x.config.nonce,
+			),
+		).toThrow("independent");
+	});
 	it("exercises the production /me parser and discovery through real authenticated requests", async () => {
 		const x = await fixture();
 		const token = syntheticValue(x.config, "access-a");

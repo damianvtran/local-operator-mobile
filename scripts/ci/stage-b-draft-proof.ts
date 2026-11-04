@@ -17,6 +17,7 @@ import {
 	STAGE_B_OTHER_HOST,
 	type StageBProofConfig,
 	stageBDiagnosticText,
+	stageBDraftCanary,
 } from "../../src/testing/stage-b-draft-transport.ts";
 import {
 	type IdentityScenario,
@@ -131,7 +132,7 @@ async function until<T>(
 	throw new Error(`native proof observation timed out: ${description}`);
 }
 
-/** One bounded unsigned producer; a unique owned simulator; all children use
+/** One bounded ad-hoc simulator producer; a unique owned simulator; all children use
  * exact process-group reaping. This is not the callback/PR147 proof lane. */
 export async function runStageBDraftProof(
 	env: NodeJS.ProcessEnv = process.env,
@@ -159,6 +160,7 @@ export async function runStageBNodeDryRun(
 		"pnpm",
 		"maestro",
 		"plutil",
+		"codesign",
 	]) {
 		const tool = join(tools, name);
 		if (
@@ -442,8 +444,19 @@ async function runStageBCoordinator(
 			["simctl", "bootstatus", udid, "-b"],
 			240,
 		);
+		// No team/profile/certificate or keychain import: '-' is a credential-free
+		// ad-hoc identity. Completely unsigned simulator apps cannot use SecureStore.
+		// Override app entitlements (e.g. notification aps-environment) for this
+		// simulator-only proof; Xcode still injects its simulator signing identity.
+		const simulatorEntitlements = join(output, "proof-simulator.entitlements");
+		writeFileSync(
+			simulatorEntitlements,
+			'<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict/></plist>',
+		);
 		// Match the ordinary iOS lane's automatic build parallelism. The measured
 		// uncapped Release build takes ~23–25 min; retain a bounded 45-min ceiling.
+		// Keep the historical receipt phase name for artifact correlation; this
+		// candidate is now ad-hoc signed, never distribution/certificate signed.
 		await run(
 			"unsigned-candidate-producer",
 			"xcodebuild",
@@ -460,8 +473,12 @@ async function runStageBCoordinator(
 				`platform=iOS Simulator,id=${udid}`,
 				"-derivedDataPath",
 				join(output, "DerivedData"),
-				"CODE_SIGNING_ALLOWED=NO",
+				"CODE_SIGN_IDENTITY=-",
+				"CODE_SIGN_STYLE=Manual",
+				"DEVELOPMENT_TEAM=",
+				"CODE_SIGNING_ALLOWED=YES",
 				"CODE_SIGNING_REQUIRED=NO",
+				`CODE_SIGN_ENTITLEMENTS=${simulatorEntitlements}`,
 				"build",
 				"-quiet",
 			],
@@ -515,6 +532,19 @@ async function runStageBCoordinator(
 			STAGE_B_BUNDLE,
 			"app",
 		]);
+		const signature = await run("installed-ad-hoc-signature", "codesign", [
+			"-dv",
+			installed,
+		]);
+		if (!signature.includes("Signature=adhoc"))
+			throw new Error("installed simulator app is not ad-hoc signed");
+		receipt.installedSignature = "adhoc";
+		await run("installed-signing-entitlements", "codesign", [
+			"-d",
+			"--entitlements",
+			":-",
+			installed,
+		]);
 		verifyStageBBundle(config, await identity(installed));
 		receipt.installedDigest = treeDigest(installed);
 		if (
@@ -528,7 +558,7 @@ async function runStageBCoordinator(
 			digest(readFileSync(join(installed, executable)))
 		)
 			throw new Error("installed native executable differs from producer");
-		const canary = `stage-b-private-draft-${config.nonce}`;
+		const canary = stageBDraftCanary(fixture.canary, config.nonce);
 		const launches: number[] = [];
 		receipt.launchPids = launches;
 		const launch = async () => {

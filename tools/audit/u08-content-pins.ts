@@ -432,7 +432,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Converged onto main 24a3d30f (#157 above): recomputed over the combined tree. */
 	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
-	src: "84f1389eaa1ff6da77e7d37942cc5ddd0edd8f30e0f75f0e59285f5b8673fcde",
+	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
+	src: "f2cf35f3faca38b1e8aa5f02d0adeb9397ad9e858fc8c665e8587896cc0261e1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

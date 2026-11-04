@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { installStageBDraftProof } from "../stage-b-draft-bootstrap";
+import {
+	installStageBDraftProof,
+	stageBKeychainPreflight,
+} from "../stage-b-draft-bootstrap";
 import {
 	assertStageBEmbeddedConfig,
 	STAGE_B_BUNDLE,
@@ -16,6 +19,67 @@ const config: StageBProofConfig = {
 };
 
 describe("Stage B synchronous transport installation", () => {
+	it("writes, reads and removes the throwaway key before a seed can proceed", async () => {
+		let value: string | null = null;
+		const operations: string[] = [];
+		await stageBKeychainPreflight(
+			{
+				write: async () => {
+					operations.push("write");
+					value = "throwaway";
+				},
+				read: async () => {
+					operations.push("read");
+					return value;
+				},
+				remove: async () => {
+					operations.push("remove");
+					value = null;
+				},
+			},
+			"throwaway",
+		);
+		expect(operations).toEqual(["write", "read", "remove", "read"]);
+		expect(value).toBeNull();
+	});
+	it("preserves the original entitlement failure even when cleanup also fails", async () => {
+		const entitlement = new Error(
+			"KeyChainException errSecMissingEntitlement -34018",
+		);
+		let removed = false;
+		await expect(
+			stageBKeychainPreflight(
+				{
+					write: async () => {
+						throw entitlement;
+					},
+					read: async () => null,
+					remove: async () => {
+						removed = true;
+						throw new Error("cleanup also denied");
+					},
+				},
+				"throwaway",
+			),
+		).rejects.toBe(entitlement);
+		expect(removed).toBe(true);
+	});
+	it("refuses a mismatched keychain round-trip", async () => {
+		let removed = false;
+		await expect(
+			stageBKeychainPreflight(
+				{
+					write: async () => {},
+					read: async () => "wrong",
+					remove: async () => {
+						removed = true;
+					},
+				},
+				"expected",
+			),
+		).rejects.toThrow("keychain preflight round-trip mismatch");
+		expect(removed).toBe(true);
+	});
 	it("accepts the same embedded identity reserialized by native NSDictionary", () => {
 		const reordered = Object.fromEntries(Object.entries(config).reverse());
 		expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(config)); // Old guard refuses it.

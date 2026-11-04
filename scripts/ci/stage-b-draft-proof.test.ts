@@ -138,6 +138,15 @@ describe("dedicated Stage B proof preflight", () => {
 		expect(start).toBeGreaterThan(0);
 		const build = source.slice(start, source.indexOf("const products", start));
 		expect(build).not.toContain('"-jobs"');
+		for (const flag of [
+			"CODE_SIGN_IDENTITY=-",
+			"CODE_SIGN_STYLE=Manual",
+			"DEVELOPMENT_TEAM=",
+			"CODE_SIGNING_ALLOWED=YES",
+			"CODE_SIGNING_REQUIRED=NO",
+		])
+			expect(build).toContain(flag);
+		expect(build).not.toContain("CODE_SIGNING_ALLOWED=NO");
 		expect(build).toContain(`platform=iOS Simulator,id=\${udid}`);
 		expect(build).toContain('join(output, "DerivedData")');
 		expect(build).toContain("2700");

@@ -15,6 +15,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  * ONLY these regular Node scripts. Even plutil is redirected by the test API. */
 export function probeStageBCoordinator(
 	oldRedactedReturn = false,
+	unsignedBuild = false,
 ): Record<string, unknown> {
 	const repository = fileURLToPath(new URL("../../", import.meta.url));
 	const root = mkdtempSync(
@@ -54,7 +55,8 @@ if(name==='git'){if(args[0]==='rev-parse')out(process.env.STAGE_B_SOURCE_SHA);el
 else if(name==='df')out('Filesystem 1024-blocks Used Available Capacity Mounted on\\nnode-only 99999999 0 99999999 0% /');
 else if(name==='pod')out('1.16.2');
 else if(name==='pnpm'){if(args.includes('prebuild')){fs.mkdirSync(path.join(root,'ios/StageBDraftProof.xcworkspace'),{recursive:true});fs.mkdirSync(path.join(root,'ios/StageBDraftProof.xcodeproj'),{recursive:true});}else out('57.0.26');}
-else if(name==='xcodebuild'){if(args.includes('-version'))out('Xcode 26.0');else{const c=config(),derived=args[args.indexOf('-derivedDataPath')+1],app=path.join(derived,'Build/Products/Release-iphonesimulator/StageBDraftProof.app');fs.mkdirSync(app,{recursive:true});fs.writeFileSync(path.join(app,'Info.plist'),JSON.stringify({CFBundleIdentifier:c.bundleId,CFBundleExecutable:'StageBDraftProof',StageBProofSourceSha:c.sourceSha,StageBProofNonce:c.nonce,StageBProofFlavor:c.flavor}));fs.writeFileSync(path.join(app,'main.jsbundle'),JSON.stringify(c));fs.writeFileSync(path.join(app,'StageBDraftProof'),'NODE ONLY executable placeholder');}}
+else if(name==='xcodebuild'){if(args.includes('-version'))out('Xcode 26.0');else{for(const flag of ['CODE_SIGN_IDENTITY=-','CODE_SIGN_STYLE=Manual','DEVELOPMENT_TEAM=','CODE_SIGNING_ALLOWED=YES','CODE_SIGNING_REQUIRED=NO'])if(!args.includes(flag))throw Error('ADHOC_ARGS_REQUIRED:'+flag);const ent=args.find(a=>a.startsWith('CODE_SIGN_ENTITLEMENTS='));if(!ent||!fs.readFileSync(ent.slice('CODE_SIGN_ENTITLEMENTS='.length),'utf8').includes('<dict/>'))throw Error('EMPTY_SIMULATOR_ENTITLEMENTS_REQUIRED');const c=config(),derived=args[args.indexOf('-derivedDataPath')+1],app=path.join(derived,'Build/Products/Release-iphonesimulator/StageBDraftProof.app');fs.mkdirSync(app,{recursive:true});fs.writeFileSync(path.join(app,'Info.plist'),JSON.stringify({CFBundleIdentifier:c.bundleId,CFBundleExecutable:'StageBDraftProof',StageBProofSourceSha:c.sourceSha,StageBProofNonce:c.nonce,StageBProofFlavor:c.flavor}));fs.writeFileSync(path.join(app,'main.jsbundle'),JSON.stringify(c));fs.writeFileSync(path.join(app,'StageBDraftProof'),'NODE ONLY executable placeholder');}}
+else if(name==='codesign'){if(args.includes('-dv'))out('Executable='+args.at(-1)+'\\nSignature=adhoc\\nTeamIdentifier=not set');else if(args.includes('--entitlements'))out('<plist version="1.0"><dict/></plist>');else throw Error('UNEXPECTED_CODESIGN_OPERATION');}
 else if(name==='plutil'){const info=JSON.parse(fs.readFileSync(args.at(-1),'utf8'));out(info[args[1]]);}
 else if(name==='xcrun'){const op=args[1];if(op==='list')out(JSON.stringify({runtimes:[{identifier:'com.apple.CoreSimulator.SimRuntime.iOS-26-0',name:'iOS 26.0',isAvailable:true}]}));else if(op==='create')out('00000000-0000-4000-8000-000000000001');else if(op==='install'){fs.mkdirSync(path.dirname(installed),{recursive:true});fs.cpSync(args[3],installed,{recursive:true});}else if(op==='get_app_container')out(installed);else if(op==='launch')out('com.localoperator.mobile.stagebproof: 12345');else if(op==='io')fs.writeFileSync(args.at(-1),'NODE ONLY screenshot placeholder');else if(op==='spawn')out('NODE ONLY os_log capture');}
 else if(name==='maestro'){if(args.includes('--version'))out('2.11.0');else if(args.includes('hierarchy'))out(JSON.stringify({identifier:'home-screen'}));else if(args.includes('test')){out('NODE_ONLY_FAKE_FLOW_STOP');process.exitCode=17;}}
@@ -67,6 +69,7 @@ else throw Error('Unexpected tool '+name);
 		"pnpm",
 		"xcodebuild",
 		"plutil",
+		"codesign",
 		"xcrun",
 		"maestro",
 	])
@@ -74,12 +77,18 @@ else throw Error('Unexpected tool '+name);
 	let proofModule = pathToFileURL(
 		join(repository, "scripts/ci/stage-b-draft-proof.ts"),
 	).href;
-	if (oldRedactedReturn) {
+	if (oldRedactedReturn || unsignedBuild) {
 		// Counterfactual copy only: never modify the owned implementation/worktree.
 		let source = readFileSync(fileURLToPath(proofModule), "utf8");
 		if (!source.includes("done(bytes.trim())"))
 			throw Error("raw return mutation site missing");
-		source = source.replace("done(bytes.trim())", "done(safe.trim())");
+		if (oldRedactedReturn)
+			source = source.replace("done(bytes.trim())", "done(safe.trim())");
+		if (unsignedBuild)
+			source = source.replace(
+				'"CODE_SIGNING_ALLOWED=YES"',
+				'"CODE_SIGNING_ALLOWED=NO"',
+			);
 		source = source.replace(
 			/from (["'])(\.[^"']+)\1/g,
 			(_match, quote, specifier) =>
@@ -93,12 +102,15 @@ else throw Error('Unexpected tool '+name);
 const raw=new Map();let error='';try{await runStageBNodeDryRun(process.env,${JSON.stringify(tools)},(name,value)=>raw.set(name,value));}catch(e){error=String(e.message);}
 const output=join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12));const receipt=JSON.parse(readFileSync(join(output,'receipt.json'),'utf8'));const logs=readdirSync(join(output,'commands'));const log=name=>readFileSync(join(output,'commands',logs.find(p=>p.endsWith('-'+name+'.log'))),'utf8');
 const entry=readFileSync('stage-b-proof-entry.js','utf8');const cfg=JSON.parse(entry.match(/installStageBDraftProof\\((\\{[^\\n]+\\})\\)/)[1]);
-const result={nodeOnly:true,sourceRaw:raw.get('source')===process.env.STAGE_B_SOURCE_SHA,workflowRaw:raw.get('evaluated-workflow')===readFileSync('.github/workflows/stage-b-draft-proof.yml','utf8').trim(),nonceRaw:raw.get('plist-StageBProofNonce')===cfg.nonce,containerRaw:raw.get('installed-container')?.includes('/Library/Developer/CoreSimulator/')&&raw.get('installed-container')?.endsWith('/StageBDraftProof.app'),pids:receipt.launchPids,stoppedAtFakeFlow:error.includes('warm-app-foreground failed: rc=17'),error,logsRedacted:{sha:!log('source').includes(process.env.STAGE_B_SOURCE_SHA),nonce:raw.has('plist-StageBProofNonce')?!log('plist-StageBProofNonce').includes(cfg.nonce):null,path:raw.has('installed-container')?!log('installed-container').includes(raw.get('installed-container')):null},argsRedacted:receipt.commands.every(c=>c.args.every(arg=>!arg.includes(cfg.nonce)&&!arg.includes(cfg.sourceSha)&&!arg.includes(process.env.GITHUB_WORKFLOW_SHA))),safeDigests:receipt.commands.every((c,i)=>c.outputDigest===createHash('sha256').update(readFileSync(join(output,'commands',logs.find(p=>p.startsWith(String(i+1).padStart(3,'0')+'-'))))).digest('hex')),captures:receipt.failureDiagnostics,commands:receipt.commands.map(c=>c.name)};writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify(result));`;
+const result={nodeOnly:true,sourceRaw:raw.get('source')===process.env.STAGE_B_SOURCE_SHA,workflowRaw:raw.get('evaluated-workflow')===readFileSync('.github/workflows/stage-b-draft-proof.yml','utf8').trim(),nonceRaw:raw.get('plist-StageBProofNonce')===cfg.nonce,containerRaw:raw.get('installed-container')?.includes('/Library/Developer/CoreSimulator/')&&raw.get('installed-container')?.endsWith('/StageBDraftProof.app'),signature:receipt.installedSignature,entitlementsLogged:receipt.commands.some(c=>c.name==='installed-signing-entitlements'),pids:receipt.launchPids,stoppedAtFakeFlow:error.includes('warm-app-foreground failed: rc=17'),error,logsRedacted:{sha:!log('source').includes(process.env.STAGE_B_SOURCE_SHA),nonce:raw.has('plist-StageBProofNonce')?!log('plist-StageBProofNonce').includes(cfg.nonce):null,path:raw.has('installed-container')?!log('installed-container').includes(raw.get('installed-container')):null},argsRedacted:receipt.commands.every(c=>c.args.every(arg=>!arg.includes(cfg.nonce)&&!arg.includes(cfg.sourceSha)&&!arg.includes(process.env.GITHUB_WORKFLOW_SHA))),safeDigests:receipt.commands.every((c,i)=>c.outputDigest===createHash('sha256').update(readFileSync(join(output,'commands',logs.find(p=>p.startsWith(String(i+1).padStart(3,'0')+'-'))))).digest('hex')),captures:receipt.failureDiagnostics,commands:receipt.commands.map(c=>c.name)};writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify(result));`;
 	// The negative control stops before prepare generates the entry: use a smaller
 	// reporter that still records its exact pre-simulator rejection.
-	const negativeRunner = `import{readFileSync,writeFileSync}from'node:fs';import{join}from'node:path';import{runStageBNodeDryRun}from ${JSON.stringify(proofModule)};let error='';try{await runStageBNodeDryRun(process.env,${JSON.stringify(tools)},()=>{});}catch(e){error=String(e.message);}const receipt=JSON.parse(readFileSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'receipt.json'),'utf8'));writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({nodeOnly:true,oldRedactedReturn:true,error,commands:receipt.commands.map(c=>c.name)}));`;
+	const negativeRunner = `import{readFileSync,readdirSync,writeFileSync}from'node:fs';import{join}from'node:path';import{runStageBNodeDryRun}from ${JSON.stringify(proofModule)};let error='';try{await runStageBNodeDryRun(process.env,${JSON.stringify(tools)},()=>{});}catch(e){error=String(e.message);}const receipt=JSON.parse(readFileSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'receipt.json'),'utf8'));writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({nodeOnly:true,oldRedactedReturn:${oldRedactedReturn},unsignedBuild:${unsignedBuild},rejectedUnsignedBuild:error.includes('unsigned-candidate-producer failed')&&readdirSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'commands')).filter(p=>p.endsWith('-unsigned-candidate-producer.log')).some(p=>readFileSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'commands',p),'utf8').includes('ADHOC_ARGS_REQUIRED:CODE_SIGNING_ALLOWED=YES')),error,commands:receipt.commands.map(c=>c.name)}));`;
 	const entry = join(root, "runner.mts");
-	writeFileSync(entry, oldRedactedReturn ? negativeRunner : runner);
+	writeFileSync(
+		entry,
+		oldRedactedReturn || unsignedBuild ? negativeRunner : runner,
+	);
 	try {
 		execFileSync(
 			process.execPath,
@@ -142,6 +154,7 @@ if (
 			{
 				candidate: probeStageBCoordinator(),
 				negativeControl: probeStageBCoordinator(true),
+				unsignedControl: probeStageBCoordinator(false, true),
 			},
 			null,
 			2,

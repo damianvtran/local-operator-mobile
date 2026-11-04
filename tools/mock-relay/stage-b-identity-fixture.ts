@@ -43,6 +43,11 @@ const sendIdentity = (response: ServerResponse, body: unknown) => {
  * counters/flags, never Authorization, body, draft text or attachment bytes. */
 export async function startStageBIdentityFixture(sourceSha: string) {
 	const nonce = randomBytes(16).toString("hex");
+	// Draft text/YAML/screenshots are public proof artifacts, unlike the HTTP
+	// control credential. Give the scanner its own independent, non-auth marker.
+	let draftMarker = randomBytes(16).toString("hex");
+	while (draftMarker === nonce) draftMarker = randomBytes(16).toString("hex");
+	const canary = `stage-b-private-draft-${draftMarker}`;
 	const config: StageBProofConfig = {
 		flavor: "stage-b-draft-proof",
 		bundleId: STAGE_B_BUNDLE,
@@ -91,6 +96,7 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 	};
 	const controlQueue: string[] = [];
 	const seed = () => ({
+		canary,
 		access: value(
 			scenario === "account-b"
 				? "access-b"
@@ -171,6 +177,7 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 								"survivingKey",
 								"sentinelPresent",
 								"nativeSecureStorage",
+								"keychainPreflight",
 								"detected",
 								"removed",
 								"plaintext",
@@ -416,6 +423,7 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 	config.fixtureOrigin = `http://127.0.0.1:${address.port}`;
 	return {
 		config,
+		canary,
 		counters,
 		receipts,
 		held: () => held.size,

@@ -12,6 +12,8 @@ describe("real proof coordinator with Node-only executable shims", () => {
 			workflowRaw: true,
 			nonceRaw: true,
 			containerRaw: true,
+			signature: "adhoc",
+			entitlementsLogged: true,
 			pids: [12345],
 			stoppedAtFakeFlow: true,
 			logsRedacted: { sha: true, nonce: true, path: true },
@@ -39,6 +41,12 @@ describe("real proof coordinator with Node-only executable shims", () => {
 			oldRedactedReturn: true,
 			error: "checkout differs from frozen PR source",
 			commands: ["source"],
+		});
+	}, 45000);
+	it("rejects a coordinator mutation that disables simulator code signing", () => {
+		expect(probeStageBCoordinator(false, true)).toMatchObject({
+			unsignedBuild: true,
+			rejectedUnsignedBuild: true,
 		});
 	}, 45000);
 	it("redacts frame hierarchies and exposes no environment-selected test host in production", () => {

@@ -13,6 +13,25 @@ export interface StageBProofConfig {
 	nonce: string;
 	fixtureOrigin: string;
 }
+const DRAFT_CANARY = /^stage-b-private-draft-[a-f0-9]{32}$/;
+/** A public marker, never the HTTP control credential. Both the coordinator and
+ * native scanner consume the same seed value across every process restart. */
+export function stageBDraftCanary(value: unknown, authNonce: string): string {
+	if (
+		typeof value !== "string" ||
+		!DRAFT_CANARY.test(value) ||
+		value.includes(authNonce)
+	)
+		throw new Error("independent synthetic draft canary required");
+	return value;
+}
+export function stageBContainsDraftCanary(
+	text: string,
+	canary: string,
+): boolean {
+	return text.includes(canary);
+}
+
 // Proof diagnostics are uploaded and drawn on-screen. Keep nonce-derived auth,
 // canaries, bearer/JWT material and long opaque key values out of both surfaces.
 export function stageBDiagnosticText(value: string): string {

@@ -2,12 +2,43 @@ import {
 	assertStageBEmbeddedConfig,
 	STAGE_B_HOST,
 	type StageBProofConfig,
+	stageBContainsDraftCanary,
+	stageBDraftCanary,
 	stageBTransport,
 	syntheticValue,
 	validateStageBProof,
 } from "./stage-b-draft-transport";
 
 export { stageBSeedFailure } from "./stage-b-draft-transport";
+
+/** Exercise the same native Keychain bridge before seeding any credentials.
+ * Always remove the dedicated throwaway; a cleanup failure must not hide the
+ * original entitlement/write/read error that diagnostics need to expose. */
+export async function stageBKeychainPreflight(
+	port: {
+		write(): Promise<void>;
+		read(): Promise<string | null>;
+		remove(): Promise<void>;
+	},
+	expected: string,
+): Promise<void> {
+	let failure: { cause: unknown } | undefined;
+	try {
+		await port.write();
+		if ((await port.read()) !== expected)
+			throw new Error("keychain preflight round-trip mismatch");
+	} catch (cause) {
+		failure = { cause };
+	}
+	try {
+		await port.remove();
+	} catch (cause) {
+		failure ??= { cause };
+	}
+	if (failure) throw failure.cause;
+	if ((await port.read()) !== null)
+		throw new Error("keychain preflight cleanup failed");
+}
 
 /** PROOF ENTRY ONLY. No ordinary route imports this module, no production env
  * flag enables it, and it never seeds an authority/scope/queue. The real provider
@@ -117,11 +148,31 @@ async function bootStageBDraftProof(
 		new File(Paths.cache, "lo-mobile-private-installation-v1");
 	const hash = (value: string) =>
 		crypto.digestStringAsync(crypto.CryptoDigestAlgorithm.SHA256, value);
+	stage("keychain-preflight");
+	const secureStore =
+		require("expo-secure-store") as typeof import("expo-secure-store");
+	const probeKey = "lo-mobile-stage-b-keychain-preflight";
+	const probeValue = "stage-b-keychain-round-trip";
+	const probeOptions = {
+		keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+	};
+	await bounded("keychain-preflight", () =>
+		stageBKeychainPreflight(
+			{
+				write: () =>
+					secureStore.setItemAsync(probeKey, probeValue, probeOptions),
+				read: () => secureStore.getItemAsync(probeKey, probeOptions),
+				remove: () => secureStore.deleteItemAsync(probeKey, probeOptions),
+			},
+			probeValue,
+		),
+	);
 	const priorKey = await bounded("private-key-read", () =>
 		privateDataKeys().read(),
 	);
 	stage("startup-receipt");
 	await receipt("startup", {
+		keychainPreflight: true,
 		survivingKey: priorKey !== null,
 		sentinelPresent: sentinel().exists,
 		installFingerprint: priorKey ? await hash(priorKey.installId) : "none",
@@ -130,6 +181,7 @@ async function bootStageBDraftProof(
 	const response = await control("seed");
 	if (!response.ok) throw new Error("synthetic credential seed unavailable");
 	const seed = (await response.json()) as {
+		canary?: unknown;
 		access?: unknown;
 		grant?: unknown;
 		refreshHandle?: unknown;
@@ -147,6 +199,7 @@ async function bootStageBDraftProof(
 		seed.tunnelId !== "stage-b-personal-tunnel"
 	)
 		throw new Error("non-synthetic credential seed refused");
+	const canary = stageBDraftCanary(seed.canary, config.nonce);
 	const now = Date.now();
 	await bounded("oauth-write", () =>
 		storage.writeStoredOauth({
@@ -173,7 +226,6 @@ async function bootStageBDraftProof(
 	stage("seeded-receipt");
 	await receipt("seeded", { nativeSecureStorage: true });
 
-	const canary = `stage-b-private-draft-${config.nonce}`;
 	const scan = async () => {
 		let files = 0;
 		let committed = 0;
@@ -185,7 +237,8 @@ async function bootStageBDraftProof(
 				else {
 					files++;
 					if (entry.name.endsWith(".json")) committed++;
-					if ((await entry.text()).includes(canary)) plaintext = true;
+					if (stageBContainsDraftCanary(await entry.text(), canary))
+						plaintext = true;
 				}
 			}
 		};
