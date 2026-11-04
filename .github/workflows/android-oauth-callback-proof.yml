@@ -21,6 +21,9 @@ jobs:
     # Expected budget: 18m cold build + 4m setup/driver + 5m KVM image/boot +
     # 6m real timeout/browser overhead + 8m positive/cancel/destroy + 4m evidence
     # = 45m. No production deadline or native assertion is shortened.
+    # Budget: setup/build/emulator <=15m + four native modes <=17m (including
+    # the unmodified 300s timeout) + real Expo failure/retry/restore <=10m +
+    # artifact teardown <=3m. KVM below is a fail-closed prerequisite.
     timeout-minutes: 45
     env:
       MAESTRO_VERSION: "2.11.0"

@@ -40,6 +40,9 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
   @Volatile private var destroyed = false
   private var preparedAt = 0L
   private var socketProbesPassed = false
+  private var socketProbeRejections = 0
+  private var wrongStateRejections = 0
+  private var lateRefused: Boolean? = null
   private var stage = "ready"
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,7 +128,10 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
         }
         OAuthCoordinator.main.post {
           if (!socketProbesPassed) { record(false, "native-socket-probes-failed"); flow.cancel() }
-          else startActivity(Intent(this, OAuthActivity::class.java))
+          else {
+            socketProbeRejections = rejected.get()
+            startActivity(Intent(this, OAuthActivity::class.java))
+          }
         }
       }
     } catch (_: Exception) { record(false, "fixture-setup-failed"); flow?.cancel() }
@@ -144,6 +150,15 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
         if (line.isEmpty()) break
       }
       val target = first.split(' ').getOrNull(1) ?: return
+      if (target == "/proof-wrong-state") {
+        // A same-origin browser acknowledgement runs AFTER wrong-state fetch
+        // settles, BEFORE other rejection probes and the valid navigation.
+        wrongStateRejections = rejected.get() - socketProbeRejections
+        client.getOutputStream().apply {
+          write("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray()); flush()
+        }
+        return
+      }
       served = true
       OAuthCoordinator.main.post { stage = "browser-ready"; persist(null, "browser-ready") }
       val body = if (target.startsWith("/complete")) {
@@ -153,13 +168,17 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
         val duplicate = "$good&state=proof-state"
         // Real browser-originated GET/POST requests hit the actual native parser.
         // CORS may hide each rejection response but cannot turn it into a grant.
-        "<script>fetch('$badState').catch(()=>{}).then(()=>fetch('$badPath').catch(()=>{}))" +
+        "<script>fetch('$badState').catch(()=>{}).then(()=>fetch('/proof-wrong-state'))" +
+          ".then(()=>fetch('$badPath').catch(()=>{}))" +
           ".then(()=>fetch('$good',{method:'POST'}).catch(()=>{}))" +
           ".then(()=>fetch('$duplicate').catch(()=>{})).finally(()=>location.href='$good');</script>"
       } else {
         val title = if (mode == "positive") "Complete test sign-in" else "Test callback waiting"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'><h1>Browser fixture ready</h1>" +
-          "<a href='/complete'>$title</a>"
+        // Fixed geometry is the real-tap fallback when Chrome omits its web AX
+        // tree: full viewport width, 200 CSS px immediately below the toolbar.
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
+          "<style>body{margin:0}a{display:flex;width:100%;height:200px;align-items:center;justify-content:center;font-size:24px}</style>" +
+          "<a href='/complete'>$title</a><h1>Browser fixture ready</h1>"
       }
       val bytes = body.toByteArray(Charsets.UTF_8)
       client.getOutputStream().apply {
@@ -173,7 +192,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
     if (ended) return
     val elapsed = System.currentTimeMillis() - preparedAt
     val outcome = when (mode) {
-      "positive" -> result?.contains("code=synthetic-only") == true && error == null && rejected.get() == 6
+      "positive" -> result?.contains("code=synthetic-only") == true && error == null && rejected.get() == 6 && wrongStateRejections == 1
       "cancel" -> result == null && error == null
       "timeout" -> result == null && error == "ERR_AUTH_TIMEOUT" && elapsed in 295000..330000
       "destroy" -> result == null && error == null
@@ -186,6 +205,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
         val refused = try { Socket("127.0.0.1", port).use { false } }
           catch (_: ConnectException) { true } catch (_: Exception) { false }
         OAuthCoordinator.main.post {
+          lateRefused = refused
           val fixtureReady = socketProbesPassed && served
           val pass = outcome && fixtureReady && refused && (mode != "destroy" || destroyed)
           record(pass, if (!fixtureReady) "fixture-not-ready" else if (pass) "native-case-complete" else "native-case-failed")
@@ -207,6 +227,8 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
     val receipt = JSONObject().put("mode", mode).put("pass", pass ?: JSONObject.NULL)
       .put("stage", stage).put("detail", detail).put("provider_served", served)
       .put("native_socket_probes_passed", socketProbesPassed)
+      .put("socket_probe_rejections", socketProbeRejections).put("wrong_state_rejections", wrongStateRejections)
+      .put("late_refused", lateRefused ?: JSONObject.NULL)
       .put("rejected", rejected.get()).put("fallback_used", fallbackUsed).put("activity_destroyed", destroyed)
       .put("elapsed_ms", if (preparedAt == 0L) 0 else System.currentTimeMillis() - preparedAt)
     File(filesDir, "oauth-proof-$mode.json").writeText(receipt.toString(2))

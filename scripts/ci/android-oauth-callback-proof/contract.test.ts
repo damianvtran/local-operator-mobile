@@ -1,9 +1,13 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const read = (path: string) =>
 	readFileSync(new URL(path, import.meta.url), "utf8");
 const runner = read("./run.sh");
+const realApp = read("./real-app.sh");
 const workflow = read(
 	"../../../.github/workflows/android-oauth-callback-proof.yml",
 );
@@ -93,6 +97,82 @@ describe("Android OAuth native-proof contract", () => {
 		expect(proof).toContain("wrong-state");
 		expect(proof).toContain("method:'POST'");
 		expect(proof).toContain("rejected.get() == 6");
+	});
+
+	it("separates two socket controls from exactly one wrong-state browser rejection", () => {
+		expect(proof).toContain("socketProbeRejections = rejected.get()");
+		expect(proof).toContain(
+			"wrongStateRejections = rejected.get() - socketProbeRejections",
+		);
+		expect(proof).toContain("wrongStateRejections == 1");
+		expect(proof).toContain("/proof-wrong-state");
+		const marker = `if python3 - "$OUT/evidence" "$mode" "$DRIVER_EXIT" "$APP_ID" <<'PY'`;
+		const validator = runner.split(marker)[1]?.split("\nPY")[0];
+		expect(validator).toBeTruthy();
+		const root = mkdtempSync(
+			join(
+				process.env.LOCAL_OPERATOR_SCRATCHPAD ??
+					process.env.RUNNER_TEMP ??
+					tmpdir(),
+				"android-validator-",
+			),
+		);
+		try {
+			writeFileSync(
+				join(root, "positive-activities.txt"),
+				"topResumedActivity=ActivityRecord{dev.proof/dev.localoperator.loopback.OAuthProofActivity}",
+			);
+			for (const [wrongState, lateRefused, expected] of [
+				[1, true, 0],
+				[2, true, 1],
+				[1, false, 1],
+			] as const) {
+				writeFileSync(
+					join(root, "positive-native.json"),
+					JSON.stringify({
+						pass: true,
+						wrong_state_rejections: wrongState,
+						late_refused: lateRefused,
+					}),
+				);
+				const result = spawnSync(
+					"python3",
+					["-", root, "positive", "0", "dev.proof"],
+					{ input: validator, encoding: "utf8" },
+				);
+				expect(result.status, result.stderr).toBe(expected);
+			}
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	it("resets each mode to a proven launcher and suppresses browser first-run/IPH", () => {
+		expect(runner).toContain("am force-stop com.android.chrome");
+		expect(runner).toContain("KEYCODE_HOME");
+		expect(runner).toContain("topResumedActivity=");
+		expect(runner).toContain("Fixture reset did not reach launcher");
+		expect(runner).toContain(
+			"--disable-fre --no-default-browser-check --no-first-run",
+		);
+		expect(runner).toContain(
+			"- assertNotVisible: 'Minimize tab to return to it later'",
+		);
+		expect(runner).toContain('point: "50%,24%"');
+		expect(proof).toContain("width:100%;height:200px");
+	});
+
+	it("also exercises the real Expo provider through failure, retry, picker and cold restore", () => {
+		expect(runner).toContain("android-oauth-callback-proof/real-app.sh");
+		expect(realApp).toContain("signin-app-proof/prepare-entry.ts");
+		expect(realApp).toContain("tools/mock-relay/oauth-fast-path.ts");
+		expect(realApp).toContain("tcp:54831 tcp:54831");
+		expect(realApp).toContain("id: 'sign-in-try-again'");
+		expect(realApp).toContain("id: 'sign-in-diagnostics'");
+		expect(realApp).toContain("id: 'computers-screen'");
+		expect(realApp).toContain("r['discovery']>p['discovery']");
+		expect(realApp).toContain("r['authorize']==2");
+		expect(realApp).not.toContain("pm clear");
 	});
 
 	it("captures screenshots only inside the configured driver output, including failures", () => {
