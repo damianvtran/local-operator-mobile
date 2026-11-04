@@ -27,12 +27,16 @@ PY
 METRO_PID=$(python3 - "$OUT" <<'PY'
 import os, pathlib, subprocess, sys
 out = pathlib.Path(sys.argv[1]); env = dict(os.environ, CI='1', EXPO_NO_TELEMETRY='1')
-p = subprocess.Popen(['pnpm','exec','expo','start','--localhost','--port','8081','--offline','--max-workers','2'], env=env, stdout=open(out / 'metro.log','w'), stderr=subprocess.STDOUT, start_new_session=True)
+p = subprocess.Popen(['pnpm','exec','expo','start','--localhost','--port','8081','--max-workers','2'], env=env, stdout=open(out / 'metro.log','w'), stderr=subprocess.STDOUT, start_new_session=True)
 print(p.pid)
 PY
 )
 ready=false
 for tick in {1..120}; do
+  if ! kill -0 -- "-$SERVER_PID" 2>/dev/null || ! kill -0 -- "-$METRO_PID" 2>/dev/null; then
+    cat "$OUT/provider.log" "$OUT/metro.log" >&2
+    echo 'Provider/Metro exited during setup' >&2; exit 1
+  fi
   if curl -fsS http://127.0.0.1:54831/receipt >/dev/null && curl -fsS http://127.0.0.1:8081/status | grep -q 'packager-status:running'; then ready=true; break; fi
   sleep 1
 done

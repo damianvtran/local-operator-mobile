@@ -21,6 +21,10 @@ describe("real Expo application OAuth proof boundary", () => {
 		expect(test).toContain('XCTAssertEqual(positive["pkce_verified"], 2)');
 		expect(test).toContain('XCTAssertEqual(restored["authorize"], 2)');
 		expect(test).toContain('XCTAssertGreaterThan(restored["discovery"]');
+		// Expo treats offline as another host selector; combining it with
+		// localhost exits before Metro can start, even though --help lists both.
+		expect(read("./run.sh")).toContain("'--localhost'");
+		expect(read("./run.sh")).not.toContain("'--offline'");
 		expect(read("./run.sh")).toContain("build-for-testing");
 		expect(read("./run.sh")).toContain("test-without-building");
 		expect(workflow).not.toContain("secrets:");

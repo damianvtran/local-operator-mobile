@@ -437,6 +437,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * selected; Heading's new optional metrics callback is undefined there. No
 	 * transcript layout, corpus or instrument changed. This is source-boundary
 	 * judgment, not new rendered U-08 proof; historical identities stay intact. */
+	// Includes the newly tracked sign-in source files (print after staging).
 	src: "2612e084ecce4db7ff00773b99aa238876fbe0c299e15affdac3872910697164",
 };
 
