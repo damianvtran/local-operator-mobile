@@ -24,6 +24,8 @@ describe("real Expo application OAuth proof boundary", () => {
 		// Expo treats offline as another host selector; combining it with
 		// localhost exits before Metro can start, even though --help lists both.
 		expect(read("./run.sh")).toContain("'--localhost'");
+		expect(read("./run.sh")).toContain("http://localhost:8081/status");
+		expect(read("./run.sh")).not.toContain("http://127.0.0.1:8081");
 		expect(read("./run.sh")).not.toContain("'--offline'");
 		expect(read("./run.sh")).toContain("build-for-testing");
 		expect(read("./run.sh")).toContain("test-without-building");

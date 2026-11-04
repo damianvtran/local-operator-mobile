@@ -31,17 +31,19 @@ p = subprocess.Popen(['pnpm','exec','expo','start','--localhost','--port','8081'
 print(p.pid)
 PY
 )
+# Expo --localhost binds the hostname, often ::1 on macOS. Probe that exact
+# host, not 127.0.0.1: the OAuth mock separately binds literal IPv4 on purpose.
 ready=false
 for tick in {1..120}; do
   if ! kill -0 -- "-$SERVER_PID" 2>/dev/null || ! kill -0 -- "-$METRO_PID" 2>/dev/null; then
     cat "$OUT/provider.log" "$OUT/metro.log" >&2
     echo 'Provider/Metro exited during setup' >&2; exit 1
   fi
-  if curl -fsS http://127.0.0.1:54831/receipt >/dev/null && curl -fsS http://127.0.0.1:8081/status | grep -q 'packager-status:running'; then ready=true; break; fi
+  if curl -fsS http://127.0.0.1:54831/receipt >/dev/null && curl -fsS http://localhost:8081/status | grep -q 'packager-status:running'; then ready=true; break; fi
   sleep 1
 done
 [[ "$ready" == true ]] || { echo 'Provider/Metro setup failed'; exit 1; }
-curl -fsS --max-time 180 'http://127.0.0.1:8081/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false' > "$RUNNER_TEMP/signin-dev.js"
+curl -fsS --max-time 180 'http://localhost:8081/.expo/.virtual-metro-entry.bundle?platform=ios&dev=true&minify=false' > "$RUNNER_TEMP/signin-dev.js"
 grep -q 54831 "$RUNNER_TEMP/signin-dev.js"
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
