@@ -27,7 +27,6 @@ import {
 } from "@/features/auth/connection-provider";
 import {
 	type ConnectorWaitState,
-	probeHealth,
 	useConnectorWait,
 } from "@/features/auth/connector-wait";
 import { removeComputer } from "@/features/auth/saved-computers-sync";
@@ -85,30 +84,18 @@ function statusLabel(status: ComputerStatus): {
 }
 
 /** The probe's own answer, kept visibly separate from the row's status. */
-type Reachability = "checking" | "answered" | "silent";
+type Reachability = "protected" | "answered";
 
 function reachabilityLabel(state: Reachability): {
 	label: string;
 	tone: "neutral" | "success" | "warning";
 } {
 	switch (state) {
-		case "checking":
-			return { label: "checking", tone: "neutral" };
+		case "protected":
+			return { label: t("mobile.computers.protected"), tone: "neutral" };
 		case "answered":
 			return { label: "answering", tone: "success" };
-		case "silent":
-			return { label: "no answer", tone: "warning" };
 	}
-}
-
-function lastSeen(computer: DiscoveredComputer): string | null {
-	if (!computer.updatedAt) return null;
-	const minutes = Math.round((Date.now() - computer.updatedAt) / 60_000);
-	if (minutes < 1) return "seen just now";
-	if (minutes < 60) return `last seen ${minutes} min ago`;
-	const hours = Math.round(minutes / 60);
-	if (hours < 24) return `last seen ${hours} h ago`;
-	return `last seen ${Math.round(hours / 24)} d ago`;
 }
 
 const ComputerRow = ({
@@ -127,7 +114,7 @@ const ComputerRow = ({
 	const ids = computerRowIds(computer.hostname);
 	const status = statusLabel(computer.status);
 	const reach = reachabilityLabel(reachability);
-	const seen = lastSeen(computer);
+
 	const spinnerColor = useTokenColor("ink-muted");
 	const selected = state === "active";
 	const connecting = state === "connecting";
@@ -205,9 +192,6 @@ const ComputerRow = ({
 								<Badge label={reach.label} tone={reach.tone} mono />
 							</View>
 						</View>
-						{seen && !selected ? (
-							<Text className="shrink-0 text-meta text-ink-dim">{seen}</Text>
-						) : null}
 					</View>
 					{!computer.supportsLocalOperator ? (
 						<Text className="text-body-sm text-ink-muted">
@@ -389,36 +373,13 @@ export default function Computers() {
 	/* Named once: the header renders them AND sizes its stacking point from them. */
 	const showSwitch = !empty || phoneKnowsComputers;
 	const showRefresh = !empty && !signedOut;
-	const [reachability, setReachability] = useState<
-		Record<string, Reachability>
-	>({});
+
 	const [removeTarget, setRemoveTarget] = useState<DiscoveredComputer | null>(
 		null,
 	);
 
-	/** The probe, once per computer on view. It is the ONLY way a phone learns
-	 *  whether a machine is up (`docs/relay/tunnel-edge.md` § 4). */
-	useEffect(() => {
-		let live = true;
-		for (const computer of computers) {
-			if (!computer.supportsLocalOperator) continue;
-			if (
-				reachability[computer.hostname] &&
-				reachability[computer.hostname] !== "checking"
-			)
-				continue;
-			void probeHealth(computer.hostname).then((health) => {
-				if (!live) return;
-				setReachability((current) => ({
-					...current,
-					[computer.hostname]: health ? "answered" : "silent",
-				}));
-			});
-		}
-		return () => {
-			live = false;
-		};
-	}, [computers, reachability]);
+	// Radient protects health with a grant. Before a pick, absence of an
+	// authenticated answer is NOT evidence that the connector is offline.
 
 	/* The computers listed when the wait started. "Add a computer" opens the set-up
 	 *  path over an account that already has some (U12), and the wait is for the
@@ -602,7 +563,13 @@ export default function Computers() {
 							key={computer.tunnelId}
 							computer={computer}
 							state={rowState(computer, { tunnelId, phase })}
-							reachability={reachability[computer.hostname] ?? "checking"}
+							reachability={
+								phase === "live" &&
+								route?.mode === "radient" &&
+								route.hostname === computer.hostname
+									? "answered"
+									: "protected"
+							}
 							onPress={() => pick(computer)}
 							onRemove={() => setRemoveTarget(computer)}
 						/>

@@ -443,13 +443,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
 	 * Button's optional expanded state is omitted for existing transcript
 	 * controls. No transcript/corpus/instrument change; historical pins retained. */
-	/* Deliberate --print re-pin (notification sounds, M1): the Android
+	/* Reprinted with --print after the unified error-writer/copy remediation
+	 * and relocation of the HTTP integration test. The healthy custom-relay
+	 * U-08 transcript selects no tunnel-refusal, diagnostic-details or protected
+	 * Radient-row branches. Existing custom-route carriers and transcript geometry
+	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
+	 * This is source compatibility judgment, not fresh geometry evidence. */
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's tunnel-refusal change above): the Android
 	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
 	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "7946649b0effa2064cde30de26e723255aee28382a585b416671402646a27585",
+	src: "48f8ea3a21a53bde87fa93ddd5487df38ee4758d73d5538547183eadff73337c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

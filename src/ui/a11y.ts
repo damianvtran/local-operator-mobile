@@ -324,6 +324,7 @@ export const CONTROL = {
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
 	refusalSignIn: "refusal-sign-in",
+	refusalDetailsToggle: "connection-details-toggle",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
 	/* --- the controls this slice's screens render, named one by one. A screen with
@@ -1214,6 +1215,7 @@ export const REGION = {
 	connectionErrorConsoleLink: "connection-error-console-link",
 	connectionErrorSignIn: "connection-error-sign-in",
 	connectionErrorWaiting: "connection-error-waiting",
+	connectionDetails: "connection-details",
 	connectionErrorClearsByItself: "connection-error-clears-by-itself",
 	connectionErrorRelayNotInstalled: "connection-error-relay-not-installed",
 	connectionErrorCertificate: "connection-error-certificate",

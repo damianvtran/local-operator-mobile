@@ -21,7 +21,12 @@ describe("E2E-only LogBox bootstrap", () => {
 				[true, undefined, false],
 			] as const) {
 				const calls: string[] = [];
-				runInNewContext(source, {
+				const targets: string[] = [];
+				const sandbox = {
+					URL,
+					fetch: (input: string) => {
+						targets.push(input);
+					},
 					__DEV__: dev,
 					process: { env: { EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: flag } },
 					require: (name: string) => {
@@ -30,7 +35,16 @@ describe("E2E-only LogBox bootstrap", () => {
 							LogBox: { ignoreAllLogs: () => calls.push("hide-overlay") },
 						};
 					},
-				});
+				};
+				runInNewContext(source, sandbox);
+				sandbox.fetch("https://api.radienthq.com/v1/tunnels/session/code");
+				expect(targets.at(-1)).toBe(
+					expected
+						? "http://127.0.0.1:54831/v1/tunnels/session/code"
+						: "https://api.radienthq.com/v1/tunnels/session/code",
+				);
+				sandbox.fetch("https://unrelated.example/healthz");
+				expect(targets.at(-1)).toBe("https://unrelated.example/healthz");
 				expect(calls.includes("hide-overlay")).toBe(expected);
 				expect(calls.at(-1)).toBe("expo-router/entry");
 			}

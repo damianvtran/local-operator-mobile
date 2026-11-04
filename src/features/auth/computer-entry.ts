@@ -92,6 +92,7 @@ export const ENTRY_DOT_TOKEN: Record<
 	"sign-in": "warning",
 	paused: "warning",
 	checking: "ink-dim",
+	protected: "ink-dim",
 	refused: "warning",
 };
 

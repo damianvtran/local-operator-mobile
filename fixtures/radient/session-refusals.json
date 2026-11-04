@@ -1,0 +1,17 @@
+{
+  "source": {
+    "repository": "radient-ml/agent-server",
+    "path": "cmd/server/main.go",
+    "handler": "httpErrorResponse",
+    "line": 2394,
+    "note": "Refusals use {error}, not the {msg,result} success writer. Cases follow internal/tunnels/session.go:sessionTarget and the generic server error writer. Values are fixture-only."
+  },
+  "cases": [
+    { "status": 401, "body": { "error": "account unavailable" }, "failure": "oauth" },
+    { "status": 402, "body": { "error": "tunnel billing is inactive" }, "failure": "billing" },
+    { "status": 403, "body": { "error": "tunnel is unavailable" }, "failure": "disabled" },
+    { "status": 404, "body": { "error": "harness hostname not found" }, "failure": "harness" },
+    { "status": 404, "body": { "error": "tunnel not found" }, "failure": "account" },
+    { "status": 500, "body": { "error": "Internal server error" }, "failure": "rejected" }
+  ]
+}
