@@ -465,13 +465,15 @@ rows = [
  ("P5 ADR effort row for the credential limb", has(af,"**Credential-live evaluation and the credential-change event**")),
  ("P5 plan row S4c", has(pf,"| **S4c** | **Credential-live evaluation and the credential-change event**")),
  ("P5 plan QA rows Q22/Q23", has(pf,"| Q22 |") and has(pf,"| Q23 |")),
- # Custom-sound reservation (amendment 2026-11-04, core notification-sounds C3): the two optional
+ # Custom-sound fields (amendment 2026-11-04; reserved in core C3, sent from C5 #3428): the two optional
  # fields must be named in every place a cloud builder copies from, the per-device pick must be
  # stated, and the retired "custom sounds are not on the phone in v1" rule must survive only as the
- # quoted retraction — a stray copy would tell S7 to refuse the reserved fields.
- ("SND reservation amendment names both optional fields", has(af,"**Amendment (2026-11-04): custom sounds on the phone — two optional fields RESERVED.**") and has(af,"`data.sound_custom` (`\"c_<sha256[:16]>\"`, completion and digest)") and has(af,"`devices[].sound_custom_ready` (bool)")),
+ # quoted retraction — a stray copy would tell S7 to refuse the custom fields.
+ ("SND custom-sound amendment names both optional fields", has(af,"**Amendment (2026-11-04): custom sounds on the phone — two optional fields.**") and has(af,"`data.sound_custom` (`\"c_<sha256[:16]>\"`, completion and digest)") and has(af,"`devices[].sound_custom_ready` (bool)")),
  ("SND per-device pick stated (ready -> custom, else data.sound)", has(af,"**ready** → **iOS** `aps.sound = \"<sound_custom>.wav\"`") and has(af,"**Android** `android.channel_id = \"sound.<sound_custom>\"`") and has(af,"**not ready, or the bit absent** → map `sound` exactly as the row above")),
- ("SND both reserved fields in the emit and report-block tables", has(af,"| `sound_custom` | string, **optional; RESERVED 2026-11-04, not sent yet** |") and has(af,"| `devices[].sound_custom_ready` | bool, **optional; RESERVED 2026-11-04, not sent yet** |")),
+ # C5 (local-operator#3428) now SENDS both fields: the rows must say so, state when, and no
+ # "not sent yet" may survive, or S7 would read the fields as a future option it can defer.
+ ("SND both custom fields in the emit and report-block tables, sent by C5", has(af,"| `sound_custom` | string, **optional; sent when a custom sound is selected (core C5 #3428)** |") and has(af,"| `devices[].sound_custom_ready` | bool, **optional; sent when a custom sound is selected (core C5 #3428)** |") and has(af,"on **every** live device row of an emit that carries `sound_custom`, and on none otherwise") and has(af,"Present only when sound is enabled and the selection is a custom sound whose file exists") and not has(af,"not sent yet") and not has(af,"RESERVED 2026-11-04")),
  # M1 prebuild constraint (2026-11-04): bundled iOS files are `<id with - → _>.wav`, and the custom
  # wire value uses an underscore so it IS the file stem; a hyphenated file name here would make APNs
  # play the OS default for every built-in.

@@ -23,16 +23,18 @@
   `data.sound`, and sound turned off sends `none`. The `attention` form carries no `sound`. Made **before S7 builds
   against the freeze**; stated in §3.2's field tables and literals, and filed in core's
   `fixtures/push/` (local-operator's notification-sounds C3).
-- **Amendment (2026-11-04): custom sounds on the phone — two optional fields RESERVED.** Custom
+- **Amendment (2026-11-04): custom sounds on the phone — two optional fields.** Custom
   sounds are no longer "not on the phone in v1": the phone fetches the computer's custom sound
-  through the tunnel and caches it (operator request, 2026-11-04). The freeze therefore reserves
+  through the tunnel and caches it (operator request, 2026-11-04). The freeze therefore adds
   `data.sound_custom` (`"c_<sha256[:16]>"`, completion and digest) and the per-device
   `devices[].sound_custom_ready` (bool), and the cloud picks per device: **ready** → the custom
   file (`aps.sound = "<sound_custom>.wav"`) and channel (`sound.<sound_custom>`); **otherwise** →
-  `data.sound`, mapped exactly as the 2026-11-03 amendment says. Both are **optional and not sent
-  yet** — the machine emits neither until its follow-up slice (core notification-sounds C5) — but
-  they are reserved **now** so S7's `extra="forbid"` validation accepts them on day one, rather
-  than forcing a cloud-first deploy later. `data.sound` stays required and unchanged.
+  `data.sound`, mapped exactly as the 2026-11-03 amendment says. Both are **optional and sent when
+  a custom sound is selected** (core notification-sounds C5, local-operator#3428): `sound_custom`
+  only when sound is enabled and the selected custom sound's file exists, and then
+  `sound_custom_ready` on **every** live device row; a built-in selection carries neither, so its
+  shape is unchanged. S7's `extra="forbid"` validation must accept both from day one. `data.sound`
+  stays required and unchanged.
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,
@@ -1116,7 +1118,7 @@ phone's number drops* — actually exist, which no slice did before.
             "emit_id": "<uuid, minted by the machine per emit>",
             "count": 2,
             "sound": "soft-pulse" } }                   // built-in id | "default" | "none"
-            // RESERVED, optional, not sent yet (2026-11-04): "sound_custom": "c_<sha256[:16]>"
+            // optional, sent when a custom sound is selected (core C5 #3428): "sound_custom": "c_<sha256[:16]>"
 ```
 
 The attention form carries `{v, type: "attention", computer, count, emit_id, exclude:
@@ -1140,8 +1142,8 @@ The **digest** form — §3.2's third emit type, and the visible counterpart of 
 
 `aps.sound` here is the built-in case; for `data.sound: "default"` it is `"default"`, and for
 `"none"` it is omitted (the field table's `sound` row). For a device whose
-`sound_custom_ready` is true it is `"<sound_custom>.wav"` instead: the digest also reserves the
-optional `data.sound_custom` (the `sound_custom` row; not sent yet, 2026-11-04).
+`sound_custom_ready` is true it is `"<sound_custom>.wav"` instead: the digest also carries the
+optional `data.sound_custom` when a custom sound is selected (the `sound_custom` row; core C5 #3428).
 
 It carries **no `conversation` handle, no `completion_token` and no `kind`** — a digest spans
 conversations, so a tap resolves nowhere (the attention form's rule) and there is no
@@ -1192,7 +1194,7 @@ are **not two payload classes**:
 | `type: "digest"` *(the third form)* | the catch-up form (§2.1): a **visible alert** carrying the count, with **no** `conversation`, `completion_token` or `kind` — it spans conversations, so nothing can deep-link or collapse per conversation; it collapses **per computer** (`digest:<computer handle>`) |
 | `count` | the number in the notification's **body**, so a user can judge whether to look now. **One number, one noun (round 2, R4)**: it is §1.1's count — the number of conversations with unread notifications, the same number the app's badge shows (§1.4) — read at composition time, and the cloud sees it. The bodies therefore say *"`<count>` conversations need you"*, a noun that is true of that number; a digest that said "updated" would imply a different quantity the field does not carry. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
 | `sound` *(completion and digest; amendment 2026-11-03)* | the phone plays the sound the user chose **on the computer**, so the preference has one home and the phone keeps no second copy. Values: one of the ten **built-in ids** (`soft-pulse`, `two-note-chime`, `felt-marimba`, `hum-swell`, `task-complete`, `signal-handshake`, `tape-warble`, `bubble-chord`, `airy-whistle`, `bubble-pulse`); **`"default"`** when the computer's selection is `system` (the platform's own sound, which on the phone is the OS default); **`"none"`** when the computer's `notifications.sound.enabled` is `false` (the banner posts silently). **A custom sound selected on the computer sends `soft-pulse` here**, as does any id the phone has no file for, so a phone that does not hold the custom file falls back to the default rather than to silence; the custom file itself is named by the separate `sound_custom` row below. The computer's **volume does not travel** — the phone plays at its own notification volume. The cloud **maps** the value, per value, and never composes from it. **iOS:** a built-in id → `aps.sound` = `"<id with - → _>.wav"` (e.g. `"soft_pulse.wav"`: the bundled file name, because Android `res/raw` names must match `[a-z][a-z0-9_]*` and expo-notifications applies one `sounds:` list to both platforms); `"default"` → `aps.sound = "default"` (the OS default sound); `"none"` → **`aps.sound` omitted** — never `"none.wav"`/`"default.wav"`, because APNs plays the default sound for a file name that is not in the bundle, which for `none` is the opposite of the setting. **Android:** `android.channel_id = "sound.<id>"` for a built-in, `sound.default` for `"default"`, and the **silent** `sound.none` channel for `"none"` (one channel per value, because a channel's sound is fixed at creation). Mapping is not composition, so P2 is unchanged. **Absent on `attention`**, which is a silent wake |
-| `sound_custom` *(completion and digest; optional; RESERVED 2026-11-04, not sent yet)* | the computer's **custom** sound, named by content: `"c_<sha256[:16]>"` of the stored WAV (an underscore, so the wire value IS the phone's file stem and no second mapping exists: `c_<sha16>.wav`), **never** the user's sound name, so P2 holds and the name changes whenever the bytes do. **Shape: `^c_[0-9a-f]{16}$`** (lowercase hex). The cloud **validates the pattern**, not only the type, because it splices the value into `aps.sound` and an Android channel id; a value outside it is refused like any other malformed field (review round 3, m1). Present only when the selection is a custom sound and sound is enabled; `sound` still carries the `soft-pulse` fallback beside it. The phone fetches the file through the tunnel by that sha and caches it. **The cloud picks per device**, with that device's `devices[].sound_custom_ready` (§3.2's report block): **ready** → **iOS** `aps.sound = "<sound_custom>.wav"` (the phone wrote it to `Library/Sounds`), **Android** `android.channel_id = "sound.<sound_custom>"` (a channel the phone created for that sha, never reused); **not ready, or the bit absent** → map `sound` exactly as the row above. Sending the custom name to a phone that lacks the file would play the OS default (iOS) or FCM's default channel (Android), neither of which is the fallback, which is why readiness is per device. Reserved now so S7's `extra="forbid"` accepts it; the machine emits it only from core's notification-sounds C5. **Absent on `attention`** |
+| `sound_custom` *(completion and digest; optional; sent when a custom sound is selected, core C5 #3428)* | the computer's **custom** sound, named by content: `"c_<sha256[:16]>"` of the stored WAV (an underscore, so the wire value IS the phone's file stem and no second mapping exists: `c_<sha16>.wav`), **never** the user's sound name, so P2 holds and the name changes whenever the bytes do. **Shape: `^c_[0-9a-f]{16}$`** (lowercase hex). The cloud **validates the pattern**, not only the type, because it splices the value into `aps.sound` and an Android channel id; a value outside it is refused like any other malformed field (review round 3, m1). Present only when sound is enabled and the selection is a custom sound whose file exists; `sound` still carries the `soft-pulse` fallback beside it. The phone fetches the file through the tunnel by that sha and caches it. **The cloud picks per device**, with that device's `devices[].sound_custom_ready` (§3.2's report block): **ready** → **iOS** `aps.sound = "<sound_custom>.wav"` (the phone wrote it to `Library/Sounds`), **Android** `android.channel_id = "sound.<sound_custom>"` (a channel the phone created for that sha, never reused); **not ready, or the bit absent** → map `sound` exactly as the row above. Sending the custom name to a phone that lacks the file would play the OS default (iOS) or FCM's default channel (Android), neither of which is the fallback, which is why readiness is per device. The machine sends it from core's notification-sounds C5 (local-operator#3428), so S7's `extra="forbid"` must accept it. **Absent on `attention`** |
 | ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
 | ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
 | ~~`revision`~~ | dropped (M7). The badge comes from a read, not from a push |
@@ -1233,8 +1235,8 @@ POST /v1/tunnels/{tunnel_id}/push/events        Idempotency-Key: <emit key, §3.
   "alert": { "title": "<APP_NAME>",                    // THE MACHINE'S WORDS, SENT VERBATIM — required on completion and digest, ABSENT on attention (R8)
              "body": "<house constant> · <count> conversations need you" },
   "sound": "soft-pulse",                               // built-in id | "default" | "none" — required on completion and digest, ABSENT on attention (2026-11-03)
-  // RESERVED, optional, not sent yet (2026-11-04): "sound_custom": "c_<sha256[:16]>" on completion and digest,
-  // and "sound_custom_ready": true|false on each devices[] row — the cloud's per-device pick (§3.2)
+  // optional, sent when a custom sound is selected (core C5 #3428): "sound_custom": "c_<sha256[:16]>" on completion and digest,
+  // and then "sound_custom_ready": true|false on every live devices[] row — the cloud's per-device pick (§3.2)
   "devices": [ …the same block… ] }
 
 // 3. THE HEARTBEAT — the block and nothing else, sent when neither of the above has happened for
@@ -1252,10 +1254,10 @@ POST <cloud>/v1/push/credentials
 | `device` | object | the registration forward's own device body — `device_id`, `platform`, `environment`, `app_version`, `push_token`, `registered_at`; §2.2's Device row is the custody statement |
 | `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
 | `devices[].last_authenticated_at` | int, unix seconds | what the machine last observed — **never** the basis of the lapse |
-| `devices[].sound_custom_ready` | bool, **optional; RESERVED 2026-11-04, not sent yet** | true only when this device has reported the selected custom sound's sha **cached and** its channel created; the cloud uses the custom file for this device only when it is true, and `sound` otherwise (§3.2's `sound_custom` row). Absent means not ready. The machine reports it from core's notification-sounds C5 |
+| `devices[].sound_custom_ready` | bool, **optional; sent when a custom sound is selected (core C5 #3428)** | true only when this device has reported the selected custom sound's sha **cached and** its channel created; the cloud uses the custom file for this device only when it is true, and `sound` otherwise (§3.2's `sound_custom` row). The machine sends it on **every** live device row of an emit that carries `sound_custom`, and on none otherwise; absent means not ready. The phone reports its cache through the relay's `PUT /api/notification-sounds/cached` (authenticated by `X-Lop-Device-Key`) |
 | `alert` | object | `{title, body}` — **the machine's words, sent verbatim**, because the cloud may not compose them (below). It is house-constant-plus-count only: no names, no snippets, no error text, no model-written text, and it is the same **push-specific builder** §3.2's payload table names (§3.2), not the desktop composer's body path. **Required on `completion` and `digest`; absent on `attention`**, which is a silent `content-available` wake with no text at all — a builder that put an `alert` on an attention emit would make a silent correction visible, and the cloud, forbidden to edit text, would deliver it verbatim (round 2, R8) |
 | `sound` | string | the computer's selected sound, **mapped** by the cloud per value (iOS: built-in → `"<id with - → _>.wav"`, e.g. `"soft_pulse.wav"`, `default` → `"default"`, `none` → `aps.sound` omitted; Android: `sound.<id>` / `sound.default` / silent `sound.none`) and never composed from (§3.2's field table, amendment 2026-11-03): a built-in id, `"default"` (computer selection `system`) or `"none"` (sound off); a custom selection sends `soft-pulse`. **Required on `completion` and `digest`; absent on `attention`** |
-| `sound_custom` | string, **optional; RESERVED 2026-11-04, not sent yet** | `"c_<sha256[:16]>"`, shape **`^c_[0-9a-f]{16}$`** (lowercase hex; validated, because it is spliced into `aps.sound` and a channel id): the custom sound by content hash, never by name; the cloud uses it only for a device whose `sound_custom_ready` is true (§3.2's `sound_custom` row). **Completion and digest only; absent on `attention`** |
+| `sound_custom` | string, **optional; sent when a custom sound is selected (core C5 #3428)** | `"c_<sha256[:16]>"`, shape **`^c_[0-9a-f]{16}$`** (lowercase hex; validated, because it is spliced into `aps.sound` and a channel id): the custom sound by content hash, never by name; the cloud uses it only for a device whose `sound_custom_ready` is true (§3.2's `sound_custom` row). **Completion and digest only; absent on `attention`** |
 | `push_token` | string | the machine validates it and drops it (`daemon.py`:4776-4778 (#1864), PR #1864); the cloud's registry is where tokens live (§2.2) |
 | ~~conversation name, snippet, transcript, `aps.badge`~~ | — | **never** (P2 and §1.5) |
 
