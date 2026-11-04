@@ -5,13 +5,19 @@
  * miss exports nothing but the exit code and a refusal marker.
  */
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { Deadline } from "./retirement-replay-core.ts";
 import { safeSummary } from "./retirement-replay-evidence.ts";
-import { NativeScope } from "./retirement-replay-native.ts";
+import { NativeScope, TAIL_DRAIN_MS } from "./retirement-replay-native.ts";
 import {
 	LINE_CAP,
 	leaksSecret,
@@ -218,6 +224,37 @@ describe("round 23 leak reproductions", () => {
 		expect(
 			sanitizeRunnerTail(65, `error: ${s.bearer.split("").join(" ")}`, s),
 		).toEqual({ exitCode: 65, redactionRefused: true });
+	});
+	it("S24-1: base64 of a PREFIXED bearer (all byte alignments, url-safe too) refuses the tail", () => {
+		for (const prefix of ["x:", "Bearer ", '{"bearer":"', "a", "ab", "abc"])
+			for (const alphabet of ["base64", "base64url"] as const) {
+				const encoded = Buffer.from(prefix + s.bearer).toString(alphabet);
+				expect(sanitizeRunnerTail(65, `error: auth ${encoded}`, s)).toEqual({
+					exitCode: 65,
+					redactionRefused: true,
+				});
+			}
+		// A 12-byte fragment, base64'd at each alignment, is refused too.
+		for (const prefix of ["", "a", "ab"])
+			expect(
+				sanitizeRunnerTail(
+					65,
+					`error: t ${Buffer.from(prefix + s.bearer.slice(10, 22)).toString("base64")}`,
+					s,
+				),
+			).toEqual({ exitCode: 65, redactionRefused: true });
+	});
+	it("R24-1: ordinary long-running failure lines are NOT refused", () => {
+		const raw = [
+			"Test Case '-[RetirementSystemAlert.RetainedReplayTests testSingleSeedReplay]' failed (241.302 seconds).",
+			"xcodebuild: error: Failed to launch on 2026-11-04 09:20:01.123+0000 at 1730712001.",
+			"xcodebuild: error: Unable to find a destination matching { platform:iOS Simulator, id:11111111-1111-4111-8111-111111111111 }",
+			"Testing failed:",
+		].join("\n");
+		const out = sanitizeRunnerTail(65, raw, s);
+		expect(out && "lines" in out).toBe(true);
+		expect(out && "lines" in out ? out.lines.length : 0).toBe(4);
+		expect(JSON.stringify(out)).toContain("failed (241.302 seconds)");
 	});
 	it("Q23-1: a base64 bearer in an allowlisted line refuses the whole tail", () => {
 		const b64 = Buffer.from(s.bearer).toString("base64");
@@ -479,6 +516,43 @@ describe("launchRunner against a fake xcodebuild", () => {
 		);
 		expect(sizes).toEqual(Array(4).fill(400000));
 	}, 60000);
+	it("Q24-2: a helper holding the pipe open cannot delay a failed command past TAIL_DRAIN_MS", async () => {
+		// The helper leaves the process group (setsid via python) and keeps the
+		// inherited pipe open for 15s; the command itself exits 65 at once.
+		const directory = fakeXcodebuild(
+			`echo "xcodebuild: error: helper"; /usr/bin/python3 -c 'import os,sys,time; os.setsid(); open(sys.argv[1],"w").write(str(os.getpid())); time.sleep(15)' "$(dirname "$0")/helper.pid" & exit 65`,
+		);
+		const scope = new NativeScope(new Deadline(30000));
+		try {
+			const started = Date.now();
+			const handle = launchRunner(
+				"/x.xctestrun",
+				"x",
+				"/tmp",
+				scope,
+				secrets(),
+			);
+			await handle.completion.catch(() => undefined);
+			expect(Date.now() - started).toBeLessThan(TAIL_DRAIN_MS + 3000);
+			expect(handle.failureTail?.()).toEqual({
+				exitCode: 65,
+				lines: ["xcodebuild: error: helper"],
+			});
+		} finally {
+			await scope.stop(new Deadline(5000)).catch(() => undefined);
+			// The helper left our process group on purpose; reap it by exact pid.
+			for (let i = 0; i < 40; i++) {
+				const file = join(directory, "helper.pid");
+				if (existsSync(file)) {
+					try {
+						process.kill(Number(readFileSync(file, "utf8")), "SIGKILL");
+					} catch {}
+					break;
+				}
+				await new Promise((yes) => setTimeout(yes, 50));
+			}
+		}
+	}, 30000);
 	it("R23-2: a runner KILLED before exiting (timeout/stop) still exports its tail", async () => {
 		const s = secrets();
 		fakeXcodebuild(
@@ -500,7 +574,10 @@ describe("launchRunner against a fake xcodebuild", () => {
 			exitCode: null,
 			lines: ["xcodebuild: error: stuck before ready"],
 		});
-		await handle.stop(new Deadline(10000));
+		// stop() can throw `cleanup` on a pre-existing EPERM race while probing
+		// the dying group (review Q24-1, deferred; it also happens on the base).
+		// This test is about the TAIL, which must survive either way.
+		await handle.stop(new Deadline(10000)).catch(() => undefined);
 		expect(handle.failureTail?.()).toEqual({
 			exitCode: null,
 			lines: ["xcodebuild: error: stuck before ready"],

@@ -68,6 +68,8 @@ const LONG_HEX = /[0-9a-f]{8,}/i;
 const LONG_HEX_ALL = /[0-9a-f]{8,}/gi;
 /** Fragments of a secret this long are treated as the secret (S23-1). */
 const FRAGMENT = 12;
+/** Base64 window, in encoded characters (6 secret bytes), see leaksSecret. */
+const BASE64_WINDOW = 8;
 
 /** Keeps only the most recent `capacity` bytes of everything pushed into it. */
 export class TailRing {
@@ -167,35 +169,53 @@ export function redactLine(line: string, secrets: TailSecrets) {
  * True when ANY trace of a private value survives in `text`: a 12-char
  * fragment of the bearer/session/control in any case, in raw or
  * percent-decoded text, a 16-char fragment of their base64, the control port,
- * or any 16+ hex run. Exact-match-only missed ring cuts, split halves and
+ * or any 8+ hex run. Exact-match-only missed ring cuts, split halves and
  * uppercase/encoded forms (review S23-1, Q23-1).
  */
 export function leaksSecret(text: string, secrets: TailSecrets) {
 	const decoded = percentDecoded(text);
-	// Also compare with all whitespace and punctuation removed, so a value
-	// written with separators (`a b c …`, `a-b-c`) is still recognised.
-	const forms = [text, decoded, decoded.replace(/[^0-9a-z]/gi, "")].map((v) =>
-		v.toLowerCase(),
-	);
+	// `plain`: the text as written (raw and percent-decoded). The hex, port and
+	// base64 rules run ONLY here: on separator-stripped text they glued
+	// ordinary words to digits (`failed (241.302 seconds)` -> `ed241302`) and
+	// refused every long-running failure tail (review R24-1 / S24-2).
+	const plain = [text, decoded].map((v) => v.toLowerCase());
+	// `stripped`: whitespace and punctuation removed, used ONLY for the exact
+	// 12-char secret fragments, so a value written with separators
+	// (`a b c …`, `a-b-c`) is still recognised.
+	const stripped = decoded.replace(/[^0-9a-z]/gi, "").toLowerCase();
+	const forms = [...plain, stripped];
 	// Fragments only of the two random values. The control URL's only private
 	// part is its port (it is otherwise the fixed loopback `/rpc` shape), which
 	// is checked on its own below; fragmenting it would refuse every line that
 	// mentions `http://127.0.0.1`.
 	const values = [secrets.bearer, secrets.session].filter((v) => v.length > 0);
 	const fragments = values.flatMap((v) => windows(v.toLowerCase(), FRAGMENT));
+	// Base64 at ALL three byte alignments (a prefix such as `x:` for Basic
+	// auth, `Bearer ` or `{"bearer":"` shifts the groups), in standard and
+	// url-safe alphabets. With a prefix the first group mixes prefix bytes and
+	// is dropped. 8-char windows (6 bytes) mean any encoded run of about 12+
+	// secret bytes contains a whole window at its own alignment (review S24-1).
 	const encoded = values.flatMap((v) =>
-		windows(Buffer.from(v).toString("base64"), 16),
+		["", "x", "xx"].flatMap((prefix) => {
+			const standard = Buffer.from(prefix + v)
+				.toString("base64")
+				.replace(/=+$/, "")
+				.slice(prefix ? 4 : 0);
+			const urlSafe = standard.replace(/\+/g, "-").replace(/\//g, "_");
+			return [
+				...windows(standard, BASE64_WINDOW),
+				...windows(urlSafe, BASE64_WINDOW),
+			];
+		}),
 	);
 	const port = portOf(secrets.control);
 	return (
 		(secrets.control.length > 0 &&
 			forms.some((form) => form.includes(secrets.control.toLowerCase()))) ||
 		forms.some((form) => fragments.some((f) => form.includes(f))) ||
-		[text, percentDecoded(text)].some((form) =>
-			encoded.some((f) => form.includes(f)),
-		) ||
-		forms.some((form) => LONG_HEX.test(form)) ||
-		(port !== null && forms.some((form) => portPattern(port).test(form)))
+		[text, decoded].some((form) => encoded.some((f) => form.includes(f))) ||
+		plain.some((form) => LONG_HEX.test(form)) ||
+		(port !== null && plain.some((form) => portPattern(port).test(form)))
 	);
 }
 

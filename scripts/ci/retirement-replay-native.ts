@@ -61,6 +61,8 @@ export interface OwnedCommand {
 	/** True once the child exited, was killed, or failed to start. */
 	hasExited: () => boolean;
 }
+/** Longest a failed tail-mode command waits for its pipe to close (Q24-2). */
+export const TAIL_DRAIN_MS = 2000;
 export class NativeScope {
 	readonly commands = new Set<OwnedCommand>();
 	closed = false;
@@ -228,6 +230,20 @@ export class NativeScope {
 			// by the timer above; `completed()` settles command-exit for a nonzero
 			// code once the group is gone and output closed.
 			if (code !== 0 && !tail) settle(new ReplayRefused("command-exit"));
+			// ...but never wait on `close` for long: a helper that left the
+			// process group can hold the pipe open (measured 12.2s, review
+			// Q24-2). After TAIL_DRAIN_MS the normal pipe has long drained.
+			if (code !== 0 && tail) {
+				const drain = setTimeout(
+					() => settle(new ReplayRefused("command-exit")),
+					TAIL_DRAIN_MS,
+				);
+				drain.unref();
+				void completion.then(
+					() => clearTimeout(drain),
+					() => clearTimeout(drain),
+				);
+			}
 			void awaitGroup(this.deadline).then(completed, () =>
 				settle(new ReplayRefused("cleanup")),
 			);
