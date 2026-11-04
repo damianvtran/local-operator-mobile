@@ -72,6 +72,38 @@ Receipts disclose whether the explicit return gesture was used. Every mode retai
 native/driver results and rendered frames even on failure; the artifact includes
 the APK itself plus hashes. Fixture setup failures are not called product failures.
 
+### Browser lifetime and timeout return
+
+The production adapter binds a real AndroidX Custom Tabs session before launch.
+Chrome's `android.support.customtabs.extra.KEEP_ALIVE` contract binds the app's
+empty `OAuthKeepAliveService` while its tab covers the owner. This keeps the
+loopback receiver and real five-minute deadline runnable; a bare tab has no
+client lifetime binding. Chromium's `CustomTabsConnection.keepAliveForSession`
+and the GoogleChrome/custom-tabs-client README's Lifecycle section define this
+contract. The service must be exported to the browser UID but exposes only an
+empty Binder: no auth data, callbacks, commands, extra permissions or foreground
+service/notification. Session teardown unbinds; it is not persistent work.
+
+Timeout/success return uses `CLEAR_TOP` on the recorded management activity,
+which finishes the tab before releasing its owner. If that activity itself is
+externally destroyed, cleanup unwinds to the recorded owner before clearing the
+references. The browser's explicit, code-free return link remains a fallback;
+its use is disclosed, never substituted for a native timeout pass.
+
+The hosted fixture requires a provider-side `/clicked` receipt, a real image
+request for the wrong-state callback, exactly one wrong-state rejection, then
+correct top-level navigation. A missed tap is a harness failure. The driver
+retains process/logcat evidence and correctly recognises Android16's `Hist  #`
+spacing when checking for orphaned auth tabs.
+
+The real-app proof embeds the existing E2E JavaScript in the debug APK and uses
+an explicitly asset-loading generated Expo host. JS `dev=true` preserves the
+existing Debug+E2E gate; native packager support is false. This job-only host is
+not production source and changes no Release build. Expo56's default is the
+React Native AAR's `ReactBuildConfig.DEBUG`, so warm Metro/reverse ports alone do
+not prove that a debug application will choose Metro. The proof continues through
+token500/Retry, persisted picker and a grant-authenticated populated session list.
+
 Source/JS tests are not native proof. Successful compilation, rendered interaction,
 independent review/QA/UX/design and native receipts are required before claiming
 cross-platform sign-in works. This implementation does not publish to Google Play.

@@ -16,34 +16,49 @@ import java.lang.ref.WeakReference
 internal object OAuthCoordinator {
   @Volatile var active: LoopbackAuthSession? = null
   var owner: WeakReference<Activity> = WeakReference(null)
+  var management: WeakReference<OAuthActivity> = WeakReference(null)
+  @Volatile var keepAliveObserved = false
   var authorizeUrl: String? = null
   var browserPackage: String? = null
   val main = Handler(Looper.getMainLooper())
 
+  // The return target belongs to this flow, not the React root. In particular
+  // timeout must clear Chrome ABOVE the management activity before releasing it.
   fun requestReturn(flow: LoopbackAuthSession) {
     main.post {
       if (active !== flow) return@post
-      val activity = owner.get()
-      if (activity == null) {
-        if (flow.isEnded()) active = null
-        return@post
-      }
-      // There is no general Custom Tabs dismiss API. Same-task CLEAR_TOP is the
-      // bounded automatic attempt; a code-free user-gesture return link remains
-      // available when OS cross-UID/background policy prevents that attempt.
+      val activity = management.get()
+      if (activity == null) { if (flow.isEnded()) release(flow); return@post }
       try {
-        val intent = if (flow.isEnded()) Intent(activity, activity.javaClass)
-          else Intent(activity, OAuthActivity::class.java).putExtra(OAuthActivity.RETURN, true)
-        if (intent != null) {
-          activity.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-        }
-      } catch (_: RuntimeException) { /* Browser page offers the explicit return. */ }
-      finally {
-        if (flow.isEnded() && active === flow) {
-          active = null; authorizeUrl = null; browserPackage = null; owner.clear()
-        }
+        activity.startActivity(Intent(activity, OAuthActivity::class.java)
+          .putExtra(OAuthActivity.RETURN, true)
+          .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+      } catch (_: RuntimeException) {
+        // Successful callback pages retain their code-free user-gesture fallback.
+        // No result is fabricated when the OS refuses a task transition.
       }
     }
+  }
+
+  fun managementDestroyed(flow: LoopbackAuthSession) {
+    if (active !== flow) return
+    // External destruction can finish the management activity while Chrome is
+    // still above it. There is then no management target left for CLEAR_TOP;
+    // unwind to the recorded owner before dropping the only task reference.
+    val activity = owner.get()
+    try {
+      if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+        activity.startActivity(Intent(activity, activity.javaClass)
+          .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+      }
+    } catch (_: RuntimeException) { /* Native cleanup still closes the listener. */ }
+    finally { release(flow) }
+  }
+
+  fun release(flow: LoopbackAuthSession) {
+    if (active !== flow) return
+    active = null; authorizeUrl = null; browserPackage = null
+    management.clear(); owner.clear()
   }
 }
 
@@ -59,6 +74,7 @@ class RadientLoopbackModule : Module() {
       check(listOf("received", "returnLabel", "invalid", "direction").all { !copy[it].isNullOrEmpty() }) { "ERR_AUTH_COPY" }
       val context = appContext.reactContext ?: error("ERR_AUTH_CONTEXT")
       val packageName = context.packageName
+      OAuthCoordinator.keepAliveObserved = false
       lateinit var flow: LoopbackAuthSession
       flow = LoopbackAuthSession(copy,
         "intent://oauth-return#Intent;scheme=$packageName.oauth;package=$packageName;end",

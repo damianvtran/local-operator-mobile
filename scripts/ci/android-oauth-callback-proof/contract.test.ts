@@ -8,6 +8,10 @@ const read = (path: string) =>
 	readFileSync(new URL(path, import.meta.url), "utf8");
 const runner = read("./run.sh");
 const realApp = read("./real-app.sh");
+const prepareApp = read("./prepare-app.sh");
+const activity = read(
+	`${"../../../modules/radient-loopback/android/"}src/main/java/dev/localoperator/loopback/OAuthActivity.kt`,
+);
 const workflow = read(
 	"../../../.github/workflows/android-oauth-callback-proof.yml",
 );
@@ -122,15 +126,34 @@ describe("Android OAuth native-proof contract", () => {
 				join(root, "positive-activities.txt"),
 				"topResumedActivity=ActivityRecord{dev.proof/dev.localoperator.loopback.OAuthProofActivity}",
 			);
-			for (const [wrongState, lateRefused, expected] of [
-				[1, true, 0],
-				[2, true, 1],
-				[1, false, 1],
+			for (const [
+				wrongState,
+				lateRefused,
+				clicked,
+				bound,
+				retained,
+				expected,
+			] of [
+				[1, true, true, true, false, 0],
+				[2, true, true, true, false, 1],
+				[1, false, true, true, false, 1],
+				[1, true, false, true, false, 1],
+				[1, true, true, false, false, 1],
+				[1, true, true, true, true, 1],
 			] as const) {
+				writeFileSync(
+					join(root, "positive-activities.txt"),
+					"topResumedActivity=ActivityRecord{dev.proof/dev.localoperator.loopback.OAuthProofActivity}" +
+						(retained
+							? "\n* Hist  #2: com.android.chrome/CustomTabActivity"
+							: ""),
+				);
 				writeFileSync(
 					join(root, "positive-native.json"),
 					JSON.stringify({
 						pass: true,
+						provider_clicked: clicked,
+						browser_keepalive_bound: bound,
 						wrong_state_rejections: wrongState,
 						late_refused: lateRefused,
 					}),
@@ -162,14 +185,60 @@ describe("Android OAuth native-proof contract", () => {
 		expect(proof).toContain("width:100%;height:200px");
 	});
 
+	it("keeps the native process runnable and closes timeout through its owned activity", () => {
+		const guarded = (text: string) =>
+			text.includes("CustomTabsClient.bindCustomTabsService") &&
+			text.includes("CustomTabsIntent.Builder(session)") &&
+			text.includes("android.support.customtabs.extra.KEEP_ALIVE") &&
+			text.includes("unbindService(connection)");
+		expect(guarded(activity)).toBe(true);
+		expect(
+			guarded(
+				activity.replace(
+					"CustomTabsIntent.Builder(session)",
+					"CustomTabsIntent.Builder()",
+				),
+			),
+		).toBe(false);
+		expect(module).toContain("Intent(activity, OAuthActivity::class.java)");
+		expect(
+			module.slice(
+				module.indexOf("fun requestReturn"),
+				module.indexOf("fun managementDestroyed"),
+			),
+		).not.toContain("Intent(activity, activity.javaClass)");
+		expect(activity).toContain("OAuthCoordinator.managementDestroyed(it)");
+		expect(manifest).toContain(
+			'service android:name=".OAuthKeepAliveService" android:exported="true"',
+		);
+		expect(manifest).not.toContain("FOREGROUND_SERVICE");
+		expect(runner).toContain("limit=360000");
+		expect(core).toContain("timeoutSeconds: Long = 300");
+	});
+
+	it("requires a provider click before a real image wrong-state request and correct navigation", () => {
+		expect(proof).toContain('target.startsWith("/clicked")');
+		expect(proof).toContain("const i=new Image()");
+		expect(proof).not.toContain("fetch('$badState')");
+		expect(proof).toContain("location.assign('$good')");
+		expect(runner).toContain("provider-click-not-observed");
+	});
+
 	it("also exercises the real Expo provider through failure, retry, picker and cold restore", () => {
 		expect(runner).toContain("android-oauth-callback-proof/real-app.sh");
-		expect(realApp).toContain("signin-app-proof/prepare-entry.ts");
+		expect(prepareApp).toContain("signin-app-proof/prepare-entry.ts");
+		expect(prepareApp).toContain("--dev true");
+		expect(prepareApp).toContain("src/debug/assets/index.android.bundle");
+		expect(workflow).toContain("android-oauth-callback-proof/prepare-app.sh");
+		expect(realApp).toContain("embedded-bundle.sha256");
+		expect(realApp).not.toContain("expo','start");
 		expect(realApp).toContain("tools/mock-relay/oauth-fast-path.ts");
 		expect(realApp).toContain("tcp:54831 tcp:54831");
 		expect(realApp).toContain("id: 'sign-in-try-again'");
 		expect(realApp).toContain("id: 'sign-in-diagnostics'");
 		expect(realApp).toContain("id: 'computers-screen'");
+		expect(realApp).toContain("id: 'conversations-list'");
+		expect(realApp).toContain("r['session_pkce_verified']==1");
 		expect(realApp).toContain("r['discovery']>p['discovery']");
 		expect(realApp).toContain("r['authorize']==2");
 		expect(realApp).not.toContain("pm clear");

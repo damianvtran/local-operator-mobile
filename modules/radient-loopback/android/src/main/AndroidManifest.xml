@@ -4,6 +4,9 @@
     <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
   </queries>
   <application>
+    <!-- Browser binds this command-free service only for the owned Custom Tab;
+         no foreground-service permission or OAuth payload crosses the binder. -->
+    <service android:name=".OAuthKeepAliveService" android:exported="true" />
     <!-- Same-task management is intentional: unlike Expo's default NEW_TASK,
          CLEAR_TOP can return to the owner without leaving an orphaned auth task. -->
     <activity android:name=".OAuthActivity" android:exported="false"

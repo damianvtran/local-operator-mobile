@@ -113,17 +113,11 @@ appId: $APP_ID
 - takeScreenshot: '$mode-browser'
 YAML
   if [[ "$mode" == positive ]]; then
-    # Prefer an AX text selector. Chrome 133 can omit web nodes entirely; the
-    # fallback point is inside the fixture's full-width 200-CSS-px top anchor
-    # (toolbar ~12% + half anchor ~11% on this pinned Pixel 7), not a URL load.
-    if timeout 20s adb shell uiautomator dump /sdcard/oauth-proof-window.xml > "$OUT/evidence/$mode-hierarchy.log" 2>&1; then
-      adb exec-out cat /sdcard/oauth-proof-window.xml > "$OUT/evidence/$mode-browser-hierarchy.xml"
-    fi
-    if [[ -f "$OUT/evidence/$mode-browser-hierarchy.xml" ]] && grep -q 'Complete test sign-in' "$OUT/evidence/$mode-browser-hierarchy.xml"; then
-      echo "- tapOn: 'Complete test sign-in'" >> "$OUT/$mode.yaml"
-    else
-      printf '%s\n' '- tapOn:' '    point: "50%,24%"' >> "$OUT/$mode.yaml"
-    fi
+    # Chrome can expose a web text node whose AX click reports success without
+    # navigating. Tap the fixture's full-width 200-CSS-px anchor at its measured
+    # centre (toolbar ~12% + half anchor ~11% on the pinned Pixel 7). The provider
+    # /clicked beacon, not Maestro's tap receipt, proves the user gesture arrived.
+    printf '%s\n' '- tapOn:' '    point: "50%,24%"' >> "$OUT/$mode.yaml"
     cat >> "$OUT/$mode.yaml" <<YAML
 - extendedWaitUntil:
     visible: 'PASS positive|Sign-in response received. Return to the app.|FAIL positive.*'
@@ -169,6 +163,8 @@ YAML
   cat "$OUT/evidence/$mode-driver.log"
   if adb shell run-as "$APP_ID" cat "files/oauth-proof-$mode.json" > "$OUT/evidence/$mode-native.json"; then :; else DRIVER_EXIT=1; fi
   adb shell dumpsys activity activities > "$OUT/evidence/$mode-activities.txt"
+  adb shell dumpsys activity processes > "$OUT/evidence/$mode-processes.txt"
+  adb logcat -d -v threadtime > "$OUT/evidence/$mode-logcat.txt"
   adb exec-out screencap -p > "$OUT/evidence/$mode-final.png"
   if python3 - "$OUT/evidence" "$mode" "$DRIVER_EXIT" "$APP_ID" <<'PY'
 import json, pathlib, re, sys
@@ -180,11 +176,14 @@ except (OSError, ValueError):
 activities = (out / (mode + '-activities.txt')).read_text()
 resumed = [line for line in activities.splitlines() if 'mResumedActivity:' in line or 'topResumedActivity=' in line]
 owner_returned = any(app + '/dev.localoperator.loopback.OAuthProofActivity' in line for line in resumed)
-auth_tab_retained = any(re.search(r'\* Hist #\d+:.*(?:CustomTabActivity|AuthTabActivity)', line) for line in activities.splitlines())
+auth_tab_retained = any(re.search(r'\*\s+Hist\s+#\d+:.*(?:CustomTabActivity|AuthTabActivity)', line) for line in activities.splitlines())
 wrong_state_proven = mode != 'positive' or native.get('wrong_state_rejections') == 1
+click_proven = mode != 'positive' or native.get('provider_clicked') is True
+lifetime_proven = native.get('browser_keepalive_bound') is True
 receipt = {'mode': mode, 'driver_exit': driver, 'owner_returned': owner_returned,
            'auth_tab_retained': auth_tab_retained, 'native': native,
-           'pass': driver == 0 and native.get('pass') is True and native.get('late_refused') is True and wrong_state_proven and owner_returned and not auth_tab_retained}
+           'harness_error': 'provider-click-not-observed' if not click_proven else None,
+           'pass': driver == 0 and native.get('pass') is True and native.get('late_refused') is True and wrong_state_proven and click_proven and lifetime_proven and owner_returned and not auth_tab_retained}
 (out / (mode + '.json')).write_text(json.dumps(receipt, indent=2, sort_keys=True))
 print(json.dumps(receipt, sort_keys=True))
 sys.exit(0 if receipt['pass'] else 1)

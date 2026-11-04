@@ -36,6 +36,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
   private var started = false
   private var ended = false
   @Volatile private var served = false
+  @Volatile private var clicked = false
   @Volatile private var fallbackUsed = false
   @Volatile private var destroyed = false
   private var preparedAt = 0L
@@ -82,6 +83,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
       val path = if (mode == "positive") "/authorize" else "/wait"
       val url = "http://127.0.0.1:${provider.localPort}$path?redirect_uri=${encode(redirect)}&state=proof-state"
       flow.arm(url, redirect)
+      OAuthCoordinator.keepAliveObserved = false
       OAuthCoordinator.active = flow
       OAuthCoordinator.owner = WeakReference(this)
       OAuthCoordinator.authorizeUrl = url
@@ -151,7 +153,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
       }
       val target = first.split(' ').getOrNull(1) ?: return
       if (target == "/proof-wrong-state") {
-        // A same-origin browser acknowledgement runs AFTER wrong-state fetch
+        // A same-origin browser acknowledgement runs AFTER the wrong-state image request
         // settles, BEFORE other rejection probes and the valid navigation.
         wrongStateRejections = rejected.get() - socketProbeRejections
         client.getOutputStream().apply {
@@ -161,24 +163,28 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
       }
       served = true
       OAuthCoordinator.main.post { stage = "browser-ready"; persist(null, "browser-ready") }
-      val body = if (target.startsWith("/complete")) {
+      val body = if (target.startsWith("/clicked")) {
+        clicked = true
+        OAuthCoordinator.main.post { persist(null, "browser-clicked") }
         val good = "$redirect?code=synthetic-only&state=proof-state"
         val badState = "$redirect?code=synthetic-bad&state=wrong-state"
         val badPath = redirect.replace("/callback", "/wrong") + "?code=synthetic-bad&state=proof-state"
         val duplicate = "$good&state=proof-state"
-        // Real browser-originated GET/POST requests hit the actual native parser.
-        // CORS may hide each rejection response but cannot turn it into a grant.
-        "<script>fetch('$badState').catch(()=>{}).then(()=>fetch('/proof-wrong-state'))" +
-          ".then(()=>fetch('$badPath').catch(()=>{}))" +
-          ".then(()=>fetch('$good',{method:'POST'}).catch(()=>{}))" +
-          ".then(()=>fetch('$duplicate').catch(()=>{})).finally(()=>location.href='$good');</script>"
+        // Images issue real cross-port browser GETs without fetch/CORS response
+        // access. A same-origin acknowledgement measures exactly the wrong-state
+        // rejection BEFORE the remaining probes; the final navigation is real.
+        "<script>function image(u){return new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u;});}" +
+          "image('$badState').then(()=>fetch('/proof-wrong-state'))" +
+          ".then(()=>image('$badPath'))" +
+          ".then(()=>fetch('$good',{method:'POST',mode:'no-cors'}))" +
+          ".then(()=>image('$duplicate')).then(()=>location.assign('$good'));</script>"
       } else {
         val title = if (mode == "positive") "Complete test sign-in" else "Test callback waiting"
         // Fixed geometry is the real-tap fallback when Chrome omits its web AX
         // tree: full viewport width, 200 CSS px immediately below the toolbar.
         "<meta name='viewport' content='width=device-width,initial-scale=1'>" +
           "<style>body{margin:0}a{display:flex;width:100%;height:200px;align-items:center;justify-content:center;font-size:24px}</style>" +
-          "<a href='/complete'>$title</a><h1>Browser fixture ready</h1>"
+          "<a href='/clicked' onclick=\"location.assign(this.href);return false;\">$title</a><h1>Browser fixture ready</h1>"
       }
       val bytes = body.toByteArray(Charsets.UTF_8)
       client.getOutputStream().apply {
@@ -192,7 +198,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
     if (ended) return
     val elapsed = System.currentTimeMillis() - preparedAt
     val outcome = when (mode) {
-      "positive" -> result?.contains("code=synthetic-only") == true && error == null && rejected.get() == 6 && wrongStateRejections == 1
+      "positive" -> clicked && result?.contains("code=synthetic-only") == true && error == null && rejected.get() == 6 && wrongStateRejections == 1
       "cancel" -> result == null && error == null
       "timeout" -> result == null && error == "ERR_AUTH_TIMEOUT" && elapsed in 295000..330000
       "destroy" -> result == null && error == null
@@ -227,6 +233,7 @@ class OAuthProofActivity : Activity(), Application.ActivityLifecycleCallbacks {
     val receipt = JSONObject().put("mode", mode).put("pass", pass ?: JSONObject.NULL)
       .put("stage", stage).put("detail", detail).put("provider_served", served)
       .put("native_socket_probes_passed", socketProbesPassed)
+      .put("provider_clicked", clicked).put("browser_keepalive_bound", OAuthCoordinator.keepAliveObserved)
       .put("socket_probe_rejections", socketProbeRejections).put("wrong_state_rejections", wrongStateRejections)
       .put("late_refused", lateRefused ?: JSONObject.NULL)
       .put("rejected", rejected.get()).put("fallback_used", fallbackUsed).put("activity_destroyed", destroyed)

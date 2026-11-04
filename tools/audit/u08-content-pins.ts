@@ -449,7 +449,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "5eb784a67d67a92072533f6c51a8f2e6d12d6b66eb62ffc2f8d9f79c057183af",
+	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
+	 * the merged catalogues. Android adapter selection/return-page messages do
+	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
+	 * style, token, corpus or instrument input changes. Historical pins retained. */
+	src: "a267fe953d573df55df7c0ca46c04adc4692c3dafcbe4c0ea0ff84057f635246",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

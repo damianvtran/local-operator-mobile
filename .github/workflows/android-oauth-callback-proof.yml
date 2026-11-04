@@ -18,12 +18,10 @@ jobs:
   browser-native:
     name: Real Custom Tab to device loopback (debug only)
     runs-on: ubuntu-latest
-    # Expected budget: 18m cold build + 4m setup/driver + 5m KVM image/boot +
-    # 6m real timeout/browser overhead + 8m positive/cancel/destroy + 4m evidence
-    # = 45m. No production deadline or native assertion is shortened.
-    # Budget: setup/build/emulator <=15m + four native modes <=17m (including
-    # the unmodified 300s timeout) + real Expo failure/retry/restore <=10m +
-    # artifact teardown <=3m. KVM below is a fail-closed prerequisite.
+    # Bounded budget: cold Gradle + embedded JS <=18m; KVM image/boot +
+    # provider/driver preflight <=5m; four native modes <=12m (including the
+    # unchanged 300s timeout); real Expo failure/retry/restore/list <=7m;
+    # artifact teardown <=3m =45m. KVM is fail-closed; no deadline/assertion shrinks.
     timeout-minutes: 45
     env:
       MAESTRO_VERSION: "2.11.0"
@@ -82,6 +80,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/android-oauth-callback-proof/evidence"
           pnpm exec expo config --type public --json > "$RUNNER_TEMP/android-oauth-callback-proof/expo-config.json"
           pnpm exec expo prebuild --platform android --clean --no-install
+          bash scripts/ci/android-oauth-callback-proof/prepare-app.sh
       - name: Compile debug APK and prove debug controls are absent from Release manifest
         run: |
           set -euo pipefail
