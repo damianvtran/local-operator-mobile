@@ -1,8 +1,88 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+	attachStageBPhoto,
+	type StageBStep,
+	stageBFlow,
+	stageBStartsInPhotoPicker,
+} from "./stage-b-draft-flows";
+import { verifyStageBPostReleaseWindow } from "./stage-b-draft-timing";
 import { StageBDriverBatch } from "./stage-b-driver-batch";
 
 describe("Stage B adjacent UI driver batching", () => {
+	it("starts a fresh driver for EVERY picker, including repeated library use in one batch", async () => {
+		const executed: StageBStep[][] = [];
+		const batch = new StageBDriverBatch(async (_name, steps) => {
+			executed.push(steps);
+		});
+		batch.add("attach-native-photo", attachStageBPhoto());
+		batch.add("original-photo-still-selectable", attachStageBPhoto());
+		await batch.flush();
+		expect(executed).toHaveLength(3);
+		for (let index = 0; index < 2; index++) {
+			expect(executed[index]?.at(-1)).toEqual({
+				tapOn: { id: "attach-option-library" },
+			});
+			const picker = executed[index + 1] ?? [];
+			expect(stageBStartsInPhotoPicker(picker)).toBe(true);
+			const yaml = stageBFlow(picker);
+			expect(yaml).not.toContain("launchApp");
+			expect(yaml).not.toContain("stage-b-proof-gate");
+			expect(picker[0]).toEqual({
+				extendedWaitUntil: {
+					visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
+					timeout: 30000,
+				},
+			});
+		}
+	});
+	it("does not acknowledge evidence when a fresh picker segment fails", async () => {
+		let acknowledged = false;
+		const batch = new StageBDriverBatch(async (_name, steps) => {
+			if (stageBStartsInPhotoPicker(steps))
+				throw new Error("picker unavailable");
+		});
+		batch.add("attach", attachStageBPhoto());
+		batch.verified(() => {
+			acknowledged = true;
+		});
+		await expect(batch.flush()).rejects.toThrow("picker unavailable");
+		expect(acknowledged).toBe(false);
+	});
+	it("models the production post-segment lease sample honestly, not concurrent sampling", async () => {
+		let clock = 0,
+			samples = 0;
+		const log: string[] = [];
+		const batch = new StageBDriverBatch(async () => {
+			log.push("driver-start");
+			clock += 70000;
+			log.push("driver-end");
+		});
+		const flow = async () =>
+			batch.add("negative", [{ assertNotVisible: "synthetic-canary" }]);
+		await verifyStageBPostReleaseWindow({
+			afterRelease: async () => {
+				log.push("release");
+			},
+			assertUI: async () => {
+				await flow();
+				await batch.flush();
+			},
+			observe: async () => {
+				await batch.flush();
+				samples++;
+				log.push("sample");
+				return { recoveryAdmitted: false };
+			},
+			now: () => clock,
+			sleep: async (ms) => {
+				clock += ms;
+			},
+		});
+		expect(samples).toBe(1);
+		expect(clock).toBeGreaterThanOrEqual(10000);
+		expect(log).toEqual(["release", "driver-start", "driver-end", "sample"]);
+	});
 	it("keeps release before the separate negative segment and budgets the reinstall receipt observation", () => {
 		const source = readFileSync(
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
@@ -24,6 +104,10 @@ describe("Stage B adjacent UI driver batching", () => {
 		expect(block).toContain("assertStageBPostReleaseDraft(canary)");
 		expect(source).toContain("stageBFlowCap(reinstallSteps) * 1000");
 		expect(source).toContain("stageBSeedFailureFromHierarchy(");
+		expect(source).toContain("unavailable: failure hierarchy missing");
+		expect(source).toContain(
+			"not applicable: failure hierarchy has no proof gate",
+		);
 	});
 	it("captures immediately after initial connect and proves navigation before typing in the same flow", () => {
 		const source = readFileSync(

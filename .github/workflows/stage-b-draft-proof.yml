@@ -52,11 +52,11 @@ jobs:
     runs-on: macos-26
     # Run 41831921831: calls 53.7–118s, mean 79s (n=12); run 41854111855:
     # 5.4–104.9s, mean 64.4s (n=7). Use the conservative 79s figure below.
-    # Planned success path: 43 calls (one post-release negative segment added).
-    # (43 * 79s / 60 + 42m measured build/setup) * 1.15 = 113.4m.
+    # Planned success path: 45 calls (post-release negative + two picker barriers).
+    # (45 * 79s / 60 + 42m measured build/setup) * 1.15 = 116.4m.
     # Extra allowances: 1m held waits (10/22/22s), 1m post-release observation,
     # 4m media import (90/115/118s observed; 240s cap), 3m screenshots,
-    # 7m fixture/process polling, 10m cleanup/upload = ~139.4m.
+    # 7m fixture/process polling, 10m cleanup/upload = ~142.4m.
     # Keep 180m headroom; this is a model, not new native timing evidence.
     # Loading captures stay screenshot-only within the unchanged 20s proof.
     timeout-minutes: 180

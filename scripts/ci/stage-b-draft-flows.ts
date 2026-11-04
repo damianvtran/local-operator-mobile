@@ -24,22 +24,35 @@ const DRAWN_SCREEN = new RegExp(STAGE_B_DRAWN_SCREEN);
 export function stageBHasDrawnScreen(hierarchy: string): boolean {
 	return DRAWN_SCREEN.test(hierarchy);
 }
+/** Run 41882974569: PHPicker was ready ~3s after the library tap, but
+ * only a fresh driver saw its remote tree. Wait up to 10x that measured delay. */
+export const STAGE_B_PICKER_WAIT_MS = 30_000;
+export function stageBStartsInPhotoPicker(steps: StageBStep[]): boolean {
+	const wait = steps[0]?.extendedWaitUntil as
+		| { visible?: { id?: string } }
+		| undefined;
+	return wait?.visible?.id === "PXGGridLayout-Info";
+}
 export function stageBFlow(steps: StageBStep[]): string {
 	// Generated outside the global Maestro flow glob: these target ONLY the
 	// dedicated bundle and cannot accidentally run against a real user's app.
 	// Maestro 2.11 defaults to stopping the app. Foreground ONLY: restart/PID
 	// evidence belongs to explicit simctl terminate+launch, never this wrapper.
-	const foreground: StageBStep[] = [
-		// Omitting permissions grants everything in Maestro 2.11, which mutates
-		// simulator privacy and may kill the tracked process. An empty map sets none.
-		{ launchApp: { stopApp: false, permissions: {} } },
-		{
-			extendedWaitUntil: {
-				visible: { id: STAGE_B_DRAWN_SCREEN },
-				timeout: STAGE_B_COLD_ASSERTION_MS,
-			},
-		},
-	];
+	// The picker is already presented by the previous invocation. Re-launching
+	// or awaiting a composer id here would obscure the remote-view evidence.
+	const foreground: StageBStep[] = stageBStartsInPhotoPicker(steps)
+		? []
+		: [
+				// Omitting permissions grants everything in Maestro 2.11, which mutates
+				// simulator privacy and may kill the tracked process. An empty map sets none.
+				{ launchApp: { stopApp: false, permissions: {} } },
+				{
+					extendedWaitUntil: {
+						visible: { id: STAGE_B_DRAWN_SCREEN },
+						timeout: STAGE_B_COLD_ASSERTION_MS,
+					},
+				},
+			];
 	return `appId: ${STAGE_B_BUNDLE}\n---\n${[...foreground, ...steps].map((step) => `- ${JSON.stringify(step)}`).join("\n")}\n`;
 }
 const row = `computer-row-${STAGE_B_HOST}`;
@@ -97,7 +110,12 @@ export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
 export const attachStageBPhoto = (): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	{ tapOn: { id: "attach-option-library" } },
-	{ extendedWaitUntil: { visible: "Photos", timeout: 15000 } },
+	{
+		extendedWaitUntil: {
+			visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
+			timeout: STAGE_B_PICKER_WAIT_MS,
+		},
+	},
 	// iOS 26 inserts an onboarding banner above the grid. Coordinates hit that
 	// banner, not a photo; use the actual PHPicker accessibility tree instead.
 	{

@@ -13,9 +13,10 @@ export const STAGE_B_RESTORE_GAP_MS = 300;
 export const STAGE_B_POST_RELEASE_WINDOW_MS = 10_000;
 
 /** The assertion driver MUST start after the held response has been released.
- * Observe lease state throughout CLI startup and the UI's own timed negative
- * assertion loop; a late asynchronous vault admission must not escape the test.
- * The assertion command and observer each retain their existing bounded caps. */
+ * The UI performs its own timed negative assertion loop. In production,
+ * observe() flushes queued UI work, so its lease sample is POST-SEGMENT (at
+ * least 10s after release), not concurrent observation during driver startup.
+ * The assertion command and observer retain their existing bounded caps. */
 export async function verifyStageBPostReleaseWindow<
 	T extends { recoveryAdmitted?: unknown },
 >(options: {

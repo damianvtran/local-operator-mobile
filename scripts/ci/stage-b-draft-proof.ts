@@ -1232,7 +1232,11 @@ async function runStageBCoordinator(
 					const seedFailure = stageBSeedFailureFromHierarchy(
 						readFileSync(hierarchyPath, "utf8"),
 					);
-					if (seedFailure) receipt.seedDiagnostic = seedFailure;
+					receipt.seedDiagnostic =
+						seedFailure ??
+						"not applicable: failure hierarchy has no proof gate";
+				} else {
+					receipt.seedDiagnostic = "unavailable: failure hierarchy missing";
 				}
 			}
 			try {

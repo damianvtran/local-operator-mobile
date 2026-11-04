@@ -37,12 +37,31 @@ export class StageBDriverBatch {
 		this.acknowledgements = [];
 		const names = pending.map(({ name }) => name);
 		const steps = pending.flatMap(({ steps }) => steps);
-		await this.execute(
-			`segment-${this.segments.length + 1}-${names[0]}`,
-			steps,
-			names,
-		);
-		this.segments.push({ names, steps: steps.length });
+		// PHPicker is an out-of-process remote view. Run 41882974569 proved
+		// a long-lived driver could not see it while a fresh driver could.
+		// Split EVERY library presentation, even inside a combined caller flow;
+		// keep acknowledgements behind all resulting segments, never the opener.
+		const segments: StageBStep[][] = [];
+		let current: StageBStep[] = [];
+		for (const step of steps) {
+			current.push(step);
+			if (
+				(step.tapOn as { id?: string } | undefined)?.id ===
+				"attach-option-library"
+			) {
+				segments.push(current);
+				current = [];
+			}
+		}
+		if (current.length) segments.push(current);
+		for (const segment of segments) {
+			await this.execute(
+				`segment-${this.segments.length + 1}-${names[0]}`,
+				segment,
+				names,
+			);
+			this.segments.push({ names, steps: segment.length });
+		}
 		for (const record of acknowledge) record();
 	}
 }

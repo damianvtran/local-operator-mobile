@@ -8,6 +8,7 @@ import {
 	attachStageBPhoto,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
+	STAGE_B_PICKER_WAIT_MS,
 	selectStageBComputer,
 	stageBFlow,
 	stageBHasDrawnScreen,
@@ -20,6 +21,19 @@ const steps = (flow: string): Record<string, unknown>[] =>
 		.map((line) => JSON.parse(line.slice(2)));
 
 describe("Stage B foreground-only Maestro flows", () => {
+	it("waits on the real remote grid with measured headroom, without obscuring it with app foreground assertions", () => {
+		const picker = attachStageBPhoto().slice(2);
+		expect(STAGE_B_PICKER_WAIT_MS).toBe(30000);
+		expect(picker[0]).toEqual({
+			extendedWaitUntil: {
+				visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
+				timeout: STAGE_B_PICKER_WAIT_MS,
+			},
+		});
+		const generated = steps(stageBFlow(picker));
+		expect(generated).toEqual(picker);
+		expect(JSON.stringify(generated)).not.toContain('"visible":"Photos"');
+	});
 	it("repeats the production negative selector over ten seconds rather than checking once before release", () => {
 		const generated = assertStageBPostReleaseDraft("synthetic-canary");
 		const script = generated[0]?.evalScript as string;
