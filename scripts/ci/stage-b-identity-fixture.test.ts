@@ -30,6 +30,47 @@ async function fixture() {
 	return { ...server, transport: stageBTransport(server.config, fetch) };
 }
 describe("Stage B real-socket synthetic authority fixture", () => {
+	it("starts capture on real held /me arrival and releases independently of a stuck observer", async () => {
+		const x = await fixture();
+		x.scenario("held");
+		let capturedAt = 0;
+		x.observeHeld(async (proof) => {
+			capturedAt = proof.firstSeenAt;
+			expect(proof.deadlineAt - proof.firstSeenAt).toBe(25);
+			await new Promise<void>(() => {});
+		}, 25);
+		const owner = await proveRecoveryAuthority(
+			syntheticValue(x.config, "access-a"),
+			{ fetcher: x.transport, isCurrent: () => true },
+		);
+		expect(owner).not.toBeNull();
+		expect(capturedAt).toBeGreaterThan(0);
+		expect(x.heldTimings[0]?.releasedAfterMs).toBeLessThan(20000);
+	});
+	it("the real production 20s deadline refuses a held response, then a prompt same-owner proof succeeds", async () => {
+		const x = await fixture();
+		x.scenario("held");
+		x.observeHeld(async (proof) => {
+			await new Promise((resolve) =>
+				setTimeout(resolve, Math.max(0, proof.deadlineAt - Date.now())),
+			);
+			proof.release();
+		}, 22000);
+		expect(
+			await proveRecoveryAuthority(syntheticValue(x.config, "access-a"), {
+				fetcher: x.transport,
+				isCurrent: () => true,
+			}),
+		).toBeNull();
+		await x.awaitHeldCapture();
+		x.scenario("same");
+		expect(
+			await proveRecoveryAuthority(syntheticValue(x.config, "access-a"), {
+				fetcher: x.transport,
+				isCurrent: () => true,
+			}),
+		).toEqual({ accountId: "stage-b-account-a", tenantId: "stage-b-tenant-a" });
+	}, 30000);
 	it("serves valid home directories and a populated catalogue behind the relay gate", async () => {
 		const x = await fixture();
 		const request = (path: string, authenticated = true) =>

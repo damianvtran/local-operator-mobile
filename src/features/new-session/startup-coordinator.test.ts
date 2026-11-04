@@ -88,6 +88,27 @@ const setup = (saved: StartupRecord | null = null) => {
 
 // Deferred barriers prove ordering without wall-clock sleeps or a fake successful network.
 describe("durable provisional conversation", () => {
+	it("publishes restored text and attachments as one atomic observer state (D1)", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		const seen: Array<{ text: string; images: unknown[] }> = [];
+		x.coordinator.subscribe(() => {
+			const draft = x.coordinator.snapshot().draft;
+			seen.push(structuredClone(draft));
+		});
+		const draft = {
+			text: "restored text",
+			images: [{ data_b64: "aW1hZ2U=", mime_type: "image/png" }],
+		};
+		expect(await x.coordinator.restoreDraft(draft, () => {})).toBe(true);
+		// Persistence may notify again with the SAME complete draft. There must
+		// never be a text-only or attachment-only intermediate observer state.
+		expect(seen.length).toBeGreaterThan(0);
+		for (const snapshot of seen) expect(snapshot).toEqual(draft);
+		expect(new Set(seen.map((snapshot) => JSON.stringify(snapshot))).size).toBe(
+			1,
+		);
+	});
 	it("late optional recovery cannot bypass unreadable ordinary history or an explicit empty edit", async () => {
 		const broken = new StartupCoordinator("synthetic-scope", {
 			store: {

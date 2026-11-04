@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { proveRecoveryAuthority } from "@/connection/recovery-authority";
 import { DraftRecoveryVault } from "./draft-recovery-vault";
 
 function fixture() {
@@ -35,6 +36,50 @@ function fixture() {
 	};
 }
 describe("sealed draft authority lease", () => {
+	it("a timed-out proof drops access, not retained draft bytes; a fresh same-owner proof restores", async () => {
+		const x = fixture();
+		const vault = x.create();
+		await vault.prepare("owner-a", () => true);
+		await vault.write("draft", "retained text");
+		vault.withdraw();
+		const before = new Map(x.disk);
+		vi.useFakeTimers();
+		try {
+			const pending = proveRecoveryAuthority("synthetic-access", {
+				isCurrent: () => true,
+				fetcher: async (_input, init) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new Error("aborted")),
+						);
+					}),
+			});
+			await vi.advanceTimersByTimeAsync(20000);
+			expect(await pending).toBeNull();
+			expect(vault.available()).toBe(false);
+			expect(await vault.read("draft")).toBeNull();
+			expect(x.disk).toEqual(before);
+			const proof = await proveRecoveryAuthority("synthetic-access", {
+				isCurrent: () => true,
+				fetcher: async () =>
+					new Response(
+						JSON.stringify({
+							result: {
+								identity: { account_id: "owner-a" },
+								account: { id: "owner-a", tenant_id: "tenant-a" },
+							},
+						}),
+						{ status: 200 },
+					),
+			});
+			expect(proof?.accountId).toBe("owner-a");
+			await vault.prepare(proof?.accountId ?? "", () => true);
+			expect(await vault.read("draft")).toBe("retained text");
+			expect(x.erasures()).toBe(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 	it.each(["current draft", null])(
 		"a clean checkpoint retry (%j) restores same-process recovery without restarting",
 		async (value) => {

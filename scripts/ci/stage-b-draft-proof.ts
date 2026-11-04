@@ -42,6 +42,14 @@ import {
 	stageBHasDrawnScreen,
 	typeStageBDraft,
 } from "./stage-b-draft-flows.ts";
+import {
+	captureStageBHeldPair,
+	captureStageBRestoreBurst,
+	STAGE_B_HELD_RELEASE_MS,
+	STAGE_B_TIMEOUT_HOLD_MS,
+	stageBFrameHierarchy,
+	stageBSleep,
+} from "./stage-b-draft-timing.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -403,6 +411,7 @@ async function runStageBCoordinator(
 			);
 		fixture = await startStageBIdentityFixture(sourceSha);
 		const config = fixture.config;
+		receipt.heldProofTimings = fixture.heldTimings;
 		receipt.nonce = redact(config.nonce);
 		receipt.fixtureOrigin = config.fixtureOrigin;
 		prepareStageBProof(cwd, config, env);
@@ -597,19 +606,29 @@ async function runStageBCoordinator(
 				stageBFlowCap(steps, name === "warm-app-foreground"),
 			);
 		};
-		const frame = async (name: string) => {
-			const hierarchy = await run(
-				`hierarchy-${name}`,
-				maestro,
-				["--device", udid ?? "", "hierarchy"],
-				90,
+		const frame = async (
+			name: string,
+			reuse?: { from: string; hierarchy: string },
+		) => {
+			const hierarchy = await stageBFrameHierarchy(
+				(seconds) =>
+					run(
+						`hierarchy-${name}`,
+						maestro,
+						["--device", udid ?? "", "hierarchy"],
+						seconds,
+					),
+				reuse?.hierarchy,
 			);
+			if (reuse) {
+				receipt.frameHierarchyReuse ??= {};
+				const reused = receipt.frameHierarchyReuse as Record<string, string>;
+				reused[name] = reuse.from;
+			}
 			writeFileSync(
 				join(output, `${name}.hierarchy.txt`),
 				stageBDiagnosticText(hierarchy),
 			);
-			if (!hierarchy.includes("bounds") && !hierarchy.includes("frame"))
-				throw new Error("actual native hierarchy geometry unavailable");
 			await run(`frame-${name}`, "xcrun", [
 				"simctl",
 				"io",
@@ -618,6 +637,50 @@ async function runStageBCoordinator(
 				join(output, "frames", `${name}.png`),
 			]);
 			return hierarchy;
+		};
+		const screenshot = async (name: string, seconds: number) => {
+			receipt.frameCaptureTimes ??= {};
+			const times = receipt.frameCaptureTimes as Record<
+				string,
+				{ startedAtMs: number; completedAtMs?: number }
+			>;
+			const timing = { startedAtMs: Date.now() } as (typeof times)[string];
+			times[name] = timing;
+			await run(
+				`frame-${name}`,
+				"xcrun",
+				[
+					"simctl",
+					"io",
+					udid ?? "",
+					"screenshot",
+					join(output, "frames", `${name}.png`),
+				],
+				seconds,
+			);
+			timing.completedAtMs = Date.now();
+		};
+		const armHeldCapture = (prefix: string, pastDeadline = false) => {
+			fixture?.observeHeld(
+				async (proof) => {
+					await captureStageBHeldPair(screenshot, `${prefix}-loading`);
+					if (pastDeadline) {
+						await stageBSleep(Math.max(0, proof.deadlineAt - Date.now()));
+						proof.release();
+					} else {
+						if (Date.now() >= proof.deadlineAt)
+							throw new Error(
+								"loading screenshot pair missed the 10s proof window",
+							);
+						proof.release();
+						await captureStageBRestoreBurst(
+							screenshot,
+							`${prefix}-populated-after`,
+						);
+					}
+				},
+				pastDeadline ? STAGE_B_TIMEOUT_HOLD_MS : STAGE_B_HELD_RELEASE_MS,
+			);
 		};
 		const snapshot = async () => {
 			const count = fixture?.receipts.length ?? 0;
@@ -728,8 +791,10 @@ async function runStageBCoordinator(
 			throw new Error(
 				"native encrypted observer had no actual private bytes/key",
 			);
-		await frame("light-populated-before");
-		await frame("light-populated-before-settled");
+		await frame("light-populated-before-settled", {
+			from: "light-populated-before",
+			hierarchy: await frame("light-populated-before"),
+		});
 		// Selecting again after verified cache removal proves the Photos source
 		// still exists; the harness never deletes or edits the library original.
 		await flow("remove-picked-copy-ui", [
@@ -738,16 +803,12 @@ async function runStageBCoordinator(
 		await flow("original-photo-still-selectable", attachStageBPhoto());
 		await expire();
 		await frame("light-expired-error");
+		// Capture on fixture arrival: returning from Maestro connect can already
+		// cost longer than production's unchanged 20s proof deadline.
+		armHeldCapture("light");
 		await relaunch("held", false);
-		await until(
-			() => (fixture?.held() ? true : undefined),
-			"held light identity request",
-		);
-		await frame("light-loading");
-		await frame("light-loading-consecutive");
-		if (!fixture.held())
-			throw new Error("held light identity request expired before release");
-		fixture.release();
+		await fixture.awaitHeldCapture();
+		await frame("light-loading-post-release");
 		await flow("assert-same-owner-recovered", [
 			...assertStageBDraft(canary, true),
 			{ assertVisible: { id: "composer-attachment-0" } },
@@ -765,8 +826,10 @@ async function runStageBCoordinator(
 			freshGeneration: true,
 			noSend: true,
 		});
-		await frame("light-populated-after");
-		await frame("light-populated-after-settled");
+		await frame("light-populated-after-settled", {
+			from: "light-populated-after",
+			hierarchy: await frame("light-populated-after"),
+		});
 		await run("phone-dark", "xcrun", [
 			"simctl",
 			"ui",
@@ -774,8 +837,10 @@ async function runStageBCoordinator(
 			"appearance",
 			"dark",
 		]);
-		await frame("dark-populated-after");
-		await frame("dark-populated-after-settled");
+		await frame("dark-populated-after-settled", {
+			from: "dark-populated-after",
+			hierarchy: await frame("dark-populated-after"),
+		});
 		await command("partial-pending");
 		await expire();
 		await relaunch("refresh");
@@ -797,24 +862,46 @@ async function runStageBCoordinator(
 			"offline",
 		] as const) {
 			await expire();
+			if (mode === "held") armHeldCapture("dark", true);
 			await relaunch(mode, mode !== "held");
 			if (mode === "held") {
-				await until(
-					() => (fixture?.held() ? true : undefined),
-					"held real /me request",
-				);
-				await frame("dark-loading");
-				await frame("dark-loading-consecutive");
-				const pendingDraft = `${canary}-typed-while-loading`;
+				await fixture.awaitHeldCapture();
+				await frame("dark-loading-post-deadline-release");
 				await flow(
-					"edit-real-input-during-proof",
-					typeStageBDraft(pendingDraft),
+					"timed-out-proof-fails-closed",
+					assertStageBDraft(canary, false),
 				);
-				if (!fixture.held())
-					throw new Error(
-						"held identity request expired before pending-input control",
-					);
-				fixture.release();
+				const timedOut = await snapshot();
+				if (timedOut.recoveryAdmitted !== false)
+					throw new Error("timed-out proof admitted recovery");
+				cases.push({
+					surface: "native proof held past 20s fails closed",
+					result: "PASS",
+					restored: false,
+					plaintext: timedOut.plaintext,
+				});
+				// A null proof drops a lease, not sealed bytes. Only the subsequent
+				// prompt /me can restore; observe the render immediately at its reply.
+				fixture.observeIdentity(() =>
+					captureStageBRestoreBurst(screenshot, "dark-populated-after"),
+				);
+				await relaunch("same");
+				await fixture.awaitIdentityCapture();
+				await flow("fresh-proof-after-timeout-restores", [
+					...assertStageBDraft(canary, true),
+					{ assertVisible: { id: "composer-attachment-0" } },
+				]);
+				cases.push({
+					surface:
+						"native fresh same-owner proof after timeout restores sealed draft",
+					result: "PASS",
+				});
+				const pendingDraft = `${canary}-edited-after-fresh-proof`;
+				await flow("edit-after-fresh-proof", [
+					...discardStageBDraft(),
+					...typeStageBDraft(pendingDraft),
+				]);
+				await relaunch("same");
 				await flow("pending-user-input-wins", [
 					...assertStageBDraft(pendingDraft, true),
 					...assertStageBDraft(canary, false),
@@ -829,7 +916,9 @@ async function runStageBCoordinator(
 					...typeStageBDraft(canary),
 				]);
 				cases.push({
-					surface: "native typing while recovery is pending wins",
+					surface:
+						"native timeout fails closed; fresh proof restores; subsequent local edit wins",
+					rebasedEditTiming: "after fresh proof, not inside the held window",
 					result: "PASS",
 				});
 			} else {
@@ -848,15 +937,17 @@ async function runStageBCoordinator(
 			await flow(`after-${mode}-same-owner`, assertStageBDraft(canary, true));
 			cases.push({ surface: `native identity ${mode}`, result: "PASS" });
 		}
-		// Change the destination through the REAL Computers route while old /me
-		// is held. No bridge grants a scope or invokes provider admission directly.
+		// Change the destination through the REAL Computers route after the old
+		// proof times out. Slow Maestro cannot honestly fit this switch inside
+		// 20s; late-proof race coverage remains in mounted-provider tests.
 		const beforeBackendChange = await snapshot();
 		await expire();
+		fixture.observeHeld(async (proof) => {
+			await stageBSleep(Math.max(0, proof.deadlineAt - Date.now()));
+			proof.release();
+		}, STAGE_B_TIMEOUT_HOLD_MS);
 		await relaunch("held", false);
-		await until(
-			() => (fixture?.held() ? true : undefined),
-			"held old-backend proof",
-		);
+		await fixture.awaitHeldCapture();
 		fixture.scenario("same");
 		await run("open-real-computer-picker", "xcrun", [
 			"simctl",
@@ -884,13 +975,16 @@ async function runStageBCoordinator(
 		if (switched.installFingerprint === beforeBackendChange.installFingerprint)
 			throw new Error("backend change retained the prior native key");
 		fixture.release();
-		await flow("late-old-proof-stays-empty", assertStageBDraft(canary, false));
+		await flow(
+			"timed-out-old-proof-stays-empty",
+			assertStageBDraft(canary, false),
+		);
 		const afterLate = await snapshot();
 		if (
 			afterLate.generationFingerprint !== switched.generationFingerprint ||
 			afterLate.installFingerprint !== switched.installFingerprint
 		)
-			throw new Error("late old proof replaced the new backend owner");
+			throw new Error("timed-out old proof replaced the new backend owner");
 		await run("return-real-computer-picker", "xcrun", [
 			"simctl",
 			"openurl",
@@ -909,7 +1003,7 @@ async function runStageBCoordinator(
 		]);
 		await flow("type-after-backend-isolation", typeStageBDraft(canary));
 		cases.push({
-			surface: "native backend switch with held old authority response",
+			surface: "native backend switch after old authority proof timeout",
 			result: "PASS",
 		});
 		for (const mode of ["account-b", "tenant-b"] as const) {

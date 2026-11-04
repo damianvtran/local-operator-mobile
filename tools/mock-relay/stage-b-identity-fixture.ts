@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
+import { STAGE_B_HELD_RELEASE_MS } from "../../scripts/ci/stage-b-draft-timing.ts";
 import {
 	fixtureBody,
 	startFixtureRelay,
@@ -26,6 +27,11 @@ export type IdentityScenario =
 	| "offline"
 	| "held"
 	| "refresh";
+export interface StageBHeldProof {
+	firstSeenAt: number;
+	deadlineAt: number;
+	release(): void;
+}
 const send = (response: ServerResponse, status: number, body: unknown) => {
 	response.writeHead(status, {
 		"content-type": "application/json",
@@ -86,6 +92,26 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 	let renewed = false;
 	let expired = false;
 	const held = new Set<() => void>();
+	let heldObserver: ((proof: StageBHeldProof) => Promise<void>) | undefined;
+	let heldReleaseMs = STAGE_B_HELD_RELEASE_MS;
+	let heldCapture: Promise<void> | undefined;
+	let identityObserver: (() => Promise<void>) | undefined;
+	let identityCapture: Promise<void> | undefined;
+	const heldTimings: {
+		firstSeenAt: number;
+		releasedAfterMs?: number;
+		closedAfterMs?: number;
+		deadlineMs: number;
+	}[] = [];
+	const identity = (response: ServerResponse, body: unknown) => {
+		sendIdentity(response, body);
+		if (identityObserver) {
+			const observer = identityObserver;
+			identityObserver = undefined;
+			identityCapture = Promise.resolve().then(observer);
+			void identityCapture.catch(() => {}); // Awaited by the coordinator; never an unhandled rejection.
+		}
+	};
 	const heldWaiters = new Set<() => void>();
 	const codes = new Map<string, { challenge: string; hostname: string }>();
 	const receipts: Record<string, unknown>[] = [];
@@ -267,17 +293,44 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 					return;
 				}
 				if (scenario === "held") {
+					const observer = heldObserver;
+					heldObserver = undefined;
+					const firstSeenAt = Date.now();
+					const timing = {
+						firstSeenAt,
+						deadlineMs: heldReleaseMs,
+					} as (typeof heldTimings)[number];
+					heldTimings.push(timing);
+					let timer: ReturnType<typeof setTimeout> | undefined;
 					const release = () => {
-						held.delete(release);
-						if (!response.destroyed) sendIdentity(response, body);
+						if (timer) clearTimeout(timer);
+						if (!held.delete(release)) return;
+						timing.releasedAfterMs = Date.now() - firstSeenAt;
+						if (!response.destroyed) identity(response, body);
 					};
 					held.add(release);
 					for (const ready of heldWaiters) ready();
 					heldWaiters.clear();
-					response.once("close", () => held.delete(release));
+					response.once("close", () => {
+						timing.closedAfterMs = Date.now() - firstSeenAt;
+						if (timer) clearTimeout(timer);
+						held.delete(release);
+					});
+					if (observer) {
+						// Never let capture/driver latency extend the proof's production deadline.
+						timer = setTimeout(release, heldReleaseMs);
+						heldCapture = Promise.resolve().then(() =>
+							observer({
+								firstSeenAt,
+								deadlineAt: firstSeenAt + heldReleaseMs,
+								release,
+							}),
+						);
+						void heldCapture.catch(() => {}); // Re-thrown by awaitHeldCapture below.
+					}
 					return;
 				}
-				sendIdentity(response, body);
+				identity(response, body);
 				return;
 			}
 			if (url.pathname === "/v1/tunnels" && request.method === "GET") {
@@ -450,6 +503,28 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 		counters,
 		receipts,
 		held: () => held.size,
+		heldTimings,
+		observeHeld: (
+			observer: (proof: StageBHeldProof) => Promise<void>,
+			releaseMs = STAGE_B_HELD_RELEASE_MS,
+		) => {
+			heldObserver = observer;
+			heldReleaseMs = releaseMs;
+			heldCapture = undefined;
+		},
+		awaitHeldCapture: async () => {
+			if (!heldCapture) throw new Error("held proof capture never started");
+			await heldCapture;
+		},
+		observeIdentity: (observer: () => Promise<void>) => {
+			identityObserver = observer;
+			identityCapture = undefined;
+		},
+		awaitIdentityCapture: async () => {
+			if (!identityCapture)
+				throw new Error("fresh identity capture never started");
+			await identityCapture;
+		},
 		whenHeld: () =>
 			held.size > 0
 				? Promise.resolve()

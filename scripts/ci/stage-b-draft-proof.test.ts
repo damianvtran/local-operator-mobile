@@ -157,7 +157,7 @@ describe("dedicated Stage B proof preflight", () => {
 		const native = workflow
 			.split("\n  native:\n")[1]
 			?.split("\n  backup-artifact:")[0];
-		expect(native).toContain("timeout-minutes: 120");
+		expect(native).toContain("timeout-minutes: 180");
 	});
 	it.each(["expo-loader", "native-esm-control"])(
 		"evaluates generated config with the real Expo CLI (%s), preserving dirname and static context",
