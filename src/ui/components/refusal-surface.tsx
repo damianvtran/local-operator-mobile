@@ -1,5 +1,7 @@
 import { AlertTriangle } from "lucide-react-native";
+import { useState } from "react";
 import { Text, View } from "react-native";
+import { t } from "@/i18n";
 
 import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -45,8 +47,12 @@ export type RefusalKind =
 	/** Transient and self-clearing: the gateway is deferring authorization, so
 	 *  the honest thing is to wait and retry rather than to send anyone away. */
 	| "retry"
-	/** A client bug. It states that it is one and offers no loop. */
+	/** An app-side request/response error. User-initiated Retry and redacted
+	 * details also apply to invalid routes and relay contract failures; this is
+	 * deliberately shared, never an automatic retry loop. */
 	| "diagnostic"
+	/** The phone is signed into a different account than this tunnel's owner. */
+	| "account-mismatch"
 	/** The tunnel's certificate was rejected. Its own cause, because the fix is
 	 *  the certificate — not the address, and not the network. */
 	| "certificate-rejected"
@@ -86,7 +92,8 @@ const HEADLINE: Record<RefusalKind, (subject: string) => string> = {
 	"sign-in": (subject) =>
 		`Your Radient session expired. Sign in to reconnect to ${subject}.`,
 	retry: (subject) => `${subject} is not ready yet.`,
-	diagnostic: () => "This request was built incorrectly.",
+	diagnostic: () => t("mobile.computers.session_error"),
+	"account-mismatch": () => t("mobile.computers.account_mismatch"),
 	"certificate-rejected": () => "That tunnel's certificate was rejected.",
 	"host-unresolved": () => "That host name could not be found.",
 };
@@ -129,8 +136,8 @@ const NEXT: Record<RefusalKind, () => string> = {
 	 *  failure) schedules one, and a driven wait saw ONE request in 30 s (PR #121
 	 *  design round 1, D2/D3). The button below is the retry. */
 	retry: () => "Usually a passing network problem. Try again in a moment.",
-	diagnostic: () =>
-		"Nothing on this screen can fix it; this is a bug in the app.",
+	diagnostic: () => t("mobile.computers.session_error_help"),
+	"account-mismatch": () => t("mobile.computers.account_help"),
 	"certificate-rejected": () =>
 		"Use the https:// address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate — this app will not skip the check.",
 	"host-unresolved": () =>
@@ -188,6 +195,7 @@ export const RefusalSurface = ({
 	onOpenConsole,
 	testID = SURFACE.refusalSurface,
 }: RefusalSurfaceProps) => {
+	const [showDetails, setShowDetails] = useState(false);
 	const danger = useTokenColor("danger");
 	const waitSeconds = retryAfterMs ? Math.round(retryAfterMs / 1000) : null;
 	const { effectiveScale } = useTextScale();
@@ -231,7 +239,7 @@ export const RefusalSurface = ({
 			{/* The gateway's own sentence sits UNDER the plain one: the reader gets the
 			 *  short version first, and the specific one when they want it. It is never
 			 *  the only line, because a gateway sentence assumes the relay's vocabulary. */}
-			{detail ? (
+			{detail && kind !== "diagnostic" ? (
 				<Text className="text-body-sm text-ink-dim">{detail}</Text>
 			) : null}
 			{remedy ? (
@@ -261,17 +269,24 @@ export const RefusalSurface = ({
 				{(kind === "computer-offline" ||
 					kind === "relay-stopped" ||
 					kind === "retry" ||
-					kind === "password") &&
+					kind === "password" ||
+					kind === "diagnostic") &&
 				onRetry ? (
 					<View testID={REGION.connectionErrorRetryProminent}>
 						<Button
 							testID={CONTROL.refusalSignIn}
-							label={kind === "retry" ? "Try now" : "Try again"}
+							label={
+								kind === "diagnostic"
+									? t("mobile.computers.retry")
+									: kind === "retry"
+										? "Try now"
+										: "Try again"
+							}
 							onPress={onRetry}
 						/>
 					</View>
 				) : null}
-				{kind === "sign-in" && onSignIn ? (
+				{(kind === "sign-in" || kind === "account-mismatch") && onSignIn ? (
 					<Button
 						label="Sign in again"
 						onPress={onSignIn}
@@ -285,6 +300,29 @@ export const RefusalSurface = ({
 						variant="outline"
 						testID={REGION.connectionErrorConsoleLink}
 					/>
+				) : null}
+				{kind === "diagnostic" ? (
+					<>
+						<Button
+							label={t(
+								showDetails
+									? "mobile.computers.hide_details"
+									: "mobile.computers.show_details",
+							)}
+							testID={CONTROL.refusalDetailsToggle}
+							variant="quiet"
+							expanded={showDetails}
+							onPress={() => setShowDetails((open) => !open)}
+						/>
+						{showDetails ? (
+							<Text
+								testID={REGION.connectionDetails}
+								className="text-center text-caption text-ink-dim"
+							>
+								{detail ?? "RelayError · connection-response"}
+							</Text>
+						) : null}
+					</>
 				) : null}
 				{onUseAnotherAddress ? (
 					<Button

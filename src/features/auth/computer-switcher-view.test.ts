@@ -233,19 +233,19 @@ describe("health mapping", () => {
 			/* status: ready ("active" from /v1/tunnels) on every fixture */
 			discovered: [discovered("t1", HOST_A)],
 		});
-		expect(switcherSections(base).onPhone[0]?.health.kind).toBe("checking");
+		expect(switcherSections(base).onPhone[0]?.health.kind).toBe("protected");
 		expect(
 			switcherSections({
 				...base,
 				probes: { [`https://${HOST_A}`]: "checking" },
 			}).onPhone[0]?.health.kind,
-		).toBe("checking");
+		).toBe("protected");
 		expect(
 			switcherSections({
 				...base,
 				probes: { [`https://${HOST_A}`]: "silent" },
 			}).onPhone[0]?.health.kind,
-		).toBe("asleep");
+		).toBe("protected");
 		expect(
 			switcherSections({
 				...base,
@@ -287,7 +287,7 @@ describe("health mapping", () => {
 		expect(
 			healthLabel(
 				switcherHealth({
-					transport: "radient",
+					transport: "custom",
 					probe: "silent",
 					radientSignedOut: false,
 					billingEligible: null,
@@ -329,7 +329,7 @@ describe("health mapping", () => {
 		);
 		expect(byKey["radient:t2"]).toBe("paused");
 		/* Absent billing is unknown, never "paused". */
-		expect(byKey["radient:t3"]).toBe("checking");
+		expect(byKey["radient:t3"]).toBe("protected");
 	});
 
 	it("has no word for states that need pairing (not built yet)", () => {

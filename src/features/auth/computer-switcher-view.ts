@@ -4,6 +4,7 @@ import type {
 	SavedCustomComputer,
 } from "@/connection/saved-computers";
 import { computersView } from "@/features/auth/computers-view";
+import { t } from "@/i18n";
 import type { ErrorSurface } from "@/relay";
 import type { ConnectionPhase } from "@/state/connection-store";
 
@@ -51,6 +52,7 @@ export type SwitcherHealth =
 	 *  explicit `false`: an absent field is unknown, never "paused". */
 	| { kind: "paused" }
 	| { kind: "checking" }
+	| { kind: "protected" }
 	| { kind: "refused"; surface?: ErrorSurface | null };
 
 export type SwitcherTransport =
@@ -182,6 +184,9 @@ export function switcherHealth(input: {
 	if (input.transport === "radient" && input.billingEligible === false)
 		return { kind: "paused" };
 	if (input.probe === "answered") return { kind: "online" };
+	// A Radient edge requires a grant even on /healthz. No unauthenticated
+	// answer can establish connector presence, or justify calling it asleep.
+	if (input.transport === "radient") return { kind: "protected" };
 	if (input.probe === "silent")
 		return { kind: "asleep", lastSeenAt: input.lastSeenAt };
 	return { kind: "checking" };
@@ -218,6 +223,8 @@ export function healthLabel(health: SwitcherHealth, now: number): string {
 			return "Paused";
 		case "checking":
 			return "Checking…";
+		case "protected":
+			return t("mobile.computers.protected");
 		case "refused":
 			return REFUSED_WORD;
 	}

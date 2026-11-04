@@ -8,5 +8,17 @@
 	"mobile.computers.password_placeholder": "Пароль из lop mobile",
 	"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 	"mobile.computers.section.on_phone": "На этом телефоне",
-	"mobile.computers.switch": "Сменить компьютер"
+	"mobile.computers.switch": "Сменить компьютер",
+	"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
+	"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
+	"mobile.computers.account_mismatch": "Этот компьютер принадлежит другому аккаунту Radient или был удалён.",
+	"mobile.computers.account_help": "Войдите в аккаунт владельца. Если компьютер удалён, выберите другой.",
+	"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
+	"mobile.computers.disabled_help": "По данным Radient, этот туннель сейчас неактивен. Проверьте его состояние в консоли Radient.",
+	"mobile.computers.harness_help": "В консоли Radient включите Local Operator для этого туннеля.",
+	"mobile.computers.protected": "Защищено входом",
+	"mobile.computers.retry": "Повторить",
+	"mobile.computers.show_details": "Показать сведения",
+	"mobile.computers.hide_details": "Скрыть сведения",
+	"mobile.computers.connection_response": "Ответ подключения"
 }

@@ -8,5 +8,17 @@
 	"mobile.computers.password_placeholder": "来自lop mobile的密码",
 	"mobile.computers.section.not_connected": "Radient账户下，未连接",
 	"mobile.computers.section.on_phone": "此手机",
-	"mobile.computers.switch": "切换电脑"
+	"mobile.computers.switch": "切换电脑",
+	"mobile.computers.session_error": "应用无法连接到这台电脑。",
+	"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
+	"mobile.computers.account_mismatch": "这台电脑属于另一个 Radient 账户，或已被移除。",
+	"mobile.computers.account_help": "请使用电脑所有者的账户登录。如果电脑已被移除，请选择其他电脑。",
+	"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
+	"mobile.computers.disabled_help": "Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。",
+	"mobile.computers.harness_help": "在 Radient 控制台中为此隧道启用 Local Operator。",
+	"mobile.computers.protected": "受登录保护",
+	"mobile.computers.retry": "重试",
+	"mobile.computers.show_details": "显示详细信息",
+	"mobile.computers.hide_details": "隐藏详细信息",
+	"mobile.computers.connection_response": "连接响应"
 }

@@ -443,11 +443,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
 	 * Button's optional expanded state is omitted for existing transcript
 	 * controls. No transcript/corpus/instrument change; historical pins retained. */
-	src: "5f317999b3e4cb7c575b860235a93729c698d02a73af26e49446c33fb46cf3f8",
+	/* Reprinted with --print after the unified error-writer/copy remediation
+	 * and relocation of the HTTP integration test. The healthy custom-relay
+	 * U-08 transcript selects no tunnel-refusal, diagnostic-details or protected
+	 * Radient-row branches. Existing custom-route carriers and transcript geometry
+	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
+	 * This is source compatibility judgment, not fresh geometry evidence. */
+	src: "251233847ce74a63f04e093e962fee8059bda5c13fcb91804c5772b8fc9b5901",
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
 	// iOS picker callbacks and recovery tests; public proof-only /healthz mapping does not enter U08.
+	// PR #156 + #161: merged-tree identity; healthy custom-relay U08 does not select refusal/recovery branches.
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

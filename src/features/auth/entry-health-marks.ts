@@ -40,7 +40,8 @@ export type EntryHealthKind =
 	| "refused"
 	| "sign-in"
 	| "paused"
-	| "checking";
+	| "checking"
+	| "protected";
 
 /**
  * One visible, non-colour carrier for a status: a glyph the shipped face covers,
@@ -71,6 +72,11 @@ export const MARK_BOX = { width: 12, height: 16 } as const;
 
 export const ENTRY_HEALTH_MARK: Record<EntryHealthKind, EntryHealthMark> = {
 	checking: { form: "text", glyph: "…" },
+	// A neutral lock identifies an unprobed authenticated edge, not a failure.
+	protected: {
+		form: "drawn",
+		paths: ["M4 5.5V3.5a2 2 0 0 1 4 0v2", "M2.5 5.5h7v5h-7z"],
+	},
 	online: {
 		form: "drawn",
 		paths: ["M2.5 6.3 L4.9 8.7 L9.5 3.3"],

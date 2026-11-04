@@ -8,5 +8,17 @@
 	"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 	"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 	"mobile.computers.section.on_phone": "En este teléfono",
-	"mobile.computers.switch": "Cambiar de máquina"
+	"mobile.computers.switch": "Cambiar de máquina",
+	"mobile.computers.session_error": "La app no pudo conectarse a este equipo.",
+	"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
+	"mobile.computers.account_mismatch": "Este equipo pertenece a otra cuenta de Radient o se ha eliminado.",
+	"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otro equipo.",
+	"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
+	"mobile.computers.disabled_help": "Radient indica que este túnel no está activo ahora. Comprueba su estado en la consola de Radient.",
+	"mobile.computers.harness_help": "En la consola de Radient, activa Local Operator para este túnel.",
+	"mobile.computers.protected": "Protegido con inicio de sesión",
+	"mobile.computers.retry": "Reintentar",
+	"mobile.computers.show_details": "Mostrar detalles",
+	"mobile.computers.hide_details": "Ocultar detalles",
+	"mobile.computers.connection_response": "Respuesta de conexión"
 }

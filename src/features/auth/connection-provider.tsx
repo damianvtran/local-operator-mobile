@@ -111,7 +111,11 @@ import {
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
-import { type RefusalView, refusalFromError } from "./refusal";
+import {
+	type RefusalView,
+	refusalFromError,
+	tunnelSessionRelayError,
+} from "./refusal";
 import {
 	authenticateCustomRoute,
 	type RouteAdmission,
@@ -1247,15 +1251,7 @@ export const ConnectionProvider = ({
 										surface: "retry",
 										detail: PICK_UNREACHABLE_DETAIL,
 									})
-								: /* A control-plane refusal has no HTTP client error to carry it: it
-									 * is typed here so the surface stays the taxonomy's decision and
-									 * never the caller's. `console` because every other
-									 * `TunnelSessionError` this can be is fixed on the computer or in
-									 * the console. */
-									new RelayError("rejected", error.message, {
-										surface: "console",
-										detail: error.message,
-									}),
+								: tunnelSessionRelayError(error),
 						() => selectComputer(computer),
 					);
 					return;
