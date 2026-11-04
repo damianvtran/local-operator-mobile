@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from "react";
-import { Text } from "react-native";
+import { Text, type TextProps } from "react-native";
 
 /**
  * A heading with an explicit outline level.
@@ -23,6 +23,7 @@ import { Text } from "react-native";
  */
 export type HeadingProps = {
 	level: 1 | 2 | 3;
+	onTextLayout?: TextProps["onTextLayout"];
 	className: string;
 	children: ReactNode;
 	numberOfLines?: number;
@@ -33,6 +34,7 @@ export type HeadingProps = {
 
 export const Heading = ({
 	level,
+	onTextLayout,
 	className,
 	children,
 	numberOfLines,
@@ -42,6 +44,7 @@ export const Heading = ({
 }: HeadingProps) => (
 	<Text
 		ref={ref}
+		onTextLayout={onTextLayout}
 		{...{ tabIndex }}
 		role="heading"
 		aria-level={level}

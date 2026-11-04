@@ -90,7 +90,7 @@ import {
 } from "@/features/session/draft-recovery";
 import { clearNativePickerCache } from "@/features/session/picker-cache";
 import { pickerPrivacy } from "@/features/session/picker-privacy";
-import { setLocaleSource } from "@/i18n";
+import { setLocaleSource, t } from "@/i18n";
 import {
 	type RelayEndpoints,
 	RelayError,
@@ -117,6 +117,12 @@ import {
 	type RouteAdmission,
 	routeAdmission,
 } from "./route-admission";
+import {
+	appendSignInDiagnostic,
+	type SignInDiagnostic,
+	SignInSupersededError,
+	signInErrorClass,
+} from "./sign-in-diagnostics";
 
 /**
  * The three stores, as process-wide singletons.
@@ -214,8 +220,8 @@ export type Connection = {
 	discovering: boolean;
 	/** The reader's own tunnel from secure storage, or `null`. */
 	savedTunnel: SavedTunnel | null;
-	/** True when this cold start read a stored RADIENT credential, accepted it, and
-	 *  started discovery.
+	/** True when this app accepted a RADIENT grant (interactive or restored) and
+	 *  started discovery. The historical name is retained for existing consumers.
 	 *
 	 *  It exists because a restored sign-in is invisible to the store: no route exists
 	 *  yet (the reader has not picked a computer), so `phase` is still `signed-out` and
@@ -257,6 +263,7 @@ export type Connection = {
 	relay: () => RelayEndpoints | null;
 	streamHealth: StreamHealth;
 	signInState: SignInState;
+	signInDiagnostics: readonly SignInDiagnostic[];
 	/** The last typed failure, for the diagnostics row. Never a status code on a
 	 *  screen; this is the one place a diagnostic is allowed. */
 	lastError: RelayError | null;
@@ -384,6 +391,9 @@ export const ConnectionProvider = ({
 	const [restoredAccount, setRestoredAccount] = useState(false);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
+	const [signInDiagnostics, setSignInDiagnostics] = useState<
+		SignInDiagnostic[]
+	>([]);
 	const [lastError, setLastError] = useState<RelayError | null>(null);
 
 	const clientRef = useRef<ReturnType<typeof createRelayClient> | null>(null);
@@ -677,6 +687,8 @@ export const ConnectionProvider = ({
 			// Route changes include account/computer switches. Retire image bytes
 			// before the next credential can address the same agent id and hash.
 			agentAvatarCache.clear();
+			signInAbortRef.current?.abort();
+			signInAbortRef.current = null;
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
@@ -990,15 +1002,28 @@ export const ConnectionProvider = ({
 		signInAbortRef.current?.abort();
 		const attempt = new AbortController();
 		signInAbortRef.current = attempt;
-		// Checkpoint the retiring generation before ordinary purge; its vault stays
-		// quarantined. Callback cancellation and the auth epoch both fence adoption.
+		const ownsUI = () =>
+			mountedRef.current && signInAbortRef.current === attempt;
+		setSignInDiagnostics([]);
+		const trace = (stage: string, errorClass?: string) => {
+			if (ownsUI())
+				setSignInDiagnostics((trail) =>
+					appendSignInDiagnostic(trail, stage, errorClass),
+				);
+		};
+		trace("retiring");
+		// Checkpoint before ordinary purge; the sealed vault stays quarantined.
+		// UI ownership, callback cancellation and the auth epoch fence this attempt.
 		const privacy = retireAuthorization(true, undefined, "reauthenticate");
+		// retire() revokes synchronously; capture AFTER it, not before cleanup.
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const isCurrent = () =>
-			mountedRef.current &&
+			ownsUI() &&
 			!attempt.signal.aborted &&
-			signInAbortRef.current === attempt &&
 			startupAuthorizationLifecycle.isCurrent(revision);
+		const requireCurrent = () => {
+			if (!isCurrent()) throw new SignInSupersededError();
+		};
 		cancelledRef.current = true;
 		stopStream();
 		stopConfig();
@@ -1008,32 +1033,66 @@ export const ConnectionProvider = ({
 		managerRef.current = null;
 		connectionStore.getState().endRoute();
 		setBusy(true);
+		setSignInState({ kind: "starting" });
 		try {
 			await Promise.all([verifiedRetirement(privacy), retired]);
-			if (!isCurrent()) return;
+			requireCurrent();
 			const result = await beginRadientSignIn({
 				signal: attempt.signal,
 				onState: (state) => {
-					if (isCurrent()) setSignInState(state);
+					if (isCurrent()) {
+						setSignInState(state);
+						trace(
+							state.kind,
+							state.kind === "failed" ? state.errorClass : undefined,
+						);
+					}
 				},
 			});
-			if (!result.ok || !isCurrent()) return;
-			tokensRef.current = result.tokens;
-			/* Persisted BEFORE discovery, and before any route exists: the credential is
-			 *  what makes the NEXT launch a computers screen instead of a second browser
-			 *  hand-off, and a discovery that then fails (an unreachable API, an empty
-			 *  account) must not throw a valid grant away. A runtime that cannot store it
-			 *  still gets a working session this run — `writeStoredOauth` reports which. */
-			await startupAuthorizationLifecycle.runIfCurrent(revision, () =>
-				writeStoredOauth(result.tokens),
+			requireCurrent();
+			if (!result.ok) {
+				setSignInState(result.state);
+				return;
+			}
+			trace("persisting");
+			// Publish admission only after durable persistence completes. A newer
+			// route/attempt cannot receive this grant, nor be overwritten by it.
+			const stored = await startupAuthorizationLifecycle.runIfCurrent(
+				revision,
+				() => writeStoredOauth(result.tokens),
 			);
-			if (!isCurrent()) return;
-			setSignInState({ kind: "idle" });
-			/* Straight into discovery, which is what makes the button's promise —
-			 * "finds your computers" — true rather than a second tap away. */
+			requireCurrent();
+			// Web's documented memory-only session is intentional. A native
+			// keystore failure is not: expose Retry instead of claiming persistence.
+			if (Platform.OS !== "web" && !stored?.persistent) throw new Error();
+			tokensRef.current = result.tokens;
+			setRestoredAccount(true);
+			trace("discovering");
 			await refreshComputers();
+			// Discovery's 401 revokes this revision itself. That is a server
+			// refusal, not a competing attempt, and must use the general failure.
+			if (ownsUI() && connectionStore.getState().surface === "sign-in")
+				throw new Error();
+			requireCurrent();
+			trace("signed-in");
+			setSignInState({ kind: "idle" });
+		} catch (error) {
+			// A replacement attempt/route owns its own UI. Otherwise even a
+			// revoked revision must produce a visible terminal result, not vanish.
+			if (ownsUI()) {
+				trace("failed", signInErrorClass(error));
+				setSignInState({
+					kind: "failed",
+					detail: t(
+						error instanceof SignInSupersededError
+							? "mobile.signin.superseded"
+							: "mobile.signin.failed",
+					),
+					errorClass: signInErrorClass(error),
+				});
+			}
 		} finally {
-			if (isCurrent()) setBusy(false);
+			if (ownsUI()) setBusy(false);
 		}
 	}, [refreshComputers, retireAuthorization, stopStream, stopConfig]);
 
@@ -1687,6 +1746,7 @@ export const ConnectionProvider = ({
 			coldStartSettled,
 			streamHealth,
 			signInState,
+			signInDiagnostics,
 			lastError,
 			refusal,
 		}),
@@ -1709,6 +1769,7 @@ export const ConnectionProvider = ({
 			coldStartSettled,
 			streamHealth,
 			signInState,
+			signInDiagnostics,
 			lastError,
 			refusal,
 		],

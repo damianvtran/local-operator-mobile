@@ -430,11 +430,24 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * entries, and the U-08 long-transcript scene has zero supplement beats (same
 	 * world hash on main and head), so no measured transcript row changes.
 	 * Converged onto main 24a3d30f (#157 above): recomputed over the combined tree. */
-	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
+	/* Re-pinned 2026-11-03 with --print for the real-app sign-in fix: account
+	 * admission, progress/errors/diagnostics and the brand-title lockup. U-08 is
+	 * a custom-relay transcript, not OAuth. Its Screen supplies a custom titleNode
+	 * (session/[id].tsx), so the Local Operator-only default brand title is not
+	 * selected; Heading's new optional metrics callback is undefined there. No
+	 * transcript layout, corpus or instrument changed. This is source-boundary
+	 * judgment, not new rendered U-08 proof; historical identities stay intact. */
+	// Includes the newly tracked sign-in source files (print after staging).
+	/* Round-1 remediation: reprinted after staging all new source files.
+	 * Welcome/re-auth navigation and disclosure copy, plus the explicit brand
+	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
+	 * Button's optional expanded state is omitted for existing transcript
+	 * controls. No transcript/corpus/instrument change; historical pins retained. */
+	src: "7db6d009afe5439d45d088510e13f0bc1fce25ddbbecbf1f7a33f3779bd75710",
+	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
 	// iOS picker handoff only; web U08 rendering/animation and scene data unchanged.
-	src: "0335a780f42ce648b9197572b1ac1d23f871dc8880c3e79dd0d9dd1c1a8adb55",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

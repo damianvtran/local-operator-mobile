@@ -3,6 +3,7 @@ import { ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { maxColumnWidth } from "@/ui/column";
+import { BrandTitle } from "@/ui/components/brand-title";
 import { Heading } from "@/ui/components/heading";
 import { headerStacks } from "@/ui/size-class";
 import { lineBoxPt } from "@/ui/text-scale";
@@ -37,6 +38,8 @@ export type ScreenProps = {
 	 *  screen: the inbox did exactly that, and a global clamp altered the S5
 	 *  session title at 200 % (audit U-08 on an untouched screen). */
 	titleLines?: 1 | 2;
+	/** Explicit brand lockup; independent of the title's wording or locale. */
+	brand?: boolean;
 	/** Left-aligned header control (a back affordance). */
 	headerLeading?: ReactNode;
 	/**
@@ -189,6 +192,7 @@ const StackedTitleRow = ({
  */
 export const Screen = ({
 	title,
+	brand = false,
 	children,
 	headerAction,
 	headerLeading,
@@ -243,6 +247,11 @@ export const Screen = ({
 		!compact &&
 		title !== undefined &&
 		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
+	const resolvedTitleNode =
+		titleNode ??
+		(brand ? (
+			<BrandTitle title={title} compact={compact} numberOfLines={titleLines} />
+		) : undefined);
 	return (
 		<View
 			className="flex-1 bg-canvas"
@@ -290,7 +299,7 @@ export const Screen = ({
 						{title !== undefined ? (
 							<StackedTitleRow leading={stackedTitleLeading}>
 								{headerDetail === undefined ? (
-									(titleNode ?? (
+									(resolvedTitleNode ?? (
 										<Heading
 											level={1}
 											className="text-display text-ink"
@@ -301,7 +310,7 @@ export const Screen = ({
 									))
 								) : (
 									<View className="gap-1">
-										{titleNode ?? (
+										{resolvedTitleNode ?? (
 											<Heading
 												level={1}
 												className="text-display text-ink"
@@ -331,7 +340,7 @@ export const Screen = ({
 						{headerLeading}
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								(titleNode ?? (
+								(resolvedTitleNode ?? (
 									<Heading
 										level={1}
 										className={
@@ -346,7 +355,7 @@ export const Screen = ({
 								))
 							) : (
 								<View className="min-w-0 flex-1 gap-1">
-									{titleNode ?? (
+									{resolvedTitleNode ?? (
 										<Heading
 											level={1}
 											className={

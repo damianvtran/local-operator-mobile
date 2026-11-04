@@ -39,6 +39,8 @@ export type ButtonProps = {
 	loading?: boolean;
 	disabled?: boolean;
 	accessibilityHint?: string;
+	/** Disclosure state, omitted for ordinary action buttons. */
+	expanded?: boolean;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
 	testID: string;
@@ -62,6 +64,7 @@ export const Button = ({
 	loading = false,
 	disabled = false,
 	accessibilityHint,
+	expanded,
 	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
@@ -79,7 +82,7 @@ export const Button = ({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
 			accessibilityHint={accessibilityHint}
-			accessibilityState={state({ disabled, busy: loading })}
+			accessibilityState={state({ disabled, busy: loading, expanded })}
 			/* `sm` is the one size under the floor, and the floor is now REAL geometry
 			 *  rather than `hitSlop`.
 			 *

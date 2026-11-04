@@ -38,6 +38,7 @@ import {
 	switcherSections,
 	switcherTap,
 } from "./computer-switcher-view";
+import { signInPresentation } from "./sign-in-presentation";
 
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
@@ -263,6 +264,8 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		/** Edge re-auth signal, distinct from the custom relay's plain 401. */
+		edgeCatalogue?: boolean;
 		/** Seed one session frame, tear the stream, then refuse every reopen 401 —
 		 *  the round-4 shape (review N1). */
 		refuseSessionStream?: boolean;
@@ -424,6 +427,8 @@ async function relay(
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
 			if (options.refuseCatalogue && catalogueStreams > 1) {
+				if (options.edgeCatalogue)
+					response.setHeader("x-radient-login", "required");
 				json({ detail: "Authentication required" }, 401);
 				return;
 			}
@@ -758,6 +763,113 @@ describe("mounted provider picture privacy", () => {
 });
 
 describe("mounted provider authentication retirement", () => {
+	it("proves recovery only after native persistence, and refuses late proof after a route-change abort", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		nativePlatform.OS = "ios";
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		const persisted = deferred(),
+			heldProof = deferred();
+		let writing = false;
+		const tunnelStorage = await import("@/features/auth/tunnel-storage");
+		const write = vi
+			.spyOn(tunnelStorage, "writeStoredOauth")
+			.mockImplementation(async (tokens) => {
+				writing = true;
+				await persisted.promise;
+				durable.oauth = tokens;
+				durable.events.push("oauth-write");
+				return { persistent: true };
+			});
+		const proof = vi
+			.spyOn(recoveryProof, "proveRecoveryAuthority")
+			.mockImplementation(async () => {
+				expect(durable.events).toContain("oauth-write");
+				await heldProof.promise;
+				return { accountId: "owner-a", tenantId: "tenant-a" };
+			});
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery"),
+			publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		let signingIn: Promise<void> | undefined;
+		await mount();
+		try {
+			await act(async () => {
+				signingIn = latest.signInWithRadient();
+			});
+			await until(() => writing);
+			expect(proof).not.toHaveBeenCalled();
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(latest.restoredAccount).toBe(false);
+			await act(async () => {
+				persisted.resolve();
+				await signingIn;
+			});
+			expect(latest.restoredAccount).toBe(true);
+			await act(async () => {
+				await latest.selectComputer(computer("a"));
+			});
+			expect(handoff.signals[0]?.aborted).toBe(true);
+			expect(proof).toHaveBeenCalledOnce();
+			const fence = proof.mock.calls[0]?.[1].isCurrent;
+			expect(fence?.()).toBe(true);
+			await act(async () => {
+				await latest.connectCustom({
+					url: mock.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			expect(fence?.()).toBe(false);
+			await act(async () => {
+				heldProof.resolve();
+			});
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+		} finally {
+			persisted.resolve();
+			heldProof.resolve();
+			await signingIn;
+			await unmount();
+			nativePlatform.OS = "web";
+			write.mockRestore();
+			proof.mockRestore();
+			prepare.mockRestore();
+			publish.mockRestore();
+		}
+	});
+	it("does not prove or publish recovery when native persistent admission fails", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		nativePlatform.OS = "ios";
+		const proof = vi.spyOn(recoveryProof, "proveRecoveryAuthority");
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery"),
+			publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		await mount();
+		try {
+			await act(async () => {
+				await latest.signInWithRadient();
+			});
+			expect(latest.signInState.kind).toBe("failed");
+			expect(latest.restoredAccount).toBe(false);
+			expect(proof).not.toHaveBeenCalled();
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(getStartupAuthorization()).toBeNull();
+		} finally {
+			await unmount();
+			nativePlatform.OS = "web";
+			proof.mockRestore();
+			prepare.mockRestore();
+			publish.mockRestore();
+		}
+	});
 	it("combines reauth checkpoint epochs with callback abort: late identity proof and superseded browser success cannot adopt recovery", async () => {
 		const mock = await relay();
 		transport(mock.origin);
@@ -1879,6 +1991,9 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			await latest.signInWithRadient();
 		});
 		expect(mock.events).toContain("GET /v1/tunnels");
+		// A browser grant must publish the same landing admission as a restored
+		// credential, not merely populate rows behind the welcome screen.
+		expect(latest.restoredAccount).toBe(true);
 		expect(connectionStore.getState().route).toBeNull();
 		expect(
 			connectionStore
@@ -1886,6 +2001,133 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 				.computers.map((c) => c.tunnelId)
 				.sort(),
 		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
+	});
+
+	it("keeps Welcome available after a restored account gets an edge 401, then admits its own retry", async () => {
+		const routedTunnels = tunnels.map((tunnel, index) => ({
+			...tunnel,
+			hostname: `${(index === 0 ? "a" : "b").repeat(32)}-lop.radienthq.com`,
+		}));
+		const mock = await relay({
+			tunnels: routedTunnels,
+			refuseCatalogue: true,
+			edgeCatalogue: true,
+		});
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		mock.refuseCatalogue.resolve();
+		await until(() => connectionStore.getState().surface === "sign-in");
+		expect(latest.refusal?.kind).toBe("sign-in");
+		// Opening C5's "Sign in again" mounts Welcome with this exact state.
+		// The shared presentation function is the screen's actual redirect guard.
+		const welcome = signInPresentation({
+			initiated: false,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			state: latest.signInState,
+		});
+		expect(latest.restoredAccount).toBe(true);
+		expect(welcome.navigate).toBe(false);
+		expect(welcome.state.kind).toBe("idle");
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const retried = signInPresentation({
+			initiated: true,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			state: latest.signInState,
+		});
+		expect(retried.navigate).toBe(true);
+		expect(retried.state.kind).toBe("exchanging");
+	});
+
+	it("reports a discovery 401 after a fresh grant as general failure, not a competing sign-in", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		mock.answerTunnels(401);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState).toMatchObject({
+			kind: "failed",
+			errorClass: "Error",
+			detail: "We could not finish signing in.",
+		});
+		expect(mock.events).toContain("GET /v1/tunnels");
+	});
+
+	it("makes native memory-only credential storage a visible retryable failure", async () => {
+		await mount();
+		const { Platform } = await import("react-native");
+		const previous = Platform.OS;
+		Object.defineProperty(Platform, "OS", {
+			value: "ios",
+			writable: true,
+			configurable: true,
+		});
+		try {
+			await act(async () => {
+				await latest.signInWithRadient();
+			});
+			expect(latest.signInState).toMatchObject({
+				kind: "failed",
+				errorClass: "Error",
+			});
+			expect(
+				latest.signInDiagnostics.map((entry) => entry.stage),
+			).not.toContain("discovering");
+			expect(latest.restoredAccount).toBe(false);
+			expect(latest.busy).toBe(false);
+			expect(latest.signInDiagnostics.map((entry) => entry.stage)).toContain(
+				"persisting",
+			);
+		} finally {
+			Object.defineProperty(Platform, "OS", {
+				value: previous,
+				writable: true,
+				configurable: true,
+			});
+		}
+	});
+
+	it("shows a superseded attempt instead of silently abandoning a returned browser grant", async () => {
+		await mount();
+		const gate = deferred();
+		handoff.block = gate.promise;
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await until(() => handoff.started);
+		startupAuthorizationLifecycle.suspend();
+		gate.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		expect(latest.signInState).toMatchObject({
+			kind: "failed",
+			errorClass: "SignInSupersededError",
+		});
+		expect(latest.signInDiagnostics.at(-1)).toEqual({
+			stage: "failed",
+			errorClass: "SignInSupersededError",
+		});
+		expect(latest.busy).toBe(false);
+		expect(durable.oauth).toBeNull();
 	});
 
 	it("lists the account's computers on a cold-start restore of a stored grant", async () => {

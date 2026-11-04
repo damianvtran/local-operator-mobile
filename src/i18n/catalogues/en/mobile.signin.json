@@ -1,0 +1,20 @@
+{
+	"mobile.signin.diagnostics": "Sign-in diagnostics",
+	"mobile.signin.failed": "We could not finish signing in.",
+	"mobile.signin.hide_diagnostics": "Hide sign-in details",
+	"mobile.signin.progress": "Signing in…",
+	"mobile.signin.retry": "Retry",
+	"mobile.signin.show_diagnostics": "Show sign-in details",
+	"mobile.signin.stage_browser": "Waiting for your browser",
+	"mobile.signin.stage_cancelled": "Sign-in cancelled",
+	"mobile.signin.stage_discovering": "Finding your computers",
+	"mobile.signin.stage_exchanging": "Finishing browser sign-in",
+	"mobile.signin.stage_failed": "Sign-in failed",
+	"mobile.signin.stage_idle": "Not started",
+	"mobile.signin.stage_persisting": "Saving your sign-in",
+	"mobile.signin.stage_retiring": "Preparing your account",
+	"mobile.signin.stage_signed_in": "Signed in",
+	"mobile.signin.stage_starting": "Starting sign-in",
+	"mobile.signin.stage_unavailable": "Sign-in unavailable",
+	"mobile.signin.superseded": "Another sign-in started."
+}

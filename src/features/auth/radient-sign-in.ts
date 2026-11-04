@@ -15,7 +15,6 @@
  */
 
 import { Platform } from "react-native";
-
 import {
 	type AuthBrowserSession,
 	type CallbackListener,
@@ -26,6 +25,9 @@ import {
 	type RadientTokens,
 	signInWithRadient,
 } from "@/connection";
+import { debugOAuthProofOrigin } from "@/connection/oauth-proof-override";
+import { t } from "@/i18n";
+import { signInErrorClass } from "./sign-in-diagnostics";
 
 export type SignInState =
 	/** Nothing started. The screen's resting state. */
@@ -44,7 +46,7 @@ export type SignInState =
 	 *  offers the relay-password route instead. */
 	| { kind: "unavailable"; detail: string }
 	/** The exchange failed. `detail` is the app's own sentence, never a status. */
-	| { kind: "failed"; detail: string };
+	| { kind: "failed"; detail: string; errorClass?: string };
 
 export type RadientSignInResult =
 	| { ok: true; tokens: RadientTokens }
@@ -112,16 +114,27 @@ export async function beginRadientSignIn(
 	const browser = deps.browser ?? (await createSystemBrowserSession());
 	const signIn = deps.signIn ?? signInWithRadient;
 
+	let exchanged = false;
+	const exchanging = () => {
+		if (!exchanged) {
+			exchanged = true;
+			report({ kind: "exchanging" });
+		}
+	};
 	try {
+		const proof = debugOAuthProofOrigin();
 		const tokens = await signIn({
+			authorizeUrl: proof ? `${proof}/authorize` : undefined,
+			tokenUrl: proof ? `${proof}/token` : undefined,
 			browser,
 			signal: deps.signal,
 			listener,
 			// Fires once the URL is built, so the screen can move to "waiting for
 			// your browser" BEFORE the sheet appears rather than after it closes.
 			onAuthorizeUrl: () => report({ kind: "waiting-for-browser" }),
+			onCallbackReceived: exchanging,
 		});
-		report({ kind: "exchanging" });
+		exchanging();
 		return { ok: true, tokens };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -135,8 +148,8 @@ export async function beginRadientSignIn(
 		}
 		const state: SignInState = {
 			kind: "failed",
-			detail:
-				"We could not finish signing in. Try again, or use an address instead.",
+			errorClass: signInErrorClass(error),
+			detail: t("mobile.signin.failed"),
 		};
 		report(state);
 		return { ok: false, state, retryable: true };
