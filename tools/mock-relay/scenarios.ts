@@ -3907,6 +3907,60 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			]),
 	);
 
+	/* Highlights deliverables (the highlights contract's row shape, ADDITIVE to
+	   the vendored C0 rows, which predate it and stay byte-exact): two written
+	   sounds in the two-column grid, a written video tile beside the callouts,
+	   and the never-silent withheld line. No capture cell claims it yet
+	   (`shows` is empty) — it exists so a reviewer can reach the state. */
+	add(
+		"supplement-deliverables",
+		"A settled highlight carrying the turn's written deliverables: two sounds in a grid, a video tile, and `2 files not shown: …` (no capture cell yet).",
+		[],
+		() => {
+			const base = supplementBeat("done_populated");
+			return supplementWorld([
+				{
+					...base,
+					components: [],
+					files: [
+						...(Array.isArray(base.files) ? base.files.slice(0, 1) : []),
+						{
+							path: "~/picks/demo.mp4",
+							name: "demo.mp4",
+							kind: "video",
+							size_bytes: 48213,
+							mtime: 0,
+							why: "written",
+							pinned: true,
+						},
+					],
+					files_more: 0,
+					more: [],
+					sounds: [
+						{
+							attachment: "0123456789abcdef0123456789abcdef",
+							mime: "audio/wav",
+							title: "rain-loop.wav",
+							duration_s: 1,
+							path: "~/picks/rain-loop.wav",
+							origin: "file",
+						},
+						{
+							attachment: "fedcba9876543210fedcba9876543210",
+							mime: "audio/wav",
+							title: "Door chime",
+							duration_s: 1,
+						},
+					],
+					withheld: [
+						{ name: "id_rsa", reason: "sensitive" },
+						{ name: "report.pdf", reason: "outside" },
+					],
+				},
+			]);
+		},
+	);
+
 	add(
 		"supplement-failed",
 		"The one quiet line a failed run leaves: `Couldn't prepare highlights` with Retry (S5/supplement-failed).",
