@@ -8,5 +8,17 @@
 	"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 	"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 	"mobile.computers.section.on_phone": "इस फ़ोन पर",
-	"mobile.computers.switch": "कंप्यूटर बदलें"
+	"mobile.computers.switch": "कंप्यूटर बदलें",
+	"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
+	"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
+	"mobile.computers.account_mismatch": "यह कंप्यूटर किसी दूसरे Radient खाते का है या हटा दिया गया है।",
+	"mobile.computers.account_help": "इसके मालिक के खाते से साइन इन करें। अगर इसे हटा दिया गया है, तो दूसरा कंप्यूटर चुनें।",
+	"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
+	"mobile.computers.disabled_help": "Radient के अनुसार यह टनल अभी सक्रिय नहीं है। Radient कंसोल में इसकी स्थिति देखें।",
+	"mobile.computers.harness_help": "Radient कंसोल में इस टनल के लिए Local Operator चालू करें।",
+	"mobile.computers.protected": "साइन-इन से सुरक्षित",
+	"mobile.computers.retry": "दोबारा कोशिश करें",
+	"mobile.computers.show_details": "विवरण दिखाएँ",
+	"mobile.computers.hide_details": "विवरण छिपाएँ",
+	"mobile.computers.connection_response": "कनेक्शन की प्रतिक्रिया"
 }

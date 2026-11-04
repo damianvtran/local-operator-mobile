@@ -724,7 +724,7 @@ describe("discovery turns tunnels into computers, honestly", () => {
 			(
 				await discoverComputers({
 					accessToken: () => "at",
-					fetchImpl: recordingFetch(() => jsonResponse({ msg: "no" }, 401))
+					fetchImpl: recordingFetch(() => jsonResponse({ error: "no" }, 401))
 						.fetchImpl,
 				})
 			).kind,
@@ -804,7 +804,10 @@ describe("the tunnel session lifecycle", () => {
 
 	const mintHandler = () => (url: string) =>
 		url.includes("/session/code")
-			? jsonResponse({ code: "one-time", state: "s", callback_uri: `${url}` })
+			? jsonResponse({
+					msg: "success",
+					result: { code: "one-time", state: "s", callback_uri: `${url}` },
+				})
 			: jsonResponse({
 					access_token: "grant",
 					refresh_token: "handle",
@@ -871,7 +874,7 @@ describe("the tunnel session lifecycle", () => {
 
 	it("maps a 402 to billing, which is what it means", async () => {
 		const { fetchImpl } = recordingFetch(() =>
-			jsonResponse({ msg: "tunnel billing is inactive" }, 402),
+			jsonResponse({ error: "tunnel billing is inactive" }, 402),
 		);
 		const manager = new TunnelSessionManager({
 			fetchImpl,
@@ -923,9 +926,12 @@ describe("the tunnel session lifecycle", () => {
 			}
 			if (url.includes("/session/code")) {
 				return jsonResponse({
-					code: "one-time",
-					state: "s",
-					callback_uri: url,
+					msg: "Authorization code created",
+					result: {
+						code: "one-time",
+						state: "s",
+						callback_uri: url,
+					},
 				});
 			}
 			return jsonResponse({
@@ -990,7 +996,11 @@ describe("the tunnel session lifecycle", () => {
 			seen.push(url);
 			if (url.includes("/session/refresh"))
 				return jsonResponse({ error: "invalid_grant" }, 400);
-			if (url.includes("/session/code")) return jsonResponse({ code: "c" });
+			if (url.includes("/session/code"))
+				return jsonResponse({
+					msg: "Authorization code created",
+					result: { code: "c" },
+				});
 			return jsonResponse({
 				access_token: "fresh",
 				refresh_token: "fresh-handle",

@@ -1,0 +1,18 @@
+{
+  "source": {
+    "repository": "radient-ml/agent-server",
+    "path": "internal/tunnels/session.go",
+    "handler": "issueSessionCode",
+    "line": 114,
+    "writer": "responses.WriteJSON",
+    "note": "Shape pinned from server source; values are synthetic, not an operator response. previewSession at line 93 uses the same envelope. Token and refresh call writeGrant at line 209, which uses raw c.JSON."
+  },
+  "body": {
+    "msg": "Authorization code created",
+    "result": {
+      "callback_uri": "https://fixture-lop.example.com/_radient/callback",
+      "code": "fixture-session-code",
+      "state": "fixture-state"
+    }
+  }
+}

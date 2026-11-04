@@ -156,6 +156,7 @@ const DOT_TOKEN: Record<
 	"sign-in": "warning",
 	paused: "warning",
 	checking: "ink-dim",
+	protected: "ink-dim",
 	refused: "warning",
 };
 
@@ -165,6 +166,7 @@ const WORD_CLASS: Record<SwitcherHealth["kind"], string> = {
 	"sign-in": "text-warning",
 	paused: "text-warning",
 	checking: "text-ink-muted",
+	protected: "text-ink-muted",
 	refused: "text-warning",
 };
 
@@ -429,7 +431,9 @@ export function ComputerSwitcherSheet({
 	 *  the sheet said "Checking…" forever (PR #122 round 1: review B1, design D1, QA
 	 *  Q1, UX U1). `computer-switcher-sheet.test.ts` renders the sheet to hold it. */
 	const originsKey = [...sections.onPhone, ...sections.notConnected]
-		.filter((row) => row.health.kind !== "sign-in")
+		.filter(
+			(row) => row.transport.kind === "custom" && row.health.kind !== "sign-in",
+		)
 		.map((row) => row.origin)
 		.join("\n");
 	const probedThisOpen = useRef(new Set<string>());

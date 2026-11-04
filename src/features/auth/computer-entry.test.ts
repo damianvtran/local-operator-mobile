@@ -283,6 +283,7 @@ describe("registry name source", () => {
 			"sign-in",
 			"paused",
 			"checking",
+			"protected",
 		];
 		expect(Object.keys(ENTRY_HEALTH_MARK).sort()).toEqual([...kinds].sort());
 	});

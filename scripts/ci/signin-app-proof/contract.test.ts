@@ -76,6 +76,15 @@ describe("real Expo application OAuth proof boundary", () => {
 		);
 		expect(test).not.toContain('try text("OAuth proof computer")');
 		expect(test).toContain('attach("cancelled-and-retry")');
+		expect(test).toContain('attach("tunnel-contract-error-and-retry")');
+		expect(test).toContain('attach("tunnel-inactive-status-guidance")');
+		expect(test).toContain('XCTAssertEqual(connected["session_code"], 3)');
+		expect(test).toContain('attach("connected-session-list")');
+		expect(test).toContain('try visible("conversations-list")');
+		expect(test).toContain(
+			'XCTAssertEqual(connected["session_pkce_verified"], 1)',
+		);
+		expect(read("./run.sh")).toContain("v['relay_requests'] > 0");
 		expect(test).toContain('attach("token-500-error-and-retry-collapsed")');
 		expect(test).toContain('"actual_monotonic_starts": times');
 		expect(test).toContain('attach("transition-\\(index)")');
