@@ -24,6 +24,12 @@ export async function createFastPathOAuth(port = 0, receiptPath?: string) {
 			"utf8",
 		),
 	).body;
+	const refusalContract = JSON.parse(
+		readFileSync(
+			new URL("../../fixtures/radient/session-refusals.json", import.meta.url),
+			"utf8",
+		),
+	);
 	const sessions = JSON.parse(
 		readFileSync(
 			new URL(
@@ -214,28 +220,39 @@ export async function createFastPathOAuth(port = 0, receiptPath?: string) {
 			request.method === "POST"
 		) {
 			if (request.headers.authorization !== "Bearer synthetic-access-token") {
-				json({ msg: "unauthorized" }, 401);
+				json({ error: "unauthorized" }, 401);
 				return;
 			}
 			let body = "";
 			for await (const chunk of request) body += chunk;
 			const fields = JSON.parse(body);
 			if (
-				fields.hostname !== hostname ||
 				fields.code_challenge_method !== "S256" ||
 				!fields.state ||
 				!PKCE_CHALLENGE.test(fields.code_challenge)
 			) {
-				json({ msg: "invalid session request" }, 400);
+				json({ error: "invalid session request" }, 400);
 				return;
 			}
 			if (fields.tunnel_id !== tunnelId) {
-				json({ msg: "tunnel not found" }, 404);
+				json({ error: "tunnel not found" }, 404);
+				return;
+			}
+			if (fields.hostname !== hostname) {
+				json({ error: "harness hostname not found" }, 404);
+				return;
+			}
+			connectionCounts.session_code++;
+			save();
+			if (sessionMode === "inactive") {
+				tunnelCode = undefined;
+				const refusal = refusalContract.cases.find(
+					(item: { failure: string }) => item.failure === "disabled",
+				);
+				json(refusal.body, refusal.status);
 				return;
 			}
 			tunnelCode = { challenge: fields.code_challenge, hostname };
-			connectionCounts.session_code++;
-			save();
 			const result = {
 				...codeContract.result,
 				state: fields.state,

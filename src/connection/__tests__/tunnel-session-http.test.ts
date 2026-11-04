@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { mintTunnelSession } from "../../src/connection/tunnel-session";
-import { createFastPathOAuth } from "./oauth-fast-path";
+import { createFastPathOAuth } from "../../../tools/mock-relay/oauth-fast-path";
+import { mintTunnelSession } from "../tunnel-session";
 
 // Real HTTP requests through BOTH PKCE exchanges and the grant Cookie gate.
 // Source-only mocks used to return a raw code and could not catch the operator's
@@ -38,6 +38,23 @@ describe("real-app OAuth → enveloped tunnel code → relay contract", () => {
 				hostname: `${"0".repeat(32)}-lop.radienthq.com`,
 				oauthAccessToken: oauth.access_token,
 			};
+			await expect(
+				mintTunnelSession(
+					{ ...input, tunnelId: "other-tunnel" },
+					{ apiBase: server.origin },
+				),
+			).rejects.toMatchObject({ failure: "account", status: 404 });
+			await expect(
+				mintTunnelSession(
+					{ ...input, hostname: `${"1".repeat(32)}-lop.radienthq.com` },
+					{ apiBase: server.origin },
+				),
+			).rejects.toMatchObject({ failure: "harness", status: 404 });
+			await fetch(`${server.origin}/control?session=inactive`);
+			await expect(
+				mintTunnelSession(input, { apiBase: server.origin }),
+			).rejects.toMatchObject({ failure: "disabled", status: 403 });
+			await fetch(`${server.origin}/control?session=success`);
 			const session = await mintTunnelSession(input, {
 				apiBase: server.origin,
 			});
@@ -51,7 +68,7 @@ describe("real-app OAuth → enveloped tunnel code → relay contract", () => {
 				r.json(),
 			);
 			expect(receipt).toMatchObject({
-				session_code: 1,
+				session_code: 2,
 				session_token: 1,
 				session_pkce_verified: 1,
 				relay_requests: 1,
@@ -61,7 +78,7 @@ describe("real-app OAuth → enveloped tunnel code → relay contract", () => {
 				mintTunnelSession(input, { apiBase: server.origin }),
 			).rejects.toMatchObject({ failure: "contract" });
 			receipt = await fetch(`${server.origin}/receipt`).then((r) => r.json());
-			expect(receipt).toMatchObject({ session_code: 2, session_token: 1 });
+			expect(receipt).toMatchObject({ session_code: 3, session_token: 1 });
 		} finally {
 			await server.close();
 		}

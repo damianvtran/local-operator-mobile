@@ -47,7 +47,9 @@ export type RefusalKind =
 	/** Transient and self-clearing: the gateway is deferring authorization, so
 	 *  the honest thing is to wait and retry rather than to send anyone away. */
 	| "retry"
-	/** A client bug. It states that it is one and offers no loop. */
+	/** An app-side request/response error. User-initiated Retry and redacted
+	 * details also apply to invalid routes and relay contract failures; this is
+	 * deliberately shared, never an automatic retry loop. */
 	| "diagnostic"
 	/** The phone is signed into a different account than this tunnel's owner. */
 	| "account-mismatch"
@@ -315,7 +317,7 @@ export const RefusalSurface = ({
 						{showDetails ? (
 							<Text
 								testID={REGION.connectionDetails}
-								className="text-caption text-ink-dim"
+								className="text-center text-caption text-ink-dim"
 							>
 								{detail ?? "RelayError · connection-response"}
 							</Text>

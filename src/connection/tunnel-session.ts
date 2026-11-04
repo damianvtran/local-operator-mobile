@@ -213,12 +213,14 @@ async function postSession(
 	return parsed;
 }
 
-/** The control plane's envelope is `{msg, result}`; the sentence a user can read
- *  is `msg`, and it is sometimes the only explanation for a refusal. */
+/** The refusal writer differs from success envelopes. httpErrorResponse in
+ * cmd/server/main.go uses {error}; retain msg/message for older servers. A 404
+ * must use this actual reason, since status alone cannot distinguish a missing
+ * harness from an owner-scoped record that is unavailable. */
 function describeEnvelope(value: unknown): string | null {
 	if (typeof value !== "object" || value === null) return null;
-	const body = value as { msg?: unknown; message?: unknown };
-	const msg = body.msg ?? body.message;
+	const body = value as { error?: unknown; msg?: unknown; message?: unknown };
+	const msg = body.error ?? body.msg ?? body.message;
 	return typeof msg === "string" && msg.length > 0 ? msg : null;
 }
 

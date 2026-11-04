@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { mintTunnelSession } from "../tunnel-session";
+import { mintTunnelSession, TunnelSessionError } from "../tunnel-session";
 
 // The server has two writers, not one uniform API envelope. Pin the observed
 // issueSessionCode writer so a raw-only test double cannot hide this bug again.
@@ -64,19 +64,58 @@ describe("server-pinned session response contract", () => {
 		).rejects.toMatchObject({ failure: "contract" });
 		expect(calls).toBe(1);
 	});
-	it.each([
-		[401, "account unavailable", "oauth"],
-		[402, "billing inactive", "billing"],
-		[403, "tunnel unavailable", "disabled"],
-		[404, "harness hostname not found", "harness"],
-		[404, "tunnel not found", "account"],
-		[500, "server unavailable", "rejected"],
-	])("classifies HTTP %i (%s) as %s", async (status, message, failure) => {
-		await expect(
-			mintTunnelSession(input, {
-				fetchImpl: async () =>
-					Response.json({ message }, { status: Number(status) }),
-			}),
-		).rejects.toMatchObject({ failure, status });
+	const refusals = JSON.parse(
+		readFileSync(
+			new URL(
+				"../../../fixtures/radient/session-refusals.json",
+				import.meta.url,
+			),
+			"utf8",
+		),
+	) as {
+		source: { handler: string };
+		cases: { status: number; body: { error: string }; failure: string }[];
+	};
+	it.each(refusals.cases)(
+		"classifies real HTTP $status/$body.error as $failure",
+		async ({ status, body, failure }) => {
+			expect(refusals.source.handler).toBe("httpErrorResponse");
+			expect(Object.keys(body)).toEqual(["error"]);
+			await expect(
+				mintTunnelSession(input, {
+					fetchImpl: async () => Response.json(body, { status }),
+				}),
+			).rejects.toMatchObject({ failure, status });
+		},
+	);
+	it("prefers error over legacy msg/message and sends a missing harness to the concrete console remedy", async () => {
+		const { refusalFromError, tunnelSessionRelayError } = await import(
+			"../../features/auth/refusal"
+		);
+		const error = await mintTunnelSession(input, {
+			fetchImpl: async () =>
+				Response.json(
+					{
+						error: "harness hostname not found",
+						msg: "tunnel not found",
+						message: "tunnel not found",
+					},
+					{ status: 404 },
+				),
+		}).catch((error: unknown) => error);
+		if (!(error instanceof TunnelSessionError))
+			throw new Error("Expected typed refusal");
+		expect(error.failure).toBe("harness");
+		const relayError = tunnelSessionRelayError(error);
+		const view = refusalFromError({
+			error: relayError,
+			surface: relayError.surface,
+			detail: relayError.detail ?? null,
+			retryAfterMs: null,
+			subject: "Fixture computer",
+		});
+		expect(view?.kind).toBe("console");
+		expect(view?.detail).toContain("Local Operator harness");
+		expect(view?.remedy).toBeNull();
 	});
 });

@@ -14,7 +14,7 @@
 	"mobile.computers.account_mismatch": "This computer belongs to another Radient account, or was removed.",
 	"mobile.computers.account_help": "Sign in with the account that owns it. If it was removed, choose another computer.",
 	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
-	"mobile.computers.disabled_help": "In the Radient console, enable this tunnel in its settings.",
+	"mobile.computers.disabled_help": "Radient says this tunnel isn't active right now. Check its status in the Radient console.",
 	"mobile.computers.harness_help": "In the Radient console, enable the Local Operator harness for this tunnel.",
 	"mobile.computers.protected": "Sign-in protected",
 	"mobile.computers.retry": "Retry",

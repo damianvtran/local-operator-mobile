@@ -287,21 +287,31 @@ Owner APIs that settle it (all `Authorization: Bearer <Radient access token>`;
   (`service.go:205-221`).
 
 **Session responses are not uniformly enveloped.** Owner-authenticated
-`POST /v1/tunnels/session/code` and `GET /v1/tunnels/session/request` use
-`responses.WriteJSON`, so their payload is under `{msg,result}`
+`POST /v1/tunnels/session/code` (`issueSessionCode`) and
+`GET /v1/tunnels/session/request` (`previewSession`) use `responses.WriteJSON`, so their payload is under `{msg,result}`
 (`session.go:114` and `:86-94`; route: `service.go:118`). Token/refresh call
 `writeGrant`, which returns **raw** `c.JSON` (`session.go:199-209`). The phone
 unwraps code only, retaining older raw code responses for compatibility. A 200
 response that fails schema parsing is an app contract error: Retry and redacted
 details, never a console or `lop login radient` remedy.
 
+**Refusals use a third writer, not the success envelope:**
+`cmd/server/main.go:httpErrorResponse` (`:2394`) emits `{"error":"…"}`. The
+client reads `error` first, then legacy `msg`/`message`. In particular,
+`404 {"error":"harness hostname not found"}` requires the harness-enable
+remedy, not the account/removed-record message. The refusal fixture pins the
+writer and its real body shape alongside the separate success fixture.
+
 Codes are **account-owner scoped**, not device approvals: `sessionTarget` calls
 `store.Get(ctx, accountID, id)` (`session.go:60-84`). The owner signed into Radient
 on this phone needs no extra allow-list approval, including when already paired
 through mobile relay. A missing owner-scoped record can mean another account OR
 a deleted tunnel; do not invent an approval screen. Explicit 402 billing, 403
-disabled tunnel and 404 missing harness responses should name the billing,
-tunnel-enable or Local Operator harness setting to change in the console.
+non-active tunnel and 404 missing harness responses should name billing,
+the tunnel's status or the Local Operator harness setting in the console.
+`sessionTarget` refuses both `!Enabled` AND every status other than `active`
+(`session.go:68`), so 403 does not prove that an enable toggle is off: it can
+also be reconciling, suspended or in error. Guide the owner to check status.
 
 `BillingStatus` is `{active, eligible, monthly_cost_usd, monthly_price_usd,
 balance_usd, amount_due_usd, next_charge_at}` (`service.go:24-32`); `eligible`

@@ -76,6 +76,12 @@ final class SignInAppUITests: XCTestCase {
     // a bad server contract, in-app Retry, then a grant-authenticated list.
     let computer = app.buttons["computer-row-" + String(repeating: "0", count: 32) + "-lop.radienthq.com"]
     XCTAssertTrue(computer.label.contains("Sign-in protected"))
+    // A real 403 is disabled OR not-yet-active, never proof of an off toggle.
+    _ = try control("/control?session=inactive")
+    computer.tap()
+    try visible("connection-error-console-link")
+    try text("Radient says this tunnel isn't active right now. Check its status in the Radient console.")
+    attach("tunnel-inactive-status-guidance")
     _ = try control("/control?session=malformed")
     computer.tap()
     try visible("connection-details-toggle")
@@ -96,7 +102,7 @@ final class SignInAppUITests: XCTestCase {
     try visible("session-row-b3535011f562")
     attach("connected-session-list")
     let connected = try control("/receipt")
-    XCTAssertEqual(connected["session_code"], 2)
+    XCTAssertEqual(connected["session_code"], 3)
     XCTAssertEqual(connected["session_token"], 1)
     XCTAssertEqual(connected["session_pkce_verified"], 1)
     XCTAssertGreaterThan(connected["relay_requests"] ?? 0, 0)

@@ -35,7 +35,7 @@ describe("tunnel ownership and app-side failure remedies", () => {
 	);
 	it.each([
 		["billing", 402, "billing"],
-		["disabled", 403, "enable"],
+		["disabled", 403, "status"],
 		["harness", 404, "Local Operator"],
 	] as const)(
 		"gives %s a concrete console setting, never a machine login command",

@@ -313,7 +313,7 @@ async function relay(
 				return;
 			}
 			if (tunnelsAnswer === 401) {
-				json({ msg: "unauthorized" }, 401);
+				json({ error: "unauthorized" }, 401);
 				return;
 			}
 			json({ msg: "ok", result: options.tunnels ?? [] });
@@ -327,7 +327,7 @@ async function relay(
 				return;
 			}
 			if (failCode) {
-				json({ msg: "synthetic mint failure" }, 500);
+				json({ error: "synthetic mint failure" }, 500);
 				return;
 			}
 			json({
