@@ -32,6 +32,9 @@ import { deferred } from "./retirement-replay-transport.ts";
 import {
 	cleanupReplay,
 	executeSeed,
+	PREPARE_CAP_MS,
+	PREPARE_PHASE_MS,
+	prepareRunner,
 	type SeedInput,
 } from "./retirement-ui-replay.ts";
 
@@ -395,6 +398,74 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 		// A fake handle with no record of its own stays null; the REAL
 		// prepareRunner record is pinned in retirement-replay-prepare.test.ts.
 		expect(exported.runnerFailure).toBeNull();
+	});
+	/*
+	 * Review R28 F1: the phase wrapper used a fixed 15 s outer wait, so a real
+	 * prepare slower than that failed with `deadline` while its child still
+	 * ran, and the export said runnerFailure: null. These drive the REAL
+	 * executeSeed phase wrapper with a REAL prepare subprocess, at scaled-down
+	 * caps (command cap 6 s, phase wait 8 s; old shape: phase 1 s). The sleeps
+	 * stay well under the caps because spawning alone takes ~1 s on a loaded host.
+	 */
+	async function prepareThroughSeed(body: string, cap: number, phase: number) {
+		const f = fixture();
+		const dir = mkdtempSync(join(tmpdir(), "seed-prepare-"));
+		const script = join(dir, "prepare.sh");
+		writeFileSync(script, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+		const scope = new NativeScope(new Deadline(60000));
+		const original = f.input.startRunner;
+		f.input.preparePhaseMs = phase;
+		f.input.startRunner = (control, session) => {
+			const prep = prepareRunner(scope, [], script, cap);
+			return managedRunner(
+				prep.run,
+				() => original(control, session),
+				() => scope.stop(new Deadline(5000)),
+				prep.failureRecord,
+			);
+		};
+		await f.start();
+		await scope.stop(new Deadline(5000)).catch(() => undefined);
+		rmSync(dir, { recursive: true, force: true });
+		return JSON.parse(
+			readFileSync(join(f.directory, "evidence", "seed-replay.json"), "utf8"),
+		);
+	}
+	it("a prepare slower than the old phase wait now passes runner-prepare (R28 F1)", async () => {
+		const exported = await prepareThroughSeed("sleep 2; exit 0", 6000, 8000);
+		expect(exported.phases[0]).toEqual(
+			expect.objectContaining({ name: "runner-prepare", status: "ok" }),
+		);
+	}, 30000);
+	it("the old shape (phase wait shorter than the command) exported runnerFailure null (R28 F1 RED)", async () => {
+		const exported = await prepareThroughSeed("sleep 2; exit 0", 6000, 1000);
+		expect(exported.failedPhase).toBe("runner-prepare");
+		expect(exported.runnerFailure).toBeNull();
+	}, 30000);
+	it("a prepare that hits its own cap exports a prepare_timeout record, never null (R28 F1)", async () => {
+		const exported = await prepareThroughSeed("sleep 20; exit 0", 3000, 8000);
+		expect(exported.failedPhase).toBe("runner-prepare");
+		expect(exported.cause).toBe("command-timeout");
+		expect(exported.runnerFailure).toEqual(
+			expect.objectContaining({
+				command: "prepare",
+				errorClass: "prepare_timeout",
+			}),
+		);
+	}, 30000);
+	it("a refusing prepare exports a prepare_refused record (R28 F1)", async () => {
+		const exported = await prepareThroughSeed("exit 1", 6000, 8000);
+		expect(exported.failedPhase).toBe("runner-prepare");
+		expect(exported.runnerFailure).toEqual(
+			expect.objectContaining({
+				command: "prepare",
+				errorClass: "prepare_refused",
+				exitCode: 1,
+			}),
+		);
+	}, 30000);
+	it("the default phase wait outlasts the command cap", () => {
+		expect(PREPARE_PHASE_MS).toBeGreaterThan(PREPARE_CAP_MS);
 	});
 	it("final metadata refusal after bootstrap prevents proof launch/openURL", async () => {
 		const f = fixture();

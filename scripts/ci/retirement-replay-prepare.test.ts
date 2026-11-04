@@ -28,9 +28,7 @@ afterEach(() => {
 });
 /** A stand-in prepare: a shell script with a known duration and exit. */
 function standIn(body: string) {
-	const directory = mkdtempSync(
-		join(tmpdir(), "prepare-"),
-	);
+	const directory = mkdtempSync(join(tmpdir(), "prepare-"));
 	roots.push(directory);
 	const path = join(directory, "prepare.sh");
 	writeFileSync(path, `#!/bin/sh\n${body}\n`, { mode: 0o755 });

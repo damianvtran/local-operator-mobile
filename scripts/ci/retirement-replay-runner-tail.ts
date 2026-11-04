@@ -175,9 +175,9 @@ export function classifyRunnerFailure(
  * OUTCOME only (ReplayRefused code, exit status), never from what prepare
  * printed, so this path copies nothing out either:
  * - `prepare_timeout`: killed at its cap (`command-timeout` / `deadline`);
- * - `prepare_refused`: exited 1, i.e. one of products.py's ValueError checks
- *   refused the runner products or environment (Python's uncaught-exception
- *   status);
+ * - `prepare_refused`: exited 1, Python's status for ANY uncaught exception:
+ *   usually one of products.py's ValueError checks, but also e.g. a missing
+ *   file (FileNotFoundError). It means "prepare raised", not which check;
  * - `prepare_exit`: any other nonzero exit, a start failure or a signal.
  */
 export const PREPARE_CLASSES = [
@@ -238,8 +238,9 @@ export function safeRunnerFailure(value: unknown): RunnerFailure | null {
 	if (
 		!exitOk ||
 		(v.command !== "launch" && v.command !== "prepare") ||
-		(v.command === "prepare" &&
-			!(PREPARE_CLASSES as readonly unknown[]).includes(v.errorClass)) ||
+		// Each command carries only its own classes (review R28 F2).
+		(v.command === "prepare") !==
+			(PREPARE_CLASSES as readonly unknown[]).includes(v.errorClass) ||
 		typeof v.errorClass !== "string" ||
 		!CLASS_NAMES.has(v.errorClass) ||
 		!(

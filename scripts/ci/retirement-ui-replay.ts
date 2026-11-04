@@ -137,6 +137,12 @@ export interface SeedInput {
 	closeTransport?: (transport: ReplayTransport) => Promise<void>;
 	/** Diagnostic phase timings; absent in unit fixtures that don't assert them. */
 	phases?: PhaseLog;
+	/**
+	 * Outer wait on the runner-prepare phase; defaults to PREPARE_PHASE_MS.
+	 * Injectable only so tests can drive the real phase wrapper at a scaled-down
+	 * cap instead of waiting tens of seconds.
+	 */
+	preparePhaseMs?: number;
 }
 /**
  * Simulator boot + readiness on their OWN clock, with the 300s work clock
@@ -274,9 +280,18 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		void started.completion.catch(() => undefined);
 		// runner-prepare: the private xctestrun is written and xcodebuild launched.
 		// Handles without a separate preparation skip straight to runner-launch.
+		// The outer wait (PREPARE_PHASE_MS) must OUTLAST the command cap (PREPARE_CAP_MS):
+		// a fixed 15 s here cut a 45 s prepare off at 15 s while the child was
+		// still running, so the summary exported runnerFailure: null (review
+		// R28 F1). Letting the command's cap fire first means `prepared` rejects
+		// with the command's own cause and the record exists before export.
 		if (started.prepared)
 			await phases.step("runner-prepare", () =>
-				boundedWait(started.prepared!, deadline, 15000),
+				boundedWait(
+					started.prepared!,
+					deadline,
+					input.preparePhaseMs ?? PREPARE_PHASE_MS,
+				),
 			);
 		// runner-launch: XCTest boots in the simulator and reports runner-ready.
 		await phases.step("runner-launch", async () => {
@@ -544,13 +559,17 @@ export function launchRunner(
  * The 300 s work clock (boot excluded) had ~117 s spent before prepare in that
  * replay. After prepare the success path still needs runner-launch (up to
  * 40 s), the artifact refresh, `simctl launch`, ready, and `require(70000)`
- * before openurl. With 45 s: 117 + 45 + 40 + (≈5 + ≈5 + ≈10 measured) + 70
- * ≈ 292 s, inside 300. With 60 s it is ≈ 307 s and with 90 s ≈ 337 s, so a
- * prepare that used its whole cap would leave no window for openurl and fail
- * later as `insufficient-window` instead. 45 s is ~1.9× the slowest measured
- * prepare and ~4.5× the old cap.
+ * before openurl. Those three middle steps have caps of 20/60/75 s but took
+ * ≈5/≈5/≈10 s measured; the work deadline bounds them either way. Budget:
+ * 300 − 117 − 40 − 20 − 70 = 53 s of headroom for prepare. 45 s leaves 8 s
+ * of that as margin because the 117 s comes from a single replay; 60 s
+ * (≈307 s) and 90 s (≈337 s) would leave no window for openurl, so a prepare
+ * that used its whole cap would just fail later as `insufficient-window`.
+ * 45 s is ~1.9× the slowest measured prepare and ~4.5× the old cap.
  */
 export const PREPARE_CAP_MS = 45000;
+/** The runner-prepare phase wait: the command cap plus room to settle. */
+export const PREPARE_PHASE_MS = PREPARE_CAP_MS + 5000;
 /**
  * Run the local runner `prepare` check under PREPARE_CAP_MS, and keep a closed
  * failure record of its OUTCOME (never its output) for the evidence: a failed
