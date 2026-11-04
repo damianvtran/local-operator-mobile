@@ -1,4 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list here is regenerated from the same record on each render (the row's own `files`/`components` arrays), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	Image,
@@ -11,7 +13,12 @@ import {
 
 import { refusalText } from "@/features/session/asks";
 import { SupplementWebView } from "@/features/session/components/supplement-webview";
-import { toBase64 } from "@/features/session/runtime";
+import {
+	audioExtension,
+	playableSource,
+	toBase64,
+	videoExtension,
+} from "@/features/session/runtime";
 import {
 	COPY_ADJUST,
 	COPY_CANCEL,
@@ -26,6 +33,7 @@ import {
 	fileRowParts,
 	filesSummaryEntries,
 	frameBudgetPx,
+	isVideoFile,
 	MORE_MAX,
 	moreText,
 	OP_LEAD,
@@ -35,10 +43,16 @@ import {
 	type SupplementComponent,
 	type SupplementFile,
 	type SupplementFileClass,
+	type SupplementSound,
 	showAllText,
+	soundControlLabel,
+	soundName,
 	supplementDisposition,
 	supplementFileClass,
+	videoTileLabel,
+	withheldText,
 } from "@/features/session/supplements";
+import { t } from "@/i18n";
 import { CONTROL, SURFACE, supplementFileId } from "@/ui/a11y";
 import { Input, Shimmer } from "@/ui/components";
 import { cx } from "@/ui/variants";
@@ -106,6 +120,12 @@ export interface SupplementClient {
 	loadFile: (
 		job: string,
 		index: number,
+	) => Promise<{ bytes: Uint8Array; mimeType: string | null }>;
+	/** One sound's bytes by its `sounds[].attachment` digest (the relay's
+	 *  `/sound?digest=` route). Bytes, not a URL: the players cannot carry the
+	 *  relay client's cookie, the reason `loadVideoSource` fetches too. */
+	loadSound: (
+		digest: string,
 	) => Promise<{ bytes: Uint8Array; mimeType: string | null }>;
 	/** `supplement_cancel` | `supplement_restart` | `supplement_steer`. */
 	command: (
@@ -559,16 +579,240 @@ export const SupplementBlock = ({
 	 *  only off-scale value U-42 found in this block (16 rows on one phone at
 	 *  100 %, one per cell and scale — 96 at CI's six-cell x two-profile x
 	 *  three-scale scope). The audit reads the scale, and 8 is a step of it. */
+	/*
+	 * The sounds, with the file callouts and OUTSIDE every disclosure — the
+	 * relay web's placement and its reason: collapse may hide tool lines, never
+	 * an artifact the reader can act on, so a sound one has to expand to find is
+	 * a sound the answer did not deliver. TWO COLUMNS for more than one sound (a
+	 * 14-item batch is a list to scan); a single sound takes the whole width,
+	 * because one narrow cell beside whitespace reads as a broken grid.
+	 * `sounds_more` is said, never silently dropped.
+	 */
+	const sounds = beat.sounds;
+	const soundsSection =
+		sounds.length > 0 ? (
+			<View className="flex-col gap-1" testID={SURFACE.supplementSounds}>
+				<View className="flex-row flex-wrap gap-2">
+					{sounds.map((sound) => (
+						<View
+							key={sound.attachment}
+							className={
+								sounds.length > 1 ? "min-w-0 basis-[48%] grow" : "w-full"
+							}
+						>
+							<SoundCell sound={sound} client={client} />
+						</View>
+					))}
+				</View>
+				{beat.soundsMore > 0 ? (
+					<Text className="text-meta text-ink-dim">
+						{t("mobile.session.highlights.sounds_more", {
+							count: beat.soundsMore,
+						})}
+					</Text>
+				) : null}
+			</View>
+		) : null;
+
+	/* NEVER SILENT: a pinned or named deliverable the producer refused is said
+	   in one muted line under the block (the highlights contract), so the
+	   reader is not left hunting their disk for something the agent promised. */
+	const withheld = withheldText(beat);
+	const withheldLine = withheld ? (
+		<Text
+			className="text-meta text-ink-dim"
+			testID={SURFACE.supplementWithheld}
+		>
+			{withheld}
+		</Text>
+	) : null;
+
 	return (
 		<View className="flex-col gap-2" testID={SURFACE.supplementBlock}>
 			{filesSection}
+			{soundsSection}
 			{stateLine}
 			{adjustLine}
 			{errorLine}
 			{componentsSection}
+			{withheldLine}
 		</View>
 	);
 };
+
+/* ---------------------------------------------------------------------------
+ * One sound: a compact play/pause cell (highlights deliverables)
+ * ------------------------------------------------------------------------- */
+
+type SoundState =
+	| { kind: "idle" }
+	| { kind: "loading" }
+	| { kind: "ready"; uri: string }
+	| { kind: "refused"; message: string };
+
+/**
+ * One sound cell. The bytes are fetched on the FIRST press, not at mount: a
+ * fourteen-sound batch must not pull fourteen files over a phone tunnel just
+ * because the answer scrolled past. Once fetched, the player mounts and starts,
+ * and the same control pauses and resumes it.
+ */
+function SoundCell({
+	sound,
+	client,
+}: {
+	sound: SupplementSound;
+	client: SupplementClient;
+}) {
+	const [state, setState] = useState<SoundState>({ kind: "idle" });
+
+	/* A web object URL outlives nothing it was made for: release it with the
+	   cell (`playableSource`'s contract — the caller revokes). Native cache
+	   files are the OS's to reclaim. */
+	const readyUri = state.kind === "ready" ? state.uri : null;
+	useEffect(
+		() => () => {
+			if (readyUri?.startsWith("blob:")) URL.revokeObjectURL(readyUri);
+		},
+		[readyUri],
+	);
+
+	const load = async () => {
+		setState({ kind: "loading" });
+		try {
+			const { bytes, mimeType } = await client.loadSound(sound.attachment);
+			const type = mimeType ?? sound.mime;
+			const uri = await playableSource(
+				bytes,
+				type,
+				sound.attachment,
+				audioExtension(type),
+			);
+			setState({ kind: "ready", uri });
+		} catch (error) {
+			setState({
+				kind: "refused",
+				message: t("mobile.session.highlights.sound_refused", {
+					reason: refusalText(error),
+				}),
+			});
+		}
+	};
+
+	const name = soundName(sound);
+	if (state.kind === "ready") {
+		return <LoadedSound uri={state.uri} sound={sound} name={name} />;
+	}
+	return (
+		<View className="min-w-0 flex-col">
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={soundControlLabel(sound, false)}
+				accessibilityState={{ busy: state.kind === "loading" }}
+				disabled={state.kind === "loading"}
+				className="min-h-11 flex-row items-center gap-2 rounded-sm border border-hairline px-2"
+				testID={CONTROL.supplementSoundToggle}
+				onPress={() => void load()}
+			>
+				<Text aria-hidden className="text-meta text-ink-dim">
+					▶
+				</Text>
+				<Text className="min-w-0 flex-1 text-meta text-ink" numberOfLines={1}>
+					{name}
+				</Text>
+				{sound.durationS > 0 ? (
+					<Text className="text-meta text-ink-dim">
+						{clockText(sound.durationS)}
+					</Text>
+				) : null}
+			</Pressable>
+			{state.kind === "refused" ? (
+				<Text className="text-meta text-danger">{state.message}</Text>
+			) : null}
+		</View>
+	);
+}
+
+/** The cell once its bytes are local: the player is created with the source
+ *  (`useAudioPlayer` rebuilds on a source change), so it mounts only now. */
+function LoadedSound({
+	uri,
+	sound,
+	name,
+}: {
+	uri: string;
+	sound: SupplementSound;
+	name: string;
+}) {
+	const player = useAudioPlayer(uri);
+	const status = useAudioPlayerStatus(player);
+	const [started, setStarted] = useState(false);
+	/* The press that fetched the bytes was a press to PLAY: start once the
+	   player has loaded, rather than asking for a second tap. */
+	useEffect(() => {
+		if (!started && status.isLoaded) {
+			setStarted(true);
+			player.play();
+		}
+	}, [started, status.isLoaded, player]);
+
+	const playing = status.playing;
+	const toggle = () => {
+		if (playing) {
+			player.pause();
+			return;
+		}
+		/* A finished clip replays from the top rather than no-op at its end. */
+		if (status.duration > 0 && status.currentTime >= status.duration - 0.05) {
+			void player.seekTo(0);
+		}
+		player.play();
+	};
+	const total = status.duration > 0 ? status.duration : sound.durationS;
+
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={soundControlLabel(sound, playing)}
+			className="min-h-11 flex-row items-center gap-2 rounded-sm border border-hairline px-2"
+			testID={CONTROL.supplementSoundToggle}
+			onPress={toggle}
+		>
+			<Text aria-hidden className="text-meta text-ink-dim">
+				{playing ? "❚❚" : "▶"}
+			</Text>
+			<Text className="min-w-0 flex-1 text-meta text-ink" numberOfLines={1}>
+				{name}
+			</Text>
+			<Text className="text-meta text-ink-dim">
+				{total > 0
+					? `${clockText(status.currentTime)} / ${clockText(total)}`
+					: clockText(status.currentTime)}
+			</Text>
+		</Pressable>
+	);
+}
+
+/** `m:ss` — the library player's clock, for one cell's position/length. */
+function clockText(seconds: number): string {
+	const total = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+	return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** A written video, opened in place with `expo-video`'s native controls. */
+function VideoPreview({ uri }: { uri: string }) {
+	const player = useVideoPlayer(uri, (instance) => {
+		instance.loop = false;
+		instance.play();
+	});
+	return (
+		<VideoView
+			player={player}
+			nativeControls
+			contentFit="contain"
+			style={{ width: "100%", aspectRatio: 16 / 9, borderRadius: 4 }}
+		/>
+	);
+}
 
 /* ---------------------------------------------------------------------------
  * One callout row, with the type-appropriate preview (§2.7/§3.4 N5)
@@ -578,6 +822,7 @@ type FilePreview =
 	| { kind: "loading" }
 	| { kind: "text"; text: string; truncated: boolean }
 	| { kind: "image"; uri: string }
+	| { kind: "video"; uri: string }
 	| { kind: "refused"; message: string };
 
 /** One callout's bytes → the preview state its row renders; shared by the
@@ -594,6 +839,18 @@ async function loadFilePreview(
 		if (fileClass === "image") {
 			const type = mimeType ?? "image/png";
 			return { kind: "image", uri: `data:${type};base64,${toBase64(bytes)}` };
+		}
+		if (fileClass === "video") {
+			const type = mimeType ?? "video/mp4";
+			/* Keyed by job + row index: the file route's own address, and stable
+			   across reopenings of the same row. */
+			const uri = await playableSource(
+				bytes,
+				type,
+				`${job}-${index}`,
+				videoExtension(type),
+			);
+			return { kind: "video", uri };
 		}
 		const text = new TextDecoder().decode(bytes);
 		return {
@@ -660,6 +917,7 @@ function PreviewPanel({
 					accessibilityLabel={label}
 				/>
 			) : null}
+			{preview.kind === "video" ? <VideoPreview uri={preview.uri} /> : null}
 			{preview.kind === "refused" ? (
 				<Text className="text-meta text-danger">{preview.message}</Text>
 			) : null}
@@ -679,8 +937,14 @@ function CalloutRow({
 	client: SupplementClient;
 }) {
 	const { name, path, size } = fileRowParts(file);
-	const fileClass = supplementFileClass(file.path);
-	const previewable = fileClass === "text" || fileClass === "image";
+	/* A video is previewable by its producer `kind` too, so a written clip whose
+	   suffix this build does not list still opens. */
+	const video = isVideoFile(file);
+	const fileClass: SupplementFileClass = video
+		? "video"
+		: supplementFileClass(file.path);
+	const previewable =
+		fileClass === "text" || fileClass === "image" || fileClass === "video";
 	const [open, setOpen] = useState(false);
 	const [preview, setPreview] = useState<FilePreview | null>(null);
 
@@ -708,12 +972,25 @@ function CalloutRow({
 				{previewable ? (
 					<Pressable
 						accessibilityRole="button"
+						/* A video row is a play tile: its label names the action, since
+						   the glyph alone says nothing to a screen reader. */
+						accessibilityLabel={video ? videoTileLabel(file) : undefined}
 						accessibilityState={{ expanded: open }}
-						className="min-h-11 min-w-0 flex-1 justify-center"
-						testID={CONTROL.supplementFileOpen}
+						className={cx(
+							"min-h-11 min-w-0 flex-1 justify-center",
+							video && "rounded-sm border border-hairline px-2",
+						)}
+						testID={
+							video ? CONTROL.supplementVideoOpen : CONTROL.supplementFileOpen
+						}
 						onPress={() => void toggle()}
 					>
 						<Text className="text-meta text-ink" numberOfLines={1}>
+							{video ? (
+								<Text aria-hidden className="text-ink-dim">
+									{"▶ "}
+								</Text>
+							) : null}
 							{label}
 							{path && name ? (
 								<Text className="text-ink-muted"> {path}</Text>
@@ -767,6 +1044,7 @@ function SummaryFilesLine({
 
 	const previewable = (entry: FilesSummaryEntry): boolean => {
 		if (entry.file === null) return false;
+		if (isVideoFile(entry.file)) return true;
 		const fileClass = supplementFileClass(entry.file.path);
 		return fileClass === "text" || fileClass === "image";
 	};
@@ -787,7 +1065,9 @@ function SummaryFilesLine({
 				client,
 				job,
 				entry.index,
-				supplementFileClass(entry.file.path),
+				isVideoFile(entry.file)
+					? "video"
+					: supplementFileClass(entry.file.path),
 			),
 		);
 	};

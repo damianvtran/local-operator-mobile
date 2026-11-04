@@ -1,4 +1,15 @@
 {
 	"mobile.session.conversation_details": "گفتگو کی تفصیلات",
-	"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے"
+	"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+	"mobile.session.highlights.withheld": "{count, plural, one {# فائل نہیں دکھائی گئی} other {# فائلیں نہیں دکھائی گئیں}}: {reasons}",
+	"mobile.session.highlights.withheld_outside": "اجازت یافتہ مقامات سے باہر",
+	"mobile.session.highlights.withheld_sensitive": "حساس فائل",
+	"mobile.session.highlights.withheld_missing": "فائل اب موجود نہیں",
+	"mobile.session.highlights.withheld_too_large": "پیش نظارہ کے لیے بہت بڑی",
+	"mobile.session.highlights.sound_play": "{title} چلائیں",
+	"mobile.session.highlights.sound_pause": "{title} روکیں",
+	"mobile.session.highlights.sound_untitled": "آواز",
+	"mobile.session.highlights.video_open": "ویڈیو {name} چلائیں",
+	"mobile.session.highlights.sounds_more": "{count, plural, one {# مزید آواز} other {# مزید آوازیں}}",
+	"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}"
 }

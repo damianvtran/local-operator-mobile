@@ -1,4 +1,15 @@
 {
 	"mobile.session.conversation_details": "Детали беседы",
-	"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов"
+	"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+	"mobile.session.highlights.withheld": "{count, plural, one {# файл не показан} few {# файла не показаны} many {# файлов не показано} other {# файла не показано}}: {reasons}",
+	"mobile.session.highlights.withheld_outside": "за пределами разрешённых мест",
+	"mobile.session.highlights.withheld_sensitive": "конфиденциальный файл",
+	"mobile.session.highlights.withheld_missing": "файл больше не существует",
+	"mobile.session.highlights.withheld_too_large": "слишком большой для просмотра",
+	"mobile.session.highlights.sound_play": "Воспроизвести {title}",
+	"mobile.session.highlights.sound_pause": "Приостановить {title}",
+	"mobile.session.highlights.sound_untitled": "Звук",
+	"mobile.session.highlights.video_open": "Воспроизвести видео {name}",
+	"mobile.session.highlights.sounds_more": "{count, plural, one {Ещё # звук} few {Ещё # звука} many {Ещё # звуков} other {Ещё # звука}}",
+	"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}"
 }

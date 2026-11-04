@@ -184,6 +184,58 @@ export const loadVideoSource = async (
 	}
 };
 
+/** The file extension for a supplement sound's mime type; `mp3` when unknown —
+ *  the players sniff the bytes, the extension only has to be plausible. */
+export const audioExtension = (mimeType: string | null): string => {
+	switch ((mimeType ?? "").split(";")[0]?.trim().toLowerCase()) {
+		case "audio/wav":
+		case "audio/x-wav":
+		case "audio/wave":
+			return "wav";
+		case "audio/ogg":
+			return "ogg";
+		case "audio/mp4":
+		case "audio/aac":
+		case "audio/x-m4a":
+			return "m4a";
+		case "audio/flac":
+			return "flac";
+		default:
+			return "mp3";
+	}
+};
+
+/**
+ * Fetched media bytes → a source a player opens, the posture `loadVideoSource`
+ * established: a Blob object URL on web (the CALLER revokes it), a cache file
+ * on native (the OS reclaims it). `key` must already be filename-safe (a
+ * digest, or a job id plus an index). Used by the highlights block, whose
+ * sounds and written videos arrive by digest or by row index rather than by a
+ * transcript entry, so `loadVideoSource`'s entry-keyed cache cannot name them.
+ */
+export const playableSource = async (
+	bytes: Uint8Array,
+	mimeType: string,
+	key: string,
+	extension: string,
+): Promise<string> => {
+	if (Platform.OS === "web") {
+		return URL.createObjectURL(
+			new Blob([bytes as BlobPart], { type: mimeType }),
+		);
+	}
+	const { Directory, File, Paths } = await import("expo-file-system");
+	const directory = new Directory(Paths.cache, "lo-supplement");
+	if (!directory.exists) directory.create({ intermediates: true });
+	const file = new File(
+		directory,
+		`${key.replace(/[^a-zA-Z0-9_-]/g, "")}.${extension}`,
+	);
+	if (!file.exists) file.create({ intermediates: true });
+	file.write(bytes);
+	return file.uri;
+};
+
 /** Every extension `loadVideoSource` may have cached under (the mime-derived
  *  name, so a lookup before the fetch must try each known one — the cost is a
  *  stat call on a fresh cache and one on a warm one, never a network read). */

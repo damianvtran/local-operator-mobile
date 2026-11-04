@@ -1,4 +1,15 @@
 {
 	"mobile.session.conversation_details": "对话详情",
-	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体"
+	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+	"mobile.session.highlights.withheld": "{count, plural, other {# 个文件未显示}}：{reasons}",
+	"mobile.session.highlights.withheld_outside": "不在允许的位置",
+	"mobile.session.highlights.withheld_sensitive": "敏感文件",
+	"mobile.session.highlights.withheld_missing": "文件已不存在",
+	"mobile.session.highlights.withheld_too_large": "太大，无法预览",
+	"mobile.session.highlights.sound_play": "播放{title}",
+	"mobile.session.highlights.sound_pause": "暂停{title}",
+	"mobile.session.highlights.sound_untitled": "声音",
+	"mobile.session.highlights.video_open": "播放视频{name}",
+	"mobile.session.highlights.sounds_more": "{count, plural, other {还有 # 个声音}}",
+	"mobile.session.highlights.sound_refused": "无法播放：{reason}"
 }
