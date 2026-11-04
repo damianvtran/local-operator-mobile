@@ -1,0 +1,20 @@
+{
+	"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
+	"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
+	"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
+	"mobile.signin.progress": "Đang đăng nhập…",
+	"mobile.signin.retry": "Thử lại",
+	"mobile.signin.show_diagnostics": "Hiện chi tiết đăng nhập",
+	"mobile.signin.stage_browser": "Đang chờ trình duyệt",
+	"mobile.signin.stage_cancelled": "Đã hủy đăng nhập",
+	"mobile.signin.stage_discovering": "Đang tìm máy tính của bạn",
+	"mobile.signin.stage_exchanging": "Đang hoàn tất đăng nhập qua trình duyệt",
+	"mobile.signin.stage_failed": "Đăng nhập thất bại",
+	"mobile.signin.stage_idle": "Chưa bắt đầu",
+	"mobile.signin.stage_persisting": "Đang lưu thông tin đăng nhập",
+	"mobile.signin.stage_retiring": "Đang chuẩn bị tài khoản",
+	"mobile.signin.stage_signed_in": "Đã đăng nhập",
+	"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
+	"mobile.signin.stage_unavailable": "Không thể đăng nhập",
+	"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu."
+}

@@ -255,6 +255,7 @@ export const CONTROL = {
 	setupCreateTunnel: "setup-create-tunnel",
 	setupTunnelId: "setup-tunnel-id",
 	signInTryAgain: "sign-in-try-again",
+	signInDiagnostics: "sign-in-diagnostics-toggle",
 	signInUseAddress: "sign-in-use-address",
 	signInTryAnyway: "sign-in-try-anyway",
 	signInBack: "sign-in-back",
@@ -1188,6 +1189,7 @@ export const REGION = {
 	 *  is not"), so the flow asserts the app HANDED OFF rather than that the user
 	 *  signed in. */
 	signInHandoff: "sign-in-browser-handoff",
+	signInDiagnostics: "sign-in-diagnostics",
 	welcomeHeadline: "welcome-headline",
 
 	settingsConnection: "settings-section-connection",

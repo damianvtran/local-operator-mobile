@@ -1,0 +1,20 @@
+{
+	"mobile.signin.diagnostics": "登录诊断",
+	"mobile.signin.failed": "无法完成登录。",
+	"mobile.signin.hide_diagnostics": "隐藏登录详情",
+	"mobile.signin.progress": "正在登录…",
+	"mobile.signin.retry": "重试",
+	"mobile.signin.show_diagnostics": "显示登录详情",
+	"mobile.signin.stage_browser": "正在等待浏览器",
+	"mobile.signin.stage_cancelled": "登录已取消",
+	"mobile.signin.stage_discovering": "正在查找你的电脑",
+	"mobile.signin.stage_exchanging": "正在完成浏览器登录",
+	"mobile.signin.stage_failed": "登录失败",
+	"mobile.signin.stage_idle": "尚未开始",
+	"mobile.signin.stage_persisting": "正在保存登录信息",
+	"mobile.signin.stage_retiring": "正在准备账户",
+	"mobile.signin.stage_signed_in": "已登录",
+	"mobile.signin.stage_starting": "正在开始登录",
+	"mobile.signin.stage_unavailable": "无法登录",
+	"mobile.signin.superseded": "另一次登录已开始。"
+}

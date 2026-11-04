@@ -329,6 +329,7 @@ export default function Computers() {
 		refusal,
 		signInWithRadient,
 		signInState,
+		signInDiagnostics,
 	} = useConnection();
 
 	const switcher = useComputerSwitcher();
@@ -558,6 +559,7 @@ export default function Computers() {
 			{signInPending ? (
 				<SignInPanel
 					state={signInState}
+					diagnostics={signInDiagnostics}
 					onStart={() => void signInWithRadient()}
 					onUseAddress={() => undefined}
 				/>
