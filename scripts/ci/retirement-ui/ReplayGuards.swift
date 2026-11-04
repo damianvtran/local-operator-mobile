@@ -17,9 +17,9 @@ struct PromptObservation {
 /// Observation is permitted by a live QUERY grant BEFORE title attestation.
 /// Only an exact observation plus a new fresh host TAP permit can authorize action.
 enum ReplayGuards {
-  static let source = "78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b"
-  static let bundle = "9c667250a1e0a8d5dc129495a8f1bd734e201ec5bfbae8bd7b863e4f951574e7"
-  static let tar = "2e6ce4369dea84a514ba31d8802e9ec36f25dd4f0ace9c36353cba6edc9d1d92"
+  static let source = "2989876958f6c605f6756f59b15519456516faa7"
+  static let bundle = "7808c4279c3590230b464aca1ebd3e00902f09ab3f9d2a06f2ab9b3e8429f985"
+  static let tar = "0b1d9e8fec58d3d3b87aab4d96b0ea5cf8c184ac2886f51f3536f6429e239b4e"
   static let title = "Open in “Local Operator”?"
   static func scalars(_ value: String) -> [UInt32] { value.unicodeScalars.map { $0.value } }
   static func exact(_ value: PromptObservation) -> Bool {

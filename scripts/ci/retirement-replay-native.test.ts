@@ -24,7 +24,7 @@ function fixture() {
 		flavor: "auth-retirement-proof",
 		bundleId: "com.localoperator.mobile.retirementproof",
 		nonce: "a".repeat(32),
-		sourceSha: "78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b",
+		sourceSha: "2989876958f6c605f6756f59b15519456516faa7",
 		receiverPort: 23456,
 		bundleSha256: immutableBundleDigest(app),
 	};

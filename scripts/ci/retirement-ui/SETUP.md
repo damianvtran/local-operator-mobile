@@ -27,10 +27,12 @@ The manual validator rejects unknown/missing modes, malformed/nonboolean proof f
 
 ## Retained ORIGINAL proof identity (not the runner identity)
 
-- Run `41620694610`, artifact `13225164386`.
-- App source `78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b`.
-- Immutable bundle SHA-256 `9c667250a1e0a8d5dc129495a8f1bd734e201ec5bfbae8bd7b863e4f951574e7`.
-- Inner tar SHA-256 `2e6ce4369dea84a514ba31d8802e9ec36f25dd4f0ace9c36353cba6edc9d1d92`.
+Re-pinned 2026-11-04 to the original built by proof run `41842459195` (the previous original, artifact `13225164386` from run `41620694610`, expired 2026-11-04T11:19:46Z). It expires 2026-11-05T15:05:00Z. The same identity is pinned in `retirement-ui-guards.ts` (`RETAINED`), `retirement-ui/ReplayGuards.swift` and `retirement-replay-products.py` (`preflight`), and `retirement-pins.test.ts` fails unless all three agree, so a partial re-pin cannot pass CI.
+
+- Run `41842459195`, artifact `13335948355`.
+- App source `2989876958f6c605f6756f59b15519456516faa7`.
+- Immutable bundle SHA-256 `7808c4279c3590230b464aca1ebd3e00902f09ab3f9d2a06f2ab9b3e8429f985`.
+- Inner tar SHA-256 `0b1d9e8fec58d3d3b87aab4d96b0ea5cf8c184ac2886f51f3536f6429e239b4e`.
 
 These are independent of the **new runner commit**. Never compare the retained app source with current runner HEAD, relabel the old app as a new build, rewrite its nonce/port/source, or use cached bytes to evade server expiry. `verifyHostedReuse` fetches a fresh GitHub artifact API response before accepting archive bytes; absent/expired/inaccessible is a stop, with no authentication-scope expansion. SHA, metadata run/source and expiry must agree. Current server presence is **unobserved** in this source-only slice; a one-day artifact may expire before compile completes.
 
@@ -54,7 +56,7 @@ gh api --method POST repos/damianvtran/local-operator-mobile/actions/workflows/i
 JSON
 ```
 
-Read `GET /repos/damianvtran/local-operator-mobile/actions/artifacts/13225164386` and the new runner artifact metadata; verify `expired=false`, server expiry, workflow run/source, and inspect `setup-receipt.json`: compile exit0, `compileOutcome=passed`, `packageValidated=true`, source/Xcode/SDK/tar/manifest/executable hashes. API denial or artifact expiry stops. The setup job is 10min; watchdog540s, group RSS2GiB, one build job. `passed` is written ONLY AFTER the mode-preserving package and exact runner-only `NSAllowsLocalNetworking` readback validate. This is NOT a proof-app rebuild or simulator test.
+Read `GET /repos/damianvtran/local-operator-mobile/actions/artifacts/13335948355` and the new runner artifact metadata; verify `expired=false`, server expiry, workflow run/source, and inspect `setup-receipt.json`: compile exit0, `compileOutcome=passed`, `packageValidated=true`, source/Xcode/SDK/tar/manifest/executable hashes. API denial or artifact expiry stops. The setup job is 10min; watchdog540s, group RSS2GiB, one build job. `passed` is written ONLY AFTER the mode-preserving package and exact runner-only `NSAllowsLocalNetworking` readback validate. This is NOT a proof-app rebuild or simulator test.
 
 Then, only under the separately granted ONE replay:
 

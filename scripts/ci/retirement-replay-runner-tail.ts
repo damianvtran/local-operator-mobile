@@ -15,14 +15,22 @@
  * module exports NO text from the runner at all. It exports only:
  *
  * - `exitCode` (a number or null);
- * - `command`: which command failed, `prepare` or `launch`;
+ * - `command`: which command failed. Only `launch` is classified: a failed
+ *   prepare step has no output worth keeping and is already named by the
+ *   receipt's `failedPhase: runner-prepare` (review R26-3);
  * - `errorClass`: one value of a CLOSED enum, chosen by matching KNOWN
  *   xcodebuild/XCTest messages (`unknown` when nothing matches);
  * - `failingTest`: only if it is one of ALLOWED_TESTS, compared exactly;
  * - `failureCount`: the number of `Test Case … failed` lines (bounded);
- * - `tailSha256`: sha256 of the whole captured tail, so a later local run can
- *   be matched to it. The digest reveals nothing (the tail holds a 256-bit
- *   random bearer, so it cannot be brute-forced back).
+ * - `tailSha256`: sha256 of the captured bytes (the last RING_BYTES). It
+ *   CONFIRMS that a captured output someone already holds is the one this run
+ *   saw; a fresh run will not reproduce it, since real output carries
+ *   timestamps, pids and temp paths (review Q26-2). Publishing it is safe for
+ *   a different reason than "the bearer is in it" (usually it is not): the
+ *   only low-entropy private value that can appear is the control port, and
+ *   confirming a guess needs every other byte reconstructed, while the port
+ *   names a loopback listener on a runner that no longer exists, guarded by a
+ *   per-session bearer (review S26-1).
  *
  * Every field is from a closed set or a number; nothing the runner wrote can be
  * copied out. `safeRunnerFailure` re-validates that shape at the export
@@ -38,7 +46,11 @@ export const MAX_FAILURE_COUNT = 99;
 /**
  * Closed error classes, checked in this order (most specific first). Each
  * pattern names a known xcodebuild/XCTest message; the TEXT itself never
- * leaves, only the class name.
+ * leaves, only the class name. A name may appear twice (`test_failed`): an
+ * actual `Test Case … failed` line wins over timeout wording, because a UI
+ * query timing out INSIDE the test is a test failure, not a launch failure
+ * (review R26-2 / Q26-1), while the bare `** TEST EXECUTE FAILED **` marker
+ * follows every failure and is only the last resort.
  */
 export const ERROR_CLASSES = [
 	[
@@ -47,20 +59,24 @@ export const ERROR_CLASSES = [
 	],
 	[
 		"xctestrun_invalid",
-		/(?:xctestrun|test run file).*(?:could not be (?:read|parsed|loaded)|is (?:invalid|malformed))|The file couldn.t be opened because it isn.t in the correct format|unable to read the xctestrun/i,
+		// Real wording names the file: `The file “private.xctestrun” couldn’t
+		// be opened …` (review R26-1).
+		/(?:xctestrun|test run file).*(?:could not be (?:read|parsed|loaded)|is (?:invalid|malformed))|The file .{0,120}\.xctestrun.{0,2} couldn.t be opened|The file couldn.t be opened because it isn.t in the correct format|unable to read the xctestrun/i,
 	],
 	[
 		"test_bundle_load_failed",
-		/(?:The bundle|test bundle).*(?:couldn.t be loaded|could not be loaded)|Failed to load the test bundle|Early unexpected exit|Test runner exited before starting test execution|Failed to (?:create|establish) (?:a )?(?:test )?(?:session|communication)/i,
+		// Runner-level bootstrap failures, the likely causes of the 9.6s exit
+		// in replay 41801686399 (review R26-4).
+		/(?:The bundle|test bundle).*(?:couldn.t be loaded|could not be loaded)|Failed to load the test bundle|Early unexpected exit|Test runner exited before starting test execution|Test runner never began executing tests|Failed to install or launch the test runner|Failed to (?:create|establish) (?:a )?(?:test )?(?:session|communication)/i,
 	],
+	["test_failed", /^Test Case '.*' failed /m],
 	[
 		"launch_timeout",
-		/Timed out (?:waiting|while)|test runner (?:hung|timed out)|Failed to launch .* within|exceeded .*time allowance/i,
+		// Bootstrap wording only; `Timed out while evaluating UI query` is the
+		// test's own failure and is caught above by its Test Case line.
+		/Timed out waiting for (?:automation session|the test runner|test runner)|test runner (?:hung|timed out)|Failed to launch .* within|exceeded .*time allowance/i,
 	],
-	[
-		"test_failed",
-		/^Test Case '.*' failed |^\*\* TEST (?:EXECUTE )?FAILED \*\*$/m,
-	],
+	["test_failed", /^\*\* TEST (?:EXECUTE )?FAILED \*\*$/m],
 ] as const;
 export type RunnerErrorClass = (typeof ERROR_CLASSES)[number][0] | "unknown";
 const CLASS_NAMES: ReadonlySet<string> = new Set([
@@ -74,7 +90,7 @@ export const ALLOWED_TESTS = [
 ] as const;
 const TEST_CASE_LINE = /^Test Case '-\[([\w.]+) (\w+)\]' failed /gm;
 
-export type RunnerCommand = "prepare" | "launch";
+export type RunnerCommand = "launch";
 export interface RunnerFailure {
 	exitCode: number | null;
 	command: RunnerCommand;
@@ -154,7 +170,10 @@ export function safeRunnerFailure(value: unknown): RunnerFailure | null {
 		"failureCount",
 		"tailSha256",
 	];
-	if (Object.keys(v).length !== keys.length || !keys.every((key) => key in v))
+	if (
+		Object.keys(v).length !== keys.length ||
+		!keys.every((key) => Object.hasOwn(v, key))
+	)
 		return null;
 	const exitOk =
 		v.exitCode === null ||
@@ -164,7 +183,7 @@ export function safeRunnerFailure(value: unknown): RunnerFailure | null {
 			Math.abs(v.exitCode) <= 255);
 	if (
 		!exitOk ||
-		(v.command !== "prepare" && v.command !== "launch") ||
+		v.command !== "launch" ||
 		typeof v.errorClass !== "string" ||
 		!CLASS_NAMES.has(v.errorClass) ||
 		!(

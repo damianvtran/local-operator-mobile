@@ -7,12 +7,12 @@ import { join, posix } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { immutableBundleDigest } from "./auth-retirement-ios-proof.ts";
 export const RETAINED = {
-	artifactID: 13225164386,
-	runID: 41620694610,
-	sourceSHA: "78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b",
+	artifactID: 13335948355,
+	runID: 41842459195,
+	sourceSHA: "2989876958f6c605f6756f59b15519456516faa7",
 	bundleSHA256:
-		"9c667250a1e0a8d5dc129495a8f1bd734e201ec5bfbae8bd7b863e4f951574e7",
-	tarSHA256: "2e6ce4369dea84a514ba31d8802e9ec36f25dd4f0ace9c36353cba6edc9d1d92",
+		"7808c4279c3590230b464aca1ebd3e00902f09ab3f9d2a06f2ab9b3e8429f985",
+	tarSHA256: "0b1d9e8fec58d3d3b87aab4d96b0ea5cf8c184ac2886f51f3536f6429e239b4e",
 } as const;
 export const SYSTEM_TITLE = "Open in “Local Operator”?";
 const fail = () => {

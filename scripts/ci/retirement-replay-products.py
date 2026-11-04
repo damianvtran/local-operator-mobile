@@ -35,7 +35,7 @@ def preflight_retained(credential, fetcher=None, now=None):
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, *args, **kwargs): return None
         def fetcher():
-            request = urllib.request.Request('https://api.github.com/repos/damianvtran/local-operator-mobile/actions/artifacts/13225164386', headers={'Authorization': 'Bearer ' + credential, 'Accept': 'application/vnd.github+json'})
+            request = urllib.request.Request('https://api.github.com/repos/damianvtran/local-operator-mobile/actions/artifacts/13335948355', headers={'Authorization': 'Bearer ' + credential, 'Accept': 'application/vnd.github+json'})
             try:
                 with urllib.request.build_opener(NoRedirect).open(request, timeout=10) as response:
                     data = response.read(16385)
@@ -46,9 +46,9 @@ def preflight_retained(credential, fetcher=None, now=None):
     value = fetcher()
     try: expiry = datetime.datetime.fromisoformat(value['expires_at'].replace('Z', '+00:00')).timestamp()
     except (KeyError, ValueError, TypeError): raise ValueError('Artifact expiry invalid') from None
-    if value.get('id') != 13225164386 or value.get('expired') is not False or value.get('workflow_run', {}).get('id') != 41620694610 or value['workflow_run'].get('head_sha') != '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b' or expiry <= now + MINIMUM_REPLAY_WINDOW_SECONDS:
+    if value.get('id') != 13335948355 or value.get('expired') is not False or value.get('workflow_run', {}).get('id') != 41842459195 or value['workflow_run'].get('head_sha') != '2989876958f6c605f6756f59b15519456516faa7' or expiry <= now + MINIMUM_REPLAY_WINDOW_SECONDS:
         raise ValueError('Original artifact unavailable or insufficient compile/replay window')
-    return {'artifactID': 13225164386, 'expiresAt': expiry, 'minimumWindowSeconds': MINIMUM_REPLAY_WINDOW_SECONDS}
+    return {'artifactID': 13335948355, 'expiresAt': expiry, 'minimumWindowSeconds': MINIMUM_REPLAY_WINDOW_SECONDS}
 
 
 def manifest(root):

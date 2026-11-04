@@ -65,8 +65,8 @@ const identity: LiveIdentity = {
 	udid: "11111111-1111-4111-8111-111111111111",
 	pid: 123,
 	label: "UIKitApplication:com.localoperator.mobile.retirementproof[owned]",
-	source: "78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b",
-	bundle: "9c667250a1e0a8d5dc129495a8f1bd734e201ec5bfbae8bd7b863e4f951574e7",
+	source: "2989876958f6c605f6756f59b15519456516faa7",
+	bundle: "7808c4279c3590230b464aca1ebd3e00902f09ab3f9d2a06f2ab9b3e8429f985",
 	hostSource: "c".repeat(40),
 };
 function frame(
@@ -331,7 +331,7 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 	/*
 	 * Replay 41801686399: the runner exited during bootstrap and seed-replay.json
 	 * said failedPhase=null (only the later cleanup.json named the phase). The
-	 * work export must carry the phase receipt and the sanitized runner tail.
+	 * work export must carry the phase receipt and the closed runner record.
 	 */
 	it("a runner that exits during launch is named in seed-replay.json itself, with its closed failure record", async () => {
 		const f = fixture();

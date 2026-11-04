@@ -420,8 +420,8 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		// failedPhase=null while cleanup.json named the phase).
 		phases: phases.phases,
 		failedPhase: phases.failed,
-		// Any failed replay reads the tail, including a runner that was killed or
-		// is still hung (null exit code), which the first cut missed (R23-2).
+		// Any failed replay classifies the runner, including one that was killed
+		// or is still hung (null exit code), which the first cut missed (R23-2).
 		runnerFailure: runner?.failureRecord?.(failure.cause !== null) ?? null,
 		seedPersisted,
 		runnerReportedTap,

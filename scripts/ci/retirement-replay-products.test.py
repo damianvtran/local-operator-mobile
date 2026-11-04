@@ -173,7 +173,7 @@ class ProductFixtures(unittest.TestCase):
                 self.assertFalse((self.root / 'runner-products.tar.gz').exists())
 
     def test_compile_preflight_checks_actual_original_identity_and_remaining_window(self):
-        value = {'id': 13225164386, 'expired': False, 'expires_at': '2030-01-01T00:00:00Z', 'workflow_run': {'id': 41620694610, 'head_sha': '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b'}}
+        value = {'id': 13335948355, 'expired': False, 'expires_at': '2030-01-01T00:00:00Z', 'workflow_run': {'id': 41842459195, 'head_sha': '2989876958f6c605f6756f59b15519456516faa7'}}
         self.assertEqual(API['preflight_retained']('fixture-only', lambda: value, 1000)['minimumWindowSeconds'], 1380)
         # 22 min left is now too little for an 18-min replay job + margin.
         with self.assertRaises(ValueError): API['preflight_retained']('fixture-only', lambda: value, datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc).timestamp() - 22 * 60)
@@ -195,7 +195,7 @@ class ProductFixtures(unittest.TestCase):
                 if fail: raise ValueError('Synthetic package failure')
                 API['package'](output)
             fake = types.SimpleNamespace(STDOUT=-2, check_output=lambda args, **kw: (SOURCE + '\n') if args[0] == 'git' else 'fixture SDK\n', Popen=popen, run=package_boundary)
-            with mock.patch.dict(setup.__globals__, {'subprocess': fake, 'PREFLIGHT': lambda credential: {'artifactID': 13225164386, 'expiresAt': 9999999999}}), mock.patch.object(os, 'killpg') as kill:
+            with mock.patch.dict(setup.__globals__, {'subprocess': fake, 'PREFLIGHT': lambda credential: {'artifactID': 13335948355, 'expiresAt': 9999999999}}), mock.patch.object(os, 'killpg') as kill:
                 if fail:
                     with self.assertRaises(ValueError): setup(output)
                 else: setup(output)

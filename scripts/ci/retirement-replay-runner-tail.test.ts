@@ -83,6 +83,48 @@ describe("classifyRunnerFailure: closed classes from known messages", () => {
 			classifyRunnerFailure(65, "launch", Buffer.from(text))?.errorClass,
 		).toBe(errorClass);
 	});
+	it.each([
+		[
+			"R26-1: the real xctestrun wording names the file",
+			"xcodebuild: error: The file “private.xctestrun” couldn’t be opened because there is no such file.",
+			"xctestrun_invalid",
+		],
+		[
+			"R26-4: runner never began executing tests",
+			"Testing failed:\n\tTest runner never began executing tests after launching.",
+			"test_bundle_load_failed",
+		],
+		[
+			"R26-4: failed to install or launch the test runner",
+			"xcodebuild: error: Failed to install or launch the test runner. (Underlying Error: …)",
+			"test_bundle_load_failed",
+		],
+		[
+			"R26-2/Q26-1: a UI-query timeout INSIDE the test is a test failure",
+			`${TEST_LINE}\n\tFailed to get matching snapshot: Timed out while evaluating UI query.\n** TEST EXECUTE FAILED **`,
+			"test_failed",
+		],
+		[
+			"R26-2/Q26-1: a bootstrap timeout with no failed test case is launch_timeout",
+			"Testing failed:\n\tTimed out waiting for automation session\n** TEST EXECUTE FAILED **",
+			"launch_timeout",
+		],
+	])("%s", (_name, text, errorClass) => {
+		expect(
+			classifyRunnerFailure(65, "launch", Buffer.from(text))?.errorClass,
+		).toBe(errorClass);
+	});
+	it("R26-3: `prepare` is not a value the record accepts (it was never produced)", () => {
+		const record = classifyRunnerFailure(65, "launch", Buffer.from("x"))!;
+		expect(safeRunnerFailure({ ...record, command: "prepare" })).toBeNull();
+	});
+	it("S26-2: an INHERITED key does not count as present", () => {
+		const record = classifyRunnerFailure(65, "launch", Buffer.from("x"))!;
+		const { tailSha256, ...own } = record;
+		const proto = Object.create({ tailSha256 });
+		Object.assign(proto, own, { extra: 1 });
+		expect(safeRunnerFailure(proto)).toBeNull();
+	});
 	it("a specific cause wins over the generic test_failed marker", () => {
 		expect(
 			classifyRunnerFailure(
