@@ -77,9 +77,9 @@ export class NativeScope {
 		beforeStart?: (pid: number) => void,
 		capture = true,
 		/**
-		 * Runner failure tail ONLY (retirement-replay-runner-tail.ts): stdout and
+		 * Runner failure record ONLY (retirement-replay-runner-tail.ts): stdout and
 		 * (merged) stderr go into this capped in-memory ring and nowhere else (never into
-		 * `completion`'s output). Sanitizing and exporting is the caller's job.
+		 * `completion`'s output). The caller classifies it into a closed record.
 		 */
 		tail?: TailRing,
 	): OwnedCommand {
@@ -232,7 +232,10 @@ export class NativeScope {
 			if (code !== 0 && !tail) settle(new ReplayRefused("command-exit"));
 			// ...but never wait on `close` for long: a helper that left the
 			// process group can hold the pipe open (measured 12.2s, review
-			// Q24-2). After TAIL_DRAIN_MS the normal pipe has long drained.
+			// Q24-2). After TAIL_DRAIN_MS the normal pipe has long drained. If this
+			// fires first, the reported cause is `command-exit` even where a later
+			// group probe would have said `cleanup`: only the label changes, since
+			// the group is still killed and awaited (review R25-2).
 			if (code !== 0 && tail) {
 				const drain = setTimeout(
 					() => settle(new ReplayRefused("command-exit")),

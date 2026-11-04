@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Deadline, ReplayRefused } from "./retirement-replay-core.ts";
 import { REPLAY_POLICY } from "./retirement-replay-policy.ts";
-import type { RunnerTail } from "./retirement-replay-runner-tail.ts";
+import type { RunnerFailure } from "./retirement-replay-runner-tail.ts";
 
 const CAUSES = new Set(REPLAY_POLICY.failureCauses);
 
@@ -186,8 +186,8 @@ export interface RunnerHandle {
 	 * could not). Absent on handles that have no separate preparation.
 	 */
 	prepared?: Promise<void>;
-	/** Sanitized failure tail of the XCTest command (nonzero exit only). */
-	failureTail?: (replayFailed?: boolean) => RunnerTail | null;
+	/** Closed failure record of the XCTest command (no free text). */
+	failureRecord?: (replayFailed?: boolean) => RunnerFailure | null;
 }
 /** stop sets the latch synchronously, BEFORE cancellation or joining prepare.
  * Even an uncooperative prepare resolving after a timeout cannot launch later. */
@@ -213,7 +213,8 @@ export function managedRunner(
 	return {
 		completion,
 		prepared: launched,
-		failureTail: (replayFailed) => actual?.failureTail?.(replayFailed) ?? null,
+		failureRecord: (replayFailed) =>
+			actual?.failureRecord?.(replayFailed) ?? null,
 		stop: (deadline) => {
 			stopped = true;
 			if (!stopPromise)

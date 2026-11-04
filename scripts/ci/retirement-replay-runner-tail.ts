@@ -1,93 +1,99 @@
 /**
- * A capped, redacted, default-DENY failure tail for the XCTest runner command.
+ * A STRUCTURED, closed failure record for the XCTest runner command.
  *
  * WHY THIS EXISTS. Seed replay 41801686399 failed with `command-exit` 9.6s into
- * runner bootstrap, and nothing recorded why: the runner's stdout and stderr were
- * discarded by design (it holds a private environment with the loopback control
- * URL, a session id and a bearer), and the xcresult never leaves the runner. Each
- * replay costs a retained artifact's day, so an unexplained exit wastes a day.
+ * runner bootstrap, and nothing recorded why: the runner's output was discarded
+ * by design, because it runs with a private environment (the loopback control
+ * URL and its port, a session id and a bearer), and the xcresult never leaves
+ * the runner. Each replay costs a retained artifact's day, so an unexplained
+ * exit wastes a day.
  *
- * WHY IT IS SAFE TO EXPORT. This is a new path out of a runner that holds private
- * values, so it is built to export as little as possible:
+ * WHY NO FREE TEXT. Three review rounds (23-25) each found a new major leak in a
+ * redactor over free-text output: ring cuts, split halves, case, base64
+ * alignments, separator-split hex. A free-text tail from a runner holding a
+ * bearer is hard to prove safe, so (the manager's decision after round 25) this
+ * module exports NO text from the runner at all. It exports only:
  *
- * 1. Only on a NONZERO exit. A runner that exits 0 exports nothing.
- * 2. Only the last RING_BYTES of combined output are ever kept in memory.
- * 3. DEFAULT-DENY: a line leaves only if it matches one of ALLOWED_SHAPES (the
- *    xcodebuild/XCTest failure lines that name a cause). Everything else drops.
- * 4. Each kept line is REDACTED (bearer, session, control URL and port replaced
- *    by fixed tokens, absolute paths collapsed to their basename) and capped at
- *    LINE_CAP characters; at most MAX_LINES lines leave.
- * 5. A final ASSERT re-checks the whole result for every private value. If any
- *    survives, NOTHING is exported except the exit code and `redactionRefused`,
- *    never a partial tail.
+ * - `exitCode` (a number or null);
+ * - `command`: which command failed, `prepare` or `launch`;
+ * - `errorClass`: one value of a CLOSED enum, chosen by matching KNOWN
+ *   xcodebuild/XCTest messages (`unknown` when nothing matches);
+ * - `failingTest`: only if it is one of ALLOWED_TESTS, compared exactly;
+ * - `failureCount`: the number of `Test Case … failed` lines (bounded);
+ * - `tailSha256`: sha256 of the whole captured tail, so a later local run can
+ *   be matched to it. The digest reveals nothing (the tail holds a 256-bit
+ *   random bearer, so it cannot be brute-forced back).
  *
- * The tail is diagnostic only. It never decides pass/fail.
+ * Every field is from a closed set or a number; nothing the runner wrote can be
+ * copied out. `safeRunnerFailure` re-validates that shape at the export
+ * boundary. The record is diagnostic only and never decides pass/fail.
  */
+import { createHash } from "node:crypto";
 
 /** Bytes of combined runner output kept in memory (the most recent bytes). */
 export const RING_BYTES = 16 * 1024;
-/** Characters per exported line, after redaction. */
-export const LINE_CAP = 300;
-/** Lines exported at most. */
-export const MAX_LINES = 24;
+/** Upper bound reported for `failureCount`. */
+export const MAX_FAILURE_COUNT = 99;
 
 /**
- * The only line shapes that may leave. Each names a failure; none is free text
- * from the test's own environment dump. Matched against the raw line (so
- * redaction cannot manufacture a match) and again by `safeRunnerTail` on export.
+ * Closed error classes, checked in this order (most specific first). Each
+ * pattern names a known xcodebuild/XCTest message; the TEXT itself never
+ * leaves, only the class name.
  */
-export const ALLOWED_SHAPES: readonly RegExp[] = [
-	/^xcodebuild: error: /,
-	/^Testing failed:/,
-	/^\*\* TEST (?:EXECUTE |BUILD )?FAILED \*\*$/,
-	/^\s*error: /,
-	/^\s*Error Domain=/,
-	/^\s*Underlying Error: /,
-	/^Test Case '-\[[\w.]+ \w+\]' failed /,
-	// XCTest assertion lines: `<file>.swift:<line>: error: -[Class method] : …`.
-	// Anchored to that exact form: an open `^.*` here let a ring-cut env-dump
-	// line (starting mid-bearer) through (review S23-2 / Q23-2).
-	/^\S+\.swift:\d+: error: -\[[\w.]+ \w+\] : /,
-];
+export const ERROR_CLASSES = [
+	[
+		"destination_unavailable",
+		/Unable to find a destination matching|Unable to find a device matching|Failed to prepare device|device is not available|Unable to boot|Simulator device failed to (?:launch|install)/i,
+	],
+	[
+		"xctestrun_invalid",
+		/(?:xctestrun|test run file).*(?:could not be (?:read|parsed|loaded)|is (?:invalid|malformed))|The file couldn.t be opened because it isn.t in the correct format|unable to read the xctestrun/i,
+	],
+	[
+		"test_bundle_load_failed",
+		/(?:The bundle|test bundle).*(?:couldn.t be loaded|could not be loaded)|Failed to load the test bundle|Early unexpected exit|Test runner exited before starting test execution|Failed to (?:create|establish) (?:a )?(?:test )?(?:session|communication)/i,
+	],
+	[
+		"launch_timeout",
+		/Timed out (?:waiting|while)|test runner (?:hung|timed out)|Failed to launch .* within|exceeded .*time allowance/i,
+	],
+	[
+		"test_failed",
+		/^Test Case '.*' failed |^\*\* TEST (?:EXECUTE )?FAILED \*\*$/m,
+	],
+] as const;
+export type RunnerErrorClass = (typeof ERROR_CLASSES)[number][0] | "unknown";
+const CLASS_NAMES: ReadonlySet<string> = new Set([
+	...ERROR_CLASSES.map(([name]) => name),
+	"unknown",
+]);
 
-/**
- * Line breaks xcodebuild text may contain. `\r?\n` alone let text after a
- * U+2028 ride along inside an allowlisted line (review S23-1).
- */
-const LINE_BREAK = /\r\n|[\n\r\u0085\u2028\u2029]/;
+/** The only XCTest test names that may be named in the record, exactly. */
+export const ALLOWED_TESTS = [
+	"RetirementSystemAlert.RetainedReplayTests.testSingleSeedReplay",
+] as const;
+const TEST_CASE_LINE = /^Test Case '-\[([\w.]+) (\w+)\]' failed /gm;
 
-/**
- * Runs of 8+ hex characters are REDACTED to `<hex>`. They may be a piece of the
- * hex bearer/session: a value split across lines, cut by the ring or the line
- * cap leaves pieces of ANY length, and 16 still let an 11-char tail through
- * (measured while fixing review S23-1). Legitimate long hex (addresses, ids)
- * is not what this tail is for. After this no 8+ hex run can remain, which is
- * also the secret-free rule the export boundary re-checks (review S23-4).
- */
-const LONG_HEX = /[0-9a-f]{8,}/i;
-const LONG_HEX_ALL = /[0-9a-f]{8,}/gi;
-/** Fragments of a secret this long are treated as the secret (S23-1). */
-const FRAGMENT = 12;
-/** Base64 window, in encoded characters (6 secret bytes), see leaksSecret. */
-const BASE64_WINDOW = 8;
+export type RunnerCommand = "prepare" | "launch";
+export interface RunnerFailure {
+	exitCode: number | null;
+	command: RunnerCommand;
+	errorClass: RunnerErrorClass;
+	failingTest: (typeof ALLOWED_TESTS)[number] | null;
+	failureCount: number;
+	tailSha256: string;
+}
 
-/** Keeps only the most recent `capacity` bytes of everything pushed into it. */
+/** Keeps only the most recent RING_BYTES of everything pushed into it. */
 export class TailRing {
 	#chunks: Buffer[] = [];
 	#size = 0;
-	readonly capacity: number;
-	constructor(capacity = RING_BYTES) {
-		this.capacity = capacity;
-	}
-	/** True once any byte was evicted: the first line may then start mid-token. */
-	truncated = false;
 	push(chunk: Buffer) {
 		this.#chunks.push(chunk);
 		this.#size += chunk.length;
-		while (this.#size > this.capacity && this.#chunks.length > 0) {
+		while (this.#size > RING_BYTES && this.#chunks.length > 0) {
 			const head = this.#chunks[0]!;
-			const excess = this.#size - this.capacity;
-			this.truncated = true;
+			const excess = this.#size - RING_BYTES;
 			if (head.length <= excess) {
 				this.#chunks.shift();
 				this.#size -= head.length;
@@ -100,191 +106,85 @@ export class TailRing {
 	get size() {
 		return this.#size;
 	}
-	text() {
-		return Buffer.concat(this.#chunks).toString("utf8");
+	bytes() {
+		return Buffer.concat(this.#chunks);
 	}
-}
-
-/** Private values that must never leave, and the control port derived from them. */
-export interface TailSecrets {
-	bearer: string;
-	session: string;
-	control: string;
-}
-
-export type RunnerTail =
-	| { exitCode: number | null; lines: string[] }
-	| { exitCode: number | null; redactionRefused: true };
-
-function escapeRegExp(value: string) {
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function portPattern(port: string, flags = "") {
-	// Digit lookarounds, not `\b`: `%3A54321` has no word boundary before the
-	// port, so `\b` missed the percent-encoded control URL (review S23-3).
-	return new RegExp(`(?<!\\d)${escapeRegExp(port)}(?!\\d)`, flags);
-}
-function percentDecoded(text: string) {
-	try {
-		return decodeURIComponent(text);
-	} catch {
-		return text.replace(/%([0-9a-f]{2})/gi, (_, h) =>
-			String.fromCharCode(Number.parseInt(h, 16)),
-		);
-	}
-}
-function windows(value: string, size: number) {
-	const out: string[] = [];
-	if (value.length <= size) return value ? [value] : [];
-	for (let i = 0; i + size <= value.length; i++)
-		out.push(value.slice(i, i + size));
-	return out;
-}
-function portOf(control: string) {
-	try {
-		return new URL(control).port || null;
-	} catch {
-		return null;
-	}
-}
-
-/** Replace every private value with a fixed token and collapse absolute paths. */
-export function redactLine(line: string, secrets: TailSecrets) {
-	let out = line;
-	for (const [value, token] of [
-		[secrets.control, "<control>"],
-		[secrets.bearer, "<bearer>"],
-		[secrets.session, "<session>"],
-	] as const)
-		if (value) out = out.replace(new RegExp(escapeRegExp(value), "gi"), token);
-	const port = portOf(secrets.control);
-	if (port) out = out.replace(portPattern(port, "g"), "<port>");
-	out = out.replace(LONG_HEX_ALL, "<hex>");
-	// Absolute paths name the runner's temp root and home; keep only the leaf.
-	out = out.replace(/(?:\/[^\s/:'"]+)+\/([^\s/:'"]+)/g, "…/$1");
-	return out.length > LINE_CAP ? `${out.slice(0, LINE_CAP - 1)}…` : out;
 }
 
 /**
- * True when ANY trace of a private value survives in `text`: a 12-char
- * fragment of the bearer/session/control in any case, in raw or
- * percent-decoded text, a 16-char fragment of their base64, the control port,
- * or any 8+ hex run. Exact-match-only missed ring cuts, split halves and
- * uppercase/encoded forms (review S23-1, Q23-1).
+ * Classify a failed runner command into the closed record. Returns null for a
+ * zero exit (nothing is reported for a command that succeeded).
  */
-export function leaksSecret(text: string, secrets: TailSecrets) {
-	const decoded = percentDecoded(text);
-	// `plain`: the text as written (raw and percent-decoded). The hex, port and
-	// base64 rules run ONLY here: on separator-stripped text they glued
-	// ordinary words to digits (`failed (241.302 seconds)` -> `ed241302`) and
-	// refused every long-running failure tail (review R24-1 / S24-2).
-	const plain = [text, decoded].map((v) => v.toLowerCase());
-	// `stripped`: whitespace and punctuation removed, used ONLY for the exact
-	// 12-char secret fragments, so a value written with separators
-	// (`a b c …`, `a-b-c`) is still recognised.
-	const stripped = decoded.replace(/[^0-9a-z]/gi, "").toLowerCase();
-	const forms = [...plain, stripped];
-	// Fragments only of the two random values. The control URL's only private
-	// part is its port (it is otherwise the fixed loopback `/rpc` shape), which
-	// is checked on its own below; fragmenting it would refuse every line that
-	// mentions `http://127.0.0.1`.
-	const values = [secrets.bearer, secrets.session].filter((v) => v.length > 0);
-	const fragments = values.flatMap((v) => windows(v.toLowerCase(), FRAGMENT));
-	// Base64 at ALL three byte alignments (a prefix such as `x:` for Basic
-	// auth, `Bearer ` or `{"bearer":"` shifts the groups), in standard and
-	// url-safe alphabets. With a prefix the first group mixes prefix bytes and
-	// is dropped. 8-char windows (6 bytes) mean any encoded run of about 12+
-	// secret bytes contains a whole window at its own alignment (review S24-1).
-	const encoded = values.flatMap((v) =>
-		["", "x", "xx"].flatMap((prefix) => {
-			const standard = Buffer.from(prefix + v)
-				.toString("base64")
-				.replace(/=+$/, "")
-				.slice(prefix ? 4 : 0);
-			const urlSafe = standard.replace(/\+/g, "-").replace(/\//g, "_");
-			return [
-				...windows(standard, BASE64_WINDOW),
-				...windows(urlSafe, BASE64_WINDOW),
-			];
-		}),
-	);
-	const port = portOf(secrets.control);
-	return (
-		(secrets.control.length > 0 &&
-			forms.some((form) => form.includes(secrets.control.toLowerCase()))) ||
-		forms.some((form) => fragments.some((f) => form.includes(f))) ||
-		[text, decoded].some((form) => encoded.some((f) => form.includes(f))) ||
-		plain.some((form) => LONG_HEX.test(form)) ||
-		(port !== null && plain.some((form) => portPattern(port).test(form)))
-	);
-}
-
-/**
- * Build the exportable tail. Returns null for a zero exit (nothing leaves).
- * `assertClean` is injectable ONLY so the refusal branch is testable; production
- * always uses `leaksSecret`.
- */
-export function sanitizeRunnerTail(
+export function classifyRunnerFailure(
 	exitCode: number | null,
-	raw: string,
-	secrets: TailSecrets,
-	assertClean: (text: string, secrets: TailSecrets) => boolean = (t, s) =>
-		!leaksSecret(t, s),
-	truncated = false,
-): RunnerTail | null {
+	command: RunnerCommand,
+	tail: Buffer,
+): RunnerFailure | null {
 	if (exitCode === 0) return null;
-	const all = raw.split(LINE_BREAK);
-	// After eviction the first line may start mid-token (even mid-bearer, or
-	// mid-UTF-8 character): never consider it (review Q23-2 / Q23-3).
-	if (truncated) all.shift();
-	const lines = all
-		.filter((line) => ALLOWED_SHAPES.some((shape) => shape.test(line)))
-		.slice(-MAX_LINES)
-		.map((line) => redactLine(line, secrets));
-	const result: RunnerTail = { exitCode, lines };
-	if (!assertClean(JSON.stringify(result), secrets))
-		return { exitCode, redactionRefused: true };
-	return result;
-}
-
-/** Tab is allowed (xcodebuild indents with it); any other C0 control or DEL is not. */
-function hasControlCharacter(line: string) {
-	for (const char of line) {
-		const code = char.codePointAt(0)!;
-		if ((code < 0x20 && code !== 0x09) || code === 0x7f) return true;
-	}
-	return false;
-}
-
-/**
- * Shape-only re-validation at the export boundary (`safeSummary` has no secrets
- * to re-check against, so it accepts only what `sanitizeRunnerTail` can emit).
- */
-export function safeRunnerTail(value: unknown): RunnerTail | null {
-	if (!value || typeof value !== "object") return null;
-	const v = value as Record<string, unknown>;
-	const exitCode =
-		v.exitCode === null ||
-		(typeof v.exitCode === "number" && Number.isSafeInteger(v.exitCode))
-			? (v.exitCode as number | null)
-			: undefined;
-	if (exitCode === undefined || exitCode === 0) return null;
-	if (v.redactionRefused === true) return { exitCode, redactionRefused: true };
-	if (!Array.isArray(v.lines)) return null;
+	const text = tail.toString("utf8");
+	const errorClass =
+		ERROR_CLASSES.find(([, pattern]) => pattern.test(text))?.[0] ?? "unknown";
+	const failed = [...text.matchAll(TEST_CASE_LINE)].map(
+		(match) => `${match[1]}.${match[2]}`,
+	);
+	const failingTest =
+		ALLOWED_TESTS.find((name) => failed.includes(name)) ?? null;
 	return {
 		exitCode,
-		// Re-applied here without secrets: the allowlist and the long-hex rule
-		// (review S23-4), so the export boundary is a real second gate.
-		lines: v.lines
-			.filter(
-				(line): line is string =>
-					typeof line === "string" &&
-					line.length <= LINE_CAP &&
-					!hasControlCharacter(line) &&
-					!LINE_BREAK.test(line) &&
-					!LONG_HEX.test(line) &&
-					ALLOWED_SHAPES.some((shape) => shape.test(line)),
-			)
-			.slice(-MAX_LINES),
+		command,
+		errorClass,
+		failingTest,
+		failureCount: Math.min(failed.length, MAX_FAILURE_COUNT),
+		tailSha256: createHash("sha256").update(tail).digest("hex"),
+	};
+}
+
+/**
+ * Re-validate the closed shape at the export boundary. Anything outside it
+ * (an unknown key, a string outside the enums) drops the WHOLE record.
+ */
+export function safeRunnerFailure(value: unknown): RunnerFailure | null {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+	const v = value as Record<string, unknown>;
+	const keys = [
+		"exitCode",
+		"command",
+		"errorClass",
+		"failingTest",
+		"failureCount",
+		"tailSha256",
+	];
+	if (Object.keys(v).length !== keys.length || !keys.every((key) => key in v))
+		return null;
+	const exitOk =
+		v.exitCode === null ||
+		(typeof v.exitCode === "number" &&
+			Number.isSafeInteger(v.exitCode) &&
+			v.exitCode !== 0 &&
+			Math.abs(v.exitCode) <= 255);
+	if (
+		!exitOk ||
+		(v.command !== "prepare" && v.command !== "launch") ||
+		typeof v.errorClass !== "string" ||
+		!CLASS_NAMES.has(v.errorClass) ||
+		!(
+			v.failingTest === null ||
+			(ALLOWED_TESTS as readonly unknown[]).includes(v.failingTest)
+		) ||
+		typeof v.failureCount !== "number" ||
+		!Number.isInteger(v.failureCount) ||
+		v.failureCount < 0 ||
+		v.failureCount > MAX_FAILURE_COUNT ||
+		typeof v.tailSha256 !== "string" ||
+		!/^[0-9a-f]{64}$/.test(v.tailSha256)
+	)
+		return null;
+	return {
+		exitCode: v.exitCode as number | null,
+		command: v.command,
+		errorClass: v.errorClass as RunnerErrorClass,
+		failingTest: v.failingTest as RunnerFailure["failingTest"],
+		failureCount: v.failureCount,
+		tailSha256: v.tailSha256,
 	};
 }

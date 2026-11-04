@@ -63,9 +63,8 @@ import {
 	signalBootWindow,
 } from "./retirement-replay-native.ts";
 import {
-	sanitizeRunnerTail,
+	classifyRunnerFailure,
 	TailRing,
-	type TailSecrets,
 } from "./retirement-replay-runner-tail.ts";
 import { deferred, ReplayTransport } from "./retirement-replay-transport.ts";
 import {
@@ -423,7 +422,7 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		failedPhase: phases.failed,
 		// Any failed replay reads the tail, including a runner that was killed or
 		// is still hung (null exit code), which the first cut missed (R23-2).
-		runnerTail: runner?.failureTail?.(failure.cause !== null) ?? null,
+		runnerFailure: runner?.failureRecord?.(failure.cause !== null) ?? null,
 		seedPersisted,
 		runnerReportedTap,
 		urlProgress: transport.urlProgress,
@@ -484,10 +483,10 @@ export function launchRunner(
 	udid: string,
 	root: string,
 	scope: NativeScope,
-	secrets?: TailSecrets,
 ): RunnerHandle {
-	// Combined stdout/stderr goes ONLY into this capped ring; it leaves the
-	// runner only through sanitizeRunnerTail (default-deny, redacted, asserted).
+	// Combined stdout/stderr goes ONLY into this capped in-memory ring. It
+	// never leaves as text: classifyRunnerFailure turns it into a closed
+	// record (error class enum, allowlisted test name, counts, sha256).
 	const ring = new TailRing();
 	const command = scope.start(
 		"xcodebuild",
@@ -515,26 +514,17 @@ export function launchRunner(
 	return {
 		completion: command.completion.then(() => undefined),
 		stop: (deadline) => command.stop(deadline),
-		// No secrets known means nothing can be checked, so nothing leaves.
 		/*
 		 * `replayFailed`: the replay as a whole failed. Then a runner with no
 		 * exit code (killed by a timeout/stop, or still hung before ready) is
-		 * a failure too and its tail is read (review R23-2). A clean exit 0
-		 * never exports anything.
+		 * a failure too and is classified (review R23-2). A clean exit 0
+		 * reports nothing.
 		 */
-		failureTail: (replayFailed = false) => {
+		failureRecord: (replayFailed = false) => {
 			const code = command.exitCode();
 			if (code === 0) return null;
 			if (code === null && !replayFailed && !command.hasExited()) return null;
-			return secrets
-				? sanitizeRunnerTail(
-						code,
-						ring.text(),
-						secrets,
-						undefined,
-						ring.truncated,
-					)
-				: { exitCode: code, redactionRefused: true };
+			return classifyRunnerFailure(code, "launch", ring.bytes());
 		},
 	};
 }
@@ -846,12 +836,7 @@ export async function runSeedReplay(options: ReplayOptions) {
 							deadline.cap(10000),
 						);
 					},
-					() =>
-						launchRunner(privateRun, lease.udid, root, runnerScope, {
-							bearer: session.bearer,
-							session: session.id,
-							control,
-						}),
+					() => launchRunner(privateRun, lease.udid, root, runnerScope),
 					() => prepareScope.stop(cleanupBudget(root)),
 				);
 			},

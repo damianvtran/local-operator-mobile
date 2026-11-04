@@ -27,7 +27,7 @@ import {
 	managedRunner,
 } from "./retirement-replay-lifecycle.ts";
 import { NativeScope } from "./retirement-replay-native.ts";
-import { sanitizeRunnerTail } from "./retirement-replay-runner-tail.ts";
+import { classifyRunnerFailure } from "./retirement-replay-runner-tail.ts";
 import { deferred } from "./retirement-replay-transport.ts";
 import {
 	cleanupReplay,
@@ -333,24 +333,22 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 	 * said failedPhase=null (only the later cleanup.json named the phase). The
 	 * work export must carry the phase receipt and the sanitized runner tail.
 	 */
-	it("a runner that exits during launch is named in seed-replay.json itself, with its sanitized tail", async () => {
+	it("a runner that exits during launch is named in seed-replay.json itself, with its closed failure record", async () => {
 		const f = fixture();
 		const secret = "b".repeat(64);
 		f.input.startRunner = () => ({
 			completion: Promise.reject(new ReplayRefused("command-exit")),
 			stop: async () => undefined,
 			prepared: Promise.resolve(),
-			// A REAL sanitized tail built from raw output carrying the secret, so
-			// the not-contained check below can actually fail (review R23-4).
-			failureTail: () =>
-				sanitizeRunnerTail(
+			// A REAL record built from raw output carrying the secret, so the
+			// not-contained check below can actually fail (review R23-4).
+			failureRecord: () =>
+				classifyRunnerFailure(
 					65,
-					`LO_REPLAY_BEARER=${secret}\nxcodebuild: error: Failed to launch ${secret}`,
-					{
-						bearer: secret,
-						session: "c".repeat(48),
-						control: "http://127.0.0.1:41999/rpc",
-					},
+					"launch",
+					Buffer.from(
+						`LO_REPLAY_BEARER=${secret}\nxcodebuild: error: Failed to prepare device ${secret}`,
+					),
 				),
 		});
 		const result = await f.start();
@@ -364,10 +362,14 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 				(p: { name: string; status: string }) => `${p.name}:${p.status}`,
 			),
 		).toEqual(["runner-prepare:ok", "runner-launch:failed"]);
-		expect(exported.runnerTail).toEqual({
+		expect(exported.runnerFailure).toMatchObject({
 			exitCode: 65,
-			lines: ["xcodebuild: error: Failed to launch <bearer>"],
+			command: "launch",
+			errorClass: "destination_unavailable",
+			failingTest: null,
+			failureCount: 0,
 		});
+		expect(exported.runnerFailure.tailSha256).toMatch(/^[0-9a-f]{64}$/);
 		expect(JSON.stringify(exported)).not.toContain(secret);
 		expect(f.events).not.toContain("openurl");
 	});
@@ -390,7 +392,7 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 				(p: { name: string; status: string }) => `${p.name}:${p.status}`,
 			),
 		).toEqual(["runner-prepare:failed"]);
-		expect(exported.runnerTail).toBeNull();
+		expect(exported.runnerFailure).toBeNull();
 	});
 	it("final metadata refusal after bootstrap prevents proof launch/openURL", async () => {
 		const f = fixture();
