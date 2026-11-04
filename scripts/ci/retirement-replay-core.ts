@@ -15,6 +15,7 @@ export class ReplayRefused extends Error {
 export class Deadline {
 	#end: number;
 	#paused = false;
+	#pausedOnce = false;
 	readonly clock: () => number;
 	constructor(ms: number, clock: () => number = () => performance.now()) {
 		this.clock = clock;
@@ -31,13 +32,15 @@ export class Deadline {
 	 * WHY. Simulator boot gets its own budget (REPLAY_BOOT_BUDGET_MS) so a cold
 	 * boot cannot consume the 300s experiment. `work` must enforce its OWN cap;
 	 * the outer watchdog independently bounds it (boot start/end on its pipe).
-	 * At most one pause per Deadline, and pauses never nest.
+	 * At most ONE pause per Deadline, ever: a second pause (nested or later) is
+	 * refused, mirroring the watchdog's single boot window.
 	 */
 	async excluding<T>(work: () => Promise<T>): Promise<T> {
-		if (this.#paused) throw new ReplayRefused("stage");
+		if (this.#paused || this.#pausedOnce) throw new ReplayRefused("stage");
 		const left = this.remaining();
 		if (left <= 0) throw new ReplayRefused("deadline");
 		this.#paused = true;
+		this.#pausedOnce = true;
 		try {
 			return await work();
 		} finally {

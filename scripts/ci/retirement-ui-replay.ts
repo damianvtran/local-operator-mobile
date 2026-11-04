@@ -132,6 +132,46 @@ export interface SeedInput {
 	/** Diagnostic phase timings; absent in unit fixtures that don't assert them. */
 	phases?: PhaseLog;
 }
+/**
+ * Simulator boot + readiness on their OWN clock, with the 300s work clock
+ * stopped, so a cold simulator cannot eat the experiment's budget.
+ *
+ * The boot clock (REPLAY_BOOT_BUDGET_MS, mirroring the proof harness's
+ * BOOT_READY_BUDGET_MS) is created by `open()` only AFTER the window opens.
+ * Creating it earlier would let artifact download/create time shrink the boot
+ * budget (review R21-1), and it would no longer match the watchdog, which
+ * starts its own boot cap at the `start` signal. `open`'s scope registers its
+ * groups with the same watchdog pipe; the caller stops it in `finally`.
+ */
+export async function runBootWindow(input: {
+	deadline: Deadline;
+	phases: PhaseLog;
+	udid: string;
+	open: () => { run: Run };
+	signal: (state: "start" | "end") => void;
+}) {
+	const { deadline, phases, udid } = input;
+	await deadline.excluding(() =>
+		bootPhase(async () => {
+			input.signal("start");
+			try {
+				const boot = input.open();
+				await phases.step("boot", () =>
+					boot.run("xcrun", ["simctl", "boot", udid], 60000),
+				);
+				await phases.step("bootstatus", () =>
+					boot.run(
+						"xcrun",
+						["simctl", "bootstatus", udid, "-b"],
+						REPLAY_BOOT_BUDGET_MS,
+					),
+				);
+			} finally {
+				input.signal("end");
+			}
+		}),
+	);
+}
 /** Real coordinator with injected native/runner boundaries, not canned HTTP.
  * The original receipt clock is armed ONCE before openURL and never at tap. */
 export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
@@ -512,9 +552,10 @@ export async function runSeedReplay(options: ReplayOptions) {
 	const deadline = new Deadline(300000),
 		workScope = new NativeScope(deadline),
 		run = workScope.run,
-		// Separate clock for boot + readiness only; see REPLAY_BOOT_BUDGET_MS.
-		bootScope = new NativeScope(new Deadline(REPLAY_BOOT_BUDGET_MS)),
 		phases = new PhaseLog();
+	// Boot + readiness get their own scope, created only when the boot window
+	// OPENS (see runBootWindow). Kept here so `finally` can stop it.
+	let bootScope: NativeScope | undefined;
 	let context: SampleContext | undefined;
 	let result: Awaited<ReturnType<typeof executeSeed>> | undefined;
 	try {
@@ -610,30 +651,16 @@ export async function runSeedReplay(options: ReplayOptions) {
 		const lease = await phases.step("create", () =>
 			createFromIntent(root, intent, run),
 		);
-		// Boot + readiness run on their OWN clock (REPLAY_BOOT_BUDGET_MS, mirrors
-		// the proof harness's BOOT_READY_BUDGET_MS) with the 300s work clock
-		// stopped, so a cold simulator cannot eat the experiment's budget. The
-		// boot scope's groups register with the same watchdog pipe; it is stopped
-		// in `finally` beside the work scope.
-		await deadline.excluding(() =>
-			bootPhase(async () => {
-				signalBootWindow("start");
-				try {
-					await phases.step("boot", () =>
-						bootScope.run("xcrun", ["simctl", "boot", lease.udid], 60000),
-					);
-					await phases.step("bootstatus", () =>
-						bootScope.run(
-							"xcrun",
-							["simctl", "bootstatus", lease.udid, "-b"],
-							REPLAY_BOOT_BUDGET_MS,
-						),
-					);
-				} finally {
-					signalBootWindow("end");
-				}
-			}),
-		);
+		await runBootWindow({
+			deadline,
+			phases,
+			udid: lease.udid,
+			open: () => {
+				bootScope = new NativeScope(new Deadline(REPLAY_BOOT_BUDGET_MS));
+				return bootScope;
+			},
+			signal: signalBootWindow,
+		});
 		await phases.step("install", () =>
 			run(
 				"xcrun",
@@ -767,12 +794,16 @@ export async function runSeedReplay(options: ReplayOptions) {
 		new FirstFailure(root).remember(error);
 	} finally {
 		const cleanup = cleanupBudget(root);
-		try {
-			// Both scopes share the ONE persisted cleanup allowance; no renewal.
-			await Promise.all([workScope.stop(cleanup), bootScope.stop(cleanup)]);
-		} catch (error) {
-			new FirstFailure(root).remember(error);
-		}
+		// Both scopes share the ONE persisted cleanup allowance; no renewal.
+		// allSettled: BOTH stops finish before device cleanup starts, even when
+		// one of them fails first (review R21-5).
+		const stops = await Promise.allSettled([
+			workScope.stop(cleanup),
+			bootScope?.stop(cleanup),
+		]);
+		for (const stop of stops)
+			if (stop.status === "rejected")
+				new FirstFailure(root).remember(stop.reason);
 		const device = await cleanupReplay(root);
 		const failure = new FirstFailure(root);
 		if (!device.cleanupComplete) failure.remember(new ReplayRefused("cleanup"));

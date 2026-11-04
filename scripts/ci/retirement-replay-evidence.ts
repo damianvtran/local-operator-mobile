@@ -48,18 +48,22 @@ export interface ExportSummary {
  * known statuses, so the export can never carry a command line or path. */
 function safePhases(value: unknown) {
 	if (!Array.isArray(value)) return [];
-	return value
-		.filter(
-			(p) =>
-				p &&
-				typeof p === "object" &&
-				(REPLAY_PHASES as readonly string[]).includes(p.name) &&
-				Number.isSafeInteger(p.elapsedMs) &&
-				p.elapsedMs >= 0 &&
-				(p.status === "ok" || p.status === "failed"),
-		)
-		.slice(0, REPLAY_PHASES.length)
-		.map((p) => ({ name: p.name, elapsedMs: p.elapsedMs, status: p.status }));
+	return (
+		value
+			.filter(
+				(p) =>
+					p &&
+					typeof p === "object" &&
+					(REPLAY_PHASES as readonly string[]).includes(p.name) &&
+					Number.isSafeInteger(p.elapsedMs) &&
+					p.elapsedMs >= 0 &&
+					(p.status === "ok" || p.status === "failed"),
+			)
+			// Each phase runs at most once; keep the first record of any name.
+			.filter((p, i, all) => all.findIndex((q) => q.name === p.name) === i)
+			.slice(0, REPLAY_PHASES.length)
+			.map((p) => ({ name: p.name, elapsedMs: p.elapsedMs, status: p.status }))
+	);
 }
 export function safeSummary(summary: ExportSummary) {
 	const hash = (v: unknown, length: number) =>

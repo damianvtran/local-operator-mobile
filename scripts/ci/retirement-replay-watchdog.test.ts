@@ -239,22 +239,23 @@ const signal = (state: string) =>
 const spin = (ms: number) => `{const e=Date.now()+${ms};while(Date.now()<e){}}`;
 it("a boot window longer than the work budget does not consume it; work resumes with what was left", () => {
 	const root = fixture();
-	// 0.6s work budget; a 0.9s boot window would have killed the old shared clock.
-	const work = `const fs=require('node:fs');${signal("start")}${spin(900)}${signal("end")}${spin(200)}process.exit(0)`;
+	// 1.5s work budget; a 2s boot window would have killed the old shared clock.
+	// The budget leaves >1s for Node start-up on a loaded host (QA Q21-1).
+	const work = `const fs=require('node:fs');${signal("start")}${spin(2000)}${signal("end")}${spin(200)}process.exit(0)`;
 	const result = exercise(
 		root,
 		work,
 		"process.exit(0)",
-		0.6,
+		1.5,
 		1,
 		false,
 		false,
-		2,
+		4,
 	);
 	expect(result.first.stopReason).toBeNull();
 	expect(result.first.workerExit).toBe(0);
-	expect(result.first.bootElapsedMs).toBeGreaterThanOrEqual(850);
-	expect(result.bootBudgetSeconds).toBe(2);
+	expect(result.first.bootElapsedMs).toBeGreaterThanOrEqual(1900);
+	expect(result.bootBudgetSeconds).toBe(4);
 }, 6000);
 it("a boot overrun is classified boot-timeout, not a work deadline", () => {
 	const root = fixture(),
@@ -298,8 +299,11 @@ it("a work overrun after boot still fails as a work deadline", () => {
 }, 6000);
 it("a second boot window is refused, so boot can never renew the work clock", () => {
 	const root = fixture();
-	const work = `const fs=require('node:fs');${signal("start")}${signal("end")}${signal("start")}while(true){}`;
+	// The FIRST window must be accepted and timed (the old watchdog refused any
+	// boot line, so it never reports bootElapsedMs); only the SECOND is refused.
+	const work = `const fs=require('node:fs');${signal("start")}${spin(500)}${signal("end")}${spin(300)}${signal("start")}while(true){}`;
 	const result = exercise(root, work, "process.exit(0)", 3, 1, false, false, 2);
+	expect(result.first.bootElapsedMs).toBeGreaterThanOrEqual(400);
 	expect(result.first.stopReason).toBe("supervisor-refused");
 	expect(result.elapsedMs).toBeLessThan(2500);
 }, 6000);

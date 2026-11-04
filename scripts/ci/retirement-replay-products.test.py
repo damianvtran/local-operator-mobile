@@ -1,4 +1,5 @@
 """Real stdlib product/package fixtures; NO Xcode/SDK/network command runs."""
+import datetime
 import copy
 import hashlib
 import json
@@ -173,7 +174,10 @@ class ProductFixtures(unittest.TestCase):
 
     def test_compile_preflight_checks_actual_original_identity_and_remaining_window(self):
         value = {'id': 13225164386, 'expired': False, 'expires_at': '2030-01-01T00:00:00Z', 'workflow_run': {'id': 41620694610, 'head_sha': '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b'}}
-        self.assertEqual(API['preflight_retained']('fixture-only', lambda: value, 1000)['minimumWindowSeconds'], 1020)
+        self.assertEqual(API['preflight_retained']('fixture-only', lambda: value, 1000)['minimumWindowSeconds'], 1380)
+        # 22 min left is now too little for an 18-min replay job + margin.
+        with self.assertRaises(ValueError): API['preflight_retained']('fixture-only', lambda: value, datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc).timestamp() - 22 * 60)
+        API['preflight_retained']('fixture-only', lambda: value, datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc).timestamp() - 24 * 60)
         for field, wrong in [('id', 1), ('expired', True), ('expires_at', 'not-a-date'), ('expires_at', '1970-01-01T00:20:00Z')]:
             with self.subTest(field=field), self.assertRaises(ValueError): API['preflight_retained']('fixture-only', lambda: {**value, field: wrong}, 1000)
         with self.assertRaises(ValueError): API['preflight_retained']('fixture-only', lambda: {**value, 'workflow_run': {'id': 1, 'head_sha': 'd' * 40}}, 1000)

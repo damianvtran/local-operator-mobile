@@ -18,6 +18,14 @@ import tarfile
 POLICY = json.loads(Path(__file__).with_name('retirement-replay-policy.json').read_text())
 if set(POLICY) != {'sessionBytes', 'bearerBytes', 'failureCauses'} or any(type(POLICY[k]) is not int or not 16 <= POLICY[k] <= 64 for k in ('sessionBytes', 'bearerBytes')): raise ValueError('Replay policy invalid')
 
+# The original app must outlive one whole seed-replay JOB plus a margin. The
+# replay job is 18 min (boot 300s + work 300s + cleanup 120s + checkout/upload,
+# retirement-ui-seed-replay.yml) + 5 min margin = 23 min. It was 17 (12 + 5)
+# before boot got its own window (review R21-4). Expiry is ALSO rechecked at
+# every actual use, so this only refuses a doomed run early; it never passes one.
+MINIMUM_REPLAY_WINDOW_SECONDS = 23 * 60
+
+
 def preflight_retained(credential, fetcher=None, now=None):
     """Queue delay can expire the original app. Recheck on the compile host
     BEFORE SDK work; metadata only, never download/rebuild the proof app."""
@@ -38,9 +46,9 @@ def preflight_retained(credential, fetcher=None, now=None):
     value = fetcher()
     try: expiry = datetime.datetime.fromisoformat(value['expires_at'].replace('Z', '+00:00')).timestamp()
     except (KeyError, ValueError, TypeError): raise ValueError('Artifact expiry invalid') from None
-    if value.get('id') != 13225164386 or value.get('expired') is not False or value.get('workflow_run', {}).get('id') != 41620694610 or value['workflow_run'].get('head_sha') != '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b' or expiry <= now + 17 * 60:
+    if value.get('id') != 13225164386 or value.get('expired') is not False or value.get('workflow_run', {}).get('id') != 41620694610 or value['workflow_run'].get('head_sha') != '78ff786a7ef173560b7fb67e29a9e20eb9ca6f8b' or expiry <= now + MINIMUM_REPLAY_WINDOW_SECONDS:
         raise ValueError('Original artifact unavailable or insufficient compile/replay window')
-    return {'artifactID': 13225164386, 'expiresAt': expiry, 'minimumWindowSeconds': 1020}
+    return {'artifactID': 13225164386, 'expiresAt': expiry, 'minimumWindowSeconds': MINIMUM_REPLAY_WINDOW_SECONDS}
 
 
 def manifest(root):

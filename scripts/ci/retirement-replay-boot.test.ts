@@ -21,6 +21,7 @@ import {
 	REPLAY_BOOT_BUDGET_MS,
 } from "./retirement-replay-lifecycle.ts";
 import { REPLAY_POLICY } from "./retirement-replay-policy.ts";
+import { runBootWindow } from "./retirement-ui-replay.ts";
 
 function manualClock(start = 0) {
 	let now = start;
@@ -67,15 +68,25 @@ describe("Deadline.excluding", () => {
 		).rejects.toMatchObject({ code: "boot-timeout" });
 		expect(deadline.remaining()).toBe(600);
 	});
+	it("refuses a SECOND pause even after the first has ended (one window, ever)", async () => {
+		const t = manualClock();
+		const deadline = new Deadline(1000, t.clock);
+		await deadline.excluding(async () => t.advance(50));
+		await expect(
+			deadline.excluding(async () => t.advance(5000)),
+		).rejects.toMatchObject({ code: "stage" });
+		expect(deadline.remaining()).toBe(1000);
+	});
 	it("refuses a nested pause and a pause on an exhausted clock", async () => {
 		const t = manualClock();
 		const deadline = new Deadline(100, t.clock);
 		await expect(
 			deadline.excluding(() => deadline.excluding(async () => undefined)),
 		).rejects.toMatchObject({ code: "stage" });
+		const exhausted = new Deadline(100, t.clock);
 		t.advance(100);
 		await expect(
-			deadline.excluding(async () => undefined),
+			exhausted.excluding(async () => undefined),
 		).rejects.toMatchObject({ code: "deadline" });
 	});
 });
@@ -199,5 +210,76 @@ describe("phase export", () => {
 		expect(out.acceptanceComplete).toBe(false);
 		for (const value of Object.values(out.observations))
 			expect(value).toBe("UNOBSERVED");
+	});
+});
+
+describe("runBootWindow (review R21-1)", () => {
+	const udid = "00000000-0000-0000-0000-000000000000";
+	it("opens the boot clock only AFTER the window starts and asks bootstatus for the FULL budget", async () => {
+		const t = manualClock();
+		const deadline = new Deadline(300000, t.clock);
+		// 250s of artifact download/create BEFORE boot: under the reviewed bug the
+		// boot clock already existed and this came out of the boot budget.
+		t.advance(250000);
+		const events: string[] = [];
+		const caps: number[] = [];
+		let bootClock: Deadline | undefined;
+		await runBootWindow({
+			deadline,
+			phases: new PhaseLog(t.clock),
+			udid,
+			signal: (state) => events.push(`signal:${state}`),
+			open: () => {
+				events.push("open");
+				bootClock = new Deadline(REPLAY_BOOT_BUDGET_MS, t.clock);
+				const clock = bootClock;
+				return {
+					run: async (_exe, args, cap = 30000) => {
+						events.push(`run:${args[1]}`);
+						caps.push(clock.cap(cap));
+						t.advance(1000);
+						return "";
+					},
+				};
+			},
+		});
+		expect(events).toEqual([
+			"signal:start",
+			"open",
+			"run:boot",
+			"run:bootstatus",
+			"signal:end",
+		]);
+		// The full 300s (minus only the 1s boot itself), not 300s minus the
+		// 250s spent before the window opened.
+		expect(caps).toEqual([60000, REPLAY_BOOT_BUDGET_MS - 1000]);
+		// The work clock lost only the pre-boot 250s, nothing during boot.
+		expect(deadline.remaining()).toBe(50000);
+	});
+	it("signals end, resumes the work clock and classifies a boot overrun even on failure", async () => {
+		const t = manualClock();
+		const deadline = new Deadline(300000, t.clock);
+		t.advance(100000);
+		const events: string[] = [];
+		const phases = new PhaseLog(t.clock);
+		await expect(
+			runBootWindow({
+				deadline,
+				phases,
+				udid,
+				signal: (state) => events.push(state),
+				open: () => ({
+					run: async (_exe, args) => {
+						t.advance(150000);
+						if (args[1] === "bootstatus")
+							throw new ReplayRefused("command-timeout");
+						return "";
+					},
+				}),
+			}),
+		).rejects.toMatchObject({ code: "boot-timeout" });
+		expect(events).toEqual(["start", "end"]);
+		expect(phases.failed).toBe("bootstatus");
+		expect(deadline.remaining()).toBe(200000);
 	});
 });
