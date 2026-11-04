@@ -2,6 +2,7 @@ import {
 	STAGE_B_BUNDLE,
 	STAGE_B_HOST,
 } from "../../src/testing/stage-b-draft-transport.ts";
+import { STAGE_B_POST_RELEASE_WINDOW_MS } from "./stage-b-draft-timing.ts";
 export type StageBStep = Record<string, unknown>;
 const REGEX_META = /[.*+?^${}()|[\]\\]/g;
 const exactDraft = (text: string) => ({
@@ -78,6 +79,20 @@ export const assertStageBDraft = (
 ): StageBStep[] => [
 	...stageBEditor(),
 	{ [present ? "assertVisible" : "assertNotVisible"]: exactDraft(text) },
+];
+/** The driver starts only AFTER release. A timed negative loop, rather than
+ * one early absence assertion, catches delayed UI import over a real 10s span. */
+export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
+	{
+		evalScript: `\${output.stageBNoRestoreUntil = Date.now() + ${STAGE_B_POST_RELEASE_WINDOW_MS}}`,
+	},
+	{
+		repeat: {
+			while: { true: `\${Date.now() < output.stageBNoRestoreUntil}` },
+			commands: assertStageBDraft(text, false),
+		},
+	},
+	...assertStageBDraft(text, false),
 ];
 export const attachStageBPhoto = (): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },

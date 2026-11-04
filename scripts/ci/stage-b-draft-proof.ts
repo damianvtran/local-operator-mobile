@@ -28,9 +28,11 @@ import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	captureStageBFailure,
 	stageBFlowCap,
+	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics.ts";
 import {
 	assertStageBDraft,
+	assertStageBPostReleaseDraft,
 	attachStageBPhoto,
 	discardStageBDraft,
 	logoutStageB,
@@ -43,10 +45,12 @@ import {
 import {
 	captureStageBHeldPair,
 	captureStageBRestoreBurst,
+	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
 	STAGE_B_TIMEOUT_HOLD_MS,
 	stageBFrameHierarchy,
 	stageBSleep,
+	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing.ts";
 import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
 
@@ -66,8 +70,9 @@ export async function warmStageBDriver(
 	await hierarchy("warm-maestro-driver-cold", capFor("maestroCold"));
 	await launch();
 	await foreground();
-	// The foreground flow asserts the actual drawn app/seed-ready screen. Do
-	// not pay another driver startup for redundant non-geometric hierarchy.
+	// Foreground proves a DRAWN app, which can still be the loading gate.
+	// Connect separately waits for the real row/editor. On failure we decode
+	// stage/cause from the captured gate without another readiness driver call.
 }
 
 export function assertStageBAdmission(env: NodeJS.ProcessEnv): void {
@@ -769,12 +774,17 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		await run("add-owned-photo", "xcrun", [
-			"simctl",
-			"addmedia",
-			udid,
-			join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-		]);
+		await run(
+			"add-owned-photo",
+			"xcrun",
+			[
+				"simctl",
+				"addmedia",
+				udid,
+				join(cwd, "design/app-icon/ios/icon-light-1024.png"),
+			],
+			STAGE_B_ADD_MEDIA_SECONDS,
+		);
 		await warmStageBDriver(
 			(name, seconds) =>
 				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
@@ -891,13 +901,22 @@ async function runStageBCoordinator(
 			if (mode === "held") armHeldCapture("dark", true);
 			await relaunch(mode, mode !== "held");
 			if (mode === "held") {
-				await flow(
-					"timed-out-proof-fails-closed",
-					assertStageBDraft(canary, false),
-				);
+				// Flush ONLY connect before the release barrier; absence during a
+				// held proof is tautological. The negative driver starts afterward.
 				await flushFlows();
-				await fixture.awaitHeldCapture();
-				const timedOut = await snapshot();
+				const timedOut = await verifyStageBPostReleaseWindow({
+					afterRelease: () =>
+						fixture?.awaitHeldCapture() ??
+						Promise.reject(new Error("fixture unavailable")),
+					assertUI: async () => {
+						await flow(
+							"timed-out-proof-fails-closed",
+							assertStageBPostReleaseDraft(canary),
+						);
+						await flushFlows();
+					},
+					observe: snapshot,
+				});
 				if (timedOut.recoveryAdmitted !== false)
 					throw new Error("timed-out proof admitted recovery");
 				batch.verified(() =>
@@ -1117,16 +1136,17 @@ async function runStageBCoordinator(
 		]);
 		const beforeBoot = fixture.receipts.length;
 		await launch();
-		await flow("connect-after-reinstall", [
-			...selectStageBComputer(),
-			...stageBEditor(),
-		]);
+		const reinstallSteps = [...selectStageBComputer(), ...stageBEditor()];
+		await flow("connect-after-reinstall", reinstallSteps);
 		const startup = await until(
 			() =>
 				fixture?.receipts
 					.slice(beforeBoot)
 					.find((item) => item.kind === "startup"),
 			"reinstall Keychain observation",
+			// This receipt starts at launch while connect is queued; use its full
+			// segment budget rather than the unrelated 20s observer default.
+			stageBFlowCap(reinstallSteps) * 1000,
 		);
 		if (startup.survivingKey !== true || startup.sentinelPresent !== false)
 			throw new Error(
@@ -1199,7 +1219,7 @@ async function runStageBCoordinator(
 	} finally {
 		for (const child of children) reap(child);
 		if (udid) {
-			if (failed)
+			if (failed) {
 				receipt.failureDiagnostics = await captureStageBFailure(
 					(name, command, args, seconds) =>
 						run(name, command, args, seconds, true),
@@ -1207,6 +1227,14 @@ async function runStageBCoordinator(
 					output,
 					maestro,
 				);
+				const hierarchyPath = join(output, "failure.hierarchy.txt");
+				if (existsSync(hierarchyPath)) {
+					const seedFailure = stageBSeedFailureFromHierarchy(
+						readFileSync(hierarchyPath, "utf8"),
+					);
+					if (seedFailure) receipt.seedDiagnostic = seedFailure;
+				}
+			}
 			try {
 				await run(
 					"cleanup-shutdown-owned-simulator",

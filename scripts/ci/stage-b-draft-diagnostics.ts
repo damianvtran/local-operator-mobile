@@ -18,7 +18,6 @@ export type DiagnosticRun = (
 /** Reserve CLI/driver startup separately from EVERY nested inner wait. Killing
  * Maestro at the same deadline as its assertion prevents its debug finalization. */
 export function stageBFlowCap(steps: StageBStep[], cold = false): number {
-	if (cold) return capFor("maestroCold");
 	const sum = (value: unknown): number => {
 		if (Array.isArray(value))
 			return value.reduce((n, item) => n + sum(item), 0);
@@ -36,16 +35,18 @@ export function stageBFlowCap(steps: StageBStep[], cold = false): number {
 		);
 	};
 	// 30s per explicit command also covers actions using Maestro's default wait.
-	return (
+	const computed =
 		capFor("maestroCold") +
 		Math.ceil((STAGE_B_COLD_ASSERTION_MS + sum(steps)) / 1000) +
-		30 * (steps.length + 1)
-	);
+		30 * (steps.length + 1);
+	// A merged cold segment can contain many more waits than the original warm
+	// foreground command. Its complete step budget must win over the cold floor.
+	return cold ? Math.max(capFor("maestroCold"), computed) : computed;
 }
 
 const STAGE_LABEL = /stage=([a-z0-9-]+)/i;
 const CAUSE_LABEL = /cause=([^"\r\n]+)/;
-function statusFromHierarchy(hierarchy: string): {
+export function statusFromHierarchy(hierarchy: string): {
 	stage: string;
 	cause: string;
 } {
@@ -75,6 +76,16 @@ function statusFromHierarchy(hierarchy: string): {
 			CAUSE_LABEL.exec(status)?.[1] ?? "pending",
 		).slice(0, 300),
 	};
+}
+
+/** Reuse the already-captured failure hierarchy. A drawn loading gate is not
+ * readiness; preserve its stage/cause without another slow Maestro invocation. */
+export function stageBSeedFailureFromHierarchy(
+	hierarchy: string,
+): string | null {
+	if (!hierarchy.includes("stage-b-proof-gate")) return null;
+	const status = statusFromHierarchy(hierarchy);
+	return `seed never completed at stage=${status.stage}: ${status.cause}`;
 }
 
 /** A gate counts as drawn, not as seeded. Preserve the last observed stage when

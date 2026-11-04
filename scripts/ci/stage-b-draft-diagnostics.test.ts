@@ -8,7 +8,13 @@ import {
 	awaitStageBSeed,
 	captureStageBFailure,
 	stageBFlowCap,
+	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics";
+import {
+	attachStageBPhoto,
+	selectStageBComputer,
+	typeStageBDraft,
+} from "./stage-b-draft-flows";
 
 const gate = (cause = "pending") =>
 	JSON.stringify({
@@ -17,8 +23,24 @@ const gate = (cause = "pending") =>
 	});
 
 describe("Stage B diagnosed-failure exit criterion", () => {
+	it("decodes the persisted failure gate stage/cause without another driver call", () => {
+		expect(
+			stageBSeedFailureFromHierarchy(gate("Error: token=secret-value")),
+		).toBe(
+			"seed never completed at stage=private-key-read: Error: [redacted-credential]",
+		);
+		expect(
+			stageBSeedFailureFromHierarchy('{"identifier":"home-screen"}'),
+		).toBeNull();
+	});
 	it("gives the warm flow a cold cap and all other flows startup plus nested timeout headroom", () => {
-		expect(stageBFlowCap([], true)).toBe(capFor("maestroCold"));
+		const merged = [
+			...selectStageBComputer(),
+			...typeStageBDraft("synthetic"),
+			...attachStageBPhoto(),
+		];
+		expect(stageBFlowCap(merged, true)).toBe(stageBFlowCap(merged));
+		expect(stageBFlowCap(merged, true)).toBeGreaterThan(capFor("maestroCold"));
 		expect(
 			stageBFlowCap([
 				{ runFlow: { commands: [{ extendedWaitUntil: { timeout: 300000 } }] } },

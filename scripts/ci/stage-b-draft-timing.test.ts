@@ -3,13 +3,101 @@ import { describe, expect, it } from "vitest";
 import {
 	captureStageBHeldPair,
 	captureStageBRestoreBurst,
+	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_FRAME_HIERARCHY_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
 	STAGE_B_TIMEOUT_HOLD_MS,
 	stageBFrameHierarchy,
+	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing";
 
 describe("measured Stage B frame timing", () => {
+	it("explicitly reserves twice the measured 118s media-import maximum", () => {
+		expect(STAGE_B_ADD_MEDIA_SECONDS).toBe(240);
+		expect(STAGE_B_ADD_MEDIA_SECONDS).toBeGreaterThanOrEqual(2 * 118);
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const start = source.indexOf('await run(\n\t\t\t"add-owned-photo"');
+		const alternative = source.indexOf('await run("add-owned-photo"');
+		const at = start >= 0 ? start : alternative;
+		expect(at).toBeGreaterThan(0);
+		const call = source.slice(
+			at,
+			source.indexOf("await warmStageBDriver(", at),
+		);
+		expect(call).toContain("STAGE_B_ADD_MEDIA_SECONDS");
+	});
+	it("does not hide a failed post-release canary assertion behind clean storage samples", async () => {
+		let clock = 0;
+		await expect(
+			verifyStageBPostReleaseWindow({
+				afterRelease: async () => {},
+				assertUI: async () => {
+					throw new Error("late canary visible");
+				},
+				observe: async () => ({ recoveryAdmitted: false }),
+				now: () => clock,
+				sleep: async (ms) => {
+					clock += ms;
+				},
+			}),
+		).rejects.toThrow("late canary visible");
+	});
+	it("starts the negative driver segment strictly after the release barrier and observes the full window", async () => {
+		let release!: () => void,
+			released = false,
+			clock = 0,
+			observations = 0;
+		const held = new Promise<void>((resolve) => {
+			release = () => {
+				released = true;
+				resolve();
+			};
+		});
+		const events: string[] = [];
+		const pending = verifyStageBPostReleaseWindow({
+			afterRelease: async () => {
+				await held;
+				events.push("release");
+			},
+			assertUI: async () => {
+				expect(released).toBe(true);
+				events.push("negative-driver-start");
+			},
+			observe: async () => {
+				observations++;
+				return { recoveryAdmitted: false };
+			},
+			now: () => clock,
+			sleep: async (ms) => {
+				clock += ms;
+			},
+		});
+		await Promise.resolve();
+		expect(events).toEqual([]);
+		release();
+		expect((await pending).recoveryAdmitted).toBe(false);
+		expect(events).toEqual(["release", "negative-driver-start"]);
+		expect(clock).toBeGreaterThanOrEqual(10000);
+		expect(observations).toBeGreaterThan(1);
+	});
+	it("rejects delayed admission after an initially clean post-release sample", async () => {
+		let clock = 0;
+		await expect(
+			verifyStageBPostReleaseWindow({
+				afterRelease: async () => {},
+				assertUI: async () => {},
+				observe: async () => ({ recoveryAdmitted: clock >= 750 }),
+				now: () => clock,
+				sleep: async (ms) => {
+					clock += ms;
+				},
+			}),
+		).rejects.toThrow("late post-release proof admitted recovery");
+		expect(clock).toBe(750);
+	});
 	it("never overlaps restore screenshot commands on the same simulator", async () => {
 		let active = 0,
 			maximum = 0;

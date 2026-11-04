@@ -1,7 +1,10 @@
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
 import { capFor } from "./account-routing-proof-contract";
 import {
+	assertStageBDraft,
+	assertStageBPostReleaseDraft,
 	attachStageBPhoto,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
@@ -17,6 +20,30 @@ const steps = (flow: string): Record<string, unknown>[] =>
 		.map((line) => JSON.parse(line.slice(2)));
 
 describe("Stage B foreground-only Maestro flows", () => {
+	it("repeats the production negative selector over ten seconds rather than checking once before release", () => {
+		const generated = assertStageBPostReleaseDraft("synthetic-canary");
+		const script = generated[0]?.evalScript as string;
+		const repeat = generated[1]?.repeat as {
+			while: { true: string };
+			commands: unknown[];
+		};
+		let clock = 0,
+			observations = 0;
+		const context = { output: {}, Date: { now: () => clock } };
+		runInNewContext(script.slice(2, -1), context);
+		while (runInNewContext(repeat.while.true.slice(2, -1), context)) {
+			observations++;
+			clock += 1000;
+		}
+		expect(observations).toBe(10);
+		expect(clock).toBe(10000);
+		expect(repeat.commands).toEqual(
+			assertStageBDraft("synthetic-canary", false),
+		);
+		expect(generated.slice(2)).toEqual(
+			assertStageBDraft("synthetic-canary", false),
+		);
+	});
 	it("dismisses optional Photos onboarding and selects the first real photo without point taps", () => {
 		const commands = steps(stageBFlow(attachStageBPhoto()));
 		expect(commands).toContainEqual({

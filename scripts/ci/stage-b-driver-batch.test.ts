@@ -3,6 +3,28 @@ import { describe, expect, it } from "vitest";
 import { StageBDriverBatch } from "./stage-b-driver-batch";
 
 describe("Stage B adjacent UI driver batching", () => {
+	it("keeps release before the separate negative segment and budgets the reinstall receipt observation", () => {
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const start = source.indexOf(
+			"const timedOut = await verifyStageBPostReleaseWindow(",
+		);
+		expect(start).toBeGreaterThan(0);
+		expect(source.slice(start - 60, start)).toContain("await flushFlows();");
+		const block = source.slice(
+			start,
+			source.indexOf("if (timedOut.recoveryAdmitted", start),
+		);
+		expect(block).toContain("afterRelease:");
+		expect(block).toContain("awaitHeldCapture()");
+		expect(block).toContain("assertUI:");
+		expect(block).toContain('"timed-out-proof-fails-closed"');
+		expect(block).toContain("assertStageBPostReleaseDraft(canary)");
+		expect(source).toContain("stageBFlowCap(reinstallSteps) * 1000");
+		expect(source).toContain("stageBSeedFailureFromHierarchy(");
+	});
 	it("captures immediately after initial connect and proves navigation before typing in the same flow", () => {
 		const source = readFileSync(
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
