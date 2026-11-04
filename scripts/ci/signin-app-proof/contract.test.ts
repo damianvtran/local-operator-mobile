@@ -10,12 +10,14 @@ describe("real Expo application OAuth proof boundary", () => {
 		const workflow = read("../../../.github/workflows/signin-app-proof.yml");
 		expect(project).toContain("com.apple.product-type.application");
 		expect(project).toContain("'TEST_TARGET_NAME' => app.name");
+		expect(project).toContain("'PRODUCT_NAME' => '$(TARGET_NAME)'");
+		expect(project).toContain("'PRODUCT_MODULE_NAME' => 'SignInAppUITests'");
 		expect(workflow).toContain("expo prebuild --platform ios");
 		expect(workflow).toContain("Prove adversarial debug override");
 		expect(workflow).toContain(
 			"EXPO_PUBLIC_SIGNIN_PROOF_ORIGIN: http://127.0.0.1:54831",
 		);
-		expect(test).toContain("/control?mode=failure&hold=true");
+		expect(test).toContain("/control?mode=failure&hold=true&reset=true");
 		expect(test).toContain('try text("Signing in…")');
 		expect(test).toContain('app.buttons["sign-in-try-again"].tap()');
 		expect(test).toContain('XCTAssertEqual(positive["pkce_verified"], 2)');
@@ -29,6 +31,10 @@ describe("real Expo application OAuth proof boundary", () => {
 		expect(read("./run.sh")).not.toContain("'--offline'");
 		expect(read("./run.sh")).toContain("build-for-testing");
 		expect(read("./run.sh")).toContain("test-without-building");
+		expect(read("./run.sh")).toContain("for theme in light dark");
+		expect(read("./run.sh")).toContain('appearance "$theme"');
+		expect(read("./run.sh")).toContain('keychain "$UDID" reset');
+		expect(read("./run.sh")).toContain("v['pkce_verified'] == 2");
 		expect(workflow).not.toContain("secrets:");
 	});
 });

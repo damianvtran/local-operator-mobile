@@ -47,6 +47,10 @@ curl -fsS --max-time 180 'http://localhost:8081/.expo/.virtual-metro-entry.bundl
 grep -q 54831 "$RUNNER_TEMP/signin-dev.js"
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
+xcrun simctl help keychain > "$OUT/simctl-keychain-help.txt"
+grep -q reset "$OUT/simctl-keychain-help.txt"
+xcrun simctl help ui > "$OUT/simctl-ui-help.txt"
+grep -q appearance "$OUT/simctl-ui-help.txt"
 # Match the proven callback-proof UI runner: ad-hoc simulator identities only,
 # no developer team, certificate, provisioning profile or release signing lane.
 SIGNING=(CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=)
@@ -57,12 +61,27 @@ EXEC=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
 shasum -a 256 "$APP/$EXEC" "$RUNNER_TEMP/signin-dev.js" > "$OUT/binary-and-preflight-bundle.sha256"
 git rev-parse HEAD > "$OUT/source-head.txt"
 ditto -c -k --keepParent "$APP" "$OUT/real-expo-debug-app.zip"
-set +e
-TEST_RUNNER_APP_ID="$APP_ID" xcodebuild -workspace "$WORKSPACE" -scheme SignInAppProof -configuration Debug -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/SignInAppDD" -resultBundlePath "$OUT/signin.xcresult" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -only-testing:SignInAppUITests/SignInAppUITests/testAlreadySignedInFastPathAndServerError "${SIGNING[@]}" test-without-building > "$OUT/test.log" 2>&1
-RESULT=$?
-set -e
-if [[ -d "$OUT/signin.xcresult" ]]; then
-  xcrun xcresulttool export attachments --path "$OUT/signin.xcresult" --output-path "$OUT/frames"
-fi
-cat "$OUT/test.log"
-exit "$RESULT"
+for theme in light dark; do
+  # This simulator and all grants were created by this job. Between theme
+  # phases only, discard its synthetic Keychain data so the next case starts
+  # signed out. The prior phase already proved persistence across a cold launch.
+  xcrun simctl terminate "$UDID" "$APP_ID" >/dev/null 2>&1 || true
+  xcrun simctl keychain "$UDID" reset
+  xcrun simctl ui "$UDID" appearance "$theme"
+  xcrun simctl ui "$UDID" appearance > "$OUT/$theme-appearance.txt"
+  set +e
+  TEST_RUNNER_APP_ID="$APP_ID" xcodebuild -workspace "$WORKSPACE" -scheme SignInAppProof -configuration Debug -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/SignInAppDD" -resultBundlePath "$OUT/$theme.xcresult" -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 -only-testing:SignInAppUITests/SignInAppUITests/testAlreadySignedInFastPathAndServerError "${SIGNING[@]}" test-without-building > "$OUT/$theme-test.log" 2>&1
+  RESULT=$?
+  set -e
+  if [[ -d "$OUT/$theme.xcresult" ]]; then
+    xcrun xcresulttool export attachments --path "$OUT/$theme.xcresult" --output-path "$OUT/frames/$theme"
+  fi
+  if [[ -f "$OUT/provider-receipt.json" ]]; then cp "$OUT/provider-receipt.json" "$OUT/$theme-provider-receipt.json"; fi
+  cat "$OUT/$theme-test.log"
+  [[ "$RESULT" == 0 ]] || exit "$RESULT"
+  python3 - "$OUT/$theme-provider-receipt.json" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+assert v['authorize'] == 2 and v['token'] == 2 and v['pkce_verified'] == 2 and v['discovery'] >= 2, 'Real-app flow/persistence receipts incomplete (including zero-tests execution)'
+PY
+done

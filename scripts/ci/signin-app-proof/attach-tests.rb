@@ -23,6 +23,11 @@ Xcodeproj::Plist.write_to_path({
 }, info)
 ui.build_configurations.each do |config|
   config.build_settings.merge!({
+    # xcodeproj's programmatic UI target does not supply Xcode's template
+    # PRODUCT_NAME default. Without it both directory/link outputs become
+    # -Runner.app/PlugIns/.xctest, colliding before any source compiles.
+    'PRODUCT_NAME' => '$(TARGET_NAME)',
+    'PRODUCT_MODULE_NAME' => 'SignInAppUITests',
     'PRODUCT_BUNDLE_IDENTIFIER' => 'dev.localoperator.signinproof.tests',
     'SWIFT_VERSION' => '5.0', 'GENERATE_INFOPLIST_FILE' => 'NO', 'INFOPLIST_FILE' => info,
     'TEST_TARGET_NAME' => app.name, 'CODE_SIGNING_ALLOWED' => 'NO'

@@ -9,7 +9,7 @@ final class SignInAppUITests: XCTestCase {
   @MainActor func testAlreadySignedInFastPathAndServerError() throws {
     continueAfterFailure = false
     executionTimeAllowance = 900
-    _ = try control("/control?mode=failure&hold=true")
+    _ = try control("/control?mode=failure&hold=true&reset=true")
     app.launch()
     try visible("welcome-screen")
     attach("welcome-brand-initial")

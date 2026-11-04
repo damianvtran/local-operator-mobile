@@ -23,6 +23,18 @@ export async function createFastPathOAuth(port = 0, receiptPath?: string) {
 			response.end(JSON.stringify(value));
 		};
 		if (url.pathname === "/control") {
+			if (url.searchParams.get("reset") === "true") {
+				// Theme phases are separate fresh-app cases; archive each receipt
+				// before this setup reset, never count isolation as authentication.
+				Object.assign(counts, {
+					authorize: 0,
+					token: 0,
+					pkce_verified: 0,
+					discovery: 0,
+				});
+				authorization = undefined;
+				save();
+			}
 			mode = url.searchParams.get("mode") ?? mode;
 			hold = url.searchParams.get("hold") === "true";
 			json({ ok: true });
