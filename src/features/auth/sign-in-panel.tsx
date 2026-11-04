@@ -6,6 +6,7 @@ import { CONTROL, REGION, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Shimmer } from "@/ui/components/shimmer";
 import type { SignInState } from "./radient-sign-in";
+import { signInDiagnosticLabel } from "./sign-in-diagnostic-label";
 import type { SignInDiagnostic } from "./sign-in-diagnostics";
 
 /**
@@ -131,20 +132,25 @@ export const SignInPanel = ({
 			state.kind === "unavailable" ? (
 				<View className="gap-2">
 					<Button
-						label={t("mobile.signin.diagnostics")}
+						label={t(
+							showDiagnostics
+								? "mobile.signin.hide_diagnostics"
+								: "mobile.signin.show_diagnostics",
+						)}
+						expanded={showDiagnostics}
 						testID={CONTROL.signInDiagnostics}
 						variant="quiet"
 						onPress={() => setShowDiagnostics((shown) => !shown)}
 					/>
 					{showDiagnostics ? (
 						<Text
-							className="text-body-sm text-ink-muted"
+							className="text-meta text-ink-muted"
 							testID={REGION.signInDiagnostics}
 						>
 							{diagnostics
 								.map(
 									(entry) =>
-										`${entry.stage}${entry.errorClass ? ` (${entry.errorClass})` : ""}`,
+										`${signInDiagnosticLabel(entry.stage)}${entry.errorClass ? ` (${entry.errorClass})` : ""}`,
 								)
 								.join("\n")}
 						</Text>

@@ -38,6 +38,8 @@ export type ScreenProps = {
 	 *  screen: the inbox did exactly that, and a global clamp altered the S5
 	 *  session title at 200 % (audit U-08 on an untouched screen). */
 	titleLines?: 1 | 2;
+	/** Explicit brand lockup; independent of the title's wording or locale. */
+	brand?: boolean;
 	/** Left-aligned header control (a back affordance). */
 	headerLeading?: ReactNode;
 	/**
@@ -190,6 +192,7 @@ const StackedTitleRow = ({
  */
 export const Screen = ({
 	title,
+	brand = false,
 	children,
 	headerAction,
 	headerLeading,
@@ -246,8 +249,8 @@ export const Screen = ({
 		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
 	const resolvedTitleNode =
 		titleNode ??
-		(title === "Local Operator" ? (
-			<BrandTitle compact={compact} numberOfLines={titleLines} />
+		(brand ? (
+			<BrandTitle title={title} compact={compact} numberOfLines={titleLines} />
 		) : undefined);
 	return (
 		<View

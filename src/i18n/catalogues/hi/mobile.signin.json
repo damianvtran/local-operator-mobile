@@ -1,7 +1,20 @@
 {
+	"mobile.signin.diagnostics": "साइन-इन निदान",
+	"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
+	"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
 	"mobile.signin.progress": "साइन इन हो रहा है…",
 	"mobile.signin.retry": "फिर कोशिश करें",
-	"mobile.signin.diagnostics": "साइन-इन निदान",
-	"mobile.signin.superseded": "इस साइन-इन की जगह दूसरा प्रयास शुरू हुआ। फिर कोशिश करें।",
-	"mobile.signin.failed": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें।"
+	"mobile.signin.show_diagnostics": "साइन-इन का विवरण दिखाएँ",
+	"mobile.signin.stage_browser": "आपके ब्राउज़र की प्रतीक्षा है",
+	"mobile.signin.stage_cancelled": "साइन-इन रद्द हुआ",
+	"mobile.signin.stage_discovering": "आपके कंप्यूटर खोजे जा रहे हैं",
+	"mobile.signin.stage_exchanging": "ब्राउज़र में साइन-इन पूरा हो रहा है",
+	"mobile.signin.stage_failed": "साइन-इन विफल हुआ",
+	"mobile.signin.stage_idle": "शुरू नहीं हुआ",
+	"mobile.signin.stage_persisting": "आपका साइन-इन सहेजा जा रहा है",
+	"mobile.signin.stage_retiring": "आपका खाता तैयार हो रहा है",
+	"mobile.signin.stage_signed_in": "साइन-इन हो गया",
+	"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
+	"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
+	"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।"
 }

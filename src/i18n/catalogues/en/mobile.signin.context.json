@@ -1,4 +1,16 @@
 {
+	"mobile.signin.diagnostics": {
+		"role": "button",
+		"note": "Reveal a redacted in-memory log containing stage names and error classes only."
+	},
+	"mobile.signin.failed": {
+		"role": "status",
+		"note": "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials."
+	},
+	"mobile.signin.hide_diagnostics": {
+		"role": "button",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
 	"mobile.signin.progress": {
 		"role": "status",
 		"note": "Visible after the native browser returns, during token exchange and credential persistence."
@@ -7,16 +19,56 @@
 		"role": "button",
 		"note": "Retry a failed or cancelled sign-in."
 	},
-	"mobile.signin.diagnostics": {
+	"mobile.signin.show_diagnostics": {
 		"role": "button",
-		"note": "Reveal a redacted in-memory log containing stage names and error classes only."
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_browser": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_cancelled": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_discovering": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_exchanging": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_failed": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_idle": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_persisting": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_retiring": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_signed_in": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_starting": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
+	},
+	"mobile.signin.stage_unavailable": {
+		"role": "status",
+		"note": "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value."
 	},
 	"mobile.signin.superseded": {
 		"role": "status",
 		"note": "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI."
-	},
-	"mobile.signin.failed": {
-		"role": "status",
-		"note": "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials."
 	}
 }

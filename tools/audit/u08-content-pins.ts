@@ -438,7 +438,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript layout, corpus or instrument changed. This is source-boundary
 	 * judgment, not new rendered U-08 proof; historical identities stay intact. */
 	// Includes the newly tracked sign-in source files (print after staging).
-	src: "2612e084ecce4db7ff00773b99aa238876fbe0c299e15affdac3872910697164",
+	/* Round-1 remediation: reprinted after staging all new source files.
+	 * Welcome/re-auth navigation and disclosure copy, plus the explicit brand
+	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
+	 * Button's optional expanded state is omitted for existing transcript
+	 * controls. No transcript/corpus/instrument change; historical pins retained. */
+	src: "2367569cee7f486a25ee91223d8aaaabd9f586e5ee40d9eb03154f4f23526f6e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

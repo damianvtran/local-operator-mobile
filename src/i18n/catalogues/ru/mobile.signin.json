@@ -1,7 +1,20 @@
 {
+	"mobile.signin.diagnostics": "Диагностика входа",
+	"mobile.signin.failed": "Не удалось завершить вход.",
+	"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
 	"mobile.signin.progress": "Вход…",
 	"mobile.signin.retry": "Повторить",
-	"mobile.signin.diagnostics": "Диагностика входа",
-	"mobile.signin.superseded": "Эта попытка входа заменена. Повторите попытку.",
-	"mobile.signin.failed": "Не удалось завершить вход. Повторите попытку."
+	"mobile.signin.show_diagnostics": "Показать сведения о входе",
+	"mobile.signin.stage_browser": "Ожидание браузера",
+	"mobile.signin.stage_cancelled": "Вход отменён",
+	"mobile.signin.stage_discovering": "Поиск ваших компьютеров",
+	"mobile.signin.stage_exchanging": "Завершение входа через браузер",
+	"mobile.signin.stage_failed": "Не удалось войти",
+	"mobile.signin.stage_idle": "Не начато",
+	"mobile.signin.stage_persisting": "Сохранение входа",
+	"mobile.signin.stage_retiring": "Подготовка учётной записи",
+	"mobile.signin.stage_signed_in": "Вход выполнен",
+	"mobile.signin.stage_starting": "Начало входа",
+	"mobile.signin.stage_unavailable": "Вход недоступен",
+	"mobile.signin.superseded": "Начался другой вход."
 }

@@ -34,7 +34,9 @@ final class SignInAppUITests: XCTestCase {
     _ = try control("/release-token")
     try visible("sign-in-try-again")
     attach("token-500-error-and-retry-collapsed")
+    XCTAssertEqual(app.buttons["sign-in-diagnostics-toggle"].label, "Show sign-in details")
     app.buttons["sign-in-diagnostics-toggle"].tap()
+    XCTAssertEqual(app.buttons["sign-in-diagnostics-toggle"].label, "Hide sign-in details")
     try visible("sign-in-diagnostics")
     let diagnostic = app.descendants(matching: .any).matching(identifier: "sign-in-diagnostics").firstMatch.label
     XCTAssertTrue(diagnostic.contains("RadientAuthError"))

@@ -1,7 +1,20 @@
 {
+	"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
+	"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
+	"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
 	"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
 	"mobile.signin.retry": "دوبارہ کوشش کریں",
-	"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
-	"mobile.signin.superseded": "اس سائن اِن کی جگہ نئی کوشش شروع ہوئی۔ دوبارہ کوشش کریں۔",
-	"mobile.signin.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
+	"mobile.signin.show_diagnostics": "سائن ان کی تفصیلات دکھائیں",
+	"mobile.signin.stage_browser": "آپ کے براؤزر کا انتظار ہے",
+	"mobile.signin.stage_cancelled": "سائن ان منسوخ ہو گیا",
+	"mobile.signin.stage_discovering": "آپ کے کمپیوٹر تلاش ہو رہے ہیں",
+	"mobile.signin.stage_exchanging": "براؤزر میں سائن ان مکمل ہو رہا ہے",
+	"mobile.signin.stage_failed": "سائن ان ناکام ہوا",
+	"mobile.signin.stage_idle": "شروع نہیں ہوا",
+	"mobile.signin.stage_persisting": "آپ کا سائن ان محفوظ ہو رہا ہے",
+	"mobile.signin.stage_retiring": "آپ کا اکاؤنٹ تیار ہو رہا ہے",
+	"mobile.signin.stage_signed_in": "سائن ان ہو گیا",
+	"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
+	"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
+	"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔"
 }

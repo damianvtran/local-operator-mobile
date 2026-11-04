@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { View } from "react-native";
+import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { brandTitleMetrics } from "./brand-title-metrics";
 import { Heading } from "./heading";
 import { NavigationMark } from "./navigation-mark";
 
@@ -9,27 +11,43 @@ import { NavigationMark } from "./navigation-mark";
  * font scaling; it stays centred beside the title rather than beside controls. */
 export function BrandTitle({
 	compact,
+	title,
 	numberOfLines,
 }: {
 	compact?: boolean;
+	title?: string;
 	numberOfLines?: number;
 }) {
 	const { effectiveScale } = useTextScale();
-	const [measuredCap, setMeasuredCap] = useState<number | null>(null);
-	const cap = measuredCap ?? (compact ? 16 : 20) * effectiveScale;
+	const [metrics, setMetrics] = useState<{ cap: number; top: number } | null>(
+		null,
+	);
+	const cap = metrics?.cap ?? (compact ? 16 : 20) * effectiveScale;
+	const top =
+		metrics?.top ??
+		Math.max(
+			0,
+			(lineBoxPt(compact ? "title" : "display", effectiveScale) - cap) / 2,
+		);
 	return (
-		<View className="min-w-0 flex-row items-center gap-2">
-			<NavigationMark size={cap} />
+		<View className="min-w-0 flex-row items-start gap-2">
+			<View style={{ paddingTop: top }}>
+				<NavigationMark size={cap} />
+			</View>
 			<Heading
 				level={1}
 				className={`${compact ? "text-title" : "text-display"} shrink text-ink`}
 				numberOfLines={numberOfLines}
 				onTextLayout={(event) => {
-					const value = event.nativeEvent.lines[0]?.capHeight;
-					if (value && Number.isFinite(value)) setMeasuredCap(value);
+					const line = event.nativeEvent.lines[0];
+					const next = line && brandTitleMetrics(line);
+					if (next)
+						setMetrics((old) =>
+							old?.cap === next.cap && old.top === next.top ? old : next,
+						);
 				}}
 			>
-				Local Operator
+				{title}
 			</Heading>
 		</View>
 	);

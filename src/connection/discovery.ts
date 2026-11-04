@@ -27,9 +27,9 @@ import { z } from "zod";
 import { resolveFetch } from "../relay/platform-fetch";
 
 /* Hoisted: discovery runs on every cold start and after every re-auth. */
-const TRAILING_SLASHES = /\/+$/;
-
 import { debugOAuthProofOrigin } from "./oauth-proof-override";
+
+const TRAILING_SLASHES = /\/+$/;
 
 export const RADIENT_API_BASE = "https://api.radienthq.com";
 /** The tunnel console, for the billing and revoked-tunnel copy. */

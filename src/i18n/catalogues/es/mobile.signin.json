@@ -1,7 +1,20 @@
 {
+	"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
+	"mobile.signin.failed": "No pudimos iniciar sesión.",
+	"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
 	"mobile.signin.progress": "Iniciando sesión…",
 	"mobile.signin.retry": "Reintentar",
-	"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
-	"mobile.signin.superseded": "Este inicio de sesión fue reemplazado. Vuelve a intentarlo.",
-	"mobile.signin.failed": "No pudimos iniciar sesión. Vuelve a intentarlo."
+	"mobile.signin.show_diagnostics": "Mostrar detalles del inicio de sesión",
+	"mobile.signin.stage_browser": "Esperando a tu navegador",
+	"mobile.signin.stage_cancelled": "Inicio de sesión cancelado",
+	"mobile.signin.stage_discovering": "Buscando tus equipos",
+	"mobile.signin.stage_exchanging": "Finalizando el inicio de sesión en el navegador",
+	"mobile.signin.stage_failed": "Error al iniciar sesión",
+	"mobile.signin.stage_idle": "Sin iniciar",
+	"mobile.signin.stage_persisting": "Guardando tu inicio de sesión",
+	"mobile.signin.stage_retiring": "Preparando tu cuenta",
+	"mobile.signin.stage_signed_in": "Sesión iniciada",
+	"mobile.signin.stage_starting": "Iniciando sesión",
+	"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
+	"mobile.signin.superseded": "Se inició otro acceso."
 }

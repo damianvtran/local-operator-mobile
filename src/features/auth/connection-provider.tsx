@@ -1005,6 +1005,10 @@ export const ConnectionProvider = ({
 			setRestoredAccount(true);
 			trace("discovering");
 			await refreshComputers();
+			// Discovery's 401 revokes this revision itself. That is a server
+			// refusal, not a competing attempt, and must use the general failure.
+			if (ownsUI() && connectionStore.getState().surface === "sign-in")
+				throw new Error();
 			requireCurrent();
 			trace("signed-in");
 			setSignInState({ kind: "idle" });

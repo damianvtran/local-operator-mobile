@@ -215,8 +215,21 @@ export type CatalogueKey =
 	| "mobile.session_health.still_reopening"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
+	| "mobile.signin.hide_diagnostics"
 	| "mobile.signin.progress"
 	| "mobile.signin.retry"
+	| "mobile.signin.show_diagnostics"
+	| "mobile.signin.stage_browser"
+	| "mobile.signin.stage_cancelled"
+	| "mobile.signin.stage_discovering"
+	| "mobile.signin.stage_exchanging"
+	| "mobile.signin.stage_failed"
+	| "mobile.signin.stage_idle"
+	| "mobile.signin.stage_persisting"
+	| "mobile.signin.stage_retiring"
+	| "mobile.signin.stage_signed_in"
+	| "mobile.signin.stage_starting"
+	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
@@ -386,8 +399,21 @@ export type NoParamKey =
 	| "mobile.session_health.still_reopening"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
+	| "mobile.signin.hide_diagnostics"
 	| "mobile.signin.progress"
 	| "mobile.signin.retry"
+	| "mobile.signin.show_diagnostics"
+	| "mobile.signin.stage_browser"
+	| "mobile.signin.stage_cancelled"
+	| "mobile.signin.stage_discovering"
+	| "mobile.signin.stage_exchanging"
+	| "mobile.signin.stage_failed"
+	| "mobile.signin.stage_idle"
+	| "mobile.signin.stage_persisting"
+	| "mobile.signin.stage_retiring"
+	| "mobile.signin.stage_signed_in"
+	| "mobile.signin.stage_starting"
+	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
@@ -591,8 +617,21 @@ export type MessageParams = {
 	"mobile.session_health.still_reopening": NoParams;
 	"mobile.signin.diagnostics": NoParams;
 	"mobile.signin.failed": NoParams;
+	"mobile.signin.hide_diagnostics": NoParams;
 	"mobile.signin.progress": NoParams;
 	"mobile.signin.retry": NoParams;
+	"mobile.signin.show_diagnostics": NoParams;
+	"mobile.signin.stage_browser": NoParams;
+	"mobile.signin.stage_cancelled": NoParams;
+	"mobile.signin.stage_discovering": NoParams;
+	"mobile.signin.stage_exchanging": NoParams;
+	"mobile.signin.stage_failed": NoParams;
+	"mobile.signin.stage_idle": NoParams;
+	"mobile.signin.stage_persisting": NoParams;
+	"mobile.signin.stage_retiring": NoParams;
+	"mobile.signin.stage_signed_in": NoParams;
+	"mobile.signin.stage_starting": NoParams;
+	"mobile.signin.stage_unavailable": NoParams;
 	"mobile.signin.superseded": NoParams;
 	"relay.chrome.session.resume": NoParams;
 	"relay.chrome.session.resuming": NoParams;
@@ -808,10 +847,23 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
 	"mobile.signin.diagnostics": "Sign-in diagnostics",
-	"mobile.signin.failed": "We could not finish signing in. Please retry.",
+	"mobile.signin.failed": "We could not finish signing in.",
+	"mobile.signin.hide_diagnostics": "Hide sign-in details",
 	"mobile.signin.progress": "Signing in…",
 	"mobile.signin.retry": "Retry",
-	"mobile.signin.superseded": "This sign-in was superseded. Please retry.",
+	"mobile.signin.show_diagnostics": "Show sign-in details",
+	"mobile.signin.stage_browser": "Waiting for your browser",
+	"mobile.signin.stage_cancelled": "Sign-in cancelled",
+	"mobile.signin.stage_discovering": "Finding your computers",
+	"mobile.signin.stage_exchanging": "Finishing browser sign-in",
+	"mobile.signin.stage_failed": "Sign-in failed",
+	"mobile.signin.stage_idle": "Not started",
+	"mobile.signin.stage_persisting": "Saving your sign-in",
+	"mobile.signin.stage_retiring": "Preparing your account",
+	"mobile.signin.stage_signed_in": "Signed in",
+	"mobile.signin.stage_starting": "Starting sign-in",
+	"mobile.signin.stage_unavailable": "Sign-in unavailable",
+	"mobile.signin.superseded": "Another sign-in started.",
 	"relay.chrome.session.resume": "Resume",
 	"relay.chrome.session.resuming": "Resuming…",
 	"relay.chrome.session.subtitle.ended": "Ended",
@@ -1012,8 +1064,21 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
 	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
 	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
+	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.progress": { role: "status", note: "Visible after the native browser returns, during token exchange and credential persistence." },
 	"mobile.signin.retry": { role: "button", note: "Retry a failed or cancelled sign-in." },
+	"mobile.signin.show_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_browser": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_cancelled": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_discovering": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_exchanging": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_failed": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_idle": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_persisting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_retiring": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_signed_in": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_starting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_unavailable": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
 	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
 	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
@@ -1228,10 +1293,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
 		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
-		"mobile.signin.failed": "No pudimos iniciar sesión. Vuelve a intentarlo.",
+		"mobile.signin.failed": "No pudimos iniciar sesión.",
+		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
 		"mobile.signin.progress": "Iniciando sesión…",
 		"mobile.signin.retry": "Reintentar",
-		"mobile.signin.superseded": "Este inicio de sesión fue reemplazado. Vuelve a intentarlo.",
+		"mobile.signin.show_diagnostics": "Mostrar detalles del inicio de sesión",
+		"mobile.signin.stage_browser": "Esperando a tu navegador",
+		"mobile.signin.stage_cancelled": "Inicio de sesión cancelado",
+		"mobile.signin.stage_discovering": "Buscando tus equipos",
+		"mobile.signin.stage_exchanging": "Finalizando el inicio de sesión en el navegador",
+		"mobile.signin.stage_failed": "Error al iniciar sesión",
+		"mobile.signin.stage_idle": "Sin iniciar",
+		"mobile.signin.stage_persisting": "Guardando tu inicio de sesión",
+		"mobile.signin.stage_retiring": "Preparando tu cuenta",
+		"mobile.signin.stage_signed_in": "Sesión iniciada",
+		"mobile.signin.stage_starting": "Iniciando sesión",
+		"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
+		"mobile.signin.superseded": "Se inició otro acceso.",
 		"relay.chrome.session.resume": "Reanudar",
 		"relay.chrome.session.resuming": "Reanudando…",
 		"relay.chrome.session.subtitle.ended": "Finalizada",
@@ -1429,10 +1507,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
 		"mobile.signin.diagnostics": "Diagnostic de connexion",
-		"mobile.signin.failed": "Impossible de terminer la connexion. Réessayez.",
+		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
+		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
 		"mobile.signin.progress": "Connexion en cours…",
 		"mobile.signin.retry": "Réessayer",
-		"mobile.signin.superseded": "Cette connexion a été remplacée. Réessayez.",
+		"mobile.signin.show_diagnostics": "Afficher les détails de connexion",
+		"mobile.signin.stage_browser": "En attente de votre navigateur",
+		"mobile.signin.stage_cancelled": "Connexion annulée",
+		"mobile.signin.stage_discovering": "Recherche de vos ordinateurs",
+		"mobile.signin.stage_exchanging": "Finalisation de la connexion dans le navigateur",
+		"mobile.signin.stage_failed": "Échec de la connexion",
+		"mobile.signin.stage_idle": "Non commencé",
+		"mobile.signin.stage_persisting": "Enregistrement de votre connexion",
+		"mobile.signin.stage_retiring": "Préparation de votre compte",
+		"mobile.signin.stage_signed_in": "Connecté",
+		"mobile.signin.stage_starting": "Connexion en cours",
+		"mobile.signin.stage_unavailable": "Connexion indisponible",
+		"mobile.signin.superseded": "Une autre connexion a démarré.",
 		"relay.chrome.session.resume": "Reprendre",
 		"relay.chrome.session.resuming": "Reprise…",
 		"relay.chrome.session.subtitle.ended": "Terminée",
@@ -1630,10 +1721,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
 		"mobile.signin.diagnostics": "साइन-इन निदान",
-		"mobile.signin.failed": "साइन इन पूरा नहीं हुआ। फिर कोशिश करें।",
+		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
+		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
 		"mobile.signin.progress": "साइन इन हो रहा है…",
 		"mobile.signin.retry": "फिर कोशिश करें",
-		"mobile.signin.superseded": "इस साइन-इन की जगह दूसरा प्रयास शुरू हुआ। फिर कोशिश करें।",
+		"mobile.signin.show_diagnostics": "साइन-इन का विवरण दिखाएँ",
+		"mobile.signin.stage_browser": "आपके ब्राउज़र की प्रतीक्षा है",
+		"mobile.signin.stage_cancelled": "साइन-इन रद्द हुआ",
+		"mobile.signin.stage_discovering": "आपके कंप्यूटर खोजे जा रहे हैं",
+		"mobile.signin.stage_exchanging": "ब्राउज़र में साइन-इन पूरा हो रहा है",
+		"mobile.signin.stage_failed": "साइन-इन विफल हुआ",
+		"mobile.signin.stage_idle": "शुरू नहीं हुआ",
+		"mobile.signin.stage_persisting": "आपका साइन-इन सहेजा जा रहा है",
+		"mobile.signin.stage_retiring": "आपका खाता तैयार हो रहा है",
+		"mobile.signin.stage_signed_in": "साइन-इन हो गया",
+		"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
+		"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
+		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
 		"relay.chrome.session.resume": "जारी रखें",
 		"relay.chrome.session.resuming": "खुल रहा है…",
 		"relay.chrome.session.subtitle.ended": "समाप्त",
@@ -1831,10 +1935,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
 		"mobile.signin.diagnostics": "Диагностика входа",
-		"mobile.signin.failed": "Не удалось завершить вход. Повторите попытку.",
+		"mobile.signin.failed": "Не удалось завершить вход.",
+		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
 		"mobile.signin.progress": "Вход…",
 		"mobile.signin.retry": "Повторить",
-		"mobile.signin.superseded": "Эта попытка входа заменена. Повторите попытку.",
+		"mobile.signin.show_diagnostics": "Показать сведения о входе",
+		"mobile.signin.stage_browser": "Ожидание браузера",
+		"mobile.signin.stage_cancelled": "Вход отменён",
+		"mobile.signin.stage_discovering": "Поиск ваших компьютеров",
+		"mobile.signin.stage_exchanging": "Завершение входа через браузер",
+		"mobile.signin.stage_failed": "Не удалось войти",
+		"mobile.signin.stage_idle": "Не начато",
+		"mobile.signin.stage_persisting": "Сохранение входа",
+		"mobile.signin.stage_retiring": "Подготовка учётной записи",
+		"mobile.signin.stage_signed_in": "Вход выполнен",
+		"mobile.signin.stage_starting": "Начало входа",
+		"mobile.signin.stage_unavailable": "Вход недоступен",
+		"mobile.signin.superseded": "Начался другой вход.",
 		"relay.chrome.session.resume": "Возобновить",
 		"relay.chrome.session.resuming": "Возобновляем…",
 		"relay.chrome.session.subtitle.ended": "Завершена",
@@ -2032,10 +2149,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
 		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
-		"mobile.signin.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
+		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
 		"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
 		"mobile.signin.retry": "دوبارہ کوشش کریں",
-		"mobile.signin.superseded": "اس سائن اِن کی جگہ نئی کوشش شروع ہوئی۔ دوبارہ کوشش کریں۔",
+		"mobile.signin.show_diagnostics": "سائن ان کی تفصیلات دکھائیں",
+		"mobile.signin.stage_browser": "آپ کے براؤزر کا انتظار ہے",
+		"mobile.signin.stage_cancelled": "سائن ان منسوخ ہو گیا",
+		"mobile.signin.stage_discovering": "آپ کے کمپیوٹر تلاش ہو رہے ہیں",
+		"mobile.signin.stage_exchanging": "براؤزر میں سائن ان مکمل ہو رہا ہے",
+		"mobile.signin.stage_failed": "سائن ان ناکام ہوا",
+		"mobile.signin.stage_idle": "شروع نہیں ہوا",
+		"mobile.signin.stage_persisting": "آپ کا سائن ان محفوظ ہو رہا ہے",
+		"mobile.signin.stage_retiring": "آپ کا اکاؤنٹ تیار ہو رہا ہے",
+		"mobile.signin.stage_signed_in": "سائن ان ہو گیا",
+		"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
+		"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
+		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
 		"relay.chrome.session.resume": "جاری رکھیں",
 		"relay.chrome.session.resuming": "جاری ہو رہا…",
 		"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
@@ -2233,10 +2363,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
 		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
-		"mobile.signin.failed": "Không thể hoàn tất đăng nhập. Vui lòng thử lại.",
+		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
+		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
 		"mobile.signin.progress": "Đang đăng nhập…",
 		"mobile.signin.retry": "Thử lại",
-		"mobile.signin.superseded": "Lần đăng nhập này đã được thay thế. Vui lòng thử lại.",
+		"mobile.signin.show_diagnostics": "Hiện chi tiết đăng nhập",
+		"mobile.signin.stage_browser": "Đang chờ trình duyệt",
+		"mobile.signin.stage_cancelled": "Đã hủy đăng nhập",
+		"mobile.signin.stage_discovering": "Đang tìm máy tính của bạn",
+		"mobile.signin.stage_exchanging": "Đang hoàn tất đăng nhập qua trình duyệt",
+		"mobile.signin.stage_failed": "Đăng nhập thất bại",
+		"mobile.signin.stage_idle": "Chưa bắt đầu",
+		"mobile.signin.stage_persisting": "Đang lưu thông tin đăng nhập",
+		"mobile.signin.stage_retiring": "Đang chuẩn bị tài khoản",
+		"mobile.signin.stage_signed_in": "Đã đăng nhập",
+		"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
+		"mobile.signin.stage_unavailable": "Không thể đăng nhập",
+		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
 		"relay.chrome.session.resume": "Mở lại",
 		"relay.chrome.session.resuming": "Đang mở lại…",
 		"relay.chrome.session.subtitle.ended": "Đã kết thúc",
@@ -2434,10 +2577,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
 		"mobile.signin.diagnostics": "登录诊断",
-		"mobile.signin.failed": "无法完成登录。请重试。",
+		"mobile.signin.failed": "无法完成登录。",
+		"mobile.signin.hide_diagnostics": "隐藏登录详情",
 		"mobile.signin.progress": "正在登录…",
 		"mobile.signin.retry": "重试",
-		"mobile.signin.superseded": "此次登录已被替代。请重试。",
+		"mobile.signin.show_diagnostics": "显示登录详情",
+		"mobile.signin.stage_browser": "正在等待浏览器",
+		"mobile.signin.stage_cancelled": "登录已取消",
+		"mobile.signin.stage_discovering": "正在查找你的电脑",
+		"mobile.signin.stage_exchanging": "正在完成浏览器登录",
+		"mobile.signin.stage_failed": "登录失败",
+		"mobile.signin.stage_idle": "尚未开始",
+		"mobile.signin.stage_persisting": "正在保存登录信息",
+		"mobile.signin.stage_retiring": "正在准备账户",
+		"mobile.signin.stage_signed_in": "已登录",
+		"mobile.signin.stage_starting": "正在开始登录",
+		"mobile.signin.stage_unavailable": "无法登录",
+		"mobile.signin.superseded": "另一次登录已开始。",
 		"relay.chrome.session.resume": "恢复",
 		"relay.chrome.session.resuming": "正在恢复……",
 		"relay.chrome.session.subtitle.ended": "已结束",

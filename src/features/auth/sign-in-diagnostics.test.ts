@@ -15,6 +15,9 @@ describe("redacted sign-in diagnostics", () => {
 			"https://example.invalid/callback?code=PRIVATE&state=PRIVATE",
 		);
 		error.name = error.message;
+		// Pin the FIRST privacy boundary too; the append filter must not hide
+		// a regression that returns an arbitrary native error.name.
+		expect(signInErrorClass(error)).toBe("Error");
 		trail = appendSignInDiagnostic(
 			trail,
 			error.message,

@@ -36,6 +36,7 @@ import {
 	switcherSections,
 	switcherTap,
 } from "./computer-switcher-view";
+import { signInPresentation } from "./sign-in-presentation";
 
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
@@ -229,6 +230,8 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		/** Edge re-auth signal, distinct from the custom relay's plain 401. */
+		edgeCatalogue?: boolean;
 		/** Seed one session frame, tear the stream, then refuse every reopen 401 —
 		 *  the round-4 shape (review N1). */
 		refuseSessionStream?: boolean;
@@ -390,6 +393,8 @@ async function relay(
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
 			if (options.refuseCatalogue && catalogueStreams > 1) {
+				if (options.edgeCatalogue)
+					response.setHeader("x-radient-login", "required");
 				json({ detail: "Authentication required" }, 401);
 				return;
 			}
@@ -1730,6 +1735,73 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 		).toEqual(["tun-synthetic-1", "tun-synthetic-2"]);
 	});
 
+	it("keeps Welcome available after a restored account gets an edge 401, then admits its own retry", async () => {
+		const routedTunnels = tunnels.map((tunnel, index) => ({
+			...tunnel,
+			hostname: `${(index === 0 ? "a" : "b").repeat(32)}-lop.radienthq.com`,
+		}));
+		const mock = await relay({
+			tunnels: routedTunnels,
+			refuseCatalogue: true,
+			edgeCatalogue: true,
+		});
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		mock.refuseCatalogue.resolve();
+		await until(() => connectionStore.getState().surface === "sign-in");
+		expect(latest.refusal?.kind).toBe("sign-in");
+		// Opening C5's "Sign in again" mounts Welcome with this exact state.
+		// The shared presentation function is the screen's actual redirect guard.
+		const welcome = signInPresentation({
+			initiated: false,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			state: latest.signInState,
+		});
+		expect(latest.restoredAccount).toBe(true);
+		expect(welcome.navigate).toBe(false);
+		expect(welcome.state.kind).toBe("idle");
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		const retried = signInPresentation({
+			initiated: true,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			state: latest.signInState,
+		});
+		expect(retried.navigate).toBe(true);
+		expect(retried.state.kind).toBe("exchanging");
+	});
+
+	it("reports a discovery 401 after a fresh grant as general failure, not a competing sign-in", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		mock.answerTunnels(401);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState).toMatchObject({
+			kind: "failed",
+			errorClass: "Error",
+			detail: "We could not finish signing in.",
+		});
+		expect(mock.events).toContain("GET /v1/tunnels");
+	});
+
 	it("makes native memory-only credential storage a visible retryable failure", async () => {
 		await mount();
 		const { Platform } = await import("react-native");
@@ -1743,7 +1815,13 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			await act(async () => {
 				await latest.signInWithRadient();
 			});
-			expect(latest.signInState.kind).toBe("failed");
+			expect(latest.signInState).toMatchObject({
+				kind: "failed",
+				errorClass: "Error",
+			});
+			expect(
+				latest.signInDiagnostics.map((entry) => entry.stage),
+			).not.toContain("discovering");
 			expect(latest.restoredAccount).toBe(false);
 			expect(latest.busy).toBe(false);
 			expect(latest.signInDiagnostics.map((entry) => entry.stage)).toContain(

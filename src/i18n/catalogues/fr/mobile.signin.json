@@ -1,7 +1,20 @@
 {
+	"mobile.signin.diagnostics": "Diagnostic de connexion",
+	"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
+	"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
 	"mobile.signin.progress": "Connexion en cours…",
 	"mobile.signin.retry": "Réessayer",
-	"mobile.signin.diagnostics": "Diagnostic de connexion",
-	"mobile.signin.superseded": "Cette connexion a été remplacée. Réessayez.",
-	"mobile.signin.failed": "Impossible de terminer la connexion. Réessayez."
+	"mobile.signin.show_diagnostics": "Afficher les détails de connexion",
+	"mobile.signin.stage_browser": "En attente de votre navigateur",
+	"mobile.signin.stage_cancelled": "Connexion annulée",
+	"mobile.signin.stage_discovering": "Recherche de vos ordinateurs",
+	"mobile.signin.stage_exchanging": "Finalisation de la connexion dans le navigateur",
+	"mobile.signin.stage_failed": "Échec de la connexion",
+	"mobile.signin.stage_idle": "Non commencé",
+	"mobile.signin.stage_persisting": "Enregistrement de votre connexion",
+	"mobile.signin.stage_retiring": "Préparation de votre compte",
+	"mobile.signin.stage_signed_in": "Connecté",
+	"mobile.signin.stage_starting": "Connexion en cours",
+	"mobile.signin.stage_unavailable": "Connexion indisponible",
+	"mobile.signin.superseded": "Une autre connexion a démarré."
 }
