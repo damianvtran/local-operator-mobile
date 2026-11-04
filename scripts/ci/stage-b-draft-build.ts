@@ -29,6 +29,15 @@ const { View, Text, ActivityIndicator } = require('react-native');
 const { renderRootComponent } = require('expo-router/build/renderRootComponent');
 let startup;
 let stage = 'registered';
+let gateSplashHidden = false;
+function hideGateSplash() {
+  // The real router hides on navigation-ready, which deliberately cannot occur
+  // before seed completion. Reveal this laid-out diagnostic gate independently.
+  if (!gateSplashHidden) {
+    require('expo-router/build/utils/splash').hide();
+    gateSplashHidden = true;
+  }
+}
 function StageBProofRoot() {
   const [state, setState] = React.useState({ ready: false, stage, error: null });
   React.useEffect(() => {
@@ -44,7 +53,7 @@ function StageBProofRoot() {
     return () => { active = false; };
   }, []);
   const status = 'stage=' + state.stage + ' cause=' + (state.error ? state.error.name + ': ' + state.error.message : 'pending');
-  if (!state.ready) return React.createElement(View, { testID: 'stage-b-proof-gate', accessible: true, accessibilityLabel: status }, React.createElement(Text, { testID: 'stage-b-proof-status' }, status), state.error ? null : React.createElement(ActivityIndicator));
+  if (!state.ready) return React.createElement(View, { testID: 'stage-b-proof-gate', accessible: true, accessibilityLabel: status, onLayout: hideGateSplash }, React.createElement(Text, { testID: 'stage-b-proof-status' }, status), state.error ? null : React.createElement(ActivityIndicator));
   const { App } = require('expo-router/build/qualified-entry');
   return React.createElement(App);
 }

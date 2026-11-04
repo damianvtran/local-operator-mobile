@@ -101,6 +101,8 @@ function evaluateEntry(entry: string) {
 				ActivityIndicator: "ActivityIndicator",
 				AppRegistry,
 			};
+		if (id === "expo-router/build/utils/splash")
+			return { hide: () => calls.push("hide-native-splash") };
 		if (id === "expo-router/build/renderRootComponent")
 			return {
 				renderRootComponent: (Root: () => unknown) =>
@@ -153,6 +155,26 @@ function requireSynchronousMain(registry: Map<string, unknown>) {
 }
 
 describe("dedicated Stage B entry registration", () => {
+	it("reveals the gate once on layout without waiting for or importing the real router", async () => {
+		const entry = evaluateEntry(stageBGeneratedSource(config).entry);
+		requireSynchronousMain(entry.registry);
+		expect(entry.calls).not.toContain("hide-native-splash");
+		const gate = entry.render() as { props: { onLayout: () => void } };
+		gate.props.onLayout();
+		gate.props.onLayout();
+		expect(entry.calls).toEqual([
+			"install-transport",
+			"register-main",
+			"hide-native-splash",
+		]);
+		entry.mountEffect();
+		await entry.resolve();
+		expect(entry.render()).toMatchObject({ type: entry.App });
+		gate.props.onLayout(); // A queued old layout after App mount cannot hide twice.
+		expect(
+			entry.calls.filter((call) => call === "hide-native-splash"),
+		).toHaveLength(1);
+	});
 	it("registers main synchronously and mounts the real router only after seed completion", async () => {
 		const entry = evaluateEntry(stageBGeneratedSource(config).entry);
 		requireSynchronousMain(entry.registry);
