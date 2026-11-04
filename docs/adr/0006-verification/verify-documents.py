@@ -476,6 +476,9 @@ rows = [
  # wire value uses an underscore so it IS the file stem; a hyphenated file name here would make APNs
  # play the OS default for every built-in.
  ("SND iOS file names are the underscore form (built-in and custom)", has(af,'"sound": "soft_pulse.wav"') and has(af,'`"<id with - → _>.wav"`') and not has(af,'"<id>.wav"') and not has(af,"soft-pulse.wav") and not has(af,"c-<sha256")),
+ # Review round 3, m1: the cloud splices sound_custom into aps.sound and a channel id, so both
+ # sound_custom rows must pin the SHAPE (lowercase hex, underscore), not only `string`.
+ ("SND sound_custom shape pinned in both rows", af.count("`^c_[0-9a-f]{16}$`") >= 2 and has(af,"The cloud **validates the pattern**")),
  ("SND the v1 no-custom rule survives only as its retraction", af.count("not on the phone in v1") == 1 and has(af,"sounds are no longer \"not on the phone in v1\"")),
  ("P5 plan note: vocabulary re-checked at the note head", has(pf,"`revoked_at` / `unpaired_at` / `expired_at`") and has(pf,"Re-checked at the note's head `30a0f4d`")),
 ]
