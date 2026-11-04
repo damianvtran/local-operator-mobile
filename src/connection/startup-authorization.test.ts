@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { PickerPrivacy } from "@/features/session/picker-privacy";
 import { scopedStore } from "@/features/session/scoped-storage";
 import { runCommandOperation } from "@/relay/command-lifecycle";
 import {
@@ -40,6 +41,35 @@ function deferred() {
 }
 
 describe("startup authorization privacy boundary", () => {
+	it("does not cancel an open picker on late same-owner proof or recovery readiness", async () => {
+		const owner = fixture().lifecycle();
+		const privacy = new PickerPrivacy();
+		const withdraw = vi.fn(privacy.withdraw);
+		owner.configureRecoveryBoundary({
+			withdraw,
+			admitted: privacy.reopen,
+			drain: privacy.drain,
+			clear: async () => {},
+			checkpoint: async () => {},
+		});
+		const revision = owner.getRevision();
+		await owner.admit("route", revision, undefined, null);
+		const selection = deferred();
+		let stillCurrent = false;
+		const picked = privacy.run(async (isCurrent) => {
+			await selection.promise;
+			stillCurrent = isCurrent();
+			return "image";
+		});
+		await owner.admit("route", revision, async () => {}, "owner-a");
+		await owner.admit("route", revision, async () => {}, "owner-a");
+		expect(withdraw).not.toHaveBeenCalled();
+		selection.resolve();
+		expect(await picked).toBe("image");
+		expect(stillCurrent).toBe(true);
+		owner.suspend();
+		expect(withdraw).toHaveBeenCalledOnce();
+	});
 	it.each([
 		["custom restart", "custom-route", null, null],
 		["Radient offline restart", "radient-route", "owner-a", null],

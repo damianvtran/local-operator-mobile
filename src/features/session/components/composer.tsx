@@ -55,6 +55,38 @@ import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
+/** iOS presents its picker from the current native controller, not the next
+ * React state. Wait for the sheet's actual dismissal so it cannot take a newly
+ * presented PHPicker down with it. Other platforms keep their immediate path.
+ * The bounded fallback avoids a lost native callback hanging Attach forever. */
+export function createAttachmentSheetHandoff() {
+	let pending: (() => void) | undefined;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const cancel = () => {
+		if (timer !== undefined) clearTimeout(timer);
+		timer = undefined;
+		pending = undefined;
+	};
+	const dismissed = () => {
+		const launch = pending;
+		cancel();
+		launch?.();
+	};
+	return {
+		choose: (launch: () => void, platform: string) => {
+			cancel();
+			if (platform !== "ios") {
+				launch();
+				return;
+			}
+			pending = launch;
+			timer = setTimeout(dismissed, 500);
+		},
+		dismissed,
+		cancel,
+	};
+}
+
 /** The outcome lines the status row can rest on, and whether the row is showing a
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
@@ -437,6 +469,8 @@ export const Composer = ({
 	/* The attach sheet's open state. Local, not the host's: the sheet is this
 	 *  component's own surface, so both hosts inherit it without a second copy. */
 	const [attachSheetOpen, setAttachSheetOpen] = useState(false);
+	const attachmentHandoff = useRef(createAttachmentSheetHandoff()).current;
+	useEffect(() => () => attachmentHandoff.cancel(), [attachmentHandoff]);
 	useEffect(() => {
 		/* Enter sends, Shift+Enter inserts a newline, on a hardware keyboard. On web
 		 * that is a `keydown` the field would otherwise spend on a newline: a multiline
@@ -1095,6 +1129,7 @@ export const Composer = ({
 			<Sheet
 				visible={attachSheetOpen}
 				onClose={() => setAttachSheetOpen(false)}
+				onDismiss={attachmentHandoff.dismissed}
 				title="attach"
 				testID={SURFACE.attachSheet}
 			>
@@ -1106,11 +1141,11 @@ export const Composer = ({
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={action.label}
 								onPress={() => {
-									/* Closed first: the picker opens over a dismissed sheet, never
-									 *  under one — a system picker presented from behind a modal is
-									 *  how a cancel lands back on a sheet nobody reopened. */
 									setAttachSheetOpen(false);
-									onAttach(action.source);
+									attachmentHandoff.choose(
+										() => onAttach(action.source),
+										Platform.OS,
+									);
 								}}
 								testID={attachOptionId(action.source)}
 							>

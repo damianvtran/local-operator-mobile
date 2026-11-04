@@ -6,6 +6,10 @@ import {
 	recoveryAuthorityScope,
 } from "../../src/connection/recovery-authority";
 import {
+	directoriesSchema,
+	modelsResponseSchema,
+} from "../../src/contracts/schemas";
+import {
 	STAGE_B_HOST,
 	stageBContainsDraftCanary,
 	stageBDraftCanary,
@@ -26,6 +30,35 @@ async function fixture() {
 	return { ...server, transport: stageBTransport(server.config, fetch) };
 }
 describe("Stage B real-socket synthetic authority fixture", () => {
+	it("serves valid home directories and a populated catalogue behind the relay gate", async () => {
+		const x = await fixture();
+		const request = (path: string, authenticated = true) =>
+			!authenticated
+				? fetch(`${x.config.fixtureOrigin}${path}`, {
+						headers: {
+							"x-stage-b-proof": x.config.nonce,
+							Origin: `https://${STAGE_B_HOST}`,
+						},
+					})
+				: x.transport(`https://${STAGE_B_HOST}${path}`, {
+						headers: authenticated
+							? {
+									Cookie: `__Host-radient-grant=${syntheticValue(x.config, "grant")}`,
+									Origin: `https://${STAGE_B_HOST}`,
+								}
+							: {},
+					});
+		const directories = await request("/api/directories");
+		expect(directories.status).toBe(200);
+		directoriesSchema.parse(await directories.json());
+		const models = await request("/api/models");
+		expect(models.status).toBe(200);
+		expect(
+			modelsResponseSchema.parse(await models.json()).models.length,
+		).toBeGreaterThan(0);
+		expect((await request("/api/directories", false)).status).toBe(401);
+		expect((await request("/api/models", false)).status).toBe(401);
+	});
 	it("accepts the native keychain preflight evidence as a boolean startup receipt", async () => {
 		const x = await fixture();
 		const response = await fetch(`${x.config.fixtureOrigin}/proof/receipt`, {

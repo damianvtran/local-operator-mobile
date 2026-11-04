@@ -1,0 +1,81 @@
+import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
+import { runInNewContext } from "node:vm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const source = readFileSync(
+	new URL("./components/composer.tsx", import.meta.url),
+	"utf8",
+);
+// Evaluate the actual production function without importing the native renderer.
+// No duplicated policy: source wiring below pins its use at the Sheet boundary.
+const start = source.indexOf("export function createAttachmentSheetHandoff()");
+const end = source.indexOf("/** The outcome lines", start);
+if (start < 0 || end < 0) throw Error("production attachment handoff missing");
+const js = stripTypeScriptTypes(
+	source.slice(start, end).replace("export ", ""),
+);
+const create = () =>
+	runInNewContext(`${js}; createAttachmentSheetHandoff()`, {
+		setTimeout,
+		clearTimeout,
+	}) as {
+		choose(launch: () => void, platform: string): void;
+		dismissed(): void;
+		cancel(): void;
+	};
+afterEach(() => vi.useRealTimers());
+describe("native attachment sheet handoff", () => {
+	it("waits for native dismissal; a later fallback cannot launch twice", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const launch = vi.fn();
+		handoff.choose(launch, "ios");
+		expect(launch).not.toHaveBeenCalled();
+		vi.advanceTimersByTime(499);
+		expect(launch).not.toHaveBeenCalled();
+		handoff.dismissed();
+		expect(launch).toHaveBeenCalledTimes(1);
+		vi.runAllTimers();
+		handoff.dismissed();
+		expect(launch).toHaveBeenCalledTimes(1);
+	});
+	it("falls back after 500ms and consumes a late native dismissal exactly once", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const launch = vi.fn();
+		handoff.choose(launch, "ios");
+		vi.advanceTimersByTime(500);
+		handoff.dismissed();
+		expect(launch).toHaveBeenCalledTimes(1);
+	});
+	it("launches nothing without a selection or after unmount", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const launch = vi.fn();
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(launch).not.toHaveBeenCalled();
+		handoff.choose(launch, "ios");
+		handoff.cancel();
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(launch).not.toHaveBeenCalled();
+	});
+	it.each(["android", "web"])("keeps %s selection immediate", (platform) => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const launch = vi.fn();
+		handoff.choose(launch, platform);
+		expect(launch).toHaveBeenCalledTimes(1);
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(launch).toHaveBeenCalledTimes(1);
+	});
+	it("wires the real composer choice and native dismissal without changing close/layout", () => {
+		expect(source).toContain("onDismiss={attachmentHandoff.dismissed}");
+		expect(source).toContain("attachmentHandoff.choose(");
+		expect(source).toContain("() => onAttach(action.source)");
+		expect(source).toContain("onClose={() => setAttachSheetOpen(false)}");
+	});
+});

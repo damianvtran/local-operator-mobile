@@ -433,7 +433,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #156 adds native recovery/reauth fencing; re-derived on the merged tree below.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
-	src: "f2cf35f3faca38b1e8aa5f02d0adeb9397ad9e858fc8c665e8587896cc0261e1",
+	// iOS picker handoff only; web U08 rendering/animation and scene data unchanged.
+	src: "0335a780f42ce648b9197572b1ac1d23f871dc8880c3e79dd0d9dd1c1a8adb55",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

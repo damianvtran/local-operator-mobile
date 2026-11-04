@@ -1,7 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
-import { startFixtureRelay } from "../../src/testing/fixture-relay.ts";
+import {
+	fixtureBody,
+	startFixtureRelay,
+} from "../../src/testing/fixture-relay.ts";
+import { loadFixture } from "../../src/testing/fixtures.ts";
 import {
 	STAGE_B_BUNDLE,
 	STAGE_B_HOST,
@@ -398,6 +402,25 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 						redirect: "manual",
 					},
 				);
+				// The minimal relay authenticates first, but has no directory route and
+				// its captured model catalogue is empty. Supply the home screen's data
+				// only after that gate, so proof screenshots aren't fixture-error states.
+				if (
+					request.method === "GET" &&
+					[200, 404].includes(upstream.status) &&
+					(url.pathname === "/api/directories" ||
+						url.pathname === "/api/models")
+				) {
+					await upstream.body?.cancel();
+					send(
+						response,
+						200,
+						url.pathname === "/api/directories"
+							? fixtureBody("http/directories.json")
+							: loadFixture("synthetic/models.ranked.json"),
+					);
+					return;
+				}
 				response.writeHead(
 					upstream.status,
 					Object.fromEntries(upstream.headers),
