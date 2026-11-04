@@ -183,7 +183,7 @@ describe("dedicated Stage B proof preflight", () => {
 				writeFileSync(join(fixture, "marker.txt"), "relative-original-data");
 				writeFileSync(
 					join(fixture, "app.stage-b-original.ts"),
-					`import { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\nconst marker = readFileSync(join(__dirname, 'marker.txt'), 'utf8');\nexport default ({ config }) => ({ ...config, ios: { infoPlist: { OriginalMarker: marker } } });\n`,
+					`import { readFileSync } from 'node:fs';\nimport { join } from 'node:path';\nconst marker = readFileSync(join(__dirname, 'marker.txt'), 'utf8');\nexport default ({ config }) => ({ ...config, ios: { infoPlist: { OriginalMarker: marker, NSAppTransportSecurity: { NSAllowsArbitraryLoads: false, NSExceptionDomains: { '10.0.0.0/8': { NSExceptionAllowsInsecureHTTPLoads: true }, '127.0.0.1': { NSIncludesSubdomains: false } } } } } });\n`,
 				);
 				const source =
 					mode === "expo-loader"
@@ -225,9 +225,14 @@ describe("dedicated Stage B proof preflight", () => {
 						config.fixtureOrigin,
 					);
 					expect(actual.ios.infoPlist.NSAppTransportSecurity).toEqual({
+						NSAllowsArbitraryLoads: false,
 						NSAllowsLocalNetworking: true,
 						NSExceptionDomains: {
-							"127.0.0.1": { NSExceptionAllowsInsecureHTTPLoads: true },
+							"10.0.0.0/8": { NSExceptionAllowsInsecureHTTPLoads: true },
+							"127.0.0.1": {
+								NSIncludesSubdomains: false,
+								NSExceptionAllowsInsecureHTTPLoads: true,
+							},
 						},
 					});
 				}

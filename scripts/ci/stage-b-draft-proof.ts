@@ -136,6 +136,44 @@ async function until<T>(
 export async function runStageBDraftProof(
 	env: NodeJS.ProcessEnv = process.env,
 ): Promise<void> {
+	return runStageBCoordinator(env);
+}
+
+const NODE_SHIM_MARKER = "Stage B Node-only fake native tool";
+/** Explicit test API only, never selected by CLI/environment. All executables
+ * (including prepare's git) must be owned regular shims on an exclusive PATH.
+ * The production entry above has no route to this host seam. */
+export async function runStageBNodeDryRun(
+	env: NodeJS.ProcessEnv,
+	tools: string,
+	onValue: (name: string, raw: string) => void,
+): Promise<void> {
+	if (process.env.PATH !== tools || env.PATH !== tools)
+		throw new Error("Node-only coordinator requires a fake-tools-only PATH");
+	for (const name of [
+		"git",
+		"df",
+		"xcrun",
+		"xcodebuild",
+		"pod",
+		"pnpm",
+		"maestro",
+		"plutil",
+	]) {
+		const tool = join(tools, name);
+		if (
+			!lstatSync(tool).isFile() ||
+			!readFileSync(tool, "utf8").includes(NODE_SHIM_MARKER)
+		)
+			throw new Error("Node-only coordinator requires owned native-tool shims");
+	}
+	return runStageBCoordinator(env, { plist: join(tools, "plutil"), onValue });
+}
+
+async function runStageBCoordinator(
+	env: NodeJS.ProcessEnv,
+	nodeOnly?: { plist: string; onValue: (name: string, raw: string) => void },
+): Promise<void> {
 	assertStageBAdmission(env);
 	const cwd = process.cwd();
 	const sourceSha = env.STAGE_B_SOURCE_SHA ?? "";
@@ -198,8 +236,10 @@ export async function runStageBDraftProof(
 		commands,
 		cases,
 		status: "running",
-		nativeAuthBoundary:
-			"real native UI/provider/storage/HTTP with synthetic identity; not live Radient OAuth/TLS",
+		...(nodeOnly ? { nodeOnly: true } : {}),
+		nativeAuthBoundary: nodeOnly
+			? "NODE-ONLY simulated tools; no native UI, build or simulator evidence"
+			: "real native UI/provider/storage/HTTP with synthetic identity; not live Radient OAuth/TLS",
 	};
 	const reap = (child: ChildProcess) => {
 		if (!child.pid) return;
@@ -290,7 +330,12 @@ export async function runStageBDraftProof(
 							`${name} failed: rc=${rc} timeout=${timedOut} overflow=${overflow}; see bounded command log`,
 						),
 					);
-				else done(safe.trim());
+				else {
+					// Parsing/identity checks consume exact bytes. Only persisted surfaces
+					// may be redacted; returning safe corrupts SHA/nonce/path/workflow data.
+					nodeOnly?.onValue(name, bytes.trim());
+					done(bytes.trim());
+				}
 			});
 		});
 	const maestro =
@@ -356,7 +401,7 @@ export async function runStageBDraftProof(
 			);
 		fixture = await startStageBIdentityFixture(sourceSha);
 		const config = fixture.config;
-		receipt.nonce = config.nonce;
+		receipt.nonce = redact(config.nonce);
 		receipt.fixtureOrigin = config.fixtureOrigin;
 		prepareStageBProof(cwd, config, env);
 		await run(
@@ -430,7 +475,7 @@ export async function runStageBDraftProof(
 		if (apps.length !== 1) throw new Error("produced native app ambiguous");
 		const app = join(products, apps[0] ?? "");
 		const info = async (path: string, key: string) =>
-			run(`plist-${key}`, "/usr/bin/plutil", [
+			run(`plist-${key}`, nodeOnly?.plist ?? "/usr/bin/plutil", [
 				"-extract",
 				key,
 				"raw",
@@ -529,7 +574,10 @@ export async function runStageBDraftProof(
 				["--device", udid ?? "", "hierarchy"],
 				90,
 			);
-			writeFileSync(join(output, `${name}.hierarchy.txt`), hierarchy);
+			writeFileSync(
+				join(output, `${name}.hierarchy.txt`),
+				stageBDiagnosticText(hierarchy),
+			);
 			if (!hierarchy.includes("bounds") && !hierarchy.includes("frame"))
 				throw new Error("actual native hierarchy geometry unavailable");
 			await run(`frame-${name}`, "xcrun", [
@@ -988,7 +1036,7 @@ export async function runStageBDraftProof(
 					true,
 				);
 			} catch (error) {
-				receipt.shutdownError = String(error);
+				receipt.shutdownError = redact(String(error));
 			}
 			try {
 				await run(
@@ -999,7 +1047,7 @@ export async function runStageBDraftProof(
 					true,
 				);
 			} catch (error) {
-				receipt.deleteError = String(error);
+				receipt.deleteError = redact(String(error));
 				failed ??= error;
 			}
 		}
@@ -1009,7 +1057,7 @@ export async function runStageBDraftProof(
 			try {
 				await fixture.close();
 			} catch (error) {
-				receipt.fixtureCleanupError = String(error);
+				receipt.fixtureCleanupError = redact(String(error));
 				failed ??= error;
 			}
 		}
