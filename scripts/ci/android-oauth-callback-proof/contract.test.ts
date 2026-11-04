@@ -238,6 +238,16 @@ describe("Android OAuth native-proof contract", () => {
 		expect(runner).toContain("provider-click-not-observed");
 	});
 
+	it("launches explicitly and retains immediate and failed-start diagnostics", () => {
+		expect(realApp).toContain("- launchApp:\n    clearState: true");
+		expect(realApp).toContain("- launchApp:\n    clearState: false");
+		expect(realApp).not.toContain('am start -n "$APP_ID/.MainActivity"');
+		expect(realApp).toContain('adb shell pidof "$APP_ID"');
+		expect(realApp).toContain("adb logcat -d -v threadtime");
+		expect(realApp).toContain("capture_app_state negative-complete");
+		expect(realApp).toContain("ANDROID_PROOF_BUNDLE_URL=assets://");
+	});
+
 	it("also exercises the real Expo provider through failure, retry, picker and cold restore", () => {
 		expect(runner).toContain("android-oauth-callback-proof/real-app.sh");
 		expect(prepareApp).toContain("signin-app-proof/prepare-entry.ts");

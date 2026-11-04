@@ -13,7 +13,9 @@ node scripts/ci/signin-app-proof/prepare-entry.ts "$EVIDENCE"
 HOST=$(find "$ROOT/android/app/src/main/java" -name MainApplication.kt -print)
 [[ $(printf '%s\n' "$HOST" | wc -l) == 1 && -f "$HOST" ]] || { echo 'Expected one generated Expo host'; exit 1; }
 cp "$HOST" "$EVIDENCE/generated-host-before.kt"
-node scripts/ci/android-oauth-callback-proof/embedded-host.ts "$HOST"
+node scripts/ci/android-oauth-callback-proof/embedded-host.ts "$HOST" "$ROOT/signin-proof-entry.js"
+cp signin-proof-entry.js "$EVIDENCE/signin-proof-entry.js"
+sha256sum signin-proof-entry.js > "$EVIDENCE/entry-sha256.txt"
 cp "$HOST" "$EVIDENCE/generated-host-embedded.kt"
 mkdir -p android/app/src/debug/assets android/app/src/debug/res
 # dev=true preserves __DEV__ for the existing explicit E2E gate. The native host
