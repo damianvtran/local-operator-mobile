@@ -10,6 +10,22 @@ import {
 } from "./stage-b-draft-timing";
 
 describe("measured Stage B frame timing", () => {
+	it("never overlaps restore screenshot commands on the same simulator", async () => {
+		let active = 0,
+			maximum = 0;
+		await captureStageBRestoreBurst(
+			async () => {
+				active++;
+				maximum = Math.max(maximum, active);
+				await new Promise((resolve) => setTimeout(resolve, 1));
+				active--;
+			},
+			"restore",
+			async () => {},
+		);
+		expect(maximum).toBe(1);
+		expect(active).toBe(0);
+	});
 	it("wires fixture-triggered loading capture without Maestro and leaves the product 20s deadline unchanged", () => {
 		const source = readFileSync(
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
@@ -24,7 +40,7 @@ describe("measured Stage B frame timing", () => {
 		expect(capture).toContain("proof.release()");
 		expect(capture).not.toContain("await frame(");
 		expect(capture).not.toContain("await flow(");
-		expect(source).toContain('frame("light-loading-post-release")');
+		expect(source).not.toContain('frame("light-loading-post-release")');
 		expect(source).toContain('"timed-out-proof-fails-closed"');
 		expect(source).toContain('"fresh-proof-after-timeout-restores"');
 		const production = readFileSync(
@@ -54,7 +70,7 @@ describe("measured Stage B frame timing", () => {
 		).toBe(first);
 		expect(calls).toEqual([180, ["gap", 1000]]);
 	});
-	it("takes loading pixels with bounded screenshots, then three 300ms restore frames", async () => {
+	it("takes bounded loading pixels, then three serial restore frames with 300ms quiet gaps", async () => {
 		const calls: unknown[] = [];
 		const shot = async (name: string, seconds: number) => {
 			calls.push([name, seconds]);
@@ -70,8 +86,8 @@ describe("measured Stage B frame timing", () => {
 			["light-loading-consecutive", 3],
 			["light-populated-after-restore-0", 3],
 			["gap", 300],
-			["gap", 600],
 			["light-populated-after-restore-1", 3],
+			["gap", 300],
 			["light-populated-after-restore-2", 3],
 		]);
 	});

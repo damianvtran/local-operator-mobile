@@ -50,10 +50,12 @@ jobs:
     needs: preflight
     if: github.event.action == 'labeled' && github.event.label.name == 'stage-b-native-approved' && github.actor == 'damianvtran' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: macos-26
-    # Run 41831921831 used ~60m at roughly 1/3 of the matrix; hierarchy calls
-    # measured 39–83s. Five settle pairs now reuse AX, saving 3–7m of driver work.
-    # Reserve 45m producer + 15m setup + 110m matrix + 10m cleanup/upload = 180m.
-    # Loading/restore captures use screenshots, never slow AX inside the 20s proof.
+    # Run 41831921831: calls 53.7–118s, mean 79s (n=12); run 41854111855:
+    # 5.4–104.9s, mean 64.4s (n=7). Use the conservative 79s figure below.
+    # Batching cuts the source-expanded success path from 107 to 42 driver calls.
+    # (42 * 79s / 60 + 39m build/setup) * 1.15 = 108.4m; +10m cleanup/upload.
+    # Keep 180m as headroom, NOT as a claim the unbatched ~100-call lane fit.
+    # Loading captures stay screenshot-only within the unchanged 20s proof.
     timeout-minutes: 180
     concurrency:
       group: stage-b-draft-native-${{ github.event.pull_request.number }}

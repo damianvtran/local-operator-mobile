@@ -26,7 +26,6 @@ import {
 import { capFor } from "./account-routing-proof-contract.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
-	awaitStageBSeed,
 	captureStageBFailure,
 	stageBFlowCap,
 } from "./stage-b-draft-diagnostics.ts";
@@ -39,7 +38,6 @@ import {
 	selectStageBComputer,
 	stageBEditor,
 	stageBFlow,
-	stageBHasDrawnScreen,
 	typeStageBDraft,
 } from "./stage-b-draft-flows.ts";
 import {
@@ -50,6 +48,7 @@ import {
 	stageBFrameHierarchy,
 	stageBSleep,
 } from "./stage-b-draft-timing.ts";
+import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -63,16 +62,12 @@ export async function warmStageBDriver(
 	hierarchy: (name: string, seconds: number) => Promise<string>,
 	launch: () => Promise<void>,
 	foreground: () => Promise<void>,
-): Promise<string> {
+): Promise<void> {
 	await hierarchy("warm-maestro-driver-cold", capFor("maestroCold"));
 	await launch();
 	await foreground();
-	const drawn = await hierarchy("warm-app-readiness", 90);
-	if (!stageBHasDrawnScreen(drawn))
-		throw new Error(
-			"Stage B warm readiness: hierarchy has no drawn app screen id",
-		);
-	return drawn;
+	// The foreground flow asserts the actual drawn app/seed-ready screen. Do
+	// not pay another driver startup for redundant non-geometric hierarchy.
 }
 
 export function assertStageBAdmission(env: NodeJS.ProcessEnv): void {
@@ -412,6 +407,7 @@ async function runStageBCoordinator(
 		fixture = await startStageBIdentityFixture(sourceSha);
 		const config = fixture.config;
 		receipt.heldProofTimings = fixture.heldTimings;
+		receipt.fixtureRequestTimeline = fixture.requestTimeline;
 		receipt.nonce = redact(config.nonce);
 		receipt.fixtureOrigin = config.fixtureOrigin;
 		prepareStageBProof(cwd, config, env);
@@ -582,14 +578,16 @@ async function runStageBCoordinator(
 				throw new Error("native restart PID not observed");
 			launches.push(pid);
 		};
-		const terminate = () =>
-			run("terminate-owned-app", "xcrun", [
+		const terminate = async () => {
+			await flushFlows();
+			return run("terminate-owned-app", "xcrun", [
 				"simctl",
 				"terminate",
 				udid ?? "",
 				STAGE_B_BUNDLE,
 			]);
-		const flow = async (name: string, steps: StageBStep[]) => {
+		};
+		const batch = new StageBDriverBatch(async (name, steps, names) => {
 			const path = join(output, `${name}.yaml`);
 			writeFileSync(path, stageBFlow(steps));
 			await run(
@@ -603,13 +601,30 @@ async function runStageBCoordinator(
 					join(output, "maestro"),
 					path,
 				],
-				stageBFlowCap(steps, name === "warm-app-foreground"),
+				stageBFlowCap(steps, names.includes("warm-app-foreground")),
 			);
+		});
+		receipt.driverSegments = batch.segments;
+		let expectedMe: number | undefined;
+		const flow = async (name: string, steps: StageBStep[]) =>
+			batch.add(name, steps);
+		const flushFlows = async () => {
+			await batch.flush();
+			if (expectedMe !== undefined) {
+				const prior = expectedMe;
+				expectedMe = undefined;
+				await until(
+					() => ((fixture?.counters.me ?? 0) > prior ? true : undefined),
+					"fresh native /me request (not cached identity)",
+					30000,
+				);
+			}
 		};
 		const frame = async (
 			name: string,
 			reuse?: { from: string; hierarchy: string },
 		) => {
+			await flushFlows();
 			const hierarchy = await stageBFrameHierarchy(
 				(seconds) =>
 					run(
@@ -626,8 +641,15 @@ async function runStageBCoordinator(
 				reused[name] = reuse.from;
 			}
 			writeFileSync(
-				join(output, `${name}.hierarchy.txt`),
-				stageBDiagnosticText(hierarchy),
+				join(
+					output,
+					reuse
+						? `${name}.hierarchy.reused-from-${reuse.from}.txt`
+						: `${name}.hierarchy.txt`,
+				),
+				reuse
+					? `Reused geometry only; see ${reuse.from}.hierarchy.txt. This is NOT a fresh hierarchy.\n`
+					: stageBDiagnosticText(hierarchy),
 			);
 			await run(`frame-${name}`, "xcrun", [
 				"simctl",
@@ -683,6 +705,7 @@ async function runStageBCoordinator(
 			);
 		};
 		const snapshot = async () => {
+			await flushFlows();
 			const count = fixture?.receipts.length ?? 0;
 			fixture?.command("snapshot");
 			const item = await until(
@@ -697,6 +720,7 @@ async function runStageBCoordinator(
 			return item;
 		};
 		const command = async (action: string) => {
+			await flushFlows();
 			const count = fixture?.receipts.length ?? 0;
 			fixture?.command(action);
 			return until(
@@ -709,19 +733,19 @@ async function runStageBCoordinator(
 			mode: IdentityScenario = "same",
 			waitEditor = true,
 		) => {
+			await flushFlows();
 			const priorMe = fixture?.counters.me ?? 0;
 			fixture?.scenario(mode);
 			await terminate();
 			await launch();
-			await flow(`connect-${++serial}`, selectStageBComputer());
-			await until(
-				() => ((fixture?.counters.me ?? 0) > priorMe ? true : undefined),
-				"fresh native /me request (not cached identity)",
-				30000,
-			);
-			if (waitEditor) await flow(`editor-${++serial}`, stageBEditor());
+			expectedMe = priorMe;
+			await flow(`connect-${++serial}`, [
+				...selectStageBComputer(),
+				...(waitEditor ? stageBEditor() : []),
+			]);
 		};
 		const expire = async () => {
+			await flushFlows();
 			const previous = fixture?.counters.expired ?? 0;
 			fixture?.expire();
 			await until(
@@ -745,35 +769,32 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		const warmHierarchy = await warmStageBDriver(
-			(name, seconds) =>
-				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
-			launch,
-			() => flow("warm-app-foreground", []),
-		);
-		writeFileSync(
-			join(output, "warm-app.hierarchy.txt"),
-			stageBDiagnosticText(warmHierarchy),
-		);
-		await awaitStageBSeed(warmHierarchy, (seconds) =>
-			run(
-				"warm-seed-state",
-				maestro,
-				["--device", udid ?? "", "hierarchy"],
-				seconds,
-			),
-		);
-		receipt.driverWarmUp =
-			"PASS cold driver before tracked launch; foreground-only drawn app hierarchy";
-		await flow("connect-initial", selectStageBComputer());
-		await flow("type-initial", typeStageBDraft(canary));
 		await run("add-owned-photo", "xcrun", [
 			"simctl",
 			"addmedia",
 			udid,
 			join(cwd, "design/app-icon/ios/icon-light-1024.png"),
 		]);
-		await flow("attach-native-photo", attachStageBPhoto());
+		await warmStageBDriver(
+			(name, seconds) =>
+				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
+			launch,
+			async () => {
+				await flow("warm-app-foreground", []);
+				await flow("connect-initial", [
+					...selectStageBComputer(),
+					{ takeScreenshot: "connect-initial-after-tap" },
+					...stageBEditor(),
+					{ assertNotVisible: { id: "computers-screen" } },
+				]);
+				await flow("type-initial", typeStageBDraft(canary));
+				await flow("attach-native-photo", attachStageBPhoto());
+				await flushFlows();
+			},
+		);
+		receipt.driverWarmUp =
+			"PASS cold driver before tracked launch; foreground-only drawn app assertions";
+
 		// Ordinary editor readiness intentionally does not imply optional recovery
 		// readiness. Observe the actual native capability before the positive case.
 		const readyDeadline = Date.now() + 30000;
@@ -807,12 +828,12 @@ async function runStageBCoordinator(
 		// cost longer than production's unchanged 20s proof deadline.
 		armHeldCapture("light");
 		await relaunch("held", false);
-		await fixture.awaitHeldCapture();
-		await frame("light-loading-post-release");
 		await flow("assert-same-owner-recovered", [
 			...assertStageBDraft(canary, true),
 			{ assertVisible: { id: "composer-attachment-0" } },
 		]);
+		await flushFlows();
+		await fixture.awaitHeldCapture();
 		const recovered = await snapshot();
 		if (
 			recovered.recoveryAdmitted !== true ||
@@ -820,12 +841,14 @@ async function runStageBCoordinator(
 			fixture.counters.mutations !== 0
 		)
 			throw new Error("recovery reused dispatch generation or sent work");
-		cases.push({
-			surface: "same-owner expiry recovery",
-			result: "PASS",
-			freshGeneration: true,
-			noSend: true,
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "same-owner expiry recovery",
+				result: "PASS",
+				freshGeneration: true,
+				noSend: true,
+			}),
+		);
 		await frame("light-populated-after-settled", {
 			from: "light-populated-after",
 			hierarchy: await frame("light-populated-after"),
@@ -848,12 +871,15 @@ async function runStageBCoordinator(
 			"partial-write-and-refresh-restored",
 			assertStageBDraft(canary, true),
 		);
+		await flushFlows();
 		if (fixture.counters.oauthRefresh < 1)
 			throw new Error("real OAuth refresh path was not exercised");
-		cases.push({
-			surface: "native pending-write restart and OAuth refresh",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "native pending-write restart and OAuth refresh",
+				result: "PASS",
+			}),
+		);
 		for (const mode of [
 			"held",
 			"unauthorized",
@@ -865,37 +891,42 @@ async function runStageBCoordinator(
 			if (mode === "held") armHeldCapture("dark", true);
 			await relaunch(mode, mode !== "held");
 			if (mode === "held") {
-				await fixture.awaitHeldCapture();
-				await frame("dark-loading-post-deadline-release");
 				await flow(
 					"timed-out-proof-fails-closed",
 					assertStageBDraft(canary, false),
 				);
+				await flushFlows();
+				await fixture.awaitHeldCapture();
 				const timedOut = await snapshot();
 				if (timedOut.recoveryAdmitted !== false)
 					throw new Error("timed-out proof admitted recovery");
-				cases.push({
-					surface: "native proof held past 20s fails closed",
-					result: "PASS",
-					restored: false,
-					plaintext: timedOut.plaintext,
-				});
+				batch.verified(() =>
+					cases.push({
+						surface: "native proof held past 20s fails closed",
+						result: "PASS",
+						restored: false,
+						plaintext: timedOut.plaintext,
+					}),
+				);
 				// A null proof drops a lease, not sealed bytes. Only the subsequent
 				// prompt /me can restore; observe the render immediately at its reply.
 				fixture.observeIdentity(() =>
 					captureStageBRestoreBurst(screenshot, "dark-populated-after"),
 				);
 				await relaunch("same");
-				await fixture.awaitIdentityCapture();
 				await flow("fresh-proof-after-timeout-restores", [
 					...assertStageBDraft(canary, true),
 					{ assertVisible: { id: "composer-attachment-0" } },
 				]);
-				cases.push({
-					surface:
-						"native fresh same-owner proof after timeout restores sealed draft",
-					result: "PASS",
-				});
+				await flushFlows();
+				await fixture.awaitIdentityCapture();
+				batch.verified(() =>
+					cases.push({
+						surface:
+							"native fresh same-owner proof after timeout restores sealed draft",
+						result: "PASS",
+					}),
+				);
 				const pendingDraft = `${canary}-edited-after-fresh-proof`;
 				await flow("edit-after-fresh-proof", [
 					...discardStageBDraft(),
@@ -915,15 +946,19 @@ async function runStageBCoordinator(
 					...discardStageBDraft(),
 					...typeStageBDraft(canary),
 				]);
-				cases.push({
-					surface:
-						"native timeout fails closed; fresh proof restores; subsequent local edit wins",
-					rebasedEditTiming: "after fresh proof, not inside the held window",
-					result: "PASS",
-				});
+				batch.verified(() =>
+					cases.push({
+						surface:
+							"native timeout fails closed; fresh proof restores; subsequent local edit wins",
+						rebasedEditTiming: "after fresh proof, not inside the held window",
+						result: "PASS",
+					}),
+				);
 			} else {
 				await flow(`refused-${mode}`, assertStageBDraft(canary, false));
-				await frame(`dark-refused-${mode}`);
+				await flushFlows();
+				if (mode === "unauthorized") await frame(`dark-refused-${mode}`);
+				else await screenshot(`dark-refused-${mode}`, 30);
 				if ((await snapshot()).recoveryAdmitted !== false)
 					throw new Error(
 						"refused identity restored a cached recovery capability",
@@ -935,7 +970,10 @@ async function runStageBCoordinator(
 			}
 			await relaunch("same");
 			await flow(`after-${mode}-same-owner`, assertStageBDraft(canary, true));
-			cases.push({ surface: `native identity ${mode}`, result: "PASS" });
+			await flushFlows();
+			batch.verified(() =>
+				cases.push({ surface: `native identity ${mode}`, result: "PASS" }),
+			);
 		}
 		// Change the destination through the REAL Computers route after the old
 		// proof times out. Slow Maestro cannot honestly fit this switch inside
@@ -947,6 +985,7 @@ async function runStageBCoordinator(
 			proof.release();
 		}, STAGE_B_TIMEOUT_HOLD_MS);
 		await relaunch("held", false);
+		await flushFlows();
 		await fixture.awaitHeldCapture();
 		fixture.scenario("same");
 		await run("open-real-computer-picker", "xcrun", [
@@ -1002,10 +1041,12 @@ async function runStageBCoordinator(
 			...assertStageBDraft(canary, false),
 		]);
 		await flow("type-after-backend-isolation", typeStageBDraft(canary));
-		cases.push({
-			surface: "native backend switch after old authority proof timeout",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "native backend switch after old authority proof timeout",
+				result: "PASS",
+			}),
+		);
 		for (const mode of ["account-b", "tenant-b"] as const) {
 			const beforeMismatch = await snapshot();
 			await expire();
@@ -1022,12 +1063,16 @@ async function runStageBCoordinator(
 				assertStageBDraft(canary, false),
 			);
 			await flow(`type-next-${mode}`, typeStageBDraft(canary));
-			cases.push({ surface: `native ${mode} isolation`, result: "PASS" });
+			batch.verified(() =>
+				cases.push({ surface: `native ${mode} isolation`, result: "PASS" }),
+			);
 		}
 		await flow("explicit-discard", discardStageBDraft());
 		await relaunch();
 		await flow("discard-survives-restart", assertStageBDraft(canary, false));
-		cases.push({ surface: "explicit discard", result: "PASS" });
+		batch.verified(() =>
+			cases.push({ surface: "explicit discard", result: "PASS" }),
+		);
 		await flow("type-before-logout", typeStageBDraft(canary));
 		await snapshot();
 		await flow("explicit-ui-logout", logoutStageB());
@@ -1036,7 +1081,9 @@ async function runStageBCoordinator(
 			throw new Error("UI logout retained native key/ciphertext");
 		await relaunch();
 		await flow("logout-no-recovery", assertStageBDraft(canary, false));
-		cases.push({ surface: "explicit UI logout", result: "PASS" });
+		batch.verified(() =>
+			cases.push({ surface: "explicit UI logout", result: "PASS" }),
+		);
 		await flow("type-before-sentinel-loss", typeStageBDraft(canary));
 		const beforeSentinel = await snapshot();
 		const dropped = await command("drop-sentinel");
@@ -1047,10 +1094,12 @@ async function runStageBCoordinator(
 		const afterSentinel = await snapshot();
 		if (beforeSentinel.installFingerprint === afterSentinel.installFingerprint)
 			throw new Error("missing sentinel adopted surviving Keychain identity");
-		cases.push({
-			surface: "native sentinel loss with surviving key",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "native sentinel loss with surviving key",
+				result: "PASS",
+			}),
+		);
 		await flow("type-before-reinstall", typeStageBDraft(canary));
 		await snapshot();
 		await terminate();
@@ -1084,10 +1133,12 @@ async function runStageBCoordinator(
 				"BLOCKED: simulator did not expose OS Keychain survival with a missing sandbox sentinel",
 			);
 		await flow("reinstall-empty", assertStageBDraft(canary, false));
-		cases.push({
-			surface: "actual uninstall/reinstall with observed Keychain survival",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "actual uninstall/reinstall with observed Keychain survival",
+				result: "PASS",
+			}),
+		);
 		await flow("type-before-corruption", typeStageBDraft(canary));
 		await snapshot();
 		await command("corrupt-recovery");
@@ -1097,10 +1148,12 @@ async function runStageBCoordinator(
 			"corrupt-ciphertext-no-fallback",
 			assertStageBDraft(canary, false),
 		);
-		cases.push({
-			surface: "native committed ciphertext/tag corruption",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "native committed ciphertext/tag corruption",
+				result: "PASS",
+			}),
+		);
 		await frame("dark-empty-after-corruption");
 		await flow("clear-corrupt-vault-by-ui-logout", logoutStageB());
 		await relaunch();
@@ -1113,10 +1166,13 @@ async function runStageBCoordinator(
 			"wrong-key-no-plaintext-fallback",
 			assertStageBDraft(canary, false),
 		);
-		cases.push({
-			surface: "native SecureStore wrong-key ciphertext refusal",
-			result: "PASS",
-		});
+		batch.verified(() =>
+			cases.push({
+				surface: "native SecureStore wrong-key ciphertext refusal",
+				result: "PASS",
+			}),
+		);
+		await flushFlows();
 		if (fixture.counters.mutations !== 0)
 			throw new Error("draft recovery generated a session/command mutation");
 		receipt.wireCounters = fixture.counters;

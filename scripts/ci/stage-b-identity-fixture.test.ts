@@ -9,6 +9,7 @@ import {
 	directoriesSchema,
 	modelsResponseSchema,
 } from "../../src/contracts/schemas";
+import { probeHealth } from "../../src/features/auth/connector-wait";
 import {
 	STAGE_B_HOST,
 	stageBContainsDraftCanary,
@@ -30,6 +31,56 @@ async function fixture() {
 	return { ...server, transport: stageBTransport(server.config, fetch) };
 }
 describe("Stage B real-socket synthetic authority fixture", () => {
+	it("initial same answers public reachability and /me immediately even with a future held observer armed", async () => {
+		const x = await fixture();
+		let heldTriggered = false;
+		x.observeHeld(async () => {
+			heldTriggered = true;
+		});
+		const started = Date.now();
+		const [owner, health] = await Promise.all([
+			proveRecoveryAuthority(syntheticValue(x.config, "access-a"), {
+				fetcher: x.transport,
+				isCurrent: () => true,
+			}),
+			probeHealth(STAGE_B_HOST, { fetchImpl: x.transport, timeoutMs: 1000 }),
+		]);
+		expect(owner).toEqual({
+			accountId: "stage-b-account-a",
+			tenantId: "stage-b-tenant-a",
+		});
+		expect(health).not.toBeNull();
+		expect(health?.ok).toBe(true);
+		expect(Date.now() - started).toBeLessThan(1000);
+		expect(heldTriggered).toBe(false);
+		expect(x.held()).toBe(0);
+		expect(x.heldTimings).toEqual([]);
+		expect(x.counters.me).toBe(1);
+		expect(x.counters.healthProbes).toBe(1);
+		for (const kind of ["health", "me"]) {
+			const event = x.requestTimeline.find((event) => event.kind === kind);
+			expect(event?.status).toBe(200);
+			expect(event?.receivedAtMs).toBeGreaterThanOrEqual(started);
+			expect(
+				(event?.completedAtMs ?? Infinity) - (event?.receivedAtMs ?? 0),
+			).toBeLessThan(1000);
+		}
+	});
+	it("allows only credential-free GET health probes, never anonymous private APIs or arbitrary credentials", async () => {
+		const x = await fixture();
+		for (const [path, init] of [
+			["/api/models", {}],
+			["/healthz", { method: "POST" }],
+			["/healthz", { headers: { Authorization: "Bearer not-synthetic" } }],
+		] as const)
+			await expect(
+				x.transport(`https://${STAGE_B_HOST}${path}`, init),
+			).rejects.toThrow("non-synthetic relay authority refused");
+		x.expire();
+		expect(
+			await probeHealth(STAGE_B_HOST, { fetchImpl: x.transport }),
+		).not.toBeNull();
+	});
 	it("starts capture on real held /me arrival and releases independently of a stuck observer", async () => {
 		const x = await fixture();
 		x.scenario("held");

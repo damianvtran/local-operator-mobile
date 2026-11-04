@@ -213,11 +213,20 @@ export function stageBTransport(
 			) &&
 			(url.pathname === "/healthz" || url.pathname.startsWith("/api/"))
 		) {
+			// Computers probes /healthz publicly BEFORE choosing a route, exactly
+			// like the real relay. Requiring a grant here fabricated "no answer".
+			// This exception is GET-only and NEVER admits any /api request.
+			const publicProbe =
+				url.pathname === "/healthz" &&
+				method === "GET" &&
+				!headers.has("cookie") &&
+				!headers.has("authorization");
 			if (
-				headers.get("cookie") !==
+				!publicProbe &&
+				(headers.get("cookie") !==
 					`__Host-radient-grant=${syntheticValue(config, "grant")}` ||
-				headers.get("origin") !== url.origin ||
-				headers.get("authorization")
+					headers.get("origin") !== url.origin ||
+					headers.get("authorization"))
 			)
 				throw new Error("non-synthetic relay authority refused");
 		} else {

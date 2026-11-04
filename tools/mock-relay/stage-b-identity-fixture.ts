@@ -115,8 +115,20 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 	const heldWaiters = new Set<() => void>();
 	const codes = new Map<string, { challenge: string; hostname: string }>();
 	const receipts: Record<string, unknown>[] = [];
+	// No URL/query/header values: these timestamps diagnose whether selection
+	// reached each fixture boundary without leaking credentials into receipts.
+	const requestTimeline: {
+		kind: string;
+		receivedAtMs: number;
+		completedAtMs?: number;
+		closedAtMs?: number;
+		status?: number;
+		scenario: IdentityScenario;
+		counters?: Record<string, number>;
+	}[] = [];
 	const counters = {
 		me: 0,
+		healthProbes: 0,
 		discovery: 0,
 		redirectTarget: 0,
 		mutations: 0,
@@ -143,6 +155,31 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 		tunnelId: "stage-b-personal-tunnel",
 	});
 	const server = createServer(async (request, response) => {
+		const path = new URL(request.url ?? "/", "http://fixture.invalid").pathname;
+		const kind =
+			path === "/healthz"
+				? "health"
+				: path === "/v1/me"
+					? "me"
+					: path === "/v1/tunnels"
+						? "discovery"
+						: null;
+		if (kind) {
+			const event = {
+				kind,
+				receivedAtMs: Date.now(),
+				scenario,
+			} as (typeof requestTimeline)[number];
+			requestTimeline.push(event);
+			response.once("finish", () => {
+				event.completedAtMs = Date.now();
+				event.status = response.statusCode;
+				event.counters = { ...counters };
+			});
+			response.once("close", () => {
+				event.closedAtMs = Date.now();
+			});
+		}
 		try {
 			// Count redirect targets before authentication so a platform that follows
 			// but drops headers cannot fake the no-follow negative control.
@@ -423,7 +460,9 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 				return;
 			}
 			if (url.pathname === "/healthz" || url.pathname.startsWith("/api/")) {
-				if (expired) {
+				if (url.pathname === "/healthz") counters.healthProbes++;
+				// Public liveness stays available across auth expiry, as on the relay.
+				if (expired && url.pathname !== "/healthz") {
 					counters.expired++;
 					send(response, 401, { error: "Authentication required" });
 					return;
@@ -501,6 +540,7 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 		config,
 		canary,
 		counters,
+		requestTimeline,
 		receipts,
 		held: () => held.size,
 		heldTimings,

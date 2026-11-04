@@ -89,12 +89,11 @@ describe("dedicated Stage B proof preflight", () => {
 				calls.push("foreground-without-restart");
 			},
 		);
-		expect(result).toBe(drawn);
+		expect(result).toBeUndefined();
 		expect(calls).toEqual([
 			["warm-maestro-driver-cold", capFor("maestroCold")],
 			"tracked-simctl-launch",
 			"foreground-without-restart",
-			["warm-app-readiness", 90],
 		]);
 	});
 	it("names a readiness failure instead of admitting SpringBoard icons as app UI", async () => {
@@ -103,11 +102,11 @@ describe("dedicated Stage B proof preflight", () => {
 				async () =>
 					'{"application":"SpringBoard","icons":["Stage B Draft Proof","maestro-driver-iosUITests-Runner"]}',
 				async () => {},
-				async () => {},
+				async () => {
+					throw new Error("Maestro foreground app-screen assertion failed");
+				},
 			),
-		).rejects.toThrow(
-			"Stage B warm readiness: hierarchy has no drawn app screen id",
-		);
+		).rejects.toThrow("Maestro foreground app-screen assertion failed");
 	});
 	it("does not launch or enter evidence when cold driver startup fails", async () => {
 		let launched = false;

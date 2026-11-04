@@ -30,7 +30,7 @@ describe("real proof coordinator with Node-only executable shims", () => {
 				"plist-StageBProofNonce",
 				"installed-container",
 				"launch-owned-app",
-				"warm-app-foreground",
+				"segment-1-warm-app-foreground",
 				"failure-hierarchy",
 				"cleanup-delete-owned-simulator",
 			]),

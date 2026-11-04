@@ -99,7 +99,7 @@ describe("Stage B diagnosed-failure exit criterion", () => {
 			cleanup.indexOf('"cleanup-shutdown-owned-simulator"'),
 		);
 		expect(source).toContain(
-			'stageBFlowCap(steps, name === "warm-app-foreground")',
+			'stageBFlowCap(steps, names.includes("warm-app-foreground"))',
 		);
 	});
 });
