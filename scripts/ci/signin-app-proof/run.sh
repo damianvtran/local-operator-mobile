@@ -47,9 +47,9 @@ curl -fsS --max-time 180 'http://localhost:8081/.expo/.virtual-metro-entry.bundl
 grep -q 54831 "$RUNNER_TEMP/signin-dev.js"
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b
-xcrun simctl help keychain > "$OUT/simctl-keychain-help.txt"
+xcrun simctl help keychain > "$OUT/simctl-keychain-help.txt" 2>&1
 grep -q reset "$OUT/simctl-keychain-help.txt"
-xcrun simctl help ui > "$OUT/simctl-ui-help.txt"
+xcrun simctl help ui > "$OUT/simctl-ui-help.txt" 2>&1
 grep -q appearance "$OUT/simctl-ui-help.txt"
 # Match the proven callback-proof UI runner: ad-hoc simulator identities only,
 # no developer team, certificate, provisioning profile or release signing lane.

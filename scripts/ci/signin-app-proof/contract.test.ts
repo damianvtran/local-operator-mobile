@@ -1,9 +1,44 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const read = (path: string) =>
 	readFileSync(new URL(path, import.meta.url), "utf8");
 describe("real Expo application OAuth proof boundary", () => {
+	it("captures simctl stderr help and rejects the observed stdout-only regression", () => {
+		const source = read("./run.sh");
+		const start = source.indexOf("xcrun simctl help keychain");
+		const end = source.indexOf("# Match the proven", start);
+		expect(start).toBeGreaterThan(0);
+		expect(end).toBeGreaterThan(start);
+		const block = source.slice(start, end);
+		const root = mkdtempSync(join(tmpdir(), "signin-simctl-help-"));
+		const run = (script: string) =>
+			spawnSync(
+				"/bin/bash",
+				[
+					"-c",
+					`set -e\nxcrun() { printf 'reset appearance\\n' >&2; }\n${script}`,
+				],
+				{
+					env: {
+						PATH: "/usr/bin:/bin",
+						HOME: root,
+						OUT: root,
+						NODE_ENV: "test",
+					},
+					encoding: "utf8",
+				},
+			).status;
+		try {
+			expect(run(block)).toBe(0);
+			expect(run(block.replace(" 2>&1", ""))).not.toBe(0);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
 	it("builds the actual Expo app and proves 500, PKCE, discovery and persisted restoration", () => {
 		const project = read("./attach-tests.rb");
 		const test = read("./SignInAppUITests.swift");
