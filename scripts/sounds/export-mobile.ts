@@ -19,6 +19,13 @@
  * the core shows up here as a manifest mismatch under `--check`, instead of
  * the phone quietly playing the old take.
  *
+ * WHAT `--check` DOES NOT COVER, by design: it re-derives the manifest from
+ * the core and compares the TEXT; it never reads the committed WAVs.
+ * `src/notifications/sound-channels.test.ts` closes that half (committed WAV
+ * bytes and sha256 = manifest = id list). Parity with the core is proved only
+ * by the two together: `--check` (core → manifest) plus that unit test
+ * (manifest → committed files).
+ *
  * WHY WAV. iOS notification sounds must be aiff, wav or caf (Apple,
  * `UNNotificationSound`); FLAC is not accepted. IMA4-CAF would be ~3.4×
  * smaller but ADPCM is lossy, which the operator ruled out (design §2, table
@@ -123,6 +130,44 @@ function decode(ffmpeg: string, flac: string, wav: string): void {
 	);
 }
 
+/** Decode every catalog sound into `target`, refusing a FLAC whose bytes
+ *  disagree with the core catalog. */
+function exportSounds(
+	ffmpeg: string,
+	soundsDir: string,
+	catalog: CoreCatalog,
+	target: string,
+): SoundManifestEntry[] {
+	const entries: SoundManifestEntry[] = [];
+	for (const sound of catalog.sounds) {
+		const flacPath = join(soundsDir, sound.file);
+		const flacSha = sha256(readFileSync(flacPath));
+		if (flacSha !== sound.sha256) {
+			throw new Error(
+				`${sound.file}: sha256 ${flacSha} disagrees with the core catalog (${sound.sha256})`,
+			);
+		}
+		const file = bundledSoundFile(sound.id);
+		const wavPath = join(target, file);
+		decode(ffmpeg, flacPath, wavPath);
+		const wav = readFileSync(wavPath);
+		entries.push({
+			id: sound.id,
+			file,
+			sha256: sha256(wav),
+			bytes: wav.length,
+			duration_s: sound.duration_s,
+			channels: sound.channels,
+			source_file: sound.file,
+			source_sha256: sound.sha256,
+		});
+		process.stdout.write(
+			`${sound.id.padEnd(17)} ${sound.channels}ch ${String(wav.length).padStart(7)} B  ${file}\n`,
+		);
+	}
+	return entries;
+}
+
 function main(argv: string[]): number {
 	const coreArg = argument(argv, "--core");
 	if (coreArg === null) {
@@ -153,32 +198,14 @@ function main(argv: string[]): number {
 		: OUT;
 	mkdirSync(target, { recursive: true });
 
-	const entries: SoundManifestEntry[] = [];
-	for (const sound of catalog.sounds) {
-		const flacPath = join(soundsDir, sound.file);
-		const flacSha = sha256(readFileSync(flacPath));
-		if (flacSha !== sound.sha256) {
-			throw new Error(
-				`${sound.file}: sha256 ${flacSha} disagrees with the core catalog (${sound.sha256})`,
-			);
-		}
-		const file = bundledSoundFile(sound.id);
-		const wavPath = join(target, file);
-		decode(ffmpeg, flacPath, wavPath);
-		const wav = readFileSync(wavPath);
-		entries.push({
-			id: sound.id,
-			file,
-			sha256: sha256(wav),
-			bytes: wav.length,
-			duration_s: sound.duration_s,
-			channels: sound.channels,
-			source_file: sound.file,
-			source_sha256: sound.sha256,
-		});
-		process.stdout.write(
-			`${sound.id.padEnd(17)} ${sound.channels}ch ${String(wav.length).padStart(7)} B  ${file}\n`,
-		);
+	// In --check mode the scratch copy is removed whatever happens, including a
+	// sha-guard throw or an ffmpeg failure part-way through (review R3, QA Q1:
+	// an early version leaked `lop-mobile-sounds-check-<pid>` on those paths).
+	let entries: SoundManifestEntry[];
+	try {
+		entries = exportSounds(ffmpeg, soundsDir, catalog, target);
+	} finally {
+		if (check) rmSync(target, { recursive: true, force: true });
 	}
 	const manifest: SoundManifest = {
 		schema: 1,
@@ -188,7 +215,6 @@ function main(argv: string[]): number {
 	const text = `${JSON.stringify(manifest, null, "\t")}\n`;
 	const manifestPath = join(OUT, "manifest.json");
 	if (check) {
-		rmSync(target, { recursive: true, force: true });
 		const committed = existsSync(manifestPath)
 			? readFileSync(manifestPath, "utf8")
 			: "";
