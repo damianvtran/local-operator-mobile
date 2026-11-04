@@ -16,6 +16,13 @@
   (2026-10-28) therefore ruled out Android background push, and the operator resolved that
   collision on **2026-10-29** by allowing the registration and nothing further (§5 sets out what it
   changes and what it does not).
+- **Amendment (2026-11-03): `data.sound`.** The visible emits (`completion`, `digest`) carry the
+  computer's selected notification sound — a built-in id, `"default"` or `"none"` — and the cloud
+  maps it to `aps.sound` / an Android channel; it never composes from it, so P2 holds. A **custom**
+  sound selected on the computer sends `soft-pulse` (custom sounds are not on the phone in v1), and
+  sound turned off sends `none`. The `attention` form carries no `sound`. Made **before S7 builds
+  against the freeze**; stated in §3.2's field tables and literals, and filed in core's
+  `fixtures/push/` (local-operator's notification-sounds C3).
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,
@@ -1088,6 +1095,7 @@ phone's number drops* — actually exist, which no slice did before.
 { "aps": { "alert": {"title": "Local Operator",
                      "body": "Task complete · 2 conversations need you"},
            "thread-id": "<conversation handle>",
+           "sound": "soft-pulse.wav",                    // mapped from data.sound (2026-11-03 amendment)
            "interruption-level": "active" },
   "data": { "v": 1,
             "type": "completion",                       // "completion" | "attention" | "digest"
@@ -1096,7 +1104,8 @@ phone's number drops* — actually exist, which no slice did before.
             "completion_token": "<uuid>",
             "kind": "complete|error|interrupted|closed|retired",
             "emit_id": "<uuid, minted by the machine per emit>",
-            "count": 2 } }
+            "count": 2,
+            "sound": "soft-pulse" } }                   // built-in id | "default" | "none"
 ```
 
 The attention form carries `{v, type: "attention", computer, count, emit_id, exclude:
@@ -1104,16 +1113,18 @@ The attention form carries `{v, type: "attention", computer, count, emit_id, exc
 term is used for it throughout: **the attention push**. It carries **no `alert` and no user-visible
 text of any kind**: `alert` is required on `completion` and `digest` and absent here (the field
 table
-below), so an `alert` on an attention emit would turn a silent badge correction into a banner.
+below), so an `alert` on an attention emit would turn a silent badge correction into a banner. It
+carries **no `sound`** either, for the same reason: a silent wake has no banner for a sound to ride.
 
 The **digest** form — §3.2's third emit type, and the visible counterpart of the attention push:
 
 ```jsonc
 { "aps": { "alert": {"title": "<APP_NAME>",
                      "body": "<digest house constant> · <count> conversations need you"},
+           "sound": "<data.sound>.wav",
            "interruption-level": "active" },
   "data": { "v": 1, "type": "digest", "computer": "<computer handle>",
-            "count": <n>, "emit_id": "<uuid>" } }
+            "count": <n>, "emit_id": "<uuid>", "sound": "<built-in id | default | none>" } }
 ```
 
 It carries **no `conversation` handle, no `completion_token` and no `kind`** — a digest spans
@@ -1164,6 +1175,7 @@ are **not two payload classes**:
 | `exclude` *(attention and digest)* | the device that just acted, so the self-correcting push skips it — the one field that makes §3.1's exclusion representable at all (round 2 M3: the claim had no wire field). Absent means "exclude nobody", which is what a tick-detected change sends because it never knows who acked. **Required** when the emit is an attention correction triggered by an **ack nudge** — the device that just acted is not told about a change its own action made. On a **digest** it is *permitted with the same meaning and never required*: the trigger for the required case is an ack, and an ack emits the attention correction, not a catch-up digest (round 2, R6). `(proposal)` like the rest of the attention form |
 | `type: "digest"` *(the third form)* | the catch-up form (§2.1): a **visible alert** carrying the count, with **no** `conversation`, `completion_token` or `kind` — it spans conversations, so nothing can deep-link or collapse per conversation; it collapses **per computer** (`digest:<computer handle>`) |
 | `count` | the number in the notification's **body**, so a user can judge whether to look now. **One number, one noun (round 2, R4)**: it is §1.1's count — the number of conversations with unread notifications, the same number the app's badge shows (§1.4) — read at composition time, and the cloud sees it. The bodies therefore say *"`<count>` conversations need you"*, a noun that is true of that number; a digest that said "updated" would imply a different quantity the field does not carry. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
+| `sound` *(completion and digest; amendment 2026-11-03)* | the phone plays the sound the user chose **on the computer**, so the preference has one home and the phone keeps no second copy. Values: one of the ten **built-in ids** (`soft-pulse`, `two-note-chime`, `felt-marimba`, `hum-swell`, `task-complete`, `signal-handshake`, `tape-warble`, `bubble-chord`, `airy-whistle`, `bubble-pulse`); **`"default"`** when the computer's selection is `system` (the platform's own sound, which on the phone is the OS default); **`"none"`** when the computer's `notifications.sound.enabled` is `false` (the banner posts silently). **A custom sound selected on the computer sends `soft-pulse`**, as does any id the phone has no file for: custom sounds are not on the phone in v1, so the phone falls back to the default rather than to silence. The computer's **volume does not travel** — the phone plays at its own notification volume. The cloud **maps** the value and never composes from it: `aps.sound = "<id>.wav"` on iOS; `android.channel_id = "sound.<id>"` on Android (one channel per value, because a channel's sound is fixed at creation; `sound.default` and `sound.none` for the two non-file values). Mapping is not composition, so P2 is unchanged. **Absent on `attention`**, which is a silent wake |
 | ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
 | ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
 | ~~`revision`~~ | dropped (M7). The badge comes from a read, not from a push |
@@ -1203,6 +1215,7 @@ POST /v1/tunnels/{tunnel_id}/push/events        Idempotency-Key: <emit key, §3.
   "count": 2, "exclude": ["<device_id>"],              // attention and digest; required only on the ack-triggered attention emit
   "alert": { "title": "<APP_NAME>",                    // THE MACHINE'S WORDS, SENT VERBATIM — required on completion and digest, ABSENT on attention (R8)
              "body": "<house constant> · <count> conversations need you" },
+  "sound": "soft-pulse",                               // built-in id | "default" | "none" — required on completion and digest, ABSENT on attention (2026-11-03)
   "devices": [ …the same block… ] }
 
 // 3. THE HEARTBEAT — the block and nothing else, sent when neither of the above has happened for
@@ -1221,6 +1234,7 @@ POST <cloud>/v1/push/credentials
 | `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
 | `devices[].last_authenticated_at` | int, unix seconds | what the machine last observed — **never** the basis of the lapse |
 | `alert` | object | `{title, body}` — **the machine's words, sent verbatim**, because the cloud may not compose them (below). It is house-constant-plus-count only: no names, no snippets, no error text, no model-written text, and it is the same **push-specific builder** §3.2's payload table names (§3.2), not the desktop composer's body path. **Required on `completion` and `digest`; absent on `attention`**, which is a silent `content-available` wake with no text at all — a builder that put an `alert` on an attention emit would make a silent correction visible, and the cloud, forbidden to edit text, would deliver it verbatim (round 2, R8) |
+| `sound` | string | the computer's selected sound, **mapped** by the cloud to `aps.sound` / the Android channel and never composed from (§3.2's field table, amendment 2026-11-03): a built-in id, `"default"` (computer selection `system`) or `"none"` (sound off); a custom selection sends `soft-pulse`. **Required on `completion` and `digest`; absent on `attention`** |
 | `push_token` | string | the machine validates it and drops it (`daemon.py`:4776-4778 (#1864), PR #1864); the cloud's registry is where tokens live (§2.2) |
 | ~~conversation name, snippet, transcript, `aps.badge`~~ | — | **never** (P2 and §1.5) |
 
