@@ -15,7 +15,7 @@ final class SignInAppUITests: XCTestCase {
     attach("welcome-brand-initial")
     attach("welcome-brand-settled")
     app.buttons["welcome-connect"].tap()
-    consent()
+    try consent()
     try text("Signing in…")
     attach("negative-exchanging")
     _ = try control("/release-token")
@@ -35,7 +35,7 @@ final class SignInAppUITests: XCTestCase {
 
     _ = try control("/control?mode=success&hold=true")
     app.buttons["sign-in-try-again"].tap()
-    consent()
+    try consent()
     try text("Signing in…")
     attach("positive-exchanging")
     _ = try control("/release-token")
@@ -58,9 +58,14 @@ final class SignInAppUITests: XCTestCase {
     attach("persisted-grant-restored-picker")
   }
 
-  @MainActor private func consent() {
+  @MainActor private func consent() throws {
+    // Same required Springboard handshake as the proven native callback lane.
+    // Slow first-launch retirement can present this after five seconds; absence
+    // must fail HERE, never silently continue into the exchange assertion.
     let button = springboard.buttons["Continue"].firstMatch
-    if button.waitForExistence(timeout: 5) { button.tap() }
+    try require(button.waitForExistence(timeout: 60), "Missing system sign-in consent Continue")
+    button.tap()
+    // Both callers then require the held exchange stage before releasing tokens.
   }
   @MainActor private func visible(_ id: String) throws {
     let element = app.descendants(matching: .any).matching(identifier: id).firstMatch

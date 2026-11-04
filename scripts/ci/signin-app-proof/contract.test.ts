@@ -44,6 +44,19 @@ describe("real Expo application OAuth proof boundary", () => {
 		const test = read("./SignInAppUITests.swift");
 		const workflow = read("../../../.github/workflows/signin-app-proof.yml");
 		expect(project).toContain("com.apple.product-type.application");
+		const consent = test.slice(
+			test.indexOf("private func consent()"),
+			test.indexOf("private func visible("),
+		);
+		expect(consent).toContain(
+			"try require(button.waitForExistence(timeout: 60)",
+		);
+		expect(consent).toContain("button.tap()");
+		expect(consent).not.toContain("if button.waitForExistence");
+		expect(
+			test.match(/try consent\(\)\n {4}try text\("Signing in…"\)/g),
+		).toHaveLength(2);
+		expect(read("./run.sh")).toContain('prepare-entry.ts "$OUT"');
 		expect(project).toContain("'TEST_TARGET_NAME' => app.name");
 		expect(project).toContain("'PRODUCT_NAME' => '$(TARGET_NAME)'");
 		expect(project).toContain("'PRODUCT_MODULE_NAME' => 'SignInAppUITests'");

@@ -11,11 +11,16 @@ cleanup() {
     if [[ -n "$pid" ]]; then kill -TERM -- "-$pid" 2>/dev/null || true; fi
   done
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
+  if [[ -f "$OUT/original-package.json" ]]; then cp "$OUT/original-package.json" package.json; fi
 }
 trap cleanup EXIT
 APP_ID=$(pnpm exec expo config --type public --json | node -e 'let s=""; process.stdin.on("data",x=>s+=x).on("end",()=>console.log(JSON.parse(s).ios.bundleIdentifier))')
 WORKSPACE=$(find ios -maxdepth 1 -name '*.xcworkspace' -type d | head -1)
 [[ -n "$WORKSPACE" && -n "$UDID" && -n "$APP_ID" ]]
+# Debug is required by the intentionally Debug-only OAuth override. Release
+# stripping is tested separately before this harness-only entry is generated.
+# Keep the real router/app entry and suppress only LogBox, under the E2E flag.
+node scripts/ci/signin-app-proof/prepare-entry.ts "$OUT"
 # Export actual process-group owners, not pnpm's subsequently reparented children.
 SERVER_PID=$(python3 - "$OUT" <<'PY'
 import os, pathlib, subprocess, sys
