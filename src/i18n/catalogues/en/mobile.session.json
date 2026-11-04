@@ -1,4 +1,16 @@
 {
 	"mobile.session.conversation_details": "Conversation details",
-	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents"
+	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.highlights.withheld": "{count, plural, one {# file not shown} other {# files not shown}}: {reasons}",
+	"mobile.session.highlights.withheld_outside": "outside allowed locations",
+	"mobile.session.highlights.withheld_sensitive": "sensitive file",
+	"mobile.session.highlights.withheld_missing": "file no longer exists",
+	"mobile.session.highlights.withheld_too_large": "too large to preview",
+	"mobile.session.highlights.sound_play": "Play {title}",
+	"mobile.session.highlights.sound_pause": "Pause {title}",
+	"mobile.session.highlights.sound_untitled": "Sound",
+	"mobile.session.highlights.video_open": "Play video {name}",
+	"mobile.session.highlights.sounds_more": "{count, plural, one {# more sound} other {# more sounds}}",
+	"mobile.session.highlights.sound_refused": "Could not play: {reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
 }

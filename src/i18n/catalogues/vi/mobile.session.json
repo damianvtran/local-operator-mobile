@@ -1,4 +1,16 @@
 {
 	"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
-	"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con"
+	"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+	"mobile.session.highlights.withheld": "{count, plural, other {# tệp không được hiển thị}}: {reasons}",
+	"mobile.session.highlights.withheld_outside": "nằm ngoài vị trí được phép",
+	"mobile.session.highlights.withheld_sensitive": "tệp nhạy cảm",
+	"mobile.session.highlights.withheld_missing": "tệp không còn tồn tại",
+	"mobile.session.highlights.withheld_too_large": "quá lớn để xem trước",
+	"mobile.session.highlights.sound_play": "Phát {title}",
+	"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
+	"mobile.session.highlights.sound_untitled": "Âm thanh",
+	"mobile.session.highlights.video_open": "Phát video {name}",
+	"mobile.session.highlights.sounds_more": "{count, plural, other {Thêm # âm thanh}}",
+	"mobile.session.highlights.sound_refused": "Không thể phát: {reason}",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
 }

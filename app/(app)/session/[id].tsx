@@ -205,11 +205,13 @@ export default function Session() {
 		() => ({
 			loadDocument: runtime.loadSupplementDocument,
 			loadFile: runtime.loadSupplementFile,
+			loadSound: runtime.loadSupplementSound,
 			command: runtime.supplementCommand,
 		}),
 		[
 			runtime.loadSupplementDocument,
 			runtime.loadSupplementFile,
+			runtime.loadSupplementSound,
 			runtime.supplementCommand,
 		],
 	);

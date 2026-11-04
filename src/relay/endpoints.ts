@@ -1096,6 +1096,26 @@ export class RelayEndpoints {
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}
 
+	/**
+	 * One supplement sound's bytes, keyed by the row's own `sounds[].attachment`
+	 * digest — the relay web's `soundUrl` route (`GET /api/sessions/{id}/sound
+	 * ?digest=`). A separate route from `attachment` on purpose: a turn's sound
+	 * (generated, or a file the turn wrote) has no message block to index, so
+	 * `(entry, kind, i)` cannot address it. Fetched as bytes through the same
+	 * authenticated client as every other read, because the player cannot carry
+	 * this client's cookie on a bare URL.
+	 */
+	async supplementSound(
+		sessionId: string,
+		digest: string,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/sound${query({ digest })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	/** A subagent's full cached detail, including the transcript and todos the
 	 *  aggregate roster strips. */
 	async agentDetail(
