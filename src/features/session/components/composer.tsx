@@ -62,23 +62,34 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 export function createAttachmentSheetHandoff() {
 	let pending: (() => void) | undefined;
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	const cancel = () => {
+	let chosen = false;
+	const clearPending = () => {
 		if (timer !== undefined) clearTimeout(timer);
 		timer = undefined;
 		pending = undefined;
 	};
+	const cancel = () => {
+		clearPending();
+		chosen = false;
+	};
 	const dismissed = () => {
 		const launch = pending;
-		cancel();
+		// Consuming a selection is NOT reopening the sheet: queued row events
+		// after onDismiss/fallback must not launch a second, different picker.
+		clearPending();
 		launch?.();
 	};
 	return {
 		choose: (launch: () => void, platform: string) => {
+			// First iOS choice wins for this open, including the native dismissal
+			// window. Attach's explicit cancel() is the only re-admission point.
+			if (platform === "ios" && chosen) return;
 			cancel();
 			if (platform !== "ios") {
 				launch();
 				return;
 			}
+			chosen = true;
 			pending = launch;
 			timer = setTimeout(dismissed, 500);
 		},

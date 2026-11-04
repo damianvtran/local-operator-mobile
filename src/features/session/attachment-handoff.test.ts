@@ -28,6 +28,52 @@ const create = () =>
 	};
 afterEach(() => vi.useRealTimers());
 describe("native attachment sheet handoff", () => {
+	it("keeps the first library choice when another row is pressed during native dismissal", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const library = vi.fn(),
+			documents = vi.fn();
+		handoff.choose(library, "ios");
+		handoff.choose(documents, "ios");
+		handoff.choose(library, "ios");
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(library).toHaveBeenCalledOnce();
+		expect(documents).not.toHaveBeenCalled();
+	});
+	it("does not reset the first deadline or admit stale presses after fallback", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const library = vi.fn(),
+			documents = vi.fn();
+		handoff.choose(library, "ios");
+		vi.advanceTimersByTime(250);
+		handoff.choose(documents, "ios");
+		vi.advanceTimersByTime(250);
+		expect(library).toHaveBeenCalledOnce();
+		expect(documents).not.toHaveBeenCalled();
+		handoff.choose(documents, "ios");
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(documents).not.toHaveBeenCalled();
+	});
+	it("ignores stale presses after onDismiss until Attach explicitly reopens", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		const library = vi.fn(),
+			documents = vi.fn();
+		handoff.choose(library, "ios");
+		handoff.dismissed();
+		handoff.choose(documents, "ios");
+		handoff.dismissed();
+		expect(library).toHaveBeenCalledOnce();
+		expect(documents).not.toHaveBeenCalled();
+		handoff.cancel();
+		handoff.choose(documents, "ios");
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(documents).toHaveBeenCalledOnce();
+	});
 	it("waits for native dismissal; a later fallback cannot launch twice", () => {
 		vi.useFakeTimers();
 		const handoff = create();

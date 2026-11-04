@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	attachStageBPhoto,
+	STAGE_B_PICKER_BROWSER_ID,
+	STAGE_B_WRONG_PICKER,
 	type StageBStep,
 	stageBFlow,
 	stageBStartsInPhotoPicker,
@@ -21,7 +23,7 @@ describe("Stage B adjacent UI driver batching", () => {
 		expect(executed).toHaveLength(3);
 		for (let index = 0; index < 2; index++) {
 			expect(executed[index]?.at(-1)).toEqual({
-				tapOn: { id: "attach-option-library" },
+				tapOn: { id: "attach-option-library", retryTapIfNoChange: false },
 			});
 			const picker = executed[index + 1] ?? [];
 			expect(stageBStartsInPhotoPicker(picker)).toBe(true);
@@ -29,6 +31,24 @@ describe("Stage B adjacent UI driver batching", () => {
 			expect(yaml).not.toContain("launchApp");
 			expect(yaml).not.toContain("stage-b-proof-gate");
 			expect(picker[0]).toEqual({
+				extendedWaitUntil: {
+					notVisible: { id: "attach-sheet" },
+					timeout: 15000,
+				},
+			});
+			expect(picker[1]).toEqual({
+				extendedWaitUntil: {
+					visible: { id: STAGE_B_PICKER_BROWSER_ID },
+					timeout: 30000,
+				},
+			});
+			expect(picker[2]).toEqual({
+				assertNotVisible: {
+					id: "DOC.browsingRoot",
+					label: STAGE_B_WRONG_PICKER,
+				},
+			});
+			expect(picker[3]).toEqual({
 				extendedWaitUntil: {
 					visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
 					timeout: 30000,

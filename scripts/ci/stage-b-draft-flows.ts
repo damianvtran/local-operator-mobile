@@ -27,11 +27,22 @@ export function stageBHasDrawnScreen(hierarchy: string): boolean {
 /** Run 41882974569: PHPicker was ready ~3s after the library tap, but
  * only a fresh driver saw its remote tree. Wait up to 10x that measured delay. */
 export const STAGE_B_PICKER_WAIT_MS = 30_000;
+export const STAGE_B_PICKER_BROWSER_ID =
+	"(PXGGridLayout-Info|DOC.browsingRoot)";
+export const STAGE_B_WRONG_PICKER =
+	"Wrong picker: document browser opened instead of Photos";
 export function stageBStartsInPhotoPicker(steps: StageBStep[]): boolean {
 	const wait = steps[0]?.extendedWaitUntil as
+		| { visible?: { id?: string }; notVisible?: { id?: string } }
+		| undefined;
+	const next = steps[1]?.extendedWaitUntil as
 		| { visible?: { id?: string } }
 		| undefined;
-	return wait?.visible?.id === "PXGGridLayout-Info";
+	return (
+		wait?.visible?.id === "PXGGridLayout-Info" ||
+		(wait?.notVisible?.id === "attach-sheet" &&
+			next?.visible?.id === STAGE_B_PICKER_BROWSER_ID)
+	);
 }
 export function stageBFlow(steps: StageBStep[]): string {
 	// Generated outside the global Maestro flow glob: these target ONLY the
@@ -109,7 +120,21 @@ export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
 ];
 export const attachStageBPhoto = (): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
-	{ tapOn: { id: "attach-option-library" } },
+	// Sheet rises 40pt over 240ms. A stale pre-wait hierarchy can aim at a
+	// different row; run 41900181124 explicitly logged that fallback path.
+	{ waitForAnimationToEnd: { timeout: 5000 } },
+	{ assertVisible: { id: "attach-option-library" } },
+	{ tapOn: { id: "attach-option-library", retryTapIfNoChange: false } },
+	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 15000 } },
+	// Recognise either native browser, then diagnose the wrong source BEFORE
+	// spending the full photo-grid timeout on a Files document browser.
+	{
+		extendedWaitUntil: {
+			visible: { id: STAGE_B_PICKER_BROWSER_ID },
+			timeout: STAGE_B_PICKER_WAIT_MS,
+		},
+	},
+	{ assertNotVisible: { id: "DOC.browsingRoot", label: STAGE_B_WRONG_PICKER } },
 	{
 		extendedWaitUntil: {
 			visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },

@@ -449,12 +449,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "251233847ce74a63f04e093e962fee8059bda5c13fcb91804c5772b8fc9b5901",
+	src: "0358c6bd5f3fd9317ca146a75cb5239a72f2f3ed8fa94a853931fce20c0ca6aa",
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
 	// iOS picker callbacks and recovery tests; public proof-only /healthz mapping does not enter U08.
 	// PR #156 + #161: merged-tree identity; healthy custom-relay U08 does not select refusal/recovery branches.
+	// First-choice picker latch/test reprinted with --print; U08 never opens Attach; idle JSX/layout unchanged (source judgment).
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

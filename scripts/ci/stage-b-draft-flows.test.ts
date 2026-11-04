@@ -8,7 +8,9 @@ import {
 	attachStageBPhoto,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
+	STAGE_B_PICKER_BROWSER_ID,
 	STAGE_B_PICKER_WAIT_MS,
+	STAGE_B_WRONG_PICKER,
 	selectStageBComputer,
 	stageBFlow,
 	stageBHasDrawnScreen,
@@ -22,14 +24,38 @@ const steps = (flow: string): Record<string, unknown>[] =>
 
 describe("Stage B foreground-only Maestro flows", () => {
 	it("waits on the real remote grid with measured headroom, without obscuring it with app foreground assertions", () => {
-		const picker = attachStageBPhoto().slice(2);
+		const attachment = attachStageBPhoto();
+		const tapIndex = attachment.findIndex(
+			(step) =>
+				(step.tapOn as { id?: string } | undefined)?.id ===
+				"attach-option-library",
+		);
+		const picker = attachment.slice(tapIndex + 1);
 		expect(STAGE_B_PICKER_WAIT_MS).toBe(30000);
 		expect(picker[0]).toEqual({
+			extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 15000 },
+		});
+		expect(picker[1]).toEqual({
+			extendedWaitUntil: {
+				visible: { id: STAGE_B_PICKER_BROWSER_ID },
+				timeout: STAGE_B_PICKER_WAIT_MS,
+			},
+		});
+		expect(picker[2]).toEqual({
+			assertNotVisible: { id: "DOC.browsingRoot", label: STAGE_B_WRONG_PICKER },
+		});
+		expect(picker[3]).toEqual({
 			extendedWaitUntil: {
 				visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
 				timeout: STAGE_B_PICKER_WAIT_MS,
 			},
 		});
+		expect(attachment.slice(0, tapIndex + 1)).toEqual([
+			{ tapOn: { id: "composer-attach" } },
+			{ waitForAnimationToEnd: { timeout: 5000 } },
+			{ assertVisible: { id: "attach-option-library" } },
+			{ tapOn: { id: "attach-option-library", retryTapIfNoChange: false } },
+		]);
 		const generated = steps(stageBFlow(picker));
 		expect(generated).toEqual(picker);
 		expect(JSON.stringify(generated)).not.toContain('"visible":"Photos"');
