@@ -488,11 +488,10 @@ export const ConversationsPane = ({
 									</View>
 								) : null}
 							</View>
-							<Text
-								className="text-mono-label text-ink-muted"
-								numberOfLines={1}
-								style={{ letterSpacing: 0 }}
-							>
+							{/* `meta` (12 pt sans), not the mono label: the mono step's wide
+							 *  advance cut "Projects"/"Schedules" to "Projec…" in a 65 pt slot
+							 *  on the first web capture. */}
+							<Text className="text-meta text-ink-muted" numberOfLines={1}>
 								{item.label}
 							</Text>
 						</Pressable>

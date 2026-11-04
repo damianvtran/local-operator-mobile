@@ -1037,11 +1037,12 @@ export default function Session() {
 									health,
 									working: working !== null,
 									waiting: pending !== null,
+									/* `startedS` is the phase's AGE in seconds on the wire
+									 *  (`activity_started_s`), not an epoch — `WorkingLine`
+									 *  seeds its clock from it the same way. */
 									elapsed:
 										working?.startedS != null
-											? elapsedLabel(
-													Math.max(0, Date.now() / 1000 - working.startedS),
-												)
+											? elapsedLabel(working.startedS)
 											: null,
 								})
 					}

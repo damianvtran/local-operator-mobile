@@ -377,7 +377,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "53b3954386c8ceec04107547d42f39c904c3206b38e822e0512caf5cc5a34a03",
+	app: "c8ae536abc5849a0f97733313963545e5afbd212b50910a092befdf3da4b5d54",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -461,7 +461,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
 	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
 	 * identities and the instrument/input pins are untouched. */
-	src: "b9aa87e90a1b0a9213af935949c800b08313f12643de7a63f2d104b3b1018b18",
+	src: "6215cfef9cd5149ecfcc2f0cffd45c5d52a7224c4456a152f2ff90b042d3a4b1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
