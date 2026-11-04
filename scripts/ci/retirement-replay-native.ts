@@ -20,6 +20,7 @@ import {
 /** Register only the wrapper group WE just spawned. The watchdog reads this
  * private pipe and kills/joins these groups if synchronous host work overruns. */
 import { boundedWait } from "./retirement-replay-lifecycle.ts";
+import type { TailRing } from "./retirement-replay-runner-tail.ts";
 export function registerOwnedGroup(pid: number) {
 	const raw = process.env.LO_REPLAY_SUPERVISOR_FD;
 	if (raw !== undefined) {
@@ -55,6 +56,8 @@ function retireOwnedGroup(pid: number) {
 export interface OwnedCommand {
 	completion: Promise<string>;
 	stop: (deadline: Deadline) => Promise<void>;
+	/** The child's exit code once it exited (null before, or when signalled). */
+	exitCode: () => number | null;
 }
 export class NativeScope {
 	readonly commands = new Set<OwnedCommand>();
@@ -69,6 +72,12 @@ export class NativeScope {
 		cap = 30000,
 		beforeStart?: (pid: number) => void,
 		capture = true,
+		/**
+		 * Runner failure tail ONLY (retirement-replay-runner-tail.ts): stdout AND
+		 * stderr go into this capped in-memory ring and nowhere else (never into
+		 * `completion`'s output). Sanitizing and exporting is the caller's job.
+		 */
+		tail?: TailRing,
 	): OwnedCommand {
 		if (this.closed) throw new ReplayRefused("closed");
 		const budget = this.deadline.cap(cap);
@@ -99,7 +108,9 @@ export class NativeScope {
 			process.execPath,
 			[join(import.meta.dirname, "retirement-replay-child.cjs"), exe, ...args],
 			{
-				stdio: ["pipe", capture ? "pipe" : "ignore", "ignore"],
+				stdio: tail
+					? ["pipe", "pipe", "pipe"]
+					: ["pipe", capture ? "pipe" : "ignore", "ignore"],
 				detached: true,
 				env: environment,
 			},
@@ -139,6 +150,7 @@ export class NativeScope {
 			settled = true;
 			clearTimeout(timer);
 			child.stdout?.destroy();
+			child.stderr?.destroy();
 			child.stdin?.destroy();
 			if (error) rejectOutput(error);
 			else resolveOutput(output.toString("utf8").trim());
@@ -150,16 +162,20 @@ export class NativeScope {
 				settle(new ReplayRefused("command-timeout"));
 			}
 		}, budget);
-		child.stdout?.on("data", (data) => {
-			output = Buffer.concat([output, data]);
-			if (output.length > 4 * 1024 ** 2) {
-				try {
-					kill();
-				} finally {
-					settle(new ReplayRefused("command-output-cap"));
+		if (tail) {
+			child.stdout?.on("data", (data: Buffer) => tail.push(data));
+			child.stderr?.on("data", (data: Buffer) => tail.push(data));
+		} else
+			child.stdout?.on("data", (data) => {
+				output = Buffer.concat([output, data]);
+				if (output.length > 4 * 1024 ** 2) {
+					try {
+						kill();
+					} finally {
+						settle(new ReplayRefused("command-output-cap"));
+					}
 				}
-			}
-		});
+			});
 		const awaitGroup = async (deadline: Deadline) => {
 			while (child.pid && !groupGone) {
 				try {
@@ -211,6 +227,7 @@ export class NativeScope {
 		});
 		const owned: OwnedCommand = {
 			completion,
+			exitCode: () => exitCode,
 			stop: async (deadline) => {
 				kill();
 				settle(new ReplayRefused("command-exit"));

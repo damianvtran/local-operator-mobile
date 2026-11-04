@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Deadline, ReplayRefused } from "./retirement-replay-core.ts";
 import { REPLAY_POLICY } from "./retirement-replay-policy.ts";
+import type { RunnerTail } from "./retirement-replay-runner-tail.ts";
 
 const CAUSES = new Set(REPLAY_POLICY.failureCauses);
 
@@ -28,7 +29,10 @@ export const REPLAY_PHASES = [
 	"boot",
 	"bootstatus",
 	"install",
-	"runner-bootstrap",
+	// Was one `runner-bootstrap` phase; split so a receipt names WHICH runner
+	// command failed (python prepare vs xcodebuild launch).
+	"runner-prepare",
+	"runner-launch",
 	"launch",
 	"ready",
 	"openurl",
@@ -175,6 +179,15 @@ export async function boundedWait<T>(
 export interface RunnerHandle {
 	completion: Promise<void>;
 	stop: (deadline: Deadline) => Promise<void>;
+	/**
+	 * Resolves when the private configuration is prepared and the XCTest
+	 * command has been launched; rejects if preparation fails. Lets the phase
+	 * receipt tell `runner-prepare` from `runner-launch` (replay 41801686399
+	 * could not). Absent on handles that have no separate preparation.
+	 */
+	prepared?: Promise<void>;
+	/** Sanitized failure tail of the XCTest command (nonzero exit only). */
+	failureTail?: () => RunnerTail | null;
 }
 /** stop sets the latch synchronously, BEFORE cancellation or joining prepare.
  * Even an uncooperative prepare resolving after a timeout cannot launch later. */
@@ -190,14 +203,17 @@ export function managedRunner(
 		if (stopped) throw new ReplayRefused("runner-stopped");
 		return prepare();
 	});
-	const completion = preparation.then(() => {
+	const launched = preparation.then(() => {
 		if (stopped) throw new ReplayRefused("runner-stopped");
 		actual = launch();
-		return actual.completion;
 	});
+	void launched.catch(() => undefined);
+	const completion = launched.then(() => actual!.completion);
 	void completion.catch(() => undefined);
 	return {
 		completion,
+		prepared: launched,
+		failureTail: () => actual?.failureTail?.() ?? null,
 		stop: (deadline) => {
 			stopped = true;
 			if (!stopPromise)

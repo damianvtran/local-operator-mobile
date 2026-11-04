@@ -62,6 +62,11 @@ import {
 	sampleOwnedProof,
 	signalBootWindow,
 } from "./retirement-replay-native.ts";
+import {
+	sanitizeRunnerTail,
+	TailRing,
+	type TailSecrets,
+} from "./retirement-replay-runner-tail.ts";
 import { deferred, ReplayTransport } from "./retirement-replay-transport.ts";
 import {
 	inspectTarBytes,
@@ -265,7 +270,14 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 		const started = input.startRunner(control, session);
 		runner = started;
 		void started.completion.catch(() => undefined);
-		await phases.step("runner-bootstrap", async () => {
+		// runner-prepare: the private xctestrun is written and xcodebuild launched.
+		// Handles without a separate preparation skip straight to runner-launch.
+		if (started.prepared)
+			await phases.step("runner-prepare", () =>
+				boundedWait(started.prepared!, deadline, 15000),
+			);
+		// runner-launch: XCTest boots in the simulator and reports runner-ready.
+		await phases.step("runner-launch", async () => {
 			await boundedWait(
 				Promise.race([
 					transport.runner.promise,
@@ -389,6 +401,12 @@ export async function executeSeed(input: SeedInput): Promise<ExportSummary> {
 			};
 		}
 	Object.assign(summary, {
+		// The work export below writes seed-replay.json from THIS summary, so the
+		// phase receipt must be in it now (replay 41801686399 exported
+		// failedPhase=null while cleanup.json named the phase).
+		phases: phases.phases,
+		failedPhase: phases.failed,
+		runnerTail: runner?.failureTail?.() ?? null,
 		seedPersisted,
 		runnerReportedTap,
 		urlProgress: transport.urlProgress,
@@ -449,7 +467,11 @@ export function launchRunner(
 	udid: string,
 	root: string,
 	scope: NativeScope,
+	secrets?: TailSecrets,
 ): RunnerHandle {
+	// Combined stdout/stderr goes ONLY into this capped ring; it leaves the
+	// runner only through sanitizeRunnerTail (default-deny, redacted, asserted).
+	const ring = new TailRing();
 	const command = scope.start(
 		"xcodebuild",
 		[
@@ -471,10 +493,19 @@ export function launchRunner(
 		300000,
 		undefined,
 		false,
+		ring,
 	);
 	return {
 		completion: command.completion.then(() => undefined),
 		stop: (deadline) => command.stop(deadline),
+		// No secrets known means nothing can be checked, so nothing leaves.
+		failureTail: () => {
+			const code = command.exitCode();
+			if (code === 0 || code === null) return null;
+			return secrets
+				? sanitizeRunnerTail(code, ring.text(), secrets)
+				: { exitCode: code, redactionRefused: true };
+		},
 	};
 }
 export async function cleanupReplay(
@@ -785,7 +816,12 @@ export async function runSeedReplay(options: ReplayOptions) {
 							deadline.cap(10000),
 						);
 					},
-					() => launchRunner(privateRun, lease.udid, root, runnerScope),
+					() =>
+						launchRunner(privateRun, lease.udid, root, runnerScope, {
+							bearer: session.bearer,
+							session: session.id,
+							control,
+						}),
 					() => prepareScope.stop(cleanupBudget(root)),
 				);
 			},

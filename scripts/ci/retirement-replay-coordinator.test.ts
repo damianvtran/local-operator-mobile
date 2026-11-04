@@ -327,6 +327,62 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 			existsSync(join(f.directory, "evidence", "private-runner-env.json")),
 		).toBe(false);
 	});
+	/*
+	 * Replay 41801686399: the runner exited during bootstrap and seed-replay.json
+	 * said failedPhase=null (only the later cleanup.json named the phase). The
+	 * work export must carry the phase receipt and the sanitized runner tail.
+	 */
+	it("a runner that exits during launch is named in seed-replay.json itself, with its sanitized tail", async () => {
+		const f = fixture();
+		const secret = "b".repeat(64);
+		f.input.startRunner = () => ({
+			completion: Promise.reject(new ReplayRefused("command-exit")),
+			stop: async () => undefined,
+			prepared: Promise.resolve(),
+			failureTail: () => ({
+				exitCode: 65,
+				lines: ["xcodebuild: error: Failed to launch <redacted>"],
+			}),
+		});
+		const result = await f.start();
+		expect(result.cause).toBe("command-exit");
+		const exported = JSON.parse(
+			readFileSync(join(f.directory, "evidence", "seed-replay.json"), "utf8"),
+		);
+		expect(exported.failedPhase).toBe("runner-launch");
+		expect(
+			exported.phases.map(
+				(p: { name: string; status: string }) => `${p.name}:${p.status}`,
+			),
+		).toEqual(["runner-prepare:ok", "runner-launch:failed"]);
+		expect(exported.runnerTail).toEqual({
+			exitCode: 65,
+			lines: ["xcodebuild: error: Failed to launch <redacted>"],
+		});
+		expect(JSON.stringify(exported)).not.toContain(secret);
+		expect(f.events).not.toContain("openurl");
+	});
+	it("a failed preparation is named runner-prepare, and no launch phase is claimed", async () => {
+		const f = fixture();
+		const prepared = Promise.reject(new ReplayRefused("command-exit"));
+		void prepared.catch(() => undefined);
+		f.input.startRunner = () => ({
+			completion: prepared,
+			stop: async () => undefined,
+			prepared,
+		});
+		await f.start();
+		const exported = JSON.parse(
+			readFileSync(join(f.directory, "evidence", "seed-replay.json"), "utf8"),
+		);
+		expect(exported.failedPhase).toBe("runner-prepare");
+		expect(
+			exported.phases.map(
+				(p: { name: string; status: string }) => `${p.name}:${p.status}`,
+			),
+		).toEqual(["runner-prepare:failed"]);
+		expect(exported.runnerTail).toBeNull();
+	});
 	it("final metadata refusal after bootstrap prevents proof launch/openURL", async () => {
 		const f = fixture();
 		f.input.refreshArtifacts = async () => {

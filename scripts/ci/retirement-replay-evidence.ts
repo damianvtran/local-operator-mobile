@@ -22,6 +22,10 @@ import {
 	REPLAY_PHASES,
 	type ReplayPhase,
 } from "./retirement-replay-lifecycle.ts";
+import {
+	type RunnerTail,
+	safeRunnerTail,
+} from "./retirement-replay-runner-tail.ts";
 export const MAX_REPLAY_EVIDENCE_BYTES = 16 * 1024 * 1024;
 const JSON_RESERVE = 256 * 1024;
 export interface ExportSummary {
@@ -43,6 +47,8 @@ export interface ExportSummary {
 	/** Diagnostic pre-openurl phase timings; never part of acceptance. */
 	phases?: PhaseRecord[];
 	failedPhase?: ReplayPhase | null;
+	/** Sanitized XCTest runner failure tail; see retirement-replay-runner-tail.ts. */
+	runnerTail?: RunnerTail | null;
 }
 /** Keep only allowlisted phase names, finite non-negative integer timings and
  * known statuses, so the export can never carry a command line or path. */
@@ -161,6 +167,7 @@ export function safeSummary(summary: ExportSummary) {
 				? summary.failedPhase
 				: null,
 		phases: safePhases(summary.phases),
+		runnerTail: safeRunnerTail(summary.runnerTail),
 		runnerReportedTap: summary.runnerReportedTap === true,
 		urlProgress:
 			/^(admitted|none|refused:(identity|scheme|nonce|phase|callback|parse))$/.test(
