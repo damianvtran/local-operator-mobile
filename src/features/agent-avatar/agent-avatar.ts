@@ -26,10 +26,51 @@
  * UI-free and React-free on purpose, so the vitest Node host exercises it.
  */
 
+import type { Capabilities } from "@/contracts";
 import { isRelayMissing, RelayError } from "@/relay/errors";
 
-/** What a row needs to name a picture. Both halves or nothing. */
-export type AgentAvatarRef = { agentId: string; sha256: string };
+/** What a row needs to name a picture. Both halves or nothing. `size` is the
+ *  relay variant to fetch (`avatarVariant`); absent means the stored original. */
+export type AgentAvatarRef = { agentId: string; sha256: string; size?: number };
+
+/* ------------------------------------------------------------- variants */
+
+/** The square variants the relay can serve (core `agent_avatar.DERIVATIVE_SIZES`,
+ *  advertised as `features.agent_avatar_sizes`). */
+export const AVATAR_VARIANTS = [64, 128, 256] as const;
+
+/**
+ * The variant edge for a `dp`-sized slot at `pixelRatio`, or `undefined` for the
+ * 512 px original.
+ *
+ * WHY. The stored picture is 512 px; a 24 dp row draws it into 72 physical px at
+ * 3x, so fetching the original ships ~10x the bytes needed, while a variant
+ * below dp x PixelRatio is upscaled and looks soft. The answer is the SMALLEST
+ * variant whose edge covers the physical pixels, and the original only when even
+ * 256 does not (past 256 physical px, e.g. 72 dp at 4x). A missing or odd ratio reads as 1.
+ */
+export const avatarVariant = (
+	dp: number,
+	pixelRatio: number,
+): number | undefined => {
+	const density =
+		Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+	const needed = Math.ceil(dp * density);
+	return AVATAR_VARIANTS.find((edge) => edge >= needed);
+};
+
+/**
+ * Whether this relay honours `?size=` on the avatar route.
+ *
+ * The flag bag's values are version numbers, so a positive number is the claim
+ * (the `libraryEnabled` rule). Gating matters even though an older relay would
+ * just ignore the query: it keeps the request identical to what that relay has
+ * always been sent, and keeps one cache entry per picture there.
+ */
+export const avatarSizesServed = (capabilities: Capabilities): boolean => {
+	const value = capabilities.features?.agent_avatar_sizes;
+	return typeof value === "number" && value > 0;
+};
 
 /** The digest the contract writes: lowercase hex sha256. Anything else is not a
  *  digest this client can address, so it is treated like an absent one rather
@@ -72,8 +113,11 @@ export const AVATAR_CACHE_BYTES = 8 * 1024 * 1024;
 
 // JSON avoids delimiter collisions in agent ids; an absent/refused agent must
 // never poison a different agent that happens to name the same content hash.
+// The variant is part of the identity: the row (24 dp) and the header (28 dp)
+// can resolve to different variants at one density, and a 64 px body painted
+// into a 128 px slot is the blur this exists to prevent.
 const cacheKey = (ref: AgentAvatarRef): string =>
-	JSON.stringify([ref.agentId, ref.sha256]);
+	JSON.stringify([ref.agentId, ref.sha256, ref.size ?? null]);
 // Data URIs are ASCII, but count UTF-16 backing storage conservatively too.
 const uriBytes = (value: string | null): number => (value?.length ?? 0) * 2;
 

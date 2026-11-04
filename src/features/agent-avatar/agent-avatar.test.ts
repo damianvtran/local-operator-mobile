@@ -6,7 +6,10 @@ import { parsePayload } from "@/contracts";
 import {
 	AVATAR_CACHE_LIMIT,
 	AVATAR_FETCH_CONCURRENCY,
+	AVATAR_VARIANTS,
 	avatarRefOf,
+	avatarSizesServed,
+	avatarVariant,
 	createAvatarCache,
 	paintedPicture,
 } from "@/features/agent-avatar/agent-avatar";
@@ -568,5 +571,67 @@ describe("picture privacy lifecycle wiring", () => {
 	});
 	it("refusal clears pictures too, not only explicit sign-out", () => {
 		expect(provider).toMatch(CLEAR_REFUSAL);
+	});
+});
+
+describe("right-sized variants: requested size >= PixelRatio x dp", () => {
+	it("picks the smallest relay variant covering the slot's physical pixels", () => {
+		/* Every rendered avatar slot on this client, across real phone densities. */
+		for (const dp of [24, 28]) {
+			for (const ratio of [1, 1.5, 2, 2.625, 2.75, 3, 3.5, 4]) {
+				const size = avatarVariant(dp, ratio);
+				const physical = dp * ratio;
+				if (size === undefined) {
+					expect(physical).toBeGreaterThan(AVATAR_VARIANTS.at(-1) ?? 0);
+					continue;
+				}
+				expect(size).toBeGreaterThanOrEqual(physical);
+				// ...and no smaller variant would have covered it (bandwidth).
+				for (const smaller of AVATAR_VARIANTS.filter((v) => v < size)) {
+					expect(smaller).toBeLessThan(physical);
+				}
+			}
+		}
+		expect(avatarVariant(24, 3)).toBe(128);
+		expect(avatarVariant(28, 2)).toBe(64);
+		expect(avatarVariant(64, 4)).toBe(256);
+		expect(avatarVariant(65, 4)).toBeUndefined();
+		expect(avatarVariant(24, Number.NaN)).toBe(64);
+	});
+
+	it("asks only a relay that advertises agent_avatar_sizes", () => {
+		expect(avatarSizesServed({ features: { agent_avatar_sizes: 1 } })).toBe(
+			true,
+		);
+		expect(avatarSizesServed({ features: { agent_avatar_sizes: 0 } })).toBe(
+			false,
+		);
+		expect(avatarSizesServed({ features: {} })).toBe(false);
+		expect(avatarSizesServed({})).toBe(false);
+	});
+
+	it("caches each variant separately, so a 64 px body never fills a 128 px slot", async () => {
+		const cache = createAvatarCache();
+		const load = vi.fn(
+			async (r: { size?: number }) => `data:${r.size ?? "orig"}`,
+		);
+		await cache.get({ ...ref(), size: 64 }, load);
+		await cache.get({ ...ref(), size: 128 }, load);
+		expect(load).toHaveBeenCalledTimes(2);
+		expect(cache.peek({ ...ref(), size: 64 })).toBe("data:64");
+		expect(cache.peek({ ...ref(), size: 128 })).toBe("data:128");
+		expect(cache.peek(ref())).toBeUndefined();
+	});
+
+	it("the view derives the size from PixelRatio x the rendered dp and passes it through", () => {
+		const view = readFileSync(
+			fileURLToPath(new URL("./agent-avatar-view.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(view).toContain("avatarVariant(dp, PixelRatio.get())");
+		expect(view).toContain("avatarSizesServed(state.capabilities)");
+		expect(view).toContain("target.size,");
+		expect(view).toContain("useAgentAvatarUri(avatarRef, HEADER_AVATAR_PT)");
+		expect(view).toContain("useAgentAvatarUri(avatarRef, ROW_AVATAR_PT)");
 	});
 });
