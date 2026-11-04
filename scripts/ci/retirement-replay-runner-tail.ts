@@ -15,9 +15,8 @@
  * module exports NO text from the runner at all. It exports only:
  *
  * - `exitCode` (a number or null);
- * - `command`: which command failed. Only `launch` is classified: a failed
- *   prepare step has no output worth keeping and is already named by the
- *   receipt's `failedPhase: runner-prepare` (review R26-3);
+ * - `command`: which command failed, `launch` or `prepare` (see
+ *   `RunnerCommand`; prepare's class is from its outcome, not its output);
  * - `errorClass`: one value of a CLOSED enum, chosen by matching KNOWN
  *   xcodebuild/XCTest messages (`unknown` when nothing matches);
  * - `failingTest`: only if it is one of ALLOWED_TESTS, compared exactly;
@@ -78,10 +77,18 @@ export const ERROR_CLASSES = [
 	],
 	["test_failed", /^\*\* TEST (?:EXECUTE )?FAILED \*\*$/m],
 ] as const;
-export type RunnerErrorClass = (typeof ERROR_CLASSES)[number][0] | "unknown";
+export type RunnerErrorClass =
+	| (typeof ERROR_CLASSES)[number][0]
+	| "unknown"
+	| "prepare_timeout"
+	| "prepare_refused"
+	| "prepare_exit";
 const CLASS_NAMES: ReadonlySet<string> = new Set([
 	...ERROR_CLASSES.map(([name]) => name),
 	"unknown",
+	"prepare_timeout",
+	"prepare_refused",
+	"prepare_exit",
 ]);
 
 /** The only XCTest test names that may be named in the record, exactly. */
@@ -90,7 +97,15 @@ export const ALLOWED_TESTS = [
 ] as const;
 const TEST_CASE_LINE = /^Test Case '-\[([\w.]+) (\w+)\]' failed /gm;
 
-export type RunnerCommand = "launch";
+/**
+ * `launch` is the XCTest runner (xcodebuild). `prepare` is the local
+ * retirement-replay-products.py check that runs first; replay 41883569070
+ * failed there (command-timeout at 10,029 ms) and exported `runnerFailure:
+ * null`, so the receipt said WHERE but not HOW. A prepare failure now gets a
+ * record too, built ONLY from the outcome (timeout vs exit vs refusal class),
+ * never from prepare's output.
+ */
+export type RunnerCommand = "launch" | "prepare";
 export interface RunnerFailure {
 	exitCode: number | null;
 	command: RunnerCommand;
@@ -156,6 +171,45 @@ export function classifyRunnerFailure(
 }
 
 /**
+ * The closed classes a PREPARE failure can carry. They come from the command
+ * OUTCOME only (ReplayRefused code, exit status), never from what prepare
+ * printed, so this path copies nothing out either:
+ * - `prepare_timeout`: killed at its cap (`command-timeout` / `deadline`);
+ * - `prepare_refused`: exited 1, i.e. one of products.py's ValueError checks
+ *   refused the runner products or environment (Python's uncaught-exception
+ *   status);
+ * - `prepare_exit`: any other nonzero exit, a start failure or a signal.
+ */
+export const PREPARE_CLASSES = [
+	"prepare_timeout",
+	"prepare_refused",
+	"prepare_exit",
+] as const;
+export type PrepareErrorClass = (typeof PREPARE_CLASSES)[number];
+
+/** Build the record for a failed prepare from its outcome alone. */
+export function classifyPrepareFailure(
+	exitCode: number | null,
+	code: string,
+): RunnerFailure {
+	const errorClass: PrepareErrorClass =
+		code === "command-timeout" || code === "deadline"
+			? "prepare_timeout"
+			: exitCode === 1
+				? "prepare_refused"
+				: "prepare_exit";
+	return {
+		exitCode: exitCode === 0 ? null : exitCode,
+		command: "prepare",
+		errorClass,
+		failingTest: null,
+		failureCount: 0,
+		// No output is captured for prepare; the digest of nothing says so.
+		tailSha256: createHash("sha256").update(Buffer.alloc(0)).digest("hex"),
+	};
+}
+
+/**
  * Re-validate the closed shape at the export boundary. Anything outside it
  * (an unknown key, a string outside the enums) drops the WHOLE record.
  */
@@ -183,7 +237,9 @@ export function safeRunnerFailure(value: unknown): RunnerFailure | null {
 			Math.abs(v.exitCode) <= 255);
 	if (
 		!exitOk ||
-		v.command !== "launch" ||
+		(v.command !== "launch" && v.command !== "prepare") ||
+		(v.command === "prepare" &&
+			!(PREPARE_CLASSES as readonly unknown[]).includes(v.errorClass)) ||
 		typeof v.errorClass !== "string" ||
 		!CLASS_NAMES.has(v.errorClass) ||
 		!(

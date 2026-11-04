@@ -195,6 +195,8 @@ export function managedRunner(
 	prepare: () => Promise<void>,
 	launch: () => RunnerHandle,
 	cancelPrepare: () => Promise<void>,
+	/** The prepare step's own closed record, used when launch never ran. */
+	prepareRecord: () => RunnerFailure | null = () => null,
 ): RunnerHandle {
 	let stopped = false,
 		actual: RunnerHandle | undefined,
@@ -213,8 +215,10 @@ export function managedRunner(
 	return {
 		completion,
 		prepared: launched,
+		// Launch's record when it ran; otherwise prepare's, so a runner-*
+		// failure never exports `runnerFailure: null` (after 41883569070).
 		failureRecord: (replayFailed) =>
-			actual?.failureRecord?.(replayFailed) ?? null,
+			actual ? (actual.failureRecord?.(replayFailed) ?? null) : prepareRecord(),
 		stop: (deadline) => {
 			stopped = true;
 			if (!stopPromise)

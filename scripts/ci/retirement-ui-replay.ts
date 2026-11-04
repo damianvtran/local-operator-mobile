@@ -63,7 +63,9 @@ import {
 	signalBootWindow,
 } from "./retirement-replay-native.ts";
 import {
+	classifyPrepareFailure,
 	classifyRunnerFailure,
+	type RunnerFailure,
 	TailRing,
 } from "./retirement-replay-runner-tail.ts";
 import { deferred, ReplayTransport } from "./retirement-replay-transport.ts";
@@ -528,6 +530,55 @@ export function launchRunner(
 		},
 	};
 }
+/**
+ * Work-clock cap for the runner `prepare` step (retirement-replay-products.py).
+ *
+ * WHY 45 s, NOT 10 s. Replay 41883569070 failed here: `command-timeout` at
+ * 10,029 ms, right after an 80.6 s simulator install, with nothing refused
+ * (every refusal raises ValueError and exits at once). prepare re-hashes the
+ * runner products (75 entries, 22.6 MB) and is I/O-bound: on the real runner
+ * artifact 13350176643 it took 0.9 s, 7.3 s and 23.8 s as a subprocess on a
+ * loaded host, 3.1 s in-process with a warm cache.
+ *
+ * WHY NOT MORE (the manager asked for 90 s if the budget fits; it does not).
+ * The 300 s work clock (boot excluded) had ~117 s spent before prepare in that
+ * replay. After prepare the success path still needs runner-launch (up to
+ * 40 s), the artifact refresh, `simctl launch`, ready, and `require(70000)`
+ * before openurl. With 45 s: 117 + 45 + 40 + (≈5 + ≈5 + ≈10 measured) + 70
+ * ≈ 292 s, inside 300. With 60 s it is ≈ 307 s and with 90 s ≈ 337 s, so a
+ * prepare that used its whole cap would leave no window for openurl and fail
+ * later as `insufficient-window` instead. 45 s is ~1.9× the slowest measured
+ * prepare and ~4.5× the old cap.
+ */
+export const PREPARE_CAP_MS = 45000;
+/**
+ * Run the local runner `prepare` check under PREPARE_CAP_MS, and keep a closed
+ * failure record of its OUTCOME (never its output) for the evidence: a failed
+ * prepare used to export `runnerFailure: null` (manager, after 41883569070).
+ */
+export function prepareRunner(
+	scope: NativeScope,
+	args: string[],
+	exe: string = PYTHON,
+	cap: number = PREPARE_CAP_MS,
+) {
+	let record: RunnerFailure | null = null;
+	return {
+		run: async () => {
+			const command = scope.start(exe, args, cap, undefined, false);
+			try {
+				await command.completion;
+			} catch (error) {
+				record = classifyPrepareFailure(
+					command.exitCode(),
+					error instanceof ReplayRefused ? error.code : "other",
+				);
+				throw error;
+			}
+		},
+		failureRecord: () => record,
+	};
+}
 export async function cleanupReplay(
 	root: string,
 	deps: { run?: Run; isAlive?: (pid: number) => boolean } = {},
@@ -820,24 +871,20 @@ export async function runSeedReplay(options: ReplayOptions) {
 				const privateRun = join(runnerRoot, "Products/private.xctestrun");
 				const prepareScope = new NativeScope(deadline),
 					runnerScope = new NativeScope(deadline);
+				const preparation = prepareRunner(prepareScope, [
+					join(import.meta.dirname, "retirement-replay-products.py"),
+					"prepare",
+					runnerRoot,
+					"--environment",
+					envPath,
+					"--output",
+					privateRun,
+				]);
 				return managedRunner(
-					async () => {
-						await prepareScope.run(
-							PYTHON,
-							[
-								join(import.meta.dirname, "retirement-replay-products.py"),
-								"prepare",
-								runnerRoot,
-								"--environment",
-								envPath,
-								"--output",
-								privateRun,
-							],
-							deadline.cap(10000),
-						);
-					},
+					preparation.run,
 					() => launchRunner(privateRun, lease.udid, root, runnerScope),
 					() => prepareScope.stop(cleanupBudget(root)),
+					preparation.failureRecord,
 				);
 			},
 		});

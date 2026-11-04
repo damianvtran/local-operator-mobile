@@ -392,6 +392,8 @@ describe("real loopback coordinator at injected native/runner boundaries", () =>
 				(p: { name: string; status: string }) => `${p.name}:${p.status}`,
 			),
 		).toEqual(["runner-prepare:failed"]);
+		// A fake handle with no record of its own stays null; the REAL
+		// prepareRunner record is pinned in retirement-replay-prepare.test.ts.
 		expect(exported.runnerFailure).toBeNull();
 	});
 	it("final metadata refusal after bootstrap prevents proof launch/openURL", async () => {
