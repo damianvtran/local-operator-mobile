@@ -46,6 +46,20 @@ describe("Android OAuth native-proof contract", () => {
 		);
 	});
 
+	it("stages the compiled APK onto a fresh emulator VM instead of filling its disk with Gradle", () => {
+		const runtime = workflow.slice(workflow.indexOf("  browser-native:"));
+		expect(runtime).toContain("needs: build-native");
+		expect(runtime).toContain("actions/download-artifact@v8");
+		expect(runtime).toContain("sha256sum --check artifact-apk.sha256");
+		expect(runtime).toContain('test "$ACTUAL" = "$EXPECTED"');
+		expect(runtime).not.toContain("./gradlew");
+		expect(runtime).not.toContain("pnpm install");
+		expect(runner).toContain('APK="$OUT/app-debug.apk"');
+		expect(workflow.indexOf("Stage the built APK")).toBeLessThan(
+			workflow.indexOf("  browser-native:"),
+		);
+	});
+
 	it("enables KVM and fails fast before building or starting the emulator", () => {
 		const e2e = read("../../../.github/workflows/e2e.yml");
 		const start = e2e.indexOf("      - name: Enable KVM");

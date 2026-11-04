@@ -5,7 +5,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 OUT="${RUNNER_TEMP:?}/android-oauth-callback-proof"
 mkdir -p "$OUT/evidence"
-APK="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+# Downloaded from the preceding build job and verified before this VM boots.
+# Do not retain a Gradle/NDK tree beside the large Play image (attempt4 ENOSPC).
+APK="$OUT/app-debug.apk"
 [[ -f "$APK" ]] || { echo 'Debug APK must be compiled before emulator proof'; exit 1; }
 APP_ID=$(node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync(process.argv[1])); if(!c.android?.package)process.exit(1); console.log(c.android.package)' "$OUT/expo-config.json")
 cleanup() { adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true; }
