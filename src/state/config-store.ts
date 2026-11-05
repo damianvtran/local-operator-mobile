@@ -17,6 +17,9 @@
 import { createStore } from "zustand/vanilla";
 
 export interface ConfigSnapshot {
+	/** The last frame's invalidation keys; sound prefetch consumes these without
+	 * opening a duplicate SSE connection. Selection itself remains on the relay. */
+	changedKeys: string[];
 	/** The RESOLVED locale tag the last frame carried, or `null` before the
 	 *  first. Never the raw setting: the relay resolves `auto` before it is
 	 *  sent, and an unshipped configured tag arrives as `en`. */
@@ -52,6 +55,7 @@ export type ConfigStore = ConfigSnapshot & ConfigActions;
 export type ConfigStoreApi = ReturnType<typeof createConfigStore>;
 
 const INITIAL: ConfigSnapshot = {
+	changedKeys: [],
 	language: null,
 	supported: null,
 	frameCount: 0,
@@ -65,6 +69,7 @@ export function createConfigStore(deps: { now?: () => number } = {}) {
 		applyFrame(payload, at) {
 			set({
 				language: payload.language,
+				changedKeys: payload.changed_keys,
 				/* A frame can only arrive on an open stream; recording that here as
 				 * well keeps `supported` true for a consumer that missed the open. */
 				supported: true,

@@ -1,0 +1,14 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'dev.localoperator.sound'
+version = '1.0.0'
+android {
+  namespace 'dev.localoperator.sound'
+  defaultConfig {
+    versionCode 1; versionName '1.0.0'
+    // Framework-only native checks: no new test dependency or SDK installer.
+    testInstrumentationRunner 'dev.localoperator.sound.NotificationSoundTestRunner'
+  }
+}
