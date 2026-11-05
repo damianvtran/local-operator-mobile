@@ -598,7 +598,7 @@ jobs:
         if: always() && steps.simulator.outputs.udid != ''
         env:
           SOUND_SIMULATOR: ${{ steps.simulator.outputs.udid }}
-        run: xcrun simctl shutdown "$SOUND_SIMULATOR"
+        run: node scripts/ci/notification-sound-ios-cleanup.ts
       - uses: actions/upload-artifact@v7
         if: always()
         with:
