@@ -15,6 +15,53 @@ export type DiagnosticRun = (
 	seconds: number,
 ) => Promise<string>;
 
+/** A cold simulator can fail before an app or Maestro exists (41955013065).
+ * Capture system-app/migration and Photos services, not a fictitious app flow.
+ * Each read is bounded and independent; diagnostics must not replace boot/import. */
+export async function captureStageBSetupFailure(
+	run: DiagnosticRun,
+	udid: string,
+	output: string,
+): Promise<Record<string, string>> {
+	const result = await captureStageBMediaReadiness(run, udid, output, "failed");
+	for (const [name, args, cap, file] of [
+		[
+			"setup-failure-screenshot",
+			["simctl", "io", udid, "screenshot", join(output, "setup-failure.png")],
+			30,
+			null,
+		],
+		[
+			"setup-failure-boot-log",
+			[
+				"simctl",
+				"spawn",
+				udid,
+				"log",
+				"show",
+				"--style",
+				"compact",
+				"--last",
+				"6m",
+				"--info",
+				"--predicate",
+				'process == "SpringBoard" OR process == "backboardd" OR process == "runningboardd" OR process CONTAINS[c] "migrat" OR subsystem CONTAINS[c] "migration"',
+			],
+			30,
+			"setup-failure-boot-log.txt",
+		],
+	] as const) {
+		try {
+			const text = await run(name, "xcrun", [...args], cap);
+			if (file) writeFileSync(join(output, file), stageBDiagnosticText(text));
+			result[name] = "captured";
+		} catch (error) {
+			result[name] = stageBDiagnosticText(String(error));
+		}
+	}
+	return result;
+}
+
 /** Reserve CLI/driver startup separately from EVERY nested inner wait. Killing
  * Maestro at the same deadline as its assertion prevents its debug finalization. */
 export function stageBFlowCap(steps: StageBStep[], cold = false): number {

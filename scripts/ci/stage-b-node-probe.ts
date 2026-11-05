@@ -22,6 +22,7 @@ export function probeStageBCoordinator(
 	oldRedactedReturn = false,
 	unsignedBuild = false,
 	mediaImportFails = false,
+	setup?: { bootFails?: boolean; deleteFails?: boolean },
 ): Record<string, unknown> {
 	const repository = fileURLToPath(new URL("../../", import.meta.url));
 	const root = mkdtempSync(
@@ -64,7 +65,7 @@ else if(name==='pnpm'){if(args.includes('prebuild')){fs.mkdirSync(path.join(root
 else if(name==='xcodebuild'){if(args.includes('-version'))out('Xcode 26.0');else{for(const flag of ['CODE_SIGN_IDENTITY=-','CODE_SIGN_STYLE=Manual','DEVELOPMENT_TEAM=','CODE_SIGNING_ALLOWED=YES','CODE_SIGNING_REQUIRED=NO'])if(!args.includes(flag))throw Error('ADHOC_ARGS_REQUIRED:'+flag);const ent=args.find(a=>a.startsWith('CODE_SIGN_ENTITLEMENTS='));if(!ent||!fs.readFileSync(ent.slice('CODE_SIGN_ENTITLEMENTS='.length),'utf8').includes('<dict/>'))throw Error('EMPTY_SIMULATOR_ENTITLEMENTS_REQUIRED');const c=config(),derived=args[args.indexOf('-derivedDataPath')+1],app=path.join(derived,'Build/Products/Release-iphonesimulator/StageBDraftProof.app');fs.mkdirSync(app,{recursive:true});fs.writeFileSync(path.join(app,'Info.plist'),JSON.stringify({CFBundleIdentifier:c.bundleId,CFBundleExecutable:'StageBDraftProof',StageBProofSourceSha:c.sourceSha,StageBProofNonce:c.nonce,StageBProofFlavor:c.flavor}));fs.writeFileSync(path.join(app,'main.jsbundle'),JSON.stringify(c));fs.writeFileSync(path.join(app,'StageBDraftProof'),'NODE ONLY executable placeholder');}}
 else if(name==='codesign'){if(args.includes('-dv'))out('Executable='+args.at(-1)+'\\nSignature=adhoc\\nTeamIdentifier=not set');else if(args.includes('--entitlements'))out('<plist version="1.0"><dict/></plist>');else throw Error('UNEXPECTED_CODESIGN_OPERATION');}
 else if(name==='plutil'){const info=JSON.parse(fs.readFileSync(args.at(-1),'utf8'));out(info[args[1]]);}
-else if(name==='xcrun'){const op=args[1];if(op==='list')out(JSON.stringify({runtimes:[{identifier:'com.apple.CoreSimulator.SimRuntime.iOS-26-0',name:'iOS 26.0',isAvailable:true}]}));else if(op==='create')out('00000000-0000-4000-8000-000000000001');else if(op==='install'){fs.mkdirSync(path.dirname(installed),{recursive:true});fs.cpSync(args[3],installed,{recursive:true});}else if(op==='addmedia'&&${mediaImportFails}){out('NODE_ONLY_MEDIA_IMPORT_FAILURE');process.exitCode=18;}else if(op==='get_app_container')out(installed);else if(op==='launch')out('com.localoperator.mobile.stagebproof: 12345');else if(op==='io')fs.writeFileSync(args.at(-1),'NODE ONLY screenshot placeholder');else if(op==='spawn')out('NODE ONLY os_log capture');}
+else if(name==='xcrun'){const op=args[1];if(op==='list')out(JSON.stringify({runtimes:[{identifier:'com.apple.CoreSimulator.SimRuntime.iOS-26-0',name:'iOS 26.0',isAvailable:true}]}));else if(op==='create')out('00000000-0000-4000-8000-000000000001');else if(op==='bootstatus'&&${setup?.bootFails ?? false}){out('Waiting on System App; isTerminal=NO');process.exitCode=19;}else if(op==='delete'&&${setup?.deleteFails ?? false}){process.exitCode=20;}else if(op==='install'){fs.mkdirSync(path.dirname(installed),{recursive:true});fs.cpSync(args[3],installed,{recursive:true});}else if(op==='addmedia'&&${mediaImportFails}){out('NODE_ONLY_MEDIA_IMPORT_FAILURE');process.exitCode=18;}else if(op==='get_app_container')out(installed);else if(op==='launch')out('com.localoperator.mobile.stagebproof: 12345');else if(op==='io')fs.writeFileSync(args.at(-1),'NODE ONLY screenshot placeholder');else if(op==='spawn')out('NODE ONLY os_log capture');}
 else if(name==='maestro'){if(args.includes('--version'))out('2.11.0');else if(args.includes('hierarchy'))out(JSON.stringify({identifier:'home-screen'}));else if(args.includes('test')){out('NODE_ONLY_FAKE_FLOW_STOP');process.exitCode=17;}}
 else throw Error('Unexpected tool '+name);
 `;
@@ -112,10 +113,15 @@ const result={nodeOnly:true,sourceRaw:raw.get('source')===process.env.STAGE_B_SO
 	// The negative control stops before prepare generates the entry: use a smaller
 	// reporter that still records its exact pre-simulator rejection.
 	const negativeRunner = `import{readFileSync,readdirSync,writeFileSync}from'node:fs';import{join}from'node:path';import{runStageBNodeDryRun}from ${JSON.stringify(proofModule)};let error='';try{await runStageBNodeDryRun(process.env,${JSON.stringify(tools)},()=>{});}catch(e){error=String(e.message);}const receipt=JSON.parse(readFileSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'receipt.json'),'utf8'));writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({nodeOnly:true,oldRedactedReturn:${oldRedactedReturn},unsignedBuild:${unsignedBuild},rejectedUnsignedBuild:error.includes('unsigned-candidate-producer failed')&&readdirSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'commands')).filter(p=>p.endsWith('-unsigned-candidate-producer.log')).some(p=>readFileSync(join(process.env.RUNNER_TEMP,'stage-b-draft-proof-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'commands',p),'utf8').includes('ADHOC_ARGS_REQUIRED:CODE_SIGNING_ALLOWED=YES')),error,commands:receipt.commands.map(c=>c.name)}));`;
+	const setupRunner = `import{readFileSync,writeFileSync}from'node:fs';import{join}from'node:path';import{runStageBNodeDryRun,assertStageBFullEvidence}from ${JSON.stringify(proofModule)};let error='';try{await runStageBNodeDryRun(process.env,${JSON.stringify(tools)},()=>{});}catch(e){error=String(e.message);}const receipt=JSON.parse(readFileSync(join(process.env.RUNNER_TEMP,'stage-b-setup-only-'+process.env.STAGE_B_SOURCE_SHA.slice(0,12),'receipt.json'),'utf8'));let fullEvidenceRejected=false;try{assertStageBFullEvidence(receipt);}catch{fullEvidenceRejected=true;}writeFileSync(${JSON.stringify(join(root, "result.json"))},JSON.stringify({...receipt,error,nodeOnly:true,fullEvidenceRejected,commandReceipts:receipt.commands,commands:receipt.commands.map(c=>c.name)}));`;
 	const entry = join(root, "runner.mts");
 	writeFileSync(
 		entry,
-		oldRedactedReturn || unsignedBuild ? negativeRunner : runner,
+		setup
+			? setupRunner
+			: oldRedactedReturn || unsignedBuild
+				? negativeRunner
+				: runner,
 	);
 	try {
 		execFileSync(
@@ -135,6 +141,10 @@ const result={nodeOnly:true,sourceRaw:raw.get('source')===process.env.STAGE_B_SO
 					GITHUB_ACTIONS: "true",
 					GITHUB_REPOSITORY: "damianvtran/local-operator-mobile",
 					GITHUB_EVENT_NAME: "pull_request",
+					GITHUB_ACTOR: "damianvtran",
+					STAGE_B_PROOF_MODE: setup ? "setup-only" : "full",
+					STAGE_B_SETUP_APPROVED: setup ? "true" : "false",
+					STAGE_B_SETUP_LABEL_CONFIRMED: setup ? "true" : "false",
 					STAGE_B_NATIVE_APPROVED: "true",
 					STAGE_B_SOURCE_SHA: sha,
 					GITHUB_WORKFLOW_SHA: "c".repeat(40),

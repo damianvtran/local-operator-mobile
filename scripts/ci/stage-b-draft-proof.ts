@@ -28,6 +28,7 @@ import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	captureStageBFailure,
 	captureStageBMediaReadiness,
+	captureStageBSetupFailure,
 	stageBFlowCap,
 	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics.ts";
@@ -78,6 +79,7 @@ export async function warmStageBDriver(
 
 export function assertStageBAdmission(env: NodeJS.ProcessEnv): void {
 	if (
+		(env.STAGE_B_PROOF_MODE ?? "full") !== "full" ||
 		env.CI !== "true" ||
 		env.GITHUB_ACTIONS !== "true" ||
 		env.GITHUB_REPOSITORY !== "damianvtran/local-operator-mobile" ||
@@ -89,6 +91,48 @@ export function assertStageBAdmission(env: NodeJS.ProcessEnv): void {
 			"Stage B native execution requires its explicitly approved trusted PR lane",
 		);
 }
+/** Explicit prerequisite authorization cannot downgrade the trusted full lane.
+ * The PR label route works before this workflow exists on default/main; dispatch
+ * additionally requires its explicit boolean input. Neither is E2E approval. */
+export function assertStageBSetupAdmission(env: NodeJS.ProcessEnv): void {
+	const requested =
+		env.GITHUB_EVENT_NAME === "workflow_dispatch"
+			? env.STAGE_B_SETUP_ONLY_INPUT === "true"
+			: env.GITHUB_EVENT_NAME === "pull_request" &&
+				env.STAGE_B_SETUP_LABEL_CONFIRMED === "true";
+	if (
+		env.STAGE_B_PROOF_MODE !== "setup-only" ||
+		env.STAGE_B_SETUP_APPROVED !== "true" ||
+		env.CI !== "true" ||
+		env.GITHUB_ACTIONS !== "true" ||
+		env.GITHUB_REPOSITORY !== "damianvtran/local-operator-mobile" ||
+		env.GITHUB_ACTOR !== "damianvtran" ||
+		!SOURCE_SHA.test(env.STAGE_B_SOURCE_SHA ?? "") ||
+		!requested
+	)
+		throw new Error(
+			"Stage B setup-only requires explicit trusted prerequisite approval",
+		);
+}
+
+/** A setup receipt is NEVER eligible for the native merge-evidence row. */
+export function assertStageBFullEvidence(
+	receipt: Record<string, unknown>,
+): void {
+	if (
+		receipt.nodeOnly === true ||
+		receipt.flavor !== "stage-b-draft-proof" ||
+		receipt.proofMode !== "full" ||
+		receipt.status !== "PASS" ||
+		receipt.nativeMatrixPass !== true ||
+		!Array.isArray(receipt.cases) ||
+		receipt.cases.length === 0
+	)
+		throw new Error(
+			"setup-only or incomplete receipt cannot satisfy native E2E evidence",
+		);
+}
+
 export function verifyStageBBundle(
 	expected: StageBProofConfig,
 	actual: {
@@ -185,12 +229,14 @@ async function runStageBCoordinator(
 	env: NodeJS.ProcessEnv,
 	nodeOnly?: { plist: string; onValue: (name: string, raw: string) => void },
 ): Promise<void> {
-	assertStageBAdmission(env);
+	const setupOnly = env.STAGE_B_PROOF_MODE === "setup-only";
+	if (setupOnly) assertStageBSetupAdmission(env);
+	else assertStageBAdmission(env);
 	const cwd = process.cwd();
 	const sourceSha = env.STAGE_B_SOURCE_SHA ?? "";
 	const output = resolve(
 		env.RUNNER_TEMP ?? "",
-		`stage-b-draft-proof-${sourceSha.slice(0, 12)}`,
+		`${setupOnly ? "stage-b-setup-only" : "stage-b-draft-proof"}-${sourceSha.slice(0, 12)}`,
 	);
 	if (!env.RUNNER_TEMP || existsSync(output))
 		throw new Error("proof output must be a fresh owned runner directory");
@@ -243,14 +289,18 @@ async function runStageBCoordinator(
 	const receipt: Record<string, unknown> = {
 		sourceSha,
 		workflowSha: env.GITHUB_WORKFLOW_SHA ?? "unavailable",
-		flavor: "stage-b-draft-proof",
+		flavor: setupOnly ? "stage-b-setup-only" : "stage-b-draft-proof",
+		proofMode: setupOnly ? "setup-only" : "full",
+		nativeMatrixPass: false,
 		commands,
 		cases,
 		status: "running",
 		...(nodeOnly ? { nodeOnly: true } : {}),
-		nativeAuthBoundary: nodeOnly
-			? "NODE-ONLY simulated tools; no native UI, build or simulator evidence"
-			: "real native UI/provider/storage/HTTP with synthetic identity; not live Radient OAuth/TLS",
+		nativeAuthBoundary: setupOnly
+			? "SETUP ONLY: boot/addmedia/cleanup; no app build, launch, provider or E2E evidence"
+			: nodeOnly
+				? "NODE-ONLY simulated tools; no native UI, build or simulator evidence"
+				: "real native UI/provider/storage/HTTP with synthetic identity; not live Radient OAuth/TLS",
 	};
 	const reap = (child: ChildProcess) => {
 		if (!child.pid) return;
@@ -328,6 +378,7 @@ async function runStageBCoordinator(
 				commands.push({
 					name,
 					command,
+					capSeconds: seconds,
 					args: args.map(redact),
 					rc,
 					elapsedMs: Date.now() - started,
@@ -351,7 +402,9 @@ async function runStageBCoordinator(
 		});
 	const maestro =
 		env.STAGE_B_MAESTRO ?? join(env.HOME ?? "", ".maestro/bin/maestro");
-	try {
+	// Keep setup's early completion inside the phase, never outside cleanup's
+	// error propagation. A failed delete must turn setup success into failure.
+	const execute = async () => {
 		if ((await run("source", "git", ["rev-parse", "HEAD"])) !== sourceSha)
 			throw new Error("checkout differs from frozen PR source");
 		if (env.GITHUB_WORKFLOW_SHA) {
@@ -390,9 +443,11 @@ async function runStageBCoordinator(
 			throw new Error("native proof requires at least 15 GiB free");
 		receipt.freeKiBBefore = freeKiB;
 		await run("xcode-preflight", "xcodebuild", ["-version"]);
-		await run("pod-preflight", "pod", ["--version"]);
-		await run("driver-preflight", maestro, ["--version"]);
-		await run("expo-preflight", "pnpm", ["exec", "expo", "--version"]);
+		if (!setupOnly) {
+			await run("pod-preflight", "pod", ["--version"]);
+			await run("driver-preflight", maestro, ["--version"]);
+			await run("expo-preflight", "pnpm", ["exec", "expo", "--version"]);
+		}
 		const runtimes = JSON.parse(
 			await run("runtime-preflight", "xcrun", [
 				"simctl",
@@ -410,6 +465,46 @@ async function runStageBCoordinator(
 			throw new Error(
 				"preinstalled iOS 26 runtime missing; no SDK/runtime installation attempted",
 			);
+		const bootOwned = async (name: string) => {
+			udid = await run("create-owned-simulator", "xcrun", [
+				"simctl",
+				"create",
+				name,
+				"com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+				runtime.identifier,
+			]);
+			if (!SIMULATOR_ID.test(udid))
+				throw new Error("owned simulator UDID invalid");
+			receipt.udid = udid;
+			await run("boot-owned-simulator", "xcrun", ["simctl", "boot", udid]);
+			await run(
+				"boot-status",
+				"xcrun",
+				["simctl", "bootstatus", udid, "-b"],
+				240,
+			);
+			return udid;
+		};
+		if (setupOnly) {
+			const owned = await bootOwned(`StageB-setup-${sourceSha.slice(0, 12)}`);
+			receipt.mediaReadiness = {
+				purpose: "setup prerequisite only",
+				before: await captureStageBMediaReadiness(run, owned, output, "before"),
+			};
+			await run(
+				"add-owned-photo",
+				"xcrun",
+				[
+					"simctl",
+					"addmedia",
+					owned,
+					join(cwd, "design/app-icon/ios/icon-light-1024.png"),
+				],
+				STAGE_B_ADD_MEDIA_SECONDS,
+			);
+			receipt.status = "SETUP_ONLY_PASS";
+			return; // finally still reaps/deletes; cleanup failure rejects this run.
+		}
 		fixture = await startStageBIdentityFixture(sourceSha);
 		const config = fixture.config;
 		receipt.heldProofTimings = fixture.heldTimings;
@@ -438,23 +533,8 @@ async function runStageBCoordinator(
 		if (workspace.length !== 1 || projects.length !== 1)
 			throw new Error("generated native project identity ambiguous");
 		const scheme = projects[0]?.slice(0, -".xcodeproj".length) ?? "";
-		udid = await run("create-owned-simulator", "xcrun", [
-			"simctl",
-			"create",
-			`StageB-${config.nonce.slice(0, 12)}`,
-			"com.apple.CoreSimulator.SimDeviceType.iPhone-17",
-			runtime.identifier,
-		]);
-		if (!SIMULATOR_ID.test(udid))
-			throw new Error("owned simulator UDID invalid");
-		receipt.udid = udid;
-		await run("boot-owned-simulator", "xcrun", ["simctl", "boot", udid]);
-		await run(
-			"boot-status",
-			"xcrun",
-			["simctl", "bootstatus", udid, "-b"],
-			240,
-		);
+		udid = await bootOwned(`StageB-${config.nonce.slice(0, 12)}`);
+		if (!udid) throw new Error("owned simulator UDID invalid");
 		// No team/profile/certificate or keychain import: '-' is a credential-free
 		// ad-hoc identity. Completely unsigned simulator apps cannot use SecureStore.
 		// Override app entitlements (e.g. notification aps-environment) for this
@@ -1227,6 +1307,8 @@ async function runStageBCoordinator(
 		receipt.wireCounters = fixture.counters;
 		receipt.nativeReceipts = fixture.receipts;
 		receipt.status = "PASS";
+		receipt.nativeMatrixPass = true;
+		assertStageBFullEvidence(receipt);
 		await run(
 			"archive-one-produced-app",
 			"tar",
@@ -1239,6 +1321,9 @@ async function runStageBCoordinator(
 			],
 			180,
 		);
+	};
+	try {
+		await execute();
 	} catch (error) {
 		failed = error;
 		receipt.status = "FAIL";
@@ -1248,7 +1333,14 @@ async function runStageBCoordinator(
 	} finally {
 		for (const child of children) reap(child);
 		if (udid) {
-			if (failed) {
+			if (failed && setupOnly) {
+				receipt.failureDiagnostics = await captureStageBSetupFailure(
+					(name, command, args, seconds) =>
+						run(name, command, args, seconds, true),
+					udid,
+					output,
+				);
+			} else if (failed) {
 				receipt.failureDiagnostics = await captureStageBFailure(
 					(name, command, args, seconds) =>
 						run(name, command, args, seconds, true),
@@ -1278,6 +1370,7 @@ async function runStageBCoordinator(
 				);
 			} catch (error) {
 				receipt.shutdownError = redact(String(error));
+				if (setupOnly) failed ??= error;
 			}
 			try {
 				await run(
@@ -1292,17 +1385,27 @@ async function runStageBCoordinator(
 				failed ??= error;
 			}
 		}
-		if (fixture) {
-			receipt.wireCounters = fixture.counters;
-			receipt.nativeReceipts = fixture.receipts;
+		// TypeScript cannot track ownership published by the awaited phase closure.
+		const cleanupFixture = fixture as Awaited<
+			ReturnType<typeof startStageBIdentityFixture>
+		> | null;
+		if (cleanupFixture) {
+			receipt.wireCounters = cleanupFixture.counters;
+			receipt.nativeReceipts = cleanupFixture.receipts;
 			try {
-				await fixture.close();
+				await cleanupFixture.close();
 			} catch (error) {
 				receipt.fixtureCleanupError = redact(String(error));
 				failed ??= error;
 			}
 		}
-		if (failed) receipt.status = "FAIL";
+		if (failed) {
+			receipt.status = setupOnly ? "SETUP_ONLY_FAIL" : "FAIL";
+			receipt.nativeMatrixPass = false;
+			receipt.error ??= stageBDiagnosticText(
+				failed instanceof Error ? failed.message : "proof failed",
+			);
+		}
 		process.removeListener("SIGTERM", abort);
 		process.removeListener("SIGINT", abort);
 		writeFileSync(

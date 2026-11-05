@@ -272,7 +272,11 @@ describe("dedicated Stage B proof preflight", () => {
 		expect(workflow).toContain(
 			"run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts",
 		);
-		expect(workflow).not.toContain("\n  workflow_dispatch:");
+		// Dispatch may run the separately identified prerequisite job, never this
+		// full native/backup approval lane or a substitute E2E receipt.
+		expect(native).toContain("STAGE_B_PROOF_MODE: full");
+		expect(native).toContain("github.event.action == 'labeled'");
+		expect(native).not.toContain("inputs.setup_only");
 	});
 	it("requires explicit same-repository PR admission and a frozen source", () => {
 		expect(() => assertStageBAdmission(env)).not.toThrow();

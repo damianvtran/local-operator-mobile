@@ -8,6 +8,7 @@ import {
 	awaitStageBSeed,
 	captureStageBFailure,
 	captureStageBMediaReadiness,
+	captureStageBSetupFailure,
 	stageBFlowCap,
 	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics";
@@ -24,6 +25,45 @@ const gate = (cause = "pending") =>
 	});
 
 describe("Stage B diagnosed-failure exit criterion", () => {
+	it("captures cold system-app/migration evidence without Maestro and redacts failed probes", async () => {
+		const dir = mkdtempSync(
+			join(
+				process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+				"stage-b-setup-diag-",
+			),
+		);
+		const calls: { name: string; args: string[]; cap: number }[] = [];
+		const privateToken = ["setup", "diagnostic", "private", "token"].join("-");
+		try {
+			const result = await captureStageBSetupFailure(
+				async (name, _command, args, cap) => {
+					calls.push({ name, args, cap });
+					if (name.includes("services"))
+						throw new Error(`Bearer ${privateToken}`);
+					return `SpringBoard Waiting on System App; Bearer ${privateToken}`;
+				},
+				"owned",
+				dir,
+			);
+			expect(calls.every((call) => call.cap <= 30)).toBe(true);
+			expect(calls.some((call) => call.name.includes("hierarchy"))).toBe(false);
+			expect(
+				calls
+					.find((call) => call.name === "setup-failure-boot-log")
+					?.args.join(" "),
+			).toContain("migration");
+			expect(result["setup-failure-boot-log"]).toBe("captured");
+			expect(JSON.stringify(result)).not.toContain(privateToken);
+			const text = readFileSync(
+				join(dir, "setup-failure-boot-log.txt"),
+				"utf8",
+			);
+			expect(text).toContain("Waiting on System App");
+			expect(text).not.toContain(privateToken);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 	it("uploads the redacted media evidence files alongside receipt/command logs", () => {
 		const workflow = readFileSync(
 			new URL(
