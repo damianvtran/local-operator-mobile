@@ -78,6 +78,35 @@ const durable = vi.hoisted(() => ({
 	clearBlock: null as Promise<void> | null,
 	clearsStarted: 0,
 }));
+/** The OAuth rotation's durable-write hold. Module scope like `durable` because the
+ *  storage mock above is hoisted and cannot see `relay()`'s locals. */
+const oauthWriteHold = vi.hoisted(() => {
+	let markHeld: (() => void) | null = null;
+	let releaseWrite: (() => void) | null = null;
+	const hold = {
+		armed: false,
+		/** Resolves once the armed write has actually STARTED. */
+		started: null as Promise<void> | null,
+		/** Resolves when the test lets that write land. */
+		release: null as Promise<void> | null,
+		arm() {
+			hold.armed = true;
+			hold.started = new Promise<void>((resolve) => {
+				markHeld = resolve;
+			});
+			hold.release = new Promise<void>((resolve) => {
+				releaseWrite = resolve;
+			});
+		},
+		markHeld() {
+			markHeld?.();
+		},
+		releaseNow() {
+			releaseWrite?.();
+		},
+	};
+	return hold;
+});
 type TunnelStorageModule = typeof import("@/features/auth/tunnel-storage");
 /* The saved-computers registry is the REAL module's (the web runtime, so its
  *  memory keystore): the switcher tests assert what the provider records there,
@@ -110,7 +139,12 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 	removeSavedTunnel: async () => {},
 	writeSavedTunnel: async () => {},
 	writeStoredOauth: async (tokens: RadientTokens) => {
-		durable.events.push("oauth-write");
+		if (oauthWriteHold.armed) {
+			oauthWriteHold.armed = false;
+			oauthWriteHold.markHeld();
+			await oauthWriteHold.release;
+		}
+		durable.events.push(`oauth-write:${tokens.access}`);
 		durable.oauth = tokens;
 		return { persistent: false };
 	},
@@ -226,6 +260,12 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		/**389: stale account access is recoverable through its durable refresh. */
+		expiringOauth?: boolean;
+		/** Lifetime the token endpoint reports for a rotation. `0` makes the rotated
+		 *  access already stale, so the next pass rotates again (R1-M3's ordering
+		 *  case) without inventing a 401 burst. */
+		oauthExpiresIn?: number;
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
@@ -261,6 +301,12 @@ async function relay(
 ) {
 	const events: string[] = [];
 	let failLogout = options.failLogout;
+	let oauthRefreshed = false;
+	let oauthIssued = 0;
+	let holdNextOauth = false;
+	const oauthHeld = deferred();
+	const releaseOauth = deferred();
+	let rejectOldGrant = false;
 	const loginReceived = deferred();
 	const tokenReceived = deferred();
 	const releaseLogin = deferred();
@@ -299,7 +345,30 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.expiringOauth) {
+			if (holdNextOauth) {
+				holdNextOauth = false;
+				oauthHeld.resolve();
+				await releaseOauth.promise;
+			}
+			oauthRefreshed = true;
+			json({
+				access_token: `synthetic-access-${++oauthIssued}`,
+				refresh_token: `synthetic-refresh-${oauthIssued}`,
+				expires_in: options.oauthExpiresIn ?? 3600,
+				token_type: "Bearer",
+			});
+			return;
+		}
 		if (path === "/v1/tunnels") {
+			if (
+				options.expiringOauth &&
+				oauth.expires_at < Date.now() &&
+				!oauthRefreshed
+			) {
+				json({ error: "access expired" }, 401);
+				return;
+			}
 			tunnelsReceived.resolve();
 			if (options.holdTunnels) await releaseTunnels.promise;
 			if (holdNext) {
@@ -334,6 +403,27 @@ async function relay(
 				msg: "Authorization code created",
 				result: { code: `synthetic-code-${++codeCount}` },
 			});
+			return;
+		}
+		if (path === "/v1/tunnels/session/refresh") {
+			json({
+				access_token: `synthetic-grant-${++tokenCount}`,
+				refresh_token: "synthetic-handle-1",
+				expires_in: 300,
+				refresh_expires_in: 2592000,
+			});
+			return;
+		}
+		if (
+			path.startsWith("/api/") &&
+			rejectOldGrant &&
+			(request.headers.cookie ?? "").includes("synthetic-grant-1")
+		) {
+			response.writeHead(401, {
+				"content-type": "application/json",
+				"x-radient-login": "/login",
+			});
+			response.end(JSON.stringify({ detail: "grant expired" }));
 			return;
 		}
 		if (path === "/v1/tunnels/session/token") {
@@ -505,6 +595,8 @@ async function relay(
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
 		releaseTunnels.resolve();
+		releaseOauth.resolve();
+		oauthWriteHold.releaseNow();
 		server.closeAllConnections();
 		await new Promise<void>((resolve) => server.close(() => resolve()));
 	});
@@ -524,12 +616,27 @@ async function relay(
 		releaseTunnels,
 		codeReceived,
 		releaseCode,
+		expireGrant: () => {
+			rejectOldGrant = true;
+		},
 		answerTunnels: (answer: "list" | 500 | 401) => {
 			tunnelsAnswer = answer;
 		},
 		holdNextTunnels: () => {
 			holdNext = true;
 		},
+		/** Holds the NEXT account renewal, so a pass can be superseded inside its
+		 *  `await usableOauth()` — the exit review round 1 R1-M1 found unguarded. */
+		holdNextOauth: () => {
+			holdNextOauth = true;
+		},
+		/** Holds the NEXT durable OAuth write, so a newer rotation can arrive while
+		 *  an older one's record is still open (review round 1, R1-M3). */
+		holdNextOauthWrite: () => oauthWriteHold.arm(),
+		oauthWriteStarted: () => oauthWriteHold.started ?? Promise.resolve(),
+		releaseOauthWrite: () => oauthWriteHold.releaseNow(),
+		oauthHeld,
+		releaseOauth,
 		nextTunnelsReceived,
 		releaseNextTunnels,
 		allowLogout: () => {
@@ -2016,6 +2123,171 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		);
 		expect(connectionStore.getState().discoveryFailure).toBeNull();
 		expect(ids()).toEqual(listed);
+	});
+
+	it("389 renews a five-minute live grant before the next real relay request", async () => {
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		mock.expireGrant();
+		const now = Date.now();
+		const clock = vi.spyOn(Date, "now").mockReturnValue(now + 301_000);
+		try {
+			await act(async () => {
+				await latest.refreshList();
+			});
+			expect(
+				mock.events.filter((e) => e === "POST /v1/tunnels/session/refresh"),
+			).toHaveLength(1);
+			expect(connectionStore.getState().phase).toBe("live");
+			expect(connectionStore.getState().surface).not.toBe("sign-in");
+		} finally {
+			clock.mockRestore();
+		}
+	});
+
+	it("389 treats a granted refresh that is still refused as genuine revocation", async () => {
+		// The other half of the rule: a refresh only buys one retry. If the grant is
+		// really revoked, the retried discovery is refused again and the reader goes
+		// to sign-in with the credential cleared — no infinite refresh loop, and no
+		// silently accepted refused credential.
+		const previous = { ...oauth };
+		try {
+			oauth.refresh = "synthetic-durable-refresh";
+			const mock = await signedIn({ expiringOauth: true });
+			oauth.expires_at = Date.now() - 1;
+			mock.answerTunnels(401);
+			await act(async () => {
+				await latest.refreshComputers();
+			});
+			/* Two renewals, and that is the fence: one to replace the expired access
+			 * before discovery, and the forced one a 401 on that fresh token earns.
+			 * The retried discovery is refused again, so the pass stops here — a third
+			 * attempt would be a refresh loop over a grant the server has revoked. */
+			expect(
+				mock.events.filter((e) => e === "POST /v1/auth/oauth/token"),
+			).toHaveLength(2);
+			expect(connectionStore.getState().computers).toEqual([]);
+			expect(connectionStore.getState().surface).toBe("sign-in");
+			expect(latest.refusal?.kind).toBe("sign-in");
+			expect(durable.oauth).toBeNull();
+			/* And it stays signed out once the revocation has settled: a later Refresh
+			 * neither restores rows for the refused grant nor reports a live session. */
+			await until(() => connectionStore.getState().phase === "signed-out");
+			await act(async () => {
+				await latest.refreshComputers();
+			});
+			expect(connectionStore.getState().computers).toEqual([]);
+			expect(connectionStore.getState().surface).toBe("sign-in");
+			expect(durable.oauth).toBeNull();
+		} finally {
+			Object.assign(oauth, previous);
+		}
+	});
+
+	it("389 never lets an older rotation's durable write land after a newer one", async () => {
+		// Review round 1, R1-M3: rotation A's keystore write is slow and the next pass
+		// rotates again (B). The durable record must be B — A's handle is already spent —
+		// and the writes must land in rotation order, not completion order. Without the
+		// queue the record can end up holding A, and the next launch signs the reader
+		// out with `invalid_grant`.
+		const previous = { ...oauth };
+		try {
+			oauth.refresh = "synthetic-durable-refresh";
+			const mock = await signedIn({ expiringOauth: true, oauthExpiresIn: 0 });
+			oauth.expires_at = Date.now() - 1;
+			const writesBefore = durable.events.length;
+			mock.holdNextOauthWrite();
+			let first!: Promise<void>;
+			await act(async () => {
+				first = latest.refreshComputers();
+			});
+			await mock.oauthWriteStarted();
+			// A's write is in flight and held. B starts while it is still open.
+			let second!: Promise<void>;
+			await act(async () => {
+				second = latest.refreshComputers();
+			});
+			mock.releaseOauthWrite();
+			await act(async () => {
+				await first;
+				await second;
+			});
+			// The newest rotation owns the record; the older one never overwrites it.
+			expect(durable.oauth?.access).toBe("synthetic-access-2");
+			// The writes themselves, in landing order: the queue is what makes B win.
+			expect(
+				durable.events
+					.slice(writesBefore)
+					.filter((e) => e.startsWith("oauth-write:")),
+			).toEqual([
+				"oauth-write:synthetic-access-1",
+				"oauth-write:synthetic-access-2",
+			]);
+		} finally {
+			Object.assign(oauth, previous);
+		}
+	});
+
+	it("389 closes the discovering latch when its route is retired mid-renewal", async () => {
+		// The body has already awaited `await usableOauth()` when the route ends, so it
+		// returns before every result arm — the exit that bypassed the inner `finally`.
+		// The latch the Refresh controls read must still come down, or Refresh/Try now
+		// stay spinning and inert and an empty account paints the skeleton forever
+		// (review round 1, R1-M1: PR #121 R2-m1 re-entered through the new exits).
+		const previous = { ...oauth };
+		try {
+			oauth.refresh = "synthetic-durable-refresh";
+			const mock = await signedIn({ expiringOauth: true });
+			oauth.expires_at = Date.now() - 1;
+			mock.holdNextOauth();
+			let pass!: Promise<void>;
+			await act(async () => {
+				pass = latest.refreshComputers();
+			});
+			await mock.oauthHeld.promise;
+			expect(latest.discovering).toBe(true);
+			try {
+				// Sign-out suspends the authorization revision the pass captured; it does
+				// not need the held rotation, so it cannot join it.
+				await act(async () => {
+					await latest.signOut();
+				});
+			} finally {
+				mock.releaseOauth.resolve();
+			}
+			await act(async () => {
+				await pass;
+			});
+			// Stuck `true` here was an inert Refresh and an endless skeleton.
+			expect(latest.discovering).toBe(false);
+		} finally {
+			Object.assign(oauth, previous);
+		}
+	});
+
+	it("389 renews expired account access before discovery instead of deleting its still-valid refresh", async () => {
+		const previous = { ...oauth };
+		try {
+			oauth.refresh = "synthetic-durable-refresh";
+			const mock = await signedIn({ expiringOauth: true });
+			oauth.expires_at = Date.now() - 1;
+			await act(async () => {
+				await latest.refreshComputers();
+			});
+			expect(
+				mock.events.filter((e) => e === "POST /v1/auth/oauth/token"),
+			).toHaveLength(1);
+			expect(ids()).toEqual(listed);
+			expect(connectionStore.getState().surface).not.toBe("sign-in");
+			expect(durable.oauth?.refresh).toBe("synthetic-refresh-1");
+		} finally {
+			Object.assign(oauth, previous);
+		}
 	});
 
 	it("clears the rows when Radient refuses the grant (R1-m1)", async () => {

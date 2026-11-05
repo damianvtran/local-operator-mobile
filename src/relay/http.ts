@@ -74,8 +74,11 @@ export interface RelayHttpOptions {
 	/** Relay base URL with no trailing slash — the tunnel origin or the custom
 	 *  base. Every route is resolved against it. */
 	baseUrl: string;
-	/** Resolved per request so a grant refreshed a moment ago is the one used. */
-	auth: () => RequestAuth | Promise<RequestAuth>;
+	/** Resolved per request so a grant refreshed a moment ago is the one used.
+	 *  `signal` is the request's own abort signal: a route switch or the deadline
+	 *  firing must be able to cancel a credential renewal that is still in flight,
+	 *  otherwise the renewal outlives the request that needed it. */
+	auth: (signal?: AbortSignal) => RequestAuth | Promise<RequestAuth>;
 	/** Injected for tests and for `expo/fetch` on a platform where the global
 	 *  fetch cannot stream. Defaults to the global. */
 	fetchImpl?: typeof globalThis.fetch;
@@ -260,8 +263,6 @@ export class RelayHttpClient {
 	async open(
 		request: RelayRequest,
 	): Promise<{ response: Response; release: () => Promise<void> }> {
-		const auth = await this.auth();
-		const headers = buildHeaders(auth, request);
 		const controller = new AbortController();
 		/* One deadline, and WHO it covers differs by response class — the distinction
 		 * is the whole point of this option:
@@ -302,6 +303,28 @@ export class RelayHttpClient {
 			request.signal?.removeEventListener("abort", onExternalAbort);
 		};
 
+		/* The deadline is armed BEFORE authentication is resolved: on the tunnel route
+		 * `auth()` renews an expiring grant, which is a network round trip, and arming
+		 * the timer afterwards made the request's own budget exclude it — a stalled
+		 * token endpoint held the caller for as long as the renewal took
+		 * (review round 1, R1-M2). The race is what enforces the budget even when the
+		 * renewal cannot be cancelled; the signal is what lets a route switch cancel it
+		 * promptly when the renewal does observe one. */
+		let auth: RequestAuth;
+		try {
+			auth = await raceAbort(this.auth(controller.signal), controller.signal);
+		} catch (cause) {
+			detach();
+			// A deliberate local refusal keeps its own class and surface; only an
+			// untyped failure is a transport fault (review round 1, R1-M5).
+			if (cause instanceof RelayError) throw cause;
+			throw transportError(
+				cause,
+				`${this.diagnostic} ${request.method} ${redactPath(request.path)} (credentials)`,
+			);
+		}
+		const headers = buildHeaders(auth, request);
+
 		let response: Response;
 		try {
 			response = await this.fetchImpl(this.url(request), {
@@ -319,6 +342,7 @@ export class RelayHttpClient {
 			});
 		} catch (cause) {
 			detach();
+			if (cause instanceof RelayError) throw cause;
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)}`,
@@ -497,6 +521,31 @@ export class RelayHttpClient {
  * `accept` is set per request shape; `content-type` only when there is a body,
  * because a `GET` with a content type is a smell a proxy can act on.
  */
+/** Resolves `work` unless `signal` aborts first.
+ *
+ * The request deadline must cover the credential renewal on the tunnel route, and
+ * that renewal is an `await` this class does not own: a token endpoint that stops
+ * answering would otherwise hold the caller for the renewal's whole life while the
+ * request's own timer had not even started. Rejecting on abort also stops the
+ * request from being sent with credentials nobody is waiting for any more. */
+function raceAbort<T>(work: T | Promise<T>, signal: AbortSignal): Promise<T> {
+	if (signal.aborted) return Promise.reject(new Error("aborted"));
+	return new Promise<T>((resolve, reject) => {
+		const onAbort = () => reject(new Error("aborted"));
+		signal.addEventListener("abort", onAbort, { once: true });
+		Promise.resolve(work).then(
+			(value) => {
+				signal.removeEventListener("abort", onAbort);
+				resolve(value);
+			},
+			(error: unknown) => {
+				signal.removeEventListener("abort", onAbort);
+				reject(error);
+			},
+		);
+	});
+}
+
 function buildHeaders(
 	auth: RequestAuth,
 	request: RelayRequest,
