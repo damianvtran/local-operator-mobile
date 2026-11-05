@@ -28,7 +28,12 @@ stale or damaged asset fails the run instead of passing quietly. The three
 `--check` commands re-derive an artefact; `check-upstream.mjs` re-proves a pin.
 
 ```sh
-node design/tokens/contrast-contract.mjs           # gate: 1157 assertions over both themes
+node design/tokens/contrast-contract.mjs           # gate: the brand themes (1175 assertions) AND every desktop
+                                                   #   palette the app can ship (the fleet, design/themes/), naming
+                                                   #   each withheld palette
+node design/themes/export-desktop-palettes.mjs --check
+                                                   # gate: desktop-palettes.json == the export of local-operator-ui at
+                                                   #   its locked commit (fetches the 59 sources from GitHub)
 node design/tokens/build-preset.mjs                # generate: the preset + the preview's CSS
 node design/tokens/build-preset.mjs --check        # gate: those two files match tokens.json
 node design/tokens/check-upstream.mjs              # gate: the slice == the kit at its pin, and tokens.json ==

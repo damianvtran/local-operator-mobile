@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { type FieldState, fieldClasses } from "@/ui/variants";
 
@@ -76,6 +76,7 @@ export const Input = ({
 	// rather than a class, so it comes from the token the same way an icon colour
 	// does — there is no class name to hang it on.
 	const placeholderColour = useTokenColor("ink-muted");
+	const keyboardAppearance = useKeyboardAppearance();
 	return (
 		<View className="gap-1.5">
 			{/* Visible label as well as the accessible name: a reader who can see the
@@ -98,6 +99,7 @@ export const Input = ({
 				onChangeText={onChangeText}
 				placeholder={placeholder}
 				placeholderTextColor={placeholderColour}
+				keyboardAppearance={keyboardAppearance}
 				editable={!disabled}
 				secureTextEntry={secureTextEntry}
 				autoFocus={autoFocus}

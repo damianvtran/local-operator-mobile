@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "始终使用 {name}",
+	"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
+	"mobile.settings.theme.card_dark": "{name}，深色主题",
+	"mobile.settings.theme.card_dark_selected": "{name}，深色主题，已选择",
+	"mobile.settings.theme.card_light": "{name}，浅色主题",
+	"mobile.settings.theme.card_light_selected": "{name}，浅色主题，已选择",
+	"mobile.settings.theme.mode_dark": "深色",
+	"mobile.settings.theme.mode_label": "外观",
+	"mobile.settings.theme.mode_light": "浅色",
+	"mobile.settings.theme.mode_system": "跟随系统",
+	"mobile.settings.theme.no_match": "没有匹配的主题",
+	"mobile.settings.theme.row_label": "主题，{name}",
+	"mobile.settings.theme.search_label": "搜索主题",
+	"mobile.settings.theme.search_placeholder": "搜索主题",
+	"mobile.settings.theme.section_dark": "深色（{count}）",
+	"mobile.settings.theme.section_light": "浅色（{count}）",
+	"mobile.settings.theme.title": "主题"
+}

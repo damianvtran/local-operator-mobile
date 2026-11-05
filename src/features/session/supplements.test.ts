@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { resetLocaleSource, setLocaleSource } from "@/i18n";
+import { themeEntry } from "@/ui/tokens.gen";
 
 import {
 	acceptFrameMessage,
@@ -412,6 +413,15 @@ describe("the theme channel", () => {
 		// palette twice would pass every assertion above.
 		expect(supplementThemeFor("dark").vars["--lo-canvas"]).not.toBe(
 			supplementThemeFor("light").vars["--lo-canvas"],
+		);
+	});
+
+	it("paints the reader's chosen palette, not the brand theme of the same side", () => {
+		const dracula = themeEntry("dracula", "dark");
+		const theme = supplementThemeFor("dark", dracula.colors);
+		expect(theme.vars["--lo-canvas"]).toBe(dracula.colors.canvas);
+		expect(theme.vars["--lo-canvas"]).not.toBe(
+			supplementThemeFor("dark").vars["--lo-canvas"],
 		);
 	});
 });

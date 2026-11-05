@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "Always {name}",
+	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
+	"mobile.settings.theme.card_dark": "{name}, dark theme",
+	"mobile.settings.theme.card_dark_selected": "{name}, dark theme, selected",
+	"mobile.settings.theme.card_light": "{name}, light theme",
+	"mobile.settings.theme.card_light_selected": "{name}, light theme, selected",
+	"mobile.settings.theme.mode_dark": "Dark",
+	"mobile.settings.theme.mode_label": "Appearance",
+	"mobile.settings.theme.mode_light": "Light",
+	"mobile.settings.theme.mode_system": "System",
+	"mobile.settings.theme.no_match": "No themes match",
+	"mobile.settings.theme.row_label": "Theme, {name}",
+	"mobile.settings.theme.search_label": "Search themes",
+	"mobile.settings.theme.search_placeholder": "Search themes",
+	"mobile.settings.theme.section_dark": "Dark ({count})",
+	"mobile.settings.theme.section_light": "Light ({count})",
+	"mobile.settings.theme.title": "Theme"
+}

@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
+	"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
+	"mobile.settings.theme.card_dark": "{name}, giao diện tối",
+	"mobile.settings.theme.card_dark_selected": "{name}, giao diện tối, đã chọn",
+	"mobile.settings.theme.card_light": "{name}, giao diện sáng",
+	"mobile.settings.theme.card_light_selected": "{name}, giao diện sáng, đã chọn",
+	"mobile.settings.theme.mode_dark": "Tối",
+	"mobile.settings.theme.mode_label": "Chế độ hiển thị",
+	"mobile.settings.theme.mode_light": "Sáng",
+	"mobile.settings.theme.mode_system": "Hệ thống",
+	"mobile.settings.theme.no_match": "Không có giao diện phù hợp",
+	"mobile.settings.theme.row_label": "Giao diện, {name}",
+	"mobile.settings.theme.search_label": "Tìm giao diện",
+	"mobile.settings.theme.search_placeholder": "Tìm giao diện",
+	"mobile.settings.theme.section_dark": "Tối ({count})",
+	"mobile.settings.theme.section_light": "Sáng ({count})",
+	"mobile.settings.theme.title": "Giao diện"
+}

@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "Siempre {name}",
+	"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
+	"mobile.settings.theme.card_dark": "{name}, tema oscuro",
+	"mobile.settings.theme.card_dark_selected": "{name}, tema oscuro, seleccionado",
+	"mobile.settings.theme.card_light": "{name}, tema claro",
+	"mobile.settings.theme.card_light_selected": "{name}, tema claro, seleccionado",
+	"mobile.settings.theme.mode_dark": "Oscuro",
+	"mobile.settings.theme.mode_label": "Apariencia",
+	"mobile.settings.theme.mode_light": "Claro",
+	"mobile.settings.theme.mode_system": "Sistema",
+	"mobile.settings.theme.no_match": "Ningún tema coincide",
+	"mobile.settings.theme.row_label": "Tema, {name}",
+	"mobile.settings.theme.search_label": "Buscar temas",
+	"mobile.settings.theme.search_placeholder": "Buscar temas",
+	"mobile.settings.theme.section_dark": "Oscuros ({count})",
+	"mobile.settings.theme.section_light": "Claros ({count})",
+	"mobile.settings.theme.title": "Tema"
+}

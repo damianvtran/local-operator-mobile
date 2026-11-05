@@ -92,6 +92,8 @@ export const SCREEN = {
 	notificationDetail: "notification-detail-screen",
 	newSession: "new-session-screen",
 	settings: "settings-screen",
+	/** Settings → Appearance → Theme: the mode, the caption, the two grids. */
+	themePicker: "theme-picker-screen",
 	notFound: "not-found-screen",
 	ownTunnel: "own-tunnel-screen",
 } as const;
@@ -227,6 +229,23 @@ export const CONTROL = {
 	setupUseThisComputer: "setup-use-this-computer",
 	computersRetryAction: "computers-retry-action",
 	settingsThemeGroup: "settings-theme-group",
+	/** The Appearance row that opens the Theme picker; its value names the
+	 *  active theme. */
+	settingsThemeRow: "settings-theme-row",
+	themePickerBack: "theme-picker-back",
+	/** The picker's own mode control. Distinct from `settingsTheme*`, which the
+	 *  Settings screen keeps: both screens are mounted during the push, and an
+	 *  id is declared once. */
+	themePickerModeGroup: "theme-picker-mode-group",
+	themePickerModeSystem: "theme-picker-mode-system",
+	themePickerModeLight: "theme-picker-mode-light",
+	themePickerModeDark: "theme-picker-mode-dark",
+	themePickerSearch: "theme-picker-search",
+	/** The pair caption under the mode control ("System uses … and …"). */
+	themePickerCaption: "theme-picker-caption",
+	/** The ✓ on the selected card. Not unique — one per side — so a flow
+	 *  asserts it inside a card rather than by itself. */
+	themePickerCheck: "theme-picker-check",
 	computersBanner: "computers-banner",
 	sessionsClearSearchAction: "sessions-clear-search-action",
 	sessionsConnectAction: "sessions-connect-action",
@@ -1092,6 +1111,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  family is rendered: the settings section builds each option's id with the
 	 *  builder above, and the Android proof flow addresses a concrete member. */
 	"settings-account-routing-group:",
+	/* One card per shipped theme in the Theme picker, keyed by the theme id
+	 *  (`theme-card-dracula`) — the id is generated data, so the screen cannot
+	 *  spell the family inline. */
+	"theme-card-",
 ];
 
 /**
@@ -1198,6 +1221,10 @@ export const REGION = {
 	 *  not a route refusal (PR #121, D2). */
 	settingsDiscoveryFailure: "settings-discovery-failure",
 	settingsAppearance: "settings-section-appearance",
+	/** The Theme picker's two grids and their empty-search line. */
+	themePickerDark: "theme-picker-section-dark",
+	themePickerLight: "theme-picker-section-light",
+	themePickerEmpty: "theme-picker-empty",
 	settingsDiagnostics: "settings-section-diagnostics",
 	/** Notifications: the permission state and the honest machine line
 	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
@@ -1680,6 +1707,9 @@ export const IDENTIFIERS: readonly string[] = [
  * (the same shape `sessionRowId` and its siblings already use). */
 export const accountRoutingChoiceId = (value: string): string =>
 	`${CONTROL.settingsAccountRoutingGroup}:${value}`;
+
+/** A Theme picker card's identifier, keyed by the generated theme id. */
+export const themeCardId = (themeId: string): string => `theme-card-${themeId}`;
 
 /** A row's identifier, derived from the id it carries so a flow can address one
  *  row without the screen inventing a second naming scheme. */

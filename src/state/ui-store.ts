@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-import type { ThemePreference } from "@/ui/tokens.gen";
+import {
+	DEFAULT_SELECTION,
+	type ThemeMode,
+	type ThemeSelection,
+} from "@/state/theme-preference";
 
 /**
  * The shell's UI state: appearance, and the one transient message slot.
@@ -29,9 +33,16 @@ export type Toast = {
 };
 
 export type UiState = {
-	/** What the reader chose in Settings. `system` follows the OS appearance. */
-	themePreference: ThemePreference;
-	setThemePreference: (preference: ThemePreference) => void;
+	/** What the reader chose in Settings: a mode, and a theme for each side.
+	 *  `system` follows the OS appearance (`theme-preference.ts`). */
+	themeSelection: ThemeSelection;
+	setThemeSelection: (selection: ThemeSelection) => void;
+	/** Only the mode, for the controls that predate the theme slots. */
+	setThemeMode: (mode: ThemeMode) => void;
+	/** Whether the stored selection has been read. Until it has, the provider
+	 *  must not WRITE: the default it holds would overwrite the reader's choice. */
+	themeHydrated: boolean;
+	hydrateThemeSelection: (selection: ThemeSelection) => void;
 
 	/** **One at a time.** A second toast replaces the first: a queue on a phone
 	 * is a stack of things nobody reads (docs/design/components.md § 10). */
@@ -46,10 +57,25 @@ export const useUiStore = create<UiState>((set) => {
 	// consumers could accidentally depend on.
 	let nextToastId = 0;
 	return {
-		// `system` is the default because it is the only preference that is
-		// correct without knowing anything about the reader.
-		themePreference: "system",
-		setThemePreference: (preference) => set({ themePreference: preference }),
+		themeSelection: DEFAULT_SELECTION,
+		setThemeSelection: (selection) => set({ themeSelection: selection }),
+		setThemeMode: (mode) =>
+			set((state) => ({ themeSelection: { ...state.themeSelection, mode } })),
+		themeHydrated: false,
+		// A choice the reader made before the stored one was read wins: hydration
+		// only fills the default, it never undoes a tap.
+		hydrateThemeSelection: (selection) =>
+			set((state) =>
+				state.themeHydrated
+					? {}
+					: {
+							themeHydrated: true,
+							themeSelection:
+								state.themeSelection === DEFAULT_SELECTION
+									? selection
+									: state.themeSelection,
+						},
+			),
 
 		toast: null,
 		showToast: (message, tone = "neutral") =>

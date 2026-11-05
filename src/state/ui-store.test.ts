@@ -1,22 +1,61 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { DEFAULT_SELECTION } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 
 const reset = () =>
-	useUiStore.setState({ themePreference: "system", toast: null });
+	useUiStore.setState({
+		themeSelection: DEFAULT_SELECTION,
+		themeHydrated: false,
+		toast: null,
+	});
 
 describe("ui-store", () => {
 	beforeEach(reset);
 
 	it("follows the device until the reader chooses otherwise", () => {
-		expect(useUiStore.getState().themePreference).toBe("system");
+		expect(useUiStore.getState().themeSelection.mode).toBe("system");
 	});
 
 	it("records a manual override and lets the reader return to the device", () => {
-		useUiStore.getState().setThemePreference("dark");
-		expect(useUiStore.getState().themePreference).toBe("dark");
-		useUiStore.getState().setThemePreference("system");
-		expect(useUiStore.getState().themePreference).toBe("system");
+		useUiStore.getState().setThemeMode("dark");
+		expect(useUiStore.getState().themeSelection.mode).toBe("dark");
+		useUiStore.getState().setThemeMode("system");
+		expect(useUiStore.getState().themeSelection.mode).toBe("system");
+	});
+
+	it("keeps the slots when only the mode changes", () => {
+		useUiStore.getState().setThemeSelection({
+			mode: "system",
+			lightTheme: "paper",
+			darkTheme: "dracula",
+		});
+		useUiStore.getState().setThemeMode("light");
+		expect(useUiStore.getState().themeSelection).toEqual({
+			mode: "light",
+			lightTheme: "paper",
+			darkTheme: "dracula",
+		});
+	});
+
+	it("hydrates the stored selection once, and never over a choice made first", () => {
+		const stored = {
+			mode: "dark",
+			lightTheme: "paper",
+			darkTheme: "nord",
+		} as const;
+		useUiStore.getState().hydrateThemeSelection(stored);
+		expect(useUiStore.getState().themeSelection).toEqual(stored);
+		// A second hydration (a remount re-reading the store) is ignored.
+		useUiStore.getState().hydrateThemeSelection(DEFAULT_SELECTION);
+		expect(useUiStore.getState().themeSelection).toEqual(stored);
+
+		reset();
+		// A tap that lands before the read wins over the stored value.
+		useUiStore.getState().setThemeMode("light");
+		useUiStore.getState().hydrateThemeSelection(stored);
+		expect(useUiStore.getState().themeSelection.mode).toBe("light");
+		expect(useUiStore.getState().themeHydrated).toBe(true);
 	});
 
 	it("holds ONE toast, replacing rather than queueing", () => {

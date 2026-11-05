@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "Toujours {name}",
+	"mobile.settings.theme.caption_system": "Système utilise {light} et {dark}",
+	"mobile.settings.theme.card_dark": "{name}, thème sombre",
+	"mobile.settings.theme.card_dark_selected": "{name}, thème sombre, sélectionné",
+	"mobile.settings.theme.card_light": "{name}, thème clair",
+	"mobile.settings.theme.card_light_selected": "{name}, thème clair, sélectionné",
+	"mobile.settings.theme.mode_dark": "Sombre",
+	"mobile.settings.theme.mode_label": "Apparence",
+	"mobile.settings.theme.mode_light": "Clair",
+	"mobile.settings.theme.mode_system": "Système",
+	"mobile.settings.theme.no_match": "Aucun thème ne correspond",
+	"mobile.settings.theme.row_label": "Thème, {name}",
+	"mobile.settings.theme.search_label": "Rechercher des thèmes",
+	"mobile.settings.theme.search_placeholder": "Rechercher des thèmes",
+	"mobile.settings.theme.section_dark": "Sombres ({count})",
+	"mobile.settings.theme.section_light": "Clairs ({count})",
+	"mobile.settings.theme.title": "Thème"
+}
