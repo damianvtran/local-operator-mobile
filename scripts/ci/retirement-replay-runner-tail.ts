@@ -58,6 +58,12 @@ export const ERROR_CLASSES = [
 	],
 	[
 		"xctestrun_invalid",
+		// Verified human-reported file-type diagnostic, not a broad build-error
+		// inference: https://github.com/google/xctestrunner/issues/60
+		/^xcodebuild: error: Failed to build workspace temporary with scheme Transient Testing\.: File is of an unsupported type; must be either an xctestrun file or xctestproducts bundle\.\r?$/m,
+	],
+	[
+		"xctestrun_invalid",
 		// Real wording names the file: `The file “private.xctestrun” couldn’t
 		// be opened …` (review R26-1).
 		/(?:xctestrun|test run file).*(?:could not be (?:read|parsed|loaded)|is (?:invalid|malformed))|The file .{0,120}\.xctestrun.{0,2} couldn.t be opened|The file couldn.t be opened because it isn.t in the correct format|unable to read the xctestrun/i,
@@ -74,6 +80,17 @@ export const ERROR_CLASSES = [
 		// Bootstrap wording only; `Timed out while evaluating UI query` is the
 		// test's own failure and is caught above by its Test Case line.
 		/Timed out waiting for (?:automation session|the test runner|test runner)|test runner (?:hung|timed out)|Failed to launch .* within|exceeded .*time allowance/i,
+	],
+	[
+		"cli_argument_refused",
+		// Only explicit, complete xcodebuild diagnostics. Option content is
+		// consumed privately, bounded to one line, and NEVER copied into the
+		// record. Public specimens: tuist/tuist#8178, fastlane/fastlane#20540.
+		// These forms add future instrumentation, not a diagnosis of the
+		// historical exit 64: that run's private output was discarded.
+		// Existing specific failures above retain priority; generic Usage and
+		// exit-code-only text remain unknown. No optional argument-ID field.
+		/^xcodebuild: error: (?:invalid option '[^'\r\n]{1,256}'|Cannot use -xctestrun with -project, -workspace or -scheme options\.)\r?$/m,
 	],
 	["test_failed", /^\*\* TEST (?:EXECUTE )?FAILED \*\*$/m],
 ] as const;
