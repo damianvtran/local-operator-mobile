@@ -10,14 +10,15 @@
  */
 
 import { useEffect } from "react";
-
 import { noteConversationPush } from "@/features/deep-links/pending";
 import {
 	ensureAndroidSoundChannels,
 	subscribeNotificationTaps,
 } from "@/notifications/native";
+import { useCustomSoundPrefetch } from "./use-custom-sound-prefetch";
 
 export const useNotificationTapRouting = (): void => {
+	useCustomSoundPrefetch();
 	useEffect(() => {
 		let cancelled = false;
 		let unsubscribe: (() => void) | null = null;
