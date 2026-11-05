@@ -89,6 +89,24 @@ describe("direct runner-only transport XCTest", () => {
 });
 
 // These are local harness contracts, never native transport evidence.
+it("requires visible-keyboard geometry, empty field and paced exact-prefix acknowledgements before Return", () => {
+	const swift = readFileSync(
+		new URL("./transport-xctest/TransportUITests.swift", import.meta.url),
+		"utf8",
+	);
+	expect(swift).not.toContain("field.typeText(url)");
+	expect(swift).toContain("keyboard.frame.minY");
+	expect(swift).toContain("field.frame.maxY");
+	expect(swift).toContain("for character in url");
+	expect(swift).toContain("field.typeText(String(character))");
+	expect(swift).toContain("acknowledged exact prefix");
+	expect(swift).toContain("Fresh URL field must be empty");
+	expect(swift).toContain('"before-return"');
+	expect(swift).toContain('"after-return-immediate"');
+	expect(swift).toContain('"after-return-settled"');
+	expect(swift).not.toMatch(/UIPasteboard|pbcopy|setValue\(/);
+});
+
 describe("direct-only stage isolation", () => {
 	it("shares the900s budget but never calls Maestro warm/app flows", () => {
 		expect(themeProofPlan("transport-xctest").budgetSeconds).toBe(900);

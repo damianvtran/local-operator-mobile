@@ -55,13 +55,18 @@ final class TransportUITests: XCTestCase {
 
   @MainActor private func attempt(_ url: String, label: String, scrollUp: Bool) throws -> String {
     let field = try scrollTo("custom-url-field", up: scrollUp)
-    field.tap()
-    let previous = field.value as? String ?? ""
-    if previous.hasPrefix("http") { field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count)) }
-    field.typeText(url)
+    try enterExactURL(url, field: field, label: label)
+    inputCheckpoint("before-return", field: field, expected: url, label: label)
+    XCTAssertEqual(field.value as? String, url, "Literal URL must be exact BEFORE Return")
     let key = app.keyboards.buttons["Return"].firstMatch
     let lowerKey = app.keyboards.buttons["return"].firstMatch
+    XCTAssertTrue(key.exists || lowerKey.exists, "Missing actual Return key")
     if key.exists { key.tap() } else if lowerKey.exists { lowerKey.tap() }
+    inputCheckpoint("after-return-immediate", field: field, expected: url, label: label)
+    let exact = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", url), object: field)
+    let settled = XCTWaiter.wait(for: [exact], timeout: 2) == .completed
+    inputCheckpoint("after-return-settled", field: field, expected: url, label: label)
+    XCTAssertTrue(settled, "Literal URL did not settle after Return")
     XCTAssertEqual(field.value as? String, url, "Exact authority must reach the real app field")
     let toggle = try scrollTo("custom-insecure-opt-in", up: false)
     if toggle.label == "Allow a plain http:// address" { toggle.tap() }
@@ -76,6 +81,70 @@ final class TransportUITests: XCTestCase {
     attach(label)
     emit(["event": "ui-verdict", "authority": label.hasPrefix("negative-") ? String(label.dropFirst(9)) : label, "verdict": verdict, "elapsedMs": Int(Date().timeIntervalSince(started) * 1000)])
     return verdict
+  }
+
+  // Run42023917700 requested the full URL but lost `ttp://1`; QA observed
+  // the field below the keyboard. This discriminates delivery from Return:
+  // real visible input, one acknowledged exact prefix at a time, no rewrites,
+  // retries, clipboard/state injection, or speculative product Input change.
+  @MainActor private func enterExactURL(_ url: String, field: XCUIElement, label: String) throws {
+    field.tap()
+    let keyboard = app.keyboards.firstMatch
+    XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "Keyboard must actually appear")
+    var aboveKeyboard = false
+    for _ in 0..<6 {
+      if !keyboard.exists {
+        XCTAssertTrue(field.isHittable, "Field must remain reachable before refocusing")
+        field.tap()
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "Keyboard disappeared during field positioning")
+      }
+      if field.isHittable && field.frame.maxY < keyboard.frame.minY - 8 {
+        aboveKeyboard = true
+        break
+      }
+      // Drag the REAL scroll surface above the keyboard, not the keyboard or
+      // the occluded field. Re-query actual geometry after each bounded drag.
+      let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+      let bottom = keyboard.frame.minY - app.frame.minY - 24
+      let top: CGFloat = 150
+      XCTAssertGreaterThan(bottom - top, 44, "No safe scroll band above keyboard")
+      origin.withOffset(CGVector(dx: 0, dy: bottom)).press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: 0, dy: top)))
+    }
+    inputCheckpoint("positioned-empty", field: field, expected: "", label: label)
+    XCTAssertTrue(aboveKeyboard && keyboard.exists, "Field must be visibly above the actual keyboard")
+    field.tap()
+    let initial = field.value as? String ?? ""
+    // Native accessibility can report its placeholder as an empty value. Never
+    // infer emptiness merely from an http prefix or erase unverified content.
+    XCTAssertTrue(initial.isEmpty || initial == field.placeholderValue, "Fresh URL field must be empty")
+    var prefix = ""
+    for character in url {
+      prefix += String(character)
+      field.typeText(String(character))
+      let acknowledged = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", prefix), object: field)
+      guard XCTWaiter.wait(for: [acknowledged], timeout: 2) == .completed else {
+        inputCheckpoint("prefix-failure-\(prefix.count)", field: field, expected: prefix, label: label)
+        XCTFail("Missing acknowledged exact prefix; stop before any connection Test")
+        throw NSError(domain: "TransportInputPrerequisite", code: 1)
+      }
+      // The first acknowledged character verifies keyboard delivery/focus on
+      // THIS field without private/unsupported hasKeyboardFocus KVC queries.
+    }
+  }
+
+  @MainActor private func inputCheckpoint(_ stage: String, field: XCUIElement, expected: String, label: String) {
+    let keyboard = app.keyboards.firstMatch
+    let actual = field.value as? String ?? ""
+    let record: [String: Any] = ["stage": stage, "actual": actual, "expected": expected,
+      "exact": actual == expected, "fieldFrame": NSStringFromCGRect(field.frame),
+      "keyboardPresent": keyboard.exists, "keyboardFrame": keyboard.exists ? NSStringFromCGRect(keyboard.frame) : "absent",
+      "selectionGap": "Public XCTest field API does not expose UIKit selectedTextRange; not inferred"]
+    // Original xcresult already explicitly retains synthetic fixture addresses;
+    // keep exact values HERE, not in purportedly scrubbed stdout event fields.
+    let data = try! JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
+    let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+    attachment.name = "input-\(stage)-\(label)"; attachment.lifetime = .keepAlways; add(attachment)
+    attach("input-\(stage)-\(label)")
   }
 
   @MainActor private func terminalVerdict() throws -> String {
