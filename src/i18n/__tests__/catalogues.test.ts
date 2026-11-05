@@ -26,6 +26,8 @@ import libraryContext from "@/i18n/catalogues/en/mobile.library.context.json";
 import library from "@/i18n/catalogues/en/mobile.library.json";
 import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.context.json";
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
+import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
+import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
@@ -56,6 +58,12 @@ const NAMESPACES = [
 		messages: signin,
 		context: signinContext,
 		expected: 18,
+	},
+	{
+		name: "mobile.oauth",
+		messages: oauth,
+		context: oauthContext,
+		expected: 4,
 	},
 	{
 		name: "mobile.common",
@@ -198,7 +206,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(241);
+		expect(total).toBe(245);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

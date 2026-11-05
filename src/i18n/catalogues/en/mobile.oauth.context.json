@@ -1,0 +1,18 @@
+{
+	"mobile.oauth.received": {
+		"role": "status",
+		"note": "On-device browser callback page after a validated HTTP callback, BEFORE token exchange. Do not claim the user is signed in. No code, state or identity appears."
+	},
+	"mobile.oauth.return": {
+		"role": "button",
+		"note": "Link on on-device callback page. Returns to the installed Local Operator app using a package-targeted control URI with no OAuth payload. Keep brand Local Operator."
+	},
+	"mobile.oauth.invalid": {
+		"role": "status",
+		"note": "Generic body for malformed/wrong-state on-device callback request. Never reflect the URL or explain which secret field matched."
+	},
+	"mobile.oauth.failed": {
+		"role": "status",
+		"note": "App sign-in failure when Android native transport or browser cannot complete. Cancellation is a separate existing state. No native error/URL/code is shown."
+	}
+}

@@ -9,8 +9,8 @@
  *
  * iOS binds an ephemeral IPv4 loopback listener before opening the system
  * browser. ASWebAuthenticationSession does not intercept HTTP callbacks.
- * Android still has no native listener and reports `unavailable` before opening
- * a browser that could never complete the registered loopback redirect.
+ * Android owns a literal-loopback listener and a real Custom Tab; other native
+ * platforms remain explicitly unavailable rather than opening a dead-end browser.
 
  */
 
@@ -59,12 +59,12 @@ export type RadientSignInResult =
 /**
  * Whether this platform can receive a loopback callback at all.
  *
- * iOS's browser adapter owns its native listener; web remains a dev/QA target.
- * Android still needs a separately supplied native listener.
+ * iOS and Android browser adapters own native listeners; web remains a dev/QA
+ * target. Other native platforms have no listener and fail explicitly.
 
  */
 export function needsDeviceListener(): boolean {
-	return Platform.OS !== "ios" && Platform.OS !== "web";
+	return !["ios", "android", "web"].includes(Platform.OS);
 }
 
 /** The sentence the unavailable state shows. It names the module, because the

@@ -1,0 +1,26 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <queries>
+    <intent><action android:name="android.support.customtabs.action.CustomTabsService" /></intent>
+  </queries>
+  <application>
+    <!-- Browser binds this command-free service only for the owned Custom Tab;
+         no foreground-service permission or OAuth payload crosses the binder. -->
+    <service android:name=".OAuthKeepAliveService" android:exported="true" />
+    <!-- Same-task management is intentional: unlike Expo's default NEW_TASK,
+         CLEAR_TOP can return to the owner without leaving an orphaned auth task. -->
+    <activity android:name=".OAuthActivity" android:exported="false"
+      android:launchMode="singleTop" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    <!-- A package-targeted, user-gesture return link carries NO OAuth payload.
+         It only returns to the existing, independently validated in-memory flow. -->
+    <activity android:name=".OAuthReturnActivity" android:exported="true"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar">
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="${applicationId}.oauth" android:host="oauth-return" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
