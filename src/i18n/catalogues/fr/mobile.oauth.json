@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "Réponse de connexion reçue. Revenez à l’application.",
+	"mobile.oauth.return": "Revenir à Local Operator",
+	"mobile.oauth.invalid": "Cette demande de connexion n’a pas été acceptée.",
+	"mobile.oauth.failed": "La connexion n’a pas pu aboutir. Réessayez."
+}
