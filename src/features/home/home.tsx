@@ -587,6 +587,7 @@ export default function Home({
 						setImages((current) => current.filter((_, at) => at !== index))
 					}
 					onAttach={attach}
+					onAttachStart={() => setAttaching(true)}
 					onPasteFile={pasteFile}
 					attaching={attaching}
 					onSend={send}

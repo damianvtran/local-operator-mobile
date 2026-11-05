@@ -80,7 +80,7 @@ export function createAttachmentSheetHandoff() {
 		launch?.();
 	};
 	return {
-		choose: (launch: () => void, platform: string) => {
+		choose: (launch: () => void, platform: string, onAccepted?: () => void) => {
 			// First iOS choice wins for this open, including the native dismissal
 			// window. Attach's explicit cancel() is the only re-admission point.
 			if (platform === "ios" && chosen) return;
@@ -90,6 +90,9 @@ export function createAttachmentSheetHandoff() {
 				return;
 			}
 			chosen = true;
+			// The owning attach finally clears busy. Signal acceptance now, not
+			// 500ms later when native dismissal finally permits presentation.
+			onAccepted?.();
 			pending = launch;
 			timer = setTimeout(dismissed, 500);
 		},
@@ -215,6 +218,8 @@ export type ComposerProps = {
 	 *  reading the image is the host's — the composer home and the session view
 	 *  both hand in their own `attach`, and both land on the same strip. */
 	onAttach: (source: AttachSource) => void;
+	/** Marks the owner's existing attach state busy during the iOS handoff. */
+	onAttachStart?: () => void;
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
@@ -406,6 +411,7 @@ export const Composer = ({
 	images,
 	onRemoveImage,
 	onAttach,
+	onAttachStart,
 	onPasteFile,
 	attaching = false,
 	voice = null,
@@ -1160,6 +1166,7 @@ export const Composer = ({
 									attachmentHandoff.choose(
 										() => onAttach(action.source),
 										Platform.OS,
+										onAttachStart,
 									);
 								}}
 								testID={attachOptionId(action.source)}

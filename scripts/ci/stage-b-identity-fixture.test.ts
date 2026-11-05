@@ -31,6 +31,56 @@ async function fixture() {
 	return { ...server, transport: stageBTransport(server.config, fetch) };
 }
 describe("Stage B real-socket synthetic authority fixture", () => {
+	it("records both loading completions relative to arrival and early release", async () => {
+		const x = await fixture();
+		x.scenario("held");
+		x.observeHeld(async (proof) => {
+			proof.recordFrame("first");
+			proof.recordFrame("second");
+			proof.recordFrame("first", Date.now());
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			proof.recordFrame("second", Date.now());
+			proof.release();
+		}, 1000);
+		expect(
+			await proveRecoveryAuthority(syntheticValue(x.config, "access-a"), {
+				fetcher: x.transport,
+				isCurrent: () => true,
+			}),
+		).not.toBeNull();
+		await x.awaitHeldCapture();
+		const timing = x.heldTimings[0];
+		if (!timing) throw new Error("held timing missing");
+		expect(timing.releasedAfterMs).toBeLessThan(1000);
+		expect(timing.frames).toHaveLength(2);
+		for (const frame of timing.frames ?? []) {
+			expect(frame.completedAfterArrivalMs).toBeGreaterThanOrEqual(0);
+			expect(frame.completedRelativeToReleaseMs).toBeLessThanOrEqual(0);
+		}
+	});
+	it("retains late and missing frame evidence after the independent hard release", async () => {
+		const x = await fixture();
+		x.scenario("held");
+		x.observeHeld(async (proof) => {
+			proof.recordFrame("late");
+			proof.recordFrame("missing");
+			await new Promise((resolve) => setTimeout(resolve, 35));
+			expect(proof.releasedAt).toBeDefined();
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			proof.recordFrame("late", Date.now());
+		}, 10);
+		expect(
+			await proveRecoveryAuthority(syntheticValue(x.config, "access-a"), {
+				fetcher: x.transport,
+				isCurrent: () => true,
+			}),
+		).not.toBeNull();
+		await x.awaitHeldCapture();
+		const frames = x.heldTimings[0]?.frames;
+		expect(frames).toHaveLength(2);
+		expect(frames?.[0]?.completedRelativeToReleaseMs).toBeGreaterThan(0);
+		expect(frames?.[1]?.completedAtMs).toBeUndefined();
+	});
 	it("initial same answers public reachability and /me immediately even with a future held observer armed", async () => {
 		const x = await fixture();
 		let heldTriggered = false;

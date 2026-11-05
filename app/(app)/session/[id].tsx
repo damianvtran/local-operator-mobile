@@ -1379,6 +1379,7 @@ export default function Session() {
 						images={composer.images}
 						onRemoveImage={composer.removeImage}
 						onAttach={composer.attach}
+						onAttachStart={composer.beginAttach}
 						onPasteFile={composer.pasteFile}
 						attaching={composer.attaching}
 						voice={composer.voice}

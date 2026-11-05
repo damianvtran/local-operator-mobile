@@ -96,6 +96,7 @@ export interface ComposerState {
 	 *  nothing and says nothing; a failed read says so on the composer's error
 	 *  line; a paste that found no image reports the outcome there too. */
 	attach: (source: AttachSource) => void;
+	beginAttach: () => void;
 	/** A web paste event's image file, read and attached. The composer's listener
 	 *  hands the raw file here so the read and its failure copy live beside the
 	 *  pickers' own. */
@@ -673,6 +674,9 @@ export const useComposer = (input: {
 		[endpoints, sessionId],
 	);
 
+	// Shared owner state covers sheet handoff and picker work; attach's existing
+	// finally is the sole completion path that clears it.
+	const beginAttach = useCallback(() => setAttaching(true), []);
 	const attach = useCallback(
 		(source: AttachSource) => {
 			void (async () => {
@@ -808,6 +812,7 @@ export const useComposer = (input: {
 			setImages((current) => current.filter((_, at) => at !== index)),
 		clearImages: () => setImages([]),
 		attach,
+		beginAttach,
 		pasteFile,
 		attaching,
 		retained,

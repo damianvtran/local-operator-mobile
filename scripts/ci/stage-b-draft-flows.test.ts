@@ -9,6 +9,8 @@ import {
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
 	STAGE_B_PICKER_BROWSER_ID,
+	STAGE_B_PICKER_OUTCOME_LABEL,
+	STAGE_B_PICKER_OUTCOME_MS,
 	STAGE_B_PICKER_WAIT_MS,
 	STAGE_B_WRONG_PICKER,
 	selectStageBComputer,
@@ -33,18 +35,26 @@ describe("Stage B foreground-only Maestro flows", () => {
 		const picker = attachment.slice(tapIndex + 1);
 		expect(STAGE_B_PICKER_WAIT_MS).toBe(30000);
 		expect(picker[0]).toEqual({
-			extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 15000 },
+			extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 10000 },
 		});
 		expect(picker[1]).toEqual({
 			extendedWaitUntil: {
 				visible: { id: STAGE_B_PICKER_BROWSER_ID },
-				timeout: STAGE_B_PICKER_WAIT_MS,
+				timeout: STAGE_B_PICKER_OUTCOME_MS,
+				label: STAGE_B_PICKER_OUTCOME_LABEL,
 			},
 		});
 		expect(picker[2]).toEqual({
 			assertNotVisible: { id: "DOC.browsingRoot", label: STAGE_B_WRONG_PICKER },
 		});
 		expect(picker[3]).toEqual({
+			assertNotVisible: {
+				id: "composer-error",
+				label: "Photo picker failed: composer attach error",
+			},
+		});
+		expect(STAGE_B_PICKER_OUTCOME_MS + 10000).toBe(130000);
+		expect(picker[4]).toEqual({
 			extendedWaitUntil: {
 				visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },
 				timeout: STAGE_B_PICKER_WAIT_MS,

@@ -30,6 +30,8 @@ export type IdentityScenario =
 export interface StageBHeldProof {
 	firstSeenAt: number;
 	deadlineAt: number;
+	readonly releasedAt?: number;
+	recordFrame(name: string, completedAtMs?: number): void;
 	release(): void;
 }
 const send = (response: ServerResponse, status: number, body: unknown) => {
@@ -102,6 +104,12 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 		releasedAfterMs?: number;
 		closedAfterMs?: number;
 		deadlineMs: number;
+		frames?: {
+			name: string;
+			completedAtMs?: number;
+			completedAfterArrivalMs?: number;
+			completedRelativeToReleaseMs?: number;
+		}[];
 	}[] = [];
 	const identity = (response: ServerResponse, body: unknown) => {
 		sendIdentity(response, body);
@@ -343,6 +351,11 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 						if (timer) clearTimeout(timer);
 						if (!held.delete(release)) return;
 						timing.releasedAfterMs = Date.now() - firstSeenAt;
+						for (const frame of timing.frames ?? []) {
+							if (frame.completedAtMs !== undefined)
+								frame.completedRelativeToReleaseMs =
+									frame.completedAtMs - firstSeenAt - timing.releasedAfterMs;
+						}
 						if (!response.destroyed) identity(response, body);
 					};
 					held.add(release);
@@ -360,6 +373,26 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 							observer({
 								firstSeenAt,
 								deadlineAt: firstSeenAt + heldReleaseMs,
+								get releasedAt() {
+									return timing.releasedAfterMs === undefined
+										? undefined
+										: firstSeenAt + timing.releasedAfterMs;
+								},
+								recordFrame: (name, completedAtMs) => {
+									timing.frames ??= [];
+									let frame = timing.frames.find((item) => item.name === name);
+									if (!frame) {
+										frame = { name };
+										timing.frames.push(frame);
+									}
+									if (completedAtMs !== undefined) {
+										frame.completedAtMs = completedAtMs;
+										frame.completedAfterArrivalMs = completedAtMs - firstSeenAt;
+										if (timing.releasedAfterMs !== undefined)
+											frame.completedRelativeToReleaseMs =
+												completedAtMs - firstSeenAt - timing.releasedAfterMs;
+									}
+								},
 								release,
 							}),
 						);

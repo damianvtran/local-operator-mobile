@@ -690,14 +690,22 @@ async function runStageBCoordinator(
 		const armHeldCapture = (prefix: string, pastDeadline = false) => {
 			fixture?.observeHeld(
 				async (proof) => {
-					await captureStageBHeldPair(screenshot, `${prefix}-loading`);
+					await captureStageBHeldPair(
+						screenshot,
+						`${prefix}-loading`,
+						stageBSleep,
+						proof,
+					);
 					if (pastDeadline) {
 						await stageBSleep(Math.max(0, proof.deadlineAt - Date.now()));
 						proof.release();
 					} else {
-						if (Date.now() >= proof.deadlineAt)
+						if (
+							proof.releasedAt !== undefined ||
+							Date.now() >= proof.deadlineAt
+						)
 							throw new Error(
-								"loading screenshot pair missed the 10s proof window",
+								"loading frame not captured before proof release",
 							);
 						proof.release();
 						await captureStageBRestoreBurst(

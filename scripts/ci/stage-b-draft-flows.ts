@@ -27,8 +27,13 @@ export function stageBHasDrawnScreen(hierarchy: string): boolean {
 /** Run 41882974569: PHPicker was ready ~3s after the library tap, but
  * only a fresh driver saw its remote tree. Wait up to 10x that measured delay. */
 export const STAGE_B_PICKER_WAIT_MS = 30_000;
+// 10s dismissal + 120s outcome wait bounds this native phase at 130s.
+// No product timeout: legitimate native browsing may last much longer.
+export const STAGE_B_PICKER_OUTCOME_MS = 120_000;
+export const STAGE_B_PICKER_OUTCOME_LABEL =
+	"Native picker or attach error did not appear within 130s";
 export const STAGE_B_PICKER_BROWSER_ID =
-	"(PXGGridLayout-Info|DOC.browsingRoot)";
+	"(PXGGridLayout-Info|DOC.browsingRoot|composer-error)";
 export const STAGE_B_WRONG_PICKER =
 	"Wrong picker: document browser opened instead of Photos";
 export function stageBStartsInPhotoPicker(steps: StageBStep[]): boolean {
@@ -125,16 +130,23 @@ export const attachStageBPhoto = (): StageBStep[] => [
 	{ waitForAnimationToEnd: { timeout: 5000 } },
 	{ assertVisible: { id: "attach-option-library" } },
 	{ tapOn: { id: "attach-option-library", retryTapIfNoChange: false } },
-	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 15000 } },
+	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 10000 } },
 	// Recognise either native browser, then diagnose the wrong source BEFORE
 	// spending the full photo-grid timeout on a Files document browser.
 	{
 		extendedWaitUntil: {
 			visible: { id: STAGE_B_PICKER_BROWSER_ID },
-			timeout: STAGE_B_PICKER_WAIT_MS,
+			timeout: STAGE_B_PICKER_OUTCOME_MS,
+			label: STAGE_B_PICKER_OUTCOME_LABEL,
 		},
 	},
 	{ assertNotVisible: { id: "DOC.browsingRoot", label: STAGE_B_WRONG_PICKER } },
+	{
+		assertNotVisible: {
+			id: "composer-error",
+			label: "Photo picker failed: composer attach error",
+		},
+	},
 	{
 		extendedWaitUntil: {
 			visible: { id: "PXGGridLayout-Info", text: "Photo, .*" },

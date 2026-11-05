@@ -3,6 +3,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const OWNER_ATTACH_FINALLY = /finally\s*\{\s*setAttaching\(false\)/;
 const CANCEL_BEFORE_REOPEN =
 	/onPress=\{\(\) => \{\s*attachmentHandoff\.cancel\(\);\s*setAttachSheetOpen\(true\);/;
 const source = readFileSync(
@@ -22,12 +23,51 @@ const create = () =>
 		setTimeout,
 		clearTimeout,
 	}) as {
-		choose(launch: () => void, platform: string): void;
+		choose(launch: () => void, platform: string, onAccepted?: () => void): void;
 		dismissed(): void;
 		cancel(): void;
 	};
 afterEach(() => vi.useRealTimers());
 describe("native attachment sheet handoff", () => {
+	it("marks the accepted choice busy before dismissal, once, with owner completion clearing it", () => {
+		vi.useFakeTimers();
+		const handoff = create();
+		let busy = false;
+		const accepted = vi.fn(() => {
+			busy = true;
+		});
+		const launch = vi.fn(() => {
+			busy = false;
+		});
+		handoff.choose(launch, "ios", accepted);
+		expect(busy).toBe(true);
+		expect(launch).not.toHaveBeenCalled();
+		handoff.choose(vi.fn(), "ios", accepted);
+		expect(accepted).toHaveBeenCalledOnce();
+		handoff.dismissed();
+		expect(launch).toHaveBeenCalledOnce();
+		expect(busy).toBe(false);
+		const home = readFileSync(
+			new URL("../home/home.tsx", import.meta.url),
+			"utf8",
+		);
+		const hook = readFileSync(
+			new URL("./use-composer.ts", import.meta.url),
+			"utf8",
+		);
+		const session = readFileSync(
+			new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+			"utf8",
+		);
+		expect(home).toContain("onAttachStart={() => setAttaching(true)}");
+		expect(session).toContain("onAttachStart={composer.beginAttach}");
+		expect(hook).toContain(
+			"const beginAttach = useCallback(() => setAttaching(true), []);",
+		);
+		for (const owner of [home, hook])
+			expect(owner).toMatch(OWNER_ATTACH_FINALLY);
+		expect(source).toContain("onAttachStart,");
+	});
 	it("keeps the first library choice when another row is pressed during native dismissal", () => {
 		vi.useFakeTimers();
 		const handoff = create();
@@ -35,7 +75,7 @@ describe("native attachment sheet handoff", () => {
 			documents = vi.fn();
 		handoff.choose(library, "ios");
 		handoff.choose(documents, "ios");
-		handoff.choose(library, "ios");
+		handoff.choose(documents, "ios");
 		handoff.dismissed();
 		vi.runAllTimers();
 		expect(library).toHaveBeenCalledOnce();

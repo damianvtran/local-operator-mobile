@@ -5,9 +5,13 @@ export const STAGE_B_FRAME_HIERARCHY_SECONDS = 180;
 /** simctl addmedia took 90s (41804068676), 115s (41818693532), and 118s
  * (41831921831). Reserve >=2x the observed maximum, not run()'s 120s default. */
 export const STAGE_B_ADD_MEDIA_SECONDS = 240;
-export const STAGE_B_HELD_RELEASE_MS = 10_000;
+/** Run 41918042114: screenshot took 10s under concurrent Maestro load.
+ * Release after both serial loading frames, never later than 17s after /me;
+ * production's independent 20s proof deadline remains unchanged. */
+export const STAGE_B_HELD_RELEASE_MS = 17_000;
 export const STAGE_B_TIMEOUT_HOLD_MS = 22_000;
-export const STAGE_B_SCREENSHOT_SECONDS = 3;
+// Run 41918042114 measured a 10s screenshot; 12s allows completion diagnostics.
+export const STAGE_B_SCREENSHOT_SECONDS = 12;
 export const STAGE_B_SETTLE_GAP_MS = 1_000;
 export const STAGE_B_RESTORE_GAP_MS = 300;
 export const STAGE_B_POST_RELEASE_WINDOW_MS = 10_000;
@@ -82,10 +86,35 @@ export async function captureStageBHeldPair(
 	screenshot: (name: string, seconds: number) => Promise<void>,
 	prefix: string,
 	sleep: (ms: number) => Promise<void> = stageBSleep,
+	proof?: {
+		deadlineAt: number;
+		readonly releasedAt?: number;
+		recordFrame(name: string, completedAtMs?: number): void;
+	},
 ): Promise<void> {
-	await screenshot(prefix, STAGE_B_SCREENSHOT_SECONDS);
-	await sleep(STAGE_B_SETTLE_GAP_MS);
-	await screenshot(`${prefix}-consecutive`, STAGE_B_SCREENSHOT_SECONDS);
+	const names = [prefix, `${prefix}-consecutive`];
+	for (const name of names) proof?.recordFrame(name);
+	try {
+		for (const [index, name] of names.entries()) {
+			if (index) await sleep(STAGE_B_SETTLE_GAP_MS);
+			if (
+				proof &&
+				(proof.releasedAt !== undefined || Date.now() >= proof.deadlineAt)
+			)
+				throw new Error("proof released");
+			await screenshot(name, STAGE_B_SCREENSHOT_SECONDS);
+			proof?.recordFrame(name, Date.now());
+			if (
+				proof &&
+				(proof.releasedAt !== undefined || Date.now() >= proof.deadlineAt)
+			)
+				throw new Error("proof released");
+		}
+	} catch (cause) {
+		throw new Error("loading frame not captured before proof release", {
+			cause,
+		});
+	}
 }
 export async function captureStageBRestoreBurst(
 	screenshot: (name: string, seconds: number) => Promise<void>,

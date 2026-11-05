@@ -1,17 +1,103 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	captureStageBHeldPair,
 	captureStageBRestoreBurst,
 	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_FRAME_HIERARCHY_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
+	STAGE_B_SCREENSHOT_SECONDS,
 	STAGE_B_TIMEOUT_HOLD_MS,
 	stageBFrameHierarchy,
 	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing";
 
+afterEach(() => vi.useRealTimers());
 describe("measured Stage B frame timing", () => {
+	it("serially completes a 10s and 2s pair by 13s, before the 17s release ceiling", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(0);
+		let released: number | undefined;
+		let active = 0,
+			maxActive = 0;
+		const frames = new Map<string, number | undefined>();
+		const proof = {
+			deadlineAt: 17000,
+			get releasedAt() {
+				return released;
+			},
+			recordFrame: (name: string, completed?: number) =>
+				frames.set(name, completed),
+		};
+		setTimeout(() => {
+			released = Date.now();
+		}, 17000);
+		const shot = async (name: string, seconds: number) => {
+			expect(seconds).toBe(12);
+			active++;
+			maxActive = Math.max(maxActive, active);
+			await new Promise<void>((resolve) =>
+				setTimeout(resolve, name.endsWith("consecutive") ? 2000 : 10000),
+			);
+			active--;
+		};
+		const pending = captureStageBHeldPair(
+			shot,
+			"loading",
+			undefined,
+			proof,
+		).then(() => {
+			released = Date.now();
+		});
+		await vi.advanceTimersByTimeAsync(13000);
+		await pending;
+		expect([...frames.values()]).toEqual([10000, 13000]);
+		expect(released).toBe(13000);
+		expect(maxActive).toBe(1);
+	});
+	it("names late and missing loading evidence instead of passing after release", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(0);
+		let released: number | undefined;
+		const frames = new Map<string, number | undefined>();
+		const proof = {
+			deadlineAt: 17000,
+			get releasedAt() {
+				return released;
+			},
+			recordFrame: (name: string, completed?: number) =>
+				frames.set(name, completed),
+		};
+		setTimeout(() => {
+			released = Date.now();
+		}, 17000);
+		const shot = async (name: string) =>
+			new Promise<void>((resolve) =>
+				setTimeout(resolve, name.endsWith("consecutive") ? 8000 : 10000),
+			);
+		const pending = expect(
+			captureStageBHeldPair(shot, "loading", undefined, proof),
+		).rejects.toThrow("loading frame not captured before proof release");
+		await vi.advanceTimersByTimeAsync(19000);
+		await pending;
+		expect(frames.get("loading-consecutive")).toBe(19000);
+		expect(released).toBe(17000);
+		const missing = new Map<string, number | undefined>();
+		await expect(
+			captureStageBHeldPair(
+				async () => {
+					throw new Error("screenshot timeout");
+				},
+				"missing",
+				undefined,
+				{
+					deadlineAt: 36000,
+					recordFrame: (name, completed) => missing.set(name, completed),
+				},
+			),
+		).rejects.toThrow("loading frame not captured before proof release");
+		expect([...missing.values()]).toEqual([undefined, undefined]);
+	});
 	it("explicitly reserves twice the measured 118s media-import maximum", () => {
 		expect(STAGE_B_ADD_MEDIA_SECONDS).toBe(240);
 		expect(STAGE_B_ADD_MEDIA_SECONDS).toBeGreaterThanOrEqual(2 * 118);
@@ -141,7 +227,9 @@ describe("measured Stage B frame timing", () => {
 	});
 	it("budgets slow AX outside proof and releases loading captures before the unchanged 20s deadline", () => {
 		expect(STAGE_B_FRAME_HIERARCHY_SECONDS).toBeGreaterThanOrEqual(2 * 83);
-		expect(STAGE_B_HELD_RELEASE_MS).toBe(10000);
+		expect(STAGE_B_HELD_RELEASE_MS).toBe(17000);
+		expect(STAGE_B_HELD_RELEASE_MS).toBeLessThan(20000);
+		expect(STAGE_B_SCREENSHOT_SECONDS).toBeGreaterThan(10);
 		expect(STAGE_B_TIMEOUT_HOLD_MS).toBeGreaterThan(20000);
 	});
 	it("reuses one hierarchy with a 1s settle gap; never invokes the driver again", async () => {
@@ -169,14 +257,14 @@ describe("measured Stage B frame timing", () => {
 		await captureStageBHeldPair(shot, "light-loading", sleep);
 		await captureStageBRestoreBurst(shot, "light-populated-after", sleep);
 		expect(calls).toEqual([
-			["light-loading", 3],
+			["light-loading", 12],
 			["gap", 1000],
-			["light-loading-consecutive", 3],
-			["light-populated-after-restore-0", 3],
+			["light-loading-consecutive", 12],
+			["light-populated-after-restore-0", 12],
 			["gap", 300],
-			["light-populated-after-restore-1", 3],
+			["light-populated-after-restore-1", 12],
 			["gap", 300],
-			["light-populated-after-restore-2", 3],
+			["light-populated-after-restore-2", 12],
 		]);
 	});
 });

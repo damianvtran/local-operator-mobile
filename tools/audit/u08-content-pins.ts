@@ -377,7 +377,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "19195211af9ae93848aee88eea6deeed3d570a0b2df9ea7f2db1e26110c403eb",
+	app: "9474e152553c0db72dd12b67923dc3fb53399339818aaaea636d89a5cf6cb9a2",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -449,13 +449,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "0358c6bd5f3fd9317ca146a75cb5239a72f2f3ed8fa94a853931fce20c0ca6aa",
+	src: "8c74630783e6d42510357a9ec7b2f164d7ff20c68fb536d566565160ae99c811",
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
 	// iOS picker callbacks and recovery tests; public proof-only /healthz mapping does not enter U08.
 	// PR #156 + #161: merged-tree identity; healthy custom-relay U08 does not select refusal/recovery branches.
 	// First-choice picker latch/test reprinted with --print; U08 never opens Attach; idle JSX/layout unchanged (source judgment).
+	// Attach-start callback wiring + tests reprinted in app/src; U08 does not select Attach, so its idle geometry path is unchanged (source judgment).
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
