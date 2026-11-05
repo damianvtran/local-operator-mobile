@@ -60,3 +60,25 @@ export const composerPresentation = (facts: ComposerPresentationFacts) => {
 };
 export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
 	Math.max(0, hostBottom - keyboardTop);
+
+/**
+ * The pill's radius for a painted height: half the pill, capped by the record's
+ * expanded radius.
+ *
+ * Kept as a FUNCTION of the painted base rather than a constant, because the
+ * 28/24 pair is one rule — the resting pill is a stadium, the expanded card is a
+ * 24 pt rectangle — and a radius derived from a number the box does not paint is
+ * a shape nobody sees (a landscape pill kept 24 on a 56 pt card that way).
+ */
+export const morphPillRadius = (base: number) => base / 2;
+
+/**
+ * Where the card is between the collapsed pill and the expanded card.
+ *
+ * Linear on one progress value because the record asks for one morph, not two:
+ * the same value drives the radius. Extracted so a test can assert the SHAPE of
+ * the motion — an intermediate value strictly between the ends — instead of
+ * grepping the component for the expression that produces it.
+ */
+export const morphHeight = (progress: number, from: number, to: number) =>
+	from + (to - from) * Math.min(1, Math.max(0, progress));

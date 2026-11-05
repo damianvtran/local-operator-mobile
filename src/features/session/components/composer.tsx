@@ -53,6 +53,9 @@ import {
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_BASE_HEIGHT,
+	composerPaintedHeight,
+	morphHeight,
+	morphPillRadius,
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_EXPANDED_HEIGHT,
 	COMPOSER_FIELD_BOX,
@@ -719,10 +722,6 @@ export const Composer = ({
 				(voice?.micVisible ? TOUCH_FLOOR : 0) +
 				(controls.stopVisible ? TOUCH_FLOOR : 0) +
 				24;
-	const idleHeight = Math.max(
-		COMPOSER_BASE_HEIGHT,
-		Math.ceil(24 * effectiveScale + 24),
-	);
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
 	 * actually paints (iOS 56/R28, web and Android 60/R30 on the 48 floor), not
 	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
@@ -735,63 +734,47 @@ export const Composer = ({
 	 * value the morph travels to, and content growth (3 lines, 6 lines) moves the
 	 * target rather than being clipped by it. */
 	const [paintedExpanded, setPaintedExpanded] = useState<number | null>(null);
-	/* Measurement, in one place. The resting shell reports what it paints; the
-	 *  content column reports its natural height, which the fixed box must equal
-	 *  when expanded or the last line sits outside the card. */
-	const [mainHeight, setMainHeight] = useState(0);
-	const measureMain = (event: LayoutChangeEvent) => {
-		const height = Math.round(event.nativeEvent.layout.height);
-		if (height > 0 && height !== mainHeight) setMainHeight(height);
-	};
+	/* The extras' natural height, for the ceiling budget only: the morph's ends
+	 *  come from one measured content block that already contains them, so adding
+	 *  this to a total again would count them twice. */
+	const [extrasHeight, setExtrasHeight] = useState(0);
 	/* The record's paddings, settled per state: they are part of its sums
-	 *  (6 + h + 6 at rest, 12 + h + 4 + h + 8 expanded) and never a second clock. */
+	 *  (6 + h + 6 standing, 12 + h + 4 + h + 8 open) and never a second clock. */
 	const shellBox = {
 		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
 		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
 	};
-	/* The extras' natural height, so the expanded target can sum it. */
-	const [extrasHeight, setExtrasHeight] = useState(0);
-	useEffect(() => {
-		if (!presentation.expanded || compactSingle) return;
-		const padding = shellBox.paddingTop + shellBox.paddingBottom;
-		const target = Math.max(
-			COMPOSER_EXPANDED_HEIGHT,
-			padding + extrasHeight + mainHeight,
-		);
-		if (target !== paintedExpanded) setPaintedExpanded(target);
-	}, [
-		presentation.expanded,
-		compactSingle,
-		extrasHeight,
-		mainHeight,
-		paintedExpanded,
-		shellBox.paddingTop,
-		shellBox.paddingBottom,
-	]);
-
-	/* The shell cannot be its own ruler: an animated height reports whatever value
-	 *  it was handed, so measuring it would ratify the constant it started from
-	 *  (that shipped a 56 pt pill with 4 pt of the field outside it). The content
-	 *  column is the honest source for both ends of the morph. */
-	const baseHeight =
-		mainHeight > 0
-			? shellBox.paddingTop + shellBox.paddingBottom + extrasHeight + mainHeight
-			: COMPOSER_BASE_HEIGHT;
-	const targetExpanded = Math.max(
-		paintedExpanded ?? COMPOSER_EXPANDED_HEIGHT,
-		baseHeight,
-	);
+	/* Measurement, in one place, and ONE seed per state. A single seed cannot
+	 *  describe a morph: while expanded the content column is the EXPANDED height,
+	 *  so reusing it as the collapsed end gave `interpolate([120, 120])` — corners
+	 *  travelled and the box did not, which is exactly the asymmetry the design
+	 *  round measured. Each end is captured while ITS state is mounted. */
+	const [collapsedSeed, setCollapsedSeed] = useState<number | null>(null);
+	const [expandedSeed, setExpandedSeed] = useState<number | null>(null);
+	const measureContent = (event: LayoutChangeEvent) => {
+		const height = Math.round(event.nativeEvent.layout.height);
+		if (height <= 0) return;
+		const total =
+			height + shellBox.paddingTop + shellBox.paddingBottom;
+		if (presentation.expanded) {
+			if (total !== expandedSeed) setExpandedSeed(total);
+		} else if (!compactSingle && total !== collapsedSeed) {
+			setCollapsedSeed(total);
+		}
+	};
+	/* The first frame must not paint a radius the pill does not have: the field's
+	 *  box IS the platform's touch floor, so the seeded ends are the record's own
+	 *  sums at that floor (56/112 on iOS, 60/120 on the 48 floor). */
+	const seededBase = composerPaintedHeight(false, TOUCH_FLOOR);
+	const seededExpanded = composerPaintedHeight(true, TOUCH_FLOOR);
+	const baseHeight = collapsedSeed ?? seededBase;
+	const targetExpanded = Math.max(expandedSeed ?? seededExpanded, baseHeight);
 	const shellMotion = useAnimatedStyle(() => ({
-		borderRadius: interpolate(
-			progress.value,
-			[0, 1],
-			[compactSingle ? 24 : baseHeight / 2, 24],
-		),
-		height: interpolate(
-			progress.value,
-			[0, 1],
-			[baseHeight, compactSingle ? baseHeight : targetExpanded],
-		),
+		/* One rule in every state, landscape included: the radius is half the pill
+		 *  the shell paints, and 24 when expanded. A landscape pill that kept the
+		 *  portrait 24 was measuring the wrong thing. */
+		borderRadius: morphHeight(progress.value, morphPillRadius(baseHeight), 24),
+		height: morphHeight(progress.value, baseHeight, targetExpanded),
 	}));
 	const dockMotion = useAnimatedStyle(() => ({
 		marginBottom:
@@ -1464,20 +1447,9 @@ export const Composer = ({
 				>
 					{attach}
 					{mic}
-					{compactSingle ? (
-						<IconButton
-							accessibilityLabel={
-								queuedCount > 0
-									? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-									: t("mobile.chrome.composer.more")
-							}
-							onPress={() => setContextOpen(true)}
-							icon={({ color, size }) => (
-								<MoreHorizontal color={color} size={size} />
-							)}
-							testID={CONTROL.composerCompactContext}
-						/>
-					) : null}
+					{/* Landscape has exactly ONE context affordance, and it is the one
+					 *  in the compact strip: a second More on this row was the same
+					 *  action twice in one 44 pt line (design round 6, D2). */}
 					{actionCluster}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
@@ -1524,24 +1496,31 @@ export const Composer = ({
 						 * expanded (12 + 44 + 4 + 44 + 8 = 112). `composerPaintedHeight`
 						 * is the one place those sums are written down. */
 						...shellBox,
+						/* The box travels between two measured ends, so for part of
+						 *  the morph it is shorter than the content it holds. Clipping
+						 *  there is the card's own edge; spilling painted controls
+						 *  outside the card, which is what the design round saw. */
+						overflow: "hidden",
 						paddingHorizontal: 12,
 						marginTop: compactSingle ? 0 : 4,
 					},
 					shellMotion,
 				]}
 			>
-				<ScrollView
-					style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
-					scrollEnabled={compact !== null}
-					onContentSizeChange={(_width, height) =>
-						setExtrasHeight(Math.round(height))
-					}
-					nestedScrollEnabled
-					keyboardShouldPersistTaps="handled"
-				>
-					{extras}
-				</ScrollView>
-				<View onLayout={measureMain}>{main}</View>
+				<View onLayout={measureContent}>
+					<ScrollView
+						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
+						scrollEnabled={compact !== null}
+						onContentSizeChange={(_width, height) =>
+							setExtrasHeight(Math.round(height))
+						}
+						nestedScrollEnabled
+						keyboardShouldPersistTaps="handled"
+					>
+						{extras}
+					</ScrollView>
+					{main}
+				</View>
 			</Animated.View>
 			{attachSheet}
 			<Sheet

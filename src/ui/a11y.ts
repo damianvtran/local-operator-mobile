@@ -349,7 +349,6 @@ export const CONTROL = {
 	composerContextEffort: "composer-context-effort",
 	composerContextSheet: "composer-context-sheet",
 	composerDismissKeyboard: "composer-dismiss-keyboard",
-	composerCompactContext: "composer-compact-context",
 	composerCompactDismiss: "composer-compact-dismiss",
 	composerRetry: "composer-retry",
 	composerModelChip: "composer-model-chip",

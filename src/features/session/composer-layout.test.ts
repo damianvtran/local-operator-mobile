@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { morphHeight, morphPillRadius } from "./composer-presentation";
 import {
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CONTROLS_ROW,
@@ -34,7 +35,8 @@ describe("build389 persistent field and context", () => {
 		expect(strip).toContain("CONTROL.composerEffortChip");
 		expect(strip).toContain("CONTROL.composerDismissKeyboard");
 		expect(COMPOSER).toContain("CONTROL.composerContextEffort");
-		expect(COMPOSER).toContain("CONTROL.composerCompactContext");
+		// D2 (round 6): landscape has ONE context affordance — the compact strip's.
+		expect(COMPOSER).not.toContain("CONTROL.composerCompactContext");
 	});
 });
 describe("the above-composer stack (relay above-composer.spacing)", () => {
@@ -80,26 +82,44 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 		expect(SRC).not.toMatch(/marginEnd:\s*interpolate/);
 	});
 
-	it("derives the resting radius from the measured painted pill", () => {
-		expect(SRC).toMatch(/baseHeight \/ 2/);
-		// The shell cannot be its own ruler; the CONTENT column is measured.
-		expect(SRC).toMatch(/mainHeight > 0/);
-		expect(SRC).toMatch(/setMainHeight\(height\)/);
+	it("derives the resting radius from the measured painted pill, in every state", () => {
+		expect(SRC).toMatch(/morphPillRadius\(baseHeight\)/);
+		// Measured from the content block, never from the animated shell.
+		expect(SRC).toMatch(/measureContent/);
 	});
 
-	it("animates to a MEASURED expanded target instead of a constant bound", () => {
-		expect(SRC).toMatch(/height: interpolate\(/);
-		expect(SRC).toMatch(/setPaintedExpanded\(target\)/);
+	it("captures ONE seed per state, so the morph is not a constant pair", () => {
+		// The design round's D1: one seed gave interpolate([120, 120]) while expanded.
+		expect(SRC).toMatch(/setCollapsedSeed\(total\)/);
+		expect(SRC).toMatch(/setExpandedSeed\(total\)/);
+		expect(SRC).toMatch(/morphHeight\(progress\.value, baseHeight, targetExpanded\)/);
 		// The negative control QA used: a fixed expanded height clips the field.
 		expect(SRC).not.toMatch(/height: compactSingle \? idleHeight/);
 	});
 
-	it("keeps the short-landscape strip, with the count, instead of collapsing it", () => {
+	it("keeps the short-landscape strip, and only ONE context affordance", () => {
 		expect(SRC).toMatch(/compactSingle \? compactReceipt : receipt/);
 		expect(SRC).not.toMatch(/height: 0, overflow: "hidden"/);
+		// D2: the strip's More is the only one in landscape.
+		expect(SRC).not.toContain("composerCompactContext");
 	});
 
 	it("bounds the queue chip so large text cannot push a control off the card", () => {
 		expect(SRC).toMatch(/maxWidth: 160/);
+	});
+});
+
+describe("round 6 — the morph is a shape, not a pair of constants", () => {
+	it("travels through values strictly between its ends", () => {
+		const mid = morphHeight(0.5, 60, 120);
+		expect(mid).toBeGreaterThan(60);
+		expect(mid).toBeLessThan(120);
+		expect(mid).toBe(90);
+	});
+
+	it("moves the radius on the same progress value as the height", () => {
+		expect(morphPillRadius(60)).toBe(30);
+		expect(morphPillRadius(56)).toBe(28);
+		expect(morphHeight(0.5, morphPillRadius(60), 24)).toBe(27);
 	});
 });
