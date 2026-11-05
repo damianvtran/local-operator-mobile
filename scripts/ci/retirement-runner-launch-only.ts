@@ -31,17 +31,64 @@ import {
 
 export const COMPILED_RUNNER_SOURCE =
 	"4fff5e12296c3b6bd4ce3663988b9da8ca383227";
+/**
+ * One accepted 300s work window, rebalanced after run 42095351919 stopped at a
+ * 30s ownership clip.
+ *
+ * The sibling iOS lane on the SAME runner image and head runs the identical
+ * `xcrun simctl list devices available --json` inside its "Resolve the
+ * simulator" step, which measured 32s (18:17:55→18:18:27Z, run 42080472137). So
+ * the first CoreSimulator interaction routinely exceeds 30s on this image, and
+ * the old per-command clip was below the observed cost of the command itself.
+ * Acquisition and prepare released headroom: measured 2065ms and 2393ms here.
+ * Sum of ceilings + the 10s refresh stays inside 300s (45+15+30+120+40+30+10).
+ */
 export const LAUNCH_LIMITS = Object.freeze({
 	work: 300000,
-	acquisition: 90000,
+	acquisition: 45000,
 	toolchain: 15000,
-	prepare: 45000,
-	ownership: 60000,
+	prepare: 30000,
+	ownership: 120000,
+	/** Per-command ceiling inside ownership; the cold simctl call may take 32s. */
+	ownershipCommand: 60000,
 	ready: 40000,
 	postDenial: 30000,
 	boot: 300000,
 	cleanup: 120000,
 });
+/** Closed substep names: a receipt can only ever name one of these. */
+export type StepName = "inventory" | "create";
+export const STEP_NAMES: readonly StepName[] = ["inventory", "create"];
+/** Closed substep failure classes; no free text from a child ever lands here. */
+export type StepClass = "timeout" | "refused" | "mismatch";
+export interface StepRecord {
+	name: StepName;
+	elapsedMs: number;
+	ok: boolean;
+	class?: StepClass;
+}
+export interface StageRecord {
+	name: string;
+	elapsedMs: number;
+	ok: boolean;
+	steps?: StepRecord[];
+}
+export type Step = <T>(name: StepName, action: () => Promise<T>) => Promise<T>;
+
+/**
+ * Classify a substep failure without exporting anything the child said.
+ *
+ * `ReplayRefused` is our own closed refusal vocabulary; a created-device
+ * mismatch is raised as a plain Error by `createFromIntent`. Anything else is
+ * either a command deadline (the executor's own timeout) or a refusal we cannot
+ * name — both fail closed to `timeout`/`refused` rather than leaking a message.
+ */
+export function closedStepClass(error: unknown): StepClass {
+	if (error instanceof ReplayRefused) return "refused";
+	const message = error instanceof Error ? error.message : "";
+	return /timeout|timed out|deadline/i.test(message) ? "timeout" : "mismatch";
+}
+
 export type StopOutcome =
 	| "not-launched"
 	| "early-exit"
@@ -184,7 +231,7 @@ export async function runLaunchOnly(root: string) {
 		mobileAcceptanceComplete: false,
 		stages: [
 			{ name: "acquisition", elapsedMs: clock.acquisitionMs, ok: true },
-		] as Array<{ name: string; elapsedMs: number; ok: boolean }>,
+		] as StageRecord[],
 		protocol: listener.receipt(),
 		runnerFailure: null as ReturnType<typeof safeRunnerFailure>,
 		stopOutcome: "not-launched" as StopOutcome,
@@ -201,19 +248,53 @@ export async function runLaunchOnly(root: string) {
 	async function stage<T>(
 		name: string,
 		cap: number,
-		action: (run: Run) => Promise<T>,
+		action: (run: Run, step: Step) => Promise<T>,
+		commandCap = 30000,
 	): Promise<T> {
 		const began = performance.now();
 		const stageDeadline = new Deadline(deadline.cap(cap));
-		const run: Run = (exe, args, limit = 30000, before) =>
-			currentRun(exe, args, stageDeadline.cap(Math.min(limit, 30000)), before);
+		const run: Run = (exe, args, limit = commandCap, before) =>
+			currentRun(
+				exe,
+				args,
+				stageDeadline.cap(Math.min(limit, commandCap)),
+				before,
+			);
+		// Substep records make a preflight stop self-describing: run 42095351919
+		// reported only `ownership ok:false 30009ms`, which named neither the
+		// command nor why it stopped, so the cause could not be read from the
+		// artifact. Names are a closed set; the class is a closed enum.
+		const steps: StepRecord[] = [];
+		const step: Step = (stepName, action) => {
+			const start = performance.now();
+			return action().then(
+				(value) => {
+					steps.push({
+						name: stepName,
+						elapsedMs: Math.round(performance.now() - start),
+						ok: true,
+					});
+					return value;
+				},
+				(error: unknown) => {
+					steps.push({
+						name: stepName,
+						elapsedMs: Math.round(performance.now() - start),
+						ok: false,
+						class: closedStepClass(error),
+					});
+					throw error;
+				},
+			);
+		};
 		try {
-			const result = await action(run);
+			const result = await action(run, step);
 			stageDeadline.cap(1);
 			receipt.stages.push({
 				name,
 				elapsedMs: Math.round(performance.now() - began),
 				ok: true,
+				steps,
 			});
 			return result;
 		} catch (error) {
@@ -221,6 +302,7 @@ export async function runLaunchOnly(root: string) {
 				name,
 				elapsedMs: Math.round(performance.now() - began),
 				ok: false,
+				steps,
 			});
 			throw error;
 		}
@@ -283,15 +365,11 @@ export async function runLaunchOnly(root: string) {
 		const lease = await stage(
 			"ownership",
 			LAUNCH_LIMITS.ownership,
-			async (run) => {
+			async (run, step) => {
 				const inventory = JSON.parse(
-					await run("xcrun", [
-						"simctl",
-						"list",
-						"devices",
-						"available",
-						"--json",
-					]),
+					await step("inventory", () =>
+						run("xcrun", ["simctl", "list", "devices", "available", "--json"]),
+					),
 				);
 				const templates = Object.entries(
 					inventory.devices as Record<
@@ -316,8 +394,9 @@ export async function runLaunchOnly(root: string) {
 					deviceType: template.deviceTypeIdentifier,
 					templateUdid: template.udid,
 				});
-				return createFromIntent(root, intent, run);
+				return step("create", () => createFromIntent(root, intent, run));
 			},
+			LAUNCH_LIMITS.ownershipCommand,
 		);
 		const bootPhases = new PhaseLog();
 		try {

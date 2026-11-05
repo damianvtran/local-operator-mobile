@@ -23,15 +23,27 @@ describe("accepted bounds are pinned, not merely documented", () => {
 		// future edit fails a test instead of silently widening the approved lane.
 		expect(LAUNCH_LIMITS).toEqual({
 			work: 300_000,
-			acquisition: 90_000,
+			acquisition: 45_000,
 			toolchain: 15_000,
-			prepare: 45_000,
-			ownership: 60_000,
+			prepare: 30_000,
+			ownership: 120_000,
+			ownershipCommand: 60_000,
 			ready: 40_000,
 			postDenial: 30_000,
 			boot: 300_000,
 			cleanup: 120_000,
 		});
+		// The ceilings plus the pre-launch refresh must still fit the ONE shared
+		// 300s window: 45+15+30+120+40+30+10 = 290.
+		const ceilings =
+			LAUNCH_LIMITS.acquisition +
+			LAUNCH_LIMITS.toolchain +
+			LAUNCH_LIMITS.prepare +
+			LAUNCH_LIMITS.ownership +
+			LAUNCH_LIMITS.ready +
+			LAUNCH_LIMITS.postDenial +
+			10_000;
+		expect(ceilings).toBeLessThanOrEqual(LAUNCH_LIMITS.work);
 	});
 });
 

@@ -76,6 +76,29 @@ class Bounds(unittest.TestCase):
         self.assertEqual(value['failure'], 'internal')
         self.assertFalse(value['protocol']['readyReceived'])
 
+    def test_substeps_are_closed_and_only_failures_carry_a_class(self):
+        api = load()
+        value = {'stages': [
+            {'name': 'ownership', 'elapsedMs': 61000, 'ok': False, 'steps': [
+                {'name': 'inventory', 'elapsedMs': 60000, 'ok': False, 'class': 'timeout'},
+                {'name': 'create', 'elapsedMs': 1000, 'ok': True, 'class': 'timeout'},
+                {'name': 'evil-substep', 'elapsedMs': 1, 'ok': False, 'class': 'timeout'},
+                {'name': 'inventory', 'elapsedMs': 'slow', 'ok': False, 'class': 'timeout'},
+                {'name': 'inventory', 'elapsedMs': 5, 'ok': False, 'class': 'Bearer secret'},
+            ]},
+            {'name': 'not-a-stage', 'elapsedMs': 1, 'ok': True},
+        ]}
+        kept = api['closed_receipt'](value)['stages']
+        self.assertEqual(len(kept), 1)
+        steps = kept[0]['steps']
+        # Unknown name, non-integer duration and an out-of-vocabulary class are
+        # dropped rather than exported; a success never carries a class.
+        self.assertEqual([step['name'] for step in steps], ['inventory', 'create', 'inventory'])
+        self.assertEqual(steps[0]['class'], 'timeout')
+        self.assertNotIn('class', steps[1])
+        self.assertNotIn('class', steps[2])
+        self.assertNotIn('Bearer secret', json.dumps(api['closed_receipt'](value)))
+
     def test_expiry_life_and_source_are_fixed(self):
         api = load()['INPUTS']
         expiry = api['epoch'](api['EXPIRY'])

@@ -18,6 +18,10 @@ import time
 HERE = Path(__file__).parent
 WATCHDOG = runpy.run_path(str(HERE / 'retirement-replay-watchdog.py'))
 INPUTS = runpy.run_path(str(HERE / 'retirement-runner-launch-only-inputs.py'))
+STEP_NAMES = ('inventory', 'create')
+STEP_CLASSES = ('timeout', 'refused', 'mismatch')
+# Bound on exported substeps per stage; the vocabulary is separate.
+MAX_SUBSTEPS = 8
 PROTOCOL = ('readyReceived', 'readyReplySent', 'beforeObserveReceived', 'denialSent', 'protocolFailed')
 STAGES = ('acquisition', 'toolchain', 'static-prepare', 'ownership', 'boot', 'bootstatus', 'runner-observation')
 OUTCOMES = ('not-launched', 'early-exit', 'expected-test-failure', 'unexpected-zero', 'unrelated-failure', 'forced-stop', 'runner-start-timeout', 'post-denial-timeout', 'protocol-failure')
@@ -120,7 +124,22 @@ def closed_receipt(value):
         for stage in stages[:len(STAGES)]:
             if (isinstance(stage, dict) and stage.get('name') in STAGES and type(stage.get('elapsedMs')) is int
                     and 0 <= stage['elapsedMs'] <= 301000 and stage.get('ok') in (True, False)):
-                result['stages'].append({'name': stage['name'], 'elapsedMs': stage['elapsedMs'], 'ok': stage['ok'] is True})
+                entry = {'name': stage['name'], 'elapsedMs': stage['elapsedMs'], 'ok': stage['ok'] is True}
+                # Substeps are closed too: a name from the fixed set, a bounded
+                # integer duration, a boolean, and — only on failure — a class
+                # from the fixed enum. Nothing a child said can reach here.
+                steps = stage.get('steps')
+                if isinstance(steps, list) and steps:
+                    entry['steps'] = []
+                    for sub in steps[:MAX_SUBSTEPS]:
+                        if (isinstance(sub, dict) and sub.get('name') in STEP_NAMES
+                                and type(sub.get('elapsedMs')) is int and 0 <= sub['elapsedMs'] <= 301000
+                                and sub.get('ok') in (True, False)):
+                            kept = {'name': sub['name'], 'elapsedMs': sub['elapsedMs'], 'ok': sub['ok'] is True}
+                            if sub['ok'] is False and sub.get('class') in STEP_CLASSES:
+                                kept['class'] = sub['class']
+                            entry['steps'].append(kept)
+                result['stages'].append(entry)
     return result
 
 
