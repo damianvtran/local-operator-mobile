@@ -2,6 +2,7 @@
  * bearer env, xctestrun, identity JSON, raw logs and xcresult stay private. */
 import { createHash } from "node:crypto";
 import {
+	existsSync,
 	lstatSync,
 	mkdirSync,
 	readFileSync,
@@ -277,8 +278,22 @@ export function finishCleanupEvidence(
 	deadline.cap(1);
 	const directory = join(root, "evidence");
 	mkdirSync(directory, { recursive: true, mode: 0o700 });
+	// The work export may never have run (pre-create failure). Finalize both
+	// receipts from one sanitized snapshot, retaining only its already-exported
+	// frame names; cleanup must never recapture or rewrite the PNGs.
+	const canonical = safeSummary(summary);
+	const seedFile = join(directory, "seed-replay.json");
+	const previous = existsSync(seedFile)
+		? JSON.parse(readFileSync(seedFile, "utf8"))
+		: null;
+	const frames = Array.isArray(previous?.frames)
+		? previous.frames.filter(
+				(name: unknown) => name === "before.png" || name === "after.png",
+			)
+		: [];
+	const seedBytes = safeBytes({ ...canonical, frames });
 	const bytes = safeBytes({
-		summary: safeSummary(summary),
+		summary: canonical,
 		cleanup:
 			cleanup && typeof cleanup === "object"
 				? {
@@ -292,6 +307,13 @@ export function finishCleanupEvidence(
 					}
 				: { cleanupComplete: false, inventoryAbsent: "UNOBSERVED" },
 	});
+	const seedTemporary = join(directory, ".seed-summary.tmp");
+	writeFileSync(seedTemporary, seedBytes, {
+		flag: "wx",
+		mode: 0o600,
+		flush: true,
+	});
+	renameSync(seedTemporary, seedFile);
 	const temporary = join(directory, ".cleanup-summary.tmp");
 	writeFileSync(temporary, bytes, { flag: "wx", mode: 0o600, flush: true });
 	renameSync(temporary, join(directory, "cleanup.json"));

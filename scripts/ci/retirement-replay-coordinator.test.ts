@@ -6,6 +6,7 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +22,7 @@ import {
 	ReplayRefused,
 	scalarValues,
 } from "./retirement-replay-core.ts";
+import { finishCleanupEvidence } from "./retirement-replay-evidence.ts";
 import {
 	cleanupBudget,
 	FirstFailure,
@@ -300,6 +302,48 @@ function fixture(
 	};
 }
 describe("real loopback coordinator at injected native/runner boundaries", () => {
+	it("finalizes matching summaries without rewriting captured frames or losing cleanup failure", async () => {
+		const f = fixture();
+		const result = await f.start();
+		const directory = join(f.directory, "evidence");
+		const frames = ["before.png", "after.png"].map((name) => ({
+			name,
+			bytes: readFileSync(join(directory, name)),
+			stat: statSync(join(directory, name)),
+		}));
+		const work = JSON.parse(
+			readFileSync(join(directory, "seed-replay.json"), "utf8"),
+		);
+		result.cause = "cleanup";
+		result.acceptanceComplete = false;
+		finishCleanupEvidence(
+			f.directory,
+			result,
+			{ cleanupComplete: false, inventoryAbsent: false },
+			new Deadline(10000),
+		);
+		const seed = JSON.parse(
+			readFileSync(join(directory, "seed-replay.json"), "utf8"),
+		);
+		const cleanup = JSON.parse(
+			readFileSync(join(directory, "cleanup.json"), "utf8"),
+		);
+		const { frames: names, ...summary } = seed;
+		expect(summary).toEqual(cleanup.summary);
+		expect(seed.cause).toBe("cleanup");
+		expect(seed.captures).toEqual(work.captures);
+		expect(names).toEqual(work.frames);
+		expect(cleanup.cleanup).toEqual({
+			cleanupComplete: false,
+			inventoryAbsent: false,
+		});
+		for (const frame of frames) {
+			const path = join(directory, frame.name);
+			expect(readFileSync(path)).toEqual(frame.bytes);
+			expect(statSync(path).ino).toBe(frame.stat.ino);
+			expect(statSync(path).mtimeMs).toBe(frame.stat.mtimeMs);
+		}
+	});
 	it("bootstraps, refreshes metadata, receives ready during launch, then opens once and records distinct query/tap samples", async () => {
 		const f = fixture();
 		const result = await f.start();

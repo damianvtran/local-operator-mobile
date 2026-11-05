@@ -23,8 +23,18 @@ const CAUSES = new Set(REPLAY_POLICY.failureCauses);
 export const REPLAY_BOOT_BUDGET_MS = 300000;
 
 /** Coarse, allowlisted phase names: the receipt names WHERE a run stopped
- * without exporting any command line, path, udid or token. */
+ * without exporting any command line, path, udid or token.
+ *
+ * Replay 41963944846 failed before create with command-timeout, but its empty
+ * receipt could not distinguish source verification, either archive extraction
+ * or simulator inventory. Name those four native sites too: diagnostics only,
+ * with their existing commands, guards and timeouts unchanged.
+ */
 export const REPLAY_PHASES = [
+	"source-check",
+	"original-extract",
+	"runner-extract",
+	"simulator-inventory",
 	"create",
 	"boot",
 	"bootstatus",

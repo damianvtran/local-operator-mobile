@@ -680,7 +680,9 @@ export async function runSeedReplay(options: ReplayOptions) {
 	let context: SampleContext | undefined;
 	let result: Awaited<ReturnType<typeof executeSeed>> | undefined;
 	try {
-		const actualSource = await run("git", ["rev-parse", "HEAD"]);
+		const actualSource = await phases.step("source-check", () =>
+			run("git", ["rev-parse", "HEAD"]),
+		);
 		if (actualSource !== options.runnerSource)
 			throw new ReplayRefused("runner-source");
 		const original = await originalArchive(
@@ -691,7 +693,9 @@ export async function runSeedReplay(options: ReplayOptions) {
 		writeFileSync(appTar, original.tar, { flag: "wx" });
 		const appRoot = join(root, "original");
 		mkdirSync(appRoot);
-		await run("tar", ["-xzpf", appTar, "-C", appRoot], deadline.cap(30000));
+		await phases.step("original-extract", () =>
+			run("tar", ["-xzpf", appTar, "-C", appRoot], deadline.cap(30000)),
+		);
 		verifyModes(
 			appRoot,
 			gunzipSync(original.tar, { maxOutputLength: 1024 ** 3 + 32 * 1024 ** 2 }),
@@ -736,7 +740,9 @@ export async function runSeedReplay(options: ReplayOptions) {
 		mkdirSync(runnerRoot);
 		const tarFile = join(root, "runner.tar.gz");
 		writeFileSync(tarFile, runnerTar, { flag: "wx" });
-		await run("tar", ["-xzpf", tarFile, "-C", runnerRoot]);
+		await phases.step("runner-extract", () =>
+			run("tar", ["-xzpf", tarFile, "-C", runnerRoot]),
+		);
 		verifyModes(runnerRoot, runnerBytes);
 		const manifest = JSON.parse(
 			readFileSync(join(runnerRoot, "runner-manifest.json"), "utf8"),
@@ -750,7 +756,9 @@ export async function runSeedReplay(options: ReplayOptions) {
 		)
 			throw new ReplayRefused("runner-products");
 		const inventory = JSON.parse(
-			await run("xcrun", ["simctl", "list", "devices", "available", "--json"]),
+			await phases.step("simulator-inventory", () =>
+				run("xcrun", ["simctl", "list", "devices", "available", "--json"]),
+			),
 		);
 		const template = Object.entries(
 			inventory.devices as Record<
