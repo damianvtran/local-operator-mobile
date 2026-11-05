@@ -95,7 +95,9 @@ import { runS15FlowProof } from "./s15-flow.ts";
 import {
 	type CanvasTokens,
 	canvasComparable,
+	canvasExpectation,
 	canvasTokens,
+	paintedCanvases,
 } from "./theme-tokens.ts";
 
 /**
@@ -1209,6 +1211,8 @@ interface ThemeCheckReport {
 	canvasUncompared: number;
 	/** Why the canvas half did not cover every frame, or `null` when it did. */
 	canvasReason: string | null;
+	/** Where the expected canvases came from, as a sentence for the report. */
+	canvasSource: string;
 }
 
 /** Compare each frame's claimed theme against the token canvas and its twin. */
@@ -1219,6 +1223,24 @@ function verifyThemes(
 	const problems = [];
 	let canvasCompared = 0;
 	let canvasUncompared = 0;
+	/* The expectation is the palette the app PAINTS (`paintedCanvases` explains
+	 * why that is the palette and not the kit's token file, QA round 1 Q164-1),
+	 * with the token file as the fallback for a mode the catalogue does not
+	 * carry. Resolved once per mode, so every frame of that mode is measured
+	 * against the same number and the report can name which file it came from. */
+	const painted = paintedCanvases();
+	const expectation = {
+		dark: canvasExpectation("dark", tokens.perTheme, painted),
+		light: canvasExpectation("light", tokens.perTheme, painted),
+	};
+	const sources = [
+		...new Set([expectation.dark.source, expectation.light.source]),
+	];
+	const canvasSource =
+		`the expected canvas is the shipped palette's own value (${sources.join(", ")})` +
+		(sources.includes("tokens")
+			? ` — design/tokens/tokens.json supplied a mode the catalogue did not`
+			: "");
 	/** The themes the tokens left without a canvas, so the report can name them. */
 	const themesWithoutCanvas = new Set<string>();
 	const byStem = new Map();
@@ -1232,14 +1254,19 @@ function verifyThemes(
 		for (const theme of ["dark", "light"]) {
 			const record = bucket[theme];
 			if (!record) continue;
-			const expected = tokens.perTheme?.[theme]?.canvas ?? null;
+			const expected = expectation[theme as "dark" | "light"]?.canvas ?? null;
 			// Counted, not inferred later: `canvasMatchesToken` is `null` both when the
 			// comparison ran and agreed and when it never ran at all, and the summary must
 			// not read the second as the first. The test is `canvasComparable` — the SAME one
 			// the verdict below uses, never a second test of its own: an empty-string token
 			// counted as compared here while the verdict skipped it is how the all-clear got
 			// printed over zero comparisons.
-			if (!canvasComparable(expected)) {
+			/* THE TOKEN HALF'S GUARD IS UNCHANGED: a run with no readable token file
+			 * still records the canvas as UNCOMPARED and still says so loudly, because
+			 * that is this harness's documented contract for `--tokens`. What changed
+			 * (Q164-1) is the VALUE the comparison uses when it does run: the palette
+			 * the app paints, not the kit's token file — see `canvasExpectation`. */
+			if (tokens.reason !== null || !canvasComparable(expected)) {
 				canvasUncompared += 1;
 				themesWithoutCanvas.add(theme);
 			} else {
@@ -2472,7 +2499,7 @@ export async function runCapture(options: CaptureOptions) {
 		for (const problem of themeProblems) console.log(`  - ${problem}`);
 	} else if (themeReport.canvasReason === null) {
 		console.log(
-			"theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical",
+			`theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical (${themeReport.canvasSource})`,
 		);
 	}
 	/*

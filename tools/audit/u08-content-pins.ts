@@ -469,7 +469,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * both catalogues are retained; the Android-only adapter path does not
 	 * affect the iOS theme walk. This is the combined source admission hash,
 	 * never either side's stale hash or a claim of rendered equivalence. */
-	src: "dc102f15d226ff326054b663f59daafb70928b739bb3dba251c00e230cc973df",
+	src: "64a65b40353974f9c8635f20e75a04bdaec7b8e61e08856e1e274e82d16a5586",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

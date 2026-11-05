@@ -22,6 +22,13 @@
  *     focus-ring-photo-inner / -outer       <- fixed (they sit on a photograph,
  *                                              which no palette controls)
  *     scrim                                 <- the phone's fixed literal (see FIXED)
+ *
+ * Two roles are not copied verbatim either, and the policy is named rather than
+ * implicit: the semantic washes and the two row states may take a BOUNDED,
+ * hue-preserving L* move when a pair the PHONE asserts on them fails
+ * (`ADAPTED_GROUNDS` documents the bounds, the prohibited roles and why).
+ * Everything else the desktop authors is copied byte for byte — a palette that
+ * fails on an authored role is still withheld.
  *   Desktop-only roles are dropped: mediaSurface, chartBarHover, tokenCommand
  *   (and overlayShadow once its colour is taken, and the desktop scrim).
  *
@@ -39,6 +46,7 @@ import {
 	mix,
 	ratio,
 } from "../tokens/colour-math.mjs";
+import { EXEMPT_INK, textPairs } from "../tokens/palette-rules.mjs";
 
 /** The phone-only constants: the photographic focus ring is drawn over an
  *  image, so it is the same two-tone in every theme (tokens.json § focus). */
@@ -99,6 +107,96 @@ const stepUntil = (hex, dir, test) => {
 	return null;
 };
 
+/** Step `hex` along L* (holding its hue) in direction `dir` (+1 lighter, -1
+ *  darker) until `test` holds, inside a bound on how far it may travel. Returns
+ *  the first passing value, or null when the walk runs out of sRGB or out of
+ *  budget. 0.25 L* steps, the same step `stepUntil` uses. */
+const stepUntilWithin = (hex, dir, test, maxStep) => {
+	if (test(hex)) return hex;
+	const start = lstar(hex);
+	for (let d = 0.25; d <= maxStep + 1e-9; d += 0.25) {
+		const L = start + dir * d;
+		if (L < 0 || L > 100) break;
+		const next = atLightness(hex, L);
+		if (next && test(next)) return next;
+	}
+	return null;
+};
+
+/**
+ * The phone-only GROUND ADAPTATION policy — a bounded, hue-preserving minimal L*
+ * move on the tinted and state grounds, so a palette the desktop authors keeps
+ * its identity instead of being withheld.
+ *
+ * WHY THIS EXISTS (design round 1, D164-1). The phone asserts pairs the desktop's
+ * own contract never makes: an `ink-dim` caption on a semantic wash, and the
+ * accent ramp on the selected row. Four desktop palettes — Catppuccin Mocha,
+ * Tokyo Night Storm, Duskfox and Outrun — fail ONLY on those pairs (3.94, 4.45,
+ * 4.43 and 4.35 against a 4.5 floor). Withholding was defensible while the rule
+ * was "the floors are the curation", but the operator asked for ALL the themes,
+ * and the failing role is a ground whose whole job is to carry an ink: a tint,
+ * not a brand decision like the canvas or the message bubble.
+ *
+ * WHAT IT MAY NEVER TOUCH: `canvas`, `surface`, `elevated`, `sunken`,
+ * `message-surface` and every ink and accent role. Those are the palette's
+ * identity and the desktop's authored values; a palette that fails on one of
+ * THEM is still withheld. Only the washes and the two row states are adapted,
+ * and only when one of the phone's own asserted pairs actually fails — the walk
+ * is a no-op (byte-identical value) for every palette that already clears, which
+ * is why the other 55 palettes' exports do not move.
+ *
+ * BOUNDED: at most 6 L*, both directions walked and the smaller move kept (a wash
+ * may sit above or below its ground, exactly as `diffTint` explains). A palette
+ * whose pair cannot be cleared inside the bound keeps its authored value and is
+ * still withheld — the fail-closed path survives the policy.
+ *
+ * THE INKS ARE NOT LISTED HERE: they are read from the contract's own
+ * `textPairs(mode)`, so this policy cannot drift from the pairs the gate
+ * asserts.
+ */
+const GROUND_ADAPTATION_FLOOR = 4.55;
+const GROUND_ADAPTATION_MAX_LSTAR = 6;
+
+/** The grounds this policy may move: the semantic washes and the two row
+ *  states. Named as data so the licence cannot quietly grow to the ladder. */
+export const ADAPTED_GROUNDS = [
+	"accent-wash",
+	"success-wash",
+	"warning-wash",
+	"danger-wash",
+	"info-wash",
+	"row-hover",
+	"row-selected",
+];
+
+/** Adapt one ground in place, or record why it could not be. */
+const adaptGround = (role, colors, mode, unsolved) => {
+	const inks = textPairs(mode)
+		.filter(([, ground]) => ground === role)
+		.map(([fg]) => fg)
+		.filter((fg) => !EXEMPT_INK.has(fg));
+	if (inks.length === 0) return;
+	const start = colors[role];
+	/* The target is 4.55 rather than the 4.50 floor: the gate's comparisons are
+	 * floating point, and a candidate measured at 4.5001 is one the next rounding
+	 * loses. */
+	const ok = (candidate) =>
+		inks.every((ink) => ratio(colors[ink], candidate) >= GROUND_ADAPTATION_FLOOR);
+	if (ok(start)) return;
+	const up = stepUntilWithin(start, 1, ok, GROUND_ADAPTATION_MAX_LSTAR);
+	const down = stepUntilWithin(start, -1, ok, GROUND_ADAPTATION_MAX_LSTAR);
+	const from = lstar(start);
+	const moveOf = (value) => Math.abs(lstar(value) - from);
+	const best =
+		up && down ? (moveOf(up) <= moveOf(down) ? up : down) : (up ?? down);
+	if (best !== null && best !== undefined) colors[role] = best;
+	else
+		unsolved.push({
+			role,
+			why: `${inks.join("/")} cannot clear ${GROUND_ADAPTATION_FLOOR}:1 on it within ${GROUND_ADAPTATION_MAX_LSTAR} L* of a hue-preserving move`,
+		});
+};
+
 /** A diff row's tint: the semantic wash, moved into the band on `sunken` AND
  *  kept readable under the inks drawn on it (`inks`, each at 4.5:1). Both
  *  directions along L* are walked and the smaller move wins, because a wash can
@@ -149,6 +247,9 @@ export const derivePalette = (desktop) => {
 	c["diff-remove"] = c.danger;
 	c["diff-hunk"] = c.info;
 	c["diff-context"] = c["ink-dim"];
+	/* The phone-only ground adaptation runs BEFORE the diff tints, so a tint
+	 * solved from a moved wash is the colour the frame will paint. */
+	for (const role of ADAPTED_GROUNDS) adaptGround(role, c, mode, unsolved);
 	/* The inks each tint carries (contrast-contract's diff pairs): its own
 	 * diff ink, and the context ink on the add/remove rows. */
 	for (const [role, wash, inks] of [

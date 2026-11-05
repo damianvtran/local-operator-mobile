@@ -27,20 +27,25 @@ import { checkPalette, EXEMPT_INK, FLOOR } from "../tokens/palette-rules.mjs";
 import { derivePalette } from "./derive.mjs";
 
 /**
- * Palette id -> why it is withheld. Measured 2026-11-04 against the export at
- * the lock's ref. All four fail on roles the DESKTOP authors (not on anything
- * this repository derives) and on pairs only the phone's contract asserts — the
- * desktop's own contract does not claim `inkDim` on a wash, or `accent` text on
- * `rowSelected`, so these are not desktop defects so much as the phone holding
- * more pairs. The fix belongs upstream (or in a phone-side pair decision), so
- * they ship the day their values clear and this list is emptied.
+ * Palette id -> why it is withheld. EMPTY as of 2026-11-05: all 59 palettes the
+ * desktop ships now pass every per-palette rule on the phone.
+ *
+ * It was four (catppuccinMocha, tokyoNightStorm, duskfox, outrun), each failing
+ * ONLY on a pair the phone asserts and the desktop does not — `ink-dim` on a
+ * semantic wash, and the accent ramp on the selected row. Those failures were
+ * 3.94-4.45 against a 4.5 floor, on a GROUND whose job is to carry an ink, and
+ * `derive.mjs`'s `ADAPTED_GROUNDS` policy clears them with a bounded (<6 L*),
+ * hue-preserving move that leaves the canvas, the ladder, the bubble and every
+ * ink byte-identical (design round 1, D164-1). The four survivors of that change
+ * are the four palettes, not a subset of them: the table above records what the
+ * values were, so this entry can be re-derived rather than remembered.
+ *
+ * The pin still does its two jobs: a palette that starts failing turns the
+ * contract red until someone decides, and a palette that starts passing turns it
+ * red until it is removed from this list. With the list empty, a regression
+ * cannot hide behind an expected-withheld entry; the gate simply names it.
  */
-export const EXPECTED_WITHHELD = {
-	catppuccinMocha: "ink-dim on success-wash measures 3.94 (< 4.5); the phone writes captions on its washes",
-	tokyoNightStorm: "ink-dim on success-wash measures 4.45 (< 4.5)",
-	duskfox: "accent on row-selected measures 4.43 (< 4.5): a link in the selected row",
-	outrun: "accent-hover on row-selected measures 4.35 (< 4.5)",
-};
+export const EXPECTED_WITHHELD = {};
 
 const SOURCE = new URL("./desktop-palettes.json", import.meta.url);
 

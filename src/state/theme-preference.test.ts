@@ -54,11 +54,12 @@ describe("parseSelection", () => {
 				}),
 			),
 		).toEqual({ ...DEFAULT_SELECTION, mode: "light" });
-		// A palette the contrast gate withholds is not shipped, so it reads as
-		// the default rather than as a theme the app cannot paint.
+		/* Every desktop palette ships now (D164-1 restored the four the contrast
+		 * gate used to withhold), so the only ids that fail to resolve are an
+		 * unknown one and a theme from the wrong side. */
 		expect(
 			parseSelection(
-				JSON.stringify({ mode: "dark", darkTheme: "catppuccinMocha" }),
+				JSON.stringify({ mode: "dark", darkTheme: "no-such-theme" }),
 			).darkTheme,
 		).toBe("localOperatorDark");
 	});

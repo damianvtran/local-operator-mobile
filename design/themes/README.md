@@ -27,6 +27,20 @@ node design/tokens/contrast-contract.mjs   # read the fleet section: a palette t
                                            # EXPECTED_WITHHELD is updated with the reason
 ```
 
+## The catalogue and `design/tokens/tokens.json` are different files
+
+`tokens.json` is the design KIT's brand layer, pinned to a kit slice and released on
+the kit's cadence; `desktop-palettes.json` is the product's palette catalogue, pinned to a
+desktop commit. They are allowed to disagree, and they do: the desktop re-lit its dark
+ladder on 2026-11-03 (canvas L* 12.3 -> 9.9) and the phone adopted the palette, so the
+canvas a frame paints is `#1d1b17` while the kit's token file still says `#22201c`.
+
+Anything that compares a rendered frame against "the theme's canvas" must therefore read
+the CATALOGUE, not the token file — `tools/visual/theme-tokens.ts`'s `paintedCanvases`
+does exactly that, and `canvasExpectation` keeps the token file as the fallback for a
+mode the catalogue does not carry. Measured the hard way: the web capture gate once
+failed 636 dark frames for painting the right colour (QA round 1, Q164-1).
+
 This is an interim home. Once the design kit's `app-family.json` carries the
 palettes (a data-only kit release), this directory is deleted in favour of the kit
 pin in `design-kit.lock.json`.

@@ -34,6 +34,60 @@ describe("the theme fleet", () => {
 		expect(withheld.sort()).toEqual(Object.keys(EXPECTED_WITHHELD).sort());
 	});
 
+	it("admits the four palettes the ground adaptation restored, on the full rule set (D164-1)", () => {
+		/* The regression the design round asked for: these four were withheld for a
+		 * pair the phone asserts on a ground whose job is to carry an ink, and the
+		 * bounded hue-preserving move clears it. Asserted by NAME and by the
+		 * assertion count, so a later palette edit that quietly re-withholds one of
+		 * them fails here rather than shrinking the catalogue. */
+		for (const id of [
+			"catppuccinMocha",
+			"tokyoNightStorm",
+			"duskfox",
+			"outrun",
+		]) {
+			const entry = report.find((e) => e.id === id);
+			expect(entry, id).toBeDefined();
+			expect(entry?.failures, id).toEqual([]);
+			expect(entry?.checks, id).toBe(585);
+		}
+	});
+
+	it("leaves a palette that already clears byte-identical (the adaptation is a no-op there)", () => {
+		/* The policy must not move a value it has no reason to move: 55 palettes
+		 * shipped before it existed, and every role they copy from the desktop has to
+		 * stay exactly as authored. `dracula` is the control — it never failed, so its
+		 * derived roles must equal the export's own values for the copied roles. */
+		type DesktopPalette = {
+			id: string;
+			name: string;
+			mode: "dark" | "light";
+			values: Record<string, string>;
+		};
+		const all = desktopPalettes() as DesktopPalette[];
+		const [control] = all;
+		const desktop = all.find((entry) => entry.id === "dracula");
+		expect(desktop).toBeDefined();
+		expect(control).toBeDefined();
+		if (!desktop) return;
+		const derived = derivePalette(desktop);
+		const kebab = (name: string) =>
+			name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+		const dropped = [
+			"mediaSurface",
+			"chartBarHover",
+			"tokenCommand",
+			"overlayShadow",
+			"scrim",
+		];
+		for (const [role, value] of Object.entries(desktop.values)) {
+			if (dropped.includes(role)) continue;
+			expect(derived.colors[kebab(role)], `${desktop.id}.${role}`).toBe(
+				String(value).toLowerCase(),
+			);
+		}
+	});
+
 	it("detects a palette that breaks a floor (negative control)", () => {
 		const [brand] = desktopPalettes() as Array<{
 			id: string;

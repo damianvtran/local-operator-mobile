@@ -180,8 +180,8 @@ describe("the shipped theme catalogue", () => {
 	/* `THEMES` is generated from the desktop palettes and admitted by the
 	 * contrast contract's fleet run, so contrast is NOT re-derived here. What is
 	 * pinned is the catalogue's shape on the way into the app: every role
-	 * present, the brand pair present and equal to its own derivation, and a
-	 * withheld palette absent. */
+	 * present, the brand pair present and equal to its own derivation, and an id
+	 * the build does not carry falling back to its slot's default. */
 	it("defines all of this app's roles for every theme", () => {
 		for (const entry of THEMES)
 			for (const role of COLOR_ROLES)
@@ -198,9 +198,25 @@ describe("the shipped theme catalogue", () => {
 		expect(THEMES[0]?.id).toBe("localOperatorDark");
 	});
 
-	it("falls back to the slot's default for an unknown, withheld or wrong-mode id", () => {
+	it("ships every palette the desktop offers, so the catalogue carries all 59", () => {
+		/* The four contrast-withheld palettes were restored by the bounded ground
+		 * adaptation (D164-1); the operator asked for ALL the themes, so this count
+		 * is the acceptance criterion rather than a coincidence. */
+		expect(THEMES).toHaveLength(59);
+		expect(THEMES.filter((entry) => entry.mode === "dark")).toHaveLength(41);
+		expect(THEMES.filter((entry) => entry.mode === "light")).toHaveLength(18);
+		expect(THEMES.map((entry) => entry.id)).toEqual(
+			expect.arrayContaining([
+				"catppuccinMocha",
+				"tokyoNightStorm",
+				"duskfox",
+				"outrun",
+			]),
+		);
+	});
+
+	it("falls back to the slot's default for an unknown or wrong-mode id", () => {
 		expect(themeEntry("no-such-theme", "dark").id).toBe("localOperatorDark");
-		expect(themeEntry("catppuccinMocha", "dark").id).toBe("localOperatorDark");
 		expect(themeEntry("dracula", "light").id).toBe("localOperatorLight");
 		expect(isThemeId("dracula", "dark")).toBe(true);
 		expect(isThemeId("dracula", "light")).toBe(false);
