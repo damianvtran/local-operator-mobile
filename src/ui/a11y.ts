@@ -344,6 +344,7 @@ export const CONTROL = {
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerContext: "composer-context",
+	composerOpenQueue: "composer-open-queue",
 	composerContextModel: "composer-context-model",
 	composerContextEffort: "composer-context-effort",
 	composerContextSheet: "composer-context-sheet",

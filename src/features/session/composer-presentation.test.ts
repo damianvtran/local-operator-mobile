@@ -71,6 +71,12 @@ describe("build389 uniform dock", () => {
 		expect(expanded).toEqual({ top: 12, bottom: 8 });
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
+		/* The record's totals are its iOS values. The web/Android floor is 48, and
+		 *  the SAME rule paints 60/120 there — which is exactly what the web frames
+		 *  measure, so the frame table and this arithmetic agree instead of one
+		 *  being declared wrong. */
+		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(
 			expanded.top +
 				COMPOSER_FIELD_BOX +

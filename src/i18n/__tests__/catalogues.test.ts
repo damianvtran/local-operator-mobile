@@ -16,6 +16,8 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
+import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
 import common from "@/i18n/catalogues/en/mobile.common.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
@@ -39,8 +41,6 @@ import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
-import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
-import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
@@ -157,7 +157,7 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 15,
+		expected: 16,
 	},
 	{
 		name: "relay.chrome",
@@ -207,7 +207,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(272);
+		expect(total).toBe(273);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -58,5 +58,9 @@
 	"mobile.chrome.home.reconnecting": {
 		"role": "status",
 		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.composer.open_queue": {
+		"role": "button",
+		"note": "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control."
 	}
 }

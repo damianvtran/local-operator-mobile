@@ -49,6 +49,7 @@ export type CatalogueKey =
 	| "mobile.agent_avatar.label"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.inbox_count"
@@ -324,6 +325,7 @@ export type NoParamKey =
 	| "mobile.agent_avatar.label"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
@@ -564,6 +566,7 @@ export type MessageParams = {
 	"mobile.agent_avatar.label": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
 	"mobile.chrome.composer.more": NoParams;
+	"mobile.chrome.composer.open_queue": NoParams;
 	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.destination.inbox": NoParams;
 	"mobile.chrome.destination.inbox_count": { count: number };
@@ -855,6 +858,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.agent_avatar.label": "Agent picture",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
 	"mobile.chrome.composer.more": "More context",
+	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.destination.inbox": "Inbox",
 	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
@@ -1131,6 +1135,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
 	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
@@ -1421,6 +1426,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Imagen del agente",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
 		"mobile.chrome.composer.more": "Más contexto",
+		"mobile.chrome.composer.open_queue": "Abrir la cola",
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.destination.inbox": "Bandeja",
 		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
@@ -1695,6 +1701,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Photo de l’agent",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
 		"mobile.chrome.composer.more": "Plus de contexte",
+		"mobile.chrome.composer.open_queue": "Ouvrir la file",
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.destination.inbox": "Boîte",
 		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
@@ -1969,6 +1976,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
+		"mobile.chrome.composer.open_queue": "कतार खोलें",
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
 		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
@@ -2243,6 +2251,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Изображение агента",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
 		"mobile.chrome.composer.more": "Дополнительный контекст",
+		"mobile.chrome.composer.open_queue": "Открыть очередь",
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.destination.inbox": "Входящие",
 		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
@@ -2517,6 +2526,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
 		"mobile.chrome.composer.more": "مزید سیاق",
+		"mobile.chrome.composer.open_queue": "قطار کھولیں",
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.destination.inbox": "ان باکس",
 		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
@@ -2791,6 +2801,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
+		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.destination.inbox": "Hộp thư",
 		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
@@ -3065,6 +3076,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.agent_avatar.label": "智能体头像",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
 		"mobile.chrome.composer.more": "更多上下文",
+		"mobile.chrome.composer.open_queue": "打开队列",
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.destination.inbox": "收件箱",
 		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",

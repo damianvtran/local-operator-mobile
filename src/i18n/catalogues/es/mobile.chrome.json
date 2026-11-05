@@ -13,5 +13,6 @@
 	"mobile.chrome.home.connect": "Conectar un ordenador",
 	"mobile.chrome.home.sign_in": "Inicia sesión para reconectar",
 	"mobile.chrome.home.saved_draft": "Tu borrador está guardado en este teléfono y no se ha enviado.",
-	"mobile.chrome.home.reconnecting": "Reconectando con {host}…"
+	"mobile.chrome.home.reconnecting": "Reconectando con {host}…",
+	"mobile.chrome.composer.open_queue": "Abrir la cola"
 }

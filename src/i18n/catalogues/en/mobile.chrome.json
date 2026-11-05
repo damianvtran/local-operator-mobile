@@ -13,5 +13,6 @@
 	"mobile.chrome.home.connect": "Connect a computer",
 	"mobile.chrome.home.sign_in": "Sign in to reconnect",
 	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
-	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…"
+	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
+	"mobile.chrome.composer.open_queue": "Open the queue"
 }

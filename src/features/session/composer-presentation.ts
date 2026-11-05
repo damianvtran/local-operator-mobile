@@ -1,23 +1,29 @@
 import { composerOuterGap } from "@/ui/device-corner";
 
-/** The field's own painted box at 100 % text: the 44 pt touch floor. */
+/** The field's painted box on iOS at 100 % text: the 44 pt touch floor. The
+ *  web and Android floor is 48, so every total below is a FUNCTION of the
+ *  platform floor — the record's 56/112 are its iOS values, and the same rule
+ *  paints 60/120 where the floor is larger. Hardcoding 44 here is what made a
+ *  web frame look 4 pt "wrong" when it was the record's rule on another floor. */
 export const COMPOSER_FIELD_BOX = 44;
 /** The record's gap between the expanded field and its controls row. */
 export const COMPOSER_CONTROLS_GAP = 4;
+/** The record's two painted totals, exported so the component animates TO them. */
+export const COMPOSER_BASE_HEIGHT = 56;
+export const COMPOSER_EXPANDED_HEIGHT = 112;
 /** Where the record's heights come from, so a test can assert the arithmetic
  *  rather than a class name: rest 6 + 44 + 6 = 56; expanded 12 + 44 + 4 + 44 +
  *  8 = 112. A change to either padding has to keep these sums true. */
 export const composerShellPadding = (expanded: boolean) =>
 	expanded ? { top: 12, bottom: 8 } : { top: 6, bottom: 6 };
-export const composerPaintedHeight = (expanded: boolean) => {
+export const composerPaintedHeight = (
+	expanded: boolean,
+	floor: number = COMPOSER_FIELD_BOX,
+) => {
 	const pad = composerShellPadding(expanded);
 	return expanded
-		? pad.top +
-				COMPOSER_FIELD_BOX +
-				COMPOSER_CONTROLS_GAP +
-				COMPOSER_FIELD_BOX +
-				pad.bottom
-		: pad.top + COMPOSER_FIELD_BOX + pad.bottom;
+		? pad.top + floor + COMPOSER_CONTROLS_GAP + floor + pad.bottom
+		: pad.top + floor + pad.bottom;
 };
 /** Build389 presentation only: never derives auth or modifies draft content. */
 export type ComposerPresentationFacts = {

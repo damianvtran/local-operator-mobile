@@ -52,6 +52,9 @@ import {
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
+	COMPOSER_BASE_HEIGHT,
+	COMPOSER_CONTROLS_GAP,
+	COMPOSER_EXPANDED_HEIGHT,
 	COMPOSER_FIELD_BOX,
 	composerPresentation,
 	keyboardOverlap,
@@ -723,14 +726,22 @@ export const Composer = ({
 			[0, 1],
 			[compactSingle ? 24 : idleHeight / 2, 24],
 		),
+		minHeight: interpolate(
+			progress.value,
+			[0, 1],
+			[
+				COMPOSER_BASE_HEIGHT,
+				compactSingle ? COMPOSER_BASE_HEIGHT : COMPOSER_EXPANDED_HEIGHT,
+			],
+		),
 	}));
-	/* SETTLED layout, from the settled state rather than a shared value: an
-	 * animated padding/height was a second source of truth for the box and left
-	 * the resting height 4 pt over the record's 56 (measured 2026-11-05). `height`
-	 * rather than `minHeight` so the painted box IS the contract, not whatever the
-	 * field's platform box happens to be (a web textarea measured 48). */
+	/* The box ANIMATES with the same progress value as the shape (record §3: one
+	 * monotonic 180–220 ms morph, no one-frame jump), and it is a MINIMUM rather
+	 * than a fixed height: the field and the controls are in flow now, so a three-
+	 * or six-line draft grows the dock past the record's floor instead of
+	 * overflowing a pinned box, and the field scrolls itself at the cap. Padding
+	 * is settled per state — it is part of the record's sums, not a second clock. */
 	const shellBox = {
-		height: compactSingle ? idleHeight : presentation.expanded ? 112 : 56,
 		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
 		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
 	};
@@ -1045,6 +1056,26 @@ export const Composer = ({
 				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
 				testID={CONTROL.composerContext}
 			/>
+			{/* VISIBLE, not just announced (round 4 reviewer MAJOR): a queue the
+			 *  reader cannot see is a queue they cannot trust. The chip opens More,
+			 *  which lists the count and — where the surface can open the queue —
+			 *  the way in; it is never a disabled control. */}
+			{queuedCount > 0 ? (
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={t("mobile.chrome.composer.queued", {
+						count: queuedCount,
+					})}
+					onPress={() => setContextOpen(true)}
+					style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+					className="items-center justify-center px-1"
+					testID={SURFACE.queuedMessageChip}
+				>
+					<Text className="text-meta text-ink-dim" numberOfLines={1}>
+						{t("mobile.chrome.composer.queued", { count: queuedCount })}
+					</Text>
+				</Pressable>
+			) : null}
 			{keyboardVisible || focused ? (
 				<IconButton
 					accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
@@ -1227,12 +1258,57 @@ export const Composer = ({
 			</View>
 		) : null;
 
+	/* One attach sheet instance, rendered once by the shell: the dock's two rows
+	 *  are layout, so the sheet must not be mounted twice. */
+	const attachSheet = (
+		<Sheet
+			visible={attachSheetOpen}
+			onClose={() => setAttachSheetOpen(false)}
+			title="Attach"
+			testID={SURFACE.attachSheet}
+		>
+			<View className="py-1">
+				{attachActions(Platform.OS === "web" ? "web" : "native").map(
+					(action) => (
+						<Pressable
+							key={action.source}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={action.label}
+							onPress={() => {
+								/* Closed first: the picker opens over a dismissed sheet, never
+								 *  under one — a system picker presented from behind a modal is
+								 *  how a cancel lands back on a sheet nobody reopened. */
+								setAttachSheetOpen(false);
+								onAttach(action.source);
+							}}
+							testID={attachOptionId(action.source)}
+						>
+							<View className="min-h-11 flex-row items-center px-3">
+								<Text className="text-body-sm text-ink">{action.label}</Text>
+							</View>
+						</Pressable>
+					),
+				)}
+			</View>
+		</Sheet>
+	);
+
 	const main = (
 		<>
-			<View>
-				{dictationRow}
-				{/* ---- row 1: the field, a full-width row of its own ---- */}
-				<Animated.View className="min-w-0 shrink" style={fieldMotion}>
+			{/* TWO ROWS IN FLOW, never pinned over each other (round 4, U1/U2/U3).
+			 *  A collapsed dock is ONE row — attach · field · trailing — and an
+			 *  expanded dock is the field's row plus the controls row, as normal
+			 *  siblings. The overlay this replaces put an absolutely positioned
+			 *  controls layer across the whole band: it painted a 44 pt dead strip
+			 *  under the field, and it swallowed every tap on the field, so the
+			 *  reader could not even reach the keyboard. In flow, the field is the
+			 *  frontmost thing in its own row and a tap lands on it. */}
+			<View
+				className="flex-row items-end"
+				style={{ minHeight: COMPOSER_FIELD_BOX }}
+			>
+				{presentation.expanded ? null : attach}
+				<Animated.View className="min-w-0 flex-1" style={fieldMotion}>
 					<Textarea
 						label="Message"
 						hideLabel
@@ -1245,15 +1321,12 @@ export const Composer = ({
 								: composerCopy().placeholder
 						}
 						maxLines={compactSingle ? 1 : 6}
-						/* The field's own box is the dock's ruler: 44 pt at rest, so
-						 * 56 = 12 padding + 44 holds whatever the platform adds around
-						 * the text box (a web `<textarea>` measured 48 with its border).
-						 * Expanded keeps the budget's cap. */
-						maxHeightPx={
-							presentation.expanded
-								? (fieldMaxHeight ?? undefined)
-								: COMPOSER_FIELD_BOX
-						}
+						/* The field's own box is the dock's ruler: 44 pt in both rows,
+						 * so 56 = 6 + 44 + 6 and 112 = 12 + 44 + 4 + 44 + 8 hold
+						 * whatever the platform adds around the text box (a web
+						 * `<textarea>` measured 48 before `border-box`). Past the
+						 * budget the field scrolls itself and the dock stops growing. */
+						maxHeightPx={fieldMaxHeight ?? undefined}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height
 						 * must not grow with a wrapped placeholder, or the last transcript row is
 						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
@@ -1269,12 +1342,19 @@ export const Composer = ({
 						testID={CONTROL.composerInput}
 					/>
 				</Animated.View>
+				{presentation.expanded ? null : (
+					<View className="flex-row items-center">{mic ?? actionCluster}</View>
+				)}
+			</View>
+			{dictationRow}
+			{presentation.expanded ? (
 				<View
 					className={COMPOSER_CONTROLS_ROW}
-					style={{ position: "absolute", start: 0, end: 0, bottom: 0 }}
+					style={{ marginTop: COMPOSER_CONTROLS_GAP }}
 					testID={SURFACE.composerControls}
 				>
 					{attach}
+					{mic}
 					{compactSingle ? (
 						<IconButton
 							accessibilityLabel={
@@ -1289,15 +1369,7 @@ export const Composer = ({
 							testID={CONTROL.composerCompactContext}
 						/>
 					) : null}
-					{presentation.expanded ? (
-						mic
-					) : (
-						<View style={{ marginStart: "auto" }}>{mic ?? actionCluster}</View>
-					)}
-					{/* Fold inline only when the model/effort targets fit the remainder;
-					 * otherwise keep their separate meta row below. */}
-					{null}
-					{presentation.expanded ? actionCluster : null}
+					{actionCluster}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
 							accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
@@ -1312,49 +1384,11 @@ export const Composer = ({
 						/>
 					) : null}
 				</View>
-				{null}
-			</View>
+			) : null}
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
 			<View testID={SURFACE.composerReceipt} aria-hidden />
 			{slashQuery !== null ? slashSheet : null}
-
-			{/* The attach sheet: one entry point, and the sources each platform actually
-			    has — the photo picker, the document picker, the clipboard (web: file
-			    input and clipboard). It renders through the shared `Sheet` primitive,
-			    like the model and effort sheets, so it dismisses the same way (scrim,
-			    Close, Escape), and every row lands in the attachment strip above the
-			    field — one chip treatment, one removal, one send path. */}
-			<Sheet
-				visible={attachSheetOpen}
-				onClose={() => setAttachSheetOpen(false)}
-				title="attach"
-				testID={SURFACE.attachSheet}
-			>
-				<View className="py-1">
-					{attachActions(Platform.OS === "web" ? "web" : "native").map(
-						(action) => (
-							<Pressable
-								key={action.source}
-								accessibilityRole={ROLE.button}
-								accessibilityLabel={action.label}
-								onPress={() => {
-									/* Closed first: the picker opens over a dismissed sheet, never
-									 *  under one — a system picker presented from behind a modal is
-									 *  how a cancel lands back on a sheet nobody reopened. */
-									setAttachSheetOpen(false);
-									onAttach(action.source);
-								}}
-								testID={attachOptionId(action.source)}
-							>
-								<View className="min-h-11 flex-row items-center px-3">
-									<Text className="text-body-sm text-ink">{action.label}</Text>
-								</View>
-							</Pressable>
-						),
-					)}
-				</View>
-			</Sheet>
 		</>
 	);
 
@@ -1457,13 +1491,22 @@ export const Composer = ({
 					<Text className="text-body text-ink">{costLabel}</Text>
 				) : null}
 				{queuedCount > 0 ? (
-					<Button
-						variant="quiet"
-						label={t("mobile.chrome.composer.queued", { count: queuedCount })}
-						onPress={onOpenQueue ?? (() => undefined)}
-						disabled={!onOpenQueue}
-						testID={SURFACE.queuedMessageChip}
-					/>
+					<View className="gap-1">
+						<Text className="text-body text-ink">
+							{t("mobile.chrome.composer.queued", { count: queuedCount })}
+						</Text>
+						{onOpenQueue ? (
+							<Button
+								variant="quiet"
+								label={t("mobile.chrome.composer.open_queue")}
+								onPress={() => {
+									setContextOpen(false);
+									onOpenQueue();
+								}}
+								testID={CONTROL.composerOpenQueue}
+							/>
+						) : null}
+					</View>
 				) : null}
 			</Sheet>
 		</Animated.View>

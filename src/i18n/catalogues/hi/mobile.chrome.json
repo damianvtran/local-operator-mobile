@@ -13,5 +13,6 @@
 	"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
 	"mobile.chrome.home.sign_in": "फिर से कनेक्ट करने के लिए साइन इन करें",
 	"mobile.chrome.home.saved_draft": "आपका ड्राफ़्ट इस फ़ोन पर सुरक्षित है और भेजा नहीं गया है।",
-	"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…"
+	"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…",
+	"mobile.chrome.composer.open_queue": "कतार खोलें"
 }

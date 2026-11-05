@@ -13,5 +13,6 @@
 	"mobile.chrome.home.connect": "Подключить компьютер",
 	"mobile.chrome.home.sign_in": "Войдите для повторного подключения",
 	"mobile.chrome.home.saved_draft": "Черновик сохранён на этом телефоне и не отправлен.",
-	"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…"
+	"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…",
+	"mobile.chrome.composer.open_queue": "Открыть очередь"
 }

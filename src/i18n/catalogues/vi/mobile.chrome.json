@@ -13,5 +13,6 @@
 	"mobile.chrome.home.connect": "Kết nối máy tính",
 	"mobile.chrome.home.sign_in": "Đăng nhập để kết nối lại",
 	"mobile.chrome.home.saved_draft": "Bản nháp được lưu trên điện thoại này và chưa được gửi.",
-	"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…"
+	"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…",
+	"mobile.chrome.composer.open_queue": "Mở hàng đợi"
 }
