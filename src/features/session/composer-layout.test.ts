@@ -62,3 +62,42 @@ describe("sidebar chrome (relay session-list.chrome)", () => {
 		expect(PANE).not.toContain("<NavigationMark");
 	});
 });
+
+const SRC = COMPOSER;
+
+describe("round 5 — regressions that fail if the fix is reverted", () => {
+	it("renders the attach sheet (it existed as a value nobody mounted)", () => {
+		expect(SRC.match(/\{attachSheet\}/g) ?? []).toHaveLength(1);
+	});
+
+	it("keeps the attach title on the ratcheted literal rather than a new one", () => {
+		expect(SRC).toContain('title="attach"');
+		expect(SRC).not.toContain('title="Attach"');
+	});
+
+	it("left no clearance margin from the removed absolute layer", () => {
+		expect(SRC).not.toMatch(/marginStart:\s*interpolate/);
+		expect(SRC).not.toMatch(/marginEnd:\s*interpolate/);
+	});
+
+	it("derives the resting radius from the measured painted pill", () => {
+		expect(SRC).toMatch(/baseHeight \/ 2/);
+		expect(SRC).toMatch(/setPaintedBase\(height\)/);
+	});
+
+	it("animates to a MEASURED expanded target instead of a constant bound", () => {
+		expect(SRC).toMatch(/height: interpolate\(/);
+		expect(SRC).toMatch(/setPaintedExpanded\(target\)/);
+		// The negative control QA used: a fixed expanded height clips the field.
+		expect(SRC).not.toMatch(/height: compactSingle \? idleHeight/);
+	});
+
+	it("keeps the short-landscape strip, with the count, instead of collapsing it", () => {
+		expect(SRC).toMatch(/compactSingle \? compactReceipt : receipt/);
+		expect(SRC).not.toMatch(/height: 0, overflow: "hidden"/);
+	});
+
+	it("bounds the queue chip so large text cannot push a control off the card", () => {
+		expect(SRC).toMatch(/maxWidth: 160/);
+	});
+});

@@ -719,20 +719,38 @@ export const Composer = ({
 				(voice?.micVisible ? TOUCH_FLOOR : 0) +
 				(controls.stopVisible ? TOUCH_FLOOR : 0) +
 				24;
-	const idleHeight = Math.max(56, Math.ceil(24 * effectiveScale + 24));
+	const idleHeight = Math.max(
+		COMPOSER_BASE_HEIGHT,
+		Math.ceil(24 * effectiveScale + 24),
+	);
+	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
+	 * actually paints (iOS 56/R28, web and Android 60/R30 on the 48 floor), not
+	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
+	 * number the box does not paint is a shape nobody sees. `onLayout` reports the
+	 * resting shell; until it does, the constant is the floor. */
+	const [paintedBase, setPaintedBase] = useState<number | null>(null);
+	/* THE PAINTED EXPANDED TARGET, measured the same way. The height animation has
+	 * to end where the content actually ends — a constant upper bound is what made
+	 * the earlier "animation" a jump: content already equalled the bound, so the
+	 * interpolation painted nothing. Measured once per layout change, it is the
+	 * value the morph travels to, and content growth (3 lines, 6 lines) moves the
+	 * target rather than being clipped by it. */
+	const [paintedExpanded, setPaintedExpanded] = useState<number | null>(null);
+	const baseHeight = paintedBase ?? COMPOSER_BASE_HEIGHT;
+	const targetExpanded = Math.max(
+		paintedExpanded ?? COMPOSER_EXPANDED_HEIGHT,
+		baseHeight,
+	);
 	const shellMotion = useAnimatedStyle(() => ({
 		borderRadius: interpolate(
 			progress.value,
 			[0, 1],
-			[compactSingle ? 24 : idleHeight / 2, 24],
+			[compactSingle ? 24 : baseHeight / 2, 24],
 		),
-		minHeight: interpolate(
+		height: interpolate(
 			progress.value,
 			[0, 1],
-			[
-				COMPOSER_BASE_HEIGHT,
-				compactSingle ? COMPOSER_BASE_HEIGHT : COMPOSER_EXPANDED_HEIGHT,
-			],
+			[baseHeight, compactSingle ? baseHeight : targetExpanded],
 		),
 	}));
 	/* The box ANIMATES with the same progress value as the shape (record §3: one
@@ -745,10 +763,41 @@ export const Composer = ({
 		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
 		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
 	};
-	const fieldMotion = useAnimatedStyle(() => ({
-		marginStart: interpolate(progress.value, [0, 1], [44, 0]),
-		marginEnd: interpolate(progress.value, [0, 1], [44, 0]),
-	}));
+	/* The extras' natural height, from the scroller's own content size, so the
+	 *  budget can give them what they need and no more. Declared here because the
+	 *  expanded target below sums it. */
+	const [extrasHeight, setExtrasHeight] = useState(0);
+	/* Measurement, in one place. The resting shell reports what it paints; the
+	 *  content column reports its natural height, which the fixed box must equal
+	 *  when expanded or the last line sits outside the card. */
+	const [mainHeight, setMainHeight] = useState(0);
+	const measureShell = (event: LayoutChangeEvent) => {
+		if (presentation.expanded || compactSingle) return;
+		const height = Math.round(event.nativeEvent.layout.height);
+		if (height > 0 && height !== paintedBase) setPaintedBase(height);
+	};
+	const measureMain = (event: LayoutChangeEvent) => {
+		const height = Math.round(event.nativeEvent.layout.height);
+		if (height > 0 && height !== mainHeight) setMainHeight(height);
+	};
+	useEffect(() => {
+		if (!presentation.expanded || compactSingle) return;
+		const padding = shellBox.paddingTop + shellBox.paddingBottom;
+		const target = Math.max(
+			COMPOSER_EXPANDED_HEIGHT,
+			padding + extrasHeight + mainHeight,
+		);
+		if (target !== paintedExpanded) setPaintedExpanded(target);
+	}, [
+		presentation.expanded,
+		compactSingle,
+		extrasHeight,
+		mainHeight,
+		paintedExpanded,
+		shellBox.paddingTop,
+		shellBox.paddingBottom,
+	]);
+
 	const dockMotion = useAnimatedStyle(() => ({
 		marginBottom:
 			keyboardOffset.value +
@@ -759,7 +808,6 @@ export const Composer = ({
 	const attachInk = useTokenColor("ink-muted");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
 	 *  give them what they need and no more. */
-	const [extrasHeight, setExtrasHeight] = useState(0);
 	const COMPOSER_PAD = 8;
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
@@ -1067,12 +1115,22 @@ export const Composer = ({
 						count: queuedCount,
 					})}
 					onPress={() => setContextOpen(true)}
-					style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+					/* Bounded width is the point (UX round 5, U2): an unconstrained
+					 *  label at 200 % text pushed the dismiss control past the 390 pt
+					 *  edge. The sentence stays on the accessibility label; the visible
+					 *  text falls back to the bare count when the type is large. */
+					style={{
+						minWidth: TOUCH_FLOOR,
+						maxWidth: 160,
+						flexShrink: 1,
+					}}
 					className="items-center justify-center px-1"
 					testID={SURFACE.queuedMessageChip}
 				>
 					<Text className="text-meta text-ink-dim" numberOfLines={1}>
-						{t("mobile.chrome.composer.queued", { count: queuedCount })}
+						{dictationLargeText
+							? String(queuedCount)
+							: t("mobile.chrome.composer.queued", { count: queuedCount })}
 					</Text>
 				</Pressable>
 			) : null}
@@ -1087,6 +1145,59 @@ export const Composer = ({
 					testID={CONTROL.composerDismissKeyboard}
 				/>
 			) : null}
+		</View>
+	);
+
+	/* U3: short landscape used to collapse the strip to zero height, which took
+	 *  the queued count and the only context route with it. The compact row keeps
+	 *  exactly what the record requires in that state — the queue's presence and
+	 *  the way into More — and drops the model/effort chips to More's own list,
+	 *  because a 44 pt row cannot hold them at 200 % text. */
+	const compactReceipt = (
+		<View
+			className={COMPOSER_META_ROW}
+			testID={SURFACE.composerMeta}
+			onLayout={(event) => {
+				setReceiptHeight(Math.ceil(event.nativeEvent.layout.height));
+				setMetaWidth(Math.ceil(event.nativeEvent.layout.width));
+			}}
+		>
+			{queuedCount > 0 ? (
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={t("mobile.chrome.composer.queued", {
+						count: queuedCount,
+					})}
+					onPress={() => setContextOpen(true)}
+					/* Bounded width is the point (UX round 5, U2): an unconstrained
+					 *  label at 200 % text pushed the dismiss control past the 390 pt
+					 *  edge. The sentence stays on the accessibility label; the visible
+					 *  text falls back to the bare count when the type is large. */
+					style={{
+						minWidth: TOUCH_FLOOR,
+						maxWidth: 160,
+						flexShrink: 1,
+					}}
+					className="items-center justify-center px-1"
+					testID={SURFACE.queuedMessageChip}
+				>
+					<Text className="text-meta text-ink-dim" numberOfLines={1}>
+						{dictationLargeText
+							? String(queuedCount)
+							: t("mobile.chrome.composer.queued", { count: queuedCount })}
+					</Text>
+				</Pressable>
+			) : null}
+			<IconButton
+				accessibilityLabel={
+					queuedCount > 0
+						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+						: t("mobile.chrome.composer.more")
+				}
+				onPress={() => setContextOpen(true)}
+				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
+				testID={CONTROL.composerContext}
+			/>
 		</View>
 	);
 
@@ -1264,7 +1375,10 @@ export const Composer = ({
 		<Sheet
 			visible={attachSheetOpen}
 			onClose={() => setAttachSheetOpen(false)}
-			title="Attach"
+			/* The ratchet's own entry for this file is lower-case "attach": the
+			 * title is pre-existing debt, and capitalising it minted a NEW literal
+			 * that failed `check-strings`. Keying it is the payoff, not this fix. */
+			title="attach"
 			testID={SURFACE.attachSheet}
 		>
 			<View className="py-1">
@@ -1308,7 +1422,7 @@ export const Composer = ({
 				style={{ minHeight: COMPOSER_FIELD_BOX }}
 			>
 				{presentation.expanded ? null : attach}
-				<Animated.View className="min-w-0 flex-1" style={fieldMotion}>
+				<View className="min-w-0 flex-1">
 					<Textarea
 						label="Message"
 						hideLabel
@@ -1341,7 +1455,7 @@ export const Composer = ({
 						onBlur={() => setFocused(false)}
 						testID={CONTROL.composerInput}
 					/>
-				</Animated.View>
+				</View>
 				{presentation.expanded ? null : (
 					<View className="flex-row items-center">{mic ?? actionCluster}</View>
 				)}
@@ -1405,16 +1519,7 @@ export const Composer = ({
 			}}
 			testID={testID}
 		>
-			<View
-				style={compactSingle ? { height: 0, overflow: "hidden" } : undefined}
-				pointerEvents={compactSingle ? "none" : "auto"}
-				accessibilityElementsHidden={compactSingle}
-				importantForAccessibility={
-					compactSingle ? "no-hide-descendants" : "auto"
-				}
-			>
-				{receipt}
-			</View>
+			{compactSingle ? compactReceipt : receipt}
 			<Animated.View
 				style={[
 					{
@@ -1429,6 +1534,7 @@ export const Composer = ({
 					},
 					shellMotion,
 				]}
+				onLayout={measureShell}
 			>
 				<ScrollView
 					style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
@@ -1441,8 +1547,9 @@ export const Composer = ({
 				>
 					{extras}
 				</ScrollView>
-				{main}
+				<View onLayout={measureMain}>{main}</View>
 			</Animated.View>
+			{attachSheet}
 			<Sheet
 				visible={contextOpen}
 				onClose={() => setContextOpen(false)}
