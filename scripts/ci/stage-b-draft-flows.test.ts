@@ -3,9 +3,11 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
 import { capFor } from "./account-routing-proof-contract";
+import { STAGE_B_DOCUMENT_NAME } from "./stage-b-document-seed";
 import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
+	attachStageBDocument,
 	attachStageBPhoto,
 	discardStageBDraft,
 	STAGE_B_COLD_ASSERTION_MS,
@@ -278,5 +280,31 @@ describe("Stage B foreground-only Maestro flows", () => {
 					JSON.stringify({ application: "SpringBoard", label }),
 				),
 			).toBe(false);
+	});
+});
+
+describe("document-picker attachment is the native proof surface", () => {
+	it("selects the seeded Files document and never touches the photo grid", () => {
+		const flow = attachStageBDocument();
+		const raw = JSON.stringify(flow);
+		expect(raw).toContain("attach-option-files");
+		expect(raw).toContain("DOC.browsingRoot");
+		expect(raw).toContain(STAGE_B_DOCUMENT_NAME);
+		expect(raw).toContain("composer-attachment-0");
+		// 42078247373: PhotoKit ingest is environment-BLOCKED; a leftover photo
+		// selector here would silently re-enter the stalled path.
+		expect(raw).not.toContain("PXGGridLayout-Info");
+		expect(raw).not.toContain("attach-option-library");
+		// No coordinate taps anywhere in the attach proof.
+		expect(raw).not.toContain("point");
+	});
+	it("is the flow the coordinator actually queues for attachment-bearing drafts", () => {
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain('flow("attach-native-document"');
+		expect(source).toContain('flow("original-document-still-selectable"');
+		expect(source).not.toContain('flow("attach-native-photo"');
 	});
 });

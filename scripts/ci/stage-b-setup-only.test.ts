@@ -124,11 +124,11 @@ describe("explicit setup prerequisite, never an E2E replacement", () => {
 			"boot-status failed: rc=19",
 		],
 		[
-			"import failure",
+			"document seed failure",
 			true,
 			{},
 			"SETUP_ONLY_FAIL",
-			"add-owned-photo failed: rc=18",
+			"document-seed failed",
 		],
 		[
 			"cleanup failure",
@@ -159,18 +159,14 @@ describe("explicit setup prerequisite, never an E2E replacement", () => {
 			expect(records.find((c) => c.name === "boot-status")?.capSeconds).toBe(
 				240,
 			);
-			if (commands.includes("add-owned-photo"))
-				expect(
-					records.find((c) => c.name === "add-owned-photo")?.capSeconds,
-				).toBe(240);
+			// No photo ingest in this lane at all: 42100957111 measured it dead.
+			expect(commands).not.toContain("add-owned-photo");
 			expect(commands).toContain("boot-status");
 			expect(commands).toContain("cleanup-delete-owned-simulator");
 			expect(commands.some((name) => FORBIDDEN_SETUP_COMMAND.test(name))).toBe(
 				false,
 			);
-			expect(
-				commands.filter((name) => name === "add-owned-photo"),
-			).toHaveLength("bootFails" in options && options.bootFails ? 0 : 1);
+			expect(commands.filter((name) => name.startsWith("warm-"))).toEqual([]);
 			if (error && !("deleteFails" in options && options.deleteFails)) {
 				expect(commands).toContain("setup-failure-boot-log");
 				expect(commands).toContain("setup-failure-screenshot");

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       setup_only:
-        description: "Boot/addmedia prerequisite ONLY; never native E2E approval"
+        description: "Boot/document-seed prerequisite ONLY; never native E2E approval"
         type: boolean
         required: true
         default: false
@@ -62,17 +62,15 @@ jobs:
     if: github.actor == 'damianvtran' && ((github.event_name == 'workflow_dispatch' && inputs.setup_only) || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'stage-b-setup-approved' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: macos-26
     # 41955013065: boot failed at 284.8s (240s cap + reap latency).
-    # Media ceilings are now 180s warm-up + 240s import. 42078247373 proved the
-    # fresh library rebuilds thumbnails inside assetsd while holding PhotoKit's
-    # changes transaction, so the rebuild gets its own bounded budget and is
-    # never import evidence.
-    # Honest lease arithmetic (review R27-1): the sum of every per-step cap
-    # (boot 240 + warm 180 + import 240 + diagnostics ~190 + cleanup ~120 +
-    # ~240s checkout/deps/controls) is ~1890s, already above this 20m lease.
-    # That is deliberate, not an oversight: a realistic hosted run models ~19m,
-    # and the worst case ends in an honest job-kill with the receipt, commands
-    # and frames preserved — never a false pass. No 32–42m app build here, and
-    # no retry or cap rise; 180s stays until the next native run measures it.
+    # This lane now proves the DOCUMENT seeding prerequisite: the file is written
+    # host-side into the owned simulator's iCloud Drive container and read back.
+    # No Photos ingest: 42100957111 measured the fresh-library thumbnail rebuild
+    # as still stalled at 180s warm-up + 240s import (receipt warmup failed,
+    # elapsedMs 180204), so both media caps are gone rather than raised.
+    # Honest lease: sum of caps (boot 240 + seed ~5 + setup diagnostics ~190 +
+    # cleanup ~120 + ~240s checkout/deps/controls) leaves real headroom inside
+    # this 20m lease; a worst case still ends in an honest job-kill with the
+    # receipt/commands preserved, never a false pass. No app build in this lane.
     timeout-minutes: 20
     concurrency:
       group: stage-b-draft-native-${{ github.event.pull_request.number || inputs.source_sha }}
@@ -96,7 +94,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Fail-closed prerequisite and full-evidence negative controls
-        run: pnpm exec vitest run scripts/ci/stage-b-setup-only.test.ts scripts/ci/stage-b-media-sample.test.ts --maxWorkers=1 --bail 1
+        run: pnpm exec vitest run scripts/ci/stage-b-setup-only.test.ts scripts/ci/stage-b-document-seed.test.ts --maxWorkers=1 --bail 1
       - name: Existing hosted runtime boot and media prerequisite only
         run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts
       - uses: actions/upload-artifact@v7

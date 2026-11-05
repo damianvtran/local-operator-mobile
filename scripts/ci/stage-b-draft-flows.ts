@@ -2,6 +2,7 @@ import {
 	STAGE_B_BUNDLE,
 	STAGE_B_HOST,
 } from "../../src/testing/stage-b-draft-transport.ts";
+import { STAGE_B_DOCUMENT_NAME } from "./stage-b-document-seed.ts";
 import { STAGE_B_POST_RELEASE_WINDOW_MS } from "./stage-b-draft-timing.ts";
 export type StageBStep = Record<string, unknown>;
 const REGEX_META = /[.*+?^${}()|[\]\\]/g;
@@ -123,6 +124,52 @@ export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
 	},
 	...assertStageBDraft(text, false),
 ];
+/** Native attachment surface for attachment-bearing drafts. The Files picker
+ * needs no PhotoKit ingest, which 42078247373 proved permanently stalled on a
+ * fresh simulator library (assetsd thumbnail rebuild inside the changes
+ * transaction). The seeded document name is asserted before selection so an
+ * empty browser fails with that sentence, never as a silent composer timeout. */
+export const attachStageBDocument = (): StageBStep[] => [
+	{ tapOn: { id: "composer-attach" } },
+	{ waitForAnimationToEnd: { timeout: 5000 } },
+	{ assertVisible: { id: "attach-option-files" } },
+	{ tapOn: { id: "attach-option-files", retryTapIfNoChange: false } },
+	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 10000 } },
+	{
+		extendedWaitUntil: {
+			visible: { id: "DOC.browsingRoot" },
+			timeout: STAGE_B_PICKER_OUTCOME_MS,
+			label: STAGE_B_DOCUMENT_BROWSER_LABEL,
+		},
+	},
+	{
+		extendedWaitUntil: {
+			visible: { text: STAGE_B_DOCUMENT_NAME },
+			timeout: STAGE_B_PICKER_WAIT_MS,
+			label: STAGE_B_DOCUMENT_SEED_LABEL,
+		},
+	},
+	{ tapOn: { text: STAGE_B_DOCUMENT_NAME } },
+	{
+		assertNotVisible: {
+			id: "composer-error",
+			label: "Document picker failed: composer attach error",
+		},
+	},
+	{
+		extendedWaitUntil: {
+			visible: { id: "composer-attachment-0" },
+			timeout: 15000,
+		},
+	},
+];
+export const STAGE_B_DOCUMENT_BROWSER_LABEL =
+	"Files document browser did not appear within 120s";
+export const STAGE_B_DOCUMENT_SEED_LABEL =
+	"Document picker did not show the seeded file";
+/** NOT executed: the photo-library row is environment-BLOCKED by the 42078247373
+ * stack (assetsd rebuild inside the PhotoKit changes transaction). Kept because
+ * the row must stay recorded rather than deleted. */
 export const attachStageBPhoto = (): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	// Sheet rises 40pt over 240ms. A stale pre-wait hierarchy can aim at a

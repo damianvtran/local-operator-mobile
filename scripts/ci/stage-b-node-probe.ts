@@ -21,7 +21,7 @@ export const STAGE_B_NODE_PROBE_MS = 90_000;
 export function probeStageBCoordinator(
 	oldRedactedReturn = false,
 	unsignedBuild = false,
-	mediaImportFails = false,
+	seedFails = false,
 	setup?: { bootFails?: boolean; deleteFails?: boolean },
 ): Record<string, unknown> {
 	const repository = fileURLToPath(new URL("../../", import.meta.url));
@@ -31,6 +31,9 @@ export function probeStageBCoordinator(
 			"stage-b-node-probe-",
 		),
 	);
+	// A regular file where the device directory should be: mkdir fails closed.
+	const seedBlocker = join(root, "seed-blocker");
+	writeFileSync(seedBlocker, "not a directory\n");
 	const tools = join(root, "tools");
 	mkdirSync(tools);
 	mkdirSync(join(root, "tmp"));
@@ -77,7 +80,7 @@ else if(name==='pnpm'){if(args.includes('prebuild')){fs.mkdirSync(path.join(root
 else if(name==='xcodebuild'){if(args.includes('-version'))out('Xcode 26.0');else{for(const flag of ['CODE_SIGN_IDENTITY=-','CODE_SIGN_STYLE=Manual','DEVELOPMENT_TEAM=','CODE_SIGNING_ALLOWED=YES','CODE_SIGNING_REQUIRED=NO'])if(!args.includes(flag))throw Error('ADHOC_ARGS_REQUIRED:'+flag);const ent=args.find(a=>a.startsWith('CODE_SIGN_ENTITLEMENTS='));if(!ent||!fs.readFileSync(ent.slice('CODE_SIGN_ENTITLEMENTS='.length),'utf8').includes('<dict/>'))throw Error('EMPTY_SIMULATOR_ENTITLEMENTS_REQUIRED');const c=config(),derived=args[args.indexOf('-derivedDataPath')+1],app=path.join(derived,'Build/Products/Release-iphonesimulator/StageBDraftProof.app');fs.mkdirSync(app,{recursive:true});fs.writeFileSync(path.join(app,'Info.plist'),JSON.stringify({CFBundleIdentifier:c.bundleId,CFBundleExecutable:'StageBDraftProof',StageBProofSourceSha:c.sourceSha,StageBProofNonce:c.nonce,StageBProofFlavor:c.flavor}));fs.writeFileSync(path.join(app,'main.jsbundle'),JSON.stringify(c));fs.writeFileSync(path.join(app,'StageBDraftProof'),'NODE ONLY executable placeholder');}}
 else if(name==='codesign'){if(args.includes('-dv'))out('Executable='+args.at(-1)+'\\nSignature=adhoc\\nTeamIdentifier=not set');else if(args.includes('--entitlements'))out('<plist version="1.0"><dict/></plist>');else throw Error('UNEXPECTED_CODESIGN_OPERATION');}
 else if(name==='plutil'){const info=JSON.parse(fs.readFileSync(args.at(-1),'utf8'));out(info[args[1]]);}
-else if(name==='xcrun'){const op=args[1];if(op==='list')out(JSON.stringify({runtimes:[{identifier:'com.apple.CoreSimulator.SimRuntime.iOS-26-0',name:'iOS 26.0',isAvailable:true}]}));else if(op==='create')out('00000000-0000-4000-8000-000000000001');else if(op==='bootstatus'&&${setup?.bootFails ?? false}){out('Waiting on System App; isTerminal=NO');process.exitCode=19;}else if(op==='delete'&&${setup?.deleteFails ?? false}){process.exitCode=20;}else if(op==='install'){fs.mkdirSync(path.dirname(installed),{recursive:true});fs.cpSync(args[3],installed,{recursive:true});}else if(op==='addmedia'&&${mediaImportFails}){out('NODE_ONLY_MEDIA_IMPORT_FAILURE');process.exitCode=18;}else if(op==='get_app_container')out(installed);else if(op==='launch')out('com.localoperator.mobile.stagebproof: 12345');else if(op==='io')fs.writeFileSync(args.at(-1),'NODE ONLY screenshot placeholder');else if(op==='spawn')out('NODE ONLY os_log capture');}
+else if(name==='xcrun'){const op=args[1];if(op==='list')out(JSON.stringify({runtimes:[{identifier:'com.apple.CoreSimulator.SimRuntime.iOS-26-0',name:'iOS 26.0',isAvailable:true}]}));else if(op==='create')out('00000000-0000-4000-8000-000000000001');else if(op==='bootstatus'&&${setup?.bootFails ?? false}){out('Waiting on System App; isTerminal=NO');process.exitCode=19;}else if(op==='delete'&&${setup?.deleteFails ?? false}){process.exitCode=20;}else if(op==='install'){fs.mkdirSync(path.dirname(installed),{recursive:true});fs.cpSync(args[3],installed,{recursive:true});}else if(op==='get_app_container')out(installed);else if(op==='launch')out('com.localoperator.mobile.stagebproof: 12345');else if(op==='io')fs.writeFileSync(args.at(-1),'NODE ONLY screenshot placeholder');else if(op==='spawn')out('NODE ONLY os_log capture');}
 else if(name==='maestro'){if(args.includes('--version'))out('2.11.0');else if(args.includes('hierarchy'))out(JSON.stringify({identifier:'home-screen'}));else if(args.includes('test')){out('NODE_ONLY_FAKE_FLOW_STOP');process.exitCode=17;}}
 else throw Error('Unexpected tool '+name);
 `;
@@ -162,6 +165,12 @@ const result={nodeOnly:true,sourceRaw:raw.get('source')===process.env.STAGE_B_SO
 					GITHUB_WORKFLOW_SHA: "c".repeat(40),
 					RUNNER_TEMP: join(root, "output"),
 					STAGE_B_MAESTRO: join(tools, "maestro"),
+					// Seeding is host-side (no fake tool), so its failure injection is a
+					// data root that cannot be created: a regular file stands in for the
+					// device directory. Never the operator's real CoreSimulator tree.
+					STAGE_B_SIMULATOR_DATA_ROOT: seedFails
+						? join(seedBlocker, "devices")
+						: join(root, "simulators"),
 					GIT_CONFIG_SYSTEM: "/dev/null",
 					GIT_CONFIG_GLOBAL: "/dev/null",
 					GIT_TERMINAL_PROMPT: "0",

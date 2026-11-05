@@ -9,6 +9,7 @@ import {
 	readlinkSync,
 	writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -24,6 +25,10 @@ import {
 	startStageBIdentityFixture,
 } from "../../tools/mock-relay/stage-b-identity-fixture.ts";
 import { capFor } from "./account-routing-proof-contract.ts";
+import {
+	STAGE_B_DOCUMENT_NAME,
+	seedStageBDocument,
+} from "./stage-b-document-seed.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	captureStageBFailure,
@@ -35,6 +40,7 @@ import {
 import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
+	attachStageBDocument,
 	attachStageBPhoto,
 	discardStageBDraft,
 	logoutStageB,
@@ -47,10 +53,8 @@ import {
 import {
 	captureStageBHeldPair,
 	captureStageBRestoreBurst,
-	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
 	STAGE_B_TIMEOUT_HOLD_MS,
-	STAGE_B_WARM_MEDIA_SECONDS,
 	stageBFrameHierarchy,
 	stageBSleep,
 	verifyStageBPostReleaseWindow,
@@ -64,12 +68,6 @@ import {
 	type StageBLostTapLease,
 	stageBLostTapGate,
 } from "./stage-b-lost-tap.ts";
-import {
-	STAGE_B_MEDIA_SAMPLE_MAX_OUTPUT,
-	stageBImportWithSampling,
-	stageBMediaSampleText,
-} from "./stage-b-media-sample.ts";
-import { stageBWarmMediaLibrary } from "./stage-b-media-warmup.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -397,7 +395,7 @@ async function runStageBCoordinator(
 				// utility is not permission to leave its child process group behind.
 				reap(child);
 				children.delete(child);
-				const safe = diagnostic ? stageBMediaSampleText(bytes) : redact(bytes);
+				const safe = redact(bytes);
 				writeFileSync(
 					join(
 						output,
@@ -496,61 +494,34 @@ async function runStageBCoordinator(
 			throw new Error(
 				"preinstalled iOS 26 runtime missing; no SDK/runtime installation attempted",
 			);
-		// One bounded attempt OUTSIDE the timed import (42078247373): the fresh
-		// library's thumbnail rebuild stalls PhotoKit's changes transaction in an
-		// untimed CMPhoto transcode. Recorded separately; never import evidence and
-		// never fatal, so a cold or wedged library fails honestly at the timed step.
-		const warmOwnedPhotoLibrary = async (
-			owned: string,
-			evidence: Record<string, unknown>,
-		) => {
-			const witness: Record<string, unknown> = {
-				capSeconds: STAGE_B_WARM_MEDIA_SECONDS,
-				purpose: "simulator first-run thumbnail rebuild; never import evidence",
+		/** Host-side seed for the Files picker. The device data root is derived from
+		 * THIS owned simulator's UDID; nothing outside it is touched. */
+		const seedOwnedDocument = (owned: string) => {
+			let seed: ReturnType<typeof seedStageBDocument>;
+			try {
+				seed = seedStageBDocument(
+					join(
+						process.env.STAGE_B_SIMULATOR_DATA_ROOT ??
+							join(homedir(), "Library/Developer/CoreSimulator/Devices"),
+						owned,
+						"data",
+					),
+				);
+			} catch (error) {
+				// Named so a seeding failure is never read as a picker failure.
+				throw new Error(
+					`document-seed failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+			receipt.documentSeed = {
+				name: STAGE_B_DOCUMENT_NAME,
+				path: seed.path,
+				bytes: seed.bytes,
+				sha256: seed.sha256,
+				containerPresent: seed.containerPresent,
 			};
-			evidence.warmup = witness;
-			await stageBWarmMediaLibrary(
-				() =>
-					run(
-						"warm-owned-photo-library",
-						"xcrun",
-						[
-							"simctl",
-							"addmedia",
-							owned,
-							join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-						],
-						STAGE_B_WARM_MEDIA_SECONDS,
-					),
-				witness,
-			);
+			return seed;
 		};
-		const importOwnedPhoto = (
-			owned: string,
-			evidence: Record<string, unknown>,
-		) =>
-			stageBImportWithSampling(
-				() =>
-					run(
-						"add-owned-photo",
-						"xcrun",
-						[
-							"simctl",
-							"addmedia",
-							owned,
-							join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-						],
-						STAGE_B_ADD_MEDIA_SECONDS,
-					),
-				(name, command, args, seconds, signal) =>
-					run(name, command, args, seconds, false, {
-						signal,
-						maxOutput: STAGE_B_MEDIA_SAMPLE_MAX_OUTPUT,
-					}),
-				owned,
-				output,
-				evidence,
-			);
 		const bootOwned = async (name: string) => {
 			udid = await run("create-owned-simulator", "xcrun", [
 				"simctl",
@@ -573,18 +544,9 @@ async function runStageBCoordinator(
 		};
 		if (setupOnly) {
 			const owned = await bootOwned(`StageB-setup-${sourceSha.slice(0, 12)}`);
-			receipt.mediaReadiness = {
-				purpose: "setup prerequisite only",
-				before: await captureStageBMediaReadiness(run, owned, output, "before"),
-			};
-			await warmOwnedPhotoLibrary(
-				owned,
-				receipt.mediaReadiness as Record<string, unknown>,
-			);
-			await importOwnedPhoto(
-				owned,
-				receipt.mediaReadiness as Record<string, unknown>,
-			);
+			// The attachment prerequisite is now document seeding: PhotoKit ingest is
+			// environment-BLOCKED (42078247373) and no longer part of this lane.
+			seedOwnedDocument(owned);
 			receipt.status = "SETUP_ONLY_PASS";
 			return; // finally still reaps/deletes; cleanup failure rejects this run.
 		}
@@ -1043,28 +1005,13 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		const mediaEvidence: Record<string, unknown> = {
-			purpose: "diagnostic only; bootstatus does not prove Photos readiness",
-			before: await captureStageBMediaReadiness(run, udid, output, "before"),
-		};
-		receipt.mediaReadiness = mediaEvidence;
-		await warmOwnedPhotoLibrary(udid ?? "", mediaEvidence);
-		try {
-			await importOwnedPhoto(udid, mediaEvidence);
-			mediaEvidence.import = "completed";
-		} catch (error) {
-			mediaEvidence.import = "failed";
-			// Capture service state BEFORE generic driver diagnostics/cleanup.
-			// These probes never retry import or replace its primary exception.
-			mediaEvidence.failed = await captureStageBMediaReadiness(
-				(name, command, args, seconds) =>
-					run(name, command, args, seconds, true),
-				udid,
-				output,
-				"failed",
-			);
-			throw error;
-		}
+		seedOwnedDocument(udid ?? "");
+		// Photo-library attachment is not exercised: 42078247373 proved the fresh
+		// library's thumbnail rebuild holds PhotoKit's changes transaction in an
+		// untimed CMPhoto HEIF transcode, so the simctl import waits forever. The row stays
+		// recorded as environment-BLOCKED on the PR with that stack; the document
+		// picker below is the native surface that carries an attachment draft.
+		receipt.photoLibraryAttach = "environment-BLOCKED";
 		await warmStageBDriver(
 			(name, seconds) =>
 				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
@@ -1078,7 +1025,7 @@ async function runStageBCoordinator(
 					{ assertNotVisible: { id: "computers-screen" } },
 				]);
 				await flow("type-initial", typeStageBDraft(canary));
-				await flow("attach-native-photo", attachStageBPhoto());
+				await flow("attach-native-document", attachStageBDocument());
 				await flushFlows();
 			},
 		);
@@ -1111,7 +1058,7 @@ async function runStageBCoordinator(
 		await flow("remove-picked-copy-ui", [
 			{ tapOn: { id: "composer-attachment-0" } },
 		]);
-		await flow("original-photo-still-selectable", attachStageBPhoto());
+		await flow("original-document-still-selectable", attachStageBDocument());
 		await expire();
 		await frame("light-expired-error");
 		// Capture on fixture arrival: returning from Maestro connect can already

@@ -2,17 +2,11 @@
  * 180s exceeds twice the observed maximum. Never spend this budget inside the
  * production /me proof's unchanged 20s deadline. */
 export const STAGE_B_FRAME_HIERARCHY_SECONDS = 180;
-/** Initial simctl addmedia samples: 90s (41804068676), 115s (41818693532),
- * 118s (41831921831). Keep the resulting 240s cap after 41938722439 timed out:
- * diagnose Photos-service state rather than escalating this budget again. */
-export const STAGE_B_ADD_MEDIA_SECONDS = 240;
-/** 42078247373: a fresh simulator library rebuilds thumbnails inside assetsd
- * while holding PhotoKit's changes transaction, stalling the import in an
- * untimed CMPhoto HEIF transcode. Give that rebuild one bounded attempt of its
- * own, OUTSIDE the timed import: 180s keeps setup-only's worst case (checkout
- * ~4m + boot 4m + warm 3m + import 4m + diagnostics 2m + cleanup 2m) inside its
- * 20m lease. The import cap is unchanged and the warm-up is never evidence. */
-export const STAGE_B_WARM_MEDIA_SECONDS = 180;
+/** 42100957111 measured the photo-library warm-up as insufficient: the fresh
+ * library's thumbnail rebuild still held PhotoKit's changes transaction at 180s
+ * warm-up (receipt warmup failed, elapsedMs 180204) and the timed import then
+ * failed again. Both media budgets are therefore deleted, not raised — the
+ * attachment proof uses the Files document picker, seeded host-side. */
 /** Run 41918042114: screenshot took 10s under concurrent Maestro load.
  * Release after both serial loading frames, never later than 17s after /me;
  * production's independent 20s proof deadline remains unchanged. */

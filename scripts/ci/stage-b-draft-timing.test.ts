@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	captureStageBHeldPair,
 	captureStageBRestoreBurst,
-	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_FRAME_HIERARCHY_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
 	STAGE_B_SCREENSHOT_SECONDS,
@@ -126,20 +125,16 @@ describe("measured Stage B frame timing", () => {
 		).rejects.toThrow("loading frame not captured before proof release");
 		expect([...missing.values()]).toEqual([undefined, undefined]);
 	});
-	it("explicitly reserves twice the measured 118s media-import maximum", () => {
-		expect(STAGE_B_ADD_MEDIA_SECONDS).toBe(240);
-		expect(STAGE_B_ADD_MEDIA_SECONDS).toBeGreaterThanOrEqual(2 * 118);
+	it("reserves no photo-import budget at all", () => {
 		const source = readFileSync(
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		const at = source.indexOf('"add-owned-photo"');
-		expect(at).toBeGreaterThan(0);
-		const call = source.slice(
-			at,
-			source.indexOf("await warmStageBDriver(", at),
-		);
-		expect(call).toContain("STAGE_B_ADD_MEDIA_SECONDS");
+		// 42100957111: warm-up measured insufficient at 180s; the ingest path is
+		// environment-BLOCKED, so a surviving addmedia call would be a dead cost.
+		expect(source).not.toContain('"add-owned-photo"');
+		expect(source).not.toContain("STAGE_B_ADD_MEDIA_SECONDS");
+		expect(source).not.toContain("STAGE_B_WARM_MEDIA_SECONDS");
 	});
 	it("does not hide a failed post-release canary assertion behind clean storage samples", async () => {
 		let clock = 0;
