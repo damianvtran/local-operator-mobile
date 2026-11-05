@@ -93,11 +93,13 @@ import {
 } from "./matrix.ts";
 import { runS15FlowProof } from "./s15-flow.ts";
 import {
+	type CanvasContext,
 	type CanvasTokens,
 	canvasComparable,
 	canvasExpectation,
 	canvasTokens,
 	paintedCanvases,
+	parseCanvasContext,
 } from "./theme-tokens.ts";
 
 /**
@@ -1219,6 +1221,7 @@ interface ThemeCheckReport {
 export function verifyThemes(
 	records: CaptureRecord[],
 	tokens: CanvasTokens,
+	context: CanvasContext = "app",
 ): ThemeCheckReport {
 	const problems = [];
 	let canvasCompared = 0;
@@ -1230,17 +1233,19 @@ export function verifyThemes(
 	 * against the same number and the report can name which file it came from. */
 	const painted = paintedCanvases();
 	const expectation = {
-		dark: canvasExpectation("dark", tokens.perTheme, painted),
-		light: canvasExpectation("light", tokens.perTheme, painted),
+		dark: canvasExpectation("dark", tokens.perTheme, painted, context),
+		light: canvasExpectation("light", tokens.perTheme, painted, context),
 	};
 	const sources = [
 		...new Set([expectation.dark.source, expectation.light.source]),
 	];
 	const canvasSource =
-		`the expected canvas is the shipped palette's own value (${sources.join(", ")})` +
-		(sources.includes("tokens")
-			? ` — design/tokens/tokens.json supplied a mode the catalogue did not`
-			: "");
+		context === "fixture"
+			? `the explicit fixture token file (${sources.join(", ")})`
+			: `the expected canvas is the shipped palette's own value (${sources.join(", ")})` +
+				(sources.includes("tokens")
+					? ` — design/tokens/tokens.json supplied a mode the catalogue did not`
+					: "");
 	/** The themes the tokens left without a canvas, so the report can name them. */
 	const themesWithoutCanvas = new Set<string>();
 	const byStem = new Map();
@@ -1479,6 +1484,8 @@ export interface CaptureOptions {
 	 */
 	deadlineMs: number | null;
 	tokens: string;
+	/** Standalone canaries opt into their own token truth; apps retain defaults. */
+	canvasContext?: CanvasContext;
 	plan: boolean;
 	yes: boolean;
 	strict: boolean;
@@ -1661,6 +1668,7 @@ export async function runCapture(options: CaptureOptions) {
 						refusedAt: phase,
 						refusal: reason,
 						buildDir: resolve(options.dir),
+						canvasContext: parseCanvasContext(options.canvasContext),
 						relay: options.relay ?? null,
 						out: outDir,
 					},
@@ -2172,7 +2180,11 @@ export async function runCapture(options: CaptureOptions) {
 				: ""),
 	);
 
-	const themeReport = verifyThemes(records, tokens);
+	const themeReport = verifyThemes(
+		records,
+		tokens,
+		parseCanvasContext(options.canvasContext),
+	);
 	const themeProblems = themeReport.problems;
 	const reflow = records
 		.filter((r) => r.frames.length > 2)
@@ -2293,6 +2305,7 @@ export async function runCapture(options: CaptureOptions) {
 			capturedAt: new Date().toISOString(),
 			durationMs: Date.now() - startedAt,
 			buildDir: resolve(options.dir),
+			canvasContext: parseCanvasContext(options.canvasContext),
 			repoRoot: resolve(new URL("../../", import.meta.url).pathname),
 			relay: options.relay ?? null,
 			scenario: state?.scenario ?? null,
@@ -3027,6 +3040,7 @@ if (isMain) {
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
+				"  --canvas-context <app|fixture>  default app; fixture uses supplied token truth",
 				"  --inbox-return-proof  read/dismiss/Undo returns, both themes, same browser (CI only)",
 				"  --inbox-baseline-dir  optional base export for before frames with the same driver",
 				"  --s15-flow-proof    also prove S15 footer navigation/return on the same browser (CI only)",
@@ -3126,6 +3140,7 @@ if (isMain) {
 		tokens:
 			str(flags, "tokens", join(repoRoot, "design", "tokens", "tokens.json")) ??
 			join(repoRoot, "design", "tokens", "tokens.json"),
+		canvasContext: parseCanvasContext(str(flags, "canvas-context", undefined)),
 		plan: bool(flags, "plan"),
 		yes: bool(flags, "yes"),
 		strict: !bool(flags, "no-strict"),

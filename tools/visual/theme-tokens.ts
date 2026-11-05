@@ -95,16 +95,34 @@ export function paintedCanvases(): Record<string, { canvas: string | null }> {
 /**
  * The canvas a frame of `theme` must paint, and which file said so.
  *
- * The ORDER is the decision: the painted palette first, the kit's token file
- * second, nothing third. `source` is reported rather than inferred, so a reader
+ * In APP context the order is the decision: painted palette first, kit tokens
+ * second, nothing third. Explicit FIXTURE context uses only its token file; an
+ * app fallback would compare a standalone canary against unrelated colours. `source` is reported rather than inferred, so a reader
  * of the run can see which file the number came from without reading this
  * function.
  */
+/** Capture truth is selected by the caller, never inferred from a filename or
+ * token value. App renders use generated defaults; standalone clean/defect
+ * canaries must use their explicitly supplied fixture tokens (Q164-2). */
+export type CanvasContext = "app" | "fixture";
+export function parseCanvasContext(value: string | undefined): CanvasContext {
+	if (value === undefined || value === "app") return "app";
+	if (value === "fixture") return "fixture";
+	throw new Error(`unknown canvas context: ${value}`);
+}
+
 export function canvasExpectation(
 	theme: string,
 	perTheme: Record<string, { canvas: string | null }> | null,
 	painted: Record<string, { canvas: string | null }> = paintedCanvases(),
+	context: CanvasContext = "app",
 ): { canvas: string | null; source: "palette" | "tokens" | "none" } {
+	// Fixture truth never falls back to the unrelated app palette. Missing fixture
+	// tokens stay uncomparable; wrong fixture paint remains a gate failure.
+	if (context === "fixture") {
+		const canvas = perTheme?.[theme]?.canvas ?? null;
+		return { canvas, source: canvas === null ? "none" : "tokens" };
+	}
 	const fromPalette = painted[theme]?.canvas ?? null;
 	if (fromPalette !== null) return { canvas: fromPalette, source: "palette" };
 	const fromTokens = perTheme?.[theme]?.canvas ?? null;

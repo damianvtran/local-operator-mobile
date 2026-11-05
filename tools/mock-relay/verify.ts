@@ -1444,6 +1444,9 @@ async function main() {
 			process.execPath,
 			[
 				join(WORKTREE, "tools", "visual", "capture.ts"),
+				// These standalone fixtures paint kit tokens, not the app's defaults.
+				"--canvas-context",
+				"fixture",
 				"--dir",
 				join(WORKTREE, "e2e", "fixtures", "audit-canary"),
 				"--out",
@@ -1948,6 +1951,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					dir,
 					"--out",
@@ -2142,6 +2148,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					dir,
 					"--out",
@@ -2996,6 +3005,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					join(WORKTREE, "e2e", "fixtures", "audit-canary"),
 					"--out",
