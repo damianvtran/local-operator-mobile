@@ -288,12 +288,14 @@ describe("document-picker attachment is the native proof surface", () => {
 		const flow = attachStageBDocument();
 		const raw = JSON.stringify(flow);
 		expect(raw).toContain("attach-option-files");
-		expect(raw).toContain("DOC.browsingRoot");
+		expect(raw).toContain("Browse");
 		expect(raw).toContain(STAGE_B_DOCUMENT_NAME);
 		expect(raw).toContain("composer-attachment-0");
-		// 42078247373: PhotoKit ingest is environment-BLOCKED; a leftover photo
-		// selector here would silently re-enter the stalled path.
-		expect(raw).not.toContain("PXGGridLayout-Info");
+		// 42078247373: PhotoKit ingest is environment-BLOCKED. The Photos grid may
+		// appear ONLY as the wrong-picker negative, never as a wait or a tap.
+		expect(raw).toContain('"assertNotVisible":{"id":"PXGGridLayout-Info"');
+		expect(raw).not.toContain('"visible":{"id":"PXGGridLayout-Info"');
+		expect(raw).not.toContain('"tapOn":{"id":"PXGGridLayout-Info"');
 		expect(raw).not.toContain("attach-option-library");
 		// No coordinate taps anywhere in the attach proof.
 		expect(raw).not.toContain("point");
@@ -303,8 +305,8 @@ describe("document-picker attachment is the native proof surface", () => {
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		expect(source).toContain('flow("attach-native-document"');
-		expect(source).toContain('flow("original-document-still-selectable"');
+		expect(source).toContain('"attach-native-document"');
+		expect(source).toContain('"attach-native-document-second"');
 		expect(source).not.toContain('flow("attach-native-photo"');
 	});
 });

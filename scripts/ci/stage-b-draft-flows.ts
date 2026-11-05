@@ -2,6 +2,7 @@ import {
 	STAGE_B_BUNDLE,
 	STAGE_B_HOST,
 } from "../../src/testing/stage-b-draft-transport.ts";
+import type { StageBDocumentProvider } from "./stage-b-document-seed.ts";
 import { STAGE_B_DOCUMENT_NAME } from "./stage-b-document-seed.ts";
 import { STAGE_B_POST_RELEASE_WINDOW_MS } from "./stage-b-draft-timing.ts";
 export type StageBStep = Record<string, unknown>;
@@ -125,37 +126,55 @@ export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
 	...assertStageBDraft(text, false),
 ];
 /** Native attachment surface for attachment-bearing drafts. The Files picker
- * needs no PhotoKit ingest, which 42078247373 proved permanently stalled on a
- * fresh simulator library (assetsd thumbnail rebuild inside the changes
- * transaction). The seeded document name is asserted before selection so an
- * empty browser fails with that sentence, never as a silent composer timeout. */
-export const attachStageBDocument = (): StageBStep[] => [
+ * needs no PhotoKit ingest, which 42078247373 showed stalled permanently.
+ * Run 42119054596* showed the picker opening on an empty "Recents" sheet, so the
+ * flow navigates to the provider the seed actually wrote to and waits on
+ * hierarchy elements confirmed in that run: the "Recents"/"Browse" segmented
+ * control and the provider row. `DOC.browsingBrowser` is a container view with
+ * no size — Maestro never calls it visible, so it is not an anchor. */
+export const attachStageBDocument = (
+	provider: StageBDocumentProvider = "local",
+): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	{ waitForAnimationToEnd: { timeout: 5000 } },
 	{ assertVisible: { id: "attach-option-files" } },
 	{ tapOn: { id: "attach-option-files", retryTapIfNoChange: false } },
 	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 10000 } },
+	// The visible discriminator for "the document browser is up": its tab labels.
 	{
 		extendedWaitUntil: {
-			visible: { id: "DOC.browsingRoot" },
-			timeout: STAGE_B_PICKER_OUTCOME_MS,
+			visible: { text: "Browse" },
+			timeout: STAGE_B_DOCUMENT_BROWSER_MS,
 			label: STAGE_B_DOCUMENT_BROWSER_LABEL,
 		},
 	},
+	// Photos is the wrong picker: its grid is the positive, specific marker.
 	{
-		extendedWaitUntil: {
-			visible: { text: STAGE_B_DOCUMENT_NAME },
-			timeout: STAGE_B_PICKER_WAIT_MS,
-			label: STAGE_B_DOCUMENT_SEED_LABEL,
-		},
+		assertNotVisible: { id: "PXGGridLayout-Info", label: STAGE_B_WRONG_PICKER },
 	},
-	{ tapOn: { text: STAGE_B_DOCUMENT_NAME } },
 	{
 		assertNotVisible: {
 			id: "composer-error",
 			label: "Document picker failed: composer attach error",
 		},
 	},
+	{ tapOn: { text: "Browse" } },
+	{
+		extendedWaitUntil: {
+			visible: { text: STAGE_B_DOCUMENT_PROVIDER_LABEL[provider] },
+			timeout: STAGE_B_DOCUMENT_PROVIDER_MS,
+			label: STAGE_B_DOCUMENT_PROVIDER_LABEL_TEXT[provider],
+		},
+	},
+	{ tapOn: { text: STAGE_B_DOCUMENT_PROVIDER_LABEL[provider] } },
+	{
+		extendedWaitUntil: {
+			visible: { text: STAGE_B_DOCUMENT_NAME },
+			timeout: STAGE_B_DOCUMENT_FILE_MS,
+			label: STAGE_B_DOCUMENT_SEED_LABEL,
+		},
+	},
+	{ tapOn: { text: STAGE_B_DOCUMENT_NAME } },
 	{
 		extendedWaitUntil: {
 			visible: { id: "composer-attachment-0" },
@@ -163,8 +182,23 @@ export const attachStageBDocument = (): StageBStep[] => [
 		},
 	},
 ];
+export const STAGE_B_DOCUMENT_PROVIDER_LABEL: Readonly<
+	Record<StageBDocumentProvider, string>
+> = { cloud: "iCloud Drive", local: "On My iPhone" };
+export const STAGE_B_DOCUMENT_PROVIDER_LABEL_TEXT: Readonly<
+	Record<StageBDocumentProvider, string>
+> = {
+	cloud: "Files browser did not list iCloud Drive within 15s",
+	local: "Files browser did not list On My iPhone within 15s",
+};
+/** Runs 42119022926/42119054596: the picker was on screen within ~3s of the
+ * tap, so a 30s ceiling names a wrong-picker failure quickly instead of after
+ * the 120s wait that dominated a 289.7s segment. */
+export const STAGE_B_DOCUMENT_BROWSER_MS = 30_000;
+export const STAGE_B_DOCUMENT_PROVIDER_MS = 15_000;
+export const STAGE_B_DOCUMENT_FILE_MS = 20_000;
 export const STAGE_B_DOCUMENT_BROWSER_LABEL =
-	"Files document browser did not appear within 120s";
+	"Files document browser did not appear within 30s";
 export const STAGE_B_DOCUMENT_SEED_LABEL =
 	"Document picker did not show the seeded file";
 /** NOT executed: the photo-library row is environment-BLOCKED by the 42078247373

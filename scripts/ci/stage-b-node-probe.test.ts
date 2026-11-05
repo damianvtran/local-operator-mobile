@@ -8,26 +8,16 @@ import {
 
 describe("real proof coordinator with Node-only executable shims", () => {
 	it(
-		"collects before/failed Photos service evidence without retrying import or masking its error",
+		"fails the seeding prerequisite without retrying Photos ingest or masking its error",
 		() => {
 			const result = probeStageBCoordinator(false, false, true);
-			expect(result.error).toContain("add-owned-photo failed: rc=18");
-			expect(result.mediaReadiness).toMatchObject({
-				import: "failed",
-				before: { services: "captured", "photos-log": "captured" },
-				failed: { services: "captured", "photos-log": "captured" },
-			});
+			expect(result.error).toContain("document-seed failed");
+			// 42100957111: the photo path is gone, so no receipt may carry it.
+			expect(result.mediaReadiness).toBeUndefined();
 			const commands = result.commands as string[];
-			expect(commands.filter((n) => n === "add-owned-photo")).toHaveLength(1);
-			expect(commands.indexOf("media-before-services")).toBeLessThan(
-				commands.indexOf("add-owned-photo"),
-			);
-			expect(commands.indexOf("media-failed-photos-log")).toBeGreaterThan(
-				commands.indexOf("add-owned-photo"),
-			);
-			expect(commands.indexOf("media-failed-photos-log")).toBeLessThan(
-				commands.indexOf("cleanup-shutdown-owned-simulator"),
-			);
+			expect(commands.filter((n) => n === "add-owned-photo")).toHaveLength(0);
+			expect(commands.filter((n) => n.startsWith("media-"))).toHaveLength(0);
+			expect(commands).toContain("cleanup-shutdown-owned-simulator");
 			expect(commands).not.toContain("launch-owned-app");
 		},
 		STAGE_B_NODE_PROBE_MS + 5000,
@@ -59,8 +49,6 @@ describe("real proof coordinator with Node-only executable shims", () => {
 					"plist-StageBProofSourceSha",
 					"plist-StageBProofNonce",
 					"installed-container",
-					"media-before-services",
-					"media-before-photos-log",
 					"launch-owned-app",
 					"segment-1-warm-app-foreground",
 					"failure-hierarchy",

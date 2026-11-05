@@ -95,7 +95,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Fail-closed prerequisite and full-evidence negative controls
         run: pnpm exec vitest run scripts/ci/stage-b-setup-only.test.ts scripts/ci/stage-b-document-seed.test.ts --maxWorkers=1 --bail 1
-      - name: Existing hosted runtime boot and media prerequisite only
+      - name: Existing hosted runtime boot and document-seed prerequisite only
         run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts
       - uses: actions/upload-artifact@v7
         if: always()
@@ -119,7 +119,7 @@ jobs:
     # Planned success path: 45 calls (post-release negative + two picker barriers).
     # (45 * 79s / 60 + 42m measured build/setup) * 1.15 = 116.4m.
     # Extra allowances: 2m held waits (17/22/22s), 1m post-release observation,
-    # 4m media import (90/115/118s observed; 240s cap), 5m screenshots,
+    # 1m document seeding (host-side write + read-back), 5m screenshots,
     # 7m fixture/process polling, 10m cleanup/upload = ~145.4m.
     # Keep 180m headroom; this is a model, not new native timing evidence.
     # Loading captures stay screenshot-only within the unchanged 20s proof.

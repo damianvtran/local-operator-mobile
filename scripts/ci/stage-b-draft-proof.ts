@@ -32,7 +32,6 @@ import {
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	captureStageBFailure,
-	captureStageBMediaReadiness,
 	captureStageBSetupFailure,
 	stageBFlowCap,
 	stageBSeedFailureFromHierarchy,
@@ -41,7 +40,6 @@ import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
 	attachStageBDocument,
-	attachStageBPhoto,
 	discardStageBDraft,
 	logoutStageB,
 	type StageBStep,
@@ -515,10 +513,14 @@ async function runStageBCoordinator(
 			}
 			receipt.documentSeed = {
 				name: STAGE_B_DOCUMENT_NAME,
+				// Which Files location took the file decides which row the flow
+				// navigates to, so the receipt must carry it.
+				provider: seed.provider,
 				path: seed.path,
 				bytes: seed.bytes,
 				sha256: seed.sha256,
 				containerPresent: seed.containerPresent,
+				checked: seed.checked,
 			};
 			return seed;
 		};
@@ -1005,7 +1007,7 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		seedOwnedDocument(udid ?? "");
+		const documentSeed = seedOwnedDocument(udid ?? "");
 		// Photo-library attachment is not exercised: 42078247373 proved the fresh
 		// library's thumbnail rebuild holds PhotoKit's changes transaction in an
 		// untimed CMPhoto HEIF transcode, so the simctl import waits forever. The row stays
@@ -1025,7 +1027,10 @@ async function runStageBCoordinator(
 					{ assertNotVisible: { id: "computers-screen" } },
 				]);
 				await flow("type-initial", typeStageBDraft(canary));
-				await flow("attach-native-document", attachStageBDocument());
+				await flow(
+					"attach-native-document",
+					attachStageBDocument(documentSeed.provider),
+				);
 				await flushFlows();
 			},
 		);
@@ -1058,7 +1063,10 @@ async function runStageBCoordinator(
 		await flow("remove-picked-copy-ui", [
 			{ tapOn: { id: "composer-attachment-0" } },
 		]);
-		await flow("original-document-still-selectable", attachStageBDocument());
+		await flow(
+			"attach-native-document-second",
+			attachStageBDocument(documentSeed.provider),
+		);
 		await expire();
 		await frame("light-expired-error");
 		// Capture on fixture arrival: returning from Maestro connect can already
