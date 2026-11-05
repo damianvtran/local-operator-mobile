@@ -34,6 +34,47 @@ describe("one account-refresh authority", () => {
 		await owner(expired);
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});
+	it("stops offering a cached rotation once its own access expires", async () => {
+		// R1-M3: the cached result may itself need refreshing. That attempt SPENDS the
+		// cached handle, so the entry must stop being offered to anyone else — the
+		// second caller must refresh from its own input, not join a spent rotation.
+		let issued = 0;
+		const refresh = vi.fn(async (tokens: RadientTokens) => {
+			issued += 1;
+			return {
+				...tokens,
+				access: `access-${issued}`,
+				refresh: `rotated-${issued}`,
+				expires_at: issued === 1 ? Date.now() - 1 : Date.now() + 3_600_000,
+			};
+		});
+		const owner = createRadientRefresher(refresh);
+		const first = await owner(expired);
+		expect(first.refresh).toBe("rotated-1");
+		// `first`'s access is already expired, so this spends its handle.
+		const second = await owner(expired);
+		expect(second.refresh).toBe("rotated-2");
+		expect(refresh).toHaveBeenCalledTimes(2);
+		// A third caller holding the ORIGINAL input is offered the newest rotation,
+		// never the spent intermediate one.
+		const third = await owner(expired);
+		expect(third.refresh).toBe("rotated-2");
+		expect(refresh).toHaveBeenCalledTimes(2);
+	});
+	it("forgets cached rotations when the session that owned them ends", async () => {
+		const refresh = vi.fn(async (tokens: RadientTokens) => ({
+			...tokens,
+			access: "access-x",
+			refresh: "rotated-x",
+			expires_at: Date.now() + 3_600_000,
+		}));
+		const owner = createRadientRefresher(refresh);
+		await owner(expired);
+		owner.clear();
+		await owner(expired);
+		expect(refresh).toHaveBeenCalledTimes(2);
+	});
+
 	it("does not retain a rejected rotation as a refreshable value", async () => {
 		const refresh = vi.fn(async () => {
 			throw new Error("synthetic network failure");

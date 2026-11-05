@@ -47,7 +47,9 @@ import type { TunnelSession } from "./tunnel-session";
 export interface RouteCredentials {
 	/** The current tunnel session, or `null` when there is none yet. Read on every
 	 *  request, never captured. */
-	tunnelSession?: () => TunnelSession | null | Promise<TunnelSession | null>;
+	tunnelSession?: (
+		signal?: AbortSignal,
+	) => TunnelSession | null | Promise<TunnelSession | null>;
 }
 
 export interface CreateRelayClientOptions extends RouteCredentials {
@@ -59,7 +61,7 @@ export interface CreateRelayClientOptions extends RouteCredentials {
 	onResponse?: (facts: RelayResponseFactsWithHeaders) => void | Promise<void>;
 	/** Only the edge's explicit pre-forward401 permits ONE replay, never an
 	 * ambiguous transport failure or an arbitrary relay401 after a write. */
-	refreshTunnelSession?: () => Promise<void>;
+	refreshTunnelSession?: (signal?: AbortSignal) => Promise<void>;
 	assertCurrent?: () => void;
 }
 
@@ -68,10 +70,11 @@ export function createRelayClient(
 	options: CreateRelayClientOptions,
 ): RelayEndpoints {
 	const { route, tunnelSession, onResponse } = options;
-	const auth = async () =>
-		requestAuthFor(route, { grant: (await tunnelSession?.())?.grant });
+	const auth = async (signal?: AbortSignal) =>
+		requestAuthFor(route, { grant: (await tunnelSession?.(signal))?.grant });
 	const baseFetch = resolveFetch(options.fetchImpl);
 	const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+		const signal = init?.signal ?? undefined;
 		options.assertCurrent?.();
 		const response = await baseFetch(input, init);
 		if (
@@ -90,11 +93,11 @@ export function createRelayClient(
 			return response;
 		options.assertCurrent?.();
 		const rejectedCookie = new Headers(init?.headers).get("cookie");
-		let currentAuth = await auth();
+		let currentAuth = await auth(signal);
 		if (currentAuth.cookie === rejectedCookie)
-			await options.refreshTunnelSession();
+			await options.refreshTunnelSession(signal);
 		options.assertCurrent?.();
-		currentAuth = await auth();
+		currentAuth = await auth(signal);
 		options.assertCurrent?.();
 		const headers = new Headers(init?.headers);
 		if (currentAuth.cookie) headers.set("cookie", currentAuth.cookie);

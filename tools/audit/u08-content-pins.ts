@@ -466,7 +466,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * for that hook, not a transcript rendering change. No tokens, styles,
 	 * transcript components, corpus or instrument changed. Native filesystem
 	 * proof is separate; this retains only the unchanged U08 web geometry. */
-	src: "d9f31c09f77f0d12d5295aec9c3d3e4ccbfe9fa96a3230db84950053270268e8",
+	/* Deliberate re-pin for PR #166 (native session persistence, operator incident
+	 * #389), after review round 1: `src` renews an expiring account token and the
+	 * five-minute tunnel grant in place, and the provider's discovery pass reports
+	 * those outcomes through the connection store. No screen, layout, style, token
+	 * or transcript input is added or renamed, and U-08's healthy custom-relay
+	 * transcript selects none of the renewed branches — this is a source-
+	 * compatibility re-pin, not fresh geometry evidence. `app` untouched;
+	 * historical pins retained. Recomputed with `--print` after the merge with
+	 * main (#162 notification-store changes). */
+	src: "58967bb0654d0cd633dd3b7072cfd22125969fe6cd71ff94ee2de3dbb31172c2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
