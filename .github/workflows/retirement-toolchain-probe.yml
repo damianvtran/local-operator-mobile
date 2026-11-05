@@ -1,0 +1,53 @@
+name: Retirement exact-toolchain NO-TEST probe
+
+# The registered iOS manual route delegates only this fixed, input-free probe.
+# Neither entrypoint is triggered automatically by a push/PR.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+# A reusable inherits the caller's workflow/event/ref: a child-specific namespace
+# prevents this job from queuing behind the parent that is waiting for it.
+concurrency:
+  group: ${{ format('{0}-retirement-toolchain-probe-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  no-test-probe:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # The sole credentialed step owns both metadata and raw ZIP acquisition.
+      # Bearer headers stop at api.github.com; signed blob requests are anonymous.
+      - name: Acquire and independently hash only the fixed compile runner ZIP
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/ci/retirement-toolchain-acquire.py "$RUNNER_TEMP/toolchain-probe-download" > "$RUNNER_TEMP/toolchain-probe.json"
+      - name: Inspect private Products and standalone toolchain help only
+        run: |
+          set -euo pipefail
+          trap 'rm -rf "$RUNNER_TEMP/toolchain-probe-download" "$RUNNER_TEMP/toolchain-probe-private"' EXIT
+          mkdir -m 700 "$RUNNER_TEMP/toolchain-probe-private"
+          env -i PATH=/usr/bin:/bin:/usr/sbin:/sbin DEVELOPER_DIR="${DEVELOPER_DIR:-}" TMPDIR="$RUNNER_TEMP/toolchain-probe-private/" \
+            python3 scripts/ci/retirement-toolchain-probe.py "$RUNNER_TEMP/toolchain-probe-download" "$RUNNER_TEMP/toolchain-probe-download/identity.json" > "$RUNNER_TEMP/toolchain-probe.json"
+      - name: Retain only allowlisted JSON evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: retirement-toolchain-probe-json
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/toolchain-probe.json
+      - name: Remove owned private inputs even after an earlier step fails
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/toolchain-probe-download" "$RUNNER_TEMP/toolchain-probe-private"

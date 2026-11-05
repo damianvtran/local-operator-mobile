@@ -132,7 +132,7 @@ describe("registered iOS workflow exclusive setup routing (source-only, no dispa
 	);
 	it("default input and local reusable workflow are exact, with no app/test install entrypoint", () => {
 		expect(workflow).toContain(
-			"options: [standard, retirement-ui-setup, retirement-seed-replay]",
+			"options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe]",
 		);
 		expect(workflow).toContain("default: standard");
 		expect(block("retirement-ui-setup")).toContain(
@@ -165,6 +165,7 @@ describe("exclusive retained replay route cross-product", () => {
 		"standard",
 		"retirement-ui-setup",
 		"retirement-seed-replay",
+		"retirement-toolchain-probe",
 	])
 		for (const proof of [false, true])
 			for (const observeOnly of [false, true])
@@ -339,6 +340,118 @@ function graph(
 	for (const name of names) resolve(name);
 	return { states, dependencies, ancestors };
 }
+describe("registered NO-TEST probe route isolation", () => {
+	it("valid probe reaches only manual validation and the reusable probe lane", () => {
+		expect(route("retirement-toolchain-probe", false).status).toBe(0);
+		const result = graph(
+			"workflow_dispatch",
+			"retirement-toolchain-probe",
+			false,
+		);
+		for (const [name, state] of Object.entries(result.states))
+			expect(state, name).toBe(
+				["manual-mode", "retirement-toolchain-probe"].includes(name)
+					? "success"
+					: "skipped",
+			);
+		expect(result.dependencies("retirement-toolchain-probe")).toEqual([
+			"manual-mode",
+		]);
+	});
+	it.each([true, "false", null, undefined, 0])(
+		"refuses malformed or enabled proof=%s",
+		(proof) => {
+			expect(route("retirement-toolchain-probe", proof).status).not.toBe(0);
+			expect(
+				evaluate(
+					"retirement-toolchain-probe",
+					"workflow_dispatch",
+					"retirement-toolchain-probe",
+					proof,
+				),
+			).toBe(false);
+		},
+	);
+	it.each([
+		["REPLAY_COMPILE_RUN", "12345"],
+		["REPLAY_COMPILE_RUN", " "],
+		["REPLAY_RUNNER_ARTIFACT", "67890"],
+		["REPLAY_RUNNER_SOURCE", "c".repeat(40)],
+		["REPLAY_OBSERVE_ONLY_JSON", "true"],
+		["REPLAY_OBSERVE_ONLY_JSON", '"false"'],
+		["REPLAY_OBSERVE_ONLY_JSON", "null"],
+		["REPLAY_OBSERVE_ONLY_JSON", "not-json"],
+	] as const)(
+		"refuses probe replay field %s=%s before any lane",
+		(key, value) => {
+			expect(
+				route("retirement-toolchain-probe", false, { [key]: value }).status,
+			).not.toBe(0);
+			const states = graph(
+				"workflow_dispatch",
+				"retirement-toolchain-probe",
+				false,
+				false,
+			).states;
+			expect(states["manual-mode"]).toBe("failure");
+			for (const [name, state] of Object.entries(states))
+				if (name !== "manual-mode") expect(state, name).toBe("skipped");
+		},
+	);
+	it.each(["pull_request", "push"])("probe is unreachable for %s", (event) => {
+		expect(
+			evaluate(
+				"retirement-toolchain-probe",
+				event,
+				"retirement-toolchain-probe",
+				false,
+			),
+		).toBe(false);
+	});
+	it("old manual modes never reach the probe job", () => {
+		for (const mode of [
+			"standard",
+			"retirement-ui-setup",
+			"retirement-seed-replay",
+		])
+			expect(
+				graph("workflow_dispatch", mode, false).states[
+					"retirement-toolchain-probe"
+				],
+			).toBe("skipped");
+	});
+	it("reusable child has independent concurrency, no inputs and no native execution path", () => {
+		const job = block("retirement-toolchain-probe");
+		expect(job).toContain(
+			"uses: ./.github/workflows/retirement-toolchain-probe.yml",
+		);
+		expect(job).toContain("contents: read");
+		expect(job).toContain("actions: read");
+		expect(job).not.toMatch(/with:|secrets:|steps:|runs-on:/);
+		const child = readFileSync(
+			new URL(
+				"../../.github/workflows/retirement-toolchain-probe.yml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		expect(child).toContain("workflow_call:");
+		expect(child).toContain("-retirement-toolchain-probe-");
+		expect(child).toContain("cancel-in-progress: false");
+		expect(child).not.toMatch(
+			/inputs:|simctl|build-for-testing|test-without-building|setup-node|pnpm|npm install|retirement-ui-setup.py|retirement-ui-replay.ts/,
+		);
+		const python = readFileSync(
+			new URL("./retirement-toolchain-probe.py", import.meta.url),
+			"utf8",
+		);
+		expect(python).toContain("if option not in ('-version', '-help')");
+		expect(python).not.toMatch(
+			/test-without-building|build-for-testing|simctl/,
+		);
+	});
+});
+
 describe("resolved actual needs/if/default-status workflow graph", () => {
 	it.each(["pull_request", "push"])(
 		"ordinary %s native iOS remains eligible despite skipped manual-only jobs",

@@ -33,9 +33,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Standard jobs, independent runner compile, or separately approved retained seed replay"
+        description: "Standard jobs, independent runner compile, approved retained seed replay, or NO-TEST toolchain probe"
         type: choice
-        options: [standard, retirement-ui-setup, retirement-seed-replay]
+        options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe]
         default: standard
       retirement_proof:
         description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
@@ -117,6 +117,16 @@ jobs:
     uses: ./.github/workflows/retirement-ui-setup.yml
     with:
       mode: setup
+
+  # The registered entrypoint delegates without exposing any app/build lane.
+  # manual-mode rejects proof/replay inputs before this independent child runs.
+  retirement-toolchain-probe:
+    permissions:
+      contents: read
+      actions: read
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-toolchain-probe' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-toolchain-probe.yml
 
   retirement-seed-replay:
     needs: manual-mode
