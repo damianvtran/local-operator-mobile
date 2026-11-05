@@ -1,12 +1,5 @@
 import assert from "node:assert/strict";
-import {
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	renameSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync } from "node:fs";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import {
@@ -245,13 +238,11 @@ export async function directTransportTest(options: {
 						"..",
 						"auth-credential-attachments-quarantine",
 					);
+					// Filename shape and secure-field masking do not prove image
+					// privacy. Keep EVERY exported attachment outside upload roots
+					// when the credential audit fails; salvage requires independent
+					// proof that the capture predates credential entry.
 					renameSync(exported, quarantine);
-					mkdirSync(exported, { recursive: true });
-					// Preserve masked application PNGs, not potentially sensitive text
-					// attachments/manifest, if activity privacy cannot be established.
-					for (const file of readdirSync(quarantine))
-						if (/^[A-Fa-f0-9-]+\.png$/.test(file))
-							copyFileSync(join(quarantine, file), join(exported, file));
 				}
 			}
 		}

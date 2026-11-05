@@ -488,6 +488,16 @@ let failure: string | undefined;
 /** Failure-time evidence, taken BEFORE teardown: the screen the driver was
  *  actually looking at. Best effort and bounded; it never masks the real error. */
 async function captureFailure(label: string, driverUnavailable = false) {
+	// A failed auth run may still display credentials. This capture has no
+	// credential audit (unlike auth-verified XCTest attachments), so never
+	// produce image or hierarchy evidence for that allocation, even on setup
+	// failures: the phase alone is not independent precredential proof.
+	if (authSave) {
+		note(
+			"auth-save failure image/hierarchy withheld: credential privacy unproved",
+		);
+		return;
+	}
 	if (!udid) return;
 	try {
 		await run(
