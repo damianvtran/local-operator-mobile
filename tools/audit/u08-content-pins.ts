@@ -460,7 +460,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "cc420536ea3e94e0f016021caa2225085da51b8c1e1afb3681497765a509064f",
+	src: "acf67f88993c46cd2bc15c89cd55f41bd28c16cb7883e0b69ca7b2712f3ee4fd",
 	// Proof-entry-only bounded route tracing; ordinary app/U08 custom-relay graph unchanged.
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.

@@ -46,7 +46,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Discriminating proof source controls (not another full suite)
-        run: pnpm exec vitest run scripts/ci/stage-b-draft-proof.test.ts scripts/ci/stage-b-backup-rules.test.ts scripts/ci/stage-b-identity-fixture.test.ts src/features/session/picker-privacy.test.ts
+        run: pnpm exec vitest run scripts/ci/stage-b-draft-proof.test.ts scripts/ci/stage-b-backup-rules.test.ts scripts/ci/stage-b-identity-fixture.test.ts scripts/ci/stage-b-lost-tap.test.ts src/features/session/picker-privacy.test.ts
       - name: Exercise the actual TypeScript entry and its negative admission gate
         run: |
           set -euo pipefail

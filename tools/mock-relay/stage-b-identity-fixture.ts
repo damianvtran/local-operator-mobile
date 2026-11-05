@@ -16,6 +16,7 @@ import {
 } from "../../src/testing/stage-b-draft-transport.ts";
 
 const OPAQUE_FINGERPRINT = /^[a-f0-9]{64}$/;
+const PROCESS_LEASE = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 export type IdentityScenario =
 	| "same"
@@ -235,6 +236,17 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 							"traceSelected",
 							"traceFailure",
 						].some((key) => !(key in receipt))) ||
+					(receipt.kind === "stage-b-callback-probe" &&
+						[
+							"processId",
+							"presses",
+							"superseded",
+							"traceRevision",
+							"tracePhase",
+							"traceRoute",
+							"traceSelected",
+							"traceFailure",
+						].some((key) => !(key in receipt))) ||
 					Object.entries(receipt).some(([key, val]) => {
 						if (key === "kind")
 							return ![
@@ -248,6 +260,7 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 								"wrong-key",
 								"control-error",
 								"route-trace",
+								"stage-b-callback-probe",
 							].includes(String(val));
 						if (key === "sourceSha") return val !== sourceSha;
 						if (key === "traceEvent")
@@ -280,6 +293,17 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 							return (
 								typeof val !== "string" ||
 								(val !== "none" && !OPAQUE_FINGERPRINT.test(val))
+							);
+						if (key === "processId")
+							return (
+								typeof val !== "string" || !PROCESS_LEASE.test(String(val))
+							);
+						if (["presses", "superseded"].includes(key))
+							return (
+								typeof val !== "number" ||
+								!Number.isSafeInteger(val) ||
+								val < 0 ||
+								val > 100000
 							);
 						if (["files", "committed", "pickerCopies"].includes(key))
 							return (

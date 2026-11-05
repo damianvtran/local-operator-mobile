@@ -273,9 +273,14 @@ async function bootStageBDraftProof(
 		require("@/features/auth/connection-provider") as typeof import("@/features/auth/connection-provider");
 	const { stageBRouteTrace } =
 		require("./stage-b-route-trace") as typeof import("./stage-b-route-trace");
+	// One lease per JavaScript process. A relaunch mints a new one, so a probe
+	// answered by a different process can never authorise a re-tap.
+	const processLease = crypto.randomUUID();
 	const trace = stageBRouteTrace(
 		() => connectionStore.getState(),
 		(event) => receipt("route-trace", { ...event }),
+		Date.now,
+		processLease,
 	);
 	(globalThis as { __stageBRowPress?: () => void }).__stageBRowPress =
 		trace.rowPress;
@@ -314,6 +319,20 @@ async function bootStageBDraftProof(
 					sentinelPresent: sentinel().exists,
 					installFingerprint: key ? await hash(key.installId) : "none",
 					generationFingerprint: scope ? await hash(scope) : "none",
+				});
+			} else if (action === "stage-b-callback-probe") {
+				// Synchronous counters, no identity/route/draft payload. This is the
+				// only evidence that may authorise the one lost-tap re-tap.
+				const probe = trace.probe();
+				await receipt("stage-b-callback-probe", {
+					processId: probe.processId,
+					presses: probe.presses,
+					superseded: probe.superseded,
+					traceRevision: probe.revision,
+					tracePhase: probe.phase,
+					traceRoute: probe.route,
+					traceSelected: probe.selected,
+					traceFailure: probe.failure,
 				});
 			} else if (action === "drop-sentinel") {
 				if (sentinel().exists) sentinel().delete();

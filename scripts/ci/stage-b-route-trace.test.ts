@@ -88,6 +88,7 @@ describe("proof-only callback/publication trace", () => {
 			trace.rowPress();
 		}
 		await expect(trace.settled()).resolves.toBeUndefined();
+		await trace.settled();
 		expect(events).toHaveLength(32);
 		expect(
 			events.every((e) => e.tracePhase === "other" && e.traceRoute === "other"),
@@ -160,5 +161,55 @@ describe("proof-only callback/publication trace", () => {
 		);
 		expect(product).not.toContain("__stageBRowPress");
 		expect(instrumentStageBComputerPick(product)).toContain("__stageBRowPress");
+	});
+	it("counts every row entry synchronously, past the trace record cap, and probes without private data", async () => {
+		const state: StageBTraceState = {
+			revision: 0,
+			phase: "signed-out",
+			route: null,
+			tunnelId: null,
+			surface: null,
+		};
+		const events: StageBRouteTrace[] = [];
+		const trace = stageBRouteTrace(
+			() => state,
+			async (event) => {
+				events.push(event);
+			},
+			() => 7,
+			"lease-1",
+		);
+		for (let i = 0; i < 40; i++) trace.rowPress();
+		expect(trace.probe()).toEqual({
+			processId: "lease-1",
+			presses: 40,
+			superseded: 0,
+			revision: 0,
+			phase: "signed-out",
+			route: "none",
+			selected: false,
+			failure: false,
+		});
+		await trace.settled();
+		expect(events).toHaveLength(32);
+		Object.assign(state, {
+			revision: 2,
+			phase: "live",
+			route: { mode: "radient", hostname: "private-host" },
+			tunnelId: "private-tunnel",
+		});
+		trace.superseded();
+		const probe = trace.probe();
+		expect(probe).toMatchObject({
+			presses: 40,
+			superseded: 1,
+			revision: 2,
+			phase: "live",
+			route: "radient",
+			selected: true,
+			processId: "lease-1",
+		});
+		expect(JSON.stringify(probe)).not.toContain("private-host");
+		expect(JSON.stringify(probe)).not.toContain("private-tunnel");
 	});
 });

@@ -25,24 +25,40 @@ export interface StageBRouteTrace {
 	traceAtMs: number;
 	traceRevision: number;
 	tracePhase: (typeof STAGE_B_TRACE_PHASES)[number];
-	traceRoute: "none" | "radient" | "custom" | "other";
+	traceRoute: StageBRouteMode;
 	traceSelected: boolean;
 	traceFailure: boolean;
+}
+/** Same-process lease plus synchronous counters for the lost-tap gate. A
+ * capped trace record cannot answer "did the callback run at all", so the
+ * counts are kept OUTSIDE the 32-record cap and incremented at entry. */
+export type StageBRouteMode = "none" | "radient" | "custom" | "other";
+export interface StageBCallbackSnapshot {
+	processId: string;
+	presses: number;
+	superseded: number;
+	revision: number;
+	phase: (typeof STAGE_B_TRACE_PHASES)[number];
+	route: StageBRouteMode;
+	selected: boolean;
+	failure: boolean;
 }
 export function stageBRouteTrace(
 	read: () => StageBTraceState,
 	send: (event: StageBRouteTrace) => Promise<void>,
 	now: () => number = Date.now,
+	processId = "unleased",
 ) {
 	let count = 0,
+		presses = 0,
+		supersessions = 0,
 		last = "",
 		tail = Promise.resolve();
-	const emit = (traceEvent: StageBRouteTrace["traceEvent"]) => {
-		if (count >= 32) return;
+	const project = () => {
 		const state = read();
 		const tracePhase =
 			STAGE_B_TRACE_PHASES.find((value) => value === state.phase) ?? "other";
-		const traceRoute =
+		const traceRoute: StageBRouteMode =
 			state.route === null
 				? "none"
 				: state.route.mode === "radient"
@@ -50,7 +66,7 @@ export function stageBRouteTrace(
 					: state.route.mode === "custom"
 						? "custom"
 						: "other";
-		const projection = {
+		return {
 			traceRevision:
 				Number.isSafeInteger(state.revision) && state.revision >= 0
 					? state.revision
@@ -60,12 +76,15 @@ export function stageBRouteTrace(
 			traceSelected: state.tunnelId !== null,
 			traceFailure: state.surface !== null,
 		};
+	};
+	const emit = (traceEvent: StageBRouteTrace["traceEvent"]) => {
+		if (count >= 32) return;
+		const projection = project();
 		const fingerprint = JSON.stringify(projection);
 		if (traceEvent === "state" && fingerprint === last) return;
 		last = fingerprint;
 		const event: StageBRouteTrace = {
 			...projection,
-			traceRoute,
 			traceEvent,
 			traceSequence: ++count,
 			traceAtMs: now(),
@@ -75,9 +94,29 @@ export function stageBRouteTrace(
 		tail = tail.then(() => send(event)).catch(() => {});
 	};
 	return {
-		rowPress: () => emit("row-press"),
-		superseded: () => emit("superseded"),
+		rowPress: () => {
+			presses++;
+			emit("row-press");
+		},
+		superseded: () => {
+			supersessions++;
+			emit("superseded");
+		},
 		observe: () => emit("state"),
 		settled: () => tail,
+		/** Bounded, identity-free answer to "did THIS process run the callback". */
+		probe: (): StageBCallbackSnapshot => {
+			const projection = project();
+			return {
+				processId,
+				presses,
+				superseded: supersessions,
+				revision: projection.traceRevision,
+				phase: projection.tracePhase,
+				route: projection.traceRoute,
+				selected: projection.traceSelected,
+				failure: projection.traceFailure,
+			};
+		},
 	};
 }

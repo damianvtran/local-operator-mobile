@@ -54,7 +54,15 @@ import {
 	stageBSleep,
 	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing.ts";
-import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
+import {
+	StageBDriverBatch,
+	type StageBLostTapRetry,
+} from "./stage-b-driver-batch.ts";
+import {
+	type StageBCallbackProbe,
+	type StageBLostTapLease,
+	stageBLostTapGate,
+} from "./stage-b-lost-tap.ts";
 import {
 	STAGE_B_MEDIA_SAMPLE_MAX_OUTPUT,
 	stageBImportWithSampling,
@@ -732,8 +740,11 @@ async function runStageBCoordinator(
 		});
 		receipt.driverSegments = batch.segments;
 		let expectedMe: number | undefined;
-		const flow = async (name: string, steps: StageBStep[]) =>
-			batch.add(name, steps);
+		const flow = async (
+			name: string,
+			steps: StageBStep[],
+			retry?: StageBLostTapRetry,
+		) => batch.add(name, steps, retry);
 		const flushFlows = async () => {
 			await batch.flush();
 			if (expectedMe !== undefined) {
@@ -863,6 +874,66 @@ async function runStageBCoordinator(
 				`native ${action} receipt`,
 			);
 		};
+		/** Raw control round trip. It never flushes the batch: it is used at
+		 * boundaries that are already flushed, and a probe must not reorder
+		 * flows or trigger the fresh-/me wait. Any anomaly returns null. */
+		const probeCallback = async (
+			capMs = 20000,
+		): Promise<StageBCallbackProbe | null> => {
+			if (!fixture) return null;
+			const count = fixture.receipts.length;
+			fixture.command("stage-b-callback-probe");
+			let item: Record<string, unknown>;
+			try {
+				item = await until(
+					() =>
+						fixture?.receipts
+							.slice(count)
+							.find((entry) => entry.kind === "stage-b-callback-probe"),
+					"same-process callback probe",
+					capMs,
+				);
+			} catch {
+				return null;
+			}
+			const number = (value: unknown) =>
+				typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+					? value
+					: null;
+			const presses = number(item.presses);
+			const superseded = number(item.superseded);
+			const revision = number(item.traceRevision);
+			if (
+				presses === null ||
+				superseded === null ||
+				revision === null ||
+				typeof item.processId !== "string" ||
+				typeof item.tracePhase !== "string" ||
+				typeof item.traceRoute !== "string" ||
+				typeof item.traceSelected !== "boolean" ||
+				typeof item.traceFailure !== "boolean"
+			)
+				return null;
+			return {
+				processId: item.processId,
+				presses,
+				superseded,
+				revision,
+				phase: item.tracePhase,
+				route: item.traceRoute as StageBCallbackProbe["route"],
+				selected: item.traceSelected,
+				failure: item.traceFailure,
+			};
+		};
+		/** Positive same-process lease for THIS launch. Unavailable means no
+		 * retry capability at all; it must never fall back to "still on
+		 * Computers", which is also what a refusal or a network hang looks like. */
+		const lostTapLease = async (): Promise<StageBLostTapLease | null> => {
+			const probe = await probeCallback();
+			return probe
+				? { probe, identityRequests: fixture?.counters.me ?? 0 }
+				: null;
+		};
 		const relaunch = async (
 			mode: IdentityScenario = "same",
 			waitEditor = true,
@@ -873,10 +944,44 @@ async function runStageBCoordinator(
 			await terminate();
 			await launch();
 			expectedMe = priorMe;
-			await flow(`connect-${++serial}`, [
-				...selectStageBComputer(),
-				...(waitEditor ? stageBEditor() : []),
-			]);
+			// Run 42044812065 lost one fresh-proof row tap in transit while the
+			// driver reported COMPLETED. Arm exactly one conditional re-tap per
+			// launch, and only for a flow that must publish a route.
+			const lease = waitEditor ? await lostTapLease() : null;
+			let attempted = false;
+			const lostTapRetry: StageBLostTapRetry | undefined = lease
+				? {
+						probe: async () => {
+							const probe = await probeCallback();
+							const decision = stageBLostTapGate({
+								lease,
+								observed: probe
+									? {
+											probe,
+											identityRequests: fixture?.counters.me ?? 0,
+										}
+									: null,
+								retryAttempted: attempted,
+							});
+							attempted = decision.allow;
+							return decision;
+						},
+						record: (decision) => {
+							receipt.lostTapRetry = {
+								leaseProcess: "same-process",
+								identityRequests: lease.identityRequests,
+								attempted,
+								allowed: decision.allow,
+								reason: decision.reason,
+							};
+						},
+					}
+				: undefined;
+			await flow(
+				`connect-${++serial}`,
+				[...selectStageBComputer(), ...(waitEditor ? stageBEditor() : [])],
+				lostTapRetry,
+			);
 		};
 		const expire = async () => {
 			await flushFlows();

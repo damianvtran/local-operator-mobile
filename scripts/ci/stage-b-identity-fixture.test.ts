@@ -237,6 +237,46 @@ describe("Stage B real-socket synthetic authority fixture", () => {
 		expect((await post(missing)).status).toBe(400);
 		expect(x.receipts).toEqual([trace]);
 	});
+	it("accepts only bounded same-process callback probes over the real control socket", async () => {
+		const x = await fixture();
+		const probe = {
+			kind: "stage-b-callback-probe",
+			sourceSha: x.config.sourceSha,
+			processId: "00000000-0000-4000-8000-000000000001",
+			presses: 0,
+			superseded: 0,
+			traceRevision: 0,
+			tracePhase: "signed-out",
+			traceRoute: "none",
+			traceSelected: false,
+			traceFailure: false,
+		};
+		const post = (body: unknown) =>
+			fetch(`${x.config.fixtureOrigin}/proof/receipt`, {
+				method: "POST",
+				headers: {
+					"x-stage-b-proof": x.config.nonce,
+					"content-type": "application/json",
+				},
+				body: JSON.stringify(body),
+			});
+		expect((await post(probe)).status).toBe(200);
+		for (const mutation of [
+			{ processId: "not-a-lease" },
+			{ presses: -1 },
+			{ presses: 1.5 },
+			{ superseded: "1" },
+			{ tracePhase: "private-phase" },
+			{ traceRoute: "private-host" },
+			{ traceSelected: "yes" },
+			{ draft: "private-content" },
+			{ traceRevision: null },
+		])
+			expect((await post({ ...probe, ...mutation })).status).toBe(400);
+		const { presses: _omitted, ...missing } = probe;
+		expect((await post(missing)).status).toBe(400);
+		expect(x.receipts).toEqual([probe]);
+	});
 	it("accepts the native keychain preflight evidence as a boolean startup receipt", async () => {
 		const x = await fixture();
 		const response = await fetch(`${x.config.fixtureOrigin}/proof/receipt`, {
