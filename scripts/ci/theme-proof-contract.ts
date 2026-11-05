@@ -78,16 +78,17 @@ export function collectThemeFrames(
 
 /** A diagnostic success is a saved-route prerequisite only, never theme proof. */
 export function themeProofPlan(stage = "full") {
-	// Setup is a separately allocated prerequisite. 900s fits measured boot179s
-	// + install65s + the existing account-lane cold-driver420s + small operations.
-	// It does not extend the diagnostic's600s or Maestro's own startup timeout.
+	// Setup remains900s. Manager explicitly reallocates diagnostic600 ->900s
+	// so it can warm its OWN simulator before the short app flow. Setup41990457134
+	// measured boot120s + install118s + warm130s, before launch/other operations.
+	// This is one shared budget, not900s per phase; full mode is unchanged.
 	if (stage === "setup")
 		return { stage, flow: null, budgetSeconds: 900, frames: ["setup-ready"] };
 	if (stage === "diagnostic")
 		return {
 			stage,
 			flow: "saved-route-diagnostic.yaml",
-			budgetSeconds: 600,
+			budgetSeconds: 900,
 			frames: ["diagnostic-home", "diagnostic-sidebar"],
 		};
 	if (stage !== "full") throw new Error("unsupported theme proof stage");
@@ -177,3 +178,21 @@ export const sanitizeBootstrapLog = (text: string) =>
 	text
 		.replace(BOOTSTRAP_URL, "<redacted-origin>")
 		.replace(BOOTSTRAP_SECRET, "$1: <redacted>");
+
+/** A setup in another job/VM cannot warm this simulator. Cache the one actual
+ * attempt by owned device AND bundle; failed attempts are retained too, so a
+ * caller cannot turn a bootstrap failure into an implicit retry. */
+export function createThemeDriverWarmer(
+	run: Parameters<typeof warmThemeDriver>[0],
+) {
+	const attempts = new Map<string, Promise<string>>();
+	return (udid: string, bundle: string): Promise<string> => {
+		const key = JSON.stringify([udid, bundle]);
+		let attempt = attempts.get(key);
+		if (!attempt) {
+			attempt = warmThemeDriver(run, udid, bundle);
+			attempts.set(key, attempt);
+		}
+		return attempt;
+	};
+}

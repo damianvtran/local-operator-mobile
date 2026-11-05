@@ -15,6 +15,7 @@ import {
 	assertDriverReady,
 	collectThemeFrames,
 	copyThemeFrames,
+	createThemeDriverWarmer,
 	isDriverBootstrapFailure,
 	PROOF_THEMES,
 	sanitizeBootstrapLog,
@@ -27,6 +28,37 @@ import {
  *  A capture the flow takes but the inventory omits would ship unchecked, and
  *  one the inventory names but the flow never takes would fail every run. */
 describe("minimal native saved-route diagnostic allocation", () => {
+	it("warms once in the same owned simulator and never borrows another VM's readiness", async () => {
+		const commands: string[] = [];
+		const warm = createThemeDriverWarmer(async (name, _cmd, args) => {
+			commands.push(`${name}:${args.join(" ")}`);
+			return name === "warm-maestro-driver" ? "welcome-screen" : "";
+		});
+		await warm("owned-A", "com.localoperator.mobile");
+		await warm("owned-A", "com.localoperator.mobile");
+		expect(commands).toHaveLength(2);
+		await warm("owned-B", "com.localoperator.mobile");
+		expect(commands).toHaveLength(4);
+		expect(commands[3]).toContain("owned-B");
+	});
+
+	it("does not silently retry a failed bootstrap for the same owned simulator", async () => {
+		let attempts = 0;
+		const warm = createThemeDriverWarmer(async (name) => {
+			if (name === "warm-maestro-driver") {
+				attempts++;
+				throw new Error("IOSDriverTimeoutException");
+			}
+			return "";
+		});
+		await expect(warm("owned-A", "com.localoperator.mobile")).rejects.toThrow(
+			"IOSDriverTimeoutException",
+		);
+		await expect(warm("owned-A", "com.localoperator.mobile")).rejects.toThrow(
+			"IOSDriverTimeoutException",
+		);
+		expect(attempts).toBe(1);
+	});
 	it("setup never starts relay/app flow and bootstrap failure never retries hierarchy", () => {
 		const runner = readFileSync(
 			new URL("./theme-ios-proof.ts", import.meta.url),
@@ -34,7 +66,17 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		);
 		const start = runner.indexOf('if (plan.stage === "setup")');
 		const setup = runner.slice(start, runner.indexOf("} else {", start));
-		expect(setup).toContain("warmThemeDriver(");
+		const shared = runner.indexOf(
+			"const warmDriver = createThemeDriverWarmer(run);",
+		);
+		const warmBlock = runner.slice(shared, start);
+		expect(warmBlock).toContain('if (plan.stage !== "full")');
+		expect(warmBlock).toMatch(/await warmDriver\(\s*udid,/);
+		expect(shared).toBeLessThan(
+			runner.indexOf('const relay = await startRelay("en")'),
+		);
+		expect(warmBlock).not.toContain("flowRun(");
+		expect(runner.match(/createThemeDriverWarmer\(run\)/g)).toHaveLength(1);
 		expect(setup).not.toMatch(/startRelay|flowRun|session-row/);
 		expect(runner).toContain(
 			"captureFailure(label, isDriverBootstrapFailure(String(error)))",
@@ -140,7 +182,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 
 	it("is one bounded short flow and never the twelve-theme matrix", () => {
 		const plan = themeProofPlan("diagnostic");
-		expect(plan.budgetSeconds).toBe(600);
+		expect(plan.budgetSeconds).toBe(900);
 		expect(plan.flow).toBe("saved-route-diagnostic.yaml");
 		const flow = readFileSync(
 			new URL(
@@ -155,6 +197,8 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		expect(flow).toContain('id: "session-row-6714def86197"');
 		expect(flow).not.toMatch(/theme-card|theme-picker/);
 		expect(themeProofPlan().frames).toEqual(THEME_FRAMES);
+		expect(themeProofPlan().budgetSeconds).toBe(2700);
+		expect(themeProofPlan("setup").budgetSeconds).toBe(900);
 		expect(() => themeProofPlan("unknown")).toThrow();
 	});
 	it("refuses other hardware/runtime and a successful row without safe provider trace", () => {

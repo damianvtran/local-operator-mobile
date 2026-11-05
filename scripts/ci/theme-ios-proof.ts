@@ -41,10 +41,10 @@ import {
 	assertDiagnosticTrace,
 	collectThemeFrames,
 	copyThemeFrames,
+	createThemeDriverWarmer,
 	isDriverBootstrapFailure,
 	sanitizeBootstrapLog,
 	themeProofPlan,
-	warmThemeDriver,
 } from "./theme-proof-contract.ts";
 
 const env = process.env;
@@ -560,15 +560,12 @@ try {
 	await run("boot-ready", "xcrun", ["simctl", "bootstatus", udid, "-b"], 600);
 	await run("install", "xcrun", ["simctl", "install", udid, app], 180);
 
-	if (plan.stage === "setup") {
-		receipt.setupOnly = {
-			savedRouteFlowExecuted: false,
-			relayStarted: false,
-			expectedFixtureRequests: 0,
-		};
+	// Both stages warm this exact owned simulator, once, before any app flow.
+	// A previous setup job's VM is neither reused nor accepted as readiness.
+	const warmDriver = createThemeDriverWarmer(run);
+	if (plan.stage !== "full") {
 		try {
-			const hierarchy = await warmThemeDriver(
-				run,
+			const hierarchy = await warmDriver(
 				udid,
 				(receipt.installed as { bundleId: string }).bundleId,
 			);
@@ -590,12 +587,19 @@ try {
 			);
 			receipt.driverWarmUp =
 				"PASS actual launch + XCTest hierarchy showing a drawn app screen";
-			receipt.verdict =
-				"PASS setup prerequisite ONLY (not provider/theme acceptance)";
 		} catch (error) {
 			await captureFailure("setup", true);
 			throw error;
 		}
+	}
+	if (plan.stage === "setup") {
+		receipt.setupOnly = {
+			savedRouteFlowExecuted: false,
+			relayStarted: false,
+			expectedFixtureRequests: 0,
+		};
+		receipt.verdict =
+			"PASS setup prerequisite ONLY (not provider/theme acceptance)";
 	} else {
 		if (!plan.flow) throw new Error("missing flow for non-setup stage");
 		const relay = await startRelay("en");
@@ -604,7 +608,8 @@ try {
 
 		// The OS on LIGHT, so the System-mode frames show the light slot and every
 		// dark frame is the app's own forced choice rather than the simulator's.
-		// The first maestro call pays the cold driver start; one walk, so one cap.
+		// Diagnostic has already passed its same-simulator warm gate. Full mode
+		// keeps its original cold-first-call behavior and acceptance unchanged.
 		await run(
 			"appearance-light",
 			"xcrun",
