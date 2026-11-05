@@ -91,8 +91,14 @@ internal object NotificationSoundFiles {
     File(file(filesDir, sha).parentFile, "${check(sha)}.pending")
 
   fun syncDirectory(directory: File) {
-    val descriptor = Os.open(directory.absolutePath, OsConstants.O_RDONLY or OsConstants.O_DIRECTORY, 0)
-    try { Os.fsync(descriptor) } finally { Os.close(descriptor) }
+    // O_DIRECTORY is hidden from the public Android SDK. Verify the opened
+    // descriptor's type through public API21+ fstat/S_ISDIR instead; never
+    // weaken this to a best-effort or file-only barrier.
+    val descriptor = Os.open(directory.absolutePath, OsConstants.O_RDONLY, 0)
+    try {
+      require(OsConstants.S_ISDIR(Os.fstat(descriptor).st_mode))
+      Os.fsync(descriptor)
+    } finally { Os.close(descriptor) }
   }
 
   fun publish(filesDir: File, sha: String, bytes: ByteArray) {

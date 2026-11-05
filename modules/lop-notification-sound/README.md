@@ -147,3 +147,41 @@ current AOSP. Platform basis, not device results:
 
 There is no new app settings UI, user-facing copy, playback preview, service
 extension, or second notification handler in this change.
+
+## iOS persistence barriers and native fault execution
+
+The Expo module delegates to `ios/NotificationSoundStore.swift`. That exact
+Foundation/CryptoKit source is also the dependency-free SwiftPM target (no Pods
+or fetched package dependencies in the persistence test lane). Atomic rename is
+not a persistence barrier: both final sound and index writes synchronize the
+file **and its containing directory**. Directory creation synchronizes its
+parent; unlink synchronizes the sound directory before index removal. Errors
+propagate before native success, including close/barrier failures. Inventory
+retries barriers before treating a visible file as valid after an interrupted
+operation; successful read-back alone is not durability proof.
+
+A durably initialized witness distinguishes a first use from a lost index.
+An initialized missing index, missing claims field, corrupt JSON, or claims
+referring to unindexed files fail closed. A pre-witness readable index is
+preserved with its claims, never migrated through an empty reset. This does
+not promise recovery from arbitrary container erasure or simulate power loss.
+
+The narrowly selected sound jobs in `android.yml` now execute, not only compile:
+
+- Android API29/36 serial matrix downloads the same run's compiled native test
+  APK and checks its source-SHA receipt before booting the emulator. It requires
+  7/7 checks, no failure statuses and instrumentation result -1. This still does
+  not prove separate-UID/NMS grants or actual audible push delivery.
+- macOS-26 iOS simulator lane builds the Swift package and executes injected
+  sound/index/unlink directory-barrier failures and the old file-only negative
+  control. Separate `test-without-building` invocations persist/reopen the
+  sound and foreign claims, and verify different runner process IDs. XCTest
+  result bundles and the checkout SHA are artifacts. This is iOS persistence
+  execution, not Expo binding or notification/acoustic proof; the existing
+  iOS app build remains the separate compiled-binding lane.
+
+Local CLT-only hosts may not contain XCTest: do not install Xcode/SDKs to make
+this lane run. A native macOS executable using the same store can exercise
+real Darwin barriers and failure propagation, but it is not iOS simulator
+proof. No native test result should be inferred until its exact-SHA execution
+log/result bundle is actually observed.
