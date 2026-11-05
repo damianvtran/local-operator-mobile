@@ -153,6 +153,37 @@ class FailureClasses(unittest.TestCase):
             self.assertTrue(exported['supervisorFailed'])
             self.assertTrue(exported['forcedStop'])
 
+    def test_a_nonzero_worker_exit_with_a_clean_receipt_is_not_success(self):
+        # Round-34 delta re-check: dropping `workerExit != 0` let an external
+        # SIGKILL (exit -9, no stopReason) pass with a pre-spawn `none` receipt.
+        api = load()
+        for exit_code in (-9, 1, 143):
+            with tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                (root / 'work-clock.json').write_text(json.dumps({'jobStart': time.time(), 'acquisitionMs': 10}))
+                (root / 'replay-cleanup.json').write_text(json.dumps({'cleanupComplete': True, 'inventoryAbsent': True, 'exit': 0}))
+                (root / 'launch-receipt.json').write_text(json.dumps({'failure': 'none', 'controllerSource': 'a' * 40}))
+                fake = {'first': {'workerExit': exit_code, 'workerReaped': True, 'groupsAbsent': True, 'stopReason': None}, 'fallback': None}
+                with patch.dict(api['WATCHDOG'], {'supervise': lambda *_a, **_k: fake}):
+                    self.assertFalse(api['run']('run', root, root / 'out.json'))
+                exported = json.loads((root / 'out.json').read_text())
+                self.assertEqual(exported['failure'], 'internal', exit_code)
+                # The supervisor did not fail here; the exit is unexplained.
+                self.assertFalse(exported['supervisorFailed'])
+
+    def test_a_prior_class_forces_internal_over_a_clean_receipt(self):
+        api = load()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'work-clock.json').write_text(json.dumps({'jobStart': time.time(), 'acquisitionMs': 10}))
+            (root / 'replay-cleanup.json').write_text(json.dumps({'cleanupComplete': True, 'inventoryAbsent': True, 'exit': 0}))
+            (root / 'launch-receipt.json').write_text(json.dumps({'failure': 'none', 'controllerSource': 'a' * 40}))
+            (root / 'prior.json').write_text(json.dumps({'failure': 'launch'}))
+            fake = {'first': {'workerExit': 0, 'workerReaped': True, 'groupsAbsent': True, 'stopReason': None}, 'fallback': None}
+            with patch.dict(api['WATCHDOG'], {'supervise': lambda *_a, **_k: fake}):
+                self.assertFalse(api['run']('run', root, root / 'prior.json'))
+            self.assertEqual(json.loads((root / 'prior.json').read_text())['failure'], 'internal')
+
     def test_a_missing_receipt_is_internal(self):
         api = load()
         with tempfile.TemporaryDirectory() as raw:

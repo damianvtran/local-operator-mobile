@@ -153,6 +153,8 @@ def run(mode, root, output):
     result = None
     failed = False
     supervisor_error = False
+    unexplained_exit = False
+    prior_failed = prior.get('failure') not in (None, 'none')
     try:
         remaining = 300
         if mode == 'run':
@@ -160,12 +162,20 @@ def run(mode, root, output):
         result = WATCHDOG['supervise'](command + ['--run', str(root)], command + ['--cleanup', str(root)], root,
                                        work_seconds=remaining, cleanup_only=mode == 'cleanup', memory_check=sample_memory)
         # QA34-m1: the controller exits 1 for every recorded failure, so
-        # `workerExit != 0` relabelled a deliberate preflight refusal as a
+        # `workerExit != 0` alone relabelled a deliberate preflight refusal as a
         # supervisor crash and destroyed the only diagnosis the artifact carries.
         # A supervisor-side failure is a stop IT induced (stopReason), an
-        # unreaped worker or surviving groups — a clean self-exit with a receipt
-        # keeps the controller's own class.
-        failed = any(part and (part['stopReason'] or not part.get('workerReaped') or not part.get('groupsAbsent')) for part in (result['first'], result['fallback']))
+        # unreaped worker or surviving groups.
+        #
+        # But dropping the exit code entirely (round-34 delta re-check) let a
+        # real failure pass: an external SIGKILL gives workerExit=-9 with no
+        # stopReason, and a best-effort finally write can leave a pre-spawn
+        # `failure:"none"` on disk, so `run()` returned True. A non-zero exit is
+        # therefore still a failure signal — just not a SUPERVISOR one. It is
+        # only explained by a receipt that names a class.
+        parts = [part for part in (result['first'], result['fallback']) if part]
+        failed = any(part['stopReason'] or not part.get('workerReaped') or not part.get('groupsAbsent') for part in parts)
+        unexplained_exit = any(part.get('workerExit') not in (0, None) for part in parts)
     except Exception:
         failed = True
         supervisor_error = True
@@ -188,7 +198,11 @@ def run(mode, root, output):
     value['ownedGroupsAbsent'] = bool(parts) and all(part.get('groupsAbsent') is True for part in parts)
     value['controllerReaped'] = bool(parts) and all(part.get('workerReaped') is True for part in parts)
     value['forcedStop'] = prior.get('forcedStop') is True or value['stopOutcome'] in ('runner-start-timeout', 'post-denial-timeout', 'forced-stop') or any(part.get('stopReason') for part in parts)
-    if (supervisor_error or not receipt_present) or (failed and value['failure'] == 'none'):
+    # A `none` receipt is only believed when every process exited cleanly. Any
+    # non-zero exit, an induced stop, a prior non-`none` class or a missing
+    # receipt overrides it, so an unexplained death can never read as success.
+    if (supervisor_error or not receipt_present or
+            (value['failure'] == 'none' and (failed or unexplained_exit or prior_failed))):
         value['failure'] = 'internal'
     try:
         # Keep only ownership journals for the always() recovery. Raw runner
