@@ -380,7 +380,7 @@ async function flowRun(
 	}
 	const frames = collectThemeFrames(join(ROOT, "maestro", label), shots);
 	note(`collected ${label}: ${frames.join(",")}`);
-	// The native accessibility tree of the final state (home, last theme).
+	// Final picker hierarchy reads the persisted slot after the cold restart.
 	const tree = await run(
 		`hierarchy-${label}`,
 		"maestro",

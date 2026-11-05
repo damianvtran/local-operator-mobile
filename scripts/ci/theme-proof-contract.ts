@@ -16,6 +16,13 @@ export const PROOF_THEMES = [
 	"rosePine",
 	"rosePineDawn",
 	"highContrastLight",
+	// Restored maps and the third light-palette safety-margin neighbor. The
+	// other two (localOperatorLight/rosePineDawn) are already above.
+	"catppuccinMocha",
+	"tokyoNightStorm",
+	"duskfox",
+	"outrun",
+	"everforestLight",
 ] as const;
 
 export const THEME_FRAMES: readonly string[] = [
@@ -25,6 +32,8 @@ export const THEME_FRAMES: readonly string[] = [
 	"picker-search-rose",
 	"picker-selected-dracula",
 	...PROOF_THEMES.flatMap((theme) => [`home-${theme}`, `session-${theme}`]),
+	"home-persisted-everforestLight",
+	"picker-persisted-everforestLight",
 ];
 
 const PATH_SEPARATOR = /[\\/]/;
