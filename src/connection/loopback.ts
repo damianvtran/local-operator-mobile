@@ -11,7 +11,7 @@
  * iOS binds a real, device-local HTTP listener through the local Expo module.
  * ASWebAuthenticationSession's custom-scheme initializer cannot intercept HTTP;
  * its newer host/path callback API supports HTTPS, not this registered redirect.
- * Android still needs a native listener and remains explicitly unavailable.
+ * Android uses the same contract through a bounded local socket and owned Custom Tab.
  */
 
 import { type CryptoDeps, randomState } from "./pkce";
@@ -36,16 +36,16 @@ export interface CallbackListener {
 	close(): Promise<void>;
 }
 
-/** The system-browser session, which on iOS is also the callback transport. */
+/** The system-browser adapter, including owned callback transport on iOS/Android. */
 export interface AuthBrowserSession {
 	/** Bind an ephemeral loopback port before constructing the authorize URL. */
 	prepareRedirect?(): Promise<string>;
 	/** Opens `authorizeUrl` and resolves with the URL the platform handed back, or
 	 *  `null` when the platform cannot hand one back. */
 	open(authorizeUrl: string, redirectUri: string): Promise<string | null>;
-	/** False on an Android Custom Tab, which resolves on close and returns no URL.
-	 *  Read by the sign-in flow to decide whether a listener is mandatory rather
-	 *  than optional. */
+	/** True when this adapter owns callback delivery (native listener plus browser).
+	 *  A bare browser without that transport returns false and needs an external
+	 *  listener; merely opening an Android Custom Tab is never sufficient. */
 	readonly returnsCallback: boolean;
 	/** Best-effort dismissal. Never awaited as if it were reliable: Android cannot
 	 *  do it from JavaScript at all. */
@@ -147,20 +147,47 @@ export function parseCallbackUrl(
 	return { code, state };
 }
 
-/** The `expo-web-browser` session, imported lazily so Node never resolves it. */
+/** Native callback-owning sessions, with the existing web development adapter.
+ *  Imports stay lazy so Node never resolves a native implementation. */
 export async function createSystemBrowserSession(): Promise<AuthBrowserSession> {
-	// Keep native loading lazy: Node/web do not have an iOS Expo module. A real
+	// Keep native loading lazy: Node/web do not have the device Expo module. A real
 	// listener, not callbackURLScheme="http", is required for registered redirects.
 	const { Platform } = await import("react-native");
-	if (Platform.OS === "ios") {
+	if (Platform.OS === "ios" || Platform.OS === "android") {
 		const { requireNativeModule } = await import("expo");
 		const native = requireNativeModule("RadientLoopback");
+		const invoke = async (operation: () => Promise<string | null>) => {
+			try {
+				return await operation();
+			} catch (error) {
+				if (Platform.OS !== "android") throw error;
+				const { t } = await import("../i18n");
+				throw new LoopbackUnavailableError(t("mobile.oauth.failed"));
+			}
+		};
 		return {
 			returnsCallback: true,
-			prepareRedirect: () => native.prepare(),
-			open: (url, redirect) => native.open(url, redirect),
+			prepareRedirect: async () => {
+				const redirect = await invoke(async () => {
+					if (Platform.OS !== "android") return native.prepare();
+					const { t, activeDirection } = await import("../i18n");
+					return native.prepare({
+						received: t("mobile.oauth.received"),
+						returnLabel: t("mobile.oauth.return"),
+						invalid: t("mobile.oauth.invalid"),
+						direction: activeDirection(),
+					});
+				});
+				if (!redirect) throw new LoopbackUnavailableError("ERR_AUTH_NOT_READY");
+				return redirect;
+			},
+			open: (url, redirect) => invoke(() => native.open(url, redirect)),
 			dismiss: () => native.dismiss(),
 		};
+	}
+
+	if (Platform.OS !== "web") {
+		throw new LoopbackUnavailableError("ERR_AUTH_PLATFORM_UNSUPPORTED");
 	}
 	/* Lazy import for the same reason as the keystore: Node never loads the native
 	 * module. The shape is declared for the subset used and each member is checked
@@ -211,9 +238,9 @@ export function loopbackRedirectUri(
  * The device listener.
  *
  * Not implemented, and it says so in one place: see
- * `DEVICE_LOOPBACK_MODULE_REQUEST`. The iOS happy path does not need it (the
- * browser session returns the URL itself); Android does, and a hanging sign-in
- * would be a worse failure than this error.
+ * `DEVICE_LOOPBACK_MODULE_REQUEST`. The iOS and Android browser adapters own
+ * their listeners; other native platforms must fail explicitly rather than
+ * opening a browser whose callback has no transport.
  */
 export async function createDeviceListener(): Promise<CallbackListener> {
 	throw new LoopbackUnavailableError(

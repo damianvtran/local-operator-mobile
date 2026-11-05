@@ -469,7 +469,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
 	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
 	 * identities and the instrument/input pins are untouched. */
-	src: "ef34cb1a7fa23e87a679c0408d6a598fe7bcd1b82288d07f1114b9e97375854c",
+	src: "f4a5a191456b7bab81312a6b146b51c78006d7822ba4f5bd3c4457744371ad22",
+	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
+	 * the merged catalogues. Android adapter selection/return-page messages do
+	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
+	 * style, token, corpus or instrument input changes. Historical pins retained. */
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

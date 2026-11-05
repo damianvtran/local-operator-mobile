@@ -1,0 +1,202 @@
+name: Android OAuth callback proof
+
+# Manual only: the release owner runs this AFTER the iOS callback proof settles.
+# workflow_call lets the already-registered android.yml dispatch launch this
+# branch-local workflow before a new workflow exists on the default branch.
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Reusable workflows inherit the CALLER's github.workflow: distinguish this
+  # callee or its own caller holds the same lane and GitHub rejects a deadlock.
+  group: ${{ github.workflow }}-oauth-callback-proof-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-native:
+    name: Compile and stage real proof APK (no emulator)
+    runs-on: ubuntu-latest
+    # Keep Gradle/NDK intermediates off the VM that unpacks the Play image.
+    # Attempt4 compiled successfully but filled that combined VM before boot.
+    # Separate sequential leases:25m build +30m emulator; expected total <40m.
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Enable KVM (the emulator's hardware acceleration)
+        # WHY: GitHub-hosted Ubuntu runners can run the Android emulator on KVM, but
+        # they ship /dev/kvm with the runner user outside its owning group, so an
+        # unmodified job silently degrades to software emulation (measured: a
+        # ~15-minute boot, ~40-minute runs, and no flow output). This is the recipe
+        # GitHub's changelog for hardware-accelerated Android virtualization publishes
+        # (2024-04-02) and the emulator action's README carries: make the device
+        # world-readable/writable. Placed before the build so a KVM-less runner fails
+        # in seconds in the check below, not after the APK build.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Assert the emulator can use KVM (fail fast, and name KVM)
+        # WHY: a runner that cannot open /dev/kvm must fail HERE, naming KVM — never
+        # as "no flow output" forty minutes later, which reads like an app failure.
+        # This mirrors the action's own check before it decides to fall back to
+        # software emulation: accessSync('/dev/kvm', R_OK | W_OK).
+        run: |
+          set -euo pipefail
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -e /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm does not exist on this runner, so the Android emulator cannot use hardware acceleration — a software-emulated run is not a valid test of this app."
+            exit 1
+          fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            ls -l /dev/kvm
+            echo "::error title=KVM unavailable::/dev/kvm is not readable+writable by the runner user $(id -un); the emulator would silently fall back to software emulation."
+            exit 1
+          fi
+          echo "KVM is usable: $(ls -l /dev/kvm)"
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0
+      - name: Install locked dependencies and generate the real Android app
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          mkdir -p "$RUNNER_TEMP/android-oauth-callback-proof/evidence"
+          pnpm exec expo config --type public --json > "$RUNNER_TEMP/android-oauth-callback-proof/expo-config.json"
+          pnpm exec expo prebuild --platform android --clean --no-install
+          bash scripts/ci/android-oauth-callback-proof/prepare-app.sh
+      - name: Compile debug APK and prove debug controls are absent from Release manifest
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew assembleDebug :app:processReleaseMainManifest --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx3g
+          python3 - <<'PY'
+          import pathlib
+          # Match the repository's existing native gate: MainManifest can emit
+          # singular merged_manifest before a later task emits merged_manifests.
+          candidates = [p for p in pathlib.Path('app/build/intermediates').rglob('AndroidManifest.xml')
+                        if 'release' in p.parts and any(s.startswith('merged_manifest') for s in p.parts)]
+          assert candidates, 'Release manifest must exist; source-only absence is not proof'
+          for path in candidates:
+              text = path.read_text()
+              assert 'OAuthProofActivity' not in text and 'OAuthProofControlReceiver' not in text, path
+              assert 'OAuthActivity' in text and 'OAuthReturnActivity' in text, path
+          print('Release manifest: production activities present; debug proof controls absent')
+          PY
+      - name: Stage the built APK and provenance before any emulator setup
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/android-oauth-callback-proof"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$OUT/app-debug.apk"
+          git rev-parse HEAD > "$OUT/source-head.txt"
+          (cd "$OUT" && sha256sum app-debug.apk > artifact-apk.sha256)
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-oauth-build-${{ github.sha }}
+          path: ${{ runner.temp }}/android-oauth-callback-proof/
+          if-no-files-found: error
+
+  browser-native:
+    name: Real Custom Tab to device loopback (debug only)
+    needs: build-native
+    runs-on: ubuntu-latest
+    # Fresh runner: no Gradle cache, NDK build tree or node_modules are needed.
+    # Image/boot <=5m + native modes <=12m (real300s timeout) + app <=7m +
+    # retained evidence <=3m;30m lease. No native assertion/deadline is shortened.
+    timeout-minutes: 30
+    env:
+      MAESTRO_VERSION: "2.11.0"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-oauth-build-${{ github.sha }}
+          path: ${{ runner.temp }}/android-oauth-callback-proof
+      - name: Verify staged source, APK and embedded JavaScript
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/android-oauth-callback-proof"
+          test "$(cat "$OUT/source-head.txt")" = "$GITHUB_SHA"
+          (cd "$OUT" && sha256sum --check artifact-apk.sha256)
+          EXPECTED=$(cut -d ' ' -f1 "$OUT/evidence/real-app/embedded-bundle.sha256")
+          ACTUAL=$(unzip -p "$OUT/app-debug.apk" assets/index.android.bundle | sha256sum | cut -d ' ' -f1)
+          test "$ACTUAL" = "$EXPECTED"
+          df -h "$RUNNER_TEMP" "$ANDROID_HOME"
+      - name: Enable KVM (the emulator's hardware acceleration)
+        # WHY: GitHub-hosted Ubuntu runners can run the Android emulator on KVM, but
+        # they ship /dev/kvm with the runner user outside its owning group, so an
+        # unmodified job silently degrades to software emulation (measured: a
+        # ~15-minute boot, ~40-minute runs, and no flow output). This is the recipe
+        # GitHub's changelog for hardware-accelerated Android virtualization publishes
+        # (2024-04-02) and the emulator action's README carries: make the device
+        # world-readable/writable. Placed before the build so a KVM-less runner fails
+        # in seconds in the check below, not after the APK build.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Assert the emulator can use KVM (fail fast, and name KVM)
+        # WHY: a runner that cannot open /dev/kvm must fail HERE, naming KVM — never
+        # as "no flow output" forty minutes later, which reads like an app failure.
+        # This mirrors the action's own check before it decides to fall back to
+        # software emulation: accessSync('/dev/kvm', R_OK | W_OK).
+        run: |
+          set -euo pipefail
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -e /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm does not exist on this runner, so the Android emulator cannot use hardware acceleration — a software-emulated run is not a valid test of this app."
+            exit 1
+          fi
+          if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+            ls -l /dev/kvm
+            echo "::error title=KVM unavailable::/dev/kvm is not readable+writable by the runner user $(id -un); the emulator would silently fall back to software emulation."
+            exit 1
+          fi
+          echo "KVM is usable: $(ls -l /dev/kvm)"
+
+      - name: Install the repository-pinned hosted UI driver
+        run: |
+          set -euo pipefail
+          curl -fsSL https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Exercise real browser/provider/socket/lifecycle boundaries
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
+        with:
+          api-level: 36
+          target: google_apis_playstore
+          arch: x86_64
+          profile: pixel_7
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash scripts/ci/android-oauth-callback-proof/run.sh
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: android-oauth-callback-native-${{ github.sha }}
+          path: ${{ runner.temp }}/android-oauth-callback-proof/evidence/
