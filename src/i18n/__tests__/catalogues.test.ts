@@ -159,12 +159,14 @@ const NAMESPACES = [
 		expected: 20,
 	},
 	{
-		/* This app's own short sidebar words the relay has no key for: the
-		 *  destinations strip's one-word labels and the More sheet's title. */
+		/* This app's own short chrome words the relay has no key for: the
+		 *  destinations strip's one-word labels, the More sheet's title, and (from
+		 *  the 2026-11-05 build389 pass) the composer's context strip and the
+		 *  home's single presentation story. */
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 6,
+		expected: 15,
 	},
 ] as const;
 
@@ -208,7 +210,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(250);
+		expect(total).toBe(259);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

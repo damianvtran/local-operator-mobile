@@ -4,5 +4,14 @@
 	"mobile.chrome.destination.schedules": "计划",
 	"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
 	"mobile.chrome.destinations": "目的地",
-	"mobile.chrome.new_chat": "新聊天"
+	"mobile.chrome.new_chat": "新聊天",
+	"mobile.chrome.composer.more": "更多上下文",
+	"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+	"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
+	"mobile.chrome.home.greeting": "你想处理什么工作？",
+	"mobile.chrome.home.connecting": "正在连接 {host}…",
+	"mobile.chrome.home.connect": "连接电脑",
+	"mobile.chrome.home.sign_in": "登录以重新连接",
+	"mobile.chrome.home.saved_draft": "草稿已保存在此手机上，尚未发送。",
+	"mobile.chrome.home.reconnecting": "正在重新连接 {host}…"
 }

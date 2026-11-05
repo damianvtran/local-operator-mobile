@@ -47,11 +47,20 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.inbox_count"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.connecting"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.reconnecting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
 	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
@@ -300,10 +309,16 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
 	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
@@ -521,11 +536,20 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.chrome.composer.dismiss_keyboard": NoParams;
+	"mobile.chrome.composer.more": NoParams;
+	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.destination.inbox": NoParams;
 	"mobile.chrome.destination.inbox_count": { count: number };
 	"mobile.chrome.destination.past": NoParams;
 	"mobile.chrome.destination.schedules": NoParams;
 	"mobile.chrome.destinations": NoParams;
+	"mobile.chrome.home.connect": NoParams;
+	"mobile.chrome.home.connecting": { host: string | number };
+	"mobile.chrome.home.greeting": NoParams;
+	"mobile.chrome.home.reconnecting": { host: string | number };
+	"mobile.chrome.home.saved_draft": NoParams;
+	"mobile.chrome.home.sign_in": NoParams;
 	"mobile.chrome.new_chat": NoParams;
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
@@ -790,11 +814,20 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.more": "More context",
+	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.destination.inbox": "Inbox",
 	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
 	"mobile.chrome.destination.past": "Past",
 	"mobile.chrome.destination.schedules": "Schedules",
 	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.home.connect": "Connect a computer",
+	"mobile.chrome.home.connecting": "Connecting to {host}…",
+	"mobile.chrome.home.greeting": "What would you like to work on?",
+	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
+	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
+	"mobile.chrome.home.sign_in": "Sign in to reconnect",
 	"mobile.chrome.new_chat": "New chat",
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
@@ -1044,11 +1077,20 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
 	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
 	"mobile.chrome.destination.schedules": { role: "button", note: "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors." },
 	"mobile.chrome.destinations": { role: "heading", note: "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop." },
+	"mobile.chrome.home.connect": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.connecting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.greeting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.reconnecting": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.saved_draft": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.sign_in": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
 	"mobile.chrome.new_chat": { role: "button", note: "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop." },
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
@@ -1312,11 +1354,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+		"mobile.chrome.composer.more": "Más contexto",
+		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.destination.inbox": "Bandeja",
 		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
 		"mobile.chrome.destination.past": "Anteriores",
 		"mobile.chrome.destination.schedules": "Horarios",
 		"mobile.chrome.destinations": "Destinos",
+		"mobile.chrome.home.connect": "Conectar un ordenador",
+		"mobile.chrome.home.connecting": "Conectando con {host}…",
+		"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
+		"mobile.chrome.home.reconnecting": "Reconectando con {host}…",
+		"mobile.chrome.home.saved_draft": "Tu borrador está guardado en este teléfono y no se ha enviado.",
+		"mobile.chrome.home.sign_in": "Inicia sesión para reconectar",
 		"mobile.chrome.new_chat": "Nuevo chat",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
@@ -1564,11 +1615,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+		"mobile.chrome.composer.more": "Plus de contexte",
+		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.destination.inbox": "Boîte",
 		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
 		"mobile.chrome.destination.past": "Passées",
 		"mobile.chrome.destination.schedules": "Plans",
 		"mobile.chrome.destinations": "Destinations",
+		"mobile.chrome.home.connect": "Connecter un ordinateur",
+		"mobile.chrome.home.connecting": "Connexion à {host}…",
+		"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
+		"mobile.chrome.home.reconnecting": "Reconnexion à {host}…",
+		"mobile.chrome.home.saved_draft": "Votre brouillon est enregistré sur ce téléphone et n’a pas été envoyé.",
+		"mobile.chrome.home.sign_in": "Se connecter pour rétablir la connexion",
 		"mobile.chrome.new_chat": "Nouveau chat",
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
@@ -1816,11 +1876,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+		"mobile.chrome.composer.more": "अधिक संदर्भ",
+		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
 		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
 		"mobile.chrome.destination.past": "पिछले",
 		"mobile.chrome.destination.schedules": "शेड्यूल",
 		"mobile.chrome.destinations": "गंतव्य",
+		"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
+		"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
+		"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
+		"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…",
+		"mobile.chrome.home.saved_draft": "आपका ड्राफ़्ट इस फ़ोन पर सुरक्षित है और भेजा नहीं गया है।",
+		"mobile.chrome.home.sign_in": "फिर से कनेक्ट करने के लिए साइन इन करें",
 		"mobile.chrome.new_chat": "नई चैट",
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
@@ -2068,11 +2137,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+		"mobile.chrome.composer.more": "Дополнительный контекст",
+		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.destination.inbox": "Входящие",
 		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
 		"mobile.chrome.destination.past": "Прошлые",
 		"mobile.chrome.destination.schedules": "Расписания",
 		"mobile.chrome.destinations": "Разделы",
+		"mobile.chrome.home.connect": "Подключить компьютер",
+		"mobile.chrome.home.connecting": "Подключение к {host}…",
+		"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
+		"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…",
+		"mobile.chrome.home.saved_draft": "Черновик сохранён на этом телефоне и не отправлен.",
+		"mobile.chrome.home.sign_in": "Войдите для повторного подключения",
 		"mobile.chrome.new_chat": "Новый чат",
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
@@ -2320,11 +2398,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+		"mobile.chrome.composer.more": "مزید سیاق",
+		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.destination.inbox": "ان باکس",
 		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
 		"mobile.chrome.destination.past": "گزشتہ",
 		"mobile.chrome.destination.schedules": "شیڈول",
 		"mobile.chrome.destinations": "منزلیں",
+		"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
+		"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
+		"mobile.chrome.home.reconnecting": "{host} سے دوبارہ رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.saved_draft": "آپ کا مسودہ اس فون پر محفوظ ہے اور بھیجا نہیں گیا۔",
+		"mobile.chrome.home.sign_in": "دوبارہ رابطے کے لیے سائن ان کریں",
 		"mobile.chrome.new_chat": "نئی چیٹ",
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
@@ -2572,11 +2659,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
+		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.destination.inbox": "Hộp thư",
 		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
 		"mobile.chrome.destination.past": "Trước",
 		"mobile.chrome.destination.schedules": "Lịch",
 		"mobile.chrome.destinations": "Mục đến",
+		"mobile.chrome.home.connect": "Kết nối máy tính",
+		"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
+		"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
+		"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…",
+		"mobile.chrome.home.saved_draft": "Bản nháp được lưu trên điện thoại này và chưa được gửi.",
+		"mobile.chrome.home.sign_in": "Đăng nhập để kết nối lại",
 		"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
@@ -2824,11 +2920,20 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+		"mobile.chrome.composer.more": "更多上下文",
+		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.destination.inbox": "收件箱",
 		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
 		"mobile.chrome.destination.past": "历史",
 		"mobile.chrome.destination.schedules": "计划",
 		"mobile.chrome.destinations": "目的地",
+		"mobile.chrome.home.connect": "连接电脑",
+		"mobile.chrome.home.connecting": "正在连接 {host}…",
+		"mobile.chrome.home.greeting": "你想处理什么工作？",
+		"mobile.chrome.home.reconnecting": "正在重新连接 {host}…",
+		"mobile.chrome.home.saved_draft": "草稿已保存在此手机上，尚未发送。",
+		"mobile.chrome.home.sign_in": "登录以重新连接",
 		"mobile.chrome.new_chat": "新聊天",
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",

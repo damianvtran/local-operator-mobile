@@ -4,5 +4,14 @@
 	"mobile.chrome.destination.schedules": "Plans",
 	"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
 	"mobile.chrome.destinations": "Destinations",
-	"mobile.chrome.new_chat": "Nouveau chat"
+	"mobile.chrome.new_chat": "Nouveau chat",
+	"mobile.chrome.composer.more": "Plus de contexte",
+	"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+	"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
+	"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
+	"mobile.chrome.home.connecting": "Connexion à {host}…",
+	"mobile.chrome.home.connect": "Connecter un ordinateur",
+	"mobile.chrome.home.sign_in": "Se connecter pour rétablir la connexion",
+	"mobile.chrome.home.saved_draft": "Votre brouillon est enregistré sur ce téléphone et n’a pas été envoyé.",
+	"mobile.chrome.home.reconnecting": "Reconnexion à {host}…"
 }

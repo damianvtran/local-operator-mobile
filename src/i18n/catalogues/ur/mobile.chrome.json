@@ -4,5 +4,14 @@
 	"mobile.chrome.destination.schedules": "شیڈول",
 	"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
 	"mobile.chrome.destinations": "منزلیں",
-	"mobile.chrome.new_chat": "نئی چیٹ"
+	"mobile.chrome.new_chat": "نئی چیٹ",
+	"mobile.chrome.composer.more": "مزید سیاق",
+	"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+	"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
+	"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
+	"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
+	"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
+	"mobile.chrome.home.sign_in": "دوبارہ رابطے کے لیے سائن ان کریں",
+	"mobile.chrome.home.saved_draft": "آپ کا مسودہ اس فون پر محفوظ ہے اور بھیجا نہیں گیا۔",
+	"mobile.chrome.home.reconnecting": "{host} سے دوبارہ رابطہ ہو رہا ہے…"
 }

@@ -32,6 +32,8 @@ export type ScreenProps = {
 	children: ReactNode;
 	/** Right-aligned header control (a settings affordance, a new-session button). */
 	headerAction?: ReactNode;
+	/** Home identity row spends its width on the host, not redundant chrome. */
+	headerDensity?: "home";
 	/** How many lines the title may take. Defaults to 2 — the header's own
 	 *  allowance since it shipped. A screen that names itself in one word-ish
 	 *  string at large text can ask for 1 instead of changing this for every
@@ -212,6 +214,7 @@ export const Screen = ({
 	brand = false,
 	children,
 	headerAction,
+	headerDensity,
 	headerLeading,
 	titleLines = 2,
 	headerDetail,
@@ -293,7 +296,9 @@ export const Screen = ({
 						? "min-h-14 justify-center gap-2 px-4 py-2"
 						: compact
 							? "min-h-12 flex-row items-center gap-2 px-4"
-							: "min-h-14 flex-row items-center gap-2 px-4 py-2"
+							: headerDensity === "home"
+								? "min-h-14 flex-row items-center gap-1 px-2 py-2"
+								: "min-h-14 flex-row items-center gap-2 px-4 py-2"
 				}
 				style={column}
 			>

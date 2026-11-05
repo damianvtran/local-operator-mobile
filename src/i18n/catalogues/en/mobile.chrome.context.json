@@ -22,5 +22,41 @@
 	"mobile.chrome.new_chat": {
 		"role": "button",
 		"note": "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop."
+	},
+	"mobile.chrome.composer.more": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.composer.dismiss_keyboard": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.composer.queued": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.greeting": {
+		"role": "status",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.connecting": {
+		"role": "status",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.connect": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.sign_in": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.saved_draft": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.reconnecting": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
 	}
 }

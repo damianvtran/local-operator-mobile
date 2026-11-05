@@ -343,6 +343,13 @@ export const CONTROL = {
 	composerDictationCancel: "composer-dictation-cancel",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
+	composerContext: "composer-context",
+	composerContextModel: "composer-context-model",
+	composerContextEffort: "composer-context-effort",
+	composerContextSheet: "composer-context-sheet",
+	composerDismissKeyboard: "composer-dismiss-keyboard",
+	composerCompactContext: "composer-compact-context",
+	composerCompactDismiss: "composer-compact-dismiss",
 	composerRetry: "composer-retry",
 	composerModelChip: "composer-model-chip",
 	composerEffortChip: "composer-effort-chip",
@@ -460,7 +467,6 @@ export const CONTROL = {
 	/** The home composer's folder chip: the session's target folder. */
 	homeTargetFolder: "home-target-folder",
 	/** The home's offline action "Connect a computer", in the suggestions' slot. */
-	homeConnect: "home-connect",
 	/** The home's folders-read failure line and its remedy (review M2): the
 	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
 	homeFoldersBanner: "home-folders-banner",
@@ -499,7 +505,6 @@ export const CONTROL = {
 	 *  switcher's two are: two controls, two ids, so a flow can press one and
 	 *  prove which it reached. */
 	homeNotifications: "home-notifications",
-	homeNotificationsCount: "home-notifications-count",
 	sidebarNotifications: "sidebar-notifications",
 	sidebarNotificationsCount: "sidebar-notifications-count",
 	inboxBack: "notifications-back",
@@ -741,6 +746,9 @@ export const SURFACE = {
 	projectMilestoneSlashNote: "project-milestone-slash-note",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
+	homeRecovery: "home-recovery",
+	homeRecoveryAction: "home-recovery-action",
+	homeRecoveryDetails: "home-recovery-details",
 	/** The panels + working line, bounded and internally scrolling in short landscape
 	 *  (`compactChromeFor`); absent elsewhere, where they are plain siblings. */
 	sessionSecondaryChrome: "session-secondary-chrome",
@@ -925,7 +933,6 @@ export const SURFACE = {
 	homeSplash: "home-splash",
 	homeGreeting: "home-greeting",
 	homeSuggestions: "home-suggestions",
-	homeTip: "home-tip",
 	homeStarting: "home-starting",
 	sidebar: "conversations-sidebar",
 	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the

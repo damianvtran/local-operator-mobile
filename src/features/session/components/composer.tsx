@@ -1,9 +1,19 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
-import { Folder, Mic, Paperclip, Square, X } from "lucide-react-native";
+import {
+	Keyboard as KeyboardIcon,
+	Mic,
+	MoreHorizontal,
+	Paperclip,
+	Square,
+	X,
+} from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	Dimensions,
 	Image,
+	Keyboard,
+	type KeyboardEvent,
 	type LayoutChangeEvent,
 	Platform,
 	Pressable,
@@ -14,6 +24,13 @@ import {
 	View,
 } from "react-native";
 
+import Animated, {
+	interpolate,
+	useAnimatedStyle,
+	useReducedMotion,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
 import type { PromptImage } from "@/contracts";
 import {
 	type AttachSource,
@@ -31,16 +48,16 @@ import {
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
-	COMPOSER_LEADING,
-	COMPOSER_META_INLINE,
 	COMPOSER_META_ROW,
-	COMPOSER_META_TEXT,
-	footerFit,
-	inlineMetaFits,
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
+import {
+	composerPresentation,
+	keyboardOverlap,
+} from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
+import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
 import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
@@ -62,12 +79,6 @@ import {
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
-import {
-	ChromeSurface,
-	useChromeGlass,
-	useKeyboardVisible,
-} from "@/ui/components/chrome-surface";
-import { composerGeometry } from "@/ui/device-corner";
 import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { composerBudget } from "@/ui/size-class";
@@ -218,6 +229,9 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
+	onOpenQueue?: () => void;
+	onEditingChange?: (editing: boolean) => void;
+	suppressDisabledHint?: boolean;
 	/** The working-folder chip on the meta line. The composer home passes its
 	 *  target folder (`homeTargetFolder`); the session view passes nothing. Data
 	 *  rather than an element, because the meta line's fit decides how it paints:
@@ -415,6 +429,9 @@ export const Composer = ({
 	ended = false,
 	error,
 	queuedCount,
+	onOpenQueue,
+	onEditingChange,
+	suppressDisabledHint = false,
 	folderChip = null,
 	contextLabel = null,
 	costLabel = null,
@@ -621,44 +638,112 @@ export const Composer = ({
 	 *  growth, and the extras scroller gets the rest. `compact.maxHeight` is the whole
 	 *  composer's share of the window (`COMPACT_COMPOSER_SHARE`). */
 	const [receiptHeight, setReceiptHeight] = useState(48);
-	/* The meta line's own width, so `footerFit` decides from the space the layout
-	 *  actually gave it. 0 until measured: the first frame shows every fact. */
+	/* Measure this dock's width (not the whole window) for compact split fit. */
 	const [metaWidth, setMetaWidth] = useState(0);
-	const keyboardVisible = useKeyboardVisible();
-	const glass = useChromeGlass();
-	const window = useWindowDimensions();
-	/* The shell's outer geometry: margins, the concentric bottom radius and the
-	 *  inner bottom padding that pays the home-indicator inset (record §2.1/§2.2,
-	 *  `device-corner.ts`). The short-landscape form keeps its own tighter box. */
-	const geometry = composerGeometry({
-		platform: Platform.OS,
-		width: window.width,
-		height: window.height,
-		insetBottom: bottomInset ?? 0,
-		keyboardVisible,
+	const _window = useWindowDimensions();
+	const [focused, setFocused] = useState(false);
+	const [keyboardVisible, setKeyboardVisible] = useState(false);
+	const [contextOpen, setContextOpen] = useState(false);
+	const ownField = useRef<TextInput>(null);
+	const inputRef = fieldRef ?? ownField;
+	const reducedMotion = useReducedMotion();
+	const elevated = useTokenColor("elevated");
+	const progress = useSharedValue(0);
+	const keyboardOffset = useSharedValue(0);
+	const keyboardDuration = useRef(200);
+	const presentation = composerPresentation({
+		focused,
+		draft,
+		attachments: images.length,
+		dictation: !!voice && (rowIsLive(voice.phase) || voice.status !== ""),
+		stop: controls.stopVisible,
+		error: !!error || !!retainedMessage || !!notice,
+		keyboard: keyboardVisible,
+		inset: bottomInset ?? 0,
+		scale: effectiveScale,
 	});
-	/* Reserve the actual control targets before folding metadata inline. If the
-	 * model floor plus effort cannot share the remainder, keep the second row:
-	 * hiding the session's sole effort route is not a valid yield (R163-3).
-	 * Use the shell width, not metaWidth, to avoid layout feedback/oscillation. */
-	const controlCount =
-		2 + (voice?.micVisible ? 1 : 0) + (controls.stopVisible ? 1 : 0);
-	const inlineMeta =
-		keyboardVisible &&
-		inlineMetaFits(
-			window.width -
-				2 * geometry.marginX -
-				16 -
-				controlCount * TOUCH_FLOOR -
-				controlCount * 2,
-			effectiveScale,
-			effortChip
-				? effortChip.kind === "loading"
-					? "effort"
-					: effortChip.text
-				: null,
-		);
-	const metaInk = useTokenColor("ink-dim");
+	/* One keyboard owner. Android's resized window already ends at keyboard top:
+	 * overlap is then zero. iOS follows the native frame/duration, not a second
+	 * keyboardDidShow correction; safe-area clearance belongs OUTSIDE the shell. */
+	useEffect(() => {
+		if (Platform.OS === "web") return;
+		const frame = (event: KeyboardEvent) => {
+			keyboardDuration.current = event.duration || 200;
+			const overlap = keyboardOverlap(
+				Dimensions.get("window").height,
+				event.endCoordinates.screenY,
+			);
+			keyboardOffset.value = withTiming(overlap, {
+				duration: event.duration || 200,
+			});
+			if (overlap > 0 || event.endCoordinates.height > 0)
+				setKeyboardVisible(true);
+		};
+		const subs = [
+			Keyboard.addListener(
+				Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow",
+				frame,
+			),
+			Keyboard.addListener("keyboardDidHide", () => {
+				setKeyboardVisible(false);
+				keyboardOffset.value = 0;
+			}),
+		];
+		return () => {
+			for (const sub of subs) sub.remove();
+		};
+	}, [keyboardOffset]);
+	useEffect(() => {
+		progress.value = withTiming(presentation.expanded ? 1 : 0, {
+			duration: reducedMotion
+				? 0
+				: keyboardVisible
+					? keyboardDuration.current
+					: 200,
+		});
+	}, [presentation.expanded, reducedMotion, keyboardVisible, progress]);
+	useEffect(() => {
+		onEditingChange?.(presentation.expanded);
+	}, [presentation.expanded, onEditingChange]);
+	/* Physical orientation is supplied by the caller, not the keyboard-shortened
+	 * window. Narrow splits retain two rows rather than clipping a control. */
+	const compactSingle =
+		compact !== null &&
+		metaWidth >=
+			80 +
+				5 * TOUCH_FLOOR +
+				(voice?.micVisible ? TOUCH_FLOOR : 0) +
+				(controls.stopVisible ? TOUCH_FLOOR : 0) +
+				24;
+	const idleHeight = Math.max(56, Math.ceil(24 * effectiveScale + 24));
+	const shellMotion = useAnimatedStyle(() => ({
+		borderRadius: interpolate(
+			progress.value,
+			[0, 1],
+			[compactSingle ? 24 : idleHeight / 2, 24],
+		),
+		minHeight: interpolate(
+			progress.value,
+			[0, 1],
+			[idleHeight, compactSingle ? idleHeight : 112],
+		),
+		paddingTop: interpolate(
+			progress.value,
+			[0, 1],
+			[6, compactSingle ? 6 : 12],
+		),
+		paddingBottom: interpolate(progress.value, [0, 1], [6, 56]),
+	}));
+	const fieldMotion = useAnimatedStyle(() => ({
+		marginStart: interpolate(progress.value, [0, 1], [44, 0]),
+		marginEnd: interpolate(progress.value, [0, 1], [44, 0]),
+	}));
+	const dockMotion = useAnimatedStyle(() => ({
+		marginBottom:
+			keyboardOffset.value +
+			(keyboardVisible ? 8 : Math.max(0, bottomInset ?? 0) + 8),
+	}));
+
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
@@ -674,15 +759,16 @@ export const Composer = ({
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
 	 *  form, and `pt-2` plus the inset-paying bottom padding everywhere else. The
 	 *  budget spends what the box paints. */
-	const composerPad =
-		compact === null ? 8 + geometry.paddingBottom : COMPOSER_PAD;
+	const composerPad = compact === null ? 20 : COMPOSER_PAD;
 	/* What sits under the field and never scrolls: the controls row, plus the meta
 	 *  line when it has its own row. With the keyboard up it only rides inline
 	 *  when model + effort targets fit; otherwise reserve the separate row too. */
-	const fixedRows = inlineMeta
-		? Math.max(TOUCH_FLOOR, receiptHeight)
-		: TOUCH_FLOOR + receiptHeight;
-	const bound = compact === null ? limit : compact.maxHeight;
+	const fixedRows = compactSingle ? 0 : TOUCH_FLOOR + receiptHeight + 4;
+	const rawBound = compact === null ? limit : compact.maxHeight;
+	const bound =
+		rawBound === null
+			? null
+			: Math.max(TOUCH_FLOOR, rawBound - presentation.gap);
 	const budget =
 		bound === null
 			? null
@@ -904,7 +990,9 @@ export const Composer = ({
 			    instruction or a session that has ended — so a disabled ↑ reads as
 			    intentional rather than as a broken button. The sentence is the
 			    projection's, and this is the only place it is rendered. */}
-			{controls.disabledReason !== null ? (
+			{controls.disabledReason !== null &&
+			presentation.expanded &&
+			!suppressDisabledHint ? (
 				<Text
 					className="pb-1 text-meta text-ink-muted"
 					testID={SURFACE.composerDisabledReason}
@@ -915,89 +1003,29 @@ export const Composer = ({
 		</>
 	);
 
-	/* ---- row 3: the meta line (record §2.2) ------------------------------
-	 *  `[N queued] [folder] [model] [effort] [context %] [cost]`, ONE line that
-	 *  never wraps. It was a `flex-wrap` "receipt" that also carried the mic, and
-	 *  on a real phone the model chip filled the line and the 44 pt mic wrapped
-	 *  onto a line of its own (TestFlight 365, D-S4). The mic now lives on the
-	 *  controls row; this line yields from its END instead (`footerFit`), and the
-	 *  model chip is the elastic item that truncates last. */
-	const fit = footerFit({
-		width: metaWidth,
-		scale: effectiveScale,
-		queued: queuedCount > 0 ? `${queuedCount} queued` : null,
-		folder: folderChip?.label ?? null,
-		model: modelChip.kind === "loading" ? "model" : modelChip.text,
-		effort:
-			effortChip && effortChip.kind !== "loading" ? effortChip.text : null,
-		context: contextLabel ?? null,
-		cost: costLabel ?? null,
-	});
+	/* The permanent context strip is outside the shell. No keyboard-dependent
+	 * reparenting or first-frame facts ladder: model and effort always retain a
+	 * target; optional facts are disclosed via More. */
 	const receipt = (
 		<View
-			onLayout={(event) => {
-				const { width, height } = event.nativeEvent.layout;
-				setReceiptHeight(Math.round(height));
-				setMetaWidth(Math.floor(width));
-			}}
-			className={inlineMeta ? COMPOSER_META_INLINE : COMPOSER_META_ROW}
+			className={COMPOSER_META_ROW}
 			testID={SURFACE.composerMeta}
+			onLayout={(event) => {
+				setReceiptHeight(Math.ceil(event.nativeEvent.layout.height));
+				setMetaWidth(event.nativeEvent.layout.width);
+			}}
 		>
-			{fit.showQueued && queuedCount > 0 ? (
-				<Text
-					className={COMPOSER_META_TEXT}
-					numberOfLines={1}
-					testID={SURFACE.queuedMessageChip}
-				>
-					{queuedCount} queued
-				</Text>
-			) : null}
-			{fit.showFolder && folderChip ? (
-				<Chip
-					label={fit.folderGlyphOnly ? "~" : folderChip.label}
-					onPress={folderChip.onPress}
-					quiet
-					shrink
-					leadingIcon={
-						fit.folderGlyphOnly ? undefined : (
-							<Folder size={14} color={metaInk} aria-hidden />
-						)
-					}
-					accessibilityLabel={folderChip.accessibilityLabel}
-					accessibilityHint={folderChip.accessibilityHint}
-					testID={folderChip.testID}
-				/>
-			) : null}
-			{/* The model is the elastic element: `shrink` lets its label truncate
-			 *  from the tail, and `minWidth` reserves the 44 pt target ON THE FLEX
-			 *  ITEM — the chip's own floor cannot, because a child's min-width does
-			 *  not reserve its ancestor's allocation (review round 1, R163-1). Every
-			 *  fact that could compete with it yields first (`footerFit`'s ladder),
-			 *  so this floor is never the thing that overflows the row; the cap at
-			 *  the measured line width is the one case where the row itself is
-			 *  narrower than the target, and it keeps the model inside the frame
-			 *  rather than pushing the controls off it. */}
-			<View
-				className="min-w-0 shrink"
-				style={{
-					minWidth:
-						metaWidth > 0
-							? Math.min(MODEL_FLOOR_PT, metaWidth)
-							: MODEL_FLOOR_PT,
-				}}
-			>
+			<View className="min-w-0 flex-1" style={{ minWidth: MODEL_FLOOR_PT }}>
 				<ComposerChipButton
 					chip={modelChip}
 					onPress={onOpenModels}
 					chooseHint="Choose the model"
-					// Sized to the settled chip (measured 119.6 pt with a model name):
-					// a bar that is too short makes the swap jump sideways.
 					loadingWidthClassName="w-24"
 					testID={CONTROL.composerModelChip}
 				/>
 			</View>
-			{fit.showEffort && effortChip ? (
-				<View className="shrink-0">
+			{effortChip ? (
+				<View className="shrink" style={{ minWidth: MODEL_FLOOR_PT }}>
 					<ComposerChipButton
 						chip={effortChip}
 						onPress={onOpenEffort}
@@ -1007,19 +1035,26 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			{fit.showContext && contextLabel ? (
-				<Text
-					className={COMPOSER_META_TEXT}
-					numberOfLines={1}
-					testID={SURFACE.sessionContext}
-				>
-					{contextLabel}
-				</Text>
-			) : null}
-			{fit.showCost && costLabel ? (
-				<Text className={COMPOSER_META_TEXT} numberOfLines={1}>
-					{costLabel}
-				</Text>
+			<IconButton
+				accessibilityLabel={
+					queuedCount > 0
+						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+						: t("mobile.chrome.composer.more")
+				}
+				onPress={() => setContextOpen(true)}
+				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
+				testID={CONTROL.composerContext}
+			/>
+			{keyboardVisible || focused ? (
+				<IconButton
+					accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
+					onPress={() => {
+						inputRef.current?.blur();
+						Keyboard.dismiss();
+					}}
+					icon={({ color, size }) => <KeyboardIcon color={color} size={size} />}
+					testID={CONTROL.composerDismissKeyboard}
+				/>
 			) : null}
 		</View>
 	);
@@ -1051,7 +1086,7 @@ export const Composer = ({
 	const attach = (
 		<Pressable
 			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
-			className={COMPOSER_LEADING}
+			className="items-center justify-center"
 			accessibilityRole={ROLE.button}
 			accessibilityLabel="Attach an image"
 			accessibilityState={state({ busy: attaching, disabled: attaching })}
@@ -1195,8 +1230,9 @@ export const Composer = ({
 	const main = (
 		<>
 			<View>
+				{dictationRow}
 				{/* ---- row 1: the field, a full-width row of its own ---- */}
-				<View className="w-full min-w-0">
+				<Animated.View className="min-w-0" style={fieldMotion}>
 					<Textarea
 						label="Message"
 						hideLabel
@@ -1208,7 +1244,7 @@ export const Composer = ({
 								? composerCopy().endedPlaceholder
 								: composerCopy().placeholder
 						}
-						maxLines={6}
+						maxLines={compactSingle ? 1 : 6}
 						maxHeightPx={fieldMaxHeight}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height
 						 * must not grow with a wrapped placeholder, or the last transcript row is
@@ -1219,23 +1255,56 @@ export const Composer = ({
 						// version a multiline field never dispatches it. Native is NOT RUN
 						// here, so this records the gap rather than a behaviour.
 						onSubmitEditing={onSend}
-						fieldRef={fieldRef}
+						fieldRef={inputRef}
+						onFocus={() => setFocused(true)}
+						onBlur={() => setFocused(false)}
 						testID={CONTROL.composerInput}
 					/>
-				</View>
-				{dictationRow}
+				</Animated.View>
 				<View
 					className={COMPOSER_CONTROLS_ROW}
+					style={{ position: "absolute", start: 0, end: 0, bottom: 0 }}
 					testID={SURFACE.composerControls}
 				>
 					{attach}
-					{mic}
+					{compactSingle ? (
+						<IconButton
+							accessibilityLabel={
+								queuedCount > 0
+									? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+									: t("mobile.chrome.composer.more")
+							}
+							onPress={() => setContextOpen(true)}
+							icon={({ color, size }) => (
+								<MoreHorizontal color={color} size={size} />
+							)}
+							testID={CONTROL.composerCompactContext}
+						/>
+					) : null}
+					{presentation.expanded ? (
+						mic
+					) : (
+						<View style={{ marginStart: "auto" }}>{mic ?? actionCluster}</View>
+					)}
 					{/* Fold inline only when the model/effort targets fit the remainder;
 					 * otherwise keep their separate meta row below. */}
-					{inlineMeta ? receipt : null}
-					{actionCluster}
+					{null}
+					{presentation.expanded ? actionCluster : null}
+					{compactSingle && keyboardVisible ? (
+						<IconButton
+							accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
+							onPress={() => {
+								inputRef.current?.blur();
+								Keyboard.dismiss();
+							}}
+							icon={({ color, size }) => (
+								<KeyboardIcon color={color} size={size} />
+							)}
+							testID={CONTROL.composerCompactDismiss}
+						/>
+					) : null}
 				</View>
-				{inlineMeta ? null : receipt}
+				{null}
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}
@@ -1281,71 +1350,109 @@ export const Composer = ({
 		</>
 	);
 
-	/* THE SHELL (record §2.1/§2.2). Margin = outer bottom gap = 8 pt and the
-	 *  bottom radius is the display's corner minus 8, so the composer's arc is
-	 *  concentric with the display instead of clipping it (the shipped 12/8/12 pt
-	 *  shell poked 3.8–6.6 pt outside the corner — the operator's "it's cutting
-	 *  off", D-H4). The top corners are `radius.composer` (20) everywhere. The
-	 *  inner bottom padding pays the home-indicator inset, so the surface fills the
-	 *  band under the indicator while every control sits above it.
-	 *
-	 *  Short landscape keeps its tighter box: the device corner is at the SIDE
-	 *  there, and the compact budget was measured against these paddings. */
-	const shellStyle =
-		compact === null
-			? {
-					marginHorizontal: geometry.marginX,
-					marginBottom: geometry.marginBottom,
-					paddingBottom: geometry.paddingBottom,
-				}
-			: { marginHorizontal: geometry.marginX, marginBottom: 4 };
+	/* The dock is measured as one unit (context + shell + external clearance), so
+	 * the transcript reserves the full footprint. Opaque is the baseline until
+	 * composited native glass contrast is independently proved for this shape. */
 	return (
-		<ChromeSurface
+		<Animated.View
 			ref={rootRef}
-			glass={glass}
-			radii={{
-				top: geometry.radiusTop,
-				bottom: compact === null ? geometry.radiusBottom : geometry.radiusTop,
-			}}
+			style={[{ marginHorizontal: 12 }, dockMotion]}
 			onLayout={(event) => {
 				onLayout?.(event);
 				publishBox();
 			}}
-			className={compact === null ? "px-2 pt-2" : "px-2 pt-1 pb-1"}
 			testID={testID}
-			/* The budget decides the FIELD's cap; this is the box's own guarantee. The
-			 *  root is the surface the window actually pays for, and a few pixels of
-			 *  fixed chrome (the notice row between field and receipt) are not in the
-			 *  field's ceiling arithmetic — [redacted]: 258 painted against a 254
-			 *  limit, bottom 572 in a 568 pt window. The field still scrolls its text,
-			 *  so nothing is hidden by the cap; only the box's tail is bounded. */
-			style={bound === null ? shellStyle : { ...shellStyle, maxHeight: bound }}
 		>
-			{/* ONE parent shape in both modes: the extras ScrollView is always here and only
-			    its style and `scrollEnabled` change. Switching between a fragment and a
-			    ScrollView on rotation would unmount the field, and with it the caret, the
-			    selection, focus, an open attach sheet and the dictation row. Wide: it has no
-			    height bound and `flexGrow/flexShrink: 0` keeps it EXACTLY the old plain
-			    column (a ScrollView defaults to `flexShrink: 1` on the web, which shrank the
-			    composer inside a short portrait column: bottom 1092 -> 857 at 390x844 /
-			    200 %). `nestedScrollEnabled` lets this and the field's own scroll coexist
-			    on Android. */}
-			<ScrollView
-				style={
-					compact === null
-						? { flexGrow: 0, flexShrink: 0 }
-						: { flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }
+			<View
+				style={compactSingle ? { height: 0, overflow: "hidden" } : undefined}
+				pointerEvents={compactSingle ? "none" : "auto"}
+				accessibilityElementsHidden={compactSingle}
+				importantForAccessibility={
+					compactSingle ? "no-hide-descendants" : "auto"
 				}
-				scrollEnabled={compact !== null}
-				onContentSizeChange={(_width, height) =>
-					setExtrasHeight(Math.round(height))
-				}
-				nestedScrollEnabled
-				keyboardShouldPersistTaps="handled"
 			>
-				{extras}
-			</ScrollView>
-			{main}
-		</ChromeSurface>
+				{receipt}
+			</View>
+			<Animated.View
+				style={[
+					{
+						backgroundColor: elevated,
+						paddingHorizontal: 12,
+						marginTop: compactSingle ? 0 : 4,
+					},
+					shellMotion,
+				]}
+			>
+				<ScrollView
+					style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
+					scrollEnabled={compact !== null}
+					onContentSizeChange={(_width, height) =>
+						setExtrasHeight(Math.round(height))
+					}
+					nestedScrollEnabled
+					keyboardShouldPersistTaps="handled"
+				>
+					{extras}
+				</ScrollView>
+				{main}
+			</Animated.View>
+			<Sheet
+				visible={contextOpen}
+				onClose={() => setContextOpen(false)}
+				title={t("mobile.chrome.composer.more")}
+				testID={CONTROL.composerContextSheet}
+			>
+				<ComposerChipButton
+					chip={modelChip}
+					onPress={() => {
+						setContextOpen(false);
+						onOpenModels();
+					}}
+					chooseHint="Choose the model"
+					loadingWidthClassName="w-24"
+					testID={CONTROL.composerContextModel}
+				/>
+				{effortChip ? (
+					<ComposerChipButton
+						chip={effortChip}
+						onPress={() => {
+							setContextOpen(false);
+							onOpenEffort();
+						}}
+						chooseHint="Choose the effort"
+						loadingWidthClassName="w-7"
+						testID={CONTROL.composerContextEffort}
+					/>
+				) : null}
+				{folderChip ? (
+					<Chip
+						quiet
+						shrink
+						label={folderChip.label}
+						onPress={() => {
+							setContextOpen(false);
+							folderChip.onPress();
+						}}
+						accessibilityLabel={folderChip.accessibilityLabel}
+						testID={folderChip.testID}
+					/>
+				) : null}
+				{contextLabel ? (
+					<Text className="text-body text-ink">{contextLabel}</Text>
+				) : null}
+				{costLabel ? (
+					<Text className="text-body text-ink">{costLabel}</Text>
+				) : null}
+				{queuedCount > 0 ? (
+					<Button
+						variant="quiet"
+						label={t("mobile.chrome.composer.queued", { count: queuedCount })}
+						onPress={onOpenQueue ?? (() => undefined)}
+						disabled={!onOpenQueue}
+						testID={SURFACE.queuedMessageChip}
+					/>
+				) : null}
+			</Sheet>
+		</Animated.View>
 	);
 };

@@ -61,6 +61,9 @@ export type TextareaProps = {
 	 *  are equal by construction, whichever way the placeholder wraps. */
 	placeholderMaxLines?: number;
 	onSubmitEditing?: () => void;
+	/** Presentation observers; the same native input survives shell transitions. */
+	onFocus?: () => void;
+	onBlur?: () => void;
 	autoFocus?: boolean;
 	/** A handle to the platform field, for the one caller that must FOCUS it —
 	 *  the home's New chat row, which closes the drawer and puts the caret where
@@ -151,6 +154,8 @@ export const Textarea = ({
 	maxHeightPx,
 	placeholderMaxLines,
 	onSubmitEditing,
+	onFocus,
+	onBlur,
 	autoFocus,
 	fieldRef,
 	testID,
@@ -289,6 +294,8 @@ export const Textarea = ({
 					</View>
 				) : null}
 				<TextInput
+					onFocus={onFocus}
+					onBlur={onBlur}
 					ref={resolvedRef}
 					className={fieldClasses(fieldState, { inComposer: integrated })}
 					/* One `style`, because a textarea's box IS its visual: the growing height
@@ -313,6 +320,13 @@ export const Textarea = ({
 						 *  only when there is nothing to scroll; content past the cap keeps
 						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
 						...webFieldStyle(Platform.OS, scrollable),
+						...(integrated
+							? {
+									backgroundColor: "transparent",
+									paddingHorizontal: 0,
+									borderWidth: 0,
+								}
+							: {}),
 					}}
 					/* On WEB, an EMPTY field whose placeholder is capped to one line is an
 					 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
@@ -324,6 +338,7 @@ export const Textarea = ({
 					 * element also gives Enter the submit semantics the composer already
 					 * handles on web. */
 					multiline={
+						integrated ||
 						!webSingleLinePlaceholder(
 							Platform.OS,
 							value === "",

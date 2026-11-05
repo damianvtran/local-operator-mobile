@@ -473,7 +473,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * charged at 44 pt, effort outlives optional facts, and keyboard inline falls
 	 * back to a separate meta row if the targets cannot share the controls row.
 	 * This is a new render identity, NOT retention of old geometry evidence. */
-	src: "4e436e528ead594445f61f43084dd4c85c6fca074909a459b341f89edbe0cf69",
+	src: "4eecef740960b588f3fb01cdc8256d803e2ec5d15156b2ef939e8b3318176eef",
 	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
