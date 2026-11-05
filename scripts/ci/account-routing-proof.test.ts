@@ -170,6 +170,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				PROOF_MODE,
 				ANDROID_PROOF_MODE,
 				"projects-create-ios-proof",
+				"theme-ios-proof",
 				"u08-geometry-proof",
 			].sort(),
 		);

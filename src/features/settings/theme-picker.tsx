@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Check } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { t } from "@/i18n";
 import { chooseTheme, type ThemeMode } from "@/state/theme-preference";
@@ -46,13 +47,18 @@ export default function ThemePicker() {
 	const { selection, setSelection, setPreference, theme } = useTheme();
 	const [query, setQuery] = useState("");
 	const viewport = useWindowDimensions();
+	const insets = useSafeAreaInsets();
 
-	/* The grid's width is the screen's capped column less its gutters, so the
-	 *  column count follows the space the cards actually get, not the device. */
+	/* The record's 320/600 pt breakpoints describe the viewport, not its
+	 * padded content: subtracting the gutters first would leave a 600 pt
+	 * viewport at two columns. Card WIDTH still follows Screen's actual
+	 * capped column, with its horizontal safe areas and px-4 gutters paid,
+	 * so the three columns never spill into a landscape display cutout. */
+	const safeWidth = viewport.width - insets.left - insets.right;
 	const columnWidth =
-		Math.min(viewport.width, maxColumnWidth(viewport) ?? viewport.width) -
+		Math.min(safeWidth, maxColumnWidth(viewport) ?? safeWidth) -
 		2 * LAYOUT.gutter;
-	const columns = pickerColumns(columnWidth);
+	const columns = pickerColumns(viewport.width);
 	const cardWidth = Math.floor(
 		(columnWidth - GRID_GAP * (columns - 1)) / columns,
 	);

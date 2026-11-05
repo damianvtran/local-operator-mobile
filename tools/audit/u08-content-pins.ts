@@ -163,6 +163,18 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Reprinted 2026-11-04 for PR #164's theme pipeline and picker: `app`
+	 * gains only the /theme route; `design/tokens` extracts the contrast maths
+	 * and per-palette rules; `src` gains the theme catalogue, preference and
+	 * picker, changes keyboard appearance and passes the selected palette to
+	 * supplement frames. The default dark palette is intentionally re-lit:
+	 * U-08's colour pixels therefore are NOT byte-compatible with the old
+	 * scene, while typography, layout classes, transcript fixture bytes and
+	 * measurement instruments are unchanged. This re-pin admits running the
+	 * geometry instrument against the new scene; it is source admission, NOT
+	 * evidence that the new scene passed or a reuse of old rendered proof.
+	 * Historical ORIGINAL_* pins, instrument and input pins remain untouched. */
+
 	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
 	 * polish work itself (new status-tray module, one-row session chrome, Home splash
 	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
@@ -377,11 +389,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "19195211af9ae93848aee88eea6deeed3d570a0b2df9ea7f2db1e26110c403eb",
+	app: "e0481a769958481ba0f693e94c33921788fa3d5307e0bb61833aa723b235818e",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
+		"1393b7635e77b92b141a24835f47879098d167505ec43edd397ad079ff90e4be",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -449,7 +461,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "5eb784a67d67a92072533f6c51a8f2e6d12d6b66eb62ffc2f8d9f79c057183af",
+	src: "8bd2f8cb8ecdb41d59aa5bd8ddc62ec3d4842fbf7ece54c4ef82b15f510dc237",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
