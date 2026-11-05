@@ -84,6 +84,24 @@ Successful acquisition emits no output; its failure emits only the fixed
 `acquisition` closed record into the same JSON upload path. Unexpected probe
 failures close to fixed enums; a failing probe or acquisition exits 1.
 
+## Actual-artifact compatibility preflight
+
+Probe run `42024489713` closed before help/version because its metadata check
+expected only `FormatVersion`. The actual pinned Xcode 26.6 configuration also
+contains `ContainerInfo`. Validation now requires an integer (not boolean)
+`FormatVersion` equal to 1, permits an optional dictionary `ContainerInfo`, and
+rejects other metadata keys/types. Container values never enter evidence.
+
+Before requesting another hosted allocation, run the **current `static_check`**
+against the independently hashed, exact pinned runner archive offline—not only
+`configuration()` or a hand-written fixture. The real-shape fixture includes a
+sanitized `ContainerInfo`, with malformed/unknown-key refusal controls. On a
+CLT-only machine, the supported result is that metadata, receipt and manifest
+checks pass and execution reaches `references()` before failing on absent Xcode
+platform paths. That boundary is not a full static pass or hosted-toolchain
+proof; record it explicitly and remove the private artifact tree afterwards.
+No retry is authorized by this preflight.
+
 ## Static checks and limits
 
 The runner receipt's source and compile/no-build/no-test outcome are checked.

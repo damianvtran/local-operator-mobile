@@ -295,7 +295,17 @@ def static_check(download, root):
         if path.is_symlink() or not path.is_file() or path.stat().st_size > CAP:
             raise Closed('configuration')
     original, value, runner = PRODUCTS['configuration'](tree)
-    if value.get('__xctestrun_metadata__') != {'FormatVersion': 1}:
+    # Real Xcode 26.6 products include a ContainerInfo dictionary beside the
+    # integer format version (probe 42024489713). Requiring exact equality to
+    # the version-only fixture rejected that compiler output before help/version
+    # could run. Accept only these known keys/types; never export their values.
+    # bool is deliberately not an integer here, despite Python's subclass rule.
+    metadata = value.get('__xctestrun_metadata__')
+    if (type(metadata) is not dict
+        or not set(metadata).issubset({'FormatVersion', 'ContainerInfo'})
+        or type(metadata.get('FormatVersion')) is not int
+        or metadata['FormatVersion'] != 1
+        or ('ContainerInfo' in metadata and type(metadata['ContainerInfo']) is not dict)):
         raise Closed('configuration')
     if PRODUCTS['manifest'](tree) != saved['products'] or digest(original) != saved['xctestrunSHA256']:
         raise Closed('configuration')

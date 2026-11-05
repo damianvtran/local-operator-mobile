@@ -87,6 +87,9 @@ class ProbeTests(unittest.TestCase):
         info.write_bytes(plistlib.dumps(value))
         config = tree / 'Fixture.xctestrun'
         value = plistlib.loads(config.read_bytes())
+        # Sanitized shape from Xcode 26.6 runner artifact 13398590341. The
+        # earlier minimal fixture missed ContainerInfo and hid the hosted bug.
+        value['__xctestrun_metadata__']['ContainerInfo'] = {'FixtureOnly': 'METADATA_SENTINEL_NEVER_EXPORT'}
         value['RetirementSystemAlert']['DependentProductPaths'].append('__TESTROOT__/Debug-iphonesimulator/RetirementSystemAlert-Runner.app/PlugIns/RetirementSystemAlert.xctest')
         if mutate: mutate(value)
         config.write_bytes(plistlib.dumps(value))
@@ -143,6 +146,40 @@ class ProbeTests(unittest.TestCase):
         config = plistlib.loads((out / 'Products/private.xctestrun').read_bytes())
         self.assertEqual(len(config['RetirementSystemAlert']['EnvironmentVariables']['LO_REPLAY_SESSION']), 48)
         self.assertEqual(len(config['RetirementSystemAlert']['EnvironmentVariables']['LO_REPLAY_BEARER']), 64)
+
+    def test_metadata_allows_real_shape_without_exporting_container_values(self):
+        download, _ = self.fixture()
+        out = self.root / 'real-shape'; out.mkdir()
+        result = PROBE.static_check(download, out)
+        self.assertEqual(result['formatVersion'], 1)
+        self.assertNotIn('METADATA_SENTINEL_NEVER_EXPORT', json.dumps(result))
+        self.assertNotIn('ContainerInfo', json.dumps(result))
+
+    def test_metadata_optional_container_and_malformed_shapes(self):
+        cases = [
+            (lambda v: v['__xctestrun_metadata__'].pop('ContainerInfo'), True),
+            (lambda v: v['__xctestrun_metadata__'].update(FormatVersion=True), False),
+            (lambda v: v['__xctestrun_metadata__'].update(FormatVersion='1'), False),
+            (lambda v: v['__xctestrun_metadata__'].update(ContainerInfo=[]), False),
+            (lambda v: v['__xctestrun_metadata__'].update(ContainerInfo='METADATA_SENTINEL_NEVER_EXPORT'), False),
+            (lambda v: v['__xctestrun_metadata__'].update(UnknownField={}), False),
+            (lambda v: v['__xctestrun_metadata__'].pop('FormatVersion'), False),
+            (lambda v: v.update(__xctestrun_metadata__=[]), False),
+        ]
+        for i, (mutation, accepted) in enumerate(cases):
+            with self.subTest(i=i), tempfile.TemporaryDirectory() as directory:
+                old_root = self.root; self.root = Path(directory)
+                try:
+                    download, _ = self.fixture(mutation)
+                    out = self.root / 'out'; out.mkdir()
+                    if accepted:
+                        self.assertEqual(PROBE.static_check(download, out)['formatVersion'], 1)
+                    else:
+                        with self.assertRaises(PROBE.Closed) as caught:
+                            PROBE.static_check(download, out)
+                        self.assertEqual(caught.exception.code, 'configuration')
+                finally:
+                    self.root = old_root
 
     def test_static_configuration_rejects_missing_refs_and_unknown_format(self):
         mutations = [lambda v: v['RetirementSystemAlert']['DependentProductPaths'].append('__TESTROOT__/SENTINEL'),
