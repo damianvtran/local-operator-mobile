@@ -37,6 +37,28 @@ export const glassEnabled = (facts: GlassFacts): boolean =>
 	facts.liquidGlassAvailable &&
 	!facts.reduceTransparency;
 
+/**
+ * The same rule, fed what the accessibility read has actually returned.
+ *
+ * `reduceTransparency` is `null` UNTIL THE READ RESOLVES, and a null must read as
+ * "the reader asked for solid" rather than as "the reader asked for nothing"
+ * (review round 1, R163-2): the setting is an accessibility request, so a frame
+ * drawn before it is known has to honour the request it cannot see yet. Only a
+ * resolved `false` turns glass on, which also makes a REJECTED read fail safe —
+ * the state stays null and the composer keeps its solid fill.
+ */
+export const chromeGlass = (facts: {
+	platform: string;
+	available: boolean;
+	reduceTransparency: boolean | null;
+}): boolean =>
+	glassEnabled({
+		platform: facts.platform,
+		apiAvailable: facts.available,
+		liquidGlassAvailable: facts.available,
+		reduceTransparency: facts.reduceTransparency !== false,
+	});
+
 /** Alpha of the `elevated` tint laid over the glass: enough of the theme's own
  *  ground that the placeholder keeps its contrast over a bright transcript
  *  row, while the material still reads as glass (record §4, "Legibility"). */

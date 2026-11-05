@@ -15,13 +15,21 @@ import {
 } from "react-native";
 
 import { useTheme, useTokenColor } from "@/ui/appearance";
-import { GLASS_TINT_ALPHA, glassEnabled, withAlpha } from "@/ui/glass-rule";
+import { chromeGlass, GLASS_TINT_ALPHA, withAlpha } from "@/ui/glass-rule";
 
 /**
  * Whether the composer chrome is drawn as Liquid Glass right now — the rule in
  * `glass-rule.ts`, fed live. Reduce Transparency is subscribed rather than read
  * once: a reader who flips it in Control Center while a conversation is open
  * must see the opaque fill immediately, not on the next launch.
+ *
+ * UNTIL THE READ LANDS THE SURFACE IS SOLID, and that direction is deliberate
+ * (review round 1, R163-2). The setting is a READER'S accessibility request, so
+ * the honest first frame is the one that honours it: starting at `false` drew
+ * glass for a frame or two over a reader who had turned transparency off, which
+ * is the wrong way to be wrong. A rejected read leaves the same `null` in place,
+ * so a failure to read the setting keeps the solid fill rather than assuming the
+ * reader has no preference — and only a resolved `false` ever turns glass on.
  */
 export const useChromeGlass = (): boolean => {
 	/* The two availability probes are synchronous constants per process, read
@@ -34,26 +42,36 @@ export const useChromeGlass = (): boolean => {
 			isGlassEffectAPIAvailable() &&
 			isLiquidGlassAvailable(),
 	);
-	const [reduceTransparency, setReduceTransparency] = useState(false);
+	/* `null` is "not read yet", and it is the SOLID state: see the note above. */
+	const [reduceTransparency, setReduceTransparency] = useState<boolean | null>(
+		null,
+	);
 	useEffect(() => {
 		if (!available) return;
 		let live = true;
-		void AccessibilityInfo.isReduceTransparencyEnabled().then((on) => {
-			if (live) setReduceTransparency(on);
-		});
+		void AccessibilityInfo.isReduceTransparencyEnabled().then(
+			(on) => {
+				if (live) setReduceTransparency(on);
+			},
+			/* A rejected read is a fact about the platform, not a reason to drop the
+			 * reader's setting: keeping `null` keeps the solid fill, which is what the
+			 * reader asked for in the case this guard exists for. */
+			() => {},
+		);
 		const sub = AccessibilityInfo.addEventListener(
 			"reduceTransparencyChanged",
-			setReduceTransparency,
+			(on: boolean) => setReduceTransparency(on),
 		);
 		return () => {
 			live = false;
 			sub.remove();
 		};
 	}, [available]);
-	return glassEnabled({
+	return chromeGlass({
 		platform: Platform.OS,
-		apiAvailable: available,
-		liquidGlassAvailable: available,
+		available,
+		/* The policy, and why `null` is solid, live in `glass-rule.ts`'s
+		 * `chromeGlass` — one place, asserted in Node. */
 		reduceTransparency,
 	});
 };

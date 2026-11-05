@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { glassEnabled, withAlpha } from "@/ui/glass-rule";
+import { chromeGlass, glassEnabled, withAlpha } from "@/ui/glass-rule";
 
 const ON = {
 	platform: "ios",
@@ -20,6 +20,29 @@ describe("glassEnabled (record §4)", () => {
 		expect(glassEnabled({ ...ON, liquidGlassAvailable: false })).toBe(false);
 		// The accessibility request wins over the style.
 		expect(glassEnabled({ ...ON, reduceTransparency: true })).toBe(false);
+	});
+});
+
+describe("chromeGlass — what the accessibility read has actually returned (R163-2)", () => {
+	/* The composer's own policy, which the component feeds its live state into.
+	 * The real frame is the evidence (the acceptance matrix names the Reduce
+	 * Transparency initial state); this pins the DECISION that frame shows. */
+	const ios = { platform: "ios", available: true };
+
+	it("is SOLID until the Reduce Transparency read resolves, and only a false turns it on", () => {
+		expect(chromeGlass({ ...ios, reduceTransparency: null })).toBe(false);
+		expect(chromeGlass({ ...ios, reduceTransparency: false })).toBe(true);
+		expect(chromeGlass({ ...ios, reduceTransparency: true })).toBe(false);
+	});
+
+	it("stays solid on a platform without the material, whatever the read says", () => {
+		expect(
+			chromeGlass({
+				platform: "android",
+				available: false,
+				reduceTransparency: false,
+			}),
+		).toBe(false);
 	});
 });
 

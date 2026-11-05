@@ -36,6 +36,7 @@ import {
 	COMPOSER_META_ROW,
 	COMPOSER_META_TEXT,
 	footerFit,
+	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
@@ -920,7 +921,7 @@ export const Composer = ({
 			className={keyboardVisible ? COMPOSER_META_INLINE : COMPOSER_META_ROW}
 			testID={SURFACE.composerMeta}
 		>
-			{queuedCount > 0 ? (
+			{fit.showQueued && queuedCount > 0 ? (
 				<Text
 					className={COMPOSER_META_TEXT}
 					numberOfLines={1}
@@ -929,7 +930,7 @@ export const Composer = ({
 					{queuedCount} queued
 				</Text>
 			) : null}
-			{folderChip ? (
+			{fit.showFolder && folderChip ? (
 				<Chip
 					label={fit.folderGlyphOnly ? "~" : folderChip.label}
 					onPress={folderChip.onPress}
@@ -946,9 +947,23 @@ export const Composer = ({
 				/>
 			) : null}
 			{/* The model is the elastic element: `shrink` lets its label truncate
-			 *  from the tail, and the chip's own 44 pt floor means it never leaves
-			 *  the line (relay rule D10). */}
-			<View className="min-w-0 shrink">
+			 *  from the tail, and `minWidth` reserves the 44 pt target ON THE FLEX
+			 *  ITEM — the chip's own floor cannot, because a child's min-width does
+			 *  not reserve its ancestor's allocation (review round 1, R163-1). Every
+			 *  fact that could compete with it yields first (`footerFit`'s ladder),
+			 *  so this floor is never the thing that overflows the row; the cap at
+			 *  the measured line width is the one case where the row itself is
+			 *  narrower than the target, and it keeps the model inside the frame
+			 *  rather than pushing the controls off it. */}
+			<View
+				className="min-w-0 shrink"
+				style={{
+					minWidth:
+						metaWidth > 0
+							? Math.min(MODEL_FLOOR_PT, metaWidth)
+							: MODEL_FLOOR_PT,
+				}}
+			>
 				<ComposerChipButton
 					chip={modelChip}
 					onPress={onOpenModels}
@@ -959,7 +974,7 @@ export const Composer = ({
 					testID={CONTROL.composerModelChip}
 				/>
 			</View>
-			{effortChip ? (
+			{fit.showEffort && effortChip ? (
 				<View className="shrink-0">
 					<ComposerChipButton
 						chip={effortChip}

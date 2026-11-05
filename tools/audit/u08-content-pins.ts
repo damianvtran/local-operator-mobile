@@ -68,6 +68,14 @@ const sha256 = (content: string | Uint8Array) =>
 /* --------------------------------------------------------------- the table -- */
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-05 by the chrome round's own review fix, deliberately, and
+	 * the reader can see why from this diff: `tools/lib/affordance.ts` gained the
+	 * conditional `openers` shape the Find cells need (the fold puts Find behind the
+	 * ⋮ menu below 320 pt), `tools/visual/matrix.ts` uses it on the five find cells
+	 * and no longer pins the retired `S5/tags-header` skip, and
+	 * `tools/mock-relay/scenarios.ts` no longer declares that cell. The proof's
+	 * subject did not move: the cells still press the app's own controls and still
+	 * fail by name when one is absent. `--print` produced these values. */
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
 	"tools/audit/checks.ts":
@@ -83,7 +91,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/u08-geometry-proof.ts":
 		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
 	"tools/lib/affordance.ts":
-		"06902d73d4a59043084c223897c45dbc55c6e89014aa57b4204904e4b19e3208",
+		"1bec46754c3f696fde274b16b646cc24ea5314461d97fd694309ffd6a11280c4",
 	"tools/lib/args.ts":
 		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
 	"tools/lib/cdp.ts":
@@ -140,7 +148,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"b3761b32c16b06d64e6febcf8668911392a30a4a01169fffe4d2d906fce19b86",
+		"32ea49717b5093078901d5771c9ba2e2852664858f0f3c12f263834794ab1c57",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -157,7 +165,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"071a8f43fec7c1f92e1f9236fc6b17de517b02616e056733a81ee4897e0d2028",
+		"4747988924ab3832c1412f86fc8962c3055d6b49cd8e864df8ecae60f629843e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -461,7 +469,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
 	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
 	 * identities and the instrument/input pins are untouched. */
-	src: "6215cfef9cd5149ecfcc2f0cffd45c5d52a7224c4456a152f2ff90b042d3a4b1",
+	src: "ef34cb1a7fa23e87a679c0408d6a598fe7bcd1b82288d07f1114b9e97375854c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

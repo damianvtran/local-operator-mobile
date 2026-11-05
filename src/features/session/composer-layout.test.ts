@@ -8,6 +8,8 @@ import {
 	COMPOSER_META_INLINE,
 	COMPOSER_META_ROW,
 	footerFit,
+	MODEL_FLOOR_PT,
+	metaNeed,
 } from "@/features/session/composer-layout";
 
 /**
@@ -92,13 +94,16 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 		expect(footerFit({ ...facts, width: 0 })).toEqual({
 			showCost: true,
 			showContext: true,
+			showFolder: true,
 			folderGlyphOnly: false,
+			showEffort: true,
+			showQueued: true,
 		});
 		expect(footerFit({ ...facts, width: 2000 }).showCost).toBe(true);
 	});
 
-	it("yields cost first, then context, then the folder's path — never the model", () => {
-		const widths = [2000, 420, 380, 300, 120];
+	it("yields cost first, then context, the folder's path, effort, queued, and the folder itself — never the model", () => {
+		const widths = [2000, 420, 380, 300, 200, 120];
 		const fits = widths.map((width) => footerFit({ ...facts, width }));
 		// Monotone: once an item yields at a width it stays yielded below it.
 		for (let i = 1; i < fits.length; i += 1) {
@@ -106,23 +111,84 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 			if (!wide?.showCost) expect(narrow?.showCost).toBe(false);
 			if (!wide?.showContext) expect(narrow?.showContext).toBe(false);
 			if (wide?.folderGlyphOnly) expect(narrow?.folderGlyphOnly).toBe(true);
+			if (!wide?.showEffort) expect(narrow?.showEffort).toBe(false);
+			if (!wide?.showQueued) expect(narrow?.showQueued).toBe(false);
+			if (!wide?.showFolder) expect(narrow?.showFolder).toBe(false);
 		}
-		// The order: cost goes before context, context before the folder's path.
+		// The order: cost goes before context, context before the folder's path,
+		// effort before queued, and queued before the folder leaves the line.
 		const at = (pred: (f: (typeof fits)[number]) => boolean) =>
 			fits.findIndex(pred);
 		const costGone = at((f) => !f.showCost);
 		const contextGone = at((f) => !f.showContext);
 		const folderGlyph = at((f) => f.folderGlyphOnly);
+		const effortGone = at((f) => !f.showEffort);
+		const queuedGone = at((f) => !f.showQueued);
+		const folderGone = at((f) => !f.showFolder);
 		expect(costGone).toBeGreaterThan(0);
 		expect(contextGone).toBeGreaterThanOrEqual(costGone);
 		expect(folderGlyph).toBeGreaterThanOrEqual(contextGone);
+		expect(effortGone).toBeGreaterThanOrEqual(folderGlyph);
+		expect(queuedGone).toBeGreaterThanOrEqual(effortGone);
+		expect(folderGone).toBeGreaterThanOrEqual(queuedGone);
 	});
 
-	it("never has a step that drops the model chip", () => {
+	it("yields the queued count and the effort — not the model — on a narrow phone with the keyboard up at 200 % (R163-1)", () => {
+		/* The reviewer's discriminating case: with the keyboard up the meta folds
+		 * INLINE into the controls row and gets only the leftover width; streaming
+		 * keeps stop and mic on the row, a queued instruction and an effort chip are
+		 * present, and the text is at 200 %. Before the extended ladder the queued
+		 * text and the effort chip were both `shrink-0`, so the model's wrapper — the
+		 * only elastic item — could be allocated zero, and the row's `overflow-hidden`
+		 * clipped the chip whose 44 pt slot the record promises. */
+		const fit = footerFit({ ...facts, scale: 2, width: 200 });
+		expect(fit.showQueued).toBe(false);
+		expect(fit.showEffort).toBe(false);
+		// Nothing else competes with the model either, so its slot is the whole line.
+		expect(fit.showFolder).toBe(false);
+		expect(fit.showCost).toBe(false);
+		expect(fit.showContext).toBe(false);
+	});
+
+	it("only keeps a fact when the fit actually fits, and always keeps the model's 44 pt slot", () => {
+		/* The property the component relies on, asserted as arithmetic rather than
+		 * restated: a chosen fit either fits the measured line — so the inline row
+		 * never clips it — or every optional fact has already yielded and the model
+		 * alone remains, truncating inside a wrapper that reserves its target. */
+		for (const scale of [1, 1.35, 2]) {
+			for (let width = MODEL_FLOOR_PT; width <= 600; width += 7) {
+				const fit = footerFit({ ...facts, scale, width });
+				const optional =
+					fit.showCost ||
+					fit.showContext ||
+					fit.showFolder ||
+					fit.showEffort ||
+					fit.showQueued;
+				if (optional)
+					expect(metaNeed({ ...facts, scale, width }, fit)).toBeLessThanOrEqual(
+						width,
+					);
+			}
+		}
+	});
+
+	it("reserves the model's floor on the flex item, not only inside the chip", () => {
 		// The FooterFit shape has no model switch at all: the model is the
-		// elastic element and truncates; its 44 pt floor keeps it on the line.
+		// elastic element and truncates; its floor is reserved by the wrapper.
 		expect(Object.keys(footerFit({ ...facts, width: 10 }))).not.toContain(
 			"showModel",
+		);
+		expect(MODEL_FLOOR_PT).toBe(44);
+		/* The wrapper's own style, not the chip's class: the reserved slot has to
+		 * sit on the flex item, and biome may wrap the expression, so the assertion
+		 * is on the presence of both pieces in the wrapper's block rather than on
+		 * one line's formatting. */
+		const wrapper = COMPOSER.slice(
+			COMPOSER.indexOf('<View\n\t\t\t\tclassName="min-w-0 shrink"'),
+		);
+		expect(wrapper.slice(0, 400)).toContain("minWidth:");
+		expect(wrapper.slice(0, 400)).toContain(
+			"Math.min(MODEL_FLOOR_PT, metaWidth)",
 		);
 	});
 });

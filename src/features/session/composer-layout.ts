@@ -13,7 +13,10 @@
  *  2. one 44 pt controls row: attach and mic lead, stop and send are a 2 pt
  *     cluster pinned to the trailing edge. The mic is never on the meta line;
  *  3. one 44 pt meta line that never wraps: queued · folder · model · effort ·
- *     context % · cost, yielding from the end as width shrinks (`footerFit`).
+ *     context % · cost, yielding from the end as width shrinks (`footerFit`). The
+ *     MODEL keeps a reserved 44 pt slot and every other fact leaves the line
+ *     before it does — see `footerFit`'s ladder for why the review round found
+ *     the old order insufficient.
  *
  * With the keyboard up the meta folds INLINE into the controls row with a zero
  * flex-basis, so it only takes what attach/mic/stop/send leave and the model
@@ -64,8 +67,10 @@ export const ATTACH_GLYPH_PT = 20;
 const CHIP_PAD_PT = 16;
 /** `gap-1`. */
 const META_GAP_PT = 4;
-/** The model chip's floor: it never disappears, it pins to a 44 pt target. */
-const MODEL_FLOOR_PT = 44;
+/** The model chip's floor: it never disappears, it pins to a 44 pt target.
+ *  Exported because the row itself has to reserve it — a child's min-width does
+ *  not reserve its ancestor's flex allocation (review round 1, R163-1). */
+export const MODEL_FLOOR_PT = 44;
 /** The folder chip collapsed to its glyph only. */
 const FOLDER_GLYPH_PT = 44;
 /** A conservative advance for the 12 pt meta/mono steps, in em. Over-estimating
@@ -93,18 +98,53 @@ export type FooterFacts = {
 export type FooterFit = {
 	showCost: boolean;
 	showContext: boolean;
+	/** The folder chip is on the line at all. */
+	showFolder: boolean;
 	/** The folder paints its glyph only, its full path staying in its name. */
 	folderGlyphOnly: boolean;
+	showEffort: boolean;
+	showQueued: boolean;
+};
+
+/**
+ * What a fit needs, in pt — the model at its floor plus whatever the fit kept.
+ *
+ * Exported so the regression can assert the arithmetic the component relies on
+ * (that a chosen fit FITS) instead of restating the estimate in a test, where
+ * the two copies would drift apart and only one of them would be wrong.
+ */
+export const metaNeed = (facts: FooterFacts, fit: FooterFit): number => {
+	const parts: number[] = [chipWidth(facts.model, facts.scale)];
+	if (fit.showEffort && facts.effort)
+		parts.push(chipWidth(facts.effort, facts.scale));
+	if (fit.showQueued && facts.queued)
+		parts.push(widthOf(facts.queued, facts.scale));
+	if (fit.showFolder && facts.folder)
+		parts.push(
+			fit.folderGlyphOnly
+				? FOLDER_GLYPH_PT
+				: chipWidth(facts.folder, facts.scale),
+		);
+	if (fit.showContext && facts.context)
+		parts.push(widthOf(facts.context, facts.scale));
+	if (fit.showCost && facts.cost) parts.push(widthOf(facts.cost, facts.scale));
+	return (
+		parts.reduce((sum, w) => sum + w, 0) + META_GAP_PT * (parts.length - 1)
+	);
 };
 
 /**
  * Which meta facts the line can hold, in the record's yield order:
- * cost → context % → folder to glyph-only → (the model truncates from the
- * tail, which flex does on its own; it never drops below its 44 pt floor).
+ * cost → context % → folder to glyph-only → effort → queued → folder itself.
  *
- * The queued count is NOT yielded here: the record moves it to the chip row,
- * and native has no chip row on home, so it keeps its slot (it is short — "2
- * queued" — and a count that silently vanished would hide pending work).
+ * The MODEL never yields: it is the one fact that keeps a reserved 44 pt slot,
+ * and every other fact leaves the line before it does. Review round 1 (R163-1)
+ * is why effort and queued are in this list at all — with the keyboard up the
+ * meta folds inline into the controls row, and with only cost/context/folder
+ * yielding, the two non-shrinking facts beside the model could leave the model
+ * wrapper zero width, so the chip it promises to keep was clipped away by the
+ * row's `overflow-hidden`. A yield route has to exist for every other fact, or
+ * the floor is a claim about arithmetic nothing enforces.
  *
  * Unmeasured (`width <= 0`) shows everything: the first frame is the widest
  * reading, and measurement may only remove items, never add them back mid-frame.
@@ -113,37 +153,45 @@ export const footerFit = (facts: FooterFacts): FooterFit => {
 	const all: FooterFit = {
 		showCost: Boolean(facts.cost),
 		showContext: Boolean(facts.context),
+		showFolder: Boolean(facts.folder),
 		folderGlyphOnly: false,
+		showEffort: Boolean(facts.effort),
+		showQueued: Boolean(facts.queued),
 	};
 	if (facts.width <= 0) return all;
-	const need = (fit: FooterFit): number => {
-		const parts: number[] = [chipWidth(facts.model, facts.scale)];
-		if (facts.effort) parts.push(chipWidth(facts.effort, facts.scale));
-		if (facts.queued) parts.push(widthOf(facts.queued, facts.scale));
-		if (facts.folder)
-			parts.push(
-				fit.folderGlyphOnly
-					? FOLDER_GLYPH_PT
-					: chipWidth(facts.folder, facts.scale),
-			);
-		if (fit.showContext && facts.context)
-			parts.push(widthOf(facts.context, facts.scale));
-		if (fit.showCost && facts.cost)
-			parts.push(widthOf(facts.cost, facts.scale));
-		return (
-			parts.reduce((sum, w) => sum + w, 0) + META_GAP_PT * (parts.length - 1)
-		);
-	};
-	const last: FooterFit = {
+	/* The narrowest step, named rather than indexed: it is also the fallback the
+	 * rule returns when nothing fits, and `noUncheckedIndexedAccess` is right that
+	 * `steps[steps.length - 1]` could be undefined. */
+	const modelOnly: FooterFit = {
+		...all,
 		showCost: false,
 		showContext: false,
-		folderGlyphOnly: Boolean(facts.folder),
+		folderGlyphOnly: true,
+		showEffort: false,
+		showQueued: false,
+		showFolder: false,
 	};
 	const steps: FooterFit[] = [
 		all,
 		{ ...all, showCost: false },
 		{ ...all, showCost: false, showContext: false },
-		last,
+		{ ...all, showCost: false, showContext: false, folderGlyphOnly: true },
+		{
+			...all,
+			showCost: false,
+			showContext: false,
+			folderGlyphOnly: true,
+			showEffort: false,
+		},
+		{
+			...all,
+			showCost: false,
+			showContext: false,
+			folderGlyphOnly: true,
+			showEffort: false,
+			showQueued: false,
+		},
+		modelOnly,
 	];
-	return steps.find((fit) => need(fit) <= facts.width) ?? last;
+	return steps.find((fit) => metaNeed(facts, fit) <= facts.width) ?? modelOnly;
 };
