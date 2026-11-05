@@ -802,3 +802,27 @@ frame, and the development host has no simulator.
 - **Output:** artifact `projects-create-ios-<run id>`: `receipt.json` (incl.
   cleanup receipt), `commands.json`, command logs, PNG frames, hierarchy dumps.
   A pass is simulator evidence for those frames only; reviewers must view the PNGs.
+
+## Targeted native theme proof
+
+`e2e.yml` offers `proof_mode = theme-ios-proof` (dispatch only, not full E2E),
+built the same way as the project-create proof above: it downloads an
+already-built `ios-simulator` artifact (the same three inputs, which have no
+useful default here — pass the run that built the branch), verifies its digest,
+boots one fresh owned simulator with the OS on light, and runs
+`e2e/maestro/theme-proof/theme-matrix.yaml` against a mock relay on the `idle`
+scenario.
+
+- **The walk:** the Theme picker in System / Light / Dark, a search for "rose",
+  the selected Dracula card, then for each of `localOperatorDark`,
+  `localOperatorLight`, `dracula`, `obsidian`, `rosePine`, `rosePineDawn` and
+  `highContrastLight`: open the picker, tap that theme's card, assert it is
+  selected, and capture home and the session. Every theme is applied by a card
+  tap, so the frames exercise the real path (picker, store,
+  `Uniwind.updateCSSVariables`, mounted screens).
+- **Inventory:** `scripts/ci/theme-proof-contract.ts` names all 19 frames and the
+  runner refuses an incomplete set; `scripts/ci/theme-proof.test.ts` keeps the
+  flow and that list identical.
+- **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=theme-ios-proof -f native_run_id=<run> -f native_artifact_name=ios-simulator -f native_artifact_sha256=<sha256>`.
+- **Output:** artifact `theme-ios-<run id>`. Simulator evidence for those frames
+  only; reviewers must view the PNGs.
