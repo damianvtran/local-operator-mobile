@@ -160,6 +160,10 @@ export type CatalogueKey =
 	| "mobile.notifications.load_failed"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
+	| "mobile.oauth.failed"
+	| "mobile.oauth.invalid"
+	| "mobile.oauth.received"
+	| "mobile.oauth.return"
 	| "mobile.projects.delete_body"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
@@ -398,6 +402,10 @@ export type NoParamKey =
 	| "mobile.notifications.load_failed"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
+	| "mobile.oauth.failed"
+	| "mobile.oauth.invalid"
+	| "mobile.oauth.received"
+	| "mobile.oauth.return"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
 	| "mobile.projects.milestones.none"
@@ -612,6 +620,10 @@ export type MessageParams = {
 	"mobile.notifications.load_failed": NoParams;
 	"mobile.notifications.priority_high": NoParams;
 	"mobile.notifications.title": NoParams;
+	"mobile.oauth.failed": NoParams;
+	"mobile.oauth.invalid": NoParams;
+	"mobile.oauth.received": NoParams;
+	"mobile.oauth.return": NoParams;
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
@@ -868,6 +880,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.load_failed": "Couldn't load notifications",
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.title": "Notifications",
+	"mobile.oauth.failed": "Sign-in could not finish. Try again.",
+	"mobile.oauth.invalid": "This sign-in request was not accepted.",
+	"mobile.oauth.received": "Sign-in response received. Return to the app.",
+	"mobile.oauth.return": "Return to Local Operator",
 	"mobile.projects.delete_body": "Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.",
 	"mobile.projects.draft_kept_note": "Kept from your last visit. Clear the fields to start something new.",
 	"mobile.projects.milestone_slash_note": "Milestone names can't contain a slash. A milestone with one could never be removed.",
@@ -1109,6 +1125,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.load_failed": { role: "heading", note: "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body." },
 	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
 	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
+	"mobile.oauth.failed": { role: "status", note: "App sign-in failure when Android native transport or browser cannot complete. Cancellation is a separate existing state. No native error/URL/code is shown." },
+	"mobile.oauth.invalid": { role: "status", note: "Generic body for malformed/wrong-state on-device callback request. Never reflect the URL or explain which secret field matched." },
+	"mobile.oauth.received": { role: "status", note: "On-device browser callback page after a validated HTTP callback, BEFORE token exchange. Do not claim the user is signed in. No code, state or identity appears." },
+	"mobile.oauth.return": { role: "button", note: "Link on on-device callback page. Returns to the installed Local Operator app using a package-targeted control URI with no OAuth payload. Keep brand Local Operator." },
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
@@ -1364,6 +1384,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "No se pudieron cargar las notificaciones",
 		"mobile.notifications.priority_high": "Alta",
 		"mobile.notifications.title": "Notificaciones",
+		"mobile.oauth.failed": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
+		"mobile.oauth.invalid": "No se ha aceptado esta solicitud de inicio de sesión.",
+		"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
+		"mobile.oauth.return": "Volver a Local Operator",
 		"mobile.projects.delete_body": "¿Eliminar {name}? La fila del proyecto se borra para siempre. Sus sesiones vinculadas y sus transcripciones no se tocan.",
 		"mobile.projects.draft_kept_note": "Se conservó de tu última visita. Vacía los campos para empezar algo nuevo.",
 		"mobile.projects.milestone_slash_note": "Los nombres de hito no pueden contener una barra. Un hito con barra nunca podría quitarse.",
@@ -1603,6 +1627,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Impossible de charger les notifications",
 		"mobile.notifications.priority_high": "Élevée",
 		"mobile.notifications.title": "Notifications",
+		"mobile.oauth.failed": "La connexion n’a pas pu aboutir. Réessayez.",
+		"mobile.oauth.invalid": "Cette demande de connexion n’a pas été acceptée.",
+		"mobile.oauth.received": "Réponse de connexion reçue. Revenez à l’application.",
+		"mobile.oauth.return": "Revenir à Local Operator",
 		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
 		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
 		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
@@ -1842,6 +1870,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "सूचनाएँ लोड नहीं हो सकीं",
 		"mobile.notifications.priority_high": "उच्च",
 		"mobile.notifications.title": "सूचनाएँ",
+		"mobile.oauth.failed": "साइन-इन पूरा नहीं हो सका। फिर से कोशिश करें।",
+		"mobile.oauth.invalid": "यह साइन-इन अनुरोध स्वीकार नहीं किया गया।",
+		"mobile.oauth.received": "साइन-इन का जवाब मिल गया है। ऐप पर लौटें।",
+		"mobile.oauth.return": "Local Operator पर लौटें",
 		"mobile.projects.delete_body": "{name} मिटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
 		"mobile.projects.draft_kept_note": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।",
 		"mobile.projects.milestone_slash_note": "पड़ाव के नाम में स्लैश नहीं हो सकता। स्लैश वाला पड़ाव कभी हटाया नहीं जा सकेगा।",
@@ -2081,6 +2113,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Не удалось загрузить уведомления",
 		"mobile.notifications.priority_high": "Важно",
 		"mobile.notifications.title": "Уведомления",
+		"mobile.oauth.failed": "Не удалось завершить вход. Попробуйте ещё раз.",
+		"mobile.oauth.invalid": "Этот запрос на вход не принят.",
+		"mobile.oauth.received": "Ответ для входа получен. Вернитесь в приложение.",
+		"mobile.oauth.return": "Вернуться в Local Operator",
 		"mobile.projects.delete_body": "Удалить «{name}»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются.",
 		"mobile.projects.draft_kept_note": "Сохранено с прошлого раза. Очистите поля, чтобы начать новое.",
 		"mobile.projects.milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
@@ -2320,6 +2356,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "اطلاعات لوڈ نہیں ہو سکیں",
 		"mobile.notifications.priority_high": "اعلیٰ",
 		"mobile.notifications.title": "اطلاعات",
+		"mobile.oauth.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.oauth.invalid": "یہ سائن اِن درخواست قبول نہیں کی گئی۔",
+		"mobile.oauth.received": "سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔",
+		"mobile.oauth.return": "Local Operator پر واپس جائیں",
 		"mobile.projects.delete_body": "کیا پروجیکٹ “{name}” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔",
 		"mobile.projects.draft_kept_note": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
 		"mobile.projects.milestone_slash_note": "سنگ میل کے نام میں سلیش نہیں ہو سکتا۔ ایسا سنگ میل بعد میں کبھی ہٹایا نہیں جا سکے گا۔",
@@ -2559,6 +2599,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Không thể tải thông báo",
 		"mobile.notifications.priority_high": "Cao",
 		"mobile.notifications.title": "Thông báo",
+		"mobile.oauth.failed": "Không thể hoàn tất đăng nhập. Hãy thử lại.",
+		"mobile.oauth.invalid": "Yêu cầu đăng nhập này không được chấp nhận.",
+		"mobile.oauth.received": "Đã nhận phản hồi đăng nhập. Hãy quay lại ứng dụng.",
+		"mobile.oauth.return": "Quay lại Local Operator",
 		"mobile.projects.delete_body": "Xóa {name}? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.",
 		"mobile.projects.draft_kept_note": "Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.",
 		"mobile.projects.milestone_slash_note": "Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.",
@@ -2798,6 +2842,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "无法加载通知",
 		"mobile.notifications.priority_high": "高",
 		"mobile.notifications.title": "通知",
+		"mobile.oauth.failed": "无法完成登录。请重试。",
+		"mobile.oauth.invalid": "未接受此登录请求。",
+		"mobile.oauth.received": "已收到登录响应。请返回应用。",
+		"mobile.oauth.return": "返回 Local Operator",
 		"mobile.projects.delete_body": "删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。",
 		"mobile.projects.draft_kept_note": "已保留上次填写的内容。清空各字段即可重新开始。",
 		"mobile.projects.milestone_slash_note": "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。",

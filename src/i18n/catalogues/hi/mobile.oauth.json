@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "साइन-इन का जवाब मिल गया है। ऐप पर लौटें।",
+	"mobile.oauth.return": "Local Operator पर लौटें",
+	"mobile.oauth.invalid": "यह साइन-इन अनुरोध स्वीकार नहीं किया गया।",
+	"mobile.oauth.failed": "साइन-इन पूरा नहीं हो सका। फिर से कोशिश करें।"
+}

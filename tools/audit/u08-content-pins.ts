@@ -449,14 +449,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
+	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
+	 * the merged catalogues. Android adapter selection/return-page messages do
+	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
+	 * style, token, corpus or instrument input changes. Historical pins retained. */
 	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
-	 * merging main's tunnel-refusal change above): the Android
+	 * merging main's Android OAuth change above): the Android
 	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
 	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "48f8ea3a21a53bde87fa93ddd5487df38ee4758d73d5538547183eadff73337c",
+	src: "7b28c27626d45943c3bce1d7c42c4169c0d6bd72ee3ffeb4d36dd1a50f82db05",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

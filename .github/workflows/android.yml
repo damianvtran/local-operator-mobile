@@ -36,6 +36,11 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      oauth_callback_proof:
+        description: Secret-free device callback proof only (run after the iOS proof settles)
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -69,6 +74,12 @@ env:
   JAVA_VERSION: "17"
 
 jobs:
+  oauth-callback-proof:
+    # Existing default-branch dispatch entrypoint can call the branch-local proof
+    # without first merging its workflow. No signing environment/secrets inherited.
+    if: github.event_name == 'workflow_dispatch' && inputs.oauth_callback_proof == true
+    uses: ./.github/workflows/android-oauth-callback-proof.yml
+
   changes:
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
@@ -122,7 +133,7 @@ jobs:
   android:
     name: Android (debug APK)
     needs: changes
-    if: needs.changes.outputs.native == 'true'
+    if: needs.changes.outputs.native == 'true' && inputs.oauth_callback_proof != true
     runs-on: ubuntu-latest
     # Bounded so a wedged Gradle invocation cannot hold a runner for GitHub's
     # 360-minute default. A cold run is 8-14 minutes.
