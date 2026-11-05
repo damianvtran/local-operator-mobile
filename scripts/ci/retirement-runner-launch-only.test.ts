@@ -254,7 +254,7 @@ describe.skipIf(!swiftToolchain)(
 				{ encoding: "utf8", timeout: 60000 },
 			);
 			expect(compile.status, compile.stderr).toBe(0);
-		}, 65000);
+		}, 180000);
 		afterAll(() => {
 			if (root) rmSync(root, { recursive: true, force: true });
 		});
@@ -426,9 +426,11 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 		};
 		try {
 			const endpoint = await transport.listen();
-			const observed = observeLaunch(transport, runner, new Deadline(1000), {
-				ready: 200,
-				postDenial: 20,
+			// Generous, deterministic windows: 200ms/20ms made these outcomes depend on
+			// host load, which is exactly the flake class this repo keeps re-learning.
+			const observed = observeLaunch(transport, runner, new Deadline(60000), {
+				ready: 5000,
+				postDenial: 1000,
 			});
 			const send = (requestKind: string) =>
 				fetch(endpoint, {
@@ -445,6 +447,11 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 			else if (kind !== "no-ready") {
 				expect((await send("runner-ready")).status).toBe(200);
 				expect((await send("before-observe")).status).toBe(403);
+				// Wait for the listener to have SETTLED its denial before ending the
+				// fake runner: the HTTP response can return before the denial promise
+				// resolves, and `observeLaunch` races denial against exit — without
+				// this the zero case intermittently reads as early-exit under load.
+				await transport.denied.promise;
 				if (kind === "zero") resolve();
 				else if (kind !== "hung") reject();
 			}

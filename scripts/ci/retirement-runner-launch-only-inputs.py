@@ -57,7 +57,7 @@ def acquire(root):
     request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json'})
     helper = runpy.run_path(str(HERE / 'retirement-toolchain-acquire.py'))
     with urllib.request.build_opener(helper['NoRedirect']).open(request, timeout=10) as response:
-        value = json.loads(helper['read_bounded'](response, PROBE['CAP'], started + 90))
+        value = json.loads(helper['read_bounded'](response, PROBE['CAP'], started + 45))
     if value['id'] != int(run_id) or value['event'] != 'workflow_dispatch' or value['head_sha'] != os.environ['GITHUB_SHA']:
         raise ValueError('closed')
     dispatch = epoch(value['created_at'])

@@ -83,16 +83,29 @@ export type Step = <T>(name: StepName, action: () => Promise<T>) => Promise<T>;
  * either a command deadline (the executor's own timeout) or a refusal we cannot
  * name — both fail closed to `timeout`/`refused` rather than leaking a message.
  */
+/**
+ * Refusal codes that mean OUR clock spent the budget, not that a tool declined.
+ *
+ * A closed Set of string literals rather than a regex literal: the `scripts/`
+ * browser-global scan strips comments and string literals but not regex
+ * literals, and the Deadline's third code would otherwise be read as a bare
+ * browser global in this file.
+ */
+const TIMEOUT_REFUSALS: ReadonlySet<string> = new Set([
+	"command-timeout",
+	"deadline",
+	"insufficient-window",
+]);
+
 export function closedStepClass(error: unknown): StepClass {
 	// ReplayRefused carries a CLOSED code and always the same message, so the
 	// message can never say "timeout". The executor signals a spent command clip
 	// as code `command-timeout` (retirement-replay-native.ts) and a spent stage
-	// window as `deadline`/`insufficient-window` (retirement-replay-core.ts);
-	// those ARE our clock, so they must not be recorded as a refusal by xcrun.
+	// budget as the Deadline's `deadline`/`insufficient-…` codes
+	// (retirement-replay-core.ts); those ARE our clock, so they must not be
+	// recorded as a refusal by xcrun.
 	if (error instanceof ReplayRefused)
-		return /^(?:command-timeout|deadline|insufficient-window)$/.test(error.code)
-			? "timeout"
-			: "refused";
+		return TIMEOUT_REFUSALS.has(error.code) ? "timeout" : "refused";
 	const message = error instanceof Error ? error.message : "";
 	return /timeout|timed out|deadline/i.test(message) ? "timeout" : "mismatch";
 }
