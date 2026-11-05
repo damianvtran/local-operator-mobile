@@ -76,20 +76,12 @@ export interface StageRecord {
 export type Step = <T>(name: StepName, action: () => Promise<T>) => Promise<T>;
 
 /**
- * Classify a substep failure without exporting anything the child said.
- *
- * `ReplayRefused` is our own closed refusal vocabulary; a created-device
- * mismatch is raised as a plain Error by `createFromIntent`. Anything else is
- * either a command deadline (the executor's own timeout) or a refusal we cannot
- * name — both fail closed to `timeout`/`refused` rather than leaking a message.
- */
-/**
  * Refusal codes that mean OUR clock spent the budget, not that a tool declined.
  *
  * A closed Set of string literals rather than a regex literal: the `scripts/`
  * browser-global scan strips comments and string literals but not regex
- * literals, and the Deadline's third code would otherwise be read as a bare
- * browser global in this file.
+ * literals, and the Deadline's `insufficient-window` code would otherwise be
+ * read as a bare browser global in this file.
  */
 const TIMEOUT_REFUSALS: ReadonlySet<string> = new Set([
 	"command-timeout",
@@ -97,11 +89,19 @@ const TIMEOUT_REFUSALS: ReadonlySet<string> = new Set([
 	"insufficient-window",
 ]);
 
+/**
+ * Classify a substep failure without exporting anything the child said.
+ *
+ * `ReplayRefused` is our own closed refusal vocabulary; a created-device
+ * mismatch is raised as a plain Error by `createFromIntent`. Anything else is
+ * either a command deadline (the executor's own timeout) or a refusal we cannot
+ * name — both fail closed to `timeout`/`refused` rather than leaking a message.
+ */
 export function closedStepClass(error: unknown): StepClass {
 	// ReplayRefused carries a CLOSED code and always the same message, so the
 	// message can never say "timeout". The executor signals a spent command clip
 	// as code `command-timeout` (retirement-replay-native.ts) and a spent stage
-	// budget as the Deadline's `deadline`/`insufficient-…` codes
+	// budget as the Deadline's `deadline` and `insufficient-window` codes
 	// (retirement-replay-core.ts); those ARE our clock, so they must not be
 	// recorded as a refusal by xcrun.
 	if (error instanceof ReplayRefused)

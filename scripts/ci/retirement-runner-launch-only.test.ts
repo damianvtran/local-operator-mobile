@@ -396,6 +396,7 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 		"early",
 		"no-ready",
 		"protocol",
+		"exit-before-denial",
 	])("keeps %s separate from the inbound receipts", async (kind) => {
 		const { observeLaunch } = await import(
 			"./retirement-runner-launch-only.ts"
@@ -429,7 +430,7 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 			// Generous, deterministic windows: 200ms/20ms made these outcomes depend on
 			// host load, which is exactly the flake class this repo keeps re-learning.
 			const observed = observeLaunch(transport, runner, new Deadline(60000), {
-				ready: 5000,
+				ready: 3000,
 				postDenial: 1000,
 			});
 			const send = (requestKind: string) =>
@@ -443,7 +444,14 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 					}),
 				});
 			if (kind === "early") reject();
-			else if (kind === "protocol") await send("authorize-tap");
+			else if (kind === "exit-before-denial") {
+				// Exits first, deliberately: `observeLaunch` races the denial against
+				// the runner's completion, and this pins WHICH side wins rather than
+				// only avoiding the race.
+				reject();
+				await send("runner-ready");
+				await send("before-observe");
+			} else if (kind === "protocol") await send("authorize-tap");
 			else if (kind !== "no-ready") {
 				expect((await send("runner-ready")).status).toBe(200);
 				expect((await send("before-observe")).status).toBe(403);
@@ -465,15 +473,26 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 						early: "early-exit",
 						"no-ready": "runner-start-timeout",
 						protocol: "protocol-failure",
+						"exit-before-denial": "early-exit",
 					} as Record<string, string>
 				)[kind],
 			);
 			expect(transport.receipt().readyReceived).toBe(
 				!["early", "no-ready", "protocol"].includes(kind),
 			);
+			// The listener still answers the late before-observe; what the race
+			// decides is which OUTCOME observeLaunch reports, asserted above.
+			expect(transport.receipt().denialSent).toBe(
+				["nonzero", "zero", "unrelated", "hung", "exit-before-denial"].includes(
+					kind,
+				),
+			);
 		} finally {
 			resolve();
 			await transport.close();
 		}
-	});
+		// `no-ready` waits the entire ready window by design. CI runs plain
+		// `vitest run` (5s default), so the timeout is stated here rather than
+		// inherited; local runs with `--testTimeout` had been masking it.
+	}, 30_000);
 });
