@@ -449,7 +449,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	src: "28a40a121f921c5a5af4e88c769aaf49fd79b31b7e745889bc5de1d88a9586a2",
+	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
+	 * the merged catalogues. Android adapter selection/return-page messages do
+	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
+	 * style, token, corpus or instrument input changes. Historical pins retained. */
+	src: "4b97969f702069d201ef20c2e9d728c3a1b14d1084bbf100cafb207b4d470230",
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
@@ -457,6 +461,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #156 + #161: merged-tree identity; healthy custom-relay U08 does not select refusal/recovery branches.
 	// First-choice picker latch/test reprinted with --print; U08 never opens Attach; idle JSX/layout unchanged (source judgment).
 	// Optional U1 early-busy wiring removed: app/owner/Composer bytes restored to 2d443c54; src pin includes remount tests. No U08 geometry change claimed.
+	// PR #156 convergence with 79a246f4: --print on the combined tree; historical identities unchanged.
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

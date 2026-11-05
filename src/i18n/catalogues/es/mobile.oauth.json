@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
+	"mobile.oauth.return": "Volver a Local Operator",
+	"mobile.oauth.invalid": "No se ha aceptado esta solicitud de inicio de sesión.",
+	"mobile.oauth.failed": "No se pudo completar el inicio de sesión. Inténtalo de nuevo."
+}

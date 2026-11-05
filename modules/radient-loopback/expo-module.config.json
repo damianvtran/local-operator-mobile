@@ -1,6 +1,9 @@
 {
-	"platforms": ["apple"],
+	"platforms": ["apple", "android"],
 	"apple": {
 		"modules": ["RadientLoopbackModule"]
+	},
+	"android": {
+		"modules": ["dev.localoperator.loopback.RadientLoopbackModule"]
 	}
 }

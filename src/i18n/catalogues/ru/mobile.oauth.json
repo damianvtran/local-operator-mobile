@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "Ответ для входа получен. Вернитесь в приложение.",
+	"mobile.oauth.return": "Вернуться в Local Operator",
+	"mobile.oauth.invalid": "Этот запрос на вход не принят.",
+	"mobile.oauth.failed": "Не удалось завершить вход. Попробуйте ещё раз."
+}
