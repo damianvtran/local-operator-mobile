@@ -23,50 +23,66 @@ const create = () =>
 		setTimeout,
 		clearTimeout,
 	}) as {
-		choose(launch: () => void, platform: string, onAccepted?: () => void): void;
+		choose(launch: () => void, platform: string): void;
 		dismissed(): void;
 		cancel(): void;
 	};
 afterEach(() => vi.useRealTimers());
 describe("native attachment sheet handoff", () => {
-	it("marks the accepted choice busy before dismissal, once, with owner completion clearing it", () => {
+	it.each(["Home", "Session"])(
+		"pending unmount cannot strand %s owner busy after dropping optional U1",
+		(ownerName) => {
+			vi.useFakeTimers();
+			const owner = { busy: false };
+			const launch = vi.fn(() => {
+				owner.busy = true;
+			});
+			const handoff = create();
+			handoff.choose(launch, "ios");
+			// Home's split/column switch retains owner state while remounting its
+			// Composer. Model that boundary with the REAL handoff's unmount cancel.
+			handoff.cancel();
+			const remounted = create();
+			vi.runAllTimers();
+			remounted.dismissed();
+			expect(launch).not.toHaveBeenCalled();
+			expect(owner.busy).toBe(false);
+			const ownerPath =
+				ownerName === "Home" ? "../home/home.tsx" : "./use-composer.ts";
+			const ownerSource = readFileSync(
+				new URL(ownerPath, import.meta.url),
+				"utf8",
+			);
+			expect(ownerSource).not.toContain("onAttachStart");
+			expect(ownerSource).not.toContain("beginAttach");
+			expect(ownerSource).toMatch(OWNER_ATTACH_FINALLY);
+			expect(source).not.toContain("onAccepted");
+			expect(source).not.toContain("onAttachStart");
+			const session = readFileSync(
+				new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+				"utf8",
+			);
+			expect(session).not.toContain("onAttachStart");
+		},
+	);
+	it("cancel after fallback launch cannot clear an owner's running attach before finally", () => {
 		vi.useFakeTimers();
-		const handoff = create();
 		let busy = false;
-		const accepted = vi.fn(() => {
+		const handoff = create();
+		const launch = vi.fn(() => {
 			busy = true;
 		});
-		const launch = vi.fn(() => {
-			busy = false;
-		});
-		handoff.choose(launch, "ios", accepted);
-		expect(busy).toBe(true);
-		expect(launch).not.toHaveBeenCalled();
-		handoff.choose(vi.fn(), "ios", accepted);
-		expect(accepted).toHaveBeenCalledOnce();
-		handoff.dismissed();
+		handoff.choose(launch, "ios");
+		vi.advanceTimersByTime(500);
 		expect(launch).toHaveBeenCalledOnce();
+		expect(busy).toBe(true);
+		handoff.cancel();
+		handoff.dismissed();
+		vi.runAllTimers();
+		expect(busy).toBe(true);
+		// Only the running owner's unchanged finally ends its busy state.
+		busy = false;
 		expect(busy).toBe(false);
-		const home = readFileSync(
-			new URL("../home/home.tsx", import.meta.url),
-			"utf8",
-		);
-		const hook = readFileSync(
-			new URL("./use-composer.ts", import.meta.url),
-			"utf8",
-		);
-		const session = readFileSync(
-			new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
-			"utf8",
-		);
-		expect(home).toContain("onAttachStart={() => setAttaching(true)}");
-		expect(session).toContain("onAttachStart={composer.beginAttach}");
-		expect(hook).toContain(
-			"const beginAttach = useCallback(() => setAttaching(true), []);",
-		);
-		for (const owner of [home, hook])
-			expect(owner).toMatch(OWNER_ATTACH_FINALLY);
-		expect(source).toContain("onAttachStart,");
 	});
 	it("keeps the first library choice when another row is pressed during native dismissal", () => {
 		vi.useFakeTimers();

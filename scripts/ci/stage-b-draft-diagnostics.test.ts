@@ -7,6 +7,7 @@ import { capFor } from "./account-routing-proof-contract";
 import {
 	awaitStageBSeed,
 	captureStageBFailure,
+	captureStageBMediaReadiness,
 	stageBFlowCap,
 	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics";
@@ -23,6 +24,67 @@ const gate = (cause = "pending") =>
 	});
 
 describe("Stage B diagnosed-failure exit criterion", () => {
+	it("uploads the redacted media evidence files alongside receipt/command logs", () => {
+		const workflow = readFileSync(
+			new URL(
+				"../../.github/workflows/stage-b-draft-proof.yml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		expect(workflow).toContain("/stage-b-draft-proof-*/media-*.txt");
+	});
+	it("captures bounded Photos service evidence without claiming readiness or retaining credentials", async () => {
+		const dir = mkdtempSync(
+			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "stage-b-media-"),
+		);
+		try {
+			const commands: { name: string; args: string[]; seconds: number }[] = [];
+			const result = await captureStageBMediaReadiness(
+				async (name, _command, args, seconds) => {
+					commands.push({ name, args, seconds });
+					return "123 0 com.apple.assetsd token=forbidden-key";
+				},
+				"synthetic-simulator",
+				dir,
+				"before",
+			);
+			expect(result).toEqual({
+				services: "captured",
+				"photos-log": "captured",
+			});
+			expect(commands.map((c) => c.seconds)).toEqual([15, 30]);
+			expect(commands[0]?.args.slice(-2)).toEqual(["launchctl", "list"]);
+			expect(commands[1]?.args).toContain("6m");
+			for (const name of ["media-before-services", "media-before-photos-log"]) {
+				const text = readFileSync(join(dir, `${name}.txt`), "utf8");
+				expect(text).toContain("com.apple.assetsd");
+				expect(text).not.toContain("forbidden-key");
+			}
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+	it("records unavailable service probes instead of replacing the import failure", async () => {
+		const dir = mkdtempSync(
+			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "stage-b-media-"),
+		);
+		try {
+			const result = await captureStageBMediaReadiness(
+				async () => {
+					throw new Error("service probe unavailable");
+				},
+				"synthetic-simulator",
+				dir,
+				"failed",
+			);
+			expect(Object.keys(result)).toEqual(["services", "photos-log"]);
+			for (const status of Object.values(result))
+				expect(status).toContain("service probe unavailable");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 	it("decodes the persisted failure gate stage/cause without another driver call", () => {
 		expect(
 			stageBSeedFailureFromHierarchy(gate("Error: token=secret-value")),

@@ -2,8 +2,9 @@
  * 180s exceeds twice the observed maximum. Never spend this budget inside the
  * production /me proof's unchanged 20s deadline. */
 export const STAGE_B_FRAME_HIERARCHY_SECONDS = 180;
-/** simctl addmedia took 90s (41804068676), 115s (41818693532), and 118s
- * (41831921831). Reserve >=2x the observed maximum, not run()'s 120s default. */
+/** Initial simctl addmedia samples: 90s (41804068676), 115s (41818693532),
+ * 118s (41831921831). Keep the resulting 240s cap after 41938722439 timed out:
+ * diagnose Photos-service state rather than escalating this budget again. */
 export const STAGE_B_ADD_MEDIA_SECONDS = 240;
 /** Run 41918042114: screenshot took 10s under concurrent Maestro load.
  * Release after both serial loading frames, never later than 17s after /me;
@@ -87,26 +88,27 @@ export async function captureStageBHeldPair(
 	prefix: string,
 	sleep: (ms: number) => Promise<void> = stageBSleep,
 	proof?: {
+		firstSeenAt: number;
 		deadlineAt: number;
 		readonly releasedAt?: number;
 		recordFrame(name: string, completedAtMs?: number): void;
 	},
 ): Promise<void> {
+	// The intentional 22s timeout-negative hold must not label post-20s UI
+	// as loading. Capture admission ends at the earlier fixture/production fence.
+	const loadingDeadlineAt = proof
+		? Math.min(proof.deadlineAt, proof.firstSeenAt + 20_000)
+		: Infinity;
 	const names = [prefix, `${prefix}-consecutive`];
 	for (const name of names) proof?.recordFrame(name);
 	try {
 		for (const [index, name] of names.entries()) {
 			if (index) await sleep(STAGE_B_SETTLE_GAP_MS);
-			if (
-				proof &&
-				(proof.releasedAt !== undefined || Date.now() >= proof.deadlineAt)
-			)
-				throw new Error("proof released");
 			await screenshot(name, STAGE_B_SCREENSHOT_SECONDS);
 			proof?.recordFrame(name, Date.now());
 			if (
 				proof &&
-				(proof.releasedAt !== undefined || Date.now() >= proof.deadlineAt)
+				(proof.releasedAt !== undefined || Date.now() >= loadingDeadlineAt)
 			)
 				throw new Error("proof released");
 		}

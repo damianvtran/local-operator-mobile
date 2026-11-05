@@ -99,6 +99,7 @@ jobs:
           path: |
             ${{ runner.temp }}/stage-b-draft-proof-*/receipt.json
             ${{ runner.temp }}/stage-b-draft-proof-*/commands
+            ${{ runner.temp }}/stage-b-draft-proof-*/media-*.txt
             ${{ runner.temp }}/stage-b-draft-proof-*/frames
             ${{ runner.temp }}/stage-b-draft-proof-*/*.hierarchy.txt
             ${{ runner.temp }}/stage-b-draft-proof-*/*.yaml

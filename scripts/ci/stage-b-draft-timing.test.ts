@@ -14,6 +14,31 @@ import {
 
 afterEach(() => vi.useRealTimers());
 describe("measured Stage B frame timing", () => {
+	it("refuses a 21s loading frame even when the deliberate timeout-negative hold lasts 22s", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(0);
+		const frames = new Map<string, number | undefined>();
+		const proof = {
+			firstSeenAt: 0,
+			deadlineAt: 22000,
+			recordFrame: (name: string, completed?: number) =>
+				frames.set(name, completed),
+		};
+		const capture = expect(
+			captureStageBHeldPair(
+				async () => {
+					await new Promise((resolve) => setTimeout(resolve, 10000));
+				},
+				"dark-loading",
+				undefined,
+				proof,
+			),
+		).rejects.toThrow("loading frame not captured before proof release");
+		await vi.advanceTimersByTimeAsync(21000);
+		await capture;
+		expect(frames.get("dark-loading")).toBe(10000);
+		expect(frames.get("dark-loading-consecutive")).toBe(21000);
+	});
 	it("serially completes a 10s and 2s pair by 13s, before the 17s release ceiling", async () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(0);
@@ -22,6 +47,7 @@ describe("measured Stage B frame timing", () => {
 			maxActive = 0;
 		const frames = new Map<string, number | undefined>();
 		const proof = {
+			firstSeenAt: 0,
 			deadlineAt: 17000,
 			get releasedAt() {
 				return released;
@@ -61,6 +87,7 @@ describe("measured Stage B frame timing", () => {
 		let released: number | undefined;
 		const frames = new Map<string, number | undefined>();
 		const proof = {
+			firstSeenAt: 0,
 			deadlineAt: 17000,
 			get releasedAt() {
 				return released;
@@ -91,6 +118,7 @@ describe("measured Stage B frame timing", () => {
 				"missing",
 				undefined,
 				{
+					firstSeenAt: Date.now(),
 					deadlineAt: 36000,
 					recordFrame: (name, completed) => missing.set(name, completed),
 				},
@@ -105,9 +133,7 @@ describe("measured Stage B frame timing", () => {
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		const start = source.indexOf('await run(\n\t\t\t"add-owned-photo"');
-		const alternative = source.indexOf('await run("add-owned-photo"');
-		const at = start >= 0 ? start : alternative;
+		const at = source.indexOf('"add-owned-photo"');
 		expect(at).toBeGreaterThan(0);
 		const call = source.slice(
 			at,

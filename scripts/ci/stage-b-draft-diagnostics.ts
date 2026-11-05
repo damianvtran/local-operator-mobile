@@ -88,6 +88,52 @@ export function stageBSeedFailureFromHierarchy(
 	return `seed never completed at stage=${status.stage}: ${status.cause}`;
 }
 
+/** Boot readiness is not Photos-library readiness. Run 41938722439 timed out
+ * addmedia with an empty log after bootstatus succeeded and a 32m build; the
+ * existing app-only log could not distinguish a lazy service from an I/O stall.
+ * Read-only, bounded snapshots collect evidence without retries or launching a
+ * service just to make an unproved cold-start theory look like a fix. */
+export async function captureStageBMediaReadiness(
+	run: DiagnosticRun,
+	udid: string,
+	output: string,
+	phase: "before" | "failed",
+): Promise<Record<string, string>> {
+	const result: Record<string, string> = {};
+	const probes: [string, string[], number][] = [
+		["services", ["simctl", "spawn", udid, "launchctl", "list"], 15],
+		[
+			"photos-log",
+			[
+				"simctl",
+				"spawn",
+				udid,
+				"log",
+				"show",
+				"--style",
+				"compact",
+				"--last",
+				"6m",
+				"--info",
+				"--predicate",
+				'process == "assetsd" OR process == "medialibraryd" OR process CONTAINS[c] "photo" OR subsystem CONTAINS[c] "photo"',
+			],
+			30,
+		],
+	];
+	for (const [kind, args, seconds] of probes) {
+		const name = `media-${phase}-${kind}`;
+		try {
+			const text = await run(name, "xcrun", args, seconds);
+			writeFileSync(join(output, `${name}.txt`), stageBDiagnosticText(text));
+			result[kind] = "captured";
+		} catch (error) {
+			result[kind] = stageBDiagnosticText(String(error));
+		}
+	}
+	return result;
+}
+
 /** A gate counts as drawn, not as seeded. Preserve the last observed stage when
  * the seed hangs or hierarchy acquisition itself fails; never return false PASS. */
 export async function awaitStageBSeed(

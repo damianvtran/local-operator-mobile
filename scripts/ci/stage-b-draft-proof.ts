@@ -27,6 +27,7 @@ import { capFor } from "./account-routing-proof-contract.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
 	captureStageBFailure,
+	captureStageBMediaReadiness,
 	stageBFlowCap,
 	stageBSeedFailureFromHierarchy,
 } from "./stage-b-draft-diagnostics.ts";
@@ -782,17 +783,37 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		await run(
-			"add-owned-photo",
-			"xcrun",
-			[
-				"simctl",
-				"addmedia",
+		const mediaEvidence: Record<string, unknown> = {
+			purpose: "diagnostic only; bootstatus does not prove Photos readiness",
+			before: await captureStageBMediaReadiness(run, udid, output, "before"),
+		};
+		receipt.mediaReadiness = mediaEvidence;
+		try {
+			await run(
+				"add-owned-photo",
+				"xcrun",
+				[
+					"simctl",
+					"addmedia",
+					udid,
+					join(cwd, "design/app-icon/ios/icon-light-1024.png"),
+				],
+				STAGE_B_ADD_MEDIA_SECONDS,
+			);
+			mediaEvidence.import = "completed";
+		} catch (error) {
+			mediaEvidence.import = "failed";
+			// Capture service state BEFORE generic driver diagnostics/cleanup.
+			// These probes never retry import or replace its primary exception.
+			mediaEvidence.failed = await captureStageBMediaReadiness(
+				(name, command, args, seconds) =>
+					run(name, command, args, seconds, true),
 				udid,
-				join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-			],
-			STAGE_B_ADD_MEDIA_SECONDS,
-		);
+				output,
+				"failed",
+			);
+			throw error;
+		}
 		await warmStageBDriver(
 			(name, seconds) =>
 				run(name, maestro, ["--device", udid ?? "", "hierarchy"], seconds),
