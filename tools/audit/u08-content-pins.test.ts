@@ -233,6 +233,18 @@ describe("U08 content-identity admission", () => {
 		);
 	});
 
+	it("refuses a proof-controller-only change through the pinned source corpus", () => {
+		// The proof controller is a new src member; a forward pin must not exempt it.
+		append("src/testing/auth-retirement-proof.ts", "\n/* identity drift */\n");
+		execFileSync("git", ["add", "-A"], { cwd: fixture });
+		const content = snapshotContent(fixture);
+		const actual = treeDigest(content, "src");
+		expect(actual).not.toBe(RENDER_TREE_PINS.src);
+		expect(() => assertPinnedContent(content)).toThrow(
+			`render-tree src pinned=${RENDER_TREE_PINS.src} actual=${actual}`,
+		);
+	});
+
 	it("refuses an edited design token and an edited dependency-input file", () => {
 		writeFileSync(
 			resolve(fixture, "design/tokens/tokens.json"),

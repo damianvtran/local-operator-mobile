@@ -440,7 +440,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Derived across all 613 indexed src members, not either parent SHA.
 	 * Instrument/input and historical incident identities are unchanged; this
 	 * records source admission, not fresh auth, rendered or native evidence. */
-	src: "cbac143ff5e87fb6c6367a7f407f7c3faa0c1aec2fc68413fba9e36e8ae83b1d",
+	/* #147 union retains explicit fixture-only native retirement proof plus
+	 * current #105 shared source. Re-derived with the normal CLI over the
+	 * actual indexed union; this is identity closure, not native execution. */
+	/* #147 diagnostic-only JS callback/startup constants in the existing proof
+	 * module move this corpus. Derived by --print; no ordinary entry import,
+	 * transport change, instrument exemption or native-execution claim. */
+	src: "5d61d50866409896684e24a1ae4330dd753d3e83f96031a9a36cefbfe684ac07",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

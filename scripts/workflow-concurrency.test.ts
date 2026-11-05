@@ -550,6 +550,58 @@ const workflows: WorkflowFile[] = readdirSync(WORKFLOW_DIR)
 		return { file, ...triggersOf(source), ...concurrencyOf(source) };
 	});
 
+describe("R16 reusable setup caller-context isolation", () => {
+	const parent = workflows.find((workflow) => workflow.file === "ios.yml");
+	const child = workflows.find(
+		(workflow) => workflow.file === "retirement-ui-setup.yml",
+	);
+	it.each(["workflow_dispatch", "workflow_call"])(
+		"separates caller and reusable for SAME inherited %s context",
+		(event) => {
+			expect(parent?.group).toBeTruthy();
+			expect(child?.group).toBeTruthy();
+			if (!parent?.group || !child?.group)
+				throw new Error("Caller or child concurrency missing");
+			const inherited = {
+				event,
+				ref: "refs/heads/test/auth-retirement-native-proof",
+				proof: null,
+			};
+			// lane() already models github.workflow as the SAME WORKFLOW for both:
+			// a reusable inherits caller context, not the child file's display name.
+			const parentLane = lane(parent.group, inherited);
+			const isIsolated = (candidate: string) =>
+				lane(candidate, inherited) !== parentLane;
+			expect(isIsolated(child.group)).toBe(true);
+			// Negative control: removing the namespace by substituting the parent's
+			// expression MUST fail the same isolation check, not gain an exemption.
+			expect(isIsolated(parent.group)).toBe(false);
+		},
+	);
+	it("retains event/ref separation for directly dispatched reusable setup", () => {
+		if (!child?.group) throw new Error("Child concurrency missing");
+		const current = lane(child.group, {
+			event: "workflow_dispatch",
+			ref: "refs/heads/topic",
+			proof: null,
+		});
+		expect(current).not.toBe(
+			lane(child.group, {
+				event: "workflow_call",
+				ref: "refs/heads/topic",
+				proof: null,
+			}),
+		);
+		expect(current).not.toBe(
+			lane(child.group, {
+				event: "workflow_dispatch",
+				ref: "refs/heads/another",
+				proof: null,
+			}),
+		);
+	});
+});
+
 /** Trigger pairs that can start two runs on one ref, with a ref they share. */
 function collisions(
 	triggers: Trigger[],

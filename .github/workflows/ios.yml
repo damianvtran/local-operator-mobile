@@ -31,6 +31,33 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Standard jobs, independent runner compile, approved retained seed replay, NO-TEST probe, or actual runner launch-only diagnostic"
+        type: choice
+        options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe, retirement-runner-launch-only]
+        default: standard
+      retirement_proof:
+        description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
+        type: boolean
+        default: false
+
+      retirement_compile_run:
+        description: "Replay ONLY: source-matched successful setup run ID"
+        type: string
+        default: ""
+      retirement_runner_artifact:
+        description: "Replay ONLY: fresh setup runner artifact ID"
+        type: string
+        default: ""
+      retirement_runner_source:
+        description: "Replay ONLY: full reviewed runner/host SHA, equal to this dispatch SHA"
+        type: string
+        default: ""
+      retirement_observe_only:
+        description: "Replay ONLY: observe system alert without requesting tap authority"
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -65,7 +92,69 @@ env:
   IOS_SIMULATOR_DEVICE: iPhone 17
 
 jobs:
+  manual-mode:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Refuse unknown or contradictory manual setup inputs
+        env:
+          IOS_MANUAL_MODE: ${{ inputs.mode }}
+          IOS_PROOF_JSON: ${{ toJSON(inputs.retirement_proof) }}
+          REPLAY_COMPILE_RUN: ${{ inputs.retirement_compile_run }}
+          REPLAY_RUNNER_ARTIFACT: ${{ inputs.retirement_runner_artifact }}
+          REPLAY_RUNNER_SOURCE: ${{ inputs.retirement_runner_source }}
+          REPLAY_OBSERVE_ONLY_JSON: ${{ toJSON(inputs.retirement_observe_only) }}
+        run: python3 scripts/ci/retirement-ui-route.py
+
+  retirement-ui-setup:
+    permissions:
+      contents: read
+      actions: read
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-ui-setup' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-ui-setup.yml
+    with:
+      mode: setup
+
+  # The registered entrypoint delegates without exposing any app/build lane.
+  # manual-mode rejects proof/replay inputs before this independent child runs.
+  retirement-toolchain-probe:
+    permissions:
+      contents: read
+      actions: read
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-toolchain-probe' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-toolchain-probe.yml
+
+  retirement-runner-launch-only:
+    # Actual test execution, not the NO-TEST probe and never mobile acceptance.
+    permissions:
+      contents: read
+      actions: read
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-runner-launch-only' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-runner-launch-only.yml
+
+  retirement-seed-replay:
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-seed-replay' && toJSON(inputs.retirement_proof) == 'false'
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/retirement-ui-seed-replay.yml
+    with:
+      compile_run: ${{ inputs.retirement_compile_run }}
+      runner_artifact: ${{ inputs.retirement_runner_artifact }}
+      runner_source: ${{ inputs.retirement_runner_source }}
+      observe_only: ${{ inputs.retirement_observe_only }}
+
   changes:
+    # No skipped manual-only ancestor may enter the ordinary PR/push graph.
+    # Dispatch validation is instead the first conditional step, before diff
+    # classification, so malformed standard inputs still cannot start app work.
+    if: github.event_name != 'workflow_dispatch' || (inputs.mode == 'standard' && (toJSON(inputs.retirement_proof) == 'false' || toJSON(inputs.retirement_proof) == 'true'))
     name: Does this change touch anything native?
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -75,6 +164,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Validate dispatch before native classification
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          IOS_MANUAL_MODE: ${{ inputs.mode }}
+          IOS_PROOF_JSON: ${{ toJSON(inputs.retirement_proof) }}
+          REPLAY_COMPILE_RUN: ${{ inputs.retirement_compile_run }}
+          REPLAY_RUNNER_ARTIFACT: ${{ inputs.retirement_runner_artifact }}
+          REPLAY_RUNNER_SOURCE: ${{ inputs.retirement_runner_source }}
+          REPLAY_OBSERVE_ONLY_JSON: ${{ toJSON(inputs.retirement_observe_only) }}
+        run: python3 scripts/ci/retirement-ui-route.py
 
       - name: Decide whether the native jobs are worth running
         id: diff
@@ -150,6 +250,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Only the manual opt-in gets an ephemeral dedicated Metro entry/bundle ID.
+      # No ordinary artifact imports or accepts the proof controller's commands.
+      - name: Prepare dedicated retirement-proof flavor
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        env:
+          RETIREMENT_PROOF: "true"
+        run: node scripts/ci/auth-retirement-ios-proof.ts --prepare "$RUNNER_TEMP/auth-retirement-proof"
+
       - name: Derive the version from the ref
         run: node scripts/ci/version.ts --write
 
@@ -221,6 +329,7 @@ jobs:
           node scripts/ci/native-config.ts ios "$RUNNER_TEMP/Info.json"
 
       - name: Boot the simulator
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         id: boot
         run: |
           set -euo pipefail
@@ -234,7 +343,29 @@ jobs:
           # from a screenshot of the app.
           xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
 
+      - name: Freeze proof artifact before installation
+        id: proof_freeze
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        env:
+          RETIREMENT_PROOF: "true"
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-ios-proof.ts --freeze-artifact "$app" "$RUNNER_TEMP/auth-retirement-proof"
+
+      # Fresh build, not reuse of run8. Freeze binds this run's source SHA first.
+      # Historical simulator transports were 30–33MiB; 512MiB compressed plus
+      # 1GiB extracted bounds leave measured margin, not a storage-quota claim.
+      - name: Archive the dedicated synthetic proof before diagnostic execution
+        if: github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        id: proof_archive
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-archive.ts "$app" "$RUNNER_TEMP/auth-retirement-proof" "$GITHUB_SHA"
+
       - name: Install the app, assert the version it carries, and launch it
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         # A build that produces a .app which cannot start is not a working app,
         # and this is the cheapest honest way to find that out without a device.
         run: |
@@ -274,7 +405,63 @@ jobs:
           xcrun simctl install "$udid" "$app"
           xcrun simctl launch "$udid" "$bundle"
 
+      - name: Native durable retirement and restore primitives (manual opt-in)
+        # Archive failure must stay visible without suppressing tiny diagnostics.
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof && steps.proof_freeze.outcome == 'success'
+        # Timing diagnostic, NOT an acceptance-budget guarantee:
+        # Wait/probe subtotal 1140s + identity commands 720s + verifiers 20s
+        # = 1880s accounted before setup/cleanup/sync I/O (see launch.ts).
+        # Captures add <=10s command work/phase (<=60s across six phases),
+        # partly concurrent with receipts; validation/I/O are not a full bound.
+        # The unchanged 20m step is a hard stop; always() owns cleanup. Neither
+        # the old 1050s subtotal nor job headroom proves all inner caps bind first.
+        timeout-minutes: 20
+        env:
+          RETIREMENT_PROOF: "true"
+        run: |
+          set -euo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          node scripts/ci/auth-retirement-ios-proof.ts --run "$app" "$RUNNER_TEMP/auth-retirement-proof" "${{ steps.simulator.outputs.udid }}"
+
+      - name: Reap only this proof run's leased simulator
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        timeout-minutes: 2
+        env:
+          RETIREMENT_PROOF: "true"
+        run: node scripts/ci/auth-retirement-ios-proof.ts --cleanup "$RUNNER_TEMP/auth-retirement-proof"
+
+      - name: Upload redacted native primitive evidence
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-retirement-native-primitives
+          retention-days: 1
+          path: |
+            ${{ runner.temp }}/auth-retirement-proof/proof.json
+            ${{ runner.temp }}/auth-retirement-proof/cleanup.json
+            ${{ runner.temp }}/auth-retirement-proof/cleanup-first.json
+            ${{ runner.temp }}/auth-retirement-proof/failure.json
+            ${{ runner.temp }}/auth-retirement-proof/freeze.json
+            ${{ runner.temp }}/auth-retirement-proof/progress.json
+            ${{ runner.temp }}/auth-retirement-proof/captures/*.png
+            ${{ runner.temp }}/auth-retirement-proof/*-capture.json
+            ${{ runner.temp }}/auth-retirement-proof/archive-provenance.json
+          if-no-files-found: error
+
+      # Kept independent of tiny diagnostic artifacts: quota/upload failure must
+      # not hide receipts/PNGs. No continue-on-error; failed upload stays visible.
+      - name: Upload sensitive synthetic proof bundle (one day only)
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.retirement_proof && steps.proof_archive.outputs.upload == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: sensitive-synthetic-retirement-proof-app
+          compression-level: 0
+          path: ${{ runner.temp }}/auth-retirement-proof/proof-bundle/synthetic-proof-app.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Capture the frame the app renders, and assert it rendered
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         # WHAT THIS ASSERTS, AND WHY IT DOES NOT GATE ON "SETTLED".
         # Two hard assertions: the frame after launch must differ from the
         # pre-install home screen (so the app painted something rather than
@@ -351,6 +538,7 @@ jobs:
           fi
 
       - name: Upload the frame and the simulator build
+        if: github.event_name != 'workflow_dispatch' || !inputs.retirement_proof
         uses: actions/upload-artifact@v7
         with:
           name: ios-simulator

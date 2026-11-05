@@ -1,0 +1,53 @@
+name: Retirement UI runner setup (compile only)
+
+# Separate, explicit setup authority. There is NO replay mode/job in this file.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Compile independent XCTest runner only; never install/launch/test/tap"
+        type: choice
+        options: [setup]
+        default: setup
+        required: true
+  workflow_call:
+    inputs:
+      mode:
+        type: string
+        default: setup
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  # A reusable inherits caller github.workflow/event/ref. Namespace INSIDE the
+  # full expression or it queues behind its own parent's active group.
+  group: ${{ format('{0}-retirement-ui-setup-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  cancel-in-progress: false
+jobs:
+  compile-only:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Refuse any mode except compile-only setup
+        env:
+          SETUP_MODE: ${{ inputs.mode }}
+        run: test "$SETUP_MODE" = setup
+      # Existing hosted Python/Xcode ONLY: no setup-node, npm, CocoaPods,
+      # project-generator dependency, app build/prebuild or retained-app access.
+      - name: Compile independent XCTest runner without running tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/retirement-ui-setup.py --mode setup --output "$RUNNER_TEMP/retirement-ui-setup"
+      - name: Retain sensitive compile-only runner and setup receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sensitive-retirement-ui-setup-runner
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/retirement-ui-setup/setup-receipt.json
+            ${{ runner.temp }}/retirement-ui-setup/runner-products.tar.gz

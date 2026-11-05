@@ -1,0 +1,74 @@
+name: Retained retirement seed replay
+
+# No dispatch surface here: the registered iOS router validates every input.
+# Only existing hosted Node/Python/Xcode; never build the retained app or install
+# dependencies. The worker/watchdog own ALL native work, including cleanup.
+on:
+  workflow_call:
+    inputs:
+      compile_run:
+        type: string
+        required: true
+      runner_artifact:
+        type: string
+        required: true
+      runner_source:
+        type: string
+        required: true
+      observe_only:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ format('{0}-retirement-seed-replay-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  cancel-in-progress: false
+jobs:
+  seed-only:
+    runs-on: macos-26
+    # Checkout/upload envelope, not additional native-work authority. The outer
+    # watchdog enforces a separate <=300s simulator boot window (mirrors the proof
+    # harness's BOOT_READY_BUDGET_MS) + 300s work + ONE persisted 120s total
+    # cleanup. Step guards leave only enough time for the watchdog to publish its
+    # closed receipts. Raised from 12 for the boot window only (replay
+    # 41768325986 timed out pre-openurl with boot inside the 300s work budget).
+    timeout-minutes: 18
+    env:
+      REPLAY_COMPILE_RUN: ${{ inputs.compile_run }}
+      REPLAY_RUNNER_ARTIFACT: ${{ inputs.runner_artifact }}
+      REPLAY_RUNNER_SOURCE: ${{ inputs.runner_source }}
+      NODE_OPTIONS: --max-old-space-size=512
+    steps:
+      - uses: actions/checkout@v7
+      - name: Refuse contradictory or source-mismatched replay inputs
+        env:
+          IOS_MANUAL_MODE: retirement-seed-replay
+          IOS_PROOF_JSON: 'false'
+          REPLAY_OBSERVE_ONLY_JSON: ${{ toJSON(inputs.observe_only) }}
+        run: python3 scripts/ci/retirement-ui-route.py
+      - name: One retained seed experiment under the independent watchdog
+        id: replay
+        # boot 300s + work 300s + in-step cleanup 120s = 12 min, +2 min margin
+        # for Node/Python start-up and receipt writes. Was 8 before the boot window.
+        timeout-minutes: 14
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPLAY_MODE: ${{ inputs.observe_only && 'observe-only' || 'seed-replay' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/retirement-replay-watchdog.py --mode run --root "$RUNNER_TEMP/retirement-seed-replay"
+      - name: Owned remaining-budget cleanup fallback
+        if: always() && steps.replay.outcome != 'skipped'
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/retirement-replay-watchdog.py --mode cleanup --root "$RUNNER_TEMP/retirement-seed-replay"
+      - name: Retain only capped redacted seed evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sensitive-retained-retirement-seed-evidence
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/retirement-seed-replay/evidence/**
