@@ -431,14 +431,18 @@ export class RelayHttpClient {
 	 */
 	async bytes(
 		request: RelayRequest,
+		maxBytes?: number,
 	): Promise<{ status: number; mimeType: string | null; bytes: Uint8Array }> {
 		const { response, release } = await this.open(request);
 		try {
-			const buffer = await response.arrayBuffer();
+			const buffer =
+				maxBytes === undefined
+					? new Uint8Array(await response.arrayBuffer())
+					: await boundedResponseBytes(response, maxBytes);
 			return {
 				status: response.status,
 				mimeType: response.headers.get("content-type"),
-				bytes: new Uint8Array(buffer),
+				bytes: buffer,
 			};
 		} catch (cause) {
 			/* As in `raw`: a body read is inside the deadline, and a failure here
@@ -552,4 +556,37 @@ function redactPath(path: string | undefined): string {
 	if (!path) return "";
 	const index = path.indexOf("?");
 	return index === -1 ? path : `${path.slice(0, index)}?…`;
+}
+
+/** Bound an untrusted custom-sound body while receiving it, not after a giant
+ * allocation. The server's size metadata and Content-Length are not trusted.
+ * Canceling the reader also prevents a dishonest streaming response hanging
+ * around after the caller has refused it. */
+async function boundedResponseBytes(
+	response: Response,
+	limit: number,
+): Promise<Uint8Array> {
+	const reader = response.body?.getReader();
+	if (!reader) throw new Error("Sound body is not readable");
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			size += value.length;
+			if (size > limit) throw new Error("Sound body exceeds limit");
+			chunks.push(value);
+		}
+	} finally {
+		await reader.cancel();
+		reader.releaseLock();
+	}
+	const bytes = new Uint8Array(size);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.length;
+	}
+	return bytes;
 }

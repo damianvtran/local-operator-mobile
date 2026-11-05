@@ -460,7 +460,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "7b28c27626d45943c3bce1d7c42c4169c0d6bd72ee3ffeb4d36dd1a50f82db05",
+	/* Deliberate --print re-pin (M2): native custom-sound cache, relay routes,
+	 * lifecycle invalidation and tests. The new root hook returns on web before
+	 * IO; its store subscriptions render nothing. Config changedKeys is data
+	 * for that hook, not a transcript rendering change. No tokens, styles,
+	 * transcript components, corpus or instrument changed. Native filesystem
+	 * proof is separate; this retains only the unchanged U08 web geometry. */
+	src: "62afdd0a01f3c2ec29e32f819d3ee99d7cd65ef32d5db4a072efd96f3ab69944",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
