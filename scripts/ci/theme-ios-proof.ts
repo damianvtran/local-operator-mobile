@@ -36,7 +36,13 @@ import { join } from "node:path";
 import { parseSavedRouteDiagnostics } from "../../src/features/auth/saved-route-diagnostics.ts";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { probeNativeRelay } from "./native-relay-preflight.ts";
-import { collectThemeFrames, copyThemeFrames } from "./theme-proof-contract.ts";
+import {
+	assertDiagnosticSimulator,
+	assertDiagnosticTrace,
+	collectThemeFrames,
+	copyThemeFrames,
+	themeProofPlan,
+} from "./theme-proof-contract.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -48,7 +54,8 @@ const RUNNER_TEMP = need("RUNNER_TEMP");
 const ROOT = join(RUNNER_TEMP, "theme-proof");
 const ZIP = need("PROOF_ARTIFACT_ZIP");
 const PASSWORD_FILE = need("PROOF_PASSWORD_FILE");
-const BUDGET_SECONDS = 45 * 60;
+const plan = themeProofPlan(env.PROOF_STAGE ?? "full");
+const BUDGET_SECONDS = plan.budgetSeconds;
 const started = Date.now();
 
 if (
@@ -87,6 +94,8 @@ const records: Record_[] = [];
 const groups = new Set<ChildProcess>();
 const receipt: Record<string, unknown> = {
 	mode: "theme-ios-proof",
+	stage: plan.stage,
+	nativeBudgetSeconds: BUDGET_SECONDS,
 	sourceSha: env.GITHUB_SHA,
 	runId: env.GITHUB_RUN_ID,
 	artifact: {
@@ -98,7 +107,9 @@ const receipt: Record<string, unknown> = {
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
 	scope:
-		"native iOS SIMULATOR, one fixed walk, theme picker + 7 themes, no physical device, not full E2E",
+		plan.stage === "diagnostic"
+			? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
+			: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {
@@ -447,7 +458,12 @@ async function flowRun(
 			note("saved-route diagnostic preservation unavailable");
 		}
 	}
-	const frames = collectThemeFrames(join(ROOT, "maestro", label), shots);
+	const frames = collectThemeFrames(
+		join(ROOT, "maestro", label),
+		shots,
+		plan.frames,
+	);
+	if (plan.stage === "diagnostic") assertDiagnosticTrace(events);
 	note(`collected ${label}: ${frames.join(",")}`);
 	// Final picker hierarchy reads the persisted slot after the cold restart.
 	const tree = await run(
@@ -508,6 +524,8 @@ try {
 				deviceType = row.deviceTypeIdentifier;
 			}
 	if (!runtime) throw new Error("device runtime metadata unavailable");
+	if (plan.stage === "diagnostic")
+		assertDiagnosticSimulator(runtime, deviceType);
 	const created = (
 		await run(
 			"create-owned-simulator",
@@ -542,8 +560,18 @@ try {
 		["simctl", "ui", udid, "appearance", "light"],
 		60,
 	);
-	await flowRun("matrix", relay.origin, "theme-matrix.yaml", 2100);
-	receipt.verdict = "PASS (assertions only; reviewers must view the PNGs)";
+	await flowRun(
+		plan.stage === "diagnostic" ? "diagnostic" : "matrix",
+		relay.origin,
+		plan.flow,
+		plan.stage === "diagnostic" ? 600 : 2100,
+	);
+	receipt.stage = plan.stage;
+	receipt.nativeBudgetSeconds = BUDGET_SECONDS;
+	receipt.verdict =
+		plan.stage === "diagnostic"
+			? "PASS saved-route prerequisite ONLY (not theme acceptance)"
+			: "PASS (assertions only; reviewers must view the PNGs)";
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
 	receipt.verdict = `FAIL: ${failure}`;

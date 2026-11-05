@@ -10,15 +10,93 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+	assertDiagnosticSimulator,
+	assertDiagnosticTrace,
 	collectThemeFrames,
 	copyThemeFrames,
 	PROOF_THEMES,
 	THEME_FRAMES,
+	themeProofPlan,
 } from "./theme-proof-contract.ts";
 
 /** The flow and the runner's inventory are two files; this keeps them one list.
  *  A capture the flow takes but the inventory omits would ship unchecked, and
  *  one the inventory names but the flow never takes would fail every run. */
+describe("minimal native saved-route diagnostic allocation", () => {
+	it("wires the stage through workflow, runtime limit and driver instead of dispatching full proof", () => {
+		const runner = readFileSync(
+			new URL("./theme-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/e2e.yml", import.meta.url),
+			"utf8",
+		);
+		expect(runner).toContain('themeProofPlan(env.PROOF_STAGE ?? "full")');
+		expect(runner).toContain("const BUDGET_SECONDS = plan.budgetSeconds");
+		expect(runner).toContain("assertDiagnosticSimulator(runtime, deviceType)");
+		expect(runner).toContain("assertDiagnosticTrace(events)");
+		expect(runner).toContain("plan.flow,");
+		const job = workflow.slice(
+			workflow.indexOf("\n  theme-ios-proof:"),
+			workflow.indexOf("\n  u08-geometry-proof:"),
+		);
+		expect(job).toContain("PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}");
+		expect(workflow).toContain('case "$PROOF_STAGE" in full|diagnostic)');
+	});
+
+	it("is one bounded short flow and never the twelve-theme matrix", () => {
+		const plan = themeProofPlan("diagnostic");
+		expect(plan.budgetSeconds).toBe(600);
+		expect(plan.flow).toBe("saved-route-diagnostic.yaml");
+		const flow = readFileSync(
+			new URL(
+				"../../e2e/maestro/theme-proof/saved-route-diagnostic.yaml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		expect(
+			[...flow.matchAll(/^- takeScreenshot: (\S+)$/gm)].map((m) => m[1]),
+		).toEqual(plan.frames);
+		expect(flow).toContain('id: "session-row-6714def86197"');
+		expect(flow).not.toMatch(/theme-card|theme-picker/);
+		expect(themeProofPlan().frames).toEqual(THEME_FRAMES);
+		expect(() => themeProofPlan("setup")).toThrow();
+	});
+	it("refuses other hardware/runtime and a successful row without safe provider trace", () => {
+		expect(() =>
+			assertDiagnosticSimulator(
+				"com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+				"com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+			),
+		).not.toThrow();
+		expect(() =>
+			assertDiagnosticSimulator(
+				"iOS-18-0",
+				"com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+			),
+		).toThrow();
+		expect(() =>
+			assertDiagnosticSimulator(
+				"iOS-26-5",
+				"com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+			),
+		).toThrow();
+		expect(() => assertDiagnosticTrace([])).toThrow("missing safe");
+		expect(() =>
+			assertDiagnosticTrace([{ event: "stage", stage: "save.begin" }]),
+		).toThrow("peer-list200");
+		expect(() =>
+			assertDiagnosticTrace([
+				{ event: "stage", stage: "save.begin" },
+				{ event: "response", requestClass: "peer-list", status: 200 },
+				{ event: "stage", stage: "cold-list.applied" },
+			]),
+		).not.toThrow();
+	});
+});
+
 describe("the theme proof's frame inventory", () => {
 	it("preserves screenshots in the flow finally path and sanitizes native logs before writing", () => {
 		const runner = readFileSync(

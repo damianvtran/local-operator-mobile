@@ -64,9 +64,64 @@ export function copyThemeFrames(output: string, destination: string) {
 }
 
 /** Acceptance stays fail-closed even when partial evidence was salvaged. */
-export function collectThemeFrames(output: string, destination: string) {
+export function collectThemeFrames(
+	output: string,
+	destination: string,
+	required: readonly string[] = THEME_FRAMES,
+) {
 	const found = copyThemeFrames(output, destination);
-	for (const name of THEME_FRAMES)
+	for (const name of required)
 		assert(found.includes(`${name}.png`), `missing ${name}.png`);
 	return found;
+}
+
+/** A diagnostic success is a saved-route prerequisite only, never theme proof. */
+export function themeProofPlan(stage = "full") {
+	if (stage === "diagnostic")
+		return {
+			stage,
+			flow: "saved-route-diagnostic.yaml",
+			budgetSeconds: 600,
+			frames: ["diagnostic-home", "diagnostic-sidebar"],
+		};
+	if (stage !== "full") throw new Error("unsupported theme proof stage");
+	return {
+		stage,
+		flow: "theme-matrix.yaml",
+		budgetSeconds: 2700,
+		frames: THEME_FRAMES,
+	};
+}
+export function assertDiagnosticSimulator(runtime: string, deviceType: string) {
+	assert(runtime.endsWith("iOS-26-5"), "diagnostic requires iOS26.5");
+	assert(
+		deviceType === "com.apple.CoreSimulator.SimDeviceType.iPhone-17",
+		"diagnostic requires iPhone17",
+	);
+}
+export function assertDiagnosticTrace(
+	events: readonly {
+		event: string;
+		stage?: string;
+		requestClass?: string;
+		status?: number;
+	}[],
+) {
+	assert(
+		events.some((e) => e.stage === "save.begin"),
+		"missing safe saved-provider trace",
+	);
+	assert(
+		events.some(
+			(e) =>
+				e.event === "response" &&
+				e.requestClass === "peer-list" &&
+				e.status === 200,
+		),
+		"missing post-save peer-list200 trace",
+	);
+	assert(
+		events.some((e) => e.stage === "cold-list.applied"),
+		"missing saved-provider list application trace",
+	);
 }
