@@ -36,6 +36,8 @@ export type ComposerPresentationFacts = {
 	keyboard: boolean;
 	inset: number;
 	scale: number;
+	/** The platform's touch floor; the field paints at it. Defaults to iOS's 44. */
+	floor?: number;
 };
 /** Clearance is outside the shell; one radius applies to all corners. Whitespace
  * is still a draft, so geometry must never normalize the reader's content. */
@@ -47,13 +49,18 @@ export const composerPresentation = (facts: ComposerPresentationFacts) => {
 		facts.dictation ||
 		facts.stop ||
 		facts.error;
-	const idleHeight = Math.max(56, Math.ceil(24 * facts.scale + 24));
+	const floor = facts.floor ?? COMPOSER_FIELD_BOX;
+	/* The painted pill, on the SAME floor the component paints, plus the large-text
+	 *  growth. Reporting 56/28 over a 60/30 paint was a second source of truth for
+	 *  the shape (R7-4). */
+	const idleHeight = Math.max(
+		composerPaintedHeight(false, floor),
+		Math.ceil(24 * facts.scale + 24),
+	);
 	return {
 		expanded,
-		height: expanded
-			? composerPaintedHeight(true)
-			: Math.max(idleHeight, composerPaintedHeight(false)),
-		radius: expanded ? 24 : idleHeight / 2,
+		height: expanded ? composerPaintedHeight(true, floor) : idleHeight,
+		radius: expanded ? 24 : morphPillRadius(idleHeight),
 		gap: composerOuterGap(facts.inset, facts.keyboard),
 		side: 12,
 	};
@@ -62,8 +69,11 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
 	Math.max(0, hostBottom - keyboardTop);
 
 /**
- * The pill's radius for a painted height: half the pill, capped by the record's
- * expanded radius.
+ * The pill's radius for a painted height: half of it, so every resting pill is a
+ * stadium whatever platform floor it paints on. It is NOT capped — the 24 pt
+ * expanded radius is a second shape the morph travels to, not a limit on this
+ * one, and a cap here would have rounded a 60 pt pill to the expanded card's
+ * corners while it was still standing.
  *
  * Kept as a FUNCTION of the painted base rather than a constant, because the
  * 28/24 pair is one rule — the resting pill is a stadium, the expanded card is a
@@ -71,6 +81,20 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
  * a shape nobody sees (a landscape pill kept 24 on a 56 pt card that way).
  */
 export const morphPillRadius = (base: number) => base / 2;
+
+/**
+ * Which end of the morph a measurement seeds.
+ *
+ * The predicate is deliberately ONE fact — expanded or not — because the bug it
+ * replaces was a second condition (`!compactSingle`) that skipped short landscape
+ * entirely: the seeded 56 stayed put while the content grew past it and the
+ * overflow rule clipped the field. Returns the branch as a value so a test can
+ * assert the DECISION rather than grep for an expression.
+ */
+export const seedFor = (expanded: boolean, total: number) =>
+	expanded
+		? ({ kind: "expanded", total } as const)
+		: ({ kind: "collapsed", total } as const);
 
 /**
  * Where the card is between the collapsed pill and the expanded card.

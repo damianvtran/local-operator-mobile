@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -6,7 +7,11 @@ import {
 	composerPresentation,
 	composerShellPadding,
 	keyboardOverlap,
+	seedFor,
 } from "./composer-presentation";
+
+const read = (path: string) =>
+	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
 const empty = {
 	focused: false,
@@ -84,11 +89,38 @@ describe("build389 uniform dock", () => {
 				COMPOSER_FIELD_BOX +
 				expanded.bottom,
 		).toBe(112);
-		// The shape follows the painted height: half the idle height, and the
-		// record's 24 once expanded.
-		expect(composerPresentation(empty).height).toBe(56);
-		expect(composerPresentation(empty).radius).toBe(28);
-		expect(composerPresentation({ ...empty, focused: true }).height).toBe(112);
-		expect(composerPresentation({ ...empty, focused: true }).radius).toBe(24);
+		// The shape follows the PAINTED pill on the floor it is given: 44 gives the
+		// record's 56/28, and the 48 floor the composer actually paints on gives
+		// 60/30 — reporting 28 over a 30 pt paint was a second source of truth
+		// (round 7, R7-4). Both floors are asserted, so neither can drift alone.
+		expect(composerPresentation({ ...empty, floor: 44 }).height).toBe(56);
+		expect(composerPresentation({ ...empty, floor: 44 }).radius).toBe(28);
+		expect(
+			composerPresentation({ ...empty, focused: true, floor: 44 }).height,
+		).toBe(112);
+		expect(
+			composerPresentation({ ...empty, focused: true, floor: 44 }).radius,
+		).toBe(24);
+		expect(composerPresentation({ ...empty, floor: 48 }).height).toBe(60);
+		expect(composerPresentation({ ...empty, floor: 48 }).radius).toBe(30);
+	});
+});
+
+describe("round 7 — the seed is a decision, not an expression", () => {
+	it("seeds the collapsed end whenever the card is not expanded", () => {
+		expect(seedFor(false, 60)).toEqual({ kind: "collapsed", total: 60 });
+		expect(seedFor(true, 120)).toEqual({ kind: "expanded", total: 120 });
+	});
+
+	it("has no second condition that could skip a layout", () => {
+		// The regression this replaces: a `!compactSingle` guard left short
+		// landscape unmeasured while the seeded floor stayed in place.
+		const source = read("src/features/session/components/composer.tsx");
+		const call = source.slice(
+			source.indexOf("const seed = seedFor("),
+			source.indexOf("const seed = seedFor(") + 200,
+		);
+		expect(call).toContain("presentation.expanded");
+		expect(call).not.toContain("compactSingle");
 	});
 });

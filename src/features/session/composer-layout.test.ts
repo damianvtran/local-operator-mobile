@@ -90,8 +90,8 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 
 	it("captures ONE seed per state, so the morph is not a constant pair", () => {
 		// The design round's D1: one seed gave interpolate([120, 120]) while expanded.
-		expect(SRC).toMatch(/setCollapsedSeed\(total\)/);
-		expect(SRC).toMatch(/setExpandedSeed\(total\)/);
+		expect(SRC).toMatch(/setCollapsedSeed\(seed\.total\)/);
+		expect(SRC).toMatch(/setExpandedSeed\(seed\.total\)/);
 		expect(SRC).toMatch(
 			/morphHeight\(progress\.value, baseHeight, targetExpanded\)/,
 		);

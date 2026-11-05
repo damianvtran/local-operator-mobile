@@ -481,8 +481,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * morph state, the radius from the measured pill, the landscape duplicate More
 	 * removed) and `src/ui/a11y.ts` (the retired compact-context identifier). The
 	 * app tree moves with the screen that mounts them. Values are `--print` output
-	 * from the merged head, not hand-written. */
-	src: "8b79013ebcc51e94ed70db43f1d664a243f15afa0121766732a004987b90e7e8",
+	 * from the merged head, not hand-written.
+	 *
+	 * Re-pinned 2026-11-05 for round 7, src only: `composer.tsx` lost the
+	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
+	 * itself and is floored), the overflow clip follows the animation's own
+	 * progress instead of a timer, and `composer-presentation.ts` gained
+	 * `seedFor` plus a floor-aware presentation. `app` untouched. */
+	src: "1fb695b720b6f1c29279acf35267c607926a1ffe7cc99b21b62b568f52497432",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

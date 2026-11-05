@@ -26,6 +26,8 @@ import {
 
 import Animated, {
 	interpolate,
+	runOnJS,
+	useAnimatedReaction,
 	useAnimatedStyle,
 	useReducedMotion,
 	useSharedValue,
@@ -52,15 +54,14 @@ import {
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
-	COMPOSER_BASE_HEIGHT,
 	COMPOSER_CONTROLS_GAP,
-	COMPOSER_EXPANDED_HEIGHT,
 	COMPOSER_FIELD_BOX,
 	composerPaintedHeight,
 	composerPresentation,
 	keyboardOverlap,
 	morphHeight,
 	morphPillRadius,
+	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
@@ -668,6 +669,10 @@ export const Composer = ({
 		keyboard: keyboardVisible,
 		inset: bottomInset ?? 0,
 		scale: effectiveScale,
+		/* The composer paints on the platform's touch floor, so its presentation
+		 *  must be computed on the same floor or the radius disagrees with the box
+		 *  (28 announced over a 30 pt paint). */
+		floor: TOUCH_FLOOR,
 	});
 	/* One keyboard owner. Android's resized window already ends at keyboard top:
 	 * overlap is then zero. iOS follows the native frame/duration, not a second
@@ -725,15 +730,8 @@ export const Composer = ({
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
 	 * actually paints (iOS 56/R28, web and Android 60/R30 on the 48 floor), not
 	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
-	 * number the box does not paint is a shape nobody sees. `onLayout` reports the
-	 * resting shell; until it does, the constant is the floor. */
-	/* THE PAINTED EXPANDED TARGET, measured the same way. The height animation has
-	 * to end where the content actually ends — a constant upper bound is what made
-	 * the earlier "animation" a jump: content already equalled the bound, so the
-	 * interpolation painted nothing. Measured once per layout change, it is the
-	 * value the morph travels to, and content growth (3 lines, 6 lines) moves the
-	 * target rather than being clipped by it. */
-	const [paintedExpanded, setPaintedExpanded] = useState<number | null>(null);
+	 * number the box does not paint is a shape nobody sees. The CONTENT block is
+	 * the ruler; the shell cannot measure itself (see `measureContent`). */
 	/* The extras' natural height, for the ceiling budget only: the morph's ends
 	 *  come from one measured content block that already contains them, so adding
 	 *  this to a total again would count them twice. */
@@ -752,13 +750,22 @@ export const Composer = ({
 	const [collapsedSeed, setCollapsedSeed] = useState<number | null>(null);
 	const [expandedSeed, setExpandedSeed] = useState<number | null>(null);
 	const measureContent = (event: LayoutChangeEvent) => {
-		const height = Math.round(event.nativeEvent.layout.height);
+		/* `Math.ceil`, not `Math.round`: half a point of rounding at rest is a clip
+		 *  the moment the shell is allowed to hide overflow, and the content below
+		 *  the true height is exactly what would disappear. */
+		const height = Math.ceil(event.nativeEvent.layout.height);
 		if (height <= 0) return;
-		const total = height + shellBox.paddingTop + shellBox.paddingBottom;
-		if (presentation.expanded) {
-			if (total !== expandedSeed) setExpandedSeed(total);
-		} else if (!compactSingle && total !== collapsedSeed) {
-			setCollapsedSeed(total);
+		const seed = seedFor(
+			presentation.expanded,
+			height + shellBox.paddingTop + shellBox.paddingBottom,
+		);
+		if (seed.kind === "expanded") {
+			if (seed.total !== expandedSeed) setExpandedSeed(seed.total);
+		} else if (seed.total !== collapsedSeed) {
+			/* No `compactSingle` guard: short landscape is a pill like any other, and
+			 *  skipping its measurement left the seeded 56/60 in place while the
+			 *  content grew past it — clipped by the overflow rule below (R7-1). */
+			setCollapsedSeed(seed.total);
 		}
 	};
 	/* The first frame must not paint a radius the pill does not have: the field's
@@ -766,7 +773,10 @@ export const Composer = ({
 	 *  sums at that floor (56/112 on iOS, 60/120 on the 48 floor). */
 	const seededBase = composerPaintedHeight(false, TOUCH_FLOOR);
 	const seededExpanded = composerPaintedHeight(true, TOUCH_FLOOR);
-	const baseHeight = collapsedSeed ?? seededBase;
+	/* A measured pill can be SMALLER than the floor's own sum (a scale that renders
+	 *  a shorter field), and honouring that would shrink the shell under its own
+	 *  content; the floor wins, so the box never clips what it holds. */
+	const baseHeight = Math.max(seededBase, collapsedSeed ?? 0);
 	const targetExpanded = Math.max(expandedSeed ?? seededExpanded, baseHeight);
 	const shellMotion = useAnimatedStyle(() => ({
 		/* One rule in every state, landscape included: the radius is half the pill
@@ -775,6 +785,18 @@ export const Composer = ({
 		borderRadius: morphHeight(progress.value, morphPillRadius(baseHeight), 24),
 		height: morphHeight(progress.value, baseHeight, targetExpanded),
 	}));
+	/* Overflow is hidden only while the box is between its two ends; at rest the
+	 *  content and the box agree, so hiding would be a clip waiting for half a
+	 *  point of rounding. Read off the shared value itself rather than a timer
+	 *  racing the animation: 0 and 1 are the ends, anything between is travel. */
+	const [morphing, setMorphing] = useState(false);
+	useAnimatedReaction(
+		() => progress.value > 0 && progress.value < 1,
+		(travelling, previous) => {
+			if (travelling !== previous) runOnJS(setMorphing)(travelling);
+		},
+	);
+
 	const dockMotion = useAnimatedStyle(() => ({
 		marginBottom:
 			keyboardOffset.value +
