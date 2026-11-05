@@ -82,7 +82,9 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 
 	it("derives the resting radius from the measured painted pill", () => {
 		expect(SRC).toMatch(/baseHeight \/ 2/);
-		expect(SRC).toMatch(/setPaintedBase\(height\)/);
+		// The shell cannot be its own ruler; the CONTENT column is measured.
+		expect(SRC).toMatch(/mainHeight > 0/);
+		expect(SRC).toMatch(/setMainHeight\(height\)/);
 	});
 
 	it("animates to a MEASURED expanded target instead of a constant bound", () => {

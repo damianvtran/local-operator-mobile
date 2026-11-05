@@ -728,7 +728,6 @@ export const Composer = ({
 	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
 	 * number the box does not paint is a shape nobody sees. `onLayout` reports the
 	 * resting shell; until it does, the constant is the floor. */
-	const [paintedBase, setPaintedBase] = useState<number | null>(null);
 	/* THE PAINTED EXPANDED TARGET, measured the same way. The height animation has
 	 * to end where the content actually ends — a constant upper bound is what made
 	 * the earlier "animation" a jump: content already equalled the bound, so the
@@ -736,50 +735,22 @@ export const Composer = ({
 	 * value the morph travels to, and content growth (3 lines, 6 lines) moves the
 	 * target rather than being clipped by it. */
 	const [paintedExpanded, setPaintedExpanded] = useState<number | null>(null);
-	const baseHeight = paintedBase ?? COMPOSER_BASE_HEIGHT;
-	const targetExpanded = Math.max(
-		paintedExpanded ?? COMPOSER_EXPANDED_HEIGHT,
-		baseHeight,
-	);
-	const shellMotion = useAnimatedStyle(() => ({
-		borderRadius: interpolate(
-			progress.value,
-			[0, 1],
-			[compactSingle ? 24 : baseHeight / 2, 24],
-		),
-		height: interpolate(
-			progress.value,
-			[0, 1],
-			[baseHeight, compactSingle ? baseHeight : targetExpanded],
-		),
-	}));
-	/* The box ANIMATES with the same progress value as the shape (record §3: one
-	 * monotonic 180–220 ms morph, no one-frame jump), and it is a MINIMUM rather
-	 * than a fixed height: the field and the controls are in flow now, so a three-
-	 * or six-line draft grows the dock past the record's floor instead of
-	 * overflowing a pinned box, and the field scrolls itself at the cap. Padding
-	 * is settled per state — it is part of the record's sums, not a second clock. */
-	const shellBox = {
-		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
-		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
-	};
-	/* The extras' natural height, from the scroller's own content size, so the
-	 *  budget can give them what they need and no more. Declared here because the
-	 *  expanded target below sums it. */
-	const [extrasHeight, setExtrasHeight] = useState(0);
 	/* Measurement, in one place. The resting shell reports what it paints; the
 	 *  content column reports its natural height, which the fixed box must equal
 	 *  when expanded or the last line sits outside the card. */
 	const [mainHeight, setMainHeight] = useState(0);
-	const measureShell = (event: LayoutChangeEvent) => {
-		if (presentation.expanded || compactSingle) return;
-		const height = Math.round(event.nativeEvent.layout.height);
-		if (height > 0 && height !== paintedBase) setPaintedBase(height);
-	};
 	const measureMain = (event: LayoutChangeEvent) => {
 		const height = Math.round(event.nativeEvent.layout.height);
 		if (height > 0 && height !== mainHeight) setMainHeight(height);
 	};
+	/* The record's paddings, settled per state: they are part of its sums
+	 *  (6 + h + 6 at rest, 12 + h + 4 + h + 8 expanded) and never a second clock. */
+	const shellBox = {
+		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
+		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
+	};
+	/* The extras' natural height, so the expanded target can sum it. */
+	const [extrasHeight, setExtrasHeight] = useState(0);
 	useEffect(() => {
 		if (!presentation.expanded || compactSingle) return;
 		const padding = shellBox.paddingTop + shellBox.paddingBottom;
@@ -798,6 +769,30 @@ export const Composer = ({
 		shellBox.paddingBottom,
 	]);
 
+	/* The shell cannot be its own ruler: an animated height reports whatever value
+	 *  it was handed, so measuring it would ratify the constant it started from
+	 *  (that shipped a 56 pt pill with 4 pt of the field outside it). The content
+	 *  column is the honest source for both ends of the morph. */
+	const baseHeight =
+		mainHeight > 0
+			? shellBox.paddingTop + shellBox.paddingBottom + extrasHeight + mainHeight
+			: COMPOSER_BASE_HEIGHT;
+	const targetExpanded = Math.max(
+		paintedExpanded ?? COMPOSER_EXPANDED_HEIGHT,
+		baseHeight,
+	);
+	const shellMotion = useAnimatedStyle(() => ({
+		borderRadius: interpolate(
+			progress.value,
+			[0, 1],
+			[compactSingle ? 24 : baseHeight / 2, 24],
+		),
+		height: interpolate(
+			progress.value,
+			[0, 1],
+			[baseHeight, compactSingle ? baseHeight : targetExpanded],
+		),
+	}));
 	const dockMotion = useAnimatedStyle(() => ({
 		marginBottom:
 			keyboardOffset.value +
@@ -1534,7 +1529,6 @@ export const Composer = ({
 					},
 					shellMotion,
 				]}
-				onLayout={measureShell}
 			>
 				<ScrollView
 					style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
