@@ -52,6 +52,36 @@ final class TransportUITests: XCTestCase {
     XCTAssertEqual(afterClose, beforeClose, "Closed-listener control must not gain a new401")
   }
 
+  @MainActor func testAuthenticatedSave() throws {
+    continueAfterFailure = false
+    executionTimeAllowance = 700
+    emit(["event": "method-entered", "runnerPID": ProcessInfo.processInfo.processIdentifier])
+    app.launch(); try visible("welcome-screen"); attach("welcome-ready")
+    emit(["event": "welcome-ready"])
+    _ = try control("/begin")
+    app.buttons["welcome-custom-url"].tap(); try visible("own-tunnel-screen")
+    // Credential travels over the private supervisor control channel, not CLI,
+    // runner environment, attachment, assertion message or predicate format.
+    let payload = try controlPayload("/fixture-password")
+    guard let credential = payload["password"] as? String, credential.count >= 24 else {
+      XCTFail("Fixture credential unavailable"); return
+    }
+    let verdict = try attempt(ProcessInfo.processInfo.environment["LOCAL_URL"]!, label: "published-local", credential: credential)
+    XCTAssertEqual(verdict, "connected", "Authenticated Test must reach Connected before Save")
+    attach("auth-connected"); emit(["event": "auth-connected"])
+    let save = try scrollTo("custom-connect", up: false)
+    XCTAssertTrue(save.isEnabled, "Save must be enabled by the actual successful Test")
+    _ = try control("/save-phase")
+    save.tap(); emit(["event": "auth-save"])
+    XCTAssertTrue(app.descendants(matching: .any)["home-screen"].firstMatch.waitForExistence(timeout: 30), "Save did not reach actual Home")
+    attach("auth-home"); emit(["event": "auth-home"])
+    let sidebar = app.buttons["home-sidebar"].firstMatch
+    XCTAssertTrue(sidebar.waitForExistence(timeout: 5)); sidebar.tap()
+    let row = app.descendants(matching: .any)["session-row-6714def86197"].firstMatch
+    XCTAssertTrue(row.waitForExistence(timeout: 30) && row.isHittable, "Expected existing saved-route session row missing")
+    attach("auth-sidebar"); emit(["event": "auth-session-row"])
+  }
+
   @MainActor private func freshForm() throws {
     let back = app.buttons["own-tunnel-back"].firstMatch
     XCTAssertTrue(back.waitForExistence(timeout: 5)); back.tap()
@@ -61,7 +91,7 @@ final class TransportUITests: XCTestCase {
     XCTAssertFalse(app.staticTexts["Not yet"].exists, "Fresh form must not retain a stale verdict")
   }
 
-  @MainActor private func attempt(_ url: String, label: String, scrollUp: Bool) throws -> String {
+  @MainActor private func attempt(_ url: String, label: String, scrollUp: Bool = false, credential: String? = nil) throws -> String {
     let field = try scrollTo("custom-url-field", up: scrollUp)
     try enterExactURL(url, field: field, label: label)
     inputCheckpoint("before-return", field: field, expected: url, label: label)
@@ -76,6 +106,7 @@ final class TransportUITests: XCTestCase {
     inputCheckpoint("after-return-settled", field: field, expected: url, label: label)
     XCTAssertTrue(settled, "Literal URL did not settle after Return")
     XCTAssertEqual(field.value as? String, url, "Exact authority must reach the real app field")
+    if let credential = credential { try enterCredential(credential) }
     let toggle = try scrollTo("custom-insecure-opt-in", up: false)
     if toggle.label == "Allow a plain http:// address" { toggle.tap() }
     XCTAssertEqual(toggle.label, "Plain http:// is allowed")
@@ -84,7 +115,7 @@ final class TransportUITests: XCTestCase {
     test.tap()
     let ready = NSPredicate(format: "enabled == true AND label == %@", "Test the connection")
     XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: test)], timeout: 15), .completed)
-    let text = try terminalVerdict()
+    let text = try terminalVerdict(includeConnected: credential != nil)
     let verdict = classify(text)
     attach(label)
     emit(["event": "ui-verdict", "authority": label.hasPrefix("negative-") ? String(label.dropFirst(9)) : label, "verdict": verdict, "elapsedMs": Int(Date().timeIntervalSince(started) * 1000)])
@@ -95,11 +126,13 @@ final class TransportUITests: XCTestCase {
   // the field below the keyboard. This discriminates delivery from Return:
   // real visible input, one acknowledged exact prefix at a time, no rewrites,
   // retries, clipboard/state injection, or speculative product Input change.
-  @MainActor private func enterExactURL(_ url: String, field: XCUIElement, label: String) throws {
+  @MainActor private func positionField(_ field: XCUIElement, label: String, secure: Bool = false) throws {
     field.tap()
     let keyboard = app.keyboards.firstMatch
     XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "Keyboard must actually appear")
-    let scrolls = app.scrollViews.containing(.textField, identifier: "custom-url-field")
+    let scrolls = secure
+      ? app.scrollViews.containing(.secureTextField, identifier: "custom-password-field")
+      : app.scrollViews.containing(.textField, identifier: "custom-url-field")
     XCTAssertEqual(scrolls.count, 1, "Require the unique app scroll container owning the field")
     let scroll = scrolls.firstMatch
     XCTAssertTrue(scroll.exists && scroll.isHittable, "Actual owning ScrollView must be reachable")
@@ -118,7 +151,7 @@ final class TransportUITests: XCTestCase {
       // The first prose anchor has moved near the header by then: do not repeat
       // that long gesture. One short continuation may use the visible URL label
       // only after measured progress; no movement/clearance failure ends the test.
-      let note = adjustment == 0
+      let note = adjustment == 0 && !secure
         ? scroll.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Free and needs no account")).firstMatch
         : scroll.staticTexts.matching(NSPredicate(format: "label == %@", "Public URL")).firstMatch
       XCTAssertTrue(note.exists && note.isHittable, "Require visible app-owned positioning anchor")
@@ -132,7 +165,7 @@ final class TransportUITests: XCTestCase {
         "start": [start.x, start.y], "end": [end.x, end.y], "visibleKeyboardTop": visibleKeyboardTop,
         "adjustment": adjustment, "remainingClearanceBefore": remainingClearance,
         "offsetGap": "Public XCUI does not expose UIScrollView.contentOffset; field-frame delta is measured instead"]
-      inputCheckpoint("gesture-before", field: field, expected: "", label: label, geometry: geometry)
+      if !secure { inputCheckpoint("gesture-before", field: field, expected: "", label: label, geometry: geometry) }
       let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
       origin.withOffset(CGVector(dx: start.x - app.frame.minX, dy: start.y - app.frame.minY)).press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: end.x - app.frame.minX, dy: end.y - app.frame.minY)))
       var after = geometry
@@ -140,13 +173,42 @@ final class TransportUITests: XCTestCase {
       after["fieldDeltaY"] = -previousProgress
       after["remainingClearanceAfter"] = field.frame.maxY - (keyboardOcclusionTop(keyboard) - 8)
       after["scrollFrameAfter"] = NSCoder.string(for: scroll.frame)
-      inputCheckpoint("gesture-after", field: field, expected: "", label: label, geometry: after)
+      if !secure { inputCheckpoint("gesture-after", field: field, expected: "", label: label, geometry: after) }
       XCTAssertLessThan(field.frame.minY, before.minY - 1, "No vertical field movement after the ONE app-content drag")
     }
     XCTAssertTrue(keyboard.exists, "Keyboard disappeared after positioning; stop without refocus/retry")
     visibleKeyboardTop = keyboardOcclusionTop(keyboard)
-    inputCheckpoint("positioned-empty", field: field, expected: "", label: label, geometry: ["visibleKeyboardTop": visibleKeyboardTop])
+    if !secure { inputCheckpoint("positioned-empty", field: field, expected: "", label: label, geometry: ["visibleKeyboardTop": visibleKeyboardTop]) }
     XCTAssertTrue(keyboard.exists && field.isHittable && field.frame.maxY < visibleKeyboardTop - 8, "Field must be visibly above the actual keyboard AND accessory")
+  }
+
+  @MainActor private func enterCredential(_ credential: String) throws {
+    _ = try scrollTo("custom-password-field", up: false)
+    let field = app.secureTextFields["custom-password-field"].firstMatch
+    XCTAssertTrue(field.exists && field.elementType == .secureTextField, "Require real masked SecureTextField")
+    try positionField(field, label: "credential", secure: true)
+    let empty = field.value as? String ?? ""
+    XCTAssertTrue(empty.isEmpty || empty == field.placeholderValue, "Secure field must start empty")
+    print("XCT_CREDENTIAL_ENTRY_BEGIN")
+    XCTContext.runActivity(named: "credential-entry") { _ in
+      var acknowledgedLength = 0
+      for character in credential {
+        field.typeText(String(character))
+        acknowledgedLength += String(character).utf16.count
+        // Secure AX exposes bullets. Numeric length acknowledges delivery, NOT
+        // an unmasked prefix; login303/Connected proves the final credential.
+        // No secret is ever interpolated into a logged predicate description.
+        let predicate = NSPredicate(format: "value.length == %d", acknowledgedLength)
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: field)], timeout: 2), .completed, "Secure input length acknowledgment failed")
+      }
+    }
+    print("XCT_CREDENTIAL_ENTRY_END")
+    let key = app.keyboards.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "Return", "return")).firstMatch
+    XCTAssertTrue(key.exists, "Secure field Return key missing"); key.tap()
+  }
+
+  @MainActor private func enterExactURL(_ url: String, field: XCUIElement, label: String) throws {
+    try positionField(field, label: label)
     field.tap()
     let initial = field.value as? String ?? ""
     // Native accessibility can report its placeholder as an empty value. Never
@@ -191,7 +253,8 @@ final class TransportUITests: XCTestCase {
     attach("input-\(stage)-\(label)")
   }
 
-  @MainActor private func terminalVerdict() throws -> String {
+  @MainActor private func terminalVerdict(includeConnected: Bool = false) throws -> String {
+    if includeConnected && app.staticTexts["Connected"].firstMatch.waitForExistence(timeout: 15) { return "Connected" }
     let predicate = NSPredicate(format: "label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@ OR label BEGINSWITH %@", "That password was not accepted", "That address did not answer", "That host name", "The address could not be reached", "Nothing answered", "That tunnel's certificate")
     for _ in 0..<8 {
       let element = app.staticTexts.matching(predicate).firstMatch
@@ -201,6 +264,7 @@ final class TransportUITests: XCTestCase {
     XCTFail("No actual terminal Own Tunnel verdict"); throw NSError(domain: "TransportProof", code: 1)
   }
   private func classify(_ text: String) -> String {
+    if text == "Connected" { return "connected" }
     if text.hasPrefix("That password was not accepted") { return "password-refused" }
     if text.hasPrefix("That address did not answer") { return "timeout" }
     if text.hasPrefix("That host name") { return "host" }
@@ -229,6 +293,11 @@ final class TransportUITests: XCTestCase {
   // This URLSession is TEST-SUPERVISOR control only. It never targets /api,
   // performs a relay login, or stands in for the installed app's transport.
   private func control(_ path: String) throws -> [String: Int] {
+    let payload = try controlPayload(path)
+    return payload.compactMapValues { $0 as? Int }
+  }
+
+  private func controlPayload(_ path: String) throws -> [String: Any] {
     let expected = expectation(description: "supervisor control")
     let box = ControlBox()
     var req = URLRequest(url: URL(string: ProcessInfo.processInfo.environment["CONTROL_URL"]! + path)!)
@@ -239,7 +308,7 @@ final class TransportUITests: XCTestCase {
     }.resume()
     guard XCTWaiter.wait(for: [expected], timeout: 12) == .completed else { throw NSError(domain: "SupervisorControlTimeout", code: 1) }
     let (data, status) = box.read(); XCTAssertEqual(status, 200)
-    return (try JSONSerialization.jsonObject(with: data ?? Data()) as? [String: Int]) ?? [:]
+    return (try JSONSerialization.jsonObject(with: data ?? Data()) as? [String: Any]) ?? [:]
   }
 }
 private final class ControlBox: @unchecked Sendable {

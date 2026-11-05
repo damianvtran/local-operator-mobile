@@ -78,17 +78,22 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		expect(warmBlock).not.toContain("flowRun(");
 		expect(runner.match(/createThemeDriverWarmer\(run\)/g)).toHaveLength(1);
 		expect(setup).not.toMatch(/startRelay|flowRun|session-row/);
-		expect(runner).toContain(
-			"captureFailure(label, isDriverBootstrapFailure(String(error)))",
+		expect(runner).toMatch(
+			/captureFailure\(\s*label,\s*!!operation\s*\|\|\s*isDriverBootstrapFailure\(String\(error\)\)/,
 		);
 		const failure = runner.slice(
 			runner.indexOf("async function captureFailure("),
 			runner.indexOf("async function flowRun("),
 		);
-		expect(failure.indexOf("if (driverUnavailable)")).toBeLessThan(
-			failure.indexOf("`failure-hierarchy-${label}`"),
+		expect(
+			failure.indexOf("if (driverUnavailable || directXCTest)"),
+		).toBeGreaterThanOrEqual(0);
+		expect(
+			failure.indexOf("if (driverUnavailable || directXCTest)"),
+		).toBeLessThan(failure.indexOf("`failure-hierarchy-${label}`"));
+		expect(failure).toMatch(
+			/if \(driverUnavailable \|\| directXCTest\) \{[\s\S]*return;/,
 		);
-		expect(failure).toMatch(/if \(driverUnavailable\) \{[\s\S]*return;/);
 	});
 
 	it("uses the actual launch/hierarchy sequence and fails once before any app flow", async () => {
@@ -178,7 +183,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		);
 		expect(job).toContain("PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}");
 		expect(workflow).toContain(
-			'case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest|transport-xctest-negative)',
+			'case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest|transport-xctest-negative|auth-save-xctest)',
 		);
 	});
 

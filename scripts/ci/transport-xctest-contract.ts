@@ -5,6 +5,7 @@ export function directXCTestPlan(
 	udid: string,
 	root: string,
 	negativeOnly = false,
+	authSave = false,
 ) {
 	const shared = [
 		"-project",
@@ -36,7 +37,7 @@ export function directXCTestPlan(
 			"NO",
 			"-maximum-concurrent-test-simulator-destinations",
 			"1",
-			`-only-testing:TransportUITests/TransportUITests/${negativeOnly ? "testNegativeControl" : "testPairedTransport"}`,
+			`-only-testing:TransportUITests/TransportUITests/${authSave ? "testAuthenticatedSave" : negativeOnly ? "testNegativeControl" : "testPairedTransport"}`,
 			"test-without-building",
 		],
 	};
@@ -50,6 +51,10 @@ export type DirectEvent = {
 	runnerPID?: number;
 };
 const EVENTS = new Set([
+	"auth-connected",
+	"auth-save",
+	"auth-home",
+	"auth-session-row",
 	"method-entered",
 	"welcome-ready",
 	"authority",
@@ -59,6 +64,7 @@ const EVENTS = new Set([
 ]);
 const AUTHORITIES = new Set(["loopback-ipv4", "published-local"]);
 const VERDICTS = new Set([
+	"connected",
 	"password-refused",
 	"timeout",
 	"unreachable",

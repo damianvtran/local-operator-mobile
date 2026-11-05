@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+} from "node:fs";
 import { createServer } from "node:http";
 import { join } from "node:path";
+import {
+	assertPrivateCredentialActivities,
+	type observeAuthRequests,
+} from "./auth-save-contract.ts";
 import type {
 	observeTransportRequests,
 	transportAuthorities,
@@ -26,10 +37,14 @@ export async function directTransportTest(options: {
 	appId: string;
 	run: Run;
 	authorities: ReturnType<typeof transportAuthorities>;
-	observer: ReturnType<typeof observeTransportRequests>;
+	observer?: ReturnType<typeof observeTransportRequests>;
 	closeListener: () => Promise<void>;
 	receipt: Record<string, unknown>;
 	negativeOnly?: boolean;
+	authSave?: {
+		password: string;
+		observer: ReturnType<typeof observeAuthRequests>;
+	};
 }) {
 	const {
 		root,
@@ -50,12 +65,24 @@ export async function directTransportTest(options: {
 		}
 		let result: Record<string, number>;
 		if (url.pathname === "/begin") {
-			observer.beginNative();
+			observer?.beginNative();
+			options.authSave?.observer.beginNative();
+			result = { ready: 1 };
+		} else if (options.authSave && url.pathname === "/fixture-password") {
+			// No CLI/env/URL carries this value; only the private control response.
+			res.writeHead(200, {
+				"Content-Type": "application/json",
+				"Cache-Control": "no-store",
+			});
+			res.end(JSON.stringify({ password: options.authSave.password }));
+			return;
+		} else if (options.authSave && url.pathname === "/save-phase") {
+			options.authSave.observer.beginSave();
 			result = { ready: 1 };
 		} else if (url.pathname === "/close") {
 			await closeListener();
 			result = { closed: 1 };
-		} else if (url.pathname === "/counts") {
+		} else if (url.pathname === "/counts" && observer) {
 			const label = url.searchParams.get("authority");
 			if (!authorities.some((a) => a.label === label)) {
 				res.writeHead(400);
@@ -99,10 +126,18 @@ export async function directTransportTest(options: {
 	const port = (control.address() as { port: number }).port;
 	const project = join(root, "carrier", "TransportCarrier.xcodeproj");
 	const negativeOnly = options.negativeOnly === true;
-	receipt.directScope = negativeOnly
-		? "current loopback401 -> close SAME listener -> fresh negative; prior A/B retained separately"
-		: "paired authorities + closed-listener control";
-	const plan = directXCTestPlan(project, udid, root, negativeOnly);
+	receipt.directScope = options.authSave
+		? "one published-local authenticated Test/Save/Home/sidebar existing-row prerequisite"
+		: negativeOnly
+			? "current loopback401 -> close SAME listener -> fresh negative; prior A/B retained separately"
+			: "paired authorities + closed-listener control";
+	const plan = directXCTestPlan(
+		project,
+		udid,
+		root,
+		negativeOnly,
+		!!options.authSave,
+	);
 	try {
 		receipt.directPhase = "generate-isolated-target-graph";
 		await run(
@@ -135,21 +170,23 @@ export async function directTransportTest(options: {
 		);
 		const events = parseDirectEvents(output);
 		receipt.directEvents = events;
-		assertDirectXCTestResult(events, negativeOnly);
-		assert(
-			observer
-				.snapshot()
-				.arrivals.filter((a) => a.phase === "native-pair")
-				.every(
-					(a) =>
-						a.method === "GET" &&
-						a.endpoint === "sessions" &&
-						authorities
-							.slice(0, negativeOnly ? 1 : 2)
-							.some((b) => b.label === a.authority),
-				),
-			"unexpected native route/method in no-auth paired transport stage",
-		);
+		if (!options.authSave) {
+			assertDirectXCTestResult(events, negativeOnly);
+			assert(
+				observer!
+					.snapshot()
+					.arrivals.filter((a) => a.phase === "native-pair")
+					.every(
+						(a) =>
+							a.method === "GET" &&
+							a.endpoint === "sessions" &&
+							authorities
+								.slice(0, negativeOnly ? 1 : 2)
+								.some((b) => b.label === a.authority),
+					),
+				"unexpected native route/method in no-auth paired transport stage",
+			);
+		}
 		receipt.directPhase = "observations-complete";
 	} finally {
 		// Even a crashed/zero-tests runner keeps its xcresult and partial attachments.
@@ -177,10 +214,54 @@ export async function directTransportTest(options: {
 			}
 		}
 
+		if (options.authSave && existsSync(result)) {
+			try {
+				await inspectCredentialResult(result, run, options.authSave.password);
+				assert(
+					receipt.credentialActivityMasked === true,
+					"secure native activity mask unproved",
+				);
+				renameSync(result, join(root, "safe-auth.xcresult"));
+				const exported = join(root, "frames", "xctest");
+				if (existsSync(exported))
+					renameSync(exported, join(root, "frames", "auth-verified"));
+				receipt.privateXcresultProven = true;
+				receipt.authVerifiedResult = "safe-auth.xcresult";
+				receipt.authVerifiedFrames = "frames/auth-verified";
+			} catch {
+				// Reversible quarantine is outside the upload root. Never rewrite a
+				// structured xcresult or let a privacy error mask the first UI failure.
+				receipt.privateXcresultProven = false;
+				if (existsSync(result))
+					renameSync(
+						result,
+						join(root, "..", "auth-credential-result-quarantine.xcresult"),
+					);
+				receipt.xcresultQuarantined = true;
+				const exported = join(root, "frames", "xctest");
+				if (existsSync(exported)) {
+					const quarantine = join(
+						root,
+						"..",
+						"auth-credential-attachments-quarantine",
+					);
+					renameSync(exported, quarantine);
+					mkdirSync(exported, { recursive: true });
+					// Preserve masked application PNGs, not potentially sensitive text
+					// attachments/manifest, if activity privacy cannot be established.
+					for (const file of readdirSync(quarantine))
+						if (/^[A-Fa-f0-9-]+\.png$/.test(file))
+							copyFileSync(join(quarantine, file), join(exported, file));
+				}
+			}
+		}
 		const events =
 			(receipt.directEvents as ReturnType<typeof parseDirectEvents>) ?? [];
 		receipt.directCrashObservables = {
-			xcresultPresent: existsSync(result),
+			xcresultPresent:
+				existsSync(result) ||
+				receipt.xcresultQuarantined === true ||
+				receipt.privateXcresultProven === true,
 			methodEntered: events.some((e) => e.event === "method-entered"),
 			runnerPID:
 				events.find((e) => e.event === "method-entered")?.runnerPID ?? null,
@@ -195,6 +276,19 @@ export async function directTransportTest(options: {
 		receipt.attachmentExportFailed !== true,
 		"actual xcresult attachment export failed",
 	);
+	if (options.authSave) {
+		assert(
+			receipt.privateXcresultProven === true,
+			"credential privacy prerequisite failed; raw result quarantined, no pass",
+		);
+		assertXCTestAttachments(join(root, "frames", "auth-verified"), [
+			"welcome-ready",
+			"auth-connected",
+			"auth-home",
+			"auth-sidebar",
+		]);
+		return;
+	}
 	const negative = (
 		receipt.directEvents as ReturnType<typeof parseDirectEvents>
 	).find((e) => e.event === "negative")!;
@@ -209,6 +303,76 @@ export async function directTransportTest(options: {
 // Field mapping matches xcresulttool export attachments (also consumed by
 // Chromium Xcode16LogParser::_extract_attachments). A different image or a JSON
 // marker containing the desired name must not substitute for that screenshot.
+async function inspectCredentialResult(
+	result: string,
+	run: Run,
+	secret: string,
+) {
+	const objects: unknown[] = [],
+		queue: (string | undefined)[] = [undefined],
+		seen = new Set<string>();
+	// Published xcresulttool object reads are used; hosted feasibility remains a gate. Only test/
+	// summary refs are followed. Bounded metadata reads, never another test run.
+	while (queue.length) {
+		assert(
+			objects.length < 8,
+			"credential activity graph exceeds bounded inspection",
+		);
+		const id = queue.shift();
+		const text = await run(
+			`xctest-auth-privacy-${objects.length}`,
+			"xcrun",
+			[
+				"xcresulttool",
+				"get",
+				"object",
+				"--legacy",
+				"--path",
+				result,
+				"--format",
+				"json",
+				...(id ? ["--id", id] : []),
+			],
+			15,
+			true,
+		);
+		const object = JSON.parse(text);
+		objects.push(object);
+		const refs = (node: any) => {
+			if (!node || typeof node !== "object") return;
+			for (const [key, value] of Object.entries(node)) {
+				if (
+					(key === "testsRef" || key === "summaryRef") &&
+					(value as any)?.id?._value
+				) {
+					const next = (value as any).id._value as string;
+					if (!seen.has(next)) {
+						seen.add(next);
+						queue.push(next);
+					}
+				} else refs(value);
+			}
+		};
+		refs(object);
+	}
+	assertPrivateCredentialActivities(objects, secret);
+	const scan = (path: string) => {
+		for (const file of readdirSync(path, { withFileTypes: true })) {
+			const name = join(path, file.name);
+			if (file.isDirectory()) scan(name);
+			else if (file.isFile()) {
+				const data = readFileSync(name);
+				assert(
+					!data.includes(Buffer.from(secret)) &&
+						!data.includes(Buffer.from(secret, "utf16le")),
+					"raw result credential privacy prerequisite failed",
+				);
+			}
+		}
+	};
+	scan(result);
+}
+
 export function assertXCTestAttachments(
 	root: string,
 	names: readonly string[] = ["welcome-ready"],

@@ -35,6 +35,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseSavedRouteDiagnostics } from "../../src/features/auth/saved-route-diagnostics.ts";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
+import {
+	assertAuthSaveProof,
+	credentialActivityIsMasked,
+	observeAuthRequests,
+	redactCredentialActivity,
+} from "./auth-save-contract.ts";
 import { probeNativeRelay } from "./native-relay-preflight.ts";
 import {
 	assertDiagnosticSimulator,
@@ -46,7 +52,6 @@ import {
 	sanitizeBootstrapLog,
 	themeProofPlan,
 } from "./theme-proof-contract.ts";
-
 import {
 	assertTransportPair,
 	observeTransportRequests,
@@ -70,10 +75,13 @@ const ZIP = need("PROOF_ARTIFACT_ZIP");
 const PASSWORD_FILE = need("PROOF_PASSWORD_FILE");
 const plan = themeProofPlan(env.PROOF_STAGE ?? "full");
 const BUDGET_SECONDS = plan.budgetSeconds;
+const authSave = plan.stage === "auth-save-xctest";
 const directXCTest =
+	authSave ||
 	plan.stage === "transport-xctest" ||
 	plan.stage === "transport-xctest-negative";
-const pairedTransport = plan.stage === "transport" || directXCTest;
+const pairedTransport =
+	plan.stage === "transport" || (!authSave && directXCTest);
 const started = Date.now();
 
 if (
@@ -135,13 +143,15 @@ const receipt: Record<string, unknown> = {
 		// which ref). Never read this as literal-head provenance.
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
-	scope: pairedTransport
-		? "paired native authority transport only; blank password, no auth/save/provider/theme acceptance"
-		: plan.stage === "setup"
-			? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
-			: plan.stage === "diagnostic"
-				? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
-				: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
+	scope: authSave
+		? "one published-local authenticated Test/Save/Home/sidebar existing-row prerequisite; no themes or root-cause verdict"
+		: pairedTransport
+			? "paired native authority transport only; blank password, no auth/save/provider/theme acceptance"
+			: plan.stage === "setup"
+				? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
+				: plan.stage === "diagnostic"
+					? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
+					: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {
@@ -149,7 +159,7 @@ const note = (line: string) => {
 	console.log(line);
 };
 const redact = (text: string) =>
-	text.replaceAll(password, "<run-only-redacted>");
+	redactCredentialActivity(text).replaceAll(password, "<run-only-redacted>");
 const save = () => {
 	writeFileSync(join(ROOT, "receipt.json"), JSON.stringify(receipt, null, 2));
 	writeFileSync(join(ROOT, "commands.json"), JSON.stringify(records, null, 2));
@@ -226,6 +236,30 @@ async function run(
 		});
 	});
 	await stop(child);
+	const privateInspection = authSave && name.startsWith("xctest-auth-privacy-");
+	const inspectedInMemory = privateInspection ? output : undefined;
+	if (authSave && name === "xctest-selected-test") {
+		receipt.credentialActivityMasked = credentialActivityIsMasked(output);
+		const failureLine = output.match(
+			/TransportUITests\.swift:(\d+)(?::\d+)?: error:/,
+		);
+		receipt.safeXCTestFailure = failureLine
+			? { file: "TransportUITests.swift", line: Number(failureLine[1]) }
+			: null;
+		// Keystroke activities cannot be persisted even on an interrupted entry.
+		// Retain only the fixed event schema; raw xcresult gets its OWN audit.
+		output = parseDirectEvents(output)
+			.map((e) => `XCT_TRANSPORT ${JSON.stringify(e)}`)
+			.join("\n");
+		stdout = output;
+		stderr =
+			"credential-bearing native activity omitted; safe event/line facts retained";
+	}
+	if (privateInspection) {
+		output = "private xcresult object inspected in memory only";
+		stdout = output;
+		stderr = output;
+	}
 	if (name === "warm-maestro-driver" || pairedTransport)
 		output = sanitizeBootstrapLog(output);
 	if (name === "maestro-transport")
@@ -271,11 +305,12 @@ async function run(
 		throw new Error(
 			`${name} failed rc=${code}${isDriverBootstrapFailure(output) ? " [driver-bootstrap]" : ""}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
 		);
-	return output;
+	return inspectedInMemory ?? output;
 }
 
 type Slot = {
 	origin: string;
+	authObserver?: ReturnType<typeof observeAuthRequests>;
 	authorities?: ReturnType<typeof transportAuthorities>;
 	transportObserver?: ReturnType<typeof observeTransportRequests>;
 	shutdown: () => Promise<void>;
@@ -303,6 +338,9 @@ async function startRelay(language: string): Promise<Slot> {
 	const handle = await relay.listen();
 	const origin = `http://${host}:${handle.port}`;
 	const authorities = transportAuthorities(handle.port, origin);
+	const authObserver = authSave
+		? observeAuthRequests(relay.handler, new URL(origin).host)
+		: undefined;
 	const transportObserver = pairedTransport
 		? observeTransportRequests(relay.handler, authorities)
 		: undefined;
@@ -325,6 +363,7 @@ async function startRelay(language: string): Promise<Slot> {
 	groups.add(publisher);
 	const slot: Slot = {
 		origin,
+		authObserver,
 		publisher,
 		authorities,
 		transportObserver,
@@ -336,6 +375,13 @@ async function startRelay(language: string): Promise<Slot> {
 		},
 		shutdown: async () => {
 			await relay.shutdown();
+			if (authObserver) {
+				writeFileSync(
+					join(ROOT, `relay-${language}-auth.json`),
+					JSON.stringify(authObserver.snapshot(), null, 2),
+				);
+				return;
+			}
 			if (transportObserver) {
 				writeFileSync(
 					join(ROOT, `relay-${language}-transport.json`),
@@ -461,7 +507,7 @@ async function captureFailure(label: string, driverUnavailable = false) {
 	}
 	// A hierarchy request itself bootstraps XCTest. Repeating it after a known
 	// startup failure spent the remaining101s in41982518174 without app evidence.
-	if (driverUnavailable) {
+	if (driverUnavailable || directXCTest) {
 		note("failure hierarchy skipped: XCTest driver was not ready");
 		return;
 	}
@@ -481,12 +527,62 @@ async function captureFailure(label: string, driverUnavailable = false) {
 	}
 }
 
+async function authenticatedSaveProbe(relay: Slot) {
+	try {
+		// Reuse the existing pre-launch OS-log subscription/whitelist/finally
+		// collector. The callback replaces Maestro; it never runs a YAML flow.
+		await flowRun("auth-save", relay.origin, "", 700, undefined, () =>
+			directTransportTest({
+				root: ROOT,
+				udid: udid!,
+				appId: (receipt.installed as { bundleId: string }).bundleId,
+				run,
+				authorities: relay.authorities!,
+				closeListener: relay.closeListener,
+				receipt,
+				authSave: { password, observer: relay.authObserver! },
+			}),
+		);
+		assertAuthSaveProof(
+			receipt.directEvents as ReturnType<typeof parseDirectEvents>,
+			relay.authObserver!.snapshot().completions,
+			(receipt.savedRouteDiagnostics ?? []) as ReturnType<
+				typeof parseSavedRouteDiagnostics
+			>,
+		);
+	} finally {
+		receipt.authRequestLedger = relay.authObserver!.snapshot();
+		// Absence labels are observations, NOT provider/ATS/DNS causes. No Save
+		// legitimately means no save.begin; an empty trace never diagnoses logging.
+		const trace = (receipt.savedRouteDiagnostics ?? []) as ReturnType<
+			typeof parseSavedRouteDiagnostics
+		>;
+		receipt.authFirstMissingProviderStage =
+			["save.begin", "cold-list.applied"].find(
+				(stage) => !trace.some((e) => e.stage === stage),
+			) ?? null;
+		const events = (receipt.directEvents ?? []) as ReturnType<
+			typeof parseDirectEvents
+		>;
+		receipt.authFirstMissingAppStage =
+			[
+				"method-entered",
+				"welcome-ready",
+				"auth-connected",
+				"auth-save",
+				"auth-home",
+				"auth-session-row",
+			].find((event) => !events.some((e) => e.event === event)) ?? null;
+	}
+}
+
 async function flowRun(
 	label: string,
 	relayOrigin: string,
 	file: string,
 	cap: number,
 	transport?: Slot,
+	operation?: () => Promise<void>,
 ) {
 	const shots = join(ROOT, "frames", label);
 	mkdirSync(shots, { recursive: true });
@@ -548,44 +644,51 @@ async function flowRun(
 		pending = pending.slice(-65536);
 	});
 	try {
-		await run(
-			`maestro-${label}`,
-			"maestro",
-			[
-				"--device",
-				udid as string,
-				"test",
-				"--config",
-				transport
-					? "e2e/maestro/theme-proof/transport-config.yaml"
-					: "e2e/maestro/theme-proof/config.yaml",
-				"-e",
-				`APP_ID=${bundle}`,
-				"-e",
-				`RELAY_URL=${relayOrigin}`,
-				...(transport
-					? [
-							"-e",
-							`TRANSPORT_LOOPBACK=${transport.authorities?.[0].url}`,
-							"-e",
-							`TRANSPORT_LOCAL=${transport.authorities?.[1].url}`,
-						]
-					: ["-e", `RELAY_PASSWORD=${password}`]),
-				"--test-output-dir",
-				join(ROOT, "maestro", label),
-				`e2e/maestro/theme-proof/${file}`,
-			],
-			cap,
-		);
+		if (operation) await operation();
+		else
+			await run(
+				`maestro-${label}`,
+				"maestro",
+				[
+					"--device",
+					udid as string,
+					"test",
+					"--config",
+					transport
+						? "e2e/maestro/theme-proof/transport-config.yaml"
+						: "e2e/maestro/theme-proof/config.yaml",
+					"-e",
+					`APP_ID=${bundle}`,
+					"-e",
+					`RELAY_URL=${relayOrigin}`,
+					...(transport
+						? [
+								"-e",
+								`TRANSPORT_LOOPBACK=${transport.authorities?.[0].url}`,
+								"-e",
+								`TRANSPORT_LOCAL=${transport.authorities?.[1].url}`,
+							]
+						: ["-e", `RELAY_PASSWORD=${password}`]),
+					"--test-output-dir",
+					join(ROOT, "maestro", label),
+					`e2e/maestro/theme-proof/${file}`,
+				],
+				cap,
+			);
 	} catch (error) {
-		await captureFailure(label, isDriverBootstrapFailure(String(error)));
+		await captureFailure(
+			label,
+			!!operation || isDriverBootstrapFailure(String(error)),
+		);
 		throw error;
 	} finally {
 		// Maestro has already captured successful earlier steps when a later
 		// prerequisite fails. Preserve them before the driver/runner is reaped;
 		// the strict collector below still refuses incomplete successful walks.
 		try {
-			const partial = copyThemeFrames(join(ROOT, "maestro", label), shots);
+			const partial = operation
+				? []
+				: copyThemeFrames(join(ROOT, "maestro", label), shots);
 			note(`preserved ${label}: ${partial.join(",")}`);
 		} catch (error) {
 			// An early driver failure may not create its output directory. Do not
@@ -626,6 +729,7 @@ async function flowRun(
 			note("saved-route diagnostic preservation unavailable");
 		}
 	}
+	if (operation) return;
 	const frames = collectThemeFrames(
 		join(ROOT, "maestro", label),
 		shots,
@@ -770,7 +874,13 @@ try {
 			throw error;
 		}
 	}
-	if (directXCTest) {
+	if (authSave) {
+		const relay = await startRelay("en");
+		relays.push(relay);
+		await authenticatedSaveProbe(relay);
+		receipt.verdict =
+			"PASS one authenticated published-local Test/Save/Home/sidebar session-row + native auth ledger/provider trace ONLY; not theme/polish acceptance";
+	} else if (directXCTest) {
 		const relay = await startRelay("en");
 		relays.push(relay);
 		receipt.nativeTransportCodes = [];
