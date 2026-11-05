@@ -62,9 +62,17 @@ jobs:
     if: github.actor == 'damianvtran' && ((github.event_name == 'workflow_dispatch' && inputs.setup_only) || (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'stage-b-setup-approved' && github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: macos-26
     # 41955013065: boot failed at 284.8s (240s cap + reap latency).
-    # Keep boot 240s + import 240s; allow ~4m checkout/deps/controls, ~2m bounded
-    # diagnostics + ~2m cleanup/upload and runner latency. No 32–42m app build.
-    # Expected ~10–15 hosted runner-minutes, hard lease 20m; no retry/cap rise.
+    # Media ceilings are now 180s warm-up + 240s import. 42078247373 proved the
+    # fresh library rebuilds thumbnails inside assetsd while holding PhotoKit's
+    # changes transaction, so the rebuild gets its own bounded budget and is
+    # never import evidence.
+    # Honest lease arithmetic (review R27-1): the sum of every per-step cap
+    # (boot 240 + warm 180 + import 240 + diagnostics ~190 + cleanup ~120 +
+    # ~240s checkout/deps/controls) is ~1890s, already above this 20m lease.
+    # That is deliberate, not an oversight: a realistic hosted run models ~19m,
+    # and the worst case ends in an honest job-kill with the receipt, commands
+    # and frames preserved — never a false pass. No 32–42m app build here, and
+    # no retry or cap rise; 180s stays until the next native run measures it.
     timeout-minutes: 20
     concurrency:
       group: stage-b-draft-native-${{ github.event.pull_request.number || inputs.source_sha }}

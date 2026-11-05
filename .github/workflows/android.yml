@@ -86,11 +86,26 @@ jobs:
     timeout-minutes: 5
     outputs:
       native: ${{ steps.diff.outputs.native }}
+      sound_native: ${{ steps.sound_diff.outputs.run }}
     steps:
       - uses: actions/checkout@v7
         with:
           # The diff needs the base commit, not just the head.
           fetch-depth: 0
+
+      - name: Select bounded sound-native execution
+        id: sound_diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BASE" HEAD | grep -E '^(modules/lop-notification-sound/|scripts/ci/notification-sound-|\.github/workflows/android\.yml$)' >/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Decide whether the native jobs are worth running
         id: diff
@@ -195,7 +210,19 @@ jobs:
       - name: Build the debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          # Compile the framework-only provider instrumentation as well. This
+          # does NOT claim execution or system-consumer URI-grant/device proof.
+          ./gradlew assembleDebug :lop-notification-sound:assembleDebugAndroidTest --no-daemon
+
+      - name: Bind the sound test artifact to the checked-out source
+        run: git rev-parse HEAD > modules/lop-notification-sound/android/build/outputs/apk/androidTest/debug/source-sha.txt
+
+      - name: Upload the notification sound native test APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: notification-sound-native-tests
+          path: modules/lop-notification-sound/android/build/outputs/apk/androidTest/debug/
+          if-no-files-found: error
 
       - name: Assert the version in the built APK
         # THE VERSION IS READ OUT OF THE ARTEFACT, not out of the environment.
@@ -479,3 +506,102 @@ jobs:
             echo "- AAB + APK: ${{ steps.signing.outcome == 'success' && 'built, and the release certificate is verified not to be the debug key' || '**NOT verified** — the signing assertion did not pass' }}"
             echo "- Play internal track: uploaded by the step above"
           } >> "$GITHUB_STEP_SUMMARY"
+
+
+  sound-android:
+    name: Sound provider instrumentation (API ${{ matrix.api }})
+    needs: [changes, android]
+    if: needs.changes.outputs.sound_native == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        api: [29, 36]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: notification-sound-native-tests
+          path: ${{ runner.temp }}/sound-apk
+      - name: Verify artifact source identity before emulator dispatch
+        run: |
+          set -euo pipefail
+          test "$(cat "$RUNNER_TEMP/sound-apk/source-sha.txt")" = "$(git rev-parse HEAD)"
+          test "$(find "$RUNNER_TEMP/sound-apk" -maxdepth 1 -name '*.apk' | wc -l)" -eq 1
+      - name: Enable KVM and await permission-rule completion
+        # trigger queues events asynchronously. An immediate access predicate
+        # in the same step can race udev and gives only exit 1, not node/UID facts.
+        # Keep the established repo/GitHub rule, but bound and await completion.
+        run: |
+          set -euxo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=10
+      - name: Prove runner-user KVM access before emulator dispatch
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/notification-sound-kvm.py --self-test
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -c /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm is absent or not a character device after udev settle; a KVM-capable Linux host is required."
+            exit 1
+          fi
+          ls -l /dev/kvm
+          if [ ! -r /dev/kvm ]; then
+            echo "::error title=KVM read denied::runner user cannot read /dev/kvm after udev settle."
+            exit 1
+          fi
+          if [ ! -w /dev/kvm ]; then
+            echo "::error title=KVM write denied::runner user cannot write /dev/kvm after udev settle."
+            exit 1
+          fi
+          python3 scripts/ci/notification-sound-kvm.py
+      - name: Execute the compiled framework-native tests
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: true
+          emulator-options: -accel on -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save -memory 1536
+          disable-animations: true
+          script: bash scripts/ci/notification-sound-android-tests.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sound-native-api-${{ matrix.api }}
+          path: ${{ runner.temp }}/sound-native.log
+          if-no-files-found: warn
+
+  sound-ios:
+    name: iOS sound persistence XCTest
+    needs: changes
+    if: needs.changes.outputs.sound_native == 'true'
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Resolve the existing simulator
+        id: simulator
+        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17'
+      - name: Native barrier faults and separate-process persistence
+        env:
+          SOUND_SIMULATOR: ${{ steps.simulator.outputs.udid }}
+        run: bash scripts/ci/notification-sound-ios-tests.sh
+      - name: Reap only the selected simulator
+        if: always() && steps.simulator.outputs.udid != ''
+        env:
+          SOUND_SIMULATOR: ${{ steps.simulator.outputs.udid }}
+        run: node scripts/ci/notification-sound-ios-cleanup.ts
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sound-ios-native-results
+          path: ${{ runner.temp }}/sound-ios-results
+          if-no-files-found: warn

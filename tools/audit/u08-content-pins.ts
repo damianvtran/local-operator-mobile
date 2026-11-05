@@ -460,17 +460,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "acf67f88993c46cd2bc15c89cd55f41bd28c16cb7883e0b69ca7b2712f3ee4fd",
-	// Proof-entry-only bounded route tracing; ordinary app/U08 custom-relay graph unchanged.
-	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
-	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
-	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.
-	// iOS picker callbacks and recovery tests; public proof-only /healthz mapping does not enter U08.
-	// PR #156 + #161: merged-tree identity; healthy custom-relay U08 does not select refusal/recovery branches.
-	// First-choice picker latch/test reprinted with --print; U08 never opens Attach; idle JSX/layout unchanged (source judgment).
-	// Optional U1 early-busy wiring removed: app/owner/Composer bytes restored to 2d443c54; src pin includes remount tests. No U08 geometry change claimed.
-	// PR #156 convergence with 79a246f4: --print on the combined tree; historical identities unchanged.
-	// PR #156 + #162: combined-tree --print; pending stack diagnostics do not enter U08.
+	/* Deliberate --print re-pin (M2): native custom-sound cache, relay routes,
+	 * lifecycle invalidation and tests. The new root hook returns on web before
+	 * IO; its store subscriptions render nothing. Config changedKeys is data
+	 * for that hook, not a transcript rendering change. No tokens, styles,
+	 * transcript components, corpus or instrument changed. Native filesystem
+	 * proof is separate; this retains only the unchanged U08 web geometry. */
+	src: "50491f3e8277eb8d9f4eb834527d236d0c99555bb8556155c4d486f284be6318",
+
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
