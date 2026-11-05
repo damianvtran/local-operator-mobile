@@ -78,6 +78,15 @@ export function collectThemeFrames(
 
 /** A diagnostic success is a saved-route prerequisite only, never theme proof. */
 export function themeProofPlan(stage = "full") {
+	//42037732071 already observed both real-app authorities. Retest only the
+	// incomplete closed-listener row, with its OWN current same-listener401.
+	if (stage === "transport-xctest-negative")
+		return {
+			stage,
+			flow: null,
+			budgetSeconds: 900,
+			frames: ["welcome-ready", "loopback-ipv4", "negative-loopback-ipv4"],
+		};
 	if (stage === "transport-xctest")
 		return {
 			stage,

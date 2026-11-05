@@ -70,8 +70,10 @@ const ZIP = need("PROOF_ARTIFACT_ZIP");
 const PASSWORD_FILE = need("PROOF_PASSWORD_FILE");
 const plan = themeProofPlan(env.PROOF_STAGE ?? "full");
 const BUDGET_SECONDS = plan.budgetSeconds;
-const pairedTransport =
-	plan.stage === "transport" || plan.stage === "transport-xctest";
+const directXCTest =
+	plan.stage === "transport-xctest" ||
+	plan.stage === "transport-xctest-negative";
+const pairedTransport = plan.stage === "transport" || directXCTest;
 const started = Date.now();
 
 if (
@@ -195,11 +197,7 @@ async function run(
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	groups.add(child);
-	if (
-		plan.stage === "transport-xctest" &&
-		command === "xcodebuild" &&
-		child.pid
-	)
+	if (directXCTest && command === "xcodebuild" && child.pid)
 		directGroups.add(child.pid);
 	let output = "",
 		stdout = "",
@@ -232,7 +230,7 @@ async function run(
 		output = sanitizeBootstrapLog(output);
 	if (name === "maestro-transport")
 		receipt.transportObservations = parseTransportObservations(output);
-	if (plan.stage === "transport-xctest") {
+	if (directXCTest) {
 		writeFileSync(
 			log.replace(/\.log$/, ".stdout.log"),
 			redact(sanitizeBootstrapLog(stdout)),
@@ -743,7 +741,7 @@ try {
 	// Both stages warm this exact owned simulator, once, before any app flow.
 	// A previous setup job's VM is neither reused nor accepted as readiness.
 	const warmDriver = createThemeDriverWarmer(run);
-	if (plan.stage !== "full" && plan.stage !== "transport-xctest") {
+	if (plan.stage !== "full" && !directXCTest) {
 		try {
 			const hierarchy = await warmDriver(
 				udid,
@@ -772,7 +770,7 @@ try {
 			throw error;
 		}
 	}
-	if (plan.stage === "transport-xctest") {
+	if (directXCTest) {
 		const relay = await startRelay("en");
 		relays.push(relay);
 		receipt.nativeTransportCodes = [];
@@ -787,9 +785,12 @@ try {
 			observer: relay.transportObserver!,
 			closeListener: relay.closeListener,
 			receipt,
+			negativeOnly: plan.stage === "transport-xctest-negative",
 		});
 		receipt.verdict =
-			"PASS direct serial real-app paired401 + same-listener closed negative ONLY; not provider/theme acceptance";
+			plan.stage === "transport-xctest-negative"
+				? "PASS current loopback401 + fresh same-listener closed negative ONLY; prior A/B retained separately, not provider/theme acceptance"
+				: "PASS direct serial real-app paired401 + same-listener closed negative ONLY; not provider/theme acceptance";
 	} else if (plan.stage === "setup") {
 		receipt.setupOnly = {
 			savedRouteFlowExecuted: false,
@@ -901,7 +902,7 @@ try {
 		}
 	}
 	for (const child of [...groups]) await stop(child);
-	if (plan.stage === "transport-xctest") {
+	if (directXCTest) {
 		receipt.directGroupReap = [...directGroups].map((pid) => ({
 			hostPID: pid,
 			groupExitObserved: !groupExists(pid),

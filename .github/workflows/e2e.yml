@@ -62,6 +62,7 @@ on:
           - diagnostic
           - transport
           - transport-xctest
+          - transport-xctest-negative
       # Inputs of projects-create-ios-proof AND theme-ios-proof; ignored by every
       # other mode. The defaults pin the artifact PR #150's native Urdu frame was
       # requested against; theme-ios-proof must be given its own three values.
@@ -166,7 +167,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
-            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest) ;; *) exit 1 ;; esac ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest|transport-xctest-negative) ;; *) exit 1 ;; esac ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1687,7 +1688,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
-        if: inputs.proof_stage != 'transport-xctest'
+        if: inputs.proof_stage != 'transport-xctest' && inputs.proof_stage != 'transport-xctest-negative'
         run: |
           set -euo pipefail
           export MAESTRO_VERSION

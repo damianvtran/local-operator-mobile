@@ -29,6 +29,7 @@ export async function directTransportTest(options: {
 	observer: ReturnType<typeof observeTransportRequests>;
 	closeListener: () => Promise<void>;
 	receipt: Record<string, unknown>;
+	negativeOnly?: boolean;
 }) {
 	const {
 		root,
@@ -97,7 +98,11 @@ export async function directTransportTest(options: {
 	});
 	const port = (control.address() as { port: number }).port;
 	const project = join(root, "carrier", "TransportCarrier.xcodeproj");
-	const plan = directXCTestPlan(project, udid, root);
+	const negativeOnly = options.negativeOnly === true;
+	receipt.directScope = negativeOnly
+		? "current loopback401 -> close SAME listener -> fresh negative; prior A/B retained separately"
+		: "paired authorities + closed-listener control";
+	const plan = directXCTestPlan(project, udid, root, negativeOnly);
 	try {
 		receipt.directPhase = "generate-isolated-target-graph";
 		await run(
@@ -130,7 +135,7 @@ export async function directTransportTest(options: {
 		);
 		const events = parseDirectEvents(output);
 		receipt.directEvents = events;
-		assertDirectXCTestResult(events);
+		assertDirectXCTestResult(events, negativeOnly);
 		assert(
 			observer
 				.snapshot()
@@ -139,7 +144,9 @@ export async function directTransportTest(options: {
 					(a) =>
 						a.method === "GET" &&
 						a.endpoint === "sessions" &&
-						authorities.some((b) => b.label === a.authority),
+						authorities
+							.slice(0, negativeOnly ? 1 : 2)
+							.some((b) => b.label === a.authority),
 				),
 			"unexpected native route/method in no-auth paired transport stage",
 		);
@@ -194,7 +201,7 @@ export async function directTransportTest(options: {
 	assertXCTestAttachments(join(root, "frames", "xctest"), [
 		"welcome-ready",
 		"loopback-ipv4",
-		"published-local",
+		...(negativeOnly ? [] : ["published-local"]),
 		`negative-${negative.authority}`,
 	]);
 }

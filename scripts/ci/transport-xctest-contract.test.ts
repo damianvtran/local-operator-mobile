@@ -12,6 +12,76 @@ import {
 } from "./transport-xctest-host.ts";
 
 describe("direct runner-only transport XCTest", () => {
+	it("selects only the uncompleted negative row with a fresh current baseline, not another A/B matrix", () => {
+		const p = directXCTestPlan(
+			"/owned/project.xcodeproj",
+			"owned-udid",
+			"/owned/out",
+			true,
+		);
+		expect(p.test.filter((s) => s.startsWith("-only-testing:"))).toEqual([
+			"-only-testing:TransportUITests/TransportUITests/testNegativeControl",
+		]);
+		expect(
+			p.test.filter((s) => /iterations|retry|repetition|relaunch/i.test(s)),
+		).toEqual([]);
+		expect(p.test[p.test.indexOf("-parallel-testing-enabled") + 1]).toBe("NO");
+		expect(themeProofPlan("transport-xctest-negative")).toEqual({
+			stage: "transport-xctest-negative",
+			flow: null,
+			budgetSeconds: 900,
+			frames: ["welcome-ready", "loopback-ipv4", "negative-loopback-ipv4"],
+		});
+		const events = [
+			{ event: "method-entered", runnerPID: 12 },
+			{ event: "welcome-ready" },
+			{
+				event: "authority",
+				authority: "loopback-ipv4",
+				verdict: "password-refused",
+				matching401: true,
+			},
+			{ event: "listener-closed" },
+			{
+				event: "negative",
+				authority: "loopback-ipv4",
+				verdict: "unreachable",
+				matching401: false,
+			},
+		];
+		expect(() => assertDirectXCTestResult(events, true)).not.toThrow();
+		// Default paired mode still requires BOTH authority rows; a narrow run
+		// must never become a retroactive full-pair or authentication pass.
+		expect(() => assertDirectXCTestResult(events)).toThrow();
+		expect(() =>
+			assertDirectXCTestResult(
+				events.map((e) =>
+					e.event === "authority" ? { ...e, matching401: false } : e,
+				),
+				true,
+			),
+		).toThrow();
+		for (let i = 0; i < events.length; i++) {
+			expect(() =>
+				assertDirectXCTestResult(
+					events.filter((_, n) => n !== i),
+					true,
+				),
+			).toThrow();
+		}
+		for (const patch of [
+			{ matching401: true },
+			{ verdict: "password-refused" },
+			{ authority: "published-local" },
+		]) {
+			expect(() =>
+				assertDirectXCTestResult(
+					[...events.slice(0, -1), { ...events.at(-1)!, ...patch }],
+					true,
+				),
+			).toThrow();
+		}
+	});
 	it("builds only carrier/test targets once and selects exactly one serial method", () => {
 		const p = directXCTestPlan(
 			"/owned/project.xcodeproj",
@@ -103,6 +173,21 @@ it("requires visible-keyboard geometry, empty field and paced exact-prefix ackno
 	expect(swift).toContain(
 		'app.scrollViews.containing(.textField, identifier: "custom-url-field")',
 	);
+	expect(swift).toContain("for adjustment in 0..<2");
+	expect(swift).toContain("remainingClearance");
+	expect(swift).toContain("Public URL");
+	expect(swift).toContain("previousProgress > 1 && remainingClearance >= 0");
+	const positioning = swift.slice(
+		swift.indexOf("for adjustment in 0..<2"),
+		swift.indexOf('inputCheckpoint("positioned-empty"'),
+	);
+	expect(positioning).not.toMatch(/field\.tap\(|typeText\(|setValue\(/);
+	const afterClose = swift.slice(
+		swift.indexOf('control("/close")'),
+		swift.indexOf("let afterClose"),
+	);
+	expect(afterClose).toContain("try freshForm()");
+	expect(afterClose).toContain('label: "negative-" + authorities[index]');
 	expect(swift).toContain('"gesture-before"');
 	expect(swift).toContain('"gesture-after"');
 	expect(swift).toContain("start.y < visibleKeyboardTop");
@@ -130,10 +215,7 @@ describe("direct-only stage isolation", () => {
 			"utf8",
 		);
 		const setup = source.indexOf('} else if (plan.stage === "setup")');
-		const start = source.lastIndexOf(
-			'if (plan.stage === "transport-xctest")',
-			setup,
-		);
+		const start = source.lastIndexOf("if (directXCTest)", setup);
 		const body = source.slice(start, setup);
 		expect(body).toContain("directTransportTest");
 		expect(body).not.toMatch(/warmDriver|flowRun|maestro/);
@@ -141,7 +223,9 @@ describe("direct-only stage isolation", () => {
 			new URL("../../.github/workflows/e2e.yml", import.meta.url),
 			"utf8",
 		);
-		expect(workflow).toContain("if: inputs.proof_stage != 'transport-xctest'");
+		expect(workflow).toContain(
+			"if: inputs.proof_stage != 'transport-xctest' && inputs.proof_stage != 'transport-xctest-negative'",
+		);
 	});
 	it("retains only safe event fields, never raw URI/error/credentials", () => {
 		const rows = parseDirectEvents(

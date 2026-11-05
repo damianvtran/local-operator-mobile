@@ -8,6 +8,14 @@ final class TransportUITests: XCTestCase {
   @MainActor private lazy var app = XCUIApplication(bundleIdentifier: ProcessInfo.processInfo.environment["REAL_APP_ID"]!)
 
   @MainActor func testPairedTransport() throws {
+    try transportProof(negativeOnly: false)
+  }
+
+  @MainActor func testNegativeControl() throws {
+    try transportProof(negativeOnly: true)
+  }
+
+  @MainActor private func transportProof(negativeOnly: Bool) throws {
     continueAfterFailure = false
     executionTimeAllowance = 700
     emit(["event": "method-entered", "runnerPID": ProcessInfo.processInfo.processIdentifier])
@@ -21,7 +29,7 @@ final class TransportUITests: XCTestCase {
     let authorities = ["loopback-ipv4", "published-local"]
     let urls = [ProcessInfo.processInfo.environment["IP_URL"]!, ProcessInfo.processInfo.environment["LOCAL_URL"]!]
     var successful: Int?
-    for index in 0..<2 {
+    for index in (negativeOnly ? [0] : [0, 1]) {
       if index != 0 { try freshForm() }
       let before = try control("/counts?authority=\(authorities[index])")["completed401"] ?? 0
       let verdict = try attempt(urls[index], label: authorities[index], scrollUp: false)
@@ -96,25 +104,41 @@ final class TransportUITests: XCTestCase {
     let scroll = scrolls.firstMatch
     XCTAssertTrue(scroll.exists && scroll.isHittable, "Actual owning ScrollView must be reachable")
     var visibleKeyboardTop = keyboardOcclusionTop(keyboard)
-    if !(field.isHittable && field.frame.maxY < visibleKeyboardTop - 8) {
+    var previousProgress: CGFloat = 0
+    for adjustment in 0..<2 {
+      XCTAssertTrue(keyboard.exists && scroll.exists && scroll.isHittable, "Positioning cannot refocus a dismissed keyboard or a lost app container")
+      visibleKeyboardTop = keyboardOcclusionTop(keyboard)
+      let remainingClearance = field.frame.maxY - (visibleKeyboardTop - 8)
+      if remainingClearance < 0 && field.isHittable { break }
+      if adjustment == 1 {
+        XCTAssertTrue(previousProgress > 1 && remainingClearance >= 0, "Additional adjustment requires measured first progress AND remaining occlusion")
+      }
       // QA42031766877 proved keyboard.minY-24 hit the system Passwords bar.
-      // Choose app-owned, nonselectable prose INSIDE this scroll container;
-      // one measured gesture only, never six unchanged application drags.
-      let note = scroll.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Free and needs no account")).firstMatch
-      XCTAssertTrue(note.exists && note.isHittable, "Require visible app-owned Cloudflare prose")
+      // Run42037732071 moved the fresh negative field258pt but still needed41pt.
+      // The first prose anchor has moved near the header by then: do not repeat
+      // that long gesture. One short continuation may use the visible URL label
+      // only after measured progress; no movement/clearance failure ends the test.
+      let note = adjustment == 0
+        ? scroll.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Free and needs no account")).firstMatch
+        : scroll.staticTexts.matching(NSPredicate(format: "label == %@", "Public URL")).firstMatch
+      XCTAssertTrue(note.exists && note.isHittable, "Require visible app-owned positioning anchor")
       let start = CGPoint(x: note.frame.midX, y: note.frame.midY)
-      let end = CGPoint(x: start.x, y: max(scroll.frame.minY + 24, app.frame.minY + 200))
+      let end = CGPoint(x: start.x, y: max(scroll.frame.minY + 24,
+        adjustment == 0 ? app.frame.minY + 200 : start.y - max(48, remainingClearance + 16)))
       XCTAssertTrue(scroll.frame.contains(start) && scroll.frame.contains(end) && start.y < visibleKeyboardTop - 16 && end.y < start.y - 44, "Gesture must stay in real app content above the visible accessory")
       let before = field.frame
       let geometry: [String: Any] = ["scrollFrame": NSCoder.string(for: scroll.frame),
         "targetFrame": NSCoder.string(for: note.frame), "scrollHittable": scroll.isHittable,
         "start": [start.x, start.y], "end": [end.x, end.y], "visibleKeyboardTop": visibleKeyboardTop,
+        "adjustment": adjustment, "remainingClearanceBefore": remainingClearance,
         "offsetGap": "Public XCUI does not expose UIScrollView.contentOffset; field-frame delta is measured instead"]
       inputCheckpoint("gesture-before", field: field, expected: "", label: label, geometry: geometry)
       let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
       origin.withOffset(CGVector(dx: start.x - app.frame.minX, dy: start.y - app.frame.minY)).press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: end.x - app.frame.minX, dy: end.y - app.frame.minY)))
       var after = geometry
-      after["fieldDeltaY"] = field.frame.minY - before.minY
+      previousProgress = before.minY - field.frame.minY
+      after["fieldDeltaY"] = -previousProgress
+      after["remainingClearanceAfter"] = field.frame.maxY - (keyboardOcclusionTop(keyboard) - 8)
       after["scrollFrameAfter"] = NSCoder.string(for: scroll.frame)
       inputCheckpoint("gesture-after", field: field, expected: "", label: label, geometry: after)
       XCTAssertLessThan(field.frame.minY, before.minY - 1, "No vertical field movement after the ONE app-content drag")

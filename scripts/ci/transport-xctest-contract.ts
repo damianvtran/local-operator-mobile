@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 
-export function directXCTestPlan(project: string, udid: string, root: string) {
+export function directXCTestPlan(
+	project: string,
+	udid: string,
+	root: string,
+	negativeOnly = false,
+) {
 	const shared = [
 		"-project",
 		project,
@@ -31,7 +36,7 @@ export function directXCTestPlan(project: string, udid: string, root: string) {
 			"NO",
 			"-maximum-concurrent-test-simulator-destinations",
 			"1",
-			"-only-testing:TransportUITests/TransportUITests/testPairedTransport",
+			`-only-testing:TransportUITests/TransportUITests/${negativeOnly ? "testNegativeControl" : "testPairedTransport"}`,
 			"test-without-building",
 		],
 	};
@@ -89,7 +94,10 @@ export function parseDirectEvents(text: string): DirectEvent[] {
 	}
 	return result;
 }
-export function assertDirectXCTestResult(events: readonly DirectEvent[]) {
+export function assertDirectXCTestResult(
+	events: readonly DirectEvent[],
+	negativeOnly = false,
+) {
 	assert(
 		events.filter((e) => e.event === "method-entered").length === 1,
 		"missing/duplicate selected test-method entry; zero-tests is not readiness",
@@ -110,8 +118,8 @@ export function assertDirectXCTestResult(events: readonly DirectEvent[]) {
 	const rows = events.filter((e) => e.event === "authority");
 	assert.deepEqual(
 		rows.map((e) => e.authority),
-		["loopback-ipv4", "published-local"],
-		"paired real-app authority observations required",
+		negativeOnly ? ["loopback-ipv4"] : ["loopback-ipv4", "published-local"],
+		"required real-app authority observations missing or unexpected",
 	);
 	const successful = rows.filter(
 		(e) => e.verdict === "password-refused" && e.matching401,

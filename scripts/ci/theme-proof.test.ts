@@ -70,9 +70,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 			"const warmDriver = createThemeDriverWarmer(run);",
 		);
 		const warmBlock = runner.slice(shared, start);
-		expect(warmBlock).toContain(
-			'if (plan.stage !== "full" && plan.stage !== "transport-xctest")',
-		);
+		expect(warmBlock).toContain('if (plan.stage !== "full" && !directXCTest)');
 		expect(warmBlock).toMatch(/await warmDriver\(\s*udid,/);
 		expect(shared).toBeLessThan(
 			runner.indexOf('const relay = await startRelay("en")'),
@@ -180,7 +178,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		);
 		expect(job).toContain("PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}");
 		expect(workflow).toContain(
-			'case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest)',
+			'case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest|transport-xctest-negative)',
 		);
 	});
 
