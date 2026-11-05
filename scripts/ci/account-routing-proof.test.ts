@@ -170,6 +170,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				PROOF_MODE,
 				ANDROID_PROOF_MODE,
 				"projects-create-ios-proof",
+				"chrome-ios-proof",
 				"u08-geometry-proof",
 			].sort(),
 		);
@@ -278,6 +279,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			["projects-create-ios-proof", "full", true],
 			["projects-create-ios-proof", "setup", false],
 			["projects-create-ios-proof", "preflight", false],
+			// The chrome proof is one fixed plan of lanes: no stage argument either.
+			["chrome-ios-proof", "full", true],
+			["chrome-ios-proof", "setup", false],
 			// Stage arguments that must be refused rather than silently accepted.
 			["account-routing-android-proof", "setup", false],
 			["account-routing-android-proof", "preflight", false],

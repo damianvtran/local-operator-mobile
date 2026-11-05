@@ -1088,6 +1088,15 @@ export const PENDING_CELLS: Record<string, string> = {
 	 * owner text to read. */
 	"S5/scroll":
 		"harness (tools/visual/capture.ts) — driving a scroll position needs a wire action or an app-side id; until then no cell evidences a scrolled transcript",
+	/* RETIRED SURFACE, kept as a cell so the registry's plan figures stay put:
+	 *  the session header's tag line was removed in the 2026-11-04 chrome pass
+	 *  (decision record §2.3, D-S1 — it painted over the title on TestFlight 365).
+	 *  Tags are a row of the ⋮ menu now, so the app no longer declares the
+	 *  `session/tags-header` marker and this cell is a named skip, not a
+	 *  measurement. Remove it together with its scenario entry and the plan
+	 *  figures that count it, in a change whose subject is the matrix. */
+	"S5/tags-header":
+		"chrome pass 2026-11-04: the header tag line is retired (tags live in the session's ⋮ menu)",
 };
 
 /**

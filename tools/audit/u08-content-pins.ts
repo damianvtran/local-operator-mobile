@@ -157,7 +157,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
+		"071a8f43fec7c1f92e1f9236fc6b17de517b02616e056733a81ee4897e0d2028",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
