@@ -177,7 +177,9 @@ describe("minimal native saved-route diagnostic allocation", () => {
 			workflow.indexOf("\n  u08-geometry-proof:"),
 		);
 		expect(job).toContain("PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}");
-		expect(workflow).toContain('case "$PROOF_STAGE" in full|diagnostic|setup)');
+		expect(workflow).toContain(
+			'case "$PROOF_STAGE" in full|diagnostic|setup|transport)',
+		);
 	});
 
 	it("is one bounded short flow and never the twelve-theme matrix", () => {

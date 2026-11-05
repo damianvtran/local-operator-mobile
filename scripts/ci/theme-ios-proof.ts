@@ -47,6 +47,15 @@ import {
 	themeProofPlan,
 } from "./theme-proof-contract.ts";
 
+import {
+	assertTransportPair,
+	observeTransportRequests,
+	parseNativeTransportCodes,
+	parseTransportObservations,
+	transportAuthorities,
+	transportOutcome,
+} from "./theme-transport-contract.ts";
+
 const env = process.env;
 const need = (name: string): string => {
 	const value = env[name];
@@ -112,11 +121,13 @@ const receipt: Record<string, unknown> = {
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
 	scope:
-		plan.stage === "setup"
-			? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
-			: plan.stage === "diagnostic"
-				? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
-				: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
+		plan.stage === "transport"
+			? "paired native authority transport only; blank password, no auth/save/provider/theme acceptance"
+			: plan.stage === "setup"
+				? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
+				: plan.stage === "diagnostic"
+					? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
+					: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {
@@ -192,7 +203,10 @@ async function run(
 		});
 	});
 	await stop(child);
-	if (name === "warm-maestro-driver") output = sanitizeBootstrapLog(output);
+	if (name === "warm-maestro-driver" || plan.stage === "transport")
+		output = sanitizeBootstrapLog(output);
+	if (name === "maestro-transport")
+		receipt.transportObservations = parseTransportObservations(output);
 	writeFileSync(log, redact(output));
 	records.push({
 		name,
@@ -212,6 +226,8 @@ async function run(
 
 type Slot = {
 	origin: string;
+	authorities?: ReturnType<typeof transportAuthorities>;
+	transportObserver?: ReturnType<typeof observeTransportRequests>;
 	shutdown: () => Promise<void>;
 	publisher: ChildProcess;
 };
@@ -219,14 +235,9 @@ type Slot = {
 /** A relay reachable by a unique `.local` name, the SAME mechanism the
  *  account-routing iOS proof uses.
  *
- *  WHY NOT 127.0.0.1 (run 41554295782 failed there). The built app's ATS is
- *  `NSAllowsLocalNetworking` plus CIDR exceptions for 10/8, 100.64/10,
- *  169.254/16, 172.16/12 and 192.168/16 — 127.0.0.0/8 is not among them — and
- *  ADR 0002 §5/§7 records that a literal-IP exception is unsettled on iOS. A
- *  `.local` name is what `NSAllowsLocalNetworking` is documented to admit, so a
- *  Bonjour record (`dns-sd -P`) points a unique name at the loopback listener.
- *  No ATS widening, no app change. The relay admits exactly this origin on the
- *  port the kernel chose, added after `listen()` and before any client connects. */
+ * The default .local choice is historical, not measured proof that loopback is
+ * unsuitable for today's native artifact. Transport stage compares BOTH exact
+ * authorities on this same IPv4 listener without widening production ATS. */
 async function startRelay(language: string): Promise<Slot> {
 	const nonce = randomBytes(6).toString("hex");
 	const name = `thp-${language}-${nonce}`;
@@ -240,7 +251,15 @@ async function startRelay(language: string): Promise<Slot> {
 	relay.state.journalAll = true;
 	const handle = await relay.listen();
 	const origin = `http://${host}:${handle.port}`;
-	relay.state.allowedOrigins = [...(relay.state.allowedOrigins ?? []), origin];
+	const authorities = transportAuthorities(handle.port, origin);
+	const transportObserver =
+		plan.stage === "transport"
+			? observeTransportRequests(relay.handler, authorities)
+			: undefined;
+	relay.state.allowedOrigins =
+		plan.stage === "transport"
+			? authorities.map((a) => a.url)
+			: [...(relay.state.allowedOrigins ?? []), origin];
 	const publisher = spawn(
 		"/usr/bin/dns-sd",
 		[
@@ -258,8 +277,17 @@ async function startRelay(language: string): Promise<Slot> {
 	const slot: Slot = {
 		origin,
 		publisher,
+		authorities,
+		transportObserver,
 		shutdown: async () => {
 			await relay.shutdown();
+			if (transportObserver) {
+				writeFileSync(
+					join(ROOT, `relay-${language}-transport.json`),
+					JSON.stringify(transportObserver.snapshot(), null, 2),
+				);
+				return;
+			}
 			writeFileSync(
 				join(ROOT, `relay-${language}-requests.json`),
 				JSON.stringify(
@@ -290,7 +318,11 @@ async function startRelay(language: string): Promise<Slot> {
 			]);
 			if (
 				rows.length > 0 &&
-				rows.every((r) => r.address === "127.0.0.1" || r.address === "::1")
+				rows.every(
+					(r) =>
+						r.address === "127.0.0.1" ||
+						(plan.stage !== "transport" && r.address === "::1"),
+				)
 			)
 				resolved = true;
 		} catch {
@@ -299,9 +331,34 @@ async function startRelay(language: string): Promise<Slot> {
 	}
 	if (!resolved) {
 		await slot.shutdown();
-		throw new Error(`owned ${host} did not resolve to loopback`);
+		throw new Error(
+			plan.stage === "transport"
+				? "published-local failed host IPv4 listener admission"
+				: `owned ${host} did not resolve to loopback`,
+		);
 	}
 	// Auth boundary: unauthenticated GET must be refused, not served.
+	if (plan.stage === "transport") {
+		receipt.transportFixture = {
+			authorityLabels: authorities.map((a) => a.label),
+			boundPort: handle.port,
+			listenerFamily: 4,
+			hostLookupIPv4Only: resolved,
+			admittedAuthorities: relay.state.allowedOrigins.length,
+			relayProcessId: process.pid,
+		};
+		for (const authority of authorities) {
+			const response = await fetch(`${authority.url}/api/sessions`, {
+				signal: AbortSignal.timeout(10000),
+			});
+			await response.arrayBuffer();
+			if (response.status !== 401)
+				throw new Error(
+					"paired host unauthenticated control did not return401",
+				);
+		}
+		return slot;
+	}
 	const unauth = await fetch(`${origin}/api/sessions`, {
 		signal: AbortSignal.timeout(5000),
 	});
@@ -374,6 +431,7 @@ async function flowRun(
 	relayOrigin: string,
 	file: string,
 	cap: number,
+	transport?: Slot,
 ) {
 	const shots = join(ROOT, "frames", label);
 	mkdirSync(shots, { recursive: true });
@@ -381,6 +439,15 @@ async function flowRun(
 	// Installed React Native RCTLog.mm maps console.info to OS_LOG_TYPE_INFO,
 	// which os_log may discard unless needed. Subscribe BEFORE app launch rather
 	// than hoping a post-failure `log show` retained it. No log config is changed.
+	const executable = String(
+		(receipt.installed as { executable: string }).executable,
+	);
+	if (transport && !/^[A-Za-z0-9_-]+$/.test(executable))
+		throw new Error("unsafe actual executable diagnostic label");
+	const predicate = transport
+		? `process == "${executable}" AND (eventMessage CONTAINS "NSURLErrorDomain" OR eventMessage CONTAINS "kCFErrorDomainCFNetwork")`
+		: 'eventMessage CONTAINS "[saved-route]"';
+	const nativeCodes: ReturnType<typeof parseNativeTransportCodes> = [];
 	const nativeTrace = spawn(
 		"xcrun",
 		[
@@ -394,7 +461,7 @@ async function flowRun(
 			"--style",
 			"compact",
 			"--predicate",
-			'eventMessage CONTAINS "[saved-route]"',
+			predicate,
 		],
 		{ env: childEnv, detached: true, stdio: ["ignore", "pipe", "pipe"] },
 	);
@@ -408,6 +475,13 @@ async function flowRun(
 		const end = pending.lastIndexOf("\n");
 		if (end >= 0) {
 			// Sanitize before retention: no raw native text is written to disk.
+			if (transport)
+				nativeCodes.push(
+					...parseNativeTransportCodes(pending.slice(0, end)).slice(
+						0,
+						32 - nativeCodes.length,
+					),
+				);
 			events.push(
 				...parseSavedRouteDiagnostics(pending.slice(0, end)).slice(
 					0,
@@ -427,13 +501,21 @@ async function flowRun(
 				udid as string,
 				"test",
 				"--config",
-				"e2e/maestro/theme-proof/config.yaml",
+				transport
+					? "e2e/maestro/theme-proof/transport-config.yaml"
+					: "e2e/maestro/theme-proof/config.yaml",
 				"-e",
 				`APP_ID=${bundle}`,
 				"-e",
 				`RELAY_URL=${relayOrigin}`,
-				"-e",
-				`RELAY_PASSWORD=${password}`,
+				...(transport
+					? [
+							"-e",
+							`TRANSPORT_LOOPBACK=${transport.authorities?.[0].url}`,
+							"-e",
+							`TRANSPORT_LOCAL=${transport.authorities?.[1].url}`,
+						]
+					: ["-e", `RELAY_PASSWORD=${password}`]),
 				"--test-output-dir",
 				join(ROOT, "maestro", label),
 				`e2e/maestro/theme-proof/${file}`,
@@ -462,6 +544,23 @@ async function flowRun(
 			events.push(
 				...parseSavedRouteDiagnostics(pending).slice(0, 64 - events.length),
 			);
+			if (transport) {
+				nativeCodes.push(
+					...parseNativeTransportCodes(pending).slice(
+						0,
+						32 - nativeCodes.length,
+					),
+				);
+				receipt.nativeTransportCodes = nativeCodes;
+				receipt.nativeTransportCodeGap =
+					nativeCodes.length === 0
+						? "No app-process NSError code observed; RN JS TypeError is NOT substituted"
+						: "App-process code observed; not by itself a DNS/root diagnosis";
+				writeFileSync(
+					join(ROOT, "commands", "native-transport-codes.log"),
+					JSON.stringify(nativeCodes, null, 2),
+				);
+			}
 			receipt.savedRouteDiagnostics = events;
 			receipt.savedRouteDiagnosticsAvailable = events.length > 0;
 			writeFileSync(
@@ -479,6 +578,16 @@ async function flowRun(
 	);
 	if (plan.stage === "diagnostic") assertDiagnosticTrace(events);
 	note(`collected ${label}: ${frames.join(",")}`);
+	if (transport) {
+		assertTransportPair(
+			(receipt.transportObservations as ReturnType<
+				typeof parseTransportObservations
+			>) ?? [],
+		);
+		// The UI copied each terminal verdict and captured both frames. A fresh
+		// Maestro hierarchy would restart XCTest again, not add transport proof.
+		return;
+	}
 	// Final picker hierarchy reads the persisted slot after the cold restart.
 	const tree = await run(
 		`hierarchy-${label}`,
@@ -510,6 +619,20 @@ try {
 	);
 	const app = (receipt.installed as { app: string }).app;
 	note(`extracted app ${app}`);
+	if (plan.stage === "transport") {
+		receipt.installedTransportPolicy = JSON.parse(
+			await run(
+				"actual-installed-ats",
+				"python3",
+				[
+					"-c",
+					"import json,plistlib,sys; from pathlib import Path; d=plistlib.loads((Path(sys.argv[1])/'Info.plist').read_bytes()); print(json.dumps({'ats':d.get('NSAppTransportSecurity',{}),'executable':d.get('CFBundleExecutable'),'bundleId':d.get('CFBundleIdentifier')}))",
+					app,
+				],
+				30,
+			),
+		);
+	}
 
 	const selection = await run(
 		"existing-simulator-selector",
@@ -604,7 +727,11 @@ try {
 		if (!plan.flow) throw new Error("missing flow for non-setup stage");
 		const relay = await startRelay("en");
 		relays.push(relay);
-		note(`relay: ${relay.origin}`);
+		note(
+			plan.stage === "transport"
+				? "relay: exact paired authorities on one IPv4 listener"
+				: `relay: ${relay.origin}`,
+		);
 
 		// The OS on LIGHT, so the System-mode frames show the light slot and every
 		// dark frame is the app's own forced choice rather than the simulator's.
@@ -616,18 +743,56 @@ try {
 			["simctl", "ui", udid, "appearance", "light"],
 			60,
 		);
+		if (plan.stage === "transport") relay.transportObserver?.beginNative();
 		await flowRun(
-			plan.stage === "diagnostic" ? "diagnostic" : "matrix",
+			plan.stage === "transport"
+				? "transport"
+				: plan.stage === "diagnostic"
+					? "diagnostic"
+					: "matrix",
 			relay.origin,
 			plan.flow,
-			plan.stage === "diagnostic" ? 600 : 2100,
+			plan.stage === "full" ? 2100 : 600,
+			plan.stage === "transport" ? relay : undefined,
 		);
+		if (plan.stage === "transport") {
+			const rows =
+				(receipt.transportObservations as ReturnType<
+					typeof parseTransportObservations
+				>) ?? [];
+			assertTransportPair(rows);
+			if (
+				relay
+					.transportObserver!.snapshot()
+					.arrivals.some((r) => r.phase === "native-pair" && r.method !== "GET")
+			)
+				throw new Error(
+					"unexpected non-GET in blank-password transport pair; no auth control admitted",
+				);
+			const outcome = transportOutcome(
+				rows,
+				relay.transportObserver!.snapshot().completions,
+			);
+			receipt.transportOutcome = outcome;
+			receipt.transportDecision =
+				outcome === "both-401"
+					? "separate auth-Test allocation next"
+					: outcome === "loopback-only-401"
+						? "fixture-only loopback candidate, NOT proved DNS"
+						: "stop for independent request-error/listener interpretation";
+			if (outcome === "neither-401")
+				throw new Error(
+					"neither authority proved native unauthenticated401 transport; stop",
+				);
+		}
 		receipt.stage = plan.stage;
 		receipt.nativeBudgetSeconds = BUDGET_SECONDS;
 		receipt.verdict =
-			plan.stage === "diagnostic"
-				? "PASS saved-route prerequisite ONLY (not theme acceptance)"
-				: "PASS (assertions only; reviewers must view the PNGs)";
+			plan.stage === "transport"
+				? "PASS paired transport observations ONLY (not auth/provider/theme acceptance)"
+				: plan.stage === "diagnostic"
+					? "PASS saved-route prerequisite ONLY (not theme acceptance)"
+					: "PASS (assertions only; reviewers must view the PNGs)";
 	}
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);

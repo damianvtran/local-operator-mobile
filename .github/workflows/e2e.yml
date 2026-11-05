@@ -60,6 +60,7 @@ on:
           - setup
           - full
           - diagnostic
+          - transport
       # Inputs of projects-create-ios-proof AND theme-ios-proof; ignored by every
       # other mode. The defaults pin the artifact PR #150's native Urdu frame was
       # requested against; theme-ios-proof must be given its own three values.
@@ -164,7 +165,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
-            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup) ;; *) exit 1 ;; esac ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport) ;; *) exit 1 ;; esac ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1736,6 +1737,7 @@ jobs:
             ${{ runner.temp }}/theme-proof/receipt.json
             ${{ runner.temp }}/theme-proof/commands.json
             ${{ runner.temp }}/theme-proof/relay-*-requests.json
+            ${{ runner.temp }}/theme-proof/relay-*-transport.json
             ${{ runner.temp }}/theme-proof/commands/*.log
             ${{ runner.temp }}/theme-proof/frames/**/*.png
             ${{ runner.temp }}/theme-proof/hierarchies/*.txt

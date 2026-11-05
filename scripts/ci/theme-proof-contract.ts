@@ -78,6 +78,13 @@ export function collectThemeFrames(
 
 /** A diagnostic success is a saved-route prerequisite only, never theme proof. */
 export function themeProofPlan(stage = "full") {
+	if (stage === "transport")
+		return {
+			stage,
+			flow: "transport-pair.yaml",
+			budgetSeconds: 900,
+			frames: ["transport-loopback-ipv4", "transport-published-local"],
+		};
 	// Setup remains900s. Manager explicitly reallocates diagnostic600 ->900s
 	// so it can warm its OWN simulator before the short app flow. Setup41990457134
 	// measured boot120s + install118s + warm130s, before launch/other operations.
