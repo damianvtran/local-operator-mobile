@@ -7,6 +7,46 @@ import {
 	validateStageBProof,
 } from "../../src/testing/stage-b-draft-transport.ts";
 
+/** Add callback-entry observation ONLY to the ephemeral proof checkout. The
+ * ordinary Computers source stays byte-identical; no production runtime flag,
+ * hook import, identity or callback argument is introduced into the shipped app.
+ * A source mismatch is a pre-build failure, not a silently uninstrumented run. */
+export function instrumentStageBComputerPick(source: string): string {
+	const marker = "setPicked(computer.tunnelId);";
+	if (source.includes("__stageBRowPress") || source.split(marker).length !== 2)
+		throw new Error("proof row callback instrumentation source mismatch");
+	return source.replace(
+		marker,
+		`try { (globalThis as { __stageBRowPress?: () => void }).__stageBRowPress?.(); } catch { /* Proof diagnostics cannot veto the real pick. */ }\n\t\t\t${marker}`,
+	);
+}
+
+/** Revision snapshots alone miss a lease cancelled by provider unmount. Tag
+ * only selectComputer's five existing superseded returns in the proof overlay;
+ * preserve every predicate/return and fail before build if that source drifts. */
+export function instrumentStageBSelectionFences(source: string): string {
+	const start = source.indexOf("\tconst selectComputer = useCallback(");
+	const end = source.indexOf("\n\tconst ", start + 1);
+	if (start < 0 || end < 0)
+		throw new Error("proof selection fence source mismatch");
+	let span = source.slice(start, end);
+	for (const [guard, count] of [
+		["if (!admission.isCurrent()) return;", 4],
+		["if (admission && !admission.isCurrent()) return;", 1],
+	] as const) {
+		if (span.split(guard).length !== count + 1)
+			throw new Error("proof selection fence source mismatch");
+		span = span.replaceAll(
+			guard,
+			guard.replace(
+				"return;",
+				`{ try { (globalThis as { __stageBSelectionSuperseded?: () => void }).__stageBSelectionSuperseded?.(); } catch { /* Proof telemetry cannot alter the fence. */ } return; }`,
+			),
+		);
+	}
+	return source.slice(0, start) + span + source.slice(end);
+}
+
 /** Generates a proof-only entry in an ephemeral owned CI checkout. Ordinary
  * package.main/app.config are never committed or given a runtime proof flag. */
 export function stageBGeneratedSource(config: StageBProofConfig) {
@@ -94,10 +134,20 @@ export function prepareStageBProof(
 	const backup = join(root, "app.stage-b-original.ts");
 	if (existsSync(backup) || existsSync(join(root, "stage-b-proof-entry.js")))
 		throw new Error("proof generation already exists");
+	const computersPath = join(root, "src/features/auth/computers.tsx");
+	const instrumentedComputers = instrumentStageBComputerPick(
+		readFileSync(computersPath, "utf8"),
+	);
+	const providerPath = join(root, "src/features/auth/connection-provider.tsx");
+	const instrumentedProvider = instrumentStageBSelectionFences(
+		readFileSync(providerPath, "utf8"),
+	);
 	const sources = stageBGeneratedSource(config);
 	const manifest = JSON.parse(
 		readFileSync(join(root, "package.json"), "utf8"),
 	) as Record<string, unknown>;
+	writeFileSync(computersPath, instrumentedComputers);
+	writeFileSync(providerPath, instrumentedProvider);
 	renameSync(join(root, "app.config.ts"), backup);
 	writeFileSync(join(root, "app.config.ts"), sources.config);
 	writeFileSync(join(root, "stage-b-proof-entry.js"), sources.entry);

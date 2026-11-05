@@ -51,6 +51,18 @@ export function probeStageBCoordinator(
 		join(root, "app.config.ts"),
 		'export default {name:"Node-only proof",slug:"node-only-proof"};',
 	);
+	mkdirSync(join(root, "src/features/auth"), { recursive: true });
+	writeFileSync(
+		join(root, "src/features/auth/computers.tsx"),
+		readFileSync(join(repository, "src/features/auth/computers.tsx"), "utf8"),
+	);
+	writeFileSync(
+		join(root, "src/features/auth/connection-provider.tsx"),
+		readFileSync(
+			join(repository, "src/features/auth/connection-provider.tsx"),
+			"utf8",
+		),
+	);
 	const shim = `#!${process.execPath}
 // Stage B Node-only fake native tool
 const fs=require('node:fs'),path=require('node:path');

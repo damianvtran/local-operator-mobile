@@ -193,11 +193,13 @@ export const discardStageBDraft = (currentText: string): StageBStep[] => [
 	// Maestro 2.11 text selectors union text/hint/label: ^$ also matches an
 	// empty hint on a NONEMPTY field. Read text with its ordered fallback instead.
 	// copyTextFrom is an internal JS variable, not the system clipboard. Our ASCII
-	// canaries cannot equal its empty native placeholder ("Message…") or label
-	// ("Message"); the flow test pins both to the production Textarea contract.
+	// canaries cannot equal its exact empty placeholder/label variants. Native
+	// 41973921764 also exposes the aggregate AX label "Message Message…" with
+	// empty text/hint; accept that observed value exactly, never a wildcard.
+	// Tests pin the label/placeholder contract and reject nonempty lookalikes.
 	{ copyTextFrom: { id: "composer-input" } },
 	{
-		assertTrue: `\${maestro.copiedText === "" || maestro.copiedText === "Message…" || maestro.copiedText === "Message"}`,
+		assertTrue: `\${maestro.copiedText === "" || maestro.copiedText === "Message…" || maestro.copiedText === "Message" || maestro.copiedText === "Message Message…"}`,
 	},
 	{ hideKeyboard: {} },
 	{

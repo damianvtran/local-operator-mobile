@@ -64,7 +64,27 @@ describe("Stage B foreground-only Maestro flows", () => {
 		// Orchestra.resolveText prefers nonempty text over hint/label. Only an
 		// empty field falls through to this composer's placeholder or label.
 		const copied = (text: string) => text || "Message…";
-		for (const remaining of ["stale-suffix", "x".repeat(38)])
+		// Exact AX shapes observed/allowed for this empty proof composer. Real
+		// content wins even when a blank hint or the aggregate label is present.
+		for (const attributes of [
+			{ text: "", hintText: "", accessibilityText: "Message Message…" },
+			{ text: "", hintText: "Message…", accessibilityText: "Message" },
+			{ text: "", hintText: "", accessibilityText: "Message" },
+			{ text: "Message…", hintText: "", accessibilityText: "Message Message…" },
+		]) {
+			const copiedText =
+				attributes.text || attributes.hintText || attributes.accessibilityText;
+			expect(runInNewContext(expression, { maestro: { copiedText } })).toBe(
+				true,
+			);
+		}
+		for (const remaining of [
+			"stale-suffix",
+			`stage-b-private-draft-${"a".repeat(32)}`,
+			"x".repeat(38),
+			"Message Message… stale",
+			" Message Message… ",
+		])
 			expect(
 				runInNewContext(expression, {
 					maestro: { copiedText: copied(remaining) },

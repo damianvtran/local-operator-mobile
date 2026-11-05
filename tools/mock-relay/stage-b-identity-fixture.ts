@@ -224,6 +224,17 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 					receipt === null ||
 					!("kind" in receipt) ||
 					!("sourceSha" in receipt) ||
+					(receipt.kind === "route-trace" &&
+						[
+							"traceEvent",
+							"traceSequence",
+							"traceAtMs",
+							"traceRevision",
+							"tracePhase",
+							"traceRoute",
+							"traceSelected",
+							"traceFailure",
+						].some((key) => !(key in receipt))) ||
 					Object.entries(receipt).some(([key, val]) => {
 						if (key === "kind")
 							return ![
@@ -236,8 +247,35 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 								"corrupt-recovery",
 								"wrong-key",
 								"control-error",
+								"route-trace",
 							].includes(String(val));
 						if (key === "sourceSha") return val !== sourceSha;
+						if (key === "traceEvent")
+							return !["row-press", "state", "superseded"].includes(
+								String(val),
+							);
+						if (key === "tracePhase")
+							return ![
+								"signed-out",
+								"discovering",
+								"minting",
+								"live",
+								"re-minting",
+								"degraded",
+								"refused",
+								"other",
+							].includes(String(val));
+						if (key === "traceRoute")
+							return !["none", "radient", "custom", "other"].includes(
+								String(val),
+							);
+						if (["traceSequence", "traceAtMs", "traceRevision"].includes(key))
+							return (
+								typeof val !== "number" ||
+								!Number.isSafeInteger(val) ||
+								val < 0 ||
+								(key === "traceSequence" && (val < 1 || val > 32))
+							);
 						if (["installFingerprint", "generationFingerprint"].includes(key))
 							return (
 								typeof val !== "string" ||
@@ -249,6 +287,8 @@ export async function startStageBIdentityFixture(sourceSha: string) {
 							);
 						return (
 							![
+								"traceSelected",
+								"traceFailure",
 								"survivingKey",
 								"sentinelPresent",
 								"nativeSecureStorage",

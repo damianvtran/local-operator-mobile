@@ -453,7 +453,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
 	 * style, token, corpus or instrument input changes. Historical pins retained. */
-	src: "4b97969f702069d201ef20c2e9d728c3a1b14d1084bbf100cafb207b4d470230",
+	src: "22d40c45a2f98c1515653d9df52939efe1f384883d6eb905f0c64b9cc70e42d2",
+	// Proof-entry-only bounded route tracing; ordinary app/U08 custom-relay graph unchanged.
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
 	// Independent canary/scanner and proof keychain preflight do not enter the U08 scene.

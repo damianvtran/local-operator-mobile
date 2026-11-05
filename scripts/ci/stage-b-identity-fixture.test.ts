@@ -201,6 +201,42 @@ describe("Stage B real-socket synthetic authority fixture", () => {
 		expect((await request("/api/directories", false)).status).toBe(401);
 		expect((await request("/api/models", false)).status).toBe(401);
 	});
+	it("accepts only bounded sanitized route trace fields over the real control socket", async () => {
+		const x = await fixture();
+		const trace = {
+			kind: "route-trace",
+			sourceSha: x.config.sourceSha,
+			traceEvent: "row-press",
+			traceSequence: 1,
+			traceAtMs: 100,
+			traceRevision: 2,
+			tracePhase: "minting",
+			traceRoute: "radient",
+			traceSelected: true,
+			traceFailure: false,
+		};
+		const post = (body: unknown) =>
+			fetch(`${x.config.fixtureOrigin}/proof/receipt`, {
+				method: "POST",
+				headers: {
+					"x-stage-b-proof": x.config.nonce,
+					"content-type": "application/json",
+				},
+				body: JSON.stringify(body),
+			});
+		expect((await post(trace)).status).toBe(200);
+		for (const mutation of [
+			{ traceSequence: 33 },
+			{ tracePhase: "private-phase" },
+			{ traceRoute: "private-host" },
+			{ draft: "private-content" },
+			{ traceRevision: -1 },
+		])
+			expect((await post({ ...trace, ...mutation })).status).toBe(400);
+		const { traceSelected: _omitted, ...missing } = trace;
+		expect((await post(missing)).status).toBe(400);
+		expect(x.receipts).toEqual([trace]);
+	});
 	it("accepts the native keychain preflight evidence as a boolean startup receipt", async () => {
 		const x = await fixture();
 		const response = await fetch(`${x.config.fixtureOrigin}/proof/receipt`, {

@@ -265,6 +265,25 @@ async function bootStageBDraftProof(
 		throw new Error("plaintext observer failed its positive control");
 	stage("observer-control");
 	await receipt("observer-control", { detected, removed: !positive.exists });
+	// Seed is fully durable before importing the real provider singleton. React
+	// mounts it only after this gate resolves. No ordinary entry imports this
+	// observer; the callback hook is inserted only in the generated CI checkout.
+	stage("selection-trace");
+	const { connectionStore } =
+		require("@/features/auth/connection-provider") as typeof import("@/features/auth/connection-provider");
+	const { stageBRouteTrace } =
+		require("./stage-b-route-trace") as typeof import("./stage-b-route-trace");
+	const trace = stageBRouteTrace(
+		() => connectionStore.getState(),
+		(event) => receipt("route-trace", { ...event }),
+	);
+	(globalThis as { __stageBRowPress?: () => void }).__stageBRowPress =
+		trace.rowPress;
+	(
+		globalThis as { __stageBSelectionSuperseded?: () => void }
+	).__stageBSelectionSuperseded = trace.superseded;
+	connectionStore.subscribe(trace.observe);
+	trace.observe();
 	let running = false;
 	setInterval(() => {
 		if (running) return;
