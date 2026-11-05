@@ -164,7 +164,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
-            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic) ;; *) exit 1 ;; esac ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup) ;; *) exit 1 ;; esac ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1665,7 +1665,7 @@ jobs:
     runs-on: macos-26
     # Overall ceiling. The runner script spends at most 45 minutes on proof
     # operations and reserves cleanup beyond that; setup steps fit in the rest.
-    timeout-minutes: ${{ inputs.proof_stage == 'diagnostic' && 30 || 90 }}
+    timeout-minutes: ${{ inputs.proof_stage != 'full' && 30 || 90 }}
     permissions:
       contents: read
       actions: read

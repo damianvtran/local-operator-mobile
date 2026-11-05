@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import { capFor } from "./account-routing-proof-contract.ts";
 
 /**
  * The theme proof's frame inventory (decision record § 7, PR 2): the picker in
@@ -77,6 +78,11 @@ export function collectThemeFrames(
 
 /** A diagnostic success is a saved-route prerequisite only, never theme proof. */
 export function themeProofPlan(stage = "full") {
+	// Setup is a separately allocated prerequisite. 900s fits measured boot179s
+	// + install65s + the existing account-lane cold-driver420s + small operations.
+	// It does not extend the diagnostic's600s or Maestro's own startup timeout.
+	if (stage === "setup")
+		return { stage, flow: null, budgetSeconds: 900, frames: ["setup-ready"] };
 	if (stage === "diagnostic")
 		return {
 			stage,
@@ -125,3 +131,49 @@ export function assertDiagnosticTrace(
 		"missing saved-provider list application trace",
 	);
 }
+
+export function assertDriverReady(hierarchy: string) {
+	assert(
+		["welcome-screen", "home-screen"].some((id) => hierarchy.includes(id)),
+		"warm driver did not show a drawn app screen",
+	);
+}
+/** Exact existing account-routing warm-up: launch the installed app, then touch
+ * the actual XCTest driver through hierarchy. No sleep, reinstall or guessed
+ * port probe. A single unsuccessful bootstrap stops the setup lane. */
+export async function warmThemeDriver(
+	run: (
+		name: string,
+		command: string,
+		args: string[],
+		cap: number,
+	) => Promise<string>,
+	udid: string,
+	bundle: string,
+) {
+	await run(
+		"warm-launch-app",
+		"xcrun",
+		["simctl", "launch", udid, bundle],
+		capFor("selector"),
+	);
+	const hierarchy = await run(
+		"warm-maestro-driver",
+		"maestro",
+		["--verbose", "--device", udid, "hierarchy"],
+		capFor("maestroCold"),
+	);
+	assertDriverReady(hierarchy);
+	return hierarchy;
+}
+const DRIVER_BOOTSTRAP_FAILURE =
+	/IOSDriverTimeoutException|iOS driver not ready in time|\[driver-bootstrap\]/i;
+export const isDriverBootstrapFailure = (text: string) =>
+	DRIVER_BOOTSTRAP_FAILURE.test(text);
+const BOOTSTRAP_URL = /https?:\/\/[^\s"'<>]+/gi;
+const BOOTSTRAP_SECRET =
+	/\b(authorization|set-cookie|cookie|password|token)\s*[:=]\s*[^\r\n]+/gi;
+export const sanitizeBootstrapLog = (text: string) =>
+	text
+		.replace(BOOTSTRAP_URL, "<redacted-origin>")
+		.replace(BOOTSTRAP_SECRET, "$1: <redacted>");

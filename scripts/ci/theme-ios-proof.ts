@@ -41,7 +41,10 @@ import {
 	assertDiagnosticTrace,
 	collectThemeFrames,
 	copyThemeFrames,
+	isDriverBootstrapFailure,
+	sanitizeBootstrapLog,
 	themeProofPlan,
+	warmThemeDriver,
 } from "./theme-proof-contract.ts";
 
 const env = process.env;
@@ -73,6 +76,8 @@ if (password.length < 24) throw new Error("run-only password file is empty");
 // Allowlisted child environment: no GH_TOKEN/GITHUB_TOKEN, no inherited HOME.
 const childEnv: NodeJS.ProcessEnv = {
 	NODE_ENV: "production",
+	MAESTRO_CLI_NO_ANALYTICS: "1",
+	MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true",
 	PATH: env.PATH,
 	DEVELOPER_DIR: env.DEVELOPER_DIR,
 	JAVA_HOME: env.JAVA_HOME,
@@ -107,9 +112,11 @@ const receipt: Record<string, unknown> = {
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
 	scope:
-		plan.stage === "diagnostic"
-			? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
-			: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
+		plan.stage === "setup"
+			? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
+			: plan.stage === "diagnostic"
+				? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
+				: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {
@@ -185,6 +192,7 @@ async function run(
 		});
 	});
 	await stop(child);
+	if (name === "warm-maestro-driver") output = sanitizeBootstrapLog(output);
 	writeFileSync(log, redact(output));
 	records.push({
 		name,
@@ -197,7 +205,7 @@ async function run(
 	if (timedOut) throw new Error(`deadline exceeded (${name}, cap=${cap}s)`);
 	if (code !== 0)
 		throw new Error(
-			`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
+			`${name} failed rc=${code}${isDriverBootstrapFailure(output) ? " [driver-bootstrap]" : ""}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
 		);
 	return output;
 }
@@ -321,7 +329,7 @@ let failure: string | undefined;
 
 /** Failure-time evidence, taken BEFORE teardown: the screen the driver was
  *  actually looking at. Best effort and bounded; it never masks the real error. */
-async function captureFailure(label: string) {
+async function captureFailure(label: string, driverUnavailable = false) {
 	if (!udid) return;
 	try {
 		await run(
@@ -334,17 +342,23 @@ async function captureFailure(label: string) {
 				"screenshot",
 				join(ROOT, "frames", `failure-${label}.png`),
 			],
-			60,
+			15,
 		);
 	} catch (error) {
 		note(`failure screenshot unavailable: ${String(error).slice(0, 200)}`);
+	}
+	// A hierarchy request itself bootstraps XCTest. Repeating it after a known
+	// startup failure spent the remaining101s in41982518174 without app evidence.
+	if (driverUnavailable) {
+		note("failure hierarchy skipped: XCTest driver was not ready");
+		return;
 	}
 	try {
 		const tree = await run(
 			`failure-hierarchy-${label}`,
 			"maestro",
 			["--device", udid, "hierarchy"],
-			120,
+			30,
 		);
 		writeFileSync(
 			join(ROOT, "hierarchies", `failure-${label}.txt`),
@@ -427,7 +441,7 @@ async function flowRun(
 			cap,
 		);
 	} catch (error) {
-		await captureFailure(label);
+		await captureFailure(label, isDriverBootstrapFailure(String(error)));
 		throw error;
 	} finally {
 		// Maestro has already captured successful earlier steps when a later
@@ -524,8 +538,7 @@ try {
 				deviceType = row.deviceTypeIdentifier;
 			}
 	if (!runtime) throw new Error("device runtime metadata unavailable");
-	if (plan.stage === "diagnostic")
-		assertDiagnosticSimulator(runtime, deviceType);
+	if (plan.stage !== "full") assertDiagnosticSimulator(runtime, deviceType);
 	const created = (
 		await run(
 			"create-owned-simulator",
@@ -547,31 +560,70 @@ try {
 	await run("boot-ready", "xcrun", ["simctl", "bootstatus", udid, "-b"], 600);
 	await run("install", "xcrun", ["simctl", "install", udid, app], 180);
 
-	const relay = await startRelay("en");
-	relays.push(relay);
-	note(`relay: ${relay.origin}`);
+	if (plan.stage === "setup") {
+		receipt.setupOnly = {
+			savedRouteFlowExecuted: false,
+			relayStarted: false,
+			expectedFixtureRequests: 0,
+		};
+		try {
+			const hierarchy = await warmThemeDriver(
+				run,
+				udid,
+				(receipt.installed as { bundleId: string }).bundleId,
+			);
+			writeFileSync(
+				join(ROOT, "hierarchies", "setup-ready.txt"),
+				redact(hierarchy),
+			);
+			await run(
+				"setup-ready-frame",
+				"xcrun",
+				[
+					"simctl",
+					"io",
+					udid,
+					"screenshot",
+					join(ROOT, "frames", "setup-ready.png"),
+				],
+				15,
+			);
+			receipt.driverWarmUp =
+				"PASS actual launch + XCTest hierarchy showing a drawn app screen";
+			receipt.verdict =
+				"PASS setup prerequisite ONLY (not provider/theme acceptance)";
+		} catch (error) {
+			await captureFailure("setup", true);
+			throw error;
+		}
+	} else {
+		if (!plan.flow) throw new Error("missing flow for non-setup stage");
+		const relay = await startRelay("en");
+		relays.push(relay);
+		note(`relay: ${relay.origin}`);
 
-	// The OS on LIGHT, so the System-mode frames show the light slot and every
-	// dark frame is the app's own forced choice rather than the simulator's.
-	// The first maestro call pays the cold driver start; one walk, so one cap.
-	await run(
-		"appearance-light",
-		"xcrun",
-		["simctl", "ui", udid, "appearance", "light"],
-		60,
-	);
-	await flowRun(
-		plan.stage === "diagnostic" ? "diagnostic" : "matrix",
-		relay.origin,
-		plan.flow,
-		plan.stage === "diagnostic" ? 600 : 2100,
-	);
-	receipt.stage = plan.stage;
-	receipt.nativeBudgetSeconds = BUDGET_SECONDS;
-	receipt.verdict =
-		plan.stage === "diagnostic"
-			? "PASS saved-route prerequisite ONLY (not theme acceptance)"
-			: "PASS (assertions only; reviewers must view the PNGs)";
+		// The OS on LIGHT, so the System-mode frames show the light slot and every
+		// dark frame is the app's own forced choice rather than the simulator's.
+		// The first maestro call pays the cold driver start; one walk, so one cap.
+		await run(
+			"appearance-light",
+			"xcrun",
+			["simctl", "ui", udid, "appearance", "light"],
+			60,
+		);
+		await flowRun(
+			plan.stage === "diagnostic" ? "diagnostic" : "matrix",
+			relay.origin,
+			plan.flow,
+			plan.stage === "diagnostic" ? 600 : 2100,
+		);
+		receipt.stage = plan.stage;
+		receipt.nativeBudgetSeconds = BUDGET_SECONDS;
+		receipt.verdict =
+			plan.stage === "diagnostic"
+				? "PASS saved-route prerequisite ONLY (not theme acceptance)"
+				: "PASS (assertions only; reviewers must view the PNGs)";
+	}
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
 	receipt.verdict = `FAIL: ${failure}`;

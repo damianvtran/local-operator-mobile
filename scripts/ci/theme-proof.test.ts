@@ -12,17 +12,110 @@ import { describe, expect, it } from "vitest";
 import {
 	assertDiagnosticSimulator,
 	assertDiagnosticTrace,
+	assertDriverReady,
 	collectThemeFrames,
 	copyThemeFrames,
+	isDriverBootstrapFailure,
 	PROOF_THEMES,
+	sanitizeBootstrapLog,
 	THEME_FRAMES,
 	themeProofPlan,
+	warmThemeDriver,
 } from "./theme-proof-contract.ts";
 
 /** The flow and the runner's inventory are two files; this keeps them one list.
  *  A capture the flow takes but the inventory omits would ship unchecked, and
  *  one the inventory names but the flow never takes would fail every run. */
 describe("minimal native saved-route diagnostic allocation", () => {
+	it("setup never starts relay/app flow and bootstrap failure never retries hierarchy", () => {
+		const runner = readFileSync(
+			new URL("./theme-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const start = runner.indexOf('if (plan.stage === "setup")');
+		const setup = runner.slice(start, runner.indexOf("} else {", start));
+		expect(setup).toContain("warmThemeDriver(");
+		expect(setup).not.toMatch(/startRelay|flowRun|session-row/);
+		expect(runner).toContain(
+			"captureFailure(label, isDriverBootstrapFailure(String(error)))",
+		);
+		const failure = runner.slice(
+			runner.indexOf("async function captureFailure("),
+			runner.indexOf("async function flowRun("),
+		);
+		expect(failure.indexOf("if (driverUnavailable)")).toBeLessThan(
+			failure.indexOf("`failure-hierarchy-${label}`"),
+		);
+		expect(failure).toMatch(/if \(driverUnavailable\) \{[\s\S]*return;/);
+	});
+
+	it("uses the actual launch/hierarchy sequence and fails once before any app flow", async () => {
+		const calls: { name: string; args: string[]; cap: number }[] = [];
+		const run = async (
+			name: string,
+			_command: string,
+			args: string[],
+			cap: number,
+		) => {
+			calls.push({ name, args, cap });
+			return name === "warm-maestro-driver" ? "welcome-screen" : "";
+		};
+		await warmThemeDriver(run, "owned-udid", "com.localoperator.mobile");
+		expect(calls.map((c) => c.name)).toEqual([
+			"warm-launch-app",
+			"warm-maestro-driver",
+		]);
+		expect(calls[1].args).toEqual([
+			"--verbose",
+			"--device",
+			"owned-udid",
+			"hierarchy",
+		]);
+		expect(calls[1].cap).toBe(420);
+		let attempts = 0;
+		await expect(
+			warmThemeDriver(
+				async (name) => {
+					if (name === "warm-maestro-driver") {
+						attempts++;
+						throw new Error("IOSDriverTimeoutException");
+					}
+					return "";
+				},
+				"owned-udid",
+				"com.localoperator.mobile",
+			),
+		).rejects.toThrow("IOSDriverTimeoutException");
+		expect(attempts).toBe(1);
+	});
+	it("classifies the actual installer exception, not an app assertion, and sanitizes verbose startup output", () => {
+		expect(
+			isDriverBootstrapFailure(
+				"xcuitest.installer.LocalXCTestInstaller$IOSDriverTimeoutException",
+			),
+		).toBe(true);
+		expect(
+			isDriverBootstrapFailure("session-row-6714def86197 was not visible"),
+		).toBe(false);
+		const safe = sanitizeBootstrapLog(
+			"IOSDriverTimeoutException http://127.0.0.1:7001/status\nAuthorization: Bearer secret\nCookie: lop_mobile=secret",
+		);
+		expect(safe).toContain("IOSDriverTimeoutException");
+		expect(safe).not.toMatch(/secret|127\.0\.0\.1|lop_mobile/);
+	});
+
+	it("has a setup-only cold-driver gate, not an app flow or guessed sleep", () => {
+		const plan = themeProofPlan("setup");
+		expect(plan.flow).toBeNull();
+		expect(plan.budgetSeconds).toBe(900);
+		expect(plan.frames).toEqual(["setup-ready"]);
+		expect(() => assertDriverReady("SpringBoard maestrodriver")).toThrow(
+			"drawn app screen",
+		);
+		expect(() => assertDriverReady("welcome-screen")).not.toThrow();
+		expect(() => assertDriverReady("home-screen")).not.toThrow();
+	});
+
 	it("wires the stage through workflow, runtime limit and driver instead of dispatching full proof", () => {
 		const runner = readFileSync(
 			new URL("./theme-ios-proof.ts", import.meta.url),
@@ -42,7 +135,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 			workflow.indexOf("\n  u08-geometry-proof:"),
 		);
 		expect(job).toContain("PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}");
-		expect(workflow).toContain('case "$PROOF_STAGE" in full|diagnostic)');
+		expect(workflow).toContain('case "$PROOF_STAGE" in full|diagnostic|setup)');
 	});
 
 	it("is one bounded short flow and never the twelve-theme matrix", () => {
@@ -62,7 +155,7 @@ describe("minimal native saved-route diagnostic allocation", () => {
 		expect(flow).toContain('id: "session-row-6714def86197"');
 		expect(flow).not.toMatch(/theme-card|theme-picker/);
 		expect(themeProofPlan().frames).toEqual(THEME_FRAMES);
-		expect(() => themeProofPlan("setup")).toThrow();
+		expect(() => themeProofPlan("unknown")).toThrow();
 	});
 	it("refuses other hardware/runtime and a successful row without safe provider trace", () => {
 		expect(() =>
