@@ -31,8 +31,9 @@ export type PhoneSounds = {
 };
 
 /** Adapters must implement commit/read atomically and validate persisted bytes
- * on inventory. Inventory excludes missing files/channels, including user-
- * deleted Android channels. Errors never become successful readiness reports. */
+ * on inventory. Retain interrupted/missing slots as invalid so readiness is
+ * withdrawn and their reserved bytes remain accounted for until cleanup.
+ * Errors never become successful readiness reports. */
 export interface SoundCacheDisk {
 	inventory(): Promise<CachedSound[]>;
 	commit(sha: string, bytes: Uint8Array, used: number): Promise<void>;
