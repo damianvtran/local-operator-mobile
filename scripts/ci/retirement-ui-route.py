@@ -8,7 +8,7 @@ import re
 
 
 def route(mode, proof, compile_run='', runner_artifact='', runner_source='', observe_only=False, expected_source=None):
-    if not isinstance(mode, str) or mode not in ('standard', 'retirement-ui-setup', 'retirement-seed-replay', 'retirement-toolchain-probe'):
+    if not isinstance(mode, str) or mode not in ('standard', 'retirement-ui-setup', 'retirement-seed-replay', 'retirement-toolchain-probe', 'retirement-runner-launch-only'):
         raise ValueError('Unknown manual iOS mode')
     if type(proof) is not bool or type(observe_only) is not bool:
         raise ValueError('Manual booleans required')

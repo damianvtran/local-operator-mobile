@@ -1,0 +1,53 @@
+name: Retirement actual XCTest runner launch-only diagnostic
+
+# Registered ios.yml is the sole dispatch entrypoint. This IS test execution,
+# unlike the NO-TEST toolchain probe; it deliberately causes XCTest to fail
+# before observation. It is never product/mobile acceptance or an app build.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ format('{0}-retirement-runner-launch-only-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  cancel-in-progress: false
+
+jobs:
+  actual-runner-launch-only:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Acquire only the fixed runner under the shared work clock
+        id: acquire
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 scripts/ci/retirement-runner-launch-only-inputs.py acquire "$RUNNER_TEMP/retirement-runner-launch-only"
+      - name: Actual launch with null-identity ready and mandatory observation denial
+        if: steps.acquire.outcome == 'success'
+        run: |
+          set -euo pipefail
+          env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-}" HOME="$HOME" TMPDIR="$RUNNER_TEMP/" GITHUB_SHA="$GITHUB_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            python3 scripts/ci/retirement-runner-launch-only-supervisor.py run "$RUNNER_TEMP/retirement-runner-launch-only" "$RUNNER_TEMP/retirement-runner-launch-only.json"
+      - name: Always recover exact owned resources with the persisted cleanup allowance
+        if: always() && steps.acquire.outcome != 'skipped'
+        run: |
+          set -euo pipefail
+          env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-}" HOME="$HOME" TMPDIR="$RUNNER_TEMP/" GITHUB_SHA="$GITHUB_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            python3 scripts/ci/retirement-runner-launch-only-supervisor.py cleanup "$RUNNER_TEMP/retirement-runner-launch-only" "$RUNNER_TEMP/retirement-runner-launch-only.json"
+      - name: Retain only closed JSON, never private XCTest output or attachments
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: retirement-runner-launch-only-json
+          retention-days: 1
+          if-no-files-found: error
+          path: ${{ runner.temp }}/retirement-runner-launch-only.json

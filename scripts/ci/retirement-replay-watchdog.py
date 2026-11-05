@@ -78,7 +78,7 @@ def cleanup_remaining(root, allowance):
 BOOT_SECONDS = 300
 
 
-def attempt(argv, root, work_end, allowance, cleanup_only=False, boot_seconds=BOOT_SECONDS):
+def attempt(argv, root, work_end, allowance, cleanup_only=False, boot_seconds=BOOT_SECONDS, memory_check=None):
     read_fd, write_fd = os.pipe()
     os.set_blocking(read_fd, False)
     environment = os.environ.copy()
@@ -135,6 +135,11 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False, boot_seconds=BO
     try:
         while child.poll() is None:
             drain()
+            # Opt-in launch-only policy. Existing replay defaults and clocks are
+            # unchanged; sampling is independent of a blocked Node event loop.
+            if memory_check is not None and not memory_check(child.pid, groups):
+                stopped = 'memory-limit'
+                break
             if cleanup_end is None and (root / 'cleanup-start.json').exists():
                 cleanup_end = time.monotonic() + cleanup_remaining(root, allowance)
             if cleanup_end is not None:
@@ -178,13 +183,13 @@ def attempt(argv, root, work_end, allowance, cleanup_only=False, boot_seconds=BO
             'bootElapsedMs': round(boot['elapsed'] * 1000)}
 
 
-def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=120, cleanup_only=False, boot_seconds=BOOT_SECONDS):
+def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=120, cleanup_only=False, boot_seconds=BOOT_SECONDS, memory_check=None):
     # Tests may shorten these caps; CLI exposes NO override or retry parameter.
     if work_seconds <= 0 or work_seconds > 300 or cleanup_seconds <= 0 or cleanup_seconds > 120 or boot_seconds <= 0 or boot_seconds > BOOT_SECONDS:
         raise ValueError('Budget refused')
     started = time.monotonic()
     first = attempt(cleanup_argv if cleanup_only else work_argv, root, started + work_seconds,
-                    cleanup_seconds, cleanup_only, boot_seconds)
+                    cleanup_seconds, cleanup_only, boot_seconds, memory_check)
     if (first['stopReason'] or first['workerExit'] != 0) and root.exists():
         try:
             with (root / 'seed-first-failure.json').open('x') as stream:
@@ -197,7 +202,7 @@ def supervise(work_argv, cleanup_argv, root, work_seconds=300, cleanup_seconds=1
     if not cleanup_only:
         remaining = cleanup_remaining(root, cleanup_seconds)
         if remaining > 0:
-            fallback = attempt(cleanup_argv, root, time.monotonic(), cleanup_seconds, True)
+            fallback = attempt(cleanup_argv, root, time.monotonic(), cleanup_seconds, True, memory_check=memory_check)
         else:
             fallback = {'workerExit': 1, 'stopReason': 'cleanup-deadline', 'workerReaped': True}
     result = {'workBudgetSeconds': work_seconds, 'bootBudgetSeconds': boot_seconds, 'totalCleanupBudgetSeconds': cleanup_seconds,

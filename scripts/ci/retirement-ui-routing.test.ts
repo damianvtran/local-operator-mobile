@@ -132,7 +132,7 @@ describe("registered iOS workflow exclusive setup routing (source-only, no dispa
 	);
 	it("default input and local reusable workflow are exact, with no app/test install entrypoint", () => {
 		expect(workflow).toContain(
-			"options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe]",
+			"options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe, retirement-runner-launch-only]",
 		);
 		expect(workflow).toContain("default: standard");
 		expect(block("retirement-ui-setup")).toContain(
@@ -166,6 +166,7 @@ describe("exclusive retained replay route cross-product", () => {
 		"retirement-ui-setup",
 		"retirement-seed-replay",
 		"retirement-toolchain-probe",
+		"retirement-runner-launch-only",
 	])
 		for (const proof of [false, true])
 			for (const observeOnly of [false, true])
@@ -499,5 +500,72 @@ describe("resolved actual needs/if/default-status workflow graph", () => {
 		expect(
 			text.indexOf("Validate dispatch before native classification"),
 		).toBeLessThan(text.indexOf("Decide whether the native jobs"));
+	});
+});
+
+describe("actual launch-only fifth route isolation", () => {
+	for (const proof of [false, true, "false", undefined])
+		for (const supplied of [false, true])
+			for (const observeOnly of [false, true])
+				it(`launch-only proof=${proof} supplied=${supplied} observe=${observeOnly}`, () => {
+					const accepted =
+						route("retirement-runner-launch-only", proof, {
+							...(supplied ? replayInputs : {}),
+							REPLAY_OBSERVE_ONLY_JSON: JSON.stringify(observeOnly),
+						}).status === 0;
+					expect(accepted).toBe(proof === false && !supplied && !observeOnly);
+					for (const ordinary of [
+						"changes",
+						"credentials",
+						"internal",
+						"retirement-ui-setup",
+						"retirement-seed-replay",
+						"retirement-toolchain-probe",
+					])
+						expect(
+							evaluate(
+								ordinary,
+								"workflow_dispatch",
+								"retirement-runner-launch-only",
+								proof,
+							),
+						).toBe(false);
+				});
+	it.each(["push", "pull_request"])(
+		"never runs diagnostic automatically on %s",
+		(event) => {
+			expect(
+				evaluate(
+					"retirement-runner-launch-only",
+					event,
+					"retirement-runner-launch-only",
+					false,
+				),
+			).toBe(false);
+		},
+	);
+	it("uses a separate actual-test child with a single token boundary and closed artifact", () => {
+		expect(block("retirement-runner-launch-only")).toContain(
+			"needs: manual-mode",
+		);
+		expect(block("retirement-runner-launch-only")).toContain("contents: read");
+		expect(block("retirement-runner-launch-only")).toContain("actions: read");
+		const child = readFileSync(
+			new URL(
+				"../../.github/workflows/retirement-runner-launch-only.yml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		expect(child).toContain("timeout-minutes: 15");
+		expect(child).not.toContain("workflow_dispatch:");
+		expect(child.match(/GITHUB_TOKEN:/g)).toHaveLength(1);
+		expect(child).toContain("env -i");
+		expect(child).not.toMatch(
+			/setup-node|pnpm|build-for-testing|retirement-ui-setup.py|seed-replay|simctl|screenshots|secrets\./,
+		);
+		expect(child).toContain(
+			"path: ${{ runner.temp }}/retirement-runner-launch-only.json",
+		);
 	});
 });

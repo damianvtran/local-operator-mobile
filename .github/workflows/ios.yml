@@ -33,9 +33,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Standard jobs, independent runner compile, approved retained seed replay, or NO-TEST toolchain probe"
+        description: "Standard jobs, independent runner compile, retained seed replay, NO-TEST probe, or actual runner launch-only diagnostic"
         type: choice
-        options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe]
+        options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe, retirement-runner-launch-only]
         default: standard
       retirement_proof:
         description: "Opt-in unsigned native durable retirement/restore primitive proof (not provider/UI E2E)"
@@ -127,6 +127,15 @@ jobs:
     needs: manual-mode
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-toolchain-probe' && toJSON(inputs.retirement_proof) == 'false'
     uses: ./.github/workflows/retirement-toolchain-probe.yml
+
+  retirement-runner-launch-only:
+    # Actual test execution, not the NO-TEST probe and never mobile acceptance.
+    permissions:
+      contents: read
+      actions: read
+    needs: manual-mode
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'retirement-runner-launch-only' && toJSON(inputs.retirement_proof) == 'false'
+    uses: ./.github/workflows/retirement-runner-launch-only.yml
 
   retirement-seed-replay:
     needs: manual-mode
