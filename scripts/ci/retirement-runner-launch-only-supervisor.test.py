@@ -97,5 +97,74 @@ class Bounds(unittest.TestCase):
             with self.assertRaises(Exception): api['expiry_gate'](metadata, expiry-10801, expiry-1201, expiry-1200)
 
 
+class FailureClasses(unittest.TestCase):
+    """QA34-M1 / QA34-m1: the shared clock and the retained failure class.
+
+    Both regressions are exercised through the production helpers, so a future
+    edit that restores the old behaviour fails here rather than in a hosted run.
+    """
+
+    def test_work_clock_is_the_persisted_wall_clock_not_monotonic(self):
+        api = load()
+        # A clock written by the acquisition process is read by this one. Wall
+        # clock is comparable; monotonic is not (negative deltas measured on
+        # this host), which is the defect QA34-M1 named.
+        clock = {'jobStart': time.time() - 120.5, 'acquisitionMs': 1000}
+        self.assertAlmostEqual(api['remaining_work'](clock), 179.5, places=1)
+        # A clock step backwards must refuse rather than grant a fresh budget.
+        for bad in ({'jobStart': time.time() + 60, 'acquisitionMs': 0},
+                    {'jobStart': time.time() - 301, 'acquisitionMs': 0},
+                    {'jobStart': time.time() - 1, 'acquisitionMs': 90001}):
+            with self.assertRaises(ValueError):
+                api['remaining_work'](bad)
+        self.assertNotIn('monotonicStart', (HERE / 'retirement-runner-launch-only-supervisor.py').read_text())
+
+    def test_a_controller_recorded_preflight_failure_is_not_relabelled_internal(self):
+        api = load()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'work-clock.json').write_text(json.dumps({'jobStart': time.time(), 'acquisitionMs': 10}))
+            (root / 'replay-cleanup.json').write_text(json.dumps({'cleanupComplete': True, 'inventoryAbsent': True, 'exit': 0}))
+            (root / 'launch-receipt.json').write_text(json.dumps({'failure': 'preflight', 'controllerSource': 'a' * 40}, ))
+            # A clean self-exit 1 with a receipt and a clean reap is the controller
+            # refusing on purpose; the export must keep that class.
+            def supervise(*_a, **_k):
+                return {'first': {'workerExit': 1, 'workerReaped': True, 'groupsAbsent': True, 'stopReason': None}, 'fallback': None}
+            with patch.dict(api['WATCHDOG'], {'supervise': supervise}):
+                self.assertFalse(api['run']('run', root, root / 'out.json'))
+            exported = json.loads((root / 'out.json').read_text())
+            self.assertEqual(exported['failure'], 'preflight')
+            self.assertFalse(exported['supervisorFailed'])
+            self.assertFalse(exported['forcedStop'])
+
+    def test_a_supervisor_induced_stop_still_reports_internal(self):
+        api = load()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'work-clock.json').write_text(json.dumps({'jobStart': time.time(), 'acquisitionMs': 10}))
+            (root / 'replay-cleanup.json').write_text(json.dumps({'cleanupComplete': True, 'inventoryAbsent': True, 'exit': 0}))
+            (root / 'launch-receipt.json').write_text(json.dumps({'failure': 'none', 'controllerSource': 'a' * 40}))
+            def supervise(*_a, **_k):
+                return {'first': {'workerExit': None, 'workerReaped': True, 'groupsAbsent': True, 'stopReason': 'work-deadline'}, 'fallback': None}
+            with patch.dict(api['WATCHDOG'], {'supervise': supervise}):
+                self.assertFalse(api['run']('run', root, root / 'out.json'))
+            exported = json.loads((root / 'out.json').read_text())
+            self.assertEqual(exported['failure'], 'internal')
+            self.assertTrue(exported['supervisorFailed'])
+            self.assertTrue(exported['forcedStop'])
+
+    def test_a_missing_receipt_is_internal(self):
+        api = load()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / 'work-clock.json').write_text(json.dumps({'jobStart': time.time(), 'acquisitionMs': 10}))
+            (root / 'replay-cleanup.json').write_text(json.dumps({'cleanupComplete': True, 'inventoryAbsent': True, 'exit': 0}))
+            def supervise(*_a, **_k):
+                return {'first': {'workerExit': 0, 'workerReaped': True, 'groupsAbsent': True, 'stopReason': None}, 'fallback': None}
+            with patch.dict(api['WATCHDOG'], {'supervise': supervise}):
+                self.assertFalse(api['run']('run', root, root / 'out.json'))
+            self.assertEqual(json.loads((root / 'out.json').read_text())['failure'], 'internal')
+
+
 if __name__ == '__main__':
     unittest.main()

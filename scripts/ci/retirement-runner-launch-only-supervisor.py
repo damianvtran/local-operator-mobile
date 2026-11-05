@@ -66,6 +66,23 @@ def sample_memory(worker, groups):
         raise
 
 
+def remaining_work(clock, now=None):
+    """Budget left in the ONE accepted 300s work window.
+
+    QA34-M1: `time.monotonic()` has an undefined reference point and is not
+    comparable across processes; two interpreters on this host gave negative
+    deltas, which turned a healthy run into an opaque `internal` failure before
+    launch. The persisted wall-clock `jobStart` is the same quantity the
+    controller counts from (`Date.now() - jobStart*1000`), so both sides agree.
+    A backwards step refuses; a forwards step only consumes budget.
+    """
+    now = time.time() if now is None else now
+    elapsed = now - clock['jobStart']
+    if elapsed < 0 or elapsed >= 300 or clock['acquisitionMs'] > 90000:
+        raise ValueError('closed')
+    return 300 - elapsed
+
+
 def runner_failure(value):
     if not isinstance(value, dict) or set(value) != {'exitCode', 'command', 'errorClass', 'failingTest', 'failureCount', 'tailSha256'}:
         return None
@@ -135,28 +152,34 @@ def run(mode, root, output):
     root.mkdir(mode=0o700, exist_ok=True)
     result = None
     failed = False
-    original_failed = prior.get('failure') not in (None, 'none')
+    supervisor_error = False
     try:
         remaining = 300
         if mode == 'run':
-            clock = INPUTS['PROBE']['bounded_json'](root / 'work-clock.json')
-            elapsed = time.monotonic() - clock['monotonicStart']
-            if elapsed < 0 or elapsed >= 300 or clock['acquisitionMs'] > 90000:
-                raise ValueError('closed')
-            remaining -= elapsed
+            remaining = remaining_work(INPUTS['PROBE']['bounded_json'](root / 'work-clock.json'))
         result = WATCHDOG['supervise'](command + ['--run', str(root)], command + ['--cleanup', str(root)], root,
                                        work_seconds=remaining, cleanup_only=mode == 'cleanup', memory_check=sample_memory)
-        failed = any(part and (part['workerExit'] != 0 or part['stopReason'] or not part.get('workerReaped') or not part.get('groupsAbsent')) for part in (result['first'], result['fallback']))
+        # QA34-m1: the controller exits 1 for every recorded failure, so
+        # `workerExit != 0` relabelled a deliberate preflight refusal as a
+        # supervisor crash and destroyed the only diagnosis the artifact carries.
+        # A supervisor-side failure is a stop IT induced (stopReason), an
+        # unreaped worker or surviving groups — a clean self-exit with a receipt
+        # keeps the controller's own class.
+        failed = any(part and (part['stopReason'] or not part.get('workerReaped') or not part.get('groupsAbsent')) for part in (result['first'], result['fallback']))
     except Exception:
         failed = True
+        supervisor_error = True
         # Bad acquisition/clock still gets exact owned cleanup, under the same
         # persisted 120s allowance, not an unsupervised JS finally.
         try:
             result = WATCHDOG['supervise'](command + ['--run', str(root)], command + ['--cleanup', str(root)], root, cleanup_only=True, memory_check=sample_memory)
         except Exception:
             pass
-    value = read_private(root / 'launch-receipt.json') or prior
-    value = closed_receipt(value)
+    receipt = read_private(root / 'launch-receipt.json')
+    # A receipt is the controller's own record: without one there is no
+    # controller-authored class to preserve, so `internal` is the honest label.
+    receipt_present = isinstance(receipt, dict) and bool(receipt)
+    value = closed_receipt(receipt or prior)
     cleanup = read_private(root / 'replay-cleanup.json')
     value['cleanupComplete'] = cleanup.get('cleanupComplete') is True
     value['inventoryAbsent'] = cleanup.get('inventoryAbsent') is True
@@ -165,7 +188,8 @@ def run(mode, root, output):
     value['ownedGroupsAbsent'] = bool(parts) and all(part.get('groupsAbsent') is True for part in parts)
     value['controllerReaped'] = bool(parts) and all(part.get('workerReaped') is True for part in parts)
     value['forcedStop'] = prior.get('forcedStop') is True or value['stopOutcome'] in ('runner-start-timeout', 'post-denial-timeout', 'forced-stop') or any(part.get('stopReason') for part in parts)
-    if failed or original_failed and value['failure'] == 'none': value['failure'] = 'internal'
+    if (supervisor_error or not receipt_present) or (failed and value['failure'] == 'none'):
+        value['failure'] = 'internal'
     try:
         # Keep only ownership journals for the always() recovery. Raw runner
         # result attachments, config/secret material and pinned bytes never leave.

@@ -33,7 +33,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Standard jobs, independent runner compile, retained seed replay, NO-TEST probe, or actual runner launch-only diagnostic"
+        description: "Standard jobs, independent runner compile, approved retained seed replay, NO-TEST probe, or actual runner launch-only diagnostic"
         type: choice
         options: [standard, retirement-ui-setup, retirement-seed-replay, retirement-toolchain-probe, retirement-runner-launch-only]
         default: standard
