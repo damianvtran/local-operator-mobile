@@ -38,7 +38,9 @@ export const THEME_FRAMES: readonly string[] = [
 
 const PATH_SEPARATOR = /[\\/]/;
 
-export function collectThemeFrames(output: string, destination: string) {
+/** Copy useful evidence independently of the completeness verdict. A later
+ * failed session prerequisite must not discard already-taken picker frames. */
+export function copyThemeFrames(output: string, destination: string) {
 	const found: string[] = [];
 	const visit = (dir: string) => {
 		for (const row of readdirSync(dir, { withFileTypes: true })) {
@@ -58,6 +60,12 @@ export function collectThemeFrames(output: string, destination: string) {
 		}
 	};
 	visit(output);
+	return found;
+}
+
+/** Acceptance stays fail-closed even when partial evidence was salvaged. */
+export function collectThemeFrames(output: string, destination: string) {
+	const found = copyThemeFrames(output, destination);
 	for (const name of THEME_FRAMES)
 		assert(found.includes(`${name}.png`), `missing ${name}.png`);
 	return found;

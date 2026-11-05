@@ -1,12 +1,66 @@
-import { readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { PROOF_THEMES, THEME_FRAMES } from "./theme-proof-contract.ts";
+import {
+	collectThemeFrames,
+	copyThemeFrames,
+	PROOF_THEMES,
+	THEME_FRAMES,
+} from "./theme-proof-contract.ts";
 
 /** The flow and the runner's inventory are two files; this keeps them one list.
  *  A capture the flow takes but the inventory omits would ship unchecked, and
  *  one the inventory names but the flow never takes would fail every run. */
 describe("the theme proof's frame inventory", () => {
+	it("preserves screenshots in the flow finally path and sanitizes native logs before writing", () => {
+		const runner = readFileSync(
+			new URL("./theme-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const flowRun = runner.slice(
+			runner.indexOf("async function flowRun("),
+			runner.indexOf("try {\n\t// Source and archive"),
+		);
+		expect(flowRun).toMatch(/finally\s*\{[\s\S]*copyThemeFrames/);
+		expect(flowRun).toMatch(/"log",\s*"stream",\s*"--level",\s*"info"/);
+		expect(flowRun).toContain(
+			"parseSavedRouteDiagnostics(pending.slice(0, end))",
+		);
+		expect(flowRun).toContain("JSON.stringify(events, null, 2)");
+	});
+
+	it("salvages completed screenshots after failure without admitting an incomplete matrix", () => {
+		const root = mkdtempSync(join(tmpdir(), "theme-partial-"));
+		const source = join(root, "maestro");
+		const destination = join(root, "frames");
+		const shots = join(source, "failed-flow", "takeScreenshot");
+		mkdirSync(shots, { recursive: true });
+		writeFileSync(
+			join(shots, "picker-mode-system.png"),
+			"captured-before-failure",
+		);
+		expect(copyThemeFrames(source, destination)).toEqual([
+			"picker-mode-system.png",
+		]);
+		expect(existsSync(join(destination, "picker-mode-system.png"))).toBe(true);
+		expect(
+			readFileSync(join(destination, "picker-mode-system.png"), "utf8"),
+		).toBe("captured-before-failure");
+		// Presence of useful partial evidence must never turn missing acceptance
+		// frames into a successful proof.
+		expect(() => collectThemeFrames(source, destination)).toThrow(
+			"missing picker-mode-light.png",
+		);
+	});
+
 	const flow = readFileSync(
 		new URL("../../e2e/maestro/theme-proof/theme-matrix.yaml", import.meta.url),
 		"utf8",

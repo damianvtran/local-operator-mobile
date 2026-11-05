@@ -469,7 +469,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * both catalogues are retained; the Android-only adapter path does not
 	 * affect the iOS theme walk. This is the combined source admission hash,
 	 * never either side's stale hash or a claim of rendered equivalence. */
-	src: "64a65b40353974f9c8635f20e75a04bdaec7b8e61e08856e1e274e82d16a5586",
+	/* Native saved-route prerequisite diagnostics only: bounded stage/request
+	 * events do not change authentication, HTTP policy, transcript geometry or
+	 * palette bytes. Recomputed with --print; the only drift is this src tree.
+	 * Historical incident, instrument and corpus pins remain untouched. This
+	 * admits instrumented source, not a native pass or old-binary equivalence. */
+	src: "4e88d9b5204dae7be5fc98ba42619ff5a6d66e96373e99e9e9f7d2407b2570c8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

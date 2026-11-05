@@ -33,9 +33,10 @@ import { randomBytes } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseSavedRouteDiagnostics } from "../../src/features/auth/saved-route-diagnostics.ts";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { probeNativeRelay } from "./native-relay-preflight.ts";
-import { collectThemeFrames } from "./theme-proof-contract.ts";
+import { collectThemeFrames, copyThemeFrames } from "./theme-proof-contract.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -352,6 +353,46 @@ async function flowRun(
 	const shots = join(ROOT, "frames", label);
 	mkdirSync(shots, { recursive: true });
 	const bundle = (receipt.installed as { bundleId: string }).bundleId;
+	// Installed React Native RCTLog.mm maps console.info to OS_LOG_TYPE_INFO,
+	// which os_log may discard unless needed. Subscribe BEFORE app launch rather
+	// than hoping a post-failure `log show` retained it. No log config is changed.
+	const nativeTrace = spawn(
+		"xcrun",
+		[
+			"simctl",
+			"spawn",
+			udid as string,
+			"log",
+			"stream",
+			"--level",
+			"info",
+			"--style",
+			"compact",
+			"--predicate",
+			'eventMessage CONTAINS "[saved-route]"',
+		],
+		{ env: childEnv, detached: true, stdio: ["ignore", "pipe", "pipe"] },
+	);
+	groups.add(nativeTrace);
+	nativeTrace.stderr?.resume(); // Drain/discard; never persist unsanitized native text.
+	const events: ReturnType<typeof parseSavedRouteDiagnostics> = [];
+	let pending = "";
+	nativeTrace.on("error", () => note("saved-route native logger unavailable"));
+	nativeTrace.stdout?.on("data", (chunk: Buffer) => {
+		pending += chunk.toString("utf8");
+		const end = pending.lastIndexOf("\n");
+		if (end >= 0) {
+			// Sanitize before retention: no raw native text is written to disk.
+			events.push(
+				...parseSavedRouteDiagnostics(pending.slice(0, end)).slice(
+					0,
+					64 - events.length,
+				),
+			);
+			pending = pending.slice(end + 1);
+		}
+		pending = pending.slice(-65536);
+	});
 	try {
 		await run(
 			`maestro-${label}`,
@@ -377,6 +418,34 @@ async function flowRun(
 	} catch (error) {
 		await captureFailure(label);
 		throw error;
+	} finally {
+		// Maestro has already captured successful earlier steps when a later
+		// prerequisite fails. Preserve them before the driver/runner is reaped;
+		// the strict collector below still refuses incomplete successful walks.
+		try {
+			const partial = copyThemeFrames(join(ROOT, "maestro", label), shots);
+			note(`preserved ${label}: ${partial.join(",")}`);
+		} catch (error) {
+			// An early driver failure may not create its output directory. Do not
+			// replace the original failure with a secondary evidence-copy error.
+			note(
+				`partial frame preservation unavailable: ${String(error).slice(0, 200)}`,
+			);
+		}
+		try {
+			await stop(nativeTrace);
+			events.push(
+				...parseSavedRouteDiagnostics(pending).slice(0, 64 - events.length),
+			);
+			receipt.savedRouteDiagnostics = events;
+			receipt.savedRouteDiagnosticsAvailable = events.length > 0;
+			writeFileSync(
+				join(ROOT, "commands", `saved-route-${label}.log`),
+				JSON.stringify(events, null, 2),
+			);
+		} catch {
+			note("saved-route diagnostic preservation unavailable");
+		}
 	}
 	const frames = collectThemeFrames(join(ROOT, "maestro", label), shots);
 	note(`collected ${label}: ${frames.join(",")}`);
