@@ -23,7 +23,18 @@ describe("direct runner-only transport XCTest", () => {
 		expect(p.test).toContain(
 			"-only-testing:TransportUITests/TransportUITests/testPairedTransport",
 		);
-		expect(p.test).toContain("-parallel-testing-enabled");
+		// Hosted42020713478 rejected -test-iterations1 before any test method.
+		// Default execution is already one selected test; repetition options are
+		// not a way to disable retries. Guard the real argument array, not text.
+		expect(
+			p.test.filter((x) => /iterations|retry|repetition|relaunch/i.test(x)),
+		).toEqual([]);
+		expect(p.test.filter((x) => x.startsWith("-only-testing:"))).toHaveLength(
+			1,
+		);
+		const serial = p.test.indexOf("-parallel-testing-enabled");
+		expect(serial).toBeGreaterThanOrEqual(0);
+		expect(p.test[serial + 1]).toBe("NO");
 		expect(p.test).not.toContain("build-for-testing");
 		expect(p.build.join(" ") + p.test.join(" ")).not.toMatch(
 			/workspace|Metro|Expo|LocalOperator\.xcodeproj/,

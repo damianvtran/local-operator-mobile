@@ -31,8 +31,6 @@ export function directXCTestPlan(project: string, udid: string, root: string) {
 			"NO",
 			"-maximum-concurrent-test-simulator-destinations",
 			"1",
-			"-test-iterations",
-			"1",
 			"-only-testing:TransportUITests/TransportUITests/testPairedTransport",
 			"test-without-building",
 		],
