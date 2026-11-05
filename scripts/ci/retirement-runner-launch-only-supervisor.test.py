@@ -137,7 +137,7 @@ class FailureClasses(unittest.TestCase):
         # A clock step backwards must refuse rather than grant a fresh budget.
         for bad in ({'jobStart': time.time() + 60, 'acquisitionMs': 0},
                     {'jobStart': time.time() - 301, 'acquisitionMs': 0},
-                    {'jobStart': time.time() - 1, 'acquisitionMs': 90001}):
+                    {'jobStart': time.time() - 1, 'acquisitionMs': 45001}):
             with self.assertRaises(ValueError):
                 api['remaining_work'](bad)
         self.assertNotIn('monotonicStart', (HERE / 'retirement-runner-launch-only-supervisor.py').read_text())

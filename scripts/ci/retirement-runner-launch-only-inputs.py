@@ -115,7 +115,9 @@ if __name__ == '__main__':
     signal.signal(signal.SIGALRM, timeout)
     try:
         mode, raw, *extra = sys.argv[1:]
-        signal.setitimer(signal.ITIMER_REAL, 90 if mode == 'acquire' else 45)
+        # 45s is the accepted acquisition ceiling AND the ceiling the supervisor
+        # admits; a longer alarm would let the two disagree about one work window.
+        signal.setitimer(signal.ITIMER_REAL, 45)
         root = Path(raw)
         if mode == 'acquire' and not extra:
             acquire(root)

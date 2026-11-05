@@ -53,13 +53,15 @@ and acquires the fixed ZIP. Expiry is checked again before native launch. No
 original-app API/preflight/download is used. Controller/native children receive
 minimal environments without account credentials.
 
-One 300-second work clock starts before acquisition: acquisition 45s,
+One 300-second work clock starts before acquisition: acquisition 45s (enforced
+by the acquisition alarm and by the supervisor's admission check, so the ledger
+below is the one the runtime applies),
 version/SDK 15s combined, static/prepare 30s, ownership 120s total with each
 command clipped to 60s, ready/next request 40s, post-denial exit 30s, plus the
 pre-launch expiry refresh capped at 10s. The ceilings sum to 290s, leaving 10s
 for interpreter start.
 
-The ownership numbers are measured, not chosen. Run 42095351919 stopped at a
+The ownership numbers are sized from a measurement, not chosen outright. Run 42095351919 stopped at a
 30s clip with nothing launched; the sibling iOS lane on the same runner image
 and head runs the identical `xcrun simctl list devices available --json` inside
 "Resolve the simulator", which took 32s (run 42080472137, 18:17:55→18:18:27Z).

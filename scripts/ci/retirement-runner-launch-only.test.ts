@@ -14,6 +14,36 @@ function credentials() {
 	};
 }
 
+describe("substep failure classes name our clock, not the tool", () => {
+	it("maps each real refusal code to the honest class", async () => {
+		const { closedStepClass } = await import(
+			"./retirement-runner-launch-only.ts"
+		);
+		const { ReplayRefused } = await import("./retirement-replay-core.ts");
+		// The executor's own signals: a spent command clip and a spent stage
+		// window are OUR clock, so labelling them `refused` would claim xcrun
+		// declined. Round 36 M-1.
+		expect(closedStepClass(new ReplayRefused("command-timeout"))).toBe(
+			"timeout",
+		);
+		expect(closedStepClass(new ReplayRefused("deadline"))).toBe("timeout");
+		expect(closedStepClass(new ReplayRefused("insufficient-window"))).toBe(
+			"timeout",
+		);
+		// Everything else stays a refusal or a mismatch, never a timeout.
+		expect(closedStepClass(new ReplayRefused("template"))).toBe("refused");
+		expect(closedStepClass(new Error("Creation intent refused"))).toBe(
+			"mismatch",
+		);
+		expect(
+			closedStepClass(
+				new Error("Created device metadata did not match intent"),
+			),
+		).toBe("mismatch");
+		expect(closedStepClass("not an error")).toBe("mismatch");
+	});
+});
+
 describe("accepted bounds are pinned, not merely documented", () => {
 	it("keeps every launch-only limit exact", async () => {
 		const { LAUNCH_LIMITS } = await import(

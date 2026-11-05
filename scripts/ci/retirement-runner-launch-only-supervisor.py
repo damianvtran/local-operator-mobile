@@ -82,7 +82,9 @@ def remaining_work(clock, now=None):
     """
     now = time.time() if now is None else now
     elapsed = now - clock['jobStart']
-    if elapsed < 0 or elapsed >= 300 or clock['acquisitionMs'] > 90000:
+    # 45s, matching LAUNCH_LIMITS.acquisition and the acquisition alarm; the
+    # three must agree or the documented 290s ledger is not the enforced one.
+    if elapsed < 0 or elapsed >= 300 or clock['acquisitionMs'] > 45000:
         raise ValueError('closed')
     return 300 - elapsed
 

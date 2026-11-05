@@ -84,7 +84,15 @@ export type Step = <T>(name: StepName, action: () => Promise<T>) => Promise<T>;
  * name — both fail closed to `timeout`/`refused` rather than leaking a message.
  */
 export function closedStepClass(error: unknown): StepClass {
-	if (error instanceof ReplayRefused) return "refused";
+	// ReplayRefused carries a CLOSED code and always the same message, so the
+	// message can never say "timeout". The executor signals a spent command clip
+	// as code `command-timeout` (retirement-replay-native.ts) and a spent stage
+	// window as `deadline`/`insufficient-window` (retirement-replay-core.ts);
+	// those ARE our clock, so they must not be recorded as a refusal by xcrun.
+	if (error instanceof ReplayRefused)
+		return /^(?:command-timeout|deadline|insufficient-window)$/.test(error.code)
+			? "timeout"
+			: "refused";
 	const message = error instanceof Error ? error.message : "";
 	return /timeout|timed out|deadline/i.test(message) ? "timeout" : "mismatch";
 }
@@ -267,25 +275,30 @@ export async function runLaunchOnly(root: string) {
 		const steps: StepRecord[] = [];
 		const step: Step = (stepName, action) => {
 			const start = performance.now();
-			return action().then(
-				(value) => {
-					steps.push({
-						name: stepName,
-						elapsedMs: Math.round(performance.now() - start),
-						ok: true,
-					});
-					return value;
-				},
-				(error: unknown) => {
-					steps.push({
-						name: stepName,
-						elapsedMs: Math.round(performance.now() - start),
-						ok: false,
-						class: closedStepClass(error),
-					});
-					throw error;
-				},
-			);
+			// Wrapped: `run` can throw synchronously (Deadline.cap -> ReplayRefused),
+			// and a silent hole in "every failure names a substep" would defeat the
+			// point of the records.
+			return Promise.resolve()
+				.then(action)
+				.then(
+					(value) => {
+						steps.push({
+							name: stepName,
+							elapsedMs: Math.round(performance.now() - start),
+							ok: true,
+						});
+						return value;
+					},
+					(error: unknown) => {
+						steps.push({
+							name: stepName,
+							elapsedMs: Math.round(performance.now() - start),
+							ok: false,
+							class: closedStepClass(error),
+						});
+						throw error;
+					},
+				);
 		};
 		try {
 			const result = await action(run, step);
