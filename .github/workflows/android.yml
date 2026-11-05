@@ -530,12 +530,35 @@ jobs:
           set -euo pipefail
           test "$(cat "$RUNNER_TEMP/sound-apk/source-sha.txt")" = "$(git rev-parse HEAD)"
           test "$(find "$RUNNER_TEMP/sound-apk" -maxdepth 1 -name '*.apk' | wc -l)" -eq 1
-      - name: Enable and preflight KVM
+      - name: Enable KVM and await permission-rule completion
+        # trigger queues events asynchronously. An immediate access predicate
+        # in the same step can race udev and gives only exit 1, not node/UID facts.
+        # Keep the established repo/GitHub rule, but bound and await completion.
         run: |
+          set -euxo pipefail
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm
+          sudo udevadm settle --timeout=10
+      - name: Prove runner-user KVM access before emulator dispatch
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/notification-sound-kvm.py --self-test
+          echo "runner user: $(id -un); groups: $(id -Gn)"
+          if [ ! -c /dev/kvm ]; then
+            echo "::error title=KVM unavailable::/dev/kvm is absent or not a character device after udev settle; a KVM-capable Linux host is required."
+            exit 1
+          fi
+          ls -l /dev/kvm
+          if [ ! -r /dev/kvm ]; then
+            echo "::error title=KVM read denied::runner user cannot read /dev/kvm after udev settle."
+            exit 1
+          fi
+          if [ ! -w /dev/kvm ]; then
+            echo "::error title=KVM write denied::runner user cannot write /dev/kvm after udev settle."
+            exit 1
+          fi
+          python3 scripts/ci/notification-sound-kvm.py
       - name: Execute the compiled framework-native tests
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
         with:
@@ -543,7 +566,7 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save -memory 1536
+          emulator-options: -accel on -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save -memory 1536
           disable-animations: true
           script: bash scripts/ci/notification-sound-android-tests.sh
       - uses: actions/upload-artifact@v7
