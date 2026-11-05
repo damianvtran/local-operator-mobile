@@ -50,6 +50,7 @@ import {
 	STAGE_B_ADD_MEDIA_SECONDS,
 	STAGE_B_HELD_RELEASE_MS,
 	STAGE_B_TIMEOUT_HOLD_MS,
+	STAGE_B_WARM_MEDIA_SECONDS,
 	stageBFrameHierarchy,
 	stageBSleep,
 	verifyStageBPostReleaseWindow,
@@ -68,6 +69,7 @@ import {
 	stageBImportWithSampling,
 	stageBMediaSampleText,
 } from "./stage-b-media-sample.ts";
+import { stageBWarmMediaLibrary } from "./stage-b-media-warmup.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -494,6 +496,35 @@ async function runStageBCoordinator(
 			throw new Error(
 				"preinstalled iOS 26 runtime missing; no SDK/runtime installation attempted",
 			);
+		// One bounded attempt OUTSIDE the timed import (42078247373): the fresh
+		// library's thumbnail rebuild stalls PhotoKit's changes transaction in an
+		// untimed CMPhoto transcode. Recorded separately; never import evidence and
+		// never fatal, so a cold or wedged library fails honestly at the timed step.
+		const warmOwnedPhotoLibrary = async (
+			owned: string,
+			evidence: Record<string, unknown>,
+		) => {
+			const witness: Record<string, unknown> = {
+				capSeconds: STAGE_B_WARM_MEDIA_SECONDS,
+				purpose: "simulator first-run thumbnail rebuild; never import evidence",
+			};
+			evidence.warmup = witness;
+			await stageBWarmMediaLibrary(
+				() =>
+					run(
+						"warm-owned-photo-library",
+						"xcrun",
+						[
+							"simctl",
+							"addmedia",
+							owned,
+							join(cwd, "design/app-icon/ios/icon-light-1024.png"),
+						],
+						STAGE_B_WARM_MEDIA_SECONDS,
+					),
+				witness,
+			);
+		};
 		const importOwnedPhoto = (
 			owned: string,
 			evidence: Record<string, unknown>,
@@ -546,6 +577,10 @@ async function runStageBCoordinator(
 				purpose: "setup prerequisite only",
 				before: await captureStageBMediaReadiness(run, owned, output, "before"),
 			};
+			await warmOwnedPhotoLibrary(
+				owned,
+				receipt.mediaReadiness as Record<string, unknown>,
+			);
 			await importOwnedPhoto(
 				owned,
 				receipt.mediaReadiness as Record<string, unknown>,
@@ -1013,6 +1048,7 @@ async function runStageBCoordinator(
 			before: await captureStageBMediaReadiness(run, udid, output, "before"),
 		};
 		receipt.mediaReadiness = mediaEvidence;
+		await warmOwnedPhotoLibrary(udid ?? "", mediaEvidence);
 		try {
 			await importOwnedPhoto(udid, mediaEvidence);
 			mediaEvidence.import = "completed";

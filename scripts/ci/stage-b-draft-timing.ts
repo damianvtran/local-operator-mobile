@@ -6,6 +6,13 @@ export const STAGE_B_FRAME_HIERARCHY_SECONDS = 180;
  * 118s (41831921831). Keep the resulting 240s cap after 41938722439 timed out:
  * diagnose Photos-service state rather than escalating this budget again. */
 export const STAGE_B_ADD_MEDIA_SECONDS = 240;
+/** 42078247373: a fresh simulator library rebuilds thumbnails inside assetsd
+ * while holding PhotoKit's changes transaction, stalling the import in an
+ * untimed CMPhoto HEIF transcode. Give that rebuild one bounded attempt of its
+ * own, OUTSIDE the timed import: 180s keeps setup-only's worst case (checkout
+ * ~4m + boot 4m + warm 3m + import 4m + diagnostics 2m + cleanup 2m) inside its
+ * 20m lease. The import cap is unchanged and the warm-up is never evidence. */
+export const STAGE_B_WARM_MEDIA_SECONDS = 180;
 /** Run 41918042114: screenshot took 10s under concurrent Maestro load.
  * Release after both serial loading frames, never later than 17s after /me;
  * production's independent 20s proof deadline remains unchanged. */

@@ -90,11 +90,11 @@ export class StageBDriverBatch {
 				// when the failure belongs to that flow's own steps. Everything
 				// succeeding in this segment proves the callback ran, so no tail
 				// step may be replayed on a lossy gate.
+				// ONLY a flow that opens its segment may be re-run: otherwise a real
+				// failure in an earlier pending flow is re-read as a lost tap, its
+				// steps are dropped and flush() wrongly resolves (review R26-1).
 				const bound = bounds.find(
-					(item) =>
-						item.retry &&
-						item.start >= segment.start &&
-						item.start < segment.start + segment.steps.length,
+					(item) => item.retry && item.start === segment.start,
 				);
 				if (!bound?.retry) throw error;
 				const decision = await bound.retry.probe();

@@ -166,6 +166,16 @@ describe("one conditional re-tap inside the driver batch", () => {
 		]);
 		expect(gated.seen).toHaveLength(1);
 	});
+	it("never retries a policy entry that does not open its segment (R26-1)", async () => {
+		const { runs, execute } = executor([1]);
+		const gated = policy(true);
+		const subject = batch(execute);
+		subject.add("pre-cert", steps("assert-cert"));
+		subject.add("connect", steps("computer-row", "composer"), gated.retry);
+		await expect(subject.flush()).rejects.toThrow("maestro flow failed");
+		expect(runs.map((run) => run.name)).toEqual(["segment-1-pre-cert"]);
+		expect(gated.seen).toEqual([]);
+	});
 	it("never probes a flow without the policy", async () => {
 		const { runs, execute } = executor([1]);
 		const subject = batch(execute);
