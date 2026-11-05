@@ -94,6 +94,9 @@ it("requires visible-keyboard geometry, empty field and paced exact-prefix ackno
 		new URL("./transport-xctest/TransportUITests.swift", import.meta.url),
 		"utf8",
 	);
+	expect(swift).not.toContain("NSStringFromCGRect");
+	expect(swift).toContain("NSCoder.string(for: field.frame)");
+	expect(swift).toContain("NSCoder.string(for: keyboard.frame)");
 	expect(swift).not.toContain("field.typeText(url)");
 	expect(swift).toContain("keyboard.frame.minY");
 	expect(swift).toContain("field.frame.maxY");

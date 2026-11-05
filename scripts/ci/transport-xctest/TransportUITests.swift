@@ -136,8 +136,8 @@ final class TransportUITests: XCTestCase {
     let keyboard = app.keyboards.firstMatch
     let actual = field.value as? String ?? ""
     let record: [String: Any] = ["stage": stage, "actual": actual, "expected": expected,
-      "exact": actual == expected, "fieldFrame": NSStringFromCGRect(field.frame),
-      "keyboardPresent": keyboard.exists, "keyboardFrame": keyboard.exists ? NSStringFromCGRect(keyboard.frame) : "absent",
+      "exact": actual == expected, "fieldFrame": NSCoder.string(for: field.frame),
+      "keyboardPresent": keyboard.exists, "keyboardFrame": keyboard.exists ? NSCoder.string(for: keyboard.frame) : "absent",
       "selectionGap": "Public XCTest field API does not expose UIKit selectedTextRange; not inferred"]
     // Original xcresult already explicitly retains synthetic fixture addresses;
     // keep exact values HERE, not in purportedly scrubbed stdout event fields.
