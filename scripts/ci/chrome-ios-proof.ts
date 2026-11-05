@@ -39,6 +39,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { collectChromeFrames, LANES } from "./chrome-ios-proof-contract.ts";
+import {
+	nativeConnectionPrerequisiteFailed,
+	probeNativeRelay,
+} from "./native-relay-preflight.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -211,6 +215,10 @@ async function startRelay(scenario: string): Promise<Slot> {
 	const name = `ccp-${scenario.replace(/[^a-z]/g, "")}-${nonce}`.slice(0, 40);
 	const host = `${name}.local`;
 	const relay = createRelay({ scenario, password, quiet: true });
+	// The historical run omitted the request ledger, so "Connected" followed
+	// by an empty saved route could not be separated into auth vs transport.
+	// The mock records only cookie presence, never its value.
+	relay.state.journalAll = true;
 	const handle = await relay.listen();
 	const origin = `http://${host}:${handle.port}`;
 	relay.state.allowedOrigins = [...(relay.state.allowedOrigins ?? []), origin];
@@ -238,6 +246,23 @@ async function startRelay(scenario: string): Promise<Slot> {
 		publisher,
 		shutdown: async () => {
 			await relay.shutdown();
+			writeFileSync(
+				join(ROOT, `relay-${scenario}-requests.json`),
+				JSON.stringify(
+					relay.state.recorded.map(
+						({ method, path, status, cookie, origin, note }) => ({
+							method,
+							path,
+							status,
+							cookie,
+							origin,
+							note,
+						}),
+					),
+					null,
+					2,
+				),
+			);
 		},
 	};
 	let resolved = false;
@@ -265,7 +290,17 @@ async function startRelay(scenario: string): Promise<Slot> {
 	const unauth = await fetch(`${origin}/api/sessions`, {
 		signal: AbortSignal.timeout(5000),
 	});
+	await unauth.arrayBuffer();
 	if (unauth.status !== 401) throw new Error("relay auth boundary failed");
+	try {
+		const preflight = await probeNativeRelay(origin, password, sessionId);
+		note(
+			`relay ${scenario} HOST preflight: ${JSON.stringify(preflight)}; native handoff not yet proven`,
+		);
+	} catch (error) {
+		await slot.shutdown();
+		throw error;
+	}
 	return slot;
 }
 
@@ -356,6 +391,11 @@ async function flow(
 	file: string,
 	cap: number,
 ) {
+	const flowLog = join(
+		ROOT,
+		"commands",
+		`${sequence + 1}-${flat(`maestro-${lane}-${file}`)}.log`,
+	);
 	try {
 		await run(
 			`maestro-${lane}-${file}`,
@@ -385,6 +425,13 @@ async function flow(
 		} catch {
 			/* best effort; never masks the real error */
 		}
+		if (
+			existsSync(flowLog) &&
+			nativeConnectionPrerequisiteFailed(readFileSync(flowLog, "utf8"))
+		)
+			throw new Error(
+				`native connection prerequisite failed: ${String(error)}`,
+			);
 		throw error;
 	}
 }
@@ -526,6 +573,11 @@ try {
 			laneReceipt.frames = collectChromeFrames(join(ROOT, "frames", lane.id));
 			laneReceipt.verdict = "CAPTURED";
 		} catch (error) {
+			// A failed initial session flow is failed connection/setup, NOT a
+			// geometry finding. Stop before fanning the same broken prerequisite
+			// out to every phone (Q163-2); finally still reaps owned resources.
+			if (String(error).includes("native connection prerequisite failed"))
+				throw error;
 			/* One lane's failure must not cost the others their frames: the record
 			 *  asks for a device matrix, and a flaky SE boot is not evidence about
 			 *  the Pro Max. The run still FAILS overall (see below). */

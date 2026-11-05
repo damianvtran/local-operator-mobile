@@ -36,6 +36,7 @@ import {
 	COMPOSER_META_ROW,
 	COMPOSER_META_TEXT,
 	footerFit,
+	inlineMetaFits,
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import { isSendKey } from "@/features/session/keyboard";
@@ -636,6 +637,27 @@ export const Composer = ({
 		insetBottom: bottomInset ?? 0,
 		keyboardVisible,
 	});
+	/* Reserve the actual control targets before folding metadata inline. If the
+	 * model floor plus effort cannot share the remainder, keep the second row:
+	 * hiding the session's sole effort route is not a valid yield (R163-3).
+	 * Use the shell width, not metaWidth, to avoid layout feedback/oscillation. */
+	const controlCount =
+		2 + (voice?.micVisible ? 1 : 0) + (controls.stopVisible ? 1 : 0);
+	const inlineMeta =
+		keyboardVisible &&
+		inlineMetaFits(
+			window.width -
+				2 * geometry.marginX -
+				16 -
+				controlCount * TOUCH_FLOOR -
+				controlCount * 2,
+			effectiveScale,
+			effortChip
+				? effortChip.kind === "loading"
+					? "effort"
+					: effortChip.text
+				: null,
+		);
 	const metaInk = useTokenColor("ink-dim");
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");
@@ -655,9 +677,9 @@ export const Composer = ({
 	const composerPad =
 		compact === null ? 8 + geometry.paddingBottom : COMPOSER_PAD;
 	/* What sits under the field and never scrolls: the controls row, plus the meta
-	 *  line when it has its own row (resting). With the keyboard up the meta rides
-	 *  the controls row, so only that one 44 pt line is reserved. */
-	const fixedRows = keyboardVisible
+	 *  line when it has its own row. With the keyboard up it only rides inline
+	 *  when model + effort targets fit; otherwise reserve the separate row too. */
+	const fixedRows = inlineMeta
 		? Math.max(TOUCH_FLOOR, receiptHeight)
 		: TOUCH_FLOOR + receiptHeight;
 	const bound = compact === null ? limit : compact.maxHeight;
@@ -918,7 +940,7 @@ export const Composer = ({
 				setReceiptHeight(Math.round(height));
 				setMetaWidth(Math.floor(width));
 			}}
-			className={keyboardVisible ? COMPOSER_META_INLINE : COMPOSER_META_ROW}
+			className={inlineMeta ? COMPOSER_META_INLINE : COMPOSER_META_ROW}
 			testID={SURFACE.composerMeta}
 		>
 			{fit.showQueued && queuedCount > 0 ? (
@@ -1208,12 +1230,12 @@ export const Composer = ({
 				>
 					{attach}
 					{mic}
-					{/* Keyboard up: the meta folds INLINE here with a zero basis (it takes
-					 *  only the leftover width), so the composer is two rows, not three. */}
-					{keyboardVisible ? receipt : null}
+					{/* Fold inline only when the model/effort targets fit the remainder;
+					 * otherwise keep their separate meta row below. */}
+					{inlineMeta ? receipt : null}
 					{actionCluster}
 				</View>
-				{keyboardVisible ? null : receipt}
+				{inlineMeta ? null : receipt}
 			</View>
 			{/* The receipt anchor `08-connection-loss-recovery` asserts after a send
 			    across a reconnect: it is the composer's own "the instruction left" mark. */}

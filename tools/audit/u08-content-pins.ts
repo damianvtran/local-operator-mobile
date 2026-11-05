@@ -469,7 +469,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
 	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
 	 * identities and the instrument/input pins are untouched. */
-	src: "f4a5a191456b7bab81312a6b146b51c78006d7822ba4f5bd3c4457744371ad22",
+	/* Round 2 R163-3 changes the actual composer fold: the elastic model is
+	 * charged at 44 pt, effort outlives optional facts, and keyboard inline falls
+	 * back to a separate meta row if the targets cannot share the controls row.
+	 * This is a new render identity, NOT retention of old geometry evidence. */
+	src: "4e436e528ead594445f61f43084dd4c85c6fca074909a459b341f89edbe0cf69",
 	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,

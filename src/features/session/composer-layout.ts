@@ -83,6 +83,17 @@ const widthOf = (text: string, scale: number): number =>
 const chipWidth = (text: string, scale: number): number =>
 	Math.max(MODEL_FLOOR_PT, widthOf(text, scale) + CHIP_PAD_PT);
 
+/** Keep the separate meta row when inline controls cannot share their targets.
+ * The width is the controls row's leftover budget, independent of meta onLayout,
+ * so falling back cannot oscillate as the row moves (R163-3). */
+export const inlineMetaFits = (
+	width: number,
+	scale: number,
+	effort: string | null,
+): boolean =>
+	width >=
+	MODEL_FLOOR_PT + (effort ? META_GAP_PT + chipWidth(effort, scale) : 0);
+
 export type FooterFacts = {
 	/** The meta line's own width, pt (measured by `onLayout`). */
 	width: number;
@@ -114,7 +125,10 @@ export type FooterFit = {
  * the two copies would drift apart and only one of them would be wrong.
  */
 export const metaNeed = (facts: FooterFacts, fit: FooterFit): number => {
-	const parts: number[] = [chipWidth(facts.model, facts.scale)];
+	/* The label is elastic: charge its target, not its natural label width.
+	 * Otherwise a long provider-qualified name evicts effort even when both
+	 * targets fit (R163-3); truncation belongs to the model's flex wrapper. */
+	const parts: number[] = [MODEL_FLOOR_PT];
 	if (fit.showEffort && facts.effort)
 		parts.push(chipWidth(facts.effort, facts.scale));
 	if (fit.showQueued && facts.queued)
@@ -135,7 +149,7 @@ export const metaNeed = (facts: FooterFacts, fit: FooterFit): number => {
 
 /**
  * Which meta facts the line can hold, in the record's yield order:
- * cost → context % → folder to glyph-only → effort → queued → folder itself.
+ * cost → context % → folder to glyph-only → queued → folder itself → effort.
  *
  * The MODEL never yields: it is the one fact that keeps a reserved 44 pt slot,
  * and every other fact leaves the line before it does. Review round 1 (R163-1)
@@ -171,26 +185,21 @@ export const footerFit = (facts: FooterFacts): FooterFit => {
 		showQueued: false,
 		showFolder: false,
 	};
+	const quiet: FooterFit = {
+		...all,
+		showCost: false,
+		showContext: false,
+		folderGlyphOnly: true,
+	};
+	// Pending facts and optional navigation yield before the session's sole
+	// effort route. Its label must not disappear merely to save queue text.
 	const steps: FooterFit[] = [
 		all,
 		{ ...all, showCost: false },
 		{ ...all, showCost: false, showContext: false },
-		{ ...all, showCost: false, showContext: false, folderGlyphOnly: true },
-		{
-			...all,
-			showCost: false,
-			showContext: false,
-			folderGlyphOnly: true,
-			showEffort: false,
-		},
-		{
-			...all,
-			showCost: false,
-			showContext: false,
-			folderGlyphOnly: true,
-			showEffort: false,
-			showQueued: false,
-		},
+		quiet,
+		{ ...quiet, showQueued: false },
+		{ ...quiet, showQueued: false, showFolder: false },
 		modelOnly,
 	];
 	return steps.find((fit) => metaNeed(facts, fit) <= facts.width) ?? modelOnly;

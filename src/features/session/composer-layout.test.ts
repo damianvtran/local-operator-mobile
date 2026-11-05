@@ -8,6 +8,7 @@ import {
 	COMPOSER_META_INLINE,
 	COMPOSER_META_ROW,
 	footerFit,
+	inlineMetaFits,
 	MODEL_FLOOR_PT,
 	metaNeed,
 } from "@/features/session/composer-layout";
@@ -31,7 +32,7 @@ const PANE = read("src/features/sessions/conversations-pane.tsx");
 const classes = (value: string) => value.split(/\s+/);
 /* Comments between the children are allowed; the ORDER is what is pinned. */
 const ACTION_ORDER =
-	/\{attach\}\s*\{mic\}[\s\S]{0,240}?\{keyboardVisible \? receipt : null\}\s*\{actionCluster\}/;
+	/\{attach\}\s*\{mic\}[\s\S]{0,240}?\{inlineMeta \? receipt : null\}\s*\{actionCluster\}/;
 
 describe("the composer's spacing constants (relay composer.spacing)", () => {
 	it("puts every control in the row 2 pt apart, and groups stop/send at the end", () => {
@@ -102,8 +103,8 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 		expect(footerFit({ ...facts, width: 2000 }).showCost).toBe(true);
 	});
 
-	it("yields cost first, then context, the folder's path, effort, queued, and the folder itself — never the model", () => {
-		const widths = [2000, 420, 380, 300, 200, 120];
+	it("yields cost first, then context, the folder's path, queued, the folder itself, and effort — never the model", () => {
+		const widths = [2000, 420, 380, 300, 200, 120, 80];
 		const fits = widths.map((width) => footerFit({ ...facts, width }));
 		// Monotone: once an item yields at a width it stays yielded below it.
 		for (let i = 1; i < fits.length; i += 1) {
@@ -116,7 +117,7 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 			if (!wide?.showFolder) expect(narrow?.showFolder).toBe(false);
 		}
 		// The order: cost goes before context, context before the folder's path,
-		// effort before queued, and queued before the folder leaves the line.
+		// queued and the folder before effort (the only session effort route).
 		const at = (pred: (f: (typeof fits)[number]) => boolean) =>
 			fits.findIndex(pred);
 		const costGone = at((f) => !f.showCost);
@@ -128,9 +129,9 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 		expect(costGone).toBeGreaterThan(0);
 		expect(contextGone).toBeGreaterThanOrEqual(costGone);
 		expect(folderGlyph).toBeGreaterThanOrEqual(contextGone);
-		expect(effortGone).toBeGreaterThanOrEqual(folderGlyph);
-		expect(queuedGone).toBeGreaterThanOrEqual(effortGone);
+		expect(queuedGone).toBeGreaterThanOrEqual(folderGlyph);
 		expect(folderGone).toBeGreaterThanOrEqual(queuedGone);
+		expect(effortGone).toBeGreaterThanOrEqual(folderGone);
 	});
 
 	it("yields the queued count and the effort — not the model — on a narrow phone with the keyboard up at 200 % (R163-1)", () => {
@@ -141,13 +142,35 @@ describe("footerFit — the meta line's yield order (record §2.2)", () => {
 		 * text and the effort chip were both `shrink-0`, so the model's wrapper — the
 		 * only elastic item — could be allocated zero, and the row's `overflow-hidden`
 		 * clipped the chip whose 44 pt slot the record promises. */
-		const fit = footerFit({ ...facts, scale: 2, width: 200 });
+		const fit = footerFit({ ...facts, scale: 2, width: 80 });
 		expect(fit.showQueued).toBe(false);
 		expect(fit.showEffort).toBe(false);
 		// Nothing else competes with the model either, so its slot is the whole line.
 		expect(fit.showFolder).toBe(false);
 		expect(fit.showCost).toBe(false);
 		expect(fit.showContext).toBe(false);
+	});
+
+	it("charges the model floor, keeping effort beside a long truncated label (R163-3)", () => {
+		const boundary = {
+			width: 361,
+			scale: 2,
+			model: "anthropic/claude-opus-4-6",
+			effort: "high",
+		};
+		const fit = footerFit(boundary);
+		expect(fit.showEffort).toBe(true);
+		expect(
+			footerFit({ ...boundary, queued: "999 queued", folder: "~/long/path" })
+				.showEffort,
+		).toBe(true);
+		// Independent arithmetic: 44 + (4 * 12 * 2 * .62 + 16) + 4.
+		expect(metaNeed(boundary, fit)).toBeCloseTo(123.52);
+		expect(inlineMetaFits(123.52, 2, "high")).toBe(true);
+		expect(inlineMetaFits(123.51, 2, "high")).toBe(false);
+		// Streaming + mic + attach + send on a 320 pt phone leaves less than
+		// this, so the component retains the separate, full-width meta row.
+		expect(inlineMetaFits(320 - 32 - 4 * 44 - 4 * 2, 2, "high")).toBe(false);
 	});
 
 	it("only keeps a fact when the fit actually fits, and always keeps the model's 44 pt slot", () => {
