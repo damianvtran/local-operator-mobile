@@ -13,7 +13,7 @@ import { useEffect } from "react";
 
 import { noteConversationPush } from "@/features/deep-links/pending";
 import {
-	ensureAndroidAlertChannel,
+	ensureAndroidSoundChannels,
 	subscribeNotificationTaps,
 } from "@/notifications/native";
 
@@ -21,10 +21,10 @@ export const useNotificationTapRouting = (): void => {
 	useEffect(() => {
 		let cancelled = false;
 		let unsubscribe: (() => void) | null = null;
-		/* The Android channel is created at first run, before any delivery could
+		/* The Android sound channels are created at app start, before any delivery could
 		 * name it (ADR 0006 §5's FCM requirement). Failure is silent by design —
-		 * see `ensureAndroidAlertChannel`. */
-		void ensureAndroidAlertChannel();
+		 * see `ensureAndroidSoundChannels`. */
+		void ensureAndroidSoundChannels();
 		void (async () => {
 			const teardown = await subscribeNotificationTaps(noteConversationPush);
 			if (cancelled) {

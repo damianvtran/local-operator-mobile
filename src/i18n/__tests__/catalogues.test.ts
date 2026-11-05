@@ -117,7 +117,7 @@ const NAMESPACES = [
 		name: "mobile.notifications",
 		messages: notifications,
 		context: notificationsContext,
-		expected: 14,
+		expected: 27,
 	},
 	{
 		name: "mobile.session",
@@ -195,7 +195,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(228);
+		expect(total).toBe(241);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
