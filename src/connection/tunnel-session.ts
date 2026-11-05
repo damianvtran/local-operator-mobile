@@ -428,8 +428,9 @@ export function needsRemint(
 	return now() - session.mintedAt >= HANDLE_REMINT_AFTER_DAYS * DAY_MS;
 }
 
-/** True when the handle is past its absolute life: only a fresh sign-in plus a
- *  re-mint can help, and the sign-in screen is the correct behaviour. */
+/** True when the handle is past its absolute life. The HANDLE cannot be extended
+ *  or refreshed, so only an authenticated re-mint through the control plane can
+ *  replace it; the owner's Radient login is untouched unless that mint refuses. */
 export function handleExpired(
 	session: TunnelSession,
 	now: () => number = () => Date.now(),
@@ -645,10 +646,10 @@ export class TunnelSessionManager {
 	async usableSession(): Promise<TunnelSession> {
 		let session = this.requireSession();
 		if (handleExpired(session, this.deps.now)) {
-			throw new TunnelSessionError(
-				"oauth",
-				"this tunnel session has expired; sign in with Radient again",
-			);
+			// Expiry ends THIS scoped handle, not the owner's Radient login. Mint
+			// through the authenticated control plane again; it rechecks ownership,
+			// tunnel version and revocation. Never extend/trust the expired handle.
+			session = await this.remint();
 		}
 		if (needsRemint(session, this.deps.now)) session = await this.remint();
 		if (grantNeedsRefresh(session, this.deps.now))

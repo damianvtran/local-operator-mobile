@@ -33,6 +33,7 @@ import {
 	type RelayResponseFactsWithHeaders,
 	TRANSPORT_SENTENCE,
 } from "../relay";
+import { resolveFetch } from "../relay/platform-fetch";
 import {
 	type CustomRoute,
 	type RouteProfile,
@@ -46,7 +47,7 @@ import type { TunnelSession } from "./tunnel-session";
 export interface RouteCredentials {
 	/** The current tunnel session, or `null` when there is none yet. Read on every
 	 *  request, never captured. */
-	tunnelSession?: () => TunnelSession | null;
+	tunnelSession?: () => TunnelSession | null | Promise<TunnelSession | null>;
 }
 
 export interface CreateRelayClientOptions extends RouteCredentials {
@@ -56,6 +57,10 @@ export interface CreateRelayClientOptions extends RouteCredentials {
 	/** Called on every response, including failures: the connection state machine
 	 *  uses it to see a `401`/`503` even from a request it did not originate. */
 	onResponse?: (facts: RelayResponseFactsWithHeaders) => void | Promise<void>;
+	/** Only the edge's explicit pre-forward401 permits ONE replay, never an
+	 * ambiguous transport failure or an arbitrary relay401 after a write. */
+	refreshTunnelSession?: () => Promise<void>;
+	assertCurrent?: () => void;
 }
 
 /** Builds the relay client for a route. */
@@ -63,13 +68,46 @@ export function createRelayClient(
 	options: CreateRelayClientOptions,
 ): RelayEndpoints {
 	const { route, tunnelSession, onResponse } = options;
+	const auth = async () =>
+		requestAuthFor(route, { grant: (await tunnelSession?.())?.grant });
+	const baseFetch = resolveFetch(options.fetchImpl);
+	const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+		options.assertCurrent?.();
+		const response = await baseFetch(input, init);
+		if (
+			route.mode !== "radient" ||
+			response.status !== 401 ||
+			!response.headers.has("x-radient-login") ||
+			!options.refreshTunnelSession
+		)
+			return response;
+		// A ReadableStream cannot be replayed. JSON, FormData and the other
+		// buffered bodies used by endpoints are reusable; never retry lost writes.
+		if (
+			typeof ReadableStream !== "undefined" &&
+			init?.body instanceof ReadableStream
+		)
+			return response;
+		options.assertCurrent?.();
+		const rejectedCookie = new Headers(init?.headers).get("cookie");
+		let currentAuth = await auth();
+		if (currentAuth.cookie === rejectedCookie)
+			await options.refreshTunnelSession();
+		options.assertCurrent?.();
+		currentAuth = await auth();
+		options.assertCurrent?.();
+		const headers = new Headers(init?.headers);
+		if (currentAuth.cookie) headers.set("cookie", currentAuth.cookie);
+		await response.body?.cancel();
+		return baseFetch(input, { ...init, headers });
+	};
 	const http = new RelayHttpClient({
 		baseUrl: routeBaseUrl(route),
 		/* The grant, and nothing else. The refresh handle is not passed at all: a
 		 * client that cannot see it here cannot send it, and the edge's transparent
 		 * refresh (which needs it) never switches on. */
-		auth: () => requestAuthFor(route, { grant: tunnelSession?.()?.grant }),
-		fetchImpl: options.fetchImpl,
+		auth,
+		fetchImpl,
 		timeoutMs: options.timeoutMs,
 		diagnostic: `relay ${route.mode}`,
 		/* No `Set-Cookie` handling on either route. On the tunnel route the app owns

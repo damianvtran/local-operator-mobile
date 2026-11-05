@@ -226,6 +226,8 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		/**389: stale account access is recoverable through its durable refresh. */
+		expiringOauth?: boolean;
 		holdToken?: boolean;
 		failStream?: boolean;
 		failLogout?: boolean;
@@ -261,6 +263,8 @@ async function relay(
 ) {
 	const events: string[] = [];
 	let failLogout = options.failLogout;
+	let oauthRefreshed = false;
+	let rejectOldGrant = false;
 	const loginReceived = deferred();
 	const tokenReceived = deferred();
 	const releaseLogin = deferred();
@@ -299,7 +303,25 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.expiringOauth) {
+			oauthRefreshed = true;
+			json({
+				access_token: "synthetic-renewed-oauth",
+				refresh_token: "synthetic-renewed-refresh",
+				expires_in: 3600,
+				token_type: "Bearer",
+			});
+			return;
+		}
 		if (path === "/v1/tunnels") {
+			if (
+				options.expiringOauth &&
+				oauth.expires_at < Date.now() &&
+				!oauthRefreshed
+			) {
+				json({ error: "access expired" }, 401);
+				return;
+			}
 			tunnelsReceived.resolve();
 			if (options.holdTunnels) await releaseTunnels.promise;
 			if (holdNext) {
@@ -334,6 +356,27 @@ async function relay(
 				msg: "Authorization code created",
 				result: { code: `synthetic-code-${++codeCount}` },
 			});
+			return;
+		}
+		if (path === "/v1/tunnels/session/refresh") {
+			json({
+				access_token: `synthetic-grant-${++tokenCount}`,
+				refresh_token: "synthetic-handle-1",
+				expires_in: 300,
+				refresh_expires_in: 2592000,
+			});
+			return;
+		}
+		if (
+			path.startsWith("/api/") &&
+			rejectOldGrant &&
+			(request.headers.cookie ?? "").includes("synthetic-grant-1")
+		) {
+			response.writeHead(401, {
+				"content-type": "application/json",
+				"x-radient-login": "/login",
+			});
+			response.end(JSON.stringify({ detail: "grant expired" }));
 			return;
 		}
 		if (path === "/v1/tunnels/session/token") {
@@ -524,6 +567,9 @@ async function relay(
 		releaseTunnels,
 		codeReceived,
 		releaseCode,
+		expireGrant: () => {
+			rejectOldGrant = true;
+		},
 		answerTunnels: (answer: "list" | 500 | 401) => {
 			tunnelsAnswer = answer;
 		},
@@ -2016,6 +2062,51 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		);
 		expect(connectionStore.getState().discoveryFailure).toBeNull();
 		expect(ids()).toEqual(listed);
+	});
+
+	it("389 renews a five-minute live grant before the next real relay request", async () => {
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		mock.expireGrant();
+		const now = Date.now();
+		const clock = vi.spyOn(Date, "now").mockReturnValue(now + 301_000);
+		try {
+			await act(async () => {
+				await latest.refreshList();
+			});
+			expect(
+				mock.events.filter((e) => e === "POST /v1/tunnels/session/refresh"),
+			).toHaveLength(1);
+			expect(connectionStore.getState().phase).toBe("live");
+			expect(connectionStore.getState().surface).not.toBe("sign-in");
+		} finally {
+			clock.mockRestore();
+		}
+	});
+
+	it("389 renews expired account access before discovery instead of deleting its still-valid refresh", async () => {
+		const previous = { ...oauth };
+		try {
+			oauth.refresh = "synthetic-durable-refresh";
+			const mock = await signedIn({ expiringOauth: true });
+			oauth.expires_at = Date.now() - 1;
+			await act(async () => {
+				await latest.refreshComputers();
+			});
+			expect(
+				mock.events.filter((e) => e === "POST /v1/auth/oauth/token"),
+			).toHaveLength(1);
+			expect(ids()).toEqual(listed);
+			expect(connectionStore.getState().surface).not.toBe("sign-in");
+			expect(durable.oauth?.refresh).toBe("synthetic-renewed-refresh");
+		} finally {
+			Object.assign(oauth, previous);
+		}
 	});
 
 	it("clears the rows when Radient refuses the grant (R1-m1)", async () => {

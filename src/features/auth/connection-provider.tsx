@@ -54,12 +54,16 @@ import {
 	discoverComputers,
 	type RadientTokens,
 	type RouteProfile,
-	refreshRadientTokens,
 	TunnelSessionError,
 	TunnelSessionManager,
 	validateCustomBaseUrl,
 	validateRadientHostname,
 } from "@/connection";
+import {
+	accessTokenNeedsRefresh,
+	RadientAuthError,
+} from "@/connection/radient-oauth";
+import { createRadientRefresher } from "@/connection/radient-refresh";
 import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
@@ -393,6 +397,8 @@ export const ConnectionProvider = ({
 	const streamRef = useRef<RelayStream | null>(null);
 	const configRef = useRef<ConfigStreamHandle | null>(null);
 	const tokensRef = useRef<RadientTokens | null>(null);
+	const refreshAccountTokens = useRef(createRadientRefresher()).current;
+	const pendingOauthWrite = useRef<RadientTokens | null>(null);
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
 	// Readiness is withdrawn before remote revocation. Keep the unresolved
@@ -871,6 +877,59 @@ export const ConnectionProvider = ({
 		[beginRoute, goLive, noteError, retireAuthorization, revokeAuthorization],
 	);
 
+	// Account access and the five-minute tunnel grant have independent lives.
+	// Renew in place: retiring authorization here would quarantine drafts and end
+	// a perfectly valid route. Only a confirmed terminal refresh refusal may do so.
+	const usableOauth = useCallback(
+		async (
+			force = false,
+			rejectedAccess?: string,
+		): Promise<RadientTokens | null> => {
+			const initial = tokensRef.current;
+			if (!initial) return null;
+			let current = initial;
+			if (
+				(force && (!rejectedAccess || initial.access === rejectedAccess)) ||
+				accessTokenNeedsRefresh(initial)
+			) {
+				const renewed = await refreshAccountTokens(initial);
+				if (tokensRef.current !== initial && tokensRef.current !== renewed)
+					throw new SignInSupersededError();
+				if (
+					initial.account_id &&
+					renewed.account_id &&
+					initial.account_id !== renewed.account_id
+				)
+					throw new SignInSupersededError();
+				tokensRef.current = renewed;
+				pendingOauthWrite.current = renewed;
+				current = renewed;
+			}
+			if (pendingOauthWrite.current === current) {
+				const revision = startupAuthorizationLifecycle.getRevision();
+				// Persisting the rotation is BEST-EFFORT, exactly as in `radient-restore`:
+				// a keystore write that fails says this DEVICE could not record the
+				// grant, not that the grant is bad. Keep the rotated token in memory and
+				// leave the retry armed, so the next consumer retries THIS write rather
+				// than spending the single-use handle a second time.
+				try {
+					await startupAuthorizationLifecycle.runIfCurrent(revision, () =>
+						writeStoredOauth(current),
+					);
+					if (pendingOauthWrite.current === current)
+						pendingOauthWrite.current = null;
+				} catch {
+					/* The rotated token still works for this run. */
+				}
+			}
+			// A newer rotation, sign-in or route ended this one: stop rather than
+			// publish rows for an account this route no longer owns.
+			if (tokensRef.current !== current) throw new SignInSupersededError();
+			return current;
+		},
+		[refreshAccountTokens],
+	);
+
 	const refreshComputers = useCallback(async () => {
 		/* Discovery answers an ACCOUNT question before a tunnel exists. The store's
 		 * phases describe a route, so the in-flight flag lives beside it instead of
@@ -878,12 +937,47 @@ export const ConnectionProvider = ({
 		const pass = ++discoveryPassRef.current;
 		setDiscovering(true);
 		const revision = startupAuthorizationLifecycle.getRevision();
-		const tokens = tokensRef.current;
 		const isCurrent = () =>
 			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);
-		const result = await discoverComputers({
-			accessToken: async () => tokens?.access ?? null,
-		});
+		let result: Awaited<ReturnType<typeof discoverComputers>>;
+		try {
+			const tokens = await usableOauth();
+			if (!isCurrent()) return;
+			result = await discoverComputers({
+				accessToken: async () => tokens?.access ?? null,
+			});
+			// A resource401 alone is not revocation: the server clock or access
+			// invalidation can outrun our local expiry. Judge a refresh first.
+			if (result.kind === "unauthorized" && tokens?.refresh && isCurrent()) {
+				const renewed = await usableOauth(true, tokens.access);
+				if (!isCurrent()) return;
+				result = await discoverComputers({
+					accessToken: async () => renewed?.access ?? null,
+				});
+			}
+		} catch (error) {
+			if (!isCurrent() || error instanceof SignInSupersededError) return;
+			if (
+				error instanceof RadientAuthError &&
+				error.failure === "invalid_grant"
+			) {
+				result = { kind: "unauthorized" };
+			} else if (
+				error instanceof RadientAuthError &&
+				error.failure === "network"
+			) {
+				// Nothing was learned about the grant, so the credential stays.
+				result = {
+					kind: "unreachable",
+					message:
+						"Radient could not be reached. Check this device's connection.",
+				};
+			} else {
+				// Not ours to judge as a grant verdict: report it as the refusal it is
+				// instead of deleting a credential nothing has been said about.
+				throw error;
+			}
+		}
 		try {
 			if (!isCurrent()) return;
 			switch (result.kind) {
@@ -940,7 +1034,7 @@ export const ConnectionProvider = ({
 			if (mountedRef.current && pass === discoveryPassRef.current)
 				setDiscovering(false);
 		}
-	}, [revokeAuthorization]);
+	}, [revokeAuthorization, usableOauth]);
 
 	const signInWithRadient = useCallback(async () => {
 		signInAbortRef.current?.abort();
@@ -1066,7 +1160,7 @@ export const ConnectionProvider = ({
 					if (admission.isCurrent())
 						await revokeAuthorization(clearStoredOauth);
 				},
-				refresh: (tokens) => refreshRadientTokens(tokens),
+				refresh: (tokens) => refreshAccountTokens(tokens),
 				discover: async (tokens) => {
 					if (admission.isCurrent()) tokensRef.current = tokens;
 				},
@@ -1082,7 +1176,7 @@ export const ConnectionProvider = ({
 					: null,
 			};
 		},
-		[revokeAuthorization],
+		[revokeAuthorization, refreshAccountTokens],
 	);
 
 	const selectComputer = useCallback(
@@ -1129,7 +1223,35 @@ export const ConnectionProvider = ({
 				);
 				if (!admission.isCurrent()) return;
 				const manager = new TunnelSessionManager({
-					oauthAccessToken: async () => tokensRef.current?.access ?? null,
+					oauthAccessToken: async () => {
+						if (!admission?.isCurrent())
+							throw new TunnelSessionError(
+								"rejected",
+								"Connection route ended",
+							);
+						try {
+							const tokens = await usableOauth();
+							if (!admission.isCurrent())
+								throw new TunnelSessionError(
+									"rejected",
+									"Connection route ended",
+								);
+							return tokens?.access ?? null;
+						} catch (error) {
+							if (!admission.isCurrent())
+								throw new TunnelSessionError(
+									"rejected",
+									"Connection route ended",
+								);
+							throw new TunnelSessionError(
+								error instanceof RadientAuthError &&
+									error.failure === "invalid_grant"
+									? "oauth"
+									: "network",
+								"Radient credentials could not be renewed",
+							);
+						}
+					},
 					initial: adopted,
 					/* Every mutation of the session is written through, so a crash mid-flow
 					 *  cannot leave the store behind the manager. */
@@ -1149,7 +1271,35 @@ export const ConnectionProvider = ({
 				if (!admission.isCurrent()) return;
 				const client = createRelayClient({
 					route,
-					tunnelSession: () => manager.current,
+					tunnelSession: async () => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+						try {
+							const session = await manager.usableSession();
+							if (!admission.isCurrent())
+								throw new RelayError("rejected", "Connection route ended");
+							return session;
+						} catch (error) {
+							if (error instanceof TunnelSessionError)
+								throw tunnelSessionRelayError(error);
+							throw error;
+						}
+					},
+					refreshTunnelSession: async () => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+						try {
+							await manager.refresh();
+						} catch (error) {
+							if (error instanceof TunnelSessionError)
+								throw tunnelSessionRelayError(error);
+							throw error;
+						}
+					},
+					assertCurrent: () => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+					},
 					onResponse: (facts) => {
 						/* The edge's own 401 (with `X-Radient-Login`) is the re-auth
 						 * signal; the connection layer types it as `sign-in`, and this
@@ -1198,7 +1348,14 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, loadStoredRadient, noteError, revokeAuthorization],
+		[
+			beginRoute,
+			goLive,
+			loadStoredRadient,
+			noteError,
+			revokeAuthorization,
+			usableOauth,
+		],
 	);
 
 	const refreshList = useCallback(async () => {
@@ -1454,7 +1611,7 @@ export const ConnectionProvider = ({
 			clearOauth: async () => {
 				if (isCurrent()) await revokeAuthorization(clearStoredOauth);
 			},
-			refresh: (tokens) => refreshRadientTokens(tokens),
+			refresh: (tokens) => refreshAccountTokens(tokens),
 			discover: async (tokens) => {
 				if (!isCurrent()) return;
 				tokensRef.current = tokens;
@@ -1481,7 +1638,7 @@ export const ConnectionProvider = ({
 		if (outcome.refusal.surface === "retry") {
 			retryRef.current = () => restoreRef.current();
 		}
-	}, [refreshComputers, revokeAuthorization]);
+	}, [refreshComputers, revokeAuthorization, refreshAccountTokens]);
 
 	/* The restore function is stable (its only dependency is `refreshComputers`), but
 	 *  the retry it publishes must call the latest one, and the two would otherwise
