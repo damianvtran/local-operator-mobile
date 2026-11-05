@@ -88,7 +88,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Fail-closed prerequisite and full-evidence negative controls
-        run: pnpm exec vitest run scripts/ci/stage-b-setup-only.test.ts --maxWorkers=1 --bail 1
+        run: pnpm exec vitest run scripts/ci/stage-b-setup-only.test.ts scripts/ci/stage-b-media-sample.test.ts --maxWorkers=1 --bail 1
       - name: Existing hosted runtime boot and media prerequisite only
         run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts
       - uses: actions/upload-artifact@v7

@@ -55,6 +55,11 @@ import {
 	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing.ts";
 import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
+import {
+	STAGE_B_MEDIA_SAMPLE_MAX_OUTPUT,
+	stageBImportWithSampling,
+	stageBMediaSampleText,
+} from "./stage-b-media-sample.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -325,8 +330,13 @@ async function runStageBCoordinator(
 		args: string[],
 		seconds = 120,
 		cleanup = false,
+		diagnostic?: { signal: AbortSignal; maxOutput: number },
 	): Promise<string> =>
 		new Promise((done, reject) => {
+			if (diagnostic?.signal.aborted) {
+				reject(new Error("diagnostic cancelled"));
+				return;
+			}
 			if (stopping && !cleanup) {
 				reject(new Error("proof interrupted"));
 				return;
@@ -340,11 +350,20 @@ async function runStageBCoordinator(
 				stdio: ["ignore", "pipe", "pipe"],
 			});
 			children.add(child);
+			// An import finishing cancels only its diagnostic child group. Never
+			// extend the import deadline or wait on a sampler during cleanup.
+			const cancelDiagnostic = () => reap(child);
+			diagnostic?.signal.addEventListener("abort", cancelDiagnostic, {
+				once: true,
+			});
 			let bytes = "";
 			let timedOut = false;
 			let overflow = false;
 			const append = (chunk: Buffer) => {
-				if (bytes.length + chunk.length > 16 * 1024 * 1024) {
+				if (
+					bytes.length + chunk.length >
+					(diagnostic?.maxOutput ?? 16 * 1024 * 1024)
+				) {
 					overflow = true;
 					reap(child);
 				} else bytes += chunk.toString();
@@ -356,17 +375,19 @@ async function runStageBCoordinator(
 				reap(child);
 			}, seconds * 1000);
 			child.once("error", (error) => {
+				diagnostic?.signal.removeEventListener("abort", cancelDiagnostic);
 				clearTimeout(timer);
 				children.delete(child);
 				reject(error);
 			});
 			child.once("close", (rc) => {
+				diagnostic?.signal.removeEventListener("abort", cancelDiagnostic);
 				clearTimeout(timer);
 				// Reap descendants even after a successful leader exit. A completed
 				// utility is not permission to leave its child process group behind.
 				reap(child);
 				children.delete(child);
-				const safe = redact(bytes);
+				const safe = diagnostic ? stageBMediaSampleText(bytes) : redact(bytes);
 				writeFileSync(
 					join(
 						output,
@@ -465,6 +486,32 @@ async function runStageBCoordinator(
 			throw new Error(
 				"preinstalled iOS 26 runtime missing; no SDK/runtime installation attempted",
 			);
+		const importOwnedPhoto = (
+			owned: string,
+			evidence: Record<string, unknown>,
+		) =>
+			stageBImportWithSampling(
+				() =>
+					run(
+						"add-owned-photo",
+						"xcrun",
+						[
+							"simctl",
+							"addmedia",
+							owned,
+							join(cwd, "design/app-icon/ios/icon-light-1024.png"),
+						],
+						STAGE_B_ADD_MEDIA_SECONDS,
+					),
+				(name, command, args, seconds, signal) =>
+					run(name, command, args, seconds, false, {
+						signal,
+						maxOutput: STAGE_B_MEDIA_SAMPLE_MAX_OUTPUT,
+					}),
+				owned,
+				output,
+				evidence,
+			);
 		const bootOwned = async (name: string) => {
 			udid = await run("create-owned-simulator", "xcrun", [
 				"simctl",
@@ -491,16 +538,9 @@ async function runStageBCoordinator(
 				purpose: "setup prerequisite only",
 				before: await captureStageBMediaReadiness(run, owned, output, "before"),
 			};
-			await run(
-				"add-owned-photo",
-				"xcrun",
-				[
-					"simctl",
-					"addmedia",
-					owned,
-					join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-				],
-				STAGE_B_ADD_MEDIA_SECONDS,
+			await importOwnedPhoto(
+				owned,
+				receipt.mediaReadiness as Record<string, unknown>,
 			);
 			receipt.status = "SETUP_ONLY_PASS";
 			return; // finally still reaps/deletes; cleanup failure rejects this run.
@@ -869,17 +909,7 @@ async function runStageBCoordinator(
 		};
 		receipt.mediaReadiness = mediaEvidence;
 		try {
-			await run(
-				"add-owned-photo",
-				"xcrun",
-				[
-					"simctl",
-					"addmedia",
-					udid,
-					join(cwd, "design/app-icon/ios/icon-light-1024.png"),
-				],
-				STAGE_B_ADD_MEDIA_SECONDS,
-			);
+			await importOwnedPhoto(udid, mediaEvidence);
 			mediaEvidence.import = "completed";
 		} catch (error) {
 			mediaEvidence.import = "failed";

@@ -1,0 +1,106 @@
+{
+	"schema": 1,
+	"default": "soft-pulse",
+	"sounds": [
+		{
+			"id": "soft-pulse",
+			"file": "soft_pulse.wav",
+			"sha256": "96b1dbe474c194f5e31b1c476c827b9668e95a52ab0f294bebec10059c79c902",
+			"bytes": 146456,
+			"duration_s": 0.83,
+			"channels": 2,
+			"source_file": "soft-pulse.flac",
+			"source_sha256": "78325beb9e6b8adb18e4d5a53cd3281f10053d542baa9441b02bf5792526167d"
+		},
+		{
+			"id": "two-note-chime",
+			"file": "two_note_chime.wav",
+			"sha256": "7ad1608e154303c7489041ac0c407c732bb3c45de9f436eba01e40c1e1c63782",
+			"bytes": 76778,
+			"duration_s": 0.87,
+			"channels": 1,
+			"source_file": "two-note-chime.flac",
+			"source_sha256": "89de6aec38ffeb31ca205f5d23c9fee1a475b5fbc2c7cb67ba019f758de2de3c"
+		},
+		{
+			"id": "felt-marimba",
+			"file": "felt_marimba.wav",
+			"sha256": "648cd7ab539b69904badbf995552a767c08d68a4a380b270a4d548a9bc5514b8",
+			"bytes": 188792,
+			"duration_s": 1.07,
+			"channels": 2,
+			"source_file": "felt-marimba.flac",
+			"source_sha256": "68b7d8dbd6db5d7add7c6892c1d427906872c0da0d6119b2d642ee83118dc14e"
+		},
+		{
+			"id": "hum-swell",
+			"file": "hum_swell.wav",
+			"sha256": "0456e16d48986e4f690590f7e30fd202fac110786decfb8a2b1cc5bbc4796227",
+			"bytes": 128816,
+			"duration_s": 1.46,
+			"channels": 1,
+			"source_file": "hum-swell.flac",
+			"source_sha256": "462481e00cace80418c5a4731b28db11ba943ae6781490a76c9e978539ec161c"
+		},
+		{
+			"id": "task-complete",
+			"file": "task_complete.wav",
+			"sha256": "34d067496908041e88786f04b8987a5cb5c30ae5683137bcf67ede629728da05",
+			"bytes": 130580,
+			"duration_s": 1.48,
+			"channels": 1,
+			"source_file": "task-complete.flac",
+			"source_sha256": "936709d5020d5a4eb3fbbc768481d76ef204437287253da0d0157c8ad6fe50e4"
+		},
+		{
+			"id": "signal-handshake",
+			"file": "signal_handshake.wav",
+			"sha256": "75be4a264037ab17d2e141f4b66b1bb7810285f53a74b55b85b55659949a3e85",
+			"bytes": 44584,
+			"duration_s": 0.505,
+			"channels": 1,
+			"source_file": "signal-handshake.flac",
+			"source_sha256": "e5c75d33fe896d3789f8c09147472c50c208baa4f57356403c3faf72bcf48b9f"
+		},
+		{
+			"id": "tape-warble",
+			"file": "tape_warble.wav",
+			"sha256": "a8d74fa6b03912dd331bd912294a417de03b64f98ef8a0fea9f8c5b524dc8ae2",
+			"bytes": 70162,
+			"duration_s": 0.795,
+			"channels": 1,
+			"source_file": "tape-warble.flac",
+			"source_sha256": "2fca7757e46cc4e1281951aacb623727f54e7442a215d6a277f4b6e42b193640"
+		},
+		{
+			"id": "bubble-chord",
+			"file": "bubble_chord.wav",
+			"sha256": "5b8d4bdfe6d029512cceb4e6660873171919694fb482d88f27368878572158d1",
+			"bytes": 60902,
+			"duration_s": 0.69,
+			"channels": 1,
+			"source_file": "bubble-chord.flac",
+			"source_sha256": "b51c4a518c749270053d2a40a32c59a6d87302f79ea141a01291b8c33d56b19c"
+		},
+		{
+			"id": "airy-whistle",
+			"file": "airy_whistle.wav",
+			"sha256": "3b86608eb6b7f252b1938ca3e986006dd9a00406abe8408e8e8a3d9910633995",
+			"bytes": 48112,
+			"duration_s": 0.545,
+			"channels": 1,
+			"source_file": "airy-whistle.flac",
+			"source_sha256": "f80002aba3a7b9060933127b2809c8e908c5a98566fe68385b33f1a9f2e6d711"
+		},
+		{
+			"id": "bubble-pulse",
+			"file": "bubble_pulse.wav",
+			"sha256": "66be2a9a3d6556289d8ea852d2a78f092c1e5a133ec4ea995ac2100a83eceb8a",
+			"bytes": 26062,
+			"duration_s": 0.295,
+			"channels": 1,
+			"source_file": "bubble-pulse.flac",
+			"source_sha256": "dd3ed66a29762e763471e244fd29d71768747ab1f1ea5a44dd7ff5c5bb6004ec"
+		}
+	]
+}

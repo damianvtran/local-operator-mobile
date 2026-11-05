@@ -453,7 +453,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
 	 * style, token, corpus or instrument input changes. Historical pins retained. */
-	src: "22d40c45a2f98c1515653d9df52939efe1f384883d6eb905f0c64b9cc70e42d2",
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's Android OAuth change above): the Android
+	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
+	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
+	 * is rendered on the web target: channels are created only on Android, and
+	 * the keys are read only by that call. No transcript/corpus/instrument
+	 * change; historical pins retained. */
+	src: "cc420536ea3e94e0f016021caa2225085da51b8c1e1afb3681497765a509064f",
 	// Proof-entry-only bounded route tracing; ordinary app/U08 custom-relay graph unchanged.
 	// PR #156 recovery/reauth fencing converged with #158 durable sign-in; re-derived on the merged tree.
 	// Proof-bootstrap/transport diagnostic drift is CI-only; ordinary entry/U08 subject unchanged.
@@ -463,6 +470,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// First-choice picker latch/test reprinted with --print; U08 never opens Attach; idle JSX/layout unchanged (source judgment).
 	// Optional U1 early-busy wiring removed: app/owner/Composer bytes restored to 2d443c54; src pin includes remount tests. No U08 geometry change claimed.
 	// PR #156 convergence with 79a246f4: --print on the combined tree; historical identities unchanged.
+	// PR #156 + #162: combined-tree --print; pending stack diagnostics do not enter U08.
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -475,8 +483,12 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
+	// Deliberate --print re-pin (notification sounds, M1): only the
+	// expo-notifications plugin's native `sounds:` list was added; it copies
+	// files into the iOS bundle and Android res/raw and is not a U-08 web layout
+	// or rendered-geometry input.
 	"app.config.ts":
-		"8ce01f109064e71382d1d5fdc4b98bfaf6bc6a5b36281d3574d12a157722c1d1",
+		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

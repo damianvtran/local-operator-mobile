@@ -29,9 +29,16 @@
 
 import { Platform } from "react-native";
 import type { ConversationPush } from "@/features/deep-links/pending";
+import { type NoParamKey, t } from "@/i18n";
 import { conversationPushFromResponse } from "@/notifications/payload";
 import type { PushAvailability } from "@/notifications/permission";
 import { availabilityFromStatus } from "@/notifications/permission";
+import {
+	type BuiltinSoundId,
+	LEGACY_ALERT_CHANNEL_ID,
+	type SoundChannelLabel,
+	soundChannelSpecs,
+} from "@/notifications/sound-catalog";
 
 type NotificationsModule = typeof import("expo-notifications");
 
@@ -85,30 +92,77 @@ export async function requestPermission(): Promise<PushAvailability> {
 	}
 }
 
+/** The localised name of one sound channel. Read at call time (not at module
+ *  load) so the reader's current language is the one the channel is created
+ *  with — see `src/i18n/runtime.ts` on why copy is never frozen at import. */
+const soundChannelName = (label: SoundChannelLabel): string => {
+	if (label.kind === "system") return t("mobile.notifications.channel.system");
+	if (label.kind === "silent") return t("mobile.notifications.channel.silent");
+	return t(BUILTIN_CHANNEL_NAME_KEYS[label.id]);
+};
+
+/* A table rather than a template-built key, so `tsc` checks every key exists
+ * and `check-strings` can see each one. */
+const BUILTIN_CHANNEL_NAME_KEYS = {
+	"soft-pulse": "mobile.notifications.channel.soft_pulse",
+	"two-note-chime": "mobile.notifications.channel.two_note_chime",
+	"felt-marimba": "mobile.notifications.channel.felt_marimba",
+	"hum-swell": "mobile.notifications.channel.hum_swell",
+	"task-complete": "mobile.notifications.channel.task_complete",
+	"signal-handshake": "mobile.notifications.channel.signal_handshake",
+	"tape-warble": "mobile.notifications.channel.tape_warble",
+	"bubble-chord": "mobile.notifications.channel.bubble_chord",
+	"airy-whistle": "mobile.notifications.channel.airy_whistle",
+	"bubble-pulse": "mobile.notifications.channel.bubble_pulse",
+} as const satisfies Record<BuiltinSoundId, NoParamKey>;
+
 /**
- * Creates the Android alert channel at first run.
+ * Creates the twelve Android sound channels at app start: `sound.<id>` for
+ * each bundled sound, `sound.default` (the phone's own default sound) and the
+ * silent `sound.none` (`sound-catalog.ts` explains the set).
  *
  * FCM requires `channel_id` to name a channel the app has ALREADY created or
  * the message falls back to a default channel (ADR 0006 §5, quoted from
- * Firebase's docs) — so this runs at app start, not at delivery time. The id
- * is `"default"`, which is also what Expo's own tooling treats as the base
- * channel; a per-class channel vocabulary is the cloud payload's contract to
- * name (S7) and is deliberately not invented here.
+ * Firebase's docs) — so this runs at app start, not at delivery time, and the
+ * cloud names one of these per push from `data.sound`.
+ *
+ * Re-running is safe and cheap: Android keeps an existing channel's sound and
+ * importance (the user owns those once the channel exists) and only updates
+ * its name and description, which is what lets a language change rename the
+ * channels on the next start.
+ *
+ * Each channel is created independently, so one failure (a sound file missing
+ * from a build that did not run the plugin) does not take the other eleven
+ * with it. The pre-sound `"default"` channel is deleted: no push ever named it
+ * (S7 is unbuilt), and leaving it would put a channel in the system settings
+ * that nothing posts to.
  */
-export async function ensureAndroidAlertChannel(): Promise<void> {
+export async function ensureAndroidSoundChannels(): Promise<void> {
 	if (Platform.OS !== "android") return;
 	const module = await loadNotifications();
 	if (module === null) return;
+	const description = t("mobile.notifications.channel.description");
+	for (const spec of soundChannelSpecs()) {
+		try {
+			await module.setNotificationChannelAsync(spec.id, {
+				name: soundChannelName(spec.label),
+				description,
+				importance: module.AndroidImportance.DEFAULT,
+				// An absent `sound` key is the system default sound; `null` is
+				// silence; a file name plays that `res/raw` resource. The key is
+				// only set when the spec sets it, so `sound.default` stays default.
+				...(spec.sound === undefined ? {} : { sound: spec.sound }),
+			});
+		} catch {
+			/* A channel that cannot be created is not a state the reader can act
+			 * on; a push naming it falls back to the platform default, which is
+			 * the documented FCM behaviour for an unknown channel_id. */
+		}
+	}
 	try {
-		await module.setNotificationChannelAsync("default", {
-			name: "Alerts",
-			description: "Turn completions and other alerts from Local Operator.",
-			importance: module.AndroidImportance.DEFAULT,
-		});
+		await module.deleteNotificationChannelAsync(LEGACY_ALERT_CHANNEL_ID);
 	} catch {
-		/* A channel that cannot be created is not a state the reader can act on;
-		 * delivery falls back to the platform default, which is the documented
-		 * FCM behaviour for an unknown channel_id. */
+		/* Absent already, or the platform refused: either way nothing posts to it. */
 	}
 }
 
