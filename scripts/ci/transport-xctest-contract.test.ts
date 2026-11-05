@@ -98,6 +98,18 @@ it("requires visible-keyboard geometry, empty field and paced exact-prefix ackno
 	expect(swift).toContain("NSCoder.string(for: field.frame)");
 	expect(swift).toContain("NSCoder.string(for: keyboard.frame)");
 	expect(swift).not.toContain("field.typeText(url)");
+	expect(swift).not.toContain("for _ in 0..<6");
+	expect(swift).not.toContain("keyboard.frame.minY - app.frame.minY - 24");
+	expect(swift).toContain(
+		'app.scrollViews.containing(.textField, identifier: "custom-url-field")',
+	);
+	expect(swift).toContain('"gesture-before"');
+	expect(swift).toContain('"gesture-after"');
+	expect(swift).toContain("start.y < visibleKeyboardTop");
+	expect(swift).toContain(
+		"No vertical field movement after the ONE app-content drag",
+	);
+	expect(swift.match(/\.press\(forDuration:/g)).toHaveLength(1);
 	expect(swift).toContain("keyboard.frame.minY");
 	expect(swift).toContain("field.frame.maxY");
 	expect(swift).toContain("for character in url");

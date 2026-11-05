@@ -91,27 +91,38 @@ final class TransportUITests: XCTestCase {
     field.tap()
     let keyboard = app.keyboards.firstMatch
     XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "Keyboard must actually appear")
-    var aboveKeyboard = false
-    for _ in 0..<6 {
-      if !keyboard.exists {
-        XCTAssertTrue(field.isHittable, "Field must remain reachable before refocusing")
-        field.tap()
-        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "Keyboard disappeared during field positioning")
-      }
-      if field.isHittable && field.frame.maxY < keyboard.frame.minY - 8 {
-        aboveKeyboard = true
-        break
-      }
-      // Drag the REAL scroll surface above the keyboard, not the keyboard or
-      // the occluded field. Re-query actual geometry after each bounded drag.
-      let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-      let bottom = keyboard.frame.minY - app.frame.minY - 24
-      let top: CGFloat = 150
-      XCTAssertGreaterThan(bottom - top, 44, "No safe scroll band above keyboard")
-      origin.withOffset(CGVector(dx: 0, dy: bottom)).press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: 0, dy: top)))
+    let scrolls = app.scrollViews.containing(.textField, identifier: "custom-url-field")
+    XCTAssertEqual(scrolls.count, 1, "Require the unique app scroll container owning the field")
+    let scroll = scrolls.firstMatch
+    XCTAssertTrue(scroll.exists && scroll.isHittable, "Actual owning ScrollView must be reachable")
+    var visibleKeyboardTop = keyboardOcclusionTop(keyboard)
+    if !(field.isHittable && field.frame.maxY < visibleKeyboardTop - 8) {
+      // QA42031766877 proved keyboard.minY-24 hit the system Passwords bar.
+      // Choose app-owned, nonselectable prose INSIDE this scroll container;
+      // one measured gesture only, never six unchanged application drags.
+      let note = scroll.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Free and needs no account")).firstMatch
+      XCTAssertTrue(note.exists && note.isHittable, "Require visible app-owned Cloudflare prose")
+      let start = CGPoint(x: note.frame.midX, y: note.frame.midY)
+      let end = CGPoint(x: start.x, y: max(scroll.frame.minY + 24, app.frame.minY + 200))
+      XCTAssertTrue(scroll.frame.contains(start) && scroll.frame.contains(end) && start.y < visibleKeyboardTop - 16 && end.y < start.y - 44, "Gesture must stay in real app content above the visible accessory")
+      let before = field.frame
+      let geometry: [String: Any] = ["scrollFrame": NSCoder.string(for: scroll.frame),
+        "targetFrame": NSCoder.string(for: note.frame), "scrollHittable": scroll.isHittable,
+        "start": [start.x, start.y], "end": [end.x, end.y], "visibleKeyboardTop": visibleKeyboardTop,
+        "offsetGap": "Public XCUI does not expose UIScrollView.contentOffset; field-frame delta is measured instead"]
+      inputCheckpoint("gesture-before", field: field, expected: "", label: label, geometry: geometry)
+      let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+      origin.withOffset(CGVector(dx: start.x - app.frame.minX, dy: start.y - app.frame.minY)).press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: end.x - app.frame.minX, dy: end.y - app.frame.minY)))
+      var after = geometry
+      after["fieldDeltaY"] = field.frame.minY - before.minY
+      after["scrollFrameAfter"] = NSCoder.string(for: scroll.frame)
+      inputCheckpoint("gesture-after", field: field, expected: "", label: label, geometry: after)
+      XCTAssertLessThan(field.frame.minY, before.minY - 1, "No vertical field movement after the ONE app-content drag")
     }
-    inputCheckpoint("positioned-empty", field: field, expected: "", label: label)
-    XCTAssertTrue(aboveKeyboard && keyboard.exists, "Field must be visibly above the actual keyboard")
+    XCTAssertTrue(keyboard.exists, "Keyboard disappeared after positioning; stop without refocus/retry")
+    visibleKeyboardTop = keyboardOcclusionTop(keyboard)
+    inputCheckpoint("positioned-empty", field: field, expected: "", label: label, geometry: ["visibleKeyboardTop": visibleKeyboardTop])
+    XCTAssertTrue(keyboard.exists && field.isHittable && field.frame.maxY < visibleKeyboardTop - 8, "Field must be visibly above the actual keyboard AND accessory")
     field.tap()
     let initial = field.value as? String ?? ""
     // Native accessibility can report its placeholder as an empty value. Never
@@ -132,13 +143,22 @@ final class TransportUITests: XCTestCase {
     }
   }
 
-  @MainActor private func inputCheckpoint(_ stage: String, field: XCUIElement, expected: String, label: String) {
+  @MainActor private func keyboardOcclusionTop(_ keyboard: XCUIElement) -> CGFloat {
+    let accessory = app.buttons["Passwords"].firstMatch
+    // AX Keyboard excludes the observed ~43pt accessory. If AX does not expose
+    // that button, reserve a conservative96pt band; never call AX.minY the
+    // complete visible occluder or proceed with the field hidden beneath it.
+    return min(keyboard.frame.minY, accessory.exists ? accessory.frame.minY : keyboard.frame.minY - 96)
+  }
+
+  @MainActor private func inputCheckpoint(_ stage: String, field: XCUIElement, expected: String, label: String, geometry: [String: Any] = [:]) {
     let keyboard = app.keyboards.firstMatch
     let actual = field.value as? String ?? ""
-    let record: [String: Any] = ["stage": stage, "actual": actual, "expected": expected,
+    var record: [String: Any] = ["stage": stage, "actual": actual, "expected": expected,
       "exact": actual == expected, "fieldFrame": NSCoder.string(for: field.frame),
       "keyboardPresent": keyboard.exists, "keyboardFrame": keyboard.exists ? NSCoder.string(for: keyboard.frame) : "absent",
       "selectionGap": "Public XCTest field API does not expose UIKit selectedTextRange; not inferred"]
+    record.merge(geometry) { _, measured in measured }
     // Original xcresult already explicitly retains synthetic fixture addresses;
     // keep exact values HERE, not in purportedly scrubbed stdout event fields.
     let data = try! JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
