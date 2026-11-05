@@ -16,8 +16,6 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
-import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
-import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
 import common from "@/i18n/catalogues/en/mobile.common.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
@@ -41,6 +39,8 @@ import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
+import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
+import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
@@ -119,7 +119,7 @@ const NAMESPACES = [
 		name: "mobile.notifications",
 		messages: notifications,
 		context: notificationsContext,
-		expected: 14,
+		expected: 27,
 	},
 	{
 		name: "mobile.session",
@@ -150,23 +150,20 @@ const NAMESPACES = [
 		expected: 11,
 	},
 	{
-		/* The relay's chrome words, mirrored key for key from the core catalogue:
-		 *  4 health/resume words, plus the 2026-11-04 chrome pass's subtitle,
-		 *  tray-chip, drawer and list words (decision record §2.3–§3). */
-		name: "relay.chrome",
-		messages: relayChrome,
-		context: relayChromeContext,
-		expected: 20,
-	},
-	{
-		/* This app's own short chrome words the relay has no key for: the
-		 *  destinations strip's one-word labels, the More sheet's title, and (from
-		 *  the 2026-11-05 build389 pass) the composer's context strip and the
-		 *  home's single presentation story. */
+		/* This app's own short chrome words the relay has no key for: the sidebar
+		 *  destinations' one-word labels, the More sheet's title, and (from the
+		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
+		 *  single presentation story. */
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
 		expected: 15,
+	},
+	{
+		name: "relay.chrome",
+		messages: relayChrome,
+		context: relayChromeContext,
+		expected: 20,
 	},
 ] as const;
 
@@ -210,7 +207,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(259);
+		expect(total).toBe(272);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

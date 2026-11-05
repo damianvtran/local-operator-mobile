@@ -68,14 +68,6 @@ const sha256 = (content: string | Uint8Array) =>
 /* --------------------------------------------------------------- the table -- */
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
-	/* Re-pinned 2026-11-05 by the chrome round's own review fix, deliberately, and
-	 * the reader can see why from this diff: `tools/lib/affordance.ts` gained the
-	 * conditional `openers` shape the Find cells need (the fold puts Find behind the
-	 * ⋮ menu below 320 pt), `tools/visual/matrix.ts` uses it on the five find cells
-	 * and no longer pins the retired `S5/tags-header` skip, and
-	 * `tools/mock-relay/scenarios.ts` no longer declares that cell. The proof's
-	 * subject did not move: the cells still press the app's own controls and still
-	 * fail by name when one is absent. `--print` produced these values. */
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
 	"tools/audit/checks.ts":
@@ -457,27 +449,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Radient-row branches. Existing custom-route carriers and transcript geometry
 	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
 	 * This is source compatibility judgment, not fresh geometry evidence. */
-	/* Re-pinned 2026-11-04 with --print for the native chrome pass (decision
-	 * record mobile-design-direction §6, PR 1): `app`, `src`, `design/tokens`,
-	 * package.json and the lockfile all move. UNLIKE the source-boundary re-pins
-	 * above, this one DOES change the U-08 scene's geometry: the session header
-	 * (17 pt title + subtitle, no tag line, no brand mark), the composer (three
-	 * rows, concentric radii, inset-paying padding) and the above-composer stack
-	 * are all inside the measured long-transcript session. The pin records the
-	 * new render identity on purpose; it is NOT a claim that the old U-08
-	 * geometry numbers still hold — the next U-08 geometry proof must measure
-	 * this tree afresh. `expo-glass-effect` (the new dependency) renders a plain
-	 * View on web, so it adds nothing to the web scene. Historical ORIGINAL_*
-	 * identities and the instrument/input pins are untouched. */
-	/* Round 2 R163-3 changes the actual composer fold: the elastic model is
-	 * charged at 44 pt, effort outlives optional facts, and keyboard inline falls
-	 * back to a separate meta row if the targets cannot share the controls row.
-	 * This is a new render identity, NOT retention of old geometry evidence. */
-	src: "4eecef740960b588f3fb01cdc8256d803e2ec5d15156b2ef939e8b3318176eef",
 	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
 	 * style, token, corpus or instrument input changes. Historical pins retained. */
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's Android OAuth change above): the Android
+	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
+	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
+	 * is rendered on the web target: channels are created only on Android, and
+	 * the keys are read only by that call. No transcript/corpus/instrument
+	 * change; historical pins retained. */
+	src: "1034165830953e1a4135ea4d94f7eec2a0888a4a4b2e737787c8f7077ddaeea9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -490,8 +473,12 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
+	// Deliberate --print re-pin (notification sounds, M1): only the
+	// expo-notifications plugin's native `sounds:` list was added; it copies
+	// files into the iOS bundle and Android res/raw and is not a U-08 web layout
+	// or rendered-geometry input.
 	"app.config.ts":
-		"8ce01f109064e71382d1d5fdc4b98bfaf6bc6a5b36281d3574d12a157722c1d1",
+		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
