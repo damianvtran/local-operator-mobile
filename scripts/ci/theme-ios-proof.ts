@@ -34,6 +34,7 @@ import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
+import { probeNativeRelay } from "./native-relay-preflight.ts";
 import { collectThemeFrames } from "./theme-proof-contract.ts";
 
 const env = process.env;
@@ -216,6 +217,7 @@ async function startRelay(language: string): Promise<Slot> {
 		password,
 		quiet: true,
 	});
+	relay.state.journalAll = true;
 	const handle = await relay.listen();
 	const origin = `http://${host}:${handle.port}`;
 	relay.state.allowedOrigins = [...(relay.state.allowedOrigins ?? []), origin];
@@ -238,6 +240,23 @@ async function startRelay(language: string): Promise<Slot> {
 		publisher,
 		shutdown: async () => {
 			await relay.shutdown();
+			writeFileSync(
+				join(ROOT, `relay-${language}-requests.json`),
+				JSON.stringify(
+					relay.state.recorded.map(
+						({ method, path, status, cookie, origin, note }) => ({
+							method,
+							path,
+							status,
+							cookie,
+							origin,
+							note,
+						}),
+					),
+					null,
+					2,
+				),
+			);
 		},
 	};
 	let resolved = false;
@@ -266,7 +285,21 @@ async function startRelay(language: string): Promise<Slot> {
 	const unauth = await fetch(`${origin}/api/sessions`, {
 		signal: AbortSignal.timeout(5000),
 	});
+	await unauth.arrayBuffer();
 	if (unauth.status !== 401) throw new Error("relay auth boundary failed");
+	try {
+		const preflight = await probeNativeRelay(
+			origin,
+			password,
+			Object.keys(relay.state.world.projections ?? {})[0],
+		);
+		note(
+			`relay ${language} HOST preflight: ${JSON.stringify(preflight)}; native handoff not yet proven`,
+		);
+	} catch (error) {
+		await slot.shutdown();
+		throw error;
+	}
 	return slot;
 }
 

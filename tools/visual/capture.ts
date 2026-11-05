@@ -1216,7 +1216,7 @@ interface ThemeCheckReport {
 }
 
 /** Compare each frame's claimed theme against the token canvas and its twin. */
-function verifyThemes(
+export function verifyThemes(
 	records: CaptureRecord[],
 	tokens: CanvasTokens,
 ): ThemeCheckReport {
@@ -1356,6 +1356,7 @@ function verifyThemes(
 		problems,
 		canvasCompared,
 		canvasUncompared,
+		canvasSource,
 		// A reason is carried whenever the canvas half could not run at all, and whenever
 		// it ran but left frames uncompared. Only `null` — every frame compared — lets the
 		// summary claim that every frame's canvas matches its cell.

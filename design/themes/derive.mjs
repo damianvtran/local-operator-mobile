@@ -142,8 +142,12 @@ const stepUntilWithin = (hex, dir, test, maxStep) => {
  * identity and the desktop's authored values; a palette that fails on one of
  * THEM is still withheld. Only the washes and the two row states are adapted,
  * and only when one of the phone's own asserted pairs actually fails — the walk
- * is a no-op (byte-identical value) for every palette that already clears, which
- * is why the other 55 palettes' exports do not move.
+ * is a no-op for grounds already clearing the 4.55 SOLVER target, not merely
+ * the 4.50 admission floor. Of the 55 previously admitted derived maps, 52
+ * stay byte-identical; Local Operator Light and Rose Pine Dawn selected rows,
+ * and Everforest Light washes/dependent tint move slightly for that headroom.
+ * Four formerly withheld maps are restored. The pinned desktop export itself
+ * remains byte-identical; these are explicit native-only adaptations.
  *
  * BOUNDED: at most 6 L*, both directions walked and the smaller move kept (a wash
  * may sit above or below its ground, exactly as `diffTint` explains). A palette

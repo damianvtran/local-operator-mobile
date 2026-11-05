@@ -54,9 +54,9 @@ describe("the theme fleet", () => {
 	});
 
 	it("leaves a palette that already clears byte-identical (the adaptation is a no-op there)", () => {
-		/* The policy must not move a value it has no reason to move: 55 palettes
-		 * shipped before it existed, and every role they copy from the desktop has to
-		 * stay exactly as authored. `dracula` is the control — it never failed, so its
+		/* A palette whose grounds already clear the 4.55 solver target must
+		 * stay unchanged. 52 old maps do; three previously admitted light maps
+		 * receive tiny headroom adaptations, distinct from the four new maps. `dracula` is the control — it never failed, so its
 		 * derived roles must equal the export's own values for the copied roles. */
 		type DesktopPalette = {
 			id: string;

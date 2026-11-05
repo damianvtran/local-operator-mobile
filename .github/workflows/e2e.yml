@@ -1733,6 +1733,7 @@ jobs:
           path: |
             ${{ runner.temp }}/theme-proof/receipt.json
             ${{ runner.temp }}/theme-proof/commands.json
+            ${{ runner.temp }}/theme-proof/relay-*-requests.json
             ${{ runner.temp }}/theme-proof/commands/*.log
             ${{ runner.temp }}/theme-proof/frames/**/*.png
             ${{ runner.temp }}/theme-proof/hierarchies/*.txt
