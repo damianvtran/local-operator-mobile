@@ -397,102 +397,110 @@ describe("controller bookkeeping with fake child outcomes (not native proof)", (
 		"no-ready",
 		"protocol",
 		"exit-before-denial",
-	])("keeps %s separate from the inbound receipts", async (kind) => {
-		const { observeLaunch } = await import(
-			"./retirement-runner-launch-only.ts"
-		);
-		const { Deadline } = await import("./retirement-replay-core.ts");
-		const auth = credentials(),
-			transport = new LaunchOnlyTransport(auth);
-		let resolve!: () => void, reject!: () => void;
-		const completion = new Promise<void>((yes, no) => {
-			resolve = yes;
-			reject = () => no(new Error("fake-nonzero"));
-		});
-		const runner = {
-			completion,
-			stop: async () => undefined,
-			failureRecord: () => ({
-				exitCode: 65,
-				command: "launch" as const,
-				errorClass:
-					kind === "unrelated"
-						? ("unknown" as const)
-						: ("test_failed" as const),
-				failingTest:
-					"RetirementSystemAlert.RetainedReplayTests.testSingleSeedReplay" as const,
-				failureCount: 1,
-				tailSha256: "a".repeat(64),
-			}),
-		};
-		try {
-			const endpoint = await transport.listen();
-			// Generous, deterministic windows: 200ms/20ms made these outcomes depend on
-			// host load, which is exactly the flake class this repo keeps re-learning.
-			const observed = observeLaunch(transport, runner, new Deadline(60000), {
-				ready: 3000,
-				postDenial: 1000,
+	])(
+		"keeps %s separate from the inbound receipts",
+		async (kind) => {
+			const { observeLaunch } = await import(
+				"./retirement-runner-launch-only.ts"
+			);
+			const { Deadline } = await import("./retirement-replay-core.ts");
+			const auth = credentials(),
+				transport = new LaunchOnlyTransport(auth);
+			let resolve!: () => void, reject!: () => void;
+			const completion = new Promise<void>((yes, no) => {
+				resolve = yes;
+				reject = () => no(new Error("fake-nonzero"));
 			});
-			const send = (requestKind: string) =>
-				fetch(endpoint, {
-					method: "POST",
-					headers: { authorization: `Bearer ${auth.bearer}` },
-					body: JSON.stringify({
-						session: auth.session,
-						kind: requestKind,
-						challenge: randomBytes(32).toString("hex"),
-					}),
+			const runner = {
+				completion,
+				stop: async () => undefined,
+				failureRecord: () => ({
+					exitCode: 65,
+					command: "launch" as const,
+					errorClass:
+						kind === "unrelated"
+							? ("unknown" as const)
+							: ("test_failed" as const),
+					failingTest:
+						"RetirementSystemAlert.RetainedReplayTests.testSingleSeedReplay" as const,
+					failureCount: 1,
+					tailSha256: "a".repeat(64),
+				}),
+			};
+			try {
+				const endpoint = await transport.listen();
+				// Generous, deterministic windows: 200ms/20ms made these outcomes depend on
+				// host load, which is exactly the flake class this repo keeps re-learning.
+				const observed = observeLaunch(transport, runner, new Deadline(60000), {
+					ready: 3000,
+					postDenial: 1000,
 				});
-			if (kind === "early") reject();
-			else if (kind === "exit-before-denial") {
-				// Exits first, deliberately: `observeLaunch` races the denial against
-				// the runner's completion, and this pins WHICH side wins rather than
-				// only avoiding the race.
-				reject();
-				await send("runner-ready");
-				await send("before-observe");
-			} else if (kind === "protocol") await send("authorize-tap");
-			else if (kind !== "no-ready") {
-				expect((await send("runner-ready")).status).toBe(200);
-				expect((await send("before-observe")).status).toBe(403);
-				// Wait for the listener to have SETTLED its denial before ending the
-				// fake runner: the HTTP response can return before the denial promise
-				// resolves, and `observeLaunch` races denial against exit — without
-				// this the zero case intermittently reads as early-exit under load.
-				await transport.denied.promise;
-				if (kind === "zero") resolve();
-				else if (kind !== "hung") reject();
+				const send = (requestKind: string) =>
+					fetch(endpoint, {
+						method: "POST",
+						headers: { authorization: `Bearer ${auth.bearer}` },
+						body: JSON.stringify({
+							session: auth.session,
+							kind: requestKind,
+							challenge: randomBytes(32).toString("hex"),
+						}),
+					});
+				if (kind === "early") reject();
+				else if (kind === "exit-before-denial") {
+					// Exits first, deliberately: `observeLaunch` races the denial against
+					// the runner's completion, and this pins WHICH side wins rather than
+					// only avoiding the race.
+					reject();
+					await send("runner-ready");
+					await send("before-observe");
+				} else if (kind === "protocol") await send("authorize-tap");
+				else if (kind !== "no-ready") {
+					expect((await send("runner-ready")).status).toBe(200);
+					expect((await send("before-observe")).status).toBe(403);
+					// Wait for the listener to have SETTLED its denial before ending the
+					// fake runner: the HTTP response can return before the denial promise
+					// resolves, and `observeLaunch` races denial against exit — without
+					// this the zero case intermittently reads as early-exit under load.
+					await transport.denied.promise;
+					if (kind === "zero") resolve();
+					else if (kind !== "hung") reject();
+				}
+				expect(await observed).toBe(
+					(
+						{
+							nonzero: "expected-test-failure",
+							zero: "unexpected-zero",
+							unrelated: "unrelated-failure",
+							hung: "post-denial-timeout",
+							early: "early-exit",
+							"no-ready": "runner-start-timeout",
+							protocol: "protocol-failure",
+							"exit-before-denial": "early-exit",
+						} as Record<string, string>
+					)[kind],
+				);
+				expect(transport.receipt().readyReceived).toBe(
+					!["early", "no-ready", "protocol"].includes(kind),
+				);
+				// The listener still answers the late before-observe; what the race
+				// decides is which OUTCOME observeLaunch reports, asserted above.
+				expect(transport.receipt().denialSent).toBe(
+					[
+						"nonzero",
+						"zero",
+						"unrelated",
+						"hung",
+						"exit-before-denial",
+					].includes(kind),
+				);
+			} finally {
+				resolve();
+				await transport.close();
 			}
-			expect(await observed).toBe(
-				(
-					{
-						nonzero: "expected-test-failure",
-						zero: "unexpected-zero",
-						unrelated: "unrelated-failure",
-						hung: "post-denial-timeout",
-						early: "early-exit",
-						"no-ready": "runner-start-timeout",
-						protocol: "protocol-failure",
-						"exit-before-denial": "early-exit",
-					} as Record<string, string>
-				)[kind],
-			);
-			expect(transport.receipt().readyReceived).toBe(
-				!["early", "no-ready", "protocol"].includes(kind),
-			);
-			// The listener still answers the late before-observe; what the race
-			// decides is which OUTCOME observeLaunch reports, asserted above.
-			expect(transport.receipt().denialSent).toBe(
-				["nonzero", "zero", "unrelated", "hung", "exit-before-denial"].includes(
-					kind,
-				),
-			);
-		} finally {
-			resolve();
-			await transport.close();
-		}
-		// `no-ready` waits the entire ready window by design. CI runs plain
-		// `vitest run` (5s default), so the timeout is stated here rather than
-		// inherited; local runs with `--testTimeout` had been masking it.
-	}, 30_000);
+			// `no-ready` waits the entire ready window by design. CI runs plain
+			// `vitest run` (5s default), so the timeout is stated here rather than
+			// inherited; local runs with `--testTimeout` had been masking it.
+		},
+		30_000,
+	);
 });
