@@ -61,6 +61,7 @@ on:
           - full
           - diagnostic
           - transport
+          - transport-xctest
       # Inputs of projects-create-ios-proof AND theme-ios-proof; ignored by every
       # other mode. The defaults pin the artifact PR #150's native Urdu frame was
       # requested against; theme-ios-proof must be given its own three values.
@@ -165,7 +166,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
-            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport) ;; *) exit 1 ;; esac ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest) ;; *) exit 1 ;; esac ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1686,6 +1687,7 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
+        if: inputs.proof_stage != 'transport-xctest'
         run: |
           set -euo pipefail
           export MAESTRO_VERSION
@@ -1740,7 +1742,10 @@ jobs:
             ${{ runner.temp }}/theme-proof/relay-*-transport.json
             ${{ runner.temp }}/theme-proof/commands/*.log
             ${{ runner.temp }}/theme-proof/frames/**/*.png
+            ${{ runner.temp }}/theme-proof/frames/xctest/**
             ${{ runner.temp }}/theme-proof/hierarchies/*.txt
+            ${{ runner.temp }}/theme-proof/transport.xcresult/**
+            ${{ runner.temp }}/theme-proof/carrier/target-graph.json
           retention-days: 14
           if-no-files-found: warn
   u08-geometry-proof:

@@ -78,6 +78,13 @@ export function collectThemeFrames(
 
 /** A diagnostic success is a saved-route prerequisite only, never theme proof. */
 export function themeProofPlan(stage = "full") {
+	if (stage === "transport-xctest")
+		return {
+			stage,
+			flow: null,
+			budgetSeconds: 900,
+			frames: ["welcome-ready", "loopback-ipv4", "published-local"],
+		};
 	if (stage === "transport")
 		return {
 			stage,

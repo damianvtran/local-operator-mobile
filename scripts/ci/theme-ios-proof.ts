@@ -55,6 +55,8 @@ import {
 	transportAuthorities,
 	transportOutcome,
 } from "./theme-transport-contract.ts";
+import { parseDirectEvents } from "./transport-xctest-contract.ts";
+import { directTransportTest } from "./transport-xctest-host.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -68,6 +70,8 @@ const ZIP = need("PROOF_ARTIFACT_ZIP");
 const PASSWORD_FILE = need("PROOF_PASSWORD_FILE");
 const plan = themeProofPlan(env.PROOF_STAGE ?? "full");
 const BUDGET_SECONDS = plan.budgetSeconds;
+const pairedTransport =
+	plan.stage === "transport" || plan.stage === "transport-xctest";
 const started = Date.now();
 
 if (
@@ -106,6 +110,15 @@ type Record_ = {
 };
 const records: Record_[] = [];
 const groups = new Set<ChildProcess>();
+const directGroups = new Set<number>();
+function groupExists(pid: number) {
+	try {
+		process.kill(-pid, 0);
+		return true;
+	} catch (error) {
+		return (error as NodeJS.ErrnoException).code !== "ESRCH";
+	}
+}
 const receipt: Record<string, unknown> = {
 	mode: "theme-ios-proof",
 	stage: plan.stage,
@@ -120,14 +133,13 @@ const receipt: Record<string, unknown> = {
 		// which ref). Never read this as literal-head provenance.
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
-	scope:
-		plan.stage === "transport"
-			? "paired native authority transport only; blank password, no auth/save/provider/theme acceptance"
-			: plan.stage === "setup"
-				? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
-				: plan.stage === "diagnostic"
-					? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
-					: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
+	scope: pairedTransport
+		? "paired native authority transport only; blank password, no auth/save/provider/theme acceptance"
+		: plan.stage === "setup"
+			? "XCTest bootstrap only, no relay/app flow/provider/theme verdict"
+			: plan.stage === "diagnostic"
+				? "saved-route prerequisite only, iPhone17/iOS26.5, no theme acceptance, not full E2E"
+				: "native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {
@@ -171,23 +183,35 @@ async function run(
 	args: string[],
 	capSeconds: number,
 	cleanup = false,
+	extraEnv: Record<string, string> = {},
 ): Promise<string> {
 	const remaining = BUDGET_SECONDS - (Date.now() - started) / 1000;
 	if (!cleanup && remaining <= 0) throw new Error("overall budget exhausted");
 	const cap = cleanup ? capSeconds : Math.min(capSeconds, remaining);
 	const t0 = Date.now();
 	const child = spawn(command, args, {
-		env: childEnv,
+		env: { ...childEnv, ...extraEnv },
 		detached: true,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	groups.add(child);
-	let output = "";
+	if (
+		plan.stage === "transport-xctest" &&
+		command === "xcodebuild" &&
+		child.pid
+	)
+		directGroups.add(child.pid);
+	let output = "",
+		stdout = "",
+		stderr = "";
+	let exitSignal: string | null = null;
 	child.stdout?.on("data", (c: Buffer) => {
 		output += c.toString("utf8");
+		stdout += c.toString("utf8");
 	});
 	child.stderr?.on("data", (c: Buffer) => {
 		output += c.toString("utf8");
+		stderr += c.toString("utf8");
 	});
 	const log = join(ROOT, "commands", `${++sequence}-${name}.log`);
 	let timedOut = false;
@@ -197,16 +221,44 @@ async function run(
 			void stop(child).then(() => resolve(null));
 		}, cap * 1000);
 		child.once("error", () => resolve(127));
-		child.once("close", (rc) => {
+		child.once("close", (rc, signal) => {
+			exitSignal = signal;
 			clearTimeout(timer);
 			resolve(rc);
 		});
 	});
 	await stop(child);
-	if (name === "warm-maestro-driver" || plan.stage === "transport")
+	if (name === "warm-maestro-driver" || pairedTransport)
 		output = sanitizeBootstrapLog(output);
 	if (name === "maestro-transport")
 		receipt.transportObservations = parseTransportObservations(output);
+	if (plan.stage === "transport-xctest") {
+		writeFileSync(
+			log.replace(/\.log$/, ".stdout.log"),
+			redact(sanitizeBootstrapLog(stdout)),
+		);
+		writeFileSync(
+			log.replace(/\.log$/, ".stderr.log"),
+			redact(sanitizeBootstrapLog(stderr)),
+		);
+		if (name === "xctest-selected-test") {
+			receipt.directEvents = parseDirectEvents(output);
+			receipt.directRunnerObservables = {
+				hostPID: child.pid,
+				processGroup: child.pid,
+				exitCode: code,
+				exitSignal,
+				deadlineExceeded: timedOut,
+				groupExitObserved: child.pid ? !groupExists(child.pid) : false,
+				runnerPID:
+					parseDirectEvents(output).find((e) => e.event === "method-entered")
+						?.runnerPID ?? null,
+				methodEntered: parseDirectEvents(output).some(
+					(e) => e.event === "method-entered",
+				),
+			};
+		}
+	}
 	writeFileSync(log, redact(output));
 	records.push({
 		name,
@@ -230,6 +282,7 @@ type Slot = {
 	transportObserver?: ReturnType<typeof observeTransportRequests>;
 	shutdown: () => Promise<void>;
 	publisher: ChildProcess;
+	closeListener: () => Promise<void>;
 };
 
 /** A relay reachable by a unique `.local` name, the SAME mechanism the
@@ -252,14 +305,12 @@ async function startRelay(language: string): Promise<Slot> {
 	const handle = await relay.listen();
 	const origin = `http://${host}:${handle.port}`;
 	const authorities = transportAuthorities(handle.port, origin);
-	const transportObserver =
-		plan.stage === "transport"
-			? observeTransportRequests(relay.handler, authorities)
-			: undefined;
-	relay.state.allowedOrigins =
-		plan.stage === "transport"
-			? authorities.map((a) => a.url)
-			: [...(relay.state.allowedOrigins ?? []), origin];
+	const transportObserver = pairedTransport
+		? observeTransportRequests(relay.handler, authorities)
+		: undefined;
+	relay.state.allowedOrigins = pairedTransport
+		? authorities.map((a) => a.url)
+		: [...(relay.state.allowedOrigins ?? []), origin];
 	const publisher = spawn(
 		"/usr/bin/dns-sd",
 		[
@@ -279,6 +330,12 @@ async function startRelay(language: string): Promise<Slot> {
 		publisher,
 		authorities,
 		transportObserver,
+		closeListener: async () => {
+			relay.handler.closeAllConnections();
+			await new Promise<void>((resolve) =>
+				relay.handler.close(() => resolve()),
+			);
+		},
 		shutdown: async () => {
 			await relay.shutdown();
 			if (transportObserver) {
@@ -332,13 +389,13 @@ async function startRelay(language: string): Promise<Slot> {
 	if (!resolved) {
 		await slot.shutdown();
 		throw new Error(
-			plan.stage === "transport"
+			pairedTransport
 				? "published-local failed host IPv4 listener admission"
 				: `owned ${host} did not resolve to loopback`,
 		);
 	}
 	// Auth boundary: unauthenticated GET must be refused, not served.
-	if (plan.stage === "transport") {
+	if (pairedTransport) {
 		receipt.transportFixture = {
 			authorityLabels: authorities.map((a) => a.label),
 			boundPort: handle.port,
@@ -619,7 +676,7 @@ try {
 	);
 	const app = (receipt.installed as { app: string }).app;
 	note(`extracted app ${app}`);
-	if (plan.stage === "transport") {
+	if (pairedTransport) {
 		receipt.installedTransportPolicy = JSON.parse(
 			await run(
 				"actual-installed-ats",
@@ -686,7 +743,7 @@ try {
 	// Both stages warm this exact owned simulator, once, before any app flow.
 	// A previous setup job's VM is neither reused nor accepted as readiness.
 	const warmDriver = createThemeDriverWarmer(run);
-	if (plan.stage !== "full") {
+	if (plan.stage !== "full" && plan.stage !== "transport-xctest") {
 		try {
 			const hierarchy = await warmDriver(
 				udid,
@@ -715,7 +772,25 @@ try {
 			throw error;
 		}
 	}
-	if (plan.stage === "setup") {
+	if (plan.stage === "transport-xctest") {
+		const relay = await startRelay("en");
+		relays.push(relay);
+		receipt.nativeTransportCodes = [];
+		receipt.nativeTransportCodeGap =
+			"No app-process NSError code captured by this baseline; control/host stderr is not app-native evidence";
+		await directTransportTest({
+			root: ROOT,
+			udid,
+			appId: (receipt.installed as { bundleId: string }).bundleId,
+			run,
+			authorities: relay.authorities!,
+			observer: relay.transportObserver!,
+			closeListener: relay.closeListener,
+			receipt,
+		});
+		receipt.verdict =
+			"PASS direct serial real-app paired401 + same-listener closed negative ONLY; not provider/theme acceptance";
+	} else if (plan.stage === "setup") {
 		receipt.setupOnly = {
 			savedRouteFlowExecuted: false,
 			relayStarted: false,
@@ -728,7 +803,7 @@ try {
 		const relay = await startRelay("en");
 		relays.push(relay);
 		note(
-			plan.stage === "transport"
+			pairedTransport
 				? "relay: exact paired authorities on one IPv4 listener"
 				: `relay: ${relay.origin}`,
 		);
@@ -743,9 +818,9 @@ try {
 			["simctl", "ui", udid, "appearance", "light"],
 			60,
 		);
-		if (plan.stage === "transport") relay.transportObserver?.beginNative();
+		if (pairedTransport) relay.transportObserver?.beginNative();
 		await flowRun(
-			plan.stage === "transport"
+			pairedTransport
 				? "transport"
 				: plan.stage === "diagnostic"
 					? "diagnostic"
@@ -753,9 +828,9 @@ try {
 			relay.origin,
 			plan.flow,
 			plan.stage === "full" ? 2100 : 600,
-			plan.stage === "transport" ? relay : undefined,
+			pairedTransport ? relay : undefined,
 		);
-		if (plan.stage === "transport") {
+		if (pairedTransport) {
 			const rows =
 				(receipt.transportObservations as ReturnType<
 					typeof parseTransportObservations
@@ -787,12 +862,11 @@ try {
 		}
 		receipt.stage = plan.stage;
 		receipt.nativeBudgetSeconds = BUDGET_SECONDS;
-		receipt.verdict =
-			plan.stage === "transport"
-				? "PASS paired transport observations ONLY (not auth/provider/theme acceptance)"
-				: plan.stage === "diagnostic"
-					? "PASS saved-route prerequisite ONLY (not theme acceptance)"
-					: "PASS (assertions only; reviewers must view the PNGs)";
+		receipt.verdict = pairedTransport
+			? "PASS paired transport observations ONLY (not auth/provider/theme acceptance)"
+			: plan.stage === "diagnostic"
+				? "PASS saved-route prerequisite ONLY (not theme acceptance)"
+				: "PASS (assertions only; reviewers must view the PNGs)";
 	}
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
@@ -827,6 +901,14 @@ try {
 		}
 	}
 	for (const child of [...groups]) await stop(child);
+	if (plan.stage === "transport-xctest") {
+		receipt.directGroupReap = [...directGroups].map((pid) => ({
+			hostPID: pid,
+			groupExitObserved: !groupExists(pid),
+		}));
+		if ([...directGroups].some(groupExists))
+			failures.push("owned direct xcodebuild process group still present");
+	}
 	receipt.cleanup = {
 		failures,
 		allOwnedResourcesReaped: failures.length === 0,
