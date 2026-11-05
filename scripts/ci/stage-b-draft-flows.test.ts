@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
@@ -6,6 +7,7 @@ import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
 	attachStageBPhoto,
+	discardStageBDraft,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DRAWN_SCREEN,
 	STAGE_B_PICKER_BROWSER_ID,
@@ -16,6 +18,7 @@ import {
 	selectStageBComputer,
 	stageBFlow,
 	stageBHasDrawnScreen,
+	typeStageBDraft,
 } from "./stage-b-draft-flows";
 
 const steps = (flow: string): Record<string, unknown>[] =>
@@ -25,6 +28,79 @@ const steps = (flow: string): Record<string, unknown>[] =>
 		.map((line) => JSON.parse(line.slice(2)));
 
 describe("Stage B foreground-only Maestro flows", () => {
+	it("reproduces both the 50-backspace limit and the native suffix left by a middle caret", () => {
+		// Maestro 2.11 EraseTextHandler sends delete keys at the existing caret.
+		// This is a source-backed deletion model, NOT a UIKit/native execution.
+		const original = `stage-b-private-draft-${"a".repeat(32)}`;
+		const erase = (text: string, caret: number, count: number) =>
+			text.slice(0, Math.max(0, caret - count)) + text.slice(caret);
+		expect(original).toHaveLength(54);
+		expect(erase(original, original.length, 50)).toHaveLength(4);
+		expect(erase(original, 16, 50)).toBe(original.slice(16));
+		expect(erase(original, 16, original.length)).toHaveLength(38);
+		for (const text of [original, `${original}-edited-after-fresh-proof`]) {
+			const clear = discardStageBDraft(text);
+			expect(clear[0]).toEqual({
+				tapOn: {
+					id: "composer-input",
+					point: "99%,99%",
+					retryTapIfNoChange: false,
+				},
+			});
+			const count =
+				(clear[1]?.eraseText as { charactersToErase?: number } | undefined)
+					?.charactersToErase ?? 0;
+			expect(count).toBe(text.length);
+			expect(erase(text, text.length, count)).toBe("");
+		}
+	});
+	it("fails on nonempty text before typing; blank hints cannot fake an empty field", () => {
+		const clear = discardStageBDraft("synthetic-owned-ASCII-draft");
+		expect(clear[2]).toEqual({ copyTextFrom: { id: "composer-input" } });
+		const condition = clear[3]?.assertTrue;
+		if (typeof condition !== "string")
+			throw new Error("clear must assert its readback before typing");
+		const expression = condition.slice(2, -1);
+		// Orchestra.resolveText prefers nonempty text over hint/label. Only an
+		// empty field falls through to this composer's placeholder or label.
+		const copied = (text: string) => text || "Message…";
+		for (const remaining of ["stale-suffix", "x".repeat(38)])
+			expect(
+				runInNewContext(expression, {
+					maestro: { copiedText: copied(remaining) },
+				}),
+			).toBe(false);
+		expect(
+			runInNewContext(expression, { maestro: { copiedText: copied("") } }),
+		).toBe(true);
+		const generated = steps(
+			stageBFlow([...clear, ...typeStageBDraft("replacement")]),
+		);
+		expect(generated.findIndex((step) => "assertTrue" in step)).toBeLessThan(
+			generated.findIndex((step) => "inputText" in step),
+		);
+	});
+	it("wires the longer edited draft into the subsequent clear rather than reusing the original length", () => {
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("...discardStageBDraft(pendingDraft)");
+		expect(source).not.toContain("discardStageBDraft()");
+		const composer = readFileSync(
+			new URL("../../src/features/session/composer.ts", import.meta.url),
+			"utf8",
+		);
+		const view = readFileSync(
+			new URL(
+				"../../src/features/session/components/composer.tsx",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		expect(composer).toContain('placeholder: "Message…"');
+		expect(view).toContain('label="Message"');
+	});
 	it("waits on the real remote grid with measured headroom, without obscuring it with app foreground assertions", () => {
 		const attachment = attachStageBPhoto();
 		const tapIndex = attachment.findIndex(

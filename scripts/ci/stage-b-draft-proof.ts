@@ -1057,7 +1057,7 @@ async function runStageBCoordinator(
 				);
 				const pendingDraft = `${canary}-edited-after-fresh-proof`;
 				await flow("edit-after-fresh-proof", [
-					...discardStageBDraft(),
+					...discardStageBDraft(canary),
 					...typeStageBDraft(pendingDraft),
 				]);
 				await relaunch("same");
@@ -1071,7 +1071,7 @@ async function runStageBCoordinator(
 						"pending-input control did not obtain fresh recovery proof",
 					);
 				await flow("reset-after-pending-edit", [
-					...discardStageBDraft(),
+					...discardStageBDraft(pendingDraft),
 					...typeStageBDraft(canary),
 				]);
 				batch.verified(() =>
@@ -1195,7 +1195,7 @@ async function runStageBCoordinator(
 				cases.push({ surface: `native ${mode} isolation`, result: "PASS" }),
 			);
 		}
-		await flow("explicit-discard", discardStageBDraft());
+		await flow("explicit-discard", discardStageBDraft(canary));
 		await relaunch();
 		await flow("discard-survives-restart", assertStageBDraft(canary, false));
 		batch.verified(() =>

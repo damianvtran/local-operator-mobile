@@ -177,9 +177,28 @@ export const attachStageBPhoto = (): StageBStep[] => [
 	},
 	{ assertVisible: { id: "composer-attachment-0" } },
 ];
-export const discardStageBDraft = (): StageBStep[] => [
-	{ tapOn: { id: "composer-input" } },
-	{ eraseText: {} },
+/** 41973921764 retained a 38-character suffix: iOS eraseText sends backspaces
+ * at the tapped caret, not a platform clear. Focus the field's trailing corner
+ * without tap retries, erase the complete known draft, and fail before retyping
+ * if the native field is not empty. No app reset or production mutation. */
+export const discardStageBDraft = (currentText: string): StageBStep[] => [
+	{
+		tapOn: {
+			id: "composer-input",
+			point: "99%,99%",
+			retryTapIfNoChange: false,
+		},
+	},
+	{ eraseText: { charactersToErase: currentText.length } },
+	// Maestro 2.11 text selectors union text/hint/label: ^$ also matches an
+	// empty hint on a NONEMPTY field. Read text with its ordered fallback instead.
+	// copyTextFrom is an internal JS variable, not the system clipboard. Our ASCII
+	// canaries cannot equal its empty native placeholder ("Message…") or label
+	// ("Message"); the flow test pins both to the production Textarea contract.
+	{ copyTextFrom: { id: "composer-input" } },
+	{
+		assertTrue: `\${maestro.copiedText === "" || maestro.copiedText === "Message…" || maestro.copiedText === "Message"}`,
+	},
 	{ hideKeyboard: {} },
 	{
 		runFlow: {
