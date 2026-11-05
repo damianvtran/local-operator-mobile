@@ -195,7 +195,16 @@ jobs:
       - name: Build the debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          # Compile the framework-only provider instrumentation as well. This
+          # does NOT claim execution or system-consumer URI-grant/device proof.
+          ./gradlew assembleDebug :lop-notification-sound:assembleDebugAndroidTest --no-daemon
+
+      - name: Upload the notification sound native test APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: notification-sound-native-tests
+          path: modules/lop-notification-sound/android/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
 
       - name: Assert the version in the built APK
         # THE VERSION IS READ OUT OF THE ARTEFACT, not out of the environment.

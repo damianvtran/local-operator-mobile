@@ -2,12 +2,9 @@ package dev.localoperator.sound
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.ContentValues
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.AtomicFile
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -15,12 +12,12 @@ import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
 
-/** Only this app's own MediaStore rows are written/deleted (API 29+ needs no
- * storage permission). Private file:// sounds are not readable by SystemUI;
- * res/raw-only Expo resolution cannot play a downloaded file. A SHA-named
- * channel is never repurposed: Android retains user settings after deletion.
- * Native returns success only after bytes are fsynced/published, indexed and
- * the channel exists. The JS coordinator withdraws readiness before deletion.
+/** Private atomic files + deterministic read-granted content URIs. Android
+ * retains a deleted channel's sound URI, so same-SHA re-cache must republish
+ * bytes at exactly that address, not allocate a new MediaStore row.
+ * Native returns success only after fsync/publication, indexing and a readable
+ * effective channel. JS withdraws readiness before deletion; native enforces
+ * outstanding claims too. System-settings mute/overrides remain authoritative.
  */
 class LopNotificationSoundModule : Module() {
   private val context get() = requireNotNull(appContext.reactContext)
@@ -31,7 +28,7 @@ class LopNotificationSoundModule : Module() {
     else JSONObject().put("entries", JSONObject()).put("claims", JSONObject())
   private fun save(value: JSONObject) {
     val stream = index.startWrite()
-    try { stream.write(value.toString().toByteArray()); index.finishWrite(stream) }
+    try { stream.write(value.toString().toByteArray()); index.finishWrite(stream); NotificationSoundFiles.syncDirectory(context.filesDir) }
     catch (e: Exception) { index.failWrite(stream); throw e }
   }
   private fun stem(sha: String): String {
@@ -40,29 +37,36 @@ class LopNotificationSoundModule : Module() {
   }
   private fun hash(bytes: ByteArray) = MessageDigest.getInstance("SHA-256")
     .digest(bytes).joinToString("") { "%02x".format(it) }
-  private fun uri(row: JSONObject): Uri = Uri.parse(row.getString("uri")).also {
-    require(it.scheme == "content" && it.authority == "media")
-  }
   private fun valid(sha: String, row: JSONObject): Boolean = try {
-    val sound = uri(row)
-    val bytes = context.contentResolver.openInputStream(sound)!!.use { input ->
-      val output = java.io.ByteArrayOutputStream()
-      val buffer = ByteArray(8192)
-      while (output.size() <= 2097152) {
-        val count = input.read(buffer, 0, minOf(buffer.size, 2097153 - output.size()))
-        if (count < 0) break
-        output.write(buffer, 0, count)
-      }
-      output.toByteArray() }
+    val sound = NotificationSoundFiles.uri(context.packageName, sha)
+    val file = NotificationSoundFiles.file(context.filesDir, sha)
+    val bytesValid = file.canonicalFile == file.absoluteFile && file.isFile &&
+      file.length() == row.getLong("bytes") && file.length() in 1L..2097152L && hash(file.readBytes()) == sha
     val channel = manager.getNotificationChannel("sound.${stem(sha)}")
-    // Android may resurrect a deleted channel with its OLD immutable URI.
-    // A different readable sound (or null) is the user's system-settings
-    // override and must be honored. An unreadable stale URI is NOT ready.
     val chosen = channel?.sound
-    val readable = channel != null && (chosen == null || chosen == sound ||
+    // Never reset a user's mute/override. A known legacy allocation URI or a
+    // different provider digest is not evidence of this sound being ready.
+    val userOverride = Build.VERSION.SDK_INT >= 30 && channel?.hasUserSetSound() == true
+    val legacy = row.optString("uri", "")
+    val stale = !userOverride && chosen != null && (
+      (legacy.isNotEmpty() && chosen.toString() == legacy) ||
+      (chosen.authority == sound.authority && chosen != sound))
+    val readable = channel != null && !stale && (chosen == null || chosen == sound || userOverride ||
       context.contentResolver.openAssetFileDescriptor(chosen, "r")?.use { true } == true)
-    bytes.size == row.getInt("bytes") && hash(bytes) == sha && readable
+    bytesValid && readable
   } catch (_: Exception) { false }
+
+  private fun recover(value: JSONObject) {
+    val entries = value.getJSONObject("entries")
+    val claims = value.getJSONObject("claims")
+    // A structurally readable but inconsistent index is not permission to
+    // delete advertised files or stop accounting for them. Refuse new writes.
+    claims.keys().forEach { owner ->
+      val shas = claims.getJSONArray(owner)
+      for (i in 0 until shas.length()) require(entries.has(shas.getString(i)))
+    }
+    NotificationSoundFiles.recover(context.filesDir, entries.keys().asSequence().toSet())
+  }
 
   override fun definition() = ModuleDefinition {
     Name("LopNotificationSound")
@@ -71,7 +75,12 @@ class LopNotificationSoundModule : Module() {
     // cross-network transaction too. An index read error fails closed: losing
     // previous-computer claims must never make their sounds evictable.
     AsyncFunction("inventory") {
-      val entries = state().getJSONObject("entries")
+      val value = state()
+      recover(value)
+      // A previous killed JS receive may have left its one staging file. No
+      // active writer can overlap inventory: the app owns one serialized queue.
+      File(context.cacheDir, "lop-notification-sound-stage.wav").delete()
+      val entries = value.getJSONObject("entries")
       entries.keys().asSequence().map { sha ->
         val row = entries.getJSONObject(sha)
         mapOf("sha" to sha, "bytes" to row.getInt("bytes"), "used" to row.getDouble("used"), "valid" to valid(sha, row))
@@ -99,9 +108,11 @@ class LopNotificationSoundModule : Module() {
     AsyncFunction("install") { sha: String, stage: String, used: Double ->
       require(Build.VERSION.SDK_INT >= 29)
       val name = stem(sha)
-      val source = File(requireNotNull(Uri.parse(stage).path)).canonicalFile
+      val stageUri = Uri.parse(stage)
+      require(stageUri.scheme == "file" && stageUri.query == null && stageUri.fragment == null)
+      val source = File(requireNotNull(stageUri.path)).canonicalFile
       require(source == File(context.cacheDir, "lop-notification-sound-stage.wav").canonicalFile)
-      require(source.length() in 1..2097152)
+      require(source.length() in 1L..2097152L)
       val bytes = source.readBytes()
       require(hash(bytes) == sha) { "Sound digest mismatch" }
       val value = state(); val entries = value.getJSONObject("entries")
@@ -111,35 +122,19 @@ class LopNotificationSoundModule : Module() {
         require(stem(key) != name); total += entries.getJSONObject(key).getInt("bytes")
       }
       require(total <= 8388608)
-      val resolver = context.contentResolver
-      val metadata = ContentValues().apply {
-        put(MediaStore.Audio.Media.DISPLAY_NAME, "$name.wav")
-        put(MediaStore.Audio.Media.MIME_TYPE, "audio/wav")
-        put(MediaStore.Audio.Media.IS_NOTIFICATION, 1)
-        put(MediaStore.Audio.Media.RELATIVE_PATH, "${Environment.DIRECTORY_NOTIFICATIONS}/LocalOperator/")
-        put(MediaStore.Audio.Media.IS_PENDING, 1)
-      }
-      val sound = requireNotNull(resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, metadata))
-      // Index the reserved slot BEFORE writing bytes. A crash leaves a tracked,
-      // invalid row; inventory withdraws its readiness before the next cleanup.
-      try {
-        entries.put(sha, JSONObject().put("uri", sound.toString()).put("bytes", bytes.size).put("used", used))
-        save(value)
-        android.os.ParcelFileDescriptor.AutoCloseOutputStream(requireNotNull(resolver.openFileDescriptor(sound, "w"))).use { output ->
-          output.write(bytes); output.fd.sync()
-        }
-        resolver.update(sound, ContentValues().apply { put(MediaStore.Audio.Media.IS_PENDING, 0) }, null, null)
-        val channel = NotificationChannel("sound.$name", name, NotificationManager.IMPORTANCE_DEFAULT)
-        channel.setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
-        manager.createNotificationChannel(channel)
-        require(valid(sha, entries.getJSONObject(sha))) { "Sound not durable or channel absent" }
-      } catch (e: Exception) {
-        // Keep a tracked reserved slot for retry, but if indexing itself failed
-        // no bytes were written: remove the pending empty row we just inserted.
-        if (!state().getJSONObject("entries").has(sha)) resolver.delete(sound, null, null)
-        throw e
-      }
+      recover(value)
+      val sound = NotificationSoundFiles.uri(context.packageName, sha)
+      // Reserve/account before publication. A crash leaves a tracked invalid
+      // slot; recovery reaps partial files and readiness is repaired from disk.
+      entries.put(sha, JSONObject().put("bytes", bytes.size).put("used", used))
+      save(value)
+      NotificationSoundFiles.publish(context.filesDir, sha, bytes)
+      val channel = NotificationChannel("sound.$name", name, NotificationManager.IMPORTANCE_DEFAULT)
+      channel.setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
+      manager.createNotificationChannel(channel)
+      require(valid(sha, entries.getJSONObject(sha))) { "Sound not durable or channel absent" }
     }
+
     AsyncFunction("remove") { sha: String ->
       val name = stem(sha); val value = state(); val entries = value.getJSONObject("entries")
       val claims = value.getJSONObject("claims")
@@ -150,7 +145,7 @@ class LopNotificationSoundModule : Module() {
       val row = entries.optJSONObject(sha)
       if (row != null) {
         manager.deleteNotificationChannel("sound.$name")
-        context.contentResolver.delete(uri(row), null, null)
+        NotificationSoundFiles.remove(context.filesDir, sha)
         entries.remove(sha); save(value)
       }
     }

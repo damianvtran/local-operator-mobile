@@ -466,7 +466,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * for that hook, not a transcript rendering change. No tokens, styles,
 	 * transcript components, corpus or instrument changed. Native filesystem
 	 * proof is separate; this retains only the unchanged U08 web geometry. */
-	src: "20877ffac129bb3530c1ca63df4bd1b31b943c12469a7d7df5d3fc3a78887ef7",
+	src: "d9f31c09f77f0d12d5295aec9c3d3e4ccbfe9fa96a3230db84950053270268e8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

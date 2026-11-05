@@ -1,6 +1,9 @@
 /** Native IO is lazy so web/FOSS binaries without the module never advertise
- * readiness. Android MUST publish to MediaStore: Expo's channel resolver only
- * reads res/raw and SystemUI cannot read an app-private file:// URL. iOS uses
+ * readiness. Android serves atomic private files through a non-exported,
+ * read-granted provider: Expo's resolver only reads res/raw and a raw private
+ * file:// URL is not readable by SystemUI. A deterministic full-SHA URI also
+ * survives Android's deleted-channel restoration without metadata tombstones.
+ * iOS uses
  * Library/Sounds, where UNNotificationSound searches before the app bundle.
  * Native inventory verifies bytes on every launch, not just index presence. */
 import { Platform } from "react-native";

@@ -26,12 +26,27 @@ volume is not transmitted; the phone's OS notification volume applies.
   Atomic file writes and `fsync` cover audio and the index. A small Swift half
   is used to make the durable-write/readiness boundary explicit and keep the
   same crash rules as Android, without a new third-party dependency.
-- Android API 29+ publishes an app-owned `MediaStore.Audio` row under
-  `Notifications/LocalOperator/` with `IS_NOTIFICATION=1`. SystemUI can read
-  that content URI; it cannot read a private `file://` sound. Expo's existing
-  channel resolver only searches `res/raw`, so the native half creates the
-  channel directly. No storage permission is requested. API 28 and earlier
-  keep the built-in fallback and never advertise custom readiness.
+- Android API 29+ publishes atomic private files through the non-exported
+  `NotificationSoundProvider`. Its exact URI is
+  `content://${applicationId}.notification-sounds/v1/<FULL-SHA>.wav`.
+  NotificationManagerService grants the channel URI to notification rendering
+  recipients; no exported provider, storage permission, or hardcoded SystemUI
+  grant is used. The provider additionally enforces the caller's exact READ
+  grant, rejects writes and noncanonical/traversal URIs, and opens final files
+  read-only. It needs neither JS nor network access when the OS starts the
+  process for a sound read. API 28 and earlier retain built-in fallback.
+- Stable addressing is essential: Android resurrects a deleted channel without
+  updating its immutable sound URI. Re-caching the same SHA now restores the
+  same full-SHA address without historical MediaStore rows or per-retired-SHA
+  metadata. Live prefix-collision checks and the wire/channel `c_<sha16>` names
+  are unchanged. Byte eviction unlinks private final/pending files and deletes
+  the channel after remote withdrawal. A previously open descriptor may finish
+  after unlink; later opens fail until the same SHA is republished.
+- Recovery visits only the dedicated private sound directory, reaps partials
+  and unindexed final files before new writes, and retains indexed invalid slots
+  for readiness withdrawal/accounting. The persistent final-file cap is 8 MiB;
+  the one <=2 MiB receive stage and one <=2 MiB publication temporary file are
+  bounded transient overhead, not a promise of <=8 MiB instantaneous disk use.
 - Native records a reserved slot **before** writing audio. Interrupted commits
   remain accounted for, but inventory marks them invalid. Inventory re-hashes
   files and checks Android channel existence/readability; an index row alone
@@ -80,20 +95,55 @@ Before dispatching a native lane, check all of:
 - iOS: the actual `Library/Sounds/c_<sha16>.wav` write, inventory after app
   restart, eviction, and a scheduled notification with that sound. Simulator
   can prove filesystem behavior; audibility and real APNs require a real phone.
-- Android: actual MediaStore row, effective channel sound URI from
+- Android: actual private file, effective full-SHA channel sound URI from
   `getNotificationChannelsAsync`/NotificationManager, inventory after restart,
-  eviction deletes the row and channel, and a local notification uses it.
+  eviction unlinks final bytes and the channel, same-SHA re-cache restores the
+  byte-identical URI, and a local notification uses it.
 - Native commit failure must leave `sound_custom_ready` false; failed remote
   withdrawal must leave the old file/channel present. Real pushes need S7.
-- **Same-digest eviction/re-cache on Android:** Android may restore a deleted
-  channel's old immutable URI while re-inserting the same digest yields a new
-  MediaStore URI. Content-addressed channel IDs prevent *different-content*
-  reuse but do not guarantee stable media URIs. This module refuses readiness
-  when the effective channel URI is unreadable, rather than claiming playback.
-  User-chosen readable sounds or silence in Android Settings are preserved.
-  Test this on a real device before claiming eviction/re-cache playback works;
-  guaranteed URI preservation or a channel-generation wire change would need
-  a separately approved contract decision.
+- The provider permission matrix needs a separate unprivileged receiver APK:
+  no grant must fail, an exact READ grant must allow only that SHA, write and
+  other-SHA reads must fail. A test-only manifest with URI grants disabled must
+  fail the same system-consumer path. Do not ship that negative-control manifest.
+- Actual background and normally terminated-app notifications must exercise NMS
+  grants on API 29 and a modern supported Android. Do not force-stop the app:
+  force-stop suppresses ordinary push delivery too. Real sound/audibility and
+  same-SHA channel restoration remain device gates, not assumed from source.
+- Clean disposable installs are required for new-provider proof: an unshipped
+  dev build with old MediaStore-backed channels cannot have its immutable URI
+  repaired just by recreating that channel. No operator data is reset, and no
+  released MediaStore implementation/migration is claimed.
+
+## Native instrumentation and platform sources
+
+The framework-only `NotificationSoundTestRunner` adds no runner dependency.
+`android.yml` compiles `:lop-notification-sound:assembleDebugAndroidTest` beside
+its normal debug build and uploads `notification-sound-native-tests`. Compilation
+is not execution. On an isolated emulator/disposable library test APK, run:
+
+```
+adb install -r <notification-sound-native-tests.apk>
+adb shell am instrument -w \
+  dev.localoperator.sound.test/dev.localoperator.sound.NotificationSoundTestRunner
+```
+
+Require **7/7 checks passed**, no failure statuses and instrumentation result -1.
+The runner performs real atomic publication/open/unlink, manifest checks,
+malformed/traversal/query URI and write-mode denials, injected exact-read-grant
+policy checks, same-SHA channel restoration/URI equality, an allocation-shaped
+negative control retaining an old channel URI, and crash cleanup. It never plays
+sound or touches a non-test installation. Its injected permission policy is NOT
+proof of NMS issuing a grant to a separate UID. The allocation fixture is NOT a
+claimed reproduction of the original MediaStore code; see the device matrix.
+
+Architect source decision (2026-11-05) checked Android 10/API 29 as well as
+current AOSP. Platform basis, not device results:
+
+- [Deleted-channel restoration preserves sound](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-10.0.0_r1/services/core/java/com/android/server/notification/PreferencesHelper.java#L636-L691).
+- [Channel sound participates in grantable URIs](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-10.0.0_r1/services/core/java/com/android/server/notification/NotificationRecord.java#L1217-L1272).
+- [NMS grants READ to rendering recipients](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-10.0.0_r1/services/core/java/com/android/server/notification/NotificationManagerService.java#L6547-L6625).
+- [Non-exported providers can serve temporary URI-granted callers](https://developer.android.com/guide/topics/manifest/provider-element#exported).
+- [API 30+ `hasUserSetSound`](https://developer.android.com/reference/android/app/NotificationChannel#hasUserSetSound()) distinguishes an explicit user override. Mute/overrides are never overwritten; readiness does not promise audibility over user mute, DND or OS volume.
 
 There is no new app settings UI, user-facing copy, playback preview, service
 extension, or second notification handler in this change.

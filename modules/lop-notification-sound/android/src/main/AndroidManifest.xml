@@ -1,1 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- NMS issues per-notification READ grants for channel sound URIs on
+         API 29+. No public export or hardcoded SystemUI package is needed. -->
+    <provider
+      android:name="dev.localoperator.sound.NotificationSoundProvider"
+      android:authorities="${applicationId}.notification-sounds"
+      android:exported="false"
+      android:grantUriPermissions="true" />
+  </application>
+</manifest>
