@@ -460,7 +460,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is rendered on the web target: channels are created only on Android, and
 	 * the keys are read only by that call. No transcript/corpus/instrument
 	 * change; historical pins retained. */
-	src: "1034165830953e1a4135ea4d94f7eec2a0888a4a4b2e737787c8f7077ddaeea9",
+	src: "0d695f1d1ded2ffc01cdaeabbb7ee4b5b8b286dbba8004cc1567bb5a85f1ddee",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

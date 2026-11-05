@@ -320,11 +320,17 @@ export const Textarea = ({
 						 *  only when there is nothing to scroll; content past the cap keeps
 						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
 						...webFieldStyle(Platform.OS, scrollable),
+						/* The composer's field paints ITS OWN box, not the box plus its
+						 *  padding: a web `<textarea>` is content-box, so the 44 pt floor plus
+						 *  `py-2` painted 60 and pushed the dock 4 pt past the record's 56/112
+						 *  (measured 2026-11-05). `box-sizing` is the web spelling of RN's own
+						 *  default, so native is unchanged. */
 						...(integrated
 							? {
 									backgroundColor: "transparent",
 									paddingHorizontal: 0,
 									borderWidth: 0,
+									...(Platform.OS === "web" ? { boxSizing: "border-box" } : {}),
 								}
 							: {}),
 					}}

@@ -52,6 +52,7 @@ import {
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
+	COMPOSER_FIELD_BOX,
 	composerPresentation,
 	keyboardOverlap,
 } from "@/features/session/composer-presentation";
@@ -722,18 +723,17 @@ export const Composer = ({
 			[0, 1],
 			[compactSingle ? 24 : idleHeight / 2, 24],
 		),
-		minHeight: interpolate(
-			progress.value,
-			[0, 1],
-			[idleHeight, compactSingle ? idleHeight : 112],
-		),
-		paddingTop: interpolate(
-			progress.value,
-			[0, 1],
-			[6, compactSingle ? 6 : 12],
-		),
-		paddingBottom: interpolate(progress.value, [0, 1], [6, 56]),
 	}));
+	/* SETTLED layout, from the settled state rather than a shared value: an
+	 * animated padding/height was a second source of truth for the box and left
+	 * the resting height 4 pt over the record's 56 (measured 2026-11-05). `height`
+	 * rather than `minHeight` so the painted box IS the contract, not whatever the
+	 * field's platform box happens to be (a web textarea measured 48). */
+	const shellBox = {
+		height: compactSingle ? idleHeight : presentation.expanded ? 112 : 56,
+		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
+		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
+	};
 	const fieldMotion = useAnimatedStyle(() => ({
 		marginStart: interpolate(progress.value, [0, 1], [44, 0]),
 		marginEnd: interpolate(progress.value, [0, 1], [44, 0]),
@@ -1232,7 +1232,7 @@ export const Composer = ({
 			<View>
 				{dictationRow}
 				{/* ---- row 1: the field, a full-width row of its own ---- */}
-				<Animated.View className="min-w-0" style={fieldMotion}>
+				<Animated.View className="min-w-0 shrink" style={fieldMotion}>
 					<Textarea
 						label="Message"
 						hideLabel
@@ -1245,7 +1245,15 @@ export const Composer = ({
 								: composerCopy().placeholder
 						}
 						maxLines={compactSingle ? 1 : 6}
-						maxHeightPx={fieldMaxHeight}
+						/* The field's own box is the dock's ruler: 44 pt at rest, so
+						 * 56 = 12 padding + 44 holds whatever the platform adds around
+						 * the text box (a web `<textarea>` measured 48 with its border).
+						 * Expanded keeps the budget's cap. */
+						maxHeightPx={
+							presentation.expanded
+								? (fieldMaxHeight ?? undefined)
+								: COMPOSER_FIELD_BOX
+						}
 						/* One line of placeholder, always (§2.5 D1): the field's resting height
 						 * must not grow with a wrapped placeholder, or the last transcript row is
 						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
@@ -1377,6 +1385,11 @@ export const Composer = ({
 				style={[
 					{
 						backgroundColor: elevated,
+						/* The record's paddings, interpolated with the same progress
+						 * value as the shape: 6/6 at rest (6 + 44 + 6 = 56) and 12/8
+						 * expanded (12 + 44 + 4 + 44 + 8 = 112). `composerPaintedHeight`
+						 * is the one place those sums are written down. */
+						...shellBox,
 						paddingHorizontal: 12,
 						marginTop: compactSingle ? 0 : 4,
 					},
