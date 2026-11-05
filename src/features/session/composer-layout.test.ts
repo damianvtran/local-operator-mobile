@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { morphHeight, morphPillRadius } from "./composer-presentation";
 import {
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
 	MODEL_FLOOR_PT,
 } from "./composer-layout";
+import { morphHeight, morphPillRadius } from "./composer-presentation";
 
 const read = (path: string) =>
 	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
@@ -92,7 +92,9 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 		// The design round's D1: one seed gave interpolate([120, 120]) while expanded.
 		expect(SRC).toMatch(/setCollapsedSeed\(total\)/);
 		expect(SRC).toMatch(/setExpandedSeed\(total\)/);
-		expect(SRC).toMatch(/morphHeight\(progress\.value, baseHeight, targetExpanded\)/);
+		expect(SRC).toMatch(
+			/morphHeight\(progress\.value, baseHeight, targetExpanded\)/,
+		);
 		// The negative control QA used: a fixed expanded height clips the field.
 		expect(SRC).not.toMatch(/height: compactSingle \? idleHeight/);
 	});

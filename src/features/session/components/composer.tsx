@@ -53,14 +53,14 @@ import {
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_BASE_HEIGHT,
-	composerPaintedHeight,
-	morphHeight,
-	morphPillRadius,
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_EXPANDED_HEIGHT,
 	COMPOSER_FIELD_BOX,
+	composerPaintedHeight,
 	composerPresentation,
 	keyboardOverlap,
+	morphHeight,
+	morphPillRadius,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
 import type { DictationState } from "@/features/session/use-dictation";
@@ -754,8 +754,7 @@ export const Composer = ({
 	const measureContent = (event: LayoutChangeEvent) => {
 		const height = Math.round(event.nativeEvent.layout.height);
 		if (height <= 0) return;
-		const total =
-			height + shellBox.paddingTop + shellBox.paddingBottom;
+		const total = height + shellBox.paddingTop + shellBox.paddingBottom;
 		if (presentation.expanded) {
 			if (total !== expandedSeed) setExpandedSeed(total);
 		} else if (!compactSingle && total !== collapsedSeed) {
