@@ -193,6 +193,9 @@ export async function runLaunchOnly(root: string) {
 		failure: "none" as "none" | "preflight" | "launch" | "cleanup",
 	};
 	let runner: RunnerHandle | undefined;
+	// Recorded here and pushed only after reap: a protocol failure discovered during
+	// cleanup must not leave an earlier `ok: true` beside stopOutcome=protocol-failure.
+	let observationStarted: number | undefined;
 	let boot: NativeScope | undefined;
 	const currentRun: Run = work.run;
 	async function stage<T>(
@@ -359,13 +362,8 @@ export async function runLaunchOnly(root: string) {
 			root,
 			work,
 		);
-		const observationStarted = performance.now();
+		observationStarted = performance.now();
 		receipt.stopOutcome = await observeLaunch(listener, runner, deadline);
-		receipt.stages.push({
-			name: "runner-observation",
-			elapsedMs: Math.round(performance.now() - observationStarted),
-			ok: receipt.stopOutcome === "expected-test-failure",
-		});
 		if (receipt.stopOutcome !== "expected-test-failure")
 			receipt.failure = "launch";
 	} catch {
@@ -381,6 +379,14 @@ export async function runLaunchOnly(root: string) {
 			// step owns the remaining persisted cleanup allowance.
 			receipt.failure = "cleanup";
 		}
+		if (observationStarted !== undefined)
+			receipt.stages.push({
+				name: "runner-observation",
+				elapsedMs: Math.round(performance.now() - observationStarted),
+				ok:
+					receipt.stopOutcome === "expected-test-failure" &&
+					receipt.failure === "none",
+			});
 		try {
 			// Best-effort second write: a SIGKILL bypasses this, which is why the
 			// attempted boundary was persisted before the spawn.

@@ -40,7 +40,18 @@ def memory_admitted(text, worker, groups):
     return controller[0] <= 512 * 1024 and sum(rss for _pid, group, rss in rows if group in groups) <= 2 * 1024 * 1024
 
 
+# `ps` costs ~117ms measured; sampling it on every watchdog tick would itself
+# become the load it is meant to bound, so the sample is throttled.
+SAMPLE_INTERVAL = 1.0
+_last_sample = 0.0
+
+
 def sample_memory(worker, groups):
+    global _last_sample
+    import time as _time
+    if _time.monotonic() - _last_sample < SAMPLE_INTERVAL:
+        return True
+    _last_sample = _time.monotonic()
     value = subprocess.run(['/bin/ps', '-axo', 'pid=,pgid=,rss='], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=1, check=True)
     if len(value.stdout) > 1024 * 1024:
         raise ValueError('closed')

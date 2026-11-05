@@ -25,8 +25,9 @@ is needed. Xcode can install/launch the independent XCTest runner itself.
 ## Capability boundary and interpretation
 
 The host listens on ephemeral IPv4 loopback, with a private 24-byte session and
-32-byte bearer. Only bounded authenticated POST `/rpc` messages with exact keys,
-fresh 32-byte challenges and strict order are accepted. The ten-key ready reply
+32-byte bearer. Only bounded authenticated POST `/rpc` messages with the exact
+three keys (uniqueness enforced; key order itself is not significant), fresh
+32-byte challenges and strictly ordered request kinds are accepted. The ten-key ready reply
 has a one-second lifetime and null identity/fingerprint/open time. The next
 before-observe is **always HTTP 403**. No query grant, application identity,
 observation authority or tap permission exists in this controller.
@@ -52,7 +53,8 @@ minimal environments without account credentials.
 One 300-second work clock starts before acquisition: acquisition 90s,
 version/SDK 15s combined, static/prepare 45s, ownership 60s total (inventory,
 create, verification individually clipped to 30s), ready/next request 40s,
-post-denial exit 30s; 20s remains for overhead. Boot gets its existing separate
+post-denial exit 30s, plus the pre-launch expiry refresh capped at 10s; 10s remains
+for overhead and interpreter start. Boot gets its existing separate
 300s window with work paused. Cleanup shares one persisted 120s allowance,
 including fallback. The workflow ceiling is 15 minutes. Controller RSS is capped
 at 512 MiB and owned native process groups at 2 GiB by an independent watchdog.
