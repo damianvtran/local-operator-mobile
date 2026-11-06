@@ -155,6 +155,42 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL https://get.maestro.mobile.dev | bash
+      - name: Reuse a verified candidate from an earlier attempt on this head
+        # The producer is 25-45 min of every attempt, and a failed E2E attempt pays
+        # it again. A previous attempt on the SAME frozen head already uploaded its
+        # app as `candidate-app.tgz`; fetch it and let the proof decide. Identity is
+        # re-verified inside the proof (source SHA + bundle id + flavor + nonce from
+        # the app's own Info.plist); any mismatch falls back to building, so this
+        # step can only save time, never weaken identity. Consumption itself stays
+        # off until the nonce-inheritance decision is taken: set
+        # STAGE_B_CONSUME_CANDIDATE=true in the job env to enable it.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/stage-b-prebuilt"
+          gh run list --workflow stage-b-draft-proof.yml --event pull_request \
+            --commit "$SOURCE_SHA" --limit 20 \
+            --json databaseId,headSha,status,conclusion \
+            > "$RUNNER_TEMP/stage-b-prebuilt/runs.json"
+          RUN_ID=$(python3 -c 'import json,os; rows=json.load(open(os.environ["RUNNER_TEMP"]+"/stage-b-prebuilt/runs.json")); matches=[r for r in rows if r["headSha"]==os.environ["SOURCE_SHA"] and r["status"]=="completed"]; print(matches[-1]["databaseId"] if matches else "")')
+          if [ -z "$RUN_ID" ]; then
+            echo "no earlier completed attempt on this head; the proof will build"
+            exit 0
+          fi
+          gh run download "$RUN_ID" --name "stage-b-native-$SOURCE_SHA" \
+            --dir "$RUNNER_TEMP/stage-b-prebuilt" || {
+              echo "earlier attempt uploaded no reusable candidate; the proof will build"
+              exit 0
+            }
+          CANDIDATE=$(find "$RUNNER_TEMP/stage-b-prebuilt" -name candidate-app.tgz -type f | head -1)
+          if [ -z "$CANDIDATE" ]; then
+            echo "earlier attempt has no candidate-app.tgz; the proof will build"
+            exit 0
+          fi
+          echo "STAGE_B_PREBUILT_CANDIDATE=$CANDIDATE" >> "$GITHUB_ENV"
       - name: One unsigned producer and real-provider native matrix
         run: pnpm exec tsx scripts/ci/stage-b-draft-proof.ts
       - name: Preserve exact source/artifact/wire/native/frame receipts on all outcomes

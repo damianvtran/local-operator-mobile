@@ -7,10 +7,11 @@ import {
 	readdirSync,
 	readFileSync,
 	readlinkSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
 	STAGE_B_BUNDLE,
@@ -25,6 +26,11 @@ import {
 	startStageBIdentityFixture,
 } from "../../tools/mock-relay/stage-b-identity-fixture.ts";
 import { capFor } from "./account-routing-proof-contract.ts";
+import {
+	type StageBCandidateIdentity,
+	stageBCandidateSource,
+	verifyStageBCandidate,
+} from "./stage-b-candidate.ts";
 import {
 	STAGE_B_DOCUMENT_NAME,
 	seedStageBDocument,
@@ -539,6 +545,73 @@ async function runStageBCoordinator(
 			};
 			return seed;
 		};
+		/** A verified prebuilt candidate for THIS frozen head, or null.
+		 *
+		 * Consumption is off unless `STAGE_B_CONSUME_CANDIDATE=true`: a reused app
+		 * brings its own nonce, and adopting it is a deliberate decision about
+		 * evidence hygiene (each attempt still mints a fresh fixture and its own
+		 * evidence; the nonce binds app to fixture, not app to attempt). Every
+		 * refusal falls back to building, so a wrong or stale artifact can only
+		 * cost time, never identity. */
+		const resolvePrebuiltCandidate = async (): Promise<{
+			app: string;
+			archive: string;
+			identity: StageBCandidateIdentity;
+		} | null> => {
+			const archive = env.STAGE_B_PREBUILT_CANDIDATE;
+			if (env.STAGE_B_CONSUME_CANDIDATE !== "true") return null;
+			if (!archive || !existsSync(archive)) {
+				receipt.candidateRefusal = "no prebuilt candidate artifact present";
+				return null;
+			}
+			const dir = join(output, "prebuilt-candidate");
+			try {
+				rmSync(dir, { recursive: true, force: true });
+				mkdirSync(dir, { recursive: true });
+				await run("prebuilt-candidate-extract", "tar", [
+					"-xzf",
+					archive,
+					"-C",
+					dir,
+				]);
+				const apps = readdirSync(dir, { recursive: true })
+					.map(String)
+					.filter((name) => name.endsWith(".app"));
+				if (apps.length !== 1)
+					throw new Error("prebuilt candidate app ambiguous");
+				const app = join(dir, apps[0] ?? "");
+				const read = (key: string) =>
+					run(`prebuilt-${key}`, nodeOnly?.plist ?? "/usr/bin/plutil", [
+						"-extract",
+						key,
+						"raw",
+						"-o",
+						"-",
+						join(app, "Info.plist"),
+					]);
+				const identity: StageBCandidateIdentity = {
+					sourceSha: await read("StageBProofSourceSha"),
+					nonce: await read("StageBProofNonce"),
+					bundleId: await read("CFBundleIdentifier"),
+					flavor: await read("StageBProofFlavor"),
+				};
+				const verdict = verifyStageBCandidate(identity, {
+					sourceSha,
+					bundleId: STAGE_B_BUNDLE,
+					flavor: "stage-b-draft-proof",
+				});
+				if (!verdict.ok) {
+					receipt.candidateRefusal = verdict.reason;
+					return null;
+				}
+				return { app, archive, identity };
+			} catch (failure) {
+				receipt.candidateRefusal = `prebuilt candidate unusable: ${
+					failure instanceof Error ? failure.message : String(failure)
+				}`;
+				return null;
+			}
+		};
 		const bootOwned = async (name: string) => {
 			udid = await run("create-owned-simulator", "xcrun", [
 				"simctl",
@@ -567,8 +640,20 @@ async function runStageBCoordinator(
 			receipt.status = "SETUP_ONLY_PASS";
 			return; // finally still reaps/deletes; cleanup failure rejects this run.
 		}
-		fixture = await startStageBIdentityFixture(sourceSha);
+		/* A repeat attempt on the same frozen head may reuse the app an earlier
+		 * attempt uploaded, instead of paying the 25-45 min producer again. The
+		 * candidate is read BEFORE the fixture because its embedded nonce is part
+		 * of its identity: the fixture adopts it, and the app stays bound to the
+		 * fixture for this attempt. Anything unproven falls back to building. */
+		const prebuiltApp = await resolvePrebuiltCandidate();
+		fixture = await startStageBIdentityFixture(
+			sourceSha,
+			prebuiltApp?.identity.nonce,
+		);
 		const config = fixture.config;
+		receipt.candidateSource = stageBCandidateSource(prebuiltApp !== null);
+		if (prebuiltApp !== null)
+			receipt.candidateDigest = digest(readFileSync(prebuiltApp.archive));
 		receipt.heldProofTimings = fixture.heldTimings;
 		receipt.fixtureRequestTimeline = fixture.requestTimeline;
 		receipt.nonce = redact(config.nonce);
@@ -610,40 +695,47 @@ async function runStageBCoordinator(
 		// uncapped Release build takes ~23–25 min; retain a bounded 45-min ceiling.
 		// Keep the historical receipt phase name for artifact correlation; this
 		// candidate is now ad-hoc signed, never distribution/certificate signed.
-		await run(
-			"unsigned-candidate-producer",
-			"xcodebuild",
-			[
-				"-workspace",
-				join("ios", workspace[0] ?? ""),
-				"-scheme",
-				scheme,
-				"-configuration",
-				"Release",
-				"-sdk",
-				"iphonesimulator",
-				"-destination",
-				`platform=iOS Simulator,id=${udid}`,
-				"-derivedDataPath",
-				join(output, "DerivedData"),
-				"CODE_SIGN_IDENTITY=-",
-				"CODE_SIGN_STYLE=Manual",
-				"DEVELOPMENT_TEAM=",
-				"CODE_SIGNING_ALLOWED=YES",
-				"CODE_SIGNING_REQUIRED=NO",
-				`CODE_SIGN_ENTITLEMENTS=${simulatorEntitlements}`,
-				"build",
-				"-quiet",
-			],
-			2700,
-		);
-		const products = join(
-			output,
-			"DerivedData/Build/Products/Release-iphonesimulator",
-		);
-		const apps = readdirSync(products).filter((name) => name.endsWith(".app"));
-		if (apps.length !== 1) throw new Error("produced native app ambiguous");
-		const app = join(products, apps[0] ?? "");
+		if (prebuiltApp === null)
+			await run(
+				"unsigned-candidate-producer",
+				"xcodebuild",
+				[
+					"-workspace",
+					join("ios", workspace[0] ?? ""),
+					"-scheme",
+					scheme,
+					"-configuration",
+					"Release",
+					"-sdk",
+					"iphonesimulator",
+					"-destination",
+					`platform=iOS Simulator,id=${udid}`,
+					"-derivedDataPath",
+					join(output, "DerivedData"),
+					"CODE_SIGN_IDENTITY=-",
+					"CODE_SIGN_STYLE=Manual",
+					"DEVELOPMENT_TEAM=",
+					"CODE_SIGNING_ALLOWED=YES",
+					"CODE_SIGNING_REQUIRED=NO",
+					`CODE_SIGN_ENTITLEMENTS=${simulatorEntitlements}`,
+					"build",
+					"-quiet",
+				],
+				2700,
+			);
+		let app: string;
+		if (prebuiltApp !== null) app = prebuiltApp.app;
+		else {
+			const products = join(
+				output,
+				"DerivedData/Build/Products/Release-iphonesimulator",
+			);
+			const apps = readdirSync(products).filter((name) =>
+				name.endsWith(".app"),
+			);
+			if (apps.length !== 1) throw new Error("produced native app ambiguous");
+			app = join(products, apps[0] ?? "");
+		}
 		const info = async (path: string, key: string) =>
 			run(`plist-${key}`, nodeOnly?.plist ?? "/usr/bin/plutil", [
 				"-extract",
@@ -1546,7 +1638,7 @@ async function runStageBCoordinator(
 				"-czf",
 				join(output, "candidate-app.tgz"),
 				"-C",
-				products,
+				dirname(app),
 				basename(app),
 			],
 			180,
