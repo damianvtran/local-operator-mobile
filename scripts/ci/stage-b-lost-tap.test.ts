@@ -299,7 +299,8 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 		expect(source).toContain("launchCounters.discovery");
 		// A refusal painted on screen is never laundered into a retry.
 		expect(source).toContain("STAGE_B_VISIBLE_REFUSALS");
-		expect(source).toContain("hierarchy unavailable");
+		expect(source).toContain('status: "unavailable"');
+		expect(source).toContain("receipt.hierarchyCheck");
 	});
 	describe("fixture-observed evidence authorises the one re-tap", () => {
 		/** Run 42181646348's failed launch: discovery completed, no /me, no
@@ -407,6 +408,45 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 				"utf8",
 			);
 			expect(source).toContain('"Try now"');
+		});
+		it("authorises on structured evidence when the hierarchy read times out", () => {
+			// Run 42216832978: the gate's 20 s read timed out while the same run's
+			// failure hierarchy took 66.3 s (136 s / 173 s in earlier runs), so an
+			// unreadable hierarchy is missing evidence, not a refusal.
+			const decision = stageBLostTapDecision(
+				{ ...clean, hierarchyUnavailable: true },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(true);
+			expect(decision.authorisedBy).toBe("fixture-recovery");
+		});
+		it("still refuses refusal copy when the read succeeded", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, visibleError: "Try now" },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("visible refusal");
+		});
+		it("still refuses a failure surface when the hierarchy is unavailable", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, hierarchyUnavailable: true, traceFailure: true },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("failure surface");
+		});
+		it("still refuses a row callback when the hierarchy is unavailable", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, hierarchyUnavailable: true, pressObserved: true },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("row callback observed");
 		});
 		it("refuses a second loss in the same launch", () => {
 			const decision = stageBLostTapDecision(clean, null, true);

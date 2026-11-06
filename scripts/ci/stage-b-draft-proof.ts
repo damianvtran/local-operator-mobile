@@ -1010,24 +1010,33 @@ async function runStageBCoordinator(
 				},
 			};
 		};
-		/** A visible refusal in the hierarchy, or `"hierarchy unavailable"` when the
-		 * read itself failed. Absence of evidence is not evidence of a lost tap, so
-		 * an unreadable hierarchy refuses rather than authorises. */
-		const hierarchyRefusal = async (): Promise<string | null> => {
-			if (!fixture) return "hierarchy unavailable";
+		/** The gate's ONE hierarchy read, and what it actually says.
+		 *
+		 * The cap is measured, not guessed: `failure-hierarchy` took 66.3 s in run
+		 * 42216832978 and 136 s / 173 s in earlier runs. The gate's 20 s read timed
+		 * out in that run and refused a legitimate retry, so this read gets the same
+		 * 180 s ceiling the failure path works within — the connect flow's own cap is
+		 * untouched, because this is the gate's evidence read, not the flow. */
+		const hierarchyCheck = async (): Promise<{
+			status: "clean" | "refusal" | "unavailable";
+			marker: string | null;
+		}> => {
+			if (!fixture) return { status: "unavailable", marker: null };
 			try {
 				const text = await run(
 					"lost-tap-hierarchy",
 					maestro,
 					["--device", udid ?? "", "hierarchy"],
-					20,
+					180,
 				);
-				return (
+				const marker =
 					STAGE_B_VISIBLE_REFUSALS.find((needle) => text.includes(needle)) ??
-					null
-				);
+					null;
+				return marker === null
+					? { status: "clean", marker: null }
+					: { status: "refusal", marker };
 			} catch {
-				return "hierarchy unavailable";
+				return { status: "unavailable", marker: null };
 			}
 		};
 		/** The one conditional re-tap, decided on fixture-observable evidence.
@@ -1058,6 +1067,9 @@ async function runStageBCoordinator(
 							?.processId ?? null;
 					// Optional, short: absence must cost seconds, never the segment.
 					const answer = await probeOutcome(10000);
+					const read = await hierarchyCheck();
+					receipt.hierarchyCheck =
+						read.status === "refusal" ? `refusal: ${read.marker}` : read.status;
 					const decision = stageBLostTapDecision(
 						{
 							identityRequests: (fixture?.counters.me ?? 0) - launchCounters.me,
@@ -1075,7 +1087,8 @@ async function runStageBCoordinator(
 								: null,
 							launchProcessId:
 								typeof launchProcessId === "string" ? launchProcessId : null,
-							visibleError: await hierarchyRefusal(),
+							visibleError: read.marker,
+							hierarchyUnavailable: read.status === "unavailable",
 							pressObserved,
 							traceFailure,
 						},

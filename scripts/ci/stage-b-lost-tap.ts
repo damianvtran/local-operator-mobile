@@ -202,8 +202,13 @@ export interface StageBLostTapEvidence {
 	} | null;
 	/** Process lease of the FIRST receipt this launch posted, if any was seen. */
 	launchProcessId: string | null;
-	/** A refusal marker visible in the captured hierarchy, or null. */
+	/** A refusal marker visible in the captured hierarchy, or null. Only
+	 * meaningful when the read SUCCEEDED — see `hierarchyUnavailable`. */
 	visibleError: string | null;
+	/** The hierarchy read timed out or failed. That is missing evidence, not a
+	 * refusal: the structured signals still decide (round 37: a 20 s read against
+	 * 66-173 s measured reads refused a legitimate retry). */
+	hierarchyUnavailable?: boolean;
 	/** The launch posted a `row-press` trace, which fires synchronously at
 	 * callback entry — so the tap DID reach JavaScript. */
 	pressObserved?: boolean;
@@ -222,6 +227,7 @@ export function stageBFixtureRecovery(
 		trace: { processId: string; phase: string; selected: boolean } | null;
 		launchProcessId: string | null;
 		visibleError: string | null;
+		hierarchyUnavailable?: boolean;
 		pressObserved?: boolean;
 		traceFailure?: boolean;
 	},
@@ -240,7 +246,12 @@ export function stageBFixtureRecovery(
 		};
 	if (evidence.traceFailure === true)
 		return { allow: false, reason: "failure surface observed in trace" };
-	if (evidence.visibleError !== null)
+	/* Painted copy vetoes only when the read actually succeeded. An unreadable
+	 * hierarchy is missing evidence, and the structured signals above are the
+	 * instrument. */
+	if (evidence.hierarchyUnavailable === true) {
+		// nothing: fall through to the structured checks
+	} else if (evidence.visibleError !== null)
 		return {
 			allow: false,
 			reason: `visible refusal in hierarchy: ${evidence.visibleError}`,
@@ -296,6 +307,7 @@ export function stageBLostTapDecision(
 		trace: { processId: string; phase: string; selected: boolean } | null;
 		launchProcessId: string | null;
 		visibleError: string | null;
+		hierarchyUnavailable?: boolean;
 		pressObserved?: boolean;
 		traceFailure?: boolean;
 	},
