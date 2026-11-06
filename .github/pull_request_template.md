@@ -39,7 +39,7 @@ Show that it works by running the real thing, not only the test suite.
      Rules: AGENTS.md, "Commits and pull requests" and "Build host assumptions". -->
 
 - Split (`harness_delta_proof.py --split`): product +N / harness +N → SPLIT | NO SPLIT
-- Native evidence: N of 3 failed attempts, N h of 6 h
+- Native evidence: N of 3 failed-or-cancelled attempts, N h of 6 h
 - Pushes after a clean round: `<R>..<H>` harness-only (proof pasted) | round N
 
 ## Checklist

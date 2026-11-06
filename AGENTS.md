@@ -38,18 +38,17 @@ once chosen — do not assume one before it lands.
   changed path matches a `harness:` glob, and no changed path is a `ship:` path
   or named by one. Paste the harness delta proof
   (`python scripts/harness_delta_proof.py <R> <H> --base origin/main --repo .`
-  from local-operator: exit 0 harness-only, 1 round required, 2 no manifest/bad
-  refs). Without the script, the plain-git equivalent of the byte condition is
-  `git diff --quiet <R> <H> -- . ':(exclude,glob)scripts/ci/**' ...` with one
-  `:(exclude,glob)` per `harness:` glob (exit 0 = zero product bytes), plus
-  `git diff --quiet <R> <H> -- .github/harness-paths`, an empty
-  `git diff --name-only <R> <H> -- <every ship: glob as :(glob)>`, and no hit for
-  each changed file's basename in `git grep -F <name> <H> -- <ship: globs>`. The
+  from local-operator: exit 0 harness-only, 1 round required, 2 could not be
+  computed). It is a reachability check that fails closed, not a proof that a
+  change cannot alter behaviour: anything it cannot read or resolve is a round.
+  No script output, no carve-out — a hand-run `git diff`/`git grep` is weaker
+  (blind to `@/` aliases and extensionless imports) and does not qualify. The
   accumulated delta then gets ONE `### Harness delta check — <R>..<H>` at the
-  merge gate by an independent reviewer, reading only for gate weakening
-  (deleted or loosened assertions, skips, widened tolerances, `continue-on-error`,
-  a probe that cannot fail); a blocker/major there is fixed like any other. QA
-  is retained. Any failed condition — one product byte, a script `release.yml`
+  merge gate by an independent reviewer, reading for gate weakening (deleted or
+  loosened assertions, skips, widened tolerances, `continue-on-error`, a probe
+  that cannot fail) and for any harness file that runs with release triggers,
+  secrets, signing or publishing; a blocker/major there is fixed like any other.
+  QA is retained. Any failed condition — one product byte, a script `release.yml`
   runs even though it lives under `scripts/ci/`, a manifest edit, a moved
   base — is a normal `R..H` round.
 - **Split the harness out when it outgrows the product.** At every review

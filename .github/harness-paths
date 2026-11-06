@@ -13,8 +13,12 @@
 # - Anything NOT matched by a `harness:` glob is product. One changed product
 #   byte opens a round. Unlisted means product, so forgetting an entry is safe.
 # - `ship:` lists what the shipping pipeline (release.yml and everything it
-#   calls) reads. A `ship:` match beats a `harness:` match, and so does being
-#   NAMED by a ship file (path, basename, or relative import/require/source).
+#   calls) reads. When a path matches both, the MORE SPECIFIC glob wins (longer
+#   literal prefix; ties go to ship), so `ship: scripts/ci/version.test.ts`
+#   overrides `harness: scripts/ci/**`. Being NAMED by a ship file (path,
+#   basename, import/require/source specifier) also makes a harness file product.
+# - The proof fails closed: anything it cannot read or resolve is a round. With
+#   no proof output there is no carve-out — the delta gets a normal round.
 # - THE scripts/ci/** GLOB IS NOT AN EXEMPTION for the scripts release.yml runs.
 #   Reachability makes them product. A rule keyed on directories alone is the
 #   path classifier that already failed in the Minerva SDLC skill; the ship
@@ -44,13 +48,21 @@ ship: scripts/ci/ios-signing.py
 ship: scripts/ci/release-notes.ts
 ship: scripts/ci/stage-release-assets.sh
 ship: scripts/ci/check-secrets.ts
+# Tests of those scripts. ci.yml (called by release.yml) runs them via
+# `pnpm test`; a skipped assertion here weakens the release gate, so they are
+# product, not harness (round 1, Q-M1).
+ship: scripts/ci/version.test.ts
+ship: scripts/ci/release-platforms.test.ts
+ship: scripts/ci/release-notes.test.ts
+ship: scripts/ci/stage-release-assets.test.ts
+ship: scripts/ci/ios-signing-test.py
+ship: scripts/ci/fastlane-path-test.rb
 # The app: source, routes, native modules, config plugins, assets, strings.
 ship: app/**
-# src/ is listed per directory, NOT as src/**: a ship glob beats a harness glob,
-# so src/** would make src/testing/** unexemptable. Add any NEW top-level src/
-# directory here — an unlisted one is still product, but its imports of
-# src/testing would go unscanned. (src/features/session/runtime.ts names
-# testing/ today, which is exactly what the reachability scan is for.)
+# src/ is listed per directory. `ship: src/**` would classify the same way
+# (src/testing/** is more specific), but the explicit list keeps every shipped
+# directory's imports in the reachability scan by construction. Add any NEW
+# top-level src/ directory here; an unlisted one is still product.
 ship: src/*
 ship: src/connection/**
 ship: src/contracts/**
@@ -88,7 +100,12 @@ harness: scripts/ci/**
 harness: src/testing/**
 harness: tools/mock-relay/**
 harness: e2e/**
-# Evidence-only workflows: none is called by release.yml (checked 2026-11-06).
+# Evidence-only workflows, by EXACT filename: a glob such as *-proof.yml would
+# exempt a NEW workflow that runs on tags with signing secrets (round 1, M3).
+# A new workflow is product until it is listed here, which is itself a round.
+# None of these is called by release.yml (checked 2026-11-06).
 harness: .github/workflows/e2e.yml
 harness: .github/workflows/flake-report.yml
-harness: .github/workflows/*-proof.yml
+harness: .github/workflows/oauth-callback-proof.yml
+harness: .github/workflows/android-oauth-callback-proof.yml
+harness: .github/workflows/signin-app-proof.yml
