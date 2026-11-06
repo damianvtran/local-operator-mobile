@@ -12,5 +12,7 @@
 	"mobile.session.highlights.video_open": "Воспроизвести видео {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {Ещё # звук} few {Ещё # звука} many {Ещё # звуков} other {Ещё # звука}}",
 	"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Открыть {agent}",
+	"mobile.session.subagent_open_short": "открыть"
 }

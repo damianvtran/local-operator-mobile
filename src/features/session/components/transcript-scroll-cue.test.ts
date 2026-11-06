@@ -286,18 +286,43 @@ describe("the rail's presence signal", () => {
 	});
 
 	it("does not restart the linger for a repeated offset", () => {
-		/* Round 1, m3 / Q3 / U8. The repeat lands INSIDE the first linger and the
-		 *  assertion is at that linger's own end: a re-arm would hold the rail up
-		 *  until RAIL_LINGER_MS after the repeat, so this distinguishes the two
-		 *  behaviours (the round-1 version advanced a full linger after the
-		 *  repeat, which passed either way). */
+		/* Round 1, m3 / Q3 / U8; made honest in round 2, Q10. A stationary list
+		 *  whose scroll view keeps re-delivering the same offset must not hold
+		 *  the rail up. Round 1 guarded that with a last-offset check this test
+		 *  could not reach (a post-release offset was already discarded by the
+		 *  gesture gate, so it passed with the check deleted). The check is gone;
+		 *  what holds the property is the gesture gate, and this is its test:
+		 *  remove `if (!held && !coasting) return` and the re-emits below keep
+		 *  re-arming the linger, so the rail is still up at the first linger's
+		 *  own end. The repeats land INSIDE that linger on purpose. */
 		const presence = createScrollPresence();
 		presence.setHeld(true);
 		presence.noteMovement(20);
-		presence.setHeld(false);
-		vi.advanceTimersByTime(RAIL_LINGER_MS - 500);
 		presence.noteMovement(20);
-		vi.advanceTimersByTime(500);
+		presence.setHeld(false);
+		for (let tick = 1; tick <= 4; tick += 1) {
+			vi.advanceTimersByTime((RAIL_LINGER_MS - 100) / 4);
+			presence.noteMovement(20);
+		}
+		vi.advanceTimersByTime(100);
+		expect(presence.readVisible()).toBe(false);
+		presence.dispose();
+	});
+
+	it("lets a drag that catches a glide end it (no momentum end needed)", () => {
+		/* Round 2, U11 / m-r2-3: a finger that stops a flick does not reliably
+		 *  get `onMomentumScrollEnd` first. Without `setHeld(true)` clearing the
+		 *  glide, `coasting` stays true after the catch and no linger ever arms
+		 *  again — the rail is stuck up. */
+		const presence = createScrollPresence();
+		presence.setHeld(true);
+		presence.setHeld(false);
+		presence.setCoasting(true);
+		// The reader catches the glide; the momentum end never arrives.
+		presence.setHeld(true);
+		presence.noteMovement(300);
+		presence.setHeld(false);
+		vi.advanceTimersByTime(RAIL_LINGER_MS);
 		expect(presence.readVisible()).toBe(false);
 		presence.dispose();
 	});

@@ -412,10 +412,17 @@ export const TranscriptList = ({
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
+	/* The resize mark is set ONLY when the open state really changes (round 2,
+	 *  U10 / Q9 / m-r2-1). A press that asks for the state the row already has
+	 *  produces no content-size change to consume it, so the mark would sit armed
+	 *  until the next streamed growth — which it would then misread as the
+	 *  reader's own resize and unpin the tail for. It is set inside the updater
+	 *  because that is the only place the CURRENT set is known; the updater may
+	 *  run twice under StrictMode, which is harmless for an idempotent flag. */
 	const toggleRowOpen = useCallback((id: string, open: boolean) => {
-		foldResizeRef.current = true;
 		setRowOpen((current) => {
 			if (current.has(id) === open) return current;
+			foldResizeRef.current = true;
 			const next = new Set(current);
 			if (open) next.add(id);
 			else next.delete(id);
@@ -624,7 +631,6 @@ export const TranscriptList = ({
 	useEffect(() => {
 		heightsRef.current.clear();
 		setReaderExpanded(NO_TURNS);
-		setRowOpen(NO_TURNS);
 		const elsewhere =
 			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false;
 		setOpenElsewhere(elsewhere);
@@ -634,13 +640,25 @@ export const TranscriptList = ({
 
 	/* A FIND LANDING OPENS THE ROW IT LANDS ON (UX round 1, U2): a hit on line 3
 	 *  of a folded peer message landed on a one-line summary without the word.
-	 *  The render below already treats the highlighted row as open, so the
-	 *  landing frame shows the body; this records it so the row STAYS open once
-	 *  the highlight moves on rather than snapping shut under the reader.
-	 *  Declared AFTER the session-switch effect on purpose: effects run in
-	 *  declaration order, and that one clears the set — a landing that arrives
-	 *  with the mount must be recorded after the clear, not before it. */
-	useEffect(() => {
+	 *  The landing is RECORDED in the open set, and the set is the only thing
+	 *  the row's `open` reads. Round 1 also OR-ed `id === highlightId` into the
+	 *  render, which made the current hit impossible to close: the reader's tap
+	 *  changed nothing they could see, and — worse — armed the fold-resize mark
+	 *  with no resize to consume it, so the next streamed growth unpinned the
+	 *  tail (round 2, U10 / Q9 / m-r2-1).
+	 *
+	 *  A LAYOUT effect, so the state update re-renders before the browser
+	 *  paints: the hit is open on its first painted frame, as the render-time OR
+	 *  used to guarantee. The session reset is a layout effect for the same
+	 *  reason and is declared FIRST: layout effects run in declaration order,
+	 *  and a landing that arrives with the mount must be recorded after the
+	 *  clear, not wiped by it (the passive session effect above runs after every
+	 *  layout effect, so it must not clear this set). */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `sessionId` is the TRIGGER for the reset, not a read.
+	useLayoutEffect(() => {
+		setRowOpen(NO_TURNS);
+	}, [sessionId]);
+	useLayoutEffect(() => {
 		if (highlightId === null) return;
 		setRowOpen((current) => {
 			if (current.has(highlightId)) return current;
@@ -1103,7 +1121,7 @@ export const TranscriptList = ({
 						onOpenAgent={onOpenAgent}
 						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
-						open={rowOpen.has(item.id) || item.id === highlightId}
+						open={rowOpen.has(item.id)}
 						onToggleOpen={toggleRowOpen}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge

@@ -153,10 +153,7 @@ export const CollapsedRow = ({
 				    some words (UX round 1, U5). */}
 					{label !== undefined && label.length > 0 ? (
 						<Text
-							className={cx(
-								"min-w-0 max-w-1/2 shrink text-meta-read",
-								labelClass,
-							)}
+							className={cx("min-w-0 max-w-1/2 shrink text-meta", labelClass)}
 							numberOfLines={1}
 						>
 							{label}

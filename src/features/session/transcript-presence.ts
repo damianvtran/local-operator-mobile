@@ -121,15 +121,23 @@ export function edgeFadeLevels({
  * rid of, in the state they spend most time in. So movement shows the rail only
  * while a drag holds the list (`setHeld`) or its momentum carries it
  * (`setCoasting`); an offset change outside both is a scroll the app made, and
- * is recorded but never shown. Known limit: a web wheel scroll emits neither
- * gesture event, so on the web target the rail answers touch drags only.
+ * is recorded but never shown.
+ *
+ * Known limit — ON WEB THE RAIL NEVER SHOWS. react-native-web 0.21's ScrollView
+ * emits only `onScroll`: no drag or momentum events for wheel, trackpad OR touch
+ * (round 2, m-r2-2 — round 1's note claimed touch drags still worked, which they
+ * do not). Every web offset therefore reads as a scroll the app made. That is
+ * the accepted trade for keeping the tail pin from raising it on the native
+ * targets this rail exists for; no web gesture path is wired.
  */
 export type ScrollPresence = {
 	/** The offset moved to this value. Shows the rail only during a reader
-	 *  gesture (see above). Ignored when it is the offset already reported — a
-	 *  platform that re-delivers the same event must not restart the linger, or
-	 *  a stationary list under a scroll view that keeps emitting would hold the
-	 *  rail up forever (round 1, m3 / Q3 / U8). */
+	 *  gesture (see above). A stationary list whose scroll view keeps
+	 *  re-delivering the same offset cannot hold the rail up (round 1, m3 / Q3 /
+	 *  U8): outside a gesture an offset never shows or re-arms anything, and
+	 *  inside one the linger is not running to be restarted. That is why there
+	 *  is no repeated-offset guard — round 1 carried one that no input could
+	 *  reach (round 2, Q10). */
 	noteMovement(offsetY: number): void;
 	/** A drag gesture began or ended. A HELD thumb keeps the rail up however
 	 *  long the reader holds still, which is the pointer analogue of a desktop
@@ -150,7 +158,6 @@ export function createScrollPresence(): ScrollPresence {
 	let visible = false;
 	let held = false;
 	let coasting = false;
-	let lastOffset: number | null = null;
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	const listeners = new Set<(visible: boolean) => void>();
 
@@ -180,10 +187,7 @@ export function createScrollPresence(): ScrollPresence {
 	};
 
 	return {
-		noteMovement(offsetY: number) {
-			/* A repeated offset is not movement and must not re-arm the linger. */
-			if (lastOffset === offsetY) return;
-			lastOffset = offsetY;
+		noteMovement(_offsetY: number) {
 			/* A scroll the app made (the tail pin, a restore) is not the reader's. */
 			if (!held && !coasting) return;
 			show();
@@ -192,6 +196,12 @@ export function createScrollPresence(): ScrollPresence {
 		setHeld(next: boolean) {
 			held = next;
 			if (held) {
+				/* A new drag ends any glide it caught (round 2, U11 / m-r2-3). A
+				 *  finger that stops a flick does not reliably get
+				 *  `onMomentumScrollEnd` first, and a `coasting` left true would
+				 *  stop every later linger from arming — the rail stuck up for
+				 *  good after one caught flick. */
+				coasting = false;
 				clear();
 				show();
 				return;

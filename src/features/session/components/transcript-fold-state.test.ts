@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type React from "react";
 import { act, createElement } from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
@@ -26,7 +27,9 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
 type PressProps = {
 	onPress?: () => void;
 	accessibilityLabel?: string;
+	accessibilityRole?: string;
 	accessibilityState?: { expanded?: boolean };
+	style?: { minHeight?: number; minWidth?: number };
 };
 
 const harness = vi.hoisted(() => ({
@@ -39,6 +42,8 @@ const harness = vi.hoisted(() => ({
 	props: {} as Record<string, unknown>,
 	/** The latest fold pressable per accessible name. */
 	folds: new Map<string, PressProps>(),
+	/** The latest non-fold pressable per accessible name (the `open` route). */
+	buttons: new Map<string, PressProps>(),
 }));
 
 vi.mock("react-native", async () => {
@@ -53,6 +58,7 @@ vi.mock("react-native", async () => {
 		Pressable: (props: PressProps & { children?: React.ReactNode }) => {
 			if (props.accessibilityState?.expanded !== undefined)
 				harness.folds.set(props.accessibilityLabel ?? "", props);
+			else harness.buttons.set(props.accessibilityLabel ?? "", props);
 			return props.children ?? null;
 		},
 		StyleSheet: {
@@ -191,23 +197,36 @@ let root: ReturnType<typeof createRoot> | null = null;
 let serial = 0;
 let session = "";
 
+const listElement = (
+	highlightId: string | null,
+	presence?: ReturnType<typeof createScrollPresence>,
+) =>
+	createElement(TranscriptList, {
+		sessionId: session,
+		entries: ENTRIES,
+		streamingRowId: null,
+		anchorId: null,
+		highlightId,
+		presence,
+		testID: "fold-transcript",
+	});
 const render = async (
 	highlightId: string | null = null,
 	presence?: ReturnType<typeof createScrollPresence>,
 ) => {
-	await act(async () =>
-		root?.render(
-			createElement(TranscriptList, {
-				sessionId: session,
-				entries: ENTRIES,
-				streamingRowId: null,
-				anchorId: null,
-				highlightId,
-				presence,
-				testID: "fold-transcript",
-			}),
-		),
-	);
+	await act(async () => root?.render(listElement(highlightId, presence)));
+};
+/** The text of the FIRST COMMITTED FRAME of a render: `flushSync` runs the
+ *  render, the commit and the layout effects (and any sync re-render they
+ *  cause) but leaves passive effects queued, so this is what the browser would
+ *  paint before a `useEffect` could change it. */
+const firstFrame = async (highlightId: string | null) => {
+	let frame = "";
+	await act(async () => {
+		flushSync(() => root?.render(listElement(highlightId)));
+		frame = drawn();
+	});
+	return frame;
 };
 const drawn = () => textOf(dom?.container as TextNode);
 const press = async (label: string) => {
@@ -240,6 +259,7 @@ beforeEach(() => {
 	harness.to = Number.POSITIVE_INFINITY;
 	harness.scrolls.length = 0;
 	harness.folds.clear();
+	harness.buttons.clear();
 	dom = installDomShim();
 	vi.stubGlobal("requestAnimationFrame", () => 0);
 	vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -273,10 +293,47 @@ describe("a fold the reader opened", () => {
 
 describe("a find landing on a folded row (U2)", () => {
 	it("opens it on the landing frame, and keeps it open after", async () => {
-		await render("p1");
-		expect(drawn()).toContain(HIDDEN);
+		await render();
+		expect(drawn()).not.toContain(HIDDEN);
+		/* The first painted frame, not the settled one (round 2, U10): moving
+		 *  the landing into a passive effect leaves this frame folded. */
+		expect(await firstFrame("p1")).toContain(HIDDEN);
 		await render(null);
 		expect(drawn()).toContain(HIDDEN);
+	});
+
+	it("lets the reader close the current hit, and the tail still follows (U10 / Q9 / m-r2-1)", async () => {
+		await render("p1");
+		await parkAtTail();
+		expect(drawn()).toContain(HIDDEN);
+		await press(FOLD);
+		// Closed while it is still the current find hit.
+		expect(drawn()).not.toContain(HIDDEN);
+		expect(harness.folds.get(FOLD)?.accessibilityState?.expanded).toBe(false);
+		// The close shrinks the content; the reader is still at the end.
+		await call("onContentSizeChange", 0, 1990);
+		harness.scrolls.length = 0;
+		// A streamed growth after it still drags the tail.
+		await call("onContentSizeChange", 0, 2400);
+		expect(harness.scrolls.length).toBeGreaterThan(0);
+	});
+});
+
+describe("a press that changes nothing (round 2, m-r2-1)", () => {
+	it("arms no resize mark, so the next streamed growth still pins", async () => {
+		await render();
+		await parkAtTail();
+		/* A stale press handler (a double tap landing before the re-render)
+		 *  asks for the state the row already has. */
+		const stale = harness.folds.get(FOLD);
+		await press(FOLD);
+		await call("onContentSizeChange", 0, 2030); // the open's own resize
+		harness.scrolls.length = 0;
+		await act(async () => stale?.onPress?.());
+		expect(drawn()).toContain(HIDDEN);
+		// No resize follows a no-op, so an armed mark would eat this growth.
+		await call("onContentSizeChange", 0, 2400);
+		expect(harness.scrolls.length).toBeGreaterThan(0);
 	});
 });
 
@@ -344,5 +401,41 @@ describe("the rail and the list's own scrolls (U3 / m2 / Q4)", () => {
 		expect(presence.readVisible()).toBe(true);
 		await call("onMomentumScrollEnd");
 		presence.dispose();
+	});
+});
+
+describe("a folded subagent row's `open` route (round 2, D10 / U12)", () => {
+	it("is its own button, named for the agent, on a touch-floor box", async () => {
+		const opened: string[] = [];
+		await act(async () =>
+			root?.render(
+				createElement(TranscriptList, {
+					sessionId: session,
+					entries: [
+						row("s1", {
+							kind: "subagent_message",
+							text: `subagent summary line\n${HIDDEN}`,
+							details: { job_id: "job-7", label: "auditor" },
+						}),
+					],
+					streamingRowId: null,
+					anchorId: null,
+					highlightId: null,
+					onOpenAgent: (job: string) => opened.push(job),
+					testID: "fold-transcript",
+				}),
+			),
+		);
+		// The row did fold, so this is the folded bar's control.
+		expect(harness.folds.size).toBe(1);
+		expect(drawn()).not.toContain(HIDDEN);
+		const open = harness.buttons.get("Open auditor");
+		expect(open?.accessibilityRole).toBe("button");
+		expect(open?.style?.minHeight).toBeGreaterThanOrEqual(44);
+		expect(open?.style?.minWidth).toBeGreaterThanOrEqual(44);
+		await act(async () => open?.onPress?.());
+		expect(opened).toEqual(["job-7"]);
+		// Its own target: pressing it opened the agent, not the fold.
+		expect(drawn()).not.toContain(HIDDEN);
 	});
 });

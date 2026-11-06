@@ -54,5 +54,13 @@
 	"mobile.session.highlights.withheld_reasons_join": {
 		"role": "meta",
 		"note": "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders."
+	},
+	"mobile.session.subagent_open": {
+		"role": "button",
+		"note": "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop."
+	},
+	"mobile.session.subagent_open_short": {
+		"role": "button",
+		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
 	}
 }

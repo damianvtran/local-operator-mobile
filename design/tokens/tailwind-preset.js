@@ -114,7 +114,6 @@ const fontSize = {
 	"body-read": ["14px", { lineHeight: "1.55", fontWeight: "400", letterSpacing: "0" }],
 	"trace": ["13px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "0" }],
 	"meta": ["12px", { lineHeight: "1.4", fontWeight: "500", letterSpacing: "0" }],
-	"meta-read": ["12px", { lineHeight: "1.45", fontWeight: "500", letterSpacing: "0" }],
 	"label": ["15px", { lineHeight: "1.2", fontWeight: "600", letterSpacing: "-0.005em" }],
 	"mono": ["13px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "0" }],
 	"mono-sm": ["12px", { lineHeight: "1.45", fontWeight: "400", letterSpacing: "0" }],
@@ -352,10 +351,6 @@ module.exports.themeBlock = () => `
 	--text-meta--line-height: 1.4;
 	--text-meta--font-weight: 500;
 	--text-meta--letter-spacing: 0;
-	--text-meta-read: 12px;
-	--text-meta-read--line-height: 1.45;
-	--text-meta-read--font-weight: 500;
-	--text-meta-read--letter-spacing: 0;
 	--text-label: 15px;
 	--text-label--line-height: 1.2;
 	--text-label--font-weight: 600;

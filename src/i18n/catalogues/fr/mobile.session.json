@@ -12,5 +12,7 @@
 	"mobile.session.highlights.video_open": "Lire la vidéo {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# autre son} other {# autres sons}}",
 	"mobile.session.highlights.sound_refused": "Lecture impossible : {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Ouvrir {agent}",
+	"mobile.session.subagent_open_short": "ouvrir"
 }

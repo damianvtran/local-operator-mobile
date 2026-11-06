@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
@@ -20,7 +20,9 @@ import {
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
-import { SURFACE, transcriptImageId } from "@/ui/a11y";
+import { t } from "@/i18n";
+import { ROLE, SURFACE, transcriptImageId } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
 /**
@@ -335,18 +337,43 @@ const TranscriptRowImpl = ({
 	 *  fold can never drop one (review round 1, R1-3): the agent route — a
 	 *  supplied job ID owns it; a sender session ID is not that coordinate and
 	 *  must never stand in for one — and a hub receipt's direction / Job line. */
-	const openAgent =
+	/*  A real button (round 2, D10 / U12): a bare `Text onPress` announced as
+	 *  text, said only "open", and was a ~17 pt target beside the fold's own
+	 *  48 pt one. It is named for the agent it opens (`hubLabel`: the label,
+	 *  else the job ID — the identity the row already uses) and carries a
+	 *  TOUCH_FLOOR box of REAL geometry, not `hitSlop`: react-native-web drops
+	 *  Pressable hitSlop (`ask-bar.tsx`), and a slop reaching into the fold's
+	 *  pressable would steal the fold's taps. On the folded bar the box is a
+	 *  sibling of the fold's pressable, so the two targets never overlap.
+	 *
+	 *  The floor applies to the FOLDED bar only (`floored`), whose 48 pt
+	 *  height already holds it. The unfolded row's header is a one-line meta
+	 *  strip; flooring the control there would grow that strip to 48 pt, an
+	 *  unreviewed layout change outside round 2's scope (D10 / U12 name the
+	 *  folded row). It still gets the button role and the agent's name. */
+	const openAgentControl = (floored: boolean) =>
 		onOpenAgent && kind === "subagent" && entry.details.job_id ? (
-			<Text
-				className="text-meta-read text-accent"
+			<Pressable
+				accessibilityRole={ROLE.button}
+				accessibilityLabel={t("mobile.session.subagent_open", {
+					agent: hubLabel(entry),
+				})}
 				onPress={() => onOpenAgent(entry.details.job_id ?? "")}
+				className={floored ? "items-center justify-center px-2" : undefined}
+				style={
+					floored
+						? { minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }
+						: undefined
+				}
 			>
-				open
-			</Text>
+				<Text className="text-meta text-accent">
+					{t("mobile.session.subagent_open_short")}
+				</Text>
+			</Pressable>
 		) : null;
 	const route =
 		hub && entry.details.direction ? (
-			<Text className="text-meta-read text-ink-muted">
+			<Text className="text-meta text-ink-muted">
 				{entry.details.direction}
 				{entry.details.job_id && entry.details.label
 					? ` · Job ${entry.details.job_id}`
@@ -369,7 +396,7 @@ const TranscriptRowImpl = ({
 					summary={summary}
 					meta={intent.join(" · ")}
 					accessibilityLabel={spoken}
-					action={openAgent}
+					action={openAgentControl(true)}
 					{...fold}
 				>
 					{route}
@@ -389,14 +416,14 @@ const TranscriptRowImpl = ({
 				)}
 			>
 				<View className="flex-row items-center gap-1">
-					<Text className="text-meta-read text-ink-dim" aria-hidden>
+					<Text className="text-meta text-ink-dim" aria-hidden>
 						{kind === "peer" ? "↔" : "↳"}
 					</Text>
-					<Text className="text-meta-read text-ink-dim" numberOfLines={1}>
+					<Text className="text-meta text-ink-dim" numberOfLines={1}>
 						{who}
 						{intent.length ? ` · ${intent.join(" · ")}` : ""}
 					</Text>
-					{openAgent}
+					{openAgentControl(false)}
 				</View>
 				{route}
 				<Text className="text-body-read text-ink">{body}</Text>

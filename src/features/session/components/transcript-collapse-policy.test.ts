@@ -233,10 +233,16 @@ describe("which event kinds fold", () => {
 		);
 		expect(seen).toHaveLength(1);
 		// The route lives on the bar, so it is there folded AND expanded.
+		/* A named button since round 2 (D10 / U12), not a bare `Text`. */
 		const action = seen[0]?.action as {
-			props: { onPress: () => void; children: string };
+			props: {
+				onPress: () => void;
+				accessibilityRole: string;
+				accessibilityLabel: string;
+			};
 		};
-		expect(action.props.children).toBe("open");
+		expect(action.props.accessibilityRole).toBe("button");
+		expect(action.props.accessibilityLabel).toBe("Open coder");
 		action.props.onPress();
 		expect(opened).toEqual(["job-7"]);
 		// The expanded body carries the direction / Job line the unfolded row had.

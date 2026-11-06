@@ -193,7 +193,6 @@ export const TYPE_STEPS = {
 	"body-read": { size: 14, lineHeight: 1.55, weight: 400, letterSpacing: 0, face: "sans" },
 	"trace": { size: 13, lineHeight: 1.5, weight: 400, letterSpacing: 0, face: "sans" },
 	"meta": { size: 12, lineHeight: 1.4, weight: 500, letterSpacing: 0, face: "sans" },
-	"meta-read": { size: 12, lineHeight: 1.45, weight: 500, letterSpacing: 0, face: "sans" },
 	"label": { size: 15, lineHeight: 1.2, weight: 600, letterSpacing: -0.005, face: "sans" },
 	"mono": { size: 13, lineHeight: 1.5, weight: 400, letterSpacing: 0, face: "mono" },
 	"mono-sm": { size: 12, lineHeight: 1.45, weight: 400, letterSpacing: 0, face: "mono" },

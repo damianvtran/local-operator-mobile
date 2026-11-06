@@ -163,6 +163,17 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for PR #176 review round 2's remediation, with --print
+	 * from the staged tree. `design/tokens` moves because the `meta-read` step is
+	 * folded back into `meta` (D9: 12/1.45 vs 12/1.4 was its only difference) and
+	 * the type `$note` is corrected to say a step DOES set its family (D8), with
+	 * the generated preset/preview CSS. `src` moves for the remediation: the tool
+	 * name on the `mono` step, the find landing recorded in a layout effect and
+	 * closable, the resize mark only on a real change, a caught glide ending on a
+	 * new drag, the folded `open` control as a named 48 pt button, the new i18n
+	 * keys, and tests. `app`, fonts, `public`, instrument and input pins are
+	 * untouched. Source admission only, NOT evidence that U-08's rendered
+	 * geometry proof passed: it must be re-captured against this tree. */
 	/* Re-pinned 2026-11-06 for PR #176 review round 1's remediation, with --print.
 	 * `design/tokens` moves for three new type steps (`body-read` 14/1.55,
 	 * `trace` 13/1.5, `meta-read` 12/1.45 — the relay's transcript steps) and
@@ -415,7 +426,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"00e3465635f6371591759f7ad99e7d33bec47c7e338483d1ed55373eb7747f05",
+		"3fd7bc0b9f6b51add6d0bbeda62e86c48d232e35dd650c4c23b6b0c23f6e1019",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -598,7 +609,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "ea9be79c3c2ab5d615a5039f6afe697bfa8810fd5fe1b5ed5aefd25f5bacdac4",
+	src: "12b78604ae1b6061b9d081a3738ea56b7e739b1026768e1789a0a0c04a50084c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

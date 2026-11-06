@@ -12,5 +12,7 @@
 	"mobile.session.highlights.video_open": "ویڈیو {name} چلائیں",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# مزید آواز} other {# مزید آوازیں}}",
 	"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}، {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
+	"mobile.session.subagent_open": "{agent} کھولیں",
+	"mobile.session.subagent_open_short": "کھولیں"
 }
