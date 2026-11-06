@@ -40,7 +40,14 @@ export type ComposerPresentationFacts = {
 	floor?: number;
 };
 /** Clearance is outside the shell; one radius applies to all corners. Whitespace
- * is still a draft, so geometry must never normalize the reader's content. */
+ * is still a draft, so geometry must never normalize the reader's content.
+ *
+ * Deliberately NOT a worklet, and it must stay that way: it calls
+ * `composerOuterGap`, `composerPaintedHeight` and `composerShellPadding`, none of
+ * which are worklets. The UI runtime does not load modules — it serialises
+ * closures — so marking this one would capture those three as remote functions
+ * and reproduce the same synchronous-call crash one call deeper. It is only ever
+ * called during render. */
 export const composerPresentation = (facts: ComposerPresentationFacts) => {
 	const expanded =
 		facts.focused ||
@@ -79,8 +86,17 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
  * 28/24 pair is one rule — the resting pill is a stadium, the expanded card is a
  * 24 pt rectangle — and a radius derived from a number the box does not paint is
  * a shape nobody sees (a landscape pill kept 24 on a 56 pt card that way).
+ *
+ * `"worklet"`: `composerShellRadius` runs ON the UI runtime and calls this, and a
+ * helper missing the directive is a synchronous call back into JS —
+ * `[Worklets] Tried to synchronously call a Remote Function`, the launch crash in
+ * nightly 42156335030. That constraint is also why this has to stay pure
+ * arithmetic: no React state, no I/O, no module the UI runtime does not have.
  */
-export const morphPillRadius = (base: number) => base / 2;
+export const morphPillRadius = (base: number) => {
+	"worklet";
+	return base / 2;
+};
 
 /**
  * Which end of the morph a measurement seeds.
@@ -103,9 +119,15 @@ export const seedFor = (expanded: boolean, total: number) =>
  * the same value drives the radius. Extracted so a test can assert the SHAPE of
  * the motion — an intermediate value strictly between the ends — instead of
  * grepping the component for the expression that produces it.
+ *
+ * `"worklet"`: `shellMotion` calls this from the UI runtime (see
+ * `morphPillRadius` for the failure it prevents). `Math.min`/`Math.max` are
+ * available there; a helper would have to be a worklet too.
  */
-export const morphHeight = (progress: number, from: number, to: number) =>
-	from + (to - from) * Math.min(1, Math.max(0, progress));
+export const morphHeight = (progress: number, from: number, to: number) => {
+	"worklet";
+	return from + (to - from) * Math.min(1, Math.max(0, progress));
+};
 
 /**
  * The shell's corner radius on the morph, read by BOTH edges the composer paints:
@@ -116,6 +138,12 @@ export const morphHeight = (progress: number, from: number, to: number) =>
  * of the two is edited, and it shows as a second corner peeking out of the first.
  * The radius is the shell's own — the ring is exactly the shell's box, so there is
  * nothing to inset it by.
+ *
+ * `"worklet"`: called from BOTH `shellMotion` and `ringMotion`, which run on the
+ * UI runtime — an unmarked helper throws `[Worklets] Tried to synchronously call
+ * a Remote Function` at mount (nightly 42156335030).
  */
-export const composerShellRadius = (progress: number, base: number) =>
-	morphHeight(progress, morphPillRadius(base), 24);
+export const composerShellRadius = (progress: number, base: number) => {
+	"worklet";
+	return morphHeight(progress, morphPillRadius(base), 24);
+};
