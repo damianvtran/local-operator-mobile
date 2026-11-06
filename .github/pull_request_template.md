@@ -32,6 +32,16 @@ Show that it works by running the real thing, not only the test suite.
 - If something could not run locally (for example a native build), say so and
   link the CI run that covers it.
 
+## Review accounting
+
+<!-- Why: PR #156 ran 40 review rounds after the product was clean at round 3.
+     These three lines make the cost visible while it is still cheap to cut.
+     Rules: AGENTS.md, "Commits and pull requests" and "Build host assumptions". -->
+
+- Split (`harness_delta_proof.py --split`): product +N / harness +N → SPLIT | NO SPLIT
+- Native evidence: N of 3 failed attempts, N h of 6 h
+- Pushes after a clean round: `<R>..<H>` harness-only (proof pasted) | round N
+
 ## Checklist
 
 - [ ] Commits follow Conventional Commits.

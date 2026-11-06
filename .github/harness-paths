@@ -1,0 +1,94 @@
+# Harness/ship manifest — read by the harness delta proof
+# (`scripts/harness_delta_proof.py` in damianvtran/local-operator).
+#
+# WHY THIS EXISTS. PR #156 took 40 agent-review rounds; round 3 was already
+# clean and the last product-code commit landed on 11-05, yet every push to the
+# native proof harness reopened a numbered round. After a clean code round, a
+# delta that touches ONLY `harness:` paths, changes this file not at all, and
+# touches nothing the shipping pipeline reads is settled by one
+# `### Harness delta check` at the merge gate instead of a new round
+# (AGENTS.md, "Commits and pull requests").
+#
+# HOW TO READ IT.
+# - Anything NOT matched by a `harness:` glob is product. One changed product
+#   byte opens a round. Unlisted means product, so forgetting an entry is safe.
+# - `ship:` lists what the shipping pipeline (release.yml and everything it
+#   calls) reads. A `ship:` match beats a `harness:` match, and so does being
+#   NAMED by a ship file (path, basename, or relative import/require/source).
+# - THE scripts/ci/** GLOB IS NOT AN EXEMPTION for the scripts release.yml runs.
+#   Reachability makes them product. A rule keyed on directories alone is the
+#   path classifier that already failed in the Minerva SDLC skill; the ship
+#   entries below are what stop it failing again here.
+# - This file is product: changing it always opens a round, so the exemption
+#   set cannot grow without review.
+#
+# Globs: `**` = any depth, `*` = within one path segment.
+
+# --- ship: what release.yml reads, directly or through what it calls --------
+
+# The release pipeline itself, and the workflow it calls as a required job.
+ship: .github/workflows/release.yml
+ship: .github/workflows/ci.yml
+# Composite actions release.yml uses to build, sign and upload.
+ship: .github/actions/**
+# Native gates: ios.yml can sign and upload to TestFlight from main, and both
+# build the same native projects release.yml builds.
+ship: .github/workflows/ios.yml
+ship: .github/workflows/android.yml
+# Scripts release.yml (or its actions) runs: version and build number, platform
+# selection, Xcode project edits, signing, notes, asset staging, secret checks.
+ship: scripts/ci/version.ts
+ship: scripts/ci/release-platforms.ts
+ship: scripts/ci/ios-project.ts
+ship: scripts/ci/ios-signing.py
+ship: scripts/ci/release-notes.ts
+ship: scripts/ci/stage-release-assets.sh
+ship: scripts/ci/check-secrets.ts
+# The app: source, routes, native modules, config plugins, assets, strings.
+ship: app/**
+# src/ is listed per directory, NOT as src/**: a ship glob beats a harness glob,
+# so src/** would make src/testing/** unexemptable. Add any NEW top-level src/
+# directory here — an unlisted one is still product, but its imports of
+# src/testing would go unscanned. (src/features/session/runtime.ts names
+# testing/ today, which is exactly what the reachability scan is for.)
+ship: src/*
+ship: src/connection/**
+ship: src/contracts/**
+ship: src/e2e/**
+ship: src/features/**
+ship: src/i18n/**
+ship: src/lib/**
+ship: src/notifications/**
+ship: src/relay/**
+ship: src/state/**
+ship: src/stt/**
+ship: src/ui/**
+ship: modules/**
+ship: plugins/**
+ship: assets/**
+ship: i18n/**
+# Build inputs: dependencies, Expo/EAS/bundler config, entry points.
+ship: package.json
+ship: pnpm-lock.yaml
+ship: pnpm-workspace.yaml
+ship: app.json
+ship: app.config.*
+ship: eas.json
+ship: babel.config.*
+ship: metro.config.*
+ship: index.*
+# Store upload lanes, store metadata and the build-number floor.
+ship: fastlane/**
+ship: store/**
+ship: release/**
+
+# --- harness: proof and test tooling that never ships ------------------------
+
+harness: scripts/ci/**
+harness: src/testing/**
+harness: tools/mock-relay/**
+harness: e2e/**
+# Evidence-only workflows: none is called by release.yml (checked 2026-11-06).
+harness: .github/workflows/e2e.yml
+harness: .github/workflows/flake-report.yml
+harness: .github/workflows/*-proof.yml
