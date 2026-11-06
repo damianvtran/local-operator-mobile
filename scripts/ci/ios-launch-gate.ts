@@ -4,9 +4,9 @@
  * `ios`): is the launched app still RUNNING, did its launch write a CRASH
  * REPORT, did its own output carry a FATAL, and how much of the screen changed.
  *
- *     node scripts/ci/ios-launch-gate.ts alive --udid <udid> --bundle <id> --at t+5s [--launched-at <epoch s>]
+ *     node scripts/ci/ios-launch-gate.ts alive --udid <udid> --bundle <id> --at t+5s [--running-since <epoch s>]
  *     node scripts/ci/ios-launch-gate.ts alive --launchctl-file <listing> --bundle <id> --at t+5s
- *     node scripts/ci/ios-launch-gate.ts crash-report --dir <dir> --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]
+ *     node scripts/ci/ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]
  *     node scripts/ci/ios-launch-gate.ts fatal-lines <file>...
  *     node scripts/ci/ios-launch-gate.ts frame-delta <a.bmp> <b.bmp>
  *
@@ -31,8 +31,14 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import {
+	type Dirent,
+	existsSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+} from "node:fs";
+import { basename, join } from "node:path";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
@@ -143,7 +149,7 @@ export const judgeLiveness = (
 		};
 	}
 	const lines = [
-		`::error::${bundle} is not running at ${at}${elapsed}: launchctl in the simulator lists no ${APP_JOB}${bundle} job with a pid, so the app exited (or never started) after launch. The crash-report step prints why.`,
+		`::error::${bundle} is not running at ${at}${elapsed}: launchctl in the simulator lists no ${APP_JOB}${bundle} job with a pid, so the app exited (or never started) after launch. The crash-report and fatal-scan steps print why.`,
 	];
 	for (const job of jobs) {
 		lines.push(
@@ -335,35 +341,58 @@ const namesTheApp = (
 	);
 };
 
+/** Files in `dir` and in its subdirectories down to `depth` levels (the report
+ * writer files older reports under `Retired/`), sorted; an unreadable or
+ * missing directory contributes nothing. */
+const filesIn = (dir: string, depth: number): string[] => {
+	let entries: Dirent[];
+	try {
+		entries = readdirSync(dir, { withFileTypes: true });
+	} catch {
+		return [];
+	}
+	const files: string[] = [];
+	for (const entry of entries) {
+		const path = join(dir, entry.name);
+		if (entry.isFile()) files.push(path);
+		else if (entry.isDirectory() && depth > 0)
+			files.push(...filesIn(path, depth - 1));
+	}
+	return files.sort();
+};
+
+const writtenSince = (path: string, sinceMs: number): boolean => {
+	try {
+		return statSync(path).mtimeMs >= sinceMs;
+	} catch {
+		// Vanished between the listing and the stat: not evidence either way.
+		return false;
+	}
+};
+
 /**
- * The app's crash reports written at or after `sinceMs`. Matched on the file
- * name the report writer uses, `<executable>-…ips`, then on the metadata, so an
- * executable called `LocalOperator-Helper` cannot be blamed on `LocalOperator`.
- * A missing directory is no reports: a runner that has never seen a crash has
- * no `DiagnosticReports` directory at all.
+ * The app's crash reports written at or after `sinceMs`, in any of `dirs`.
+ * Matched on the file name the report writer uses, `<executable>-…ips`, then on
+ * the metadata, so an executable called `LocalOperator-Helper` cannot be blamed
+ * on `LocalOperator`. A missing directory is no reports: a runner that has never
+ * seen a crash has no `DiagnosticReports` directory at all.
  */
 export const crashReportsSince = (
-	dir: string,
+	dirs: string | readonly string[],
 	executable: string,
 	sinceMs: number,
 	bundle?: string,
 ): string[] => {
-	if (!existsSync(dir)) return [];
 	const found: string[] = [];
-	for (const name of readdirSync(dir).sort()) {
+	for (const path of (typeof dirs === "string" ? [dirs] : dirs).flatMap((dir) =>
+		filesIn(dir, 1),
+	)) {
+		const name = basename(path);
 		if (!name.startsWith(`${executable}-`) || !name.endsWith(".ips")) continue;
-		const path = join(dir, name);
+		if (!writtenSince(path, sinceMs)) continue;
 		try {
-			if (statSync(path).mtimeMs < sinceMs) continue;
-			if (
-				!namesTheApp(
-					parseIps(readFileSync(path, "utf8")).header,
-					executable,
-					bundle,
-				)
-			) {
-				continue;
-			}
+			const { header } = parseIps(readFileSync(path, "utf8"));
+			if (!namesTheApp(header, executable, bundle)) continue;
 		} catch {
 			// Vanished between the listing and the read: it is not evidence either way.
 			continue;
@@ -372,6 +401,22 @@ export const crashReportsSince = (
 	}
 	return found;
 };
+
+/**
+ * EVERY report written since launch, whatever process it names: what the job
+ * prints when the app was seen dead and no report of its own turned up. A dead
+ * app with no report is either a crash reporter that wrote somewhere else or
+ * one that did not run, and this listing is what tells the two apart from the
+ * log of the run that hit it — on GitHub's `macos-26` image the negative control
+ * (#170, run 42263119518) found no `LocalOperator-*.ips` in
+ * `~/Library/Logs/DiagnosticReports` three minutes after the abort.
+ */
+export const reportsWrittenSince = (dir: string, sinceMs: number): string[] =>
+	filesIn(dir, 1).filter(
+		(path) =>
+			(path.endsWith(".ips") || path.endsWith(".crash")) &&
+			writtenSince(path, sinceMs),
+	);
 
 // ---------------------------------------------------------------------------
 // Fatal signatures in the app's OWN output.
@@ -449,8 +494,8 @@ export const frameDelta = (
 // ---------------------------------------------------------------------------
 
 const USAGE =
-	"usage: ios-launch-gate.ts alive (--udid <udid> | --launchctl-file <file>) --bundle <id> --at <label> [--launched-at <epoch s>]\n" +
-	"       ios-launch-gate.ts crash-report --dir <dir> --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]\n" +
+	"usage: ios-launch-gate.ts alive (--udid <udid> | --launchctl-file <file>) --bundle <id> --at <label> [--running-since <epoch s>]\n" +
+	"       ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]\n" +
 	"       ios-launch-gate.ts fatal-lines <file>...\n" +
 	"       ios-launch-gate.ts frame-delta <a.bmp> <b.bmp>";
 
@@ -458,6 +503,14 @@ const arg = (name: string): string | undefined => {
 	const i = process.argv.indexOf(`--${name}`);
 	return i === -1 ? undefined : process.argv[i + 1];
 };
+
+/** Every value of a repeatable option, in order. */
+const all = (name: string): string[] =>
+	process.argv.flatMap((value, i) =>
+		value === `--${name}` && process.argv[i + 1] !== undefined
+			? [process.argv[i + 1] as string]
+			: [],
+	);
 
 // A declaration, not an arrow: only a declared `never` function narrows the
 // caller's variables after it (TypeScript's assertion-call rule).
@@ -523,10 +576,13 @@ if (isEntryPoint) {
 		} else {
 			usage("alive needs --udid or --launchctl-file");
 		}
-		const launchedAt = arg("launched-at");
+		// The label names the schedule; this is the clock. On a loaded runner a
+		// single screenshot took 48 s (run 42263081758), so "t+5s" can be a
+		// minute and more after the launch, and the log says how much.
+		const runningSince = arg("running-since");
 		const elapsed =
-			launchedAt && DIGITS.test(launchedAt)
-				? ` (${Math.max(0, Math.floor(Date.now() / 1000) - Number(launchedAt))} s after launch)`
+			runningSince && DIGITS.test(runningSince)
+				? ` (${Math.max(0, Math.floor(Date.now() / 1000) - Number(runningSince))} s after simctl launch returned)`
 				: "";
 		const verdict = judgeLiveness(listing, bundle, at, elapsed);
 		for (const line of verdict.lines) {
@@ -535,7 +591,8 @@ if (isEntryPoint) {
 		}
 		process.exit(verdict.alive ? 0 : 1);
 	} else if (command === "crash-report") {
-		const dir = required("dir");
+		const dirs = all("dir");
+		if (dirs.length === 0) usage("--dir is required");
 		const executable = required("executable");
 		const since = epochSeconds("since");
 		const bundle = arg("bundle");
@@ -544,16 +601,30 @@ if (isEntryPoint) {
 		// process dies. When the caller already saw the app dead it passes a
 		// wait, so the report it is looking for has time to land.
 		const deadline = Date.now() + (Number.isFinite(wait) ? wait : 0) * 1000;
-		let reports = crashReportsSince(dir, executable, since * 1000, bundle);
+		let reports = crashReportsSince(dirs, executable, since * 1000, bundle);
 		while (reports.length === 0 && Date.now() < deadline) {
 			await sleep(2000);
-			reports = crashReportsSince(dir, executable, since * 1000, bundle);
+			reports = crashReportsSince(dirs, executable, since * 1000, bundle);
 		}
 		const sinceIso = new Date(since * 1000).toISOString();
 		if (reports.length === 0) {
 			console.log(
-				`no crash report for ${executable} written since launch (${sinceIso}) in ${dir}${existsSync(dir) ? "" : " (the directory does not exist)"}`,
+				`no crash report for ${executable} written since launch (${sinceIso}) in ${dirs.join(", ")}`,
 			);
+			// Waiting means the caller saw the app dead, so "no report" needs the
+			// evidence of where reports DID land, not just the absence.
+			if (wait > 0) {
+				console.log(
+					"the app was seen dead, so here is every report written since launch, by directory:",
+				);
+				for (const dir of dirs) {
+					const recent = reportsWrittenSince(dir, since * 1000);
+					console.log(
+						`  ${dir}: ${existsSync(dir) ? (recent.length === 0 ? "none" : `${recent.length}`) : "the directory does not exist"}`,
+					);
+					for (const path of recent.slice(0, 20)) console.log(`    ${path}`);
+				}
+			}
 			process.exit(0);
 		}
 		for (const report of reports) {
@@ -583,7 +654,11 @@ if (isEntryPoint) {
 			if (!existsSync(file)) {
 				// Each file is a source the caller asked to be read; a missing one
 				// is a read that failed, and "no fatal in it" cannot be claimed.
-				console.error(
+				// ONE stream for every line of this command: stdout and stderr are
+				// flushed independently, and the first negative-control run
+				// (42263119518) printed a fatal's `::error::` header two lines away
+				// from the fatal line it introduced.
+				console.log(
 					`::error::${file} does not exist, so it cannot be scanned for a fatal`,
 				);
 				found++;
@@ -595,10 +670,10 @@ if (isEntryPoint) {
 				continue;
 			}
 			found += lines.length;
-			console.error(
+			console.log(
 				`::error::the app's own output carries a fatal (${file}), so it aborted or painted an error screen:`,
 			);
-			for (const line of lines.slice(0, 40)) console.error(`  ${line}`);
+			for (const line of lines.slice(0, 40)) console.log(`  ${line}`);
 		}
 		process.exit(found === 0 ? 0 : 1);
 	} else if (command === "frame-delta") {

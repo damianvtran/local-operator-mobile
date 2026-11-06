@@ -21,6 +21,7 @@ import {
 	isAppJobLabel,
 	judgeLiveness,
 	parseIps,
+	reportsWrittenSince,
 	summarizeCrashReport,
 } from "./ios-launch-gate.ts";
 
@@ -247,6 +248,10 @@ const CRASH_BODY = {
 	],
 };
 const CRASH = `${header()}\n${JSON.stringify(CRASH_BODY, null, 2)}`;
+const TIMED_ALIVE =
+	/^alive at t\+30s \(3[1-9] s after simctl launch returned\): com\.example\.launchgate is running as pid 41022/m;
+const FATAL_IN_ORDER =
+	/::error::the app's own output carries a fatal \([^)]*fatal\.log\), so it aborted or painted an error screen:\n {2}libc\+\+abi: terminating/;
 const FRAME_ZERO = / {4}0 {3}libsystem_kernel\.dylib +__pthread_kill \+ 8/;
 const FRAME_THREE =
 	/ {4}3 {3}libc\+\+abi\.dylib +std::__terminate\(void \(\*\)\(\)\) \+ 12/;
@@ -354,6 +359,38 @@ describe("which crash reports are the app's, written after launch", () => {
 			crashReportsSince(join(root, "absent"), EXECUTABLE, sinceMs),
 		).toEqual([]);
 	});
+
+	it("searches every directory it is given, one level of subdirectory deep", () => {
+		const other = join(root, "SimulatorLogs");
+		mkdirSync(join(other, "Retired", "Deeper"), { recursive: true });
+		writeFileSync(
+			join(other, "Retired", `${EXECUTABLE}-2026-11-06-045504.ips`),
+			CRASH,
+		);
+		writeFileSync(
+			join(other, "Retired", "Deeper", `${EXECUTABLE}-2026-11-06-045505.ips`),
+			CRASH,
+		);
+		expect(
+			crashReportsSince(
+				[join(root, "absent"), other],
+				EXECUTABLE,
+				sinceMs,
+				BUNDLE,
+			),
+		).toEqual([join(other, "Retired", `${EXECUTABLE}-2026-11-06-045504.ips`)]);
+	});
+
+	it("lists every report written since launch, whatever it names, for a dead app with none", () => {
+		expect(reportsWrittenSince(dir, sinceMs)).toEqual([
+			join(dir, `${EXECUTABLE}-2026-11-06-045501.ips`),
+			join(dir, `${EXECUTABLE}-2026-11-06-045502.ips`),
+			join(dir, `${EXECUTABLE}-2026-11-06-045503.crash`),
+			join(dir, `${EXECUTABLE}-Helper-2026-11-06-045501.ips`),
+			join(dir, "SpringBoard-2026-11-06-045501.ips"),
+		]);
+		expect(reportsWrittenSince(join(root, "absent"), sinceMs)).toEqual([]);
+	});
 });
 
 describe("fatal signatures in the app's own output", () => {
@@ -460,6 +497,20 @@ describe("CLI", () => {
 		]);
 		expect(down.status).toBe(1);
 		expect(down.stderr).toContain(`::error::${BUNDLE} is not running at t+5s`);
+
+		// The clock beside the label: how long after the launch returned.
+		const timed = run([
+			"alive",
+			"--launchctl-file",
+			file("timed.txt", RUNNING),
+			"--bundle",
+			BUNDLE,
+			"--at",
+			"t+30s",
+			"--running-since",
+			String(Math.floor(Date.now() / 1000) - 31),
+		]);
+		expect(timed.stdout).toMatch(TIMED_ALIVE);
 	});
 
 	it("alive: refuses to judge with no listing to read", () => {
@@ -536,6 +587,31 @@ describe("CLI", () => {
 		expect(stderr).toContain("crashed after launch: EXC_CRASH (SIGABRT)");
 	}, 30_000);
 
+	it("crash-report: a dead app with no report of its own gets the inventory of what did land", () => {
+		const dir = join(root, "inventory-reports");
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, "SpringBoard-2026-11-06-045501.ips"), CRASH);
+		const since = String(Math.floor(Date.now() / 1000) - 5);
+		const args = ["crash-report", "--dir", dir, "--dir", join(root, "absent")];
+		const dead = run([
+			...args,
+			"--executable",
+			EXECUTABLE,
+			"--since",
+			since,
+			"--wait",
+			"1",
+		]);
+		expect(dead.status).toBe(0);
+		expect(dead.stdout).toContain(`in ${dir}, ${join(root, "absent")}`);
+		expect(dead.stdout).toContain(
+			`the app was seen dead, so here is every report written since launch, by directory:\n  ${dir}: 1\n    ${join(dir, "SpringBoard-2026-11-06-045501.ips")}\n  ${join(root, "absent")}: the directory does not exist`,
+		);
+		// A live app (no wait) is not padded with an inventory nobody needs.
+		const live = run([...args, "--executable", EXECUTABLE, "--since", since]);
+		expect(live.stdout).not.toContain("the app was seen dead");
+	});
+
 	it("crash-report: refuses a --since that is not epoch seconds", () => {
 		const result = run([
 			"crash-report",
@@ -558,15 +634,17 @@ describe("CLI", () => {
 		expect(run(["fatal-lines", clean]).status).toBe(0);
 		const caught = run(["fatal-lines", clean, fatal]);
 		expect(caught.status).toBe(1);
-		expect(caught.stderr).toContain(
+		expect(caught.stdout).toContain(
 			"::error::the app's own output carries a fatal",
 		);
-		expect(caught.stderr).toContain(
+		expect(caught.stdout).toContain(
 			"  libc++abi: terminating due to uncaught exception",
 		);
 		const missing = run(["fatal-lines", join(root, "never-written.log")]);
 		expect(missing.status).toBe(1);
-		expect(missing.stderr).toContain("does not exist, so it cannot be scanned");
+		expect(missing.stdout).toContain("does not exist, so it cannot be scanned");
+		// Header and fatal line arrive together, on one stream, in order.
+		expect(caught.stdout).toMatch(FATAL_IN_ORDER);
 	});
 
 	it("frame-delta: one machine-readable line", () => {
