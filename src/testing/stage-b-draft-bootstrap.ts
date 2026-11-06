@@ -278,7 +278,10 @@ async function bootStageBDraftProof(
 	const processLease = crypto.randomUUID();
 	const trace = stageBRouteTrace(
 		() => connectionStore.getState(),
-		(event) => receipt("route-trace", { ...event }),
+		// The lease rides the trace so the harness can prove same-process identity
+		// from a side effect of rendering, without depending on a probe request the
+		// app may not answer after a cold relaunch (run 42181646348).
+		(event) => receipt("route-trace", { ...event, processId: processLease }),
 		Date.now,
 		processLease,
 	);

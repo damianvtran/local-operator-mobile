@@ -59,14 +59,27 @@ import {
 } from "./stage-b-draft-timing.ts";
 import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
 import {
-	createLostTapRetry,
 	type StageBCallbackProbe,
-	type StageBLostTapLease,
-	type StageBLostTapRecord,
 	type StageBLostTapRetry,
 	type StageBProbeAvailability,
+	stageBLostTapDecision,
 	stageBProbeAvailability,
 } from "./stage-b-lost-tap.ts";
+
+/** Refusal sentences the app actually paints. A hierarchy that shows one of
+ * these is a real failure — a 401, an offline connector, a refused route — and
+ * must never be laundered into a "the tap was lost" retry. */
+const STAGE_B_VISIBLE_REFUSALS = [
+	"Could not connect",
+	"Couldn't connect",
+	"Try again",
+	"offline",
+	"Offline",
+	"Unauthorized",
+	"not authorised",
+	"not authorized",
+	"refused",
+] as const;
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
 const WHITESPACE = /\s+/;
@@ -704,8 +717,16 @@ async function runStageBCoordinator(
 		 * look after it: an earlier launch's startup receipt proves nothing about
 		 * the process running now. */
 		let bootIndex = 0;
+		/** Fixture counters when the CURRENT launch was issued: the evidence gate
+		 * reads deltas, never cumulative totals. */
+		let launchCounters = { me: 0, discovery: 0, unauthorized: 0 };
 		const launch = async () => {
 			bootIndex = fixture?.receipts.length ?? 0;
+			launchCounters = {
+				me: fixture?.counters.me ?? 0,
+				discovery: fixture?.counters.discovery ?? 0,
+				unauthorized: fixture?.counters.unauthorized ?? 0,
+			};
 			const text = await run("launch-owned-app", "xcrun", [
 				"simctl",
 				"launch",
@@ -942,54 +963,82 @@ async function runStageBCoordinator(
 				},
 			};
 		};
-		/** Positive same-process lease for THIS launch. Unavailable means no
-		 * retry capability at all; it must never fall back to "still on
-		 * Computers", which is also what a refusal or a network hang looks like. */
-		/** Positive same-process lease for THIS launch. The probe is asked only
-		 * once this launch has posted a `startup` receipt: requesting it against a
-		 * booting app was how the relaunch lane recorded nothing at all (run
-		 * 42166849295: one probe on the first launch, none after the relaunch).
-		 * Fail-closed is unchanged — an app that never posts a startup receipt
-		 * still yields no lease; it now says why. */
-		const lostTapLease = async (
-			lane: "initial" | "relaunch",
-		): Promise<StageBLostTapLease | null> => {
-			/* Which route this run took to a live composer. A tap on a Computer row
-			 * is the only production path that needs no stored computer id, so it
-			 * stays the gate — recorded so a receipt never implies a route the run
-			 * did not use. */
-			receipt.connectRoute = "computer-row-tap";
-			/* No fixture is the Node-only dry run: there is no app to be up, and
-			 * waiting for a startup receipt there would spend the probe's own budget
-			 * on a receipt that cannot arrive. */
-			if (!fixture) {
-				receipt.launchProbe = {
-					lane,
-					...stageBProbeAvailability("not-requested"),
-				};
-				return null;
-			}
-			const before = bootIndex;
-			let up = true;
+		/** A visible refusal in the hierarchy, or `"hierarchy unavailable"` when the
+		 * read itself failed. Absence of evidence is not evidence of a lost tap, so
+		 * an unreadable hierarchy refuses rather than authorises. */
+		const hierarchyRefusal = async (): Promise<string | null> => {
+			if (!fixture) return "hierarchy unavailable";
 			try {
-				await until(
-					() =>
-						fixture?.receipts
-							.slice(before)
-							.find((entry) => entry.kind === "startup"),
-					"post-launch startup receipt",
-					30000,
+				const text = await run(
+					"lost-tap-hierarchy",
+					maestro,
+					["--device", udid ?? "", "hierarchy"],
+					20,
+				);
+				return (
+					STAGE_B_VISIBLE_REFUSALS.find((needle) => text.includes(needle)) ??
+					null
 				);
 			} catch {
-				up = false;
+				return "hierarchy unavailable";
 			}
-			const outcome: StageBProbeAvailability & {
-				probe?: StageBCallbackProbe;
-			} = up ? await probeOutcome() : stageBProbeAvailability("app-not-up");
-			receipt.launchProbe = { lane, ...outcome };
-			return outcome.probe
-				? { probe: outcome.probe, identityRequests: fixture?.counters.me ?? 0 }
-				: null;
+		};
+		/** The one conditional re-tap, decided on fixture-observable evidence.
+		 *
+		 * The in-app probe is a CORROBORATION now, never the authorisation: run
+		 * 42181646348 had it answer on one launch and time out on another, and a
+		 * legitimate lost tap was refused for want of a signal the app cannot
+		 * promise. Wire counters, the route-trace lease and one bounded hierarchy
+		 * read decide; anything ambiguous still refuses. */
+		const fixtureRecoveryRetry = (): StageBLostTapRetry => {
+			let attempted = false;
+			return {
+				probe: async () => {
+					const since = (fixture?.receipts ?? []).slice(bootIndex);
+					const traces = since.filter((entry) => entry.kind === "route-trace");
+					const last = traces.at(-1);
+					const launchProcessId =
+						since.find((entry) => typeof entry.processId === "string")
+							?.processId ?? null;
+					// Optional, short: absence must cost seconds, never the segment.
+					const answer = await probeOutcome(10000);
+					const decision = stageBLostTapDecision(
+						{
+							identityRequests: (fixture?.counters.me ?? 0) - launchCounters.me,
+							discoveryReads:
+								(fixture?.counters.discovery ?? 0) - launchCounters.discovery,
+							unauthorized:
+								(fixture?.counters.unauthorized ?? 0) -
+								launchCounters.unauthorized,
+							trace: last
+								? {
+										processId: String(last.processId ?? ""),
+										phase: String(last.tracePhase ?? ""),
+										selected: last.traceSelected === true,
+									}
+								: null,
+							launchProcessId:
+								typeof launchProcessId === "string" ? launchProcessId : null,
+							visibleError: await hierarchyRefusal(),
+						},
+						answer.probe ?? null,
+						attempted,
+					);
+					attempted = decision.allow;
+					receipt.lostTapProbe = {
+						outcome: answer.reason,
+						corroborated: answer.probe !== undefined,
+					};
+					return decision;
+				},
+				record: (decision) => {
+					receipt.lostTapRecord = {
+						...decision,
+						retryAuthorisedBy:
+							"authorisedBy" in decision ? decision.authorisedBy : null,
+					};
+				},
+			};
 		};
 		const relaunch = async (
 			mode: IdentityScenario = "same",
@@ -1004,15 +1053,8 @@ async function runStageBCoordinator(
 			// Run 42044812065 lost one fresh-proof row tap in transit while the
 			// driver reported COMPLETED. Arm exactly one conditional re-tap per
 			// launch, and only for a flow that must publish a route.
-			const lease = waitEditor ? await lostTapLease("relaunch") : null;
-			const lostTapRetry = createLostTapRetry({
-				lease,
-				identityRequests: () => fixture?.counters.me ?? 0,
-				probeCallback,
-				record: (entry: StageBLostTapRecord) => {
-					receipt.lostTapRetry = entry;
-				},
-			});
+			const lostTapRetry = waitEditor ? fixtureRecoveryRetry() : undefined;
+			receipt.connectRoute = "computer-row-tap";
 			await flow(
 				`connect-${++serial}`,
 				[...selectStageBComputer(), ...(waitEditor ? stageBEditor() : [])],
@@ -1065,6 +1107,7 @@ async function runStageBCoordinator(
 				// (review R31-3/R31-4: the earlier wording claimed both an extra call
 				// and a segment-batching mechanism that were not real).
 				await flushFlows();
+				receipt.connectRoute = "computer-row-tap";
 				await flow(
 					"connect-initial",
 					[
@@ -1073,14 +1116,7 @@ async function runStageBCoordinator(
 						...stageBEditor(),
 						{ assertNotVisible: { id: "computers-screen" } },
 					],
-					createLostTapRetry({
-						lease: await lostTapLease("initial"),
-						identityRequests: () => fixture?.counters.me ?? 0,
-						probeCallback,
-						record: (entry) => {
-							receipt.lostTapRetry = entry;
-						},
-					}),
+					fixtureRecoveryRetry(),
 				);
 				await flow("type-initial", typeStageBDraft(canary));
 				await flow(

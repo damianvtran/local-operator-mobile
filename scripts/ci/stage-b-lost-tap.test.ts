@@ -4,6 +4,7 @@ import { StageBDriverBatch } from "./stage-b-driver-batch";
 import {
 	createLostTapRetry,
 	type StageBCallbackProbe,
+	stageBLostTapDecision,
 	stageBLostTapGate,
 	stageBProbeAvailability,
 } from "./stage-b-lost-tap";
@@ -261,13 +262,7 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 	it("classifies every way the probe can fail to answer, and only 'answered' is a lease", () => {
 		// Run 42166849295 recorded one sentence for all of these, so the refusal
 		// could not be diagnosed. Each failure now has its own name and sentence.
-		const reasons = [
-			"app-not-up",
-			"no-receipt",
-			"timeout",
-			"invalid-payload",
-			"not-requested",
-		] as const;
+		const reasons = ["timeout", "invalid-payload", "not-requested"] as const;
 		const messages = new Set<string>();
 		for (const reason of reasons) {
 			const outcome = stageBProbeAvailability(reason);
@@ -280,22 +275,124 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 		expect(answered.available).toBe(true);
 		expect(answered.message).toContain("answered");
 	});
-	it("asks the probe only after this launch posted a startup receipt", () => {
+	it("builds the retry from fixture evidence in both lanes, not from a probe lease", () => {
 		const source = readFileSync(
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		// Fail-closed stays: an app that never posts one yields no lease at all.
-		expect(source).toContain('kind === "startup"');
-		expect(source).toContain('stageBProbeAvailability("app-not-up")');
-		expect(source).toContain("receipt.launchProbe = { lane, ...outcome }");
-		// Both lanes say which route they came from: the initial connect and the
-		// relaunched one are different evidence and must not read alike.
-		expect(source).toContain('await lostTapLease("initial")');
-		expect(source).toContain('await lostTapLease("relaunch")');
-		// The readiness window belongs to the CURRENT launch, not any earlier one.
-		expect(source).toContain("bootIndex = fixture?.receipts.length ?? 0;");
-		expect(source).toContain("const before = bootIndex;");
+		// The lease that required an answered probe is gone: run 42181646348 timed
+		// out on the probe and blocked a legitimate retry.
+		expect(source).not.toContain("lostTapLease(");
+		expect(source).toContain(
+			"const fixtureRecoveryRetry = (): StageBLostTapRetry =>",
+		);
+		// Both lanes share one factory (definition + two call sites), and the
+		// record says what authorised it.
+		expect(
+			source.split("fixtureRecoveryRetry()").length - 1,
+		).toBeGreaterThanOrEqual(2);
+		expect(source).toContain("retryAuthorisedBy:");
+		// Wire deltas, never cumulative totals: a cumulative /me would refuse
+		// every launch after the first.
+		expect(source).toContain("launchCounters = {");
+		expect(source).toContain("launchCounters.me");
+		expect(source).toContain("launchCounters.discovery");
+		// A refusal painted on screen is never laundered into a retry.
+		expect(source).toContain("STAGE_B_VISIBLE_REFUSALS");
+		expect(source).toContain("hierarchy unavailable");
+	});
+	describe("fixture-observed evidence authorises the one re-tap", () => {
+		/** Run 42181646348's failed launch: discovery completed, no /me, no
+		 * publication, same lease, nothing painted on screen. */
+		const clean = {
+			identityRequests: 0,
+			discoveryReads: 1,
+			unauthorized: 0,
+			trace: {
+				processId: "11111111-1111-4111-8111-111111111111",
+				phase: "signed-out",
+				selected: false,
+			},
+			launchProcessId: "11111111-1111-4111-8111-111111111111",
+			visibleError: null,
+		};
+		it("authorises a lost tap on wire evidence alone, with no probe answer", () => {
+			const decision = stageBLostTapDecision(clean, null, false);
+			expect(decision.allow).toBe(true);
+			expect(decision.authorisedBy).toBe("fixture-recovery");
+		});
+		it("refuses when an identity request was answered", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, identityRequests: 1 },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("identity request");
+		});
+		it("refuses when the route published or the trace is missing", () => {
+			expect(
+				stageBLostTapDecision(
+					{ ...clean, trace: { ...clean.trace, selected: true } },
+					null,
+					false,
+				).allow,
+			).toBe(false);
+			expect(
+				stageBLostTapDecision({ ...clean, trace: null }, null, false).allow,
+			).toBe(false);
+		});
+		it("refuses when a refusal is painted in the hierarchy", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, visibleError: "Could not connect" },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("visible refusal");
+		});
+		it("refuses when the trace came from another process lease", () => {
+			const decision = stageBLostTapDecision(
+				{
+					...clean,
+					trace: {
+						...clean.trace,
+						processId: "22222222-2222-4222-8222-222222222222",
+					},
+				},
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("another process");
+		});
+		it("refuses a second loss in the same launch", () => {
+			const decision = stageBLostTapDecision(clean, null, true);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("already attempted");
+		});
+		it("needs no probe to authorise, but a contradicting probe vetoes", () => {
+			// The absence of an answer is not a refusal (the whole point: run
+			// 42181646348's probe timed out and blocked a legitimate retry).
+			expect(stageBLostTapDecision(clean, null, false).allow).toBe(true);
+			const contradicting: StageBCallbackProbe = {
+				processId: clean.launchProcessId,
+				presses: 1,
+				superseded: 0,
+				revision: 0,
+				phase: "signed-out",
+				route: "none",
+				selected: false,
+				failure: false,
+			};
+			const vetoed = stageBLostTapDecision(clean, contradicting, false);
+			expect(vetoed.allow).toBe(false);
+			expect(vetoed.reason).toContain("probe contradicts");
+			const agreeing = { ...contradicting, presses: 0 };
+			const confirmed = stageBLostTapDecision(clean, agreeing, false);
+			expect(confirmed.allow).toBe(true);
+			expect(confirmed.authorisedBy).toBe("probe-confirmed");
+		});
 	});
 	it("is wired into the initial connect, which must open its own segment", () => {
 		const source = readFileSync(
@@ -307,7 +404,7 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 		const warm = source.indexOf('"warm-app-foreground"');
 		const connect = source.indexOf('"connect-initial"');
 		// The retry is the third argument of that flow, so it sits after the name.
-		const armed = source.indexOf("createLostTapRetry({", connect);
+		const armed = source.indexOf("fixtureRecoveryRetry()", connect);
 		const next = source.indexOf('"type-initial"', connect);
 		const flush = source.lastIndexOf("await flushFlows();", connect);
 		// The gate only re-runs a segment opener, and the warm-up entry is empty,
@@ -320,7 +417,7 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 		expect(next).toBeGreaterThan(armed);
 		// Both relicensing paths share the factory rather than rebuilding it.
 		expect(
-			source.split("createLostTapRetry({").length - 1,
+			source.split("fixtureRecoveryRetry()").length - 1,
 		).toBeGreaterThanOrEqual(2);
 	});
 });
