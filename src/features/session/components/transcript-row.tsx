@@ -1,7 +1,13 @@
+import { memo } from "react";
 import { Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
+import {
+	CollapsedRow,
+	firstLine,
+	shouldFold,
+} from "@/features/session/components/collapsed-row";
 import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
 import { ToolRow } from "@/features/session/components/tool-row";
@@ -37,6 +43,15 @@ import { cx } from "@/ui/variants";
  * An unknown kind renders as a labelled generic row rather than vanishing: the
  * wire's `EntryKind` is open, and a row that silently disappeared would shorten the
  * conversation with no trace.
+ *
+ * **MEMOISED, AND THAT IS A CORRECTNESS REQUIREMENT, NOT AN OPTIMISATION.**
+ * React Native's cell renderer is a `PureComponent`, so a row's identity is its
+ * only bail-out: without `memo` every mounted row re-renders on every relay
+ * frame (a 60-row window, ten frames a second). The list hands this component a
+ * STABLE `entry` object for a row whose content did not change
+ * (`transcript-list.tsx`'s `reuseRows`), so a shallow compare is enough. Its
+ * props are all either that entry, a boolean, or a callback the screen keeps
+ * stable.
  */
 export type TranscriptRowProps = {
 	entry: TranscriptEntry;
@@ -72,7 +87,7 @@ const BLOCK_LABEL: Record<string, string> = {
 	generic: "entry",
 };
 
-export const TranscriptRow = ({
+const TranscriptRowImpl = ({
 	entry,
 	streaming = false,
 	loadImage,
@@ -139,6 +154,9 @@ export const TranscriptRow = ({
 	}
 
 	if (kind === "assistant") {
+		/* NEVER COLLAPSIBLE (design item 9). The answer is the page, not an event:
+		 *  folding it would hide the thing the reader came for, which is worse than
+		 *  the bug the fold exists to fix. Same rule as an `ask` below. */
 		return (
 			<View className="px-4 py-1" testID={testID}>
 				<Markdown text={entry.text} />
@@ -149,6 +167,36 @@ export const TranscriptRow = ({
 
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
+		/* A SENT MESSAGE FOLDS LIKE ANY OTHER EVENT (design item 9: "sent message —
+		 *  collapsed"). Only when it does not fit one line, and never when it
+		 *  carries an image: there the image IS the payload, and folding it would
+		 *  hide the thing that was sent behind a summary of its caption. Its own
+		 *  text stays the accessible name, so a fold hides nothing from a screen
+		 *  reader. */
+		if (entry.images.length === 0 && shouldFold(entry.text)) {
+			return (
+				<View className="px-4 py-1" testID={testID}>
+					<CollapsedRow
+						glyph={isSteer ? "↪" : "→"}
+						glyphClass={isSteer ? "text-ink-dim" : "text-accent"}
+						summary={firstLine(entry.text)}
+						bodyClass={isSteer ? "text-ink-muted" : "text-ink"}
+						accessibilityLabel={entry.text}
+					>
+						<Text
+							className={cx(
+								isSteer
+									? "text-body-sm text-ink-muted"
+									: "text-body-sm text-ink",
+							)}
+						>
+							{entry.text}
+						</Text>
+					</CollapsedRow>
+					{anchors}
+				</View>
+			);
+		}
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
 				<View
@@ -163,7 +211,12 @@ export const TranscriptRow = ({
 					{entry.text.length > 0 ? (
 						<Text
 							className={cx(
-								isSteer ? "text-body-sm text-ink-muted" : "text-body text-ink",
+								// The message body's role is `body-sm` 14: the relay's own
+								// `--text-body` step (design item 11). It was `body` 16, one step
+								// above the reference and 1.23x the tool trace it sits beside.
+								isSteer
+									? "text-body-sm text-ink-muted"
+									: "text-body-sm text-ink",
 							)}
 						>
 							{entry.text}
@@ -191,16 +244,37 @@ export const TranscriptRow = ({
 
 	if (kind === "notice" || kind === "compaction") {
 		const severity = entry.details.severity ?? "info";
+		const glyph =
+			kind === "compaction" ? "≡" : severity === "error" ? "✗" : "•";
+		const ink = SEVERITY_CLASS[severity] ?? "text-info";
+		/* A NOTICE FOLDS, AND AN ERROR FOLDS WITHOUT HIDING ITS OWN FACT (design
+		 *  item 9: "a collapsed error that hides why is the bug being fixed"). The
+		 *  summary line IS the severity glyph plus the first line of the notice, so
+		 *  the fact stays on screen while the stack of machine prose does not. */
+		if (shouldFold(entry.text)) {
+			return (
+				<View className="px-4 py-1" testID={testID}>
+					<CollapsedRow
+						glyph={glyph}
+						glyphClass={ink}
+						summary={firstLine(entry.text)}
+						accessibilityLabel={entry.text}
+					>
+						<Text className="min-w-0 flex-1 text-body-sm text-ink">
+							{entry.text}
+							{entry.details.notice_kind === "wake" ? (
+								<Text className="text-ink-muted"> · woken</Text>
+							) : null}
+						</Text>
+					</CollapsedRow>
+					{anchors}
+				</View>
+			);
+		}
 		return (
 			<View className="flex-row items-start gap-2 px-4 py-1" testID={testID}>
-				<Text
-					className={cx(
-						"text-mono-sm",
-						SEVERITY_CLASS[severity] ?? "text-info",
-					)}
-					aria-hidden
-				>
-					{kind === "compaction" ? "≡" : severity === "error" ? "✗" : "•"}
+				<Text className={cx("text-mono-sm", ink)} aria-hidden>
+					{glyph}
 				</Text>
 				<Text className="min-w-0 flex-1 text-body-sm text-ink">
 					{entry.text}
@@ -233,6 +307,55 @@ export const TranscriptRow = ({
 				entry.details.steer === true ? "Steered" : "",
 			].filter(Boolean)
 		: [];
+	/* Already-provided refs retain the message's own ID/index. No producer
+	 *  upload support or synthetic media endpoint is implied. */
+	const images =
+		(kind === "parent" || kind === "subagent") &&
+		entry.images.length > 0 &&
+		loadImage ? (
+			<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+				{entry.images.map((image) => (
+					<TranscriptImage
+						key={image.index}
+						entryId={entry.id}
+						index={image.index}
+						mimeType={image.mime_type}
+						testID={transcriptImageId(entry.id, image.index)}
+						load={loadImage}
+					/>
+				))}
+			</View>
+		) : null;
+	/* A MESSAGE FROM ANOTHER PARTICIPANT FOLDS TO ONE EXPANDABLE LINE (design
+	 *  item 9 — and the operator's own report: "some things like peer messages
+	 *  are not properly condensed into an expandable line… make sure that these
+	 *  are properly collapsed").
+	 *
+	 *  This is where the two references disagree and the design pass settles it:
+	 *  the relay leaves a peer body OPEN, the desktop collapses it unless detail
+	 *  is asked for. Long bodies follow the DESKTOP (`shouldFold`: more than one
+	 *  non-empty line, or more than 80 characters), because the operator's
+	 *  complaint is precisely that a peer message ate the screen. A body under
+	 *  that budget keeps today's treatment and grows no chevron — a fold that
+	 *  hides nothing is chrome that lies about there being more. */
+	if (shouldFold(body)) {
+		return (
+			<View className="px-4 py-1" testID={testID}>
+				<CollapsedRow
+					glyph={kind === "peer" ? "↔" : "↳"}
+					glyphClass={kind === "subagent" ? "text-ink-dim" : "text-accent"}
+					label={who}
+					summary={firstLine(body)}
+					meta={intent.join(" · ")}
+					accessibilityLabel={who.length > 0 ? `${who}: ${body}` : body}
+				>
+					<Text className="text-body-sm text-ink">{body}</Text>
+					{images}
+				</CollapsedRow>
+				{anchors}
+			</View>
+		);
+	}
 	return (
 		<View className="px-4 py-1" testID={testID}>
 			<View
@@ -269,26 +392,14 @@ export const TranscriptRow = ({
 					</Text>
 				) : null}
 				<Text className="text-body-sm text-ink">{body}</Text>
-				{/* Already-provided refs retain the message's own ID/index. No
-				    producer upload support or synthetic media endpoint is implied. */}
-				{(kind === "parent" || kind === "subagent") &&
-				entry.images.length > 0 &&
-				loadImage ? (
-					<View className="flex-row flex-wrap gap-1.5 pt-1.5">
-						{entry.images.map((image) => (
-							<TranscriptImage
-								key={image.index}
-								entryId={entry.id}
-								index={image.index}
-								mimeType={image.mime_type}
-								testID={transcriptImageId(entry.id, image.index)}
-								load={loadImage}
-							/>
-						))}
-					</View>
-				) : null}
+				{images}
 			</View>
 			{anchors}
 		</View>
 	);
 };
+
+/** Memoised at the module boundary: see the header's note — identity is this
+ *  row's only bail-out inside React Native's cell renderer. */
+export const TranscriptRow = memo(TranscriptRowImpl);
+TranscriptRow.displayName = "TranscriptRow";

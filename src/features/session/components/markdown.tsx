@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import * as Clipboard from "expo-clipboard";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -47,6 +47,13 @@ import { cx } from "@/ui/variants";
  * bubble separates a thing from other things, and the answer is the page.
  */
 
+/** The message body's role: `body-sm` 14 pt, the relay's own `--text-body` step
+ *  (0.875rem at a 16 px root — design item 11). It used to be `body-lg` 17,
+ *  which is a HERO step: 1.31x the tool trace beside it, where the relay is
+ *  14/13 = 1.08. The operator's report — "the normal message text feels a bit
+ *  large relative to the text from the tool traces" — is that ratio. */
+const MESSAGE_BODY_CLASS = "text-body-sm text-ink";
+
 const spanClass = (span: InlineSpan): string =>
 	cx(
 		span.code && "text-mono-sm text-ink-muted",
@@ -54,21 +61,34 @@ const spanClass = (span: InlineSpan): string =>
 		span.italic && "italic",
 	);
 
-const Inline = ({ text, base }: { text: string; base?: string }) => (
-	<Text className={cx(base ?? "text-body-lg text-ink")}>
-		{parseInline(text).map((span, index) => (
-			<Text
-				// Index keys are correct here: the spans are regenerated from the same
-				// string on every frame, so position IS the identity.
-				key={index}
-				className={spanClass(span)}
-				style={span.italic ? ITALIC : undefined}
-			>
-				{span.text}
-			</Text>
-		))}
-	</Text>
-);
+const Inline = memo(function Inline({
+	text,
+	base,
+}: {
+	text: string;
+	base?: string;
+}) {
+	/* PARSED ONCE PER STRING (design pass item E, cause 2). The parse used to run
+	 *  in the render body, so a panel re-render or a row re-render re-tokenised the
+	 *  same text: on a long answer that is the frame budget spent on work whose
+	 *  input did not change. */
+	const spans = useMemo(() => parseInline(text), [text]);
+	return (
+		<Text className={cx(base ?? MESSAGE_BODY_CLASS)}>
+			{spans.map((span, index) => (
+				<Text
+					// Index keys are correct here: the spans are regenerated from the same
+					// string on every frame, so position IS the identity.
+					key={index}
+					className={spanClass(span)}
+					style={span.italic ? ITALIC : undefined}
+				>
+					{span.text}
+				</Text>
+			))}
+		</Text>
+	);
+});
 
 /** React Native has no `<i>`; the text style is the only italic it has, and it is
  *  declared once so the inline parser's `italic` is not a silent no-op. */
@@ -501,8 +521,13 @@ const HEADING_CLASS: Record<number, string> = {
 	3: "text-body-lg font-medium text-ink",
 };
 
-export const Markdown = ({ text }: { text: string }) => {
-	const blocks = parseMarkdown(text);
+export const Markdown = memo(function Markdown({ text }: { text: string }) {
+	/* THE PARSE IS A FUNCTION OF THE TEXT AND NOTHING ELSE (design pass item E,
+	 *  cause 2), so it is memoised on the text alone: a re-render that arrives with
+	 *  the same answer (a panel opening, a scroll-linked parent, the row's own
+	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
+	 *  row that actually changed. */
+	const blocks = useMemo(() => parseMarkdown(text), [text]);
 	return (
 		/* ONE gap container, and every block carries no outer margin of its own
 		 * (`components.md` §22, "the container owns the gap"). Before this an
@@ -537,7 +562,7 @@ export const Markdown = ({ text }: { text: string }) => {
 							<View key={index} className="gap-1">
 								{block.items.map((item, itemIndex) => (
 									<View key={itemIndex} className="flex-row gap-2">
-										<Text className="text-body-lg text-ink-dim" aria-hidden>
+										<Text className="text-body-sm text-ink-dim" aria-hidden>
 											{block.ordered ? `${itemIndex + 1}.` : "•"}
 										</Text>
 										<View className="min-w-0 flex-1">
@@ -563,4 +588,4 @@ export const Markdown = ({ text }: { text: string }) => {
 			})}
 		</View>
 	);
-};
+});

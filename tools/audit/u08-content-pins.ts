@@ -163,6 +163,18 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for the transcript design pass: type parity, collapsing,
+	 * edge fades, the held-scroll rail and row-level memoisation. `src` moves
+	 * because the transcript slice itself changed — the message body steps from
+	 * `body-lg` 17 to `body-sm` 14, peer/sent/notice rows gain a one-line fold, the
+	 * scroller gains two 24 pt gradient bands, the checkpoint rail becomes
+	 * transient, and rows are memoised behind a row-identity pass. `app` moves only
+	 * for the session screen's wiring of the presence object to the list and the
+	 * rail. Fixture bytes, design tokens, instrument modules and input pins are
+	 * untouched and the scene is unchanged, so this is source admission for a
+	 * typography-and-layout change: U-08's rendered geometry proof must be
+	 * RE-CAPTURED against this tree, and this re-pin is NOT evidence that it passed.
+	 * Historical ORIGINAL_* pins are never re-pinned. */
 	/* Reprinted 2026-11-04 for PR #164's theme pipeline and picker: `app`
 	 * gains only the /theme route; `design/tokens` extracts the contrast maths
 	 * and per-palette rules; `src` gains the theme catalogue, preference and
@@ -389,7 +401,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "6f9ced757e1dcb1e4f2749fe01b1fb60ac1822ffbac0816e3f7c49bc64486a9b",
+	app: "e6c45d496576fd20ecb59b9534bab6cef5d614846daa25bbd82ebbf6fa177122",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -576,7 +588,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "83f43c1aa81faaa49b67ef10afaca0b0d551aefa7f69d32e1de53c5bf592f74e",
+	src: "e70b2c89c9ff764df139707fccb9fa203d71fd1a2761883d04eeb8227804e664",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

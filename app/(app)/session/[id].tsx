@@ -74,6 +74,7 @@ import {
 	recoveryBudget,
 } from "@/features/session/recovery-budget";
 import { sessionFactsFrom } from "@/features/session/state-marker";
+import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
 import { useCheckpoints } from "@/features/session/use-checkpoints";
 import { useCompletionAck } from "@/features/session/use-completion-ack";
@@ -265,6 +266,17 @@ export default function Session() {
 		() => new Set(runtime.entries.map((entry) => entry.id)),
 		[runtime.entries],
 	);
+
+	/**
+	 * The transcript's scroll signal, owned HERE because its two consumers are
+	 * siblings: the list reports into it and the checkpoint rail subscribes
+	 * (`transcript-presence.ts` explains why it is not a state value — a flip here
+	 * would re-render this whole screen, composer and panels included, twice per
+	 * gesture). Created once per mounted screen and disposed with it, so a
+	 * half-finished linger leaves no timer behind.
+	 */
+	const scrollPresence = useMemo(() => createScrollPresence(), []);
+	useEffect(() => () => scrollPresence.dispose(), [scrollPresence]);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -757,6 +769,9 @@ export default function Session() {
 					}
 					anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
 					onAnchorVisible={setCompletionVisible}
+					// The scroll signal the edge fades and the transient rail both read
+					// (design items 8 and 10).
+					presence={scrollPresence}
 					// The find session's two outputs into the list: the wash on the current
 					// hit, and the jump to reveal it (opening a condensed turn on the way
 					// when one hides it).
@@ -774,6 +789,10 @@ export default function Session() {
 					manifest={checkpoints.manifest}
 					readFailed={checkpoints.readFailed}
 					loadedIds={loadedIds}
+					// Draws only while the transcript is moving (or held): the
+					// permanent tick column was the operator's "remove the line ticks
+					// along the side".
+					presence={scrollPresence}
 				/>
 			</View>
 		);
