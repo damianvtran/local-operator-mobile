@@ -28,7 +28,11 @@ import {
 } from "@/features/auth/tunnel-storage";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { middleFit, sansTextWidthDp } from "@/ui/components/list-row-meta";
+import {
+	middleFit,
+	sansTextWidthDp,
+	textWidthDp,
+} from "@/ui/components/list-row-meta";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -207,6 +211,30 @@ const HealthMark = ({
  * At the same type step the bell drops its count pill, the chip drops its chevron
  * (`headerChipShowsChevron`), so the width goes to the name.
  */
+/**
+ * The home chip's label, fitted to its slot: whole when it fits; a host:port
+ * keeps both ends (`middleFit`, its port is the identifying half); any other
+ * name keeps its HEAD and loses its tail, the direction a reader scans.
+ */
+const HOST_PORT = /:\d+$/;
+
+export const headerChipFit = (
+	label: string,
+	budgetDp: number,
+	scale: number,
+): string => {
+	if (textWidthDp(label, scale) <= budgetDp) return label;
+	if (HOST_PORT.test(label)) return middleFit(label, budgetDp, scale);
+	const glyphs = [...label];
+	const room = budgetDp - textWidthDp("…", scale);
+	let head = "";
+	for (const glyph of glyphs) {
+		if (textWidthDp(head + glyph, scale) > room) break;
+		head += glyph;
+	}
+	return `${head.trimEnd()}…`;
+};
+
 export function HeaderComputerChip({ testID }: { testID: string }) {
 	const entry = useComputerEntry();
 	const { open } = useComputerSwitcher();
@@ -237,8 +265,16 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
 				className="min-w-0 flex-1"
 				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
+				{/* The header chip now gets the width the mark, badge and gear used to
+				 *  take (record §2.4), so the full "Mac – Local Operator" fits at 393 pt.
+				 *  When it still does not (320 pt, 200 %), the head is what a reader
+				 *  scans for — the machine's own name — so the fit keeps the HEAD and
+				 *  elides the TAIL (D-H1: the middle fit painted "M… Operator", which
+				 *  names nothing). A host:port label keeps its port via `middleFit`. */}
 				<Text className="text-mono-sm text-ink-muted" numberOfLines={1}>
-					{nameWidth > 0 ? middleFit(label, nameWidth, effectiveScale) : label}
+					{nameWidth > 0
+						? headerChipFit(label, nameWidth, effectiveScale)
+						: label}
 				</Text>
 			</View>
 			{headerChipShowsChevron(effectiveScale) ? (

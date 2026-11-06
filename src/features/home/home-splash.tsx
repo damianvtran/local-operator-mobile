@@ -1,24 +1,16 @@
-import { Info } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
+	ActivityIndicator,
 	Pressable,
 	ScrollView,
 	Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
-
-import {
-	draftExistsFor,
-	greeting,
-	HOME_TIP_ROTATE_MS,
-	startingLine,
-	suggestionSlotFor,
-	tipAt,
-} from "@/features/home/home-copy";
-import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
-import { NavigationMark } from "@/ui/components/navigation-mark";
+import { startingLine, suggestionSlotFor } from "@/features/home/home-copy";
+import { t } from "@/i18n";
+import { ROLE, SURFACE } from "@/ui/a11y";
+import { Button } from "@/ui/components/button";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -57,6 +49,7 @@ import { buttonClasses, cx } from "@/ui/variants";
  */
 export type HomeSplashProps = {
 	draft: string;
+	editing?: boolean;
 	/** The suggestions' slot is the connect action when nothing is connected. */
 	connected: boolean;
 	onPick: (text: string) => void;
@@ -166,173 +159,139 @@ const TIP_LINE_PX = 20;
  *  moves nothing below it; a scale change re-measures the whole splash anyway
  *  (the two `onLayout`s), which is the one case this number is allowed to
  *  change in. */
-const tipReserveDp = (scale: number, largeText: boolean): number =>
+const _tipReserveDp = (scale: number, largeText: boolean): number =>
 	largeText
 		? 2 * TYPE_STEPS.meta.size * scale * TYPE_STEPS.meta.lineHeight
 		: TIP_LINE_PX;
 
+/** Connected empty state only. Recovery lives at the home composition boundary:
+ * never paint a welcome/connect hero behind an expired or restoring session. */
 export const HomeSplash = ({
 	draft,
+	editing,
 	connected,
 	onPick,
-	onConnect,
 	starting,
 }: HomeSplashProps) => {
-	const markColor = useTokenColor("ink-muted");
-	const tipColor = useTokenColor("ink-dim");
 	const { width } = useWindowDimensions();
 	const { effectiveScale } = useTextScale();
-	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-
-	/* The tip's clock: suspended while the composer holds a draft — a line that
-	 * changed under a half-written sentence would pull at the exact field the
-	 * reader is typing into. The index is kept across the suspension (suspended,
-	 * not restarted). The held-draft predicate is `draftExistsFor`, shared with
-	 * the suggestions' slot below and the state marker, so a whitespace-only
-	 * draft cannot freeze the tip while the frame declares `idle` (review n2). */
-	const [tipIndex, setTipIndex] = useState(0);
-	useEffect(() => {
-		if (starting || draftExistsFor(draft)) return;
-		const timer = setInterval(
-			() => setTipIndex((index) => index + 1),
-			HOME_TIP_ROTATE_MS,
-		);
-		return () => clearInterval(timer);
-	}, [draft, starting]);
-
-	/* The yield's two measurements and its level (0: everything, 1: no tip,
-	 * 2: no mark, 3: one fewer suggestion row). The level is DERIVED against the
-	 * region it was answered for, so a new box invalidates the old answer in the
-	 * same render — the earlier shape reset it from an effect, which ran one
-	 * render late and flashed the un-yielded frame on every resize. */
-	const [regionHeight, setRegionHeight] = useState(0);
-	const [contentHeight, setContentHeight] = useState(0);
-	const [yielded, setYielded] = useState({ region: 0, level: 0 });
-
-	useEffect(() => {
-		if (regionHeight <= 0 || contentHeight <= 0) return;
-		const level = yielded.region === regionHeight ? yielded.level : 0;
-		if (contentHeight > regionHeight && level < 3) {
-			setYielded({ region: regionHeight, level: level + 1 });
-		}
-	}, [contentHeight, regionHeight, yielded]);
-
-	const level = yielded.region === regionHeight ? yielded.level : 0;
-	const fits = contentHeight === 0 || contentHeight <= regionHeight;
-	/* The slot's contents are decided in ONE place (`suggestionSlotFor`), which
-	 *  is also where review B1's fix lives: while a draft is held the slot is
-	 *  empty — a suggestion's tap REPLACES the field's text, so a live row beside
-	 *  a held draft is a silent overwrite (spec decision 6, §3.5). */
 	const slot = suggestionSlotFor({ connected, draft, width });
-	const rows = slot.kind === "suggestions" ? slot.rows : [];
-	const visibleRows =
-		level >= 3 && rows.length > 2 ? rows.slice(0, rows.length - 1) : rows;
-
-	if (starting) {
-		return (
-			<View className="flex-1 items-center justify-center px-4">
-				{/* The state marker IS this line's id (`STATE_MARKER.home.sending`
-				 *  aliases `SURFACE.homeStarting`): the line exists exactly while the
-				 *  state does, so a second carrier would be a second thing to drift. */}
+	const rows =
+		slot.kind === "suggestions" && !draft.length && !editing
+			? slot.rows.slice(0, 2)
+			: [];
+	return (
+		<View className="flex-1" testID={SURFACE.homeSplash}>
+			<ScrollView
+				contentContainerStyle={{ padding: 16, paddingTop: 24 }}
+				keyboardShouldPersistTaps="handled"
+			>
 				<Text
-					className="text-body text-ink-muted"
-					testID={SURFACE.homeStarting}
+					className="text-title text-ink"
+					testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
 				>
-					{startingLine()}
+					{starting ? startingLine() : t("mobile.chrome.home.greeting")}
+				</Text>
+				{rows.length ? (
+					<View testID={SURFACE.homeSuggestions}>
+						{rows.map((label) => (
+							<SuggestionRow
+								key={label}
+								label={label}
+								largeText={effectiveScale > LARGE_TEXT_SCALE}
+								onPress={() => onPick(label)}
+							/>
+						))}
+					</View>
+				) : null}
+			</ScrollView>
+		</View>
+	);
+};
+
+export type HomeRecoveryKind =
+	| "restoring"
+	| "no-host"
+	| "auth"
+	| "offline"
+	| "error";
+/** Presentation of already-decided connection facts only; never retries on mount,
+ * changes authorization, or replays a quarantined draft. Details are opt-in. */
+export const HomeRecovery = ({
+	kind,
+	host,
+	detail,
+	onRetry,
+	onSignIn,
+	onConnect,
+}: {
+	kind: HomeRecoveryKind;
+	host: string;
+	detail?: string;
+	onRetry: () => void;
+	onSignIn: () => void;
+	onConnect: () => void;
+}) => {
+	const [details, setDetails] = useState(false);
+	const title =
+		kind === "restoring"
+			? t("mobile.chrome.home.connecting", { host })
+			: kind === "no-host"
+				? t("mobile.chrome.home.connect")
+				: kind === "auth"
+					? t("mobile.chrome.home.sign_in")
+					: kind === "offline"
+						? t("mobile.chrome.home.reconnecting", { host })
+						: t("mobile.computers.session_error");
+	return (
+		<View className="px-4 pt-6 pb-3 gap-2" testID={SURFACE.homeRecovery}>
+			<View className="flex-row items-center gap-2">
+				{kind === "restoring" ? <ActivityIndicator /> : null}
+				<Text className="text-title text-ink" accessibilityRole="header">
+					{title}
 				</Text>
 			</View>
-		);
-	}
-
-	return (
-		<View
-			className="flex-1"
-			onLayout={(event) => setRegionHeight(event.nativeEvent.layout.height)}
-			testID={SURFACE.homeSplash}
-		>
-			<ScrollView
-				className="flex-1"
-				contentContainerClassName={cx(
-					"items-center gap-6 px-4 py-3",
-					fits ? "flex-grow justify-center" : "",
-				)}
-				keyboardShouldPersistTaps="handled"
-				showsVerticalScrollIndicator={false}
-			>
-				<View
-					className="w-full items-center gap-6"
-					onLayout={(event) =>
-						setContentHeight(event.nativeEvent.layout.height)
+			{kind !== "restoring" && kind !== "no-host" ? (
+				<Text className="text-body-sm text-ink-muted">
+					{t("mobile.chrome.home.saved_draft")}
+				</Text>
+			) : null}
+			{kind !== "restoring" ? (
+				<Button
+					label={
+						kind === "auth"
+							? t("mobile.chrome.home.sign_in")
+							: kind === "no-host"
+								? t("mobile.chrome.home.connect")
+								: t("mobile.computers.retry")
 					}
-				>
-					{level < 2 ? <NavigationMark size={32} /> : null}
-					<Text
-						className="text-center text-title text-ink"
-						testID={SURFACE.homeGreeting}
-					>
-						{greeting()}
-					</Text>
-					{slot.kind === "suggestions" ? (
-						<View className="w-full gap-3" testID={SURFACE.homeSuggestions}>
-							{visibleRows.map((label) => (
-								<SuggestionRow
-									key={label}
-									label={label}
-									largeText={largeText}
-									onPress={() => onPick(label)}
-								/>
-							))}
-						</View>
-					) : slot.kind === "connect" ? (
-						/* The connect card takes the chips' slot: with nothing connected
-						 *  there is nothing to ask yet, so the one move that changes the
-						 *  state is the only control. It survives a held draft (it replaces
-						 *  nothing); only the suggestions hide — see `suggestionSlotFor`. */
-						<SuggestionRow
-							label="Connect a computer"
-							largeText={largeText}
-							onPress={onConnect}
-							testID={CONTROL.homeConnect}
-						/>
+					onPress={
+						kind === "auth"
+							? onSignIn
+							: kind === "no-host"
+								? onConnect
+								: onRetry
+					}
+					testID={SURFACE.homeRecoveryAction}
+				/>
+			) : null}
+			{detail ? (
+				<>
+					<Button
+						variant="quiet"
+						label={t(
+							details
+								? "mobile.computers.hide_details"
+								: "mobile.computers.show_details",
+						)}
+						onPress={() => setDetails((v) => !v)}
+						testID={SURFACE.homeRecoveryDetails}
+					/>
+					{details ? (
+						<Text className="text-body-sm text-ink-dim">{detail}</Text>
 					) : null}
-					{level < 1 ? (
-						/* At large text the row takes the content width and the line WRAPS
-						 *  inside the reserve — the fix for the 200 % cut: a centred
-						 *  content-sized row painted ~462 dp against a 390 dp viewport and
-						 *  lost BOTH ends (measured: right edge 426 vs 390). The width is the
-						 *  wrap's constraint, `justify-center` keeps the icon-and-line group
-						 *  centred, and `text-center` centres the wrapped lines. At 100 %
-						 *  nothing moves: same content-sized row, same 20 pt reserve, same
-						 *  one clamped line. No font shrink and no hidden overflow: the
-						 *  reserve is sized from the type table, and the clamp is the mop-up
-						 *  the line always had. */
-						<View
-							className={cx(
-								"flex-row items-center gap-1.5",
-								largeText && "w-full justify-center",
-							)}
-							style={{ minHeight: tipReserveDp(effectiveScale, largeText) }}
-							testID={SURFACE.homeTip}
-							/* Ambient: no affordance, no announcement, no live region. Asking
-							 *  assistive technology to read it would spam a sentence every
-							 *  rotation. */
-							aria-hidden
-							importantForAccessibility="no"
-						>
-							<Info color={tipColor} size={12} />
-							<Text
-								className={cx(
-									"text-meta text-ink-dim",
-									largeText && "text-center",
-								)}
-								numberOfLines={largeText ? 2 : 1}
-							>
-								{tipAt(tipIndex)}
-							</Text>
-						</View>
-					) : null}
-				</View>
-			</ScrollView>
+				</>
+			) : null}
 		</View>
 	);
 };

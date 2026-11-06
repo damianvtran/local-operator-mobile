@@ -384,9 +384,12 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 	});
 
 	it("the header picture sits in the leading cluster, before the title control", () => {
-		const leading = SCREEN.indexOf("<NavigationMark />");
+		/* The back control leads; the brand mark left the session header (record
+		 *  2026-11-04 §2.3, D-S2), so the picture now follows back directly. */
+		const leading = SCREEN.indexOf("testID={CONTROL.sessionBack}");
 		const avatar = SCREEN.indexOf("{headerStacked ? null : agentAvatar}");
 		const title = SCREEN.indexOf("<SessionHealthControl");
+		expect(SCREEN).not.toContain("<NavigationMark");
 		expect(leading).toBeGreaterThan(0);
 		expect(avatar).toBeGreaterThan(leading);
 		expect(title).toBeGreaterThan(avatar);

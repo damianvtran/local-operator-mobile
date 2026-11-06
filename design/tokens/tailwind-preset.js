@@ -92,6 +92,7 @@ const borderRadius = {
 	"md": "10px",
 	"lg": "14px",
 	"frame": "16px",
+	"composer": "20px",
 	"full": "9999px",
 };
 
@@ -367,6 +368,7 @@ module.exports.themeBlock = () => `
 	--radius-md: 10px;
 	--radius-lg: 14px;
 	--radius-frame: 16px;
+	--radius-composer: 20px;
 	--radius-full: 9999px;
 	/* ---- touch geometry: the heights a control may declare ---- */
 	--control-sm-height: 32px;

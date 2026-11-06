@@ -83,7 +83,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/u08-geometry-proof.ts":
 		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
 	"tools/lib/affordance.ts":
-		"06902d73d4a59043084c223897c45dbc55c6e89014aa57b4204904e4b19e3208",
+		"1bec46754c3f696fde274b16b646cc24ea5314461d97fd694309ffd6a11280c4",
 	"tools/lib/args.ts":
 		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
 	"tools/lib/cdp.ts":
@@ -140,7 +140,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"b3761b32c16b06d64e6febcf8668911392a30a4a01169fffe4d2d906fce19b86",
+		"32ea49717b5093078901d5771c9ba2e2852664858f0f3c12f263834794ab1c57",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -157,7 +157,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
+		"4747988924ab3832c1412f86fc8962c3055d6b49cd8e864df8ecae60f629843e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -377,11 +377,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "19195211af9ae93848aee88eea6deeed3d570a0b2df9ea7f2db1e26110c403eb",
+	app: "c8ae536abc5849a0f97733313963545e5afbd212b50910a092befdf3da4b5d54",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
+		"2407ec6e4e507ad1a2152843174226e3ca2f468bad87fed925b5723905a1bb79",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -474,11 +474,24 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript selects none of the renewed branches — this is a source-
 	 * compatibility re-pin, not fresh geometry evidence. `app` untouched;
 	 * historical pins retained. Recomputed with `--print` after the merge with
-	 * main (#162 notification-store changes). */
-	// PR #156 + #166: --print on the merged tree; Stage B recovery/draft fencing adds
-	// no rendered input, and #166's in-place renewal is not selected by U08's
-	// healthy custom-relay transcript. Historical pins retained.
-	src: "f55b1130d27126ce730c08dd31399355e053335343acbb90d656590d1b625dab",
+	 * main (#162 notification-store changes).
+	 *
+	 * Re-pinned 2026-11-05, still deliberately: the round-6 composer work is inside
+	 * BOTH trees — `src/features/session/components/composer.tsx` (one seed per
+	 * morph state, the radius from the measured pill, the landscape duplicate More
+	 * removed) and `src/ui/a11y.ts` (the retired compact-context identifier). The
+	 * app tree moves with the screen that mounts them. Values are `--print` output
+	 * from the merged head, not hand-written.
+	 *
+	 * Re-pinned 2026-11-05 for round 7, src only: `composer.tsx` lost the
+	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
+	 * itself and is floored), the overflow clip follows the animation's own
+	 * progress instead of a timer, and `composer-presentation.ts` gained
+	 * `seedFor` plus a floor-aware presentation. `app` untouched. */
+	// PR #156 + #423: --print on the merged tree. The chrome branch restyles the
+	// composer's dock and sheet; neither adds a U08 transcript input, and Stage B's
+	// recovery/draft fencing is not rendered by the healthy custom-relay scene.
+	src: "dbcdff413c8e801dce0518c53b9ccc20f13eb3cd179b9820acfcf02fedec5893",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -500,9 +513,9 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
+		"e7f8eefe80a606d858bc16831c82a95f226fbcef5468d384556cc79f2006ad0a",
 	"pnpm-lock.yaml":
-		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+		"a6680f1b911b580ee77f3ecd9313e83af23a9a94770f80d08b9d148745e45ddb",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

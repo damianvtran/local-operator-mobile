@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "उत्तर नहीं दे रहा",
 	"relay.chrome.session.subtitle.ended": "समाप्त",
 	"relay.chrome.session.resume": "जारी रखें",
-	"relay.chrome.session.resuming": "खुल रहा है…"
+	"relay.chrome.session.resuming": "खुल रहा है…",
+	"relay.chrome.session.subtitle.working": "कार्यरत · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "कार्यरत",
+	"relay.chrome.session.subtitle.waiting": "आपका इंतज़ार है",
+	"relay.chrome.session.subtitle.idle": "आइडल",
+	"relay.chrome.session.tray.tasks": "कार्य {done}/{total}",
+	"relay.chrome.session.tray.agents": "एजेंट {running}/{total}",
+	"relay.chrome.drawer.past": "पिछले सत्र",
+	"relay.chrome.drawer.projects": "प्रोजेक्ट",
+	"relay.chrome.drawer.library": "लाइब्रेरी",
+	"relay.chrome.drawer.settings": "सेटिंग",
+	"relay.chrome.list.search_open": "खोजें",
+	"relay.chrome.list.search_label": "बातचीत खोजें",
+	"relay.chrome.row.tags": "टैग",
+	"relay.chrome.row.more": "और",
+	"relay.chrome.drawer.open": "नेविगेशन खोलें",
+	"relay.chrome.drawer.close": "नेविगेशन बंद करें"
 }

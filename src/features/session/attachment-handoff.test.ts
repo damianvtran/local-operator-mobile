@@ -12,9 +12,21 @@ const source = readFileSync(
 );
 // Evaluate the actual production function without importing the native renderer.
 // No duplicated policy: source wiring below pins its use at the Sheet boundary.
-const start = source.indexOf("export function createAttachmentSheetHandoff()");
-const end = source.indexOf("/** The outcome lines", start);
-if (start < 0 || end < 0) throw Error("production attachment handoff missing");
+const SIGNATURE = "export function createAttachmentSheetHandoff()";
+const start = source.indexOf(SIGNATURE);
+if (start < 0) throw Error("production attachment handoff missing");
+// Balanced braces, not a neighbouring comment: the chrome branch moved every
+// comment below this function, and a comment marker silently sliced the wrong
+// region when it did.
+const end = (() => {
+	let depth = 0;
+	for (let i = source.indexOf("{", start); i < source.length; i++) {
+		if (source[i] === "{") depth++;
+		else if (source[i] === "}" && --depth === 0) return i + 1;
+	}
+	return -1;
+})();
+if (end < 0) throw Error("production attachment handoff missing");
 const js = stripTypeScriptTypes(
 	source.slice(start, end).replace("export ", ""),
 );

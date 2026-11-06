@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "Не отвечает",
 	"relay.chrome.session.subtitle.ended": "Завершена",
 	"relay.chrome.session.resume": "Возобновить",
-	"relay.chrome.session.resuming": "Возобновляем…"
+	"relay.chrome.session.resuming": "Возобновляем…",
+	"relay.chrome.session.subtitle.working": "Работает · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "Работает",
+	"relay.chrome.session.subtitle.waiting": "Ждёт вас",
+	"relay.chrome.session.subtitle.idle": "Простой",
+	"relay.chrome.session.tray.tasks": "Задачи {done}/{total}",
+	"relay.chrome.session.tray.agents": "Агенты {running}/{total}",
+	"relay.chrome.drawer.past": "Прошлые сессии",
+	"relay.chrome.drawer.projects": "Проекты",
+	"relay.chrome.drawer.library": "Библиотека",
+	"relay.chrome.drawer.settings": "Настройки",
+	"relay.chrome.list.search_open": "Поиск",
+	"relay.chrome.list.search_label": "Поиск по беседам",
+	"relay.chrome.row.tags": "Теги",
+	"relay.chrome.row.more": "Ещё",
+	"relay.chrome.drawer.open": "Открыть навигацию",
+	"relay.chrome.drawer.close": "Закрыть навигацию"
 }
