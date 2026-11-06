@@ -23,6 +23,14 @@
 		"role": "button",
 		"note": "Button that applies the starting options. Sentence case, no final full stop."
 	},
+	"mobile.home.options.default_folder": {
+		"role": "button",
+		"note": "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop."
+	},
+	"mobile.home.options.default_model": {
+		"role": "button",
+		"note": "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop."
+	},
 	"mobile.home.options.fixed": {
 		"role": "help",
 		"note": "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title."

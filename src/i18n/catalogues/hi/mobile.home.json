@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
 	"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
 	"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
+	"mobile.home.options.default_folder": "इस कंप्यूटर का डिफ़ॉल्ट फ़ोल्डर इस्तेमाल करें",
+	"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 	"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 	"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
 	"mobile.home.options.title": "बातचीत के विकल्प",

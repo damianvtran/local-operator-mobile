@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
 	"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
 	"mobile.home.options.apply": "Dùng các tùy chọn này",
+	"mobile.home.options.default_folder": "Dùng thư mục mặc định của máy tính này",
+	"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 	"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 	"mobile.home.options.folder": "Thư mục trên máy tính này",
 	"mobile.home.options.title": "Tùy chọn cuộc trò chuyện",

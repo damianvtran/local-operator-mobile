@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 	"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
 	"mobile.home.options.apply": "Utiliser ces options",
+	"mobile.home.options.default_folder": "Utiliser le dossier par défaut de cet ordinateur",
+	"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 	"mobile.home.options.folder": "Dossier sur cet ordinateur",
 	"mobile.home.options.title": "Options de la conversation",

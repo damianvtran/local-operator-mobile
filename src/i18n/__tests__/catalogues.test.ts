@@ -83,7 +83,9 @@ const NAMESPACES = [
 		name: "mobile.home",
 		messages: home,
 		context: homeContext,
-		expected: 29,
+		/* 31 from the round-1 remediation's two options-sheet rows ("back to the
+		 *  computer's default" for the folder and for the model): 29 before them. */
+		expected: 31,
 	},
 	{
 		name: "mobile.projects",
@@ -218,7 +220,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(294);
+		expect(total).toBe(296);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

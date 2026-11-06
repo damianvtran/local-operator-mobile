@@ -97,6 +97,8 @@ export type CatalogueKey =
 	| "mobile.home.greeting"
 	| "mobile.home.models_read_failed"
 	| "mobile.home.options.apply"
+	| "mobile.home.options.default_folder"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
 	| "mobile.home.options.title"
@@ -390,6 +392,8 @@ export type NoParamKey =
 	| "mobile.home.greeting"
 	| "mobile.home.models_read_failed"
 	| "mobile.home.options.apply"
+	| "mobile.home.options.default_folder"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
 	| "mobile.home.options.title"
@@ -647,6 +651,8 @@ export type MessageParams = {
 	"mobile.home.greeting": NoParams;
 	"mobile.home.models_read_failed": NoParams;
 	"mobile.home.options.apply": NoParams;
+	"mobile.home.options.default_folder": NoParams;
+	"mobile.home.options.default_model": NoParams;
 	"mobile.home.options.fixed": NoParams;
 	"mobile.home.options.folder": NoParams;
 	"mobile.home.options.title": NoParams;
@@ -960,6 +966,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.greeting": "What can I help you with today?",
 	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
 	"mobile.home.options.apply": "Use these options",
+	"mobile.home.options.default_folder": "Use this computer's default folder",
+	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
 	"mobile.home.options.title": "Conversation options",
@@ -1258,6 +1266,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
 	"mobile.home.models_read_failed": { role: "status", note: "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder." },
 	"mobile.home.options.apply": { role: "button", note: "Button that applies the starting options. Sentence case, no final full stop." },
+	"mobile.home.options.default_folder": { role: "button", note: "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop." },
+	"mobile.home.options.default_model": { role: "button", note: "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop." },
 	"mobile.home.options.fixed": { role: "help", note: "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
 	"mobile.home.options.folder": { role: "meta", note: "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone." },
 	"mobile.home.options.title": { role: "heading", note: "Title of the sheet that edits the starting options of a conversation that has not been sent yet." },
@@ -1570,6 +1580,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
 		"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
 		"mobile.home.options.apply": "Usar estas opciones",
+		"mobile.home.options.default_folder": "Usar la carpeta predeterminada de esta máquina",
+		"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 		"mobile.home.options.folder": "Carpeta en esta máquina",
 		"mobile.home.options.title": "Opciones de la conversación",
@@ -1866,6 +1878,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 		"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
 		"mobile.home.options.apply": "Utiliser ces options",
+		"mobile.home.options.default_folder": "Utiliser le dossier par défaut de cet ordinateur",
+		"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
 		"mobile.home.options.title": "Options de la conversation",
@@ -2162,6 +2176,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
 		"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
 		"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
+		"mobile.home.options.default_folder": "इस कंप्यूटर का डिफ़ॉल्ट फ़ोल्डर इस्तेमाल करें",
+		"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 		"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
 		"mobile.home.options.title": "बातचीत के विकल्प",
@@ -2458,6 +2474,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "Чем помочь сегодня?",
 		"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
 		"mobile.home.options.apply": "Применить",
+		"mobile.home.options.default_folder": "Использовать папку по умолчанию на этом компьютере",
+		"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 		"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 		"mobile.home.options.folder": "Папка на этом компьютере",
 		"mobile.home.options.title": "Параметры беседы",
@@ -2754,6 +2772,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
 		"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
 		"mobile.home.options.apply": "یہ اختیارات استعمال کریں",
+		"mobile.home.options.default_folder": "اس کمپیوٹر کا ڈیفالٹ فولڈر استعمال کریں",
+		"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 		"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
 		"mobile.home.options.title": "گفتگو کے اختیارات",
@@ -3050,6 +3070,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
 		"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
 		"mobile.home.options.apply": "Dùng các tùy chọn này",
+		"mobile.home.options.default_folder": "Dùng thư mục mặc định của máy tính này",
+		"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 		"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 		"mobile.home.options.folder": "Thư mục trên máy tính này",
 		"mobile.home.options.title": "Tùy chọn cuộc trò chuyện",
@@ -3346,6 +3368,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.greeting": "今天想让我帮你做点什么？",
 		"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
 		"mobile.home.options.apply": "使用这些选项",
+		"mobile.home.options.default_folder": "使用此电脑的默认文件夹",
+		"mobile.home.options.default_model": "使用此电脑的默认模型",
 		"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
 		"mobile.home.options.folder": "此电脑上的文件夹",
 		"mobile.home.options.title": "对话选项",

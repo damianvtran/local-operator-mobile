@@ -593,7 +593,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * unread") cannot occur there, so this is source admission rather than a claim
 	 * that the measured geometry moved. Historical ORIGINAL_* identities, the
 	 * instrument modules, the corpus and every other pin are untouched. */
-	src: "df101ea11e46bd896bc2fab087170194f94cbf1da113c6cd27d81b9cdc0a77db",
+	/* Re-printed 2026-11-06 at the STAGED round-1 remediation tree (the committed pin
+	 * above was captured before the two new `home-defaults` files were tracked, so it
+	 * described no tree that ever shipped — review R1 / QA Q1). What moved: the folder
+	 * read now fills only an unfilled slot, the two reads have their own effects and
+	 * retries, the restored-record supersede no longer waits for a resolved folder, the
+	 * options sheet gained the two "back to the computer's default" rows and per-row
+	 * recent ids, and two catalogue keys were added. `app` is untouched by this round.
+	 * The U-08 scene renders no home surface, so this is still source admission rather
+	 * than a claim that any measured geometry moved. */
+	src: "8cc304425af29ffaa59a7b624a215935165b385283fb570cb234a60815ffac65",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

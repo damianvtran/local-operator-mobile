@@ -22,13 +22,14 @@ import {
 } from "@/features/home/home-copy";
 import {
 	type CatalogueRead,
+	foldersApplied,
 	foldersFailure,
 	foldersFrom,
 	type HomeFolders,
 	homeModelReading,
 	homeStartSelection,
 	isAuthFailure,
-	selectionSuperseded,
+	restoredSupersede,
 } from "@/features/home/home-defaults";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeRecovery, HomeSplash } from "@/features/home/home-splash";
@@ -61,7 +62,7 @@ import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";
 import { useUiStore } from "@/state/ui-store";
-import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { CONTROL, homeRecentFolderId, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
@@ -204,14 +205,19 @@ export default function Home({
 	 * coordinator deliberately KEEPS a restored selection rather than replacing it —
 	 * so the invented model would keep reaching the start body. The app cannot tell an
 	 * invented model from a chosen one on disk, so the record is no evidence of
-	 * choice: once the reader's live choices disagree with it, theirs win. Guarded by
-	 * the comparison, so a record that already agrees is left alone (and an
-	 * uneditable phase answers the write with a no-op rather than a loop). */
+	 * choice: it is corrected in place (`restoredSupersede` holds the rules, and why
+	 * the folder read must not gate them). The comparison returns `null` when the
+	 * record already agrees, so an agreeing record is left alone and an uneditable
+	 * phase answers the write with a no-op rather than a loop. */
 	useEffect(() => {
-		if (selection === null) return;
-		if (!selectionSuperseded(startup.snapshot.selection, selection)) return;
-		void startup.configure(selection);
-	}, [selection, startup, startup.snapshot.selection]);
+		const next = restoredSupersede({
+			stored: startup.snapshot.selection,
+			folders,
+			chosenModel,
+		});
+		if (next === null) return;
+		void startup.configure(next);
+	}, [startup, startup.snapshot.selection, folders, chosenModel]);
 	const draft = startup.snapshot.draft.text;
 	const images = startup.snapshot.draft.images;
 	const setDraft = startup.setText;
@@ -275,10 +281,16 @@ export default function Home({
 	 * catalogue reported as connected — so the chip can say the list was unread and
 	 * the banner can offer the retry the read never had.
 	 *
+	 * ONE EFFECT PER READ (review R2). Both reads used to share one effect keyed on
+	 * both attempt counters, so the model banner's Retry re-read the FOLDERS as well
+	 * and its success path put the computer's default back over a folder the reader
+	 * had applied in the sheet — silently, and in the state this screen creates
+	 * whenever the model list fails. Each read now re-runs only its own retry.
+	 *
 	 * `directoriesAttempt` and `modelsAttempt` are dependencies the exhaustive-deps
 	 * rule cannot justify from the body: they are RE-RUN TRIGGERS (the two retries),
 	 * and without them a failed read would never be re-asked. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: the two attempts are re-run triggers (see above)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: directoriesAttempt is the re-run trigger (see above)
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
@@ -289,12 +301,26 @@ export default function Home({
 				if (!live) return;
 				const read = foldersFrom(payload);
 				setFolders(read);
-				setHomeDirectory(read.default);
+				/* THE READER'S FOLDER WINS over a later read (review R2): the success path
+				 *  fills the default only into a slot nobody has filled, so a folder applied
+				 *  in the sheet survives a re-read of any kind — this read's own retry
+				 *  included. */
+				setHomeDirectory((held) => foldersApplied(held, read));
 				setDirectoriesError(null);
 			})
 			.catch((cause: unknown) => {
 				if (live) setDirectoriesError(foldersFailure(cause));
 			});
+		return () => {
+			live = false;
+		};
+	}, [relay, directoriesAttempt]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: modelsAttempt is the re-run trigger (see above)
+	useEffect(() => {
+		const active = relay();
+		if (!active) return;
+		let live = true;
 		void active
 			.models()
 			.then((catalogue) => {
@@ -308,7 +334,7 @@ export default function Home({
 		return () => {
 			live = false;
 		};
-	}, [relay, directoriesAttempt, modelsAttempt]);
+	}, [relay, modelsAttempt]);
 
 	const retryDirectories = useCallback(() => {
 		setDirectoriesAttempt((attempt) => attempt + 1);
@@ -575,10 +601,14 @@ export default function Home({
 				</View>
 			) : null}
 
-			{/* The folders read failed. The KIND decides the sentence — a credential
-			 *  refusal is not a transient read failure, and offering Retry as the remedy
-			 *  for it points the reader at a button that will be refused again. A successful
-			 *  read clears it; a retry that fails again keeps it, which is the honest state. */}
+			{/* The folders read failed. The KIND decides the sentence AND the remedy — a
+			 *  credential refusal is not a transient read failure, and offering Retry for it
+			 *  pointed the reader at a button that would be refused again: `relay-unauthorized`
+			 *  retries `never` and its surface is a password (review R4). The auth branch
+			 *  therefore offers the sign-in handoff the splash already uses; every other kind
+			 *  keeps the retry, which is a real answer for a read that only raced something.
+			 *  A successful read clears the row; a retry that fails again keeps it, which is
+			 *  the honest state. */}
 			{directoriesError !== null ? (
 				<Banner
 					tone="warning"
@@ -587,11 +617,19 @@ export default function Home({
 							? foldersReadSignInRequired()
 							: foldersReadFailed()
 					}
-					action={{
-						label: "Retry",
-						onPress: retryDirectories,
-						testID: CONTROL.homeFoldersRetry,
-					}}
+					action={
+						isAuthFailure(directoriesError)
+							? {
+									label: t("mobile.chrome.home.sign_in"),
+									onPress: () => router.push("/welcome"),
+									testID: CONTROL.homeFoldersSignIn,
+								}
+							: {
+									label: t("mobile.computers.retry"),
+									onPress: retryDirectories,
+									testID: CONTROL.homeFoldersRetry,
+								}
+					}
 					testID={CONTROL.homeFoldersBanner}
 				/>
 			) : null}
@@ -605,7 +643,7 @@ export default function Home({
 					tone="warning"
 					message={modelsReadFailed()}
 					action={{
-						label: "Retry",
+						label: t("mobile.computers.retry"),
 						onPress: retryModels,
 						testID: CONTROL.homeModelsRetry,
 					}}
@@ -813,23 +851,54 @@ export default function Home({
 						disabled={!selectionEditable}
 						testID={CONTROL.newSessionCwd}
 					/>
+					{/* The way BACK to the computer's own answer (reviews R5 and the folder half of
+					 *  the same gap): without these rows the only way out of a mis-tap is picking
+					 *  a different entry, or a remount. Like every other row here they FILL the
+					 *  sheet rather than sending — the Apply button commits — so a reader who
+					 *  changes their mind twice is never on a wire they did not confirm. The
+					 *  folder row needs the read's `default` to name, so it waits for the read. */}
+					{folders !== null ? (
+						<Button
+							label={t("mobile.home.options.default_folder")}
+							variant="quiet"
+							onPress={() => setOptionPath(folders.default)}
+							disabled={!selectionEditable}
+							testID={CONTROL.homeDefaultFolder}
+						/>
+					) : null}
 					{/* The computer's recent directories, one tap each: every row is a directory
 					 *  its spawn gate admits, so no row is a suggestion that 400s. They fill the
 					 *  field rather than sending, so the reader can still change their mind; the
-					 *  free-text field above stays the escape hatch for a path no row names. */}
+					 *  free-text field above stays the escape hatch for a path no row names. Each
+					 *  row carries its index in the id (review R8): one shared id made no
+					 *  specific row addressable, so a flow could only press whichever row the
+					 *  matcher happened to see. */}
 					{folders !== null && folders.recent.length > 0 ? (
 						<View className="gap-2">
-							{folders.recent.map((directory) => (
+							{folders.recent.map((directory, index) => (
 								<Button
 									key={directory}
 									label={homeShortened(directory, folders.home)}
 									variant="quiet"
 									onPress={() => setOptionPath(directory)}
 									disabled={!selectionEditable}
-									testID={CONTROL.homeRecentFolder}
+									testID={homeRecentFolderId(index)}
 								/>
 							))}
 						</View>
+					) : null}
+					{/* The model half of the same way back (review R5): `chosenModel` only ever
+					 *  moved null → entry, so a mis-tap on an entry was correctable only by
+					 *  picking a different one. Shown only when the sheet holds a model, because
+					 *  "use the default" over a default is a row about nothing. */}
+					{optionModel !== null ? (
+						<Button
+							label={t("mobile.home.options.default_model")}
+							variant="quiet"
+							onPress={() => setOptionModel(null)}
+							disabled={!selectionEditable}
+							testID={CONTROL.homeDefaultModel}
+						/>
 					) : null}
 					{models.map((model) => (
 						<Button

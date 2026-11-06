@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "Чем помочь сегодня?",
 	"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
 	"mobile.home.options.apply": "Применить",
+	"mobile.home.options.default_folder": "Использовать папку по умолчанию на этом компьютере",
+	"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 	"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 	"mobile.home.options.folder": "Папка на этом компьютере",
 	"mobile.home.options.title": "Параметры беседы",

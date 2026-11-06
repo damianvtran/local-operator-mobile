@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
 	"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
 	"mobile.home.options.apply": "Usar estas opciones",
+	"mobile.home.options.default_folder": "Usar la carpeta predeterminada de esta máquina",
+	"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 	"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 	"mobile.home.options.folder": "Carpeta en esta máquina",
 	"mobile.home.options.title": "Opciones de la conversación",

@@ -5,6 +5,8 @@
 	"mobile.home.greeting": "What can I help you with today?",
 	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
 	"mobile.home.options.apply": "Use these options",
+	"mobile.home.options.default_folder": "Use this computer's default folder",
+	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
 	"mobile.home.options.title": "Conversation options",
