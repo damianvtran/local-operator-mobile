@@ -13,6 +13,9 @@ import {
 	attachStageBDocument,
 	attachStageBPhoto,
 	discardStageBDraft,
+	dismissStageBKeyboard,
+	logoutStageB,
+	STAGE_B_ATTACH_SHEET_LABEL,
 	STAGE_B_COLD_ASSERTION_MS,
 	STAGE_B_DOCUMENT_DISMISS_LABEL,
 	STAGE_B_DRAWN_SCREEN,
@@ -20,8 +23,10 @@ import {
 	STAGE_B_PICKER_OUTCOME_LABEL,
 	STAGE_B_PICKER_OUTCOME_MS,
 	STAGE_B_PICKER_WAIT_MS,
+	STAGE_B_TRANSCRIPT_SURFACE_ID,
 	STAGE_B_WRONG_PICKER,
 	selectStageBComputer,
+	stageBEditor,
 	stageBFlow,
 	stageBHasDrawnScreen,
 	typeStageBDraft,
@@ -339,5 +344,35 @@ describe("document-picker attachment is the native proof surface", () => {
 		expect(raw.indexOf(STAGE_B_DOCUMENT_DISMISS_LABEL)).toBeLessThan(
 			raw.indexOf("composer-attachment-0"),
 		);
+	});
+
+	it("dismisses the keyboard on the app's own surface, never with hideKeyboard", () => {
+		const typed = JSON.stringify(typeStageBDraft("canary"));
+		// Run 42281454898: `Hide Keyboard` failed after 103.4s on iOS, so the flow
+		// now taps the inert transcript instead.
+		expect(typed).not.toContain("hideKeyboard");
+		expect(typed).toContain(STAGE_B_TRANSCRIPT_SURFACE_ID);
+		const tap = typed.indexOf("session-transcript");
+		const settle = typed.indexOf("waitForAnimationToEnd", tap);
+		const assertDraft = typed.indexOf("^canary$");
+		expect(tap).toBeGreaterThan(-1);
+		expect(settle).toBeGreaterThan(tap);
+		// The draft assertion still runs AFTER the dismissal, which is what proves
+		// the tap did not disturb it.
+		expect(assertDraft).toBeGreaterThan(settle);
+	});
+	it("no generated Stage B flow still names hideKeyboard", () => {
+		const flows = [
+			typeStageBDraft("c"),
+			dismissStageBKeyboard(),
+			attachStageBDocument("local"),
+			attachStageBPhoto(),
+			selectStageBComputer(),
+			stageBEditor(),
+			discardStageBDraft("canary"),
+			logoutStageB(),
+		];
+		for (const flow of flows)
+			expect(JSON.stringify(flow)).not.toContain("hideKeyboard");
 	});
 });

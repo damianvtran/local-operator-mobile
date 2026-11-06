@@ -100,11 +100,30 @@ export const stageBEditor = (): StageBStep[] => [
 	},
 	{ assertVisible: { id: "composer-input" } },
 ];
+/** The app's own non-interactive surface, used to dismiss the keyboard.
+ *
+ * Run 42281454898 failed at `Hide Keyboard ... FAILED` after 103.4s: Maestro's
+ * `hideKeyboard` does not work in this app on iOS, so the step could never
+ * succeed and the picker never ran. Both surfaces exist in `src/ui/a11y.ts`
+ * (SURFACE.sessionTranscript / sessionTranscriptEmpty) and the transcript is
+ * inert, so tapping it dismisses the keyboard without touching the draft — which
+ * the following assertion then proves. */
+export const STAGE_B_TRANSCRIPT_SURFACE_ID =
+	"(session-transcript|session-transcript-empty)";
+/** No fallback point tap and no retry: one transcript tap, then settle. If the
+ * keyboard is somehow still up, the NEXT step fails and names itself, which is
+ * the evidence worth having. */
+export const dismissStageBKeyboard = (): StageBStep[] => [
+	{ tapOn: { id: STAGE_B_TRANSCRIPT_SURFACE_ID } },
+	{ waitForAnimationToEnd: { timeout: 5000 } },
+];
 export const typeStageBDraft = (text: string): StageBStep[] => [
 	...stageBEditor(),
 	{ tapOn: { id: "composer-input" } },
 	{ inputText: text },
-	{ hideKeyboard: {} },
+	...dismissStageBKeyboard(),
+	// Unchanged: this is what proves the dismissal did not disturb the draft, and
+	// it is the draft-retention behaviour the proof cares about.
 	{ assertVisible: exactDraft(text) },
 ];
 export const assertStageBDraft = (
@@ -142,7 +161,15 @@ export const attachStageBDocument = (
 ): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	{ waitForAnimationToEnd: { timeout: 5000 } },
-	{ assertVisible: { id: "attach-option-files" } },
+	// A bare assertVisible fails without waiting and without saying what it wanted;
+	// the sheet animates in, so this is a bounded wait that names the step.
+	{
+		extendedWaitUntil: {
+			visible: { id: "attach-option-files" },
+			timeout: 15000,
+			label: STAGE_B_ATTACH_SHEET_LABEL,
+		},
+	},
 	{ tapOn: { id: "attach-option-files", retryTapIfNoChange: false } },
 	{ extendedWaitUntil: { notVisible: { id: "attach-sheet" }, timeout: 10000 } },
 	// The visible discriminator for "the document browser is up": its tab labels.
@@ -236,6 +263,8 @@ export const STAGE_B_DOCUMENT_FILE_MS = 20_000;
 export const STAGE_B_DOCUMENT_DISMISS_MS = 15_000;
 export const STAGE_B_DOCUMENT_DISMISS_LABEL =
 	"picker did not return a document: the file cell never selected";
+export const STAGE_B_ATTACH_SHEET_LABEL =
+	"attach sheet did not open: no files row within 15s";
 export const STAGE_B_DOCUMENT_BROWSER_LABEL =
 	"Files document browser did not appear within 30s";
 export const STAGE_B_DOCUMENT_SEED_LABEL =
@@ -321,7 +350,7 @@ export const discardStageBDraft = (currentText: string): StageBStep[] => [
 	{
 		assertTrue: `\${maestro.copiedText === "" || maestro.copiedText === "Message…" || maestro.copiedText === "Message" || maestro.copiedText === "Message Message…"}`,
 	},
-	{ hideKeyboard: {} },
+	...dismissStageBKeyboard(),
 	{
 		runFlow: {
 			when: { visible: { id: "composer-attachment-0" } },
