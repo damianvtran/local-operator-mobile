@@ -51,6 +51,7 @@ on:
           - account-routing-android-proof
           - projects-create-ios-proof
           - chrome-ios-proof
+          - theme-ios-proof
       proof_stage:
         description: "Targeted iOS proof only; never a full-E2E verdict"
         type: choice
@@ -173,6 +174,7 @@ jobs:
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             chrome-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1763,6 +1765,89 @@ jobs:
             ${{ runner.temp }}/chrome-ios-proof/commands/*.log
             ${{ runner.temp }}/chrome-ios-proof/frames/**/*.png
             ${{ runner.temp }}/chrome-ios-proof/hierarchies/*.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  theme-ios-proof:
+    name: Targeted native theme picker + palette proof (NOT full E2E)
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'theme-ios-proof'
+    runs-on: macos-26
+    # Overall ceiling. The runner script spends at most 45 minutes on proof
+    # operations and reserves cleanup beyond that; setup steps fit in the rest.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PROOF_MODE: theme-ios-proof
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Provision the existing pinned Maestro driver
+        run: |
+          set -euo pipefail
+          export MAESTRO_VERSION
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Download and verify the already-built artifact (the only step holding the token)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+          NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
+          NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
+        run: |
+          set -euo pipefail
+          # Inputs are data: shape-check before use, refuse rather than sanitise.
+          [[ "$NATIVE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::native_run_id must be digits"; exit 1; }
+          [[ "$NATIVE_ARTIFACT_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::bad artifact name"; exit 1; }
+          [[ "$NATIVE_ARTIFACT_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad digest"; exit 1; }
+          dir="$RUNNER_TEMP/theme-artifact"
+          mkdir -m 700 "$dir"
+          meta=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID/artifacts" \
+            --jq "[.artifacts[] | select(.name == \"$NATIVE_ARTIFACT_NAME\" and .expired == false)] | if length == 1 then .[0] else error(\"expected exactly one live artifact\") end | \"\(.id) \(.digest)\"")
+          id="${meta% *}"; api_digest="${meta#* }"
+          echo "artifact id=$id api-digest=$api_digest expected=sha256:$NATIVE_ARTIFACT_SHA256"
+          [ "$api_digest" = "sha256:$NATIVE_ARTIFACT_SHA256" ] || { echo "::error::artifact digest differs from the expected digest"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/artifact.zip"
+          actual=$(shasum -a 256 "$dir/artifact.zip" | cut -d' ' -f1)
+          [ "$actual" = "$NATIVE_ARTIFACT_SHA256" ] || { echo "::error::downloaded zip digest $actual differs"; exit 1; }
+          echo "PROOF_ARTIFACT_ZIP=$dir/artifact.zip" >> "$GITHUB_ENV"
+      - name: Run-only relay password (0600, masked before any use)
+        run: |
+          set -euo pipefail
+          umask 077
+          value=$(openssl rand -hex 24)
+          echo "::add-mask::$value"
+          printf '%s\n' "$value" > "$RUNNER_TEMP/theme-password"
+          echo "PROOF_PASSWORD_FILE=$RUNNER_TEMP/theme-password" >> "$GITHUB_ENV"
+      - name: Native theme walk (token-free environment)
+        env:
+          PROOF_NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+          PROOF_NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
+          PROOF_NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
+          PROOF_PROVENANCE_NOTE: "the ios-simulator artifact of the named run; that run's head is the provenance"
+        run: node scripts/ci/theme-ios-proof.ts
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: theme-ios-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/theme-proof/receipt.json
+            ${{ runner.temp }}/theme-proof/commands.json
+            ${{ runner.temp }}/theme-proof/relay-*-requests.json
+            ${{ runner.temp }}/theme-proof/commands/*.log
+            ${{ runner.temp }}/theme-proof/frames/**/*.png
+            ${{ runner.temp }}/theme-proof/hierarchies/*.txt
           retention-days: 14
           if-no-files-found: warn
   u08-geometry-proof:

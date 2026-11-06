@@ -38,6 +38,8 @@ import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
 import session from "@/i18n/catalogues/en/mobile.session.json";
 import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
+import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
+import settings from "@/i18n/catalogues/en/mobile.settings.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
@@ -150,6 +152,15 @@ const NAMESPACES = [
 		expected: 11,
 	},
 	{
+		/* Settings → Appearance and the Theme screen (decision record
+		 *  `mobile-design-direction.md` § 5). Theme NAMES are not keys: they are
+		 *  proper nouns, verbatim in every locale, as on the desktop. */
+		name: "mobile.settings",
+		messages: settings,
+		context: settingsContext,
+		expected: 17,
+	},
+	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
 		 *  destinations' one-word labels, the More sheet's title, and (from the
 		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
@@ -207,7 +218,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(273);
+		expect(total).toBe(290);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

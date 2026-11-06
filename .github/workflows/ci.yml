@@ -423,11 +423,19 @@ jobs:
         # was written and is `.ts` now, and a rename should not touch CI.
         run: pnpm theme:check
 
-      - name: Contrast contract (tokens.json, both themes)
+      - name: Contrast contract (tokens.json, both themes, and the 59-palette fleet)
         run: node design/tokens/contrast-contract.mjs
 
       - name: Tailwind preset matches tokens.json
         run: node design/tokens/build-preset.mjs --check
+
+      - name: Desktop palettes are the desktop's (hash pin, re-derived upstream)
+        # The 59 desktop palettes the phone ships are a vendored export
+        # (design/themes/desktop-palettes.json) until the design kit carries
+        # them. This re-derives the export from local-operator-ui at the locked
+        # commit (an anonymous public fetch, fork-safe) and fails if a byte
+        # differs; the contrast step above then judges every palette.
+        run: node design/themes/export-desktop-palettes.mjs --check
 
       - name: Upstream slice and parity (kit pin, brand roles)
         # ADR 0007 § Decision 2. One command, two checks, two messages: the

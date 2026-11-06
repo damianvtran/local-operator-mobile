@@ -119,8 +119,8 @@ export const SupplementWebView = ({
 }: SupplementWebViewProps) => {
 	const resolved = useTheme();
 	const theme = useMemo(
-		() => supplementThemeFor(resolved.theme),
-		[resolved.theme],
+		() => supplementThemeFor(resolved.theme, resolved.active.colors),
+		[resolved.theme, resolved.active],
 	);
 
 	/** The write-time clamped hint: the box's height until the document's own

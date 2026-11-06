@@ -51,6 +51,8 @@ const legacy = {
 		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'account-routing-ios-proof'",
 	"projects-create-ios-proof":
 		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'projects-create-ios-proof'",
+	"theme-ios-proof":
+		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'theme-ios-proof'",
 };
 const validatorSection =
 	workflow
@@ -129,6 +131,7 @@ describe("core-audit-only dispatch isolation", () => {
 				"account-routing-ios-proof",
 				"account-routing-android-proof",
 				"projects-create-ios-proof",
+				"theme-ios-proof",
 			]) {
 				expect(
 					selects(guards.get("u08-geometry-proof") ?? "true", event, mode),
@@ -154,6 +157,7 @@ describe("core-audit-only dispatch isolation", () => {
 			"account-routing-android-proof",
 			"projects-create-ios-proof",
 			"chrome-ios-proof",
+			"theme-ios-proof",
 		]) {
 			expect(admits("workflow_dispatch", mode)).toBe(true);
 			expect(admits("push", mode)).toBe(false);
@@ -167,6 +171,7 @@ describe("core-audit-only dispatch isolation", () => {
 				"s15-proof",
 				"account-routing-android-proof",
 				"projects-create-ios-proof",
+				"theme-ios-proof",
 			])
 				expect(admits("workflow_dispatch", mode, stage)).toBe(false);
 		}

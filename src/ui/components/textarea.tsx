@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Platform, Text, TextInput, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
@@ -234,6 +234,7 @@ export const Textarea = ({
 	const resolvedRef = fieldRef ?? inputRef;
 	// React Native takes the placeholder as a colour VALUE, not a class.
 	const placeholderColour = useTokenColor("ink-muted");
+	const keyboardAppearance = useKeyboardAppearance();
 
 	const handleContentSize = useCallback(
 		(event: { nativeEvent: { contentSize: { height: number } } }) => {
@@ -297,6 +298,7 @@ export const Textarea = ({
 					onFocus={onFocus}
 					onBlur={onBlur}
 					ref={resolvedRef}
+					keyboardAppearance={keyboardAppearance}
 					className={fieldClasses(fieldState, { inComposer: integrated })}
 					/* One `style`, because a textarea's box IS its visual: the growing height
 					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the

@@ -163,6 +163,18 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Reprinted 2026-11-04 for PR #164's theme pipeline and picker: `app`
+	 * gains only the /theme route; `design/tokens` extracts the contrast maths
+	 * and per-palette rules; `src` gains the theme catalogue, preference and
+	 * picker, changes keyboard appearance and passes the selected palette to
+	 * supplement frames. The default dark palette is intentionally re-lit:
+	 * U-08's colour pixels therefore are NOT byte-compatible with the old
+	 * scene, while typography, layout classes, transcript fixture bytes and
+	 * measurement instruments are unchanged. This re-pin admits running the
+	 * geometry instrument against the new scene; it is source admission, NOT
+	 * evidence that the new scene passed or a reuse of old rendered proof.
+	 * Historical ORIGINAL_* pins, instrument and input pins remain untouched. */
+
 	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
 	 * polish work itself (new status-tray module, one-row session chrome, Home splash
 	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
@@ -377,11 +389,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "c8ae536abc5849a0f97733313963545e5afbd212b50910a092befdf3da4b5d54",
+	app: "6f9ced757e1dcb1e4f2749fe01b1fb60ac1822ffbac0816e3f7c49bc64486a9b",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"2407ec6e4e507ad1a2152843174226e3ca2f468bad87fed925b5723905a1bb79",
+		"1be11fc262b37ae25b54b87171233ec62e56e8263543beccdfc7626bf80a5d50",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -453,6 +465,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the merged catalogues. Android adapter selection/return-page messages do
 	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
 	 * style, token, corpus or instrument input changes. Historical pins retained. */
+	/* Recomputed again for the required DIRTY convergence with Android #155:
+	 * both catalogues are retained; the Android-only adapter path does not
+	 * affect the iOS theme walk. This is the combined source admission hash,
+	 * never either side's stale hash or a claim of rendered equivalence. */
+	/* Recomputed 2026-11-05 after the mechanical merge with main ab7e3fa9 and the
+	 * removal of the out-of-scope native auth-probe layer (saved-route
+	 * diagnostics, transport XCTest carrier, auth-save contract): the theme work
+	 * is the only source delta left on this branch, and main's notification
+	 * settings moved `app.config.ts`. `--print` produced both digests; this is
+	 * source admission for the geometry instrument, not rendered evidence.
+	 *
+	 * Recomputed again for the 2026-11-05 convergence with the merged native
+	 * chrome PR (#163, main a21aa8d2): the composer and session geometry below
+	 * is main's verbatim, the theme work is the only source delta, and the one
+	 * `src` digest at the end of this block is the combined tree. */
 	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
 	 * merging main's Android OAuth change above): the Android
 	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
@@ -487,11 +514,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
 	 * itself and is floored), the overflow clip follows the animation's own
 	 * progress instead of a timer, and `composer-presentation.ts` gained
-	 * `seedFor` plus a floor-aware presentation. `app` untouched. */
-	// PR #156 + #423: --print on the merged tree. The chrome branch restyles the
-	// composer's dock and sheet; neither adds a U08 transcript input, and Stage B's
-	// recovery/draft fencing is not rendered by the healthy custom-relay scene.
-	src: "dbcdff413c8e801dce0518c53b9ccc20f13eb3cd179b9820acfcf02fedec5893",
+	 * `seedFor` plus a floor-aware presentation. `app` untouched.
+	 *
+	 * Re-pinned 2026-11-05 for the round-4 minors, `src` only: the Appearance mode
+	 * control's accessible name changed in all eight catalogues (`Theme mode`
+	 * instead of repeating the section header) and the generated catalogue moved
+	 * with it. No rendered string, layout or palette changed; frames unaffected. */
+	src: "7c7705c3878186a12205373c1d5e0881f793bb4161e688ed4905bec1b267a689",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -504,10 +533,6 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
-	// Deliberate --print re-pin (notification sounds, M1): only the
-	// expo-notifications plugin's native `sounds:` list was added; it copies
-	// files into the iOS bundle and Android res/raw and is not a U-08 web layout
-	// or rendered-geometry input.
 	"app.config.ts":
 		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
 	"metro.config.js":
