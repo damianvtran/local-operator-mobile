@@ -934,8 +934,14 @@ export type SupplementTheme = {
  * re-renders on a theme change and pushes a fresh message, a live switch is one
  * more push, not a reload.
  */
-export function supplementThemeFor(theme: ThemeName): SupplementTheme {
-	const palette = PALETTE[theme];
+export function supplementThemeFor(
+	theme: ThemeName,
+	/* The ACTIVE palette's colours. Optional so the brand palette stays the
+	 *  default for a caller that has none; the two webviews pass `useTheme().active`
+	 *  so a frame under Dracula is painted in Dracula, not in the brand theme of
+	 *  the same side. */
+	palette: Readonly<Record<string, string>> = PALETTE[theme],
+): SupplementTheme {
 	const vars: Record<string, string> = {};
 	for (const name of THEME_VARIABLE_NAMES) {
 		const role = THEME_ROLE_BY_VARIABLE[name];

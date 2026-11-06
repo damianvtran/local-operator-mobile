@@ -258,6 +258,23 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.theme.caption_forced"
+	| "mobile.settings.theme.caption_system"
+	| "mobile.settings.theme.card_dark"
+	| "mobile.settings.theme.card_dark_selected"
+	| "mobile.settings.theme.card_light"
+	| "mobile.settings.theme.card_light_selected"
+	| "mobile.settings.theme.mode_dark"
+	| "mobile.settings.theme.mode_label"
+	| "mobile.settings.theme.mode_light"
+	| "mobile.settings.theme.mode_system"
+	| "mobile.settings.theme.no_match"
+	| "mobile.settings.theme.row_label"
+	| "mobile.settings.theme.search_label"
+	| "mobile.settings.theme.search_placeholder"
+	| "mobile.settings.theme.section_dark"
+	| "mobile.settings.theme.section_light"
+	| "mobile.settings.theme.title"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -499,6 +516,14 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.theme.mode_dark"
+	| "mobile.settings.theme.mode_label"
+	| "mobile.settings.theme.mode_light"
+	| "mobile.settings.theme.mode_system"
+	| "mobile.settings.theme.no_match"
+	| "mobile.settings.theme.search_label"
+	| "mobile.settings.theme.search_placeholder"
+	| "mobile.settings.theme.title"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -775,6 +800,23 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.settings.theme.caption_forced": { name: string | number };
+	"mobile.settings.theme.caption_system": { dark: string | number; light: string | number };
+	"mobile.settings.theme.card_dark": { name: string | number };
+	"mobile.settings.theme.card_dark_selected": { name: string | number };
+	"mobile.settings.theme.card_light": { name: string | number };
+	"mobile.settings.theme.card_light_selected": { name: string | number };
+	"mobile.settings.theme.mode_dark": NoParams;
+	"mobile.settings.theme.mode_label": NoParams;
+	"mobile.settings.theme.mode_light": NoParams;
+	"mobile.settings.theme.mode_system": NoParams;
+	"mobile.settings.theme.no_match": NoParams;
+	"mobile.settings.theme.row_label": { name: string | number };
+	"mobile.settings.theme.search_label": NoParams;
+	"mobile.settings.theme.search_placeholder": NoParams;
+	"mobile.settings.theme.section_dark": { count: string | number };
+	"mobile.settings.theme.section_light": { count: string | number };
+	"mobile.settings.theme.title": NoParams;
 	"mobile.signin.diagnostics": NoParams;
 	"mobile.signin.failed": NoParams;
 	"mobile.signin.hide_diagnostics": NoParams;
@@ -1067,6 +1109,23 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.settings.theme.caption_forced": "Always {name}",
+	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
+	"mobile.settings.theme.card_dark": "{name}, dark theme",
+	"mobile.settings.theme.card_dark_selected": "{name}, dark theme, selected",
+	"mobile.settings.theme.card_light": "{name}, light theme",
+	"mobile.settings.theme.card_light_selected": "{name}, light theme, selected",
+	"mobile.settings.theme.mode_dark": "Dark",
+	"mobile.settings.theme.mode_label": "Theme mode",
+	"mobile.settings.theme.mode_light": "Light",
+	"mobile.settings.theme.mode_system": "System",
+	"mobile.settings.theme.no_match": "No themes match",
+	"mobile.settings.theme.row_label": "Theme, {name}",
+	"mobile.settings.theme.search_label": "Search themes",
+	"mobile.settings.theme.search_placeholder": "Search themes",
+	"mobile.settings.theme.section_dark": "Dark ({count})",
+	"mobile.settings.theme.section_light": "Light ({count})",
+	"mobile.settings.theme.title": "Theme",
 	"mobile.signin.diagnostics": "Sign-in diagnostics",
 	"mobile.signin.failed": "We could not finish signing in.",
 	"mobile.signin.hide_diagnostics": "Hide sign-in details",
@@ -1344,6 +1403,23 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.settings.theme.caption_forced": { role: "help", note: "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.caption_system": { role: "help", note: "Caption under the mode control while it follows the phone. {light} and {dark} are theme NAMES (proper nouns such as \"Dracula\", never translated). Says which theme shows in each phone mode. No final full stop." },
+	"mobile.settings.theme.card_dark": { role: "button", note: "Screen-reader name of a theme card that is not selected. {name} is the theme NAME (proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.card_dark_selected": { role: "button", note: "Screen-reader name of the SELECTED dark theme card. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.card_light": { role: "button", note: "Screen-reader name of a light theme card that is not selected. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.card_light_selected": { role: "button", note: "Screen-reader name of the SELECTED light theme card. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.mode_dark": { role: "button", note: "Option: always use the dark side (a dark theme). Keep short; it shares a row with two other options." },
+	"mobile.settings.theme.mode_label": { role: "heading", note: "Accessible name of the three-way control that chooses whether the app follows the phone's light/dark setting or forces one. No final full stop." },
+	"mobile.settings.theme.mode_light": { role: "button", note: "Option: always use the light side (a light theme). Keep short; it shares a row with two other options." },
+	"mobile.settings.theme.mode_system": { role: "button", note: "Option: follow the phone's own light/dark setting. Keep short (one word if possible); it shares a row with two other options." },
+	"mobile.settings.theme.no_match": { role: "status", note: "Shown in a section when the search matches no theme in it. No final full stop." },
+	"mobile.settings.theme.row_label": { role: "button", note: "Screen-reader name of the Settings row that opens the Theme screen; {name} is the theme painting the app now (a proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.search_label": { role: "help", note: "Accessible name of the search field that filters the theme list by name. No final full stop." },
+	"mobile.settings.theme.search_placeholder": { role: "help", note: "Placeholder inside the same search field. Usually identical to the field's accessible name. No final full stop." },
+	"mobile.settings.theme.section_dark": { role: "heading", note: "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop." },
+	"mobile.settings.theme.section_light": { role: "heading", note: "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop." },
+	"mobile.settings.theme.title": { role: "heading", note: "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop." },
 	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
 	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
 	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
@@ -1635,6 +1711,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.settings.theme.caption_forced": "Siempre {name}",
+		"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
+		"mobile.settings.theme.card_dark": "{name}, tema oscuro",
+		"mobile.settings.theme.card_dark_selected": "{name}, tema oscuro, seleccionado",
+		"mobile.settings.theme.card_light": "{name}, tema claro",
+		"mobile.settings.theme.card_light_selected": "{name}, tema claro, seleccionado",
+		"mobile.settings.theme.mode_dark": "Oscuro",
+		"mobile.settings.theme.mode_label": "Modo del tema",
+		"mobile.settings.theme.mode_light": "Claro",
+		"mobile.settings.theme.mode_system": "Sistema",
+		"mobile.settings.theme.no_match": "Ningún tema coincide",
+		"mobile.settings.theme.row_label": "Tema, {name}",
+		"mobile.settings.theme.search_label": "Buscar temas",
+		"mobile.settings.theme.search_placeholder": "Buscar temas",
+		"mobile.settings.theme.section_dark": "Oscuros ({count})",
+		"mobile.settings.theme.section_light": "Claros ({count})",
+		"mobile.settings.theme.title": "Tema",
 		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
 		"mobile.signin.failed": "No pudimos iniciar sesión.",
 		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
@@ -1910,6 +2003,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.settings.theme.caption_forced": "Toujours {name}",
+		"mobile.settings.theme.caption_system": "Système utilise {light} et {dark}",
+		"mobile.settings.theme.card_dark": "{name}, thème sombre",
+		"mobile.settings.theme.card_dark_selected": "{name}, thème sombre, sélectionné",
+		"mobile.settings.theme.card_light": "{name}, thème clair",
+		"mobile.settings.theme.card_light_selected": "{name}, thème clair, sélectionné",
+		"mobile.settings.theme.mode_dark": "Sombre",
+		"mobile.settings.theme.mode_label": "Mode du thème",
+		"mobile.settings.theme.mode_light": "Clair",
+		"mobile.settings.theme.mode_system": "Système",
+		"mobile.settings.theme.no_match": "Aucun thème ne correspond",
+		"mobile.settings.theme.row_label": "Thème, {name}",
+		"mobile.settings.theme.search_label": "Rechercher des thèmes",
+		"mobile.settings.theme.search_placeholder": "Rechercher des thèmes",
+		"mobile.settings.theme.section_dark": "Sombres ({count})",
+		"mobile.settings.theme.section_light": "Clairs ({count})",
+		"mobile.settings.theme.title": "Thème",
 		"mobile.signin.diagnostics": "Diagnostic de connexion",
 		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
 		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
@@ -2185,6 +2295,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.settings.theme.caption_forced": "हमेशा {name}",
+		"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
+		"mobile.settings.theme.card_dark": "{name}, गहरी थीम",
+		"mobile.settings.theme.card_dark_selected": "{name}, गहरी थीम, चुनी गई",
+		"mobile.settings.theme.card_light": "{name}, हल्की थीम",
+		"mobile.settings.theme.card_light_selected": "{name}, हल्की थीम, चुनी गई",
+		"mobile.settings.theme.mode_dark": "गहरी",
+		"mobile.settings.theme.mode_label": "थीम मोड",
+		"mobile.settings.theme.mode_light": "हल्की",
+		"mobile.settings.theme.mode_system": "सिस्टम",
+		"mobile.settings.theme.no_match": "कोई थीम मेल नहीं खाती",
+		"mobile.settings.theme.row_label": "थीम, {name}",
+		"mobile.settings.theme.search_label": "थीम खोजें",
+		"mobile.settings.theme.search_placeholder": "थीम खोजें",
+		"mobile.settings.theme.section_dark": "गहरी ({count})",
+		"mobile.settings.theme.section_light": "हल्की ({count})",
+		"mobile.settings.theme.title": "थीम",
 		"mobile.signin.diagnostics": "साइन-इन निदान",
 		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
 		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
@@ -2460,6 +2587,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.settings.theme.caption_forced": "Всегда {name}",
+		"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
+		"mobile.settings.theme.card_dark": "{name}, тёмная тема",
+		"mobile.settings.theme.card_dark_selected": "{name}, тёмная тема, выбрана",
+		"mobile.settings.theme.card_light": "{name}, светлая тема",
+		"mobile.settings.theme.card_light_selected": "{name}, светлая тема, выбрана",
+		"mobile.settings.theme.mode_dark": "Тёмная",
+		"mobile.settings.theme.mode_label": "Режим темы",
+		"mobile.settings.theme.mode_light": "Светлая",
+		"mobile.settings.theme.mode_system": "Как в системе",
+		"mobile.settings.theme.no_match": "Подходящих тем нет",
+		"mobile.settings.theme.row_label": "Тема, {name}",
+		"mobile.settings.theme.search_label": "Поиск тем",
+		"mobile.settings.theme.search_placeholder": "Поиск тем",
+		"mobile.settings.theme.section_dark": "Тёмные ({count})",
+		"mobile.settings.theme.section_light": "Светлые ({count})",
+		"mobile.settings.theme.title": "Тема",
 		"mobile.signin.diagnostics": "Диагностика входа",
 		"mobile.signin.failed": "Не удалось завершить вход.",
 		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
@@ -2735,6 +2879,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
+		"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
+		"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",
+		"mobile.settings.theme.card_dark_selected": "{name}، گہرا تھیم، منتخب",
+		"mobile.settings.theme.card_light": "{name}، روشن تھیم",
+		"mobile.settings.theme.card_light_selected": "{name}، روشن تھیم، منتخب",
+		"mobile.settings.theme.mode_dark": "گہرا",
+		"mobile.settings.theme.mode_label": "تھیم موڈ",
+		"mobile.settings.theme.mode_light": "روشن",
+		"mobile.settings.theme.mode_system": "سسٹم",
+		"mobile.settings.theme.no_match": "کوئی تھیم مماثل نہیں",
+		"mobile.settings.theme.row_label": "تھیم، {name}",
+		"mobile.settings.theme.search_label": "تھیمز تلاش کریں",
+		"mobile.settings.theme.search_placeholder": "تھیمز تلاش کریں",
+		"mobile.settings.theme.section_dark": "گہرے ({count})",
+		"mobile.settings.theme.section_light": "روشن ({count})",
+		"mobile.settings.theme.title": "تھیم",
 		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
 		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
 		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
@@ -3010,6 +3171,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
+		"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
+		"mobile.settings.theme.card_dark": "{name}, giao diện tối",
+		"mobile.settings.theme.card_dark_selected": "{name}, giao diện tối, đã chọn",
+		"mobile.settings.theme.card_light": "{name}, giao diện sáng",
+		"mobile.settings.theme.card_light_selected": "{name}, giao diện sáng, đã chọn",
+		"mobile.settings.theme.mode_dark": "Tối",
+		"mobile.settings.theme.mode_label": "Chế độ chủ đề",
+		"mobile.settings.theme.mode_light": "Sáng",
+		"mobile.settings.theme.mode_system": "Hệ thống",
+		"mobile.settings.theme.no_match": "Không có giao diện phù hợp",
+		"mobile.settings.theme.row_label": "Giao diện, {name}",
+		"mobile.settings.theme.search_label": "Tìm giao diện",
+		"mobile.settings.theme.search_placeholder": "Tìm giao diện",
+		"mobile.settings.theme.section_dark": "Tối ({count})",
+		"mobile.settings.theme.section_light": "Sáng ({count})",
+		"mobile.settings.theme.title": "Giao diện",
 		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
 		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
 		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
@@ -3285,6 +3463,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.settings.theme.caption_forced": "始终使用 {name}",
+		"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
+		"mobile.settings.theme.card_dark": "{name}，深色主题",
+		"mobile.settings.theme.card_dark_selected": "{name}，深色主题，已选择",
+		"mobile.settings.theme.card_light": "{name}，浅色主题",
+		"mobile.settings.theme.card_light_selected": "{name}，浅色主题，已选择",
+		"mobile.settings.theme.mode_dark": "深色",
+		"mobile.settings.theme.mode_label": "主题模式",
+		"mobile.settings.theme.mode_light": "浅色",
+		"mobile.settings.theme.mode_system": "跟随系统",
+		"mobile.settings.theme.no_match": "没有匹配的主题",
+		"mobile.settings.theme.row_label": "主题，{name}",
+		"mobile.settings.theme.search_label": "搜索主题",
+		"mobile.settings.theme.search_placeholder": "搜索主题",
+		"mobile.settings.theme.section_dark": "深色（{count}）",
+		"mobile.settings.theme.section_light": "浅色（{count}）",
+		"mobile.settings.theme.title": "主题",
 		"mobile.signin.diagnostics": "登录诊断",
 		"mobile.signin.failed": "无法完成登录。",
 		"mobile.signin.hide_diagnostics": "隐藏登录详情",

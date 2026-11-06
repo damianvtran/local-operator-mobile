@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "Всегда {name}",
+	"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
+	"mobile.settings.theme.card_dark": "{name}, тёмная тема",
+	"mobile.settings.theme.card_dark_selected": "{name}, тёмная тема, выбрана",
+	"mobile.settings.theme.card_light": "{name}, светлая тема",
+	"mobile.settings.theme.card_light_selected": "{name}, светлая тема, выбрана",
+	"mobile.settings.theme.mode_dark": "Тёмная",
+	"mobile.settings.theme.mode_label": "Режим темы",
+	"mobile.settings.theme.mode_light": "Светлая",
+	"mobile.settings.theme.mode_system": "Как в системе",
+	"mobile.settings.theme.no_match": "Подходящих тем нет",
+	"mobile.settings.theme.row_label": "Тема, {name}",
+	"mobile.settings.theme.search_label": "Поиск тем",
+	"mobile.settings.theme.search_placeholder": "Поиск тем",
+	"mobile.settings.theme.section_dark": "Тёмные ({count})",
+	"mobile.settings.theme.section_light": "Светлые ({count})",
+	"mobile.settings.theme.title": "Тема"
+}

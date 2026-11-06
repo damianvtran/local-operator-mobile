@@ -93,9 +93,13 @@ import {
 } from "./matrix.ts";
 import { runS15FlowProof } from "./s15-flow.ts";
 import {
+	type CanvasContext,
 	type CanvasTokens,
 	canvasComparable,
+	canvasExpectation,
 	canvasTokens,
+	paintedCanvases,
+	parseCanvasContext,
 } from "./theme-tokens.ts";
 
 /**
@@ -1215,16 +1219,39 @@ interface ThemeCheckReport {
 	canvasUncompared: number;
 	/** Why the canvas half did not cover every frame, or `null` when it did. */
 	canvasReason: string | null;
+	/** Where the expected canvases came from, as a sentence for the report. */
+	canvasSource: string;
 }
 
 /** Compare each frame's claimed theme against the token canvas and its twin. */
-function verifyThemes(
+export function verifyThemes(
 	records: CaptureRecord[],
 	tokens: CanvasTokens,
+	context: CanvasContext = "app",
 ): ThemeCheckReport {
 	const problems = [];
 	let canvasCompared = 0;
 	let canvasUncompared = 0;
+	/* The expectation is the palette the app PAINTS (`paintedCanvases` explains
+	 * why that is the palette and not the kit's token file, QA round 1 Q164-1),
+	 * with the token file as the fallback for a mode the catalogue does not
+	 * carry. Resolved once per mode, so every frame of that mode is measured
+	 * against the same number and the report can name which file it came from. */
+	const painted = paintedCanvases();
+	const expectation = {
+		dark: canvasExpectation("dark", tokens.perTheme, painted, context),
+		light: canvasExpectation("light", tokens.perTheme, painted, context),
+	};
+	const sources = [
+		...new Set([expectation.dark.source, expectation.light.source]),
+	];
+	const canvasSource =
+		context === "fixture"
+			? `the explicit fixture token file (${sources.join(", ")})`
+			: `the expected canvas is the shipped palette's own value (${sources.join(", ")})` +
+				(sources.includes("tokens")
+					? ` — design/tokens/tokens.json supplied a mode the catalogue did not`
+					: "");
 	/** The themes the tokens left without a canvas, so the report can name them. */
 	const themesWithoutCanvas = new Set<string>();
 	const byStem = new Map();
@@ -1238,14 +1265,19 @@ function verifyThemes(
 		for (const theme of ["dark", "light"]) {
 			const record = bucket[theme];
 			if (!record) continue;
-			const expected = tokens.perTheme?.[theme]?.canvas ?? null;
+			const expected = expectation[theme as "dark" | "light"]?.canvas ?? null;
 			// Counted, not inferred later: `canvasMatchesToken` is `null` both when the
 			// comparison ran and agreed and when it never ran at all, and the summary must
 			// not read the second as the first. The test is `canvasComparable` — the SAME one
 			// the verdict below uses, never a second test of its own: an empty-string token
 			// counted as compared here while the verdict skipped it is how the all-clear got
 			// printed over zero comparisons.
-			if (!canvasComparable(expected)) {
+			/* THE TOKEN HALF'S GUARD IS UNCHANGED: a run with no readable token file
+			 * still records the canvas as UNCOMPARED and still says so loudly, because
+			 * that is this harness's documented contract for `--tokens`. What changed
+			 * (Q164-1) is the VALUE the comparison uses when it does run: the palette
+			 * the app paints, not the kit's token file — see `canvasExpectation`. */
+			if (tokens.reason !== null || !canvasComparable(expected)) {
 				canvasUncompared += 1;
 				themesWithoutCanvas.add(theme);
 			} else {
@@ -1335,6 +1367,7 @@ function verifyThemes(
 		problems,
 		canvasCompared,
 		canvasUncompared,
+		canvasSource,
 		// A reason is carried whenever the canvas half could not run at all, and whenever
 		// it ran but left frames uncompared. Only `null` — every frame compared — lets the
 		// summary claim that every frame's canvas matches its cell.
@@ -1457,6 +1490,8 @@ export interface CaptureOptions {
 	 */
 	deadlineMs: number | null;
 	tokens: string;
+	/** Standalone canaries opt into their own token truth; apps retain defaults. */
+	canvasContext?: CanvasContext;
 	plan: boolean;
 	yes: boolean;
 	strict: boolean;
@@ -1639,6 +1674,7 @@ export async function runCapture(options: CaptureOptions) {
 						refusedAt: phase,
 						refusal: reason,
 						buildDir: resolve(options.dir),
+						canvasContext: parseCanvasContext(options.canvasContext),
 						relay: options.relay ?? null,
 						out: outDir,
 					},
@@ -2150,7 +2186,11 @@ export async function runCapture(options: CaptureOptions) {
 				: ""),
 	);
 
-	const themeReport = verifyThemes(records, tokens);
+	const themeReport = verifyThemes(
+		records,
+		tokens,
+		parseCanvasContext(options.canvasContext),
+	);
 	const themeProblems = themeReport.problems;
 	const reflow = records
 		.filter((r) => r.frames.length > 2)
@@ -2271,6 +2311,7 @@ export async function runCapture(options: CaptureOptions) {
 			capturedAt: new Date().toISOString(),
 			durationMs: Date.now() - startedAt,
 			buildDir: resolve(options.dir),
+			canvasContext: parseCanvasContext(options.canvasContext),
 			repoRoot: resolve(new URL("../../", import.meta.url).pathname),
 			relay: options.relay ?? null,
 			scenario: state?.scenario ?? null,
@@ -2478,7 +2519,7 @@ export async function runCapture(options: CaptureOptions) {
 		for (const problem of themeProblems) console.log(`  - ${problem}`);
 	} else if (themeReport.canvasReason === null) {
 		console.log(
-			"theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical",
+			`theme problems: none — every frame's resolved theme and canvas match its cell, and no dark/light pair is identical (${themeReport.canvasSource})`,
 		);
 	}
 	/*
@@ -3005,6 +3046,7 @@ if (isMain) {
 				"  --consecutive       also capture a +250 ms and a settled frame per cell",
 				"  --settle <ms>       boot budget before the first frame (default 1200)",
 				"  --tokens <path>     tokens.json, to check each frame's canvas against its theme",
+				"  --canvas-context <app|fixture>  default app; fixture uses supplied token truth",
 				"  --inbox-return-proof  read/dismiss/Undo returns, both themes, same browser (CI only)",
 				"  --inbox-baseline-dir  optional base export for before frames with the same driver",
 				"  --s15-flow-proof    also prove S15 footer navigation/return on the same browser (CI only)",
@@ -3104,6 +3146,7 @@ if (isMain) {
 		tokens:
 			str(flags, "tokens", join(repoRoot, "design", "tokens", "tokens.json")) ??
 			join(repoRoot, "design", "tokens", "tokens.json"),
+		canvasContext: parseCanvasContext(str(flags, "canvas-context", undefined)),
 		plan: bool(flags, "plan"),
 		yes: bool(flags, "yes"),
 		strict: !bool(flags, "no-strict"),

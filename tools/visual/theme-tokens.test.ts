@@ -2,8 +2,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
 	canvasComparable,
+	canvasExpectation,
 	canvasTokenFor,
 	canvasTokens,
+	paintedCanvases,
 } from "./theme-tokens.ts";
 
 /**
@@ -54,6 +56,44 @@ describe("canvasComparable", () => {
 		expect(canvasComparable("")).toBe(false);
 		expect(canvasComparable("   ")).toBe(false);
 		expect(canvasComparable(null)).toBe(false);
+	});
+});
+
+describe("canvasExpectation — the canvas a frame must paint (QA round 1, Q164-1)", () => {
+	/* THE FAILURE THIS PINS: the run compared 636 dark frames against the kit's
+	 * `#22201c` while the app painted the shipped palette's `#1d1b17`, and called
+	 * a correct app wrong. The two files are different by design — the token file
+	 * is the kit's brand layer, the catalogue is the desktop palettes the phone
+	 * ships — so the gate has to measure against the palette it paints. */
+	it("expects the SHIPPED PALETTE's canvas, not the kit token file's, when they disagree", () => {
+		const painted = paintedCanvases();
+		// The two files really do disagree on the dark ground; if a later kit release
+		// reconciles them this test is still right, it just stops being interesting.
+		expect(painted.dark?.canvas).toBe("#1d1b17");
+		expect(painted.light?.canvas).toBe("#f2ede3");
+		const kitTokens = {
+			dark: { canvas: "#22201c" },
+			light: { canvas: "#f2ede3" },
+		};
+		expect(canvasExpectation("dark", kitTokens)).toEqual({
+			canvas: "#1d1b17",
+			source: "palette",
+		});
+		expect(canvasExpectation("light", kitTokens)).toEqual({
+			canvas: "#f2ede3",
+			source: "palette",
+		});
+	});
+
+	it("falls back to the token file for a mode the catalogue does not carry", () => {
+		const emptied = {};
+		expect(
+			canvasExpectation("dark", { dark: { canvas: "#22201c" } }, emptied),
+		).toEqual({ canvas: "#22201c", source: "tokens" });
+		expect(canvasExpectation("dark", null, emptied)).toEqual({
+			canvas: null,
+			source: "none",
+		});
 	});
 });
 

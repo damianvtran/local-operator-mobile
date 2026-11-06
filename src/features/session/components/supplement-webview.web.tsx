@@ -113,8 +113,11 @@ export const SupplementWebView = ({
 	onRetry,
 	onHeightChange,
 }: SupplementWebViewProps) => {
-	const { theme: themeName } = useTheme();
-	const theme = useMemo(() => supplementThemeFor(themeName), [themeName]);
+	const { theme: themeName, active } = useTheme();
+	const theme = useMemo(
+		() => supplementThemeFor(themeName, active.colors),
+		[themeName, active],
+	);
 	const reserved = clampedHeightHint(component);
 	const [height, setHeight] = useState(reserved);
 	const [awaitingPaint, setAwaitingPaint] = useState(true);

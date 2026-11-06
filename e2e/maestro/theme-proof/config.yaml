@@ -1,0 +1,7 @@
+# Workspace config for the targeted theme proof ONLY.
+#
+# Like ../projects-create-proof/config.yaml: native-iOS-only and dispatch-only,
+# so it never joins the default `flows/*.yaml` suite. The runner selects each
+# flow by name (scripts/ci/theme-ios-proof.ts). Nothing here is globbed.
+flows:
+  - "theme-matrix.yaml"
