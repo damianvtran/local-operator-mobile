@@ -354,6 +354,25 @@ describe("a refused create is recoverable", () => {
 		expect(x.selections.at(-1)).toMatchObject({ cwd: "/tmp/valid" });
 	});
 
+	it("sends the selection exactly as the home built it, adding no model", async () => {
+		/* The home went through a period of naming a model nobody chose, and the
+		 * computer only applies its own configured default when the fields are
+		 * ABSENT — so the absence has to survive the coordinator, not just the
+		 * expression that built the selection. */
+		const x = setup();
+		x.setStart(async () => ({ session_id: "session-a" }));
+		await x.coordinator.ready;
+		await x.coordinator.configure({
+			cwd: "/Users/reader/src/local-operator",
+		});
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.settled();
+		expect(x.selections.at(-1)).toStrictEqual({
+			cwd: "/Users/reader/src/local-operator",
+		});
+	});
+
 	it("restores a persisted refused record instead of discarding its queue", async () => {
 		const x = setup();
 		x.setStart(async () => {

@@ -1,7 +1,9 @@
 {
 	"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
 	"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
+	"mobile.home.folders_read_sign_in": "Этот компьютер попросил войти снова, поэтому его папки прочитать не удалось.",
 	"mobile.home.greeting": "Чем помочь сегодня?",
+	"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
 	"mobile.home.options.apply": "Применить",
 	"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 	"mobile.home.options.folder": "Папка на этом компьютере",

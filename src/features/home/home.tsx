@@ -16,8 +16,20 @@ import {
 import {
 	connectDisabledReason,
 	foldersReadFailed,
+	foldersReadSignInRequired,
+	modelsReadFailed,
 	startupQueueState,
 } from "@/features/home/home-copy";
+import {
+	type CatalogueRead,
+	foldersFailure,
+	foldersFrom,
+	type HomeFolders,
+	homeModelReading,
+	homeStartSelection,
+	isAuthFailure,
+	selectionSuperseded,
+} from "@/features/home/home-defaults";
 import { HomeStateMarkers } from "@/features/home/home-markers";
 import { HomeRecovery, HomeSplash } from "@/features/home/home-splash";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
@@ -47,6 +59,7 @@ import {
 import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
+import type { RelayError } from "@/relay/errors";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -163,24 +176,42 @@ export default function Home({
 	const [attaching, setAttaching] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
+	/** The folder the next start names: the reader's pick in the sheet, else the
+	 *  computer's OWN default. `null` until a read resolves one — nothing here
+	 *  invents a directory to start in. */
 	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
-	const [directoriesFailed, setDirectoriesFailed] = useState(false);
+	/** The computer's answer to "where do I start", with the folders it offers. */
+	const [folders, setFolders] = useState<HomeFolders | null>(null);
+	/** The folders read's failure, KIND KEPT: the banner names the cause it really
+	 *  was, and an auth kind is owed one automatic re-ask once the route is live. */
+	const [directoriesError, setDirectoriesError] = useState<RelayError | null>(
+		null,
+	);
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
-	const [topModel, setTopModel] = useState<ModelEntry | null>(null);
-	const [modelsLoaded, setModelsLoaded] = useState(false);
+	const [modelsAttempt, setModelsAttempt] = useState(0);
+	const [modelsRead, setModelsRead] = useState<CatalogueRead>("loading");
+	/** The model the reader picked in the sheet, and NOTHING ELSE. `null` is the
+	 *  default state rather than a gap to fill: with nothing chosen the start body
+	 *  names no model and the computer applies its own configured default. */
+	const [chosenModel, setChosenModel] = useState<ModelEntry | null>(null);
 	const selection = useMemo(
-		() =>
-			homeDirectory === null || !modelsLoaded
-				? null
-				: {
-						cwd: homeDirectory,
-						...(topModel
-							? { provider: topModel.provider, model_id: topModel.model_id }
-							: {}),
-					},
-		[homeDirectory, topModel, modelsLoaded],
+		() => homeStartSelection({ cwd: homeDirectory, chosenModel }),
+		[homeDirectory, chosenModel],
 	);
 	const startup = useStartup(selection);
+
+	/* A record written by a build that invented a model still names it, and the
+	 * coordinator deliberately KEEPS a restored selection rather than replacing it —
+	 * so the invented model would keep reaching the start body. The app cannot tell an
+	 * invented model from a chosen one on disk, so the record is no evidence of
+	 * choice: once the reader's live choices disagree with it, theirs win. Guarded by
+	 * the comparison, so a record that already agrees is left alone (and an
+	 * uneditable phase answers the write with a no-op rather than a loop). */
+	useEffect(() => {
+		if (selection === null) return;
+		if (!selectionSuperseded(startup.snapshot.selection, selection)) return;
+		void startup.configure(selection);
+	}, [selection, startup, startup.snapshot.selection]);
 	const draft = startup.snapshot.draft.text;
 	const images = startup.snapshot.draft.images;
 	const setDraft = startup.setText;
@@ -226,52 +257,79 @@ export default function Home({
 							? "no-host"
 							: null;
 
-	/* The relay's home directory is the target every first send uses, until the
-	 * reader goes through `/new` and picks another folder. Read once per client —
-	 * and once per retry: a transient read failure must not strand the composer
-	 * with no send and no sentence until a remount (review M2), so the failure is
-	 * said (`FOLDERS_READ_FAILED`, `/new`'s verbatim line) and cleared only by a
-	 * successful read. `directoriesAttempt` is a dependency the exhaustive-deps rule
-	 * cannot justify from the body: it is a RE-RUN TRIGGER (the retry), and without
-	 * it the failed read would never be re-asked. The model catalogue's FIRST entry
-	 * is the default model — the relay's own ranking, never re-sorted (`/new`'s
-	 * rule, verbatim). A failure leaves the chip in its loading state's successor:
-	 * unavailable, said plainly. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
+	/* The computer's two reads, each kept as the state it really is.
+	 *
+	 * THE FOLDER READ names where the next start goes. The computer resolves `default`
+	 * from the same function its start route uses — the first recent directory its
+	 * spawn gate admits — so a start that names nothing else lands where the reader
+	 * has actually been working; `home` is the fallback only for a computer old enough
+	 * not to publish `default`, and it is the one path the gate always admits. A
+	 * failure keeps its KIND (never a bare flag) so the banner can say whether the
+	 * credential moved or the read failed, and so the auth case can be re-asked.
+	 *
+	 * THE MODEL READ BUILDS A MENU, NOT A DEFAULT. This screen used to take the
+	 * catalogue's FIRST entry as "the default model" and put it in every start body,
+	 * which overrode the operator's configured model with whatever sorted first. The
+	 * catalogue decides what the SHEET offers and nothing else; a reader who chooses
+	 * nothing sends no model at all. A failed read stays a FAILURE — not an empty
+	 * catalogue reported as connected — so the chip can say the list was unread and
+	 * the banner can offer the retry the read never had.
+	 *
+	 * `directoriesAttempt` and `modelsAttempt` are dependencies the exhaustive-deps
+	 * rule cannot justify from the body: they are RE-RUN TRIGGERS (the two retries),
+	 * and without them a failed read would never be re-asked. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the two attempts are re-run triggers (see above)
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
 		let live = true;
 		void active
 			.directories()
-			.then((directories) => {
-				if (live) {
-					setHomeDirectory(directories.home);
-					setDirectoriesFailed(false);
-				}
+			.then((payload) => {
+				if (!live) return;
+				const read = foldersFrom(payload);
+				setFolders(read);
+				setHomeDirectory(read.default);
+				setDirectoriesError(null);
 			})
-			.catch(() => {
-				if (live) setDirectoriesFailed(true);
+			.catch((cause: unknown) => {
+				if (live) setDirectoriesError(foldersFailure(cause));
 			});
 		void active
 			.models()
 			.then((catalogue) => {
 				if (!live) return;
 				setModels(catalogue.models);
-				setTopModel(catalogue.models[0] ?? null);
-				setModelsLoaded(true);
+				setModelsRead("ready");
 			})
 			.catch(() => {
-				if (live) setModelsLoaded(true);
+				if (live) setModelsRead("failed");
 			});
 		return () => {
 			live = false;
 		};
-	}, [relay, directoriesAttempt]);
+	}, [relay, directoriesAttempt, modelsAttempt]);
 
 	const retryDirectories = useCallback(() => {
 		setDirectoriesAttempt((attempt) => attempt + 1);
 	}, []);
+
+	const retryModels = useCallback(() => {
+		setModelsAttempt((attempt) => attempt + 1);
+	}, []);
+
+	/* ONE automatic re-ask after a credential failure, and only once the route is
+	 * live again: the first read of a mount can race the token renewal the connection
+	 * layer performs behind the reader. Once per mount, never a loop — a failure that
+	 * survives a live route is an ANSWER, and re-asking it would only repeat it. */
+	const autoRetried = useRef(false);
+	useEffect(() => {
+		if (autoRetried.current) return;
+		if (!isAuthFailure(directoriesError)) return;
+		if (phase !== "live") return;
+		autoRetried.current = true;
+		setDirectoriesAttempt((attempt) => attempt + 1);
+	}, [directoriesError, phase]);
 
 	/* A cold start with no route belongs on the welcome surface — the list's own
 	 * effect, moved with the landing. Every term is a measured case in the old
@@ -398,25 +456,26 @@ export default function Home({
 		[connected, draft, images.length, starting, running, language],
 	);
 
-	/* NO locale dependency here, and that is deliberate rather than an oversight:
-	 * `composerChipLabels` (`src/features/session/chip-labels.ts`) renders no
-	 * catalogue text — its strings are the model's own name, `n/a` and the English
-	 * accessibility labels — so nothing in this memo goes stale with the language.
-	 * The day those labels are keyed, this list gains `language` for the same
-	 * reason the controls' list has it. */
+	/* `language` IS a dependency now: the two "nothing chosen" states show a catalogue
+	 * word (the computer's default is in effect, or the list could not be read), so a
+	 * language frame must repaint this memo — the note that used to sit here said this
+	 * list gains `language` the day those labels were keyed. The reading is DERIVED
+	 * (`homeModelReading`) rather than an expression, so "nothing chosen" and "the
+	 * catalogue could not be read" cannot collapse into the one `n/a` that reported a
+	 * silent failure as a connected session. */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: `t()` reads the locale live, so the memo must re-run (see above)
 	const chips = useMemo(
 		() =>
 			composerChipLabels({
-				model:
-					startup.snapshot.selection?.model_id ?? topModel?.selector ?? null,
+				model: homeModelReading({ chosenModel, catalogue: modelsRead }),
 				effort: null,
-				connection: modelsLoaded
-					? "connected"
-					: connected
+				connection: !connected
+					? "unreachable"
+					: modelsRead === "loading"
 						? "loading"
-						: "unreachable",
+						: "connected",
 			}),
-		[topModel, modelsLoaded, connected, startup.snapshot.selection?.model_id],
+		[chosenModel, modelsRead, connected, language],
 	);
 
 	// The coordinator freezes the submitted bytes; later typing stays editable.
@@ -516,20 +575,41 @@ export default function Home({
 				</View>
 			) : null}
 
-			{/* A folders read that failed leaves the composer unsendable; the sentence
-			 *  is `/new`'s verbatim line and the retry is the path the failure never
-			 *  had (review M2). The banner goes away with the condition — a successful
-			 *  re-read clears it — and never over a readable folder. */}
-			{directoriesFailed && homeDirectory === null ? (
+			{/* The folders read failed. The KIND decides the sentence — a credential
+			 *  refusal is not a transient read failure, and offering Retry as the remedy
+			 *  for it points the reader at a button that will be refused again. A successful
+			 *  read clears it; a retry that fails again keeps it, which is the honest state. */}
+			{directoriesError !== null ? (
 				<Banner
 					tone="warning"
-					message={foldersReadFailed()}
+					message={
+						isAuthFailure(directoriesError)
+							? foldersReadSignInRequired()
+							: foldersReadFailed()
+					}
 					action={{
 						label: "Retry",
 						onPress: retryDirectories,
 						testID: CONTROL.homeFoldersRetry,
 					}}
 					testID={CONTROL.homeFoldersBanner}
+				/>
+			) : null}
+
+			{/* The model list could not be read: its own failure, with the retry the
+			 *  read never had. The chip says the same in one word ("Unknown"); this row is
+			 *  where the reader can act on it, rather than a chip that declared itself
+			 *  connected while reporting no model. */}
+			{modelsRead === "failed" ? (
+				<Banner
+					tone="warning"
+					message={modelsReadFailed()}
+					action={{
+						label: "Retry",
+						onPress: retryModels,
+						testID: CONTROL.homeModelsRetry,
+					}}
+					testID={CONTROL.homeModelsBanner}
 				/>
 			) : null}
 
@@ -588,18 +668,13 @@ export default function Home({
 										homeDirectory,
 									),
 									onPress: () => {
+										/* The sheet opens on what will actually be sent: the folder the
+										 *  start names, and the model THE READER chose — `null` when they
+										 *  chose none, so no row is painted as selected on their behalf. */
 										setOptionPath(
 											startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
 										);
-										setOptionModel(
-											models.find(
-												(model) =>
-													model.provider ===
-														startup.snapshot.selection?.provider &&
-													model.model_id ===
-														startup.snapshot.selection?.model_id,
-											) ?? topModel,
-										);
+										setOptionModel(chosenModel);
 										setOptionsOpen(true);
 									},
 									accessibilityLabel: `Working in ${homeDirectory}`,
@@ -615,13 +690,7 @@ export default function Home({
 						setOptionPath(
 							startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
 						);
-						setOptionModel(
-							models.find(
-								(model) =>
-									model.provider === startup.snapshot.selection?.provider &&
-									model.model_id === startup.snapshot.selection?.model_id,
-							) ?? topModel,
-						);
+						setOptionModel(chosenModel);
 						setOptionsOpen(true);
 					}}
 					onOpenEffort={() => undefined}
@@ -744,10 +813,31 @@ export default function Home({
 						disabled={!selectionEditable}
 						testID={CONTROL.newSessionCwd}
 					/>
+					{/* The computer's recent directories, one tap each: every row is a directory
+					 *  its spawn gate admits, so no row is a suggestion that 400s. They fill the
+					 *  field rather than sending, so the reader can still change their mind; the
+					 *  free-text field above stays the escape hatch for a path no row names. */}
+					{folders !== null && folders.recent.length > 0 ? (
+						<View className="gap-2">
+							{folders.recent.map((directory) => (
+								<Button
+									key={directory}
+									label={homeShortened(directory, folders.home)}
+									variant="quiet"
+									onPress={() => setOptionPath(directory)}
+									disabled={!selectionEditable}
+									testID={CONTROL.homeRecentFolder}
+								/>
+							))}
+						</View>
+					) : null}
 					{models.map((model) => (
 						<Button
 							key={model.selector}
 							label={model.label ?? model.name ?? model.selector}
+							/* NO ROW IS PAINTED AS SELECTED UNLESS THE READER PICKED IT: `optionModel`
+							 *  starts as their own choice (`null` when they made none), so the sheet never
+							 *  shows an entry the app merely guessed at. */
 							variant={
 								optionModel?.selector === model.selector ? "primary" : "quiet"
 							}
@@ -761,8 +851,10 @@ export default function Home({
 						disabled={!selectionEditable || optionPath.trim() === ""}
 						onPress={() => {
 							setHomeDirectory(optionPath.trim());
-							setTopModel(optionModel);
+							setChosenModel(optionModel);
 							setOptionsOpen(false);
+							/* The model fields ride along ONLY when the sheet holds a chosen
+							 *  model: applying a folder must not resurrect a model nobody picked. */
 							void startup.configure({
 								cwd: optionPath.trim(),
 								...(optionModel

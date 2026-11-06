@@ -1,7 +1,9 @@
 {
 	"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
 	"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",
+	"mobile.home.folders_read_sign_in": "此电脑要求重新登录，因此无法读取其文件夹。",
 	"mobile.home.greeting": "今天想让我帮你做点什么？",
+	"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
 	"mobile.home.options.apply": "使用这些选项",
 	"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
 	"mobile.home.options.folder": "此电脑上的文件夹",

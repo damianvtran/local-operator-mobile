@@ -495,6 +495,13 @@ export const CONTROL = {
 	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
 	homeFoldersBanner: "home-folders-banner",
 	homeFoldersRetry: "home-folders-retry",
+	/** The home's model-list failure and its own retry: a read that failed used to be
+	 *  swallowed into an empty catalogue, which read as "connected, no model". */
+	homeModelsBanner: "home-models-banner",
+	homeModelsRetry: "home-models-retry",
+	/** One of the computer's recent directories in the home's options sheet — a
+	 *  one-tap row that fills the folder field rather than sending. */
+	homeRecentFolder: "home-recent-folder",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",

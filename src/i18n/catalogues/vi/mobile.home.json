@@ -1,7 +1,9 @@
 {
 	"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
 	"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
+	"mobile.home.folders_read_sign_in": "Máy tính này yêu cầu bạn đăng nhập lại, nên không đọc được thư mục của nó.",
 	"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
+	"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
 	"mobile.home.options.apply": "Dùng các tùy chọn này",
 	"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 	"mobile.home.options.folder": "Thư mục trên máy tính này",

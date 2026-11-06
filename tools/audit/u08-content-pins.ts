@@ -389,7 +389,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "6f9ced757e1dcb1e4f2749fe01b1fb60ac1822ffbac0816e3f7c49bc64486a9b",
+	/* Re-pinned 2026-11-06 with --print for the home-defaults fix: `app` moves by ONE
+	 * line in `app/(app)/session/[id].tsx` — the session screen's model reading is now
+	 * `reportedModel(projection?.model_label)` instead of a bare nullable string, the
+	 * same values in the same chip. It renders the same two outputs it always did (a
+	 * selector, or the rung-less/unreported `n/a`); only the REASON the home could be
+	 * wrong changes, and U-08's scene is a session transcript with no home surface in
+	 * it. This is source admission for the geometry instrument, NOT fresh rendered
+	 * evidence. */
+	app: "6cfc680b963b1721b554418fc95b41bb9c93a397b55c23ed68a800b744fb3469",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -576,7 +584,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "83f43c1aa81faaa49b67ef10afaca0b0d551aefa7f69d32e1de53c5bf592f74e",
+	/* Re-pinned 2026-11-06 with `--print` for the home-defaults fix, `src` (with
+	 * `app`, above): the composer home no longer takes the model catalogue's first
+	 * entry as a default model, keeps both reads' failures as failures, starts in the
+	 * computer's own default folder and offers its recent directories. The U-08
+	 * scene is the long-transcript custom-relay session — no home surface is
+	 * rendered in it, and the chips' only changed cases ("nothing chosen", "list
+	 * unread") cannot occur there, so this is source admission rather than a claim
+	 * that the measured geometry moved. Historical ORIGINAL_* identities, the
+	 * instrument modules, the corpus and every other pin are untouched. */
+	src: "df101ea11e46bd896bc2fab087170194f94cbf1da113c6cd27d81b9cdc0a77db",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

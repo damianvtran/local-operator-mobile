@@ -1,7 +1,9 @@
 {
 	"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
 	"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
+	"mobile.home.folders_read_sign_in": "इस कंप्यूटर ने दोबारा साइन इन करने को कहा है, इसलिए इसके फ़ोल्डर नहीं पढ़े जा सके।",
 	"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
+	"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
 	"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
 	"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 	"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",

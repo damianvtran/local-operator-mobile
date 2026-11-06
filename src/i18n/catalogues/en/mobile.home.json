@@ -1,7 +1,9 @@
 {
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
+	"mobile.home.folders_read_sign_in": "This computer asked you to sign in again, so its folders couldn't be read.",
 	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
 	"mobile.home.options.apply": "Use these options",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	composerChipLabels,
 	modelChipText,
+	reportedModel,
 } from "@/features/session/chip-labels";
 
 /**
@@ -18,11 +19,20 @@ import {
 /** The noun that must never reach the chip: the defect D6 fixed rendered it. */
 const NOUN = /"model"/;
 
+/** The word `n/a` never reaches the two home states: it is the sentence for a
+ *  connected session that reported no model, which is what these two states are NOT. */
+const NOT_APPLICABLE = /n\/a/;
+
 const chips = (
 	model: string | null,
 	effort: string | null,
 	connection: "loading" | "connected" | "unreachable" = "connected",
-) => composerChipLabels({ model, effort, connection });
+) =>
+	composerChipLabels({
+		model: reportedModel(model),
+		effort,
+		connection,
+	});
 
 describe("the composer's chips", () => {
 	it("shows a skeleton — not a noun — while a projection is still coming", () => {
@@ -73,5 +83,54 @@ describe("the composer's chips", () => {
 		// rather than an empty chip.
 		expect(modelChipText("anthropic/")).toBe("anthropic/");
 		expect(modelChipText("")).toBeNull();
+	});
+});
+
+/**
+ * The model's two home states, which are NOT `n/a`.
+ *
+ * Both were one state before: the home took the catalogue's first entry as a
+ * default, and a failed read left `model: null` under `connection: "connected"` —
+ * which rendered `n/a`, the sentence for a session that reported no model. The
+ * operator read "claude-haiku-5-5" on a screen where nobody had chosen anything.
+ */
+describe("the model chip when the reader has chosen nothing", () => {
+	const reading = (kind: "default" | "unknown") =>
+		composerChipLabels({
+			model: { kind },
+			effort: null,
+			connection: "connected",
+		}).model;
+
+	it("says the computer's default is in effect instead of naming a model", () => {
+		const chip = reading("default");
+		expect(chip).toMatchObject({
+			kind: "value",
+			text: "Default",
+			accessibilityLabel: "Model, using this computer's default",
+		});
+		// The defect: no catalogue row, and nothing that reads as "unavailable".
+		expect(JSON.stringify(chip)).not.toMatch(NOT_APPLICABLE);
+	});
+
+	it("says the list could not be read rather than n/a under a live connection", () => {
+		const chip = reading("unknown");
+		expect(chip).toMatchObject({
+			kind: "unavailable",
+			accessibilityLabel: "Model, not read",
+			accessibilityHint: "The model list could not be read",
+		});
+		expect(chip.kind === "unavailable" && chip.text).not.toBe("n/a");
+	});
+
+	it("shows a model the reader DID choose even while the catalogue is loading", () => {
+		// A chosen selector is known without the catalogue, so a read in flight must
+		// not replace it with a skeleton that outlives the answer.
+		const chip = composerChipLabels({
+			model: { kind: "selector", selector: "anthropic/claude-opus-5" },
+			effort: null,
+			connection: "loading",
+		}).model;
+		expect(chip).toMatchObject({ kind: "value", text: "claude-opus-5" });
 	});
 });

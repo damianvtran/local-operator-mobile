@@ -83,7 +83,7 @@ const NAMESPACES = [
 		name: "mobile.home",
 		messages: home,
 		context: homeContext,
-		expected: 27,
+		expected: 29,
 	},
 	{
 		name: "mobile.projects",
@@ -127,7 +127,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 14,
+		expected: 16,
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -218,7 +218,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(290);
+		expect(total).toBe(294);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
