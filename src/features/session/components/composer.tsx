@@ -58,9 +58,9 @@ import {
 	COMPOSER_FIELD_BOX,
 	composerPaintedHeight,
 	composerPresentation,
+	composerShellRadius,
 	keyboardOverlap,
 	morphHeight,
-	morphPillRadius,
 	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
@@ -656,6 +656,13 @@ export const Composer = ({
 	const inputRef = fieldRef ?? ownField;
 	const reducedMotion = useReducedMotion();
 	const elevated = useTokenColor("elevated");
+	/* The shell's ONLY boundary. `elevated` over `canvas` is a fill step of
+	 *  1.1244–1.2799:1 across all 59 themes — below the 3:1 a boundary owes, and
+	 *  thinnest at the near-white end, where a card delimited by its fill alone
+	 *  reads as unframed. `border-control` is the kit's token for a field's
+	 *  boundary on a plain ground: 3.132–5.924:1 against `canvas` in every theme.
+	 *  The reasoning is in `docs/design/components.md` § 5 and § 12. */
+	const borderControl = useTokenColor("border-control");
 	const progress = useSharedValue(0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
@@ -782,8 +789,13 @@ export const Composer = ({
 		/* One rule in every state, landscape included: the radius is half the pill
 		 *  the shell paints, and 24 when expanded. A landscape pill that kept the
 		 *  portrait 24 was measuring the wrong thing. */
-		borderRadius: morphHeight(progress.value, morphPillRadius(baseHeight), 24),
+		borderRadius: composerShellRadius(progress.value, baseHeight),
 		height: morphHeight(progress.value, baseHeight, targetExpanded),
+	}));
+	/* The ring's radius is the shell's own, from the same helper: it is drawn on the
+	 *  shell's edge, not inset inside it, so any other value is a second outline. */
+	const ringMotion = useAnimatedStyle(() => ({
+		borderRadius: composerShellRadius(progress.value, baseHeight),
 	}));
 	/* Overflow is hidden only while the box is between its two ends; at rest the
 	 *  content and the box agree, so hiding would be a clip waiting for half a
@@ -1542,6 +1554,44 @@ export const Composer = ({
 					</ScrollView>
 					{main}
 				</View>
+				{/* THE SHELL'S EDGE, drawn as an absolutely positioned child rather than a
+				 *  `borderWidth` on the shell. The shell's height is a border box, so a border
+				 *  there takes 1 pt off each edge of the interior: the 44 pt field paints 42,
+				 *  under the touch floor, and every measured seed lands 2 pt short of its end
+				 *  (54/110, 58/118 on the 48 floor). The RADII do not follow it down — that is
+				 *  the part an earlier draft of this comment got wrong: `baseHeight` is
+				 *  `max(seededBase, measured)` and `seededBase` comes from the same pure
+				 *  `composerPaintedHeight`, so a short measured seed loses to the 56/60 floor
+				 *  and the pill stays R28/R30. Nothing in the suite renders a box either — the
+				 *  pins are arithmetic on constants — so this is a construction, not a
+				 *  measured guard: an absolute child contributes nothing to layout, so the
+				 *  shape, the hit targets and the 12pt text inset are unchanged and only the
+				 *  edge is new.
+				 *
+				 *  `pointerEvents="none"` is a correctness requirement, not styling: an
+				 *  earlier absolutely positioned layer across this band swallowed every tap
+				 *  on the field (round 4, U1/U2/U3), so the one thing this child must never
+				 *  be is a hit target. It paints last, so the edge stays visible over the
+				 *  content it bounds. */}
+				<Animated.View
+					pointerEvents="none"
+					testID={CONTROL.composerShellRing}
+					style={[
+						{
+							position: "absolute",
+							top: 0,
+							bottom: 0,
+							/* Logical, like every other inset in this file: the ring covers
+							 *  the shell's box, so `start`/`end` are `left`/`right` in LTR and
+							 *  the mirrored pair under RTL, with no asymmetric rule to keep. */
+							start: 0,
+							end: 0,
+							borderWidth: 1,
+							borderColor: borderControl,
+						},
+						ringMotion,
+					]}
+				/>
 			</Animated.View>
 			{attachSheet}
 			<Sheet

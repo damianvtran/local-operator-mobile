@@ -519,8 +519,30 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned 2026-11-05 for the round-4 minors, `src` only: the Appearance mode
 	 * control's accessible name changed in all eight catalogues (`Theme mode`
 	 * instead of repeating the section header) and the generated catalogue moved
-	 * with it. No rendered string, layout or palette changed; frames unaffected. */
-	src: "f2245c2d79676ad500fcf574c8799b4a599fd6a49e73e61a5652cbf41b290154",
+	 * with it. No rendered string, layout or palette changed; frames unaffected.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (the composer shell boundary): `composer.tsx`
+	 * gained one absolutely positioned, `pointerEvents="none"` ring child on the
+	 * composer shell, and `composer-presentation.ts` gained `composerShellRadius` —
+	 * the single helper both the shell and the ring read. The ring is out of flow, so
+	 * no painted box moves: `composerPaintedHeight` is still 56/112 (60/120 on the 48
+	 * floor) and the resting radius is still `morphPillRadius(base)`. This is source
+	 * admission for the geometry instrument, not fresh rendered evidence — the U-08
+	 * frames predate the edge and the rendered re-capture is tracked separately.
+	 * `--print` produced the digest; `app`, `design/fonts`, `design/tokens`, `public`,
+	 * the corpus and the instrument modules are unchanged.
+	 *
+	 * Re-pinned 2026-11-06 again, `src` only (review round 1 remediation of the same
+	 * PR): `a11y.ts` declares `CONTROL.composerShellRing` and `composer.tsx` renders it
+	 * as the ring's `testID`, so the guard that locates the ring can anchor on an id the
+	 * shell never carries; the ring's own comment was also corrected to the mechanism
+	 * the code has (a shell border costs the interior, the radii do not move). A
+	 * `testID` paints nothing and a comment paints nothing — `borderWidth`, the colour,
+	 * the four insets and the radius are byte-identical to the digest above, so no
+	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged. */
+	src: "ea13a33ea3649ec09819e5a6cf6bb1f19d2d560e112eea5c0e12af7f151febb6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

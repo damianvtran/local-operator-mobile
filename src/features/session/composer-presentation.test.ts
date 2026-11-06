@@ -6,7 +6,9 @@ import {
 	composerPaintedHeight,
 	composerPresentation,
 	composerShellPadding,
+	composerShellRadius,
 	keyboardOverlap,
+	morphPillRadius,
 	seedFor,
 } from "./composer-presentation";
 
@@ -122,5 +124,35 @@ describe("round 7 — the seed is a decision, not an expression", () => {
 		);
 		expect(call).toContain("presentation.expanded");
 		expect(call).not.toContain("compactSingle");
+	});
+});
+
+describe("round 8 — one radius for the two edges the shell paints", () => {
+	/* The shell's fill and the 1 px ring over it are concentric, so they read ONE
+	 *  helper. Asserted as values at both floors rather than only as a grep,
+	 *  because the defect a copy would cause is visible: a ring on its own curve
+	 *  shows as a second corner outside the first. */
+	it("travels from the padded pill to the expanded card, on both floors", () => {
+		expect(composerShellRadius(0, 56)).toBe(28);
+		expect(composerShellRadius(1, 56)).toBe(24);
+		expect(composerShellRadius(0, 60)).toBe(30);
+		expect(composerShellRadius(1, 60)).toBe(24);
+	});
+
+	it("is the same motion the radius already had, mid-flight included", () => {
+		expect(composerShellRadius(0.5, 60)).toBe(27);
+		/* Clamped past the ends, like the morph itself: progress is a shared value,
+		 *  and a frame at 1.0001 must not paint a corner outside the box. */
+		expect(composerShellRadius(2, 60)).toBe(24);
+		expect(composerShellRadius(-1, 60)).toBe(30);
+	});
+
+	it("leaves the painted heights and the pill radius untouched", () => {
+		expect(composerPaintedHeight(false)).toBe(56);
+		expect(composerPaintedHeight(true)).toBe(112);
+		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(true, 48)).toBe(120);
+		expect(morphPillRadius(56)).toBe(28);
+		expect(morphPillRadius(60)).toBe(30);
 	});
 });
