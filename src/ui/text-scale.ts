@@ -204,6 +204,9 @@ const round = (px: number, unit: TextUnit) =>
 const CHROME_STEPS: ReadonlySet<TypeStepName> = new Set<TypeStepName>([
 	"display",
 	"meta",
+	/* The transcript's meta at the relay's leading: chrome like `meta`, so it
+	 *  caps like `meta` (round 1 type parity added the step). */
+	"meta-read",
 	"mono-label",
 ]);
 

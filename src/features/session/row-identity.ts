@@ -1,5 +1,3 @@
-import type { TranscriptEntry } from "@/contracts";
-
 /**
  * Keep a row's IDENTITY across frames when its CONTENT did not change.
  *
@@ -54,10 +52,6 @@ const sameValue = (a: unknown, b: unknown): boolean => {
 	return true;
 };
 
-/** Whether two rows are the same row carrying the same facts. */
-export const sameRow = (a: TranscriptEntry, b: TranscriptEntry): boolean =>
-	a === b || (a.id === b.id && sameValue(a, b));
-
 /**
  * `next`, with every row that equals its predecessor in `previous` replaced by
  * the predecessor's own object — and `previous` itself when the whole list is
@@ -107,18 +101,22 @@ export function reuseRows<T extends { id: string }>(
 		else bucket.push(row);
 	}
 	const out: T[] = new Array(next.length);
-	let reused = 0;
 	for (let at = 0; at < next.length; at += 1) {
 		const row = next[at] as T;
 		const old = buckets.get(row.id)?.shift();
 		if (old !== undefined && sameValue(old, row)) {
 			out[at] = old;
-			reused += 1;
 		} else {
 			out[at] = row;
 		}
 	}
-	if (reused === next.length && previous.length === next.length)
-		return previous;
-	return out;
+	/* `previous` only when it is the SAME LIST, index for index — not merely the
+	 *  same rows. A frame that permutes rows (same ids, same content, new order)
+	 *  reuses every row here, and returning `previous` would keep painting the
+	 *  old order until some row's content changed (review round 1, R1-1). */
+	if (previous.length !== next.length) return out;
+	for (let at = 0; at < out.length; at += 1) {
+		if (out[at] !== previous[at]) return out;
+	}
+	return previous;
 }

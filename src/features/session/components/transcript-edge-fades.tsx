@@ -4,6 +4,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import {
 	type EdgeFadeLevels,
+	edgeFadeStops,
 	TRANSCRIPT_FADE_PT,
 } from "@/features/session/transcript-presence";
 import { SURFACE } from "@/ui/a11y";
@@ -63,6 +64,7 @@ const Band = ({
 		fadeSeq += 1;
 		id.current = `transcript-fade-${fadeSeq}`;
 	}
+	const [startOpacity, endOpacity] = edgeFadeStops(edge);
 	return (
 		<Animated.View
 			pointerEvents="none"
@@ -82,21 +84,22 @@ const Band = ({
 		>
 			<Svg width="100%" height="100%">
 				<Defs>
-					{/* Drawn toward the EDGE, so the content nearest the edge is the
-					    thing dissolved: `near` is the content side and transparent,
-					    `far` is the edge and is the ground itself. */}
+					{/* Opaque at the SCREEN EDGE and clear toward the content, so the
+					    content nearest the edge is the thing dissolved. The order lives
+					    in `edgeFadeStops` (and its test), because it shipped inverted
+					    once (design round 1, D1). */}
 					<LinearGradient id={id.current} x1="0%" y1="0%" x2="0%" y2="100%">
 						<Stop
-							key="near"
+							key="start"
 							offset="0"
 							stopColor={ground}
-							stopOpacity={edge === "top" ? 0 : 1}
+							stopOpacity={startOpacity}
 						/>
 						<Stop
-							key="far"
+							key="end"
 							offset="1"
 							stopColor={ground}
-							stopOpacity={edge === "top" ? 1 : 0}
+							stopOpacity={endOpacity}
 						/>
 					</LinearGradient>
 				</Defs>

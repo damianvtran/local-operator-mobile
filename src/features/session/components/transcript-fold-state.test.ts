@@ -1,0 +1,348 @@
+import { readFileSync } from "node:fs";
+import type React from "react";
+import { act, createElement } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { TranscriptEntry } from "@/contracts";
+import { type DomShim, installDomShim } from "@/testing/dom-shim";
+
+/**
+ * A row fold's open state, owned by the LIST (review round 1: Q5 / U6 / m4,
+ * U2, U4). Three reader-facing promises, each driven through the real
+ * `TranscriptList` → `TranscriptRow` → `CollapsedRow` path with a stub host:
+ *
+ *  - a fold the reader opened is still open after windowing unmounts and
+ *    remounts its row;
+ *  - a find landing on a folded row opens it, and it stays open after the
+ *    highlight moves on;
+ *  - opening a fold at the tail keeps the reader's offset — they stay pinned
+ *    only if the end is still inside the tail band.
+ *
+ * The harness `FlatList` mounts a slice of its data the test controls (the
+ * windowing), records every `scrollToOffset` (the tail pin), and hands the
+ * test its scroll callbacks to drive.
+ */
+
+type PressProps = {
+	onPress?: () => void;
+	accessibilityLabel?: string;
+	accessibilityState?: { expanded?: boolean };
+};
+
+const harness = vi.hoisted(() => ({
+	/** The mounted slice: `[from, to)` of the list's data. */
+	from: 0,
+	to: Number.POSITIVE_INFINITY,
+	/** Offsets the list asked to scroll to. */
+	scrolls: [] as number[],
+	/** The latest props the list handed its scroller. */
+	props: {} as Record<string, unknown>,
+	/** The latest fold pressable per accessible name. */
+	folds: new Map<string, PressProps>(),
+}));
+
+vi.mock("react-native", async () => {
+	const React = await import("react");
+	const passthrough = ({ children }: { children?: React.ReactNode }) =>
+		children ?? null;
+	return {
+		Platform: { OS: "web" },
+		View: passthrough,
+		Text: passthrough,
+		ScrollView: passthrough,
+		Pressable: (props: PressProps & { children?: React.ReactNode }) => {
+			if (props.accessibilityState?.expanded !== undefined)
+				harness.folds.set(props.accessibilityLabel ?? "", props);
+			return props.children ?? null;
+		},
+		StyleSheet: {
+			create: (value: unknown) => value,
+			flatten: (value: unknown) => value,
+			absoluteFill: {},
+		},
+		FlatList: React.forwardRef((props: Record<string, unknown>, ref) => {
+			harness.props = props;
+			React.useImperativeHandle(
+				ref,
+				() => ({
+					scrollToOffset({ offset }: { offset: number }) {
+						harness.scrolls.push(offset);
+					},
+				}),
+				[],
+			);
+			const data = props.data as { id: string }[];
+			const render = props.renderItem as (input: {
+				item: unknown;
+				index: number;
+			}) => React.ReactNode;
+			const keyOf = props.keyExtractor as (item: unknown) => string;
+			return React.createElement(
+				"div",
+				null,
+				data
+					.slice(harness.from, harness.to)
+					.map((item, index) =>
+						React.createElement(
+							React.Fragment,
+							{ key: keyOf(item) },
+							render({ item, index: index + harness.from }),
+						),
+					),
+			);
+		}),
+	};
+});
+
+vi.mock("@/features/session/components/turn-bar", () => ({
+	TurnBar: () => null,
+}));
+vi.mock("@/features/session/components/quiet-group-bar", () => ({
+	QuietGroupBar: () => null,
+}));
+vi.mock("@/features/session/components/supplement-block", () => ({
+	SupplementBlock: () => null,
+}));
+vi.mock("@/features/session/components/tool-row", () => ({
+	ToolRow: () => null,
+}));
+vi.mock("@/features/session/components/ask-response-row", () => ({
+	AskResponseRow: () => null,
+}));
+vi.mock("@/features/session/components/transcript-image", () => ({
+	TranscriptImage: () => null,
+}));
+vi.mock("@/features/session/components/imagegen-card", () => ({
+	ImageGenCard: () => null,
+}));
+vi.mock("@/features/session/components/transcript-edge-fades", () => ({
+	TranscriptEdgeFades: () => null,
+}));
+vi.mock("@/ui/appearance", () => ({
+	useTextScale: () => ({ effectiveScale: 1, scale: 1 }),
+	useTokenColor: () => "#000000",
+	useReducedMotion: () => false,
+	useTheme: () => ({ active: { colors: {} } }),
+}));
+vi.mock("@/ui/direction", () => ({ useIsRTL: () => false, LTR_TEXT: {} }));
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({ effectiveScale: 1, scale: 1 }),
+}));
+vi.mock("expo-clipboard", () => ({ setStringAsync: async () => true }));
+vi.mock("react-native-svg", () => {
+	const passthrough = ({ children }: { children?: React.ReactNode }) =>
+		children ?? null;
+	return {
+		__esModule: true,
+		default: passthrough,
+		Defs: passthrough,
+		LinearGradient: passthrough,
+		Rect: passthrough,
+		Stop: passthrough,
+	};
+});
+
+const { TranscriptList } = await import(
+	"@/features/session/components/transcript-list"
+);
+const { createScrollPresence } = await import(
+	"@/features/session/transcript-presence"
+);
+
+const seed = JSON.parse(
+	readFileSync(
+		new URL("../../../../fixtures/relay/http/history-ok.json", import.meta.url),
+		"utf8",
+	),
+).body.entries[0] as TranscriptEntry;
+
+const HIDDEN = "the second line the fold hides";
+const FOLD = "peer reviewer: first line of the peer message";
+
+const row = (id: string, over: Partial<TranscriptEntry>): TranscriptEntry => ({
+	...seed,
+	id,
+	kind: "assistant",
+	text: `answer ${id}`,
+	images: [],
+	details: {},
+	...over,
+});
+
+const ENTRIES: TranscriptEntry[] = [
+	row("a0", {}),
+	row("p1", {
+		kind: "peer_message",
+		text: `first line of the peer message\n${HIDDEN}`,
+		details: {
+			sender: { conversation_name: "reviewer", session_id: "peer-1" },
+		},
+	}),
+	row("a2", {}),
+	row("a3", {}),
+];
+
+type TextNode = { nodeValue?: unknown; childNodes?: TextNode[] };
+const textOf = (node: TextNode): string =>
+	String(node.nodeValue ?? "") + (node.childNodes ?? []).map(textOf).join("");
+
+let dom: DomShim | null = null;
+let root: ReturnType<typeof createRoot> | null = null;
+let serial = 0;
+let session = "";
+
+const render = async (
+	highlightId: string | null = null,
+	presence?: ReturnType<typeof createScrollPresence>,
+) => {
+	await act(async () =>
+		root?.render(
+			createElement(TranscriptList, {
+				sessionId: session,
+				entries: ENTRIES,
+				streamingRowId: null,
+				anchorId: null,
+				highlightId,
+				presence,
+				testID: "fold-transcript",
+			}),
+		),
+	);
+};
+const drawn = () => textOf(dom?.container as TextNode);
+const press = async (label: string) => {
+	const fold = harness.folds.get(label);
+	expect(fold).toBeDefined();
+	await act(async () => fold?.onPress?.());
+};
+const call = async (name: string, ...args: unknown[]) => {
+	const handler = harness.props[name] as (...input: unknown[]) => void;
+	await act(async () => handler(...args));
+};
+
+/** A viewport of 800 over 2000 of content, scrolled to its end: at the tail. */
+const parkAtTail = async () => {
+	await call("onLayout", { nativeEvent: { layout: { height: 800 } } });
+	await call("onContentSizeChange", 0, 2000); // the one-time restore
+	await call("onScroll", {
+		nativeEvent: {
+			contentOffset: { y: 1200 },
+			contentSize: { height: 2000 },
+			layoutMeasurement: { height: 800 },
+		},
+	});
+	harness.scrolls.length = 0;
+};
+
+beforeEach(() => {
+	session = `folds-${++serial}`;
+	harness.from = 0;
+	harness.to = Number.POSITIVE_INFINITY;
+	harness.scrolls.length = 0;
+	harness.folds.clear();
+	dom = installDomShim();
+	vi.stubGlobal("requestAnimationFrame", () => 0);
+	vi.stubGlobal("cancelAnimationFrame", () => {});
+	root = createRoot(dom.container as Element);
+});
+afterEach(async () => {
+	await act(async () => root?.unmount());
+	root = null;
+	dom?.dispose();
+	dom = null;
+	vi.unstubAllGlobals();
+});
+
+describe("a fold the reader opened", () => {
+	it("survives its row leaving the window and coming back (Q5 / U6)", async () => {
+		await render();
+		expect(drawn()).not.toContain(HIDDEN);
+		await press(FOLD);
+		expect(drawn()).toContain(HIDDEN);
+		// Windowing unmounts the row…
+		harness.from = 2;
+		await render();
+		expect(drawn()).not.toContain("first line of the peer message");
+		// …and remounts it, open, as the reader left it.
+		harness.from = 0;
+		await render();
+		expect(drawn()).toContain(HIDDEN);
+		expect(harness.folds.get(FOLD)?.accessibilityState?.expanded).toBe(true);
+	});
+});
+
+describe("a find landing on a folded row (U2)", () => {
+	it("opens it on the landing frame, and keeps it open after", async () => {
+		await render("p1");
+		expect(drawn()).toContain(HIDDEN);
+		await render(null);
+		expect(drawn()).toContain(HIDDEN);
+	});
+});
+
+describe("opening a fold at the tail (m4 / U4)", () => {
+	it("pins as usual when content arrives and the reader did nothing (control)", async () => {
+		await render();
+		await parkAtTail();
+		await call("onContentSizeChange", 0, 2400);
+		expect(harness.scrolls.length).toBeGreaterThan(0);
+	});
+
+	it("keeps the reader's offset when the body runs past the tail band", async () => {
+		await render();
+		await parkAtTail();
+		await press(FOLD);
+		await call("onContentSizeChange", 0, 2400);
+		expect(harness.scrolls).toEqual([]);
+		// They left the tail: the next streamed growth does not drag them either.
+		await call("onContentSizeChange", 0, 2450);
+		expect(harness.scrolls).toEqual([]);
+	});
+
+	it("stays pinned when the opened body still ends inside the tail band", async () => {
+		await render();
+		await parkAtTail();
+		await press(FOLD);
+		await call("onContentSizeChange", 0, 2030);
+		expect(harness.scrolls.length).toBeGreaterThan(0);
+	});
+});
+
+describe("the rail and the list's own scrolls (U3 / m2 / Q4)", () => {
+	const scrollTo = (y: number) =>
+		call("onScroll", {
+			nativeEvent: {
+				contentOffset: { y },
+				contentSize: { height: 4000 },
+				layoutMeasurement: { height: 800 },
+			},
+		});
+
+	it("stays down while the tail pin follows a streaming turn", async () => {
+		const presence = createScrollPresence();
+		await render(null, presence);
+		await parkAtTail();
+		for (let growth = 1; growth <= 20; growth += 1) {
+			await call("onContentSizeChange", 0, 2000 + growth * 40);
+			// The platform reports the pin's own offset back through onScroll.
+			await scrollTo(1200 + growth * 40);
+		}
+		expect(harness.scrolls.length).toBeGreaterThan(0); // it did follow
+		expect(presence.readVisible()).toBe(false);
+		presence.dispose();
+	});
+
+	it("comes up for the reader's drag and its momentum", async () => {
+		const presence = createScrollPresence();
+		await render(null, presence);
+		await call("onScrollBeginDrag");
+		await scrollTo(900);
+		expect(presence.readVisible()).toBe(true);
+		await call("onScrollEndDrag");
+		await call("onMomentumScrollBegin");
+		await scrollTo(600);
+		expect(presence.readVisible()).toBe(true);
+		await call("onMomentumScrollEnd");
+		presence.dispose();
+	});
+});

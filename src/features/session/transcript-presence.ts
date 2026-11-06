@@ -52,6 +52,26 @@ export type EdgeFadeLevels = {
 const clamp01 = (n: number): number => (n <= 0 ? 0 : n >= 1 ? 1 : n);
 
 /**
+ * The gradient's two stop opacities for one edge band, in offset order
+ * (`[offset 0, offset 1]`) along a gradient drawn top → bottom.
+ *
+ * WHY THIS IS A FUNCTION WITH ITS OWN TEST. Round 1 shipped both bands inverted
+ * (design D1): solid canvas on the CONTENT side and clear at the screen edge,
+ * which paints a hard canvas line 24 pt in instead of dissolving the content
+ * into the edge. Nothing pinned the order, because the levels test only covers
+ * how strongly a band shows, not which way it runs. The rule, and the in-repo
+ * precedent (`sheet.tsx`'s bottom cue, the same `y1 0% → y2 100%` geometry):
+ * the band is OPAQUE at the screen edge and CLEAR toward the content.
+ *  - top band: offset 0 is the screen's top edge → `[1, 0]`;
+ *  - bottom band: offset 1 is the screen's bottom edge → `[0, 1]`.
+ */
+export function edgeFadeStops(
+	edge: "top" | "bottom",
+): readonly [number, number] {
+	return edge === "top" ? [1, 0] : [0, 1];
+}
+
+/**
  * Both edge fades, from the three facts the list already tracks.
  *
  * The rules, in the order they win:
@@ -87,22 +107,38 @@ export function edgeFadeLevels({
 }
 
 /**
- * The rail's presence signal: "the list has moved recently, or is being held".
+ * The rail's presence signal: "the READER is moving the list, or just did".
  *
  * Owned by the screen (`createScrollPresence`), reported to by the list and
  * subscribed to by the rail. `dispose` clears the pending timer; a screen that
  * unmounts mid-linger must not leave one behind.
+ *
+ * ONLY THE READER'S OWN GESTURE COUNTS (review round 1, U3 / m2 / Q4). The list
+ * moves itself too: the tail pin (`pinTail` → `scrollToOffset`) runs on every
+ * content growth while a turn streams, and the platforms deliver `onScroll` for
+ * that programmatic offset like any other. Counting it raised the rail through
+ * every streaming turn — the "constantly take space" the operator asked to be
+ * rid of, in the state they spend most time in. So movement shows the rail only
+ * while a drag holds the list (`setHeld`) or its momentum carries it
+ * (`setCoasting`); an offset change outside both is a scroll the app made, and
+ * is recorded but never shown. Known limit: a web wheel scroll emits neither
+ * gesture event, so on the web target the rail answers touch drags only.
  */
 export type ScrollPresence = {
-	/** The offset moved to this value. Ignored when it is the offset already
-	 *  reported — a platform that re-delivers the same event must not restart
-	 *  the linger, or a stationary list under a scroll view that keeps emitting
-	 *  would hold the rail up forever. */
+	/** The offset moved to this value. Shows the rail only during a reader
+	 *  gesture (see above). Ignored when it is the offset already reported — a
+	 *  platform that re-delivers the same event must not restart the linger, or
+	 *  a stationary list under a scroll view that keeps emitting would hold the
+	 *  rail up forever (round 1, m3 / Q3 / U8). */
 	noteMovement(offsetY: number): void;
 	/** A drag gesture began or ended. A HELD thumb keeps the rail up however
 	 *  long the reader holds still, which is the pointer analogue of a desktop
 	 *  scrollbar's thumb staying under the cursor. */
 	setHeld(held: boolean): void;
+	/** The list's momentum after a drag began or ended. The rail stays up while
+	 *  it coasts and lingers from the moment it stops, so a flick reads as one
+	 *  gesture rather than a drag plus an unexplained glide. */
+	setCoasting(coasting: boolean): void;
 	/** Fires on every visibility flip. Returns the unsubscribe. */
 	subscribe(listener: (visible: boolean) => void): () => void;
 	/** The current answer, for a subscriber that mounts late. */
@@ -113,6 +149,7 @@ export type ScrollPresence = {
 export function createScrollPresence(): ScrollPresence {
 	let visible = false;
 	let held = false;
+	let coasting = false;
 	let lastOffset: number | null = null;
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	const listeners = new Set<(visible: boolean) => void>();
@@ -130,10 +167,10 @@ export function createScrollPresence(): ScrollPresence {
 		visible = true;
 		emit();
 	};
-	/** Start the linger. A held thumb never starts it. */
+	/** Start the linger. A held thumb or a coasting list never starts it. */
 	const arm = (): void => {
 		clear();
-		if (held) return;
+		if (held || coasting) return;
 		timer = setTimeout(() => {
 			timer = null;
 			if (!visible) return;
@@ -144,15 +181,26 @@ export function createScrollPresence(): ScrollPresence {
 
 	return {
 		noteMovement(offsetY: number) {
-			if (lastOffset !== offsetY) {
-				lastOffset = offsetY;
-				show();
-			}
+			/* A repeated offset is not movement and must not re-arm the linger. */
+			if (lastOffset === offsetY) return;
+			lastOffset = offsetY;
+			/* A scroll the app made (the tail pin, a restore) is not the reader's. */
+			if (!held && !coasting) return;
+			show();
 			arm();
 		},
 		setHeld(next: boolean) {
 			held = next;
 			if (held) {
+				clear();
+				show();
+				return;
+			}
+			arm();
+		},
+		setCoasting(next: boolean) {
+			coasting = next;
+			if (coasting) {
 				clear();
 				show();
 				return;

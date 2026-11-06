@@ -430,8 +430,12 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							)}
 						</View>
 					) : (
+						/* `trace` 13 for the name AND the headline: the relay's tool line
+						 *  is one 13 pt step, and a 12 pt mono name under a 14 pt headline
+						 *  left the trace without one size (review round 1, m1 / D5). The
+						 *  name keeps the mono face — a step never encodes a family. */
 						<Text
-							className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+							className="min-w-0 shrink truncate font-mono text-trace text-ink-muted"
 							numberOfLines={1}
 						>
 							{entry.tool_name}
@@ -448,7 +452,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						 *  a floorless line lost to the chip and read `Sent to c…`, so the
 						 *  caveat outranked the message. 4.5 rem is the relay's own floor. */
 						className={cx(
-							"min-w-0 flex-1 text-body-sm text-ink-dim",
+							"min-w-0 flex-1 text-trace text-ink-dim",
 							isBridge && bridgeOutcome !== null && "min-w-[4.5rem]",
 						)}
 						numberOfLines={1}

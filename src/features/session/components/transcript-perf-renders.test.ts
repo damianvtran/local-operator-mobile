@@ -16,15 +16,21 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  * `PureComponent`, and a producer that hands it a new object for an unchanged row
  * defeats the only bail-out it has. So the measurement is per frame:
  *
- *  - `TranscriptRow` renders. The probe wraps the shipped row with the SAME
- *    shallow comparator the row itself uses, so what it counts is cells whose
- *    props CHANGED — exactly the question a memoised row is asked, and exactly
- *    the work React has to do. (Wrapping WITHOUT a comparator would instrument
- *    away the very bail-out under test.)
+ *  - Renders of the REAL row body (`TranscriptRowImpl`), counted at a call it
+ *    makes exactly once per render (`transcriptRowTestID`), so the count sits
+ *    BEHIND the shipped `memo` rather than in front of it. Round 1 counted in a
+ *    memoised wrapper, which bailed whether or not the shipped row did:
+ *    deleting the row's `memo` left that suite green (review R1-4, QA Q1).
+ *  - The streaming row's rendered TEXT, every frame. A count alone cannot see a
+ *    row that stopped rendering because it was wrongly reused — zero renders
+ *    reads as "fast" — so the frame's new sentence must be on screen.
  *  - `parseMarkdown` / `parseInline` calls, counted at the parser the renderer
  *    calls.
- *  - The wall-clock cost of committing one frame, so the budget in the pull
- *    request is reproducible from this file rather than transcribed by hand.
+ *  - The wall-clock cost of committing one frame, PRINTED and never gated: on a
+ *    shared host the same code measured p50 1.3 ms alone and 3.2 ms under a
+ *    load average of ~133 (QA round 1, Q7), so a timing gate turns the suite
+ *    red without a product change. The deterministic counts and the text are
+ *    the gate; the timings are the reproducible report the PR quotes.
  *
  * WHAT THIS IS NOT. It is not frame time on a device: it is JS work per frame in
  * a Node renderer, with every row of the 300 mounted (the real list mounts a
@@ -96,9 +102,11 @@ vi.mock("react-native", async () => {
 type TranscriptItemLike = { id: string; entry?: TranscriptEntry };
 
 /* The harness's cell: memoised on the ITEM, exactly as React Native's
- *  `CellRenderer` is. With `reuseRows` in place an unchanged row keeps its object
- *  identity, so this bails and `renderItem` is never called for it — which is the
- *  device's behaviour and the reason a frame costs one cell rather than a window. */
+ *  `CellRenderer` is. It does NOT bail on a streamed frame: the condense plan
+ *  builds a fresh `{ kind: "entry", id, entry }` item per row per frame, so every
+ *  mounted cell re-runs `renderItem` (measured by QA round 1: 300 of 300). What
+ *  keeps a frame at one row is `reuseRows` keeping the ENTRY's identity and
+ *  `memo(TranscriptRow)` bailing on it — the two things this file guards. */
 CellRenderer = React.memo(
 	function Cell({
 		item,
@@ -117,24 +125,22 @@ CellRenderer = React.memo(
 		prev.render === next.render,
 ) as unknown as typeof CellRenderer;
 
-/* The shipped row, behind the comparator it ships with. */
-vi.mock(
-	"@/features/session/components/transcript-row",
-	async (importOriginal) => {
-		const React = await import("react");
-		const actual =
-			await importOriginal<
-				typeof import("@/features/session/components/transcript-row")
-			>();
-		const Counted = React.memo(function Counted(
-			props: Parameters<typeof actual.TranscriptRow>[0],
-		) {
+/* The real row, counted INSIDE its body: `transcriptRowTestID` is called once
+ *  per `TranscriptRowImpl` render and nowhere else in the app, so the count is
+ *  of renders the shipped `memo` let through — remove the memo and it is 300. */
+vi.mock("@/features/session/projection", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/features/session/projection")>();
+	return {
+		...actual,
+		transcriptRowTestID: (
+			entry: Parameters<typeof actual.transcriptRowTestID>[0],
+		) => {
 			counts.rows += 1;
-			return React.createElement(actual.TranscriptRow, props);
-		});
-		return { TranscriptRow: Counted };
-	},
-);
+			return actual.transcriptRowTestID(entry);
+		},
+	};
+});
 
 /* The real renderer, counted at the parse it performs. */
 vi.mock("@/features/session/markdown", async (importOriginal) => {
@@ -254,6 +260,15 @@ const nextFrame = (rows: TranscriptEntry[], frame: number): TranscriptEntry[] =>
 			: { ...row },
 	);
 
+type TextNode = { nodeValue?: unknown; childNodes?: TextNode[] };
+/** Every string in the rendered tree, in order. */
+const textOf = (node: TextNode | undefined): string =>
+	node === undefined
+		? ""
+		: String(node.nodeValue ?? "") +
+			(node.childNodes ?? []).map(textOf).join("");
+const squash = (text: string): string => text.replace(/\s+/g, " ").trim();
+
 let dom: DomShim | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
 let serial = 0;
@@ -293,7 +308,7 @@ afterEach(async () => {
 });
 
 describe("streamed frames do not re-render the transcript", () => {
-	it("mounts 300 rows, then costs at most one row and one parse per frame", async () => {
+	it("mounts 300 rows, then costs exactly one row and at most one parse per frame, and draws the new text", async () => {
 		let entries = timeline();
 		await render(entries);
 		expect(entries).toHaveLength(300);
@@ -301,12 +316,18 @@ describe("streamed frames do not re-render the transcript", () => {
 		expect(counts.rows).toBeGreaterThanOrEqual(300);
 
 		const frames: { rows: number; parses: number }[] = [];
+		const drawn: boolean[] = [];
 		for (let frame = 1; frame <= 10; frame += 1) {
 			entries = nextFrame(entries, frame);
 			counts.rows = 0;
 			counts.parses = 0;
 			await render(entries);
 			frames.push({ rows: counts.rows, parses: counts.parses });
+			/* The streaming row's text as this frame delivered it. Whitespace is
+			 *  normalised on both sides because markdown owns line breaking; the
+			 *  tail is what a stale row (wrongly reused, or memo'd shut) lacks. */
+			const want = squash(entries[LAST]?.text ?? "").slice(-160);
+			drawn.push(squash(textOf(dom?.container as TextNode)).includes(want));
 		}
 
 		const rows = frames.map((frame) => frame.rows);
@@ -314,11 +335,13 @@ describe("streamed frames do not re-render the transcript", () => {
 		console.log(
 			`[transcript-perf] rows/frame ${JSON.stringify(rows)} parses/frame ${JSON.stringify(parses)}`,
 		);
-		expect(Math.max(...rows)).toBeLessThanOrEqual(1);
+		// EXACTLY one: zero would mean the streaming row itself did not render.
+		expect(rows).toEqual(Array(10).fill(1));
 		expect(Math.max(...parses)).toBeLessThanOrEqual(1);
+		expect(drawn).toEqual(Array(10).fill(true));
 	});
 
-	it("commits a frame inside the frame budget on a 4 KB answer", async () => {
+	it("reports the commit time of a frame on a 4 KB answer (printed, not gated)", async () => {
 		/* THE PHONE-SIZED WINDOW (`windowing.ts`'s policy), because that is the list
 		 *  a device holds and the frame budget is a device's budget. On its own this
 		 *  measurement does NOT prove the fix — at 30 mounted cells the commit is
@@ -376,20 +399,13 @@ describe("streamed frames do not re-render the transcript", () => {
 		console.log(
 			`[transcript-perf] median run commit ms p50 ${median.p50.toFixed(2)} p95 ${median.p95.toFixed(2)} max ${median.max.toFixed(2)}`,
 		);
-		/* The gates are stated with room for this machine, and the PR says why: the
-		 *  same code measured p95 2.2 ms and p95 10.8 ms in consecutive runs on a
-		 *  shared Mac, so a 4 ms p95 gate would be a coin flip and a test that lies
-		 *  about what it measured. `p50` is the stable statistic; the DETERMINISTIC
-		 *  proof of the fix is the row-count test above (300 -> 1). */
-		expect(median.p50).toBeLessThanOrEqual(2);
-		expect(median.p95).toBeLessThanOrEqual(8);
-		/* The maximum is REPORTED, never gated: every frame this test drives allocates
-		 *  the producer's 300 fresh entry objects (the relay really does re-send the
-		 *  window), so a 200-frame run catches a GC pause sooner or later and the
-		 *  pause's size belongs to the machine. Observed with this code: 4.0-6.1 ms on
-		 *  a quiet machine, 113 ms once while a full suite ran beside it. */
-		console.log(
-			`[transcript-perf] frame max (reported, not gated) ${median.max.toFixed(2)} ms`,
-		);
+		/* REPORTED, NEVER GATED (QA round 1, Q7). The same code measured p50 1.3 ms
+		 *  alone, 1.6 ms in CI and 2.8-3.2 ms beside a full suite on a host at load
+		 *  ~133, so any wall-clock threshold turns `pnpm test` red for a reason that
+		 *  belongs to the machine. The gate is the deterministic proof above (one row
+		 *  render and at most one parse per frame, with the new text drawn); these
+		 *  numbers are what the PR quotes, reproducible from this file. The only
+		 *  assertion is that a measurement happened. */
+		expect(median.p50).toBeGreaterThan(0);
 	});
 });

@@ -70,6 +70,14 @@ export type TranscriptRowProps = {
 	 *  controls share one gate (`composer.controls.stopVisible`). Resolves
 	 *  whether the request reached the relay (review round 1, F2). */
 	onCancelTurn?: () => Promise<boolean>;
+	/** Whether this row's fold is open, when the list owns that state (it keeps
+	 *  a set keyed by row id, so the answer survives windowing and a find
+	 *  landing can open the row — review round 1, Q5 / U6 / U2). Omitted, a
+	 *  folded row keeps its own state. */
+	open?: boolean;
+	/** Asks the owner to open or close this row's fold. Must be stable across
+	 *  frames: it is a prop of a memoised row. */
+	onToggleOpen?: (id: string, open: boolean) => void;
 };
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -94,6 +102,8 @@ const TranscriptRowImpl = ({
 	onOpenAgent,
 	onOpenVideo,
 	onCancelTurn,
+	open,
+	onToggleOpen,
 }: TranscriptRowProps) => {
 	const kind = classifyEntry(entry);
 	const testID = transcriptRowTestID(entry);
@@ -101,6 +111,14 @@ const TranscriptRowImpl = ({
 	 *  card instead of the generic tool row (`imagegen.ts` owns the set and the
 	 *  view-model; this file only chooses which treatment to hand it to). */
 	const imageGen = kind === "tool" ? imageGenView(entry) : null;
+	/* The fold's open state, owned by the list when it supplies both halves. */
+	const fold =
+		onToggleOpen !== undefined
+			? {
+					open: open === true,
+					onToggle: (next: boolean) => onToggleOpen(entry.id, next),
+				}
+			: {};
 	/* The streaming anchor is an EXTRA id on the row it belongs to, so a flow can
 	 * wait for it to appear and then for it to disappear (`04-session-view-steer`).
 	 * It is on a zero-size sibling rather than on the row itself because an element
@@ -167,36 +185,12 @@ const TranscriptRowImpl = ({
 
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
-		/* A SENT MESSAGE FOLDS LIKE ANY OTHER EVENT (design item 9: "sent message —
-		 *  collapsed"). Only when it does not fit one line, and never when it
-		 *  carries an image: there the image IS the payload, and folding it would
-		 *  hide the thing that was sent behind a summary of its caption. Its own
-		 *  text stays the accessible name, so a fold hides nothing from a screen
-		 *  reader. */
-		if (entry.images.length === 0 && shouldFold(entry.text)) {
-			return (
-				<View className="px-4 py-1" testID={testID}>
-					<CollapsedRow
-						glyph={isSteer ? "↪" : "→"}
-						glyphClass={isSteer ? "text-ink-dim" : "text-accent"}
-						summary={firstLine(entry.text)}
-						bodyClass={isSteer ? "text-ink-muted" : "text-ink"}
-						accessibilityLabel={entry.text}
-					>
-						<Text
-							className={cx(
-								isSteer
-									? "text-body-sm text-ink-muted"
-									: "text-body-sm text-ink",
-							)}
-						>
-							{entry.text}
-						</Text>
-					</CollapsedRow>
-					{anchors}
-				</View>
-			);
-		}
+		/* NEVER COLLAPSIBLE, AT ANY LENGTH (review round 1, R1-2 / U1 / D2). The
+		 *  reader's own prompt is the turn's landmark: the relay and the desktop
+		 *  both keep it open, and folding it hid what was asked while the answer
+		 *  stayed in full. The operator's complaint was OTHER participants'
+		 *  messages eating the screen; only an outbound send TO a recipient (a hub
+		 *  or peer receipt, below) folds. A steer is the same reader's voice. */
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
 				<View
@@ -211,12 +205,12 @@ const TranscriptRowImpl = ({
 					{entry.text.length > 0 ? (
 						<Text
 							className={cx(
-								// The message body's role is `body-sm` 14: the relay's own
-								// `--text-body` step (design item 11). It was `body` 16, one step
-								// above the reference and 1.23x the tool trace it sits beside.
+								// `body-read` 14 / 1.55: the relay's own `--text-body` step and
+								// its reading leading (design item 11, round 1 type parity). It
+								// was `body` 16, one step above the reference.
 								isSteer
-									? "text-body-sm text-ink-muted"
-									: "text-body-sm text-ink",
+									? "text-body-read text-ink-muted"
+									: "text-body-read text-ink",
 							)}
 						>
 							{entry.text}
@@ -247,25 +241,26 @@ const TranscriptRowImpl = ({
 		const glyph =
 			kind === "compaction" ? "≡" : severity === "error" ? "✗" : "•";
 		const ink = SEVERITY_CLASS[severity] ?? "text-info";
-		/* A NOTICE FOLDS, AND AN ERROR FOLDS WITHOUT HIDING ITS OWN FACT (design
-		 *  item 9: "a collapsed error that hides why is the bug being fixed"). The
-		 *  summary line IS the severity glyph plus the first line of the notice, so
-		 *  the fact stays on screen while the stack of machine prose does not. */
-		if (shouldFold(entry.text)) {
+		const woken = entry.details.notice_kind === "wake";
+		/* A LONG NOTICE FOLDS; AN ERROR NEVER DOES (review round 1, R1-2: the relay
+		 *  and the desktop both leave an error open — it is the fact the reader
+		 *  most needs, and a fold would cost exactly that). A folded wake notice
+		 *  keeps its cause on the bar (`woken` as meta, round 1 m5 / Q6), because
+		 *  the summary line is ellipsised and a cause at its end would be the
+		 *  first thing lost. */
+		if (severity !== "error" && shouldFold(entry.text)) {
+			const summary = firstLine(entry.text);
 			return (
 				<View className="px-4 py-1" testID={testID}>
 					<CollapsedRow
 						glyph={glyph}
 						glyphClass={ink}
-						summary={firstLine(entry.text)}
-						accessibilityLabel={entry.text}
+						summary={summary}
+						meta={woken ? "woken" : undefined}
+						accessibilityLabel={woken ? `${summary}, woken` : summary}
+						{...fold}
 					>
-						<Text className="min-w-0 flex-1 text-body-sm text-ink">
-							{entry.text}
-							{entry.details.notice_kind === "wake" ? (
-								<Text className="text-ink-muted"> · woken</Text>
-							) : null}
-						</Text>
+						<Text className="text-body-sm text-ink">{entry.text}</Text>
 					</CollapsedRow>
 					{anchors}
 				</View>
@@ -280,9 +275,7 @@ const TranscriptRowImpl = ({
 					{entry.text}
 					{/* A wake notice is the one notice whose CAUSE the reader must see: it
 					    explains why a session they thought was idle is answering. */}
-					{entry.details.notice_kind === "wake" ? (
-						<Text className="text-ink-muted"> · woken</Text>
-					) : null}
+					{woken ? <Text className="text-ink-muted"> · woken</Text> : null}
 				</Text>
 				{anchors}
 			</View>
@@ -338,18 +331,49 @@ const TranscriptRowImpl = ({
 	 *  complaint is precisely that a peer message ate the screen. A body under
 	 *  that budget keeps today's treatment and grows no chevron — a fold that
 	 *  hides nothing is chrome that lies about there being more. */
+	/* The two lines the unfolded row carries beside its body, built once so a
+	 *  fold can never drop one (review round 1, R1-3): the agent route — a
+	 *  supplied job ID owns it; a sender session ID is not that coordinate and
+	 *  must never stand in for one — and a hub receipt's direction / Job line. */
+	const openAgent =
+		onOpenAgent && kind === "subagent" && entry.details.job_id ? (
+			<Text
+				className="text-meta-read text-accent"
+				onPress={() => onOpenAgent(entry.details.job_id ?? "")}
+			>
+				open
+			</Text>
+		) : null;
+	const route =
+		hub && entry.details.direction ? (
+			<Text className="text-meta-read text-ink-muted">
+				{entry.details.direction}
+				{entry.details.job_id && entry.details.label
+					? ` · Job ${entry.details.job_id}`
+					: ""}
+			</Text>
+		) : null;
 	if (shouldFold(body)) {
+		const summary = firstLine(body);
+		/* Named by kind and sender and the summary, not the whole body (UX round
+		 *  1, U7): a screen reader reading every paragraph of a folded row gets
+		 *  nothing from the fold. The body is read from the expanded children. */
+		const named = who === label ? label : `${label} ${who}`;
+		const spoken = [`${named}: ${summary}`, ...intent].join(", ");
 		return (
 			<View className="px-4 py-1" testID={testID}>
 				<CollapsedRow
 					glyph={kind === "peer" ? "↔" : "↳"}
 					glyphClass={kind === "subagent" ? "text-ink-dim" : "text-accent"}
 					label={who}
-					summary={firstLine(body)}
+					summary={summary}
 					meta={intent.join(" · ")}
-					accessibilityLabel={who.length > 0 ? `${who}: ${body}` : body}
+					accessibilityLabel={spoken}
+					action={openAgent}
+					{...fold}
 				>
-					<Text className="text-body-sm text-ink">{body}</Text>
+					{route}
+					<Text className="text-body-read text-ink">{body}</Text>
 					{images}
 				</CollapsedRow>
 				{anchors}
@@ -365,33 +389,17 @@ const TranscriptRowImpl = ({
 				)}
 			>
 				<View className="flex-row items-center gap-1">
-					<Text className="text-meta text-ink-dim" aria-hidden>
+					<Text className="text-meta-read text-ink-dim" aria-hidden>
 						{kind === "peer" ? "↔" : "↳"}
 					</Text>
-					<Text className="text-meta text-ink-dim" numberOfLines={1}>
+					<Text className="text-meta-read text-ink-dim" numberOfLines={1}>
 						{who}
 						{intent.length ? ` · ${intent.join(" · ")}` : ""}
 					</Text>
-					{/* A supplied job ID owns the agent route. A sender session ID is
-					    not that coordinate and must never stand in for one. */}
-					{onOpenAgent && kind === "subagent" && entry.details.job_id ? (
-						<Text
-							className="text-meta text-accent"
-							onPress={() => onOpenAgent(entry.details.job_id ?? "")}
-						>
-							open
-						</Text>
-					) : null}
+					{openAgent}
 				</View>
-				{hub && entry.details.direction ? (
-					<Text className="text-meta text-ink-muted">
-						{entry.details.direction}
-						{entry.details.job_id && entry.details.label
-							? ` · Job ${entry.details.job_id}`
-							: ""}
-					</Text>
-				) : null}
-				<Text className="text-body-sm text-ink">{body}</Text>
+				{route}
+				<Text className="text-body-read text-ink">{body}</Text>
 				{images}
 			</View>
 			{anchors}

@@ -13,10 +13,12 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  * rather than about pixels. The primitive's own behaviour — one line, press to
  * expand in place, `aria-expanded` — is `collapsed-row.test.ts`.
  *
- * The three never-collapsible kinds are asserted here as absences, which is the
- * only way to state "never": the assistant's answer (it is the page), an `ask`
- * (it is a gate), and the tool rows (already one-line disclosures of their own,
- * `tool-row.tsx`'s D8 — folding them again would nest one fold in another).
+ * The never-collapsible kinds are asserted here as absences, which is the only
+ * way to state "never": the assistant's answer (it is the page), the reader's
+ * own prompt and steers and every error notice (review round 1, R1-2 / U1 / D2:
+ * the relay and the desktop both keep them open), a settled `ask` receipt and
+ * the tool rows (already one-line disclosures of their own — folding them
+ * again would nest one fold in another).
  */
 
 type FoldSeen = {
@@ -24,6 +26,8 @@ type FoldSeen = {
 	label?: string;
 	summary: string;
 	meta?: string;
+	accessibilityLabel?: string;
+	action?: unknown;
 };
 
 const folds = vi.hoisted(() => ({ seen: [] as FoldSeen[] }));
@@ -55,14 +59,18 @@ vi.mock(
 			>();
 		return {
 			...actual,
-			CollapsedRow: (props: FoldSeen) => {
+			/* Recorded, and its expanded content drawn as if open — so an
+			 *  assertion can ask what the reader gets once they expand it. */
+			CollapsedRow: (props: FoldSeen & { children?: unknown }) => {
 				folds.seen.push({
 					glyph: props.glyph,
 					label: props.label,
 					summary: props.summary,
 					meta: props.meta,
+					accessibilityLabel: props.accessibilityLabel,
+					action: props.action,
 				});
-				return null;
+				return (props.children ?? null) as never;
 			},
 		};
 	},
@@ -113,13 +121,21 @@ const entry = (over: Partial<TranscriptEntry>): TranscriptEntry => ({
 let dom: DomShim | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
 
-const render = async (row: TranscriptEntry) => {
+const render = async (
+	row: TranscriptEntry,
+	extra: { onOpenAgent?: (jobId: string) => void } = {},
+) => {
 	folds.seen.length = 0;
 	await act(async () =>
-		root?.render(createElement(TranscriptRow, { entry: row })),
+		root?.render(createElement(TranscriptRow, { entry: row, ...extra })),
 	);
 	return folds.seen;
 };
+
+type TextNode = { nodeValue?: unknown; childNodes?: TextNode[] };
+/** Every string the row put in the tree, in order. */
+const textOf = (node: TextNode): string =>
+	String(node.nodeValue ?? "") + (node.childNodes ?? []).map(textOf).join("");
 
 beforeEach(() => {
 	dom = installDomShim();
@@ -160,11 +176,9 @@ describe("which event kinds fold", () => {
 		["notice", { kind: "notice", text: LONG }],
 		["compaction", { kind: "compaction", text: LONG }],
 		[
-			"error notice",
-			{ kind: "notice", text: LONG, details: { severity: "error" } },
+			"warning notice",
+			{ kind: "notice", text: LONG, details: { severity: "warning" } },
 		],
-		["long sent message", { kind: "user", text: LONG }],
-		["long steer", { kind: "steer", text: LONG }],
 	] as [string, Partial<TranscriptEntry>][])(
 		"folds a %s to one line",
 		async (_name, over) => {
@@ -173,6 +187,76 @@ describe("which event kinds fold", () => {
 			expect(seen[0]?.summary).toBe(firstLine(String(over.text)));
 		},
 	);
+
+	it.each([
+		["long sent message", { kind: "user", text: LONG }],
+		["multi-line sent message", { kind: "user", text: "one\ntwo\nthree" }],
+		["long steer", { kind: "steer", text: LONG }],
+		[
+			"error notice",
+			{
+				kind: "notice",
+				text: `${LONG}\n${LONG}`,
+				details: { severity: "error" },
+			},
+		],
+	] as [string, Partial<TranscriptEntry>][])(
+		"never folds a %s, at any length (R1-2 / U1 / D2)",
+		async (_name, over) => {
+			expect(await render(entry(over))).toHaveLength(0);
+			// …and the whole text is on screen.
+			expect(textOf(dom?.container as TextNode)).toContain(String(over.text));
+		},
+	);
+
+	it("keeps a folded wake notice's cause on the bar (m5 / Q6)", async () => {
+		const seen = await render(
+			entry({ kind: "notice", text: LONG, details: { notice_kind: "wake" } }),
+		);
+		expect(seen[0]?.meta).toBe("woken");
+		expect(seen[0]?.accessibilityLabel).toContain("woken");
+	});
+
+	it("keeps a folded subagent row's open route and its hub line (R1-3)", async () => {
+		const opened: string[] = [];
+		const seen = await render(
+			entry({
+				kind: "subagent_message",
+				text: LONG,
+				details: {
+					direction: "to_parent",
+					job_id: "job-7",
+					label: "coder",
+				},
+			}),
+			{ onOpenAgent: (jobId) => opened.push(jobId) },
+		);
+		expect(seen).toHaveLength(1);
+		// The route lives on the bar, so it is there folded AND expanded.
+		const action = seen[0]?.action as {
+			props: { onPress: () => void; children: string };
+		};
+		expect(action.props.children).toBe("open");
+		action.props.onPress();
+		expect(opened).toEqual(["job-7"]);
+		// The expanded body carries the direction / Job line the unfolded row had.
+		const drawn = textOf(dom?.container as TextNode);
+		expect(drawn).toContain("to_parent · Job job-7");
+		expect(drawn).toContain(LONG);
+	});
+
+	it("names a folded row by kind, sender and summary, not its whole body (U7)", async () => {
+		const seen = await render(
+			entry({
+				kind: "peer_message",
+				text: `first line\n${LONG}`,
+				details: {
+					sender: { conversation_name: "reviewer", session_id: "s-2" },
+				},
+			}),
+		);
+		expect(seen[0]?.accessibilityLabel).toBe("peer reviewer: first line");
+	});
 
 	it("keeps a short sent message as it was, with no chevron", async () => {
 		expect(await render(entry({ kind: "user", text: SHORT }))).toHaveLength(0);

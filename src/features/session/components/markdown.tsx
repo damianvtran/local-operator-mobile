@@ -47,12 +47,14 @@ import { cx } from "@/ui/variants";
  * bubble separates a thing from other things, and the answer is the page.
  */
 
-/** The message body's role: `body-sm` 14 pt, the relay's own `--text-body` step
- *  (0.875rem at a 16 px root — design item 11). It used to be `body-lg` 17,
- *  which is a HERO step: 1.31x the tool trace beside it, where the relay is
- *  14/13 = 1.08. The operator's report — "the normal message text feels a bit
- *  large relative to the text from the tool traces" — is that ratio. */
-const MESSAGE_BODY_CLASS = "text-body-sm text-ink";
+/** The message body's role: `body-read` 14 pt / 1.55, the relay's own
+ *  `--text-body` step and reading leading (0.875rem at a 16 px root — design
+ *  item 11). It used to be `body-lg` 17 beside a 14 pt tool-trace headline:
+ *  17/14 = 1.21x, where the relay is 14/13 = 1.08x. The operator's report — "the
+ *  normal message text feels a bit large relative to the text from the tool
+ *  traces" — is that ratio; with the trace on `trace` 13 (`tool-row.tsx`) it is
+ *  now the relay's 1.08x (review round 1, m1). */
+const MESSAGE_BODY_CLASS = "text-body-read text-ink";
 
 const spanClass = (span: InlineSpan): string =>
 	cx(
@@ -562,7 +564,7 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
 							<View key={index} className="gap-1">
 								{block.items.map((item, itemIndex) => (
 									<View key={itemIndex} className="flex-row gap-2">
-										<Text className="text-body-sm text-ink-dim" aria-hidden>
+										<Text className="text-body-read text-ink-dim" aria-hidden>
 											{block.ordered ? `${itemIndex + 1}.` : "•"}
 										</Text>
 										<View className="min-w-0 flex-1">

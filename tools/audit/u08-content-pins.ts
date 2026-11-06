@@ -163,6 +163,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for PR #176 review round 1's remediation, with --print.
+	 * `design/tokens` moves for three new type steps (`body-read` 14/1.55,
+	 * `trace` 13/1.5, `meta-read` 12/1.45 — the relay's transcript steps) and
+	 * the generated preset/preview CSS; `src` moves for the remediation itself
+	 * (fade stop order, the sent-message and error folds removed, list-owned fold
+	 * state, gesture-only rail presence, the reuse fix and the type steps
+	 * applied). Fixture bytes, fonts, instrument modules and input pins are
+	 * untouched. As with the round-0 re-pin below, this is source admission, NOT
+	 * evidence that U-08's rendered geometry proof passed: it must be re-captured
+	 * against this tree. */
 	/* Re-pinned 2026-11-06 for the transcript design pass: type parity, collapsing,
 	 * edge fades, the held-scroll rail and row-level memoisation. `src` moves
 	 * because the transcript slice itself changed — the message body steps from
@@ -405,7 +415,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"1be11fc262b37ae25b54b87171233ec62e56e8263543beccdfc7626bf80a5d50",
+		"00e3465635f6371591759f7ad99e7d33bec47c7e338483d1ed55373eb7747f05",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -588,7 +598,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "e70b2c89c9ff764df139707fccb9fa203d71fd1a2761883d04eeb8227804e664",
+	src: "ea9be79c3c2ab5d615a5039f6afe697bfa8810fd5fe1b5ed5aefd25f5bacdac4",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

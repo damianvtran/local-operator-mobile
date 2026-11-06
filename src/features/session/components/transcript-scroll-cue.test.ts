@@ -86,6 +86,27 @@ vi.mock("react-native", async () => {
 	};
 });
 
+/* The fade's gradient stops, as the band hands them to the SVG — recorded per
+ *  band so the order can be asserted on the drawing, not only on the helper. */
+const svg = vi.hoisted(() => ({
+	stops: [] as { offset: string; stopOpacity: number }[],
+}));
+vi.mock("react-native-svg", async () => {
+	const passthrough = ({ children }: { children?: unknown }) =>
+		(children ?? null) as never;
+	return {
+		__esModule: true,
+		default: passthrough,
+		Defs: passthrough,
+		LinearGradient: passthrough,
+		Rect: () => null,
+		Stop: (props: { offset: string; stopOpacity: number }) => {
+			svg.stops.push({ offset: props.offset, stopOpacity: props.stopOpacity });
+			return null;
+		},
+	};
+});
+
 vi.mock("lucide-react-native", () => {
 	const icon = () => null;
 	return {
@@ -107,11 +128,15 @@ vi.mock("@/ui/variants", () => ({
 const {
 	createScrollPresence,
 	edgeFadeLevels,
+	edgeFadeStops,
 	RAIL_LINGER_MS,
 	TRANSCRIPT_FADE_PT,
 } = await import("@/features/session/transcript-presence");
 const { CheckpointRail } = await import(
 	"@/features/session/components/checkpoint-rail"
+);
+const { TranscriptEdgeFades } = await import(
+	"@/features/session/components/transcript-edge-fades"
 );
 
 const tick = (
@@ -167,6 +192,32 @@ describe("the edge fades", () => {
 	});
 });
 
+describe("the edge fades' direction (design round 1, D1)", () => {
+	it("is opaque at the screen edge and clear toward the content", () => {
+		// Gradients run top → bottom: offset 0 is the band's top.
+		expect(edgeFadeStops("top")).toEqual([1, 0]); // top band: edge first
+		expect(edgeFadeStops("bottom")).toEqual([0, 1]); // bottom band: edge last
+	});
+
+	it("draws both bands with that stop order", async () => {
+		svg.stops.length = 0;
+		const dom = installDomShim();
+		vi.stubGlobal("requestAnimationFrame", () => 0);
+		const root = createRoot(dom.container as Element);
+		await act(async () => root.render(createElement(TranscriptEdgeFades)));
+		// Top band renders first, then the bottom band; two stops each.
+		expect(svg.stops).toEqual([
+			{ offset: "0", stopOpacity: 1 },
+			{ offset: "1", stopOpacity: 0 },
+			{ offset: "0", stopOpacity: 0 },
+			{ offset: "1", stopOpacity: 1 },
+		]);
+		await act(async () => root.unmount());
+		dom.dispose();
+		vi.unstubAllGlobals();
+	});
+});
+
 describe("the rail's presence signal", () => {
 	beforeEach(() => vi.useFakeTimers());
 	afterEach(() => vi.useRealTimers());
@@ -181,12 +232,14 @@ describe("the rail's presence signal", () => {
 		presence.dispose();
 	});
 
-	it("comes up when the offset moves and goes after it settles", () => {
+	it("comes up for a reader's drag and goes a linger after it settles", () => {
 		const presence = createScrollPresence();
 		const seen: boolean[] = [];
 		presence.subscribe((visible) => seen.push(visible));
+		presence.setHeld(true);
 		presence.noteMovement(40);
 		expect(presence.readVisible()).toBe(true);
+		presence.setHeld(false);
 		vi.advanceTimersByTime(RAIL_LINGER_MS - 1);
 		expect(presence.readVisible()).toBe(true);
 		vi.advanceTimersByTime(1);
@@ -195,20 +248,57 @@ describe("the rail's presence signal", () => {
 		presence.dispose();
 	});
 
-	it("stays up while the offset keeps moving, and ignores a repeated offset", () => {
+	it("never shows for a scroll the app made (the tail pin while a turn streams)", () => {
+		/* Round 1, U3 / m2 / Q4: `pinTail` → `scrollToOffset` reaches `onScroll`
+		 *  like any other offset, once per streamed growth. With no drag and no
+		 *  momentum, none of it is the reader's, so the rail stays down for the
+		 *  whole stream. */
 		const presence = createScrollPresence();
 		const seen: boolean[] = [];
 		presence.subscribe((visible) => seen.push(visible));
-		presence.noteMovement(10);
-		vi.advanceTimersByTime(RAIL_LINGER_MS / 2);
-		presence.noteMovement(20);
-		vi.advanceTimersByTime(RAIL_LINGER_MS / 2);
-		expect(presence.readVisible()).toBe(true);
-		// A platform that re-delivers the same event must not restart the linger.
-		presence.noteMovement(20);
-		vi.advanceTimersByTime(RAIL_LINGER_MS);
+		for (let growth = 1; growth <= 40; growth += 1) {
+			presence.noteMovement(1000 + growth * 18);
+			vi.advanceTimersByTime(100);
+		}
 		expect(presence.readVisible()).toBe(false);
-		expect(seen).toEqual([true, false]);
+		expect(seen).toEqual([]);
+		presence.dispose();
+	});
+
+	it("stays up while a flick coasts, and lingers from the moment it stops", () => {
+		const presence = createScrollPresence();
+		presence.setHeld(true);
+		presence.noteMovement(10);
+		presence.setHeld(false);
+		presence.setCoasting(true);
+		for (let step = 1; step <= 30; step += 1) {
+			presence.noteMovement(10 + step * 40);
+			vi.advanceTimersByTime(100);
+		}
+		// 3 s of glide: longer than a linger, and still up.
+		expect(presence.readVisible()).toBe(true);
+		presence.setCoasting(false);
+		vi.advanceTimersByTime(RAIL_LINGER_MS - 1);
+		expect(presence.readVisible()).toBe(true);
+		vi.advanceTimersByTime(1);
+		expect(presence.readVisible()).toBe(false);
+		presence.dispose();
+	});
+
+	it("does not restart the linger for a repeated offset", () => {
+		/* Round 1, m3 / Q3 / U8. The repeat lands INSIDE the first linger and the
+		 *  assertion is at that linger's own end: a re-arm would hold the rail up
+		 *  until RAIL_LINGER_MS after the repeat, so this distinguishes the two
+		 *  behaviours (the round-1 version advanced a full linger after the
+		 *  repeat, which passed either way). */
+		const presence = createScrollPresence();
+		presence.setHeld(true);
+		presence.noteMovement(20);
+		presence.setHeld(false);
+		vi.advanceTimersByTime(RAIL_LINGER_MS - 500);
+		presence.noteMovement(20);
+		vi.advanceTimersByTime(500);
+		expect(presence.readVisible()).toBe(false);
 		presence.dispose();
 	});
 
@@ -226,7 +316,8 @@ describe("the rail's presence signal", () => {
 
 	it("leaves no timer behind when disposed mid-linger", () => {
 		const presence = createScrollPresence();
-		presence.noteMovement(5);
+		presence.setHeld(true);
+		presence.setHeld(false);
 		presence.dispose();
 		expect(vi.getTimerCount()).toBe(0);
 	});
@@ -267,7 +358,7 @@ describe("the rail draws only while the transcript moves", () => {
 		);
 		// At rest: the drawn column exists but is invisible — no tick in the frame.
 		expect(animated.value?.__getValue()).toBe(0);
-		await act(async () => presence.noteMovement(30));
+		await act(async () => presence.setHeld(true));
 		// The tween ran on the value the view holds, with no re-render in between.
 		expect(animated.value?.__getValue()).toBe(1);
 		presence.dispose();

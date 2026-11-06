@@ -396,6 +396,33 @@ export const TranscriptList = ({
 		});
 	}, []);
 
+	/*
+	 * ONE ROW'S FOLD (`collapsed-row.tsx`), OWNED HERE AND KEYED BY ROW ID.
+	 *
+	 * Kept apart from `readerExpanded` on purpose: that set feeds the condense
+	 * and group plans, and a row fold changes neither — re-planning the whole
+	 * transcript to open one peer message would be the per-frame cost this file
+	 * exists to avoid. Held at list scope rather than in the row because
+	 * windowing unmounts rows: a fold kept in the row's own state came back
+	 * closed after a few screens of scrolling, and the row's height changed under
+	 * the anchors (review round 1, Q5 / U6 / m4). Reset on a session switch with
+	 * the turn folds.
+	 */
+	const [rowOpen, setRowOpen] = useState<ReadonlySet<string>>(NO_TURNS);
+	/* Set by a reader's own expand or collapse, consumed by the content-size
+	 *  change that toggle causes: see `onContentSizeChange`. */
+	const foldResizeRef = useRef(false);
+	const toggleRowOpen = useCallback((id: string, open: boolean) => {
+		foldResizeRef.current = true;
+		setRowOpen((current) => {
+			if (current.has(id) === open) return current;
+			const next = new Set(current);
+			if (open) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	}, []);
+
 	const policy = useMemo(
 		// The window's unit is what the FlatList MOUNTS, so it counts the plan's
 		// items: a condensed turn mounts its bar, not the work behind it.
@@ -597,12 +624,31 @@ export const TranscriptList = ({
 	useEffect(() => {
 		heightsRef.current.clear();
 		setReaderExpanded(NO_TURNS);
+		setRowOpen(NO_TURNS);
 		const elsewhere =
 			scrollAnchor === "top" || scrollPlaces.get(sessionId)?.atTail === false;
 		setOpenElsewhere(elsewhere);
 		atTail.current = !elsewhere;
 		recompute();
 	}, [sessionId, recompute, scrollAnchor]);
+
+	/* A FIND LANDING OPENS THE ROW IT LANDS ON (UX round 1, U2): a hit on line 3
+	 *  of a folded peer message landed on a one-line summary without the word.
+	 *  The render below already treats the highlighted row as open, so the
+	 *  landing frame shows the body; this records it so the row STAYS open once
+	 *  the highlight moves on rather than snapping shut under the reader.
+	 *  Declared AFTER the session-switch effect on purpose: effects run in
+	 *  declaration order, and that one clears the set — a landing that arrives
+	 *  with the mount must be recorded after the clear, not before it. */
+	useEffect(() => {
+		if (highlightId === null) return;
+		setRowOpen((current) => {
+			if (current.has(highlightId)) return current;
+			const next = new Set(current);
+			next.add(highlightId);
+			return next;
+		});
+	}, [highlightId]);
 
 	/* ------------------------------------------------------------ the find jump --
 	 *
@@ -819,7 +865,9 @@ export const TranscriptList = ({
 			/* The transient rail: this handler is the only place that knows the
 			 *  offset moved, and the presence object is what the rail subscribes to
 			 *  (`transcript-presence.ts`) — no state, so no re-render of this list or
-			 *  the screen it lives in. */
+			 *  the screen it lives in. Every offset is reported, the tail pin's
+			 *  included; the presence itself discards the ones no reader gesture
+			 *  made. */
 			presence?.noteMovement(contentOffset.y);
 			driveFades();
 			recompute();
@@ -835,6 +883,15 @@ export const TranscriptList = ({
 	}, [presence]);
 	const onScrollEndDrag = useCallback(() => {
 		presence?.setHeld(false);
+	}, [presence]);
+	/* The glide after a flick is still the reader's gesture: the presence counts
+	 *  movement only inside a drag or its momentum, which is what keeps the tail
+	 *  pin's own scrolls from raising the rail (round 1, U3). */
+	const onMomentumScrollBegin = useCallback(() => {
+		presence?.setCoasting(true);
+	}, [presence]);
+	const onMomentumScrollEnd = useCallback(() => {
+		presence?.setCoasting(false);
 	}, [presence]);
 
 	/**
@@ -925,6 +982,27 @@ export const TranscriptList = ({
 						recompute();
 						return;
 					}
+				}
+				if (foldResizeRef.current) {
+					/* A READER'S EXPAND IS NOT CONTENT ARRIVING (review round 1, m4 /
+					 *  U4). Opening a fold at the tail grew the content, the tail pin
+					 *  below followed it, and the header the reader just tapped slid
+					 *  up out of view. So the resize a toggle causes keeps the
+					 *  reader's offset: they stay pinned only if they were pinned AND
+					 *  the end is still inside the tail band (a short body), otherwise
+					 *  they have left the tail and streaming no longer drags them. A
+					 *  toggle can only ever take a reader OFF the tail, never on. */
+					foldResizeRef.current = false;
+					const distance =
+						height - factsRef.current.offsetY - viewportRef.current;
+					atTail.current = atTail.current && distance <= TAIL_BAND_PT;
+					scrollPlaces.set(sessionId, {
+						offset: factsRef.current.offsetY,
+						atTail: atTail.current,
+					});
+					if (atTail.current) pinTail();
+					recompute();
+					return;
 				}
 				if (atTail.current) {
 					/* The tail pin, and why it is a CLAMP rather than `scrollToEnd`.
@@ -1025,6 +1103,8 @@ export const TranscriptList = ({
 						onOpenAgent={onOpenAgent}
 						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
+						open={rowOpen.has(item.id) || item.id === highlightId}
+						onToggleOpen={toggleRowOpen}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -1051,6 +1131,8 @@ export const TranscriptList = ({
 		},
 		[
 			toggleExpansion,
+			rowOpen,
+			toggleRowOpen,
 			streamingRowId,
 			loadImage,
 			onOpenAgent,
@@ -1105,6 +1187,8 @@ export const TranscriptList = ({
 				onScroll={onScroll}
 				onScrollBeginDrag={onScrollBeginDrag}
 				onScrollEndDrag={onScrollEndDrag}
+				onMomentumScrollBegin={onMomentumScrollBegin}
+				onMomentumScrollEnd={onMomentumScrollEnd}
 				scrollEventThrottle={16}
 				onContentSizeChange={onContentSizeChange}
 				/* The two props that make the FIRST frame the one the reader came for.
