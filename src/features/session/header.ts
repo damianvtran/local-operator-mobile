@@ -57,10 +57,10 @@ const HEADER_GUTTERS_PT = 32;
  * `LEADING_GAP_PT` is the `gap-1` on that cluster, and the 48s are the web
  * `IconButton` box the find lever and the back control both take. If the cluster
  * changes, this sum is the one place that must move with it. */
-const NAVIGATION_MARK_PT = 28;
-const LEADING_GAP_PT = 4;
-const HEADER_CHROME_PT =
-	HEADER_GUTTERS_PT + 48 + LEADING_GAP_PT + NAVIGATION_MARK_PT + 8 + 48 + 8;
+/* The brand mark LEFT the session header in the 2026-11-04 chrome pass
+ * (decision record §2.3, D-S2), so the leading cluster is the back control
+ * alone and the mark's 28 pt + its 4 pt gap are no longer charged. */
+const HEADER_CHROME_PT = HEADER_GUTTERS_PT + 48 + 8 + 48 + 8;
 
 /**
  * **The session-health control's own chrome on the TITLE line** (review round 1
@@ -185,6 +185,17 @@ const STACKED_WRAP_SLACK = 4;
  * cannot give this component without a canvas.
  */
 export const DISPLAY_ADVANCE_PT = 14.06;
+
+/**
+ * The advance the title is actually budgeted with since the 2026-11-04 chrome
+ * pass: the title is the `heading` step (17 pt / 600) instead of `display`
+ * (28 pt / 600) — the relay's header (decision record §2.3, D-S2). Same face,
+ * same weight, so the measured widest display advance scales linearly with the
+ * size: 14.06 × 17/28 = 8.54 pt per character. Derived, not re-measured; the
+ * rendered frames are the check that it does not under-charge (an over-budget
+ * name would show the platform's own tail ellipsis after the middle one).
+ */
+export const TITLE_ADVANCE_PT = (DISPLAY_ADVANCE_PT * 17) / 28;
 
 /* THE STATE WORD BESIDE THE TITLE IN SHORT LANDSCAPE (review round 4, D15 /
  * QA N3). Since the Q9 fix the word rides the title's own row there, so it takes
@@ -326,7 +337,7 @@ export const headerTitleChars = (
 		 *  line. The kit's 8-char floor still preserves both ends. */
 		const perLine = Math.max(
 			1,
-			Math.floor(titleRow / (DISPLAY_ADVANCE_PT * effectiveScale)),
+			Math.floor(titleRow / (TITLE_ADVANCE_PT * effectiveScale)),
 		);
 		return Math.max(MIN_HEADER_NAME_CHARS, perLine * 2 - STACKED_WRAP_SLACK);
 	}
@@ -336,7 +347,7 @@ export const headerTitleChars = (
 		row - HEADER_CHROME_PT * chromeScale - extrasPt(extras, chromeScale);
 	return Math.max(
 		MIN_HEADER_NAME_CHARS,
-		Math.floor(available / (DISPLAY_ADVANCE_PT * effectiveScale)),
+		Math.floor(available / (TITLE_ADVANCE_PT * effectiveScale)),
 	);
 };
 

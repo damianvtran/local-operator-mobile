@@ -37,9 +37,20 @@ describe("native conversation chrome", () => {
 	 * target and 20 read light beside it (user feedback on the polish round). The
 	 * ladder in `IconButton` gained 22 as a named step for exactly this, so the
 	 * assertion pins the number the design settled on rather than a range. */
+	/* The home ☰ is a Pressable now (it carries the unread count as a corner
+	 *  badge) and the sidebar's search is a pill; both still paint their glyph at
+	 *  22, asserted below. The IconButton case keeps the session's find lever and
+	 *  the sidebar's new-chat button. */
+	it("keeps the home ☰ and the sidebar's search pill glyphs at their sizes", () => {
+		const home = source("src/features/home/home.tsx");
+		expect(home).toContain("<Menu color={menuInk} size={22} />");
+		const pane = source("src/features/sessions/conversations-pane.tsx");
+		expect(pane).toContain(
+			"<Search size={18} color={destinationInk} aria-hidden />",
+		);
+	});
 	it.each([
-		["src/features/home/home.tsx", "homeSidebar"],
-		["src/features/sessions/conversations-pane.tsx", "sidebarSearch"],
+		["src/features/sessions/conversations-pane.tsx", "sidebarNewChat"],
 		["app/(app)/session/[id].tsx", "sessionFind"],
 	])("keeps the native chrome glyph at 22 in %s", (path, id) => {
 		// Icon render callbacks contain >, so inspect the complete caller's local span.
@@ -57,8 +68,19 @@ describe("final design audit wiring", () => {
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		const at = source.indexOf("testID={CONTROL.homeTargetFolder}");
-		const chip = source.slice(source.lastIndexOf("<Chip", at), at);
+		/* The home passes its folder as DATA since the 2026-11-04 composer
+		 *  restructure (the meta line decides glyph-only vs path); the chip itself
+		 *  is drawn by the composer, so its paint is asserted there. */
+		expect(source).toContain("testID: CONTROL.homeTargetFolder");
+		const composer = readFileSync(
+			new URL(
+				"../../features/session/components/composer.tsx",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		const at = composer.indexOf("testID={folderChip.testID}");
+		const chip = composer.slice(composer.lastIndexOf("<Chip", at), at);
 		// D2: one row of disclosures must not mix a filled bordered chip with flat text.
 		expect(chip).toContain("quiet");
 	});
@@ -88,9 +110,10 @@ describe("final design audit wiring", () => {
 			source.lastIndexOf("<Text", at),
 			source.indexOf("</Text>", at),
 		);
-		// D3: a one-line tail fit showed "127.0.0.1:498…" at large text.
+		// D3: a one-line tail fit showed "127.0.0.1:498…" at large text; a host:port
+		// still goes through `middleFit` inside `headerChipFit` (asserted there).
 		expect(block).toContain("numberOfLines={1}");
-		expect(block).toContain("middleFit(");
+		expect(block).toContain("headerChipFit(");
 	});
 });
 
@@ -105,6 +128,9 @@ describe("phone status surface wiring (D2 final)", () => {
 			"const { tray, inlineSecondary, statusSheet } = sessionStatusLayout(",
 		);
 		expect(screen).toContain("{tray ? (");
+		// ... on a portrait phone the tray row yields to the header subtitle and the
+		// chips above the composer (record 2026-11-04 §2.2, D-S3); short landscape keeps it.
+		expect(screen).toContain("tray && !compact && pendingViewProps === null");
 		// ... both panels open the SAME sheet there (not a dead disabled prop) ...
 		expect(screen.match(/statusSheet \? statusSheetOpen/g)?.length).toBe(2);
 		// ... and the old inline stack is not painted beside it.

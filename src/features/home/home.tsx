@@ -1,10 +1,11 @@
 import { useRouter } from "expo-router";
-import { Bell, BellDot, Menu, Settings } from "lucide-react-native";
+import { Bell, BellDot, Menu } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { ModelEntry, PromptImage } from "@/contracts";
+import type { ModelEntry } from "@/contracts";
 import { HeaderComputerChip } from "@/features/auth/computer-entry-points";
 import {
 	useConnection,
@@ -13,17 +14,12 @@ import {
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import {
-	headerBellShowsCount,
-	headerBellShowsDot,
-} from "@/features/home/header-fit";
-import {
 	connectDisabledReason,
 	foldersReadFailed,
-	refusedStartFallback,
 	startupQueueState,
 } from "@/features/home/home-copy";
 import { HomeStateMarkers } from "@/features/home/home-markers";
-import { HomeSplash } from "@/features/home/home-splash";
+import { HomeRecovery, HomeSplash } from "@/features/home/home-splash";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
@@ -39,10 +35,8 @@ import {
 import type { AttachSource } from "@/features/session/attach-rule";
 import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
-import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import type { ComposerControls } from "@/features/session/composer";
 import { composerCopy } from "@/features/session/composer";
-import { connectionView } from "@/features/session/connection-view";
 import { deviceOnline } from "@/features/session/runtime";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
@@ -53,7 +47,6 @@ import {
 import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
-import { RelayError } from "@/relay";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -62,11 +55,7 @@ import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
-import { Chip } from "@/ui/components/chip";
-import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { NavigationMark } from "@/ui/components/navigation-mark";
-import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
@@ -162,7 +151,7 @@ export default function Home({
 	const inboxEnabled = notificationsEnabled(
 		useListState((state) => state.capabilities),
 	);
-	const showToast = useUiStore((state) => state.showToast);
+	const _showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
 	const [optionsOpen, setOptionsOpen] = useState(false);
@@ -172,6 +161,7 @@ export default function Home({
 	const [running, setRunning] = useState(false);
 	const [models, setModels] = useState<ModelEntry[]>([]);
 	const [attaching, setAttaching] = useState(false);
+	const [editing, setEditing] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
 	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
 	const [directoriesFailed, setDirectoriesFailed] = useState(false);
@@ -201,6 +191,11 @@ export default function Home({
 		startup.snapshot.sessionId,
 	);
 	const { effectiveScale } = useTextScale();
+	/* The composer owns the bottom edge and pays this inset itself (record §2.2);
+	 *  `Screen` therefore pays none here (`bottomInset="child"`, its default for a
+	 *  non-scrolling screen). */
+	const insets = useSafeAreaInsets();
+	const menuInk = useTokenColor("ink-muted");
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
 	 * with `draft` — the copy already asks them to check the folder, and QA found the
@@ -208,7 +203,7 @@ export default function Home({
 	 * invalid selection). */
 	const selectionEditable =
 		startup.snapshot.phase === "draft" || startup.snapshot.phase === "refused";
-	const [problem, setProblem] = useState<string | null>(null);
+	const [problem, _setProblem] = useState<string | null>(null);
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
 	const fieldRef = useRef<TextInput | null>(null);
@@ -217,6 +212,19 @@ export default function Home({
 	const routed = route !== null;
 	const connected = routed && client !== null;
 	const offline = deviceOnline() === false;
+	const viewport = useWindowDimensions();
+	const homeRecovery =
+		busy || !coldStartSettled
+			? "restoring"
+			: refusal?.kind === "sign-in" || refusal?.kind === "account-mismatch"
+				? "auth"
+				: offline
+					? "offline"
+					: refusal !== null
+						? "error"
+						: !connected
+							? "no-host"
+							: null;
 
 	/* The relay's home directory is the target every first send uses, until the
 	 * reader goes through `/new` and picks another folder. Read once per client —
@@ -301,41 +309,6 @@ export default function Home({
 	/* The inbox's own number, from the same frame (contract §5.4). Same absence
 	 * rule: `null` draws no numeral, never a 0 the machine did not send. */
 	const inboxCount = inboxBadgeCount(inbox);
-
-	/* The banner: only the states the product has sentences for. A refusal renders
-	 * its own fuller surface below (and nothing here duplicates it); the
-	 * device-offline case is `connectionView`'s C4, built through the module that
-	 * owns the state vocabulary. The home has no session stream, so the list
-	 * stream's health is deliberately NOT passed: a rotation must never flash a
-	 * banner over the field the reader is typing into (C1). */
-	const bannerView = useMemo(
-		() =>
-			offline
-				? connectionView({
-						phase: "live",
-						stream: "idle",
-						lastEnd: undefined,
-						reconnectExpired: false,
-						online: false,
-						error: null,
-						entry: {
-							connected: false,
-							projection: null,
-							awaitingSnapshot: false,
-							version: null,
-							droppedFrames: 0,
-						},
-						stale: false,
-						ageS: null,
-						computerLabel: listLabel(computers, tunnelId, route),
-						computerLastSeenS: null,
-						phaseDetail: null,
-						phaseSurface: null,
-						ended: false,
-					})
-				: null,
-		[offline, computers, tunnelId, route],
-	);
 
 	const attach = useCallback(
 		(source: AttachSource) => {
@@ -486,45 +459,36 @@ export default function Home({
 			 *  home). `null` leaves it off, `undefined` takes `layout.measure`. */
 			measure={split ? undefined : null}
 		>
-			{refusal !== null ? (
-				<View className="px-4">
-					<RefusalSurface
-						kind={refusal.kind}
-						subject={refusal.subject}
-						detail={refusal.detail}
-						remedy={refusal.remedy}
-						retryAfterMs={refusal.retryAfterMs}
+			{/* One exclusive recovery story; a cached transcript is not an empty home.
+			 * Restoring is not evidence of expiry. No token/provider decisions here. */}
+			<View className="flex-1">
+				{homeRecovery ? (
+					<HomeRecovery
+						kind={homeRecovery}
+						host={listLabel(computers, tunnelId, route)}
+						detail={refusal?.detail ?? undefined}
 						onRetry={() => void retry()}
-						onUseAnotherAddress={() => router.push("/custom")}
+						onSignIn={() => router.push("/welcome")}
+						onConnect={() => router.push("/tunnels")}
 					/>
-				</View>
-			) : null}
+				) : null}
+				{startup.snapshot.sessionId ? (
+					<StartupTranscript
+						sessionId={startup.snapshot.sessionId}
+						onStreaming={setRunning}
+					/>
+				) : homeRecovery === null ? (
+					<HomeSplash
+						draft={draft}
+						editing={editing}
+						connected={connected}
+						onPick={setDraft}
+						onConnect={() => router.push("/tunnels")}
+						starting={starting}
+					/>
+				) : null}
+			</View>
 
-			{bannerView !== null ? (
-				<ConnectionBanner
-					view={bannerView}
-					onAction={(action) => {
-						if (action.kind === "retry") void retry();
-						if (action.kind === "sign-in") router.push("/welcome");
-						if (action.kind === "console") router.push("/tunnels");
-					}}
-				/>
-			) : null}
-
-			{startup.snapshot.sessionId ? (
-				<StartupTranscript
-					sessionId={startup.snapshot.sessionId}
-					onStreaming={setRunning}
-				/>
-			) : (
-				<HomeSplash
-					draft={draft}
-					connected={connected}
-					onPick={setDraft}
-					onConnect={() => router.push("/tunnels")}
-					starting={starting}
-				/>
-			)}
 			{/* State only, and only while there is something to say: the count is the
 			 *  composer chip's (UX U2), an unconfirmed start is named rather than
 			 *  described as "waiting" (UX U1), and the queued sheet stays one tap
@@ -579,6 +543,9 @@ export default function Home({
 				) : null}
 				<Composer
 					testID={SURFACE.homeComposer}
+					onEditingChange={setEditing}
+					onOpenQueue={() => setQueueOpen(true)}
+					suppressDisabledHint={homeRecovery !== null}
 					controls={controls}
 					draft={draft}
 					onDraftChange={setDraft}
@@ -609,38 +576,39 @@ export default function Home({
 					onResume={() => undefined}
 					error={startup.snapshot.error ?? composerError}
 					queuedCount={startup.snapshot.queue.length}
-					leadingChip={
-						homeDirectory !== null ? (
-							<Chip
-								label={homeShortened(
-									startup.snapshot.selection?.cwd ?? homeDirectory,
-									homeDirectory,
-								)}
-								onPress={() => {
-									setOptionPath(
-										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
-									);
-									setOptionModel(
-										models.find(
-											(model) =>
-												model.provider ===
-													startup.snapshot.selection?.provider &&
-												model.model_id === startup.snapshot.selection?.model_id,
-										) ?? topModel,
-									);
-									setOptionsOpen(true);
-								}}
-								/* The same quiet disclosure the model chip uses: one row of
-								 *  disclosures should not mix a filled, bordered chip with flat
-								 *  text (final audit, D2). Paint only — the 44 pt target, the
-								 *  hint and the options sheet behind it are unchanged. */
-								quiet
-								accessibilityLabel={`Working in ${homeDirectory}`}
-								accessibilityHint="Choose another folder"
-								testID={CONTROL.homeTargetFolder}
-							/>
-						) : null
+					/* The folder is data, not an element: the composer's meta line
+					 *  decides whether it paints the path or only the folder glyph
+					 *  (record §2.2 yield order). Paint, target, hint and the options
+					 *  sheet behind it are unchanged (final audit, D2). */
+					folderChip={
+						homeDirectory !== null
+							? {
+									label: homeShortened(
+										startup.snapshot.selection?.cwd ?? homeDirectory,
+										homeDirectory,
+									),
+									onPress: () => {
+										setOptionPath(
+											startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+										);
+										setOptionModel(
+											models.find(
+												(model) =>
+													model.provider ===
+														startup.snapshot.selection?.provider &&
+													model.model_id ===
+														startup.snapshot.selection?.model_id,
+											) ?? topModel,
+										);
+										setOptionsOpen(true);
+									},
+									accessibilityLabel: `Working in ${homeDirectory}`,
+									accessibilityHint: "Choose another folder",
+									testID: CONTROL.homeTargetFolder,
+								}
+							: null
 					}
+					bottomInset={insets.bottom}
 					modelChip={chips.model}
 					effortChip={null}
 					onOpenModels={() => {
@@ -670,6 +638,7 @@ export default function Home({
 			<Screen
 				testID={newSession ? SCREEN.newSession : SCREEN.home}
 				scroll={false}
+				headerDensity="home"
 				/* The cap comes off only when the split is real — the list pane then
 				 *  owns its own width and the measure belongs to the composer column
 				 *  (the old list screen's rule, kept: a cap on the whole screen squeezed
@@ -677,45 +646,51 @@ export default function Home({
 				capColumn={!split}
 				headerLeading={
 					split ? undefined : (
-						<View className="flex-row items-center gap-1">
-							<IconButton
-								accessibilityLabel="Open conversations"
-								onPress={() => setPanelOpen(true)}
-								icon={({ color, size }) => <Menu color={color} size={size} />}
-								size={22}
-								testID={CONTROL.homeSidebar}
-							/>
-							<NavigationMark />
+						/* ☰ with the unread count as a CORNER badge on the button itself
+						 *  (record §2.4, D-H2): the red "21" was a sibling of the brand
+						 *  mark, attached to no control. Inside the one 44 pt pressable it
+						 *  reads as "this opens what is new" and adds no width. The brand
+						 *  mark left the header (D-H3): three identity marks on one screen,
+						 *  and its 29 pt were what starved the computer chip (D-H1). */
+						<Pressable
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={
+								badgeCount !== null && badgeCount > 0
+									? `Open conversations, ${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`
+									: "Open conversations"
+							}
+							onPress={() => setPanelOpen(true)}
+							testID={CONTROL.homeSidebar}
+							className="items-center justify-center"
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+						>
+							<Menu color={menuInk} size={22} />
 							{badgeCount !== null && badgeCount > 0 ? (
-								<Badge
-									label={`${badgeCount}`}
-									tone="danger"
-									mono
-									/* Sighted readers get the numeral; assistive tech gets the sentence
-									 * it stands for — the row's own state word ("new", per
-									 * `rowAccessibilityLabel`) plus the count (ADR 0006 §1.4). */
-									accessibilityLabel={`${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`}
-								/>
+								<View
+									pointerEvents="none"
+									className="absolute"
+									style={{ top: 2, end: 0 }}
+								>
+									<Badge
+										label={countLabel(badgeCount)}
+										tone="danger"
+										mono
+										scale={effectiveScale}
+									/>
+								</View>
 							) : null}
-						</View>
+						</Pressable>
 					)
 				}
 				headerAction={
-					<View className="min-w-0 flex-1 flex-row items-center gap-2">
+					<View className="min-w-0 flex-1 flex-row items-center gap-1">
 						{/* The computer this will run on, and the switcher's primary entry
-						 *  point (ux-flows F5): `● Mac mini ▾`, opening the ONE sheet rather
-						 *  than navigating away. It keeps this slot's `min-w-0 flex-1` and
-						 *  its both-axis TOUCH_FLOOR (design round 9, D24) — see
-						 *  `HeaderComputerChip`; the name comes from the same saved/account-scoped
-						 *  selector the switcher sheet uses. The width floor is only honourable
-						 *  because the BELL yields its pill at large text (and the chip its
-						 *  chevron at the same step), so nothing overflows the 320 pt row. */}
+						 *  point. It takes ALL the width the ☰ and the bell leave — about
+						 *  281 pt on a 393 pt phone — so "Mac – Local Operator" reads whole
+						 *  (record §2.4: it read "M… Operator" beside the mark, the badge
+						 *  and the gear). The bell still yields its pill at large text
+						 *  (D24), so nothing overflows the 320 pt row. */}
 						<HeaderComputerChip testID={CONTROL.computersButton} />
-						{/* Settings is a GEAR, not the avatar (design D2): the avatar's initials
-						 *  came from the same label as the computer name beside it, and a
-						 *  host-shaped label fell to the `?` floor — legible as *Help*, not as
-						 *  Settings. The gear says what the control does; the accessible name
-						 *  still comes from the caller's label. */}
 						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
 						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
 						 *  button's box — an inert fifth control the reader tries to tap
@@ -724,7 +699,7 @@ export default function Home({
 						 *  94 pt² (audit U-08 on S4/idle), so the count is a trailing
 						 *  accessory INSIDE one pressable: a single 44 pt target, no
 						 *  overlap, and the number reads as part of the bell. */}
-						{inboxEnabled ? (
+						{inboxEnabled && viewport.width >= 360 && effectiveScale < 1.5 ? (
 							<Pressable
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={
@@ -735,42 +710,11 @@ export default function Home({
 								onPress={() => router.push("/notifications")}
 								testID={CONTROL.homeNotifications}
 								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-								className="flex-row items-center justify-center gap-1 px-2"
+								className="items-center justify-center"
 							>
-								<BellIcon
-									waiting={headerBellShowsDot(effectiveScale, inboxCount)}
-								/>
-								{/* THE PILL YIELDS FIRST, at and above 200 % text. The bell keeps
-								 *  its 44 pt target and its accessible name keeps the count
-								 *  ("Notifications, 120 unread"), while the ~55 pt the pill
-								 *  was taking goes to the computer switcher, which otherwise
-								 *  cannot hold its own floor (D24). Nothing is lost silently:
-								 *  the same number is on the rail's row inside the pane. */}
-								{inboxCount !== null &&
-								inboxCount > 0 &&
-								headerBellShowsCount(effectiveScale) ? (
-									<View testID={CONTROL.homeNotificationsCount}>
-										<Badge
-											/* THE APP'S ONE CAP: a four-digit count would widen the pill
-											 *  until it took width from the label (R7-02/D21). */
-											label={countLabel(inboxCount)}
-											/* The same 300 % step the rail's count passes (D25). */
-											scale={effectiveScale}
-											tone="warning"
-											emphasis
-											mono
-											accessibilityLabel={`${inboxCount} unread notifications`}
-										/>
-									</View>
-								) : null}
+								<BellIcon waiting={inboxCount !== null && inboxCount > 0} />
 							</Pressable>
 						) : null}
-						<IconButton
-							accessibilityLabel="Settings"
-							onPress={() => router.push("/settings")}
-							icon={({ color, size }) => <Settings color={color} size={size} />}
-							testID={CONTROL.settingsButton}
-						/>
 					</View>
 				}
 			>

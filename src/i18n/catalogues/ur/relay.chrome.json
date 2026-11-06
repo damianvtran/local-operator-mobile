@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "جواب نہیں دے رہا",
 	"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
 	"relay.chrome.session.resume": "جاری رکھیں",
-	"relay.chrome.session.resuming": "جاری ہو رہا…"
+	"relay.chrome.session.resuming": "جاری ہو رہا…",
+	"relay.chrome.session.subtitle.working": "کام جاری · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "کام جاری",
+	"relay.chrome.session.subtitle.waiting": "آپ کا انتظار",
+	"relay.chrome.session.subtitle.idle": "فارغ",
+	"relay.chrome.session.tray.tasks": "کام {done}/{total}",
+	"relay.chrome.session.tray.agents": "ایجنٹس {running}/{total}",
+	"relay.chrome.drawer.past": "گزشتہ سیشنز",
+	"relay.chrome.drawer.projects": "پروجیکٹس",
+	"relay.chrome.drawer.library": "لائبریری",
+	"relay.chrome.drawer.settings": "ترتیبات",
+	"relay.chrome.list.search_open": "تلاش",
+	"relay.chrome.list.search_label": "گفتگوئیں تلاش کریں",
+	"relay.chrome.row.tags": "ٹیگز",
+	"relay.chrome.row.more": "مزید",
+	"relay.chrome.drawer.open": "نیویگیشن کھولیں",
+	"relay.chrome.drawer.close": "نیویگیشن بند کریں"
 }

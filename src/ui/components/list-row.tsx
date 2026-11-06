@@ -346,8 +346,8 @@ export const ListRow = ({
 								wrapMarks && "flex-wrap",
 							)}
 						>
-							{/* The title yields first: `flex-1` + truncate, with every
-							 * count beside it `shrink-0`. The shimmer wraps the Text rather
+							{/* The title shares line 1 with the time alone, so it keeps the
+							 * row's width (D-B3). The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
 							 * (docs/design/components.md § 7) — the spinner in the slot is
 							 * the second channel, not the first. */}
@@ -367,53 +367,6 @@ export const ListRow = ({
 									{title}
 								</Text>
 							</Shimmer>
-							{/* One word slot. `approval`/`question` are danger; the two
-							 * receipts are muted, because neither is an error. */}
-							{statusWord ? (
-								<Text
-									testID={statusTestID}
-									className={`shrink-0 text-meta ${
-										pending ? "text-danger" : "text-ink-dim"
-									}`}
-								>
-									{statusWord}
-								</Text>
-							) : null}
-							{unread ? (
-								<Text className="shrink-0 text-meta text-accent">new</Text>
-							) : null}
-							{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
-							 *  deadline outranks a progress count, so when the strip is under
-							 *  pressure it is the agents/todos counts that yield, never this one —
-							 *  and no count is ever truncated (a dropped count is ABSENT; a
-							 *  truncated one is a valid-looking lie).
-							 *
-							 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open plus
-							 *  timed-out-and-answerable), so the chip says "asks" while the bar
-							 *  above a composer counts questions. The accessible name uses this
-							 *  surface's word for the set — "not a blocker" — because a queued ask
-							 *  is not a "waiting for you" state: the agent keeps working
-							 *  (design §5's header rule), and a reader who heard "waiting" beside a
-							 *  danger approval would rightly conclude the run was held. */}
-							{askCount > 0 ? (
-								<Text
-									className="shrink-0 text-mono-sm text-ink-dim"
-									testID={askBadgeTestID}
-									accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
-								>
-									{countLabel(askCount, "ask")}
-								</Text>
-							) : null}
-							{subagentCount > 0 && !progressCountsYield ? (
-								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{countLabel(subagentCount, "agent")}
-								</Text>
-							) : null}
-							{todoCount > 0 && !progressCountsYield ? (
-								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{countLabel(todoCount, "todo")}
-								</Text>
-							) : null}
 							{time !== undefined && time !== "" ? (
 								<Text
 									className="ms-auto shrink-0 text-meta text-ink-dim"
@@ -458,6 +411,72 @@ export const ListRow = ({
 						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
 						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
 						 *  is worse than a second line. */}
+						{/* LINE 2 LEADS WITH THE STATE (record §2.5, D-B3). The status word,
+						 *  "new" and the counts used to sit on line 1 beside the title, all
+						 *  `shrink-0`, so the TITLE was the item that yielded — "Ar…" while the
+						 *  metadata kept its full width (TestFlight 365). Line 1 is now title
+						 *  and time only; the state words open line 2, before the folder and
+						 *  model, which already yield (`metaLineFor`). The marks keep their
+						 *  own order and the asks-first rule below. */}
+						{statusWord ||
+						unread ||
+						askCount > 0 ||
+						(!progressCountsYield && (subagentCount > 0 || todoCount > 0)) ? (
+							<View
+								className={cx(
+									"flex-row items-center gap-2",
+									wrapMarks && "flex-wrap",
+								)}
+							>
+								{/* One word slot. `approval`/`question` are danger; the two
+								 * receipts are muted, because neither is an error. */}
+								{statusWord ? (
+									<Text
+										testID={statusTestID}
+										className={`shrink-0 text-meta ${
+											pending ? "text-danger" : "text-ink-dim"
+										}`}
+									>
+										{statusWord}
+									</Text>
+								) : null}
+								{unread ? (
+									<Text className="shrink-0 text-meta text-accent">new</Text>
+								) : null}
+								{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
+								 *  deadline outranks a progress count, so when the strip is under
+								 *  pressure it is the agents/todos counts that yield, never this one —
+								 *  and no count is ever truncated (a dropped count is ABSENT; a
+								 *  truncated one is a valid-looking lie).
+								 *
+								 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open plus
+								 *  timed-out-and-answerable), so the chip says "asks" while the bar
+								 *  above a composer counts questions. The accessible name uses this
+								 *  surface's word for the set — "not a blocker" — because a queued ask
+								 *  is not a "waiting for you" state: the agent keeps working
+								 *  (design §5's header rule), and a reader who heard "waiting" beside a
+								 *  danger approval would rightly conclude the run was held. */}
+								{askCount > 0 ? (
+									<Text
+										className="shrink-0 text-mono-sm text-ink-dim"
+										testID={askBadgeTestID}
+										accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
+									>
+										{countLabel(askCount, "ask")}
+									</Text>
+								) : null}
+								{subagentCount > 0 && !progressCountsYield ? (
+									<Text className="shrink-0 text-mono-sm text-ink-dim">
+										{countLabel(subagentCount, "agent")}
+									</Text>
+								) : null}
+								{todoCount > 0 && !progressCountsYield ? (
+									<Text className="shrink-0 text-mono-sm text-ink-dim">
+										{countLabel(todoCount, "todo")}
+									</Text>
+								) : null}
+							</View>
+						) : null}
 						{remote !== undefined ? (
 							/* A remote row's device line, in place of the folder/model meta:
 							 * another device's conversation carries no cwd or model on this wire,

@@ -61,6 +61,9 @@ export type TextareaProps = {
 	 *  are equal by construction, whichever way the placeholder wraps. */
 	placeholderMaxLines?: number;
 	onSubmitEditing?: () => void;
+	/** Presentation observers; the same native input survives shell transitions. */
+	onFocus?: () => void;
+	onBlur?: () => void;
 	autoFocus?: boolean;
 	/** A handle to the platform field, for the one caller that must FOCUS it —
 	 *  the home's New chat row, which closes the drawer and puts the caret where
@@ -151,6 +154,8 @@ export const Textarea = ({
 	maxHeightPx,
 	placeholderMaxLines,
 	onSubmitEditing,
+	onFocus,
+	onBlur,
 	autoFocus,
 	fieldRef,
 	testID,
@@ -290,6 +295,8 @@ export const Textarea = ({
 					</View>
 				) : null}
 				<TextInput
+					onFocus={onFocus}
+					onBlur={onBlur}
 					ref={resolvedRef}
 					keyboardAppearance={keyboardAppearance}
 					className={fieldClasses(fieldState, { inComposer: integrated })}
@@ -315,6 +322,19 @@ export const Textarea = ({
 						 *  only when there is nothing to scroll; content past the cap keeps
 						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
 						...webFieldStyle(Platform.OS, scrollable),
+						/* The composer's field paints ITS OWN box, not the box plus its
+						 *  padding: a web `<textarea>` is content-box, so the 44 pt floor plus
+						 *  `py-2` painted 60 and pushed the dock 4 pt past the record's 56/112
+						 *  (measured 2026-11-05). `box-sizing` is the web spelling of RN's own
+						 *  default, so native is unchanged. */
+						...(integrated
+							? {
+									backgroundColor: "transparent",
+									paddingHorizontal: 0,
+									borderWidth: 0,
+									...(Platform.OS === "web" ? { boxSizing: "border-box" } : {}),
+								}
+							: {}),
 					}}
 					/* On WEB, an EMPTY field whose placeholder is capped to one line is an
 					 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
@@ -326,6 +346,7 @@ export const Textarea = ({
 					 * element also gives Enter the submit semantics the composer already
 					 * handles on web. */
 					multiline={
+						integrated ||
 						!webSingleLinePlaceholder(
 							Platform.OS,
 							value === "",

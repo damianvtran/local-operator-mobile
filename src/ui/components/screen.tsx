@@ -32,6 +32,8 @@ export type ScreenProps = {
 	children: ReactNode;
 	/** Right-aligned header control (a settings affordance, a new-session button). */
 	headerAction?: ReactNode;
+	/** Home identity row spends its width on the host, not redundant chrome. */
+	headerDensity?: "home";
 	/** How many lines the title may take. Defaults to 2 — the header's own
 	 *  allowance since it shipped. A screen that names itself in one word-ish
 	 *  string at large text can ask for 1 instead of changing this for every
@@ -94,6 +96,23 @@ export type ScreenProps = {
 	stackedTitleLeading?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
+	/**
+	 * Who pays the bottom safe-area inset. `"screen"` pads the whole screen by
+	 * `insets.bottom`; `"child"` pads nothing and the screen's bottom-most child
+	 * MUST pay it itself.
+	 *
+	 * Why a choice and not a rule: the composer owns the bottom edge (decision
+	 * record 2026-11-04 §2.2). Its shell fills the band under the home indicator
+	 * and pays the inset as INNER padding (`composerGeometry`), so its surface
+	 * reaches the display corner it is concentric with. A screen-level pad would
+	 * leave a canvas strip under it instead — and before this prop existed,
+	 * `scroll={false}` silently dropped the inset with no child paying it, which
+	 * is how the composer ended up inside the home-indicator band (D-H4).
+	 *
+	 * Defaults keep every existing screen byte-for-byte: `"screen"` with
+	 * `scroll`, `"child"` without it.
+	 */
+	bottomInset?: "screen" | "child";
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
 	 *  multi-pane layout: a split screen puts a list and a detail side by side, and
 	 *  a cap on the WHOLE screen squeezes both (measured: a 560 pt column centred in
@@ -195,6 +214,7 @@ export const Screen = ({
 	brand = false,
 	children,
 	headerAction,
+	headerDensity,
 	headerLeading,
 	titleLines = 2,
 	headerDetail,
@@ -202,6 +222,7 @@ export const Screen = ({
 	stackedActionsBeside = false,
 	stackedTitleLeading,
 	scroll = true,
+	bottomInset = scroll ? "screen" : "child",
 	capColumn = true,
 	stackBelowWidth,
 	compact = false,
@@ -262,7 +283,7 @@ export const Screen = ({
 				paddingTop: insets.top,
 				paddingLeft: insets.left,
 				paddingRight: insets.right,
-				paddingBottom: scroll ? insets.bottom : 0,
+				paddingBottom: bottomInset === "screen" ? insets.bottom : 0,
 			}}
 			testID={testID}
 		>
@@ -275,7 +296,9 @@ export const Screen = ({
 						? "min-h-14 justify-center gap-2 px-4 py-2"
 						: compact
 							? "min-h-12 flex-row items-center gap-2 px-4"
-							: "min-h-14 flex-row items-center gap-2 px-4 py-2"
+							: headerDensity === "home"
+								? "min-h-14 flex-row items-center gap-1 px-2 py-2"
+								: "min-h-14 flex-row items-center gap-2 px-4 py-2"
 				}
 				style={column}
 			>
@@ -355,19 +378,31 @@ export const Screen = ({
 								))
 							) : (
 								<View className="min-w-0 flex-1 gap-1">
-									{resolvedTitleNode ?? (
-										<Heading
-											level={1}
-											className={
-												compact
-													? "text-title text-ink"
-													: "text-display text-ink"
-											}
-											numberOfLines={1}
-										>
-											{title}
-										</Heading>
-									)}
+									{/* The title node gets a ROW of its own (D-S1). A caller's
+									 *  title node is `min-w-0 flex-1` because it is written for the
+									 *  header ROW; placed straight into this column, that `flex-1`
+									 *  became a zero flex-basis on the VERTICAL axis, the block was
+									 *  laid out ~0 tall, and its 44 pt control overflowed onto the
+									 *  detail line below (the "Tags" line painted over the session
+									 *  title on TestFlight 365). Inside a row, `flex-1` means width. */}
+									{titleNode !== undefined ? (
+										<View className="min-w-0 flex-row">{titleNode}</View>
+									) : null}
+									{titleNode === undefined
+										? (resolvedTitleNode ?? (
+												<Heading
+													level={1}
+													className={
+														compact
+															? "text-title text-ink"
+															: "text-display text-ink"
+													}
+													numberOfLines={1}
+												>
+													{title}
+												</Heading>
+											))
+										: null}
 									{headerDetail}
 								</View>
 							)

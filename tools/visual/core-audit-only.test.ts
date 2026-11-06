@@ -94,10 +94,30 @@ describe("core-audit-only dispatch isolation", () => {
 		expect(admits("workflow_dispatch", "unknown")).toBe(false);
 	});
 	it("preserves every old job predicate's result for every existing mode and event", () => {
-		expect(
-			[...guards.keys()].filter((name) => name !== "u08-geometry-proof"),
-		).toEqual(Object.keys(legacy));
+		/* Jobs added after this guard was written are excluded by name and asserted
+		 *  on their own below: each fires only on its own manual mode. */
+		const later = ["u08-geometry-proof", "chrome-ios-proof"];
+		expect([...guards.keys()].filter((name) => !later.includes(name))).toEqual(
+			Object.keys(legacy),
+		);
 		expect(guards.get("u08-geometry-proof")).toBeTruthy();
+		for (const event of [
+			"push",
+			"pull_request",
+			"schedule",
+			"workflow_dispatch",
+		])
+			for (const mode of [
+				"",
+				"full",
+				"s15-proof",
+				"core-audit-only",
+				"chrome-ios-proof",
+			])
+				expect(
+					selects(guards.get("chrome-ios-proof") ?? "true", event, mode),
+					`${event}/${mode}/chrome-ios-proof`,
+				).toBe(event === "workflow_dispatch" && mode === "chrome-ios-proof");
 		for (const event of [
 			"push",
 			"pull_request",
@@ -136,6 +156,7 @@ describe("core-audit-only dispatch isolation", () => {
 			"account-routing-ios-proof",
 			"account-routing-android-proof",
 			"projects-create-ios-proof",
+			"chrome-ios-proof",
 			"theme-ios-proof",
 		]) {
 			expect(admits("workflow_dispatch", mode)).toBe(true);
@@ -149,7 +170,6 @@ describe("core-audit-only dispatch isolation", () => {
 				"full",
 				"s15-proof",
 				"account-routing-android-proof",
-				"projects-create-ios-proof",
 				"projects-create-ios-proof",
 				"theme-ios-proof",
 			])

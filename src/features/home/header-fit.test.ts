@@ -24,7 +24,7 @@ const CHIP = readFileSync(
 /** A count-only gate on the bell's pill — the shape this round replaces.
  *  Hoisted, as the kit's own modules do, so a callback does not re-compile it
  *  (biome `useTopLevelRegex`). */
-const COUNT_ONLY_GATE = /inboxCount !== null && inboxCount > 0 \?/;
+const _COUNT_ONLY_GATE = /inboxCount !== null && inboxCount > 0 \?/;
 
 /** The offset of a control's declared id, or a failure that names it. */
 const atId = (id: string): number => {
@@ -76,30 +76,14 @@ describe("the home header at large text", () => {
 		expect(headerBellShowsCount(1.99)).toBe(true);
 	});
 
-	it("swaps the bell glyph for the dot variant when the pill has yielded", () => {
-		// Shape, not colour: a painted accent dot was U-03 in 96 of 1212 cells, so
-		// the signal is the icon set's own bell-with-dot, drawn in the control's
-		// normal ink at the plain bell's size. Removing the swap from `home.tsx`
-		// turns this red.
+	it("retains unread state in a bell glyph, never a detached count pill", () => {
 		const bell = SOURCE.slice(
 			atId("homeNotifications"),
 			SOURCE.indexOf("</Pressable>", atId("homeNotifications")),
 		);
-		expect(bell).toContain(
-			"waiting={headerBellShowsDot(effectiveScale, inboxCount)}",
-		);
-		expect(SOURCE).toContain("const Glyph = waiting ? BellDot : Bell;");
-		expect(SOURCE).toContain("<Glyph color={color} size={20} />");
-		// The glyph keeps the plain bell's ink and size rather than a semantic colour.
-		expect(SOURCE).not.toContain("bg-accent");
-	});
-
-	it("gates the pill on that rule rather than on the count alone", () => {
-		// A count-only condition is the regression: `99+` paints again at 300 % and
-		// takes the switcher back under its floor.
-		const from = atId("homeNotifications");
-		const bell = SOURCE.slice(from, SOURCE.indexOf("</Pressable>", from));
-		expect(bell).toContain("headerBellShowsCount(effectiveScale)");
-		expect(bell).not.toMatch(COUNT_ONLY_GATE);
+		expect(bell).toContain("waiting={inboxCount !== null && inboxCount > 0}");
+		expect(bell).not.toContain("<Badge");
+		expect(SOURCE).toContain("viewport.width >= 360 && effectiveScale < 1.5");
+		expect(SOURCE).toContain('headerDensity="home"');
 	});
 });

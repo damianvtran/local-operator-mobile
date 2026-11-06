@@ -68,6 +68,26 @@ const root = new URL("../../", import.meta.url);
 const source = (path: string) => readFileSync(new URL(path, root), "utf8");
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
+/* Q163-3: removing the retired Tags capture changed only matrix-count comments
+ * in web-audit and web-audit-core. Their executable lines remain byte-identical
+ * to 5589d7fb; its hashes match frozen 0604aee9… / eb69e103…. Keep that historical
+ * JSON untouched, but pin the accepted CURRENT body (same normalization), so
+ * future command/step changes still fail instead of comparing to stale prose. */
+const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
+	"web-audit":
+		"c53f3d1dfcab21c32279f2e8cb8d6d036f4f14b1ea4bdd126c022b78f76385dd",
+	"web-audit-core":
+		"ada921e0da7bd6393d2d6bda3a879ea83486959006ec398ebd7f2e22cea3725a",
+};
+const jobBodySha = (body: string) =>
+	sha(
+		body
+			.split("\n")
+			.filter((line) => !line.startsWith("    if: "))
+			.join("\n")
+			.trim(),
+	);
+
 function jobs(text: string) {
 	const section = text.split("\njobs:\n")[1];
 	if (!section) throw new Error("missing jobs");
@@ -162,6 +182,27 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(() => selectProof(MANUAL, "full", "setup")).toThrow();
 		expect(() => selectProof("schedule", "s15-proof", "full")).toThrow();
 	});
+	it("preserves historical body pins and rejects executable drift in current jobs", () => {
+		expect(baseline.jobs["web-audit"].bodyWithoutConditionSha256).toBe(
+			"0604aee9f4abae9990605ad53eee40d53a6dbc286c8e17f48dc14fdb88662298",
+		);
+		expect(baseline.jobs["web-audit-core"].bodyWithoutConditionSha256).toBe(
+			"eb69e1033318489c3a9b6e3afa42f4e7cf92f9eace095851f95c1a71f266b1e2",
+		);
+		for (const [name, expected] of Object.entries(
+			CURRENT_PRESERVED_BODY_SHA256,
+		)) {
+			const body = jobs(source(".github/workflows/e2e.yml"))[name]?.body;
+			if (!body) throw new Error(`missing ${name} job`);
+			expect(jobBodySha(body)).toBe(expected);
+			const changed = body.replace(
+				"pnpm audit:capture",
+				"pnpm audit:capture --no-strict",
+			);
+			expect(changed).not.toBe(body);
+			expect(jobBodySha(changed)).not.toBe(expected);
+		}
+	});
 	it("the actual workflow preserves every normal full/S15 job membership and body", () => {
 		const current = jobs(source(".github/workflows/e2e.yml"));
 		expect(Object.keys(current).sort()).toEqual(
@@ -170,6 +211,7 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				PROOF_MODE,
 				ANDROID_PROOF_MODE,
 				"projects-create-ios-proof",
+				"chrome-ios-proof",
 				"theme-ios-proof",
 				"u08-geometry-proof",
 			].sort(),
@@ -179,15 +221,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			expect(job).toBeDefined();
 			if (!job) throw new Error("missing old job");
 			if (name !== "harness")
-				expect(
-					sha(
-						job.body
-							.split("\n")
-							.filter((line) => !line.startsWith("    if: "))
-							.join("\n")
-							.trim(),
-					),
-				).toBe(old.bodyWithoutConditionSha256);
+				expect(jobBodySha(job.body)).toBe(
+					CURRENT_PRESERVED_BODY_SHA256[name] ?? old.bodyWithoutConditionSha256,
+				);
 			for (const event of ["pull_request", "push", "schedule", MANUAL])
 				for (const mode of ["", "full", "s15-proof"])
 					expect(evaluate(job.condition, event, mode)).toBe(
@@ -279,6 +315,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			["projects-create-ios-proof", "full", true],
 			["projects-create-ios-proof", "setup", false],
 			["projects-create-ios-proof", "preflight", false],
+			// The chrome proof is one fixed plan of lanes: no stage argument either.
+			["chrome-ios-proof", "full", true],
+			["chrome-ios-proof", "setup", false],
 			// Stage arguments that must be refused rather than silently accepted.
 			["account-routing-android-proof", "setup", false],
 			["account-routing-android-proof", "preflight", false],

@@ -83,7 +83,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/u08-geometry-proof.ts":
 		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
 	"tools/lib/affordance.ts":
-		"06902d73d4a59043084c223897c45dbc55c6e89014aa57b4204904e4b19e3208",
+		"1bec46754c3f696fde274b16b646cc24ea5314461d97fd694309ffd6a11280c4",
 	"tools/lib/args.ts":
 		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
 	"tools/lib/cdp.ts":
@@ -140,7 +140,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"b3761b32c16b06d64e6febcf8668911392a30a4a01169fffe4d2d906fce19b86",
+		"32ea49717b5093078901d5771c9ba2e2852664858f0f3c12f263834794ab1c57",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -157,7 +157,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
 	"tools/visual/matrix.ts":
-		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
+		"4747988924ab3832c1412f86fc8962c3055d6b49cd8e864df8ecae60f629843e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -389,11 +389,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "e0481a769958481ba0f693e94c33921788fa3d5307e0bb61833aa723b235818e",
+	app: "6f9ced757e1dcb1e4f2749fe01b1fb60ac1822ffbac0816e3f7c49bc64486a9b",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"1393b7635e77b92b141a24835f47879098d167505ec43edd397ad079ff90e4be",
+		"1be11fc262b37ae25b54b87171233ec62e56e8263543beccdfc7626bf80a5d50",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -474,8 +474,48 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * diagnostics, transport XCTest carrier, auth-save contract): the theme work
 	 * is the only source delta left on this branch, and main's notification
 	 * settings moved `app.config.ts`. `--print` produced both digests; this is
-	 * source admission for the geometry instrument, not rendered evidence. */
-	src: "bd69fa186ac4df73600ad244e89a3c7a70dab5128e8b2f9b2a71359624685105",
+	 * source admission for the geometry instrument, not rendered evidence.
+	 *
+	 * Recomputed again for the 2026-11-05 convergence with the merged native
+	 * chrome PR (#163, main a21aa8d2): the composer and session geometry below
+	 * is main's verbatim, the theme work is the only source delta, and the one
+	 * `src` digest at the end of this block is the combined tree. */
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's Android OAuth change above): the Android
+	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
+	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
+	 * is rendered on the web target: channels are created only on Android, and
+	 * the keys are read only by that call. No transcript/corpus/instrument
+	 * change; historical pins retained. */
+	/* Deliberate --print re-pin (M2): native custom-sound cache, relay routes,
+	 * lifecycle invalidation and tests. The new root hook returns on web before
+	 * IO; its store subscriptions render nothing. Config changedKeys is data
+	 * for that hook, not a transcript rendering change. No tokens, styles,
+	 * transcript components, corpus or instrument changed. Native filesystem
+	 * proof is separate; this retains only the unchanged U08 web geometry. */
+	/* Deliberate re-pin for PR #166 (native session persistence, operator incident
+	 * #389), after review round 1: `src` renews an expiring account token and the
+	 * five-minute tunnel grant in place, and the provider's discovery pass reports
+	 * those outcomes through the connection store. No screen, layout, style, token
+	 * or transcript input is added or renamed, and U-08's healthy custom-relay
+	 * transcript selects none of the renewed branches — this is a source-
+	 * compatibility re-pin, not fresh geometry evidence. `app` untouched;
+	 * historical pins retained. Recomputed with `--print` after the merge with
+	 * main (#162 notification-store changes).
+	 *
+	 * Re-pinned 2026-11-05, still deliberately: the round-6 composer work is inside
+	 * BOTH trees — `src/features/session/components/composer.tsx` (one seed per
+	 * morph state, the radius from the measured pill, the landscape duplicate More
+	 * removed) and `src/ui/a11y.ts` (the retired compact-context identifier). The
+	 * app tree moves with the screen that mounts them. Values are `--print` output
+	 * from the merged head, not hand-written.
+	 *
+	 * Re-pinned 2026-11-05 for round 7, src only: `composer.tsx` lost the
+	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
+	 * itself and is floored), the overflow clip follows the animation's own
+	 * progress instead of a timer, and `composer-presentation.ts` gained
+	 * `seedFor` plus a floor-aware presentation. `app` untouched. */
+	src: "69afe7e8c1ca64e4ff989e195f3a12bbc61f2e4e6d6281fd31824e3939dcc9e8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -493,9 +533,9 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
+		"e7f8eefe80a606d858bc16831c82a95f226fbcef5468d384556cc79f2006ad0a",
 	"pnpm-lock.yaml":
-		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+		"a6680f1b911b580ee77f3ecd9313e83af23a9a94770f80d08b9d148745e45ddb",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

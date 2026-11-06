@@ -1255,18 +1255,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"tags",
-		"Conversation tags on the list, the session header and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim.",
+		"Conversation tags on the list and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim. The session header's tag line was retired in the 2026-11-04 chrome pass, so this world no longer declares that cell — the session-menu read is `S15/tags-menu`.",
 		/* The READ surfaces share one world so the row, the header, the past list
 		 *  and the menu cannot disagree about an assignment. The sheet's write
 		 *  states below are their own scenarios because they differ in what the
 		 *  relay answers, not in what is assigned. */
-		[
-			"S15/tags",
-			"S15/tags-menu",
-			"S15/tags-sheet",
-			"S5/tags-header",
-			"S10/tags",
-		],
+		["S15/tags", "S15/tags-menu", "S15/tags-sheet", "S10/tags"],
 		() => tagsWorld(),
 	);
 

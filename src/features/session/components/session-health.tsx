@@ -189,6 +189,10 @@ export type SessionHealthControlProps = {
 	/** The stacked header (large text / narrow phone): the name may use two
 	 *  lines there, which `headerTitleChars`' stacked budget assumes. */
 	stacked: boolean;
+	/** The subtitle under the title (`headerSubtitle`): "Working · 1m 36s",
+	 *  "Idle", "Waiting for you", or the non-live health word. Always present,
+	 *  so the header never resizes when the state changes. */
+	subtitle?: string;
 	sheetOpen: boolean;
 	onSheetOpenChange: (open: boolean) => void;
 };
@@ -212,7 +216,8 @@ export type SessionHealthControlProps = {
  * colour-only signal — green and grey collapse to ΔE ~8 under deuteranopia —
  * and the ended failure sentence ("tap “Ended” at the top") must point at
  * something that exists. The relay's subtitle line carries the word in every
- * state; native has no subtitle, so the word renders whenever the state is NOT
+ * state, and so does native's since the 2026-11-04 chrome pass (`subtitle`,
+ * `headerSubtitle`); without a subtitle the word still renders whenever the state is NOT
  * live (live is the default and costs no line; its word rides the control's
  * name for screen readers, as the relay's sr-only `live` word does). The live
  * dot sits inline before the name, the others on the state line — so the
@@ -224,6 +229,7 @@ export function SessionHealthControl({
 	title,
 	compact,
 	stacked,
+	subtitle,
 	sheetOpen,
 	onSheetOpenChange,
 	children,
@@ -235,7 +241,11 @@ export function SessionHealthControl({
 	controlRef: RefObject<View | null>;
 }) {
 	useReturnFocus(sheetOpen, controlRef);
-	const titleClass = compact ? "text-title text-ink" : "text-display text-ink";
+	/* `heading` (17/600), not `display` (28): a 28 pt title in a 56 pt row with
+	 *  three leading marks was the "crunched" header (D-S2). The relay uses the
+	 *  same 17 pt step with a 12 pt subtitle; together they are 39.8 pt of text
+	 *  in the 56 pt row. Compact (short landscape) keeps its `title` step. */
+	const titleClass = compact ? "text-title text-ink" : "text-heading text-ink";
 	const titleLines = stacked ? 2 : 1;
 	const { effectiveScale } = useTextScale();
 	/* No reading: the plain heading the screen had before the dot, nothing to tap,
@@ -280,7 +290,14 @@ export function SessionHealthControl({
 				<Pressable
 					ref={controlRef}
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${title}, ${label}`}
+					/* Name, state word, then the subtitle when it says more (live: the
+					 *  word is "Live" and the subtitle "Working · 1m 36s") — the visible
+					 *  words in reading order, so label-in-name holds (WCAG 2.5.3). */
+					accessibilityLabel={
+						subtitle !== undefined && subtitle !== "" && subtitle !== label
+							? `${title}, ${label}, ${subtitle}`
+							: `${title}, ${label}`
+					}
 					accessibilityHint={t("mobile.session_health.control_hint")}
 					accessibilityState={{ expanded: sheetOpen }}
 					testID={CONTROL.sessionHealth}
@@ -325,16 +342,23 @@ export function SessionHealthControl({
 						) : null}
 					</View>
 					{compact ? null : (
+						/* THE SUBTITLE (record §2.3): always painted, never only reserved.
+						 *  The live state used to show nothing here; now it says what the
+						 *  agent is doing ("Working · 1m 36s", "Idle", "Waiting for you"),
+						 *  in the relay's own words. The line's box is one `meta` line box
+						 *  at every state, so a flip moves nothing (round 2, D11). */
 						<View
 							className="min-w-0 flex-row items-center"
 							style={{ minHeight: stateLinePt(effectiveScale) }}
 							testID={CONTROL.sessionHealthWord}
 						>
-							{live ? null : (
-								<Text className="text-meta text-ink-dim" numberOfLines={1}>
-									{label}
-								</Text>
-							)}
+							<Text
+								className="min-w-0 flex-1 text-meta text-ink-dim"
+								numberOfLines={1}
+								ellipsizeMode="tail"
+							>
+								{subtitle ?? (live ? "" : label)}
+							</Text>
 						</View>
 					)}
 				</Pressable>
@@ -413,13 +437,21 @@ export function HealthAnnouncer({ health }: { health: SessionHealth | null }) {
 	);
 }
 /**
- * The header's action cluster: the find lever and, ONLY while it has an item,
- * the overflow menu (UX U3 / design D9 / QA Q6: on a live or yellow session
- * the menu was an empty sheet — a permanent control that led nowhere). Its one
- * item is Resume, which native has; nothing is invented to fill it.
+ * The header's action cluster: find and the ⋮ overflow menu.
+ *
+ * ⋮ is ALWAYS present now (record §2.3, relay parity). It used to exist only
+ * while ended, because Resume was its one item and an empty sheet would lead
+ * nowhere (UX U3 / design D9 / QA Q6). The session's tags left the header —
+ * their line painted over the title on TestFlight 365 (D-S1) — and are a row
+ * here, so the menu always has an item: Tags (when the relay can assign them),
+ * Find (on a phone too narrow to keep its own button), and Resume while ended.
+ * With none of those available it still hides, for the original reason.
  */
 export function SessionHeaderActions({
 	findAction,
+	findInMenu = false,
+	onFind,
+	onTags,
 	ended,
 	menuOpen,
 	onMenuOpenChange,
@@ -428,6 +460,12 @@ export function SessionHeaderActions({
 	resumeGone,
 }: {
 	findAction: ReactNode;
+	/** Below 360 pt the find button folds into ⋮ (record §2.3), so the title
+	 *  keeps its width on the narrowest phones. */
+	findInMenu?: boolean;
+	onFind?: () => void;
+	/** Opens the session's tag sheet; absent when the relay cannot assign. */
+	onTags?: () => void;
 	ended: boolean;
 	menuOpen: boolean;
 	onMenuOpenChange: (open: boolean) => void;
@@ -439,10 +477,11 @@ export function SessionHeaderActions({
 }) {
 	const menuRef = useRef<View | null>(null);
 	useReturnFocus(menuOpen, menuRef);
+	const hasItems = ended || onTags !== undefined || (findInMenu && onFind);
 	return (
 		<View className="flex-row items-center gap-2">
-			{findAction}
-			{ended ? (
+			{findInMenu ? null : findAction}
+			{hasItems ? (
 				<View ref={menuRef}>
 					<IconButton
 						accessibilityLabel={t("mobile.session_health.menu_label")}
@@ -458,24 +497,50 @@ export function SessionHeaderActions({
 			) : null}
 			{/* The overflow menu. Resume sits here too because a reader looks for
 			    actions in a menu. It closes first, then opens the health sheet, so
-			    the outcome lands in one place — never two stacked dialogs. */}
+			    the outcome lands in one place — never two stacked dialogs. Every
+			    row closes the menu before it opens its own sheet, for the same
+			    reason. */}
 			<Sheet
-				visible={menuOpen && ended}
+				visible={menuOpen && Boolean(hasItems)}
 				onClose={() => onMenuOpenChange(false)}
 				title={t("mobile.session_health.menu_title")}
 				testID={CONTROL.sessionHeaderMenuSheet}
 			>
 				<View className="gap-2 px-4 pb-4">
-					<Button
-						testID={CONTROL.sessionMenuResume}
-						label={
-							resumeBusy
-								? healthResumeCopy().resuming
-								: healthResumeCopy().resume
-						}
-						disabled={resumeBusy || resumeGone}
-						onPress={onResume}
-					/>
+					{onTags !== undefined ? (
+						<Button
+							testID={CONTROL.sessionMenuTags}
+							label={t("relay.chrome.row.tags")}
+							variant="outline"
+							onPress={() => {
+								onMenuOpenChange(false);
+								onTags();
+							}}
+						/>
+					) : null}
+					{findInMenu && onFind ? (
+						<Button
+							testID={CONTROL.sessionFind}
+							label={t("relay.chrome.list.search_open")}
+							variant="outline"
+							onPress={() => {
+								onMenuOpenChange(false);
+								onFind();
+							}}
+						/>
+					) : null}
+					{ended ? (
+						<Button
+							testID={CONTROL.sessionMenuResume}
+							label={
+								resumeBusy
+									? healthResumeCopy().resuming
+									: healthResumeCopy().resume
+							}
+							disabled={resumeBusy || resumeGone}
+							onPress={onResume}
+						/>
+					) : null}
 				</View>
 			</Sheet>
 		</View>

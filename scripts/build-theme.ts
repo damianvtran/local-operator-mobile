@@ -400,6 +400,11 @@ const css = (): string => {
 	out.push(
 		"\t/* ---- radii: assigned by what the object is, never by taste ---- */",
 	);
+	/* Clears Tailwind's default radius ramp first, so an off-token class such as
+	 * `rounded-xl` (Tailwind's 12 px, which the composer shipped with and which
+	 * clipped against the display corner — decision record D-H4) stops compiling
+	 * instead of silently working. Only the kit's names below exist. */
+	out.push("\t--radius-*: initial;");
 	for (const [name, value] of Object.entries(radii)) {
 		out.push("\t--radius-" + name + ": " + value + "px;");
 	}
