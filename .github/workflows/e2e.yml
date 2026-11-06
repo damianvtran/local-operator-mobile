@@ -373,8 +373,38 @@ jobs:
 
   web-audit:
     if: (inputs.proof_mode || 'full') == 'full'
-    name: Web target — frames, audit and the canary
+    name: Web target — frames, audit and the canary (${{ matrix.device }})
     needs: harness
+    # SHARDED BY DEVICE PROFILE, one leg per `ci`-tier device. Measured on
+    # 2026-11-06 (gh API step times and the capture log's per-cell timestamps), the
+    # unsharded job had stopped fitting its bound: the green run 42149661880 took
+    # 79.9 min of the 90 (capture 44.9 + audit 32.3), and every run from 16:00Z
+    # on was cancelled at 90 (42268195363: capture 55.6, audit cut off at 1080 of
+    # 1260 cells). The plan did NOT grow — 1272 cells before #163, 1260 after.
+    # Two things did: (1) #163's conditional find opener (7cb6a5ed) polled its
+    # settled `skipped` answer to the full 8 s affordance bound on every
+    # tablet-landscape find cell, in capture and audit alike (2.68 -> 10.72 s a
+    # cell, ~8 min a run; fixed in `tools/lib/affordance.ts`); and (2) runners
+    # land in two speed classes ~14 % apart on identical work (S10 cells 1.73 vs
+    # 1.97 s), and on the slower class even the fixed job projects to ~88 min.
+    # So a fix that only restores the pre-#163 wall time leaves the job at the
+    # bound's edge on half its runners — the pre-#163 runs on that class already
+    # took 87.2 and 87.7 min of the 90 (42136906859, 42085642091). Two legs put each
+    # at ~45-50 min against the 90, the ~2x headroom the bound below is written
+    # around, with NO cell dropped: the legs' `--devices` partition the tier's
+    # device list exactly, and identical-frame detection loses nothing because
+    # frames from different profiles differ in size and can never collide. The
+    # flows that are not per-cell (the inbox return proof with its base export,
+    # and the canary) run once, on the `flows` leg; `web-audit-verdict` below
+    # folds both legs back into ONE pass/fail.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: iphone-se
+            flows: true
+          - device: tablet-landscape
+            flows: false
     # LINUX, not macOS. This job ran on `macos-26` only because the harness's
     # Chrome discovery was hard-coded to `/Applications/Google Chrome.app/...` and
     # failed on a Linux runner; `tools/lib/chrome.ts` now tries `/usr/bin/
@@ -456,7 +486,7 @@ jobs:
       # cannot share dependencies honestly; record that reason rather than install
       # a second tree. This adds one serial export, not another matrix or browser.
       - name: Export the PR base for inbox return before frames
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && matrix.flows
         timeout-minutes: 5
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -564,11 +594,17 @@ jobs:
         # Frames are written outside the repository and uploaded — never committed
         # (ADR 0003).
         run: |
+          # The inbox return proof is a flow on its own phone profile, not a cell
+          # of this leg's device, so it runs once — on the `flows` leg.
           baseline=()
           if [ -n "${INBOX_BASELINE_DIR:-}" ]; then
             baseline=(--inbox-baseline-dir "$INBOX_BASELINE_DIR")
           fi
-          pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --consecutive --yes --inbox-return-proof "${baseline[@]}"
+          flows=()
+          if [ "${{ matrix.flows }}" = "true" ]; then
+            flows=(--inbox-return-proof "${baseline[@]}")
+          fi
+          pnpm audit:capture --dir dist --out "$RUNNER_TEMP/frames" --relay "$MOCK_RELAY_URL" --tier ci --devices "${{ matrix.device }}" --consecutive --yes "${flows[@]}"
 
       - name: Audit the frames against the rubric
         timeout-minutes: 40
@@ -600,6 +636,8 @@ jobs:
         run: pnpm audit:run --manifest "$RUNNER_TEMP/frames/manifest.json" --out "$RUNNER_TEMP/audit"
 
       - name: Run the canary
+        # Once per workflow run, not per device leg: the canary drives its own
+        # fixture cells, so a second leg would only repeat it.
         # ALWAYS, AND STILL PLAIN OTHERWISE. The audit step above exits 1 on real app
         # findings (the U-05/U-08 geometry rows at 200 %), and a step with no `if:`
         # after a failing one is SKIPPED — verified in run 37177701601, where the
@@ -609,7 +647,7 @@ jobs:
         # `|| true`: the canary still fails the job when it fails. It needs nothing the
         # steps above produce (it captures its own fixture matrix), so it can run on a
         # red audit.
-        if: always()
+        if: always() && matrix.flows
         timeout-minutes: 5
         # The gate that stops the audit rotting into a rubber stamp: the fixture
         # page declares its own defects, so this fails if the audit stops catching
@@ -634,11 +672,33 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: audit-frames
+          name: audit-frames-${{ matrix.device }}
           path: |
             ${{ runner.temp }}/frames
             ${{ runner.temp }}/audit
           retention-days: 30
+
+  web-audit-verdict:
+    # `always()` because a job whose `needs` failed is otherwise SKIPPED, and a
+    # skipped check reads as neutral: the aggregate has to run precisely when a leg
+    # failed, so that one red check carries the web audit's verdict. The rest of the
+    # guard is `web-audit`'s own, so the two are selected together; `always()` comes
+    # LAST so the tests that evaluate these guards as JS short-circuit before it on
+    # every non-full proof mode.
+    if: (inputs.proof_mode || 'full') == 'full' && always()
+    name: Web target — audit verdict (all device legs)
+    needs: web-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every device leg passed
+        env:
+          RESULT: ${{ needs.web-audit.result }}
+        # `needs.<job>.result` over a matrix is `success` only when every leg
+        # succeeded; anything else (failure, cancelled, skipped) is not a pass.
+        run: |
+          echo "web-audit legs: $RESULT"
+          test "$RESULT" = success
 
   s15-proof:
     name: Targeted S15 proof — not full E2E
@@ -920,7 +980,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          # A distinct name from the per-push `audit-frames`: on a nightly run both jobs
+          # A distinct name from the per-push `audit-frames-<device>` legs: on a nightly run both jobs
           # upload, and one name would make the second upload fail rather than attach.
           name: audit-frames-core
           path: |

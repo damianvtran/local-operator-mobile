@@ -213,7 +213,7 @@ Record each dispatch's exact SHA and run URL when comparing baseline and fix.
 The normal `web-audit` job also runs one bounded inbox scenario, using the
 capture job's existing browser, relay, seeded `notifications-populated` fixture,
 phone profile and theme bootstrap. It does not add matrix cells or change U-08
-pins. `audit-frames/inbox-return/{before,after}/` contains `flow.json` and paired
+pins. `audit-frames-iphone-se/inbox-return/{before,after}/` (the web audit's `flows` leg) contains `flow.json` and paired
 settled PNGs for light/dark iPhone 15 at 100% text:
 
 - All → unread update → detail → Back: the actual row loses its unread dot;
