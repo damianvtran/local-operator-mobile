@@ -541,8 +541,42 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the four insets and the radius are byte-identical to the digest above, so no
 	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (the launch-crash fix, PR #168): exactly two
+	 * files moved. `composer-presentation.ts` gained `"worklet"` as the first
+	 * statement of `morphPillRadius`, `morphHeight` and `composerShellRadius` — the
+	 * three pure helpers `shellMotion`/`ringMotion` call from the UI runtime — plus
+	 * the comments stating why each must stay pure arithmetic; and
+	 * `composer-worklets.test.ts` is new (a static guard over those directives). A
+	 * directive changes which JS context compiles a body, not what the body computes:
+	 * each helper's expression is unchanged (`base / 2`, the clamped lerp, and
+	 * `morphHeight(progress, morphPillRadius(base), 24)`), and the only edit is the
+	 * arrow becoming a block body so the directive can be its first statement. A test
+	 * file is never bundled into the render tree. So no pixel of the U-08 scene moves
+	 * and `composerPaintedHeight` is still 56/112 (60/120 on the 48 floor). This is
+	 * source admission for the geometry instrument, not fresh rendered evidence; the
+	 * native lane (nightly 42156335030) is what proves the directive actually
+	 * prevents the synchronous-call crash. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (review round 1 remediation of the same PR):
+	 * the same two files moved again, and nothing painted. `composer-worklets.test.ts`
+	 * gained a presence assertion ahead of the directive check — `bodyOf` answers `""`
+	 * for a helper it cannot find and `declaresWorklet("")` is false, so deleting
+	 * `composerPresentation` outright used to leave the whole suite green — and both
+	 * that test's comment and the `composerPresentation` doc comment were corrected to
+	 * the real mechanism: it calls `composerOuterGap`, `composerPaintedHeight` and
+	 * `composerShellPadding`, none of which are worklets, so marking it would carry
+	 * three remote functions onto the UI runtime and move the crash one call deeper. An
+	 * assertion and a comment change no executable geometry: the three directives, every
+	 * helper's expression and `composer.tsx` are byte-identical to the digest above, so
+	 * no pixel of the U-08 scene moves. This is source admission for the geometry
+	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "a5f00138ff6b0f1fc06b09597693a60ef99da0942d02ebc0d5e725e11ede2413",
+	src: "8798cc121eb268c87aa08849e557aea43561bfb9a89998ae2aa5c454e23b9757",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
