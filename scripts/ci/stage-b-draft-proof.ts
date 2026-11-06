@@ -73,6 +73,7 @@ const STAGE_B_VISIBLE_REFUSALS = [
 	"Could not connect",
 	"Couldn't connect",
 	"Try again",
+	"Try now",
 	"offline",
 	"Offline",
 	"Unauthorized",
@@ -996,6 +997,15 @@ async function runStageBCoordinator(
 				probe: async () => {
 					const since = (fixture?.receipts ?? []).slice(bootIndex);
 					const traces = since.filter((entry) => entry.kind === "route-trace");
+					// `row-press` is emitted synchronously at callback entry and
+					// `traceFailure` mirrors `state.surface !== null`, so both are
+					// decisive where a copy match is not (round 34, R34-2).
+					const pressObserved = traces.some(
+						(entry) => entry.traceEvent === "row-press",
+					);
+					const traceFailure = traces.some(
+						(entry) => entry.traceFailure === true,
+					);
 					const last = traces.at(-1);
 					const launchProcessId =
 						since.find((entry) => typeof entry.processId === "string")
@@ -1020,6 +1030,8 @@ async function runStageBCoordinator(
 							launchProcessId:
 								typeof launchProcessId === "string" ? launchProcessId : null,
 							visibleError: await hierarchyRefusal(),
+							pressObserved,
+							traceFailure,
 						},
 						answer.probe ?? null,
 						attempted,

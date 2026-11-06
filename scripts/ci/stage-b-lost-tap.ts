@@ -204,6 +204,12 @@ export interface StageBLostTapEvidence {
 	launchProcessId: string | null;
 	/** A refusal marker visible in the captured hierarchy, or null. */
 	visibleError: string | null;
+	/** The launch posted a `row-press` trace, which fires synchronously at
+	 * callback entry — so the tap DID reach JavaScript. */
+	pressObserved?: boolean;
+	/** The launch's trace recorded a failure surface (`state.surface !== null`),
+	 * which is what a real refusal or network failure sets. */
+	traceFailure?: boolean;
 }
 export type RetryProvenance = "fixture-recovery" | "probe-confirmed";
 export const LOST_TAP_TRACE_QUIET_PHASES = ["signed-in", "signed-out"] as const;
@@ -216,11 +222,24 @@ export function stageBFixtureRecovery(
 		trace: { processId: string; phase: string; selected: boolean } | null;
 		launchProcessId: string | null;
 		visibleError: string | null;
+		pressObserved?: boolean;
+		traceFailure?: boolean;
 	},
 	retryAttempted: boolean,
 ): { allow: boolean; reason: string; authorisedBy?: RetryProvenance } {
 	if (retryAttempted)
 		return { allow: false, reason: "lost-tap retry already attempted" };
+	/* Structured evidence first: a callback that entered JavaScript or a failure
+	 * surface is decisive, and the hierarchy text is only a backstop (R31/R34:
+	 * matching copy alone both misses real sentences like "Try now" and cannot
+	 * tell a failed press from a swallowed one). */
+	if (evidence.pressObserved === true)
+		return {
+			allow: false,
+			reason: "row callback observed: press reached JavaScript",
+		};
+	if (evidence.traceFailure === true)
+		return { allow: false, reason: "failure surface observed in trace" };
 	if (evidence.visibleError !== null)
 		return {
 			allow: false,
@@ -277,6 +296,8 @@ export function stageBLostTapDecision(
 		trace: { processId: string; phase: string; selected: boolean } | null;
 		launchProcessId: string | null;
 		visibleError: string | null;
+		pressObserved?: boolean;
+		traceFailure?: boolean;
 	},
 	probe: StageBCallbackProbe | null,
 	retryAttempted: boolean,

@@ -519,8 +519,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned 2026-11-05 for the round-4 minors, `src` only: the Appearance mode
 	 * control's accessible name changed in all eight catalogues (`Theme mode`
 	 * instead of repeating the section header) and the generated catalogue moved
-	 * with it. No rendered string, layout or palette changed; frames unaffected. */
-	src: "7c7705c3878186a12205373c1d5e0881f793bb4161e688ed4905bec1b267a689",
+	 * with it. No rendered string, layout or palette changed; frames unaffected.
+	 *
+	 * Re-pinned 2026-11-06 (PR #156, round 34): `src` only, and proof-only. The
+	 * Stage B proof bootstrap now stamps its existing per-process lease on the
+	 * `route-trace` receipts the app already posts, so the re-tap gate can prove
+	 * same-process identity from a side effect of rendering instead of from a
+	 * probe request the app may not answer after a cold relaunch. That module runs
+	 * only behind the dedicated Stage B entry guard, and no rendered byte, string,
+	 * layout, style or token moved — the healthy custom-relay scene U-08 measures
+	 * selects none of it. `app` untouched. */
+	src: "314669bdaa3106bdf22014ae8a09773876114fff00836306e9bfd30eb21b425f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -366,6 +366,48 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 			expect(decision.allow).toBe(false);
 			expect(decision.reason).toContain("another process");
 		});
+		it("refuses when a row-press trace shows the tap reached JavaScript", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, pressObserved: true },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("row callback observed");
+		});
+		it("refuses when the trace recorded a failure surface", () => {
+			const decision = stageBLostTapDecision(
+				{ ...clean, traceFailure: true },
+				null,
+				false,
+			);
+			expect(decision.allow).toBe(false);
+			expect(decision.reason).toContain("failure surface");
+		});
+		it("proves the substring-only check would have authorised real refusal copy", () => {
+			// The app renders "Try now" on a refused route. Before round 34 the gate
+			// matched a short list that did not contain it, so clean wire counters plus
+			// that copy would have produced a retry over a genuine failure.
+			const before = stageBLostTapDecision(
+				{ ...clean, visibleError: null, pressObserved: true },
+				null,
+				false,
+			);
+			expect(before.allow).toBe(false);
+			// The copy is in the backstop list too, so a hierarchy that paints it
+			// refuses even when no trace arrived at all.
+			const painted = stageBLostTapDecision(
+				{ ...clean, visibleError: "Try now" },
+				null,
+				false,
+			);
+			expect(painted.allow).toBe(false);
+			const source = readFileSync(
+				new URL("./stage-b-draft-proof.ts", import.meta.url),
+				"utf8",
+			);
+			expect(source).toContain('"Try now"');
+		});
 		it("refuses a second loss in the same launch", () => {
 			const decision = stageBLostTapDecision(clean, null, true);
 			expect(decision.allow).toBe(false);
