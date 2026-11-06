@@ -6,7 +6,7 @@
 	"mobile.settings.theme.card_light": "{name}, светлая тема",
 	"mobile.settings.theme.card_light_selected": "{name}, светлая тема, выбрана",
 	"mobile.settings.theme.mode_dark": "Тёмная",
-	"mobile.settings.theme.mode_label": "Оформление",
+	"mobile.settings.theme.mode_label": "Режим темы",
 	"mobile.settings.theme.mode_light": "Светлая",
 	"mobile.settings.theme.mode_system": "Как в системе",
 	"mobile.settings.theme.no_match": "Подходящих тем нет",

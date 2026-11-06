@@ -6,7 +6,7 @@
 	"mobile.settings.theme.card_light": "{name}，浅色主题",
 	"mobile.settings.theme.card_light_selected": "{name}，浅色主题，已选择",
 	"mobile.settings.theme.mode_dark": "深色",
-	"mobile.settings.theme.mode_label": "外观",
+	"mobile.settings.theme.mode_label": "主题模式",
 	"mobile.settings.theme.mode_light": "浅色",
 	"mobile.settings.theme.mode_system": "跟随系统",
 	"mobile.settings.theme.no_match": "没有匹配的主题",

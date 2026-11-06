@@ -514,8 +514,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
 	 * itself and is floored), the overflow clip follows the animation's own
 	 * progress instead of a timer, and `composer-presentation.ts` gained
-	 * `seedFor` plus a floor-aware presentation. `app` untouched. */
-	src: "69afe7e8c1ca64e4ff989e195f3a12bbc61f2e4e6d6281fd31824e3939dcc9e8",
+	 * `seedFor` plus a floor-aware presentation. `app` untouched.
+	 *
+	 * Re-pinned 2026-11-05 for the round-4 minors, `src` only: the Appearance mode
+	 * control's accessible name changed in all eight catalogues (`Theme mode`
+	 * instead of repeating the section header) and the generated catalogue moved
+	 * with it. No rendered string, layout or palette changed; frames unaffected. */
+	src: "f2245c2d79676ad500fcf574c8799b4a599fd6a49e73e61a5652cbf41b290154",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

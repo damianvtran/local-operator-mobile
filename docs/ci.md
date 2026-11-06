@@ -814,13 +814,14 @@ boots one fresh owned simulator with the OS on light, and runs
 scenario.
 
 - **The walk:** the Theme picker in System / Light / Dark, a search for "rose",
-  the selected Dracula card, then for each of `localOperatorDark`,
-  `localOperatorLight`, `dracula`, `obsidian`, `rosePine`, `rosePineDawn` and
-  `highContrastLight`: open the picker, tap that theme's card, assert it is
-  selected, and capture home and the session. Every theme is applied by a card
+  the selected Dracula card, then for each of twelve themes — `localOperatorDark`,
+  `localOperatorLight`, `dracula`, `obsidian`, `rosePine`, `rosePineDawn`,
+  `highContrastLight` plus the restored `catppuccinMocha`, `tokyoNightStorm`,
+  `duskfox`, `outrun` and `everforestLight`: open the picker, tap that theme's
+  card, assert it is selected, and capture home and the session. Every theme is applied by a card
   tap, so the frames exercise the real path (picker, store,
   `Uniwind.updateCSSVariables`, mounted screens).
-- **Inventory:** `scripts/ci/theme-proof-contract.ts` names all 19 frames and the
+- **Inventory:** `scripts/ci/theme-proof-contract.ts` names all 31 frames and the
   runner refuses an incomplete set; `scripts/ci/theme-proof.test.ts` keeps the
   flow and that list identical.
 - **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=theme-ios-proof -f native_run_id=<run> -f native_artifact_name=ios-simulator -f native_artifact_sha256=<sha256>`.

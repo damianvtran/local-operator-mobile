@@ -5,7 +5,7 @@
  *
  * WHY THIS EXISTS. The theme PR (decision record `mobile-design-direction.md`
  * § 7, PR 2) owes rendered frames: the picker in each mode, a search, the
- * selected card, and home + session in seven themes. Its runtime decision —
+ * selected card, and home + session in each of twelve themes. Its runtime decision —
  * `Uniwind.updateCSSVariables` re-rendering MOUNTED styles — is read from the
  * library's source but has never been observed on a device, and the developer
  * host has no simulator. This runs ONE fixed walk on a fresh iOS simulator
@@ -97,7 +97,7 @@ const receipt: Record<string, unknown> = {
 		provenanceNote: env.PROOF_PROVENANCE_NOTE ?? "",
 	},
 	scope:
-		"native iOS SIMULATOR, one fixed walk, theme picker + 7 themes, no physical device, not full E2E",
+		"native iOS SIMULATOR, one fixed walk, theme picker + 12 themes, no physical device, not full E2E",
 	steps: [] as string[],
 };
 const note = (line: string) => {

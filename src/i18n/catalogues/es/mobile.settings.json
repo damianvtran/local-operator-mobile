@@ -6,7 +6,7 @@
 	"mobile.settings.theme.card_light": "{name}, tema claro",
 	"mobile.settings.theme.card_light_selected": "{name}, tema claro, seleccionado",
 	"mobile.settings.theme.mode_dark": "Oscuro",
-	"mobile.settings.theme.mode_label": "Apariencia",
+	"mobile.settings.theme.mode_label": "Modo del tema",
 	"mobile.settings.theme.mode_light": "Claro",
 	"mobile.settings.theme.mode_system": "Sistema",
 	"mobile.settings.theme.no_match": "Ningún tema coincide",
