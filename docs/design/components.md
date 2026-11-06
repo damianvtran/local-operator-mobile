@@ -217,6 +217,20 @@ An in-flow block: a session card, a tool-card, the about panel.
 in the system and both belong to objects that leave the flow (sheet, dialog).
 A card that needs to stand out takes `elevated`, not a shadow.
 
+**Where a fill step cannot carry the edge, the edge is a pixel.** The ground step
+separates a card only while the two fills read as a boundary; on the near-white
+pairs of the kit they do not. The composer's shell is the measured case:
+`elevated` over `canvas` runs **1.1244–1.2799:1 across all 59 themes**
+(solarizedLight 1.1473, cyberpunk 1.1244, localOperatorDark 1.2051) — a shade,
+not an edge, and a card delimited by one reads as unframed. Its boundary is drawn
+in `border-control`, the token for a field's only boundary on a plain ground,
+which measures **3.132–5.924:1 against `canvas` and 3.380–5.665:1 against
+`elevated`, 0 of 59 themes under 3:1 in either direction**. Three rules hold it:
+one edge in every theme and every state, never a threshold gated on a measured
+ratio (it would flip mid-session when the theme changes); never a shadow, per the
+paragraph above; and never a stronger fill, which would move every other
+`elevated` user. How that pixel is added without moving the box is § 12.
+
 ---
 
 ## 6. Badge and Chip
@@ -428,7 +442,8 @@ primitive in the app, and the one that carries the most information.
 
 | Slot | Binding |
 |---|---|
-| Field | `elevated` fill, `radius.frame` (16) on the container, `border-control`; **16pt text** |
+| Shell | `elevated` fill, 1px `border-control` edge, corner on the morph (below); **not** `surface`, **not** a shadow |
+| Field | the `integrated` variant of the textarea: transparent, no border, no own radius (`textarea.tsx:330-336`) — the shell owns the outer surface; **16pt text** |
 | Send / steer | 44 circle, `accent` fill, `on-accent` glyph `↑`, `fab` is 56 where it stands alone |
 | Stop | 44 circle, transparent fill, `danger-border`, `danger` `■` at 13pt |
 | Queued count | `mono-sm` `ink-dim`, left; the count is the only thing on that line that changes |
@@ -437,6 +452,34 @@ primitive in the app, and the one that carries the most information.
 | Attachments | 64 thumbs with a remove control; each image capped at **1568 px** on its long edge before upload |
 | Slash sheet | the same sheet in § 8, filtered as the draft starts with `/` |
 | Leading chip (`leadingChip`, home only) | the folder chip: `homeShortened(target.cwd, home)`, `size="sm"`, tap pushes `/new` |
+
+### The shell's edge, and why it is a child
+
+There is no nested bordered field: the field inside the shell is transparent and
+borderless on purpose, and the shell is the one surface the reader sees. That
+surface cannot be delimited by its fill — `elevated` over `canvas` is
+**1.1244–1.2799:1** in all 59 themes (§ 5), so the boundary is a 1px
+`border-control` edge (3.132–5.924:1 against `canvas`).
+
+It is drawn as a **ring, not as the shell's own border**: an absolutely positioned
+child of the shell, inset on all four sides (`top`/`bottom`, and the logical
+`start`/`end` — never a physical `left`/`right`), `borderWidth: 1`, `pointerEvents="none"`,
+and the radius read from the same function as the shell's (`composerShellRadius`, so
+both corners travel together and a second edge never shows). The box cannot carry
+it: the shell's height is a border box, so a 1 px border takes 1 pt off each
+edge of the content box and the field inside is squeezed from 44 to 42. Both
+ends of the morph move with it — 54 collapsed and 110 expanded instead of
+56/112, 58/118 on the 48 floor — so the pinned
+`composerPaintedHeight` tests fail there, and the resting pill's R28/R30 becomes
+R27/R29, because `morphPillRadius` derives the radius from the height the box
+paints. An absolute child contributes nothing to layout, so the heights, radii, the
+12 pt side inset, the gap above the shell, the 4 pt row seam, the field's own box
+and every hit target are unchanged, and the text keeps its 12 pt inset rather than
+gaining the border's 1 pt.
+
+`pointerEvents="none"` is required, not stylistic: an earlier absolutely positioned
+layer across this band swallowed every tap on the field (round 4, U1/U2/U3), so the
+ring must never be a hit target. It paints last, above the content it bounds.
 
 ### Home's use of it, and the two additive props
 

@@ -6,7 +6,12 @@ import {
 	COMPOSER_DISC,
 	MODEL_FLOOR_PT,
 } from "./composer-layout";
-import { morphHeight, morphPillRadius } from "./composer-presentation";
+import {
+	composerPaintedHeight,
+	composerShellRadius,
+	morphHeight,
+	morphPillRadius,
+} from "./composer-presentation";
 
 const read = (path: string) =>
 	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
@@ -83,7 +88,7 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 	});
 
 	it("derives the resting radius from the measured painted pill, in every state", () => {
-		expect(SRC).toMatch(/morphPillRadius\(baseHeight\)/);
+		expect(SRC).toMatch(/composerShellRadius\(progress\.value, baseHeight\)/);
 		// Measured from the content block, never from the animated shell.
 		expect(SRC).toMatch(/measureContent/);
 	});
@@ -108,6 +113,79 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 
 	it("bounds the queue chip so large text cannot push a control off the card", () => {
 		expect(SRC).toMatch(/maxWidth: 160/);
+	});
+});
+
+/* The shell has no fill contrast to lean on: `elevated` over `canvas` measures
+ * 1.1244–1.2799:1 across all 59 themes (cyberpunk 1.1244 worst, solarizedLight
+ * 1.1473, localOperatorDark 1.2051), so the boundary has to be a PIXEL rule
+ * (`docs/design/components.md` § 5). WHERE that pixel lives is the whole of this
+ * suite: on the shell's own border it would also shrink the box. */
+const ringTag = (source: string) => {
+	/* The ELEMENT, not a window around the token: an earlier draft scanned ±700
+	 *  chars and passed with `pointerEvents` deleted, because the comment above the
+	 *  ring names the prop too. Locating the tag by its border colour and slicing
+	 *  back to its own `<Animated.View` keeps the comment out of the assertion. */
+	const at = source.indexOf("borderColor: borderControl");
+	if (at < 0) return "";
+	const open = source.lastIndexOf("<Animated.View", at);
+	const close = source.indexOf("/>", at);
+	if (open < 0 || close < 0) return "";
+	return source.slice(open, close + 2);
+};
+
+describe("the shell boundary is an overlay rule, not a box", () => {
+	it("draws the border-control edge on an absolutely positioned child", () => {
+		const ring = ringTag(SRC);
+		expect(ring).not.toBe("");
+		expect(ring).toContain("<Animated.View");
+		expect(ring).toContain('pointerEvents="none"');
+		expect(ring).toContain('position: "absolute"');
+		expect(ring).toContain("borderWidth: 1");
+		expect(ring).toContain("borderColor: borderControl");
+		expect(ring).toContain("ringMotion");
+		/* All four sides, in the file's own logical vocabulary: an inset on three
+		 *  is a rule that stops short of a corner, and a physical `left`/`right`
+		 *  pair is the RTL bug the physical-edge guard exists to catch. */
+		for (const side of ["top: 0", "bottom: 0", "start: 0", "end: 0"]) {
+			expect(ring).toContain(side);
+		}
+		expect(ring).not.toMatch(/\b(left|right): 0/);
+	});
+
+	it("keeps the border OFF the shell, which is what holds the geometry", () => {
+		/* The negative control, as an assertion about WHERE the border lives: the
+		 *  shell's own style object must carry no `borderWidth`, because Yoga's
+		 *  border-box would subtract 2 pt from 56/112 (60/120 at the 48 floor),
+		 *  squeezing the 44 pt field to 42 and turning R30 into R29. */
+		const shell = SRC.slice(
+			SRC.indexOf("backgroundColor: elevated"),
+			SRC.indexOf("shellMotion,"),
+		);
+		expect(shell).toContain("backgroundColor: elevated");
+		expect(shell).toContain("paddingHorizontal: 12");
+		expect(shell).not.toContain("borderWidth");
+		expect(shell).not.toContain("borderColor");
+		// No shadow either: elevation is a background step on in-flow content (§ 5).
+		expect(SRC).not.toMatch(/shadowColor|shadowRadius|elevation:/);
+	});
+
+	it("takes its radius from the SAME expression as the shell", () => {
+		/* Two call sites, one helper: the shell's fill and its ring. A third form,
+		 *  or a copied `morphHeight(...)` in the ring, is the drift this counts. */
+		expect(
+			SRC.match(/composerShellRadius\(progress\.value, baseHeight\)/g) ?? [],
+		).toHaveLength(2);
+		expect(SRC).not.toMatch(/morphHeight\(progress\.value, morphPillRadius/);
+	});
+
+	it("pins the painted heights and the pill radius at both floors", () => {
+		expect(composerPaintedHeight(false)).toBe(56);
+		expect(composerPaintedHeight(true)).toBe(112);
+		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(true, 48)).toBe(120);
+		expect(morphPillRadius(56)).toBe(28);
+		expect(morphPillRadius(60)).toBe(30);
 	});
 });
 

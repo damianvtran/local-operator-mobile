@@ -58,9 +58,9 @@ import {
 	COMPOSER_FIELD_BOX,
 	composerPaintedHeight,
 	composerPresentation,
+	composerShellRadius,
 	keyboardOverlap,
 	morphHeight,
-	morphPillRadius,
 	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
@@ -656,6 +656,13 @@ export const Composer = ({
 	const inputRef = fieldRef ?? ownField;
 	const reducedMotion = useReducedMotion();
 	const elevated = useTokenColor("elevated");
+	/* The shell's ONLY boundary. `elevated` over `canvas` is a fill step of
+	 *  1.1244–1.2799:1 across all 59 themes — below the 3:1 a boundary owes, and
+	 *  thinnest at the near-white end, where a card delimited by its fill alone
+	 *  reads as unframed. `border-control` is the kit's token for a field's
+	 *  boundary on a plain ground: 3.132–5.924:1 against `canvas` in every theme.
+	 *  The reasoning is in `docs/design/components.md` § 5 and § 12. */
+	const borderControl = useTokenColor("border-control");
 	const progress = useSharedValue(0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
@@ -782,8 +789,13 @@ export const Composer = ({
 		/* One rule in every state, landscape included: the radius is half the pill
 		 *  the shell paints, and 24 when expanded. A landscape pill that kept the
 		 *  portrait 24 was measuring the wrong thing. */
-		borderRadius: morphHeight(progress.value, morphPillRadius(baseHeight), 24),
+		borderRadius: composerShellRadius(progress.value, baseHeight),
 		height: morphHeight(progress.value, baseHeight, targetExpanded),
+	}));
+	/* The ring's radius is the shell's own, from the same helper: it is drawn on the
+	 *  shell's edge, not inset inside it, so any other value is a second outline. */
+	const ringMotion = useAnimatedStyle(() => ({
+		borderRadius: composerShellRadius(progress.value, baseHeight),
 	}));
 	/* Overflow is hidden only while the box is between its two ends; at rest the
 	 *  content and the box agree, so hiding would be a clip waiting for half a
@@ -1542,6 +1554,38 @@ export const Composer = ({
 					</ScrollView>
 					{main}
 				</View>
+				{/* THE SHELL'S EDGE, drawn as an absolutely positioned child rather than a
+				 *  `borderWidth` on the shell. The shell's height is a border box, so a
+				 *  border there subtracts 2 pt from the pinned sums (56 = 6 + 44 + 6;
+				 *  112 = 12 + 44 + 4 + 44 + 8), squeezing the 44pt field to 42 and taking
+				 *  the resting radius from 30 to 29, since `composerShellRadius` reads the
+				 *  height the box paints. An absolute child contributes nothing to layout,
+				 *  so the shape, the hit targets and the 12pt text inset are unchanged and
+				 *  only the edge is new.
+				 *
+				 *  `pointerEvents="none"` is a correctness requirement, not styling: an
+				 *  earlier absolutely positioned layer across this band swallowed every tap
+				 *  on the field (round 4, U1/U2/U3), so the one thing this child must never
+				 *  be is a hit target. It paints last, so the edge stays visible over the
+				 *  content it bounds. */}
+				<Animated.View
+					pointerEvents="none"
+					style={[
+						{
+							position: "absolute",
+							top: 0,
+							bottom: 0,
+							/* Logical, like every other inset in this file: the ring covers
+							 *  the shell's box, so `start`/`end` are `left`/`right` in LTR and
+							 *  the mirrored pair under RTL, with no asymmetric rule to keep. */
+							start: 0,
+							end: 0,
+							borderWidth: 1,
+							borderColor: borderControl,
+						},
+						ringMotion,
+					]}
+				/>
 			</Animated.View>
 			{attachSheet}
 			<Sheet
