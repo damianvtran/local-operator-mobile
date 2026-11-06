@@ -94,7 +94,6 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
  * arithmetic: no React state, no I/O, no module the UI runtime does not have.
  */
 export const morphPillRadius = (base: number) => {
-	"worklet";
 	return base / 2;
 };
 
@@ -125,7 +124,6 @@ export const seedFor = (expanded: boolean, total: number) =>
  * available there; a helper would have to be a worklet too.
  */
 export const morphHeight = (progress: number, from: number, to: number) => {
-	"worklet";
 	return from + (to - from) * Math.min(1, Math.max(0, progress));
 };
 
@@ -144,6 +142,5 @@ export const morphHeight = (progress: number, from: number, to: number) => {
  * a Remote Function` at mount (nightly 42156335030).
  */
 export const composerShellRadius = (progress: number, base: number) => {
-	"worklet";
 	return morphHeight(progress, morphPillRadius(base), 24);
 };
