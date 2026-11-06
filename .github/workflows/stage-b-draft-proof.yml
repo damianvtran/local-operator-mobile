@@ -120,7 +120,8 @@ jobs:
     # (45 * 79s / 60 + 42m measured build/setup) * 1.15 = 116.4m.
     # Extra allowances: 2m held waits (17/22/22s), 1m post-release observation,
     # 1m document seeding (host-side write + read-back), 5m screenshots,
-    # 7m fixture/process polling, 10m cleanup/upload = ~145.4m.
+    # 7m fixture/process polling, 10m cleanup/upload = 26m allowances, so
+    # 116.4m + 26m = ~142.4m total.
     # Keep 180m headroom; this is a model, not new native timing evidence.
     # Loading captures stay screenshot-only within the unchanged 20s proof.
     timeout-minutes: 180

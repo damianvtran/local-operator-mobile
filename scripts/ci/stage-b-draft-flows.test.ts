@@ -3,7 +3,7 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
 import { capFor } from "./account-routing-proof-contract";
-import { STAGE_B_DOCUMENT_NAME } from "./stage-b-document-seed";
+import { STAGE_B_DOCUMENT_ROW } from "./stage-b-document-seed";
 import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
@@ -285,11 +285,14 @@ describe("Stage B foreground-only Maestro flows", () => {
 
 describe("document-picker attachment is the native proof surface", () => {
 	it("selects the seeded Files document and never touches the photo grid", () => {
-		const flow = attachStageBDocument();
+		const flow = attachStageBDocument("local");
 		const raw = JSON.stringify(flow);
 		expect(raw).toContain("attach-option-files");
 		expect(raw).toContain("Browse");
-		expect(raw).toContain(STAGE_B_DOCUMENT_NAME);
+		// Run 42132547421 captured the row as "stage-b-seed, txt"; an exact
+		// "stage-b-seed.txt" match never lands on iOS.
+		expect(raw).toContain("stage-b-seed, txt");
+		expect(STAGE_B_DOCUMENT_ROW).toBe("stage-b-seed, txt(,.*)?");
 		expect(raw).toContain("composer-attachment-0");
 		// 42078247373: PhotoKit ingest is environment-BLOCKED. The Photos grid may
 		// appear ONLY as the wrong-picker negative, never as a wait or a tap.

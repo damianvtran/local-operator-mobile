@@ -3,7 +3,7 @@ import {
 	STAGE_B_HOST,
 } from "../../src/testing/stage-b-draft-transport.ts";
 import type { StageBDocumentProvider } from "./stage-b-document-seed.ts";
-import { STAGE_B_DOCUMENT_NAME } from "./stage-b-document-seed.ts";
+import { STAGE_B_DOCUMENT_ROW } from "./stage-b-document-seed.ts";
 import { STAGE_B_POST_RELEASE_WINDOW_MS } from "./stage-b-draft-timing.ts";
 export type StageBStep = Record<string, unknown>;
 const REGEX_META = /[.*+?^${}()|[\]\\]/g;
@@ -132,8 +132,10 @@ export const assertStageBPostReleaseDraft = (text: string): StageBStep[] => [
  * hierarchy elements confirmed in that run: the "Recents"/"Browse" segmented
  * control and the provider row. `DOC.browsingBrowser` is a container view with
  * no size — Maestro never calls it visible, so it is not an anchor. */
+/** `provider` is required: a default here would silently disagree with whichever
+ * container the seeder actually wrote to (review R29-5). */
 export const attachStageBDocument = (
-	provider: StageBDocumentProvider = "local",
+	provider: StageBDocumentProvider,
 ): StageBStep[] => [
 	{ tapOn: { id: "composer-attach" } },
 	{ waitForAnimationToEnd: { timeout: 5000 } },
@@ -169,12 +171,12 @@ export const attachStageBDocument = (
 	{ tapOn: { text: STAGE_B_DOCUMENT_PROVIDER_LABEL[provider] } },
 	{
 		extendedWaitUntil: {
-			visible: { text: STAGE_B_DOCUMENT_NAME },
+			visible: { text: STAGE_B_DOCUMENT_ROW },
 			timeout: STAGE_B_DOCUMENT_FILE_MS,
 			label: STAGE_B_DOCUMENT_SEED_LABEL,
 		},
 	},
-	{ tapOn: { text: STAGE_B_DOCUMENT_NAME } },
+	{ tapOn: { text: STAGE_B_DOCUMENT_ROW } },
 	{
 		extendedWaitUntil: {
 			visible: { id: "composer-attachment-0" },

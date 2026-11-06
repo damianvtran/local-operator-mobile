@@ -308,7 +308,7 @@ async function runStageBCoordinator(
 		status: "running",
 		...(nodeOnly ? { nodeOnly: true } : {}),
 		nativeAuthBoundary: setupOnly
-			? "SETUP ONLY: boot/addmedia/cleanup; no app build, launch, provider or E2E evidence"
+			? "SETUP ONLY: boot/document-seed/cleanup; no app build, launch, provider or E2E evidence"
 			: nodeOnly
 				? "NODE-ONLY simulated tools; no native UI, build or simulator evidence"
 				: "real native UI/provider/storage/HTTP with synthetic identity; not live Radient OAuth/TLS",
