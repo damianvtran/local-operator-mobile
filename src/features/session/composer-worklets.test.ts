@@ -207,10 +207,17 @@ describe("the composer's worklets run on the UI runtime", () => {
 
 	it("leaves the render-only helper a plain function", () => {
 		/* Deliberate, and asserted so a later sweep cannot "fix" it by marking
-		 *  everything: `composerPresentation` also calls `composerOuterGap` from
-		 *  `@/ui/device-corner`, which is not a worklet module, so workletising it
-		 *  would move the same synchronous-call crash one frame later. It is only
-		 *  ever called during render. */
+		 *  everything: `composerPresentation` calls `composerOuterGap`,
+		 *  `composerPaintedHeight` and `composerShellPadding`, none of which are
+		 *  worklets. The UI runtime does not load modules — it serialises closures —
+		 *  so marking this one would capture those three as remote functions and
+		 *  reproduce the same synchronous-call crash one call deeper. It is only ever
+		 *  called during render. */
+		/* Presence first: `bodyOf` answers "" for a helper it could not find, and
+		 *  `declaresWorklet("")` is false, so a deleted or renamed
+		 *  `composerPresentation` would satisfy the assertion below while proving
+		 *  nothing. Fail on absence instead. */
+		expect(bodyOf("composerPresentation")).not.toBe("");
 		expect(declaresWorklet(bodyOf("composerPresentation"))).toBe(false);
 	});
 });

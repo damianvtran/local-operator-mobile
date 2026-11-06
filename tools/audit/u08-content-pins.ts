@@ -559,8 +559,24 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * native lane (nightly 42156335030) is what proves the directive actually
 	 * prevents the synchronous-call crash. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (review round 1 remediation of the same PR):
+	 * the same two files moved again, and nothing painted. `composer-worklets.test.ts`
+	 * gained a presence assertion ahead of the directive check — `bodyOf` answers `""`
+	 * for a helper it cannot find and `declaresWorklet("")` is false, so deleting
+	 * `composerPresentation` outright used to leave the whole suite green — and both
+	 * that test's comment and the `composerPresentation` doc comment were corrected to
+	 * the real mechanism: it calls `composerOuterGap`, `composerPaintedHeight` and
+	 * `composerShellPadding`, none of which are worklets, so marking it would carry
+	 * three remote functions onto the UI runtime and move the crash one call deeper. An
+	 * assertion and a comment change no executable geometry: the three directives, every
+	 * helper's expression and `composer.tsx` are byte-identical to the digest above, so
+	 * no pixel of the U-08 scene moves. This is source admission for the geometry
+	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "de545639b49dfcd67feee45cf20d12e5e29c8a3582d1f3d2bde6368028aca2bc",
+	src: "83f43c1aa81faaa49b67ef10afaca0b0d551aefa7f69d32e1de53c5bf592f74e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

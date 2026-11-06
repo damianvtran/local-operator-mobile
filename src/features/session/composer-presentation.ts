@@ -43,9 +43,11 @@ export type ComposerPresentationFacts = {
  * is still a draft, so geometry must never normalize the reader's content.
  *
  * Deliberately NOT a worklet, and it must stay that way: it calls
- * `composerOuterGap` from `@/ui/device-corner`, a plain module the UI runtime
- * cannot load, so marking it would move the synchronous-call crash one frame
- * later instead of removing it. It is only ever called during render. */
+ * `composerOuterGap`, `composerPaintedHeight` and `composerShellPadding`, none of
+ * which are worklets. The UI runtime does not load modules — it serialises
+ * closures — so marking this one would capture those three as remote functions
+ * and reproduce the same synchronous-call crash one call deeper. It is only ever
+ * called during render. */
 export const composerPresentation = (facts: ComposerPresentationFacts) => {
 	const expanded =
 		facts.focused ||
