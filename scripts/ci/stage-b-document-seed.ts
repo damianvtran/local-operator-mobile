@@ -19,7 +19,10 @@ export const STAGE_B_DOCUMENT_NAME = "stage-b-seed.txt";
  * 42132547421 captured resource-id "stage-b-seed, txt" and accessibilityText
  * "stage-b-seed, txt, 12:54 AM, 34 bytes", so an exact ".txt" match never
  * lands. Anchored on our own synthetic name, so no other Files row can match. */
-export const STAGE_B_DOCUMENT_ROW = "stage-b-seed, txt(,.*)?";
+export const STAGE_B_DOCUMENT_ROW = `${STAGE_B_DOCUMENT_NAME.replace(
+	".",
+	", ",
+)}(,.*)?`;
 /** Synthetic, non-secret content. A canary would leak into a public artifact
  * through the file name alone, and the attachment strip proves the same thing. */
 export const STAGE_B_DOCUMENT_CONTENT = "Stage B synthetic attachment seed\n";
@@ -36,7 +39,7 @@ export const STAGE_B_LOCAL_STORAGE_DIR = "File Provider Storage";
 export type StageBDocumentProvider = "cloud" | "local";
 /** Labels, not host paths: the receipt is uploaded, so an absolute /Users/...
  * device path is an unnecessary disclosure (review R29-2). */
-export const STAGE_B_PROVIDER_LABEL: Readonly<
+export const STAGE_B_PROVIDER_PROSE: Readonly<
 	Record<StageBDocumentProvider, string>
 > = {
 	cloud: "iCloud Drive (Documents/com~apple~CloudDocs)",
@@ -44,7 +47,7 @@ export const STAGE_B_PROVIDER_LABEL: Readonly<
 };
 export interface StageBDocumentSeed {
 	provider: StageBDocumentProvider;
-	/** Provider labels probed, in order; safe to upload. */
+	/** Providers probed, in order; safe to upload. */
 	checked: StageBDocumentProvider[];
 	/** Simulator-relative path, safe to upload. */
 	path: string;
@@ -135,7 +138,7 @@ export function seedStageBDocument(
 			? (["local", local] as const)
 			: (() => {
 					throw new Error(
-						`document-seed failed: no Files location exists; checked ${STAGE_B_PROVIDER_LABEL.cloud} and ${STAGE_B_PROVIDER_LABEL.local}`,
+						`document-seed failed: no Files location exists; checked ${STAGE_B_PROVIDER_PROSE.cloud} and ${STAGE_B_PROVIDER_PROSE.local}`,
 					);
 				})();
 	mkdirSync(directory, { recursive: true });

@@ -80,3 +80,53 @@ export function stageBLostTapGate(input: {
 		reason: "no row callback: tap never reached JavaScript",
 	};
 }
+
+/** One conditional re-tap per launch, shared by every connect path. It was
+ * previously built only inside `relaunch()`, so the FIRST connect after boot
+ * (run 42149735954: row tap COMPLETED, zero row-presses, revision 0,
+ * signed-out/none, no /me) had no lease and no probe at all — the guard existed
+ * and never ran. Keeping the arming here means a new call site cannot forget it. */
+export interface StageBLostTapRetry {
+	probe: () => Promise<StageBLostTapDecision>;
+	record: (decision: StageBLostTapDecision) => void;
+}
+export interface StageBLostTapRecord {
+	leaseProcess: "same-process";
+	identityRequests: number;
+	attempted: boolean;
+	allowed: boolean;
+	reason: string;
+}
+export function createLostTapRetry(input: {
+	lease: StageBLostTapLease | null;
+	/** Live cumulative count: a CHANGE since the lease refuses the retry. */
+	identityRequests: () => number;
+	probeCallback: () => Promise<StageBCallbackProbe | null>;
+	record: (entry: StageBLostTapRecord) => void;
+}): StageBLostTapRetry | undefined {
+	const { lease } = input;
+	if (!lease) return undefined;
+	let attempted = false;
+	return {
+		probe: async () => {
+			const probe = await input.probeCallback();
+			const decision = stageBLostTapGate({
+				lease,
+				observed: probe
+					? { probe, identityRequests: input.identityRequests() }
+					: null,
+				retryAttempted: attempted,
+			});
+			attempted = decision.allow;
+			return decision;
+		},
+		record: (decision) =>
+			input.record({
+				leaseProcess: "same-process",
+				identityRequests: lease.identityRequests,
+				attempted,
+				allowed: decision.allow,
+				reason: decision.reason,
+			}),
+	};
+}

@@ -184,6 +184,9 @@ export const attachStageBDocument = (
 		},
 	},
 ];
+/** Files' own row text, i.e. what the picker shows — deliberately separate from
+ * `STAGE_B_PROVIDER_PROSE` in the seed module, which is our log/error wording.
+ * They read alike but one is UI copy under Apple's control. */
 export const STAGE_B_DOCUMENT_PROVIDER_LABEL: Readonly<
 	Record<StageBDocumentProvider, string>
 > = { cloud: "iCloud Drive", local: "On My iPhone" };

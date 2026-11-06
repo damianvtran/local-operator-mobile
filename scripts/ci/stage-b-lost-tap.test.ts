@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { StageBDriverBatch } from "./stage-b-driver-batch";
 import {
+	createLostTapRetry,
 	type StageBCallbackProbe,
 	stageBLostTapGate,
 } from "./stage-b-lost-tap";
@@ -182,5 +184,101 @@ describe("one conditional re-tap inside the driver batch", () => {
 		subject.add("draft", steps("assert-draft"));
 		await expect(subject.flush()).rejects.toThrow("maestro flow failed");
 		expect(runs).toHaveLength(1);
+	});
+});
+
+describe("the retry is armed on the first launch, not only on relaunch", () => {
+	it("requests the probe and allows one re-tap on the exact lost-tap shape", async () => {
+		// Run 42149735954: receipt.lostTapRetry was null and driverSegments empty
+		// because the initial connect was batched behind the warm-up flow and the
+		// lease was only ever taken inside relaunch(). The gate itself was fine.
+		let probes = 0;
+		let recorded:
+			| Parameters<
+					NonNullable<Parameters<typeof createLostTapRetry>[0]["record"]>
+			  >[0]
+			| null = null;
+		const retry = createLostTapRetry({
+			lease: lease(),
+			identityRequests: () => 0,
+			probeCallback: async () => {
+				probes++;
+				return { ...lease().probe };
+			},
+			record: (entry) => {
+				recorded = entry;
+			},
+		});
+		expect(retry).toBeDefined();
+		const decision = await retry?.probe();
+		expect(probes).toBe(1);
+		expect(decision).toEqual({
+			allow: true,
+			reason: expect.stringContaining("never reached JavaScript"),
+		});
+		retry?.record(decision!);
+		expect(recorded).toMatchObject({
+			leaseProcess: "same-process",
+			allowed: true,
+			attempted: true,
+		});
+		// One attempt per launch, no matter what the next probe says.
+		expect(await retry?.probe()).toEqual({
+			allow: false,
+			reason: "lost-tap retry already attempted",
+		});
+	});
+	it("still refuses when the probe is unavailable or a request was observed", async () => {
+		const unavailable = createLostTapRetry({
+			lease: lease(),
+			identityRequests: () => 0,
+			probeCallback: async () => null,
+			record: () => {},
+		});
+		expect(await unavailable?.probe()).toEqual({
+			allow: false,
+			reason: "same-process probe unavailable",
+		});
+		const observedMe = createLostTapRetry({
+			lease: lease(),
+			identityRequests: () => 1,
+			probeCallback: async () => ({ ...lease().probe }),
+			record: () => {},
+		});
+		expect((await observedMe?.probe())?.allow).toBe(false);
+	});
+	it("is not created without a same-process lease", () => {
+		expect(
+			createLostTapRetry({
+				lease: null,
+				identityRequests: () => 0,
+				probeCallback: async () => null,
+				record: () => undefined,
+			}),
+		).toBeUndefined();
+	});
+	it("is wired into the initial connect, which must open its own segment", () => {
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const initial = source.slice(
+			source.indexOf('await flow("warm-app-foreground"'),
+		);
+		const flush = initial.indexOf("await flushFlows();");
+		const connect = initial.indexOf('"connect-initial"');
+		// The retry is the third argument of that flow, so it sits after the name.
+		const armed = initial.indexOf("createLostTapRetry({");
+		const next = initial.indexOf('await flow("type-initial"');
+		// The gate only re-runs a segment opener: the flush must precede the
+		// connect flow, and the retry must belong to that same flow's arguments.
+		expect(flush).toBeGreaterThanOrEqual(0);
+		expect(flush).toBeLessThan(connect);
+		expect(connect).toBeLessThan(armed);
+		expect(armed).toBeLessThan(next);
+		// Both relicensing paths share the factory rather than rebuilding it.
+		expect(
+			source.split("createLostTapRetry({").length - 1,
+		).toBeGreaterThanOrEqual(2);
 	});
 });

@@ -57,14 +57,13 @@ import {
 	stageBSleep,
 	verifyStageBPostReleaseWindow,
 } from "./stage-b-draft-timing.ts";
-import {
-	StageBDriverBatch,
-	type StageBLostTapRetry,
-} from "./stage-b-driver-batch.ts";
+import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
 import {
 	type StageBCallbackProbe,
 	type StageBLostTapLease,
-	stageBLostTapGate,
+	type StageBLostTapRecord,
+	type StageBLostTapRetry,
+	createLostTapRetry,
 } from "./stage-b-lost-tap.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
@@ -947,35 +946,14 @@ async function runStageBCoordinator(
 			// driver reported COMPLETED. Arm exactly one conditional re-tap per
 			// launch, and only for a flow that must publish a route.
 			const lease = waitEditor ? await lostTapLease() : null;
-			let attempted = false;
-			const lostTapRetry: StageBLostTapRetry | undefined = lease
-				? {
-						probe: async () => {
-							const probe = await probeCallback();
-							const decision = stageBLostTapGate({
-								lease,
-								observed: probe
-									? {
-											probe,
-											identityRequests: fixture?.counters.me ?? 0,
-										}
-									: null,
-								retryAttempted: attempted,
-							});
-							attempted = decision.allow;
-							return decision;
-						},
-						record: (decision) => {
-							receipt.lostTapRetry = {
-								leaseProcess: "same-process",
-								identityRequests: lease.identityRequests,
-								attempted,
-								allowed: decision.allow,
-								reason: decision.reason,
-							};
-						},
-					}
-				: undefined;
+			const lostTapRetry = createLostTapRetry({
+				lease,
+				identityRequests: () => fixture?.counters.me ?? 0,
+				probeCallback,
+				record: (entry: StageBLostTapRecord) => {
+					receipt.lostTapRetry = entry;
+				},
+			});
 			await flow(
 				`connect-${++serial}`,
 				[...selectStageBComputer(), ...(waitEditor ? stageBEditor() : [])],
@@ -1020,12 +998,27 @@ async function runStageBCoordinator(
 			launch,
 			async () => {
 				await flow("warm-app-foreground", []);
-				await flow("connect-initial", [
-					...selectStageBComputer(),
-					{ takeScreenshot: "connect-initial-after-tap" },
-					...stageBEditor(),
-					{ assertNotVisible: { id: "computers-screen" } },
-				]);
+				// Flush so the connect flow OPENS its own segment: the retry gate
+				// only re-runs a segment opener, and batching the warm-up with it
+				// silently disabled the whole lost-tap path on the first launch.
+				await flushFlows();
+				await flow(
+					"connect-initial",
+					[
+						...selectStageBComputer(),
+						{ takeScreenshot: "connect-initial-after-tap" },
+						...stageBEditor(),
+						{ assertNotVisible: { id: "computers-screen" } },
+					],
+					createLostTapRetry({
+						lease: await lostTapLease(),
+						identityRequests: () => fixture?.counters.me ?? 0,
+						probeCallback,
+						record: (entry) => {
+							receipt.lostTapRetry = entry;
+						},
+					}),
+				);
 				await flow("type-initial", typeStageBDraft(canary));
 				await flow(
 					"attach-native-document",

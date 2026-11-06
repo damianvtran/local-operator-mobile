@@ -143,10 +143,13 @@ describe("Stage B adjacent UI driver batching", () => {
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		const begin = source.indexOf('await flow("connect-initial"');
+		const begin = source.indexOf('"connect-initial"');
+		// The flow is formatted across lines once it carries a retry argument, so
+		// slice from the last `await flow(` that precedes the name.
+		const open = source.lastIndexOf("await flow(", begin);
 		const typing = source.indexOf('await flow("type-initial"', begin);
-		const connect = source.slice(begin, typing);
-		expect(begin).toBeGreaterThan(0);
+		const connect = source.slice(open, typing);
+		expect(open).toBeGreaterThan(0);
 		expect(typing).toBeGreaterThan(begin);
 		expect(connect).toContain('takeScreenshot: "connect-initial-after-tap"');
 		expect(connect).toContain("...stageBEditor()");
