@@ -45,6 +45,26 @@ export const foldersFrom = (payload: Payload<"directories">): HomeFolders => {
 	};
 };
 
+/** A value the screen holds FOR ONE COMPUTER, tagged with the computer it came
+ *  from (`tunnelId`; `null` is a custom route, which has no tunnel id).
+ *
+ * WHY THE TAG (review round 2, R2-1). The header computer chip switches computers
+ * in place, so Home stays mounted and its state survives the switch. A folder or a
+ * folder list held untagged is then computer A's answer sitting in computer B's
+ * start body — a path B's spawn gate refuses, or worse, one that exists on B and
+ * starts the session in the wrong directory. Tagged, A's value reads as `null` on
+ * B in the very render the switch lands in (no effect has to run first to clear
+ * it), so B's own read is what fills the slot, and a failed read on B sends
+ * nothing rather than A's path. */
+export type ForComputer<T> = Readonly<{ computer: string | null; value: T }>;
+
+/** The held value when it belongs to `computer`, else `null`. */
+export const heldOn = <T>(
+	held: ForComputer<T> | null,
+	computer: string | null,
+): T | null =>
+	held !== null && held.computer === computer ? held.value : null;
+
 /** The folder the screen holds once a read has succeeded.
  *
  * WHY IT TAKES THE CURRENT VALUE (review R2). Every successful read of the folder
@@ -54,11 +74,18 @@ export const foldersFrom = (payload: Payload<"directories">): HomeFolders => {
  * successful read's `default` got there first, and both outrank a later read.
  * Replacing the slot unconditionally was the second half of the model-retry defect:
  * that retry re-ran this read and put the computer's default back over the reader's
- * folder, silently. */
+ * folder, silently.
+ *
+ * "Nobody has filled" is judged ON THE READ'S OWN COMPUTER (R2-1): a folder held
+ * for another computer is not a fill, so the read's `default` replaces it. */
 export const foldersApplied = (
-	current: string | null,
+	current: ForComputer<string> | null,
+	computer: string | null,
 	read: HomeFolders,
-): string => current ?? read.default;
+): ForComputer<string> => ({
+	computer,
+	value: heldOn(current, computer) ?? read.default,
+});
 
 /** The failure as it happened, KIND INCLUDED — the banner names the cause, and an
  *  auth failure is the one kind a renewal answers. A throw that is not a
@@ -138,7 +165,8 @@ export const homeStartSelection = (input: {
  *   out on the wire.
  * - `cwd` is left EXACTLY as the record holds it, with one exception: the value the
  *   old build invented is the computer's own `home`, so when the record names
- *   `folders.home` and the read resolved, it is replaced with `folders.default` —
+ *   `folders.home`, the read resolved and the reader has applied nothing in this
+ *   mount, it is replaced with `folders.default` —
  *   the directory a cwd-less start would have landed in. A path that is not that
  *   invented value is the reader's, and nothing here may move it.
  *
@@ -152,11 +180,21 @@ export const restoredSupersede = (input: {
 	 *  failed — without it the invented `home` cannot be told from a chosen one. */
 	folders: HomeFolders | null;
 	chosenModel: ModelEntry | null;
+	/** Whether the reader has applied a folder on this computer since the screen
+	 *  mounted. Once they have, the record is THEIR choice, not a restored one. */
+	readerApplied: boolean;
 }): StartSessionRequest | null => {
-	const { stored, folders, chosenModel } = input;
+	const { stored, folders, chosenModel, readerApplied } = input;
 	if (stored === null) return null;
+	/* The home rewrite applies ONLY to a record restored before the reader chose
+	 *  anything in this mount (review round 2, R2-2). This function re-runs after
+	 *  every write, including the reader's own Apply, so without the gate a reader
+	 *  who picked exactly their home folder had it silently rewritten to `default`
+	 *  — the value is the same one the old build invented, and only WHEN it was
+	 *  written tells them apart. The model strip below stays unconditional: it is
+	 *  keyed on what the reader chose, not on the record (QA round 1, Q2). */
 	const cwd =
-		folders !== null && stored.cwd === folders.home
+		!readerApplied && folders !== null && stored.cwd === folders.home
 			? folders.default
 			: stored.cwd;
 	const next: StartSessionRequest = {
@@ -165,8 +203,10 @@ export const restoredSupersede = (input: {
 			? { provider: chosenModel.provider, model_id: chosenModel.model_id }
 			: {}),
 	};
-	/* Key order matters to this comparison only because both sides are built by the
-	 *  same two files (`homeStartSelection` above, the coordinator's `copy`). */
+	/* Key order matters to this comparison: `next` is built just above and `stored`
+	 *  comes from the coordinator's record (written by `homeStartSelection` or the
+	 *  sheet's Apply, then round-tripped through its JSON `copy`), and every one of
+	 *  those writers emits `cwd`, then `provider`, then `model_id`. */
 	return JSON.stringify(next) === JSON.stringify(stored) ? null : next;
 };
 

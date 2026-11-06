@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { ModelEntry } from "@/contracts";
 import {
+	type ForComputer,
 	foldersApplied,
 	foldersFailure,
 	foldersFrom,
+	heldOn,
 	homeModelReading,
 	homeStartSelection,
 	isAuthFailure,
@@ -179,7 +181,12 @@ describe("what a restored record is allowed to keep", () => {
 
 	it("drops the invented model when the folder read resolved", () => {
 		expect(
-			restoredSupersede({ stored: invented, folders: read, chosenModel: null }),
+			restoredSupersede({
+				stored: invented,
+				folders: read,
+				chosenModel: null,
+				readerApplied: false,
+			}),
 		).toStrictEqual({ cwd: "/Users/reader/src/local-operator" });
 	});
 
@@ -191,6 +198,7 @@ describe("what a restored record is allowed to keep", () => {
 			stored: invented,
 			folders: null,
 			chosenModel: null,
+			readerApplied: false,
 		});
 		expect(next).not.toBeNull();
 		expect(next).not.toHaveProperty("provider");
@@ -204,10 +212,20 @@ describe("what a restored record is allowed to keep", () => {
 			model_id: "claude-haiku-5-5",
 		};
 		expect(
-			restoredSupersede({ stored: chosen, folders: read, chosenModel: null }),
+			restoredSupersede({
+				stored: chosen,
+				folders: read,
+				chosenModel: null,
+				readerApplied: false,
+			}),
 		).toStrictEqual({ cwd: theirs });
 		expect(
-			restoredSupersede({ stored: chosen, folders: null, chosenModel: null }),
+			restoredSupersede({
+				stored: chosen,
+				folders: null,
+				chosenModel: null,
+				readerApplied: false,
+			}),
 		).toStrictEqual({ cwd: theirs });
 	});
 
@@ -220,10 +238,16 @@ describe("what a restored record is allowed to keep", () => {
 				stored: { cwd: theirs },
 				folders: read,
 				chosenModel: null,
+				readerApplied: false,
 			}),
 		).toBeNull();
 		expect(
-			restoredSupersede({ stored: null, folders: read, chosenModel: null }),
+			restoredSupersede({
+				stored: null,
+				folders: read,
+				chosenModel: null,
+				readerApplied: false,
+			}),
 		).toBeNull();
 	});
 
@@ -237,6 +261,7 @@ describe("what a restored record is allowed to keep", () => {
 				},
 				folders: read,
 				chosenModel: model(),
+				readerApplied: false,
 			}),
 		).toStrictEqual({
 			cwd: theirs,
@@ -248,17 +273,40 @@ describe("what a restored record is allowed to keep", () => {
 
 describe("the folder the screen holds after a successful read", () => {
 	it("fills a slot nobody has filled with the computer's default", () => {
-		expect(foldersApplied(null, foldersFrom(payload()))).toBe(
-			"/Users/reader/src/local-operator",
-		);
+		expect(
+			foldersApplied(null, "tunnel-a", foldersFrom(payload())),
+		).toStrictEqual({
+			computer: "tunnel-a",
+			value: "/Users/reader/src/local-operator",
+		});
 	});
 
 	it("never moves a folder the reader applied (review R2)", () => {
 		// The model banner's Retry used to re-run the FOLDERS read and land here with a
 		// fresh `default`, which replaced the reader's folder without a word.
 		expect(
-			foldersApplied("/Users/reader/projects", foldersFrom(payload())),
+			foldersApplied(
+				{ computer: "tunnel-a", value: "/Users/reader/projects" },
+				"tunnel-a",
+				foldersFrom(payload()),
+			).value,
 		).toBe("/Users/reader/projects");
+	});
+
+	it("does not count another computer's folder as filled (review round 2, R2-1)", () => {
+		expect(
+			foldersApplied(
+				{ computer: "tunnel-a", value: "/Users/reader/projects" },
+				"tunnel-b",
+				foldersFrom(payload({ default: "/home/b/work" })),
+			),
+		).toStrictEqual({ computer: "tunnel-b", value: "/home/b/work" });
+		expect(
+			heldOn(
+				{ computer: "tunnel-a", value: "/Users/reader/projects" },
+				"tunnel-b",
+			),
+		).toBeNull();
 	});
 });
 
@@ -281,6 +329,7 @@ describe("what a restored record turns into on the wire (QA round 1, Q2)", () =>
 		stored: StartSessionRequest;
 		folders: Parameters<typeof restoredSupersede>[0]["folders"];
 		chosenModel: ModelEntry | null;
+		readerApplied?: boolean;
 	}): Promise<StartSessionRequest> => {
 		let disk: StartupRecord | null = {
 			version: 1,
@@ -317,6 +366,7 @@ describe("what a restored record turns into on the wire (QA round 1, Q2)", () =>
 			stored: coordinator.snapshot().selection,
 			folders: input.folders,
 			chosenModel: input.chosenModel,
+			readerApplied: input.readerApplied ?? false,
 		});
 		if (next !== null) await coordinator.configure(next, true);
 		coordinator.edit("hello", []);
@@ -370,5 +420,171 @@ describe("what a restored record turns into on the wire (QA round 1, Q2)", () =>
 				chosenModel: null,
 			}),
 		).toStrictEqual({ cwd: theirs });
+	});
+});
+
+/**
+ * The home's wiring, replayed over the REAL coordinator: the folder state tagged
+ * per computer (`heldOn`/`foldersApplied`), the live selection `useStartup`
+ * configures without `replace`, the reader's Apply (`replace`), and the supersede
+ * effect re-running after every write until it settles — the order `home.tsx`
+ * runs them in. What is asserted is what `deps.start` receives.
+ */
+describe("the home's wiring across a computer switch and an Apply (review round 2)", () => {
+	const A = foldersFrom(payload());
+	const B = foldersFrom(
+		payload({
+			home: "/home/b",
+			recent: ["/home/b/work"],
+			default: "/home/b/work",
+		}),
+	);
+	const aPick = "/Users/reader/projects";
+
+	const computer = (stored: StartSessionRequest | null) => {
+		let disk: StartupRecord | null =
+			stored === null
+				? null
+				: {
+						version: 1,
+						scope: "authorization/server",
+						phase: "draft",
+						sessionId: null,
+						selection: stored,
+						draft: { text: "", images: [] },
+						queue: [],
+					};
+		const started: StartSessionRequest[] = [];
+		const coordinator = new StartupCoordinator("authorization/server", {
+			store: {
+				load: async () => (disk === null ? null : structuredClone(disk)),
+				save: async (record) => {
+					disk = structuredClone(record);
+				},
+			},
+			start: async (selection) => {
+				started.push(selection);
+				return { session_id: "session" };
+			},
+			send: async () => undefined,
+			isCurrent: () => true,
+			uuid: () => "00000000-0000-4000-8000-000000000002",
+		});
+		return { coordinator, started };
+	};
+
+	/** One render's effects: the live selection, then the supersede loop. */
+	const render = async (
+		coordinator: StartupCoordinator,
+		screen: {
+			cwd: string | null;
+			folders: Parameters<typeof restoredSupersede>[0]["folders"];
+			readerApplied: boolean;
+		},
+	) => {
+		const selection = homeStartSelection({
+			cwd: screen.cwd,
+			chosenModel: null,
+		});
+		if (selection !== null) await coordinator.configure(selection);
+		for (let pass = 0; pass < 5; pass += 1) {
+			const next = restoredSupersede({
+				stored: coordinator.snapshot().selection,
+				folders: screen.folders,
+				chosenModel: null,
+				readerApplied: screen.readerApplied,
+			});
+			if (next === null) return;
+			// `startup.configure` in the screen is the replacing write.
+			await coordinator.configure(next, true);
+		}
+		throw new Error("the supersede effect never settled");
+	};
+
+	const send = async (coordinator: StartupCoordinator) => {
+		coordinator.edit("hello", []);
+		await coordinator.enqueue();
+		await coordinator.settled();
+	};
+
+	it("starts computer B in B's default, never in the folder held for A (R2-1)", async () => {
+		// The reader applied a folder on A, then switched with the header chip.
+		const held: ForComputer<string> = { computer: "tunnel-a", value: aPick };
+		const b = computer(null);
+		await b.coordinator.ready;
+		// The switch's own render: A's folder reads as nothing on B.
+		await render(b.coordinator, {
+			cwd: heldOn(held, "tunnel-b"),
+			folders: null,
+			readerApplied: false,
+		});
+		// B's read resolves.
+		const filled = foldersApplied(held, "tunnel-b", B);
+		await render(b.coordinator, {
+			cwd: heldOn(filled, "tunnel-b"),
+			folders: B,
+			readerApplied: false,
+		});
+		await send(b.coordinator);
+		expect(b.started).toStrictEqual([{ cwd: "/home/b/work" }]);
+	});
+
+	it("sends nothing of A's when B's folder read FAILS (R2-1)", async () => {
+		const held: ForComputer<string> = { computer: "tunnel-a", value: aPick };
+		const b = computer(null);
+		await b.coordinator.ready;
+		await render(b.coordinator, {
+			cwd: heldOn(held, "tunnel-b"),
+			folders: null,
+			readerApplied: false,
+		});
+		await send(b.coordinator);
+		// No folder is known on B, so no start goes out at all — the send waits.
+		expect(b.started).toStrictEqual([]);
+		expect(b.coordinator.snapshot().selection).toBeNull();
+		expect(b.coordinator.snapshot().queue).toHaveLength(1);
+	});
+
+	it("keeps exactly the home folder when the reader applies it (R2-2)", async () => {
+		const a = computer(null);
+		await a.coordinator.ready;
+		await render(a.coordinator, {
+			cwd: A.default,
+			folders: A,
+			readerApplied: false,
+		});
+		// The reader taps the recent row that IS their home folder, then Apply.
+		await a.coordinator.configure({ cwd: A.home }, true);
+		// The re-renders that follow the write must not move it.
+		await render(a.coordinator, {
+			cwd: A.home,
+			folders: A,
+			readerApplied: true,
+		});
+		await render(a.coordinator, {
+			cwd: A.home,
+			folders: A,
+			readerApplied: true,
+		});
+		await send(a.coordinator);
+		expect(a.started).toStrictEqual([{ cwd: "/Users/reader" }]);
+	});
+
+	it("still moves an old build's restored home record to the default (R2-2 control)", async () => {
+		const a = computer({
+			cwd: A.home,
+			provider: "anthropic",
+			model_id: "claude-haiku-5-5",
+		});
+		await a.coordinator.ready;
+		await render(a.coordinator, {
+			cwd: A.default,
+			folders: A,
+			readerApplied: false,
+		});
+		await send(a.coordinator);
+		expect(a.started).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
 	});
 });

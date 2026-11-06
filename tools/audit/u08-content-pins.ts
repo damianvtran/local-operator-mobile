@@ -602,7 +602,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * recent ids, and two catalogue keys were added. `app` is untouched by this round.
 	 * The U-08 scene renders no home surface, so this is still source admission rather
 	 * than a claim that any measured geometry moved. */
-	src: "8cc304425af29ffaa59a7b624a215935165b385283fb570cb234a60815ffac65",
+	/* Re-printed 2026-11-06 at the STAGED round-2 remediation tree: the home's folder
+	 * state is tagged per computer (R2-1), the restored-home rewrite waits on "no
+	 * Apply yet in this mount" (R2-2), and the startup coordinator drops a restored
+	 * model before `resume()` can replay it (R2-3). Logic only — no rendered surface,
+	 * copy or catalogue key changed, `app` is untouched, and U-08's scene still renders
+	 * no home surface: source admission, not a claim that measured geometry moved. */
+	src: "7df9737d879102156ad11c6ff239747285a22a40bbcffc7ec9368d5b61a18574",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

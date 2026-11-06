@@ -373,6 +373,34 @@ describe("a refused create is recoverable", () => {
 		});
 	});
 
+	it("replays a restored pending send WITHOUT the model the reader never chose (review round 2, R2-3)", async () => {
+		/* The upgrade path: a build that invented `catalogue.models[0]` left a draft
+		 * with a send still queued. `resume()` replays it before any screen effect can
+		 * correct the record, so the strip has to happen where the record is restored. */
+		const before = setup();
+		await before.coordinator.ready;
+		before.coordinator.edit("pending", []);
+		await before.coordinator.enqueue();
+		await before.coordinator.flush();
+		const saved = before.disk();
+		expect(saved?.queue).toHaveLength(1);
+		const reloaded = setup({
+			...(saved as StartupRecord),
+			selection: {
+				cwd: "/Users/reader/src/local-operator",
+				provider: "anthropic",
+				model_id: "claude-haiku-5-5",
+			},
+		});
+		reloaded.setStart(async () => ({ session_id: "session-a" }));
+		await reloaded.coordinator.ready;
+		reloaded.coordinator.resume();
+		await reloaded.coordinator.settled();
+		expect(reloaded.selections).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
+	});
+
 	it("restores a persisted refused record instead of discarding its queue", async () => {
 		const x = setup();
 		x.setStart(async () => {

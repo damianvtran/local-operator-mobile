@@ -22,10 +22,12 @@ import {
 } from "@/features/home/home-copy";
 import {
 	type CatalogueRead,
+	type ForComputer,
 	foldersApplied,
 	foldersFailure,
 	foldersFrom,
 	type HomeFolders,
+	heldOn,
 	homeModelReading,
 	homeStartSelection,
 	isAuthFailure,
@@ -180,9 +182,21 @@ export default function Home({
 	/** The folder the next start names: the reader's pick in the sheet, else the
 	 *  computer's OWN default. `null` until a read resolves one — nothing here
 	 *  invents a directory to start in. */
-	const [homeDirectory, setHomeDirectory] = useState<string | null>(null);
+	const [heldDirectory, setHeldDirectory] =
+		useState<ForComputer<string> | null>(null);
 	/** The computer's answer to "where do I start", with the folders it offers. */
-	const [folders, setFolders] = useState<HomeFolders | null>(null);
+	const [heldFolders, setHeldFolders] =
+		useState<ForComputer<HomeFolders> | null>(null);
+	/** The computer the reader last pressed Apply on, `null` before any Apply in
+	 *  this mount: it is what tells a restored record from a choice (R2-2). */
+	const [appliedOn, setAppliedOn] = useState<ForComputer<true> | null>(null);
+	/* All three are TAGGED with the computer they belong to and read through
+	 * `heldOn` (review round 2, R2-1): the header chip switches computers without
+	 * leaving Home, and an untagged folder from computer A went into B's start body.
+	 * Read this way, A's values are `null` on B in the switch's own render. */
+	const homeDirectory = heldOn(heldDirectory, tunnelId);
+	const folders = heldOn(heldFolders, tunnelId);
+	const readerApplied = heldOn(appliedOn, tunnelId) !== null;
 	/** The folders read's failure, KIND KEPT: the banner names the cause it really
 	 *  was, and an auth kind is owed one automatic re-ask once the route is live. */
 	const [directoriesError, setDirectoriesError] = useState<RelayError | null>(
@@ -214,10 +228,17 @@ export default function Home({
 			stored: startup.snapshot.selection,
 			folders,
 			chosenModel,
+			readerApplied,
 		});
 		if (next === null) return;
 		void startup.configure(next);
-	}, [startup, startup.snapshot.selection, folders, chosenModel]);
+	}, [
+		startup,
+		startup.snapshot.selection,
+		folders,
+		chosenModel,
+		readerApplied,
+	]);
 	const draft = startup.snapshot.draft.text;
 	const images = startup.snapshot.draft.images;
 	const setDraft = startup.setText;
@@ -294,18 +315,21 @@ export default function Home({
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
+		/* The read is answered FOR the computer it was asked of (R2-1), and a
+		 *  computer change re-asks: `tunnelId` is a dependency for that reason. */
+		const computer = tunnelId;
 		let live = true;
 		void active
 			.directories()
 			.then((payload) => {
 				if (!live) return;
 				const read = foldersFrom(payload);
-				setFolders(read);
+				setHeldFolders({ computer, value: read });
 				/* THE READER'S FOLDER WINS over a later read (review R2): the success path
 				 *  fills the default only into a slot nobody has filled, so a folder applied
 				 *  in the sheet survives a re-read of any kind — this read's own retry
 				 *  included. */
-				setHomeDirectory((held) => foldersApplied(held, read));
+				setHeldDirectory((held) => foldersApplied(held, computer, read));
 				setDirectoriesError(null);
 			})
 			.catch((cause: unknown) => {
@@ -314,7 +338,7 @@ export default function Home({
 		return () => {
 			live = false;
 		};
-	}, [relay, directoriesAttempt]);
+	}, [relay, tunnelId, directoriesAttempt]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: modelsAttempt is the re-run trigger (see above)
 	useEffect(() => {
@@ -919,7 +943,11 @@ export default function Home({
 						label={t("mobile.home.options.apply")}
 						disabled={!selectionEditable || optionPath.trim() === ""}
 						onPress={() => {
-							setHomeDirectory(optionPath.trim());
+							setHeldDirectory({
+								computer: tunnelId,
+								value: optionPath.trim(),
+							});
+							setAppliedOn({ computer: tunnelId, value: true });
 							setChosenModel(optionModel);
 							setOptionsOpen(false);
 							/* The model fields ride along ONLY when the sheet holds a chosen
