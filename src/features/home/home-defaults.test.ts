@@ -7,7 +7,9 @@ import {
 	foldersFailure,
 	foldersFrom,
 	heldOn,
+	homeFolderSelection,
 	homeModelReading,
+	homeModelRows,
 	homeStartSelection,
 	isAuthFailure,
 	restoredSupersede,
@@ -16,6 +18,7 @@ import {
 	StartupCoordinator,
 	type StartupRecord,
 } from "@/features/new-session/startup-coordinator";
+import { composerChipLabels } from "@/features/session/chip-labels";
 import type { StartSessionRequest } from "@/relay/endpoints";
 import { RelayError } from "@/relay/errors";
 
@@ -153,16 +156,88 @@ describe("what the model chip is told", () => {
 		).toStrictEqual({ kind: "default" });
 	});
 
-	it("reports the catalogue as unread when its read failed", () => {
+	it("still says Default when the catalogue read failed and nothing is chosen", () => {
+		// Design D2 / UX U1: a failed read loses the MENU, not the model that runs —
+		// the start names no model, so the computer's default applies. The reading
+		// is a pressable value chip, so the sheet stays reachable; the banner alone
+		// tells the failure.
 		expect(
 			homeModelReading({ chosenModel: null, catalogue: "failed" }),
-		).toStrictEqual({ kind: "unknown" });
+		).toStrictEqual({ kind: "default" });
+		expect(
+			composerChipLabels({
+				model: homeModelReading({ chosenModel: null, catalogue: "failed" }),
+				effort: null,
+				connection: "connected",
+			}).model,
+		).toMatchObject({ kind: "value", text: "Default" });
 	});
 
 	it("waits while the catalogue is still loading", () => {
 		expect(
 			homeModelReading({ chosenModel: null, catalogue: "loading" }),
 		).toStrictEqual({ kind: "loading" });
+	});
+});
+
+describe("the options sheet's rows", () => {
+	const opus = model();
+	const haiku = model({
+		selector: "anthropic/claude-haiku-5",
+		model_id: "claude-haiku-5",
+		name: "Haiku 5",
+	});
+	const shape = (rows: ReturnType<typeof homeModelRows>) =>
+		rows.map((row) =>
+			row.kind === "default" ? "default" : row.model.selector,
+		);
+
+	it("shows the default row as the selected one while nothing is chosen", () => {
+		const rows = homeModelRows({ models: [opus, haiku], optionModel: null });
+		expect(rows[0]).toStrictEqual({ kind: "default", selected: true });
+		expect(rows.filter((row) => row.selected)).toHaveLength(1);
+	});
+
+	it("keeps the default row, unselected, once a model is chosen", () => {
+		const rows = homeModelRows({ models: [opus, haiku], optionModel: haiku });
+		expect(rows[0]).toStrictEqual({ kind: "default", selected: false });
+		expect(rows.filter((row) => row.selected)).toStrictEqual([
+			{ kind: "model", model: haiku, selected: true },
+		]);
+	});
+
+	it("never changes the row count or order when the default row is tapped", () => {
+		// Design D1: the tap used to unmount the row it landed on, so the first
+		// catalogue model slid under the finger. Same rows before and after.
+		const chosen = homeModelRows({ models: [opus, haiku], optionModel: opus });
+		const tapped = homeModelRows({ models: [opus, haiku], optionModel: null });
+		expect(shape(tapped)).toStrictEqual(shape(chosen));
+		expect(shape(tapped)).toStrictEqual([
+			"default",
+			"anthropic/claude-opus-5",
+			"anthropic/claude-haiku-5",
+		]);
+	});
+
+	it("keeps the default row when the catalogue could not be read", () => {
+		expect(homeModelRows({ models: [], optionModel: null })).toStrictEqual([
+			{ kind: "default", selected: true },
+		]);
+	});
+
+	it("announces which folder rows hold the sheet's folder", () => {
+		const folders = foldersFrom(payload());
+		const selection = homeFolderSelection({
+			folders,
+			optionPath: ` ${folders.default} `,
+		});
+		expect(selection.default).toBe(true);
+		expect(selection.recent).toStrictEqual(
+			folders.recent.map((directory) => directory === folders.default),
+		);
+		const typed = homeFolderSelection({ folders, optionPath: "/elsewhere" });
+		expect(typed.default).toBe(false);
+		expect(typed.recent.every((selected) => !selected)).toBe(true);
 	});
 });
 

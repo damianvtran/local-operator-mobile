@@ -608,7 +608,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * model before `resume()` can replay it (R2-3). Logic only — no rendered surface,
 	 * copy or catalogue key changed, `app` is untouched, and U-08's scene still renders
 	 * no home surface: source admission, not a claim that measured geometry moved. */
-	src: "7df9737d879102156ad11c6ff239747285a22a40bbcffc7ec9368d5b61a18574",
+	/* Re-printed 2026-11-06 at the STAGED design/UX round-1 remediation tree: the
+	 * options sheet's "computer's default model" row stays mounted and is the selected
+	 * row while nothing is chosen (D1/U3), the sheet rows announce selection through a
+	 * new optional `Button` `selected` prop (U5), the chip keeps "Default" when the
+	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
+	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
+	 * source admission, not a claim that measured geometry moved. */
+	src: "603ecaf930754295a712e4a47ccf6770148e2c9d9732339113c1dddcd3b35438",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

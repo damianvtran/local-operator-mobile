@@ -218,10 +218,14 @@ export type CatalogueRead = "loading" | "ready" | "failed";
  *
  * A CHOSEN MODEL ALWAYS WINS: it is known without the catalogue, so a read still in
  * flight (or one that failed) must not replace a selector the reader picked. With
- * nothing chosen the answer is the computer's own default, never a catalogue row —
- * and a failed read says it could not be read rather than reporting the session as
- * connected with no model (`n/a`), which was a silent failure wearing a state's
- * clothes.
+ * nothing chosen the answer is the computer's own default, never a catalogue row.
+ *
+ * A FAILED READ STILL SAYS "Default" (design review round 1, D2; UX U1). The
+ * catalogue is the sheet's MENU, not the model that runs: with nothing chosen the
+ * start body names no model and the computer applies its configured default
+ * whether or not the list could be read. "Unknown" said something false, and its
+ * unavailable chip was disabled — with the folders read failed too, the reader had
+ * no way into the sheet at all. The read failure is the models banner's to tell.
  */
 export const homeModelReading = (input: {
 	chosenModel: ModelEntry | null;
@@ -229,7 +233,61 @@ export const homeModelReading = (input: {
 }): ModelReading => {
 	if (input.chosenModel !== null)
 		return { kind: "selector", selector: input.chosenModel.selector };
-	if (input.catalogue === "failed") return { kind: "unknown" };
 	if (input.catalogue === "loading") return { kind: "loading" };
 	return { kind: "default" };
+};
+
+/** One row of the options sheet's model list: the computer's default, or an entry. */
+export type HomeModelRow =
+	| Readonly<{ kind: "default"; selected: boolean }>
+	| Readonly<{ kind: "model"; model: ModelEntry; selected: boolean }>;
+
+/**
+ * The model half of the options sheet, in render order.
+ *
+ * THE DEFAULT ROW IS ALWAYS THERE (design review round 1, D1; UX U3). It used to
+ * render only while a model was held, and its own tap set the held model to `null`
+ * — so the tap unmounted the row it landed on, every entry moved up a row, and the
+ * catalogue's first model came to rest under the reader's finger: a second "make
+ * sure" tap chose the invented default this module exists to remove. Kept mounted,
+ * the list's length and order depend on the catalogue alone and never on a tap.
+ *
+ * Selection is exactly one row: the default while nothing is held — the truthful
+ * state, since the start body then names no model and the computer decides — or
+ * the held entry. A held selector the catalogue does not list (a re-read dropped
+ * it) selects nothing rather than guessing a neighbour.
+ */
+export const homeModelRows = (input: {
+	models: readonly ModelEntry[];
+	optionModel: ModelEntry | null;
+}): readonly HomeModelRow[] => [
+	{ kind: "default", selected: input.optionModel === null },
+	...input.models.map(
+		(model): HomeModelRow => ({
+			kind: "model",
+			model,
+			selected: input.optionModel?.selector === model.selector,
+		}),
+	),
+];
+
+/**
+ * Which folder rows say they hold the sheet's folder, for screen readers (UX U5).
+ *
+ * The folder rows already stay mounted on tap (they fill the field, they do not
+ * remove themselves), so only their selected STATE is new. It is announced, not
+ * painted: the default row and the first recent row usually name the same path,
+ * and two solid rows for one choice would read as two choices — the visual marker
+ * is the folder picker's job (redesign item 5, design D3). A path typed into the
+ * field that no row names selects no row.
+ */
+export const homeFolderSelection = (input: {
+	folders: HomeFolders;
+	optionPath: string;
+}): Readonly<{ default: boolean; recent: readonly boolean[] }> => {
+	const path = input.optionPath.trim();
+	return {
+		default: path === input.folders.default,
+		recent: input.folders.recent.map((directory) => directory === path),
+	};
 };

@@ -28,7 +28,9 @@ import {
 	foldersFrom,
 	type HomeFolders,
 	heldOn,
+	homeFolderSelection,
 	homeModelReading,
+	homeModelRows,
 	homeStartSelection,
 	isAuthFailure,
 	restoredSupersede,
@@ -197,6 +199,11 @@ export default function Home({
 	const homeDirectory = heldOn(heldDirectory, tunnelId);
 	const folders = heldOn(heldFolders, tunnelId);
 	const readerApplied = heldOn(appliedOn, tunnelId) !== null;
+	/* The options sheet's rows and their selection, derived rather than inline so the
+	 *  "a tap never reflows the list" guarantee is asserted in a test (design D1). */
+	const modelRows = homeModelRows({ models, optionModel });
+	const folderSelection =
+		folders === null ? null : homeFolderSelection({ folders, optionPath });
 	/** The folders read's failure, KIND KEPT: the banner names the cause it really
 	 *  was, and an auth kind is owed one automatic re-ask once the route is live. */
 	const [directoriesError, setDirectoriesError] = useState<RelayError | null>(
@@ -204,6 +211,12 @@ export default function Home({
 	);
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
 	const [modelsAttempt, setModelsAttempt] = useState(0);
+	/** The attempt whose models read last SETTLED. While it trails `modelsAttempt` a
+	 *  Retry is in flight, and the banner's action shows its own `loading` (UX U2):
+	 *  `modelsRead` deliberately stays "failed" during a retry — flipping it to
+	 *  "loading" would unmount the banner and skeleton the chip — so without this a
+	 *  second failure looked exactly like a tap that did nothing. */
+	const [modelsSettled, setModelsSettled] = useState(0);
 	const [modelsRead, setModelsRead] = useState<CatalogueRead>("loading");
 	/** The model the reader picked in the sheet, and NOTHING ELSE. `null` is the
 	 *  default state rather than a gap to fill: with nothing chosen the start body
@@ -340,7 +353,8 @@ export default function Home({
 		};
 	}, [relay, tunnelId, directoriesAttempt]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: modelsAttempt is the re-run trigger (see above)
+	/* `modelsAttempt` is the re-run trigger (see above), and is now read too: the
+	 *  settle records WHICH attempt answered, for the Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
@@ -351,9 +365,12 @@ export default function Home({
 				if (!live) return;
 				setModels(catalogue.models);
 				setModelsRead("ready");
+				setModelsSettled(modelsAttempt);
 			})
 			.catch(() => {
-				if (live) setModelsRead("failed");
+				if (!live) return;
+				setModelsRead("failed");
+				setModelsSettled(modelsAttempt);
 			});
 		return () => {
 			live = false;
@@ -659,9 +676,9 @@ export default function Home({
 			) : null}
 
 			{/* The model list could not be read: its own failure, with the retry the
-			 *  read never had. The chip says the same in one word ("Unknown"); this row is
-			 *  where the reader can act on it, rather than a chip that declared itself
-			 *  connected while reporting no model. */}
+			 *  read never had. This banner is the ONLY place that failure is told: the
+			 *  chip keeps saying "Default" because the computer's default still runs (a
+			 *  failed read loses the menu, not the model — design D2 / UX U1). */}
 			{modelsRead === "failed" ? (
 				<Banner
 					tone="warning"
@@ -669,6 +686,7 @@ export default function Home({
 					action={{
 						label: t("mobile.computers.retry"),
 						onPress: retryModels,
+						loading: modelsSettled !== modelsAttempt,
 						testID: CONTROL.homeModelsRetry,
 					}}
 					testID={CONTROL.homeModelsBanner}
@@ -887,6 +905,7 @@ export default function Home({
 							variant="quiet"
 							onPress={() => setOptionPath(folders.default)}
 							disabled={!selectionEditable}
+							selected={folderSelection?.default ?? false}
 							testID={CONTROL.homeDefaultFolder}
 						/>
 					) : null}
@@ -906,39 +925,42 @@ export default function Home({
 									variant="quiet"
 									onPress={() => setOptionPath(directory)}
 									disabled={!selectionEditable}
+									selected={folderSelection?.recent[index] ?? false}
 									testID={homeRecentFolderId(index)}
 								/>
 							))}
 						</View>
 					) : null}
-					{/* The model half of the same way back (review R5): `chosenModel` only ever
-					 *  moved null → entry, so a mis-tap on an entry was correctable only by
-					 *  picking a different one. Shown only when the sheet holds a model, because
-					 *  "use the default" over a default is a row about nothing. */}
-					{optionModel !== null ? (
-						<Button
-							label={t("mobile.home.options.default_model")}
-							variant="quiet"
-							onPress={() => setOptionModel(null)}
-							disabled={!selectionEditable}
-							testID={CONTROL.homeDefaultModel}
-						/>
-					) : null}
-					{models.map((model) => (
-						<Button
-							key={model.selector}
-							label={model.label ?? model.name ?? model.selector}
-							/* NO ROW IS PAINTED AS SELECTED UNLESS THE READER PICKED IT: `optionModel`
-							 *  starts as their own choice (`null` when they made none), so the sheet never
-							 *  shows an entry the app merely guessed at. */
-							variant={
-								optionModel?.selector === model.selector ? "primary" : "quiet"
-							}
-							onPress={() => setOptionModel(model)}
-							disabled={!selectionEditable}
-							testID={CONTROL.startupModelOption}
-						/>
-					))}
+					{/* The model half of the same way back (review R5), ALWAYS mounted: the rows
+					 *  come from `homeModelRows`, whose default row stays put whatever is held, so a
+					 *  tap never reflows the list under the finger (design D1 / UX U3). The default
+					 *  row is the selected one while nothing is chosen — the start body then names
+					 *  no model, so "the computer decides" IS the effective choice — and NO
+					 *  CATALOGUE ROW IS PAINTED AS SELECTED UNLESS THE READER PICKED IT:
+					 *  `optionModel` starts as their own choice (`null` when they made none). */}
+					{modelRows.map((row) =>
+						row.kind === "default" ? (
+							<Button
+								key="default"
+								label={t("mobile.home.options.default_model")}
+								variant={row.selected ? "primary" : "quiet"}
+								onPress={() => setOptionModel(null)}
+								disabled={!selectionEditable}
+								selected={row.selected}
+								testID={CONTROL.homeDefaultModel}
+							/>
+						) : (
+							<Button
+								key={row.model.selector}
+								label={row.model.label ?? row.model.name ?? row.model.selector}
+								variant={row.selected ? "primary" : "quiet"}
+								onPress={() => setOptionModel(row.model)}
+								disabled={!selectionEditable}
+								selected={row.selected}
+								testID={CONTROL.startupModelOption}
+							/>
+						),
+					)}
 					<Button
 						label={t("mobile.home.options.apply")}
 						disabled={!selectionEditable || optionPath.trim() === ""}
