@@ -124,6 +124,13 @@ export function stageBDocumentSeedPath(dataRoot: string): string {
 export function seedStageBDocument(
 	dataRoot: string,
 	lookup: StageBSeedLookup = simulatorSeedLookup(dataRoot),
+	/** Warm-up outcome, so a still-missing provider fails with the wait named. */
+	registration?: {
+		needed: boolean;
+		filesApp: string | null;
+		elapsedMs: number;
+		polls: number;
+	},
 ): StageBDocumentSeed {
 	const cloud = join(dataRoot, STAGE_B_CLOUD_DOCS);
 	// Captured BEFORE any seeding: the field means "the cloud container already
@@ -138,7 +145,13 @@ export function seedStageBDocument(
 			? (["local", local] as const)
 			: (() => {
 					throw new Error(
-						`document-seed failed: no Files location exists; checked ${STAGE_B_PROVIDER_PROSE.cloud} and ${STAGE_B_PROVIDER_PROSE.local}`,
+						`document-seed failed: no Files location exists; checked ${STAGE_B_PROVIDER_PROSE.cloud} and ${STAGE_B_PROVIDER_PROSE.local}; providerRegistration: unavailable${
+							registration
+								? ` (warm-up ${registration.needed ? "launched" : "skipped"} ` +
+									`${registration.filesApp ?? "no Files app resolved"}, ` +
+									`waited ${registration.elapsedMs}ms over ${registration.polls} polls)`
+								: ""
+						}`,
 					);
 				})();
 	mkdirSync(directory, { recursive: true });

@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
 	existsSync,
@@ -29,6 +29,7 @@ import { capFor } from "./account-routing-proof-contract.ts";
 import {
 	STAGE_B_DOCUMENT_NAME,
 	seedStageBDocument,
+	simulatorSeedLookup,
 } from "./stage-b-document-seed.ts";
 import { prepareStageBProof } from "./stage-b-draft-build.ts";
 import {
@@ -67,6 +68,10 @@ import {
 	stageBProbeAvailability,
 } from "./stage-b-lost-tap.ts";
 import { stageBShouldRetryProducer } from "./stage-b-producer-retry.ts";
+import {
+	awaitProviderRegistration,
+	resolveFilesBundleId,
+} from "./stage-b-provider-registration.ts";
 
 /** Refusal sentences the app actually paints. A hierarchy that shows one of
  * these is a real failure — a 401, an offline connector, a refused route — and
@@ -511,17 +516,58 @@ async function runStageBCoordinator(
 			);
 		/** Host-side seed for the Files picker. The device data root is derived from
 		 * THIS owned simulator's UDID; nothing outside it is touched. */
-		const seedOwnedDocument = (owned: string) => {
+		const seedOwnedDocument = async (owned: string) => {
+			const dataRoot = join(
+				process.env.STAGE_B_SIMULATOR_DATA_ROOT ??
+					join(homedir(), "Library/Developer/CoreSimulator/Devices"),
+				owned,
+				"data",
+			);
+			const lookup = simulatorSeedLookup(dataRoot);
+			/* A fresh simulator has not registered the File Provider group until
+			 * something Files-side asks for it (run 42237784275 failed the scan,
+			 * 42132547421 resolved it on the same code). Open Files once, then poll
+			 * the same metadata scan; a provider that never appears still fails. */
+			const registration = nodeOnly
+				? /* No device exists in the Node-only dry run: there is nothing to
+					 * register, and polling for it would spend the probe's budget. */
+					{
+						needed: false,
+						filesApp: null,
+						provider: null,
+						elapsedMs: 0,
+						polls: 0,
+					}
+				: await awaitProviderRegistration({
+						probe: () =>
+							lookup.cloudPresent()
+								? "cloud"
+								: lookup.localStorageDir() !== null
+									? "local"
+									: null,
+						launch: () => {
+							try {
+								const apps = JSON.parse(
+									execFileSync("xcrun", ["simctl", "listapps", owned], {
+										encoding: "utf8",
+										stdio: ["ignore", "pipe", "ignore"],
+									}),
+								) as Record<string, { CFBundleDisplayName?: string }>;
+								const id = resolveFilesBundleId(apps);
+								if (id === null) return null;
+								execFileSync("xcrun", ["simctl", "launch", owned, id], {
+									stdio: ["ignore", "ignore", "ignore"],
+								});
+								return id;
+							} catch {
+								return null;
+							}
+						},
+					});
+			receipt.providerRegistration = registration;
 			let seed: ReturnType<typeof seedStageBDocument>;
 			try {
-				seed = seedStageBDocument(
-					join(
-						process.env.STAGE_B_SIMULATOR_DATA_ROOT ??
-							join(homedir(), "Library/Developer/CoreSimulator/Devices"),
-						owned,
-						"data",
-					),
-				);
+				seed = seedStageBDocument(dataRoot, lookup, registration);
 			} catch (error) {
 				// Named so a seeding failure is never read as a picker failure.
 				throw new Error(
@@ -565,7 +611,7 @@ async function runStageBCoordinator(
 			const owned = await bootOwned(`StageB-setup-${sourceSha.slice(0, 12)}`);
 			// The attachment prerequisite is now document seeding: PhotoKit ingest is
 			// environment-BLOCKED (42078247373) and no longer part of this lane.
-			seedOwnedDocument(owned);
+			await seedOwnedDocument(owned);
 			receipt.status = "SETUP_ONLY_PASS";
 			return; // finally still reaps/deletes; cleanup failure rejects this run.
 		}
@@ -1157,7 +1203,7 @@ async function runStageBCoordinator(
 			"appearance",
 			"light",
 		]);
-		const documentSeed = seedOwnedDocument(udid ?? "");
+		const documentSeed = await seedOwnedDocument(udid ?? "");
 		// Photo-library attachment is not exercised: 42078247373 proved the fresh
 		// library's thumbnail rebuild holds PhotoKit's changes transaction in an
 		// untimed CMPhoto HEIF transcode, so the simctl import waits forever. The row stays
