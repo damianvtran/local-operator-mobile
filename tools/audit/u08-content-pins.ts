@@ -541,8 +541,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the four insets and the radius are byte-identical to the digest above, so no
 	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (the launch-crash fix, PR #168): exactly two
+	 * files moved. `composer-presentation.ts` gained `"worklet"` as the first
+	 * statement of `morphPillRadius`, `morphHeight` and `composerShellRadius` — the
+	 * three pure helpers `shellMotion`/`ringMotion` call from the UI runtime — plus
+	 * the comments stating why each must stay pure arithmetic; and
+	 * `composer-worklets.test.ts` is new (a static guard over those directives). A
+	 * directive changes which JS context compiles a body, not what the body computes:
+	 * each helper's expression is unchanged (`base / 2`, the clamped lerp, and
+	 * `morphHeight(progress, morphPillRadius(base), 24)`), and the only edit is the
+	 * arrow becoming a block body so the directive can be its first statement. A test
+	 * file is never bundled into the render tree. So no pixel of the U-08 scene moves
+	 * and `composerPaintedHeight` is still 56/112 (60/120 on the 48 floor). This is
+	 * source admission for the geometry instrument, not fresh rendered evidence; the
+	 * native lane (nightly 42156335030) is what proves the directive actually
+	 * prevents the synchronous-call crash. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "ea13a33ea3649ec09819e5a6cf6bb1f19d2d560e112eea5c0e12af7f151febb6",
+	src: "de545639b49dfcd67feee45cf20d12e5e29c8a3582d1f3d2bde6368028aca2bc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
