@@ -106,3 +106,16 @@ export const seedFor = (expanded: boolean, total: number) =>
  */
 export const morphHeight = (progress: number, from: number, to: number) =>
 	from + (to - from) * Math.min(1, Math.max(0, progress));
+
+/**
+ * The shell's corner radius on the morph, read by BOTH edges the composer paints:
+ * the shell's own fill and the 1 px ring drawn over it (see `composer.tsx`).
+ *
+ * Shared rather than written twice because the two edges are concentric for every
+ * frame of the travel: a ring carrying a copied expression drifts the moment one
+ * of the two is edited, and it shows as a second corner peeking out of the first.
+ * The radius is the shell's own — the ring is exactly the shell's box, so there is
+ * nothing to inset it by.
+ */
+export const composerShellRadius = (progress: number, base: number) =>
+	morphHeight(progress, morphPillRadius(base), 24);

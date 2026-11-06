@@ -521,15 +521,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instead of repeating the section header) and the generated catalogue moved
 	 * with it. No rendered string, layout or palette changed; frames unaffected.
 	 *
-	 * Re-pinned 2026-11-06 (PR #156, round 34): `src` only, and proof-only. The
-	 * Stage B proof bootstrap now stamps its existing per-process lease on the
-	 * `route-trace` receipts the app already posts, so the re-tap gate can prove
-	 * same-process identity from a side effect of rendering instead of from a
-	 * probe request the app may not answer after a cold relaunch. That module runs
-	 * only behind the dedicated Stage B entry guard, and no rendered byte, string,
-	 * layout, style or token moved — the healthy custom-relay scene U-08 measures
-	 * selects none of it. `app` untouched. */
-	src: "314669bdaa3106bdf22014ae8a09773876114fff00836306e9bfd30eb21b425f",
+	 * Re-pinned 2026-11-06, `src` only (the composer shell boundary): `composer.tsx`
+	 * gained one absolutely positioned, `pointerEvents="none"` ring child on the
+	 * composer shell, and `composer-presentation.ts` gained `composerShellRadius` —
+	 * the single helper both the shell and the ring read. The ring is out of flow, so
+	 * no painted box moves: `composerPaintedHeight` is still 56/112 (60/120 on the 48
+	 * floor) and the resting radius is still `morphPillRadius(base)`. This is source
+	 * admission for the geometry instrument, not fresh rendered evidence — the U-08
+	 * frames predate the edge and the rendered re-capture is tracked separately.
+	 * `--print` produced the digest; `app`, `design/fonts`, `design/tokens`, `public`,
+	 * the corpus and the instrument modules are unchanged.
+	 *
+	 * Re-pinned 2026-11-06 again, `src` only (review round 1 remediation of the same
+	 * PR): `a11y.ts` declares `CONTROL.composerShellRing` and `composer.tsx` renders it
+	 * as the ring's `testID`, so the guard that locates the ring can anchor on an id the
+	 * shell never carries; the ring's own comment was also corrected to the mechanism
+	 * the code has (a shell border costs the interior, the radii do not move). A
+	 * `testID` paints nothing and a comment paints nothing — `borderWidth`, the colour,
+	 * the four insets and the radius are byte-identical to the digest above, so no
+	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged. */
+	src: "a5f00138ff6b0f1fc06b09597693a60ef99da0942d02ebc0d5e725e11ede2413",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
