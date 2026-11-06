@@ -23,6 +23,7 @@ const PANE = source("./conversations-pane.tsx");
 const SHEET = source("./tags-sheet.tsx");
 const LINE = source("./tag-line.tsx");
 const PAST = source("../../features/past/past.tsx");
+const HEALTH = source("../session/components/session-health.tsx");
 /* Source-assertion regexes live at the top level so each literal is compiled
  *  once (biome's useTopLevelRegex); they scan the source text, not a frame. */
 const TAGS_PANE_GATE = /\{tagsAssignable \? \(/;
@@ -85,38 +86,25 @@ describe("the past list", () => {
 });
 
 describe("the session header", () => {
-	it("renders the line from the list frame's row", () => {
-		expect(SESSION).toContain("headerDetail={");
-		expect(SESSION).toContain("sessionHeaderTagLineId(sessionId)");
-		expect(SESSION).toContain("useListState((state) =>");
+	/* The tag LINE left the header (decision record 2026-11-04 §2.3, D-S1): laid
+	 *  out under a title block whose `flex-1` collapsed it, "Tags ⌄" painted over
+	 *  the title on TestFlight 365. The route is a row of the always-present ⋮
+	 *  menu instead — same gate, same sheet, no second write path. */
+	it("no longer paints a tag line in the header", () => {
+		expect(SESSION).not.toContain("headerDetail={");
+		expect(SESSION).not.toContain("sessionHeaderTagLineId(sessionId)");
 	});
 
-	it("opens the same sheet through a disclosed control on a local row", () => {
-		/* U1/U8: the header showed the tags and exposed no control. The line is
-		 *  the disclosure, gated by the tested capability AND the row's locality,
-		 *  and it feeds the SAME sheet — no second write path. */
+	it("opens the same sheet from the ⋮ menu on a local row", () => {
 		expect(SESSION).toContain("const tagsAssignable =");
 		expect(SESSION).toContain("canAssignSessionTags(capabilities)");
 		expect(SESSION).toContain("isRemoteRow(listRow)");
-		expect(SESSION).toContain("CONTROL.sessionHeaderTagsAction");
+		expect(SESSION).toContain(
+			"onTags={tagsAssignable ? () => setTagsOpen(true) : undefined}",
+		);
 		expect(SESSION).toContain("<SessionTagsSheet");
 		expect(SESSION).toContain("listRow?.tags ?? []");
-	});
-
-	it("keeps the control when the assignment is empty", () => {
-		/* U8: gating the whole line on `tags.length > 0` left an untagged local
-		 *  conversation with no visible route. The disclosure is present when it
-		 *  is assignable OR there is something to read, and it opens the sheet
-		 *  from the one tested gate. */
-		expect(SESSION).toContain(
-			"tagsAssignable || (listRow?.tags?.length ?? 0) > 0",
-		);
-		expect(SESSION).toContain(
-			"onPress={tagsAssignable ? () => setTagsOpen(true) : undefined}",
-		);
-		expect(SESSION).not.toContain(
-			"headerDetail={\n\t\t\t\t(listRow?.tags?.length ?? 0) > 0 ? (",
-		);
+		expect(HEALTH).toContain("testID={CONTROL.sessionMenuTags}");
 	});
 });
 

@@ -5,6 +5,7 @@ import {
 	DISPLAY_ADVANCE_PT,
 	headerTitleChars,
 	STATE_WORD_PT,
+	TITLE_ADVANCE_PT,
 	WIDEST_STATE_WORD,
 } from "@/features/session/header";
 import {
@@ -32,7 +33,10 @@ const phone = (width: number) => ({ width, height: 844 });
  * and this fails; the previous version of this assertion (`floor(a/c) * c <= a`)
  * held for every `c` and could not fail at all (review round 4, R6).
  */
-const MEASURED_WIDEST_ADVANCE = 14.06;
+/* The `heading` step (17 pt) the title draws in since the 2026-11-04 chrome
+ * pass: the measured widest display advance (14.06 at 28 pt) scaled by size,
+ * same face and weight (decision record §2.3). */
+const MEASURED_WIDEST_ADVANCE = (14.06 * 17) / 28;
 
 describe("the header's title budget", () => {
 	/* The chrome, as the module's constant derives it: the 16 pt gutters, both 48 pt
@@ -43,9 +47,9 @@ describe("the header's title budget", () => {
 	 * reason `MEASURED_WIDEST_ADVANCE` is: the assertion is that the budget never
 	 * over-promises the row, and a constant read from the code under test cannot
 	 * fail. */
-	/* Includes #118's 28 pt `NavigationMark` and the leading cluster's 4 pt gap
-	 * (review round 2, R2-M1): the rendered leading slot is 80 pt, not 56. */
-	const CHROME = 32 + 48 + 4 + 28 + 8 + 48 + 8;
+	/* #118's 28 pt `NavigationMark` and its 4 pt gap left the session header in
+	 * the 2026-11-04 chrome pass (D-S2), so the leading slot is back to 48. */
+	const CHROME = 32 + 48 + 8 + 48 + 8;
 	/* Below the stack floor the header stacks and the title owns its own row, so the
 	 * budget's available width is the viewport minus the `px-4` gutters alone — the
 	 * leg `header.ts` budgets with `width − 32` (QA round 1, Q1). */
@@ -55,11 +59,12 @@ describe("the header's title budget", () => {
 			: Math.min(width, cap ?? width) - CHROME;
 
 	it("gives a phone's whole row to the name", () => {
-		// 390 − 176 (gutters, back + mark + their gap, find + its gap) = 214 pt.
-		expect(headerTitleChars(phone(390))).toBe(15);
-		expect(headerTitleChars(phone(430))).toBe(18);
-		// 360 keeps 13 (184 pt available); the landscape cap lands at 31 (444 pt).
-		expect(headerTitleChars(phone(360))).toBe(13);
+		// 390 − 144 (gutters, back + its gap, find + its gap) = 246 pt at the
+		// 17 pt heading's 8.54 pt advance.
+		expect(headerTitleChars(phone(390))).toBe(28);
+		expect(headerTitleChars(phone(430))).toBe(33);
+		// 360 keeps 25 (216 pt available).
+		expect(headerTitleChars(phone(360))).toBe(25);
 	});
 
 	it("gives the stacked header's title its own row below the stack floor", () => {
@@ -68,8 +73,8 @@ describe("the header's title budget", () => {
 		// the single-line arithmetic over-truncated a 13-character name the PRE-FIX
 		// frames rendered whole (`Releas…sweep` where `Release sweep` fits — QA
 		// round 1, Q1).
-		expect(headerTitleChars(phone(320))).toBe(36);
-		expect(headerTitleChars(phone(353))).toBe(40);
+		expect(headerTitleChars(phone(320))).toBe(62);
+		expect(headerTitleChars(phone(353))).toBe(70);
 		expect(middleTruncate("Release sweep", headerTitleChars(phone(320)))).toBe(
 			"Release sweep",
 		);
@@ -85,10 +90,10 @@ describe("the header's title budget", () => {
 		// audit's U-07 over the se cells at every scale; this pins the arithmetic
 		// that produced the audited value and the shortened string itself.
 		/* At the DEFAULT scale the stacked title gets two lines at 1x advance,
-		 * not a hard-coded 2x: 288/14.06 = 20 per line, less the wrap slack. The
-		 * 2x case is asserted in "the title budget at large text" below. */
+		 * not a hard-coded 2x: 288/8.54 = 33 per line, less the wrap slack.
+		 * The 2x case is asserted in "the title budget at large text" below. */
 		const perLine = Math.floor((320 - 32) / MEASURED_WIDEST_ADVANCE);
-		expect(perLine).toBe(20);
+		expect(perLine).toBe(33);
 		expect(headerTitleChars(phone(320))).toBe(2 * perLine - 4);
 		expect(
 			middleTruncate(
@@ -134,8 +139,18 @@ describe("the header's title budget", () => {
 	it("never goes below the kit's floor, even where the row cannot hold it", () => {
 		// `components.md` § F-6.1: both ends of a name owe MIN_HEADER_NAME_CHARS
 		// characters. A viewport narrower than the chrome still gets that floor —
-		// the row overflows its own gap before it drops below the contract.
-		expect(headerTitleChars(phone(100))).toBe(MIN_HEADER_NAME_CHARS);
+		// the row overflows its own gap before it drops below the contract. Asserted
+		// on the INLINE branch (≥ 354 pt, 100 %) with every extra charged — dot,
+		// menu, picture and the state word — which leaves less than the floor's
+		// 8 × 8.54 = 68 pt.
+		expect(
+			headerTitleChars(phone(360), {
+				dot: true,
+				menu: true,
+				avatar: true,
+				word: true,
+			}),
+		).toBe(MIN_HEADER_NAME_CHARS);
 	});
 
 	it("keeps both ends of a real name at every phone width", () => {
@@ -214,10 +229,14 @@ describe("compactTitleChars", () => {
 		 *  915x412, dark and light (identical), 100/135/200 %: the box the run is
 		 *  painted into. A budget that promises more than this is the double cut. */
 		const TITLE_ADVANCE_PT = 9.4; // measured; see `COMPACT_TITLE_ADVANCE_PT`
+		/* The measured boxes, each widened by the 32 pt the brand mark and its gap
+		 *  gave back when the mark left the session header (2026-11-04, D-S2). At
+		 *  200 % the chrome is pt-based on native but rem on web; the web capture
+		 *  this was measured on scales it, so the 200 % box gains 64. */
 		for (const [box, scale] of [
-			[341, 1],
-			[313, 1.35],
-			[158, 2],
+			[341 + 32, 1],
+			[313 + 32 * 1.35, 1.35],
+			[158 + 64, 2],
 		] as const) {
 			const chars = compactTitleChars({ width: 844, height: 390 }, scale, {
 				dot: true,
@@ -249,18 +268,18 @@ describe("the session-health chrome", () => {
 		const ended = headerTitleChars(phone(390), { menu: true });
 		expect(live).toBeLessThan(bare);
 		expect(ended).toBeLessThan(live);
-		/* 390 − 176 − 16 = 198 pt; 390 − 176 − 56 = 158 pt, at 14.06 pt/char.
-		 * 158 pt is the box QA measured on the ended header at this width, so the
-		 *  budget now promises exactly what the row has (R2-M1 / Q7). */
-		expect(live).toBe(Math.floor(198 / DISPLAY_ADVANCE_PT));
-		expect(ended).toBe(Math.floor(158 / DISPLAY_ADVANCE_PT));
+		/* 390 − 144 − 16 = 230 pt; 390 − 144 − 56 = 190 pt, at the 17 pt heading's
+		 *  advance. QA's measured ended box was 158 pt with the 32 pt mark; the mark
+		 *  left (2026-11-04, D-S2), so the same row is 190 (R2-M1 / Q7). */
+		expect(live).toBe(Math.floor(230 / TITLE_ADVANCE_PT));
+		expect(ended).toBe(Math.floor(190 / TITLE_ADVANCE_PT));
 	});
 	it("never admits a name wider than the box the extras leave", () => {
 		for (const width of [360, 390, 430]) {
 			for (const extras of [{ dot: true }, { menu: true }]) {
-				const box = width - 176 - ("dot" in extras ? 16 : 56);
+				const box = width - 144 - ("dot" in extras ? 16 : 56);
 				expect(
-					headerTitleChars(phone(width), extras) * DISPLAY_ADVANCE_PT,
+					headerTitleChars(phone(width), extras) * TITLE_ADVANCE_PT,
 				).toBeLessThanOrEqual(box);
 			}
 		}
@@ -273,7 +292,7 @@ describe("the session-health chrome", () => {
 	it("charges the agent picture inline, and only when there is one", () => {
 		const live = headerTitleChars(phone(390), { dot: true });
 		const pictured = headerTitleChars(phone(390), { dot: true, avatar: true });
-		expect(pictured).toBe(Math.floor((198 - 32) / DISPLAY_ADVANCE_PT));
+		expect(pictured).toBe(Math.floor((230 - 32) / TITLE_ADVANCE_PT));
 		expect(pictured).toBeLessThan(live);
 		expect(headerTitleChars(phone(390), { dot: true, avatar: false })).toBe(
 			live,
@@ -319,9 +338,9 @@ describe("the title budget at large text", () => {
 		const bare = headerTitleChars(phone(320), {}, 2);
 		const withDot = headerTitleChars(phone(320), { dot: true }, 2);
 		expect(withDot).toBeLessThan(bare);
-		/* 320 − 64 − 32 = 224 pt per line at 2x14.06 → 7 chars/line, two lines
-		 * less the wrap slack = 10. */
-		expect(withDot).toBe(10);
+		/* 320 − 64 − 32 = 224 pt per line at 2× the heading's 8.54 → 13
+		 * chars/line, two lines less the wrap slack. */
+		expect(withDot).toBe(22);
 	});
 	it("the inline branch scales chrome and advance together", () => {
 		expect(
@@ -346,15 +365,18 @@ describe("the round-2 budget regressions", () => {
 		 * the title box is 158 pt. Before this fix the budget assumed a 56 pt
 		 * leading slot and promised 13 characters (164 px) — the platform clipped
 		 * the tail a second time (`Hello …ovi…`). */
+		/* Since the 2026-11-04 chrome pass the leading slot is back to 48 (the
+		 * mark left), the box is 158 + 32 = 190 pt, and the title is the 17 pt
+		 * heading. */
 		const chars = headerTitleChars(phone(390), { menu: true });
-		expect(chars * DISPLAY_ADVANCE_PT).toBeLessThanOrEqual(158);
+		expect(chars * TITLE_ADVANCE_PT).toBeLessThanOrEqual(190);
 		expect(middleTruncate("Hello from the mock provider", chars)).not.toContain(
 			"……",
 		);
 	});
 	it("live at iphone-15 / 100%: the dot still fits the row it actually gets", () => {
 		const chars = headerTitleChars(phone(390), { dot: true });
-		expect(chars * DISPLAY_ADVANCE_PT).toBeLessThanOrEqual(198);
+		expect(chars * TITLE_ADVANCE_PT).toBeLessThanOrEqual(230);
 	});
 	it("the dot costs the same in EVERY state, because it renders in every state", () => {
 		/* D11: the dot holds ONE slot before the name whether live, yellow or grey,
@@ -377,10 +399,8 @@ describe("the round-2 budget regressions", () => {
 		const chars = headerTitleChars(phone(390), { menu: true }, 2);
 		expect(chars).toBeGreaterThan(MIN_HEADER_NAME_CHARS);
 		/* Two clamped lines at 2x in a 390 − 32×2 = 326 pt title row, less the wrap
-		 * slack: floor(326 / 28.12) = 11 per line, ×2 − 4 = 18. */
-		expect(chars).toBe(
-			2 * Math.floor((390 - 64) / (2 * DISPLAY_ADVANCE_PT)) - 4,
-		);
+		 * slack, at the heading's advance. */
+		expect(chars).toBe(2 * Math.floor((390 - 64) / (2 * TITLE_ADVANCE_PT)) - 4);
 	});
 	it("the tag-line header at 200% gets the same stacked budget", () => {
 		/* The tag line is `headerDetail`, not extra title-row chrome, so the budget
@@ -391,7 +411,7 @@ describe("the round-2 budget regressions", () => {
 	});
 	it("iphone-se / 200% stays inside its two clamped lines", () => {
 		const chars = headerTitleChars(phone(320), { menu: true }, 2);
-		const perLine = Math.floor((320 - 64) / (2 * DISPLAY_ADVANCE_PT));
+		const perLine = Math.floor((320 - 64) / (2 * TITLE_ADVANCE_PT));
 		expect(chars).toBe(2 * perLine - 4);
 	});
 });

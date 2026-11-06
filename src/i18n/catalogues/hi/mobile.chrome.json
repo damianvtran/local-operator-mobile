@@ -1,0 +1,18 @@
+{
+	"mobile.chrome.destination.inbox": "इनबॉक्स",
+	"mobile.chrome.destination.past": "पिछले",
+	"mobile.chrome.destination.schedules": "शेड्यूल",
+	"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
+	"mobile.chrome.destinations": "गंतव्य",
+	"mobile.chrome.new_chat": "नई चैट",
+	"mobile.chrome.composer.more": "अधिक संदर्भ",
+	"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+	"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
+	"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
+	"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
+	"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
+	"mobile.chrome.home.sign_in": "फिर से कनेक्ट करने के लिए साइन इन करें",
+	"mobile.chrome.home.saved_draft": "आपका ड्राफ़्ट इस फ़ोन पर सुरक्षित है और भेजा नहीं गया है।",
+	"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…",
+	"mobile.chrome.composer.open_queue": "कतार खोलें"
+}

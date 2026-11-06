@@ -199,8 +199,8 @@ export const CONTROL = {
 	customConnect: "custom-connect",
 	customInsecureOptIn: "custom-insecure-opt-in",
 	/** The home header's computer chip (`● Mac mini ▾`), opening the switcher
-	 *  sheet. The panel's header row is `sidebarSwitcher`, its footer row
-	 *  `sidebarComputers`: separate controls, separate ids. */
+	 *  sheet. The panel's one switcher is its footer row, `sidebarComputers`:
+	 *  separate controls, separate ids. */
 	computersButton: "computers-button",
 	settingsButton: "settings-button",
 	/** Set on the chosen computer row, so "which one is active" is asserted as a
@@ -284,9 +284,6 @@ export const CONTROL = {
 	 *  once (the drawer over the home); the action opens the sheet, whose one
 	 *  mutation control is `Remove all`. */
 	sessionTagsAction: "session-tags-action",
-	/* The session header's tag line when this conversation can be edited: the
-	 *  same sheet as the row menu, opened from the screen that shows the tags. */
-	sessionHeaderTagsAction: "session-header-tags-action",
 	sessionTagsRemoveAll: "session-tags-remove-all",
 	sessionTagsRemoveAllDialog: "session-tags-remove-all-dialog",
 	sessionTagsRetry: "session-tags-retry",
@@ -346,6 +343,13 @@ export const CONTROL = {
 	composerDictationCancel: "composer-dictation-cancel",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
+	composerContext: "composer-context",
+	composerOpenQueue: "composer-open-queue",
+	composerContextModel: "composer-context-model",
+	composerContextEffort: "composer-context-effort",
+	composerContextSheet: "composer-context-sheet",
+	composerDismissKeyboard: "composer-dismiss-keyboard",
+	composerCompactDismiss: "composer-compact-dismiss",
 	composerRetry: "composer-retry",
 	composerModelChip: "composer-model-chip",
 	composerEffortChip: "composer-effort-chip",
@@ -368,6 +372,13 @@ export const CONTROL = {
 	sessionSubagents: "session-subagents-chip",
 	/** The compact status row: the one control that opens working/tasks/agents. */
 	sessionStatusTray: "session-status-tray",
+	/** The Tasks and Agents chips above the composer (record §2.2/D-S3): each
+	 *  opens the same status sheet the tray opened, at its own panel. */
+	sessionTasksChip: "session-tasks-chip",
+	sessionAgentsChip: "session-agents-chip",
+	/** The ⋮ sheet's Tags row: the session's tags left the header (record §2.3,
+	 *  D-S1) and are one row of the always-present overflow menu. */
+	sessionMenuTags: "session-menu-tags",
 	/* ABSENT in short landscape (`compactChromeFor`): the status strip moves into the
 	 * secondary region and drops this chip, because the roster header carries the same
 	 * lever. A flow reaching the roster there taps `subagentsDisclosure` — no flow
@@ -446,7 +457,7 @@ export const CONTROL = {
 	 * screen at once (the panel is an overlay over the home), and a shared id
 	 * makes Maestro's `id:` matching pick arbitrarily:
 	 *  - `computersButton` is the HOME header's switcher (the landing's, where a
-	 *    flow meets it first); `sidebarSwitcher` is the panel's own row.
+	 *    flow meets it first); `sidebarComputers` is the panel's own row.
 	 *  - `sidebarClose` is the panel's visible close. The scrim and Android back
 	 *    close the panel too but carry no id: neither is a control a flow should
 	 *    press by name while the panel's own close is present. --- */
@@ -456,17 +467,20 @@ export const CONTROL = {
 	/** The home composer's folder chip: the session's target folder. */
 	homeTargetFolder: "home-target-folder",
 	/** The home's offline action "Connect a computer", in the suggestions' slot. */
-	homeConnect: "home-connect",
 	/** The home's folders-read failure line and its remedy (review M2): the
 	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
 	homeFoldersBanner: "home-folders-banner",
 	homeFoldersRetry: "home-folders-retry",
-	sidebarSwitcher: "sidebar-switcher",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
+	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
+	 *  opens a sheet with the same destinations (record §3) — labels are never
+	 *  dropped silently. */
+	sidebarMore: "sidebar-more",
+	sidebarDestinationsSheet: "sidebar-destinations-sheet",
 	/** The drawer footer's workspace row: the computer in use, opening the
 	 *  switcher sheet (M2b; ux-flows F5). Same id as the route button it replaced,
 	 *  so a flow addressing "the footer's computer control" still finds it. */
@@ -491,16 +505,8 @@ export const CONTROL = {
 	 *  switcher's two are: two controls, two ids, so a flow can press one and
 	 *  prove which it reached. */
 	homeNotifications: "home-notifications",
-	homeNotificationsCount: "home-notifications-count",
 	sidebarNotifications: "sidebar-notifications",
 	sidebarNotificationsCount: "sidebar-notifications-count",
-	/** The invisible mirror of that count, which keeps the row symmetric (D19/D22).
-	 *  It carries no content and is hidden from assistive tech; the id exists so a
-	 *  test can measure the two sides against each other. */
-	sidebarNotificationsSpacer: "sidebar-notifications-spacer",
-	/** The label's own measuring stand-in: out of flow, unpainted, and only there so
-	 *  the row can compare the label's natural width with the space it has (D23). */
-	sidebarNotificationsMeasure: "notifications-label-measure",
 	inboxBack: "notifications-back",
 	inboxList: "notifications-list",
 	inboxLoadMore: "notifications-load-more",
@@ -740,6 +746,9 @@ export const SURFACE = {
 	projectMilestoneSlashNote: "project-milestone-slash-note",
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
+	homeRecovery: "home-recovery",
+	homeRecoveryAction: "home-recovery-action",
+	homeRecoveryDetails: "home-recovery-details",
 	/** The panels + working line, bounded and internally scrolling in short landscape
 	 *  (`compactChromeFor`); absent elsewhere, where they are plain siblings. */
 	sessionSecondaryChrome: "session-secondary-chrome",
@@ -788,6 +797,14 @@ export const SURFACE = {
 	composerError: "composer-error",
 	composerRetained: "composer-retained",
 	composerReceipt: "composer-receipt",
+	/** The composer's controls row (attach, mic, stop, send) and its meta line
+	 *  (queued, folder, model, effort, context, cost) — the record's rows 2 and 3,
+	 *  addressed by the layout capture that measures their centres and line count. */
+	composerControls: "composer-controls",
+	composerMeta: "composer-meta",
+	/** The Tasks/Agents chips above the composer (record §2.2), which replaced the
+	 *  under-header status tray on a phone. */
+	sessionStatusChips: "session-status-chips",
 	composerDisabledReason: "composer-disabled-reason",
 	queuedMessageChip: "queued-message-chip",
 	connectionBanner: "connection-banner",
@@ -916,7 +933,6 @@ export const SURFACE = {
 	homeSplash: "home-splash",
 	homeGreeting: "home-greeting",
 	homeSuggestions: "home-suggestions",
-	homeTip: "home-tip",
 	homeStarting: "home-starting",
 	sidebar: "conversations-sidebar",
 	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
@@ -989,7 +1005,6 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	/* Conversation tags (LOH-11 S3): one tag line per list row, one per session
 	 *  header, one per past row, and one selectable option per catalogue tag. */
 	"session-tags-line-",
-	"session-tags-header-",
 	"past-tags-line-",
 	"session-tags-option-",
 	"computer-row-",
@@ -1169,6 +1184,9 @@ export const REGION = {
 	 *  `e2e/maestro/**` and this contract moved together — a rename here without
 	 *  the flows is a flow that silently stops reaching its control. */
 	sidebarList: "conversations-list",
+	/** The panel's footer (record §3): the destinations strip and the workspace
+	 *  row. The layout capture measures it against the ≤ 104 pt + inset rule. */
+	sidebarFooter: "sidebar-footer",
 	sidebarSectionPinned: "sidebar-section-pinned",
 	sidebarSectionRunning: "sidebar-section-running",
 	sidebarSectionToday: "sidebar-section-today",
@@ -1457,9 +1475,6 @@ export const STATE_MARKER = {
 		"find-empty": "session-find-empty",
 		"find-hit": "session-find-hit",
 		"find-caveat": "session-find-caveat",
-		/* The session header's conversation tags (LOH-11 S3): a family, because the
-		 *  marker must be present only when the header drew a line. */
-		"tags-header": "session-tags-header-",
 		/* The checkpoint rail (this slice): one marker per state a cell
 		 *  declares. `rail` — the manifest is `ready` and the rail draws at
 		 *  least one tick; `rail-deep` — a refinement of `rail` (a frame may
@@ -1696,12 +1711,6 @@ export const sessionTagLineId = (sessionId: string): string =>
  *  a frame can assert a row drew the picture rather than the plain slot. */
 export const sessionRowAvatarId = (sessionId: string): string =>
 	`session-row-avatar-${sessionId}`;
-
-/** The session header's tag line — a second family because the session screen
- *  and the conversations pane can be mounted at once (the drawer over the
- *  home), and two elements sharing one id would make the selector ambiguous. */
-export const sessionHeaderTagLineId = (sessionId: string): string =>
-	`session-tags-header-${sessionId}`;
 
 /** One past row's read-only tag line. Past rows have no assignment controls,
  *  so this family is a region rather than a control — still addressed by the

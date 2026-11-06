@@ -16,6 +16,8 @@ import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.c
 import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
 import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
 import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
+import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
 import common from "@/i18n/catalogues/en/mobile.common.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
@@ -148,10 +150,20 @@ const NAMESPACES = [
 		expected: 11,
 	},
 	{
+		/* This app's own short chrome words the relay has no key for: the sidebar
+		 *  destinations' one-word labels, the More sheet's title, and (from the
+		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
+		 *  single presentation story. */
+		name: "mobile.chrome",
+		messages: chrome,
+		context: chromeContext,
+		expected: 16,
+	},
+	{
 		name: "relay.chrome",
 		messages: relayChrome,
 		context: relayChromeContext,
-		expected: 4,
+		expected: 20,
 	},
 ] as const;
 
@@ -195,7 +207,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(241);
+		expect(total).toBe(273);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -263,6 +275,14 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
 		"mobile.library.editor.description":
 			"French spells this field the same way — « Description » is the French word for the label, beside « Nom » and « Étiquettes » in the same editor.",
+		/* The 2026-11-04 chrome words. The two relay.* values are the core
+		 *  relay's own French catalogue, mirrored; all three are French words. */
+		"relay.chrome.session.tray.agents":
+			"Mirrored from the core relay's French catalogue: « Agents » is the French word, and the count template is unchanged.",
+		"relay.chrome.row.tags":
+			"Mirrored from the core relay's French catalogue, which keeps « Tags » (the app's own tag vocabulary in French).",
+		"mobile.chrome.destinations":
+			"« Destinations » is the French word for the same set of places.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical

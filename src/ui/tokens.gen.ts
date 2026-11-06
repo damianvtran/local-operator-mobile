@@ -207,6 +207,7 @@ export const RADII = {
 	"md": 10,
 	"lg": 14,
 	"frame": 16,
+	"composer": 20,
 	"full": 9999,
 } as const;
 

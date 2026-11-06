@@ -14,5 +14,69 @@
 	"relay.chrome.session.resuming": {
 		"role": "status",
 		"note": "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful."
+	},
+	"relay.chrome.session.subtitle.working": {
+		"role": "status",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line under the conversation title while the agent works. {elapsed} is an ALREADY-FORMATTED compact duration such as '1m36s'; do not reformat it. Keep the middle dot."
+	},
+	"relay.chrome.session.subtitle.working_plain": {
+		"role": "status",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent works and its start time is unknown."
+	},
+	"relay.chrome.session.subtitle.waiting": {
+		"role": "status",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is stopped on an approval the operator must give."
+	},
+	"relay.chrome.session.subtitle.idle": {
+		"role": "status",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is not working and nothing is pending."
+	},
+	"relay.chrome.session.tray.tasks": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's task list; opens it. {done} of {total} tasks are finished. Keep the slash form; it is a compact fraction. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical."
+	},
+	"relay.chrome.session.tray.agents": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's subagents (helper agents it started); opens their list. {running} of {total} are running now. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical."
+	},
+	"relay.chrome.drawer.past": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the searchable, resumable history of finished sessions. Replaces a footer button that read 'past'."
+	},
+	"relay.chrome.drawer.projects": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the projects sheet (multi-session workstreams with status and milestones)."
+	},
+	"relay.chrome.drawer.library": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the asset library (files the agents produced). Hidden on a relay without the library capability, never shown disabled."
+	},
+	"relay.chrome.drawer.settings": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens this computer's account-routing settings."
+	},
+	"relay.chrome.list.search_open": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ⌕ button; pressing it swaps the title for a search field."
+	},
+	"relay.chrome.list.search_label": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). aria-label of the conversation search field (its visible placeholder ends in an ellipsis, which does not belong in an accessible name). Matches names, tags and folders."
+	},
+	"relay.chrome.row.tags": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the sheet that assigns tag categories to this conversation. A trailing value shows the primary tag or relay.chrome.row.tags_none."
+	},
+	"relay.chrome.row.more": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Label of the second swipe-revealed action; it opens the row's action sheet. A 72 px wide tile under an icon."
+	},
+	"relay.chrome.drawer.open": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ☰ button at the start of the conversation list's app bar; it opens the navigation drawer. Read by screen readers only; the glyph is not translated."
+	},
+	"relay.chrome.drawer.close": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the close control inside the navigation drawer. Escape and a tap outside also close it; this is the visible, labelled path for touch screen-reader users."
 	}
 }

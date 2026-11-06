@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "Không phản hồi",
 	"relay.chrome.session.subtitle.ended": "Đã kết thúc",
 	"relay.chrome.session.resume": "Mở lại",
-	"relay.chrome.session.resuming": "Đang mở lại…"
+	"relay.chrome.session.resuming": "Đang mở lại…",
+	"relay.chrome.session.subtitle.working": "Đang làm việc · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "Đang làm việc",
+	"relay.chrome.session.subtitle.waiting": "Đang chờ bạn",
+	"relay.chrome.session.subtitle.idle": "Rảnh",
+	"relay.chrome.session.tray.tasks": "Tác vụ {done}/{total}",
+	"relay.chrome.session.tray.agents": "Tác nhân {running}/{total}",
+	"relay.chrome.drawer.past": "Phiên trước",
+	"relay.chrome.drawer.projects": "Dự án",
+	"relay.chrome.drawer.library": "Thư viện",
+	"relay.chrome.drawer.settings": "Cài đặt",
+	"relay.chrome.list.search_open": "Tìm kiếm",
+	"relay.chrome.list.search_label": "Tìm kiếm cuộc trò chuyện",
+	"relay.chrome.row.tags": "Nhãn",
+	"relay.chrome.row.more": "Thêm",
+	"relay.chrome.drawer.open": "Mở điều hướng",
+	"relay.chrome.drawer.close": "Đóng điều hướng"
 }

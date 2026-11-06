@@ -34,6 +34,11 @@ name: "Account routing policy on Android"
     visible:
       id: "home-screen"
     timeout: 15000
+# Settings lives in the conversations panel's footer since the 2026-11-04
+# chrome pass (the home header keeps ☰, the computer and the bell), so open
+# the panel first.
+- tapOn:
+    id: "home-sidebar"
 - tapOn:
     id: "settings-button"
 - extendedWaitUntil:

@@ -47,6 +47,22 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
+	| "mobile.chrome.composer.queued"
+	| "mobile.chrome.destination.inbox"
+	| "mobile.chrome.destination.inbox_count"
+	| "mobile.chrome.destination.past"
+	| "mobile.chrome.destination.schedules"
+	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.connecting"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.reconnecting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
+	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
@@ -260,10 +276,26 @@ export type CatalogueKey =
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
+	| "relay.chrome.drawer.close"
+	| "relay.chrome.drawer.library"
+	| "relay.chrome.drawer.open"
+	| "relay.chrome.drawer.past"
+	| "relay.chrome.drawer.projects"
+	| "relay.chrome.drawer.settings"
+	| "relay.chrome.list.search_label"
+	| "relay.chrome.list.search_open"
+	| "relay.chrome.row.more"
+	| "relay.chrome.row.tags"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.idle"
 	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.chrome.session.subtitle.waiting"
+	| "relay.chrome.session.subtitle.working"
+	| "relay.chrome.session.subtitle.working_plain"
+	| "relay.chrome.session.tray.agents"
+	| "relay.chrome.session.tray.tasks"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -291,6 +323,18 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
+	| "mobile.chrome.destination.inbox"
+	| "mobile.chrome.destination.past"
+	| "mobile.chrome.destination.schedules"
+	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
+	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
@@ -473,10 +517,23 @@ export type NoParamKey =
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
+	| "relay.chrome.drawer.close"
+	| "relay.chrome.drawer.library"
+	| "relay.chrome.drawer.open"
+	| "relay.chrome.drawer.past"
+	| "relay.chrome.drawer.projects"
+	| "relay.chrome.drawer.settings"
+	| "relay.chrome.list.search_label"
+	| "relay.chrome.list.search_open"
+	| "relay.chrome.row.more"
+	| "relay.chrome.row.tags"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.idle"
 	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.chrome.session.subtitle.waiting"
+	| "relay.chrome.session.subtitle.working_plain"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -507,6 +564,22 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.chrome.composer.dismiss_keyboard": NoParams;
+	"mobile.chrome.composer.more": NoParams;
+	"mobile.chrome.composer.open_queue": NoParams;
+	"mobile.chrome.composer.queued": { count: number };
+	"mobile.chrome.destination.inbox": NoParams;
+	"mobile.chrome.destination.inbox_count": { count: number };
+	"mobile.chrome.destination.past": NoParams;
+	"mobile.chrome.destination.schedules": NoParams;
+	"mobile.chrome.destinations": NoParams;
+	"mobile.chrome.home.connect": NoParams;
+	"mobile.chrome.home.connecting": { host: string | number };
+	"mobile.chrome.home.greeting": NoParams;
+	"mobile.chrome.home.reconnecting": { host: string | number };
+	"mobile.chrome.home.saved_draft": NoParams;
+	"mobile.chrome.home.sign_in": NoParams;
+	"mobile.chrome.new_chat": NoParams;
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
 	"mobile.common.done": NoParams;
@@ -720,10 +793,26 @@ export type MessageParams = {
 	"mobile.signin.stage_starting": NoParams;
 	"mobile.signin.stage_unavailable": NoParams;
 	"mobile.signin.superseded": NoParams;
+	"relay.chrome.drawer.close": NoParams;
+	"relay.chrome.drawer.library": NoParams;
+	"relay.chrome.drawer.open": NoParams;
+	"relay.chrome.drawer.past": NoParams;
+	"relay.chrome.drawer.projects": NoParams;
+	"relay.chrome.drawer.settings": NoParams;
+	"relay.chrome.list.search_label": NoParams;
+	"relay.chrome.list.search_open": NoParams;
+	"relay.chrome.row.more": NoParams;
+	"relay.chrome.row.tags": NoParams;
 	"relay.chrome.session.resume": NoParams;
 	"relay.chrome.session.resuming": NoParams;
 	"relay.chrome.session.subtitle.ended": NoParams;
+	"relay.chrome.session.subtitle.idle": NoParams;
 	"relay.chrome.session.subtitle.not_answering": NoParams;
+	"relay.chrome.session.subtitle.waiting": NoParams;
+	"relay.chrome.session.subtitle.working": { elapsed: string | number };
+	"relay.chrome.session.subtitle.working_plain": NoParams;
+	"relay.chrome.session.tray.agents": { running: string | number; total: string | number };
+	"relay.chrome.session.tray.tasks": { done: string | number; total: string | number };
 	"relay.health.dropped_detail": NoParams;
 	"relay.health.ended_detail": NoParams;
 	"relay.health.ended_send_failed": NoParams;
@@ -767,6 +856,22 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.more": "More context",
+	"mobile.chrome.composer.open_queue": "Open the queue",
+	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
+	"mobile.chrome.destination.inbox": "Inbox",
+	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
+	"mobile.chrome.destination.past": "Past",
+	"mobile.chrome.destination.schedules": "Schedules",
+	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.home.connect": "Connect a computer",
+	"mobile.chrome.home.connecting": "Connecting to {host}…",
+	"mobile.chrome.home.greeting": "What would you like to work on?",
+	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
+	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
+	"mobile.chrome.home.sign_in": "Sign in to reconnect",
+	"mobile.chrome.new_chat": "New chat",
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
 	"mobile.common.done": "Done",
@@ -980,10 +1085,26 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.stage_starting": "Starting sign-in",
 	"mobile.signin.stage_unavailable": "Sign-in unavailable",
 	"mobile.signin.superseded": "Another sign-in started.",
+	"relay.chrome.drawer.close": "Close navigation",
+	"relay.chrome.drawer.library": "Library",
+	"relay.chrome.drawer.open": "Open navigation",
+	"relay.chrome.drawer.past": "Past sessions",
+	"relay.chrome.drawer.projects": "Projects",
+	"relay.chrome.drawer.settings": "Settings",
+	"relay.chrome.list.search_label": "Search conversations",
+	"relay.chrome.list.search_open": "Search",
+	"relay.chrome.row.more": "More",
+	"relay.chrome.row.tags": "Tags",
 	"relay.chrome.session.resume": "Resume",
 	"relay.chrome.session.resuming": "Resuming…",
 	"relay.chrome.session.subtitle.ended": "Ended",
+	"relay.chrome.session.subtitle.idle": "Idle",
 	"relay.chrome.session.subtitle.not_answering": "Not answering",
+	"relay.chrome.session.subtitle.waiting": "Waiting for you",
+	"relay.chrome.session.subtitle.working": "Working · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "Working",
+	"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+	"relay.chrome.session.tray.tasks": "Tasks {done}/{total}",
 	"relay.health.dropped_detail": "Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
 	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
 	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
@@ -1012,6 +1133,22 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
+	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
+	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
+	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
+	"mobile.chrome.destination.schedules": { role: "button", note: "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors." },
+	"mobile.chrome.destinations": { role: "heading", note: "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop." },
+	"mobile.chrome.home.connect": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.connecting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.greeting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.reconnecting": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.saved_draft": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.sign_in": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.new_chat": { role: "button", note: "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop." },
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
@@ -1225,10 +1362,26 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.stage_starting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.stage_unavailable": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
+	"relay.chrome.drawer.close": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the close control inside the navigation drawer. Escape and a tap outside also close it; this is the visible, labelled path for touch screen-reader users." },
+	"relay.chrome.drawer.library": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the asset library (files the agents produced). Hidden on a relay without the library capability, never shown disabled." },
+	"relay.chrome.drawer.open": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ☰ button at the start of the conversation list's app bar; it opens the navigation drawer. Read by screen readers only; the glyph is not translated." },
+	"relay.chrome.drawer.past": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the searchable, resumable history of finished sessions. Replaces a footer button that read 'past'." },
+	"relay.chrome.drawer.projects": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the projects sheet (multi-session workstreams with status and milestones)." },
+	"relay.chrome.drawer.settings": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens this computer's account-routing settings." },
+	"relay.chrome.list.search_label": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). aria-label of the conversation search field (its visible placeholder ends in an ellipsis, which does not belong in an accessible name). Matches names, tags and folders." },
+	"relay.chrome.list.search_open": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ⌕ button; pressing it swaps the title for a search field." },
+	"relay.chrome.row.more": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Label of the second swipe-revealed action; it opens the row's action sheet. A 72 px wide tile under an icon." },
+	"relay.chrome.row.tags": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the sheet that assigns tag categories to this conversation. A trailing value shows the primary tag or relay.chrome.row.tags_none." },
 	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
 	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
 	"relay.chrome.session.subtitle.ended": { role: "status", note: "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim." },
+	"relay.chrome.session.subtitle.idle": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is not working and nothing is pending." },
 	"relay.chrome.session.subtitle.not_answering": { role: "status", note: "The relay SPA's own subtitle word for the YELLOW status dot: the session's process is alive but not answering (its runtime is unreachable or its heartbeat and frames have both been quiet past the relay's window). Reused here verbatim so the two clients cannot name one state two ways. Its explanation is relay.health.dropped_detail or relay.health.quiet_detail, depending on which cause won." },
+	"relay.chrome.session.subtitle.waiting": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is stopped on an approval the operator must give." },
+	"relay.chrome.session.subtitle.working": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line under the conversation title while the agent works. {elapsed} is an ALREADY-FORMATTED compact duration such as '1m36s'; do not reformat it. Keep the middle dot." },
+	"relay.chrome.session.subtitle.working_plain": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent works and its start time is unknown." },
+	"relay.chrome.session.tray.agents": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's subagents (helper agents it started); opens their list. {running} of {total} are running now. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
+	"relay.chrome.session.tray.tasks": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's task list; opens it. {done} of {total} tasks are finished. Keep the slash form; it is a compact fraction. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
 	"relay.health.dropped_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen." },
 	"relay.health.ended_detail": { role: "help", note: "Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder." },
 	"relay.health.ended_send_failed": { role: "status", note: "Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume." },
@@ -1271,6 +1424,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+		"mobile.chrome.composer.more": "Más contexto",
+		"mobile.chrome.composer.open_queue": "Abrir la cola",
+		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
+		"mobile.chrome.destination.inbox": "Bandeja",
+		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
+		"mobile.chrome.destination.past": "Anteriores",
+		"mobile.chrome.destination.schedules": "Horarios",
+		"mobile.chrome.destinations": "Destinos",
+		"mobile.chrome.home.connect": "Conectar un ordenador",
+		"mobile.chrome.home.connecting": "Conectando con {host}…",
+		"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
+		"mobile.chrome.home.reconnecting": "Reconectando con {host}…",
+		"mobile.chrome.home.saved_draft": "Tu borrador está guardado en este teléfono y no se ha enviado.",
+		"mobile.chrome.home.sign_in": "Inicia sesión para reconectar",
+		"mobile.chrome.new_chat": "Nuevo chat",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
 		"mobile.common.done": "Hecho",
@@ -1484,10 +1653,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Iniciando sesión",
 		"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
 		"mobile.signin.superseded": "Se inició otro acceso.",
+		"relay.chrome.drawer.close": "Cerrar el menú de navegación",
+		"relay.chrome.drawer.library": "Biblioteca",
+		"relay.chrome.drawer.open": "Abrir el menú de navegación",
+		"relay.chrome.drawer.past": "Sesiones anteriores",
+		"relay.chrome.drawer.projects": "Proyectos",
+		"relay.chrome.drawer.settings": "Ajustes",
+		"relay.chrome.list.search_label": "Buscar conversaciones",
+		"relay.chrome.list.search_open": "Buscar",
+		"relay.chrome.row.more": "Más",
+		"relay.chrome.row.tags": "Etiquetas",
 		"relay.chrome.session.resume": "Reanudar",
 		"relay.chrome.session.resuming": "Reanudando…",
 		"relay.chrome.session.subtitle.ended": "Finalizada",
+		"relay.chrome.session.subtitle.idle": "Inactiva",
 		"relay.chrome.session.subtitle.not_answering": "No responde",
+		"relay.chrome.session.subtitle.waiting": "Esperándote",
+		"relay.chrome.session.subtitle.working": "Trabajando · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Trabajando",
+		"relay.chrome.session.tray.agents": "Agentes {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tareas {done}/{total}",
 		"relay.health.dropped_detail": "Tu máquina no logra comunicarse con esta sesión ahora mismo y sigue intentándolo. Hasta que lo consiga, cualquier envío falla de inmediato y lo que escribiste se queda en el campo de texto.",
 		"relay.health.ended_detail": "El historial se conserva. Envía un mensaje o toca Reanudar para reabrir la sesión en tu carpeta personal.",
 		"relay.health.ended_send_failed": "Esta sesión finalizó y no se pudo reabrir en este momento. Inténtalo de nuevo o toca “Finalizada” arriba y elige Reanudar.",
@@ -1514,6 +1699,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+		"mobile.chrome.composer.more": "Plus de contexte",
+		"mobile.chrome.composer.open_queue": "Ouvrir la file",
+		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
+		"mobile.chrome.destination.inbox": "Boîte",
+		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
+		"mobile.chrome.destination.past": "Passées",
+		"mobile.chrome.destination.schedules": "Plans",
+		"mobile.chrome.destinations": "Destinations",
+		"mobile.chrome.home.connect": "Connecter un ordinateur",
+		"mobile.chrome.home.connecting": "Connexion à {host}…",
+		"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
+		"mobile.chrome.home.reconnecting": "Reconnexion à {host}…",
+		"mobile.chrome.home.saved_draft": "Votre brouillon est enregistré sur ce téléphone et n’a pas été envoyé.",
+		"mobile.chrome.home.sign_in": "Se connecter pour rétablir la connexion",
+		"mobile.chrome.new_chat": "Nouveau chat",
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
 		"mobile.common.done": "Terminé",
@@ -1727,10 +1928,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Connexion en cours",
 		"mobile.signin.stage_unavailable": "Connexion indisponible",
 		"mobile.signin.superseded": "Une autre connexion a démarré.",
+		"relay.chrome.drawer.close": "Fermer la navigation",
+		"relay.chrome.drawer.library": "Bibliothèque",
+		"relay.chrome.drawer.open": "Ouvrir la navigation",
+		"relay.chrome.drawer.past": "Sessions passées",
+		"relay.chrome.drawer.projects": "Projets",
+		"relay.chrome.drawer.settings": "Paramètres",
+		"relay.chrome.list.search_label": "Rechercher une conversation",
+		"relay.chrome.list.search_open": "Rechercher",
+		"relay.chrome.row.more": "Plus",
+		"relay.chrome.row.tags": "Tags",
 		"relay.chrome.session.resume": "Reprendre",
 		"relay.chrome.session.resuming": "Reprise…",
 		"relay.chrome.session.subtitle.ended": "Terminée",
+		"relay.chrome.session.subtitle.idle": "Inactive",
 		"relay.chrome.session.subtitle.not_answering": "Ne répond pas",
+		"relay.chrome.session.subtitle.waiting": "Vous attend",
+		"relay.chrome.session.subtitle.working": "En cours · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "En cours",
+		"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tâches {done}/{total}",
 		"relay.health.dropped_detail": "Votre ordinateur n’arrive pas à joindre cette session pour l’instant et continue d’essayer. Tant qu’il n’y parvient pas, un envoi échoue aussitôt et votre texte reste dans la zone de saisie.",
 		"relay.health.ended_detail": "L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.",
 		"relay.health.ended_send_failed": "Cette session est terminée et n’a pas pu être rouverte pour le moment. Réessayez ou touchez « Terminée » en haut, puis choisissez « Reprendre ».",
@@ -1757,6 +1974,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+		"mobile.chrome.composer.more": "अधिक संदर्भ",
+		"mobile.chrome.composer.open_queue": "कतार खोलें",
+		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
+		"mobile.chrome.destination.inbox": "इनबॉक्स",
+		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
+		"mobile.chrome.destination.past": "पिछले",
+		"mobile.chrome.destination.schedules": "शेड्यूल",
+		"mobile.chrome.destinations": "गंतव्य",
+		"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
+		"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
+		"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
+		"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…",
+		"mobile.chrome.home.saved_draft": "आपका ड्राफ़्ट इस फ़ोन पर सुरक्षित है और भेजा नहीं गया है।",
+		"mobile.chrome.home.sign_in": "फिर से कनेक्ट करने के लिए साइन इन करें",
+		"mobile.chrome.new_chat": "नई चैट",
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
 		"mobile.common.done": "हो गया",
@@ -1970,10 +2203,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
 		"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
 		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
+		"relay.chrome.drawer.close": "नेविगेशन बंद करें",
+		"relay.chrome.drawer.library": "लाइब्रेरी",
+		"relay.chrome.drawer.open": "नेविगेशन खोलें",
+		"relay.chrome.drawer.past": "पिछले सत्र",
+		"relay.chrome.drawer.projects": "प्रोजेक्ट",
+		"relay.chrome.drawer.settings": "सेटिंग",
+		"relay.chrome.list.search_label": "बातचीत खोजें",
+		"relay.chrome.list.search_open": "खोजें",
+		"relay.chrome.row.more": "और",
+		"relay.chrome.row.tags": "टैग",
 		"relay.chrome.session.resume": "जारी रखें",
 		"relay.chrome.session.resuming": "खुल रहा है…",
 		"relay.chrome.session.subtitle.ended": "समाप्त",
+		"relay.chrome.session.subtitle.idle": "आइडल",
 		"relay.chrome.session.subtitle.not_answering": "उत्तर नहीं दे रहा",
+		"relay.chrome.session.subtitle.waiting": "आपका इंतज़ार है",
+		"relay.chrome.session.subtitle.working": "कार्यरत · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "कार्यरत",
+		"relay.chrome.session.tray.agents": "एजेंट {running}/{total}",
+		"relay.chrome.session.tray.tasks": "कार्य {done}/{total}",
 		"relay.health.dropped_detail": "आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है।",
 		"relay.health.ended_detail": "इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ।",
 		"relay.health.ended_send_failed": "यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।",
@@ -2000,6 +2249,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+		"mobile.chrome.composer.more": "Дополнительный контекст",
+		"mobile.chrome.composer.open_queue": "Открыть очередь",
+		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
+		"mobile.chrome.destination.inbox": "Входящие",
+		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
+		"mobile.chrome.destination.past": "Прошлые",
+		"mobile.chrome.destination.schedules": "Расписания",
+		"mobile.chrome.destinations": "Разделы",
+		"mobile.chrome.home.connect": "Подключить компьютер",
+		"mobile.chrome.home.connecting": "Подключение к {host}…",
+		"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
+		"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…",
+		"mobile.chrome.home.saved_draft": "Черновик сохранён на этом телефоне и не отправлен.",
+		"mobile.chrome.home.sign_in": "Войдите для повторного подключения",
+		"mobile.chrome.new_chat": "Новый чат",
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
 		"mobile.common.done": "Готово",
@@ -2213,10 +2478,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Начало входа",
 		"mobile.signin.stage_unavailable": "Вход недоступен",
 		"mobile.signin.superseded": "Начался другой вход.",
+		"relay.chrome.drawer.close": "Закрыть навигацию",
+		"relay.chrome.drawer.library": "Библиотека",
+		"relay.chrome.drawer.open": "Открыть навигацию",
+		"relay.chrome.drawer.past": "Прошлые сессии",
+		"relay.chrome.drawer.projects": "Проекты",
+		"relay.chrome.drawer.settings": "Настройки",
+		"relay.chrome.list.search_label": "Поиск по беседам",
+		"relay.chrome.list.search_open": "Поиск",
+		"relay.chrome.row.more": "Ещё",
+		"relay.chrome.row.tags": "Теги",
 		"relay.chrome.session.resume": "Возобновить",
 		"relay.chrome.session.resuming": "Возобновляем…",
 		"relay.chrome.session.subtitle.ended": "Завершена",
+		"relay.chrome.session.subtitle.idle": "Простой",
 		"relay.chrome.session.subtitle.not_answering": "Не отвечает",
+		"relay.chrome.session.subtitle.waiting": "Ждёт вас",
+		"relay.chrome.session.subtitle.working": "Работает · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Работает",
+		"relay.chrome.session.tray.agents": "Агенты {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Задачи {done}/{total}",
 		"relay.health.dropped_detail": "Компьютер сейчас не может связаться с этой сессией и продолжает попытки. Пока это не удастся, отправка сразу завершается ошибкой, а текст остаётся в поле ввода.",
 		"relay.health.ended_detail": "История сохранена. Отправьте сообщение или нажмите «Возобновить», чтобы снова открыть сессию в вашей домашней папке.",
 		"relay.health.ended_send_failed": "Эта сессия завершена, и открыть её снова пока не удалось. Попробуйте отправить ещё раз или нажмите «Завершена» вверху и выберите «Возобновить».",
@@ -2243,6 +2524,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+		"mobile.chrome.composer.more": "مزید سیاق",
+		"mobile.chrome.composer.open_queue": "قطار کھولیں",
+		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
+		"mobile.chrome.destination.inbox": "ان باکس",
+		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
+		"mobile.chrome.destination.past": "گزشتہ",
+		"mobile.chrome.destination.schedules": "شیڈول",
+		"mobile.chrome.destinations": "منزلیں",
+		"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
+		"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
+		"mobile.chrome.home.reconnecting": "{host} سے دوبارہ رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.saved_draft": "آپ کا مسودہ اس فون پر محفوظ ہے اور بھیجا نہیں گیا۔",
+		"mobile.chrome.home.sign_in": "دوبارہ رابطے کے لیے سائن ان کریں",
+		"mobile.chrome.new_chat": "نئی چیٹ",
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
 		"mobile.common.done": "ہو گیا",
@@ -2456,10 +2753,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
 		"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
 		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
+		"relay.chrome.drawer.close": "نیویگیشن بند کریں",
+		"relay.chrome.drawer.library": "لائبریری",
+		"relay.chrome.drawer.open": "نیویگیشن کھولیں",
+		"relay.chrome.drawer.past": "گزشتہ سیشنز",
+		"relay.chrome.drawer.projects": "پروجیکٹس",
+		"relay.chrome.drawer.settings": "ترتیبات",
+		"relay.chrome.list.search_label": "گفتگوئیں تلاش کریں",
+		"relay.chrome.list.search_open": "تلاش",
+		"relay.chrome.row.more": "مزید",
+		"relay.chrome.row.tags": "ٹیگز",
 		"relay.chrome.session.resume": "جاری رکھیں",
 		"relay.chrome.session.resuming": "جاری ہو رہا…",
 		"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
+		"relay.chrome.session.subtitle.idle": "فارغ",
 		"relay.chrome.session.subtitle.not_answering": "جواب نہیں دے رہا",
+		"relay.chrome.session.subtitle.waiting": "آپ کا انتظار",
+		"relay.chrome.session.subtitle.working": "کام جاری · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "کام جاری",
+		"relay.chrome.session.tray.agents": "ایجنٹس {running}/{total}",
+		"relay.chrome.session.tray.tasks": "کام {done}/{total}",
 		"relay.health.dropped_detail": "آپ کا کمپیوٹر ابھی اس سیشن تک نہیں پہنچ پا رہا اور مسلسل کوشش کر رہا ہے۔ جب تک یہ پہنچ نہ پائے، بھیجنے پر پیغام فوراً ناکام ہو جاتا ہے اور آپ کا لکھا ہوا متن پیغام کے خانے میں ہی رہتا ہے۔",
 		"relay.health.ended_detail": "تاریخچہ محفوظ ہے۔ اسے اپنے ہوم فولڈر میں دوبارہ کھولنے کے لیے پیغام بھیجیں یا “جاری رکھیں” دبائیں۔",
 		"relay.health.ended_send_failed": "یہ سیشن ختم ہو گیا ہے اور ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں، یا اوپر “ختم ہو گیا” دبائیں اور “جاری رکھیں” منتخب کریں۔",
@@ -2486,6 +2799,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
+		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
+		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
+		"mobile.chrome.destination.inbox": "Hộp thư",
+		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
+		"mobile.chrome.destination.past": "Trước",
+		"mobile.chrome.destination.schedules": "Lịch",
+		"mobile.chrome.destinations": "Mục đến",
+		"mobile.chrome.home.connect": "Kết nối máy tính",
+		"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
+		"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
+		"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…",
+		"mobile.chrome.home.saved_draft": "Bản nháp được lưu trên điện thoại này và chưa được gửi.",
+		"mobile.chrome.home.sign_in": "Đăng nhập để kết nối lại",
+		"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
 		"mobile.common.done": "Xong",
@@ -2699,10 +3028,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
 		"mobile.signin.stage_unavailable": "Không thể đăng nhập",
 		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
+		"relay.chrome.drawer.close": "Đóng điều hướng",
+		"relay.chrome.drawer.library": "Thư viện",
+		"relay.chrome.drawer.open": "Mở điều hướng",
+		"relay.chrome.drawer.past": "Phiên trước",
+		"relay.chrome.drawer.projects": "Dự án",
+		"relay.chrome.drawer.settings": "Cài đặt",
+		"relay.chrome.list.search_label": "Tìm kiếm cuộc trò chuyện",
+		"relay.chrome.list.search_open": "Tìm kiếm",
+		"relay.chrome.row.more": "Thêm",
+		"relay.chrome.row.tags": "Nhãn",
 		"relay.chrome.session.resume": "Mở lại",
 		"relay.chrome.session.resuming": "Đang mở lại…",
 		"relay.chrome.session.subtitle.ended": "Đã kết thúc",
+		"relay.chrome.session.subtitle.idle": "Rảnh",
 		"relay.chrome.session.subtitle.not_answering": "Không phản hồi",
+		"relay.chrome.session.subtitle.waiting": "Đang chờ bạn",
+		"relay.chrome.session.subtitle.working": "Đang làm việc · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Đang làm việc",
+		"relay.chrome.session.tray.agents": "Tác nhân {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tác vụ {done}/{total}",
 		"relay.health.dropped_detail": "Máy tính của bạn hiện không kết nối được với phiên này và vẫn đang thử lại. Cho đến khi kết nối được, gửi tin nhắn sẽ thất bại ngay và nội dung đã gõ vẫn còn trong ô nhập.",
 		"relay.health.ended_detail": "Lịch sử đã được lưu. Gửi tin nhắn hoặc chạm Mở lại để khôi phục phiên trong thư mục home của bạn.",
 		"relay.health.ended_send_failed": "Phiên này đã kết thúc và lúc này chưa khôi phục được. Hãy thử gửi lại, hoặc chạm “Đã kết thúc” ở trên cùng rồi chọn Mở lại.",
@@ -2729,6 +3074,22 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+		"mobile.chrome.composer.more": "更多上下文",
+		"mobile.chrome.composer.open_queue": "打开队列",
+		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
+		"mobile.chrome.destination.inbox": "收件箱",
+		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
+		"mobile.chrome.destination.past": "历史",
+		"mobile.chrome.destination.schedules": "计划",
+		"mobile.chrome.destinations": "目的地",
+		"mobile.chrome.home.connect": "连接电脑",
+		"mobile.chrome.home.connecting": "正在连接 {host}…",
+		"mobile.chrome.home.greeting": "你想处理什么工作？",
+		"mobile.chrome.home.reconnecting": "正在重新连接 {host}…",
+		"mobile.chrome.home.saved_draft": "草稿已保存在此手机上，尚未发送。",
+		"mobile.chrome.home.sign_in": "登录以重新连接",
+		"mobile.chrome.new_chat": "新聊天",
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",
 		"mobile.common.done": "完成",
@@ -2942,10 +3303,26 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "正在开始登录",
 		"mobile.signin.stage_unavailable": "无法登录",
 		"mobile.signin.superseded": "另一次登录已开始。",
+		"relay.chrome.drawer.close": "关闭导航",
+		"relay.chrome.drawer.library": "资料库",
+		"relay.chrome.drawer.open": "打开导航",
+		"relay.chrome.drawer.past": "历史会话",
+		"relay.chrome.drawer.projects": "项目",
+		"relay.chrome.drawer.settings": "设置",
+		"relay.chrome.list.search_label": "搜索对话",
+		"relay.chrome.list.search_open": "搜索",
+		"relay.chrome.row.more": "更多",
+		"relay.chrome.row.tags": "标签",
 		"relay.chrome.session.resume": "恢复",
 		"relay.chrome.session.resuming": "正在恢复……",
 		"relay.chrome.session.subtitle.ended": "已结束",
+		"relay.chrome.session.subtitle.idle": "空闲",
 		"relay.chrome.session.subtitle.not_answering": "未响应",
+		"relay.chrome.session.subtitle.waiting": "等待你处理",
+		"relay.chrome.session.subtitle.working": "工作中 · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "工作中",
+		"relay.chrome.session.tray.agents": "智能体{running}/{total}",
+		"relay.chrome.session.tray.tasks": "任务{done}/{total}",
 		"relay.health.dropped_detail": "电脑目前无法连接到此会话，正在不断重试。连上之前，发送会立即失败，已输入的文字会保留在输入框中。",
 		"relay.health.ended_detail": "历史记录已保留。发送消息或点击“恢复”，即可在主目录中重新打开。",
 		"relay.health.ended_send_failed": "此会话已结束，刚才未能重新打开。可以重试，或点击顶部的“已结束”，然后选择“恢复”。",
