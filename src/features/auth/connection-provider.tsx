@@ -115,7 +115,6 @@ import {
 	type RouteAdmission,
 	routeAdmission,
 } from "./route-admission";
-import { createSavedRouteDiagnostics } from "./saved-route-diagnostics";
 import {
 	appendSignInDiagnostic,
 	type SignInDiagnostic,
@@ -765,7 +764,6 @@ export const ConnectionProvider = ({
 			client: ReturnType<typeof createRelayClient>,
 			admission: StartupRouteAdmission,
 			computerId?: string,
-			diagnostic?: ReturnType<typeof createSavedRouteDiagnostics>,
 		): Promise<void> => {
 			if (
 				!admission.isCurrent() ||
@@ -819,7 +817,6 @@ export const ConnectionProvider = ({
 			 * second must not be the reason the screen is empty. It asks for the
 			 * peers' rows exactly as the stream does — one list, one population. */
 			const listGeneration = listStore.getState().connectionGeneration;
-			diagnostic?.stage("cold-list.begin");
 			const frame = await client.sessions({ includePeers: true }).catch(
 				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
 				 *  a cold-start answer the schema refused (or a transport that never
@@ -829,7 +826,6 @@ export const ConnectionProvider = ({
 				 *  loud and the list carries the same stale mark a dropped stream
 				 *  paints. */
 				(error: unknown) => {
-					diagnostic?.stage("cold-list.failed", error);
 					if (!admission.isCurrent()) return null;
 					console.warn(
 						"[sessions] the cold-start list read could not be applied; the stream's seed frame is the fallback",
@@ -840,7 +836,6 @@ export const ConnectionProvider = ({
 				},
 			);
 			if (frame && admission.isCurrent()) {
-				diagnostic?.stage("cold-list.applied");
 				listStore.getState().applyFrame(
 					{
 						sessions: frame.sessions,
@@ -862,16 +857,11 @@ export const ConnectionProvider = ({
 			{ url, password, allowInsecure, computerId }: ConnectCustomInput,
 			restoring = false,
 		) => {
-			const diagnostic = createSavedRouteDiagnostics(
-				Platform.OS === "web" ? () => {} : undefined,
-			);
-			diagnostic.stage(restoring ? "restore.begin" : "save.begin");
 			setBusy(true);
 			let admission: StartupRouteAdmission | null = null;
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
-					diagnostic.stage("route.rejected");
 					/* A shape the validator refuses is not a transport failure: it never
 					 * reaches the network, and the screen states the reason beside the
 					 * field rather than in a refusal surface. */
@@ -884,32 +874,17 @@ export const ConnectionProvider = ({
 					return;
 				}
 				const route = validated.route;
-				diagnostic.stage("route.accepted");
 				const privacy = restoring
 					? Promise.resolve()
 					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
-				diagnostic.stage("privacy.wait");
 				await privacy;
-				diagnostic.stage("privacy.ready");
-				diagnostic.stage("native-retirement.wait");
 				await nativeCredentialRetirement.settled();
-				diagnostic.stage("native-retirement.ready");
-				if (!admission.isCurrent()) {
-					diagnostic.stage("admission.superseded");
+				if (!admission.isCurrent()) return;
+				if (!(await authenticateCustomRoute(route, password, admission)))
 					return;
-				}
-				diagnostic.stage("authentication.begin");
-				if (!(await authenticateCustomRoute(route, password, admission))) {
-					diagnostic.stage("authentication.declined");
-					return;
-				}
-				diagnostic.stage("authentication.ready");
 				const client = createRelayClient({
 					route,
-					// Existing injection seam: observe first saved-route request without
-					// touching credential ownership, fetch policy, retry or admission.
-					fetchImpl: diagnostic.fetch(),
 					onResponse: (facts) => {
 						if (admission?.isCurrent() && facts.status === 401) {
 							void revokeAuthorization();
@@ -922,10 +897,8 @@ export const ConnectionProvider = ({
 					},
 				});
 
-				await goLive(client, admission, computerId, diagnostic);
-				diagnostic.stage("provider.returned");
+				await goLive(client, admission, computerId);
 			} catch (error) {
-				diagnostic.stage("provider.failed", error);
 				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>

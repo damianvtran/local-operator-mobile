@@ -59,11 +59,6 @@ on:
           - preflight
           - setup
           - full
-          - diagnostic
-          - transport
-          - transport-xctest
-          - transport-xctest-negative
-          - auth-save-xctest
       # Inputs of projects-create-ios-proof AND theme-ios-proof; ignored by every
       # other mode. The defaults pin the artifact PR #150's native Urdu frame was
       # requested against; theme-ios-proof must be given its own three values.
@@ -168,7 +163,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
-            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; case "$PROOF_STAGE" in full|diagnostic|setup|transport|transport-xctest|transport-xctest-negative|auth-save-xctest) ;; *) exit 1 ;; esac ;;
+            theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1669,13 +1664,12 @@ jobs:
     runs-on: macos-26
     # Overall ceiling. The runner script spends at most 45 minutes on proof
     # operations and reserves cleanup beyond that; setup steps fit in the rest.
-    timeout-minutes: ${{ inputs.proof_stage != 'full' && 30 || 90 }}
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: read
     env:
       PROOF_MODE: theme-ios-proof
-      PROOF_STAGE: ${{ inputs.proof_stage || 'full' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -1689,7 +1683,6 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
-        if: inputs.proof_stage != 'transport-xctest' && inputs.proof_stage != 'transport-xctest-negative' && inputs.proof_stage != 'auth-save-xctest'
         run: |
           set -euo pipefail
           export MAESTRO_VERSION
@@ -1741,14 +1734,9 @@ jobs:
             ${{ runner.temp }}/theme-proof/receipt.json
             ${{ runner.temp }}/theme-proof/commands.json
             ${{ runner.temp }}/theme-proof/relay-*-requests.json
-            ${{ runner.temp }}/theme-proof/relay-*-transport.json
-            ${{ runner.temp }}/theme-proof/relay-*-auth.json
             ${{ runner.temp }}/theme-proof/commands/*.log
-            ${{ inputs.proof_stage == 'auth-save-xctest' && format('{0}/theme-proof/frames/auth-verified/**/*.png', runner.temp) || format('{0}/theme-proof/frames/**/*.png', runner.temp) }}
-            ${{ inputs.proof_stage == 'auth-save-xctest' && format('{0}/theme-proof/frames/auth-verified/**', runner.temp) || format('{0}/theme-proof/frames/xctest/**', runner.temp) }}
-            ${{ inputs.proof_stage != 'auth-save-xctest' && format('{0}/theme-proof/hierarchies/*.txt', runner.temp) || '' }}
-            ${{ inputs.proof_stage == 'auth-save-xctest' && format('{0}/theme-proof/safe-auth.xcresult/**', runner.temp) || format('{0}/theme-proof/transport.xcresult/**', runner.temp) }}
-            ${{ runner.temp }}/theme-proof/carrier/target-graph.json
+            ${{ runner.temp }}/theme-proof/frames/**/*.png
+            ${{ runner.temp }}/theme-proof/hierarchies/*.txt
           retention-days: 14
           if-no-files-found: warn
   u08-geometry-proof:
