@@ -70,7 +70,7 @@ import {
 import { stageBShouldRetryProducer } from "./stage-b-producer-retry.ts";
 import {
 	awaitProviderRegistration,
-	resolveFilesBundleId,
+	resolveFilesApplication,
 } from "./stage-b-provider-registration.ts";
 
 /** Refusal sentences the app actually paints. A hierarchy that shows one of
@@ -545,24 +545,36 @@ async function runStageBCoordinator(
 								: lookup.localStorageDir() !== null
 									? "local"
 									: null,
-						launch: () => {
-							try {
-								const apps = JSON.parse(
+						launch: () =>
+							resolveFilesApplication({
+								// `simctl listapps` prints a NeXTSTEP plist and has no
+								// --json flag, so it goes through plutil before parsing.
+								listapps: () =>
 									execFileSync("xcrun", ["simctl", "listapps", owned], {
 										encoding: "utf8",
 										stdio: ["ignore", "pipe", "ignore"],
 									}),
-								) as Record<string, { CFBundleDisplayName?: string }>;
-								const id = resolveFilesBundleId(apps);
-								if (id === null) return null;
-								execFileSync("xcrun", ["simctl", "launch", owned, id], {
-									stdio: ["ignore", "ignore", "ignore"],
-								});
-								return id;
-							} catch {
-								return null;
-							}
-						},
+								convert: (plist) => {
+									try {
+										return execFileSync(
+											"plutil",
+											["-convert", "json", "-o", "-", "-"],
+											{
+												encoding: "utf8",
+												input: plist,
+												stdio: ["pipe", "pipe", "ignore"],
+											},
+										);
+									} catch {
+										return null;
+									}
+								},
+								launch: (bundleId) => {
+									execFileSync("xcrun", ["simctl", "launch", owned, bundleId], {
+										stdio: ["ignore", "ignore", "ignore"],
+									});
+								},
+							}),
 					});
 			receipt.providerRegistration = registration;
 			let seed: ReturnType<typeof seedStageBDocument>;

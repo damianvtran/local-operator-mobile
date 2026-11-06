@@ -128,6 +128,8 @@ export function seedStageBDocument(
 	registration?: {
 		needed: boolean;
 		filesApp: string | null;
+		filesStage?: string;
+		filesDetail?: string;
 		elapsedMs: number;
 		polls: number;
 	},
