@@ -3,7 +3,10 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { STAGE_B_HOST } from "../../src/testing/stage-b-draft-transport";
 import { capFor } from "./account-routing-proof-contract";
-import { STAGE_B_DOCUMENT_ROW } from "./stage-b-document-seed";
+import {
+	STAGE_B_DOCUMENT_ROW,
+	STAGE_B_DOCUMENT_ROW_ID,
+} from "./stage-b-document-seed";
 import {
 	assertStageBDraft,
 	assertStageBPostReleaseDraft,
@@ -11,6 +14,7 @@ import {
 	attachStageBPhoto,
 	discardStageBDraft,
 	STAGE_B_COLD_ASSERTION_MS,
+	STAGE_B_DOCUMENT_DISMISS_LABEL,
 	STAGE_B_DRAWN_SCREEN,
 	STAGE_B_PICKER_BROWSER_ID,
 	STAGE_B_PICKER_OUTCOME_LABEL,
@@ -311,5 +315,29 @@ describe("document-picker attachment is the native proof surface", () => {
 		expect(source).toContain('"attach-native-document"');
 		expect(source).toContain('"attach-native-document-second"');
 		expect(source).not.toContain('flow("attach-native-photo"');
+	});
+
+	it("selects the documents row by resource id, settles first, and re-taps once", () => {
+		const flow = attachStageBDocument("local");
+		const raw = JSON.stringify(flow);
+		// The cell's own id, not the text regex: run 42262867379's text tap landed on
+		// a label that does not select and the picker stayed open.
+		expect(raw).toContain(`"id":"${STAGE_B_DOCUMENT_ROW_ID}"`);
+		expect(raw).toContain('"retryTapIfNoChange":false');
+		// The transition settles before the tap.
+		const settle = raw.indexOf("waitForAnimationToEnd");
+		expect(settle).toBeGreaterThan(-1);
+		expect(settle).toBeLessThan(
+			raw.indexOf(`"id":"${STAGE_B_DOCUMENT_ROW_ID}"`),
+		);
+		// Exactly one conditional re-tap, gated on the browser still being up.
+		expect(raw).toContain('"when":{"visible":{"text":"Browse"}}');
+		expect(raw.split(`"id":"${STAGE_B_DOCUMENT_ROW_ID}"`).length - 1).toBe(2);
+		// Selection failure is labelled apart from the composer assertion, and the
+		// dismissal wait comes before the chip assertion.
+		expect(raw).toContain(STAGE_B_DOCUMENT_DISMISS_LABEL);
+		expect(raw.indexOf(STAGE_B_DOCUMENT_DISMISS_LABEL)).toBeLessThan(
+			raw.indexOf("composer-attachment-0"),
+		);
 	});
 });

@@ -3,7 +3,10 @@ import {
 	STAGE_B_HOST,
 } from "../../src/testing/stage-b-draft-transport.ts";
 import type { StageBDocumentProvider } from "./stage-b-document-seed.ts";
-import { STAGE_B_DOCUMENT_ROW } from "./stage-b-document-seed.ts";
+import {
+	STAGE_B_DOCUMENT_ROW,
+	STAGE_B_DOCUMENT_ROW_ID,
+} from "./stage-b-document-seed.ts";
 import { STAGE_B_POST_RELEASE_WINDOW_MS } from "./stage-b-draft-timing.ts";
 export type StageBStep = Record<string, unknown>;
 const REGEX_META = /[.*+?^${}()|[\]\\]/g;
@@ -176,11 +179,36 @@ export const attachStageBDocument = (
 			label: STAGE_B_DOCUMENT_SEED_LABEL,
 		},
 	},
-	{ tapOn: { text: STAGE_B_DOCUMENT_ROW } },
+	// Settle the push transition before selecting: run 42262867379's text tap
+	// completed mid-transition on a label that does not select, and the picker
+	// stayed open with a Cancel button and no Open.
+	{ waitForAnimationToEnd: { timeout: 5000 } },
+	{ tapOn: { id: STAGE_B_DOCUMENT_ROW_ID, retryTapIfNoChange: false } },
+	// One bounded re-tap, only while the browser is still up. Selection and
+	// hand-off are different failures, so this wait is labelled on its own and
+	// runs BEFORE the composer assertion.
+	{
+		runFlow: {
+			when: { visible: { text: "Browse" } },
+			commands: [
+				{ tapOn: { id: STAGE_B_DOCUMENT_ROW_ID, retryTapIfNoChange: false } },
+				{ waitForAnimationToEnd: { timeout: 5000 } },
+			],
+		},
+	},
+	{
+		extendedWaitUntil: {
+			notVisible: { text: "Browse" },
+			timeout: STAGE_B_DOCUMENT_DISMISS_MS,
+			label: STAGE_B_DOCUMENT_DISMISS_LABEL,
+		},
+	},
 	{
 		extendedWaitUntil: {
 			visible: { id: "composer-attachment-0" },
 			timeout: 15000,
+			label:
+				"document selected but the composer did not show its attachment chip",
 		},
 	},
 ];
@@ -202,6 +230,12 @@ export const STAGE_B_DOCUMENT_PROVIDER_LABEL_TEXT: Readonly<
 export const STAGE_B_DOCUMENT_BROWSER_MS = 30_000;
 export const STAGE_B_DOCUMENT_PROVIDER_MS = 15_000;
 export const STAGE_B_DOCUMENT_FILE_MS = 20_000;
+/** The picker's own dismissal after a successful selection: measured within a
+ * couple of seconds when the tap actually selects, so 15 s names a selection
+ * failure quickly instead of leaving it to look like a composer failure. */
+export const STAGE_B_DOCUMENT_DISMISS_MS = 15_000;
+export const STAGE_B_DOCUMENT_DISMISS_LABEL =
+	"picker did not return a document: the file cell never selected";
 export const STAGE_B_DOCUMENT_BROWSER_LABEL =
 	"Files document browser did not appear within 30s";
 export const STAGE_B_DOCUMENT_SEED_LABEL =

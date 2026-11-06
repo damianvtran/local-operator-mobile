@@ -23,6 +23,11 @@ export const STAGE_B_DOCUMENT_ROW = `${STAGE_B_DOCUMENT_NAME.replace(
 	".",
 	", ",
 )}(,.*)?`;
+/** The picker CELL's own resource-id, exactly as run 42132547421 captured it
+ * ("stage-b-seed, txt"). Selecting by id rather than by a text regex is what run
+ * 42262867379 needed: its text-regex tap completed on a label that does not
+ * select, and the picker stayed open with no Open button. */
+export const STAGE_B_DOCUMENT_ROW_ID = STAGE_B_DOCUMENT_NAME.replace(".", ", ");
 /** Synthetic, non-secret content. A canary would leak into a public artifact
  * through the file name alone, and the attachment strip proves the same thing. */
 export const STAGE_B_DOCUMENT_CONTENT = "Stage B synthetic attachment seed\n";
