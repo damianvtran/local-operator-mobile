@@ -27,7 +27,7 @@
  *   hands a caller `any`.
  */
 
-import type { z } from "zod";
+import { z } from "zod";
 
 import {
 	type commandOpSchema,
@@ -375,6 +375,9 @@ export interface NotificationSeenRequest {
 		visible_since_ms: number;
 	};
 }
+
+/** Full content digest supplied by the paired notification-sound projection. */
+const SOUND_SHA256_RE = /^[a-f0-9]{64}$/;
 
 export class RelayEndpoints {
 	private readonly http: RelayHttpClient;
@@ -1294,6 +1297,60 @@ export class RelayEndpoints {
 			method: "POST",
 			path: "/api/push/register",
 			body: request,
+		});
+	}
+
+	/** Paired-cookie sound projection; never desktop bearer endpoints. A missing
+	 * route is an older daemon, not permission to build a second preference. */
+	async notificationSounds() {
+		const { text } = await this.http.raw({
+			method: "GET",
+			path: "/api/notification-sounds",
+		});
+		return z
+			.object({
+				selected: z.string(),
+				enabled: z.boolean(),
+				sounds: z
+					.array(
+						z.object({
+							id: z.string(),
+							builtin: z.boolean(),
+							sha256: z.string().regex(SOUND_SHA256_RE).nullable(),
+							push_name: z.string().nullable(),
+							size_bytes: z.number().int().nonnegative().nullable(),
+						}),
+					)
+					.max(256),
+			})
+			.parse(JSON.parse(text));
+	}
+
+	async notificationSoundAudio(id: string, sha: string): Promise<Uint8Array> {
+		const result = await this.http.bytes(
+			{
+				method: "GET",
+				path: `/api/notification-sounds/${encodeURIComponent(id)}/audio?sha=${encodeURIComponent(sha)}`,
+			},
+			2 * 1024 * 1024,
+		);
+		if (result.mimeType?.split(";")[0] !== "audio/wav")
+			throw new Error("Unexpected sound content type");
+		return result.bytes;
+	}
+
+	/** The install id identifies the row; the secret proves custody of THAT
+	 * row. Both stay in headers, never query strings or diagnostic payloads. */
+	async noteNotificationSoundCache(
+		installId: string,
+		deviceKey: string,
+		stems: string[],
+	): Promise<void> {
+		await this.http.raw({
+			method: "PUT",
+			path: "/api/notification-sounds/cached",
+			headers: { "X-Lop-Device": installId, "X-Lop-Device-Key": deviceKey },
+			body: { shas: stems },
 		});
 	}
 

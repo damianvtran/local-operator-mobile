@@ -123,6 +123,10 @@ export interface TunnelSessionDeps {
 	sleep?: (ms: number) => Promise<void>;
 	/** Jitter source for the backoff. */
 	random?: () => number;
+	/** Cancels the in-flight control-plane call. Set per call by the manager from
+	 *  the request that needs the session: a route switch or a request deadline
+	 *  must not leave a renewal running for a caller that has gone. */
+	signal?: AbortSignal;
 }
 
 function apiUrl(deps: TunnelSessionDeps, path: string): string {
@@ -159,6 +163,7 @@ async function postSession(
 			},
 			body: JSON.stringify(body),
 			credentials: "omit",
+			...(deps.signal ? { signal: deps.signal } : {}),
 		});
 	} catch {
 		throw new TunnelSessionError("network", `${what} could not reach Radient`);
@@ -428,8 +433,9 @@ export function needsRemint(
 	return now() - session.mintedAt >= HANDLE_REMINT_AFTER_DAYS * DAY_MS;
 }
 
-/** True when the handle is past its absolute life: only a fresh sign-in plus a
- *  re-mint can help, and the sign-in screen is the correct behaviour. */
+/** True when the handle is past its absolute life. The HANDLE cannot be extended
+ *  or refreshed, so only an authenticated re-mint through the control plane can
+ *  replace it; the owner's Radient login is untouched unless that mint refuses. */
 export function handleExpired(
 	session: TunnelSession,
 	now: () => number = () => Date.now(),
@@ -564,18 +570,24 @@ export class TunnelSessionManager {
 
 	/** Refreshes the grant, single-flight. Concurrent callers await the same
 	 *  request rather than each firing their own. */
-	async refresh(): Promise<TunnelSession> {
+	async refresh(signal?: AbortSignal): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.refreshInFlight) return this.refreshInFlight;
-		this.refreshInFlight = this.track(this.runRefresh(current)).finally(() => {
-			this.refreshInFlight = null;
-		});
+		this.refreshInFlight = this.track(this.runRefresh(current, signal)).finally(
+			() => {
+				this.refreshInFlight = null;
+			},
+		);
 		return this.refreshInFlight;
 	}
 
-	private async runRefresh(current: TunnelSession): Promise<TunnelSession> {
+	private async runRefresh(
+		current: TunnelSession,
+		signal?: AbortSignal,
+	): Promise<TunnelSession> {
+		const deps = signal ? { ...this.deps, signal } : this.deps;
 		try {
-			const refreshed = await refreshTunnelSession(current, this.deps);
+			const refreshed = await refreshTunnelSession(current, deps);
 			/* Compare-and-set: `current` was read before the request went out. If a
 			 * re-mint (or a fresh sign-in) replaced the session while this refresh
 			 * was in flight, adopting the result would resurrect the OLD handle and
@@ -609,16 +621,22 @@ export class TunnelSessionManager {
 	 * session is replaced before the user can meet its expiry, and only a lapsed
 	 * OAuth grant (90 days of no use) reaches the sign-in screen.
 	 */
-	async remint(): Promise<TunnelSession> {
+	async remint(signal?: AbortSignal): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.remintInFlight) return this.remintInFlight;
-		this.remintInFlight = this.track(this.runRemint(current)).finally(() => {
-			this.remintInFlight = null;
-		});
+		this.remintInFlight = this.track(this.runRemint(current, signal)).finally(
+			() => {
+				this.remintInFlight = null;
+			},
+		);
 		return this.remintInFlight;
 	}
 
-	private async runRemint(current: TunnelSession): Promise<TunnelSession> {
+	private async runRemint(
+		current: TunnelSession,
+		signal?: AbortSignal,
+	): Promise<TunnelSession> {
+		const deps = signal ? { ...this.deps, signal } : this.deps;
 		const token = await this.deps.oauthAccessToken();
 		if (!token)
 			throw new TunnelSessionError("oauth", "sign in with Radient again");
@@ -628,7 +646,7 @@ export class TunnelSessionManager {
 				hostname: current.hostname,
 				oauthAccessToken: token,
 			},
-			this.deps,
+			deps,
 		);
 		await this.adopt(minted);
 		return minted;
@@ -642,17 +660,18 @@ export class TunnelSessionManager {
 	 * a grant that is about to expire — which is the shape of the "hard 401 five
 	 * minutes later" failure the ADR warns about.
 	 */
-	async usableSession(): Promise<TunnelSession> {
+	async usableSession(signal?: AbortSignal): Promise<TunnelSession> {
 		let session = this.requireSession();
 		if (handleExpired(session, this.deps.now)) {
-			throw new TunnelSessionError(
-				"oauth",
-				"this tunnel session has expired; sign in with Radient again",
-			);
+			// Expiry ends THIS scoped handle, not the owner's Radient login. Mint
+			// through the authenticated control plane again; it rechecks ownership,
+			// tunnel version and revocation. Never extend/trust the expired handle.
+			session = await this.remint(signal);
 		}
-		if (needsRemint(session, this.deps.now)) session = await this.remint();
+		if (needsRemint(session, this.deps.now))
+			session = await this.remint(signal);
 		if (grantNeedsRefresh(session, this.deps.now))
-			session = await this.refresh();
+			session = await this.refresh(signal);
 		return session;
 	}
 

@@ -474,7 +474,35 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * palette bytes. Recomputed with --print; the only drift is this src tree.
 	 * Historical incident, instrument and corpus pins remain untouched. This
 	 * admits instrumented source, not a native pass or old-binary equivalence. */
-	src: "4e88d9b5204dae7be5fc98ba42619ff5a6d66e96373e99e9e9f7d2407b2570c8",
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's Android OAuth change above): the Android
+	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
+	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
+	 * is rendered on the web target: channels are created only on Android, and
+	 * the keys are read only by that call. No transcript/corpus/instrument
+	 * change; historical pins retained. */
+	/* Deliberate --print re-pin (M2): native custom-sound cache, relay routes,
+	 * lifecycle invalidation and tests. The new root hook returns on web before
+	 * IO; its store subscriptions render nothing. Config changedKeys is data
+	 * for that hook, not a transcript rendering change. No tokens, styles,
+	 * transcript components, corpus or instrument changed. Native filesystem
+	 * proof is separate; this retains only the unchanged U08 web geometry. */
+	/* Deliberate re-pin for PR #166 (native session persistence, operator incident
+	 * #389), after review round 1: `src` renews an expiring account token and the
+	 * five-minute tunnel grant in place, and the provider's discovery pass reports
+	 * those outcomes through the connection store. No screen, layout, style, token
+	 * or transcript input is added or renamed, and U-08's healthy custom-relay
+	 * transcript selects none of the renewed branches — this is a source-
+	 * compatibility re-pin, not fresh geometry evidence. `app` untouched;
+	 * historical pins retained. Recomputed with `--print` after the merge with
+	 * main (#162 notification-store changes). */
+	/* Mechanical convergence with main ab7e3fa9 (#165 M2, #166 auth): the merged
+	 * `src` digest is neither side's, because it carries both the theme/UI work
+	 * and main's notification-store and native-auth changes. Every rationale
+	 * above is retained; only the combined digest was recomputed with `--print`.
+	 * `app`, `design/*` and `public` are unchanged by the merge. This remains
+	 * source admission, not a rendered pass. */
+	src: "38b61fd3d00d1051ffbd7fc6ac450797027faf249db75a54362658aa97073fb9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -487,8 +515,12 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
+	// Deliberate --print re-pin (notification sounds, M1): only the
+	// expo-notifications plugin's native `sounds:` list was added; it copies
+	// files into the iOS bundle and Android res/raw and is not a U-08 web layout
+	// or rendered-geometry input.
 	"app.config.ts":
-		"8ce01f109064e71382d1d5fdc4b98bfaf6bc6a5b36281d3574d12a157722c1d1",
+		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

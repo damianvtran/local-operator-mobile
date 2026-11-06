@@ -150,10 +150,25 @@ describe("core-audit-only dispatch isolation", () => {
 				"s15-proof",
 				"account-routing-android-proof",
 				"projects-create-ios-proof",
-				"theme-ios-proof",
 			])
 				expect(admits("workflow_dispatch", mode, stage)).toBe(false);
 		}
+		/* `theme-ios-proof` declares its own bounded stage list (de4585b1), so it
+		 * admits stages for the same reason `account-routing-ios-proof` does. The
+		 * isolation property is kept rather than relaxed: every DECLARED stage must
+		 * admit, and a stage outside that list must still be refused. */
+		for (const stage of [
+			"full",
+			"diagnostic",
+			"setup",
+			"transport",
+			"transport-xctest",
+			"transport-xctest-negative",
+			"auth-save-xctest",
+		])
+			expect(admits("workflow_dispatch", "theme-ios-proof", stage)).toBe(true);
+		for (const stage of ["preflight", "nightly", "sdk"])
+			expect(admits("workflow_dispatch", "theme-ios-proof", stage)).toBe(false);
 	});
 	it("has a discriminating pre-change isolation negative control", () => {
 		const oldSelected = Object.entries(legacy)
