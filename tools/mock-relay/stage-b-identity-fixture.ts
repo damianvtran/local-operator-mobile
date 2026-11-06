@@ -54,13 +54,8 @@ const sendIdentity = (response: ServerResponse, body: unknown) => {
 };
 /** A real socket fixture. Only synthetic credentials are accepted. Receipts are
  * counters/flags, never Authorization, body, draft text or attachment bytes. */
-export async function startStageBIdentityFixture(
-	sourceSha: string,
-	/** A verified prebuilt candidate embeds its own nonce; the fixture adopts it so
-	 * the app stays bound to this attempt's fixture. Absent, a fresh one is minted. */
-	adoptedNonce?: string,
-) {
-	const nonce = adoptedNonce ?? randomBytes(16).toString("hex");
+export async function startStageBIdentityFixture(sourceSha: string) {
+	const nonce = randomBytes(16).toString("hex");
 	// Draft text/YAML/screenshots are public proof artifacts, unlike the HTTP
 	// control credential. Give the scanner its own independent, non-auth marker.
 	let draftMarker = randomBytes(16).toString("hex");

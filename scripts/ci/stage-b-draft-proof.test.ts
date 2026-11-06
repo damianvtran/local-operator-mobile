@@ -135,9 +135,14 @@ describe("dedicated Stage B proof preflight", () => {
 			join(root, "scripts/ci/stage-b-draft-proof.ts"),
 			"utf8",
 		);
-		const start = source.indexOf('"unsigned-candidate-producer"');
+		// The argv lives in `producerArgs` so the one retry re-runs the identical
+		// build rather than a second hand-maintained copy of these flags.
+		const start = source.indexOf("const producerArgs");
 		expect(start).toBeGreaterThan(0);
-		const build = source.slice(start, source.indexOf("const products", start));
+		const build = source.slice(
+			start,
+			source.indexOf("const products = join(", start),
+		);
 		expect(build).not.toContain('"-jobs"');
 		for (const flag of [
 			"CODE_SIGN_IDENTITY=-",
@@ -151,6 +156,10 @@ describe("dedicated Stage B proof preflight", () => {
 		expect(build).toContain(`platform=iOS Simulator,id=\${udid}`);
 		expect(build).toContain('join(output, "DerivedData")');
 		expect(build).toContain("2700");
+		// Ad-hoc signing stays the identity: a retry is the same build, not a
+		// different one, so no signing flag may differ between attempts.
+		// Both invocations share one argv: a retry cannot drift from the first run.
+		expect(source.split("producerArgs,").length - 1).toBeGreaterThanOrEqual(2);
 		const workflow = readFileSync(
 			join(root, ".github/workflows/stage-b-draft-proof.yml"),
 			"utf8",
