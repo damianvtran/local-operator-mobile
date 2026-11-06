@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
+	readFileSync,
 	rmSync,
 	utimesSync,
 	writeFileSync,
@@ -445,11 +446,13 @@ describe("the frame delta", () => {
 describe("CLI", () => {
 	const run = (
 		args: string[],
+		env: NodeJS.ProcessEnv = process.env,
 	): { status: number; stdout: string; stderr: string } => {
 		try {
 			const stdout = execFileSync(process.execPath, [SCRIPT, ...args], {
 				encoding: "utf8",
 				stdio: ["ignore", "pipe", "pipe"],
+				env,
 			});
 			return { status: 0, stdout, stderr: "" };
 		} catch (error) {
@@ -519,6 +522,50 @@ describe("CLI", () => {
 		expect(result.stderr).toContain("alive needs --udid or --launchctl-file");
 	});
 
+	it("alive: a launchctl read that fails twice exits 3 (unknown), not 1 (not running)", () => {
+		// A stub `xcrun` first on PATH stands in for a simulator whose
+		// `simctl spawn … launchctl list` fails; it counts its own calls so the
+		// one retry is pinned too. Exit 3 is what the workflow shows as
+		// "unknown" while still failing the job.
+		const bin = join(root, "failing-xcrun");
+		mkdirSync(bin, { recursive: true });
+		const calls = join(bin, "calls");
+		writeFileSync(
+			join(bin, "xcrun"),
+			`#!/bin/sh\necho call >> "${calls}"\necho "simctl: device is not booted" >&2\nexit 149\n`,
+			{ mode: 0o755 },
+		);
+		const result = run(
+			["alive", "--udid", "SYNTHETIC-UDID", "--bundle", BUNDLE, "--at", "t+5s"],
+			{ ...process.env, PATH: `${bin}:${process.env.PATH ?? ""}` },
+		);
+		expect(result.status).toBe(3);
+		expect(result.stderr).toContain(
+			`::error::could not run launchctl list in the simulator (2 attempts, 60 s each at most), so whether ${BUNDLE} is running at t+5s cannot be claimed either way:`,
+		);
+		expect(result.stderr).toContain("  attempt 2: ");
+		expect(result.stderr).not.toContain("is not running");
+		expect(readFileSync(calls, "utf8").trim().split("\n")).toHaveLength(2);
+	});
+
+	it("alive: a missing --launchctl-file is a clean read failure, not a stack trace", () => {
+		const missing = join(root, "never-listed.txt");
+		const result = run([
+			"alive",
+			"--launchctl-file",
+			missing,
+			"--bundle",
+			BUNDLE,
+			"--at",
+			"t+5s",
+		]);
+		expect(result.status).toBe(3);
+		expect(result.stderr).toContain(
+			`::error::could not read the launchctl listing ${missing}, so whether ${BUNDLE} is running at t+5s cannot be claimed either way`,
+		);
+		expect(result.stderr).not.toContain("node:fs");
+	});
+
 	it("crash-report: exit 1 with the stack when the app crashed, exit 0 when not", () => {
 		const dir = join(root, "cli-reports");
 		mkdirSync(dir, { recursive: true });
@@ -585,6 +632,83 @@ describe("CLI", () => {
 		writeFileSync(join(dir, `${EXECUTABLE}-2026-11-06-045509.ips`), CRASH);
 		expect(await exited).toBe(1);
 		expect(stderr).toContain("crashed after launch: EXC_CRASH (SIGABRT)");
+	}, 30_000);
+
+	it("crash-report: --wait-from anchors the wait to the launch, so a deadline already past gets one look", () => {
+		// The red run's report landed about 199 s after the launch returned, so
+		// the wait is counted from the launch, not from the step's start. With
+		// the launch 300 s ago the deadline has passed: one look, no wait. A
+		// wait counted from now would sit here for 300 s.
+		const dir = join(root, "anchored-reports");
+		mkdirSync(dir, { recursive: true });
+		const now = Math.floor(Date.now() / 1000);
+		const started = Date.now();
+		const result = run([
+			"crash-report",
+			"--dir",
+			dir,
+			"--executable",
+			EXECUTABLE,
+			"--since",
+			String(now - 5),
+			"--wait",
+			"300",
+			"--wait-from",
+			String(now - 300),
+		]);
+		expect(result.status).toBe(0);
+		expect(Date.now() - started).toBeLessThan(10_000);
+		expect(result.stdout).toContain("the app was seen dead");
+		expect(
+			run([
+				"crash-report",
+				"--dir",
+				dir,
+				"--executable",
+				EXECUTABLE,
+				"--since",
+				String(now),
+				"--wait",
+				"1",
+				"--wait-from",
+				"soon",
+			]).status,
+		).toBe(2);
+	}, 30_000);
+
+	it("crash-report: --wait-from still polls while the launch-anchored deadline is ahead", async () => {
+		const dir = join(root, "anchored-late-reports");
+		mkdirSync(dir, { recursive: true });
+		const now = Math.floor(Date.now() / 1000);
+		const child = spawn(process.execPath, [
+			SCRIPT,
+			"crash-report",
+			"--dir",
+			dir,
+			"--executable",
+			EXECUTABLE,
+			"--since",
+			String(now - 5),
+			"--wait",
+			"25",
+			"--wait-from",
+			String(now - 5),
+		]);
+		let stderr = "";
+		child.stderr.on("data", (chunk) => {
+			stderr += String(chunk);
+		});
+		const exited = new Promise<number | null>((resolve) =>
+			child.on("close", resolve),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+		writeFileSync(join(dir, `${EXECUTABLE}-2026-11-06-194406.ips`), CRASH);
+		expect(await exited).toBe(1);
+		expect(stderr).toContain("crashed after launch: EXC_CRASH (SIGABRT)");
+		expect(stderr).toContain("  termination: ");
+		expect(stderr).toContain(
+			"  crashed thread 1 (name com.example.ui-runtime), top 12 frames:",
+		);
 	}, 30_000);
 
 	it("crash-report: a dead app with no report of its own gets the inventory of what did land", () => {

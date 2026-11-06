@@ -6,7 +6,7 @@
  *
  *     node scripts/ci/ios-launch-gate.ts alive --udid <udid> --bundle <id> --at t+5s [--running-since <epoch s>]
  *     node scripts/ci/ios-launch-gate.ts alive --launchctl-file <listing> --bundle <id> --at t+5s
- *     node scripts/ci/ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]
+ *     node scripts/ci/ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s> [--wait-from <epoch s>]]
  *     node scripts/ci/ios-launch-gate.ts fatal-lines <file>...
  *     node scripts/ci/ios-launch-gate.ts frame-delta <a.bmp> <b.bmp>
  *
@@ -407,9 +407,13 @@ export const crashReportsSince = (
  * prints when the app was seen dead and no report of its own turned up. A dead
  * app with no report is either a crash reporter that wrote somewhere else or
  * one that did not run, and this listing is what tells the two apart from the
- * log of the run that hit it — on GitHub's `macos-26` image the negative control
- * (#170, run 42263119518) found no `LocalOperator-*.ips` in
- * `~/Library/Logs/DiagnosticReports` three minutes after the abort.
+ * log of the run that hit it. On GitHub's `macos-26` image the report DOES land
+ * in `~/Library/Logs/DiagnosticReports`, but late: the second negative control
+ * (#170, run 42277307661) had it saved there at 19:44:07, about 199 s after
+ * `simctl launch` returned and at least 79 s after the app was first seen dead,
+ * which was 0.8 s after the old 30 s wait gave up. The first negative control
+ * (run 42263119518) scanned for 3 min 14 s after launch and found none: the
+ * same timing miss, not a different directory.
  */
 export const reportsWrittenSince = (dir: string, sinceMs: number): string[] =>
 	filesIn(dir, 1).filter(
@@ -495,7 +499,7 @@ export const frameDelta = (
 
 const USAGE =
 	"usage: ios-launch-gate.ts alive (--udid <udid> | --launchctl-file <file>) --bundle <id> --at <label> [--running-since <epoch s>]\n" +
-	"       ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s>]\n" +
+	"       ios-launch-gate.ts crash-report --dir <dir> [--dir <dir>…] --executable <name> --since <epoch s> [--bundle <id>] [--wait <s> [--wait-from <epoch s>]]\n" +
 	"       ios-launch-gate.ts fatal-lines <file>...\n" +
 	"       ios-launch-gate.ts frame-delta <a.bmp> <b.bmp>";
 
@@ -529,6 +533,15 @@ const epochSeconds = (name: string): number => {
 	return Number(value);
 };
 
+/**
+ * `alive`'s exit code when the listing could not be READ (as opposed to 1, read
+ * and the app is not running). The workflow maps it to "unknown" in the step
+ * summary and still fails the job on it.
+ */
+const READ_FAILED = 3;
+
+const LAUNCHCTL_TIMEOUT_MS = 60_000;
+
 const sleep = (ms: number) =>
 	new Promise<void>((resolve) => {
 		setTimeout(resolve, ms);
@@ -553,25 +566,49 @@ if (isEntryPoint) {
 		const file = arg("launchctl-file");
 		const udid = arg("udid");
 		let listing = "";
+		// A failed READ is not an answer: "not running" would blame the app for
+		// the simulator, and "running" would be a guess. So it exits with its own
+		// code, READ_FAILED, which the workflow shows as "unknown" (never "no")
+		// and still fails the job on: the gate stays fail-closed.
 		if (file) {
-			listing = readFileSync(file, "utf8");
-		} else if (udid) {
 			try {
-				listing = execFileSync(
-					"xcrun",
-					["simctl", "spawn", udid, "launchctl", "list"],
-					{
-						encoding: "utf8",
-						stdio: ["ignore", "pipe", "pipe"],
-					},
-				);
+				listing = readFileSync(file, "utf8");
 			} catch (error) {
-				// A failed READ is not an answer: "not running" would blame the app
-				// for the simulator, and "running" would be a guess.
 				console.error(
-					`::error::could not run launchctl list in the simulator, so whether ${bundle} is running at ${at} cannot be claimed either way: ${message(error)}`,
+					`::error::could not read the launchctl listing ${file}, so whether ${bundle} is running at ${at} cannot be claimed either way: ${message(error)}`,
 				);
-				process.exit(1);
+				process.exit(READ_FAILED);
+			}
+		} else if (udid) {
+			// Bounded and retried once. A healthy read took about 23 s on a loaded
+			// runner (run 42272813639), so 60 s is headroom rather than a tight
+			// budget, and an unbounded `simctl spawn` could hang until the job's
+			// 60-minute timeout. One retry absorbs a transient failure; a second
+			// failure is reported, not retried forever.
+			const failures: string[] = [];
+			let read = false;
+			for (let attempt = 1; attempt <= 2 && !read; attempt++) {
+				try {
+					listing = execFileSync(
+						"xcrun",
+						["simctl", "spawn", udid, "launchctl", "list"],
+						{
+							encoding: "utf8",
+							stdio: ["ignore", "pipe", "pipe"],
+							timeout: LAUNCHCTL_TIMEOUT_MS,
+						},
+					);
+					read = true;
+				} catch (error) {
+					failures.push(`attempt ${attempt}: ${message(error)}`);
+				}
+			}
+			if (!read) {
+				console.error(
+					`::error::could not run launchctl list in the simulator (2 attempts, ${LAUNCHCTL_TIMEOUT_MS / 1000} s each at most), so whether ${bundle} is running at ${at} cannot be claimed either way:`,
+				);
+				for (const failure of failures) console.error(`  ${failure}`);
+				process.exit(READ_FAILED);
 			}
 		} else {
 			usage("alive needs --udid or --launchctl-file");
@@ -597,10 +634,22 @@ if (isEntryPoint) {
 		const since = epochSeconds("since");
 		const bundle = arg("bundle");
 		const wait = Number(arg("wait") ?? "0");
-		// A report is written by the host's crash reporter seconds AFTER the
-		// process dies. When the caller already saw the app dead it passes a
-		// wait, so the report it is looking for has time to land.
-		const deadline = Date.now() + (Number.isFinite(wait) ? wait : 0) * 1000;
+		// The host's crash reporter writes the report MINUTES after the process
+		// dies, not seconds: run 42277307661's landed about 199 s after
+		// `simctl launch` returned. When the caller already saw the app dead it
+		// passes a wait, so the report it is looking for has time to land.
+		//
+		// `--wait-from` anchors that wait to the LAUNCH rather than to this step's
+		// start: the latency is the crash reporter's, counted from the crash, so
+		// slow steps before this one must not push the deadline out, and a deadline
+		// already past still gets the one look below. Without it the wait counts
+		// from now, as it always did.
+		const waitFrom = arg("wait-from");
+		if (waitFrom !== undefined && !DIGITS.test(waitFrom))
+			usage(`--wait-from must be whole epoch seconds, got '${waitFrom}'`);
+		const anchor =
+			waitFrom === undefined ? Date.now() : Number(waitFrom) * 1000;
+		const deadline = anchor + (Number.isFinite(wait) ? wait : 0) * 1000;
 		let reports = crashReportsSince(dirs, executable, since * 1000, bundle);
 		while (reports.length === 0 && Date.now() < deadline) {
 			await sleep(2000);
