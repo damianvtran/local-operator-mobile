@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	type StageBCandidateIdentity,
 	stageBCandidateSource,
+	stageBShouldConsumeCandidate,
 	verifyStageBCandidate,
 } from "./stage-b-candidate.ts";
 
@@ -45,6 +46,17 @@ describe("a prebuilt candidate is used only when its identity is proven", () => 
 		expect(
 			verifyStageBCandidate({ ...good, nonce: "not-a-nonce" }, expected).reason,
 		).toContain("fixture's shape");
+	});
+	it("consumes by default and only the literal 'false' turns it off", () => {
+		// The native lane's question is whether the frozen source behaves, not
+		// whether it can be built twice — so reuse is the default and the flag is
+		// an off-switch. Anything else (including unset) tries and falls back.
+		expect(stageBShouldConsumeCandidate(undefined).consume).toBe(true);
+		expect(stageBShouldConsumeCandidate("true").consume).toBe(true);
+		expect(stageBShouldConsumeCandidate("").consume).toBe(true);
+		const off = stageBShouldConsumeCandidate("false");
+		expect(off.consume).toBe(false);
+		expect(off.reason).toContain("STAGE_B_CONSUME_CANDIDATE=false");
 	});
 	it("records which half of the receipt was paid for, and the refusal falls back to building", () => {
 		expect(stageBCandidateSource(true)).toBe("prebuilt");

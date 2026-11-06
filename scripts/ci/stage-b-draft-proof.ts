@@ -29,6 +29,7 @@ import { capFor } from "./account-routing-proof-contract.ts";
 import {
 	type StageBCandidateIdentity,
 	stageBCandidateSource,
+	stageBShouldConsumeCandidate,
 	verifyStageBCandidate,
 } from "./stage-b-candidate.ts";
 import {
@@ -559,7 +560,13 @@ async function runStageBCoordinator(
 			identity: StageBCandidateIdentity;
 		} | null> => {
 			const archive = env.STAGE_B_PREBUILT_CANDIDATE;
-			if (env.STAGE_B_CONSUME_CANDIDATE !== "true") return null;
+			const policy = stageBShouldConsumeCandidate(
+				env.STAGE_B_CONSUME_CANDIDATE,
+			);
+			if (!policy.consume) {
+				receipt.candidateRefusal = policy.reason;
+				return null;
+			}
 			if (!archive || !existsSync(archive)) {
 				receipt.candidateRefusal = "no prebuilt candidate artifact present";
 				return null;
@@ -652,8 +659,14 @@ async function runStageBCoordinator(
 		);
 		const config = fixture.config;
 		receipt.candidateSource = stageBCandidateSource(prebuiltApp !== null);
-		if (prebuiltApp !== null)
+		/* Said plainly, because a consumer must never read this run as a fresh
+		 * build, and because a consumed app brings its own nonce: the fixture
+		 * adopted it above, which is a fact about this run's evidence. */
+		receipt.candidateNonceInherited = prebuiltApp !== null;
+		if (prebuiltApp !== null) {
 			receipt.candidateDigest = digest(readFileSync(prebuiltApp.archive));
+			receipt.candidateSourceSha = prebuiltApp.identity.sourceSha;
+		}
 		receipt.heldProofTimings = fixture.heldTimings;
 		receipt.fixtureRequestTimeline = fixture.requestTimeline;
 		receipt.nonce = redact(config.nonce);

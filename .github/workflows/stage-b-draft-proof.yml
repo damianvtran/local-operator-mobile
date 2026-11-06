@@ -161,9 +161,12 @@ jobs:
         # app as `candidate-app.tgz`; fetch it and let the proof decide. Identity is
         # re-verified inside the proof (source SHA + bundle id + flavor + nonce from
         # the app's own Info.plist); any mismatch falls back to building, so this
-        # step can only save time, never weaken identity. Consumption itself stays
-        # off until the nonce-inheritance decision is taken: set
-        # STAGE_B_CONSUME_CANDIDATE=true in the job env to enable it.
+        # step can only save time, never weaken identity. Consumption is the
+        # DEFAULT (the evidence question is whether the frozen source behaves, not
+        # whether it builds twice); STAGE_B_CONSUME_CANDIDATE=false is the
+        # off-switch. A consumed app brings its own nonce, and the receipt records
+        # candidateSource: prebuilt + digest + nonce inheritance so no run can be
+        # read as a fresh build.
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -62,3 +62,20 @@ export function stageBCandidateSource(
 ): StageBCandidateSource {
 	return consumed ? "prebuilt" : "built";
 }
+
+/** Whether this attempt may consume a prebuilt candidate at all.
+ *
+ * Default ON. The only value that turns it off is the literal `"false"`; anything
+ * else (including unset) means "try, and fall back to building when the artifact
+ * is missing or refused". */
+export function stageBShouldConsumeCandidate(value: string | undefined): {
+	consume: boolean;
+	reason: string;
+} {
+	if (value === "false")
+		return { consume: false, reason: "STAGE_B_CONSUME_CANDIDATE=false" };
+	return {
+		consume: true,
+		reason: "candidate reuse is the native-lane default",
+	};
+}
