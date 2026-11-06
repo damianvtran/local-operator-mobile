@@ -5,6 +5,7 @@ import {
 	createLostTapRetry,
 	type StageBCallbackProbe,
 	stageBLostTapGate,
+	stageBProbeAvailability,
 } from "./stage-b-lost-tap";
 
 /** The exact failed state of run 42044812065's fresh-proof process. */
@@ -256,6 +257,45 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 				record: () => undefined,
 			}),
 		).toBeUndefined();
+	});
+	it("classifies every way the probe can fail to answer, and only 'answered' is a lease", () => {
+		// Run 42166849295 recorded one sentence for all of these, so the refusal
+		// could not be diagnosed. Each failure now has its own name and sentence.
+		const reasons = [
+			"app-not-up",
+			"no-receipt",
+			"timeout",
+			"invalid-payload",
+			"not-requested",
+		] as const;
+		const messages = new Set<string>();
+		for (const reason of reasons) {
+			const outcome = stageBProbeAvailability(reason);
+			expect(outcome.available).toBe(false);
+			expect(outcome.reason).toBe(reason);
+			messages.add(outcome.message);
+		}
+		expect(messages.size).toBe(reasons.length);
+		const answered = stageBProbeAvailability("answered");
+		expect(answered.available).toBe(true);
+		expect(answered.message).toContain("answered");
+	});
+	it("asks the probe only after this launch posted a startup receipt", () => {
+		const source = readFileSync(
+			new URL("./stage-b-draft-proof.ts", import.meta.url),
+			"utf8",
+		);
+		// Fail-closed stays: an app that never posts one yields no lease at all.
+		expect(source).toContain('kind === "startup"');
+		expect(source).toContain('stageBProbeAvailability("app-not-up")');
+		expect(source).toContain("receipt.launchProbe = { lane, ...outcome }");
+		// Both lanes say which route they came from: the initial connect and the
+		// relaunched one are different evidence and must not read alike.
+		expect(source).toContain('await lostTapLease("initial")');
+		expect(source).toContain('await lostTapLease("relaunch")');
+		// The readiness window belongs to the CURRENT launch, not any earlier one.
+		expect(source).toContain("bootIndex = fixture?.receipts.length ?? 0;");
+		expect(source).toContain("const before = bootIndex;");
 	});
 	it("is wired into the initial connect, which must open its own segment", () => {
 		const source = readFileSync(

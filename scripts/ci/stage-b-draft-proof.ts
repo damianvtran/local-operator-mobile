@@ -64,6 +64,8 @@ import {
 	type StageBLostTapLease,
 	type StageBLostTapRecord,
 	type StageBLostTapRetry,
+	type StageBProbeAvailability,
+	stageBProbeAvailability,
 } from "./stage-b-lost-tap.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
@@ -698,7 +700,12 @@ async function runStageBCoordinator(
 		const canary = stageBDraftCanary(fixture.canary, config.nonce);
 		const launches: number[] = [];
 		receipt.launchPids = launches;
+		/** Receipt index when the CURRENT launch was issued. A readiness wait must
+		 * look after it: an earlier launch's startup receipt proves nothing about
+		 * the process running now. */
+		let bootIndex = 0;
 		const launch = async () => {
+			bootIndex = fixture?.receipts.length ?? 0;
 			const text = await run("launch-owned-app", "xcrun", [
 				"simctl",
 				"launch",
@@ -878,7 +885,16 @@ async function runStageBCoordinator(
 		const probeCallback = async (
 			capMs = 20000,
 		): Promise<StageBCallbackProbe | null> => {
-			if (!fixture) return null;
+			const outcome = await probeOutcome(capMs);
+			return outcome.available ? (outcome.probe ?? null) : null;
+		};
+		/** The classified form of the same request: `probeCallback` is the gate's
+		 * fail-closed view, this is what the receipt records so a refusal is
+		 * diagnosable (run 42166849295 could only say "probe unavailable"). */
+		const probeOutcome = async (
+			capMs = 20000,
+		): Promise<StageBProbeAvailability & { probe?: StageBCallbackProbe }> => {
+			if (!fixture) return stageBProbeAvailability("not-requested");
 			const count = fixture.receipts.length;
 			fixture.command("stage-b-callback-probe");
 			let item: Record<string, unknown>;
@@ -892,7 +908,7 @@ async function runStageBCoordinator(
 					capMs,
 				);
 			} catch {
-				return null;
+				return stageBProbeAvailability("timeout");
 			}
 			const number = (value: unknown) =>
 				typeof value === "number" && Number.isSafeInteger(value) && value >= 0
@@ -911,25 +927,68 @@ async function runStageBCoordinator(
 				typeof item.traceSelected !== "boolean" ||
 				typeof item.traceFailure !== "boolean"
 			)
-				return null;
+				return stageBProbeAvailability("invalid-payload");
 			return {
-				processId: item.processId,
-				presses,
-				superseded,
-				revision,
-				phase: item.tracePhase,
-				route: item.traceRoute as StageBCallbackProbe["route"],
-				selected: item.traceSelected,
-				failure: item.traceFailure,
+				...stageBProbeAvailability("answered"),
+				probe: {
+					processId: item.processId,
+					presses,
+					superseded,
+					revision,
+					phase: item.tracePhase,
+					route: item.traceRoute as StageBCallbackProbe["route"],
+					selected: item.traceSelected,
+					failure: item.traceFailure,
+				},
 			};
 		};
 		/** Positive same-process lease for THIS launch. Unavailable means no
 		 * retry capability at all; it must never fall back to "still on
 		 * Computers", which is also what a refusal or a network hang looks like. */
-		const lostTapLease = async (): Promise<StageBLostTapLease | null> => {
-			const probe = await probeCallback();
-			return probe
-				? { probe, identityRequests: fixture?.counters.me ?? 0 }
+		/** Positive same-process lease for THIS launch. The probe is asked only
+		 * once this launch has posted a `startup` receipt: requesting it against a
+		 * booting app was how the relaunch lane recorded nothing at all (run
+		 * 42166849295: one probe on the first launch, none after the relaunch).
+		 * Fail-closed is unchanged — an app that never posts a startup receipt
+		 * still yields no lease; it now says why. */
+		const lostTapLease = async (
+			lane: "initial" | "relaunch",
+		): Promise<StageBLostTapLease | null> => {
+			/* Which route this run took to a live composer. A tap on a Computer row
+			 * is the only production path that needs no stored computer id, so it
+			 * stays the gate — recorded so a receipt never implies a route the run
+			 * did not use. */
+			receipt.connectRoute = "computer-row-tap";
+			/* No fixture is the Node-only dry run: there is no app to be up, and
+			 * waiting for a startup receipt there would spend the probe's own budget
+			 * on a receipt that cannot arrive. */
+			if (!fixture) {
+				receipt.launchProbe = {
+					lane,
+					...stageBProbeAvailability("not-requested"),
+				};
+				return null;
+			}
+			const before = bootIndex;
+			let up = true;
+			try {
+				await until(
+					() =>
+						fixture?.receipts
+							.slice(before)
+							.find((entry) => entry.kind === "startup"),
+					"post-launch startup receipt",
+					30000,
+				);
+			} catch {
+				up = false;
+			}
+			const outcome: StageBProbeAvailability & {
+				probe?: StageBCallbackProbe;
+			} = up ? await probeOutcome() : stageBProbeAvailability("app-not-up");
+			receipt.launchProbe = { lane, ...outcome };
+			return outcome.probe
+				? { probe: outcome.probe, identityRequests: fixture?.counters.me ?? 0 }
 				: null;
 		};
 		const relaunch = async (
@@ -945,7 +1004,7 @@ async function runStageBCoordinator(
 			// Run 42044812065 lost one fresh-proof row tap in transit while the
 			// driver reported COMPLETED. Arm exactly one conditional re-tap per
 			// launch, and only for a flow that must publish a route.
-			const lease = waitEditor ? await lostTapLease() : null;
+			const lease = waitEditor ? await lostTapLease("relaunch") : null;
 			const lostTapRetry = createLostTapRetry({
 				lease,
 				identityRequests: () => fixture?.counters.me ?? 0,
@@ -1015,7 +1074,7 @@ async function runStageBCoordinator(
 						{ assertNotVisible: { id: "computers-screen" } },
 					],
 					createLostTapRetry({
-						lease: await lostTapLease(),
+						lease: await lostTapLease("initial"),
 						identityRequests: () => fixture?.counters.me ?? 0,
 						probeCallback,
 						record: (entry) => {

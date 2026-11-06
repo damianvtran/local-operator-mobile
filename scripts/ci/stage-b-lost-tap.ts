@@ -130,3 +130,47 @@ export function createLostTapRetry(input: {
 			}),
 	};
 }
+
+/**
+ * Why a same-process lease could not be established.
+ *
+ * `null` from the raw probe means "no usable answer", which is the right
+ * fail-closed input for the gate but a useless record: run 42166849295 recorded
+ * `reason: "same-process probe unavailable"` for the relaunch lane and nothing
+ * else, so the run could not say whether the app was still booting, the probe
+ * timed out, or the payload was dirty. The lease builder asks the app only once
+ * it has posted a startup receipt, and this classifies what came back so the
+ * receipt carries the answer instead of a shrug.
+ */
+export type StageBProbeFailure =
+	| "app-not-up"
+	| "no-receipt"
+	| "timeout"
+	| "invalid-payload"
+	| "not-requested";
+export interface StageBProbeAvailability {
+	available: boolean;
+	reason: StageBProbeFailure | "answered";
+	/** The recorded sentence: stable enough to assert, plain enough to read. */
+	message: string;
+}
+const PROBE_MESSAGES: Readonly<
+	Record<StageBProbeFailure | "answered", string>
+> = {
+	answered: "same-process probe answered",
+	"app-not-up":
+		"same-process probe not requested: the app posted no startup receipt after relaunch",
+	"no-receipt": "same-process probe requested but produced no receipt",
+	timeout: "same-process probe timed out",
+	"invalid-payload": "same-process probe answered with an unreadable payload",
+	"not-requested": "same-process probe not requested",
+};
+export function stageBProbeAvailability(
+	outcome: StageBProbeFailure | "answered",
+): StageBProbeAvailability {
+	return {
+		available: outcome === "answered",
+		reason: outcome,
+		message: PROBE_MESSAGES[outcome],
+	};
+}
