@@ -1555,13 +1555,18 @@ export const Composer = ({
 					{main}
 				</View>
 				{/* THE SHELL'S EDGE, drawn as an absolutely positioned child rather than a
-				 *  `borderWidth` on the shell. The shell's height is a border box, so a
-				 *  border there subtracts 2 pt from the pinned sums (56 = 6 + 44 + 6;
-				 *  112 = 12 + 44 + 4 + 44 + 8), squeezing the 44pt field to 42 and taking
-				 *  the resting radius from 30 to 29, since `composerShellRadius` reads the
-				 *  height the box paints. An absolute child contributes nothing to layout,
-				 *  so the shape, the hit targets and the 12pt text inset are unchanged and
-				 *  only the edge is new.
+				 *  `borderWidth` on the shell. The shell's height is a border box, so a border
+				 *  there takes 1 pt off each edge of the interior: the 44 pt field paints 42,
+				 *  under the touch floor, and every measured seed lands 2 pt short of its end
+				 *  (54/110, 58/118 on the 48 floor). The RADII do not follow it down — that is
+				 *  the part an earlier draft of this comment got wrong: `baseHeight` is
+				 *  `max(seededBase, measured)` and `seededBase` comes from the same pure
+				 *  `composerPaintedHeight`, so a short measured seed loses to the 56/60 floor
+				 *  and the pill stays R28/R30. Nothing in the suite renders a box either — the
+				 *  pins are arithmetic on constants — so this is a construction, not a
+				 *  measured guard: an absolute child contributes nothing to layout, so the
+				 *  shape, the hit targets and the 12pt text inset are unchanged and only the
+				 *  edge is new.
 				 *
 				 *  `pointerEvents="none"` is a correctness requirement, not styling: an
 				 *  earlier absolutely positioned layer across this band swallowed every tap
@@ -1570,6 +1575,7 @@ export const Composer = ({
 				 *  content it bounds. */}
 				<Animated.View
 					pointerEvents="none"
+					testID={CONTROL.composerShellRing}
 					style={[
 						{
 							position: "absolute",

@@ -530,8 +530,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * admission for the geometry instrument, not fresh rendered evidence — the U-08
 	 * frames predate the edge and the rendered re-capture is tracked separately.
 	 * `--print` produced the digest; `app`, `design/fonts`, `design/tokens`, `public`,
-	 * the corpus and the instrument modules are unchanged. */
-	src: "89fc15562957880c7a0496d56cad0b10ec218f0ee3f2b676aa6ade6121c4eb33",
+	 * the corpus and the instrument modules are unchanged.
+	 *
+	 * Re-pinned 2026-11-06 again, `src` only (review round 1 remediation of the same
+	 * PR): `a11y.ts` declares `CONTROL.composerShellRing` and `composer.tsx` renders it
+	 * as the ring's `testID`, so the guard that locates the ring can anchor on an id the
+	 * shell never carries; the ring's own comment was also corrected to the mechanism
+	 * the code has (a shell border costs the interior, the radii do not move). A
+	 * `testID` paints nothing and a comment paints nothing — `borderWidth`, the colour,
+	 * the four insets and the radius are byte-identical to the digest above, so no
+	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged. */
+	src: "ea13a33ea3649ec09819e5a6cf6bb1f19d2d560e112eea5c0e12af7f151febb6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

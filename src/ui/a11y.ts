@@ -367,6 +367,11 @@ export const CONTROL = {
 	composerContextModel: "composer-context-model",
 	composerContextEffort: "composer-context-effort",
 	composerContextSheet: "composer-context-sheet",
+	/** The composer shell's painted edge, which is a CHILD of the shell rather than its
+	 *  `borderWidth` (docs/design/components.md § 12). Not a control and never a hit
+	 *  target, so no flow presses it: the id exists because the edge is a claim about a
+	 *  frame, and a claim the renderer alone can name is one a flow can assert. */
+	composerShellRing: "composer-shell-ring",
 	composerDismissKeyboard: "composer-dismiss-keyboard",
 	composerCompactDismiss: "composer-compact-dismiss",
 	composerRetry: "composer-retry",

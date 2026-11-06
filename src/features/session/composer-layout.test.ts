@@ -120,30 +120,166 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
  * 1.1244–1.2799:1 across all 59 themes (cyberpunk 1.1244 worst, solarizedLight
  * 1.1473, localOperatorDark 1.2051), so the boundary has to be a PIXEL rule
  * (`docs/design/components.md` § 5). WHERE that pixel lives is the whole of this
- * suite: on the shell's own border it would also shrink the box. */
-const ringTag = (source: string) => {
-	/* The ELEMENT, not a window around the token: an earlier draft scanned ±700
-	 *  chars and passed with `pointerEvents` deleted, because the comment above the
-	 *  ring names the prop too. Locating the tag by its border colour and slicing
-	 *  back to its own `<Animated.View` keeps the comment out of the assertion. */
-	const at = source.indexOf("borderColor: borderControl");
-	if (at < 0) return "";
-	const open = source.lastIndexOf("<Animated.View", at);
-	const close = source.indexOf("/>", at);
-	if (open < 0 || close < 0) return "";
-	return source.slice(open, close + 2);
+ * suite: on the shell's own border it would also shrink the box.
+ *
+ * These helpers exist because the first version of this gate asked two questions
+ * of STRINGS and both answers were wrong (review round 1). It read ONE literal —
+ * the shell's `style` object — so a `borderWidth` inside the `shellMotion` worklet
+ * left every test green, though that worklet's output is part of what the shell
+ * composites (R1). And it located the ring by slicing back to the nearest
+ * `<Animated.View`, which is the SHELL the moment the ring is retagged `<View`
+ * (R2). Same mistake twice: reading text where the question is about an ELEMENT.
+ * Comments are dropped before any of this runs, because the prose above the ring
+ * names `pointerEvents` and `borderWidth`, and a ±700-char window counted them. */
+const stripComments = (source: string) =>
+	source
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		/* `//` only where a comment can start: a bare replace would eat the `//` in a
+		 *  string, and a mangled string is a slice that silently stops matching. */
+		.replace(/(^|[\s;{}()])\/\/[^\n]*/g, "$1");
+
+/** The bracketed run starting at `at` (`{…}`, `(…)` or `[…]`), both ends included. */
+const balancedAt = (source: string, at: number): string => {
+	let depth = 0;
+	for (let i = at; i < source.length; i += 1) {
+		const ch = source[i];
+		if (ch === "{" || ch === "(" || ch === "[") depth += 1;
+		else if (ch === "}" || ch === ")" || ch === "]") {
+			depth -= 1;
+			if (depth === 0) return source.slice(at, i + 1);
+		}
+	}
+	return "";
+};
+
+/** The JSX open tag enclosing `at`, through the `>` that closes it. An attribute
+ *  expression is skipped as a unit, so a `>` inside one cannot end the tag early. */
+const openTagAt = (source: string, at: number): string => {
+	const start = source.lastIndexOf("<", at);
+	if (start < 0) return "";
+	let depth = 0;
+	for (let i = start + 1; i < source.length; i += 1) {
+		const ch = source[i];
+		if (ch === "{") depth += 1;
+		else if (ch === "}") depth -= 1;
+		else if (ch === ">" && depth === 0) return source.slice(start, i + 1);
+	}
+	return "";
+};
+
+/** The names an object literal sets at its OWN level. A nested value is another
+ *  object's keys; a `...spread` is the local literal it names, one level down. */
+const literalKeys = (literal: string, source: string): string[] => {
+	const keys: string[] = [];
+	let depth = 0;
+	for (let i = 0; i < literal.length; i += 1) {
+		const ch = literal[i];
+		if (ch === "{" || ch === "(" || ch === "[") depth += 1;
+		else if (ch === "}" || ch === ")" || ch === "]") depth -= 1;
+		if (depth !== 1) continue;
+		const rest = literal.slice(i);
+		const spread = /^\.\.\.([A-Za-z_$][\w$]*)/.exec(rest);
+		if (spread?.[1]) {
+			const at = source.search(new RegExp(`const ${spread[1]} = \\{\\s*`));
+			if (at >= 0) {
+				const brace = source.indexOf("{", at);
+				keys.push(...literalKeys(balancedAt(source, brace), source));
+			}
+			i += spread[0].length - 1;
+			continue;
+		}
+		const key = /^([A-Za-z_$][\w$]*):/.exec(rest)?.[1];
+		if (key) {
+			keys.push(key);
+			i += key.length - 1;
+		}
+	}
+	return keys;
+};
+
+/** Every name one entry of a `style={[…]}` array can set: a literal's own keys, or
+ *  — for the animated styles this file binds — the object its worklet RETURNS. That
+ *  returned object is composited onto the element and is not inside the literal
+ *  beside it, which is exactly the hole R1 found. */
+const styleEntryKeys = (entry: string, source: string): string[] => {
+	const text = entry.trim();
+	if (text.startsWith("{")) return literalKeys(balancedAt(text, 0), source);
+	const name = /^([A-Za-z_$][\w$]*)$/.exec(text)?.[1];
+	if (!name) return [];
+	const decl = new RegExp(`const ${name} = useAnimatedStyle\\(`).exec(source);
+	if (!decl) return [];
+	const call = balancedAt(source, decl.index + decl[0].length - 1);
+	const brace = call.indexOf("{");
+	return brace < 0 ? [] : literalKeys(balancedAt(call, brace), source);
+};
+
+/** The shell element's COMPOSITED style, flattened to the names it can set across
+ *  every entry of its `style={[…]}` array. `borderRadius` is the one
+ *  border-prefixed name it is allowed: a radius is a shape, never an edge. */
+const shellCompositedKeys = (source: string): string[] => {
+	const shell = openTagAt(source, source.indexOf("backgroundColor: elevated"));
+	if (!/^<Animated\.View\b/.test(shell)) return [];
+	const styleAt = shell.indexOf("style={");
+	if (styleAt < 0) return [];
+	/* The array, not the `{` that opens it: `balancedAt` starts counting at the
+	 *  bracket it is handed. */
+	const entries = balancedAt(shell, styleAt + "style={".length).slice(1, -1);
+	const keys: string[] = [];
+	let depth = 0;
+	let start = 0;
+	for (let i = 0; i <= entries.length; i += 1) {
+		const ch = entries[i];
+		if (ch === "{" || ch === "(" || ch === "[") depth += 1;
+		else if (ch === "}" || ch === ")" || ch === "]") depth -= 1;
+		if (i === entries.length || (ch === "," && depth === 0)) {
+			keys.push(...styleEntryKeys(entries.slice(start, i), source));
+			start = i + 1;
+		}
+	}
+	return keys;
+};
+
+/** The ring's OWN open tag, located by the identifier that exists on it alone —
+ *  `CONTROL.composerShellRing`, which the shell never carries. Slicing back from a
+ *  style token instead started at the shell as soon as the ring was retagged, and
+ *  every assertion inside the slice still passed (R2): so the anchor is the id, the
+ *  bound is checked to be a single self-closing tag, and the tag's own name is
+ *  asserted by the caller. */
+const ringTag = (source: string): string => {
+	const id = source.indexOf("testID={CONTROL.composerShellRing}");
+	if (id < 0) return "";
+	const tag = openTagAt(source, id);
+	return tag.endsWith("/>") ? tag : "";
+};
+
+/** The `ringMotion` worklet's returned object, which is the ring's radius. Takes the
+ *  literal out of the CALL rather than by regex: a greedy `[\s\S]*` ran on into the
+ *  next worklet in the file and described the composer's dock instead. */
+const ringMotionBody = (source: string): string => {
+	const decl = /const ringMotion = useAnimatedStyle\(/.exec(source);
+	if (!decl) return "";
+	const call = balancedAt(source, decl.index + decl[0].length - 1);
+	const brace = call.indexOf("{");
+	return brace < 0 ? "" : balancedAt(call, brace);
 };
 
 describe("the shell boundary is an overlay rule, not a box", () => {
 	it("draws the border-control edge on an absolutely positioned child", () => {
 		const ring = ringTag(SRC);
 		expect(ring).not.toBe("");
-		expect(ring).toContain("<Animated.View");
+		/* The boundary IS the assertion: the id has to sit inside one self-closing
+		 *  `Animated.View`, so a slice can never start at an element that is not it. */
+		expect(ring.startsWith("<Animated.View")).toBe(true);
+		expect(ring.endsWith("/>")).toBe(true);
 		expect(ring).toContain('pointerEvents="none"');
 		expect(ring).toContain('position: "absolute"');
 		expect(ring).toContain("borderWidth: 1");
 		expect(ring).toContain("borderColor: borderControl");
 		expect(ring).toContain("ringMotion");
+		/* The shell is NOT in the slice: its fill and its worklet are what a slice
+		 *  that started one element too early contains. */
+		expect(ring).not.toContain("backgroundColor: elevated");
+		expect(ring).not.toContain("shellMotion");
 		/* All four sides, in the file's own logical vocabulary: an inset on three
 		 *  is a rule that stops short of a corner, and a physical `left`/`right`
 		 *  pair is the RTL bug the physical-edge guard exists to catch. */
@@ -153,19 +289,49 @@ describe("the shell boundary is an overlay rule, not a box", () => {
 		expect(ring).not.toMatch(/\b(left|right): 0/);
 	});
 
-	it("keeps the border OFF the shell, which is what holds the geometry", () => {
-		/* The negative control, as an assertion about WHERE the border lives: the
-		 *  shell's own style object must carry no `borderWidth`, because Yoga's
-		 *  border-box would subtract 2 pt from 56/112 (60/120 at the 48 floor),
-		 *  squeezing the 44 pt field to 42 and turning R30 into R29. */
-		const shell = SRC.slice(
-			SRC.indexOf("backgroundColor: elevated"),
-			SRC.indexOf("shellMotion,"),
+	it("binds the ring's own animated radius, declared once and used once", () => {
+		/* The radius the ring paints has to be ITS binding, not a shape borrowed from
+		 *  a sibling: one declaration, one use, and that use is the ring's. Counted on
+		 *  the comment-free source, because prose naming the worklet is not a use. */
+		const bare = stripComments(SRC);
+		expect(bare.match(/\bringMotion\b/g) ?? []).toHaveLength(2);
+		expect(ringTag(SRC)).toContain("ringMotion,");
+		const body = ringMotionBody(SRC);
+		expect(body).not.toBe("");
+		expect(body).toContain(
+			"borderRadius: composerShellRadius(progress.value, baseHeight)",
 		);
-		expect(shell).toContain("backgroundColor: elevated");
-		expect(shell).toContain("paddingHorizontal: 12");
-		expect(shell).not.toContain("borderWidth");
-		expect(shell).not.toContain("borderColor");
+		/* One key: a second property in the ring's worklet is a shape the shell's own
+		 *  style does not have, and the two edges would stop agreeing mid-morph. */
+		expect(literalKeys(body, SRC)).toEqual(["borderRadius"]);
+	});
+
+	it("keeps every border off the shell's COMPOSITED style", () => {
+		/* The negative control, as an assertion about where the border lives — over
+		 *  everything the shell composites, not one literal. A border on this element
+		 *  is charged to its border box: 1 pt off each edge of the interior, so the
+		 *  44 pt field paints 42 and every measured seed lands 2 pt short of its end.
+		 *  The radii do NOT drop with it (`baseHeight` is `max(seededBase, measured)`,
+		 *  and `seededBase` is the same pure helper), and no test in this suite renders
+		 *  a box — which is why the shape of the fix, not a pin, is the guard. */
+		const keys = shellCompositedKeys(SRC);
+		/* Non-vacuous first: the flatten has to see the fill, the paddings (they arrive
+		 *  through `...shellBox`), the clip and the worklet's height before its silence
+		 *  about borders means anything. */
+		expect(keys).toEqual(
+			expect.arrayContaining([
+				"backgroundColor",
+				"paddingHorizontal",
+				"paddingTop",
+				"paddingBottom",
+				"overflow",
+				"height",
+				"borderRadius",
+			]),
+		);
+		expect(
+			keys.filter((key) => /^border/.test(key) && key !== "borderRadius"),
+		).toEqual([]);
 		// No shadow either: elevation is a background step on in-flow content (§ 5).
 		expect(SRC).not.toMatch(/shadowColor|shadowRadius|elevation:/);
 	});
