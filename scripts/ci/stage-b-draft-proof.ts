@@ -59,11 +59,11 @@ import {
 } from "./stage-b-draft-timing.ts";
 import { StageBDriverBatch } from "./stage-b-driver-batch.ts";
 import {
+	createLostTapRetry,
 	type StageBCallbackProbe,
 	type StageBLostTapLease,
 	type StageBLostTapRecord,
 	type StageBLostTapRetry,
-	createLostTapRetry,
 } from "./stage-b-lost-tap.ts";
 
 const SOURCE_SHA = /^[a-f0-9]{40}$/;
@@ -998,9 +998,13 @@ async function runStageBCoordinator(
 			launch,
 			async () => {
 				await flow("warm-app-foreground", []);
-				// Flush so the connect flow OPENS its own segment: the retry gate
-				// only re-runs a segment opener, and batching the warm-up with it
-				// silently disabled the whole lost-tap path on the first launch.
+				// The retry gate re-runs only a segment OPENER, and the warm-up entry
+				// is empty, so it compiles to no steps at all: connect is already the
+				// first segment and this flush costs no driver call (measured: an
+				// empty batch executes nothing). It stays because it makes that
+				// ordering explicit rather than incidental to the warm-up's contents
+				// (review R31-3/R31-4: the earlier wording claimed both an extra call
+				// and a segment-batching mechanism that were not real).
 				await flushFlows();
 				await flow(
 					"connect-initial",

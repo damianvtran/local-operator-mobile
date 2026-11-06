@@ -62,7 +62,9 @@ describe("dedicated Stage B proof preflight", () => {
 		expect(start).toBeGreaterThan(0);
 		const body = source.slice(start);
 		const warm = body.indexOf("await warmStageBDriver(");
-		const evidence = body.indexOf('await flow("connect-initial"');
+		// The name, not the call's formatting: reformatting it across lines once
+		// already turned this into a silent -1 (review R31-1).
+		const evidence = body.indexOf('"connect-initial"');
 		expect(warm).toBeGreaterThan(0);
 		expect(evidence).toBeGreaterThan(warm);
 		// Ignore the earlier relaunch helper: its explicit launch is intentional.

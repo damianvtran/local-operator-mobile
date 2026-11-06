@@ -262,20 +262,22 @@ describe("the retry is armed on the first launch, not only on relaunch", () => {
 			new URL("./stage-b-draft-proof.ts", import.meta.url),
 			"utf8",
 		);
-		const initial = source.slice(
-			source.indexOf('await flow("warm-app-foreground"'),
-		);
-		const flush = initial.indexOf("await flushFlows();");
-		const connect = initial.indexOf('"connect-initial"');
+		// Anchor on the flow NAMES, never on how a call is formatted: a reformat
+		// across lines already produced silent -1 sentinels (review R31-1/R31-5).
+		const warm = source.indexOf('"warm-app-foreground"');
+		const connect = source.indexOf('"connect-initial"');
 		// The retry is the third argument of that flow, so it sits after the name.
-		const armed = initial.indexOf("createLostTapRetry({");
-		const next = initial.indexOf('await flow("type-initial"');
-		// The gate only re-runs a segment opener: the flush must precede the
-		// connect flow, and the retry must belong to that same flow's arguments.
-		expect(flush).toBeGreaterThanOrEqual(0);
+		const armed = source.indexOf("createLostTapRetry({", connect);
+		const next = source.indexOf('"type-initial"', connect);
+		const flush = source.lastIndexOf("await flushFlows();", connect);
+		// The gate only re-runs a segment opener, and the warm-up entry is empty,
+		// so the flush is ordering insurance rather than a paid driver call.
+		expect(warm).toBeGreaterThanOrEqual(0);
+		expect(connect).toBeGreaterThan(warm);
+		expect(flush).toBeGreaterThan(warm);
 		expect(flush).toBeLessThan(connect);
-		expect(connect).toBeLessThan(armed);
-		expect(armed).toBeLessThan(next);
+		expect(armed).toBeGreaterThan(connect);
+		expect(next).toBeGreaterThan(armed);
 		// Both relicensing paths share the factory rather than rebuilding it.
 		expect(
 			source.split("createLostTapRetry({").length - 1,
