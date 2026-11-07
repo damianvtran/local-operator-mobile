@@ -124,3 +124,9 @@ harness: .github/workflows/flake-report.yml
 harness: .github/workflows/oauth-callback-proof.yml
 harness: .github/workflows/android-oauth-callback-proof.yml
 harness: .github/workflows/signin-app-proof.yml
+# Forward declaration for PR #156 (Stage B draft recovery), which adds it:
+# triggers pull_request + workflow_dispatch only, uploads evidence artifacts
+# only, uses no secrets, and release.yml does not name it (verified on
+# refs/pull/156/head). Declared here so that PR's proof iterations are
+# harness-only rather than a numbered round each.
+harness: .github/workflows/stage-b-draft-proof.yml
