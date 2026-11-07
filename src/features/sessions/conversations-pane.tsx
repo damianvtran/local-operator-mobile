@@ -464,13 +464,15 @@ export const ConversationsPane = ({
 			) : (
 				<View className="flex-row" accessibilityRole="toolbar">
 					{destinations.map((item) => (
+						/* `gap-1`: the icon-to-label step is the scale's 4 pt, not
+						 *  `gap-0.5`'s off-scale 2 pt (U-42); the 52 pt slot absorbs it. */
 						<Pressable
 							key={item.key}
 							accessibilityRole={ROLE.button}
 							accessibilityLabel={item.accessibilityLabel}
 							onPress={() => go(item.route)}
 							testID={item.testID}
-							className="min-w-0 flex-1 items-center justify-center gap-0.5"
+							className="min-w-0 flex-1 items-center justify-center gap-1"
 							style={{ minHeight: DESTINATION_ROW_PT, minWidth: TOUCH_FLOOR }}
 						>
 							<View>

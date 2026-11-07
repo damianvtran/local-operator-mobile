@@ -40,7 +40,7 @@ describe("the sidebar's destinations (record §3)", () => {
 		const block = flat(footer());
 		expect(block).toContain("destinations.map((item) =>");
 		expect(block).toContain(
-			'className="min-w-0 flex-1 items-center justify-center gap-0.5"',
+			'className="min-w-0 flex-1 items-center justify-center gap-1"',
 		);
 		expect(block).not.toContain("<Button");
 	});

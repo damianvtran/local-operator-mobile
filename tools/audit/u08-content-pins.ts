@@ -678,6 +678,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
 	 * after this merge, so neither side's previous digest is kept. */
+	/* Re-printed 2026-11-06 for the U-42/U-01 spacing fix (#163 regressions): the
+	 * composer's disc seams and the sidebar destinations' icon-to-label step move
+	 * from `gap-0.5` (2 pt, off the 4 pt scale) to `gap-1`, the dock's bottom inset
+	 * moves from its margin to a carrier's padding (same painted position), and the
+	 * queued-message chip gains a `TOUCH_FLOOR` height. U-08's scene is the session
+	 * screen, so the composer IS in it: this is source admission only — the 2 pt
+	 * seam shift is not claimed geometry-neutral here; `u08-geometry-proof` measures
+	 * that. No token, catalogue key or `app` change; no other pin moved. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main (PR #176,
+	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
+	 * and the digest covers both lines of history. Neither side's tree ships alone after
+	 * this merge, so neither previous digest is kept. */
 	/* Re-printed 2026-11-06 with --print at PR #178's staged tree (the fix for the
 	 * TestFlight 453 reports, not the 453 build's own tree), including its round-1
 	 * remediation: the Radient token exchange and tunnel discovery gained a request
@@ -694,7 +706,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * both notes above stand and this value is the merged tree's own. Re-printed
 	 * again for round-3 M1: `reconnectDelay` caps at setTimeout's 2^31-1 ms
 	 * ceiling. Logic only; no rendered surface. */
-	src: "5e291fc849f57495fd639db5f05fa7d9bfcb05090d05333dcf2f054fcd858640",
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (e541a904,
+	 * PR #177) into PR #178: both lines of history, so the value is the merged
+	 * tree's own and neither side's previous digest is kept. */
+	src: "8e378537d6ee2210fbd128718a40de56804ed3671c8ba351ac8e17d945dfbe9b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
