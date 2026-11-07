@@ -62,7 +62,24 @@ export const folderChipText = (name: string, scale: number): string =>
  * then model (design D2). Flex weights, not a measured ladder: a chip's shrink
  * is weighted by its own width, so a factor of ten between neighbours makes the
  * earlier one give nearly all of the overflow before the next moves, and each
- * still stops at its 44 pt floor. Home only — the session strip (no folder) keeps
- * its model `flex-1` slot unchanged.
+ * still stops at its 44 pt floor. Home only — the session strip (no folder) has
+ * its own order, `SESSION_EFFORT_SHRINK`.
  */
 export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;
+
+/**
+ * The session strip's effort chip never shrinks: the MODEL yields the overflow
+ * and effort reads whole ("Medium", never "M…").
+ *
+ * That was the order before TestFlight 578, by construction: the model slot was
+ * `flex-1` (a 0 basis floored at `MODEL_FLOOR_PT`), so it only ever took what
+ * effort's natural width left. Once the model stopped growing (left-packed
+ * chips) it got an AUTO basis, and two `shrink` items on auto bases split the
+ * overflow by width — a 180 pt model and a 70 pt effort lose 72 % / 28 %, so
+ * effort truncated beside the queued chip (code review M1, design D2). A weight
+ * ratio cannot restore it: effort would still lose a sliver, and a sliver is an
+ * ellipsis. 0 is exact. The trade: past the model's 44 pt floor the row
+ * overflows rather than eating into effort — which the compact row at large
+ * text already prevents, and an effort rung is a short fixed word.
+ */
+export const SESSION_EFFORT_SHRINK = 0;

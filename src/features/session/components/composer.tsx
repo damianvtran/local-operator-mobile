@@ -65,6 +65,7 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	SESSION_EFFORT_SHRINK,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -1297,8 +1298,10 @@ export const Composer = ({
 				 *  inside kept its own, so effort floated right behind an empty gap:
 				 *  `[folder][Claude Opus 5.5]      [Medium] ⋯`. The chips now pack
 				 *  left at the row's gap and the free width goes to More's auto margin
-				 *  (`STRIP_TRAILING`, below). Shrinking is unchanged: the home
-				 *  still yields folder → effort → model (`HOME_STRIP_SHRINK`). */
+				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
+				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
+				 *  only, effort holds (`SESSION_EFFORT_SHRINK`) — the order the old
+				 *  `flex-1` slot gave by construction. */
 				className="min-w-0 shrink"
 				style={{
 					minWidth: MODEL_FLOOR_PT,
@@ -1324,7 +1327,10 @@ export const Composer = ({
 									minWidth: MODEL_FLOOR_PT,
 									flexShrink: HOME_STRIP_SHRINK.effort,
 								}
-							: { minWidth: MODEL_FLOOR_PT }
+							: {
+									minWidth: MODEL_FLOOR_PT,
+									flexShrink: SESSION_EFFORT_SHRINK,
+								}
 					}
 				>
 					<ComposerChipButton

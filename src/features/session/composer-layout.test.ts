@@ -12,6 +12,7 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	SESSION_EFFORT_SHRINK,
 } from "./composer-layout";
 import {
 	composerPaintedHeight,
@@ -435,6 +436,27 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(strip).toContain("<Folder");
 		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.model");
 		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.effort");
+	});
+
+	/* Code review M1 / design D2: once the model slot lost `flex-1` (auto basis),
+	 *  two `shrink` chips split the session strip's overflow by width and effort
+	 *  read "H…". The session strip must yield the MODEL and keep effort whole. */
+	it("yields the model, never effort, on the session strip", () => {
+		expect(SESSION_EFFORT_SHRINK).toBe(0);
+		const effort = COMPOSER.slice(
+			COMPOSER.indexOf("{effortChip ? ("),
+			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
+		).replace(/\s+/g, " ");
+		/* The non-folder (session) branch of the effort slot's style. */
+		const session = effort.slice(effort.indexOf(": {"));
+		expect(session).toContain("flexShrink: SESSION_EFFORT_SHRINK");
+		/* …while the model still shrinks on its auto basis down to its floor. */
+		const model = COMPOSER.slice(
+			COMPOSER.indexOf('className="min-w-0 shrink"'),
+			COMPOSER.indexOf("testID={CONTROL.composerModelChip}"),
+		);
+		expect(model).toContain("minWidth: MODEL_FLOOR_PT");
+		expect(model).toContain('flexBasis: "auto"');
 	});
 
 	/* TestFlight 578: "Left justify the effort selector with the other selectors

@@ -86,7 +86,10 @@ describe("the hero is a centred stack: mark, greeting, rows", () => {
 	const splash = SPLASH.slice(SPLASH.indexOf("export const HomeSplash"));
 	const block = splash.slice(splash.indexOf("setBlock("));
 
-	it("paints the mark no larger than the 128 px asset holds at 3x", () => {
+	it("paints the mark at 32 pt, no larger than the 128 px asset holds at 3x", () => {
+		/* Equality, not just the ceiling (code review n1): `* 3 <= 128` alone
+		 *  would also pass at 42. */
+		expect(HERO_MARK_SIZE).toBe(32);
 		expect(HERO_MARK_SIZE * 3).toBeLessThanOrEqual(128);
 	});
 
@@ -97,6 +100,10 @@ describe("the hero is a centred stack: mark, greeting, rows", () => {
 		expect(greeting).toBeGreaterThan(mark);
 		expect(block.slice(0, mark)).toContain('className="items-center"');
 		expect(block).toContain("testID={SURFACE.homeHeroMark}");
+		/* Design D3: the white disc's edge reads on the light canvas. */
+		expect(block).toContain(
+			'className="mb-4 rounded-full border border-border-control" testID={SURFACE.homeHeroMark}',
+		);
 		expect(block).toContain('"text-center text-ink"');
 	});
 
@@ -108,8 +115,13 @@ describe("the hero is a centred stack: mark, greeting, rows", () => {
 	it("keeps the rows full-width targets, centred on the same line", () => {
 		expect(block).toContain('className="mt-6 gap-2 self-stretch"');
 		expect(SPLASH).toContain(
-			'"-mx-3 min-h-11 flex-row items-center justify-center gap-1 rounded-sm px-3"',
+			'"-mx-3 min-h-11 flex-row items-center gap-1 rounded-sm px-3", largeText ? "justify-start" : "justify-center",',
 		);
-		expect(SPLASH).toContain('"min-w-0 flex-shrink text-center text-body"');
+		expect(SPLASH).toContain(
+			'"min-w-0 flex-shrink text-body", largeText ? "text-start" : "text-center",',
+		);
+		/* Design D1: never a growing label, which would pin the chevron to the
+		 *  row's far edge at every size. */
+		expect(SPLASH).not.toMatch(/min-w-0 flex-1 text-body/);
 	});
 });

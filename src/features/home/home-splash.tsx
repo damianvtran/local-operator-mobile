@@ -130,9 +130,15 @@ const SuggestionRow = ({
 					 *  room past the column edge. `elevated` is the token the desktop's
 					 *  `hover:bg-elevated` uses, so one gesture means one thing on both
 					 *  clients; no rule between rows (a divider turned the stack into a
-					 *  table). */
+					 *  table).
+					 *  LARGE TEXT starts the row instead (design D1): a label that wraps
+					 *  takes the column's whole width, so a centred phrase left its
+					 *  chevron pinned to the far edge, level with neither line. Start-
+					 *  aligned, an unwrapped label keeps its chevron beside it and a
+					 *  wrapped one reads as a list row with its trailing disclosure. */
 					className={cx(
-						"-mx-3 min-h-11 flex-row items-center justify-center gap-1 rounded-sm px-3",
+						"-mx-3 min-h-11 flex-row items-center gap-1 rounded-sm px-3",
+						largeText ? "justify-start" : "justify-center",
 						pressed && "bg-elevated",
 					)}
 				>
@@ -146,7 +152,8 @@ const SuggestionRow = ({
 					 *  push the chevron to the row's far edge and off the centre line. */}
 					<Text
 						className={cx(
-							"min-w-0 flex-shrink text-center text-body",
+							"min-w-0 flex-shrink text-body",
+							largeText ? "text-start" : "text-center",
 							pressed ? "text-ink" : "text-ink-muted",
 						)}
 						numberOfLines={largeText ? 2 : 1}
@@ -291,8 +298,16 @@ export const HomeSplash = ({
 				>
 					{/* The existing asset, never a redraw; decorative, so it hides
 					 *  itself from assistive tech and the greeting stays the first
-					 *  thing read. `space.4` to the greeting. */}
-					<View className="mb-4" testID={SURFACE.homeHeroMark}>
+					 *  thing read. `space.4` to the greeting. The 1 pt
+					 *  `border-control` ring (design D3): the asset's white disc is
+					 *  1.15:1 on the light canvas and read as a bare glyph; the ring
+					 *  is the 3:1 non-text token (3.42:1 light / 3.93:1 dark on
+					 *  canvas), so the disc's edge reads in both themes. It hugs the
+					 *  disc because the asset's disc fills its square edge to edge. */}
+					<View
+						className="mb-4 rounded-full border border-border-control"
+						testID={SURFACE.homeHeroMark}
+					>
 						<NavigationMark size={HERO_MARK_SIZE} />
 					</View>
 					<Text

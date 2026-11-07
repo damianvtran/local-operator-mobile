@@ -809,8 +809,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * centred mark + one-step-smaller greeting, the composer strip packs its chips
 	 * left (More takes the free width), the ☰ count moves inside its box with a
 	 * lead before the computer selector, the drawer panel loses its right border,
-	 * and tests. Source admission only, NOT rendered U-08 evidence. */
-	src: "3f992f75ff6f48c63564477f23f6c773211a9826e66b063bc58fdd079c2f7c72",
+	 * and tests. Round-1 remediation re-printed it again: the session strip's
+	 * effort holds (SESSION_EFFORT_SHRINK), suggestion rows start-align at large
+	 * text, and the hero mark gains a border-control ring. Source admission only,
+	 * NOT rendered U-08 evidence. */
+	src: "2491873ea179450e0008cae2da4196d789b170b4ca7afc8f200b7ac45836ea43",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
