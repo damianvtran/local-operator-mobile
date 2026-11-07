@@ -481,6 +481,33 @@ describe("a refused create is recoverable", () => {
 		]);
 	});
 
+	it("replays a restored pending send WITHOUT its effort, like its model", async () => {
+		/* An effort was chosen against a ladder and a relay capability this restore
+		 * cannot re-check before `resume()` replays the queue; an effort the relay no
+		 * longer licenses is a refused keyed start. The folder survives. */
+		const before = setup();
+		await before.coordinator.ready;
+		before.coordinator.edit("pending", []);
+		await before.coordinator.enqueue();
+		await before.coordinator.flush();
+		const reloaded = setup({
+			...(before.disk() as StartupRecord),
+			selection: {
+				cwd: "/Users/reader/src/local-operator",
+				provider: "anthropic",
+				model_id: "claude-opus-5-5",
+				effort: "high",
+			},
+		});
+		reloaded.setStart(async () => ({ session_id: "session-a" }));
+		await reloaded.coordinator.ready;
+		reloaded.coordinator.resume();
+		await reloaded.coordinator.settled();
+		expect(reloaded.selections).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
+	});
+
 	it("restores a persisted refused record instead of discarding its queue", async () => {
 		const x = setup();
 		x.setStart(async () => {

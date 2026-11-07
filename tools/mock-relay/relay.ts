@@ -90,6 +90,7 @@ import {
 	SSE_KEEPALIVE_S,
 	setCookieHeader,
 	sseFrame,
+	startEffortAdmitted,
 	syntheticSessionId,
 	verifyCookie,
 } from "./wire.ts";
@@ -2430,6 +2431,21 @@ export function createRelay(options: RelayOptions = {}) {
 				sendJson(res, 400, errorBody("invalid JSON"));
 				return;
 			}
+			/* `effort` (local-operator v0.101.9): a level from the daemon's vocabulary,
+			 *  case-insensitive; `null` or blank means the configured default, exactly
+			 *  as omitting it. Anything else is refused BEFORE the directory is read,
+			 *  in the relay's order and with its body (`start_effort` in
+			 *  `mobile/start_receipts.py`, the code doubling as the sentence) — a mock
+			 *  that accepted any word would hide a client sending one the relay
+			 *  rejects. */
+			if (!startEffortAdmitted(body.effort)) {
+				sendJson(
+					res,
+					400,
+					errorBody("invalid_start_effort", "invalid_start_effort"),
+				);
+				return;
+			}
 			if (typeof body.cwd === "string" && body.cwd.startsWith("/etc")) {
 				sendFixture(res, "start-bad-cwd");
 				return;
@@ -2599,12 +2615,24 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 		if (pathname === "/api/directories" && method === "GET") {
+			/* A scenario's own folder answer, else the corpus capture. */
+			if (world.directories !== undefined) {
+				sendJson(res, 200, world.directories);
+				return;
+			}
 			sendFixture(res, "directories");
 			return;
 		}
 		if (pathname === "/api/models" && method === "GET") {
 			if (Array.isArray(world.models)) {
-				sendJson(res, 200, { models: world.models });
+				sendJson(res, 200, {
+					models: world.models,
+					/* Omitted unless the scenario names one, exactly as an older daemon
+					 *  omits it: absence and `null` are different readings. */
+					...(world.modelDefault !== undefined
+						? { default: world.modelDefault }
+						: {}),
+				});
 				return;
 			}
 			sendFixture(res, "models");

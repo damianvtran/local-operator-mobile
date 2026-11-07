@@ -8,6 +8,9 @@ import {
 	COMPOSER_META_GAP_PT,
 	COMPOSER_META_GLASS_SPACING,
 	COMPOSER_META_ROW,
+	FOLDER_CHIP_MAX_PT,
+	folderChipText,
+	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
 } from "./composer-layout";
 import {
@@ -403,5 +406,40 @@ describe("strip glass capsules stay per-chip", () => {
 		expect(surface).toContain("alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN");
 		/* The solid branch is the chip itself, unwrapped and unchanged. */
 		expect(surface).toMatch(/\) : \(\s*chip\s*\);/);
+	});
+});
+
+describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
+	it("shows the folder's name at ordinary text and the glyph alone past large text", () => {
+		expect(folderChipText("app", 1)).toBe("app");
+		expect(folderChipText("app", 1.4)).toBe("app");
+		expect(folderChipText("app", 1.5)).toBe("");
+		expect(folderChipText("app", 2)).toBe("");
+	});
+
+	it("caps the chip below the old 160 pt and above its 44 pt floor", () => {
+		expect(FOLDER_CHIP_MAX_PT).toBe(112);
+		expect(FOLDER_CHIP_MAX_PT).toBeGreaterThan(MODEL_FLOOR_PT);
+	});
+
+	it("yields folder first, then effort, then model", () => {
+		expect(HOME_STRIP_SHRINK.folder).toBeGreaterThan(HOME_STRIP_SHRINK.effort);
+		expect(HOME_STRIP_SHRINK.effort).toBeGreaterThan(HOME_STRIP_SHRINK.model);
+		const strip = COMPOSER.slice(
+			COMPOSER.indexOf("{folderChip ? ("),
+			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
+		);
+		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.folder");
+		expect(strip).toContain("maxWidth: FOLDER_CHIP_MAX_PT");
+		expect(strip).toContain("folderChipText(folderChip.label, effectiveScale)");
+		expect(strip).toContain("<Folder");
+		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.model");
+		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.effort");
+		// The session strip (no folder) keeps its `flex-1` model slot.
+		expect(strip).toContain('folderChip ? "min-w-0 grow" : "min-w-0 flex-1"');
+	});
+
+	it("offers the folder once: the More sheet no longer repeats it", () => {
+		expect(COMPOSER).not.toContain("folderChip.onPress();");
 	});
 });

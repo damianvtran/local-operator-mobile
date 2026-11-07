@@ -1,7 +1,67 @@
 {
+	"mobile.home.chip.effort_chosen": {
+		"role": "meta",
+		"note": "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.effort_default": {
+		"role": "meta",
+		"note": "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.effort_default_short": {
+		"role": "meta",
+		"note": "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.effort_default_unnamed": {
+		"role": "meta",
+		"note": "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.model_chosen": {
+		"role": "meta",
+		"note": "Spoken label of the model chip when the reader chose a model for this conversation. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.model_default": {
+		"role": "meta",
+		"note": "Spoken label of the model chip when the computer's configured default model applies. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.model_no_default": {
+		"role": "meta",
+		"note": "Visible text of the model chip when the computer has no default model configured. Very short: it shares a narrow strip. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.chip.model_no_default_label": {
+		"role": "meta",
+		"note": "Spoken label of the model chip when the computer has no default model; tapping it opens the model picker. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
 	"mobile.home.connect_disabled_reason": {
 		"role": "status",
 		"note": "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short."
+	},
+	"mobile.home.effort.high": {
+		"role": "meta",
+		"note": "Effort level: high. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.low": {
+		"role": "meta",
+		"note": "Effort level: low. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.max": {
+		"role": "meta",
+		"note": "Effort level: the most reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.medium": {
+		"role": "meta",
+		"note": "Effort level: medium, the usual default. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.minimal": {
+		"role": "meta",
+		"note": "Effort level: the least reasoning above none. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.none": {
+		"role": "meta",
+		"note": "Effort level: no extra reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.effort.xhigh": {
+		"role": "meta",
+		"note": "Effort level above high and below max. Short. New in the three-pickers change; the non-English text awaits the translation audit."
 	},
 	"mobile.home.folders_read_failed": {
 		"role": "status",
@@ -19,29 +79,105 @@
 		"role": "status",
 		"note": "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder."
 	},
-	"mobile.home.options.apply": {
-		"role": "button",
-		"note": "Button that applies the starting options. Sentence case, no final full stop."
-	},
-	"mobile.home.options.default_folder": {
-		"role": "button",
-		"note": "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop."
-	},
 	"mobile.home.options.default_model": {
 		"role": "button",
-		"note": "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop."
+		"note": "Row at the top of the model picker, shown only while the computer names no default model: it clears the chosen model, so the start names no model and the computer applies its own configured default. Sentence case, no final full stop."
 	},
 	"mobile.home.options.fixed": {
 		"role": "help",
-		"note": "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title."
+		"note": "Explains why the pickers are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title."
 	},
 	"mobile.home.options.folder": {
 		"role": "meta",
-		"note": "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone."
+		"note": "Label of the field revealed by the folder picker's \"Other path…\" row, for typing a folder path on the connected computer (not on the phone)."
 	},
-	"mobile.home.options.title": {
+	"mobile.home.picker.badge_default": {
+		"role": "meta",
+		"note": "Small badge on the picker row holding the computer's configured default. One short word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.badge_this_chat": {
+		"role": "meta",
+		"note": "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit. Says 'conversation', the product's word everywhere else (UX U7)."
+	},
+	"mobile.home.picker.effort_none": {
+		"role": "help",
+		"note": "The selected model has no effort setting, so there is nothing to choose. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.effort_title": {
 		"role": "heading",
-		"note": "Title of the sheet that edits the starting options of a conversation that has not been sent yet."
+		"note": "Title of the effort picker sheet: how much reasoning effort the model spends. One word; keep it the same term as the effort levels' family. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.effort_unknown": {
+		"role": "help",
+		"note": "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.effort_unsupported": {
+		"role": "help",
+		"note": "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.effort_use_default": {
+		"role": "button",
+		"note": "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_home": {
+		"role": "meta",
+		"note": "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_other": {
+		"role": "button",
+		"note": "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_outside": {
+		"role": "status",
+		"note": "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_title": {
+		"role": "heading",
+		"note": "Title of the folder picker sheet: where on the connected computer a new conversation starts. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_tmp": {
+		"role": "meta",
+		"note": "Badge on the folder row that is the computer's temporary (scratch) folder. One short word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_too_long": {
+		"role": "status",
+		"note": "Why a typed path cannot be used: it is longer than the computer accepts. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.folder_use_path": {
+		"role": "button",
+		"note": "Button under the typed-path field that starts the conversation in that folder. Sentence case, no final full stop. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.loading": {
+		"role": "status",
+		"note": "A picker's list is still being read from the computer. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.model_empty": {
+		"role": "status",
+		"note": "The computer listed no models at all. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.model_no_match": {
+		"role": "status",
+		"note": "The search field matched no model. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.model_search": {
+		"role": "meta",
+		"note": "Label of the search field in a long model list. Filters by model name and provider. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.model_title": {
+		"role": "heading",
+		"note": "Title of the model picker sheet. One word. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.not_connected": {
+		"role": "status",
+		"note": "Beside a model whose provider is not signed in on the computer, so it cannot be picked. Lower case, short. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.source_chosen": {
+		"role": "status",
+		"note": "Line under a picker's title once the reader chose a value for this conversation, overriding the computer's default. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.source_default": {
+		"role": "status",
+		"note": "Line under a picker's title when nothing has been chosen, so the computer's own configured value applies. Same words as the chip's spoken label. New in the three-pickers change; the non-English text awaits the translation audit."
 	},
 	"mobile.home.queue.discard": {
 		"role": "button",

@@ -82,6 +82,11 @@ export interface StartSessionRequest {
 	cwd?: string;
 	provider?: string;
 	model_id?: string;
+	/** A birth reasoning level from the daemon's vocabulary. Sent ONLY when the
+	 *  reader chose one AND the relay advertises `capabilities.session_start.effort`
+	 *  (an older relay refuses it on a keyed start, drops it on an unkeyed one).
+	 *  Absent means the computer's configured default. */
+	effort?: string;
 }
 
 /**

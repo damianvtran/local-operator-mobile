@@ -80,3 +80,39 @@ describe("model sheet disconnected row", () => {
 		).toEqual([]);
 	});
 });
+
+/** The effort rung row, as its own `<Pressable>` block (anchored on its id). */
+const rungRow = (): string => {
+	const match = SOURCE.match(
+		/<Pressable[\s\S]*?effortRungId\(rung\)[\s\S]*?<\/Pressable>/,
+	);
+	expect(match, "the effort rung row must render a Pressable").not.toBeNull();
+	return match?.[0] ?? "";
+};
+
+describe("the shared picker rows (pickers round 1)", () => {
+	it("centres their trailing badges on the row instead of its top edge (D1)", () => {
+		expect(modelRow()).toContain('<Badge label={badge} align="center" />');
+		expect(rungRow()).toContain('<Badge label={badge} align="center" />');
+		const home = readFileSync(
+			fileURLToPath(new URL("../../home/home-pickers.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(home).toContain('<Badge label={kind} align="center" />');
+		expect(home).not.toMatch(/<Badge label=\{\w+\} \/>/);
+	});
+
+	it("paints only the selected rung's dot, keeping the slot (D5)", () => {
+		// `bg-hairline` measured 1.23:1 dark / 1.44:1 light on `elevated`.
+		expect(rungRow()).toContain('selected ? "bg-accent" : "bg-transparent"');
+		expect(rungRow()).not.toContain('"bg-hairline"');
+		expect(rungRow()).toContain("h-2 w-2 rounded-full");
+	});
+
+	it("announces the rung as checked, not only selected (U9)", () => {
+		expect(rungRow()).toContain("checked: selected");
+		// The native state never reaches react-native-web; the web build reads
+		// only the ARIA attribute (QA Q3).
+		expect(rungRow()).toContain("aria-checked={selected}");
+	});
+});

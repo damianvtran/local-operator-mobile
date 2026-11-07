@@ -36,15 +36,26 @@ import {
 	foldersFrom,
 	type HomeFolders,
 	heldOn,
-	homeFolderSelection,
-	homeModelReading,
 	homeModelRows,
 	homeStartSelection,
 	isAuthFailure,
 	restoredSupersede,
 } from "@/features/home/home-defaults";
 import { HomeStateMarkers } from "@/features/home/home-markers";
+import {
+	EffortPicker,
+	FolderPicker,
+	ModelPicker,
+} from "@/features/home/home-pickers";
 import { HomeRecovery, HomeSplash } from "@/features/home/home-splash";
+import {
+	type CatalogueDefault,
+	defaultEffortFor,
+	effortAfterModelChange,
+	effortOffer,
+	homeChips,
+	homeFolderChip,
+} from "@/features/home/picker-model";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
@@ -58,7 +69,6 @@ import {
 	readWebImageFile,
 } from "@/features/session/attach";
 import type { AttachSource } from "@/features/session/attach-rule";
-import { composerChipLabels } from "@/features/session/chip-labels";
 import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
 import { composerCopy } from "@/features/session/composer";
@@ -70,18 +80,16 @@ import {
 	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
 import { t } from "@/i18n";
-import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";
 import { useUiStore } from "@/state/ui-store";
-import { CONTROL, homeRecentFolderId, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
+import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
-import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
@@ -174,18 +182,28 @@ export default function Home({
 	 * whose list omits it keeps the previous language's sentences for as long as the
 	 * language is the only thing that changed. */
 	const language = useLocaleFrame();
-	const inboxEnabled = notificationsEnabled(
-		useListState((state) => state.capabilities),
-	);
+	const capabilities = useListState((state) => state.capabilities);
+	const inboxEnabled = notificationsEnabled(capabilities);
+	/** The relay accepts `effort` on a start (local-operator v0.101.9). The ONLY
+	 *  licence to send one: an older relay refuses it on a keyed start and drops it
+	 *  on an unkeyed one, so without it the effort picker explains and offers
+	 *  nothing. */
+	const effortSupported = capabilities?.session_start?.effort === true;
 	const _showToast = useUiStore((state) => state.showToast);
 
 	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
-	const [optionsOpen, setOptionsOpen] = useState(false);
+	/** Which of the three pickers is open — one at a time, each its own sheet. */
+	const [picker, setPicker] = useState<"folder" | "model" | "effort" | null>(
+		null,
+	);
 	const [queueOpen, setQueueOpen] = useState(false);
-	const [optionPath, setOptionPath] = useState("");
-	const [optionModel, setOptionModel] = useState<ModelEntry | null>(null);
 	const [running, setRunning] = useState(false);
 	const [models, setModels] = useState<ModelEntry[]>([]);
+	/** `GET /api/models` → `default`: what a start naming no model runs here.
+	 *  `undefined` until a read answers, and for an older computer that never
+	 *  publishes it; `null` when the computer resolved none. */
+	const [catalogueDefault, setCatalogueDefault] =
+		useState<CatalogueDefault>(undefined);
 	const [attaching, setAttaching] = useState(false);
 	const [editing, setEditing] = useState(false);
 	const [composerError, setComposerError] = useState<string | null>(null);
@@ -207,11 +225,6 @@ export default function Home({
 	const homeDirectory = heldOn(heldDirectory, tunnelId);
 	const folders = heldOn(heldFolders, tunnelId);
 	const readerApplied = heldOn(appliedOn, tunnelId) !== null;
-	/* The options sheet's rows and their selection, derived rather than inline so the
-	 *  "a tap never reflows the list" guarantee is asserted in a test (design D1). */
-	const modelRows = homeModelRows({ models, optionModel });
-	const folderSelection =
-		folders === null ? null : homeFolderSelection({ folders, optionPath });
 	/** The folders read's failure, KIND KEPT: the banner names the cause it really
 	 *  was, and an auth kind is owed one automatic re-ask once the route is live. */
 	const [directoriesError, setDirectoriesError] = useState<RelayError | null>(
@@ -245,10 +258,39 @@ export default function Home({
 	 *  default state rather than a gap to fill: with nothing chosen the start body
 	 *  names no model and the computer applies its own configured default. */
 	const [chosenModel, setChosenModel] = useState<ModelEntry | null>(null);
+	/** The level the reader picked in the effort picker, and nothing else: `null`
+	 *  sends no effort and the computer applies its configured one. */
+	const [chosenEffort, setChosenEffort] = useState<string | null>(null);
 	const selection = useMemo(
-		() => homeStartSelection({ cwd: homeDirectory, chosenModel }),
-		[homeDirectory, chosenModel],
+		() =>
+			homeStartSelection({
+				cwd: homeDirectory,
+				chosenModel,
+				chosenEffort,
+				effortSupported,
+			}),
+		[homeDirectory, chosenModel, chosenEffort, effortSupported],
 	);
+	/* The model picker's rows, derived rather than inline so the "a tap never
+	 *  reflows the list" guarantee is asserted in a test (design D1). */
+	const modelRows = homeModelRows({
+		models,
+		optionModel: chosenModel,
+		defaultSelector: catalogueDefault?.selector ?? null,
+	});
+	/** What the effort picker may offer, for the model that will run. Memoised
+	 *  because it is a dependency of the chips' memo below. */
+	const offer = useMemo(
+		() =>
+			effortOffer({
+				supported: effortSupported,
+				chosenModel,
+				models,
+				catalogueDefault,
+			}),
+		[effortSupported, chosenModel, models, catalogueDefault],
+	);
+	const defaultEffort = defaultEffortFor(chosenModel, catalogueDefault);
 	const startup = useStartup(selection);
 
 	/* A record written by a build that invented a model still names it, and the
@@ -264,6 +306,8 @@ export default function Home({
 			stored: startup.snapshot.selection,
 			folders,
 			chosenModel,
+			chosenEffort,
+			effortSupported,
 			readerApplied,
 		});
 		if (next === null) return;
@@ -273,6 +317,8 @@ export default function Home({
 		startup.snapshot.selection,
 		folders,
 		chosenModel,
+		chosenEffort,
+		effortSupported,
 		readerApplied,
 	]);
 	const draft = startup.snapshot.draft.text;
@@ -412,6 +458,7 @@ export default function Home({
 			.then((catalogue) => {
 				if (!live) return;
 				setModels(catalogue.models);
+				setCatalogueDefault(catalogue.default);
 				setModelsRead("ready");
 				setModelsSettled(modelsAttempt);
 				if (pressAnswered(modelsPressed.current, modelsAttempt)) {
@@ -546,6 +593,10 @@ export default function Home({
 		[setImages],
 	);
 
+	/** The folder the next start names: the live selection's, else the held one.
+	 *  One expression for the chip's text, its spoken label and the sheet's ✓. */
+	const startFolder = startup.snapshot.selection?.cwd ?? homeDirectory;
+
 	/* `language` is a dependency here because this memo holds RENDERED COPY: the
 	 * disabled sentence is a `t()` reading, resolved at call time. Without it a
 	 * language frame repaints this screen and the memo hands back the sentence of
@@ -593,17 +644,56 @@ export default function Home({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: `t()` reads the locale live, so the memo must re-run (see above)
 	const chips = useMemo(
 		() =>
-			composerChipLabels({
-				model: homeModelReading({ chosenModel, catalogue: modelsRead }),
-				effort: null,
-				connection: !connected
-					? "unreachable"
-					: modelsRead === "loading"
-						? "loading"
-						: "connected",
+			homeChips({
+				connected,
+				modelsRead,
+				chosenModel,
+				chosenEffort,
+				models,
+				catalogueDefault,
+				offer,
+				defaultEffort,
 			}),
-		[chosenModel, modelsRead, connected, language],
+		[
+			chosenModel,
+			chosenEffort,
+			modelsRead,
+			connected,
+			models,
+			catalogueDefault,
+			offer,
+			defaultEffort,
+			language,
+		],
 	);
+
+	/* One commit path for all three pickers: the picker's own state moves, and the
+	 *  coordinator's record is rewritten through `homeStartSelection` — the SAME
+	 *  writer as the live body, so the record cannot hold a field (an uncapable
+	 *  effort, an invented model) the live body would not. Each picker commits on
+	 *  its own tap; there is no Apply step left to forget. */
+	const commit = (next: {
+		cwd?: string;
+		model?: ModelEntry | null;
+		effort?: string | null;
+	}) => {
+		const cwd = next.cwd ?? startup.snapshot.selection?.cwd ?? homeDirectory;
+		const model = next.model !== undefined ? next.model : chosenModel;
+		const effort = next.effort !== undefined ? next.effort : chosenEffort;
+		if (next.cwd !== undefined) {
+			setHeldDirectory({ computer: tunnelId, value: next.cwd });
+			setAppliedOn({ computer: tunnelId, value: true });
+		}
+		setChosenModel(model);
+		setChosenEffort(effort);
+		const body = homeStartSelection({
+			cwd,
+			chosenModel: model,
+			chosenEffort: effort,
+			effortSupported,
+		});
+		if (body !== null) void startup.configure(body);
+	};
 
 	// The coordinator freezes the submitted bytes; later typing stays editable.
 	const send = startup.send;
@@ -835,23 +925,16 @@ export default function Home({
 				 *  (record §2.2 yield order). Paint, target, hint and the options
 				 *  sheet behind it are unchanged (final audit, D2). */
 				folderChip={
-					homeDirectory !== null
+					startFolder !== null
 						? {
-								label: homeShortened(
-									startup.snapshot.selection?.cwd ?? homeDirectory,
-									homeDirectory,
-								),
-								onPress: () => {
-									/* The sheet opens on what will actually be sent: the folder the
-									 *  start names, and the model THE READER chose — `null` when they
-									 *  chose none, so no row is painted as selected on their behalf. */
-									setOptionPath(
-										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
-									);
-									setOptionModel(chosenModel);
-									setOptionsOpen(true);
-								},
-								accessibilityLabel: `Working in ${homeDirectory}`,
+								/* The folder's own name, shortened against the COMPUTER's home
+								 *  (`folders.home`). It was shortened against `homeDirectory` —
+								 *  the folder the next start names, i.e. itself — so every pick
+								 *  painted `~` while the spoken label named the real path (UX
+								 *  U1). The composer adds the glyph and decides when the name
+								 *  yields (design D2). */
+								...homeFolderChip(startFolder, folders?.home ?? null),
+								onPress: () => setPicker("folder"),
 								accessibilityHint: "Choose another folder",
 								testID: CONTROL.homeTargetFolder,
 							}
@@ -859,13 +942,9 @@ export default function Home({
 				}
 				bottomInset={insets.bottom}
 				modelChip={chips.model}
-				effortChip={null}
-				onOpenModels={() => {
-					setOptionPath(startup.snapshot.selection?.cwd ?? homeDirectory ?? "");
-					setOptionModel(chosenModel);
-					setOptionsOpen(true);
-				}}
-				onOpenEffort={() => undefined}
+				effortChip={chips.effort}
+				onOpenModels={() => setPicker("model")}
+				onOpenEffort={() => setPicker("effort")}
 				slashQuery={null}
 				slashSheet={null}
 				fieldRef={fieldRef}
@@ -980,120 +1059,66 @@ export default function Home({
 				)}
 			</Screen>
 
-			<Sheet
-				visible={optionsOpen}
-				onClose={() => setOptionsOpen(false)}
-				title={t("mobile.home.options.title")}
-				testID={CONTROL.startupOptions}
-			>
-				<View className="gap-3 py-2">
-					<Input
-						label={t("mobile.home.options.folder")}
-						value={optionPath}
-						onChangeText={setOptionPath}
-						disabled={!selectionEditable}
-						testID={CONTROL.newSessionCwd}
-					/>
-					{/* The way BACK to the computer's own answer (reviews R5 and the folder half of
-					 *  the same gap): without these rows the only way out of a mis-tap is picking
-					 *  a different entry, or a remount. Like every other row here they FILL the
-					 *  sheet rather than sending — the Apply button commits — so a reader who
-					 *  changes their mind twice is never on a wire they did not confirm. The
-					 *  folder row needs the read's `default` to name, so it waits for the read. */}
-					{folders !== null ? (
-						<Button
-							label={t("mobile.home.options.default_folder")}
-							variant="quiet"
-							onPress={() => setOptionPath(folders.default)}
-							disabled={!selectionEditable}
-							selected={folderSelection?.default ?? false}
-							testID={CONTROL.homeDefaultFolder}
-						/>
-					) : null}
-					{/* The computer's recent directories, one tap each: every row is a directory
-					 *  its spawn gate admits, so no row is a suggestion that 400s. They fill the
-					 *  field rather than sending, so the reader can still change their mind; the
-					 *  free-text field above stays the escape hatch for a path no row names. Each
-					 *  row carries its index in the id (review R8): one shared id made no
-					 *  specific row addressable, so a flow could only press whichever row the
-					 *  matcher happened to see. */}
-					{folders !== null && folders.recent.length > 0 ? (
-						<View className="gap-2">
-							{folders.recent.map((directory, index) => (
-								<Button
-									key={directory}
-									label={homeShortened(directory, folders.home)}
-									variant="quiet"
-									onPress={() => setOptionPath(directory)}
-									disabled={!selectionEditable}
-									selected={folderSelection?.recent[index] ?? false}
-									testID={homeRecentFolderId(index)}
-								/>
-							))}
-						</View>
-					) : null}
-					{/* The model half of the same way back (review R5), ALWAYS mounted: the rows
-					 *  come from `homeModelRows`, whose default row stays put whatever is held, so a
-					 *  tap never reflows the list under the finger (design D1 / UX U3). The default
-					 *  row is the selected one while nothing is chosen — the start body then names
-					 *  no model, so "the computer decides" IS the effective choice — and NO
-					 *  CATALOGUE ROW IS PAINTED AS SELECTED UNLESS THE READER PICKED IT:
-					 *  `optionModel` starts as their own choice (`null` when they made none). */}
-					{modelRows.map((row) =>
-						row.kind === "default" ? (
-							<Button
-								key="default"
-								label={t("mobile.home.options.default_model")}
-								variant={row.selected ? "primary" : "quiet"}
-								onPress={() => setOptionModel(null)}
-								disabled={!selectionEditable}
-								selected={row.selected}
-								testID={CONTROL.homeDefaultModel}
-							/>
-						) : (
-							<Button
-								key={row.model.selector}
-								label={row.model.label ?? row.model.name ?? row.model.selector}
-								variant={row.selected ? "primary" : "quiet"}
-								onPress={() => setOptionModel(row.model)}
-								disabled={!selectionEditable}
-								selected={row.selected}
-								testID={CONTROL.startupModelOption}
-							/>
+			{/* The three pickers, each its own sheet (the operator: "a separate dialog to
+			 *  handle directory vs model vs effort selection instead of having one
+			 *  overloaded popup"). Each opens on what will actually be sent — the folder
+			 *  the start names, the model and effort THE READER chose (`null` when they
+			 *  chose none, so nothing is marked as theirs on their behalf). */}
+			<FolderPicker
+				visible={picker === "folder"}
+				onClose={() => setPicker(null)}
+				folders={folders}
+				current={startFolder}
+				failure={
+					directoriesError === null
+						? null
+						: isAuthFailure(directoriesError)
+							? foldersReadSignInRequired()
+							: foldersReadFailed()
+				}
+				onRetry={retryDirectories}
+				retrying={directoriesSettled !== directoriesAttempt}
+				editable={selectionEditable}
+				onPick={(cwd) => commit({ cwd })}
+			/>
+			<ModelPicker
+				visible={picker === "model"}
+				onClose={() => setPicker(null)}
+				models={models}
+				rows={modelRows}
+				chosen={chosenModel !== null}
+				loading={modelsRead === "loading"}
+				failure={modelsRead === "failed" ? modelsReadFailed() : null}
+				onRetry={retryModels}
+				retrying={modelsSettled !== modelsAttempt}
+				editable={selectionEditable}
+				onPick={(model) =>
+					commit({
+						model,
+						/* A new model keeps the reader's effort only while its ladder
+						 *  still offers it; otherwise the start names none and the
+						 *  computer applies its configured level, clamped (spec item 5). */
+						effort: effortAfterModelChange(
+							chosenEffort,
+							effortOffer({
+								supported: effortSupported,
+								chosenModel: model,
+								models,
+								catalogueDefault,
+							}),
 						),
-					)}
-					<Button
-						label={t("mobile.home.options.apply")}
-						disabled={!selectionEditable || optionPath.trim() === ""}
-						onPress={() => {
-							setHeldDirectory({
-								computer: tunnelId,
-								value: optionPath.trim(),
-							});
-							setAppliedOn({ computer: tunnelId, value: true });
-							setChosenModel(optionModel);
-							setOptionsOpen(false);
-							/* The model fields ride along ONLY when the sheet holds a chosen
-							 *  model: applying a folder must not resurrect a model nobody picked. */
-							void startup.configure({
-								cwd: optionPath.trim(),
-								...(optionModel
-									? {
-											provider: optionModel.provider,
-											model_id: optionModel.model_id,
-										}
-									: {}),
-							});
-						}}
-						testID={CONTROL.startupOptionsApply}
-					/>
-					{!selectionEditable ? (
-						<Text className="text-body-sm text-ink-muted">
-							{t("mobile.home.options.fixed")}
-						</Text>
-					) : null}
-				</View>
-			</Sheet>
+					})
+				}
+			/>
+			<EffortPicker
+				visible={picker === "effort"}
+				onClose={() => setPicker(null)}
+				offer={offer}
+				chosen={chosenEffort}
+				defaultEffort={defaultEffort}
+				editable={selectionEditable}
+				onPick={(effort) => commit({ effort })}
+			/>
 
 			<Sheet
 				visible={queueOpen}

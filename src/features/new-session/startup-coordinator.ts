@@ -206,11 +206,17 @@ export class StartupCoordinator {
 				 *  ordering: absent fields make the computer apply its own configured
 				 *  default, and a reader who wants another model picks it again in the sheet
 				 *  (the home drops a restored model on remount anyway, so nothing a reader
-				 *  could rely on is lost). The folder is kept: it is the reader's. */
+				 *  could rely on is lost). The folder is kept: it is the reader's.
+				 *
+				 *  `effort` goes with the model, for the same reason: it was chosen
+				 *  against a ladder, a capability and a computer this restore cannot
+				 *  re-check before `resume()` replays the queue, and an effort the relay no
+				 *  longer licenses is a refused keyed start. */
 				if (this.record.selection !== null) {
 					const {
 						provider: _provider,
 						model_id: _model,
+						effort: _effort,
 						...kept
 					} = this.record.selection;
 					this.record.selection = kept;

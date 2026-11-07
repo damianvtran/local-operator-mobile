@@ -51,6 +51,7 @@ import type {
 	LibraryTagResponse,
 	LibraryTagsResponse,
 	LinkedSession,
+	ModelDefault,
 	ModelEntry,
 	ModelsResponse,
 	NotificationDetailResponse,
@@ -1224,6 +1225,16 @@ export const sttCapabilitySchema = z.looseObject({
 	reason: z.string().optional(),
 });
 
+/** Every field optional: the app reads `effort` alone today, and a relay that
+ *  publishes the object without one of the receipt fields must not fail the
+ *  whole session list frame. */
+export const sessionStartCapabilitySchema = z.looseObject({
+	version: z.number().int().optional(),
+	durable_idempotency: z.boolean().optional(),
+	receipt_capacity: z.number().int().optional(),
+	effort: z.boolean().optional(),
+});
+
 export const capabilitiesSchema = z.looseObject({
 	features: z.record(z.string(), z.unknown()).optional(),
 	/** Absent means the relay never knew about the key, which reads exactly like
@@ -1236,6 +1247,13 @@ export const capabilitiesSchema = z.looseObject({
 	 *  defaulted: absence is an older relay whose routes do not exist, while a
 	 *  default `{available: true}` would advertise controls that 404. */
 	session_tags: sessionTagsCapabilitySchema.optional(),
+	/** The start route's capability (`docs/design/mobile-start-receipts.md`
+	 *  "Capability"). Optional and never defaulted: absence is a relay that
+	 *  predates the contract. `effort: true` is the ONLY licence to put `effort`
+	 *  in a start body — an older relay refuses it on a keyed start and silently
+	 *  drops it on an unkeyed one, which would start at the configured default
+	 *  while the phone said otherwise. */
+	session_start: sessionStartCapabilitySchema.optional(),
 });
 
 /** The frame-level unread aggregate (push/ack-sync S1, ADR 0006 §1.1).
@@ -1510,10 +1528,34 @@ export const modelEntrySchema = z.looseObject({
 	label: z.string().optional(),
 	connected: z.boolean().optional(),
 	aggregated: z.boolean().optional(),
+	/** The row's effort ladder, lowest first (local-operator v0.101.9,
+	 *  `docs/design/mobile-start-receipts.md` "Picking a model and effort"). THREE
+	 *  readings, and they must stay three: a list is the ladder the effort picker
+	 *  offers; `[]` means the model has NO effort setting (offer nothing, send
+	 *  nothing); an ABSENT key means the computer does not know the ladder — an
+	 *  older daemon, or an aggregator id it has not read — so the picker offers the
+	 *  whole vocabulary and the session clamps. Never defaulted: a default `[]`
+	 *  would hide a real control, a default list would invent rungs. */
+	efforts: z.array(z.string()).optional(),
+});
+
+/** What a start that names no `provider`/`model_id`/`effort` runs on this
+ *  computer — the configured model, and its effort clamped to that model's
+ *  ladder (`null` when the model has no ladder). */
+export const modelDefaultSchema = z.looseObject({
+	selector: nonEmpty,
+	provider: z.string(),
+	model_id: z.string(),
+	effort: z.string().nullable(),
 });
 
 export const modelsResponseSchema = z.looseObject({
 	models: z.array(modelEntrySchema),
+	/** The computer's resolved default. `null` means it resolved none (say
+	 *  "unavailable"); an ABSENT key means an older daemon that never published
+	 *  one. Kept as two readings rather than defaulted, because the home chip says
+	 *  different things for them. */
+	default: modelDefaultSchema.nullable().optional(),
 });
 
 export const directoriesSchema = z.looseObject({
@@ -2454,6 +2496,7 @@ export type {
 	LibraryTagResponse,
 	LibraryTagsResponse,
 	LinkedSession,
+	ModelDefault,
 	ModelEntry,
 	ModelsResponse,
 	NotificationDetailResponse,

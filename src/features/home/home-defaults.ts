@@ -31,6 +31,9 @@ export type HomeFolders = Readonly<{
 	/** Recently active directories the computer's spawn gate admits, so every row
 	 *  is a directory a session can actually start in. */
 	recent: readonly string[];
+	/** The computer's temp folder, which its spawn gate also admits — offered as a
+	 *  scratch start by the folder picker. Absent from an older computer. */
+	tmp?: string;
 }>;
 
 /** The folder list, from the read's payload. `home` is the fallback only for a
@@ -42,6 +45,9 @@ export const foldersFrom = (payload: Payload<"directories">): HomeFolders => {
 		home: payload.home,
 		default: published.length > 0 ? published : payload.home,
 		recent: payload.recent,
+		...(payload.tmp !== undefined && payload.tmp.length > 0
+			? { tmp: payload.tmp }
+			: {}),
 	};
 };
 
@@ -126,18 +132,41 @@ export const homeStartSelection = (input: {
 	/** The folder the home will start in, once a read has resolved it. */
 	cwd: string | null;
 	chosenModel: ModelEntry | null;
+	/** The level the reader picked in the effort picker, `null` when none. */
+	chosenEffort?: string | null;
+	/** `capabilities.session_start.effort`: the relay accepts `effort`. */
+	effortSupported?: boolean;
 }): StartSessionRequest | null => {
 	if (input.cwd === null) return null;
 	return {
 		cwd: input.cwd,
-		...(input.chosenModel !== null
-			? {
-					provider: input.chosenModel.provider,
-					model_id: input.chosenModel.model_id,
-				}
-			: {}),
+		...modelFields(input.chosenModel),
+		...effortField(input.chosenEffort ?? null, input.effortSupported ?? false),
 	};
 };
+
+/** `provider`/`model_id` for a chosen model, nothing otherwise — one writer for
+ *  both bodies below, so their key order (which `restoredSupersede` compares)
+ *  cannot drift. */
+const modelFields = (
+	model: ModelEntry | null,
+): Pick<StartSessionRequest, "provider" | "model_id"> =>
+	model !== null ? { provider: model.provider, model_id: model.model_id } : {};
+
+/**
+ * `effort` ONLY when the reader chose one AND the relay advertises
+ * `capabilities.session_start.effort` (local-operator v0.101.9). The same rule as
+ * the model's: an absent field is how the computer applies its configured
+ * default, so the app never fills it in. And the capability gate is not a
+ * nicety — an older relay REFUSES `effort` on a keyed start
+ * (`invalid_start_request`) and silently DROPS it on an unkeyed one, starting the
+ * session at a level the reader did not pick while the chip said they had.
+ */
+const effortField = (
+	effort: string | null,
+	supported: boolean,
+): Pick<StartSessionRequest, "effort"> =>
+	effort !== null && supported ? { effort } : {};
 
 /**
  * What the home must WRITE INTO a restored record, or `null` when the record
@@ -180,6 +209,11 @@ export const restoredSupersede = (input: {
 	 *  failed — without it the invented `home` cannot be told from a chosen one. */
 	folders: HomeFolders | null;
 	chosenModel: ModelEntry | null;
+	/** The reader's effort, and whether the relay accepts one: an effort is
+	 *  written into the record by exactly the rule the live body follows, so a
+	 *  restored effort nobody chose in this mount is stripped like a model. */
+	chosenEffort?: string | null;
+	effortSupported?: boolean;
 	/** Whether the reader has applied a folder on this computer since the screen
 	 *  mounted. Once they have, the record is THEIR choice, not a restored one. */
 	readerApplied: boolean;
@@ -199,14 +233,14 @@ export const restoredSupersede = (input: {
 			: stored.cwd;
 	const next: StartSessionRequest = {
 		...(cwd !== undefined ? { cwd } : {}),
-		...(chosenModel !== null
-			? { provider: chosenModel.provider, model_id: chosenModel.model_id }
-			: {}),
+		...modelFields(chosenModel),
+		...effortField(input.chosenEffort ?? null, input.effortSupported ?? false),
 	};
 	/* Key order matters to this comparison: `next` is built just above and `stored`
-	 *  comes from the coordinator's record (written by `homeStartSelection` or the
-	 *  sheet's Apply, then round-tripped through its JSON `copy`), and every one of
-	 *  those writers emits `cwd`, then `provider`, then `model_id`. */
+	 *  comes from the coordinator's record (written by `homeStartSelection` or a
+	 *  picker's commit, then round-tripped through its JSON `copy`), and every one
+	 *  of those writers emits `cwd`, then `provider`, then `model_id`, then
+	 *  `effort` — the pickers commit through `homeStartSelection` itself. */
 	return JSON.stringify(next) === JSON.stringify(stored) ? null : next;
 };
 
@@ -237,10 +271,16 @@ export const homeModelReading = (input: {
 	return { kind: "default" };
 };
 
-/** One row of the options sheet's model list: the computer's default, or an entry. */
+/** One row of the model picker: the computer's default, or an entry. `isDefault`
+ *  marks the catalogue row the computer's `default` names. */
 export type HomeModelRow =
 	| Readonly<{ kind: "default"; selected: boolean }>
-	| Readonly<{ kind: "model"; model: ModelEntry; selected: boolean }>;
+	| Readonly<{
+			kind: "model";
+			model: ModelEntry;
+			selected: boolean;
+			isDefault: boolean;
+	  }>;
 
 /**
  * The model half of the options sheet, in render order.
@@ -260,34 +300,34 @@ export type HomeModelRow =
 export const homeModelRows = (input: {
 	models: readonly ModelEntry[];
 	optionModel: ModelEntry | null;
-}): readonly HomeModelRow[] => [
-	{ kind: "default", selected: input.optionModel === null },
-	...input.models.map(
-		(model): HomeModelRow => ({
+	/** `default.selector` from `GET /api/models`, when the computer published one. */
+	defaultSelector?: string | null;
+}): readonly HomeModelRow[] => {
+	/* WHEN THE DEFAULT IS NAMED AND LISTED, ITS OWN ROW IS THE WAY BACK (design
+	 *  spec §6: "the effective model is always the ✓ row"). The separate "use this
+	 *  computer's default" row would put a second ✓ beside the default model's row
+	 *  for one choice, so it is dropped, and the default model's row carries the
+	 *  meaning instead: the picker maps a tap on it to "choose nothing", so the
+	 *  start still names no model and the configured default — not a pinned copy of
+	 *  it — is what runs. Either way the row set depends on the catalogue alone,
+	 *  never on a tap (D1). */
+	const named =
+		input.defaultSelector !== undefined &&
+		input.defaultSelector !== null &&
+		input.models.some((model) => model.selector === input.defaultSelector);
+	const rows = input.models.map((model): HomeModelRow => {
+		const isDefault = named && model.selector === input.defaultSelector;
+		return {
 			kind: "model",
 			model,
-			selected: input.optionModel?.selector === model.selector,
-		}),
-	),
-];
-
-/**
- * Which folder rows say they hold the sheet's folder, for screen readers (UX U5).
- *
- * The folder rows already stay mounted on tap (they fill the field, they do not
- * remove themselves), so only their selected STATE is new. It is announced, not
- * painted: the default row and the first recent row usually name the same path,
- * and two solid rows for one choice would read as two choices — the visual marker
- * is the folder picker's job (redesign item 5, design D3). A path typed into the
- * field that no row names selects no row.
- */
-export const homeFolderSelection = (input: {
-	folders: HomeFolders;
-	optionPath: string;
-}): Readonly<{ default: boolean; recent: readonly boolean[] }> => {
-	const path = input.optionPath.trim();
-	return {
-		default: path === input.folders.default,
-		recent: input.folders.recent.map((directory) => directory === path),
-	};
+			isDefault,
+			selected:
+				input.optionModel === null
+					? isDefault
+					: input.optionModel.selector === model.selector,
+		};
+	});
+	return named
+		? rows
+		: [{ kind: "default", selected: input.optionModel === null }, ...rows];
 };

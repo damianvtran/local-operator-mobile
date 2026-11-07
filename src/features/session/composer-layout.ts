@@ -1,3 +1,5 @@
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+
 /** Build389 shared layout. Model/effort live in a permanent context strip,
  * never in a keyboard-inline receipt. Optional facts live in More, so no
  * measured-width ladder can temporarily paint all facts or evict effort. */
@@ -35,3 +37,32 @@ export const COMPOSER_CHIP_CAPSULE_ALIGN = "flex-start" as const;
 export const ATTACH_GLYPH_PT = 20;
 
 export const MODEL_FLOOR_PT = 44;
+
+/**
+ * The home strip's folder chip: a folder glyph and the folder's own name, capped,
+ * and the glyph alone at large text (design D2 / UX U4).
+ *
+ * WHY. Once the chip names the real folder instead of `~` (UX U1), a whole path
+ * took up to the old 160 pt cap before anything else yielded, and at 320 pt /
+ * 200 % the model chip was already down to `Cla…` — Opus 5 and Opus 4.8 then
+ * read the same. The name is what tells two folders apart at a glance; the whole
+ * path stays on the chip's spoken label and in the sheet. The glyph is what makes
+ * a bare `~` or `app` read as a control rather than a stray character.
+ */
+export const FOLDER_CHIP_MAX_PT = 112;
+
+/** The folder chip's visible text at this text scale: its name, or nothing (the
+ *  glyph alone) past `LARGE_TEXT_SCALE`, where the strip's width belongs to the
+ *  model's name. */
+export const folderChipText = (name: string, scale: number): string =>
+	scale > LARGE_TEXT_SCALE ? "" : name;
+
+/**
+ * The order the home strip's chips give up width: folder first, then effort,
+ * then model (design D2). Flex weights, not a measured ladder: a chip's shrink
+ * is weighted by its own width, so a factor of ten between neighbours makes the
+ * earlier one give nearly all of the overflow before the next moves, and each
+ * still stops at its 44 pt floor. Home only — the session strip (no folder) keeps
+ * its model `flex-1` slot unchanged.
+ */
+export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;

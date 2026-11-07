@@ -79,10 +79,22 @@ describe("final design audit wiring", () => {
 			),
 			"utf8",
 		);
-		const at = composer.indexOf("testID={folderChip.testID}");
-		const chip = composer.slice(composer.lastIndexOf("<Chip", at), at);
-		// D2: one row of disclosures must not mix a filled bordered chip with flat text.
-		expect(chip).toContain("quiet");
+		/* Since the pickers' round-1 remediation the folder chip lives in the strip
+		 *  only (UX U5 dropped More's copy), drawn by `ComposerChipButton` — the
+		 *  same quiet chip as the model's. D2: one row of disclosures must not mix
+		 *  a filled bordered chip with flat text. */
+		expect(composer).not.toContain("testID={folderChip.testID}");
+		const at = composer.indexOf("testID={CONTROL.homeFolderChip}");
+		const chip = composer.slice(
+			composer.lastIndexOf("<ComposerChipButton", at),
+			at,
+		);
+		expect(chip).toContain("onPress={folderChip.onPress}");
+		const button = composer.slice(
+			composer.indexOf("const ComposerChipButton"),
+			composer.indexOf("const stripChipSurface"),
+		);
+		expect(button.slice(button.lastIndexOf("<Chip"))).toContain("quiet");
 	});
 
 	it("keeps the home header's computer on ONE fitted line", () => {
