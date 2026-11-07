@@ -32,12 +32,14 @@
  *  lag: the press is acknowledged in the SAME frame, before the permission prompt
  *  and the native recorder are awaited, so a hold that has not yet opened the
  *  microphone is not silent (see `use-dictation.ts`'s note on the press path). */
+import { t } from "@/i18n";
+
 export type DictationPhase = "idle" | "starting" | "recording" | "transcribing";
 
 /** The one-line outcome the polite status row announces once a dictation has
  *  ended. `null` is "nothing to say" — a failure carries its own sentence on the
  *  composer's error line and must not also be announced here. */
-export type DictationOutcome = "added" | "empty" | "discarded";
+export type DictationOutcome = "added" | "empty" | "discarded" | "unavailable";
 
 export interface DictationSnapshot {
 	phase: DictationPhase;
@@ -81,7 +83,11 @@ export type DictationEvent =
 	/** The reader's own discard: no request, and no line (their action, not a loss). */
 	| { type: "cancel" }
 	/** A send/steer took the composer: abort, discard, and SAY SO. */
-	| { type: "send" };
+	| { type: "send" }
+	/* The mic was pressed on a computer with no speech-to-text configured
+	 * (`stt/capability.ts` `micSetupNeeded`). Not a phase: nothing records and
+	 * nothing is sent; the press is answered with the set-up line instead. */
+	| { type: "unavailable" };
 
 export interface DictationTransition {
 	state: DictationSnapshot;
@@ -165,6 +171,11 @@ export function reduceDictation(
 			};
 		}
 
+		case "unavailable":
+			return phase === "idle"
+				? { state: { phase: "idle", outcome: "unavailable" }, effects: [] }
+				: { state, effects: [] };
+
 		case "send": {
 			if (!live(phase)) return { state, effects: [] };
 			/* U2: the send is not a deliberate cancel, so the drop is SAID. */
@@ -205,8 +216,12 @@ export const dictationStatusLine = (state: DictationSnapshot): string => {
 		case "transcribing":
 			return "Transcribing";
 		case "idle":
-			return state.outcome === null
-				? ""
+			if (state.outcome === null) return "";
+			/* The set-up line is catalogue copy (it is new, and new copy ships in
+			 * every locale); the three design §2.5 lines above predate the runtime
+			 * and are pinned verbatim by their own test. */
+			return state.outcome === "unavailable"
+				? t("mobile.composer_input.voice.setup_needed")
 				: DICTATION_OUTCOME_COPY[state.outcome];
 	}
 };

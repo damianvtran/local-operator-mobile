@@ -70,6 +70,14 @@ export type CatalogueKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.paste.image"
+	| "mobile.composer_input.paste.image_hint"
+	| "mobile.composer_input.voice.discard"
+	| "mobile.composer_input.voice.finish"
+	| "mobile.composer_input.voice.mic_setup"
+	| "mobile.composer_input.voice.mic_setup_hint"
+	| "mobile.composer_input.voice.setup_needed"
+	| "mobile.composer_input.voice.transcribing"
 	| "mobile.computers.account_help"
 	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
@@ -402,6 +410,14 @@ export type NoParamKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.paste.image"
+	| "mobile.composer_input.paste.image_hint"
+	| "mobile.composer_input.voice.discard"
+	| "mobile.composer_input.voice.finish"
+	| "mobile.composer_input.voice.mic_setup"
+	| "mobile.composer_input.voice.mic_setup_hint"
+	| "mobile.composer_input.voice.setup_needed"
+	| "mobile.composer_input.voice.transcribing"
 	| "mobile.computers.account_help"
 	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
@@ -693,6 +709,14 @@ export type MessageParams = {
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.composer_input.paste.image": NoParams;
+	"mobile.composer_input.paste.image_hint": NoParams;
+	"mobile.composer_input.voice.discard": NoParams;
+	"mobile.composer_input.voice.finish": NoParams;
+	"mobile.composer_input.voice.mic_setup": NoParams;
+	"mobile.composer_input.voice.mic_setup_hint": NoParams;
+	"mobile.composer_input.voice.setup_needed": NoParams;
+	"mobile.composer_input.voice.transcribing": NoParams;
 	"mobile.computers.account_help": NoParams;
 	"mobile.computers.account_mismatch": NoParams;
 	"mobile.computers.add": NoParams;
@@ -1045,6 +1069,14 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
+	"mobile.composer_input.paste.image": "Paste image",
+	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
+	"mobile.composer_input.voice.discard": "Discard voice input",
+	"mobile.composer_input.voice.finish": "Finish and transcribe",
+	"mobile.composer_input.voice.mic_setup": "Voice input isn’t set up",
+	"mobile.composer_input.voice.mic_setup_hint": "Explains how to turn on voice input",
+	"mobile.composer_input.voice.setup_needed": "Set up speech-to-text on your computer to use voice input.",
+	"mobile.composer_input.voice.transcribing": "Transcribing your recording",
 	"mobile.computers.account_help": "Sign in with the account that owns it. If it was removed, choose another computer.",
 	"mobile.computers.account_mismatch": "This computer belongs to another Radient account, or was removed.",
 	"mobile.computers.add": "Add a computer",
@@ -1382,6 +1414,14 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
+	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
+	"mobile.composer_input.voice.discard": { role: "button", note: "Accessible name of the ✕ in the recording row: throws the recording away and sends nothing. Distinct from finishing. No final full stop." },
+	"mobile.composer_input.voice.finish": { role: "button", note: "Accessible name of the ✓ in the recording row: stops recording and transcribes it into the draft. No final full stop." },
+	"mobile.composer_input.voice.mic_setup": { role: "button", note: "Accessible name of the composer's mic when the computer has no speech-to-text configured. Screen readers only; no final full stop." },
+	"mobile.composer_input.voice.mic_setup_hint": { role: "button", note: "Accessibility hint for the mic in its not-set-up state: what a tap does (shows how to turn voice input on). No final full stop." },
+	"mobile.composer_input.voice.setup_needed": { role: "status", note: "Status line under the composer after the reader taps the mic on a computer with no speech-to-text configured. Transcription runs on the computer, so the fix is there, not on the phone. Full sentence with final full stop." },
+	"mobile.composer_input.voice.transcribing": { role: "status", note: "Accessible name of the progress indicator shown while the computer transcribes the recording. No final full stop." },
 	"mobile.computers.account_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.account_mismatch": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
@@ -1733,6 +1773,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.composer_input.paste.image": "Pegar imagen",
+		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
+		"mobile.composer_input.voice.discard": "Descartar la entrada de voz",
+		"mobile.composer_input.voice.finish": "Terminar y transcribir",
+		"mobile.composer_input.voice.mic_setup": "La entrada de voz no está configurada",
+		"mobile.composer_input.voice.mic_setup_hint": "Explica cómo activar la entrada de voz",
+		"mobile.composer_input.voice.setup_needed": "Configura la conversión de voz a texto en tu ordenador para usar la entrada de voz.",
+		"mobile.composer_input.voice.transcribing": "Transcribiendo tu grabación",
 		"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otro equipo.",
 		"mobile.computers.account_mismatch": "Este equipo pertenece a otra cuenta de Radient o se ha eliminado.",
 		"mobile.computers.add": "Añadir una máquina",
@@ -2068,6 +2116,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.composer_input.paste.image": "Coller l’image",
+		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
+		"mobile.composer_input.voice.discard": "Supprimer la saisie vocale",
+		"mobile.composer_input.voice.finish": "Terminer et transcrire",
+		"mobile.composer_input.voice.mic_setup": "La saisie vocale n’est pas configurée",
+		"mobile.composer_input.voice.mic_setup_hint": "Explique comment activer la saisie vocale",
+		"mobile.composer_input.voice.setup_needed": "Configurez la reconnaissance vocale sur votre ordinateur pour utiliser la saisie vocale.",
+		"mobile.composer_input.voice.transcribing": "Transcription de votre enregistrement",
 		"mobile.computers.account_help": "Connectez-vous avec le compte propriétaire. S’il a été supprimé, choisissez un autre ordinateur.",
 		"mobile.computers.account_mismatch": "Cet ordinateur appartient à un autre compte Radient ou a été supprimé.",
 		"mobile.computers.add": "Ajouter un ordinateur",
@@ -2403,6 +2459,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
+		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
+		"mobile.composer_input.voice.discard": "वॉइस इनपुट हटाएँ",
+		"mobile.composer_input.voice.finish": "पूरा करें और लिखें",
+		"mobile.composer_input.voice.mic_setup": "वॉइस इनपुट सेट नहीं है",
+		"mobile.composer_input.voice.mic_setup_hint": "वॉइस इनपुट चालू करने का तरीका बताता है",
+		"mobile.composer_input.voice.setup_needed": "वॉइस इनपुट इस्तेमाल करने के लिए अपने कंप्यूटर पर स्पीच-टू-टेक्स्ट सेट करें।",
+		"mobile.composer_input.voice.transcribing": "आपकी रिकॉर्डिंग लिखी जा रही है",
 		"mobile.computers.account_help": "इसके मालिक के खाते से साइन इन करें। अगर इसे हटा दिया गया है, तो दूसरा कंप्यूटर चुनें।",
 		"mobile.computers.account_mismatch": "यह कंप्यूटर किसी दूसरे Radient खाते का है या हटा दिया गया है।",
 		"mobile.computers.add": "कंप्यूटर जोड़ें",
@@ -2738,6 +2802,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
+		"mobile.composer_input.paste.image": "Вставить изображение",
+		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
+		"mobile.composer_input.voice.discard": "Отменить голосовой ввод",
+		"mobile.composer_input.voice.finish": "Завершить и расшифровать",
+		"mobile.composer_input.voice.mic_setup": "Голосовой ввод не настроен",
+		"mobile.composer_input.voice.mic_setup_hint": "Объясняет, как включить голосовой ввод",
+		"mobile.composer_input.voice.setup_needed": "Настройте распознавание речи на компьютере, чтобы пользоваться голосовым вводом.",
+		"mobile.composer_input.voice.transcribing": "Расшифровка записи",
 		"mobile.computers.account_help": "Войдите в аккаунт владельца. Если компьютер удалён, выберите другой.",
 		"mobile.computers.account_mismatch": "Этот компьютер принадлежит другому аккаунту Radient или был удалён.",
 		"mobile.computers.add": "Добавить компьютер",
@@ -3073,6 +3145,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
+		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
+		"mobile.composer_input.voice.discard": "آواز کا ان پٹ مسترد کریں",
+		"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
+		"mobile.composer_input.voice.mic_setup": "آواز سے ان پٹ سیٹ اپ نہیں ہے",
+		"mobile.composer_input.voice.mic_setup_hint": "آواز سے ان پٹ آن کرنے کا طریقہ بتاتا ہے",
+		"mobile.composer_input.voice.setup_needed": "آواز سے ان پٹ استعمال کرنے کے لیے اپنے کمپیوٹر پر اسپیچ ٹو ٹیکسٹ سیٹ اپ کریں۔",
+		"mobile.composer_input.voice.transcribing": "آپ کی ریکارڈنگ تحریر کی جا رہی ہے",
 		"mobile.computers.account_help": "مالک کے اکاؤنٹ سے سائن ان کریں۔ اگر اسے ہٹا دیا گیا ہے تو دوسرا کمپیوٹر منتخب کریں۔",
 		"mobile.computers.account_mismatch": "یہ کمپیوٹر کسی دوسرے Radient اکاؤنٹ کا ہے یا ہٹا دیا گیا ہے۔",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
@@ -3408,6 +3488,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.composer_input.paste.image": "Dán hình ảnh",
+		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
+		"mobile.composer_input.voice.discard": "Hủy nhập bằng giọng nói",
+		"mobile.composer_input.voice.finish": "Hoàn tất và chép lời",
+		"mobile.composer_input.voice.mic_setup": "Chưa thiết lập nhập bằng giọng nói",
+		"mobile.composer_input.voice.mic_setup_hint": "Giải thích cách bật nhập bằng giọng nói",
+		"mobile.composer_input.voice.setup_needed": "Hãy thiết lập chuyển giọng nói thành văn bản trên máy tính để dùng nhập bằng giọng nói.",
+		"mobile.composer_input.voice.transcribing": "Đang chép lời bản ghi",
 		"mobile.computers.account_help": "Đăng nhập bằng tài khoản chủ sở hữu. Nếu máy tính đã bị xóa, hãy chọn máy khác.",
 		"mobile.computers.account_mismatch": "Máy tính này thuộc tài khoản Radient khác hoặc đã bị xóa.",
 		"mobile.computers.add": "Thêm máy tính",
@@ -3743,6 +3831,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
+		"mobile.composer_input.paste.image": "粘贴图片",
+		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
+		"mobile.composer_input.voice.discard": "放弃语音输入",
+		"mobile.composer_input.voice.finish": "完成并转写",
+		"mobile.composer_input.voice.mic_setup": "语音输入尚未设置",
+		"mobile.composer_input.voice.mic_setup_hint": "说明如何开启语音输入",
+		"mobile.composer_input.voice.setup_needed": "请在电脑上设置语音转文字，以使用语音输入。",
+		"mobile.composer_input.voice.transcribing": "正在转写你的录音",
 		"mobile.computers.account_help": "请使用电脑所有者的账户登录。如果电脑已被移除，请选择其他电脑。",
 		"mobile.computers.account_mismatch": "这台电脑属于另一个 Radient 账户，或已被移除。",
 		"mobile.computers.add": "添加电脑",

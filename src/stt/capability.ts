@@ -53,3 +53,32 @@ export const micVisible = (
 	capabilities: Capabilities | null | undefined,
 	canRecord: boolean = buildCanRecord(),
 ): boolean => sttAvailable(capabilities) && canRecord;
+
+/**
+ * Whether to render the mic in its SET-UP state: this build can record, the
+ * computer has answered, and its answer is "no speech-to-text here".
+ *
+ * Why not simply hide it (which is what `micVisible` alone did, and what the
+ * relay's web composer still does): the operator looked for a mic on a phone
+ * whose computer had no persisted STT credential and found nothing — no
+ * control, no reason, no way to learn that the fix is on the computer. The
+ * daemon advertises `available: false` for exactly that case (it keys on
+ * PERSISTED credentials only, `local_operator/mobile/stt.py`), so the phone can
+ * say so. Transcription always runs on the computer with the operator's own STT
+ * configuration; the phone never holds a key, so "set it up on your computer"
+ * is the whole of the fix.
+ *
+ * `capabilities` that are absent, or carry no `stt` key at all, are "not
+ * answered yet" (the list store's bare `{}` before its first frame), NOT
+ * "unavailable": painting the set-up mic there would flash it on every cold
+ * start before the real answer lands. A parsed frame always carries the key
+ * (the schema defaults it), so an older relay that omits it reads as
+ * unavailable once its frame has arrived.
+ */
+export const micSetupNeeded = (
+	capabilities: Capabilities | null | undefined,
+	canRecord: boolean = buildCanRecord(),
+): boolean =>
+	canRecord &&
+	capabilities?.stt !== undefined &&
+	capabilities.stt.available !== true;

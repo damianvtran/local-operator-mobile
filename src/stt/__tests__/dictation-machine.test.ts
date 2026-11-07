@@ -201,3 +201,21 @@ describe("the mic's own vocabulary", () => {
 		expect(MIC_HINT.transcribing).toBeUndefined();
 	});
 });
+
+describe("a press on a computer with no speech-to-text (TestFlight 578)", () => {
+	it("records nothing and rests on the set-up line", () => {
+		const { state, effects } = step(IDLE_DICTATION, { type: "unavailable" });
+		expect(effects).toEqual([]);
+		expect(state).toEqual({ phase: "idle", outcome: "unavailable" });
+		expect(dictationStatusLine(state)).toBe(
+			"Set up speech-to-text on your computer to use voice input.",
+		);
+	});
+
+	it("cannot interrupt a live take", () => {
+		expect(step(recording, { type: "unavailable" }).state).toBe(recording);
+		expect(step(transcribing, { type: "unavailable" }).state).toBe(
+			transcribing,
+		);
+	});
+});

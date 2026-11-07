@@ -1,66 +1,103 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: the bars are POSITIONAL — the row is a scrolling level history and a bar's identity is its slot, not its value. A value-derived key would be recomputed every frame to produce the same value (the case React's own key docs exempt).
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { View } from "react-native";
+import Animated, {
+	Easing,
+	type SharedValue,
+	useAnimatedStyle,
+	useReducedMotion,
+	useSharedValue,
+	withTiming,
+} from "react-native-reanimated";
 
-import { LEVEL_BARS, type MeterStore } from "@/stt/levels";
+import {
+	LEVEL_BARS,
+	METER_SAMPLE_MS,
+	type MeterStore,
+	peakLevel,
+	waveformBars,
+} from "@/stt/levels";
 
-/** The shortest a bar ever gets — its HEIGHT floor. Not zero: a flat meter must
- *  still read as a meter ("the microphone is on and hearing nothing") rather than
- *  as an empty row, which is the silent-take the meter exists to make visible
- *  before it becomes an empty transcript. */
+/** The shortest a bar ever gets. Not zero: a flat meter must still read as a
+ *  meter ("the microphone is on and hearing nothing") rather than as an empty
+ *  row, which is the silent take the meter exists to make visible before it
+ *  becomes an empty transcript. */
 const BAR_MIN_PX = 3;
 
-/** The bars' WIDTH floor — separate from, and lower than, the height floor, because
- *  it exists for a different reason.
- *
- *  `flex-1` gives a bar a flex-BASIS of zero and react-native-web lets a flex item
- *  shrink to it, so at a text scale where the row is squeezed every bar measured
- *  0.0 px wide and the meter — this row's headline — rendered as nothing (design
- *  round 1, D2: 320 pt/150 % and 200 %, 390 pt/200 %). A minimum width the flex
- *  shrink cannot cross keeps each bar visible.
- *
- *  WHY 2.5 AND NOT THE 3 px HEIGHT FLOOR: the floor has to FIT its box. The group's
- *  min-content width is `LEVEL_BARS` widths plus their `gap-0.5` (2 px) gaps, and the
- *  narrowest meter box is 320 pt at 200 % (clientWidth ≈ 76 px, design round 2's
- *  measurement). At a 3 px width floor that group is 16 × 3 + 15 × 2 = 78 px — 2 px
- *  over the box — so the row's `overflow-hidden` took the shortfall off the trailing,
- *  NEWEST bar and clipped it to ≈1 px (design round 2, D7). At 2.5 px the group's
- *  min-content width is 16 × 2.5 + 15 × 2 = 70 px, inside the box with room to spare.
- *
- *  THE FLOOR IS INERT IN EVERY MEASURED CELL, which is a different claim from the
- *  one this comment used to make. It is not that the 2.5 px floor clamps at
- *  320 pt/200 %: the narrowest natural bar there measures 2.875 px, already above
- *  2.5, so the floor clamps nothing and no cell's painted width changed when it
- *  dropped from 3. Every wider cell's natural width is larger still (3.34 px at
- *  320 pt/100 %, up to 9.78 px at 390 pt/150 %). The floor is a backstop for a box
- *  narrower than any the matrix drives, not a value the meter currently rests on
- *  (review round 3, R3-5).
- *
- *  RESIDUAL, bounded: the fit argument assumes the meter box never drops below
- *  `LEVEL_BARS × 2.5 + (LEVEL_BARS − 1) × 2 = 70 px`, since that is where the floor
- *  would start clamping and the trailing bar would clip again. The tightest measured
- *  box is 76 px (320 pt at 200 %), leaving 6 px of slack — so this is a guard, not a
- *  standing margin. */
-const BAR_MIN_W_PX = 2.5;
-
-/** The tallest. The row sits inside the composer's recording bar, which is a
- *  `min-h-11` (44 pt) line, so the meter can never be the thing that sets the row's
- *  height — the design's D3 requires one height across recording / transcribing /
- *  outcome, and a meter that grew the row would break it at the loudest sample. */
+/** The tallest. The meter sits inside the composer's recording row, whose height
+ *  is fixed across recording / transcribing / outcome (design §2.5 D3), so the
+ *  meter can never be what sets it — a bar that grew the row would move the
+ *  composer at the loudest syllable. */
 const BAR_MAX_PX = 22;
 
+/** A bar's share of its slot; the rest is the gap. A ratio rather than the old
+ *  fixed `gap-0.5`, because the slot is now MEASURED (the roll needs a pitch in
+ *  points): at the narrowest measured box (≈76 px, 320 pt at 200 %) a slot is
+ *  4.75 px and the bar 2.9 px — above the 2.5 px width floor the flex layout
+ *  needed to keep bars from collapsing to 0 px there (design round 1, D2). */
+const BAR_FILL = 0.6;
+
+/** Older bars fade toward this opacity: the trail reads as time passing, and the
+ *  newest (full-opacity) bar is where the eye lands. Decoration only. */
+const TRAIL_MIN_OPACITY = 0.35;
+
+/** Bars drawn: one more than the history window, so the bar about to scroll off
+ *  the leading edge is still painted while it slides out (no empty slot opens at
+ *  the left on every sample). */
+const DRAWN = LEVEL_BARS + 1;
+
+const barHeight = (level: number) =>
+	BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX);
+
+/** One bar, reading its height from the shared array on the UI thread. */
+const WaveBar = ({
+	index,
+	levels,
+	width,
+}: {
+	index: number;
+	levels: SharedValue<number[]>;
+	width: number;
+}) => {
+	const style = useAnimatedStyle(() => ({
+		height: barHeight(levels.value[index] ?? 0),
+	}));
+	return (
+		<Animated.View
+			className="rounded-full bg-danger"
+			style={[
+				{
+					width,
+					opacity:
+						TRAIL_MIN_OPACITY + (1 - TRAIL_MIN_OPACITY) * (index / (DRAWN - 1)),
+				},
+				style,
+			]}
+		/>
+	);
+};
+
 /**
- * The recording meter: a row of level bars, oldest on the left.
+ * The live waveform: a rolling row of level bars, mirrored about the centre line,
+ * newest on the right.
  *
- * It subscribes to the level history rather than receiving it as a prop, so the
- * eight-per-second sampling re-renders THIS row and nothing else — the field the
- * reader is looking at (defect 1) must not repaint at that rate. `stt/levels.ts`
- * owns the store and says why; `use-dictation.ts` is the only writer.
+ * WHY IT IS BUILT THIS WAY (operator feedback, TestFlight 578: "a slick recording
+ * design … with the waveform showing as you're talking"):
+ * - The level is SAMPLED at 8 Hz (`METER_SAMPLE_MS`); drawing it at 8 Hz is a
+ *   visible step. Each new sample instead sets the bars once and slides the whole
+ *   row one slot left over exactly one sample interval on the UI thread
+ *   (Reanimated), so the waveform rolls continuously at the display's frame rate.
+ * - NOTHING here re-renders React per sample. The store is read through a plain
+ *   subscription that writes shared values; the bars read those in worklets. The
+ *   composer's controlled field (defect 1: the draft must stay readable while
+ *   recording) is untouched by the meter, and so is this component's own tree.
+ * - Reduce Motion replaces the roll with one static level bar holding the recent
+ *   peak (`peakLevel`) — the "is it hearing me" answer without movement.
  *
  * Decoration, and marked as such: the recording state is carried by the word, the
- * timer and the mic's own morphing label (design §2.5 — colour and motion are never
- * the only carrier), so a screen reader is not read a stream of bar heights.
+ * timer and the controls' labels (design §2.5 — colour and motion are never the
+ * only carrier), so a screen reader is not read a stream of bar heights.
  */
 export const DictationMeter = ({
 	meter,
@@ -69,40 +106,111 @@ export const DictationMeter = ({
 	meter: MeterStore;
 	testID: string;
 }) => {
-	const levels = useSyncExternalStore(
-		meter.subscribe,
-		meter.get,
-		/* The Node/SSR snapshot: this component renders inside a native tree, but the
-		 * test runner and the web export both evaluate it once without a store. */
-		meter.get,
+	const reducedMotion = useReducedMotion();
+	return reducedMotion ? (
+		<StaticLevel meter={meter} testID={testID} />
+	) : (
+		<RollingWaveform meter={meter} testID={testID} />
 	);
+};
+
+const RollingWaveform = ({
+	meter,
+	testID,
+}: {
+	meter: MeterStore;
+	testID: string;
+}) => {
+	/* The slot pitch is the measured box over the window. Measured once per
+	 * layout (a React state change on resize only, never per sample). */
+	const [boxWidth, setBoxWidth] = useState(0);
+	const pitch = boxWidth / LEVEL_BARS;
+	const levels = useSharedValue<number[]>(waveformBars(meter.get(), DRAWN));
+	const shift = useSharedValue(0);
+
+	useEffect(() => {
+		let last = meter.get();
+		levels.value = waveformBars(last, DRAWN);
+		return meter.subscribe(() => {
+			const next = meter.get();
+			levels.value = waveformBars(next, DRAWN);
+			/* A reset (`set([])` at the start or end of a take) is not a sample:
+			 * snap rather than roll a row of floors in. */
+			if (next.length === 0 || next.length < last.length) {
+				shift.value = 0;
+			} else {
+				shift.value = pitch;
+				shift.value = withTiming(0, {
+					duration: METER_SAMPLE_MS,
+					easing: Easing.linear,
+				});
+			}
+			last = next;
+		});
+	}, [meter, levels, shift, pitch]);
+
+	const rowStyle = useAnimatedStyle(() => ({
+		transform: [{ translateX: shift.value }],
+	}));
+
 	return (
 		<View
-			className="h-6 flex-1 flex-row items-end gap-0.5 overflow-hidden"
+			className="h-6 flex-1 overflow-hidden"
+			/* PHYSICAL AXIS, on purpose, in every locale: the waveform is a strip
+			 * chart whose time runs left → right (newest at the right edge), like
+			 * the system's own voice-memo and dictation meters, which do not mirror
+			 * under RTL. Pinning `direction` keeps the row's flex order, the
+			 * one-slot `left` offset and the `translateX` roll on that same axis;
+			 * mirroring only some of them would roll the bars backwards. */
+			style={{ direction: "ltr" }}
+			onLayout={(event) => setBoxWidth(event.nativeEvent.layout.width)}
 			testID={testID}
 			aria-hidden
 		>
-			{Array.from({ length: LEVEL_BARS }, (_, index) => {
-				/* The history is oldest-first and RIGHT-anchored: a fresh take starts at
-				 * the right edge and the row scrolls leftward as it fills, so a history
-				 * shorter than the row leaves the SLOTS BEFORE it at the floor and the
-				 * newest reading sits at the right (the mapping below places a short
-				 * history's entries in the last slots). The alternative — filling from the
-				 * left — was what this comment used to claim while the code did this; a
-				 * right-anchored scrolling history is the conventional shape and is kept. */
-				const offset = levels.length - LEVEL_BARS + index;
-				const level = offset >= 0 ? (levels[offset] ?? 0) : 0;
-				return (
-					<View
-						key={index}
-						className="flex-1 rounded-full bg-danger"
-						style={{
-							minWidth: BAR_MIN_W_PX,
-							height: BAR_MIN_PX + level * (BAR_MAX_PX - BAR_MIN_PX),
-						}}
-					/>
-				);
-			})}
+			{boxWidth > 0 ? (
+				/* The drawn row is one slot wider than the box and starts one slot
+				 * to the left, so at rest exactly the newest `LEVEL_BARS` are in
+				 * view and the extra leading bar is the one sliding out. */
+				<Animated.View
+					className="absolute top-0 bottom-0 flex-row items-center justify-around"
+					style={[{ left: -pitch, width: pitch * DRAWN }, rowStyle]}
+				>
+					{Array.from({ length: DRAWN }, (_, index) => (
+						<WaveBar
+							key={index}
+							index={index}
+							levels={levels}
+							width={pitch * BAR_FILL}
+						/>
+					))}
+				</Animated.View>
+			) : null}
+		</View>
+	);
+};
+
+const StaticLevel = ({
+	meter,
+	testID,
+}: {
+	meter: MeterStore;
+	testID: string;
+}) => {
+	/* A re-render of THIS bar alone, and only when the held peak changes value:
+	 * React bails out of an unchanged primitive, so steady speech costs nothing. */
+	const peak = useSyncExternalStore(
+		meter.subscribe,
+		() => peakLevel(meter.get()),
+		() => peakLevel(meter.get()),
+	);
+	return (
+		<View className="h-6 flex-1 justify-center" testID={testID} aria-hidden>
+			<View className="h-1.5 overflow-hidden rounded-full bg-danger-wash">
+				<View
+					className="h-full rounded-full bg-danger"
+					style={{ width: `${Math.max(4, Math.round(peak * 100))}%` }}
+				/>
+			</View>
 		</View>
 	);
 };

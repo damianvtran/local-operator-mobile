@@ -45,6 +45,7 @@ const FORCED: Record<string, DictationSnapshot> = {
 	added: { phase: "idle", outcome: "added" },
 	empty: { phase: "idle", outcome: "empty" },
 	discarded: { phase: "idle", outcome: "discarded" },
+	unavailable: { phase: "idle", outcome: "unavailable" },
 };
 
 /**

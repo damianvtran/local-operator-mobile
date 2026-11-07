@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "请在电脑上设置语音转文字，以使用语音输入。",
+	"mobile.composer_input.voice.mic_setup": "语音输入尚未设置",
+	"mobile.composer_input.voice.mic_setup_hint": "说明如何开启语音输入",
+	"mobile.composer_input.voice.discard": "放弃语音输入",
+	"mobile.composer_input.voice.finish": "完成并转写",
+	"mobile.composer_input.voice.transcribing": "正在转写你的录音",
+	"mobile.composer_input.paste.image": "粘贴图片",
+	"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片"
+}
