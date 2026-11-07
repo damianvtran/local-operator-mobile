@@ -12,7 +12,7 @@ import {
 	layoutFor,
 	pinnedRoutesPaneFloor,
 	regionOrder,
-	SIDEBAR_SLIVER,
+	SIDEBAR_MIN_WIDTH,
 	SIDEBAR_TABLET_MAX,
 	SPLIT_MIN_HEIGHT,
 	sessionStatusLayout,
@@ -23,7 +23,7 @@ import {
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
-import { FIELD_BORDER_Y } from "@/ui/variants";
+import { FIELD_BORDER_Y, touchFloorFor } from "@/ui/variants";
 
 /**
  * The layout thresholds, and only the thresholds.
@@ -596,27 +596,50 @@ describe("status tray beside a pending decision", () => {
 	});
 });
 
-/* The drawer's width rule (design spec 2026-11-06 § 4). The acceptance numbers
- * are the spec's own: 374 pt on a 402 pt phone, and at least 24 pt of the
- * scrimmed page left visible, so the panel still reads as a drawer over a page. */
+/* The drawer's width rule (design spec 2026-11-06 § 4, sliver revised in review
+ * round 1, U1): the page left beside the panel is the platform touch floor, so the
+ * scrimmed sliver — the only one-handed close on iOS — is a compliant target. */
+const IOS_FLOOR = touchFloorFor("ios");
+const OTHER_FLOOR = touchFloorFor("other");
+
 describe("sidebarWidthFor", () => {
-	it("gives a 402 pt phone the spec's 374 pt panel (93 %)", () => {
-		expect(sidebarWidthFor(402)).toBe(374);
+	it("reads the platform floors the sliver is sized to", () => {
+		expect(IOS_FLOOR).toBe(44);
+		expect(OTHER_FLOOR).toBe(48);
 	});
 
-	it("keeps the sliver on narrow phones: 320 pt -> 292", () => {
-		expect(sidebarWidthFor(320)).toBe(292);
-		expect(SIDEBAR_SLIVER).toBe(28);
+	it("gives a 402 pt iPhone a 358 pt panel and a 44 pt close sliver", () => {
+		expect(sidebarWidthFor(402, IOS_FLOOR)).toBe(358);
+		expect(sidebarWidthFor(402, OTHER_FLOOR)).toBe(354);
+	});
+
+	it("keeps the sliver on narrow phones: 320 pt -> 276 (iOS) / 272", () => {
+		expect(sidebarWidthFor(320, IOS_FLOOR)).toBe(276);
+		expect(sidebarWidthFor(320, OTHER_FLOOR)).toBe(272);
 	});
 
 	it("caps landscape and tablets at the ceiling instead of filling the screen", () => {
-		expect(sidebarWidthFor(844)).toBe(SIDEBAR_TABLET_MAX);
-		expect(sidebarWidthFor(1194)).toBe(SIDEBAR_TABLET_MAX);
+		for (const floor of [IOS_FLOOR, OTHER_FLOOR]) {
+			expect(sidebarWidthFor(844, floor)).toBe(SIDEBAR_TABLET_MAX);
+			expect(sidebarWidthFor(1194, floor)).toBe(SIDEBAR_TABLET_MAX);
+		}
+		expect(sidebarWidthFor(440, IOS_FLOOR)).toBe(396);
+		expect(sidebarWidthFor(444, IOS_FLOOR)).toBe(SIDEBAR_TABLET_MAX);
+		expect(sidebarWidthFor(448, OTHER_FLOOR)).toBe(SIDEBAR_TABLET_MAX);
 	});
 
-	it("leaves at least 24 pt of the page at every phone width from 264 pt up", () => {
-		for (let width = 264; width <= 1366; width += 1) {
-			expect(width - sidebarWidthFor(width)).toBeGreaterThanOrEqual(24);
+	it("leaves at least the touch floor of page at every width above the 240 minimum", () => {
+		for (const floor of [IOS_FLOOR, OTHER_FLOOR]) {
+			for (let width = SIDEBAR_MIN_WIDTH + floor; width <= 1366; width += 1) {
+				expect(width - sidebarWidthFor(width, floor)).toBeGreaterThanOrEqual(
+					floor,
+				);
+			}
 		}
+	});
+
+	it("lets the 240 minimum win below 284 / 288 pt", () => {
+		expect(sidebarWidthFor(280, IOS_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
+		expect(sidebarWidthFor(284, OTHER_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
 	});
 });

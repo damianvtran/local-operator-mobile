@@ -695,13 +695,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
 	 * this merge, so neither previous digest is kept. */
 	/* Re-printed 2026-11-07 with --print at the STAGED sidebar-density tree (design spec
-	 * 2026-11-06 § 4): the drawer's width rule moves to `min(400, vw − 28)`, the
+	 * 2026-11-06 § 4, with review round 1's remediation): the drawer's width rule moves
+	 * to `min(400, vw − TOUCH_FLOOR)` (the page sliver is the platform touch floor), the
 	 * conversation row drops its fixed 56 pt floor for `TOUCH_FLOOR` with `py-2`/`gap-1`
 	 * and a `label` title, and the panel's header/footer tighten (fixed 60 → `py-1`,
-	 * destination slots 52 → `TOUCH_FLOOR`, workspace row above the strip). U-08's scene
-	 * is the session screen, not the drawer: source admission only, not a claim that
-	 * measured geometry moved. No token, catalogue key or `app` change. */
-	src: "9ec2f22fe189734de00c91c457fec06f48c7e5fa24fcbd6040886dac69a41fe7",
+	 * destination slots 52 → `TOUCH_FLOOR`, workspace row above the strip at `gap-2`).
+	 * The drawer's "Close conversations" label moves into the catalogue
+	 * (`mobile.chrome.close_conversations`, all eight locales). U-08's scene is the
+	 * session screen, not the drawer: source admission only, not a claim that measured
+	 * geometry moved. No token or `app` change. */
+	src: "50a1f428d27ea6baed2a0ebd11184e3ccf19ce9a0bed74e078d6aaa1631b4eb3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -5,6 +5,7 @@
 	"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
 	"mobile.chrome.destinations": "गंतव्य",
 	"mobile.chrome.new_chat": "नई चैट",
+	"mobile.chrome.close_conversations": "बातचीत बंद करें",
 	"mobile.chrome.composer.more": "अधिक संदर्भ",
 	"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
 	"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",

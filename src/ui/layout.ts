@@ -89,7 +89,6 @@ export {
 	layoutFor,
 	type Orientation,
 	SIDEBAR_MIN_WIDTH,
-	SIDEBAR_SLIVER,
 	SIDEBAR_TABLET_MAX,
 	type SizeClass,
 	SPLIT_MIN_HEIGHT,

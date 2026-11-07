@@ -17,6 +17,7 @@ import {
 	finishDrawerDismiss,
 	requestDrawerNewChat,
 } from "@/features/sessions/drawer-focus";
+import { t } from "@/i18n";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
@@ -24,7 +25,7 @@ import {
 	useModalStackEntry,
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
-import { sidebarWidthFor } from "@/ui/layout";
+import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -94,15 +95,17 @@ export const ConversationsDrawer = ({
 	 *  and the drawer's own "New chat" CTA fell from 27 of its 48 pt visible to
 	 *  6.5 — its label out of view at 100 % text in both themes — while the
 	 *  header's host label ellipsized at the DEFAULT text size. The widened panel
-	 *  restores the column to its designed width (247 pt) and the CTA to its
-	 *  before position, at every scale.
+	 *  restores the column to its designed width (the safe panel less its 16 pt
+	 *  gutters: 368 pt at the 400 ceiling) and the CTA to its before position, at
+	 *  every scale.
 	 *
-	 *  The `SIDEBAR_SLIVER` cap inside `sidebarWidthFor` binds only below 428 pt of
-	 *  viewport, i.e. on portrait phones, where no side inset exists (a side inset
-	 *  this large implies a landscape phone 844 pt wide, where the 400 pt ceiling
-	 *  binds instead: 400 + 59 = 459 pt of panel, a 385 pt page beside it), so
-	 *  adding the inset cannot eat the page behind the panel. */
-	const panelWidth = sidebarWidthFor(width) + insets.left;
+	 *  The touch-floor sliver inside `sidebarWidthFor` binds only below 444 pt
+	 *  (iOS) / 448 pt of viewport, i.e. on portrait phones, where no side inset
+	 *  exists (a side inset this large implies a landscape phone 844 pt wide, where
+	 *  the 400 pt ceiling binds instead: 400 + the 59 pt left inset = 459 pt of
+	 *  panel, a 385 pt page beside it), so adding the inset cannot eat the page —
+	 *  and with it the one-handed close target — behind the panel. */
+	const panelWidth = sidebarWidthFor(width, TOUCH_FLOOR) + insets.left;
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -233,7 +236,7 @@ export const ConversationsDrawer = ({
 								className="flex-1"
 								style={{ backgroundColor: scrimColour }}
 								accessibilityRole={ROLE.button}
-								accessibilityLabel="Close conversations"
+								accessibilityLabel={t("mobile.chrome.close_conversations")}
 								onPress={close}
 							/>
 						)}
@@ -276,7 +279,8 @@ export const ConversationsDrawer = ({
 								 *  shape as the `Screen`, which pads its root rather than its children.
 								 *
 								 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
-								 *  right one (459 pt of an 844 pt landscape phone, a 385 pt page beside it),
+								 *  right one (459 pt of an 844 pt landscape phone, its 59 pt left inset
+								 *  included, a 385 pt page beside it),
 								 *  so `insets.right` describes a screen edge the panel does not touch;
 								 *  reserving it would cost another 59 pt for nothing. `left` is the one that
 								 *  moves when the notch (or a rounded corner) is on the side the drawer

@@ -69,7 +69,8 @@ export const SPLIT_MIN_HEIGHT = 700;
 /* --- the conversations panel's geometry (the home + sidebar slice). No token
  *  carries these yet, and by this file's own rule new layout numbers live HERE
  *  once and the manager is told they belong in the token set — proposed as
- *  `layout.sidebar = { max: 400, min: 240, sliver: 28 }`. --- */
+ *  `layout.sidebar = { max: 400, min: 240 }` (the sliver is the platform touch
+ *  floor, which the token set already carries as `TOUCH_TARGET`). --- */
 
 /** The panel's ceiling, phone and tablet alike (design spec 2026-11-06 § 4).
  *
@@ -78,39 +79,47 @@ export const SPLIT_MIN_HEIGHT = 700;
  *  conversations", build 453): at 280 the panel was 69.7 % of a 402 pt phone and
  *  the title column 247 pt. The ceiling is what binds in landscape and on a
  *  tablet, so a wide screen keeps a list-width panel instead of a half-screen
- *  sheet of rows; on every portrait phone up to 428 pt the sliver binds first.
+ *  sheet of rows; on every portrait phone below 444 pt (iOS) / 448 pt (other)
+ *  the sliver binds first.
  *
- *  400, NOT the spec's 360: the spec states both `min(360, vw − 28)` and "374 pt
- *  on a 402 pt viewport" as its acceptance measurement, and those contradict
- *  (min(360, 374) = 360). The acceptance number is the one the operator's
- *  request is judged by, so the ceiling is the smallest round value above every
- *  current iPhone's `vw − 28` that still keeps a tablet's panel list-width. */
+ *  400, NOT the spec's 360: at 360 the ceiling rather than the sliver would bind
+ *  on the larger iPhones (440 − 44 = 396), spending title width on a cap with no
+ *  reason behind it. The ceiling is the smallest round value above every current
+ *  iPhone's `vw − sliver` that still keeps a tablet's panel list-width. */
 export const SIDEBAR_TABLET_MAX = 400;
 
 /** The floor, so a narrow phone's panel still fits its rows' skeletons. */
 export const SIDEBAR_MIN_WIDTH = 240;
 
-/** What stays visible of the scrimmed page beside the panel on a phone.
- *
- *  28, not Material's 56, because the panel now carries its own `panel-edge`
- *  hairline (4.21:1 against the scrim), so the sliver no longer has to do the
- *  "the page is still there" work alone: 28 pt still reads as a darkened page,
- *  and the 28 it gives back go to the rows' titles. The spec's acceptance floor is
- *  24 pt of page at every width, which this keeps down to a 264 pt viewport. */
-export const SIDEBAR_SLIVER = 28;
-
 /**
- * The panel's width for a viewport: `min(400, vw − 28)`, floored at 240.
+ * The panel's width for a viewport: `min(400, vw − touchFloor)`, floored at 240.
  *
- * 402 pt phone → 374 (93 %, the Kimi-like proportion the operator pointed at);
- * 440 → 400; 390 → 362; 320 → 292; an 844 pt landscape phone → 400 (the ceiling
- * binds, a 444 pt page beside it). The sliver is what keeps the page behind the panel
- * legible as "darkened", not gone — the temporary-drawer rule.
+ * The page left visible beside the panel (the "sliver") IS the platform touch
+ * floor — 44 pt on iOS, 48 elsewhere — not a fixed 28. On iOS the scrimmed
+ * sliver is the only ONE-HANDED way to close the drawer: the header ✕ is out of
+ * thumb reach, there is no Escape or system Back, and the drawer has no
+ * swipe-to-close. A 28 pt strip was a sub-floor close target (UX round 1 U1,
+ * code M1, design D2), so the sliver is sized as a target, not as a visual cue;
+ * the panel's own `panel-edge` hairline does the "the page is still there" work.
+ *
+ * `touchFloor` is a parameter rather than an import because this module must not
+ * touch `react-native` (see the file header): the caller passes `TOUCH_FLOOR` from
+ * `layout.ts`, and the tests pass both platforms' values from `touchFloorFor`.
+ *
+ * iOS (44): 402 pt phone → 358 (89 %); 440 → 396; 390 → 346; 320 → 276.
+ * Other (48): 402 → 354; 320 → 272. The ceiling binds from 444 / 448 pt up: an
+ * 844 pt landscape phone → 400 of SAFE content, which the drawer widens by its
+ * left inset (59 pt → a 459 pt panel, a 385 pt page beside it; with no inset,
+ * 400 and 444). The 240 floor binds below 284 / 288 pt, where the sliver gives
+ * way to a usable list.
  */
-export const sidebarWidthFor = (viewportWidth: number): number =>
+export const sidebarWidthFor = (
+	viewportWidth: number,
+	touchFloor: number,
+): number =>
 	Math.max(
 		SIDEBAR_MIN_WIDTH,
-		Math.min(SIDEBAR_TABLET_MAX, viewportWidth - SIDEBAR_SLIVER),
+		Math.min(SIDEBAR_TABLET_MAX, viewportWidth - touchFloor),
 	);
 
 /** The FIVE-destination pane height below which the pinned routes starve the list.

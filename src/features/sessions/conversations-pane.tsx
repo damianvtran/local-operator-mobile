@@ -435,14 +435,21 @@ export const ConversationsPane = ({
 	};
 	const footer = (
 		<View
-			className="gap-1 border-t border-hairline px-2 pt-1 pb-2"
+			className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 			testID={REGION.sidebarFooter}
 		>
 			{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
 			 *  § 4): the destinations are the panel's bottom bar, at the edge the thumb
 			 *  rests on, and the computer chip reads as the context the list above
-			 *  belongs to rather than as a sixth destination. */}
+			 *  belongs to rather than as a sixth destination.
+			 *
+			 *  `gap-2` (8 pt), not `gap-1`: the Inbox count rides 6 pt ABOVE its icon
+			 *  (`top: -6` below), out of flow, and the slot's content grows to fill
+			 *  it as text scales, so at worst the icon sits flush with the slot's top.
+			 *  With a 4 pt gap the badge crossed the computer chip's outline (0.4 pt
+			 *  at 100 % on iOS, 2 pt at 135 %; design round 1 D1); 8 pt keeps it
+			 *  clear at every scale. `sidebar-footer.test.ts` pins the arithmetic. */}
 			<View className="flex-row items-center gap-1">
 				<View className="min-w-0 flex-1">
 					<DrawerComputerRow
@@ -564,7 +571,7 @@ export const ConversationsPane = ({
 				)}
 				{onClose ? (
 					<IconButton
-						accessibilityLabel="Close conversations"
+						accessibilityLabel={t("mobile.chrome.close_conversations")}
 						onPress={onClose}
 						icon={({ color, size }) => <X color={color} size={size} />}
 						testID={CONTROL.sidebarClose}
