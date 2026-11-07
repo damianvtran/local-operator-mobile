@@ -435,8 +435,40 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(strip).toContain("<Folder");
 		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.model");
 		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.effort");
-		// The session strip (no folder) keeps its `flex-1` model slot.
-		expect(strip).toContain('folderChip ? "min-w-0 grow" : "min-w-0 flex-1"');
+	});
+
+	/* TestFlight 578: "Left justify the effort selector with the other selectors
+	 *  on that row." A growing model slot left effort floating right of a gap on
+	 *  BOTH strips: `[folder][Claude Opus 5.5]      [Medium] ⋯`. */
+	it("packs the chips left on both strips; only More takes the free width", () => {
+		/* Comments stripped: the WHY comments name `grow`/`flex-1` themselves. */
+		const code = COMPOSER.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(
+			/\s+/g,
+			" ",
+		);
+		const strip = code.slice(
+			code.indexOf("{folderChip ? ("),
+			code.indexOf("testID={CONTROL.composerContext}"),
+		);
+		const model = strip.slice(
+			strip.indexOf("</View> ) : null}"),
+			strip.indexOf("testID={CONTROL.composerModelChip}"),
+		);
+		expect(model).toContain('className="min-w-0 shrink"');
+		expect(model).toContain('flexBasis: "auto"');
+		expect(model).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
+		const effort = strip.slice(
+			strip.indexOf("{effortChip ? ("),
+			strip.indexOf("testID={CONTROL.composerEffortChip}"),
+		);
+		expect(effort).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
+		/* The ONLY thing that absorbs the free width is More's auto margin. */
+		expect(strip).toContain(
+			'<View className="ms-auto" testID={SURFACE.composerStripTrailing}> <IconButton',
+		);
+		expect(strip.match(/\bgrow\b|flex-1|flexGrow|ms-auto/g)).toEqual([
+			"ms-auto",
+		]);
 	});
 
 	it("offers the folder once: the More sheet no longer repeats it", () => {

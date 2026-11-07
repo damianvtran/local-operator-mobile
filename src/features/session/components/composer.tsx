@@ -1290,18 +1290,21 @@ export const Composer = ({
 				</View>
 			) : null}
 			<View
-				/* Home: the model keeps its natural width and yields LAST. The session
-				 *  strip keeps its `flex-1` slot, byte for byte. */
-				className={folderChip ? "min-w-0 grow" : "min-w-0 flex-1"}
-				style={
-					folderChip
-						? {
-								minWidth: MODEL_FLOOR_PT,
-								flexShrink: HOME_STRIP_SHRINK.model,
-								flexBasis: "auto",
-							}
-						: { minWidth: MODEL_FLOOR_PT }
-				}
+				/* The model keeps its NATURAL width on both strips and never grows
+				 *  (operator, TestFlight 578: "left justify the effort selector with the
+				 *  other selectors on that row"). A growing slot (`grow` on the home,
+				 *  `flex-1` on the session) took all the free width while the chip
+				 *  inside kept its own, so effort floated right behind an empty gap:
+				 *  `[folder][Claude Opus 5.5]      [Medium] ⋯`. The chips now pack
+				 *  left at the row's gap and the free width goes to More's auto margin
+				 *  (`STRIP_TRAILING`, below). Shrinking is unchanged: the home
+				 *  still yields folder → effort → model (`HOME_STRIP_SHRINK`). */
+				className="min-w-0 shrink"
+				style={{
+					minWidth: MODEL_FLOOR_PT,
+					flexBasis: "auto",
+					...(folderChip ? { flexShrink: HOME_STRIP_SHRINK.model } : null),
+				}}
 			>
 				<ComposerChipButton
 					glass={glass}
@@ -1334,16 +1337,26 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			<IconButton
-				accessibilityLabel={
-					queuedCount > 0
-						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-						: t("mobile.chrome.composer.more")
-				}
-				onPress={() => setContextOpen(true)}
-				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
-				testID={CONTROL.composerContext}
-			/>
+			{/* STRIP_TRAILING: the free width goes to an AUTO leading margin on More,
+			 *  so the chips pack LEFT and only More (and the queue/keyboard controls
+			 *  after it) sits trailing. A margin, not a spacer element: a spacer is
+			 *  one more child and charged one more `gap-1` (4 pt) in the narrow rows
+			 *  where every point decides whether the model name fits. `ms-auto` is
+			 *  the logical edge, so RTL mirrors it. */}
+			<View className="ms-auto" testID={SURFACE.composerStripTrailing}>
+				<IconButton
+					accessibilityLabel={
+						queuedCount > 0
+							? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+							: t("mobile.chrome.composer.more")
+					}
+					onPress={() => setContextOpen(true)}
+					icon={({ color, size }) => (
+						<MoreHorizontal color={color} size={size} />
+					)}
+					testID={CONTROL.composerContext}
+				/>
+			</View>
 			{queuedChip}
 			{keyboardVisible || focused ? (
 				<IconButton

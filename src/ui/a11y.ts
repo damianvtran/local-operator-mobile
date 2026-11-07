@@ -996,6 +996,13 @@ export const SURFACE = {
 	/** The decorative brand mark beside the header's computer chip: an id so a
 	 *  capture can measure its alignment and its yield at large text. */
 	homeBrandMark: "home-brand-mark",
+	/** The brand mark CENTRED above the splash greeting (operator, TestFlight
+	 *  578): an id so a capture can measure the stack's centre line. */
+	homeHeroMark: "home-hero-mark",
+	/** The composer strip's trailing More slot, which takes the free width as
+	 *  an auto margin (TestFlight 578): an id so a capture can prove the chips
+	 *  pack left of it. */
+	composerStripTrailing: "composer-strip-trailing",
 	sidebar: "conversations-sidebar",
 	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
 	 *  `/conversations` route reads it from a `notice` param and hands it to the

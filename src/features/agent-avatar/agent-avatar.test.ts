@@ -349,7 +349,9 @@ const PANE_FORWARDS_SURFACE = /surfaceClassName=\{surfaceClassName\}/;
 /* R3-1: the drawer names its panel fill ONCE and hands that same constant to the
  *  pane, so the ring cannot drift off the fill with one edit. */
 const DRAWER_ONE_SURFACE = /const PANEL_SURFACE = "bg-elevated";/;
-const DRAWER_PANEL_USES = /border-r \$\{PANEL_SURFACE\}/;
+/* The panel is BORDERLESS (operator, TestFlight 578): the fill is the ONLY class
+ *  beside `flex-1`, so no edge colour can sneak back in beside the surface. */
+const DRAWER_PANEL_USES = /className=\{`flex-1 \$\{PANEL_SURFACE\}`\}/;
 const DRAWER_NAMES_SURFACE = /surfaceClassName=\{PANEL_SURFACE\}/;
 /* R3: the spinner is sized to the disc, not transformed into it on web — and the
  *  numeric `size` and the iOS paint scale are the two halves of that rule, so BOTH
@@ -448,6 +450,7 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(PANE).toMatch(PANE_FORWARDS_SURFACE);
 		expect(DRAWER).toMatch(DRAWER_ONE_SURFACE);
 		expect(DRAWER).toMatch(DRAWER_PANEL_USES);
+		expect(DRAWER).not.toMatch(/border-r\b|border-panel-edge/);
 		expect(DRAWER).toMatch(DRAWER_NAMES_SURFACE);
 		/* And no second literal of it anywhere in the file. */
 		expect(DRAWER.split("bg-elevated").length - 1).toBe(1);
