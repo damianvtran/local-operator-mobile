@@ -387,6 +387,9 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
+		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
+		"mobile.home.picker.folder_home":
+			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
 		"mobile.computers.transport.radient":

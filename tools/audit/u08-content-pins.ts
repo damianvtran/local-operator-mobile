@@ -970,7 +970,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * side's previous digest is kept. Source admission, not rendered evidence.
 	 * Re-printed with --print for the round-2 follow-up: the send failure path
 	 * hands back the envelope's body, the row uses ROLE.button, and two tests. */
-	src: "762a1a80bdb950f9290a2aa7e9dc8de2f70456ca8e5c8417a04e6fd7fc27abd9",
+	/* Re-pinned 2026-11-07 for fix/i18n-home-audit with --print from the staged
+	 * tree. Only `src` moves, and only translation values: the independent
+	 * post-merge audit's fixes to the es/ru/ur/vi/zh-CN/hi `mobile.home` and ru
+	 * `mobile.chrome` catalogues, the regenerated catalogue projection, and the
+	 * vi «Home» badge's entry in the identical-by-design test allowlist. No key,
+	 * en string, component or token changed. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	src: "1fac3dc5506724a0c562650e1083eafe272dd44e918d0ce7bc420cad6f513aea",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
