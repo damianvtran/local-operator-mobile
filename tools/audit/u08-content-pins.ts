@@ -677,7 +677,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (transcript pass): the digest covers both lines of history — the transcript
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
-	 * after this merge, so neither side's previous digest is kept. 	 *
+	 * after this merge, so neither side's previous digest is kept.
+	 *
 	 * Re-pinned 2026-11-07, `src` only (PR #156 harness split, merged onto main):
 	 * the native proof harness moved to its own branch, which removed exactly three
 	 * proof-only instrument modules — `src/testing/stage-b-draft-bootstrap.ts`,
