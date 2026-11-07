@@ -7,7 +7,7 @@ import {
 	pendingEchoCaption,
 } from "@/features/session/pending-echo";
 import { t } from "@/i18n";
-import { pendingEchoId } from "@/ui/a11y";
+import { pendingEchoId, ROLE } from "@/ui/a11y";
 import { cx } from "@/ui/variants";
 
 /**
@@ -72,7 +72,7 @@ const PendingEchoRowImpl = ({
 			<Pressable
 				className="items-end px-4 py-1"
 				testID={pendingEchoId(echo.commandId)}
-				accessibilityRole="button"
+				accessibilityRole={ROLE.button}
 				onPress={() => onPutBack(echo.commandId)}
 			>
 				{body}

@@ -841,8 +841,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
 	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
 	 * history above stand, the value is the merged tree's own, and neither
-	 * side's previous digest is kept. Source admission, not rendered evidence. */
-	src: "4a02add09bf73d5d8dd6d444bcd19cdcf566bb9f95387336fa67dfd7f104ecb4",
+	 * side's previous digest is kept. Source admission, not rendered evidence.
+	 * Re-printed with --print for the round-2 follow-up: the send failure path
+	 * hands back the envelope's body, the row uses ROLE.button, and two tests. */
+	src: "762a1a80bdb950f9290a2aa7e9dc8de2f70456ca8e5c8417a04e6fd7fc27abd9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

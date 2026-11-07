@@ -286,6 +286,51 @@ describe("useComposer's pending echo", () => {
 			"Your earlier message went through. The text below hasn’t been sent yet.",
 		);
 	});
+
+	it("a prompt reconciled to a steer keeps ONE row, untouched by the replay, and takes the steer's box (round 2)", async () => {
+		const { client, open } = handClient();
+		/* Not streaming: the composer mints a PROMPT, and the turn starts under it. */
+		await mount(client, "H: also cover the cold path", false);
+		await act(async () => c().send());
+		await settle();
+		const commandId = String(open[0]?.body.command_id);
+		expect(open[0]?.body.op).toBe("prompt");
+		await act(async () => c().setDraft("I: typed during the first attempt"));
+		await act(async () =>
+			open[0]?.reject(
+				new RelayError(
+					"rejected",
+					"session is already streaming; use steer() to inject mid-turn",
+					{
+						status: 422,
+						serverError:
+							"session is already streaming; use steer() to inject mid-turn",
+						envelope: "clear",
+					},
+				),
+			),
+		);
+		await settle();
+		/* The replay: same id, steer op. The row was painted once and is not
+		 *  repainted, so the text typed during the first attempt survives. */
+		expect(open).toHaveLength(2);
+		expect(open[1]?.body).toMatchObject({ op: "steer", command_id: commandId });
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			commandId,
+			text: "H: also cover the cold path",
+		});
+		expect(rows[0]?.failure).toBeUndefined();
+		expect(c().draft).toBe("I: typed during the first attempt");
+		await act(async () =>
+			open[1]?.resolve({ ok: true, detail: "steer queued" }),
+		);
+		await settle();
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({ commandId, accepted: true, op: "steer" });
+		expect(c().draft).toBe("I: typed during the first attempt");
+		expect(c().error).toBeNull();
+	});
 });
 
 describe("the pending row's box", () => {

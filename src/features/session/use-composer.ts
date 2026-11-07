@@ -407,6 +407,12 @@ export const useComposer = (input: {
 			 * after the echo moved them out (`unpaintPendingEcho`). */
 			const draftImages = imagesRef.current;
 			let painted: PaintedEcho | null = null;
+			/* What the PAINTED envelope carries. It differs from the composer's body
+			 * when `holdNew` replays an earlier unresolved envelope
+			 * (`reusedPreviousDraft`): a failure must hand back that envelope's text
+			 * and images, as retry does with `held.*`, never the composer's (review
+			 * round 2, m1). */
+			let sentBody: { text: string; images: PromptImage[] } | null = null;
 			const payloadImages =
 				imagesRef.current.length > 0
 					? imagesRef.current.map((image) => ({ ...image }))
@@ -448,6 +454,10 @@ export const useComposer = (input: {
 					text: trimmed,
 					...(payloadImages ? { images: payloadImages } : {}),
 					onHeld: (envelope) => {
+						sentBody = {
+							text: envelope.text,
+							images: envelope.images ?? [],
+						};
 						painted = paintPendingEcho(
 							sessionId,
 							envelope,
@@ -526,7 +536,7 @@ export const useComposer = (input: {
 				const echoed = unpaintPendingEcho(
 					sessionId,
 					painted,
-					{ text: trimmed, images: draftImages },
+					sentBody ?? { text: trimmed, images: draftImages },
 					echoDraft,
 					receipt !== null && receipt.kind !== "ambiguous"
 						? "refused"
