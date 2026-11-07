@@ -77,6 +77,7 @@ import { agentAvatarCache } from "@/features/agent-avatar/agent-avatar";
 import {
 	clearStoredCredentials,
 	clearStoredOauth,
+	readSavedComputers,
 	readSavedTunnel,
 	readStoredOauth,
 	readStoredTunnelSession,
@@ -114,6 +115,7 @@ import {
 	customRouteAuthentication,
 	nativeCredentialRetirement,
 } from "./authentication-lifecycle";
+import { resumeComputerOnColdStart } from "./cold-start-computer";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
@@ -456,6 +458,12 @@ export const ConnectionProvider = ({
 	/** The latest revision of the cold-start restore, so the retry a network failure
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
+	/** The latest `selectComputer`, for the cold start's computer restore. Read
+	 *  through a ref so the cold-start effect does not list it as a dependency: a
+	 *  new revision of the pick must never re-run the whole cold start. */
+	const selectRef = useRef<(computer: DiscoveredComputer) => Promise<void>>(
+		async () => undefined,
+	);
 	const mountedRef = useRef(true);
 	const signInAbortRef = useRef<AbortController | null>(null);
 
@@ -1776,6 +1784,10 @@ export const ConnectionProvider = ({
 		restoreRef.current = restoreRadient;
 	}, [restoreRadient]);
 
+	useEffect(() => {
+		selectRef.current = selectComputer;
+	}, [selectComputer]);
+
 	/** The relay-served web bundle may already hold a cookie. Verify it once as
 	 * admission, not in each screen; this path never runs again after sign-out. */
 	const restorePageRoute = useCallback(async () => {
@@ -1867,6 +1879,25 @@ export const ConnectionProvider = ({
 				/* Nothing of the reader's own to dial: the RECOMMENDED path's turn. */
 				if (!interrupted()) await restoreRadient();
 				if (!interrupted()) await restorePageRoute();
+				/* Last: open the computer the reader was on (or their only one) instead
+				 *  of parking a restored account on the picker every launch. Awaited
+				 *  inside the cold start so `coldStartSettled` stays false meanwhile and
+				 *  Home keeps its restoring splash — no flash of the picker. Every guard
+				 *  and branch is in `./cold-start-computer`. */
+				if (!interrupted())
+					await resumeComputerOnColdStart({
+						signedIn: () => tokensRef.current !== null,
+						routed: () => connectionStore.getState().route !== null,
+						refused: () => connectionStore.getState().surface !== null,
+						/* A saved own-tunnel without its password is the screen asking for
+						 *  it; dialling a Radient computer over that would take the
+						 *  reader's chosen path away from them. */
+						ownTunnelPending: () => stored !== null,
+						computers: () => connectionStore.getState().computers,
+						readSaved: readSavedComputers,
+						select: (computer) => selectRef.current(computer),
+						isCancelled: interrupted,
+					});
 			} catch {
 				/* The cold start is the APP's own setup, so a throw here is a bug in the app
 				 *  and not a fact about the reader's tunnel — which is exactly what the

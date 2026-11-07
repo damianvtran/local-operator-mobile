@@ -811,7 +811,23 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "e2282ab0f068391bcabaa81bbd09510669e7327ab2ab5f7a31e7bddff027b905",
+	/* Re-pinned 2026-11-07 for feat/startup-restore-computer with --print from the
+	 * staged tree. Only `src` moves: the cold start reopens the last computer used
+	 * (or the only one) through `src/features/auth/cold-start-computer.ts`, wired in
+	 * `connection-provider.tsx`, plus tests. No copy, styling or layout changes;
+	 * `app`, `design/tokens`, fonts and `public` are untouched. Source admission
+	 * only, NOT rendered U-08 evidence.
+	 * Re-pinned again for the round-1 remediation, --print from the staged tree:
+	 * `cold-start-computer.ts` narrows "last" to usable Radient entries and
+	 * `saved-computers.ts` stops stamping a use on a never-used Remove. Logic and
+	 * tests only; no copy, styling or layout. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (b5a2f4a1, PR #190 smooth steering: steer/prompt decision, race
+	 * reconciliation, steer failure copy) into feat/startup-restore-computer
+	 * (PR #184): both lines of history above stand, the value is the merged
+	 * tree's own, and neither side's previous digest is kept. Source admission,
+	 * not a geometry claim. */
+	src: "a4990afc052a6c801e32cafdd810d560058d0148c59316a7c9fd56e92934efda",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
