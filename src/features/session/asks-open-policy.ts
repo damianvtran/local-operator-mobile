@@ -74,7 +74,7 @@
  */
 
 import type { PendingAsk } from "@/contracts";
-import { dockAsk, outstandingAsks } from "@/features/session/asks";
+import { dockAsk, isLapsed, outstandingAsks } from "@/features/session/asks";
 import type { ProjectionEntry } from "@/state";
 
 /* ---------------------------------------------------------- the queue reading */
@@ -252,12 +252,28 @@ export const outstandingAskIds = (
  * the dismissal is cleared by a later complete frame once the queue is back
  * under the cap. This function does not change the cap and does not need to tell
  * that case from any other clip.
+ *
+ * AN OLDER DAEMON'S TALLY (review r1 m1): before local-operator #2388 the
+ * runtime's `asks_open` also counted `timed_out` asks, while this app counts
+ * `open` only. Compared against open rows alone, every frame holding a lapsed
+ * row would read tally > named and hold a dismissal forever (suppressing the
+ * auto-open of a genuinely new ask). So the named count is open PLUS lapsed rows
+ * when the tally exceeds the open rows. This cannot hide a clip on the reachable
+ * path: the projection cap keeps open rows FIRST, so a frame that dropped an open
+ * row is all open rows and has no lapsed row to add.
  */
 export const namesEveryOutstandingAsk = (
 	rows: PendingAsk[],
 	asksOpen: number | undefined,
-): boolean =>
-	typeof asksOpen !== "number" || asksOpen <= outstandingAskIds(rows).size;
+): boolean => {
+	if (typeof asksOpen !== "number") return true;
+	const open = outstandingAskIds(rows).size;
+	if (asksOpen <= open) return true;
+	return (
+		asksOpen <=
+		open + rows.filter((row) => isLapsed(String(row.status || "open"))).length
+	);
+};
 
 /**
  * Whether one ask existed by `cutoff` (epoch ms, the computer's clock).

@@ -814,7 +814,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (no Answer/Decline, Dismiss only, `settle` refuses respond/decline) and its
 	 * state line uses the desktop/relay copy (D10), plus tests. Source admission
 	 * only, NOT rendered U-08 evidence. */
-	src: "a09eb16a4937545b23200a78a1766e2943fe806c5a96049100eda65d4fb4bbcf",
+	/* Re-pinned 2026-11-07 for #183 round-1 remediation with --print from the
+	 * staged tree. Only `src` moves: the sheet's walk advances to the next ask
+	 * with a verb (Dismiss included), timed-out rows and the quiet bar's excerpt
+	 * use muted ink, an older daemon's tally is reconciled, plus tests. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "b9eaa3181825dc10d8861da840f0313c8e7b84e59520406f064520d73f5b2482",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

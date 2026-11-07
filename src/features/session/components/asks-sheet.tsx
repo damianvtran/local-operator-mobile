@@ -26,6 +26,7 @@ import {
 	hasOtherDoor,
 	isAnswerable,
 	isLapsed,
+	nextActionableAsk,
 	orderedForDisplay,
 	outstandingAsks,
 	questionIsAnswered,
@@ -859,12 +860,9 @@ export const AsksSheet = ({
 				}
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
-				 *  visible here. */
-				const next = orderedForDisplay(shownRows).find(
-					(candidate) =>
-						candidate.ask_id !== row.ask_id &&
-						isAnswerable(String(candidate.status || "open")),
-				);
+				 *  visible here. Any row with a verb — a lapsed ask's Dismiss
+				 *  counts (UX r1 U1). */
+				const next = nextActionableAsk(shownRows, row.ask_id);
 				dispatchExpansion({ type: "pick", ask: next ? next.ask_id : null });
 				await load();
 			} catch (failure) {

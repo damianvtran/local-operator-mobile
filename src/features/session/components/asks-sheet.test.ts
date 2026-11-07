@@ -125,3 +125,13 @@ describe("the asks sheet's Other door", () => {
 		expect(SOURCE).toContain("placeholderTextColor={placeholderColour}");
 	});
 });
+
+describe("the asks sheet's walk after a settle (UX r1 U1)", () => {
+	it("advances through the tested predicate, which counts a lapsed ask's Dismiss", () => {
+		/* Keyed on `isAnswerable`, a lapsed-only sheet collapsed after the first
+		 * Dismiss; `nextActionableAsk` (tested in `asks.test.ts`) keys on verbs. */
+		expect(SOURCE).toMatch(
+			/const next = nextActionableAsk\(shownRows, row\.ask_id\)/,
+		);
+	});
+});

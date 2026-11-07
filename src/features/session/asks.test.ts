@@ -22,6 +22,7 @@ import {
 	isAnswerable,
 	isLapsed,
 	isOutstanding,
+	nextActionableAsk,
 	orderedForDisplay,
 	outstandingAsks,
 	outstandingQuestions,
@@ -142,7 +143,9 @@ describe("askStateLine", () => {
 		expect(line.text).toBe(
 			"Timed out — the agent goes ahead without your answer",
 		);
-		expect(line.tone).toBe("attention");
+		/* Muted, never the warning ink of an open past-deadline ask (D1). */
+		expect(line.tone).toBe("wait");
+		expect(askToneInk(line.tone)).toBe("text-ink-muted");
 	});
 
 	it("names a dismissal as no reply at all, and an expiry as unfixable", () => {
@@ -242,6 +245,37 @@ describe("orderedForDisplay", () => {
 			"x",
 			"y",
 		]);
+	});
+});
+
+describe("nextActionableAsk (the walk after a settle, U1)", () => {
+	it("advances a lapsed-only sheet to the next ask that still has Dismiss", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "t2", status: "timed_out" }),
+		];
+		expect(nextActionableAsk(rows, "t1")?.ask_id).toBe("t2");
+		expect(nextActionableAsk(rows, "t2")?.ask_id).toBe("t1");
+	});
+
+	it("walks to the next OPEN ask before any lapsed one", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "o1" }),
+			ask({ ask_id: "o2" }),
+		];
+		expect(nextActionableAsk(rows, "o1")?.ask_id).toBe("o2");
+		expect(nextActionableAsk(rows, "o2")?.ask_id).toBe("o1");
+	});
+
+	it("skips settled rows and collapses when nothing actionable is left", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "a", status: "answered" }),
+			ask({ ask_id: "d", status: "dismissed" }),
+		];
+		expect(nextActionableAsk(rows, "t1")).toBeNull();
+		expect(nextActionableAsk([], "x")).toBeNull();
 	});
 });
 

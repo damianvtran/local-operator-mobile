@@ -257,7 +257,11 @@ export function askStateLine(
 				   relay's `relay.asks.status.timed_out`: no surface offers a late
 				   answer any more (D10), so "you can still answer" was untrue. */
 				text: "Timed out — the agent goes ahead without your answer",
-				tone: "attention",
+				/* Muted, not warning (design r1 D1): the queue already settled this
+				   ask and there is nothing left to do but Dismiss, so it must not
+				   wear the ink an urgent or past-deadline OPEN ask uses. It also
+				   matches the quiet bar the reader tapped to get here. */
+				tone: "wait",
 			};
 		default:
 			/* A status from a newer runtime. Passing it through as its own word is
@@ -349,6 +353,31 @@ export function dockAsk(
  *  question, with the named one below the fold. A thumb arrives expecting what
  *  it just read. The design's own addendum names this divergence; this is it,
  *  applied where the reader stands, with no wire change. */
+/** The ask the sheet's walk moves to after `settledId` is settled: the next row,
+ *  in display order, that still offers the reader a verb (`askActions`).
+ *
+ *  WHY NOT `isAnswerable`: since D10 a `timed_out` ask is not answerable, but it
+ *  still has Dismiss. Keying the walk on answerability collapsed a lapsed-only
+ *  sheet after the first Dismiss (UX r1 U1), leaving N identical collapsed rows
+ *  to tap through one by one. An answerable (open) ask is still preferred over a
+ *  lapsed one: display order only promotes the head row, so a plain first-match
+ *  could walk past a waiting question to a Dismiss. `null` when nothing
+ *  actionable is left — the sheet collapses. */
+export function nextActionableAsk(
+	rows: PendingAsk[] | undefined | null,
+	settledId: string,
+): PendingAsk | null {
+	const others = orderedForDisplay(rows).filter(
+		(candidate) => candidate.ask_id !== settledId,
+	);
+	const ops = (row: PendingAsk) => askActions(String(row.status || "open"));
+	return (
+		others.find((row) => ops(row).respond) ??
+		others.find((row) => ops(row).dismiss) ??
+		null
+	);
+}
+
 export function orderedForDisplay(
 	rows: PendingAsk[] | undefined | null,
 ): PendingAsk[] {

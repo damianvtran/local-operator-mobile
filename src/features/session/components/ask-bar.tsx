@@ -93,7 +93,10 @@ export const AskBar = ({ asks, onOpen, barRef }: AskBarProps) => {
 			<Text className="shrink-0 text-body-sm text-ink-muted">{label}</Text>
 			{showPreview ? (
 				<Text
-					className="min-w-0 flex-1 text-body-sm text-ink"
+					/* Quiet bar: the excerpt takes the label's ink, never brighter
+					 *  (design r1 D2) — the eye should not land on a question the
+					 *  reader can no longer answer. */
+					className={`min-w-0 flex-1 text-body-sm ${quiet ? "text-ink-muted" : "text-ink"}`}
 					numberOfLines={1}
 					ellipsizeMode="tail"
 				>

@@ -1295,6 +1295,22 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 			const rows = [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })];
 			expect(namesEveryOutstandingAsk(rows, 1)).toBe(true);
 		});
+
+		it("reads an older daemon's tally, which still counted timed-out asks, as complete (m1)", () => {
+			// Pre-#2388 `asks_open` counted `timed_out`; the frame names both rows,
+			// so it is whole and must not hold a dismissal forever.
+			const rows = [
+				ask({ ask_id: "a1" }),
+				ask({ ask_id: "t1", status: "timed_out" }),
+			];
+			expect(namesEveryOutstandingAsk(rows, 2)).toBe(true);
+			// A tally beyond open + lapsed is still a clip, and still holds.
+			expect(namesEveryOutstandingAsk(rows, 3)).toBe(false);
+			// Settled rows never pad the count.
+			expect(
+				namesEveryOutstandingAsk([ask({ ask_id: "s", status: "answered" })], 1),
+			).toBe(false);
+		});
 	});
 
 	it("a bare tally cannot name ids, so it neither forgets nor holds against them", () => {
