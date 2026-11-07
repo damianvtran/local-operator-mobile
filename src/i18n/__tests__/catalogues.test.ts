@@ -120,7 +120,7 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 22,
+		expected: 23,
 	},
 	{
 		name: "mobile.notifications",
@@ -224,8 +224,9 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182). */
-		expect(total).toBe(333);
+		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182) + the
+		 *  switcher's transport word (`mobile.computers.transport.radient`). */
+		expect(total).toBe(334);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -286,6 +287,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* French spells these the same as English. `Description` is the French
@@ -319,12 +322,16 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */
 	es: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -332,6 +339,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -341,6 +350,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -350,6 +361,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 	},
 	hi: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -359,6 +372,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",

@@ -20,5 +20,6 @@
 	"mobile.computers.retry": "دوبارہ کوشش کریں",
 	"mobile.computers.show_details": "تفصیلات دکھائیں",
 	"mobile.computers.hide_details": "تفصیلات چھپائیں",
-	"mobile.computers.connection_response": "کنکشن کا جواب"
+	"mobile.computers.connection_response": "کنکشن کا جواب",
+	"mobile.computers.transport.radient": "Radient"
 }

@@ -419,6 +419,19 @@ describe("Add a computer reaches an add path from every screen (U6, U12)", () =>
 		expect(host.pushed).toEqual([]);
 	});
 
+	it("lists Add a computer as a named row in the body, not a pinned footer", async () => {
+		/* The pinned footer drew a hairline above an outlined full-width button
+		 *  that outweighed the list (operator: "it looks ugly"); the action now sits
+		 *  under the group. Its name is the whole accessible label. */
+		await render();
+		await flush();
+		expect(host.sheet?.footer).toBeUndefined();
+		expect(host.labels.get(CONTROL.switcherAddComputer)).toBe("Add a computer");
+		/* The transport is a word on the row's second line ("Radient · …"),
+		 *  keyed for translation, not a boxed chip. */
+		expect(words()).toContain("Radient");
+	});
+
 	it("opens the set-up paths over a POPULATED Computers list, and from Settings (U12)", async () => {
 		host.pathname = "/tunnels";
 		await act(async () =>

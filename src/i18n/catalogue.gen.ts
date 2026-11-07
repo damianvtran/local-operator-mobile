@@ -92,6 +92,7 @@ export type CatalogueKey =
 	| "mobile.computers.session_error_help"
 	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
+	| "mobile.computers.transport.radient"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
 	| "mobile.home.chip.effort_default_short"
@@ -424,6 +425,7 @@ export type NoParamKey =
 	| "mobile.computers.session_error_help"
 	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
+	| "mobile.computers.transport.radient"
 	| "mobile.home.chip.effort_default_short"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_no_default"
@@ -715,6 +717,7 @@ export type MessageParams = {
 	"mobile.computers.session_error_help": NoParams;
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.switch": NoParams;
+	"mobile.computers.transport.radient": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
 	"mobile.home.chip.effort_default_short": NoParams;
@@ -1067,6 +1070,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.switch": "Switch computer",
+	"mobile.computers.transport.radient": "Radient",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
 	"mobile.home.chip.effort_default_short": "Default effort",
@@ -1404,6 +1408,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
+	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient · Online\". A product name: keep it as written." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_short": { role: "meta", note: "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
@@ -1755,6 +1760,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.switch": "Cambiar de máquina",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta computadora",
 		"mobile.home.chip.effort_default_short": "Esfuerzo predeterminado",
@@ -2090,6 +2096,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
 		"mobile.home.chip.effort_default_short": "Effort par défaut",
@@ -2425,6 +2432,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.chip.effort_default_short": "डिफ़ॉल्ट प्रयास",
@@ -2760,6 +2768,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.switch": "Сменить компьютер",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
 		"mobile.home.chip.effort_default_short": "Усилие по умолчанию",
@@ -3095,6 +3104,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "کوشش، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "کوشش، {effort}، اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.chip.effort_default_short": "ڈیفالٹ کوشش",
@@ -3430,6 +3440,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.switch": "Chuyển máy tính",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Mức nỗ lực, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức nỗ lực, {effort}, mặc định của máy tính này",
 		"mobile.home.chip.effort_default_short": "Mức nỗ lực mặc định",
@@ -3765,6 +3776,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.switch": "切换电脑",
+		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
 		"mobile.home.chip.effort_default_short": "默认推理强度",
