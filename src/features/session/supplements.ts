@@ -346,16 +346,27 @@ export function beatFromWire(value: unknown): SupplementBeat | null {
 	};
 }
 
+/** No beats: the frozen empty map most frames answer with (see the reader
+ *  below). */
+export const NO_SUPPLEMENTS: Record<string, SupplementBeat> = Object.freeze({});
+
 /**
  * The projection's whole sibling map, read defensively — the ONE reader the
  * session screen calls. Absent or malformed keys drop to nothing rather than a
  * guess, and a beat whose version ties the one held keeps the later read,
  * exactly as every surface's newest-wins rule does.
+ *
+ * An empty answer is `NO_SUPPLEMENTS` — one frozen map, not a fresh `{}` per
+ * frame. Most frames carry no beats, and a new identity for "nothing" re-renders
+ * every consumer that memoises on the map (the session screen's supplement
+ * projection, and through it the transcript list's `renderItem`).
  */
 export function supplementsFromWire(
 	value: unknown,
 ): Record<string, SupplementBeat> {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return NO_SUPPLEMENTS;
+	}
 	const out: Record<string, SupplementBeat> = {};
 	for (const [anchor, raw] of Object.entries(
 		value as Record<string, unknown>,
@@ -365,7 +376,11 @@ export function supplementsFromWire(
 		const held = out[anchor];
 		if (!held || beat.version >= held.version) out[anchor] = beat;
 	}
-	return out;
+	// An empty map is the COMMON case (most frames carry no beats), and a fresh
+	// `{}` per frame is a new identity for every consumer that memoises on it —
+	// the session screen's supplement map, the list's `renderItem`. One frozen
+	// empty answers the same question with one identity.
+	return Object.keys(out).length === 0 ? NO_SUPPLEMENTS : out;
 }
 
 /**

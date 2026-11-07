@@ -884,6 +884,13 @@ export const SURFACE = {
 	askResponseCard: "ask-response-card",
 	askTimeoutCard: "ask-timeout-card",
 	transcriptStreaming: "transcript-streaming",
+	/** The transcript's two cut-edge fades (design item 8): the 24 pt band of
+	 *  `canvas` over each edge of the scroller, transparent toward the content.
+	 *  Named separately from each other because the acceptance rule is
+	 *  asymmetric — the top band is absent at offset 0 and the bottom one at the
+	 *  end — so a frame has to be able to measure each edge on its own. */
+	transcriptFadeTop: "transcript-fade-top",
+	transcriptFadeBottom: "transcript-fade-bottom",
 	/* --- the in-conversation find's surfaces: the sheet, the navigate bar, its
 	 *  count line, the settled-empty state, and the scope line that states what
 	 *  the search could and could not cover. --- */

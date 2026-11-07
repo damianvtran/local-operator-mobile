@@ -15,6 +15,10 @@ import {
 	type RailVocabulary,
 	railState,
 } from "@/features/session/checkpoint-rail";
+import {
+	RAIL_FADE_MS,
+	type ScrollPresence,
+} from "@/features/session/transcript-presence";
 import { STATE_MARKER, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { SKELETON_PULSE_MS } from "@/ui/variants";
@@ -102,6 +106,16 @@ export type CheckpointRailProps = {
 	/** The ids of the entries the transcript holds — what makes the
 	 *  beyond-the-window marker a fact rather than a claim. */
 	loadedIds: ReadonlySet<string>;
+	/** The transcript's scroll signal (see `transcript-presence.ts`). While it
+	 *  says the list is moving — or a thumb is holding it — the rail draws;
+	 *  otherwise it is at opacity 0, which is the operator's report answered:
+	 *  "maybe remove the line ticks along the side, only have them present if
+	 *  the thumb is held to scroll fast or something like that so that they
+	 *  don't constantly take space".
+	 *
+	 *  Omitted (a host that owns no list) keeps the rail always visible — the
+	 *  old behaviour — rather than hiding a cue nobody can bring back. */
+	presence?: ScrollPresence;
 };
 
 type Colors = {
@@ -199,6 +213,7 @@ export const CheckpointRail = ({
 	manifest,
 	readFailed,
 	loadedIds,
+	presence,
 }: CheckpointRailProps) => {
 	const state = useMemo(
 		() => railState(manifest, readFailed),
@@ -232,6 +247,39 @@ export const CheckpointRail = ({
 	const onLayout = (event: LayoutChangeEvent) => {
 		setTrackPt(event.nativeEvent.layout.height);
 	};
+
+	/* THE TRANSIENT RAIL (design item 10). The marks are the checkpoint rail, not
+	 * a scrollbar — but a permanent 14 pt column of ticks advertises one and takes
+	 * the edge for the whole session, which is what the operator read. So it now
+	 * behaves like every platform's transient scrollbar: visible while the list
+	 * moves or a thumb holds it, gone a moment after it settles.
+	 *
+	 *  The opacity is an `Animated` value on the native driver, so the transition
+	 *  costs the JS thread nothing per frame and no row re-renders. The presence
+	 *  object is the screen's; this component only subscribes. */
+	const presenceOpacity = useRef(
+		new Animated.Value(
+			presence === undefined ? 1 : presence.readVisible() ? 1 : 0,
+		),
+	).current;
+	useEffect(() => {
+		if (presence === undefined) return;
+		const aim = (visible: boolean) => {
+			// U-13: a reader who asked for stillness gets the state, not the fade.
+			if (reduceMotion) {
+				presenceOpacity.setValue(visible ? 1 : 0);
+				return;
+			}
+			Animated.timing(presenceOpacity, {
+				toValue: visible ? 1 : 0,
+				duration: RAIL_FADE_MS,
+				useNativeDriver: true,
+			}).start();
+		};
+		// A subscriber that mounted while the rail was already up adopts that state.
+		aim(presence.readVisible());
+		return presence.subscribe(aim);
+	}, [presence, presenceOpacity, reduceMotion]);
 
 	/* The building state's liveness mark: an opacity pulse, static under
 	 * reduced motion (U-13). It is not a tick and sits clear of the first
@@ -292,7 +340,7 @@ export const CheckpointRail = ({
 				) : null}
 			</View>
 			{drawing ? (
-				<View
+				<Animated.View
 					testID={SURFACE.checkpointRail}
 					onLayout={onLayout}
 					// Decorative: never a touch target, never an announcement in
@@ -300,7 +348,11 @@ export const CheckpointRail = ({
 					// straight through to the transcript beneath).
 					pointerEvents="none"
 					className="absolute inset-y-0"
-					style={{ end: RAIL_EDGE_PT, width: RAIL_COLUMN_PT }}
+					style={{
+						end: RAIL_EDGE_PT,
+						width: RAIL_COLUMN_PT,
+						opacity: presenceOpacity,
+					}}
 					aria-hidden={state.kind !== "error" ? true : undefined}
 				>
 					{building ? (
@@ -341,7 +393,7 @@ export const CheckpointRail = ({
 					{placed.map((entry) => (
 						<RailMarkView key={entry.mark.id} placed={entry} colors={colors} />
 					))}
-				</View>
+				</Animated.View>
 			) : null}
 		</>
 	);
