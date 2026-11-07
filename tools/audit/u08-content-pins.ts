@@ -844,7 +844,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * under a live label keeps the line and its Stop), with its frame test and a
 	 * hook-level `runtime.streaming` assertion. `app` does not move. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "0d28da5f3a941e58f8cd0cf7e59b2a9e5ef977317ba1e69cf6b20d5ada6e918b",
+	/* Re-pinned 2026-11-07 for PR #189's avatar test anchor with --print from the
+	 * staged tree. Only `src` moves, for one test file
+	 * (`agent-avatar.test.ts` searches for the title control from the back
+	 * control). No shipped source changes. Source admission only, NOT rendered
+	 * U-08 evidence. */
+	src: "ab47752fb5b208247ab42ede8382f4351f680ecb55189bad94ffd175092382fc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
