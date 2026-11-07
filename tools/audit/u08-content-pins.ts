@@ -994,8 +994,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * stands; the value is the train tree's own and no PR's digest is kept. Only
 	 * `app` and `src` move.
 	 * Re-printed again after merging #189's test anchor fix (c8ad2bb2, one
-	 * test file under `src`). Source admission only, NOT rendered U-08 evidence. */
-	src: "b7af13dda98764626bcae2a41e51af883cdd5648f9c8fed039914c1ada85d3c8",
+	 * test file under `src`).
+	 * Re-printed again after merging #189's U-01 audit fix (c73da8fd: the
+	 * Stop's real touch-floor box). Source admission only, NOT rendered U-08
+	 * evidence. */
+	src: "fa4334b178af00f1e0d387feff174b5f27010c46b8e0c99cfca6ca5d5e9645d8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

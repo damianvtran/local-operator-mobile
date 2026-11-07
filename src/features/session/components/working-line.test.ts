@@ -23,6 +23,9 @@ const probe = vi.hoisted(() => ({
 	 *  a test can act INSIDE the line's close animation. */
 	deferTweens: false,
 	tweens: [] as Array<(ok: boolean) => void>,
+	/** The geometry props each Pressable was given, by testID: the touch floor
+	 *  must be the BOX (react-native-web drops `hitSlop` on `Pressable`). */
+	targets: new Map<string, { style?: unknown; hitSlop?: unknown }>(),
 }));
 const DIGIT_SECONDS = /\ds/;
 
@@ -57,15 +60,20 @@ vi.mock("react-native", async () => {
 			disabled,
 			testID,
 			accessibilityLabel,
+			style,
+			hitSlop,
 		}: {
 			children: (state: { pressed: boolean }) => React.ReactNode;
 			onPress: () => void;
 			disabled?: boolean;
 			testID: string;
 			accessibilityLabel: string;
+			style?: unknown;
+			hitSlop?: unknown;
 		}) => {
 			// A disabled Pressable never calls `onPress`, as on device.
 			probe.presses.set(testID, disabled ? () => {} : onPress);
+			probe.targets.set(testID, { style, hitSlop });
 			return React.createElement(
 				"button",
 				null,
@@ -143,6 +151,7 @@ beforeEach(() => {
 	root = createRoot(shim.container as Element);
 	probe.bodies = 0;
 	probe.presses.clear();
+	probe.targets.clear();
 	probe.deferTweens = false;
 	probe.tweens = [];
 });
@@ -210,6 +219,21 @@ describe("PinnedWorkingLine", () => {
 			stopping: false,
 		});
 		expect(screen()).toBe("");
+	});
+
+	it("gives the Stop a touch-floor BOX, not slop (U-01 on the web build)", () => {
+		// The iphone-se audit measured this Stop at 17 pt tall (#193, 96 U-01
+		// FAILs) while it reached 48 pt through `hitSlop`, which react-native-web
+		// does not implement on `Pressable`. The audit can only see the box.
+		render({
+			line: { activity: "reading the relay source", startedS: 0 },
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+		});
+		const target = probe.targets.get(CONTROL.sessionWorkingStop);
+		expect(target?.style).toMatchObject({ minHeight: 44, minWidth: 44 });
+		expect(target?.hitSlop).toBeUndefined();
 	});
 
 	it("says the intent and the clock, re-zeroes on the next tool, and leaves when the turn ends", () => {
