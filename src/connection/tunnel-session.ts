@@ -92,6 +92,11 @@ export type TunnelSessionFailure =
 	| "rejected"
 	/** No answer at all. */
 	| "network"
+	/** 5xx/408: the control plane answered but could not serve the request — a
+	 *  deploy, an overloaded edge. Transient by nature, so it is retried like
+	 *  `network`; distinct from it because Radient WAS reached, and copy that says
+	 *  "check this device's connection" would send the reader to the wrong place. */
+	| "unavailable"
 	/** 429: back off, the limiter is per-IP. */
 	| "rate-limited";
 
@@ -213,6 +218,18 @@ async function postSession(
 	if (!response.ok) {
 		const detail =
 			describeEnvelope(parsed) ?? `${what} failed (HTTP ${response.status})`;
+		/* A server-side outage is not a refusal. As `rejected` it mapped to the
+		 * `diagnostic` surface, which the live list stream treats as terminal: one
+		 * 5xx on the grant renewal a live route makes every ~4 minutes ended the
+		 * connection for good, with no reconnect on its own (TestFlight 453,
+		 * "disconnects after some time with no reason"). */
+		if (response.status >= 500 || response.status === 408)
+			throw new TunnelSessionError(
+				"unavailable",
+				detail,
+				response.status,
+				retryAfterFrom(response),
+			);
 		throw new TunnelSessionError("rejected", detail, response.status);
 	}
 	return parsed;

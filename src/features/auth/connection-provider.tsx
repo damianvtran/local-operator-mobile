@@ -83,6 +83,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import { setLocaleSource, t } from "@/i18n";
 import {
@@ -666,7 +667,15 @@ export const ConnectionProvider = ({
 						listStore.getState().markStale();
 						if (mountedRef.current) setStreamHealth("degraded");
 						_attempt += 1;
-						setTimeout(run, RESTART_MS);
+						/* The conversation stream's policy (`reconnectDelay`), so the two
+						 * streams of one route back off alike: 2 s, doubling to a 15 s
+						 * ceiling, and a server Retry-After only ever lengthens a step. A
+						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
+						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
+						setTimeout(
+							run,
+							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
+						);
 					},
 				});
 				streamRef.current = stream;
@@ -723,7 +732,15 @@ export const ConnectionProvider = ({
 			// Route changes include account/computer switches. Retire image bytes
 			// before the next credential can address the same agent id and hash.
 			agentAvatarCache.clear();
-			signInAbortRef.current?.abort();
+			/* A route that supersedes an in-flight browser sign-in takes its UI too.
+			 * The abandoned attempt can no longer publish (`ownsUI()` is false once
+			 * the ref is cleared), so its last state — "Waiting for your browser" or
+			 * "Signing you in…" — was left on every screen that reads `signInState`
+			 * with no way to end it. Settle it here, where ownership moves. */
+			if (signInAbortRef.current) {
+				signInAbortRef.current.abort();
+				setSignInState({ kind: "idle" });
+			}
 			signInAbortRef.current = null;
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
