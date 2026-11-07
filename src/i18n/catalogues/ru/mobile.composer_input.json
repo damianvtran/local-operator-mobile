@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "Завершить и расшифровать",
 	"mobile.composer_input.paste.image": "Вставить изображение",
 	"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
-	"mobile.composer_input.paste.denied": "Вставка не разрешена. Вставьте снова и выберите «Разрешить вставку»."
+	"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку»."
 }

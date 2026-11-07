@@ -120,7 +120,7 @@ describe("what an empty paste says, per door (UX review round 1, U3)", () => {
 	it("names the iOS denial on the chip, which is only offered while an image is there", () => {
 		const line = pasteNothingLine("offer", "ios");
 		expect(line).toBe(
-			"Paste wasn’t allowed. Paste again and choose “Allow Paste”.",
+			"Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
 		);
 		// Not the sheet's line: "Copy an image" sends the reader after an image
 		// they already copied.

@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "पूरा करें और लिखें",
 	"mobile.composer_input.paste.image": "छवि चिपकाएँ",
 	"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
-	"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। फिर से पेस्ट करें और अनुमति दें चुनें।"
+	"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।"
 }

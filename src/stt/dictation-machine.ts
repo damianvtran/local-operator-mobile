@@ -37,9 +37,23 @@ import { t } from "@/i18n";
 export type DictationPhase = "idle" | "starting" | "recording" | "transcribing";
 
 /** The one-line outcome the polite status row announces once a dictation has
- *  ended. `null` is "nothing to say" — a failure carries its own sentence on the
- *  composer's error line and must not also be announced here. */
-export type DictationOutcome = "added" | "empty" | "discarded" | "unavailable";
+ *  ended. `null` is "nothing to say" — a TRANSCRIPTION failure carries its own
+ *  sentence on the composer's error line and must not also be announced here.
+ *
+ *  `blocked` (the OS refused the microphone) and `mic-failed` (the recorder did
+ *  not start) live HERE rather than on the error line, beside `unavailable`: the
+ *  error line counts as the card's own reason to be open, which put the controls
+ *  row back to `[attach][mic] … [send]` and slid a disabled Send under the finger
+ *  the sentence had just told to "try again" (design D6 / UX U6 / QA Q4). On the
+ *  dictation row the card stays open only for dictation, so the mic holds the
+ *  trailing slot and the retry lands on it. */
+export type DictationOutcome =
+	| "added"
+	| "empty"
+	| "discarded"
+	| "unavailable"
+	| "blocked"
+	| "mic-failed";
 
 export interface DictationSnapshot {
 	phase: DictationPhase;
@@ -73,8 +87,10 @@ export type DictationEvent =
 	| { type: "press"; sending: boolean }
 	/** The microphone opened: permission granted and the recorder running. */
 	| { type: "mic-opened" }
-	/** The microphone did not open (permission refused, or no recorder). */
-	| { type: "mic-refused" }
+	/** The microphone did not open. `blocked` is the OS permission answering "no";
+	 *  otherwise the permission could not be asked or the recorder did not start —
+	 *  a different sentence, because only the first is fixed in Settings. */
+	| { type: "mic-refused"; blocked: boolean }
 	/** Stop the recording and transcribe it — the button, or the 120 s cap. */
 	| { type: "stop" }
 	/** A transcription ended. `outcome` is what the status row should rest on;
@@ -166,7 +182,13 @@ export function reduceDictation(
 
 		case "mic-refused":
 			return phase === "starting"
-				? { state: IDLE_DICTATION, effects: [] }
+				? {
+						state: {
+							phase: "idle",
+							outcome: event.blocked ? "blocked" : "mic-failed",
+						},
+						effects: [],
+					}
 				: { state, effects: [] };
 
 		case "stop":
@@ -217,7 +239,8 @@ export function reduceDictation(
 	}
 }
 
-/** The copy the outcome lines own. The three sentences are design §2.5's, verbatim. */
+/** The copy the outcome lines own. The first three sentences are design §2.5's,
+ *  verbatim; the two refusals are the error line's former copy, verbatim. */
 export const DICTATION_OUTCOME_COPY = {
 	/** U3: a landed transcript. Focus is deliberately NOT returned to the field. */
 	added: "Transcript added",
@@ -225,6 +248,13 @@ export const DICTATION_OUTCOME_COPY = {
 	empty: "Didn't catch that — try again.",
 	/** U2: speech dropped because a send took the composer. */
 	discarded: "Voice input discarded.",
+	/** The OS microphone permission is denied: only Settings can undo it. Moved
+	 *  verbatim from the composer's error line (D6/U6/Q4), so not new copy. */
+	blocked: "Microphone access is blocked. Allow it in Settings and try again.",
+	/** The permission could not be asked, or the recorder did not start. Moved
+	 *  verbatim from the composer's error line (D6/U6/Q4). */
+	"mic-failed":
+		"Couldn’t start recording. Check your microphone and try again.",
 } as const;
 
 /**

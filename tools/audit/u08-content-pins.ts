@@ -190,6 +190,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
+	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
+	 * line-capped, start/permission failures rest on the dictation row, ✓ moves to
+	 * the trailing slot while recording on a dictation-only card, and the paste
+	 * denial copy names the paperclip. Source admission only, NOT a rendered
+	 * geometry proof. */
 	/* Re-pinned 2026-11-07 for PR #187's round-1 remediation, with --print from
 	 * the staged tree. Only `src` moves: the set-up line wraps and is shorter,
 	 * the toolbar mic hides while recording, the mic keeps the trailing slot when
@@ -816,7 +822,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "dae3b3ac7a9f81d15f870f9dc7b0be34a67e9a317d8e8049ebdc89fc4fe64c43",
+	src: "c8aedc77531b944b684c03d7def7878f6484e3781960b80b3a031d7aaca8927f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

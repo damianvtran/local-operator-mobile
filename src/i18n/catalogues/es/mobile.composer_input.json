@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "Terminar y transcribir",
 	"mobile.composer_input.paste.image": "Pegar imagen",
 	"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
-	"mobile.composer_input.paste.denied": "No se permitió pegar. Vuelve a pegar y elige «Permitir pegar»."
+	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar»."
 }

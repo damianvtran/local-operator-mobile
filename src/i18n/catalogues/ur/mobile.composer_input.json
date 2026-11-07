@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
 	"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
 	"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
-	"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ دوبارہ پیسٹ کریں اور اجازت دیں منتخب کریں۔"
+	"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔"
 }

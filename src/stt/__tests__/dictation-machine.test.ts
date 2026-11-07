@@ -260,3 +260,45 @@ describe("a press while speech-to-text is not set up (agent review round 1, M1/M
 		expect(step(transcribing, { type: "available" }).state).toBe(transcribing);
 	});
 });
+
+describe("a start that fails rests on the dictation row (design D6 / UX U6 / QA Q4)", () => {
+	// On the composer's error line the card counted as open for its own reasons,
+	// so the mic left the trailing slot and a disabled Send took the retry tap.
+	it("says the permission refusal on the status row, not the error line", () => {
+		const { state, effects } = step(starting, {
+			type: "mic-refused",
+			blocked: true,
+		});
+		expect(effects).toEqual([]);
+		expect(state).toEqual({ phase: "idle", outcome: "blocked" });
+		expect(dictationStatusLine(state)).toBe(
+			"Microphone access is blocked. Allow it in Settings and try again.",
+		);
+	});
+
+	it("says a recorder that did not start in its own sentence", () => {
+		const { state } = step(starting, { type: "mic-refused", blocked: false });
+		expect(state).toEqual({ phase: "idle", outcome: "mic-failed" });
+		expect(dictationStatusLine(state)).toBe(
+			"Couldn’t start recording. Check your microphone and try again.",
+		);
+	});
+
+	it("clears on the retry press and is not mistaken for the set-up line", () => {
+		const failed = step(starting, { type: "mic-refused", blocked: true }).state;
+		expect(step(failed, { type: "available" }).state).toBe(failed);
+		expect(step(failed, { type: "press", sending: false })).toEqual({
+			state: { phase: "starting", outcome: null },
+			effects: ["open-mic"],
+		});
+	});
+
+	it("is ignored outside `starting` (a cancel already ended the take)", () => {
+		expect(
+			step(IDLE_DICTATION, { type: "mic-refused", blocked: true }).state,
+		).toBe(IDLE_DICTATION);
+		expect(step(recording, { type: "mic-refused", blocked: false }).state).toBe(
+			recording,
+		);
+	});
+});

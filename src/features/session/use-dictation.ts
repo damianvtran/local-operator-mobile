@@ -56,7 +56,6 @@ import {
 import {
 	type ActiveRecording,
 	discardRecording,
-	type MicPermission,
 	readMicPermission,
 	requestMicPermission,
 	startRecording,
@@ -69,16 +68,6 @@ export type { DictationPhase };
 /** How often the meter samples the recorder's level — `stt/levels.ts` owns the
  *  number, because the waveform rolls each new bar in over exactly this interval. */
 const METER_INTERVAL_MS = METER_SAMPLE_MS;
-
-/** The permission refusal copy. `undetermined` is "we could not ask", which is a
- *  different sentence from "you said no". */
-const permissionSentence = (permission: MicPermission): string =>
-	permission === "denied"
-		? "Microphone access is blocked. Allow it in Settings and try again."
-		: "Couldn’t start recording. Check your microphone and try again.";
-
-const MIC_REFUSED =
-	"Couldn’t start recording. Check your microphone and try again.";
 
 export interface DictationState {
 	/** Whether to render the mic at all: the relay says voice can run here AND this
@@ -299,8 +288,10 @@ export const useDictation = (input: DictationInput): DictationState => {
 		 * hot. The machine has already moved off `starting` if so. */
 		if (snapshotRef.current.phase !== "starting") return;
 		if (permission !== "granted") {
-			dispatch({ type: "mic-refused" });
-			onErrorRef.current(permissionSentence(permission));
+			/* The refusal is the dictation row's outcome line, not the composer's
+			 * error line (D6/U6/Q4, see `DictationOutcome`). `undetermined` is "we
+			 * could not ask", which is a different sentence from "you said no". */
+			dispatch({ type: "mic-refused", blocked: permission === "denied" });
 			return;
 		}
 		/* `permission` is passed so the recorder does not read it from the OS a second
@@ -311,8 +302,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 			return;
 		}
 		if (active === null) {
-			dispatch({ type: "mic-refused" });
-			onErrorRef.current(MIC_REFUSED);
+			dispatch({ type: "mic-refused", blocked: false });
 			return;
 		}
 		activeRef.current = active;

@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "Finish and transcribe",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
-	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Paste again and choose “Allow Paste”."
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”."
 }

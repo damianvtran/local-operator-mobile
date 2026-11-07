@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "Terminer et transcrire",
 	"mobile.composer_input.paste.image": "Coller l’image",
 	"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
-	"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Collez à nouveau et choisissez « Autoriser le collage »."
+	"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage »."
 }

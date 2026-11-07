@@ -6,5 +6,5 @@
 	"mobile.composer_input.voice.finish": "完成并转写",
 	"mobile.composer_input.paste.image": "粘贴图片",
 	"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
-	"mobile.composer_input.paste.denied": "未允许粘贴。请重新粘贴并选择“允许粘贴”。"
+	"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。"
 }

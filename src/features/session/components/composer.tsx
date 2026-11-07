@@ -81,6 +81,7 @@ import {
 	composerRestRow,
 	composerShellPadding,
 	composerShellRadius,
+	controlsTrailing,
 	keyboardOverlap,
 	morphHeight,
 	seedFor,
@@ -717,6 +718,11 @@ export const Composer = ({
 			 * timer beside it, and two `text-body-sm` lines (2 × 20.3) sit inside the
 			 * row's fixed `dictationRowBox`, so the set-up sentence wraps instead of
 			 * ending "…to use vo…" without moving the composer (design D1 / UX U1).
+			 * A resting outcome is not CAPPED at all: at 320 pt / 200 % the set-up
+			 * sentence needs three lines and a two-line cap cut it to "…on your …"
+			 * (design round 2, D5). No take is live then, so the row growing past its
+			 * box moves nothing under a finger mid-recording; the 1/2-line clamp stays
+			 * on the live phases, whose row height is pinned.
 			 *
 			 * While RECORDING the word is visually hidden but stays the live region:
 			 * the red dot and the running timer already say "recording", and the
@@ -727,7 +733,9 @@ export const Composer = ({
 			<Text
 				role={ROLE.status}
 				accessibilityLiveRegion={LIVE_REGION.polite}
-				numberOfLines={dictationLargeText || !rowIsLive(voice.phase) ? 2 : 1}
+				numberOfLines={
+					!rowIsLive(voice.phase) ? undefined : dictationLargeText ? 2 : 1
+				}
 				className={cx(
 					"text-body-sm",
 					rowIsLive(voice.phase) ? "text-danger" : "text-ink-muted",
@@ -742,7 +750,10 @@ export const Composer = ({
 				{voice.status}
 			</Text>
 		);
-	const dictationControls =
+	/* A function of where ✓ goes: on the row, or MOVED to the controls row's
+	 * trailing slot when the card is open only for dictation (`controlsTrailing`,
+	 * UX round 2, U7) — never both, which would be D2's two finish controls. */
+	const dictationControls = (finishOnRow: boolean) =>
 		voice === null ? null : (
 			<>
 				{voice.phase === "recording" ? (
@@ -807,15 +818,20 @@ export const Composer = ({
 						testID={CONTROL.composerDictationCancel}
 					/>
 				) : null}
-				{voice.phase === "recording" ? (
-					<IconButton
-						accessibilityLabel={t("mobile.composer_input.voice.finish")}
-						onPress={voice.press}
-						icon={({ size }) => <Check color={dictationInk} size={size} />}
-						testID={CONTROL.composerDictationFinish}
-					/>
-				) : null}
+				{voice.phase === "recording" && finishOnRow ? dictationFinish : null}
 			</>
+		);
+
+	/* ✓, wherever `dictationControls` places it. One node so the row's and the
+	 * trailing slot's copies cannot drift (label, ink, testID). */
+	const dictationFinish =
+		voice === null ? null : (
+			<IconButton
+				accessibilityLabel={t("mobile.composer_input.voice.finish")}
+				onPress={voice.press}
+				icon={({ size }) => <Check color={dictationInk} size={size} />}
+				testID={CONTROL.composerDictationFinish}
+			/>
 		);
 
 	/* The compact budget, spent in order of what must never leave the screen: the receipt
@@ -869,6 +885,11 @@ export const Composer = ({
 	const openForDictationOnly =
 		presentation.expanded &&
 		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
+	const trailing = controlsTrailing({
+		openForDictationOnly,
+		recording: voice?.phase === "recording",
+		micShown,
+	});
 	/* One keyboard owner. Android's resized window already ends at keyboard top:
 	 * overlap is then zero. iOS follows the native frame/duration, not a second
 	 * keyboardDidShow correction; safe-area clearance belongs OUTSIDE the shell. */
@@ -1665,14 +1686,14 @@ export const Composer = ({
 						{dictationStatus}
 						<View className="flex-row items-center gap-2">
 							{dictationDot}
-							{dictationControls}
+							{dictationControls(trailing !== "finish")}
 						</View>
 					</>
 				) : (
 					<>
 						{dictationDot}
 						{dictationStatus}
-						{dictationControls}
+						{dictationControls(trailing !== "finish")}
 					</>
 				)}
 			</View>
@@ -1791,15 +1812,17 @@ export const Composer = ({
 					testID={SURFACE.composerControls}
 				>
 					{attach}
-					{openForDictationOnly ? null : mic}
+					{trailing === "actions" ? mic : null}
 					{pasteChip}
 					{/* Landscape has exactly ONE context affordance, and it is the one
 					 *  in the compact strip: a second More on this row was the same
 					 *  action twice in one 44 pt line (design round 6, D2). */}
-					{openForDictationOnly && mic !== null ? (
-						<View className={COMPOSER_ACTION_CLUSTER}>{mic}</View>
-					) : (
+					{trailing === "actions" ? (
 						actionCluster
+					) : (
+						<View className={COMPOSER_ACTION_CLUSTER}>
+							{trailing === "finish" ? dictationFinish : mic}
+						</View>
 					)}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
