@@ -689,20 +689,41 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main (PR #176,
 	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
-	 * this merge, so neither previous digest is kept.
+	 * this merge, so neither previous digest is kept. */
+	/* Re-printed 2026-11-06 with --print at PR #178's staged tree (the fix for the
+	 * TestFlight 453 reports, not the 453 build's own tree), including its round-1
+	 * remediation: the Radient token exchange and tunnel discovery gained a request
+	 * deadline that also refuses an already-aborted caller, a route that supersedes
+	 * an in-flight sign-in settles its pending state, a control-plane 5xx on the
+	 * tunnel grant renewal is typed transient (`unavailable`), the conversation
+	 * stream reconnects through that class, and the list stream's restart uses the
+	 * conversation stream's backoff/Retry-After, floored by the curve so a
+	 * `Retry-After: 0` cannot loop (round 2). Connection logic and tests only —
+	 * no rendered surface, copy, catalogue key or `app` change, and U-08's
+	 * transcript scene renders none of it: source admission, not a geometry claim. */
+	/* Re-printed 2026-11-06 with --print at the merge of origin/main (d5d096f8,
+	 * PR #176) into PR #178: neither side's digest describes the merged `src`, so
+	 * both notes above stand and this value is the merged tree's own. Re-printed
+	 * again for round-3 M1: `reconnectDelay` caps at setTimeout's 2^31-1 ms
+	 * ceiling. Logic only; no rendered surface. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (e541a904,
+	 * PR #177) into PR #178: both lines of history, so the value is the merged
+	 * tree's own and neither side's previous digest is kept.
 	 *
-	 * Re-pinned 2026-11-07, `src` only (PR #156 harness split, merged onto main):
-	 * the native proof harness moved to its own branch, which removed exactly three
-	 * proof-only instrument modules — `src/testing/stage-b-draft-bootstrap.ts`,
-	 * `stage-b-draft-transport.ts`, `stage-b-route-trace.ts` — and their own test
+	 * Re-printed 2026-11-07 with --print at the merge of origin/main 56840161
+	 * (`fix/tf-reports`, `docs/ship-vitest-config`) into PR #156: this is the
+	 * harness-split re-print plus main's moves, so neither prior digest is kept.
+	 * The split removed exactly three proof-only instrument modules —
+	 * `src/testing/stage-b-draft-bootstrap.ts`, `stage-b-draft-transport.ts`,
+	 * `stage-b-route-trace.ts` — and their own test
 	 * `src/testing/__tests__/stage-b-draft-bootstrap.test.ts`. Nothing under `app/`,
 	 * `design/`, `public/`, the corpus or the geometry instruments moved, and no file
 	 * the shipping bundle loads was touched: those modules were reached only by the
 	 * native lane's scripts, never by an `src/app` entry or a rendered screen, and a
 	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
-	 * geometry is byte-identical to the digest above. This is source admission for the
-	 * geometry instrument, not fresh rendered evidence. `--print` produced the digest. */
-	src: "232f7177efd04780b20b273e8d3d4c30246ba5fd75272ef0c31ea9fe7d9ddc04",
+	 * geometry is byte-identical to main's digest above. This is source admission for
+	 * the geometry instrument, not fresh rendered evidence. --print produced the digest. */
+	src: "9242dcaadcde1e7a171a7f4e342ead2b6ccec722df460efb4d6f006decea2fa9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

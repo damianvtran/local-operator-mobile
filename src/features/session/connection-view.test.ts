@@ -52,11 +52,25 @@ describe("the reconnect backoff", () => {
 		expect(reconnectDelay(40, undefined)).toBe(15_000);
 	});
 
-	it("takes the gateway's own advice over the curve", () => {
+	it("takes the gateway's own advice over the curve when it asks for longer", () => {
 		// `authorization_deferred` carries 120 s, `authorization_lease_pending` 5 s:
 		// the server knows its own recovery time better than a doubling curve does.
 		expect(reconnectDelay(0, 120_000)).toBe(120_000);
-		expect(reconnectDelay(7, 5_000)).toBe(5_000);
+		expect(reconnectDelay(0, 5_000)).toBe(5_000);
+	});
+
+	it("never lets Retry-After shorten the curve (PR #178 R2-1/R2-2)", () => {
+		// `Retry-After: 0` (or a past date) was a zero-delay reconnect-and-renew loop;
+		// a short value held the delay flat. The curve is the floor.
+		expect([1, 2, 3, 4, 5].map((n) => reconnectDelay(n, 0))).toEqual([
+			2_000, 4_000, 8_000, 15_000, 15_000,
+		]);
+		expect([1, 2, 3].map((n) => reconnectDelay(n, 1_000))).toEqual([
+			2_000, 4_000, 8_000,
+		]);
+		expect(reconnectDelay(7, 5_000)).toBe(15_000);
+		// A far-future Retry-After date must not overflow the timer to ~1 ms (M1).
+		expect(reconnectDelay(1, 2 ** 40)).toBe(2 ** 31 - 1);
 	});
 
 	it("never returns a delay a timer would ignore", () => {
