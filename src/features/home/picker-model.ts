@@ -24,6 +24,7 @@ import {
 	type ModelReading,
 } from "@/features/session/chip-labels";
 import { t } from "@/i18n";
+import { homeShortened } from "@/lib/format";
 import {
 	type CatalogueRead,
 	type HomeFolders,
@@ -241,14 +242,20 @@ export const homeEffortChip = (input: {
 		input.connection === "connected" && input.catalogueLoading
 			? "loading"
 			: input.connection;
+	/* A relay too old to accept an effort sends none whatever was picked
+	 *  (`effortField` drops it), so the chip must not name a level the start body
+	 *  will not carry — a capability frame from an older relay can arrive after a
+	 *  pick (review R2). It names the configured level, unnamed. */
+	const chosenEffort =
+		input.offer.kind === "unsupported" ? null : input.chosenEffort;
 	if (connection !== "connected" || input.offer.kind === "none")
 		return composerChipLabels({
 			model: { kind: "default" },
 			effort: input.offer.kind === "none" ? "" : null,
 			connection,
 		}).effort;
-	if (input.chosenEffort !== null) {
-		const effort = effortLabel(input.chosenEffort);
+	if (chosenEffort !== null) {
+		const effort = effortLabel(chosenEffort);
 		return {
 			kind: "value",
 			text: effort,
@@ -263,9 +270,13 @@ export const homeEffortChip = (input: {
 			accessibilityLabel: t("mobile.home.chip.effort_default", { effort }),
 		};
 	}
+	/* "Default effort", not the model chip's bare "Default": against an older
+	 *  daemon both chips are unnamed defaults, and the strip read `Default
+	 *  Default` — two identical words with nothing telling model from effort at
+	 *  a glance (UX U8). */
 	return {
 		kind: "value",
-		text: t("mobile.session.chip.model_default"),
+		text: t("mobile.home.chip.effort_default_short"),
 		accessibilityLabel: t("mobile.home.chip.effort_default_unnamed"),
 	};
 };
@@ -400,3 +411,60 @@ export const typedFolder = (raw: string, folders: HomeFolders): TypedFolder => {
 		return { ok: true, path };
 	return { ok: false, reason: "outside" };
 };
+
+/** A folder as the home paints it: its own name, the folder holding it, and the
+ *  home-shortened whole path. */
+export type FolderName = Readonly<{
+	/** The last path segment — `app` for `~/code/app`; `~` for home itself, `/`
+	 *  for the root. What the strip chip and the picker row lead with. */
+	name: string;
+	/** The home-shortened folder holding it (`~/code`), `null` when there is
+	 *  none (home itself, the root, a bare name). */
+	parent: string | null;
+	/** The whole path, home-shortened: the spoken label and the ✓ comparison's
+	 *  readable form. */
+	short: string;
+}>;
+
+/**
+ * Split a folder path into its name and the folder holding it.
+ *
+ * WHY THE NAME LEADS. A folder's distinguishing end is its LAST segment —
+ * `~/code/app` and `~/code/api` differ only there — and a head-truncated path is
+ * not available on web: react-native-web ignores `ellipsizeMode="head"`, so a
+ * long `/private/tmp` row read `/pri…` and lost exactly the part that tells two
+ * rows apart (design D6). Painting the name and the parent as two texts keeps the
+ * name whole and lets only the dimmer parent yield, on every platform.
+ *
+ * `home` is the COMPUTER's home folder (`GET /api/directories` → `home`), never
+ * the folder currently picked: shortening a path against itself is what painted
+ * `~` for every folder (UX U1). `null` home (not read yet) leaves the path as is.
+ */
+export const folderName = (path: string, home: string | null): FolderName => {
+	const short = home === null ? path : homeShortened(path, home);
+	// A trailing separator names the same folder; `/` alone is the root.
+	const trimmed = short.length > 1 ? short.replace(/[/\\]+$/, "") : short;
+	const at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+	if (trimmed === "~" || trimmed === "/" || at < 0)
+		return { name: trimmed, parent: null, short };
+	const name = trimmed.slice(at + 1);
+	const parent = at === 0 ? "/" : trimmed.slice(0, at);
+	return { name, parent, short };
+};
+
+/**
+ * The home strip's folder chip: what it paints and what it says.
+ *
+ * Both come from the ONE folder the next start names, so the text and the spoken
+ * label cannot disagree — they did: the text was shortened against that same
+ * folder (always `~`) while the label read the real path (UX U1). The text is the
+ * folder's own name, shortened against the computer's `home`; the composer adds
+ * the glyph and decides when even the name yields (design D2).
+ */
+export const homeFolderChip = (
+	startFolder: string,
+	home: string | null,
+): Readonly<{ label: string; accessibilityLabel: string }> => ({
+	label: folderName(startFolder, home).name,
+	accessibilityLabel: `Working in ${startFolder}`,
+});

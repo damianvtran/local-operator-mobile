@@ -7,6 +7,10 @@
 		"role": "meta",
 		"note": "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit."
 	},
+	"mobile.home.chip.effort_default_short": {
+		"role": "meta",
+		"note": "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit."
+	},
 	"mobile.home.chip.effort_default_unnamed": {
 		"role": "meta",
 		"note": "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit."
@@ -93,7 +97,7 @@
 	},
 	"mobile.home.picker.badge_this_chat": {
 		"role": "meta",
-		"note": "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit."
+		"note": "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit. Says 'conversation', the product's word everywhere else (UX U7)."
 	},
 	"mobile.home.picker.effort_none": {
 		"role": "help",
@@ -110,6 +114,10 @@
 	"mobile.home.picker.effort_unsupported": {
 		"role": "help",
 		"note": "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit."
+	},
+	"mobile.home.picker.effort_use_default": {
+		"role": "button",
+		"note": "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit."
 	},
 	"mobile.home.picker.folder_home": {
 		"role": "meta",

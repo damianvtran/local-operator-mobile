@@ -504,6 +504,9 @@ export const CONTROL = {
 	 *  while the computer names no default model (reviews R5, #174 D1). With a named
 	 *  default, that model's own row is the way back. */
 	homeDefaultModel: "home-default-model",
+	/** The effort picker's "this computer's level" row, offered when the model
+	 *  that will run has no known default rung (UX U2). */
+	homeDefaultEffort: "home-default-effort",
 	/** The home's three pickers (folder, model, effort), each its own sheet in place
 	 *  of the one overloaded options sheet — and the controls inside them: the
 	 *  failed-read retries, the model search, and the folder picker's secondary

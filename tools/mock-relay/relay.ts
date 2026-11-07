@@ -2615,6 +2615,11 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 		if (pathname === "/api/directories" && method === "GET") {
+			/* A scenario's own folder answer, else the corpus capture. */
+			if (world.directories !== undefined) {
+				sendJson(res, 200, world.directories);
+				return;
+			}
 			sendFixture(res, "directories");
 			return;
 		}

@@ -347,8 +347,27 @@ const BADGE_TONES: Record<SemanticTone, string> = {
  * turn its border-vs-own-fill pair into a 3:1 requirement it does not meet; a
  * static badge is exempt because it is resolved against the page.
  */
-export const badgeClasses = (tone: SemanticTone = "neutral"): string =>
-	cx("self-start rounded-sm border px-2 py-0.5 text-meta", BADGE_TONES[tone]);
+export const badgeClasses = (
+	tone: SemanticTone = "neutral",
+	align: BadgeAlign = "start",
+): string =>
+	cx(
+		align === "center" ? "self-center" : "self-start",
+		"rounded-sm border px-2 py-0.5 text-meta",
+		BADGE_TONES[tone],
+	);
+
+/**
+ * Where a badge sits on its parent's cross axis.
+ *
+ * `start` is the default every existing caller was measured with: a badge in a
+ * column (a card's header stack, a tag line) hugs its leading edge instead of
+ * stretching to the column's width. A badge at the END of a centred `flex-row`
+ * list row (the home pickers' "Default" / "This conversation") needs `center`:
+ * `self-start` overrides the row's `items-center` and pins the pill to the row's
+ * top edge, 11-13 pt above the label's centre line (design round 1, D1).
+ */
+export type BadgeAlign = "start" | "center";
 
 /**
  * The badge's LABEL line box, which is the whole of its height above the type.

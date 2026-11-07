@@ -9,6 +9,7 @@ import {
 	effortLabel,
 	type FolderRow,
 	filterModels,
+	folderName,
 	folderRows,
 	MODEL_SEARCH_THRESHOLD,
 	typedFolder,
@@ -19,7 +20,6 @@ import {
 	ModelOptionRow,
 } from "@/features/session/components/model-sheet";
 import { t } from "@/i18n";
-import { homeShortened } from "@/lib/format";
 import { CONTROL, homeFolderRowId, ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
@@ -169,13 +169,15 @@ export const FolderPicker = ({
 			{rows.map((row, index) => {
 				const selected = row.path === current;
 				const kind = kindLabel(row);
-				const name =
-					folders === null ? row.path : homeShortened(row.path, folders.home);
+				const { name, parent, short } = folderName(
+					row.path,
+					folders?.home ?? null,
+				);
 				return (
 					<Pressable
 						key={row.path}
 						accessibilityRole={ROLE.button}
-						accessibilityLabel={kind !== null ? `${name}, ${kind}` : name}
+						accessibilityLabel={kind !== null ? `${short}, ${kind}` : short}
 						accessibilityState={state({ selected, disabled: !editable })}
 						disabled={!editable}
 						onPress={() => {
@@ -184,17 +186,30 @@ export const FolderPicker = ({
 						}}
 						testID={homeFolderRowId(index)}
 					>
-						{/* 48 pt rows: glyph · name · kind badge · ✓ (spec §5). */}
+						{/* 48 pt rows: glyph · name · parent · kind badge · ✓ (spec §5).
+						 *  The folder's own name leads and stays whole; only the dim
+						 *  parent yields (`flex-1` with no basis, so it gives way
+						 *  first). A head-ellipsized whole path lost the distinguishing
+						 *  end on web, which ignores `ellipsizeMode="head"` (D6). */}
 						<View className="min-h-12 flex-row items-center gap-3 px-3">
 							<Folder color={glyph} size={20} aria-hidden />
-							<Text
-								className="min-w-0 flex-1 text-body text-ink"
-								numberOfLines={1}
-								ellipsizeMode="head"
-							>
-								{name}
-							</Text>
-							{kind !== null ? <Badge label={kind} /> : null}
+							<View className="min-w-0 flex-1 flex-row items-baseline gap-2">
+								<Text
+									className="min-w-0 shrink text-body text-ink"
+									numberOfLines={1}
+								>
+									{name}
+								</Text>
+								{parent !== null ? (
+									<Text
+										className="min-w-0 flex-1 text-body-sm text-ink-dim"
+										numberOfLines={1}
+									>
+										{parent}
+									</Text>
+								) : null}
+							</View>
+							{kind !== null ? <Badge label={kind} align="center" /> : null}
 							{selected ? (
 								<Text className="shrink-0 text-accent" aria-hidden>
 									✓
@@ -216,6 +231,15 @@ export const FolderPicker = ({
 							invalid={reason !== null}
 							disabled={!editable}
 							maxLength={4096}
+							/* Return answers the field the way "Use this path" does, and
+							 *  only when that button would: a phone keyboard's Done key
+							 *  otherwise left a valid path sitting in an open sheet (U3). */
+							returnKeyType="done"
+							onSubmitEditing={() => {
+								if (!editable || check === null || !check.ok) return;
+								onPick(check.path);
+								close();
+							}}
 							testID={CONTROL.newSessionCwd}
 						/>
 						{reason !== null ? (
@@ -476,6 +500,25 @@ export const EffortPicker = ({
 						</Text>
 					) : null}
 					<View accessibilityRole={ROLE.radiogroup} className="py-1">
+						{/* No rung is the computer's KNOWN default for this model
+						 *  (`default.effort` describes the default model only), so no
+						 *  rung maps a tap back to "send no effort". Without this row a
+						 *  picked level could only move to another level — the way back
+						 *  was a round trip through the default model (UX U2 / R1, the
+						 *  effort twin of the model picker's default row). */}
+						{defaultEffort === null ? (
+							<EffortRungRow
+								rung=""
+								label={t("mobile.home.picker.effort_use_default")}
+								selected={chosen === null}
+								disabled={!editable}
+								onPress={() => {
+									onPick(null);
+									onClose();
+								}}
+								testID={CONTROL.homeDefaultEffort}
+							/>
+						) : null}
 						{offer.rungs.map((rung) => {
 							const isDefault = rung === defaultEffort;
 							return (

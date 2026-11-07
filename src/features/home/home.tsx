@@ -54,6 +54,7 @@ import {
 	effortAfterModelChange,
 	effortOffer,
 	homeChips,
+	homeFolderChip,
 } from "@/features/home/picker-model";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
@@ -79,7 +80,6 @@ import {
 	unreadBadgeCount,
 } from "@/features/sessions/session-projection";
 import { t } from "@/i18n";
-import { homeShortened } from "@/lib/format";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";
 import { useUiStore } from "@/state/ui-store";
@@ -593,6 +593,10 @@ export default function Home({
 		[setImages],
 	);
 
+	/** The folder the next start names: the live selection's, else the held one.
+	 *  One expression for the chip's text, its spoken label and the sheet's ✓. */
+	const startFolder = startup.snapshot.selection?.cwd ?? homeDirectory;
+
 	/* `language` is a dependency here because this memo holds RENDERED COPY: the
 	 * disabled sentence is a `t()` reading, resolved at call time. Without it a
 	 * language frame repaints this screen and the memo hands back the sentence of
@@ -921,14 +925,16 @@ export default function Home({
 				 *  (record §2.2 yield order). Paint, target, hint and the options
 				 *  sheet behind it are unchanged (final audit, D2). */
 				folderChip={
-					homeDirectory !== null
+					startFolder !== null
 						? {
-								label: homeShortened(
-									startup.snapshot.selection?.cwd ?? homeDirectory,
-									homeDirectory,
-								),
+								/* The folder's own name, shortened against the COMPUTER's home
+								 *  (`folders.home`). It was shortened against `homeDirectory` —
+								 *  the folder the next start names, i.e. itself — so every pick
+								 *  painted `~` while the spoken label named the real path (UX
+								 *  U1). The composer adds the glyph and decides when the name
+								 *  yields (design D2). */
+								...homeFolderChip(startFolder, folders?.home ?? null),
 								onPress: () => setPicker("folder"),
-								accessibilityLabel: `Working in ${homeDirectory}`,
 								accessibilityHint: "Choose another folder",
 								testID: CONTROL.homeTargetFolder,
 							}
@@ -1062,7 +1068,7 @@ export default function Home({
 				visible={picker === "folder"}
 				onClose={() => setPicker(null)}
 				folders={folders}
-				current={startup.snapshot.selection?.cwd ?? homeDirectory}
+				current={startFolder}
 				failure={
 					directoriesError === null
 						? null

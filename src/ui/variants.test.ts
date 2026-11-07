@@ -384,3 +384,17 @@ describe("alert action placement", () => {
 		expect(alertStacked.flexDirection).toBe("column");
 	});
 });
+
+describe("badge alignment (design D1)", () => {
+	it("keeps `self-start` for every existing caller", () => {
+		expect(badgeClasses("neutral")).toContain("self-start");
+		expect(badgeClasses("neutral")).not.toContain("self-center");
+	});
+
+	it("centres a badge trailing a centred row instead of pinning it to the top", () => {
+		const centred = badgeClasses("neutral", "center");
+		expect(centred).toContain("self-center");
+		expect(centred).not.toContain("self-start");
+		expect(centred).toContain("bg-accent-muted");
+	});
+});

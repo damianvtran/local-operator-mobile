@@ -84,8 +84,11 @@ const NAMESPACES = [
 		messages: home,
 		context: homeContext,
 		/* 31 from the round-1 remediation's two options-sheet rows ("back to the
-		 *  computer's default" for the folder and for the model): 29 before them. */
-		expected: 31,
+		 *  computer's default" for the folder and for the model): 29 before them.
+		 *  65 with the three pickers (#182): 32 for the chips' spoken labels, the
+		 *  effort names and the pickers' copy, and 2 from its round-1 remediation
+		 *  ("Default effort" on the chip, "This computer's level" in the sheet). */
+		expected: 65,
 	},
 	{
 		name: "mobile.projects",
@@ -220,7 +223,7 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(298);
+		expect(total).toBe(332);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -288,6 +291,12 @@ const IDENTICAL_BY_DESIGN: Readonly<
 		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
 		"mobile.library.editor.description":
 			"French spells this field the same way — « Description » is the French word for the label, beside « Nom » and « Étiquettes » in the same editor.",
+		/* The three pickers' (#182) two words French spells as English: the effort
+		 *  sheet's title and the lowest-but-one rung. */
+		"mobile.home.picker.effort_title":
+			"French uses the same word — « Effort » is the French noun for the setting, the title of the sheet that picks it.",
+		"mobile.home.effort.minimal":
+			"French spells the adjective the same way — « Minimal » is the French name of the rung, beside « Faible » and « Moyen » on the same ladder.",
 		/* The 2026-11-04 chrome words. The two relay.* values are the core
 		 *  relay's own French catalogue, mirrored; all three are French words. */
 		"relay.chrome.session.tray.agents":

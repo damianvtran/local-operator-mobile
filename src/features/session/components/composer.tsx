@@ -1,6 +1,7 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
 import {
+	Folder,
 	Keyboard as KeyboardIcon,
 	Mic,
 	MoreHorizontal,
@@ -60,6 +61,9 @@ import {
 	COMPOSER_DISC,
 	COMPOSER_META_GLASS_SPACING,
 	COMPOSER_META_ROW,
+	FOLDER_CHIP_MAX_PT,
+	folderChipText,
+	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
@@ -391,9 +395,12 @@ const ComposerChipButton = ({
 	loadingWidthClassName,
 	testID,
 	glass = false,
+	leadingIcon,
 }: {
 	/** The strip's glass branch: the chip gets its own capsule of material. */
 	glass?: boolean;
+	/** A glyph before the value chip's text (the home's folder chip). */
+	leadingIcon?: ReactElement;
 	chip: ComposerChip;
 	onPress: () => void;
 	/** The hint on the value chip, which is the only case that opens a sheet. */
@@ -438,6 +445,7 @@ const ComposerChipButton = ({
 			shrink
 			onPress={onPress}
 			quiet
+			leadingIcon={leadingIcon}
 			accessibilityLabel={chip.accessibilityLabel}
 			accessibilityHint={chooseHint}
 			testID={testID}
@@ -932,6 +940,8 @@ export const Composer = ({
 
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");
+	/* The folder glyph's ink: `ink-dim`, as on the folder sheet's rows. */
+	const folderInk = useTokenColor("ink-dim");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
 	 *  give them what they need and no more. */
 
@@ -1252,21 +1262,26 @@ export const Composer = ({
 			 *  how hard — one chip per picker (the operator: "a separate dialog to
 			 *  handle directory vs model vs effort selection"). It was reachable only
 			 *  through More, so the folder was two taps and a sheet away from the
-			 *  composer it configures. It yields first: `shrink` with the queued
-			 *  chip's 160 pt cap, so the model keeps the row's flexible width. The
-			 *  session view passes no `folderChip` and its strip is unchanged. */}
+			 *  composer it configures. Glyph + the folder's name, capped, glyph only
+			 *  at large text; it yields first, then effort, then the model
+			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes no
+			 *  `folderChip` and its strip is unchanged. */}
 			{folderChip ? (
 				<View
-					className="shrink"
-					style={{ minWidth: MODEL_FLOOR_PT, maxWidth: 160 }}
+					style={{
+						flexShrink: HOME_STRIP_SHRINK.folder,
+						minWidth: MODEL_FLOOR_PT,
+						maxWidth: FOLDER_CHIP_MAX_PT,
+					}}
 				>
 					<ComposerChipButton
 						glass={glass}
 						chip={{
 							kind: "value",
-							text: folderChip.label,
+							text: folderChipText(folderChip.label, effectiveScale),
 							accessibilityLabel: folderChip.accessibilityLabel,
 						}}
+						leadingIcon={<Folder color={folderInk} size={16} aria-hidden />}
 						onPress={folderChip.onPress}
 						chooseHint={folderChip.accessibilityHint}
 						loadingWidthClassName="w-16"
@@ -1274,7 +1289,20 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			<View className="min-w-0 flex-1" style={{ minWidth: MODEL_FLOOR_PT }}>
+			<View
+				/* Home: the model keeps its natural width and yields LAST. The session
+				 *  strip keeps its `flex-1` slot, byte for byte. */
+				className={folderChip ? "min-w-0 grow" : "min-w-0 flex-1"}
+				style={
+					folderChip
+						? {
+								minWidth: MODEL_FLOOR_PT,
+								flexShrink: HOME_STRIP_SHRINK.model,
+								flexBasis: "auto",
+							}
+						: { minWidth: MODEL_FLOOR_PT }
+				}
+			>
 				<ComposerChipButton
 					glass={glass}
 					chip={modelChip}
@@ -1285,7 +1313,17 @@ export const Composer = ({
 				/>
 			</View>
 			{effortChip ? (
-				<View className="shrink" style={{ minWidth: MODEL_FLOOR_PT }}>
+				<View
+					className="shrink"
+					style={
+						folderChip
+							? {
+									minWidth: MODEL_FLOOR_PT,
+									flexShrink: HOME_STRIP_SHRINK.effort,
+								}
+							: { minWidth: MODEL_FLOOR_PT }
+					}
+				>
 					<ComposerChipButton
 						glass={glass}
 						chip={effortChip}
@@ -1820,19 +1858,8 @@ export const Composer = ({
 						testID={CONTROL.composerContextEffort}
 					/>
 				) : null}
-				{folderChip ? (
-					<Chip
-						quiet
-						shrink
-						label={folderChip.label}
-						onPress={() => {
-							setContextOpen(false);
-							folderChip.onPress();
-						}}
-						accessibilityLabel={folderChip.accessibilityLabel}
-						testID={folderChip.testID}
-					/>
-				) : null}
+				{/* No folder chip here: the strip leads with it, and a second copy in
+				 *  More was two entry points for one setting (UX U5). */}
 				{contextLabel ? (
 					<Text className="text-body text-ink">{contextLabel}</Text>
 				) : null}

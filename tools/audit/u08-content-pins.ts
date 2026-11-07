@@ -144,15 +144,22 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * body's `effort` as the relay does (`startEffortAdmitted`, in `wire.ts`) and
 	 * advertises `session_start: {effort: true}`. No existing scenario's bytes or
 	 * the corpus moved. */
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print from
+	 * the staged tree: `GET /api/directories` serves a scenario's own folder
+	 * answer when it names one (`world.directories`), else the corpus capture as
+	 * before. No existing scenario names one, so their bytes are unchanged. */
 	"tools/mock-relay/relay.ts":
-		"5957fa71b4286acf962324e974d1b5868512b69964352ebbfcc407e40a3a2fdd",
+		"43dfa7a47715e6e34f97923d4ee6237da470f8e582a1f4ca2d14144dc0533787",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print: only
+	 * the `home-pickers` world moved (a folder answer with default/recents and two
+	 * not-connected model rows, UX U6); no other scenario's world changed. */
 	"tools/mock-relay/scenarios.ts":
-		"2ca5bd9106a8b62ab27b233de498bf019118f117b1d2f95ee7e8d6bc32246577",
+		"79886e0ee53b525e26c4ccd01e840161ea1d50ba96b9132745071e5cbcf63616",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -763,7 +770,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * fields, the new i18n keys, and tests. `app`, `design/tokens`, fonts and
 	 * `public` are untouched. Source admission only, NOT evidence that U-08's
 	 * rendered geometry proof passed: it must be re-captured against this tree. */
-	src: "d09b174de962dbb54b5df4f28252a2cd07f31676ebb6ee658256f174b466c9ba",
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print from
+	 * the staged tree. Only `src` moves: the folder chip's real name, glyph, cap
+	 * and yield order in the composer strip, centred picker badges, the effort
+	 * rows' dot/checked state, the effort "this computer's level" row, the new
+	 * i18n keys and the catalogue invariants they move, and tests. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "79cc56b6c1156680b1111e7a3df8d3eb1d249a35779a430d8cfe3d5aab8a1b34",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

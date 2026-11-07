@@ -1,6 +1,7 @@
 {
 	"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 	"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
+	"mobile.home.chip.effort_default_short": "Усилие по умолчанию",
 	"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
 	"mobile.home.chip.model_chosen": "Модель, {model}, выбрано для этой беседы",
 	"mobile.home.chip.model_default": "Модель, {model}, по умолчанию на этом компьютере",
@@ -27,6 +28,7 @@
 	"mobile.home.picker.effort_title": "Усилие",
 	"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
 	"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
+	"mobile.home.picker.effort_use_default": "Уровень этого компьютера",
 	"mobile.home.picker.folder_home": "Домашняя",
 	"mobile.home.picker.folder_other": "Другой путь…",
 	"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",

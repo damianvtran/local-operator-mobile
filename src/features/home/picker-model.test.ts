@@ -9,8 +9,10 @@ import {
 	effortAfterModelChange,
 	effortOffer,
 	filterModels,
+	folderName,
 	folderRows,
 	homeChips,
+	homeFolderChip,
 	MODEL_SEARCH_THRESHOLD,
 	typedFolder,
 } from "@/features/home/picker-model";
@@ -122,10 +124,22 @@ describe("what the chips say", () => {
 		expect(JSON.stringify(model)).not.toContain("Opus");
 	});
 
-	it("keeps #174's plain Default for an older daemon that publishes none", () => {
+	it("keeps #174's plain Default for an older daemon, and says which chip is effort", () => {
+		/* UX U8: both chips read `Default` against an older daemon, two
+		 *  identical words with nothing telling model from effort. */
 		const { model, effort } = chips({ catalogueDefault: undefined });
 		expect(model).toMatchObject({ kind: "value", text: "Default" });
-		expect(effort).toMatchObject({ kind: "value", text: "Default" });
+		expect(effort).toMatchObject({ kind: "value", text: "Default effort" });
+	});
+
+	it("never names a picked effort a relay too old for effort will not send (R2)", () => {
+		const { effort } = chips({
+			chosenEffort: "high",
+			offer: { kind: "unsupported" },
+			defaultEffort: null,
+		});
+		expect(effort).toMatchObject({ kind: "value", text: "Default effort" });
+		expect(JSON.stringify(effort)).not.toContain("High");
 	});
 
 	it("disables the effort chip, with its reason, for a model with no effort setting", () => {
@@ -233,5 +247,64 @@ describe("the folder picker", () => {
 			ok: false,
 			reason: "too_long",
 		});
+	});
+});
+
+describe("the folder chip (UX U1, design D2)", () => {
+	const HOME = "/Users/demo";
+
+	it.each([
+		// The computer's default, a picked temp folder, a typed `~` path.
+		["/Users/demo/code/app", "app", "Working in /Users/demo/code/app"],
+		["/private/tmp", "tmp", "Working in /private/tmp"],
+		["~/notes", "notes", "Working in ~/notes"],
+		["/Users/demo/notes", "notes", "Working in /Users/demo/notes"],
+	])(
+		"paints %s as its own name, and says the same folder",
+		(path, label, spoken) => {
+			expect(homeFolderChip(path, HOME)).toStrictEqual({
+				label,
+				accessibilityLabel: spoken,
+			});
+		},
+	);
+
+	it("paints `~` only for the home folder itself", () => {
+		expect(homeFolderChip(HOME, HOME).label).toBe("~");
+		// The regression: shortening a pick against ITSELF painted `~` for all.
+		expect(homeFolderChip("/private/tmp", HOME).label).not.toBe("~");
+		expect(homeFolderChip("/Users/demo/code/app", HOME).label).not.toBe("~");
+	});
+
+	it("leaves the path whole before the computer's home is known", () => {
+		expect(homeFolderChip("/Users/demo/code/app", null).label).toBe("app");
+	});
+});
+
+describe("folder names lead, the parent yields (design D6)", () => {
+	const HOME = "/Users/demo";
+	it.each([
+		[
+			"/Users/demo/code/app",
+			{ name: "app", parent: "~/code", short: "~/code/app" },
+		],
+		["/Users/demo", { name: "~", parent: null, short: "~" }],
+		["/Users/demo/notes", { name: "notes", parent: "~", short: "~/notes" }],
+		[
+			"/private/tmp",
+			{ name: "tmp", parent: "/private", short: "/private/tmp" },
+		],
+		["/tmp", { name: "tmp", parent: "/", short: "/tmp" }],
+		["/", { name: "/", parent: null, short: "/" }],
+		[
+			"/Users/demo/code/app/",
+			{ name: "app", parent: "~/code", short: "~/code/app/" },
+		],
+		[
+			"C:\\Users\\demo\\app",
+			{ name: "app", parent: "C:\\Users\\demo", short: "C:\\Users\\demo\\app" },
+		],
+	])("splits %s", (path, expected) => {
+		expect(folderName(path, HOME)).toStrictEqual(expected);
 	});
 });

@@ -93,6 +93,7 @@ export type CatalogueKey =
 	| "mobile.computers.switch"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
+	| "mobile.home.chip.effort_default_short"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_chosen"
 	| "mobile.home.chip.model_default"
@@ -119,6 +120,7 @@ export type CatalogueKey =
 	| "mobile.home.picker.effort_title"
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.effort_use_default"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -420,6 +422,7 @@ export type NoParamKey =
 	| "mobile.computers.session_error_help"
 	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
+	| "mobile.home.chip.effort_default_short"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_no_default"
 	| "mobile.home.chip.model_no_default_label"
@@ -444,6 +447,7 @@ export type NoParamKey =
 	| "mobile.home.picker.effort_title"
 	| "mobile.home.picker.effort_unknown"
 	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.effort_use_default"
 	| "mobile.home.picker.folder_home"
 	| "mobile.home.picker.folder_other"
 	| "mobile.home.picker.folder_outside"
@@ -710,6 +714,7 @@ export type MessageParams = {
 	"mobile.computers.switch": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
+	"mobile.home.chip.effort_default_short": NoParams;
 	"mobile.home.chip.effort_default_unnamed": NoParams;
 	"mobile.home.chip.model_chosen": { model: string | number };
 	"mobile.home.chip.model_default": { model: string | number };
@@ -736,6 +741,7 @@ export type MessageParams = {
 	"mobile.home.picker.effort_title": NoParams;
 	"mobile.home.picker.effort_unknown": NoParams;
 	"mobile.home.picker.effort_unsupported": NoParams;
+	"mobile.home.picker.effort_use_default": NoParams;
 	"mobile.home.picker.folder_home": NoParams;
 	"mobile.home.picker.folder_other": NoParams;
 	"mobile.home.picker.folder_outside": NoParams;
@@ -1059,6 +1065,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.switch": "Switch computer",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
+	"mobile.home.chip.effort_default_short": "Default effort",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
 	"mobile.home.chip.model_chosen": "Model, {model}, chosen for this conversation",
 	"mobile.home.chip.model_default": "Model, {model}, this computer's default",
@@ -1080,11 +1087,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
 	"mobile.home.picker.badge_default": "Default",
-	"mobile.home.picker.badge_this_chat": "This chat",
+	"mobile.home.picker.badge_this_chat": "This conversation",
 	"mobile.home.picker.effort_none": "This model has no effort setting.",
 	"mobile.home.picker.effort_title": "Effort",
 	"mobile.home.picker.effort_unknown": "This computer doesn't know this model's levels, so it will use the nearest level the model supports.",
 	"mobile.home.picker.effort_unsupported": "This computer's Local Operator is too old to accept an effort, so it uses its configured level. Update it to choose one here.",
+	"mobile.home.picker.effort_use_default": "This computer's level",
 	"mobile.home.picker.folder_home": "Home",
 	"mobile.home.picker.folder_other": "Other path…",
 	"mobile.home.picker.folder_outside": "This computer starts conversations only inside your home folder or its temporary folder.",
@@ -1393,6 +1401,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default_short": { role: "meta", note: "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.model_chosen": { role: "meta", note: "Spoken label of the model chip when the reader chose a model for this conversation. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.model_default": { role: "meta", note: "Spoken label of the model chip when the computer's configured default model applies. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -1414,11 +1423,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.options.fixed": { role: "help", note: "Explains why the pickers are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
 	"mobile.home.options.folder": { role: "meta", note: "Label of the field revealed by the folder picker's \"Other path…\" row, for typing a folder path on the connected computer (not on the phone)." },
 	"mobile.home.picker.badge_default": { role: "meta", note: "Small badge on the picker row holding the computer's configured default. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
-	"mobile.home.picker.badge_this_chat": { role: "meta", note: "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.badge_this_chat": { role: "meta", note: "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit. Says 'conversation', the product's word everywhere else (UX U7)." },
 	"mobile.home.picker.effort_none": { role: "help", note: "The selected model has no effort setting, so there is nothing to choose. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_title": { role: "heading", note: "Title of the effort picker sheet: how much reasoning effort the model spends. One word; keep it the same term as the effort levels' family. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_unknown": { role: "help", note: "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.effort_unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_use_default": { role: "button", note: "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_home": { role: "meta", note: "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_other": { role: "button", note: "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.picker.folder_outside": { role: "status", note: "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -1741,6 +1751,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta computadora",
+		"mobile.home.chip.effort_default_short": "Esfuerzo predeterminado",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta computadora",
 		"mobile.home.chip.model_chosen": "Modelo, {model}, elegido para esta conversación",
 		"mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta computadora",
@@ -1762,11 +1773,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 		"mobile.home.options.folder": "Carpeta en esta máquina",
 		"mobile.home.picker.badge_default": "Predeterminado",
-		"mobile.home.picker.badge_this_chat": "Este chat",
+		"mobile.home.picker.badge_this_chat": "Esta conversación",
 		"mobile.home.picker.effort_none": "Este modelo no tiene ajuste de esfuerzo.",
 		"mobile.home.picker.effort_title": "Esfuerzo",
 		"mobile.home.picker.effort_unknown": "Esta computadora no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
 		"mobile.home.picker.effort_unsupported": "El Local Operator de esta computadora es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
+		"mobile.home.picker.effort_use_default": "Nivel de esta computadora",
 		"mobile.home.picker.folder_home": "Inicio",
 		"mobile.home.picker.folder_other": "Otra ruta…",
 		"mobile.home.picker.folder_outside": "Esta computadora solo inicia conversaciones dentro de tu carpeta de inicio o de su carpeta temporal.",
@@ -2073,6 +2085,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
+		"mobile.home.chip.effort_default_short": "Effort par défaut",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
 		"mobile.home.chip.model_chosen": "Modèle, {model}, choisi pour cette conversation",
 		"mobile.home.chip.model_default": "Modèle, {model}, par défaut sur cet ordinateur",
@@ -2099,6 +2112,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_title": "Effort",
 		"mobile.home.picker.effort_unknown": "Cet ordinateur ne connaît pas les niveaux de ce modèle ; il utilisera donc le niveau le plus proche que le modèle prend en charge.",
 		"mobile.home.picker.effort_unsupported": "Le Local Operator de cet ordinateur est trop ancien pour accepter un niveau d’effort ; il utilise donc son niveau configuré. Mettez-le à jour pour en choisir un ici.",
+		"mobile.home.picker.effort_use_default": "Niveau de cet ordinateur",
 		"mobile.home.picker.folder_home": "Dossier personnel",
 		"mobile.home.picker.folder_other": "Autre chemin…",
 		"mobile.home.picker.folder_outside": "Cet ordinateur ne démarre des conversations que dans votre dossier personnel ou son dossier temporaire.",
@@ -2405,6 +2419,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.effort_default_short": "डिफ़ॉल्ट प्रयास",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
 		"mobile.home.chip.model_chosen": "मॉडल, {model}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.model_default": "मॉडल, {model}, इस कंप्यूटर का डिफ़ॉल्ट",
@@ -2426,11 +2441,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 		"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
 		"mobile.home.picker.badge_default": "डिफ़ॉल्ट",
-		"mobile.home.picker.badge_this_chat": "यह चैट",
+		"mobile.home.picker.badge_this_chat": "यह बातचीत",
 		"mobile.home.picker.effort_none": "इस मॉडल में प्रयास की कोई सेटिंग नहीं है।",
 		"mobile.home.picker.effort_title": "प्रयास",
 		"mobile.home.picker.effort_unknown": "यह कंप्यूटर इस मॉडल के स्तर नहीं जानता, इसलिए वह मॉडल द्वारा समर्थित सबसे नज़दीकी स्तर इस्तेमाल करेगा।",
 		"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
+		"mobile.home.picker.effort_use_default": "इस कंप्यूटर का स्तर",
 		"mobile.home.picker.folder_home": "होम",
 		"mobile.home.picker.folder_other": "दूसरा पाथ…",
 		"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
@@ -2737,6 +2753,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
+		"mobile.home.chip.effort_default_short": "Усилие по умолчанию",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
 		"mobile.home.chip.model_chosen": "Модель, {model}, выбрано для этой беседы",
 		"mobile.home.chip.model_default": "Модель, {model}, по умолчанию на этом компьютере",
@@ -2763,6 +2780,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_title": "Усилие",
 		"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
 		"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
+		"mobile.home.picker.effort_use_default": "Уровень этого компьютера",
 		"mobile.home.picker.folder_home": "Домашняя",
 		"mobile.home.picker.folder_other": "Другой путь…",
 		"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",
@@ -3069,6 +3087,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.home.chip.effort_chosen": "کوشش، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "کوشش، {effort}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.effort_default_short": "ڈیفالٹ کوشش",
 		"mobile.home.chip.effort_default_unnamed": "کوشش، اس کمپیوٹر پر ترتیب شدہ سطح",
 		"mobile.home.chip.model_chosen": "ماڈل، {model}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.model_default": "ماڈل، {model}، اس کمپیوٹر کا ڈیفالٹ",
@@ -3090,11 +3109,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 		"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
 		"mobile.home.picker.badge_default": "ڈیفالٹ",
-		"mobile.home.picker.badge_this_chat": "یہ چیٹ",
+		"mobile.home.picker.badge_this_chat": "یہ گفتگو",
 		"mobile.home.picker.effort_none": "اس ماڈل میں کوشش کی کوئی ترتیب نہیں۔",
 		"mobile.home.picker.effort_title": "کوشش",
 		"mobile.home.picker.effort_unknown": "یہ کمپیوٹر اس ماڈل کی سطحیں نہیں جانتا، اس لیے یہ ماڈل کی معاونت والی قریب ترین سطح استعمال کرے گا۔",
 		"mobile.home.picker.effort_unsupported": "اس کمپیوٹر کا Local Operator کوشش قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔",
+		"mobile.home.picker.effort_use_default": "اس کمپیوٹر کی سطح",
 		"mobile.home.picker.folder_home": "ہوم",
 		"mobile.home.picker.folder_other": "دوسرا راستہ…",
 		"mobile.home.picker.folder_outside": "یہ کمپیوٹر گفتگو صرف آپ کے ہوم فولڈر یا اس کے عارضی فولڈر کے اندر شروع کرتا ہے۔",
@@ -3401,6 +3421,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.home.chip.effort_chosen": "Mức nỗ lực, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức nỗ lực, {effort}, mặc định của máy tính này",
+		"mobile.home.chip.effort_default_short": "Mức nỗ lực mặc định",
 		"mobile.home.chip.effort_default_unnamed": "Mức nỗ lực, mức đã cấu hình trên máy tính này",
 		"mobile.home.chip.model_chosen": "Mô hình, {model}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.model_default": "Mô hình, {model}, mặc định của máy tính này",
@@ -3427,6 +3448,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_title": "Mức nỗ lực",
 		"mobile.home.picker.effort_unknown": "Máy tính này chưa biết các mức của mô hình này, nên sẽ dùng mức gần nhất mà mô hình hỗ trợ.",
 		"mobile.home.picker.effort_unsupported": "Local Operator trên máy tính này quá cũ để nhận mức nỗ lực, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
+		"mobile.home.picker.effort_use_default": "Mức của máy tính này",
 		"mobile.home.picker.folder_home": "Thư mục chính",
 		"mobile.home.picker.folder_other": "Đường dẫn khác…",
 		"mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục chính của bạn hoặc thư mục tạm của nó.",
@@ -3733,6 +3755,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "切换电脑",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
+		"mobile.home.chip.effort_default_short": "默认推理强度",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
 		"mobile.home.chip.model_chosen": "模型，{model}，为此对话选择",
 		"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
@@ -3759,6 +3782,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.picker.effort_title": "推理强度",
 		"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
 		"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
+		"mobile.home.picker.effort_use_default": "此电脑的级别",
 		"mobile.home.picker.folder_home": "主目录",
 		"mobile.home.picker.folder_other": "其他路径…",
 		"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",

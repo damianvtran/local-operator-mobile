@@ -124,7 +124,9 @@ export const ModelOptionRow = ({
 						{notConnected}
 					</Text>
 				) : null}
-				{badge !== null ? <Badge label={badge} /> : null}
+				{/* `center`: the row is `items-center`, and the badge's default
+				 *  `self-start` would pin it to the row's top edge (design D1). */}
+				{badge !== null ? <Badge label={badge} align="center" /> : null}
 				{isSelected ? (
 					<Text className="shrink-0 text-accent" aria-hidden>
 						✓
@@ -211,27 +213,40 @@ export const EffortRungRow = ({
 	onPress,
 	badge = null,
 	disabled = false,
+	testID,
 }: {
 	rung: string;
 	label: string;
 	selected: boolean;
 	onPress: () => void;
+	/** Defaults to the rung's own id; the home's "this computer's level" row is
+	 *  not a rung and names itself. */
+	testID?: string;
 	badge?: string | null;
 	disabled?: boolean;
 }) => (
 	<Pressable
 		accessibilityRole={ROLE.radio}
 		accessibilityLabel={badge !== null ? `${label}, ${badge}` : label}
-		accessibilityState={state({ selected, disabled })}
+		/* `checked` as well as `selected`: a radio's state on web and Android is
+		 *  `aria-checked`, and react-native-web emits nothing for `selected` on a
+		 *  radio, so the rung the reader is on went unannounced there (UX U9). */
+		accessibilityState={{ ...state({ selected, disabled }), checked: selected }}
 		disabled={disabled}
 		onPress={onPress}
-		testID={effortRungId(rung)}
+		testID={testID ?? effortRungId(rung)}
 	>
 		<View className="min-h-11 flex-row items-center gap-2 px-3">
+			{/* Only the selected rung paints its dot; the others keep the 8 pt slot
+			 *  so labels do not shift. An unselected `bg-hairline` dot measured
+			 *  1.23:1 dark / 1.44:1 light on `elevated` — under the 3:1 non-text
+			 *  floor, and read as an indent rather than a state (design D5, the
+			 *  relay's model sheet dropped it for the same reason). The selected
+			 *  state does not rest on the dot alone: the row is announced checked. */}
 			<View
 				className={cx(
 					"h-2 w-2 rounded-full",
-					selected ? "bg-accent" : "bg-hairline",
+					selected ? "bg-accent" : "bg-transparent",
 				)}
 			/>
 			<Text
@@ -242,7 +257,7 @@ export const EffortRungRow = ({
 			>
 				{label}
 			</Text>
-			{badge !== null ? <Badge label={badge} /> : null}
+			{badge !== null ? <Badge label={badge} align="center" /> : null}
 		</View>
 	</Pressable>
 );

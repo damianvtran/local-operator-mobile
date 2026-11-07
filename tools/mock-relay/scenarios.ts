@@ -153,6 +153,9 @@ export interface ScenarioWorld {
 	 *  naming no model or effort runs. `undefined` omits the key, as an older
 	 *  daemon does; `null` is a computer that resolved no default. */
 	modelDefault?: Json | null;
+	/** `GET /api/directories`'s body. `undefined` serves the corpus capture
+	 *  (home `~`, no recents, no default), which every existing scenario reads. */
+	directories?: Json;
 	/**
 	 * The projects surface this state pins (S16, the read path).
 	 *
@@ -3399,11 +3402,19 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			return { ...row, efforts: ["low", "medium", "high", "xhigh", "max"] };
 		if (row.selector === "deepseek/deepseek-v4-flash-0731")
 			return { ...row, efforts: [] };
+		/* Two rows the computer has no credential for: the picker keeps them
+		 *  visible and inert, and without one in the world that state had to be
+		 *  proxied in to be seen at all (UX U6). */
+		if (
+			row.selector === "kimi/k3-256k" ||
+			row.selector === "openai/gpt-6-astra"
+		)
+			return { ...row, connected: false };
 		return row;
 	});
 	add(
 		"home-pickers",
-		"The home's folder, model and effort pickers: a ranked catalogue whose rows carry all three `efforts` readings, and a computer default of Opus 5 at medium.",
+		"The home's folder, model and effort pickers: a ranked catalogue whose rows carry all three `efforts` readings and two not-connected rows, a computer default of Opus 5 at medium, and a folder answer with a default, recents, home and tmp.",
 		/* NO CELL, for `models-ranked`'s reason below: the pickers are sheets the
 		 *  app opens from the composer strip, and nothing on the wire opens one. The
 		 *  scenario is the world a rendered or manual pass of the pickers runs in. */
@@ -3415,6 +3426,20 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 				provider: "anthropic",
 				model_id: "claude-opus-5",
 				effort: "medium",
+			},
+			/* A computer default that is also its first recent folder (the dedupe),
+			 *  a recent with a long tail (the name-first row), and home/tmp — the
+			 *  folder sheet's every row kind, which the corpus capture (no default,
+			 *  no recents) cannot show (UX U6). Synthetic paths, not a capture. */
+			directories: {
+				home: "/Users/demo",
+				default: "/Users/demo/code/app",
+				recent: [
+					"/Users/demo/code/app",
+					"/Users/demo/code/a-very-long-project-name-that-keeps-going/service",
+					"/Users/demo/notes",
+				],
+				tmp: "/private/tmp",
 			},
 		}),
 	);

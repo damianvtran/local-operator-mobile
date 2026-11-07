@@ -1,6 +1,7 @@
 {
 	"mobile.home.chip.effort_chosen": "推理强度，{effort}，为此对话选择",
 	"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
+	"mobile.home.chip.effort_default_short": "默认推理强度",
 	"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
 	"mobile.home.chip.model_chosen": "模型，{model}，为此对话选择",
 	"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
@@ -27,6 +28,7 @@
 	"mobile.home.picker.effort_title": "推理强度",
 	"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
 	"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
+	"mobile.home.picker.effort_use_default": "此电脑的级别",
 	"mobile.home.picker.folder_home": "主目录",
 	"mobile.home.picker.folder_other": "其他路径…",
 	"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",
