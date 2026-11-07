@@ -8,6 +8,7 @@ import type {
 	RadientTokens,
 	TunnelSession,
 } from "@/connection";
+import * as recoveryProof from "@/connection/recovery-authority";
 import {
 	configureStartupAuthorizationStorage,
 	getStartupAuthorization,
@@ -24,6 +25,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
 import { sessions as sessionProjections } from "@/features/session/runtime";
+import { scopedStore } from "@/features/session/scoped-storage";
 import {
 	sessionFactsFrom,
 	sessionStateFlags,
@@ -40,13 +42,16 @@ import { signInPresentation } from "./sign-in-presentation";
 
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
+const nativePlatform = vi.hoisted(() => ({ OS: "web" }));
 const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
 const handoff = vi.hoisted(() => ({
 	block: null as Promise<void> | null,
 	started: false,
+	signals: [] as AbortSignal[],
 }));
 vi.mock("./radient-sign-in", () => ({
-	beginRadientSignIn: async () => {
+	beginRadientSignIn: async (options?: { signal?: AbortSignal }) => {
+		if (options?.signal) handoff.signals.push(options.signal);
 		handoff.started = true;
 		await handoff.block;
 		return { ok: true, tokens: oauth };
@@ -60,8 +65,37 @@ vi.mock("@/features/session/device-storage", async (importOriginal) => ({
 	},
 }));
 
+vi.mock("@/features/session/native-private-store", () => ({
+	nativePrivateStore: () => ({
+		get: async () => null,
+		set: async () => {},
+		remove: async () => {},
+		keys: async () => [],
+		clear: async () => {},
+	}),
+	eraseNativePrivateInstallation: async () => {},
+}));
+// Native retirement in this test has empty virtual directories, never host FS.
+vi.mock("expo-file-system", () => ({
+	Paths: { cache: "memory://cache", document: "memory://documents" },
+	Directory: class {
+		exists = false;
+		create() {}
+		info() {
+			return { exists: false };
+		}
+		list() {
+			return [];
+		}
+		delete() {}
+	},
+	File: class {},
+}));
+vi.mock("@/features/session/picker-cache", () => ({
+	clearNativePickerCache: async () => {},
+}));
 vi.mock("react-native", () => ({
-	Platform: { OS: "web" },
+	Platform: nativePlatform,
 	AppState: { addEventListener: () => ({ remove() {} }) },
 }));
 const durable = vi.hoisted(() => ({
@@ -716,9 +750,11 @@ function transport(controlPlane?: string) {
 }
 
 beforeEach(async () => {
+	nativePlatform.OS = "web";
 	privacy.fail = false;
 	handoff.block = null;
 	handoff.started = false;
+	handoff.signals.length = 0;
 	durable.saved = null;
 	const storage = new SecureStorage(memorySecureStore());
 	configureStartupAuthorizationStorage({
@@ -750,6 +786,62 @@ afterEach(async () => {
 });
 
 describe("startup authorization is admitted by the route (R1-1)", () => {
+	it("opens ordinary native writers while optional /me is still pending", async () => {
+		const gate = deferred();
+		vi.spyOn(recoveryProof, "proveRecoveryAuthority").mockReturnValue(
+			gate.promise.then(() => null),
+		);
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		nativePlatform.OS = "ios";
+		// The shared setup leaves an explicit-retire tombstone. This cold-start
+		// case starts with no prior owner, not a request to exercise native erase.
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		await mount();
+		let connecting!: Promise<void>;
+		try {
+			await act(async () => {
+				connecting = latest.selectComputer(computer("a"));
+				await vi.waitFor(() =>
+					expect(getStartupAuthorization()).not.toBeNull(),
+				);
+				const disk = new Map<string, string>();
+				const raw = {
+					get: async (key: string) => disk.get(key) ?? null,
+					set: async (key: string, value: string) => {
+						disk.set(key, value);
+					},
+					remove: async (key: string) => {
+						disk.delete(key);
+					},
+					keys: async () => [...disk.keys()],
+				};
+				const ordinary = scopedStore(
+					raw,
+					getStartupAuthorization()?.scope ?? null,
+				);
+				await ordinary.set("draft", "typed before identity response");
+				expect(await ordinary.get("draft")).toBe(
+					"typed before identity response",
+				);
+				const auth = getStartupAuthorization();
+				gate.resolve();
+				await connecting;
+				expect(getStartupAuthorization()).toBe(auth);
+			});
+		} finally {
+			await act(async () => {
+				gate.resolve();
+				if (connecting) await connecting;
+			});
+			nativePlatform.OS = "web";
+		}
+	});
 	it("survives a failed cold-start list read with a healthy stream", async () => {
 		const mock = await relay({ sessionsFailure: true });
 		transport();
@@ -813,6 +905,182 @@ describe("mounted provider picture privacy", () => {
 });
 
 describe("mounted provider authentication retirement", () => {
+	it("proves recovery only after native persistence, and refuses late proof after a route-change abort", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		nativePlatform.OS = "ios";
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		const persisted = deferred(),
+			heldProof = deferred();
+		let writing = false;
+		const tunnelStorage = await import("@/features/auth/tunnel-storage");
+		const write = vi
+			.spyOn(tunnelStorage, "writeStoredOauth")
+			.mockImplementation(async (tokens) => {
+				writing = true;
+				await persisted.promise;
+				durable.oauth = tokens;
+				durable.events.push("oauth-write");
+				return { persistent: true };
+			});
+		const proof = vi
+			.spyOn(recoveryProof, "proveRecoveryAuthority")
+			.mockImplementation(async () => {
+				expect(durable.events).toContain("oauth-write");
+				await heldProof.promise;
+				return { accountId: "owner-a", tenantId: "tenant-a" };
+			});
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery"),
+			publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		let signingIn: Promise<void> | undefined;
+		await mount();
+		try {
+			await act(async () => {
+				signingIn = latest.signInWithRadient();
+			});
+			await until(() => writing);
+			expect(proof).not.toHaveBeenCalled();
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(latest.restoredAccount).toBe(false);
+			await act(async () => {
+				persisted.resolve();
+				await signingIn;
+			});
+			expect(latest.restoredAccount).toBe(true);
+			await act(async () => {
+				await latest.selectComputer(computer("a"));
+			});
+			expect(handoff.signals[0]?.aborted).toBe(true);
+			expect(proof).toHaveBeenCalledOnce();
+			const fence = proof.mock.calls[0]?.[1].isCurrent;
+			expect(fence?.()).toBe(true);
+			await act(async () => {
+				await latest.connectCustom({
+					url: mock.origin,
+					password: "test-only",
+					allowInsecure: true,
+				});
+			});
+			expect(fence?.()).toBe(false);
+			await act(async () => {
+				heldProof.resolve();
+			});
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+		} finally {
+			persisted.resolve();
+			heldProof.resolve();
+			await signingIn;
+			await unmount();
+			nativePlatform.OS = "web";
+			write.mockRestore();
+			proof.mockRestore();
+			prepare.mockRestore();
+			publish.mockRestore();
+		}
+	});
+	it("does not prove or publish recovery when native persistent admission fails", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		nativePlatform.OS = "ios";
+		const proof = vi.spyOn(recoveryProof, "proveRecoveryAuthority");
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery"),
+			publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		await mount();
+		try {
+			await act(async () => {
+				await latest.signInWithRadient();
+			});
+			expect(latest.signInState.kind).toBe("failed");
+			expect(latest.restoredAccount).toBe(false);
+			expect(proof).not.toHaveBeenCalled();
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(getStartupAuthorization()).toBeNull();
+		} finally {
+			await unmount();
+			nativePlatform.OS = "web";
+			proof.mockRestore();
+			prepare.mockRestore();
+			publish.mockRestore();
+		}
+	});
+	it("combines reauth checkpoint epochs with callback abort: late identity proof and superseded browser success cannot adopt recovery", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		nativePlatform.OS = "ios";
+		const storage = new SecureStorage(memorySecureStore());
+		configureStartupAuthorizationStorage({
+			read: () => storage.readStartupAuthorization(),
+			write: (record) => storage.writeStartupAuthorization(record),
+		});
+		const heldProof = deferred();
+		const first = deferred();
+		const second = deferred();
+		const proof = vi
+			.spyOn(recoveryProof, "proveRecoveryAuthority")
+			.mockImplementation(async () => {
+				await heldProof.promise;
+				return { accountId: "owner-a", tenantId: "tenant-a" };
+			});
+		const recovery = await import("@/features/session/draft-recovery");
+		const prepare = vi.spyOn(recovery, "prepareDraftRecovery");
+		const publish = vi.spyOn(recovery, "notifyDraftRecoveryReady");
+		let firstAttempt: Promise<void> | undefined;
+		let secondAttempt: Promise<void> | undefined;
+		await mount();
+		try {
+			await act(async () => {
+				await latest.selectComputer(computer("a"));
+			});
+			expect(proof).toHaveBeenCalledOnce();
+			expect(getStartupAuthorization()).not.toBeNull();
+			handoff.block = first.promise;
+			await act(async () => {
+				firstAttempt = latest.signInWithRadient();
+			});
+			await until(() => handoff.signals.length === 1);
+			handoff.block = second.promise;
+			await act(async () => {
+				secondAttempt = latest.signInWithRadient();
+			});
+			await until(() => handoff.signals.length === 2);
+			expect(handoff.signals[0]?.aborted).toBe(true);
+			expect(handoff.signals[1]?.aborted).toBe(false);
+			expect(proof.mock.calls[0]?.[1].isCurrent()).toBe(false);
+			await act(async () => {
+				heldProof.resolve();
+				first.resolve();
+				await firstAttempt;
+			});
+			expect(prepare).not.toHaveBeenCalled();
+			expect(publish).not.toHaveBeenCalled();
+			expect(getStartupAuthorization()).toBeNull();
+			expect(durable.events).not.toContain("oauth-write");
+			await unmount();
+			expect(handoff.signals[1]?.aborted).toBe(true);
+		} finally {
+			await unmount();
+			await act(async () => {
+				heldProof.resolve();
+				first.resolve();
+				second.resolve();
+				await Promise.all([firstAttempt, secondAttempt]);
+			});
+			nativePlatform.OS = "web";
+			prepare.mockRestore();
+			publish.mockRestore();
+			proof.mockRestore();
+		}
+	});
 	it("reports failed privacy cleanup and keeps replacement admission closed", async () => {
 		const mock = await relay();
 		transport();

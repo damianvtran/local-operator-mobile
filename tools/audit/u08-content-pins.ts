@@ -708,8 +708,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * ceiling. Logic only; no rendered surface. */
 	/* Re-printed 2026-11-07 with --print at the merge of origin/main (e541a904,
 	 * PR #177) into PR #178: both lines of history, so the value is the merged
-	 * tree's own and neither side's previous digest is kept. */
-	src: "8e378537d6ee2210fbd128718a40de56804ed3671c8ba351ac8e17d945dfbe9b",
+	 * tree's own and neither side's previous digest is kept.
+	 *
+	 * Re-printed 2026-11-07 with --print at the merge of origin/main 56840161
+	 * (`fix/tf-reports`, `docs/ship-vitest-config`) into PR #156: this is the
+	 * harness-split re-print plus main's moves, so neither prior digest is kept.
+	 * The split removed exactly three proof-only instrument modules —
+	 * `src/testing/stage-b-draft-bootstrap.ts`, `stage-b-draft-transport.ts`,
+	 * `stage-b-route-trace.ts` — and their own test
+	 * `src/testing/__tests__/stage-b-draft-bootstrap.test.ts`. Nothing under `app/`,
+	 * `design/`, `public/`, the corpus or the geometry instruments moved, and no file
+	 * the shipping bundle loads was touched: those modules were reached only by the
+	 * native lane's scripts, never by an `src/app` entry or a rendered screen, and a
+	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
+	 * geometry is byte-identical to main's digest above. This is source admission for
+	 * the geometry instrument, not fresh rendered evidence. --print produced the digest. */
+	src: "9242dcaadcde1e7a171a7f4e342ead2b6ccec722df460efb4d6f006decea2fa9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

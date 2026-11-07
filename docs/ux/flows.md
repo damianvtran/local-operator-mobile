@@ -692,12 +692,14 @@ honest option.)
 - **Refresh:** pull-to-refresh everywhere there is a list; SSE keeps it live.
 - **Interruptions:** every modal sheet is dismissible by swipe-down and by the
   Android back gesture; the composer draft survives all of it.
-- **Auth expiry (`C5`), corrected contract:** a `401` revokes the authorization
-  generation and QUARANTINES unfinished work — drafts and outbox commands are not
-  sent, not deleted, and **not recovered** by signing in again: the next admission
-  mints a fresh generation, because this app has no proven same-person signal.
-  Automatic recovery after reauthentication is StageB and unapproved. The user copy
-  says "quarantined", never "we kept it for you".
+- **Auth expiry (`C5`):** a `401` closes dispatch/publication immediately. Native
+  personal Radient draft text/images are retained only as sealed ciphertext and
+  may recover after fresh server-authenticated SAME owner/tenant/tunnel/backend
+  proof. Reauthentication mints fresh dispatch rights: no old queue, continuation
+  identity or session creation is restored or sent. Unsupported/unproven owners
+  see no recovered draft; explicit logout/forget destroys the vault/key. See
+  [Native draft recovery](../draft-recovery.md) for cleanup, install and retention
+  boundaries. Web does not enable native cross-login recovery.
 - **Deep links:** `localoperator://s/<id>` opens a session; notification taps
   land there. Universal links for shareable session URLs are a v1.1 item.
 - **One-handed reach:** primary actions live in the bottom third; nothing
