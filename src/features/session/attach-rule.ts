@@ -77,6 +77,13 @@ export const sniffImageMime = (dataB64: string, reported: string): string => {
  */
 export type AttachSource = "library" | "files" | "paste";
 
+/**
+ * Which door a `"paste"` came through: the attach sheet's Paste row, or the
+ * composer's clipboard-image chip (`attach-clipboard.ts`). The read is the same;
+ * only what an empty answer MEANS differs (`pasteNothingLine` in `composer.ts`).
+ */
+export type PasteVia = "sheet" | "offer";
+
 /** One row of the attach sheet. */
 export interface AttachAction {
 	readonly source: AttachSource;

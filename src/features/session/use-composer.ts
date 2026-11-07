@@ -6,6 +6,7 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
+import { Platform } from "react-native";
 import {
 	getStartupAuthorization,
 	subscribeStartupAuthorization,
@@ -18,13 +19,14 @@ import {
 	pickImageFromLibrary,
 	readWebImageFile,
 } from "@/features/session/attach";
-import type { AttachSource } from "@/features/session/attach-rule";
+import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
 	chooseOp,
 	composerControls,
 	composerCopy,
+	pasteNothingLine,
 	receiptForError,
 } from "@/features/session/composer";
 import {
@@ -95,7 +97,7 @@ export interface ComposerState {
 	/** Opens the chosen attach source and adds the picked image. A cancel adds
 	 *  nothing and says nothing; a failed read says so on the composer's error
 	 *  line; a paste that found no image reports the outcome there too. */
-	attach: (source: AttachSource) => void;
+	attach: (source: AttachSource, via?: PasteVia) => void;
 	/** A web paste event's image file, read and attached. The composer's listener
 	 *  hands the raw file here so the read and its failure copy live beside the
 	 *  pickers' own. */
@@ -674,7 +676,7 @@ export const useComposer = (input: {
 	);
 
 	const attach = useCallback(
-		(source: AttachSource) => {
+		(source: AttachSource, via: PasteVia = "sheet") => {
 			void (async () => {
 				setAttaching(true);
 				/* A new attach supersedes the last failure the way `home.tsx`'s copies of
@@ -696,7 +698,7 @@ export const useComposer = (input: {
 						/* The one arm that is not a cancel: the reader pressed Paste and no
 						 *  image came back. Told, because a press with no outcome reads as a
 						 *  broken control — the same rule `attachError` follows. */
-						setError(composerCopy().pasteEmpty);
+						setError(pasteNothingLine(via, Platform.OS));
 					}
 				} catch {
 					setError(composerCopy().attachError);

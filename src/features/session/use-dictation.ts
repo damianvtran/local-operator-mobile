@@ -45,6 +45,7 @@ import {
 	dictationStatusLine,
 	IDLE_DICTATION,
 	mayStartDictation,
+	pressRoute,
 	reduceDictation,
 } from "@/stt/dictation-machine";
 import {
@@ -218,6 +219,14 @@ export const useDictation = (input: DictationInput): DictationState => {
 		return transition;
 	}, []);
 
+	/* The mic became usable (speech-to-text was set up on the computer): drop a
+	 * resting "Set up speech-to-text…" line so it does not sit beside a working mic
+	 * until the next press (agent review round 1, M2). The reducer leaves every
+	 * other outcome and any live take alone. */
+	useEffect(() => {
+		if (micVisible) dispatch({ type: "available" });
+	}, [micVisible, dispatch]);
+
 	const stopAndTranscribe = useCallback(async () => {
 		const active = activeRef.current;
 		if (active === null) return;
@@ -343,13 +352,15 @@ export const useDictation = (input: DictationInput): DictationState => {
 
 	const press = useCallback(() => {
 		const phase = snapshotRef.current.phase;
-		if (micSetup) {
-			/* No recording on a computer that cannot transcribe it: the press is
-			 * answered on the status row with where to fix it. */
+		/* `pressRoute` owns the order: a live take always finishes, and only a
+		 * resting press on a computer that cannot transcribe is answered with the
+		 * set-up line (and records nothing). */
+		const route = pressRoute({ phase, micSetup });
+		if (route === "setup") {
 			dispatch({ type: "unavailable" });
 			return;
 		}
-		if (phase === "recording") {
+		if (route === "finish") {
 			void stopAndTranscribe();
 			return;
 		}

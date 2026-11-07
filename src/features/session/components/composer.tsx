@@ -49,6 +49,7 @@ import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import {
 	type AttachSource,
 	attachActions,
+	type PasteVia,
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
@@ -120,6 +121,15 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
 const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
+
+/** Out of the layout and out of sight, still in the accessibility tree: the
+ *  web's `sr-only` box. Used for the recording row's status word (design D3). */
+const VISUALLY_HIDDEN = {
+	position: "absolute",
+	width: 1,
+	height: 1,
+	overflow: "hidden",
+} as const;
 
 /** The row's own border, top and bottom (the `border` utility is 1 px each side).
  *  Named because the row's height is a BORDER box: a `minHeight` of exactly
@@ -232,7 +242,7 @@ export type ComposerProps = {
 	/** The attach sheet's chosen source. The sheet itself is this component's;
 	 *  reading the image is the host's — the composer home and the session view
 	 *  both hand in their own `attach`, and both land on the same strip. */
-	onAttach: (source: AttachSource) => void;
+	onAttach: (source: AttachSource, via?: PasteVia) => void;
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
@@ -701,15 +711,32 @@ export const Composer = ({
 			 *
 			 * Two lines past `LARGE_TEXT_SCALE`: on its own full-width line the longest
 			 * outcome copy ("Didn't catch that — try again.", 369 pt at 200 %) fits two,
-			 * where beside the controls it clipped to `Didn't catch that — tr…` (D3). */
+			 * where beside the controls it clipped to `Didn't catch that — tr…` (D3).
+			 *
+			 * A RESTING outcome may also take two lines at 100 %: it has no meter or
+			 * timer beside it, and two `text-body-sm` lines (2 × 20.3) sit inside the
+			 * row's fixed `dictationRowBox`, so the set-up sentence wraps instead of
+			 * ending "…to use vo…" without moving the composer (design D1 / UX U1).
+			 *
+			 * While RECORDING the word is visually hidden but stays the live region:
+			 * the red dot and the running timer already say "recording", and the
+			 * waveform the operator asked for gets the word's width back (design D3).
+			 * Clipped to 1 × 1 rather than removed or `opacity: 0`, so it is still in
+			 * the accessibility tree and still announced. Past `LARGE_TEXT_SCALE` the
+			 * word keeps its own line (it never shared the meter's), so it stays. */
 			<Text
 				role={ROLE.status}
 				accessibilityLiveRegion={LIVE_REGION.polite}
-				numberOfLines={dictationLargeText ? 2 : 1}
+				numberOfLines={dictationLargeText || !rowIsLive(voice.phase) ? 2 : 1}
 				className={cx(
 					"text-body-sm",
 					rowIsLive(voice.phase) ? "text-danger" : "text-ink-muted",
 				)}
+				style={
+					voice.phase === "recording" && !dictationLargeText
+						? VISUALLY_HIDDEN
+						: undefined
+				}
 				testID={SURFACE.composerDictationStatus}
 			>
 				{voice.status}
@@ -732,10 +759,15 @@ export const Composer = ({
 						className="flex-1 flex-row items-center"
 						testID={SURFACE.composerDictationMeter}
 					>
+						{/* Hidden from assistive tech: the polite status row beside it already
+						 *  says "Transcribing", and a labelled spinner made VoiceOver say it
+						 *  twice (agent review round 1, N2). */}
 						<ActivityIndicator
 							size="small"
 							color={dictationInk}
-							accessibilityLabel={t("mobile.composer_input.voice.transcribing")}
+							aria-hidden
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
 						/>
 					</View>
 				) : null}
@@ -812,7 +844,7 @@ export const Composer = ({
 	const progress = useSharedValue(0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
-	const presentation = composerPresentation({
+	const presentationFacts = {
 		focused,
 		draft,
 		attachments: images.length,
@@ -826,7 +858,17 @@ export const Composer = ({
 		 *  must be computed on the same floor or the radius disagrees with the box
 		 *  (28 announced over a 30 pt paint). */
 		floor: TOUCH_FLOOR,
-	});
+	};
+	const presentation = composerPresentation(presentationFacts);
+	/* Open ONLY because of dictation: without the take (or its outcome line) this
+	 *  card would be the collapsed pill, whose trailing slot is the mic. The
+	 *  controls row then keeps the mic in that trailing slot, so the press that
+	 *  expands the card does not slide Send under the finger that just pressed the
+	 *  mic (UX review round 1, U2). Send is disabled in this state anyway: a card
+	 *  with a draft, an attachment or focus is open for its own reasons. */
+	const openForDictationOnly =
+		presentation.expanded &&
+		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
 	/* One keyboard owner. Android's resized window already ends at keyboard top:
 	 * overlap is then zero. iOS follows the native frame/duration, not a second
 	 * keyboardDidShow correction; safe-area clearance belongs OUTSIDE the shell. */
@@ -1427,42 +1469,41 @@ export const Composer = ({
 	 *  costs the field its width — the field is its own row above — which was the
 	 *  only reason the mic had been exiled to the meta line (design round 1,
 	 *  D1/D2 of the earlier composer). */
-	const mic = voice?.micVisible ? (
-		/* The voice mic: the relay says voice input can run here AND this build
-		 * can record (`voice.micVisible`). */
-		<IconButton
-			accessibilityLabel={micLabel(voice.phase)}
-			accessibilityHint={MIC_HINT[voice.phase]}
-			disabled={voice.phase === "transcribing"}
-			onPress={voice.press}
-			icon={({ color, size }) =>
-				voice.phase === "recording" ? (
-					<Square color={color} size={size} />
-				) : (
-					<Mic color={color} size={size} />
-				)
-			}
-			testID={CONTROL.composerMic}
-		/>
-	) : voice?.micSetup ? (
-		/* The SET-UP mic: the computer answered that it has no speech-to-text.
-		 * Shown (not hidden) so the reader learns the fix lives on the computer —
-		 * a press puts that sentence on the status row and records nothing. The
-		 * glyph is the same Mic: a struck-through mic reads as "muted", which is
-		 * a different (and wrong) state. */
-		<IconButton
-			accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
-			accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
-			onPress={voice.press}
-			icon={({ color, size }) => <Mic color={color} size={size} />}
-			testID={CONTROL.composerMic}
-		/>
-	) : null;
+	/* Hidden while RECORDING: the recording row's ✓ is the one finish control and
+	 *  its ✕ the one discard, so a third control (■ "Stop and transcribe") doing
+	 *  exactly what ✓ does read as a different action (design D2 / UX U4). It
+	 *  returns, dimmed, while transcribing so the slot does not blink twice. */
+	const mic =
+		voice === null || voice.phase === "recording" ? null : voice.micVisible ? (
+			/* The voice mic: the relay says voice input can run here AND this build
+			 * can record (`voice.micVisible`). */
+			<IconButton
+				accessibilityLabel={micLabel(voice.phase)}
+				accessibilityHint={MIC_HINT[voice.phase]}
+				disabled={voice.phase === "transcribing"}
+				onPress={voice.press}
+				icon={({ color, size }) => <Mic color={color} size={size} />}
+				testID={CONTROL.composerMic}
+			/>
+		) : voice.micSetup ? (
+			/* The SET-UP mic: the computer answered that it has no speech-to-text.
+			 * Shown (not hidden) so the reader learns the fix lives on the computer —
+			 * a press puts that sentence on the status row and records nothing. The
+			 * glyph is the same Mic: a struck-through mic reads as "muted", which is
+			 * a different (and wrong) state. */
+			<IconButton
+				accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
+				accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
+				onPress={voice.press}
+				icon={({ color, size }) => <Mic color={color} size={size} />}
+				testID={CONTROL.composerMic}
+			/>
+		) : null;
 	/* The clipboard-image offer (TestFlight 578: "I can't paste images into the
 	 *  composer"). A native field never hands a pasted image to JS, so while the
 	 *  reader is composing and the clipboard holds one, this chip offers it. It
-	 *  runs `onAttach("paste")` — the attach sheet's own Paste row — so the iOS
-	 *  paste prompt, a denial (`pasteEmpty`), a failed read and the strip are one
+	 *  runs `onAttach("paste", "offer")` — the attach sheet's own Paste read — so
+	 *  the iOS paste prompt, a denial (`pasteNothingLine`), a failed read and the strip are one
 	 *  path. It lives on the controls row, which only paints while the field is
 	 *  focused (the expanded card), so it appears without moving the composer. */
 	const pasteChip = pasteOffer.visible ? (
@@ -1477,7 +1518,9 @@ export const Composer = ({
 			disabled={attaching}
 			onPress={() => {
 				pasteOffer.consume();
-				onAttach("paste");
+				/* `"offer"`: an empty answer to THIS press is the iOS denial, not an
+				 *  empty clipboard, and is said as such (`pasteNothingLine`, U3). */
+				onAttach("paste", "offer");
 			}}
 			testID={CONTROL.composerPasteImage}
 		/>
@@ -1748,12 +1791,16 @@ export const Composer = ({
 					testID={SURFACE.composerControls}
 				>
 					{attach}
-					{mic}
+					{openForDictationOnly ? null : mic}
 					{pasteChip}
 					{/* Landscape has exactly ONE context affordance, and it is the one
 					 *  in the compact strip: a second More on this row was the same
 					 *  action twice in one 44 pt line (design round 6, D2). */}
-					{actionCluster}
+					{openForDictationOnly && mic !== null ? (
+						<View className={COMPOSER_ACTION_CLUSTER}>{mic}</View>
+					) : (
+						actionCluster
+					)}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
 							accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}

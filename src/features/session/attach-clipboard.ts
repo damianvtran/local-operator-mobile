@@ -24,8 +24,8 @@ import {
  * the one read that does not trip it (`hasImages`, no content access).
  *
  * The bytes are NOT read here. Pressing the chip goes through the composer's
- * own `onAttach("paste")` — the same path as the attach sheet's Paste row — so
- * the iOS 16+ paste prompt, its denial copy (`pasteEmpty`), the read-failure
+ * own `onAttach("paste", "offer")` — the same read as the attach sheet's Paste
+ * row — so the iOS 16+ paste prompt, its denial copy (`pasteNothingLine`), the read-failure
  * copy and the attachment strip are one implementation, not two.
  */
 export const useClipboardImageOffer = (

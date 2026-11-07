@@ -3,6 +3,7 @@ import { Bell, BellDot, Menu } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import {
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -68,10 +69,10 @@ import {
 	pickImageFromLibrary,
 	readWebImageFile,
 } from "@/features/session/attach";
-import type { AttachSource } from "@/features/session/attach-rule";
+import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
-import { composerCopy } from "@/features/session/composer";
+import { composerCopy, pasteNothingLine } from "@/features/session/composer";
 import { deviceOnline } from "@/features/session/runtime";
 import { useHomeDictation } from "@/features/session/use-dictation";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
@@ -544,7 +545,7 @@ export default function Home({
 	const inboxCount = inboxBadgeCount(inbox);
 
 	const attach = useCallback(
-		(source: AttachSource) => {
+		(source: AttachSource, via: PasteVia = "sheet") => {
 			void (async () => {
 				setAttaching(true);
 				setComposerError(null);
@@ -560,7 +561,7 @@ export default function Home({
 					} else if (source === "paste") {
 						/* A press with no outcome reads as a broken control — the same rule
 						 *  `attachError` follows in the other direction. */
-						setComposerError(composerCopy().pasteEmpty);
+						setComposerError(pasteNothingLine(via, Platform.OS));
 					}
 				} catch {
 					/* Said, never swallowed — the composer's own error line. */

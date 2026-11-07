@@ -1,10 +1,10 @@
 {
-	"mobile.composer_input.voice.setup_needed": "Configurez la reconnaissance vocale sur votre ordinateur pour utiliser la saisie vocale.",
+	"mobile.composer_input.voice.setup_needed": "Configurez la reconnaissance vocale sur votre ordinateur.",
 	"mobile.composer_input.voice.mic_setup": "La saisie vocale n’est pas configurée",
 	"mobile.composer_input.voice.mic_setup_hint": "Explique comment activer la saisie vocale",
 	"mobile.composer_input.voice.discard": "Supprimer la saisie vocale",
 	"mobile.composer_input.voice.finish": "Terminer et transcrire",
-	"mobile.composer_input.voice.transcribing": "Transcription de votre enregistrement",
 	"mobile.composer_input.paste.image": "Coller l’image",
-	"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers"
+	"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
+	"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Collez à nouveau et choisissez « Autoriser le collage »."
 }

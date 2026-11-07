@@ -1,10 +1,10 @@
 {
-	"mobile.composer_input.voice.setup_needed": "वॉइस इनपुट इस्तेमाल करने के लिए अपने कंप्यूटर पर स्पीच-टू-टेक्स्ट सेट करें।",
+	"mobile.composer_input.voice.setup_needed": "अपने कंप्यूटर पर स्पीच-टू-टेक्स्ट सेट करें।",
 	"mobile.composer_input.voice.mic_setup": "वॉइस इनपुट सेट नहीं है",
 	"mobile.composer_input.voice.mic_setup_hint": "वॉइस इनपुट चालू करने का तरीका बताता है",
 	"mobile.composer_input.voice.discard": "वॉइस इनपुट हटाएँ",
 	"mobile.composer_input.voice.finish": "पूरा करें और लिखें",
-	"mobile.composer_input.voice.transcribing": "आपकी रिकॉर्डिंग लिखी जा रही है",
 	"mobile.composer_input.paste.image": "छवि चिपकाएँ",
-	"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है"
+	"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
+	"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। फिर से पेस्ट करें और अनुमति दें चुनें।"
 }

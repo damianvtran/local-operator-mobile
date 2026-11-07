@@ -9,6 +9,7 @@ import {
 	MIC_HINT,
 	mayStartDictation,
 	micLabel,
+	pressRoute,
 	reduceDictation,
 } from "@/stt/dictation-machine";
 
@@ -191,7 +192,7 @@ describe("the mic's own vocabulary", () => {
 	it("names what the control will do in every phase", () => {
 		expect(micLabel("idle")).toBe("Start voice input");
 		expect(micLabel("starting")).toBe("Starting voice input");
-		expect(micLabel("recording")).toBe("Stop and transcribe");
+		expect(micLabel("recording")).toBe("Finish and transcribe");
 		expect(micLabel("transcribing")).toBe("Transcribing");
 	});
 
@@ -208,7 +209,7 @@ describe("a press on a computer with no speech-to-text (TestFlight 578)", () => 
 		expect(effects).toEqual([]);
 		expect(state).toEqual({ phase: "idle", outcome: "unavailable" });
 		expect(dictationStatusLine(state)).toBe(
-			"Set up speech-to-text on your computer to use voice input.",
+			"Set up speech-to-text on your computer.",
 		);
 	});
 
@@ -217,5 +218,45 @@ describe("a press on a computer with no speech-to-text (TestFlight 578)", () => 
 		expect(step(transcribing, { type: "unavailable" }).state).toBe(
 			transcribing,
 		);
+	});
+});
+
+describe("a press while speech-to-text is not set up (agent review round 1, M1/M2)", () => {
+	it("still finishes a live take when speech-to-text drops mid-recording (M1)", () => {
+		// The set-up check used to run first, so ✓ dispatched an `unavailable` the
+		// reducer ignores outside idle: a stuck control whose only exit was ✕.
+		expect(pressRoute({ phase: "recording", micSetup: true })).toBe("finish");
+		expect(pressRoute({ phase: "recording", micSetup: false })).toBe("finish");
+	});
+
+	it("answers only a resting press with the set-up line", () => {
+		expect(pressRoute({ phase: "idle", micSetup: true })).toBe("setup");
+		expect(pressRoute({ phase: "idle", micSetup: false })).toBe("start");
+		// Not idle and not recording: the start gate (`mayStartDictation`) refuses.
+		expect(pressRoute({ phase: "starting", micSetup: true })).toBe("start");
+		expect(pressRoute({ phase: "transcribing", micSetup: true })).toBe("start");
+		expect(
+			mayStartDictation({
+				phase: "transcribing",
+				micVisible: false,
+				hasEndpoints: true,
+				sending: false,
+			}),
+		).toBe(false);
+	});
+
+	it("clears the set-up line once the mic becomes usable (M2)", () => {
+		const setup = step(IDLE_DICTATION, { type: "unavailable" }).state;
+		const { state, effects } = step(setup, { type: "available" });
+		expect(effects).toEqual([]);
+		expect(state).toEqual(IDLE_DICTATION);
+		expect(dictationStatusLine(state)).toBe("");
+	});
+
+	it("leaves every other outcome and any live take alone", () => {
+		const added: DictationSnapshot = { phase: "idle", outcome: "added" };
+		expect(step(added, { type: "available" }).state).toBe(added);
+		expect(step(recording, { type: "available" }).state).toBe(recording);
+		expect(step(transcribing, { type: "available" }).state).toBe(transcribing);
 	});
 });

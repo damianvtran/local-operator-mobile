@@ -7,6 +7,7 @@ import {
 	probeClipboardImage,
 	readClipboardImage,
 } from "@/features/session/attach-rule";
+import { composerCopy, pasteNothingLine } from "@/features/session/composer";
 
 /**
  * Native image paste (TestFlight 578, item 7). A React Native field never hands a
@@ -102,7 +103,7 @@ describe("the chip is a door into the ONE attach path", () => {
 			COMPOSER.indexOf("const pasteChip"),
 			COMPOSER.indexOf("testID={CONTROL.composerPasteImage}"),
 		);
-		expect(chip).toContain('onAttach("paste")');
+		expect(chip).toContain('onAttach("paste", "offer")');
 		expect(chip).not.toMatch(/getImageAsync|pasteImage\(/);
 	});
 
@@ -112,5 +113,27 @@ describe("the chip is a door into the ONE attach path", () => {
 
 	it("keeps the web paste EVENT listener (web builds paste the browser's file)", () => {
 		expect(COMPOSER).toContain('node.addEventListener("paste", onPaste)');
+	});
+});
+
+describe("what an empty paste says, per door (UX review round 1, U3)", () => {
+	it("names the iOS denial on the chip, which is only offered while an image is there", () => {
+		const line = pasteNothingLine("offer", "ios");
+		expect(line).toBe(
+			"Paste wasn’t allowed. Paste again and choose “Allow Paste”.",
+		);
+		// Not the sheet's line: "Copy an image" sends the reader after an image
+		// they already copied.
+		expect(line).not.toBe(composerCopy().pasteEmpty);
+	});
+
+	it("keeps the outcome-only line for the sheet's Paste row and for Android", () => {
+		// The sheet cannot tell an empty clipboard from a denial; Android has no
+		// paste prompt, so a chip miss there is the image having gone.
+		expect(pasteNothingLine("sheet", "ios")).toBe(composerCopy().pasteEmpty);
+		expect(pasteNothingLine("offer", "android")).toBe(
+			composerCopy().pasteEmpty,
+		);
+		expect(pasteNothingLine("sheet", "web")).toBe(composerCopy().pasteEmpty);
 	});
 });

@@ -1,7 +1,7 @@
 {
 	"mobile.composer_input.voice.setup_needed": {
 		"role": "status",
-		"note": "Status line under the composer after the reader taps the mic on a computer with no speech-to-text configured. Transcription runs on the computer, so the fix is there, not on the phone. Full sentence with final full stop."
+		"note": "Status line under the composer after the reader taps the mic on a computer with no speech-to-text configured. Transcription runs on the computer, so the fix is there, not on the phone. Keep it short: it must fit two lines beside nothing at 320 pt and 200 % text. Full sentence with final full stop."
 	},
 	"mobile.composer_input.voice.mic_setup": {
 		"role": "button",
@@ -19,10 +19,6 @@
 		"role": "button",
 		"note": "Accessible name of the ✓ in the recording row: stops recording and transcribes it into the draft. No final full stop."
 	},
-	"mobile.composer_input.voice.transcribing": {
-		"role": "status",
-		"note": "Accessible name of the progress indicator shown while the computer transcribes the recording. No final full stop."
-	},
 	"mobile.composer_input.paste.image": {
 		"role": "button",
 		"note": "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop."
@@ -30,5 +26,9 @@
 	"mobile.composer_input.paste.image_hint": {
 		"role": "button",
 		"note": "Accessibility hint for the Paste image chip. No final full stop."
+	},
+	"mobile.composer_input.paste.denied": {
+		"role": "status",
+		"note": "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and how to allow it: paste again and pick the system's Allow Paste button (quote the OS's own button label for the locale). Full sentences with final full stop."
 	}
 }

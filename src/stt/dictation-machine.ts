@@ -87,7 +87,11 @@ export type DictationEvent =
 	/* The mic was pressed on a computer with no speech-to-text configured
 	 * (`stt/capability.ts` `micSetupNeeded`). Not a phase: nothing records and
 	 * nothing is sent; the press is answered with the set-up line instead. */
-	| { type: "unavailable" };
+	| { type: "unavailable" }
+	/* The computer now advertises speech-to-text (the mic became usable). Clears a
+	 * resting set-up line, which otherwise sat beside a working mic until the next
+	 * press (agent review round 1, M2). Touches no other outcome and no live take. */
+	| { type: "available" };
 
 export interface DictationTransition {
 	state: DictationSnapshot;
@@ -112,6 +116,26 @@ export const mayStartDictation = (input: {
 	hasEndpoints: boolean;
 	sending: boolean;
 }): boolean => input.phase === "idle" && input.micVisible && input.hasEndpoints;
+
+/**
+ * What one press of the mic (or the recording row's ✓) does.
+ *
+ * A live take is answered FIRST, before the set-up check: capabilities can flip
+ * to "no speech-to-text" mid-take (a relay frame, a reconfigured computer), and
+ * checking set-up first turned ✓ into an `unavailable` the reducer ignores
+ * outside `idle` — a stuck control whose only exit was ✕, which throws the take
+ * away (agent review round 1, M1). The set-up line only ever answers a press
+ * that would otherwise START a take.
+ */
+export const pressRoute = (input: {
+	phase: DictationPhase;
+	micSetup: boolean;
+}): "finish" | "setup" | "start" =>
+	input.phase === "recording"
+		? "finish"
+		: input.phase === "idle" && input.micSetup
+			? "setup"
+			: "start";
 
 /**
  * Advance the machine by one event.
@@ -176,6 +200,11 @@ export function reduceDictation(
 				? { state: { phase: "idle", outcome: "unavailable" }, effects: [] }
 				: { state, effects: [] };
 
+		case "available":
+			return phase === "idle" && state.outcome === "unavailable"
+				? { state: IDLE_DICTATION, effects: [] }
+				: { state, effects: [] };
+
 		case "send": {
 			if (!live(phase)) return { state, effects: [] };
 			/* U2: the send is not a deliberate cancel, so the drop is SAID. */
@@ -230,7 +259,7 @@ export const dictationStatusLine = (state: DictationSnapshot): string => {
  *  only "record" would lie once it is the control that stops. */
 export const micLabel = (phase: DictationPhase): string =>
 	phase === "recording"
-		? "Stop and transcribe"
+		? "Finish and transcribe"
 		: phase === "transcribing"
 			? "Transcribing"
 			: phase === "starting"
