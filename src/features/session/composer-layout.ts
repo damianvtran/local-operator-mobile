@@ -62,7 +62,54 @@ export const folderChipText = (name: string, scale: number): string =>
  * then model (design D2). Flex weights, not a measured ladder: a chip's shrink
  * is weighted by its own width, so a factor of ten between neighbours makes the
  * earlier one give nearly all of the overflow before the next moves, and each
- * still stops at its 44 pt floor. Home only — the session strip (no folder) keeps
- * its model `flex-1` slot unchanged.
+ * still stops at its 44 pt floor. Home only — the session strip (no folder) has
+ * its own order, `SESSION_EFFORT_SHRINK`.
  */
 export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;
+
+/**
+ * The session strip's shrink pair: the MODEL yields the overflow, down to its
+ * `MODEL_FLOOR_PT`; effort is RIGID (`flexShrink: 0`) and is held inside the
+ * row by a JS cap instead, `sessionEffortMaxWidth` — so the trailing controls
+ * (More, the queued chip, keyboard-dismiss) never reach the row's
+ * `overflow-hidden` edge, and effort never loses a sliver ("Hig…") while the
+ * model still has width to give (code review M1 / design D2).
+ *
+ * WHY not shrink weights. `{model: 1000, effort: 1}` is right under CSS §9.7
+ * (RN-web, the browser) but not on iOS: RN 0.86.3's vendored Yoga freezes a
+ * floored item inside its first distribution pass and still charges later
+ * items against the ORIGINAL free space (yoga#2006, fixed upstream in 73bebc0,
+ * not vendored). Once the model froze at 44, effort was charged nearly the
+ * whole overflow, froze too, free space went ≥ 0, and the second pass gave
+ * every child its basis — More, the queue and keyboard-dismiss all landed past
+ * the row end (round-3 review R3-M1, reproduced against the vendored engine).
+ * With effort rigid the model is the only shrinking chip that can floor, and
+ * the bug needs a SECOND shrinker after a floored one to bite.
+ */
+export const SESSION_STRIP_SHRINK = { model: 1, effort: 0 } as const;
+
+/**
+ * Effort's `maxWidth` on the session strip, from the strip's measured width:
+ * what is left after the model's floor, every trailing control that is
+ * rendered (each at its `touchFloor`) and the strip's gaps — floored at
+ * `MODEL_FLOOR_PT`, below which the chip ellipsizes rather than vanishing.
+ *
+ * `undefined` before the first `onLayout` (width 0): no cap, so the first frame
+ * is exactly the uncapped strip; the cap applies from the measured frame on.
+ * `trailing` counts More (always), the queued chip and keyboard-dismiss when
+ * shown. The queued chip may render wider than its floor, but it shrinks (to
+ * that floor) after effort is capped, so counting its floor is the right bound.
+ */
+export const sessionEffortMaxWidth = (
+	stripWidth: number,
+	trailing: number,
+	touchFloor: number,
+): number | undefined => {
+	if (!(stripWidth > 0)) return undefined;
+	/* model + effort + trailing children → (1 + trailing) gaps. */
+	const gaps = COMPOSER_META_GAP_PT * (1 + trailing);
+	return Math.max(
+		MODEL_FLOOR_PT,
+		stripWidth - MODEL_FLOOR_PT - trailing * touchFloor - gaps,
+	);
+};

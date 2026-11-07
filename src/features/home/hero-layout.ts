@@ -68,3 +68,18 @@ export const heroMeasured = (band: number, block: number): boolean =>
  */
 export const heroHeldInset = (live: number, held: number): number =>
 	Math.min(live, held);
+
+/**
+ * The brand mark's size above the greeting, in pt (operator, TestFlight 578:
+ * "make sure the local operator logo is in the center above the 'what would you
+ * like to work on' text").
+ *
+ * 32 pt, the drawer's step, because it is the LARGEST the shipped asset can
+ * paint crisply: `assets/brand/navigation-mark.png` is 128 × 128 px, i.e. 32 pt
+ * at 3× (`native-interaction-guidelines.md` § Identity). A bigger hero mark
+ * needs a bigger cut of the same asset first, never an upscale or a redraw.
+ * The mark is part of the measured hero BLOCK (it sits inside the `onLayout`
+ * view), so `heroTopInset` centres mark + greeting + rows as one unit and the
+ * composer below is untouched.
+ */
+export const HERO_MARK_SIZE = 32;

@@ -65,6 +65,8 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	SESSION_STRIP_SHRINK,
+	sessionEffortMaxWidth,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -1207,6 +1209,15 @@ export const Composer = ({
 	 *  the count and — where the surface can open the queue — the way in; it is
 	 *  never a disabled control. ONE element for both strips (tall and short
 	 *  landscape), so its floor and its width cap are written once. */
+	/* Effort's measured cap on the session strip (R3-M1): rigid, so Yoga only
+	 *  ever floors the model, and capped by what the strip leaves after the
+	 *  model's floor and the trailing controls actually rendered below — More,
+	 *  the queued chip, keyboard-dismiss. Undefined until `metaWidth` arrives. */
+	const sessionEffortCap = sessionEffortMaxWidth(
+		metaWidth,
+		1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0),
+		TOUCH_FLOOR,
+	);
 	const queuedChip =
 		queuedCount > 0 ? (
 			<Pressable
@@ -1266,6 +1277,11 @@ export const Composer = ({
 			 *  at large text; it yields first, then effort, then the model
 			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes no
 			 *  `folderChip` and its strip is unchanged. */}
+			{/* TODO(native, O1): the home strip puts a min-floored shrinker (folder)
+			 *  FIRST, then more shrinkers — the yoga#2006 shape that broke the
+			 *  session strip on iOS (R3-M1): once folder floors, effort and model
+			 *  are charged against the original free space. Needs a device check;
+			 *  if it overflows, cap like `sessionEffortMaxWidth`. */}
 			{folderChip ? (
 				<View
 					style={{
@@ -1290,18 +1306,26 @@ export const Composer = ({
 				</View>
 			) : null}
 			<View
-				/* Home: the model keeps its natural width and yields LAST. The session
-				 *  strip keeps its `flex-1` slot, byte for byte. */
-				className={folderChip ? "min-w-0 grow" : "min-w-0 flex-1"}
-				style={
-					folderChip
-						? {
-								minWidth: MODEL_FLOOR_PT,
-								flexShrink: HOME_STRIP_SHRINK.model,
-								flexBasis: "auto",
-							}
-						: { minWidth: MODEL_FLOOR_PT }
-				}
+				/* The model keeps its NATURAL width on both strips and never grows
+				 *  (operator, TestFlight 578: "left justify the effort selector with the
+				 *  other selectors on that row"). A growing slot (`grow` on the home,
+				 *  `flex-1` on the session) took all the free width while the chip
+				 *  inside kept its own, so effort floated right behind an empty gap:
+				 *  `[folder][Claude Opus 5.5]      [Medium] ⋯`. The chips now pack
+				 *  left at the row's gap and the free width goes to More's auto margin
+				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
+				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
+				 *  to its floor; effort is rigid under a measured cap
+				 *  (`SESSION_STRIP_SHRINK`, `sessionEffortMaxWidth`), so the trailing
+				 *  controls never clip — on native Yoga too (R3-M1). */
+				className="min-w-0 shrink"
+				style={{
+					minWidth: MODEL_FLOOR_PT,
+					flexBasis: "auto",
+					flexShrink: folderChip
+						? HOME_STRIP_SHRINK.model
+						: SESSION_STRIP_SHRINK.model,
+				}}
 			>
 				<ComposerChipButton
 					glass={glass}
@@ -1321,7 +1345,11 @@ export const Composer = ({
 									minWidth: MODEL_FLOOR_PT,
 									flexShrink: HOME_STRIP_SHRINK.effort,
 								}
-							: { minWidth: MODEL_FLOOR_PT }
+							: {
+									minWidth: MODEL_FLOOR_PT,
+									flexShrink: SESSION_STRIP_SHRINK.effort,
+									maxWidth: sessionEffortCap,
+								}
 					}
 				>
 					<ComposerChipButton
@@ -1334,16 +1362,26 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			<IconButton
-				accessibilityLabel={
-					queuedCount > 0
-						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-						: t("mobile.chrome.composer.more")
-				}
-				onPress={() => setContextOpen(true)}
-				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
-				testID={CONTROL.composerContext}
-			/>
+			{/* STRIP_TRAILING: the free width goes to an AUTO leading margin on More,
+			 *  so the chips pack LEFT and only More (and the queue/keyboard controls
+			 *  after it) sits trailing. A margin, not a spacer element: a spacer is
+			 *  one more child and charged one more `gap-1` (4 pt) in the narrow rows
+			 *  where every point decides whether the model name fits. `ms-auto` is
+			 *  the logical edge, so RTL mirrors it. */}
+			<View className="ms-auto" testID={SURFACE.composerStripTrailing}>
+				<IconButton
+					accessibilityLabel={
+						queuedCount > 0
+							? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+							: t("mobile.chrome.composer.more")
+					}
+					onPress={() => setContextOpen(true)}
+					icon={({ color, size }) => (
+						<MoreHorizontal color={color} size={size} />
+					)}
+					testID={CONTROL.composerContext}
+				/>
+			</View>
 			{queuedChip}
 			{keyboardVisible || focused ? (
 				<IconButton

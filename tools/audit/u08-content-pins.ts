@@ -867,7 +867,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * remediation (D1 address-titled rows: "Your address" line 2, middle-
 	 * truncated title, new `mobile.computers.transport.custom` key; D2 no `·`
 	 * before the health dot). Source admission only. */
-	src: "ba53111c62b98a7cfe3aeca94b86368c2294003893a6cc5ab8987ba8b11a29a9",
+	/* Re-printed 2026-11-07 for feat/home-polish (TestFlight 578 feedback) with
+	 * --print from the staged tree. Only `src` moves: the home hero becomes a
+	 * centred mark + one-step-smaller greeting, the composer strip packs its chips
+	 * left (More takes the free width), the ☰ count moves inside its box with a
+	 * lead before the computer selector, the drawer panel loses its right border,
+	 * and tests. Round-1 remediation re-printed it again: the session strip's
+	 * effort holds, suggestion rows start-align at large text, and the hero mark
+	 * gains a border-control ring. Round-2 remediation (R2-M1) re-printed it once
+	 * more: the session strip's model and effort take a weighted shrink pair
+	 * (SESSION_STRIP_SHRINK) so the trailing controls never clip. Round-3
+	 * remediation (R3-M1) re-printed it again: effort is rigid under a measured
+	 * JS cap (sessionEffortMaxWidth), because native Yoga 0.86.3 mis-resolves the
+	 * weighted pair (yoga#2006). Source admission only, NOT rendered U-08
+	 * evidence. */
+	src: "4f1bb44646fa1f107b100dc41592a8a78083e905b32bbd92aa3072780774f879",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

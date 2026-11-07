@@ -38,14 +38,13 @@ import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
  * returns the reader to the composer they were on, the draft included — so it is
  * a `Modal` over the home rather than a pushed screen. The panel COVERs; the home
  * beneath is never unmounted (a push would lose a draft and re-run the home's
- * cold-start effects). The panel itself, ruled by the spec: `elevated` ground,
- * the overlay shadow, and the scoped `panel-edge` edge. It is a token decision,
- * not a colour hack here: in dark the fill's own step against the scrim ground
- * measured 1.38:1 (D-dark-1) and no scrim alpha fixed it. The drawer consumes
- * the role derived for exactly this pair — measured 4.53:1 against the scrim
- * ground and 3.28:1 against the panel (`design/tokens/contrast-contract.mjs`
- * § 'the overlay panel edge'). Light was already clean (its fill ≈ 8.2:1) and
- * keeps the soft hairline step.
+ * cold-start effects). The panel itself: `elevated` ground and the overlay shadow,
+ * BORDERLESS since TestFlight 578 (the operator: "I don't like the right
+ * border"). It used to draw the scoped `panel-edge` hairline on its facing edge
+ * because in dark the fill's own step against the scrim ground measured 1.38:1
+ * (D-dark-1); that role and its contract pair (`design/tokens/contrast-contract.mjs`
+ * § 'the overlay panel edge') still exist, unused here, if a design round
+ * restores an edge. Light's fill step is ≈ 8.2:1 on its own.
  *
  * **Dismissal is threefold, and all three close the same way**: the scrim, the
  * pane's own close control, and Android's back gesture (`onRequestClose` — the
@@ -259,7 +258,16 @@ export const ConversationsDrawer = ({
 						}}
 					>
 						<View
-							className={`flex-1 border-panel-edge border-r ${PANEL_SURFACE}`}
+							/* BORDERLESS (operator, TestFlight 578: "Make the conversation
+							 *  sidebar borderless, I don't like the right border"). The
+							 *  `panel-edge` hairline on the facing edge is gone; the panel's
+							 *  edge is now drawn by the overlay shadow (`useShadow("overlay")`
+							 *  on the sliding view above) and the scrim's dim on the page
+							 *  beside it. The trade-off is the dark theme, where the fill's own
+							 *  step against the scrim ground is 1.38:1 (D-dark-1, the reason
+							 *  the hairline existed): the shadow and dim carry that edge now,
+							 *  on the operator's explicit call. */
+							className={`flex-1 ${PANEL_SURFACE}`}
 							style={{
 								paddingTop: insets.top,
 								paddingBottom: insets.bottom,
