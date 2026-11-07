@@ -34,6 +34,17 @@
  * to resume first — the honest reading of the existing resume semantics, with
  * no new wire. Once resumed the runtime's projection takes over and the chip
  * opens the picker as on any live session.
+ *
+ * BEFORE THE FIRST FRAME nothing has said whether the session ended, so the
+ * row's model is shown DISABLED too (review round 1, m1): a tap in that window
+ * on a session that turns out to be ended would send a `set_model` the relay
+ * refuses with 409. The first frame decides — live opens the picker, ended
+ * takes the branch above.
+ *
+ * A LIVE SESSION WITH NO EFFORT HIDES THE CHIP, as an ended one does (design
+ * round 1, D1): on an attached runtime `""` means "this model has no ladder",
+ * and a muted `—` beside the model read as another `n/a`. The home composer
+ * keeps its dash (`chip-labels.ts`); hiding is this screen's rule.
  */
 
 import type { ModelEntry } from "@/contracts/types.gen";
@@ -44,6 +55,7 @@ import {
 	type ComposerChipLabels,
 	composerChipLabels,
 	modelChipText,
+	NOT_CONNECTED_HINT,
 	reportedModel,
 	UNAVAILABLE_TEXT,
 } from "@/features/session/chip-labels";
@@ -124,6 +136,28 @@ export const sessionChipLabels = (input: {
 		};
 	}
 
+	if (p === null && input.connection === "loading") {
+		// The skeletons, from the one module that owns them.
+		const pending = composerChipLabels({
+			model: { kind: "loading" },
+			effort: null,
+			connection: "loading",
+		});
+		const name = friendlyModelName(modelSource, input.models);
+		return {
+			model:
+				name === null
+					? pending.model
+					: {
+							kind: "unavailable",
+							text: name,
+							accessibilityLabel: `Model, ${name}`,
+							accessibilityHint: NOT_CONNECTED_HINT,
+						},
+			effort: pending.effort,
+		};
+	}
+
 	const base: ComposerChipLabels = composerChipLabels({
 		model: reportedModel(modelSource),
 		/* The PROJECTION's effort only: on an attached runtime `""` means "this
@@ -138,10 +172,16 @@ export const sessionChipLabels = (input: {
 			const name = friendlyModelName(modelSource, input.models);
 			return name === null ? null : { text: name, label: `Model, ${name}` };
 		}),
-		effort: friendlyValue(base.effort, () => {
-			const name = effortLabel(p?.effort ?? "");
-			return { text: name, label: `Effort, ${name}` };
-		}),
+		effort:
+			/* D1 (header): a reported-but-empty rung on a connected session hides
+			 *  the chip. An unreachable route keeps its dash — that one says why
+			 *  nothing shows. */
+			p !== null && p.effort.length === 0
+				? null
+				: friendlyValue(base.effort, () => {
+						const name = effortLabel(p?.effort ?? "");
+						return { text: name, label: `Effort, ${name}` };
+					}),
 	};
 };
 

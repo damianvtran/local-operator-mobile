@@ -223,6 +223,11 @@ export default function Session() {
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
+	/* A refused `set_model`/`set_effort` (409 on a session that ended under the
+	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
+	 *  chip kept its old value and nothing said why. It rides the composer's
+	 *  own error line, as home's refused abort does; the next pick clears it. */
+	const [chipError, setChipError] = useState<string | null>(null);
 	/** The composer's field, so the asks sheet's auto-open can READ focus at the
 	 *  moment it decides (focus is not React state). */
 	const composerFieldRef = useRef<TextInput | null>(null);
@@ -1452,7 +1457,7 @@ export default function Session() {
 						showResume={aborted}
 						onResume={composer.send}
 						ended={ended}
-						error={pending === null ? composer.error : null}
+						error={pending === null ? (composer.error ?? chipError) : null}
 						queuedCount={projection?.queued_count ?? 0}
 						/* The context % and spend ride the meta line on a phone (D-S3);
 						 *  a tablet keeps its inline status strip, which already shows them. */
@@ -1513,11 +1518,14 @@ export default function Session() {
 				models={runtime.models}
 				selected={projection?.model_selector ?? ""}
 				onPick={(model) => {
-					void runtime.source.endpoints?.command(sessionId, {
-						op: "set_model",
-						provider: model.provider,
-						model_id: model.model_id,
-					});
+					setChipError(null);
+					void runtime.source.endpoints
+						?.command(sessionId, {
+							op: "set_model",
+							provider: model.provider,
+							model_id: model.model_id,
+						})
+						.catch(() => setChipError("Could not change the model."));
 				}}
 			/>
 
@@ -1527,10 +1535,13 @@ export default function Session() {
 				ladder={effortLadder}
 				selected={projection?.effort ?? ""}
 				onPick={(effort) => {
-					void runtime.source.endpoints?.command(sessionId, {
-						op: "set_effort",
-						effort,
-					});
+					setChipError(null);
+					void runtime.source.endpoints
+						?.command(sessionId, {
+							op: "set_effort",
+							effort,
+						})
+						.catch(() => setChipError("Could not change the effort."));
 				}}
 			/>
 

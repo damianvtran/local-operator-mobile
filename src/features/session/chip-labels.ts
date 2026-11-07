@@ -115,7 +115,9 @@ export const UNAVAILABLE_TEXT = "\u2014";
 
 const RUNG_LESS_HINT = "This model has no effort control";
 const UNREPORTED_HINT = "The session has not reported a model";
-const NOT_CONNECTED_HINT = "Nothing is connected yet";
+/** Exported for the session screen's pre-first-frame model chip
+ *  (`session-chips.ts`), which shows a known value while nothing is connected. */
+export const NOT_CONNECTED_HINT = "Nothing is connected yet";
 const UNREAD_HINT = "The model list could not be read";
 
 /** Both chips, for a connection that will never deliver: no pulse, and a hint that

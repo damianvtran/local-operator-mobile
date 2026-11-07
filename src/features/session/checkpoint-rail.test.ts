@@ -4,6 +4,7 @@ import type { CheckpointEntry, CheckpointManifest } from "@/contracts";
 import {
 	checkpointVocabulary,
 	decimateRailMarks,
+	GLYPH_CLEARANCE_PT,
 	layoutRailMarks,
 	marksBeyondWindow,
 	RAIL_MIN_GAP_PT,
@@ -184,8 +185,28 @@ describe("decimateRailMarks (TestFlight 578: too crowded)", () => {
 		const drawn = decimateRailMarks(layoutRailMarks(turns(1000), 600));
 		const ys = drawn.map((entry) => entry.yPt);
 		expect(ys).toEqual([...ys].sort((a, b) => a - b));
-		// 8 pt apart is under the glyph clearance, so a packed rail is all dashes.
-		expect(drawn.every((entry) => entry.form === "compact")).toBe(true);
+		// The gap IS the glyph clearance, so every drawn run clears it.
+		expect(drawn.every((entry) => entry.form === "glyph")).toBe(true);
+	});
+
+	it("a merged failure in a dense rail still draws its glyph (review m2)", () => {
+		/* The reviewer's repro: 30 marks on a 300 pt track, an error at 15. At
+		 * an 8 pt gap the error's run drew `compact` — a dash indistinguishable
+		 * from its neighbours. */
+		const marks = railMarks(
+			Array.from({ length: 30 }, (_, index) =>
+				tick({
+					id: `t${index}`,
+					seq: index,
+					kind: "completion",
+					outcome: index === 15 ? "error" : "complete",
+				}),
+			),
+		);
+		const drawn = decimateRailMarks(layoutRailMarks(marks, 300));
+		const error = drawn.find((entry) => entry.mark.id === "t15");
+		expect(error?.form).toBe("glyph");
+		expect(RAIL_MIN_GAP_PT).toBe(GLYPH_CLEARANCE_PT);
 	});
 });
 

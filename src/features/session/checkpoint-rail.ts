@@ -245,9 +245,13 @@ export const layoutRailMarks = (
 
 /** The least distance, in points, between two DRAWN marks (TestFlight 578:
  *  "~25 tall light tick marks stacked down the right edge … too invasive and
- *  crowded"). 8 pt is the app's own minimum spacing between dense targets
- *  (U-01), reused so the rail never reads denser than anything else on screen. */
-export const RAIL_MIN_GAP_PT = 8;
+ *  crowded"). It IS the glyph clearance, not merely near it: the thinned set's
+ *  form is re-decided by `GLYPH_CLEARANCE_PT`, so any gap below it would draw a
+ *  merged failure as the same muted dash as its neighbours — the "a failure is
+ *  never hidden" promise `SALIENCE` makes would hold for the mark chosen but
+ *  not for what is painted (review round 1, m2: 30 marks on a 300 pt track
+ *  drew the error compact at 8 pt). Tying the two also thins the rail further. */
+export const RAIL_MIN_GAP_PT = GLYPH_CLEARANCE_PT;
 
 /** Which mark in a merged run speaks for it: a failure outranks an
  *  interruption outranks the live tail outranks an ordinary turn. A merged run

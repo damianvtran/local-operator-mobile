@@ -109,16 +109,19 @@ export const RAIL_PEAK_OPACITY = 0.55;
  *  the first seq-placed mark, which starts at `RAIL_INSET_PT`. */
 const HEAD_Y_PT = 6;
 
-/** The overlay's own geometry: an 8 pt column inset 4 pt from the edge, so
- *  the marks occupy the outer 4–12 pt — clear of the platform scroll
- *  indicator in the last few points, and clear of the transcript's text,
- *  which starts 16 pt in (`px-4`). It was 14 pt inset 8 pt (8–22 pt), which
+/** The overlay's own geometry: an 8 pt column inset 7 pt from the edge, so
+ *  the marks occupy 7–15 pt in — clear of the iOS scroll indicator, which
+ *  draws in roughly the last 3–6 pt and shows during exactly the fast scrolls
+ *  that summon the rail (review round 1, m3: a 4 pt inset sat under it), and
+ *  still clear of the transcript's text, which starts 16 pt in (`px-4`). The
+ *  indicator's band is inferred, not measured — TestFlight confirms it. It
+ *  was 14 pt inset 8 pt (8–22 pt), which
  *  put every mark over the message text (TestFlight 578). The column is
  *  ABSOLUTE, so it takes no layout width from the transcript (the defect the
  *  web client's two-pane rail once was — 833 pt of rail beside a 533 pt
  *  transcript). */
 const RAIL_COLUMN_PT = 8;
-const RAIL_EDGE_PT = 4;
+const RAIL_EDGE_PT = 7;
 
 export type CheckpointRailProps = {
 	/** The last manifest answered, or `null` before any answer. */

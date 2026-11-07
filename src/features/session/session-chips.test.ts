@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { ModelEntry } from "@/contracts/types.gen";
-import { UNAVAILABLE_TEXT } from "@/features/session/chip-labels";
+import {
+	NOT_CONNECTED_HINT,
+	UNAVAILABLE_TEXT,
+} from "@/features/session/chip-labels";
 import {
 	friendlyModelName,
 	sessionChipLabels,
@@ -147,13 +150,25 @@ describe("sessionChipLabels — an attached session", () => {
 			connection: "connected",
 			ended: false,
 		});
+		// D1: hidden, as on an ended session — not a muted dash, and not the row's rung.
+		expect(effort).toBeNull();
+	});
+
+	it("an unreachable route keeps the dash — that one says why nothing shows", () => {
+		const { effort } = sessionChipLabels({
+			projection: null,
+			row: { model_label: "x/rungless", effort: "high" },
+			models: [],
+			connection: "unreachable",
+			ended: false,
+		});
 		expect(effort).toMatchObject({
 			kind: "unavailable",
 			text: UNAVAILABLE_TEXT,
 		});
 	});
 
-	it("skeletons while the first frame is still coming", () => {
+	it("before the first frame shows the row's model DISABLED — ended is not yet known (m1)", () => {
 		const { model, effort } = sessionChipLabels({
 			projection: null,
 			row: { model_label: "claude-opus-5-5" },
@@ -161,8 +176,25 @@ describe("sessionChipLabels — an attached session", () => {
 			connection: "loading",
 			ended: false,
 		});
-		// The row's model is known, so it shows rather than a skeleton.
-		expect(model.kind).toBe("value");
+		// Shown (the row knows it), but not tappable: a tap could send a
+		// `set_model` an ended session's relay refuses with 409.
+		expect(model).toEqual({
+			kind: "unavailable",
+			text: "claude-opus-5-5",
+			accessibilityLabel: "Model, claude-opus-5-5",
+			accessibilityHint: NOT_CONNECTED_HINT,
+		});
 		expect(effort?.kind).toBe("loading");
+	});
+
+	it("skeletons before the first frame when the row names no model either", () => {
+		const { model } = sessionChipLabels({
+			projection: null,
+			row: null,
+			models: [],
+			connection: "loading",
+			ended: false,
+		});
+		expect(model.kind).toBe("loading");
 	});
 });

@@ -482,9 +482,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * wiring) move; tokens, fonts and public do not. */
 	/* Re-pinned 2026-11-07 for fix/session-chips-rail with --print from the
 	 * staged tree: the session screen feeds its chips from the list row as well
-	 * as the projection (ended sessions, TestFlight 578). Source admission only,
-	 * NOT rendered U-08 evidence. */
-	app: "ad85fe7030af027380d73c0fef0e26759cea28e9bbb28cfd614679135b40bb38",
+	 * as the projection (ended sessions, TestFlight 578); round-1 remediation
+	 * re-printed it again for the chip-command error line. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	app: "29c1386afde5934d8ee5f1fbaacaebda49f3e60fa337a46b70276d09481be1bd",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -814,8 +815,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * optional `SessionSummary.effort`) and the subtler checkpoint rail (speed
 	 * gate, 1 s linger, decimation, hairline marks in an outer gutter). U-08's
 	 * scene is a long transcript whose rail is transient and aria-hidden; this
-	 * is source admission only, NOT rendered U-08 evidence. */
-	src: "e9c9b23989f0452da7ca25ebbe73ad5a31e5d441c1586162a74f67a7686f8a1d",
+	 * is source admission only, NOT rendered U-08 evidence. Round-1 remediation
+	 * re-printed it for the pre-frame disabled chip, the hidden live rungless
+	 * effort chip, the 12 pt rail gap and the 7 pt rail edge. */
+	src: "571b774c898f85bc935c97a2e4c6332d29c66d81dfb594819ebabab9538aff7f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
