@@ -1,3 +1,5 @@
+const COMMITTED_REVISION = /^\d{12}\.json$/;
+
 export interface RevisionFiles {
 	list(): Promise<string[]>;
 	read(name: string): Promise<string | null>;
@@ -15,7 +17,7 @@ export class RevisionStore {
 	constructor(private readonly files: RevisionFiles) {}
 	private async versions() {
 		return (await this.files.list())
-			.filter((name) => /^\d{12}\.json$/.test(name))
+			.filter((name) => COMMITTED_REVISION.test(name))
 			.sort();
 	}
 	async get(): Promise<string | null> {
@@ -27,20 +29,50 @@ export class RevisionStore {
 		if (
 			typeof saved !== "object" ||
 			saved === null ||
+			!("version" in saved) ||
+			saved.version !== 1 ||
 			!("value" in saved) ||
 			typeof saved.value !== "string"
 		)
 			throw new Error("committed startup revision is corrupt");
 		return saved.value;
 	}
-	async set(value: string): Promise<void> {
-		const versions = await this.versions();
-		const latest = versions.at(-1);
-		// Refuse to write over an unreadable committed history.
-		if (latest) await this.get();
+	set(value: string): Promise<void> {
+		return this.commit(value, true);
+	}
+
+	/** Explicit retirement is different from normal overwrite. Commit a fresh
+	 * tombstone even if old bytes are corrupt, then prune predecessors WITHOUT
+	 * deleting the tombstone. A crash during deletion must never resurrect work. */
+	async discard(tombstone: string): Promise<void> {
+		await this.commit(tombstone, false);
+		const latest = (await this.versions()).at(-1);
+		if (!latest) throw new Error("discard tombstone is missing");
+		if ((await this.get()) !== tombstone)
+			throw new Error("discard tombstone could not be confirmed");
 		for (const name of await this.files.list()) {
 			if (
 				name !== latest &&
+				(COMMITTED_REVISION.test(name) || name.endsWith(".pending"))
+			)
+				await this.files.remove(name);
+		}
+	}
+
+	private async commit(
+		value: string,
+		validatePrevious: boolean,
+	): Promise<void> {
+		const versions = await this.versions();
+		const latest = versions.at(-1);
+		// Refuse to write over an unreadable committed history.
+		if (latest && validatePrevious) await this.get();
+		for (const name of await this.files.list()) {
+			if (
+				name !== latest &&
+				// Discard must commit its tombstone before pruning committed history.
+				// An undeletable predecessor may fail cleanup, never revive old text.
+				validatePrevious &&
 				(versions.includes(name) || name.endsWith(".pending"))
 			)
 				await this.files.remove(name);

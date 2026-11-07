@@ -12,6 +12,6 @@
     { "status": 403, "body": { "error": "tunnel is unavailable" }, "failure": "disabled" },
     { "status": 404, "body": { "error": "harness hostname not found" }, "failure": "harness" },
     { "status": 404, "body": { "error": "tunnel not found" }, "failure": "account" },
-    { "status": 500, "body": { "error": "Internal server error" }, "failure": "rejected" }
+    { "status": 500, "body": { "error": "Internal server error" }, "failure": "unavailable" }
   ]
 }

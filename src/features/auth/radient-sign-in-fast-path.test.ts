@@ -79,4 +79,43 @@ describe("already-signed-in fast callback", () => {
 			await server.close();
 		}
 	});
+	/* TestFlight 453: "I tap authorize … the web view disappears and I'm stuck."
+	 * The sheet closed with a valid callback and the token answer never came. With
+	 * no request deadline the attempt sat in `exchanging` for ever — no error, no
+	 * Try again. This holds the real token endpoint open and requires a terminal,
+	 * actionable state within the budget. */
+	it("ends a token exchange that never answers in a visible, retryable failure", async () => {
+		const server = await createFastPathOAuth();
+		const states: SignInState[] = [];
+		try {
+			await fetch(`${server.origin}/control?mode=success&hold=true`);
+			const result = await beginRadientSignIn({
+				onState: (state) => states.push(state),
+				browser: {
+					returnsCallback: true,
+					prepareRedirect: async () => "http://127.0.0.1:54549/callback",
+					open: async (url) =>
+						(await fetch(url, { redirect: "manual" })).headers.get("location"),
+					dismiss: async () => {},
+				},
+				signIn: (deps) =>
+					signInWithRadient({
+						...deps,
+						authorizeUrl: `${server.origin}/authorize`,
+						tokenUrl: `${server.origin}/token`,
+						requestTimeoutMs: 300,
+					}),
+			});
+			expect(server.counts.pkce_verified).toBe(1);
+			expect(states.map((state) => state.kind)).toContain("exchanging");
+			expect(result).toMatchObject({ ok: false, retryable: true });
+			expect(states.at(-1)).toMatchObject({
+				kind: "failed",
+				errorClass: "RadientAuthError",
+			});
+		} finally {
+			await fetch(`${server.origin}/release-token`).catch(() => undefined);
+			await server.close();
+		}
+	}, 5_000);
 });

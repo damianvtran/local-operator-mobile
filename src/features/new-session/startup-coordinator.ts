@@ -40,6 +40,13 @@ export type StartupDeps = {
 	send(sessionId: string, message: ContinuationEnvelope): Promise<void>;
 	isCurrent(): boolean;
 	uuid(): string;
+	/** Checkpoint only the editor, synchronously before a later auth withdrawal
+	 * can prevent a queued ordinary persistence operation from starting. */
+	checkpointDraft?(
+		draft: StartupDraft,
+		sessionId: string | null,
+		changed: boolean,
+	): void;
 };
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -103,6 +110,7 @@ export class StartupCoordinator {
 	private record: StartupRecord;
 	private value: StartupSnapshot;
 	private draftRevision = 0;
+	private userDraftEdited = false;
 	private reservedRevision = -1;
 	private tail: Promise<void> = Promise.resolve();
 	private flight: Promise<void> | null = null;
@@ -131,14 +139,51 @@ export class StartupCoordinator {
 	}
 
 	snapshot = (): StartupSnapshot => this.value;
+	hasDraftEdits = (): boolean => this.userDraftEdited;
+	/** A late optional proof may fill only a genuinely untouched empty editor.
+	 * User typing/discard, submitted work and an existing SID are never inferred. */
+	async restoreDraft(
+		draft: StartupDraft,
+		markProvenance: () => void,
+	): Promise<boolean> {
+		await this.ready;
+		if (
+			this.revoked ||
+			this.unreadable ||
+			!this.value.loaded ||
+			!this.deps.isCurrent() ||
+			this.draftRevision !== 0 ||
+			this.value.draft.text !== "" ||
+			this.value.draft.images.length !== 0 ||
+			this.value.queue.length !== 0 ||
+			!["draft", "ready"].includes(this.value.phase)
+		)
+			return false;
+		markProvenance();
+		this.draftRevision++;
+		this.publish({ draft: copy(draft) }, false);
+		await this.persist((record) => ({ ...record, draft: this.value.draft }));
+		return true;
+	}
 	subscribe = (listener: () => void) => {
 		this.listeners.add(listener);
 		return () => {
 			this.listeners.delete(listener);
 		};
 	};
-	private publish(patch: Partial<StartupSnapshot> = {}) {
+	private publish(patch: Partial<StartupSnapshot> = {}, checkpoint = true) {
+		const draftChanged =
+			patch.draft !== undefined && patch.draft !== this.value.draft;
+		if (checkpoint && draftChanged) this.userDraftEdited = true;
+		const sessionChanged =
+			patch.sessionId !== undefined && patch.sessionId !== this.value.sessionId;
 		this.value = { ...this.value, ...patch };
+		if (checkpoint && (draftChanged || sessionChanged))
+			this.deps.checkpointDraft?.(
+				this.value.draft,
+				this.value.sessionId,
+				draftChanged,
+			);
 		for (const listener of this.listeners) listener();
 	}
 
@@ -173,12 +218,15 @@ export class StartupCoordinator {
 				// A process may have died after the POST but before saving the SID.
 				if (this.record.phase === "starting" && this.record.sessionId === null)
 					this.record.phase = "unconfirmed";
-				this.publish({
-					...this.record,
-					draft:
-						this.draftRevision === 0 ? this.record.draft : this.value.draft,
-					error: this.record.phase === "unconfirmed" ? UNCONFIRMED : null,
-				});
+				this.publish(
+					{
+						...this.record,
+						draft:
+							this.draftRevision === 0 ? this.record.draft : this.value.draft,
+						error: this.record.phase === "unconfirmed" ? UNCONFIRMED : null,
+					},
+					false,
+				); // Reading a draft must not renew its retention lifetime.
 			}
 		} catch {
 			// Corrupt/foreign state is not an empty form. Never overwrite its bytes.
@@ -216,6 +264,13 @@ export class StartupCoordinator {
 		return operation.then(() => success);
 	}
 
+	/** Serialize recovery acknowledgements behind the ordinary write they cover. */
+	persistRecoveryMetadata(update: () => void): Promise<boolean> {
+		return this.persist((record) => {
+			update();
+			return record;
+		});
+	}
 	edit(text: string, images: PromptImage[]) {
 		if (this.revoked) return;
 		this.draftRevision += 1;
