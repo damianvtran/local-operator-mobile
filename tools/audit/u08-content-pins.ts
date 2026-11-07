@@ -621,7 +621,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
 	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
 	 * source admission, not a claim that measured geometry moved. */
-	src: "603ecaf930754295a712e4a47ccf6770148e2c9d9732339113c1dddcd3b35438",
+	/* Re-printed 2026-11-06 for the U-42/U-01 spacing fix (#163 regressions): the
+	 * composer's disc seams and the sidebar destinations' icon-to-label step move
+	 * from `gap-0.5` (2 pt, off the 4 pt scale) to `gap-1`, the dock's bottom inset
+	 * moves from its margin to a carrier's padding (same painted position), and the
+	 * queued-message chip gains a `TOUCH_FLOOR` height. U-08's scene is the session
+	 * screen, so the composer IS in it: this is source admission only — the 2 pt
+	 * seam shift is not claimed geometry-neutral here; `u08-geometry-proof` measures
+	 * that. No token, catalogue key or `app` change; no other pin moved. */
+	src: "b53f103cf288633225ca8e3fd01e3f0454b6c6a81131bc2fa3e42783b4a1d48f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
