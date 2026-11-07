@@ -68,26 +68,48 @@ export const folderChipText = (name: string, scale: number): string =>
 export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;
 
 /**
- * The session strip's shrink pair: the MODEL yields the overflow first, down to
- * its `MODEL_FLOOR_PT`, and only then does effort give up width (an ellipsis,
- * stopped at its own 44 pt floor) — so the trailing controls (More, the queued
- * chip, keyboard-dismiss) never reach the row's `overflow-hidden` edge.
+ * The session strip's shrink pair: the MODEL yields the overflow, down to its
+ * `MODEL_FLOOR_PT`; effort is RIGID (`flexShrink: 0`) and is held inside the
+ * row by a JS cap instead, `sessionEffortMaxWidth` — so the trailing controls
+ * (More, the queued chip, keyboard-dismiss) never reach the row's
+ * `overflow-hidden` edge, and effort never loses a sliver ("Hig…") while the
+ * model still has width to give (code review M1 / design D2).
  *
- * WHY a weighted pair and not 0. Effort used to hold at `flexShrink: 0` (code
- * review M1 / design D2: two `shrink` chips on auto bases split the overflow by
- * width, so effort read "H…" beside the queued chip). But at 320 pt / 200 % in
- * portrait the strip is ~292 pt, and model floor 44 + More 44 + queued 44 +
- * keyboard 44 + four 4 pt gaps leave ~100 pt, while a whole "Extra high" needs
- * ~151 pt: a rigid effort pushed the keyboard button and then the queued chip
- * past the clip (round-2 review R2-M1). The compact row does not rescue it — it
- * is short-landscape only.
- *
- * WHY 1000 : 1. Flex shrink is weighted by `factor × basis`, and an item frozen
- * at its min-width hands the rest of the overflow to the others (Yoga's
- * two-pass flexible-length resolution). Until the model is at its floor,
- * effort's share of the overflow is under `effortBasis / 1000` — about 0.15 pt
- * for the widest rung, below half a device pixel at 3x, which pixel rounding
- * absorbs, so effort still reads whole at ordinary sizes (D2 holds). Once the
- * model is frozen at 44 pt, effort takes everything that is left.
+ * WHY not shrink weights. `{model: 1000, effort: 1}` is right under CSS §9.7
+ * (RN-web, the browser) but not on iOS: RN 0.86.3's vendored Yoga freezes a
+ * floored item inside its first distribution pass and still charges later
+ * items against the ORIGINAL free space (yoga#2006, fixed upstream in 73bebc0,
+ * not vendored). Once the model froze at 44, effort was charged nearly the
+ * whole overflow, froze too, free space went ≥ 0, and the second pass gave
+ * every child its basis — More, the queue and keyboard-dismiss all landed past
+ * the row end (round-3 review R3-M1, reproduced against the vendored engine).
+ * With effort rigid the model is the only shrinking chip that can floor, and
+ * the bug needs a SECOND shrinker after a floored one to bite.
  */
-export const SESSION_STRIP_SHRINK = { model: 1000, effort: 1 } as const;
+export const SESSION_STRIP_SHRINK = { model: 1, effort: 0 } as const;
+
+/**
+ * Effort's `maxWidth` on the session strip, from the strip's measured width:
+ * what is left after the model's floor, every trailing control that is
+ * rendered (each at its `touchFloor`) and the strip's gaps — floored at
+ * `MODEL_FLOOR_PT`, below which the chip ellipsizes rather than vanishing.
+ *
+ * `undefined` before the first `onLayout` (width 0): no cap, so the first frame
+ * is exactly the uncapped strip; the cap applies from the measured frame on.
+ * `trailing` counts More (always), the queued chip and keyboard-dismiss when
+ * shown. The queued chip may render wider than its floor, but it shrinks (to
+ * that floor) after effort is capped, so counting its floor is the right bound.
+ */
+export const sessionEffortMaxWidth = (
+	stripWidth: number,
+	trailing: number,
+	touchFloor: number,
+): number | undefined => {
+	if (!(stripWidth > 0)) return undefined;
+	/* model + effort + trailing children → (1 + trailing) gaps. */
+	const gaps = COMPOSER_META_GAP_PT * (1 + trailing);
+	return Math.max(
+		MODEL_FLOOR_PT,
+		stripWidth - MODEL_FLOOR_PT - trailing * touchFloor - gaps,
+	);
+};

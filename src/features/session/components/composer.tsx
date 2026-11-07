@@ -66,6 +66,7 @@ import {
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
 	SESSION_STRIP_SHRINK,
+	sessionEffortMaxWidth,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -1208,6 +1209,15 @@ export const Composer = ({
 	 *  the count and — where the surface can open the queue — the way in; it is
 	 *  never a disabled control. ONE element for both strips (tall and short
 	 *  landscape), so its floor and its width cap are written once. */
+	/* Effort's measured cap on the session strip (R3-M1): rigid, so Yoga only
+	 *  ever floors the model, and capped by what the strip leaves after the
+	 *  model's floor and the trailing controls actually rendered below — More,
+	 *  the queued chip, keyboard-dismiss. Undefined until `metaWidth` arrives. */
+	const sessionEffortCap = sessionEffortMaxWidth(
+		metaWidth,
+		1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0),
+		TOUCH_FLOOR,
+	);
 	const queuedChip =
 		queuedCount > 0 ? (
 			<Pressable
@@ -1267,6 +1277,11 @@ export const Composer = ({
 			 *  at large text; it yields first, then effort, then the model
 			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes no
 			 *  `folderChip` and its strip is unchanged. */}
+			{/* TODO(native, O1): the home strip puts a min-floored shrinker (folder)
+			 *  FIRST, then more shrinkers — the yoga#2006 shape that broke the
+			 *  session strip on iOS (R3-M1): once folder floors, effort and model
+			 *  are charged against the original free space. Needs a device check;
+			 *  if it overflows, cap like `sessionEffortMaxWidth`. */}
 			{folderChip ? (
 				<View
 					style={{
@@ -1300,8 +1315,9 @@ export const Composer = ({
 				 *  left at the row's gap and the free width goes to More's auto margin
 				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
 				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
-				 *  to its floor first, then effort (`SESSION_STRIP_SHRINK`), so the
-				 *  trailing controls never clip. */
+				 *  to its floor; effort is rigid under a measured cap
+				 *  (`SESSION_STRIP_SHRINK`, `sessionEffortMaxWidth`), so the trailing
+				 *  controls never clip — on native Yoga too (R3-M1). */
 				className="min-w-0 shrink"
 				style={{
 					minWidth: MODEL_FLOOR_PT,
@@ -1332,6 +1348,7 @@ export const Composer = ({
 							: {
 									minWidth: MODEL_FLOOR_PT,
 									flexShrink: SESSION_STRIP_SHRINK.effort,
+									maxWidth: sessionEffortCap,
 								}
 					}
 				>

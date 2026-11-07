@@ -13,6 +13,7 @@ import {
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
 	SESSION_STRIP_SHRINK,
+	sessionEffortMaxWidth,
 } from "./composer-layout";
 import {
 	composerPaintedHeight,
@@ -451,6 +452,18 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		const session = effort.slice(effort.indexOf(": {"));
 		expect(session).toContain("minWidth: MODEL_FLOOR_PT");
 		expect(session).toContain("flexShrink: SESSION_STRIP_SHRINK.effort");
+		expect(session).toContain("maxWidth: sessionEffortCap");
+		/* The cap counts exactly the trailing controls the strip renders: More
+		 *  always, the queued chip with a queue, keyboard-dismiss when focused. */
+		const cap = COMPOSER.slice(
+			COMPOSER.indexOf("const sessionEffortCap"),
+			COMPOSER.indexOf("const queuedChip"),
+		).replace(/\s+/g, " ");
+		expect(cap).toContain(
+			"sessionEffortMaxWidth( metaWidth, 1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0), TOUCH_FLOOR, )",
+		);
+		expect(COMPOSER).toContain("{queuedChip}");
+		expect(COMPOSER).toContain("{keyboardVisible || focused ? (");
 		const model = COMPOSER.slice(
 			COMPOSER.indexOf('className="min-w-0 shrink"'),
 			COMPOSER.indexOf("testID={CONTROL.composerModelChip}"),
@@ -458,8 +471,24 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(model).toContain("minWidth: MODEL_FLOOR_PT");
 		expect(model).toContain('flexBasis: "auto"');
 		expect(model).toContain(": SESSION_STRIP_SHRINK.model");
-		/* Effort may shrink (> 0), or a long rung overflows the row (R2-M1). */
-		expect(SESSION_STRIP_SHRINK.effort).toBeGreaterThan(0);
+		/* R3-M1: effort is RIGID, so on native Yoga (0.86.3, yoga#2006) the model
+		 *  is the only chip that floors; the cap, not a shrink weight, keeps it in. */
+		expect(SESSION_STRIP_SHRINK).toEqual({ model: 1, effort: 0 });
+	});
+
+	/* R3-M1's cap, with the reviewer's numbers from the vendored-Yoga harness. */
+	it("caps effort by the measured strip, its trailing controls and gaps", () => {
+		/* 292 pt (320 / 200 %), focused with a queue: 292 − 44 − 3·44 − 4·4. */
+		expect(sessionEffortMaxWidth(292, 3, 44)).toBe(100);
+		/* QA's web rig: 296 strip, 48 pt floors. */
+		expect(sessionEffortMaxWidth(296, 3, 48)).toBe(92);
+		/* 402 pt / 100 %, at rest: strip 378, More only → Medium (60) is whole. */
+		expect(sessionEffortMaxWidth(378, 1, 44)).toBe(282);
+		expect(sessionEffortMaxWidth(378, 1, 44)).toBeGreaterThan(60);
+		/* Floored: a tiny strip still leaves effort a 44 pt, ellipsized target. */
+		expect(sessionEffortMaxWidth(120, 3, 44)).toBe(MODEL_FLOOR_PT);
+		/* Before the first onLayout: no cap, the first frame is the uncapped one. */
+		expect(sessionEffortMaxWidth(0, 3, 44)).toBeUndefined();
 	});
 
 	/* Round-2 R2-M1's numbers, from the r1 frame `live-int-dark-320-200.png`:
@@ -475,7 +504,12 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 	/* The session strip's children with their flex weights as composer.tsx
 	 *  writes them: More and keyboard-dismiss are IconButtons (RN default
 	 *  `flexShrink: 0`); the queued chip is `flexShrink: 1` floored at 44 pt. */
-	const sessionStrip = (model: string, effort: string, glyph = GLYPH_200) => [
+	const sessionStrip = (
+		model: string,
+		effort: string,
+		glyph = GLYPH_200,
+		row = STRIP_320_200,
+	) => [
 		{
 			id: "model",
 			basis: chipWidth(model, glyph),
@@ -484,7 +518,11 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		},
 		{
 			id: "effort",
-			basis: chipWidth(effort, glyph),
+			/* maxWidth clamps the hypothetical size before shrink is shared. */
+			basis: Math.min(
+				chipWidth(effort, glyph),
+				sessionEffortMaxWidth(row, 3, 44) ?? Number.POSITIVE_INFINITY,
+			),
 			shrink: SESSION_STRIP_SHRINK.effort,
 			min: MODEL_FLOOR_PT,
 		},
@@ -512,10 +550,10 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 			expect(size("model")).toBe(MODEL_FLOOR_PT);
 			expect(size("effort")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
 		}
-		/* Control: with effort rigid (the round-2 `0`), the same row overflows
-		 *  by ~51 pt — the clip R2-M1 reported. */
+		/* Control: rigid effort WITHOUT the cap (round 2, and the first frame
+		 *  before `metaWidth`) overflows by ~51 pt — the clip R2-M1 reported. */
 		const rigid = sessionStrip("claude-opus-5-5", "Extra high").map((item) =>
-			item.id === "effort" ? { ...item, shrink: 0 } : item,
+			item.id === "effort" ? { ...item, basis: chipWidth("Extra high") } : item,
 		);
 		const rigidUsed =
 			resolveShrink(rigid, STRIP_320_200, COMPOSER_META_GAP_PT).reduce(
@@ -526,42 +564,25 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(rigidUsed - STRIP_320_200).toBeGreaterThan(45);
 	});
 
-	it("shrinks the model to its floor before effort gives up a visible sliver", () => {
-		/* Ordinary text (~6.65 pt glyphs) on a row just short enough that the
-		 *  model must lose width but can absorb all of it above its floor. */
+	it("keeps an ordinary effort whole and shrinks only the model", () => {
+		/* Ordinary text (~6.65 pt glyphs): whatever the overflow, effort is rigid
+		 *  under a cap it fits, so it never loses a sliver ("Hig…"). */
 		const glyph = GLYPH_200 / 2;
+		const row = 300;
 		const items = sessionStrip(
 			"Claude Opus 5.5 (1M context)",
 			"Extra high",
 			glyph,
+			row,
 		);
-		const natural =
-			items.reduce((sum, item) => sum + item.basis, 0) +
-			COMPOSER_META_GAP_PT * (items.length - 1);
-		const basis = (id: string) =>
-			items.find((item) => item.id === id)?.basis ?? Number.NaN;
-		const sizeOf = (sized: { id: string; size: number }[], id: string) =>
+		const sized = resolveShrink(items, row, COMPOSER_META_GAP_PT);
+		const size = (id: string) =>
 			sized.find((item) => item.id === id)?.size ?? Number.NaN;
-		const modelExcess = basis("model") - MODEL_FLOOR_PT;
-		for (const overflow of [1, modelExcess / 2, modelExcess - 0.5]) {
-			const sized = resolveShrink(
-				items,
-				natural - overflow,
-				COMPOSER_META_GAP_PT,
-			);
-			const effortLoss = basis("effort") - sizeOf(sized, "effort");
-			/* Below half a device pixel at 3x: rounding absorbs it, no "H…". */
-			expect(effortLoss, `overflow ${overflow}`).toBeLessThan(1 / 6);
-			expect(sizeOf(sized, "model")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
-		}
-		/* Past the model's floor, effort takes the rest and the model holds 44. */
-		const sized = resolveShrink(
-			items,
-			natural - modelExcess - 20,
-			COMPOSER_META_GAP_PT,
+		expect(size("effort")).toBe(chipWidth("Extra high", glyph));
+		expect(size("model")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
+		expect(size("model")).toBeLessThan(
+			chipWidth("Claude Opus 5.5 (1M context)", glyph),
 		);
-		expect(sizeOf(sized, "model")).toBe(MODEL_FLOOR_PT);
-		expect(basis("effort") - sizeOf(sized, "effort")).toBeGreaterThan(19);
 	});
 
 	/* TestFlight 578: "Left justify the effort selector with the other selectors

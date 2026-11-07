@@ -813,9 +813,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * effort holds, suggestion rows start-align at large text, and the hero mark
 	 * gains a border-control ring. Round-2 remediation (R2-M1) re-printed it once
 	 * more: the session strip's model and effort take a weighted shrink pair
-	 * (SESSION_STRIP_SHRINK) so the trailing controls never clip. Source
-	 * admission only, NOT rendered U-08 evidence. */
-	src: "3f479c16efd90017ae0f467f745ca02c5f278fdbd2b0bd96d56d37e1ca696c2c",
+	 * (SESSION_STRIP_SHRINK) so the trailing controls never clip. Round-3
+	 * remediation (R3-M1) re-printed it again: effort is rigid under a measured
+	 * JS cap (sessionEffortMaxWidth), because native Yoga 0.86.3 mis-resolves the
+	 * weighted pair (yoga#2006). Source admission only, NOT rendered U-08
+	 * evidence. */
+	src: "4f1bb44646fa1f107b100dc41592a8a78083e905b32bbd92aa3072780774f879",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
