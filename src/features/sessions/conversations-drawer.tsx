@@ -97,10 +97,11 @@ export const ConversationsDrawer = ({
 	 *  restores the column to its designed width (247 pt) and the CTA to its
 	 *  before position, at every scale.
 	 *
-	 *  The `SIDEBAR_SLIVER` cap inside `sidebarWidthFor` binds only below 336 pt of
-	 *  viewport, where no side inset exists (a side inset this large implies a
-	 *  landscape phone 844 pt wide, whose sliver is 505 pt of the 844), so adding
-	 *  the inset cannot eat the page behind the panel. */
+	 *  The `SIDEBAR_SLIVER` cap inside `sidebarWidthFor` binds only below 428 pt of
+	 *  viewport, i.e. on portrait phones, where no side inset exists (a side inset
+	 *  this large implies a landscape phone 844 pt wide, where the 400 pt ceiling
+	 *  binds instead: 400 + 59 = 459 pt of panel, a 385 pt page beside it), so
+	 *  adding the inset cannot eat the page behind the panel. */
 	const panelWidth = sidebarWidthFor(width) + insets.left;
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
@@ -275,7 +276,7 @@ export const ConversationsDrawer = ({
 								 *  shape as the `Screen`, which pads its root rather than its children.
 								 *
 								 *  LEFT ONLY. The panel is anchored to the left edge and never reaches the
-								 *  right one (339 pt of an 844 pt landscape phone, a 505 pt sliver behind),
+								 *  right one (459 pt of an 844 pt landscape phone, a 385 pt page beside it),
 								 *  so `insets.right` describes a screen edge the panel does not touch;
 								 *  reserving it would cost another 59 pt for nothing. `left` is the one that
 								 *  moves when the notch (or a rounded corner) is on the side the drawer

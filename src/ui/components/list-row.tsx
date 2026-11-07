@@ -19,6 +19,7 @@ import {
 } from "@/ui/components/list-row-meta";
 import { listRowStatus } from "@/ui/components/list-row-status";
 import { Shimmer } from "@/ui/components/shimmer";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
@@ -286,7 +287,10 @@ export const ListRow = ({
 			onLongPress={onLongPress}
 		>
 			{({ pressed }) => (
-				<View className={listRowClasses({ selected, pressed })}>
+				<View
+					className={listRowClasses({ selected, pressed })}
+					style={ROW_FLOOR}
+				>
 					{leading === undefined ? (
 						leadingSlotPt === undefined ? (
 							<Indicator attention={attention} />
@@ -324,7 +328,7 @@ export const ListRow = ({
 							{leading}
 						</LeadingWithBadge>
 					)}
-					<View className="flex-1 gap-0.5">
+					<View className="flex-1 gap-1">
 						{/* `flex-wrap` — but only at large text (`wrapMarks`): at 200 % on a
 						 *  320 pt phone the title plus its marks do not fit one line, and a
 						 *  row that cannot wrap pushes a mark past the viewport edge — the
@@ -350,10 +354,15 @@ export const ListRow = ({
 							 * row's width (D-B3). The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
 							 * (docs/design/components.md § 7) — the spinner in the slot is
-							 * the second channel, not the first. */}
+							 * the second channel, not the first.
+							 *
+							 * `label` (15/1.2/600), not `body-sm font-medium`: the title is the
+							 * thing a reader picks a conversation by, so it takes the kit's
+							 * strongest one-line step, and its 1.2 leading is what lets two lines
+							 * fit the ~56 pt row (design spec 2026-11-06 § 4). */}
 							<Shimmer active={streaming} style={TITLE_BOX}>
 								<Text
-									className={`text-body-sm font-medium ${
+									className={`text-label ${
 										selected
 											? // Selection's non-colour channel, plus the fill.
 												"text-accent-active dark:text-accent-hover"
@@ -369,10 +378,12 @@ export const ListRow = ({
 							</Shimmer>
 							{time !== undefined && time !== "" ? (
 								<Text
-									className="ms-auto shrink-0 text-meta text-ink-dim"
+									className="ms-auto shrink-0 text-mono-label text-ink-dim"
 									// The row's accessible name already carries the state; the time is
 									// part of the title line's scan and needs no announcement of its own
-									// (the visible string is what a reader needs).
+									// (the visible string is what a reader needs). `mono-label` so "2w" and
+									// "59 min" share one tabular column at the row's trailing edge, the
+									// same step the section headers use (spec § 4).
 								>
 									{time}
 								</Text>
@@ -551,6 +562,13 @@ export const ListRow = ({
  * when it DOES share a line with a mark; without it the browser's `min-width: auto` would
  * push the mark off the row instead of wrapping it.
  */
+/** The row's height floor: the platform touch floor, so a one-line row is
+ *  exactly a target (44 iOS / 48 other) and a two-line row is sized by its own
+ *  content (~56 pt). A style, not a class, because `TOUCH_FLOOR` is decided per
+ *  platform at runtime (see `listRowClasses`). Hoisted so every row shares one
+ *  object instead of allocating per render. */
+const ROW_FLOOR = { minHeight: TOUCH_FLOOR } as const;
+
 const TITLE_BOX = {
 	flexBasis: "auto",
 	flexGrow: 1,

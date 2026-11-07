@@ -69,29 +69,48 @@ export const SPLIT_MIN_HEIGHT = 700;
 /* --- the conversations panel's geometry (the home + sidebar slice). No token
  *  carries these yet, and by this file's own rule new layout numbers live HERE
  *  once and the manager is told they belong in the token set — proposed as
- *  `layout.sidebar = { mobileMax: 280, tablet: 320, sliver: 56 }`. --- */
+ *  `layout.sidebar = { max: 400, min: 240, sliver: 28 }`. --- */
 
-/** Material's own temporary-drawer width rule: max 280 on mobile, 320 on tablet. */
-export const SIDEBAR_MOBILE_MAX = 280;
+/** The panel's ceiling, phone and tablet alike (design spec 2026-11-06 § 4).
+ *
+ *  It replaced Material's 280 pt mobile cap, which the operator read as a
+ *  cramped list ("the drawer being slightly wider to show more of the
+ *  conversations", build 453): at 280 the panel was 69.7 % of a 402 pt phone and
+ *  the title column 247 pt. The ceiling is what binds in landscape and on a
+ *  tablet, so a wide screen keeps a list-width panel instead of a half-screen
+ *  sheet of rows; on every portrait phone up to 428 pt the sliver binds first.
+ *
+ *  400, NOT the spec's 360: the spec states both `min(360, vw − 28)` and "374 pt
+ *  on a 402 pt viewport" as its acceptance measurement, and those contradict
+ *  (min(360, 374) = 360). The acceptance number is the one the operator's
+ *  request is judged by, so the ceiling is the smallest round value above every
+ *  current iPhone's `vw − 28` that still keeps a tablet's panel list-width. */
+export const SIDEBAR_TABLET_MAX = 400;
 
 /** The floor, so a narrow phone's panel still fits its rows' skeletons. */
 export const SIDEBAR_MIN_WIDTH = 240;
 
-/** What stays visible of the page behind the panel at the 320 pt floor — the
- *  same sliver Material's own example leaves at the right edge. */
-export const SIDEBAR_SLIVER = 56;
+/** What stays visible of the scrimmed page beside the panel on a phone.
+ *
+ *  28, not Material's 56, because the panel now carries its own `panel-edge`
+ *  hairline (4.21:1 against the scrim), so the sliver no longer has to do the
+ *  "the page is still there" work alone: 28 pt still reads as a darkened page,
+ *  and the 28 it gives back go to the rows' titles. The spec's acceptance floor is
+ *  24 pt of page at every width, which this keeps down to a 264 pt viewport. */
+export const SIDEBAR_SLIVER = 28;
 
 /**
- * The panel's width for a viewport: `min(280, vw − 56)`, floored at 240.
+ * The panel's width for a viewport: `min(400, vw − 28)`, floored at 240.
  *
- * 390 pt phone → 280 (sliver 110); 320 pt phone → 264 (sliver 56). The sliver is
- * what keeps the page behind the panel legible enough to read as "darkened",
- * not gone — the temporary-drawer rule, not a sizing preference.
+ * 402 pt phone → 374 (93 %, the Kimi-like proportion the operator pointed at);
+ * 440 → 400; 390 → 362; 320 → 292; an 844 pt landscape phone → 400 (the ceiling
+ * binds, a 444 pt page beside it). The sliver is what keeps the page behind the panel
+ * legible as "darkened", not gone — the temporary-drawer rule.
  */
 export const sidebarWidthFor = (viewportWidth: number): number =>
 	Math.max(
 		SIDEBAR_MIN_WIDTH,
-		Math.min(SIDEBAR_MOBILE_MAX, viewportWidth - SIDEBAR_SLIVER),
+		Math.min(SIDEBAR_TABLET_MAX, viewportWidth - SIDEBAR_SLIVER),
 	);
 
 /** The FIVE-destination pane height below which the pinned routes starve the list.

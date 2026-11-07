@@ -70,8 +70,12 @@ const sha256 = (content: string | Uint8Array) =>
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
+	/* Re-printed 2026-11-07 with --print at the staged sidebar-density tree: the two
+	 * U-42 allowances keyed on the list row's `min-h-[56px]` class were removed with
+	 * that class (the row now pads `py-2`/`gap-1`, both on the 4 pt scale), so they
+	 * matched nothing. No check logic changed. */
 	"tools/audit/checks.ts":
-		"3b49282a11c21ec0437e80d4feb00a481d544c3554dd7dcfcb42793f85926ed9",
+		"1e9f89c657c64780b11c3017db43e2e441c1751771331c6710811dbd25bfda70",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -690,7 +694,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
 	 * this merge, so neither previous digest is kept. */
-	src: "f244908f7d74eb41013642cbba4c41894a98c12b18ab856d3eb3c0d158f2fdf8",
+	/* Re-printed 2026-11-07 with --print at the STAGED sidebar-density tree (design spec
+	 * 2026-11-06 § 4): the drawer's width rule moves to `min(400, vw − 28)`, the
+	 * conversation row drops its fixed 56 pt floor for `TOUCH_FLOOR` with `py-2`/`gap-1`
+	 * and a `label` title, and the panel's header/footer tighten (fixed 60 → `py-1`,
+	 * destination slots 52 → `TOUCH_FLOOR`, workspace row above the strip). U-08's scene
+	 * is the session screen, not the drawer: source admission only, not a claim that
+	 * measured geometry moved. No token, catalogue key or `app` change. */
+	src: "9ec2f22fe189734de00c91c457fec06f48c7e5fa24fcbd6040886dac69a41fe7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -12,9 +12,12 @@ import {
 	layoutFor,
 	pinnedRoutesPaneFloor,
 	regionOrder,
+	SIDEBAR_SLIVER,
+	SIDEBAR_TABLET_MAX,
 	SPLIT_MIN_HEIGHT,
 	sessionStatusLayout,
 	sidebarFooterScrolls,
+	sidebarWidthFor,
 	snapRegion,
 	statusTrayVisible,
 } from "@/ui/size-class";
@@ -590,5 +593,30 @@ describe("status tray beside a pending decision", () => {
 		const tablet = sessionStatusLayout(1024, false);
 		expect(statusTrayVisible(tablet.tray, false, false)).toBe(false);
 		expect(statusTrayVisible(tablet.tray, false, true)).toBe(false);
+	});
+});
+
+/* The drawer's width rule (design spec 2026-11-06 § 4). The acceptance numbers
+ * are the spec's own: 374 pt on a 402 pt phone, and at least 24 pt of the
+ * scrimmed page left visible, so the panel still reads as a drawer over a page. */
+describe("sidebarWidthFor", () => {
+	it("gives a 402 pt phone the spec's 374 pt panel (93 %)", () => {
+		expect(sidebarWidthFor(402)).toBe(374);
+	});
+
+	it("keeps the sliver on narrow phones: 320 pt -> 292", () => {
+		expect(sidebarWidthFor(320)).toBe(292);
+		expect(SIDEBAR_SLIVER).toBe(28);
+	});
+
+	it("caps landscape and tablets at the ceiling instead of filling the screen", () => {
+		expect(sidebarWidthFor(844)).toBe(SIDEBAR_TABLET_MAX);
+		expect(sidebarWidthFor(1194)).toBe(SIDEBAR_TABLET_MAX);
+	});
+
+	it("leaves at least 24 pt of the page at every phone width from 264 pt up", () => {
+		for (let width = 264; width <= 1366; width += 1) {
+			expect(width - sidebarWidthFor(width)).toBeGreaterThanOrEqual(24);
+		}
 	});
 });
