@@ -7,13 +7,29 @@
 		"role": "status",
 		"note": "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code."
 	},
+	"mobile.home.folders_read_sign_in": {
+		"role": "status",
+		"note": "Failure sentence for the folder read when the computer answered that the credential is no longer accepted. Names the CAUSE so Retry is not offered as the fix; the sign-in surface is one tap away. No placeholder."
+	},
 	"mobile.home.greeting": {
 		"role": "heading",
 		"note": "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself."
 	},
+	"mobile.home.models_read_failed": {
+		"role": "status",
+		"note": "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder."
+	},
 	"mobile.home.options.apply": {
 		"role": "button",
 		"note": "Button that applies the starting options. Sentence case, no final full stop."
+	},
+	"mobile.home.options.default_folder": {
+		"role": "button",
+		"note": "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop."
+	},
+	"mobile.home.options.default_model": {
+		"role": "button",
+		"note": "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop."
 	},
 	"mobile.home.options.fixed": {
 		"role": "help",

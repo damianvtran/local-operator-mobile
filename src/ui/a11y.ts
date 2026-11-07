@@ -491,10 +491,23 @@ export const CONTROL = {
 	/** The home composer's folder chip: the session's target folder. */
 	homeTargetFolder: "home-target-folder",
 	/** The home's offline action "Connect a computer", in the suggestions' slot. */
-	/** The home's folders-read failure line and its remedy (review M2): the
-	 *  sentence `/new` uses for the same failure, with the retry the home lacked. */
+	/** The home's folders-read failure and its remedy (review M2): the sentence
+	 *  `/new` uses for the same failure, with the retry the home lacked. An auth
+	 *  failure owes a different remedy than a retry (`relay-unauthorized` retries
+	 *  `never`), so the sign-in handoff is its own control rather than a second
+	 *  meaning for the retry's id (review R4). */
 	homeFoldersBanner: "home-folders-banner",
 	homeFoldersRetry: "home-folders-retry",
+	homeFoldersSignIn: "home-folders-sign-in",
+	/** The home's model-list failure and its own retry: a read that failed used to be
+	 *  swallowed into an empty catalogue, which read as "connected, no model". */
+	homeModelsBanner: "home-models-banner",
+	homeModelsRetry: "home-models-retry",
+	/** The two "back to what the computer would have used" rows in the same sheet:
+	 *  without them a folder or a model the reader mis-tapped could only be undone by
+	 *  choosing something else (reviews R5 and the folder's half of it). */
+	homeDefaultFolder: "home-default-folder",
+	homeDefaultModel: "home-default-model",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",
@@ -1135,6 +1148,10 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  (`theme-card-dracula`) — the id is generated data, so the screen cannot
 	 *  spell the family inline. */
 	"theme-card-",
+	/* The home options sheet's recent-directory rows, keyed by their index in the
+	 *  list the computer returned (review R8): the paths are data, so an index is
+	 *  the stable name a flow can address. */
+	"home-recent-folder-",
 ];
 
 /**
@@ -2067,6 +2084,12 @@ export const askOtherFieldId = (questionId: string): string =>
 
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;
+
+/** One recent-directory row of the home's options sheet, by its position in the
+ *  computer's list. The rows are data (paths the daemon's spawn gate admits), so
+ *  the screen cannot spell a stable id — the index is the one name a flow has. */
+export const homeRecentFolderId = (index: number): string =>
+	`home-recent-folder-${index}`;
 
 /** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
 export const askQuestionId = (index: number, total: number): string =>

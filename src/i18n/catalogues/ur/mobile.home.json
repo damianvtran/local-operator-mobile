@@ -1,8 +1,12 @@
 {
 	"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
 	"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
+	"mobile.home.folders_read_sign_in": "اس کمپیوٹر نے دوبارہ سائن اِن کرنے کو کہا ہے، اسی لیے اس کے فولڈرز نہیں پڑھے جا سکے۔",
 	"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
+	"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
 	"mobile.home.options.apply": "یہ اختیارات استعمال کریں",
+	"mobile.home.options.default_folder": "اس کمپیوٹر کا ڈیفالٹ فولڈر استعمال کریں",
+	"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 	"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 	"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
 	"mobile.home.options.title": "گفتگو کے اختیارات",

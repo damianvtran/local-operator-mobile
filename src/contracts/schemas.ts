@@ -1520,6 +1520,11 @@ export const directoriesSchema = z.looseObject({
 	home: z.string(),
 	recent: z.array(z.string()),
 	tmp: z.string().optional(),
+	/** Where a session starts when the client names no directory, resolved by the
+	 *  computer with the SAME function its start route uses. Optional because a
+	 *  computer older than that field does not publish it — the client then starts
+	 *  in `home`, the one path the spawn gate always admits, rather than guessing. */
+	default: z.string().optional(),
 });
 
 export const healthzResponseSchema = z.looseObject({

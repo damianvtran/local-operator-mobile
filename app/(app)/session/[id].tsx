@@ -17,7 +17,10 @@ import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
-import { composerChipLabels } from "@/features/session/chip-labels";
+import {
+	composerChipLabels,
+	reportedModel,
+} from "@/features/session/chip-labels";
 import {
 	attentionRecord,
 	overlaysBlocked,
@@ -341,7 +344,7 @@ export default function Session() {
 				? ("unreachable" as const)
 				: ("loading" as const);
 	const chipLabels = composerChipLabels({
-		model: projection?.model_label ?? null,
+		model: reportedModel(projection?.model_label),
 		effort: projection?.effort ?? null,
 		connection: chipConnection,
 	});

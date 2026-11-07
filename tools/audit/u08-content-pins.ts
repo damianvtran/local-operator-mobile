@@ -389,7 +389,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * their digests. */
 	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
 	 * session screen's one-line `loadSound` client wiring. */
-	app: "6f9ced757e1dcb1e4f2749fe01b1fb60ac1822ffbac0816e3f7c49bc64486a9b",
+	/* Re-pinned 2026-11-06 with --print for the home-defaults fix: `app` moves by ONE
+	 * line in `app/(app)/session/[id].tsx` — the session screen's model reading is now
+	 * `reportedModel(projection?.model_label)` instead of a bare nullable string, the
+	 * same values in the same chip. It renders the same two outputs it always did (a
+	 * selector, or the rung-less/unreported `n/a`); only the REASON the home could be
+	 * wrong changes, and U-08's scene is a session transcript with no home surface in
+	 * it. This is source admission for the geometry instrument, NOT fresh rendered
+	 * evidence. */
+	app: "6cfc680b963b1721b554418fc95b41bb9c93a397b55c23ed68a800b744fb3469",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -576,7 +584,38 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "83f43c1aa81faaa49b67ef10afaca0b0d551aefa7f69d32e1de53c5bf592f74e",
+	/* Re-pinned 2026-11-06 with `--print` for the home-defaults fix, `src` (with
+	 * `app`, above): the composer home no longer takes the model catalogue's first
+	 * entry as a default model, keeps both reads' failures as failures, starts in the
+	 * computer's own default folder and offers its recent directories. The U-08
+	 * scene is the long-transcript custom-relay session — no home surface is
+	 * rendered in it, and the chips' only changed cases ("nothing chosen", "list
+	 * unread") cannot occur there, so this is source admission rather than a claim
+	 * that the measured geometry moved. Historical ORIGINAL_* identities, the
+	 * instrument modules, the corpus and every other pin are untouched. */
+	/* Re-printed 2026-11-06 at the STAGED round-1 remediation tree (the committed pin
+	 * above was captured before the two new `home-defaults` files were tracked, so it
+	 * described no tree that ever shipped — review R1 / QA Q1). What moved: the folder
+	 * read now fills only an unfilled slot, the two reads have their own effects and
+	 * retries, the restored-record supersede no longer waits for a resolved folder, the
+	 * options sheet gained the two "back to the computer's default" rows and per-row
+	 * recent ids, and two catalogue keys were added. `app` is untouched by this round.
+	 * The U-08 scene renders no home surface, so this is still source admission rather
+	 * than a claim that any measured geometry moved. */
+	/* Re-printed 2026-11-06 at the STAGED round-2 remediation tree: the home's folder
+	 * state is tagged per computer (R2-1), the restored-home rewrite waits on "no
+	 * Apply yet in this mount" (R2-2), and the startup coordinator drops a restored
+	 * model before `resume()` can replay it (R2-3). Logic only — no rendered surface,
+	 * copy or catalogue key changed, `app` is untouched, and U-08's scene still renders
+	 * no home surface: source admission, not a claim that measured geometry moved. */
+	/* Re-printed 2026-11-06 at the STAGED design/UX round-1 remediation tree: the
+	 * options sheet's "computer's default model" row stays mounted and is the selected
+	 * row while nothing is chosen (D1/U3), the sheet rows announce selection through a
+	 * new optional `Button` `selected` prop (U5), the chip keeps "Default" when the
+	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
+	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
+	 * source admission, not a claim that measured geometry moved. */
+	src: "603ecaf930754295a712e4a47ccf6770148e2c9d9732339113c1dddcd3b35438",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

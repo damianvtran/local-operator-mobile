@@ -150,6 +150,26 @@ export class StartupCoordinator {
 				if (!validRecord(saved, this.scope))
 					throw new Error("invalid startup record");
 				this.record = copy(saved);
+				/* A RESTORED MODEL IS NOT A CHOICE (review round 2, R2-3). A build that
+				 *  predates the home-defaults fix wrote `catalogue.models[0]` into every
+				 *  record, and nothing on disk tells that invented model from one a reader
+				 *  picked. The home already strips it once it renders, but `resume()`
+				 *  replays a saved queue straight away — before any screen effect commits —
+				 *  and once the phase is `starting` no correction can land, so the invented
+				 *  override would reach `POST /api/sessions/start` once after the upgrade.
+				 *  Dropping it HERE, the one place every restore passes through, closes that
+				 *  ordering: absent fields make the computer apply its own configured
+				 *  default, and a reader who wants another model picks it again in the sheet
+				 *  (the home drops a restored model on remount anyway, so nothing a reader
+				 *  could rely on is lost). The folder is kept: it is the reader's. */
+				if (this.record.selection !== null) {
+					const {
+						provider: _provider,
+						model_id: _model,
+						...kept
+					} = this.record.selection;
+					this.record.selection = kept;
+				}
 				// A process may have died after the POST but before saving the SID.
 				if (this.record.phase === "starting" && this.record.sessionId === null)
 					this.record.phase = "unconfirmed";
