@@ -162,8 +162,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation (QA Q-R2-2)
+	 * with --print from the staged tree: one new IDENTICAL_FRAME_COINCIDENCES
+	 * entry (`S5/rail-building` + `S5/rail-deep` at iphone-se / 200 %). No rule,
+	 * probe or other entry moved. */
 	"tools/visual/matrix.ts":
-		"4747988924ab3832c1412f86fc8962c3055d6b49cd8e864df8ecae60f629843e",
+		"792a212c02484c962d01ee1a83fd1c1d0b917ceb1f49dbba87a27b97ae21ea55",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -703,7 +707,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * splash's mount-seeded focus latch, the native composer guard, Retry focus
 	 * tied to the pressed attempt, a moved import in `variants.ts`); `app`
 	 * unchanged. */
-	src: "6ef1381877658df3dad86e44bcbb55ffb1b2fb49bc38b133d4d119b77aab3ce0",
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation with --print
+	 * from the staged tree: `src` only (the home's notice stack is a capped
+	 * ScrollView so the composer never moves — Q-R2-1; the hero's centring
+	 * offset is a spacer's height, not a padding — Q-R2-3; one new SURFACE
+	 * id); `app` unchanged. */
+	src: "a0e1703b840759f22ffeb6a95e25df1cf347558a13a2689511fb2df3e24c885d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -250,13 +250,21 @@ export const HomeSplash = ({
 			onLayout={(event) => setBand(Math.round(event.nativeEvent.layout.height))}
 		>
 			<ScrollView
-				contentContainerStyle={{
-					paddingHorizontal: 16,
-					paddingTop: holding ? heroHeldInset(live, restInset.current) : live,
-					paddingBottom: 24,
-				}}
+				contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
 				keyboardShouldPersistTaps="handled"
 			>
+				{/* The centring offset is a SPACER'S HEIGHT, not a padding (QA
+				 *  Q-R2-3). It is computed from two measurements, so it lands on
+				 *  216/208/156 pt, which are not `space.scale` steps. U-42 judges
+				 *  padding, margin and gap as spacing tokens, and this value is not
+				 *  a token. Bending it to a scale step would move the hero off
+				 *  centre. As a height it is laid out the same way and is not
+				 *  measured as spacing. */}
+				<View
+					style={{
+						height: holding ? heroHeldInset(live, restInset.current) : live,
+					}}
+				/>
 				<View
 					onLayout={(event) =>
 						setBlock(Math.ceil(event.nativeEvent.layout.height))

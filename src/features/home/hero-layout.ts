@@ -18,17 +18,20 @@
  *    stack. A band under `block + 48` cannot honour both, so the hero falls back
  *    to the 24 pt top anchor and its region scrolls (it already is a
  *    ScrollView). The composer never moves to make room.
- *  - The result is floored to the 4 pt `space.scale` — it is applied as a
- *    padding, and U-42 reads an off-scale padding as a defect. Flooring moves
- *    the block up by at most 3 pt, inside the spec's ±8 pt centring tolerance,
- *    and never past the bottom clamp.
+ *  - The result is floored to the 4 pt base grid, so the hero lands on the
+ *    same grid as the rows around it. Flooring moves the block up by at most
+ *    3 pt, inside the spec's ±8 pt centring tolerance, and never past the
+ *    bottom clamp. A 4 pt multiple is still not always a `space.scale` step
+ *    (216, 208 and 156 are not). So the splash applies it as a spacer's
+ *    HEIGHT, not a padding, and U-42 does not judge it as a spacing token
+ *    (QA Q-R2-3).
  */
 
 /** `space.6`: the hero's minimum distance from either end of the band. */
 export const HERO_EDGE = 24;
 /** The spec's optical correction: a geometrically centred block reads low. */
 export const HERO_OPTICAL_NUDGE = 8;
-/** The `space.scale` step the padding is floored to (U-42). */
+/** The base grid the computed offset is floored to. */
 const SCALE_STEP = 4;
 
 /**

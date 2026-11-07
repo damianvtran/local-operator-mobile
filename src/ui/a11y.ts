@@ -975,6 +975,8 @@ export const SURFACE = {
 	 * (`homeStarting` IS the sending marker — see STATE_MARKER.home). --- */
 	homeComposer: "home-composer",
 	homeSplash: "home-splash",
+	/** The scroll cap around the notices above the composer (QA Q-R2-1). */
+	homeNoticeStack: "home-notice-stack",
 	homeGreeting: "home-greeting",
 	homeSuggestions: "home-suggestions",
 	homeStarting: "home-starting",

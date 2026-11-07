@@ -67,9 +67,36 @@ describe("the home's folder warning is structurally outside the composer", () =>
 	it("gives the notice's height to the free band, which re-centres the hero", () => {
 		expect(SPLASH).toContain('className="flex-1"');
 		expect(SPLASH).toContain("const live = heroTopInset(band, block);");
+		/* QA Q-R2-3: the offset is a spacer's height. As `paddingTop` it was
+		 *  read by U-42 as an off-scale spacing token (216/208/156 pt). */
 		expect(SPLASH).toContain(
-			"paddingTop: holding ? heroHeldInset(live, restInset.current) : live,",
+			"height: holding ? heroHeldInset(live, restInset.current) : live,",
 		);
+		expect(SPLASH).not.toMatch(/paddingTop:/);
+	});
+
+	it("caps the notices in one shrinkable ScrollView that ends above the composer (Q-R2-1)", () => {
+		const open = HOME.indexOf("<ScrollView\n");
+		const close = HOME.indexOf("</ScrollView>");
+		const composer = HOME.indexOf("<Composer\n");
+		expect(open).toBeGreaterThan(0);
+		expect(HOME.slice(open, HOME.indexOf(">", open))).toContain(
+			"style={NOTICE_STACK_STYLE}",
+		);
+		// Every notice, the startup line included, is inside the cap.
+		for (const id of [
+			"testID={SURFACE.startupPending}",
+			"testID={CONTROL.homeFoldersBanner}",
+			"testID={CONTROL.homeModelsBanner}",
+			'title="Could not start"',
+		]) {
+			const at = HOME.indexOf(id);
+			expect(at).toBeGreaterThan(open);
+			expect(at).toBeLessThan(close);
+		}
+		// The composer is the cap's sibling, after it, never inside it.
+		expect(composer).toBeGreaterThan(close);
+		expect(HOME.indexOf("<ScrollView", open + 1)).toBe(-1);
 	});
 });
 
