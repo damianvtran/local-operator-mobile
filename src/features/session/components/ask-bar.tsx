@@ -2,12 +2,7 @@ import type { Ref } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { PendingAsk } from "@/contracts";
-import {
-	dockAsk,
-	outstandingAsks,
-	outstandingQuestions,
-	questionsWaitingLabel,
-} from "@/features/session/asks";
+import { askBarLabel, dockAsk } from "@/features/session/asks";
 import { SURFACE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
@@ -55,11 +50,16 @@ export type AskBarProps = {
 
 export const AskBar = ({ asks, onOpen, barRef }: AskBarProps) => {
 	const { effectiveScale } = useTextScale();
-	const outstanding = outstandingAsks(asks);
-	if (outstanding.length === 0) return null;
+	/* WAITING vs LAPSED (local-operator #2388): only an `open` ask is waiting.
+	 *  A queue of only timed-out asks keeps the bar — the sheet behind it is
+	 *  where Dismiss lives — but in the quiet register and saying "timed out",
+	 *  as the desktop chip and the relay's web dock do; an accent "waiting"
+	 *  over it was a question no other surface counted as pending. */
+	const bar = askBarLabel(asks);
+	if (bar === null) return null;
 	const head = dockAsk(asks);
-	const questions = outstandingQuestions(asks);
-	const label = questionsWaitingLabel(questions);
+	const label = bar.text;
+	const quiet = bar.quiet;
 	const preview = String(head?.questions?.[0]?.question ?? "").trim();
 	/* At large text the preview would collapse to a fragment — measured at
 	 *  200 %: `· C…` beside the count. A one-character stub is not a name, so
@@ -74,13 +74,20 @@ export const AskBar = ({ asks, onOpen, barRef }: AskBarProps) => {
 			accessibilityHint="Show the questions"
 			testID={SURFACE.askBar}
 			onPress={onOpen}
-			className="flex-row items-center gap-2 rounded-md border border-accent-border bg-accent-wash px-3 py-1.5"
+			className={
+				quiet
+					? "flex-row items-center gap-2 rounded-md border border-hairline bg-surface px-3 py-1.5"
+					: "flex-row items-center gap-2 rounded-md border border-accent-border bg-accent-wash px-3 py-1.5"
+			}
 			/* The floor is REAL geometry, never `hitSlop`: `react-native-web`
 			 *  drops `Pressable` hitSlop, and the audit measures the box. No fixed
 			 *  height — at 200 % text the bar must grow (≈ 53 pt), not clip. */
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
-			<Text aria-hidden className="shrink-0 font-mono text-body-sm text-accent">
+			<Text
+				aria-hidden
+				className={`shrink-0 font-mono text-body-sm ${quiet ? "text-ink-muted" : "text-accent"}`}
+			>
 				?
 			</Text>
 			<Text className="shrink-0 text-body-sm text-ink-muted">{label}</Text>
@@ -95,7 +102,10 @@ export const AskBar = ({ asks, onOpen, barRef }: AskBarProps) => {
 			) : (
 				<View className="min-w-0 flex-1" />
 			)}
-			<Text aria-hidden className="shrink-0 text-body-sm text-accent">
+			<Text
+				aria-hidden
+				className={`shrink-0 text-body-sm ${quiet ? "text-ink-muted" : "text-accent"}`}
+			>
 				▸
 			</Text>
 		</Pressable>

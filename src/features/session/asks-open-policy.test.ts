@@ -183,11 +183,14 @@ describe("state 2 — pending asks on open: opens once", () => {
 		expect(view.see(fresh(PENDING))).toBe(true);
 	});
 
-	it("opens for an ask that is only timed out, because it is still answerable", () => {
+	it("does NOT open for an ask that is only timed out: a lapsed ask is not pending", () => {
+		/* local-operator #2388: the runtime publishes `asks_open: 0` beside a
+		   timed-out row and the desktop never opens for one (D12). Opening a
+		   sheet for it was the phone calling a settled ask pending. */
 		const view = mount();
 		expect(
-			view.see(fresh({ asks: [ask({ status: "timed_out" })], asks_open: 1 })),
-		).toBe(true);
+			view.see(fresh({ asks: [ask({ status: "timed_out" })], asks_open: 0 })),
+		).toBe(false);
 	});
 
 	it("opens ONCE for the view: every later render of the same frame says no", () => {
