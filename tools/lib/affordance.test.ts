@@ -555,6 +555,20 @@ describe("the affordance script", () => {
 			);
 			expect(answered[0]?.result).toBe("not-a-field");
 			expect(terminal.calls()).toBe(1);
+
+			/* `skipped` is terminal too: the conditional opener's control is already
+			 *  on the page, and that answer cannot change by waiting. Polling it to the
+			 *  bound cost ~8 s per wide-profile find cell in capture and audit alike,
+			 *  which is what timed the CI `web-audit` job out. The bound here is large
+			 *  so a regression shows as many calls, not as a slow test. */
+			const settled = page([JSON.stringify({ result: "skipped" })]);
+			const skipped = await runAffordances(
+				settled as never,
+				[{ clickWhenMissing: { control: "find", opener: "menu" } }],
+				{ waitMs: 200, pollMs: 1 },
+			);
+			expect(skipped[0]?.result).toBe("skipped");
+			expect(settled.calls()).toBe(1);
 			expect(script).toContain("scrollIntoView");
 		})();
 	});

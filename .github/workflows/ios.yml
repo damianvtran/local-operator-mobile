@@ -6,8 +6,9 @@ name: iOS
 # which is what makes it the right first native gate for a public repository: a
 # fork pull request, a contributor with no Apple Developer membership and a
 # maintainer who has not configured the secrets all get the same answer, and it
-# is a real one — the app compiles for the iOS 26 SDK on the Xcode 26 runner, and
-# it LAUNCHES, and the frame it renders is captured.
+# is a real one — the app compiles for the iOS 26 SDK on the Xcode 26 runner, it
+# LAUNCHES and its process is still running thirty seconds later, and the frame
+# it renders is captured.
 #
 # WHY A RELEASE CONFIGURATION FOR THE SIMULATOR BUILD. A Debug build of a React
 # Native app expects a Metro dev server at runtime: launched on a simulator it
@@ -260,16 +261,18 @@ jobs:
           udid="${{ steps.simulator.outputs.udid }}"
           xcrun simctl boot "$udid" || true
           xcrun simctl bootstatus "$udid" -b
-          mkdir -p "$RUNNER_TEMP/frames"
-          # The home screen, captured BEFORE anything is installed, so the frame
-          # after launch has something to be different from. Without a baseline, a
-          # screenshot of a black screen or of the springboard is indistinguishable
-          # from a screenshot of the app.
-          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
+          # No baseline frame here any more: it is the INSTALLED home screen, so
+          # the next step captures it, after install and before launch.
+          mkdir -p "$RUNNER_TEMP/frames" "$RUNNER_TEMP/launch"
 
       - name: Install the app, assert the version it carries, and launch it
+        id: launch
         # A build that produces a .app which cannot start is not a working app,
         # and this is the cheapest honest way to find that out without a device.
+        # `simctl launch` returning is NOT that proof: it returns once the process
+        # is spawned, and builds 419 (a21aa8d2), 446 (8189f21a) and 449
+        # (d7f66279) were spawned, aborted within seconds, and passed. Whether the
+        # app is still alive is judged by the steps after this one.
         run: |
           set -euo pipefail
           udid="${{ steps.simulator.outputs.udid }}"
@@ -305,15 +308,89 @@ jobs:
           fi
 
           xcrun simctl install "$udid" "$app"
-          xcrun simctl launch "$udid" "$bundle"
 
-      - name: Capture the frame the app renders, and assert it rendered
-        # WHAT THIS ASSERTS, AND WHY IT DOES NOT GATE ON "SETTLED".
-        # Two hard assertions: the frame after launch must differ from the
-        # pre-install home screen (so the app painted something rather than
-        # showing a black screen or the springboard), and the launch log must
-        # carry no JavaScript fatal (so what it painted is not an error screen —
-        # the check that caught the real crash this app had without its routes).
+          # THE BASELINE IS THE INSTALLED HOME SCREEN: captured after install and
+          # before launch (same artefact name as before, `ios-baseline.png`). It
+          # used to be captured before install, and the three crashed builds
+          # "differed" from it by 23.05%, 23.06% and 23.06% of the decoded frame —
+          # measured on their own frames, the same unit the next step uses. That
+          # difference is not noise: a crashed launch drops back to the
+          # springboard on the PAGE THAT HOLDS THE APP'S NEW ICON (page two on
+          # this simulator), and the pre-install capture shows page one. 99.7% of
+          # the differing pixels sit in the icon grid (rows 200-1499 of 2622),
+          # while the status bar's rows differ by 0.5-0.7% (the clock) and the
+          # dock's by 0.2%. Captured here, the baseline already shows that page.
+          # It still does not make the frame a crash signal: against it, two
+          # crashed launches (#170, #168's fix reverted) measured 0.14% (run
+          # 42263119518) and 73.81% (run 42277307661), while the rendering app
+          # measured 73.33% and 73.52%. The frame is therefore REPORTED, not
+          # asserted; liveness is the verdict.
+          xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/frames/ios-baseline.png"
+
+          # RECORDED BEFORE THE LAUNCH IS ATTEMPTED. The liveness, crash-report and
+          # fatal-scan steps run when `launched_at` is set, even after a failure
+          # here: a launch that dies on the way up is exactly when the crash
+          # report matters. The executable name is what the crash reporter names
+          # its `.ips` file after and what the unified log calls the process.
+          exe=$(plutil -extract CFBundleExecutable raw "$app/Info.plist")
+          echo "executable: $exe"
+          {
+            echo "bundle=$bundle"
+            echo "executable=$exe"
+            echo "launched_at=$(date +%s)"
+          } >> "$GITHUB_OUTPUT"
+          # The app's own stdout and stderr go to files (`simctl launch
+          # --stdout=/--stderr=`), scanned after the +30 s check: an uncaught C++
+          # exception is announced by libc++abi on stderr on its way into
+          # abort(), and a unified-log read is not guaranteed to carry that line.
+          xcrun simctl launch \
+            --stdout="$RUNNER_TEMP/launch/app.stdout.log" \
+            --stderr="$RUNNER_TEMP/launch/app.stderr.log" \
+            "$udid" "$bundle"
+          # The liveness clock starts when the launch RETURNS, not before it: the
+          # call itself took 34.6 s for an app that rendered (run 42263081758)
+          # and 3.3 s for one that crashed (run 42263119518).
+          echo "running_since=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Capture the frame the app renders, and assert the app is alive in it
+        id: frames
+        # THE PRIMARY ASSERTION IS THAT THE PROCESS IS ALIVE, at the moments the
+        # frames are taken (t+5s and t+7s): `launchctl list` inside the simulator
+        # must list the app's `UIKitApplication:<bundle>` job WITH a pid
+        # (`scripts/ci/ios-launch-gate.ts alive`, which names the bundle when it
+        # is absent). Builds 419 (a21aa8d2), 446 (8189f21a) and 449 (d7f66279)
+        # passed this step with a dead app: their `ios-release.png` is the
+        # springboard. The crash was a C++ exception react-native-worklets threw
+        # on the UI runtime (`[Worklets] Tried to synchronously call a Remote
+        # Function`, #168), which kills the process natively and leaves the
+        # springboard to be screenshotted. A frame cannot tell a dead app from a
+        # live one; the process table can.
+        #
+        # THE FRAME IS REPORTED, NOT ASSERTED, because it cannot judge a crash.
+        # Against the pre-install baseline the three crashed builds differed by
+        # 23.05%, 23.06% and 23.06% of the decoded frame (the springboard turning
+        # to the page with the new icon, see the install step) and the build that
+        # rendered by 73.63%. Against the INSTALLED baseline this step uses, the
+        # reverted-#168 negative control measured 0.14% on run 42263119518 and
+        # 73.81% on run 42277307661 (same revert, app dead both times), while the
+        # rendering app measured 73.33% (run 42263081758) and 73.52% (run
+        # 42272813639). A dead app lands on both sides of a live one, so no
+        # threshold separates them and retuning cannot fix it; a 50% bar that
+        # used to be asserted here passed the 73.81% dead app. The number is
+        # kept because it is cheap and, with the uploaded frames, still says
+        # what the screen did; liveness is the verdict. Same-page springboard
+        # noise measured 0.06-0.35% between runs and 0.00-0.05% between t+5s and
+        # t+7s, and the alpha byte of the 32-bit bitmap never changes, so 75% is
+        # the ceiling of this unit. The pre-install numbers were measured on
+        # those four builds' own frames with `ios-launch-gate.ts frame-delta`,
+        # which reproduces `cmp -l | wc -l` over the file size byte for byte
+        # (2915387 = 2915387 on a21aa8d2).
+        #
+        # THE LABELS NAME THE SCHEDULE; THE LOG PRINTS THE CLOCK. Each verdict
+        # says how long after the launch returned it was taken, because a loaded
+        # runner stretches "t+5s": one screenshot took 48 s on run 42263081758.
+        # The launchd pid matched the one `simctl launch` printed on that run
+        # (48385), so the process found alive is the process that was launched.
         #
         # A THIRD CHECK WAS TRIED AND REMOVED, with the measurement: requiring the
         # still to be byte-identical to a capture two seconds later. Measured on
@@ -324,71 +401,261 @@ jobs:
         # measured and REPORTED instead, in a unit that means something (a
         # pixel-channel delta, not a compressed-byte delta), and pixel-level
         # judgement stays with the audit harness (ADR 0003).
+        #
+        # The JavaScript-fatal grep that used to end this step moved, extended to
+        # native aborts, to the scan after the +30 s check, so it covers the
+        # whole window rather than the first seven seconds.
+        env:
+          BUNDLE: ${{ steps.launch.outputs.bundle }}
+          RUNNING_SINCE: ${{ steps.launch.outputs.running_since }}
         run: |
           set -euo pipefail
           udid="${{ steps.simulator.outputs.udid }}"
           frames="$RUNNER_TEMP/frames"
+          gate=scripts/ci/ios-launch-gate.ts
+          failed=0
+          # `alive` exits 0 running, 1 not running, 3 when launchctl could not be
+          # READ. A failed read is "unknown" in the summary, never "no" (that
+          # would blame the app for the simulator), and it still fails the job.
+          probe() {
+            local rc=0
+            node "$gate" alive --udid "$udid" --bundle "$BUNDLE" --at "$1" --running-since "$RUNNING_SINCE" || rc=$?
+            case "$rc" in
+              0) verdict=yes ;;
+              3) verdict=unknown; failed=1 ;;
+              *) verdict=no; failed=1 ;;
+            esac
+          }
+          # Both frames and both probes are always taken, so a dead app at t+5s
+          # still leaves the t+7s frame and verdict in the log.
           sleep 5
           xcrun simctl io "$udid" screenshot "$frames/ios-release.png"
+          probe t+5s
+          alive5=$verdict
           sleep 2
           xcrun simctl io "$udid" screenshot "$frames/ios-release+2s.png"
-
-          if cmp -s "$frames/ios-baseline.png" "$frames/ios-release.png"; then
-            echo "::error::the frame after launch is byte-identical to the home screen captured before it: the app did not render"
-            exit 1
-          fi
+          probe t+7s
+          alive7=$verdict
 
           # Decoded to an uncompressed bitmap first: comparing two PNGs byte-wise
           # measures the compressor, not the screen, so a one-pixel change can
           # read as a huge difference and a whole-screen change can read as none.
-          # The count is capped because a full-screen animation would otherwise
-          # stream millions of lines for no extra information.
+          sips -s format bmp "$frames/ios-baseline.png" --out "$RUNNER_TEMP/frame-baseline.bmp" >/dev/null
           sips -s format bmp "$frames/ios-release.png" --out "$RUNNER_TEMP/frame-a.bmp" >/dev/null
           sips -s format bmp "$frames/ios-release+2s.png" --out "$RUNNER_TEMP/frame-b.bmp" >/dev/null
-          total=$(stat -f%z "$RUNNER_TEMP/frame-a.bmp")
-          # `cmp -l` EXITS 1 when the files differ — which is precisely the case we
-          # are counting — so it is inside a group whose status is discarded: under
-          # `set -e` with `pipefail` (this workflow sets both) the bare pipeline
-          # aborted the step with no message at all. Verified locally against a
-          # differing pair before pushing.
-          differing=$( { cmp -l "$RUNNER_TEMP/frame-a.bmp" "$RUNNER_TEMP/frame-b.bmp" || true; } | head -200000 | wc -l | tr -d ' ')
-          pct=$(awk -v d="$differing" -v t="$total" 'BEGIN { printf "%.2f", (d / t) * 100 }')
-          echo "settle: $differing of $total bytes of the decoded frame differ between t+5s and t+7s (${pct}%, capped at 200000)"
+          # Assigned first and parsed second: a `read` fed by a failing command
+          # substitution would see nothing and carry on.
+          delta=$(node "$gate" frame-delta "$RUNNER_TEMP/frame-baseline.bmp" "$RUNNER_TEMP/frame-a.bmp")
+          read -r changed total changed_pct <<< "$delta"
+          # Reported only: no threshold, no `::error::`, no effect on the exit code.
+          echo "frame (reported, not asserted): $changed of $total bytes of the decoded t+5s frame differ from the installed home screen (${changed_pct}%); a dead app has measured 0.14% and 73.81% against this baseline, so the liveness probes are the verdict"
+          settle=$(node "$gate" frame-delta "$RUNNER_TEMP/frame-a.bmp" "$RUNNER_TEMP/frame-b.bmp")
+          read -r differing total pct <<< "$settle"
+          echo "settle: $differing of $total bytes of the decoded frame differ between t+5s and t+7s (${pct}%)"
           {
             echo
-            echo "| iOS frame | value |"
+            echo "| iOS launch | value |"
             echo "|---|---|"
-            echo "| differs from the pre-install home screen | yes (asserted) |"
-            echo "| javascript fatals in the launch log | none (asserted) |"
+            echo "| app process running at t+5s / t+7s (launchctl in the simulator) | $alive5 / $alive7 (asserted) |"
+            echo "| t+5s frame vs the installed home screen | ${changed_pct}% of the decoded frame's bytes differ (reported, not asserted: a dead app has measured 0.14% and 73.81%, a live one 73.33% and 73.52%, so this cannot judge a crash; liveness above is the verdict) |"
             echo "| settle delta, t+5s vs t+7s | ${pct}% of the decoded frame's bytes, header included (reported, not asserted) |"
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$failed"
 
-          # The one content signal available without the harness: a JS bundle that
-          # failed to load leaves a fatal in the simulator log while still painting
-          # a red error screen, which would pass the baseline comparison above.
-          #
-          # THE READ HAS TO SUCCEED BEFORE ITS CONTENTS MEAN ANYTHING. This used to be
-          # a single pipeline whose output was the `if` condition, so a `log show`
-          # that failed made the grep find nothing and the step pass: fatal present
-          # plus rc=1 read as "no fatal" (review Q5, measured). So the log is read to
-          # a file first, with its status checked, and only then grepped.
-          if ! xcrun simctl spawn "$udid" log show --last 60s --style compact > "$RUNNER_TEMP/launch.log" 2> "$RUNNER_TEMP/launch.log.err"; then
-            echo "::error::could not read the simulator's launch log, so 'no JavaScript fatal' cannot be claimed either way:"
-            cat "$RUNNER_TEMP/launch.log.err"
+      - name: Assert the app is still running at least 30 seconds after launch
+        id: alive30
+        # A crash that lands AFTER the first frame — a deferred effect, a timer,
+        # the first network response — passes everything that looks only at t+5s
+        # and t+7s. So the process is asked for once more, at least 30 s after
+        # the launch returned, and the crash-report and fatal scans below run
+        # after this mark so they cover the whole window. "At least": the
+        # labels name the schedule and the log prints the clock, because a
+        # loaded runner stretches it — one screenshot took 48 s on run
+        # 42263081758, whose t+30s check ran 121 s after the launch began.
+        # Under that load this check can follow the t+7s one by about a second
+        # (65 s and 66 s after launch on run 42272813639), so it is labelled
+        # "≥30 s after launch" with the measured elapsed time, not "+30 s".
+        # No extra delay is added to buy it independence: a green run would pay
+        # for it every time, and the crash-report and fatal scans below already
+        # cover the window up to their own end.
+        #
+        # `!cancelled()` rather than the default `success()`, here and in the two
+        # steps after: when the app is already dead at t+5s these still run, so a
+        # red job carries the crash report and the fatal lines, not only "not
+        # running". `launched_at` is set just before `simctl launch`, so a launch
+        # that never got that far skips them rather than judging nothing.
+        if: ${{ !cancelled() && steps.launch.outputs.launched_at != '' }}
+        env:
+          BUNDLE: ${{ steps.launch.outputs.bundle }}
+          LAUNCHED_AT: ${{ steps.launch.outputs.launched_at }}
+          RUNNING_SINCE: ${{ steps.launch.outputs.running_since }}
+        run: |
+          set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
+          # A launch call that failed never set `running_since`; count from the
+          # attempt instead.
+          since="${RUNNING_SINCE:-$LAUNCHED_AT}"
+          remaining=$(( since + 30 - $(date +%s) ))
+          if [ "$remaining" -gt 0 ]; then sleep "$remaining"; fi
+          elapsed=$(( $(date +%s) - since ))
+          # Exit 3 is a launchctl READ that failed: "unknown", never "no", and
+          # still a failure (the same mapping as the frames step).
+          rc=0
+          node scripts/ci/ios-launch-gate.ts alive --udid "$udid" --bundle "$BUNDLE" --at "≥30s after launch" --running-since "$since" || rc=$?
+          case "$rc" in
+            0) alive=yes ;;
+            3) alive=unknown ;;
+            *) alive=no ;;
+          esac
+          {
+            echo
+            echo "| iOS launch, later | value |"
+            echo "|---|---|"
+            echo "| app process running ≥30 s after launch (probed ${elapsed} s after simctl launch returned; launchctl in the simulator) | $alive (asserted) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$alive" != yes ]; then exit 1; fi
+
+      - name: Surface a crash report the launch wrote, and fail on one
+        id: crash
+        # The next crash has to arrive with a stack, not a picture of the
+        # springboard. A simulated app is a host process, so the HOST's crash
+        # reporter is the one expected to write its report, as
+        # `<executable>-<date>.ips` in ~/Library/Logs/DiagnosticReports. Any
+        # report for this executable written since `launched_at` fails the job,
+        # and its exception type, termination reason, application-specific
+        # message (where an abort leaves the C++ exception's type and message)
+        # and the crashed thread's top frames are printed here.
+        #
+        # MEASURED: IT LANDS THERE, MINUTES LATE. On the second negative control
+        # (#170, run 42277307661) the app was gone at its first probe, ReportCrash
+        # began formulating the report at 19:44:05, and
+        # `~/Library/Logs/DiagnosticReports/LocalOperator-….ips` was saved at
+        # 19:44:07: about 199 s after `simctl launch` returned, at least 79 s
+        # after the app was first seen dead, and 0.8 s after the old 30 s wait
+        # (counted from this step's start) gave up. The first negative control
+        # (run 42263119518) found none after 3 min 14 s, the same miss. The
+        # search still also covers the system directory and the simulator
+        # device's own log directory, and when the app was seen dead and no
+        # report of its own turns up, this prints every report written since
+        # launch (any process) and the host crash reporter's own log lines
+        # naming the executable. For #168's class the crash is NAMED without a
+        # report too (libc++abi's terminate line reaches stderr, read by the
+        # fatal scan below), but a plain native fault (EXC_BAD_ACCESS) writes
+        # nothing there, and then the report is the only place the cause is.
+        #
+        # So when a step above already saw the app dead, this waits for the
+        # report until 300 s after the launch RETURNED (`--wait-from`), not 30 s
+        # from this step's start: the latency is the crash reporter's, counted
+        # from the crash, and a slow step before this one must not eat into it.
+        # 300 s leaves about 100 s over the one measured latency, and the loop
+        # returns as soon as a report lands. A live app gets one look and no
+        # wait, because no report is expected: green runs pay nothing.
+        if: ${{ !cancelled() && steps.launch.outputs.launched_at != '' }}
+        env:
+          BUNDLE: ${{ steps.launch.outputs.bundle }}
+          EXECUTABLE: ${{ steps.launch.outputs.executable }}
+          LAUNCHED_AT: ${{ steps.launch.outputs.launched_at }}
+          RUNNING_SINCE: ${{ steps.launch.outputs.running_since }}
+          REPORT_WAIT: ${{ (steps.launch.outcome == 'failure' || steps.frames.outcome == 'failure' || steps.alive30.outcome == 'failure') && '300' || '0' }}
+        run: |
+          set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
+          node scripts/ci/ios-launch-gate.ts crash-report \
+            --dir "$HOME/Library/Logs/DiagnosticReports" \
+            --dir /Library/Logs/DiagnosticReports \
+            --dir "$HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Library/Logs" \
+            --executable "$EXECUTABLE" \
+            --bundle "$BUNDLE" \
+            --since "$LAUNCHED_AT" \
+            --wait "$REPORT_WAIT" \
+            --wait-from "${RUNNING_SINCE:-$LAUNCHED_AT}"
+          if [ "$REPORT_WAIT" != 0 ]; then
+            # Diagnostic only, and it cannot fail the step: the job is already
+            # red, and this is the host crash reporter saying what it did.
+            window=$(( $(date +%s) - LAUNCHED_AT + 30 ))
+            echo "the host crash reporter's log lines naming $EXECUTABLE (last ${window}s):"
+            log show --last "${window}s" --style compact \
+              --predicate "(process CONTAINS[c] \"crash\" OR process CONTAINS[c] \"analytics\") AND composedMessage CONTAINS \"$EXECUTABLE\"" \
+              2>&1 | head -40 || true
+          fi
+
+      - name: Scan the app's own log and output for a fatal
+        id: fatal
+        # The one content signal available without the harness: a JS bundle that
+        # failed to load leaves a fatal in the log while still painting a red
+        # error screen, which a live process and a changed frame both pass.
+        #
+        # EXTENDED TO NATIVE ABORTS. The grep was `Unhandled JS Exception|RCTFatal`
+        # alone, and a native abort prints neither: #168's crash never touched
+        # React Native's JavaScript fatal path. The signatures now include an
+        # uncaught Objective-C exception, libc++abi's terminate message (the
+        # shape a C++ exception escaping the worklets UI runtime takes) and
+        # EXC_CRASH/SIGABRT; the list and why a bare `[Worklets]` prefix is NOT
+        # on it (the worklets logger prefixes informational lines with it too)
+        # live in `scripts/ci/ios-launch-gate.ts`.
+        #
+        # SCOPED TO THE APP'S OWN PROCESS, so the springboard or any other
+        # process reporting its own trouble cannot fail the job: the log is read
+        # with a `process == "<executable>"` predicate (info level included), and
+        # the app's redirected stderr/stdout are scanned beside it. THE STDERR
+        # CAPTURE IS THE ONE THAT NAMED #168's CRASH: on the negative control
+        # (run 42263119518) the app's 180 unified-log lines carried no fatal,
+        # and its stderr carried `libc++abi: terminating due to uncaught
+        # exception of type facebook::jsi::JSError: [Worklets] Tried to
+        # synchronously call a Remote Function. Called "anonymous" on the UI
+        # Runtime.`
+        #
+        # THE READ HAS TO SUCCEED BEFORE ITS CONTENTS MEAN ANYTHING. This used to be
+        # a single pipeline whose output was the `if` condition, so a `log show`
+        # that failed made the grep find nothing and the step pass: fatal present
+        # plus rc=1 read as "no fatal" (review Q5, measured). So the log is read to
+        # a file first, with its status checked, and only then grepped; and a
+        # predicate that matched no line at all — a process name that differs
+        # from the executable, say — is the same vacuous read, so it fails too.
+        if: ${{ !cancelled() && steps.launch.outputs.launched_at != '' }}
+        env:
+          EXECUTABLE: ${{ steps.launch.outputs.executable }}
+          LAUNCHED_AT: ${{ steps.launch.outputs.launched_at }}
+        run: |
+          set -euo pipefail
+          udid="${{ steps.simulator.outputs.udid }}"
+          launch="$RUNNER_TEMP/launch"
+          # From 30 s before the launch to now, however long the steps above took.
+          window=$(( $(date +%s) - LAUNCHED_AT + 30 ))
+          if ! xcrun simctl spawn "$udid" log show --last "${window}s" --info --style compact \
+              --predicate "process == \"$EXECUTABLE\"" > "$launch/app.log" 2> "$launch/app.log.err"; then
+            echo "::error::could not read the simulator's log for $EXECUTABLE, so 'no fatal' cannot be claimed either way:"
+            cat "$launch/app.log.err"
             exit 1
           fi
-          if grep -E 'Unhandled JS Exception|RCTFatal' "$RUNNER_TEMP/launch.log" > "$RUNNER_TEMP/js-fatal.txt"; then
-            echo "::error::the app logged a JavaScript fatal while launching, so the frame it painted is an error screen:"
-            cat "$RUNNER_TEMP/js-fatal.txt"
+          lines=$(grep -c -v '^Timestamp ' "$launch/app.log" || true)
+          echo "read $lines log lines from $EXECUTABLE's own process, covering ${window}s from 30 s before launch"
+          if [ "$lines" -eq 0 ]; then
+            echo "::error::the simulator's log holds no line from a process named $EXECUTABLE, so 'no fatal in its log' would be a claim about nothing"
             exit 1
           fi
+          node scripts/ci/ios-launch-gate.ts fatal-lines "$launch/app.log" "$launch/app.stderr.log" "$launch/app.stdout.log"
+          {
+            echo
+            echo "| iOS launch, fatals | value |"
+            echo "|---|---|"
+            echo "| fatal signatures in the app's own log ($lines lines), stderr and stdout | none (asserted) |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the frame and the simulator build
+        # RED RUNS ARE THE ONES THAT NEED THEIR EVIDENCE. Under the default
+        # `success()` this was skipped on every failed launch, so the 73.81%
+        # dead-app frame of run 42277307661 could never be looked at. Same
+        # condition as the judging steps: it runs on a failure, and a run that
+        # never reached the launch has no frames or app output to keep. The
+        # app's own stdout/stderr and its unified-log read go with the frames.
+        if: ${{ !cancelled() && steps.launch.outputs.launched_at != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: ios-simulator
           path: |
             ${{ runner.temp }}/frames/*.png
+            ${{ runner.temp }}/launch/*
             ${{ runner.temp }}/xcodebuild-help.txt
             ${{ runner.temp }}/DerivedData/Build/Products/Release-iphonesimulator/*.app
           retention-days: 14

@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "گفتگو کی تفصیلات",
+	"mobile.session.chip.model_default": "ڈیفالٹ",
+	"mobile.session.chip.model_unknown": "نامعلوم",
 	"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 	"mobile.session.highlights.withheld": "{count, plural, one {# فائل نہیں دکھائی گئی} other {# فائلیں نہیں دکھائی گئیں}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "اجازت یافتہ مقامات سے باہر",

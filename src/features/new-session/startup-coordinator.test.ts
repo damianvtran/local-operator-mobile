@@ -354,6 +354,53 @@ describe("a refused create is recoverable", () => {
 		expect(x.selections.at(-1)).toMatchObject({ cwd: "/tmp/valid" });
 	});
 
+	it("sends the selection exactly as the home built it, adding no model", async () => {
+		/* The home went through a period of naming a model nobody chose, and the
+		 * computer only applies its own configured default when the fields are
+		 * ABSENT — so the absence has to survive the coordinator, not just the
+		 * expression that built the selection. */
+		const x = setup();
+		x.setStart(async () => ({ session_id: "session-a" }));
+		await x.coordinator.ready;
+		await x.coordinator.configure({
+			cwd: "/Users/reader/src/local-operator",
+		});
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.settled();
+		expect(x.selections.at(-1)).toStrictEqual({
+			cwd: "/Users/reader/src/local-operator",
+		});
+	});
+
+	it("replays a restored pending send WITHOUT the model the reader never chose (review round 2, R2-3)", async () => {
+		/* The upgrade path: a build that invented `catalogue.models[0]` left a draft
+		 * with a send still queued. `resume()` replays it before any screen effect can
+		 * correct the record, so the strip has to happen where the record is restored. */
+		const before = setup();
+		await before.coordinator.ready;
+		before.coordinator.edit("pending", []);
+		await before.coordinator.enqueue();
+		await before.coordinator.flush();
+		const saved = before.disk();
+		expect(saved?.queue).toHaveLength(1);
+		const reloaded = setup({
+			...(saved as StartupRecord),
+			selection: {
+				cwd: "/Users/reader/src/local-operator",
+				provider: "anthropic",
+				model_id: "claude-haiku-5-5",
+			},
+		});
+		reloaded.setStart(async () => ({ session_id: "session-a" }));
+		await reloaded.coordinator.ready;
+		reloaded.coordinator.resume();
+		await reloaded.coordinator.settled();
+		expect(reloaded.selections).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
+	});
+
 	it("restores a persisted refused record instead of discarding its queue", async () => {
 		const x = setup();
 		x.setStart(async () => {

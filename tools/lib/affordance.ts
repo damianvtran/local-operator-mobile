@@ -618,9 +618,16 @@ export async function runAffordances(
 				);
 				break;
 			}
-			/* THREE ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
-			 *  press landing, `not-a-field` is a DOM fact that cannot change —
-			 *  retrying either would only spend the bound. `missing`, `inert` and
+			/* FOUR ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
+			 *  press landing, `not-a-field` is a DOM fact that cannot change, and
+			 *  `skipped` is a conditional opener whose control is already on the page
+			 *  (the find lever on every profile wider than 360 pt) — retrying any of
+			 *  them would only spend the bound. `skipped` was missing from this list
+			 *  when `clickWhenMissing` landed (7cb6a5ed, #163), so each wide-profile
+			 *  find cell polled a settled answer for the full 8 s `waitMs`, in the
+			 *  capture AND again in the audit's re-drive: 30 cells x ~8 s x 2 passes
+			 *  ≈ 8 min of the `web-audit` job's wall time, which is what pushed it
+			 *  past its 90-minute bound. `missing`, `inert` and
 			 *  `unreachable` are all "not yet": an element still arriving, a control
 			 *  inert until React has re-rendered with the typed value, and a control
 			 *  covered while a scrim or a sheet is still animating. Every one of them
@@ -629,7 +636,8 @@ export async function runAffordances(
 			if (
 				outcome.result === "ok" ||
 				outcome.result === "ok-after-scroll" ||
-				outcome.result === "not-a-field"
+				outcome.result === "not-a-field" ||
+				outcome.result === "skipped"
 			)
 				break;
 			if (Date.now() >= deadline) break;

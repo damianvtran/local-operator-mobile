@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "对话详情",
+	"mobile.session.chip.model_default": "默认",
+	"mobile.session.chip.model_unknown": "未知",
 	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 	"mobile.session.highlights.withheld": "{count, plural, other {# 个文件未显示}}：{reasons}",
 	"mobile.session.highlights.withheld_outside": "不在允许的位置",

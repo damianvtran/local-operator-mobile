@@ -24,7 +24,13 @@ function selects(guard: string, event: string, mode: string) {
 	return Boolean(
 		runInNewContext(
 			guard,
-			{ github: { event_name: event }, inputs: { proof_mode: mode } },
+			{
+				github: { event_name: event },
+				inputs: { proof_mode: mode },
+				/* `web-audit-verdict` is `<web-audit's guard> && always()`: selection
+				 *  is the question here, and `always()` never deselects a job. */
+				always: () => true,
+			},
 			{ timeout: 100 },
 		),
 	);
@@ -96,11 +102,19 @@ describe("core-audit-only dispatch isolation", () => {
 	it("preserves every old job predicate's result for every existing mode and event", () => {
 		/* Jobs added after this guard was written are excluded by name and asserted
 		 *  on their own below: each fires only on its own manual mode. */
-		const later = ["u08-geometry-proof", "chrome-ios-proof"];
+		const later = [
+			"u08-geometry-proof",
+			"chrome-ios-proof",
+			"web-audit-verdict",
+		];
 		expect([...guards.keys()].filter((name) => !later.includes(name))).toEqual(
 			Object.keys(legacy),
 		);
 		expect(guards.get("u08-geometry-proof")).toBeTruthy();
+		/* The device legs' aggregate is selected exactly when the legs are. */
+		expect(guards.get("web-audit-verdict")).toBe(
+			`${legacy["web-audit"]} && always()`,
+		);
 		for (const event of [
 			"push",
 			"pull_request",
@@ -188,6 +202,7 @@ describe("core-audit-only dispatch isolation", () => {
 			"mock-relay-contract",
 			"docs-commands",
 			"web-audit",
+			"web-audit-verdict",
 			"web-audit-core",
 			"maestro-android",
 		]);
