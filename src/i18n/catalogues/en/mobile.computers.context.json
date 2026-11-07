@@ -89,6 +89,10 @@
 	},
 	"mobile.computers.transport.radient": {
 		"role": "meta",
-		"note": "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient · Online\". A product name: keep it as written."
+		"note": "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written."
+	},
+	"mobile.computers.transport.custom": {
+		"role": "meta",
+		"note": "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case."
 	}
 }

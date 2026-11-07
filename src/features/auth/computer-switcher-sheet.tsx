@@ -213,8 +213,18 @@ const ROW_CLASS = "flex-row items-center gap-3 rounded-md px-3";
  *  drawer and the pickers' list rows rather than as a bare icon. */
 const GLYPH_CIRCLE = avatarClasses("sm");
 
+/* An own address saved without a name is titled by its host (the add flow's
+ *  default), so line 2 repeating the host said the same string twice (design
+ *  round 1, D1). Such a title is an address, not a label: it truncates in the
+ *  middle so the port — the only part telling two local addresses apart — stays
+ *  visible, as the header pill does, and line 2 names the transport instead. */
+const titledByHost = (row: SwitcherRow): boolean =>
+	row.transport.kind === "custom" && row.name === row.transport.host;
+
 /* `·` joins the second line's facts the way the drawer row's `Mac mini · Online`
- *  does — one list language across the drawer, the pickers and this sheet. */
+ *  does — one list language across the drawer, the pickers and this sheet. The
+ *  health dot is itself a separator, so `·` goes only where no dot follows (the
+ *  connecting word); `· ●` read as two dots side by side (design round 1, D2). */
 const TransportLine = ({
 	row,
 	now,
@@ -225,7 +235,15 @@ const TransportLine = ({
 	healthTestID: string;
 }) => (
 	<View className="min-w-0 flex-row items-center gap-1">
-		{row.transport.kind === "custom" ? (
+		{row.transport.kind === "radient" ? (
+			<Text className="shrink-0 text-meta text-ink-muted">
+				{t("mobile.computers.transport.radient")}
+			</Text>
+		) : titledByHost(row) ? (
+			<Text className="shrink-0 text-meta text-ink-muted">
+				{t("mobile.computers.transport.custom")}
+			</Text>
+		) : (
 			<Text
 				className="shrink text-mono-sm text-ink-muted"
 				numberOfLines={1}
@@ -233,18 +251,16 @@ const TransportLine = ({
 			>
 				{row.transport.host}
 			</Text>
-		) : (
-			<Text className="shrink-0 text-meta text-ink-muted">
-				{t("mobile.computers.transport.radient")}
-			</Text>
 		)}
-		<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
-			·
-		</Text>
 		{row.connecting ? (
-			<Text className="shrink-0 text-meta text-ink-muted">
-				{t("mobile.computers.connecting")}
-			</Text>
+			<>
+				<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
+					·
+				</Text>
+				<Text className="shrink-0 text-meta text-ink-muted">
+					{t("mobile.computers.connecting")}
+				</Text>
+			</>
 		) : (
 			<HealthWord row={row} now={now} testID={healthTestID} />
 		)}
@@ -269,10 +285,12 @@ const SwitcherRowView = ({
 	const Glyph = row.transport.kind === "custom" ? Server : Laptop;
 	const word = healthLabel(row.health, now);
 	const hint = rowHint(row, section);
+	/* Spoken in full: the host is said even when line 2 shows only "Your
+	 *  address", because a screen reader cannot see the title's truncation. */
 	const transportLabel =
 		row.transport.kind === "radient"
-			? "Radient"
-			: `Your address, ${row.transport.host}`;
+			? t("mobile.computers.transport.radient")
+			: `${t("mobile.computers.transport.custom")}, ${row.transport.host}`;
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -307,6 +325,7 @@ const SwitcherRowView = ({
 						<Text
 							className="text-body-sm font-medium text-ink"
 							numberOfLines={1}
+							ellipsizeMode={titledByHost(row) ? "middle" : "tail"}
 						>
 							{row.name}
 						</Text>

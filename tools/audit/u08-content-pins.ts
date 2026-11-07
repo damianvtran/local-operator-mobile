@@ -810,8 +810,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * line, add row in the body instead of the pinned footer), the new
 	 * `mobile.computers.transport.radient` key, its catalogues and the catalogue
 	 * invariants it moves, and tests.
-	 * Source admission only, NOT rendered U-08 evidence. */
-	src: "ea98aa18c71b33a3c43c11e0ad89dff9a38e49320e827338ceead3bc9377f539",
+	 * Source admission only, NOT rendered U-08 evidence.
+	 * Re-pinned again the same day with --print for the design round 1
+	 * remediation (D1 address-titled rows: "Your address" line 2, middle-
+	 * truncated title, new `mobile.computers.transport.custom` key; D2 no `·`
+	 * before the health dot). Source admission only. */
+	src: "ba53111c62b98a7cfe3aeca94b86368c2294003893a6cc5ab8987ba8b11a29a9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

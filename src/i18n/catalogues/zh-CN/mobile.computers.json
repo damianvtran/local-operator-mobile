@@ -21,5 +21,6 @@
 	"mobile.computers.show_details": "显示详细信息",
 	"mobile.computers.hide_details": "隐藏详细信息",
 	"mobile.computers.connection_response": "连接响应",
-	"mobile.computers.transport.radient": "Radient"
+	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.transport.custom": "你的地址"
 }

@@ -21,5 +21,6 @@
 	"mobile.computers.show_details": "Hiện chi tiết",
 	"mobile.computers.hide_details": "Ẩn chi tiết",
 	"mobile.computers.connection_response": "Phản hồi kết nối",
-	"mobile.computers.transport.radient": "Radient"
+	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.transport.custom": "Địa chỉ của bạn"
 }

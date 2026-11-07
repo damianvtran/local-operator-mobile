@@ -21,5 +21,6 @@
 	"mobile.computers.show_details": "Показать сведения",
 	"mobile.computers.hide_details": "Скрыть сведения",
 	"mobile.computers.connection_response": "Ответ подключения",
-	"mobile.computers.transport.radient": "Radient"
+	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.transport.custom": "Ваш адрес"
 }

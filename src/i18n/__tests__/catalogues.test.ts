@@ -120,7 +120,7 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 23,
+		expected: 24,
 	},
 	{
 		name: "mobile.notifications",
@@ -225,8 +225,9 @@ describe("the English catalogues", () => {
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
 		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182) + the
-		 *  switcher's transport word (`mobile.computers.transport.radient`). */
-		expect(total).toBe(334);
+		 *  switcher's transport words (`mobile.computers.transport.radient`,
+		 *  `mobile.computers.transport.custom`). */
+		expect(total).toBe(335);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
