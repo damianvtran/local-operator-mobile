@@ -575,8 +575,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * no pixel of the U-08 scene moves. This is source admission for the geometry
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
-	 * are unchanged. */
-	src: "8798cc121eb268c87aa08849e557aea43561bfb9a89998ae2aa5c454e23b9757",
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-07, `src` only (PR #156 harness split): the native proof
+	 * harness moved to its own branch, which removed exactly three proof-only
+	 * instrument modules — `src/testing/stage-b-draft-bootstrap.ts`,
+	 * `stage-b-draft-transport.ts`, `stage-b-route-trace.ts` — plus their own test
+	 * `src/testing/__tests__/stage-b-draft-bootstrap.test.ts`. Nothing under
+	 * `app/`, `design/`, `public/`, the corpus or the geometry instruments moved,
+	 * and no file the shipping bundle loads was touched: these modules were reached
+	 * only by the native lane's scripts, never by an `src/app` entry or a rendered
+	 * screen. A test file is never bundled. So no pixel of the U-08 scene moves and
+	 * the composer geometry is byte-identical to the digest above. This is source
+	 * admission for the geometry instrument, not fresh rendered evidence.
+	 * `--print` produced the digest. */
+	src: "b2ee37eee624f3ee56caf7ae40fccbe16d9cd845251e292ab4bce03ad63fc1b7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
