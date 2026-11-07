@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
+	alertActionClasses,
+	alertActionLayout,
+	alertStacked,
 	avatarClasses,
 	BUTTON_VISUAL_HEIGHT,
 	badgeClasses,
@@ -350,5 +353,34 @@ describe("the field's painted height includes its border", () => {
 	it("keeps the scroll decision on the CONTENT budget, not the painted box", () => {
 		expect(fieldScrollsWithContent(88, 88)).toBe(false);
 		expect(fieldScrollsWithContent(89, 88)).toBe(true);
+	});
+});
+
+/* Design D2 / UX U4: an inset alert's one remedy. */
+describe("alert action placement", () => {
+	it("leaves an alert with no action exactly as it was", () => {
+		expect(alertActionLayout(false, 1)).toBe("none");
+		expect(alertActionLayout(false, 2)).toBe("none");
+		expect(alertActionClasses("none").text).toBe("flex-row items-start gap-2");
+	});
+	it("trails the remedy at normal text, overlapping the alert's padding", () => {
+		expect(alertActionLayout(true, 1)).toBe("trailing");
+		expect(alertActionLayout(true, 1.4)).toBe("trailing");
+		const trailing = alertActionClasses("trailing");
+		/* -my-3 cancels the 12 pt padding: one line is 12 + 20 + 12 + 2 = 46. */
+		expect(trailing.action).toContain("-my-3");
+		expect(trailing.action).toContain("self-center");
+		/* The message centres on the remedy, so one line shares its line. */
+		expect(trailing.text).toContain("self-center");
+		expect(trailing.text).toContain("flex-1");
+	});
+	it("stacks the remedy under the message at large text", () => {
+		expect(alertActionLayout(true, 1.5)).toBe("stacked");
+		expect(alertActionLayout(true, 2)).toBe("stacked");
+		const stacked = alertActionClasses("stacked");
+		/* A column child with flex-1 has no height to share: never here. */
+		expect(stacked.text).not.toContain("flex-1");
+		expect(stacked.action).toContain("self-end");
+		expect(alertStacked.flexDirection).toBe("column");
 	});
 });

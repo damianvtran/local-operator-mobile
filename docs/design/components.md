@@ -444,7 +444,8 @@ primitive in the app, and the one that carries the most information.
 
 | Slot | Binding |
 |---|---|
-| Shell | `elevated` fill, 1px `border-control` edge, corner on the morph (below); **not** `surface`, **not** a shadow |
+| Shell | `elevated` fill, 1px `border-control` edge, corner on the morph (below); **not** `surface`, **not** a shadow. On iOS 26 with Reduce Transparency off the fill is Liquid Glass instead (below) |
+| Shell geometry | at rest **4 + 48 + 4 = 56**, a stadium (R28), on every platform; open **12 + h + 4 + h + 8** on the platform floor `h` (112 on iOS, 120 on the 48 floor), R24 |
 | Field | the `integrated` variant of the textarea (`textarea.tsx:330-336`): transparent fill, `borderWidth: 0`, no horizontal padding of its own. Its radius comes from `fieldClasses` (`rounded-sm`, `variants.ts:285-286`) and is merely unpainted, because a transparent fill with no border has no edge to paint it — the shell owns the outer surface and its corner; **16pt text** |
 | Send / steer | 44 circle, `accent` fill, `on-accent` glyph `↑`, `fab` is 56 where it stands alone |
 | Stop | 44 circle, transparent fill, `danger-border`, `danger` `■` at 13pt |
@@ -473,13 +474,14 @@ The shell's own `borderWidth` is not an option, and what rules it out is the
 interior, not the radius. The shell's height is a border box, so a 1 px border
 takes 1 pt off each edge of the content box and the field inside is squeezed from
 44 to 42 — under the touch floor. Both ends of the morph move with it: 54
-collapsed and 110 expanded instead of 56/112, 58/118 on the 48 floor. That is
+collapsed and 110 expanded instead of 56/112 (the figures measured before H5,
+when the resting pill was 6 + 44 + 6). That is
 *not* what the pins would see, and the radii do not follow it down.
 `composerPaintedHeight` is arithmetic on the same constants a border never
 touches, so the 56/112 assertions stay green with a border on the box; and
 `baseHeight` is `Math.max(seededBase, measured)`, where `seededBase` comes from
 that same helper — a measured 54 loses to the seeded 56, so the resting pill
-stays R28/R30 rather than falling to R27/R29. What a border really costs is the
+stays R28 rather than falling to R27. What a border really costs is the
 interior: the 44 pt field paints 42, and the painted pill stops describing the box
 that holds the content — every measured seed lands 2 pt short of the end it names,
 and above the floor `overflow: hidden` clips the difference. Nothing in the suite
@@ -491,6 +493,40 @@ are unchanged, and the text keeps its 12 pt inset rather than becoming 13.
 `pointerEvents="none"` is required, not stylistic: an earlier absolutely positioned
 layer across this band swallowed every tap on the field (round 4, U1/U2/U3), so the
 ring must never be a hit target. It paints last, above the content it bounds.
+
+### The resting padding is one scale step (H5)
+
+The resting pill was 6 + 44 + 6. 6 pt is off the 4 pt `space.scale`, and the web
+audit's U-42 failed ~612 rows per device on that padding alone. Of the on-scale
+splits that keep the 56 pt pill, **4 + 48 + 4** is the only one whose control row
+stays at or above the touch floor (8 + 40 + 8 puts attach and send in a 40 pt row,
+under both platform floors), and growing the pill to 8 + 44 + 8 = 60 would grow
+the dock on every screen for a spacing rule. So the resting row is
+`COMPOSER_REST_ROW` = 48 on every platform and the padding is `COMPOSER_REST_PAD`
+= 4 (`composer-presentation.ts`). The resting row is **cross-axis centred**
+(`composerFieldRowAlign`; the open card's field row stays bottom-aligned so a
+multi-line draft grows upward), so on iOS the 44 pt discs sit centred in the 48 pt
+row and disc-to-shell is 4 + 2 = 6 pt on both edges (`composerRestInsets`); on the 48 floor
+the pill drops from 60 to 56. The open card was already on-scale and is unchanged.
+
+### Glass (iOS)
+
+The shell and the strip's model/effort chips draw `expo-glass-effect` Liquid
+Glass when the host's `useChromeGlass()` says so (iOS 26, glass API available,
+Reduce Transparency resolved **off**); the home and the session screen each take
+ONE decision and pass it as `glass`. It is **fill only**: the shell's glass is an
+absolutely positioned `ChromeSurface` layer clipped by the shell's own animated
+shape, so the box, radii and every target are identical to the solid frame; the
+strip row becomes a `ChromeGroup` and each chip its own capsule. The solid
+fallback is unchanged (no wrapper on a solid chip, `elevated` on the shell), the
+`border-control` ring stays the rim, and **attach and send stay opaque** in both
+branches so `on-accent` on `accent` never depends on what scrolls behind the
+glass. The shell's glass layer takes a fixed 24 pt radius
+(`COMPOSER_GLASS_LAYER_RADIUS`, the smallest the animated shell ever reaches), so
+the shell's clip is always the only shape. Each strip capsule hugs its chip
+(`alignSelf: flex-start`) and the strip's group merge distance is 0, under its
+4 pt gap, so model and effort read as two capsules, never one fused bar. No web
+frame can show glass (the module renders a plain view there).
 
 ### Home's use of it, and the two additive props
 
@@ -512,7 +548,11 @@ as before.
 
 The composer's foot position is invariant on home too: suggestions and the
 splash sit *above* it, and when the region stops fitting it scrolls
-(`keyboardShouldPersistTaps="handled"`) rather than pushing the field down.
+(`keyboardShouldPersistTaps="handled"`) rather than pushing the field down. The
+folder and model read failures are inset `Alert`s (16 pt inset, radius 10, one
+Retry) stacked above the composer, never a full-bleed Banner: a notice shortens
+the free band and the hero re-centres in what is left, while the composer's box
+is the same with or without it (`home-composer-invariant.test.ts`).
 
 ### The send / steer / stop morph
 

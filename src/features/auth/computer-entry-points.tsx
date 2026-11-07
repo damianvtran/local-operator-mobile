@@ -26,16 +26,17 @@ import {
 	readSavedComputers,
 	readStoredRadientAccount,
 } from "@/features/auth/tunnel-storage";
-import { CONTROL, ROLE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import {
 	middleFit,
 	sansTextWidthDp,
 	textWidthDp,
 } from "@/ui/components/list-row-meta";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
+import { CONTROL_HEIGHTS, TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
  * The switcher's two navigation entry points — the Home header chip and the
@@ -235,7 +236,17 @@ export const headerChipFit = (
 	return `${head.trimEnd()}…`;
 };
 
-export function HeaderComputerChip({ testID }: { testID: string }) {
+export function HeaderComputerChip({
+	testID,
+	brandMark = false,
+}: {
+	testID: string;
+	/** Lead with the app's brand mark (home header only). INSIDE the pressable,
+	 *  so a tap on the mark opens the switcher like a tap on the name (UX U2),
+	 *  and decorative: the chip's label already names the destination. The
+	 *  caller owns the yield rule (narrow phones, large text). */
+	brandMark?: boolean;
+}) {
 	const entry = useComputerEntry();
 	const { open } = useComputerSwitcher();
 	const { effectiveScale } = useTextScale();
@@ -254,10 +265,27 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
 			 *  At 200 % the chevron is dropped, so this edge is the only affordance the
 			 *  chip has (D8). `border-control` is the kit's own control-edge pair (the
 			 *  role `input` and `Button` outline already use): 3.42:1 light on canvas,
-			 *  3.65:1 on `surface`; 3.93:1 and 3.58:1 dark. */
-			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"
+			 *  3.65:1 on `surface`; 3.93:1 and 3.58:1 dark.
+			 *
+			 *  A ROUNDED RECTANGLE with a real inset (operator feedback, build 453;
+			 *  design spec §1). As a capsule at 44 pt the radius was 22 and, with no
+			 *  horizontal padding, the health mark's ink sat 2.5 pt from the edge.
+			 *  `rounded-md` (10 pt) is the kit's control/field radius — a different
+			 *  family from the composer's pill below it, so the screen is no longer
+			 *  bookended by two capsules — and `px-3` is `CONTROL_HEIGHTS.sm.paddingX`
+			 *  (12 pt), the kit's small-control inset. The 44 pt floor is unchanged. */
+			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-md border border-border-control px-3"
 			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		>
+			{brandMark ? (
+				/* The existing asset at the kit's icon glyph step (20 pt), never a
+				 *  redraw (`native-interaction-guidelines.md`); the repo carries no
+				 *  heavier small-size cut of it (design D3). `NavigationMark` hides
+				 *  itself from assistive tech. */
+				<View testID={SURFACE.homeBrandMark}>
+					<NavigationMark size={CONTROL_HEIGHTS.icon.icon} />
+				</View>
+			) : null}
 			<HealthMark entry={entry} {...geometry} />
 			{/* The slot must stretch independently of its painted string: measuring
 			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}

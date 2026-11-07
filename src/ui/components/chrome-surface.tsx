@@ -179,21 +179,42 @@ export const ChromeSurface = ({
 	);
 };
 
+/** `GlassContainer`'s default merge distance for a group (the status chips,
+ *  whose `gap-2` row sits exactly at it). */
+export const CHROME_GROUP_SPACING = 8;
+
 /** Groups adjacent glass capsules so iOS merges and morphs them as one
- *  material (the Tasks/Agents chips). A plain row when glass is off. */
+ *  material (the Tasks/Agents chips, the composer's strip). A plain row when
+ *  glass is off. `testID` and `onLayout` land on the SAME inner row in both
+ *  branches, so a caller that measures its row (the composer strip feeds its
+ *  height to the ceiling budget) reads one box whatever the fill. */
 export const ChromeGroup = ({
 	glass,
 	className,
 	children,
+	testID,
+	onLayout,
+	spacing = CHROME_GROUP_SPACING,
 }: {
 	glass: boolean;
 	className?: string;
 	children: ReactNode;
+	/** The distance under which iOS fuses neighbouring capsules into one
+	 *  shape. A row whose own gap is SMALLER than this renders its capsules as
+	 *  one bar, so such a row passes a spacing under its gap (the composer
+	 *  strip, design D1). */
+	spacing?: number;
+	testID?: string;
+	onLayout?: React.ComponentProps<typeof View>["onLayout"];
 }) =>
 	glass ? (
-		<GlassContainer spacing={8}>
-			<View className={className}>{children}</View>
+		<GlassContainer spacing={spacing}>
+			<View className={className} testID={testID} onLayout={onLayout}>
+				{children}
+			</View>
 		</GlassContainer>
 	) : (
-		<View className={className}>{children}</View>
+		<View className={className} testID={testID} onLayout={onLayout}>
+			{children}
+		</View>
 	);

@@ -28,10 +28,11 @@
  * defect rather than a build failure.
  */
 
-/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
- * the shared dependency set, and this is all of it that the app needs. */
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
+/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
+ * the shared dependency set, and this is all of it that the app needs. */
 export const cx = (
 	...parts: Array<string | false | null | undefined>
 ): string => parts.filter(Boolean).join(" ");
@@ -652,6 +653,39 @@ export const alertClasses = (tone: SemanticTone = "info"): string =>
 		ALERT_TONES[tone].fill,
 		ALERT_TONES[tone].ink,
 	);
+
+/**
+ * Where an alert's one action goes, and the classes that put it there.
+ *
+ *  - `none`: no action; the row keeps the classes every existing alert painted.
+ *  - `trailing`: the remedy beside the message (design D2). The action's 44 pt
+ *    box takes `-my-3` so it overlaps the alert's own 12 pt padding instead of
+ *    stretching the alert to 70 pt (one line is 12 + 20 + 12 + 2 = 46, the
+ *    spec's §3 figure), and the text block centres on it so a one-line message
+ *    shares its line with Retry rather than sitting 12 pt above it.
+ *  - `stacked`: at large text the remedy goes UNDER the message (UX U4): beside
+ *    it, a 320 pt phone at 200 % wrapped the sentence into a five-line column
+ *    270 pt tall. The flex direction is a STYLE (`alertStacked`), not a class,
+ *    because `alertClasses` already carries `flex-row` and two direction
+ *    classes on one node resolve by stylesheet order, not by intent.
+ */
+export type AlertActionLayout = "none" | "trailing" | "stacked";
+export const alertActionLayout = (
+	hasAction: boolean,
+	scale: number,
+): AlertActionLayout =>
+	!hasAction ? "none" : scale > LARGE_TEXT_SCALE ? "stacked" : "trailing";
+export const alertActionClasses = (layout: AlertActionLayout) => ({
+	text:
+		layout === "trailing"
+			? "flex-1 flex-row items-start gap-2 self-center"
+			: "flex-row items-start gap-2",
+	action: layout === "stacked" ? "self-end -mb-3" : "self-center -my-3",
+});
+export const alertStacked = {
+	flexDirection: "column",
+	alignItems: "stretch",
+} as const;
 
 export const alertGlyph = (tone: SemanticTone = "info"): string =>
 	ALERT_TONES[tone].glyph;

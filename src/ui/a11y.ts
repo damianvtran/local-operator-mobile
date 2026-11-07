@@ -975,9 +975,14 @@ export const SURFACE = {
 	 * (`homeStarting` IS the sending marker — see STATE_MARKER.home). --- */
 	homeComposer: "home-composer",
 	homeSplash: "home-splash",
+	/** The scroll cap around the notices above the composer (QA Q-R2-1). */
+	homeNoticeStack: "home-notice-stack",
 	homeGreeting: "home-greeting",
 	homeSuggestions: "home-suggestions",
 	homeStarting: "home-starting",
+	/** The decorative brand mark beside the header's computer chip: an id so a
+	 *  capture can measure its alignment and its yield at large text. */
+	homeBrandMark: "home-brand-mark",
 	sidebar: "conversations-sidebar",
 	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
 	 *  `/conversations` route reads it from a `notice` param and hands it to the

@@ -2,7 +2,13 @@ import { useRouter } from "expo-router";
 import { Bell, BellDot, Menu } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
-import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import {
+	Pressable,
+	ScrollView,
+	Text,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { ModelEntry } from "@/contracts";
@@ -13,6 +19,8 @@ import {
 	useListState,
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
+import { NOTICE_STACK_STYLE } from "@/features/home/composer-stack";
+import { NO_PRESS, pressAnswered } from "@/features/home/hero-focus";
 import {
 	connectDisabledReason,
 	foldersReadFailed,
@@ -71,8 +79,8 @@ import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
-import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
+import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
@@ -210,6 +218,21 @@ export default function Home({
 		null,
 	);
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
+	/** The attempt whose folders read last SETTLED: the models read's rule
+	 *  (below), so the folder Retry shows its own `loading` too (UX U3). Side
+	 *  by side in one stack, one spinning Retry and one inert one read as two
+	 *  different kinds of control. */
+	const [directoriesSettled, setDirectoriesSettled] = useState(0);
+	/** The ATTEMPT a Retry the reader pressed created, per read (`NO_PRESS` when
+	 *  none), so that attempt's success can move focus to the hero (UX U5): the
+	 *  alert holding focus unmounts on success, and focus otherwise falls back to
+	 *  the document's top. An attempt number, not a flag (review m2): the
+	 *  automatic re-ask and the re-read on reconnect are other attempts or other
+	 *  runs, so nothing the reader did not press can claim the move. */
+	const foldersPressed = useRef(NO_PRESS);
+	const modelsPressed = useRef(NO_PRESS);
+	/** Bumped to ask the splash to take focus; 0 never asks. */
+	const [heroFocus, setHeroFocus] = useState(0);
 	const [modelsAttempt, setModelsAttempt] = useState(0);
 	/** The attempt whose models read last SETTLED. While it trails `modelsAttempt` a
 	 *  Retry is in flight, and the banner's action shows its own `loading` (UX U2):
@@ -266,6 +289,11 @@ export default function Home({
 	 *  `Screen` therefore pays none here (`bottomInset="child"`, its default for a
 	 *  non-scrolling screen). */
 	const insets = useSafeAreaInsets();
+	/* ONE fill decision for the home's chrome (design spec §12): the composer
+	 *  shell and its strip chips draw Liquid Glass together on iOS 26 with
+	 *  Reduce Transparency off, and solid everywhere else — the session screen's
+	 *  rule, so a capsule never reads as glass beside a solid shell. */
+	const chromeGlass = useChromeGlass();
 	const menuInk = useTokenColor("ink-muted");
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
@@ -321,13 +349,19 @@ export default function Home({
 	 * had applied in the sheet — silently, and in the state this screen creates
 	 * whenever the model list fails. Each read now re-runs only its own retry.
 	 *
-	 * `directoriesAttempt` and `modelsAttempt` are dependencies the exhaustive-deps
-	 * rule cannot justify from the body: they are RE-RUN TRIGGERS (the two retries),
-	 * and without them a failed read would never be re-asked. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: directoriesAttempt is the re-run trigger (see above)
+	 * `directoriesAttempt` and `modelsAttempt` are RE-RUN TRIGGERS (the two
+	 * retries): without them a failed read would never be re-asked. Each effect
+	 * also reads its own counter, to record which attempt settled for its
+	 * Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
-		if (!active) return;
+		if (!active) {
+			/* A press with no relay is never served; the re-read on reconnect is
+			 *  automatic and must not inherit its focus move (review m2). */
+			if (foldersPressed.current === directoriesAttempt)
+				foldersPressed.current = NO_PRESS;
+			return;
+		}
 		/* The read is answered FOR the computer it was asked of (R2-1), and a
 		 *  computer change re-asks: `tunnelId` is a dependency for that reason. */
 		const computer = tunnelId;
@@ -344,9 +378,18 @@ export default function Home({
 				 *  included. */
 				setHeldDirectory((held) => foldersApplied(held, computer, read));
 				setDirectoriesError(null);
+				setDirectoriesSettled(directoriesAttempt);
+				if (pressAnswered(foldersPressed.current, directoriesAttempt)) {
+					foldersPressed.current = NO_PRESS;
+					setHeroFocus((request) => request + 1);
+				}
 			})
 			.catch((cause: unknown) => {
-				if (live) setDirectoriesError(foldersFailure(cause));
+				if (!live) return;
+				setDirectoriesError(foldersFailure(cause));
+				setDirectoriesSettled(directoriesAttempt);
+				if (foldersPressed.current === directoriesAttempt)
+					foldersPressed.current = NO_PRESS;
 			});
 		return () => {
 			live = false;
@@ -357,7 +400,12 @@ export default function Home({
 	 *  settle records WHICH attempt answered, for the Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
-		if (!active) return;
+		if (!active) {
+			/* As the folders read: an unserved press does not ride the reconnect. */
+			if (modelsPressed.current === modelsAttempt)
+				modelsPressed.current = NO_PRESS;
+			return;
+		}
 		let live = true;
 		void active
 			.models()
@@ -366,24 +414,36 @@ export default function Home({
 				setModels(catalogue.models);
 				setModelsRead("ready");
 				setModelsSettled(modelsAttempt);
+				if (pressAnswered(modelsPressed.current, modelsAttempt)) {
+					modelsPressed.current = NO_PRESS;
+					setHeroFocus((request) => request + 1);
+				}
 			})
 			.catch(() => {
 				if (!live) return;
 				setModelsRead("failed");
 				setModelsSettled(modelsAttempt);
+				if (modelsPressed.current === modelsAttempt)
+					modelsPressed.current = NO_PRESS;
 			});
 		return () => {
 			live = false;
 		};
 	}, [relay, modelsAttempt]);
 
+	/* The next attempt is computed from the render's value, not inside the
+	 *  updater: an updater must stay pure (StrictMode calls it twice). */
 	const retryDirectories = useCallback(() => {
-		setDirectoriesAttempt((attempt) => attempt + 1);
-	}, []);
+		const next = directoriesAttempt + 1;
+		foldersPressed.current = next;
+		setDirectoriesAttempt(next);
+	}, [directoriesAttempt]);
 
 	const retryModels = useCallback(() => {
-		setModelsAttempt((attempt) => attempt + 1);
-	}, []);
+		const next = modelsAttempt + 1;
+		modelsPressed.current = next;
+		setModelsAttempt(next);
+	}, [modelsAttempt]);
 
 	/* ONE automatic re-ask after a credential failure, and only once the route is
 	 * live again: the first read of a mount can race the token renewal the connection
@@ -611,89 +671,121 @@ export default function Home({
 						onPick={setDraft}
 						onConnect={() => router.push("/tunnels")}
 						starting={starting}
+						focusRequest={heroFocus}
 					/>
 				) : null}
 			</View>
 
-			{/* State only, and only while there is something to say: the count is the
-			 *  composer chip's (UX U2), an unconfirmed start is named rather than
-			 *  described as "waiting" (UX U1), and the queued sheet stays one tap
-			 *  away whenever it holds anything. */}
-			{startup.snapshot.queue.length > 0 ||
-			startup.snapshot.phase === "unconfirmed" ? (
-				<View className="px-4 py-2" testID={SURFACE.startupPending}>
-					{queueLine !== null ? (
-						<Text
-							accessibilityLiveRegion="polite"
-							className="text-body-sm text-ink-muted"
+			{/* THE NOTICE STACK'S CAP (QA Q-R2-1, `composer-stack.ts`). Everything
+			 *  between the hero and the composer lives in this one ScrollView. It
+			 *  may shrink but never grow, so it is as tall as its notices until
+			 *  they outgrow the room above the composer. Then it stops at the
+			 *  composer's resting top and scrolls, instead of pushing the composer
+			 *  off the screen. */}
+			<ScrollView
+				style={NOTICE_STACK_STYLE}
+				keyboardShouldPersistTaps="handled"
+				testID={SURFACE.homeNoticeStack}
+			>
+				{/* State only, and only while there is something to say: the count is the
+				 *  composer chip's (UX U2), an unconfirmed start is named rather than
+				 *  described as "waiting" (UX U1), and the queued sheet stays one tap
+				 *  away whenever it holds anything. */}
+				{startup.snapshot.queue.length > 0 ||
+				startup.snapshot.phase === "unconfirmed" ? (
+					<View className="px-4 py-2" testID={SURFACE.startupPending}>
+						{queueLine !== null ? (
+							<Text
+								accessibilityLiveRegion="polite"
+								className="text-body-sm text-ink-muted"
+							>
+								{queueLine}
+							</Text>
+						) : null}
+						{startup.snapshot.queue.length > 0 ? (
+							<Button
+								label={t("mobile.home.queue.view")}
+								variant="quiet"
+								size="sm"
+								testID={CONTROL.startupViewQueue}
+								onPress={() => setQueueOpen(true)}
+							/>
+						) : null}
+					</View>
+				) : null}
+
+				{/* THE COMPOSER STACK. Every notice about the composer's own inputs
+				 *  lives HERE, inset, above the composer — never as a page Banner
+				 *  (design spec §3, operator build 453: "maybe improve the warning style
+				 *  accordingly"). The Banner drew a full-bleed wash and a full-width
+				 *  rule across the screen's edges right on top of the strip, which read
+				 *  as the composer itself deforming. Inset at 16 pt, radius 10, no
+				 *  `border-b`, it is the same notice language as "Could not start"
+				 *  below, one per screen.
+				 *
+				 *  THE COMPOSER INVARIANT: these are SIBLINGS stacked above the
+				 *  composer, and none of them is an input to it, so the notice grows
+				 *  upward into the free band (the hero re-centres in what is left) and
+				 *  the composer's box is the same with or without it. When the notices
+				 *  outgrow the whole band, the stack's cap (above) stops them at the
+				 *  composer's top and they scroll. Asserted in
+				 *  `home-composer-invariant.test.ts` and `composer-stack.test.ts`. */}
+				{/* The folders read failed. The KIND decides the sentence AND the remedy — a
+				 *  credential refusal is not a transient read failure, and offering Retry for it
+				 *  pointed the reader at a button that would be refused again: `relay-unauthorized`
+				 *  retries `never` and its surface is a password (review R4). The auth branch
+				 *  therefore offers the sign-in handoff the splash already uses; every other kind
+				 *  keeps the retry, which is a real answer for a read that only raced something.
+				 *  A successful read clears the row; a retry that fails again keeps it, which is
+				 *  the honest state. */}
+				{directoriesError !== null ? (
+					<View className="px-4 pb-2">
+						<Alert
+							severity="warning"
+							action={
+								isAuthFailure(directoriesError)
+									? {
+											label: t("mobile.chrome.home.sign_in"),
+											onPress: () => router.push("/welcome"),
+											testID: CONTROL.homeFoldersSignIn,
+										}
+									: {
+											label: t("mobile.computers.retry"),
+											onPress: retryDirectories,
+											loading: directoriesSettled !== directoriesAttempt,
+											testID: CONTROL.homeFoldersRetry,
+										}
+							}
+							testID={CONTROL.homeFoldersBanner}
 						>
-							{queueLine}
-						</Text>
-					) : null}
-					{startup.snapshot.queue.length > 0 ? (
-						<Button
-							label={t("mobile.home.queue.view")}
-							variant="quiet"
-							size="sm"
-							testID={CONTROL.startupViewQueue}
-							onPress={() => setQueueOpen(true)}
-						/>
-					) : null}
-				</View>
-			) : null}
+							{isAuthFailure(directoriesError)
+								? foldersReadSignInRequired()
+								: foldersReadFailed()}
+						</Alert>
+					</View>
+				) : null}
 
-			{/* The folders read failed. The KIND decides the sentence AND the remedy — a
-			 *  credential refusal is not a transient read failure, and offering Retry for it
-			 *  pointed the reader at a button that would be refused again: `relay-unauthorized`
-			 *  retries `never` and its surface is a password (review R4). The auth branch
-			 *  therefore offers the sign-in handoff the splash already uses; every other kind
-			 *  keeps the retry, which is a real answer for a read that only raced something.
-			 *  A successful read clears the row; a retry that fails again keeps it, which is
-			 *  the honest state. */}
-			{directoriesError !== null ? (
-				<Banner
-					tone="warning"
-					message={
-						isAuthFailure(directoriesError)
-							? foldersReadSignInRequired()
-							: foldersReadFailed()
-					}
-					action={
-						isAuthFailure(directoriesError)
-							? {
-									label: t("mobile.chrome.home.sign_in"),
-									onPress: () => router.push("/welcome"),
-									testID: CONTROL.homeFoldersSignIn,
-								}
-							: {
-									label: t("mobile.computers.retry"),
-									onPress: retryDirectories,
-									testID: CONTROL.homeFoldersRetry,
-								}
-					}
-					testID={CONTROL.homeFoldersBanner}
-				/>
-			) : null}
+				{/* The model list could not be read: its own failure, with the retry the
+				 *  read never had. This banner is the ONLY place that failure is told: the
+				 *  chip keeps saying "Default" because the computer's default still runs (a
+				 *  failed read loses the menu, not the model — design D2 / UX U1). */}
+				{modelsRead === "failed" ? (
+					<View className="px-4 pb-2">
+						<Alert
+							severity="warning"
+							action={{
+								label: t("mobile.computers.retry"),
+								onPress: retryModels,
+								loading: modelsSettled !== modelsAttempt,
+								testID: CONTROL.homeModelsRetry,
+							}}
+							testID={CONTROL.homeModelsBanner}
+						>
+							{modelsReadFailed()}
+						</Alert>
+					</View>
+				) : null}
 
-			{/* The model list could not be read: its own failure, with the retry the
-			 *  read never had. This banner is the ONLY place that failure is told: the
-			 *  chip keeps saying "Default" because the computer's default still runs (a
-			 *  failed read loses the menu, not the model — design D2 / UX U1). */}
-			{modelsRead === "failed" ? (
-				<Banner
-					tone="warning"
-					message={modelsReadFailed()}
-					action={{
-						label: t("mobile.computers.retry"),
-						onPress: retryModels,
-						loading: modelsSettled !== modelsAttempt,
-						testID: CONTROL.homeModelsRetry,
-					}}
-					testID={CONTROL.homeModelsBanner}
-				/>
-			) : null}
-
-			<View>
 				{problem !== null ? (
 					<View className="px-4 pb-2">
 						<Alert severity="warning" title="Could not start">
@@ -701,84 +793,83 @@ export default function Home({
 						</Alert>
 					</View>
 				) : null}
-				<Composer
-					testID={SURFACE.homeComposer}
-					onEditingChange={setEditing}
-					onOpenQueue={() => setQueueOpen(true)}
-					suppressDisabledHint={homeRecovery !== null}
-					controls={controls}
-					draft={draft}
-					onDraftChange={setDraft}
-					images={images}
-					onRemoveImage={(index) =>
-						setImages((current) => current.filter((_, at) => at !== index))
-					}
-					onAttach={attach}
-					onPasteFile={pasteFile}
-					attaching={attaching}
-					onSend={send}
-					onStop={() => {
-						const sid = startup.snapshot.sessionId;
-						const active = relay();
-						if (sid && active)
-							void active
-								.command(sid, { op: "abort" })
-								.catch(() => setComposerError("Could not stop the turn."));
-					}}
-					retainedMessage={
-						startup.snapshot.phase === "blocked"
-							? "Your queued message is retained."
-							: null
-					}
-					notice={null}
-					onRetry={startup.retry}
-					showResume={false}
-					onResume={() => undefined}
-					error={startup.snapshot.error ?? composerError}
-					queuedCount={startup.snapshot.queue.length}
-					/* The folder is data, not an element: the composer's meta line
-					 *  decides whether it paints the path or only the folder glyph
-					 *  (record §2.2 yield order). Paint, target, hint and the options
-					 *  sheet behind it are unchanged (final audit, D2). */
-					folderChip={
-						homeDirectory !== null
-							? {
-									label: homeShortened(
-										startup.snapshot.selection?.cwd ?? homeDirectory,
-										homeDirectory,
-									),
-									onPress: () => {
-										/* The sheet opens on what will actually be sent: the folder the
-										 *  start names, and the model THE READER chose — `null` when they
-										 *  chose none, so no row is painted as selected on their behalf. */
-										setOptionPath(
-											startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
-										);
-										setOptionModel(chosenModel);
-										setOptionsOpen(true);
-									},
-									accessibilityLabel: `Working in ${homeDirectory}`,
-									accessibilityHint: "Choose another folder",
-									testID: CONTROL.homeTargetFolder,
-								}
-							: null
-					}
-					bottomInset={insets.bottom}
-					modelChip={chips.model}
-					effortChip={null}
-					onOpenModels={() => {
-						setOptionPath(
-							startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
-						);
-						setOptionModel(chosenModel);
-						setOptionsOpen(true);
-					}}
-					onOpenEffort={() => undefined}
-					slashQuery={null}
-					slashSheet={null}
-					fieldRef={fieldRef}
-				/>
-			</View>
+			</ScrollView>
+			<Composer
+				testID={SURFACE.homeComposer}
+				glass={chromeGlass}
+				onEditingChange={setEditing}
+				onOpenQueue={() => setQueueOpen(true)}
+				suppressDisabledHint={homeRecovery !== null}
+				controls={controls}
+				draft={draft}
+				onDraftChange={setDraft}
+				images={images}
+				onRemoveImage={(index) =>
+					setImages((current) => current.filter((_, at) => at !== index))
+				}
+				onAttach={attach}
+				onPasteFile={pasteFile}
+				attaching={attaching}
+				onSend={send}
+				onStop={() => {
+					const sid = startup.snapshot.sessionId;
+					const active = relay();
+					if (sid && active)
+						void active
+							.command(sid, { op: "abort" })
+							.catch(() => setComposerError("Could not stop the turn."));
+				}}
+				retainedMessage={
+					startup.snapshot.phase === "blocked"
+						? "Your queued message is retained."
+						: null
+				}
+				notice={null}
+				onRetry={startup.retry}
+				showResume={false}
+				onResume={() => undefined}
+				error={startup.snapshot.error ?? composerError}
+				queuedCount={startup.snapshot.queue.length}
+				/* The folder is data, not an element: the composer's meta line
+				 *  decides whether it paints the path or only the folder glyph
+				 *  (record §2.2 yield order). Paint, target, hint and the options
+				 *  sheet behind it are unchanged (final audit, D2). */
+				folderChip={
+					homeDirectory !== null
+						? {
+								label: homeShortened(
+									startup.snapshot.selection?.cwd ?? homeDirectory,
+									homeDirectory,
+								),
+								onPress: () => {
+									/* The sheet opens on what will actually be sent: the folder the
+									 *  start names, and the model THE READER chose — `null` when they
+									 *  chose none, so no row is painted as selected on their behalf. */
+									setOptionPath(
+										startup.snapshot.selection?.cwd ?? homeDirectory ?? "",
+									);
+									setOptionModel(chosenModel);
+									setOptionsOpen(true);
+								},
+								accessibilityLabel: `Working in ${homeDirectory}`,
+								accessibilityHint: "Choose another folder",
+								testID: CONTROL.homeTargetFolder,
+							}
+						: null
+				}
+				bottomInset={insets.bottom}
+				modelChip={chips.model}
+				effortChip={null}
+				onOpenModels={() => {
+					setOptionPath(startup.snapshot.selection?.cwd ?? homeDirectory ?? "");
+					setOptionModel(chosenModel);
+					setOptionsOpen(true);
+				}}
+				onOpenEffort={() => undefined}
+				slashQuery={null}
+				slashSheet={null}
+				fieldRef={fieldRef}
+			/>
 		</ReadableColumn>
 	);
 
@@ -839,7 +930,17 @@ export default function Home({
 						 *  (record §2.4: it read "M… Operator" beside the mark, the badge
 						 *  and the gear). The bell still yields its pill at large text
 						 *  (D24), so nothing overflows the 320 pt row. */}
-						<HeaderComputerChip testID={CONTROL.computersButton} />
+						<HeaderComputerChip
+							testID={CONTROL.computersButton}
+							/* THE BRAND MARK rides INSIDE the chip as its leading glyph
+							 *  (operator, build 453: "add the local operator logo to the
+							 *  left of the local operator title"; UX U2 / design D3): as a
+							 *  sibling it was a dead 20 pt strip 4 pt from both the ☰ and
+							 *  the chip. It is DECORATION, so it yields first and on the
+							 *  bell's own gate: below 360 pt or at large text the chip
+							 *  needs every point to keep its floor and its name (D-H1, D24). */
+							brandMark={viewport.width >= 360 && effectiveScale < 1.5}
+						/>
 						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
 						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
 						 *  button's box — an inert fifth control the reader tries to tap

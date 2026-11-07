@@ -1457,6 +1457,45 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"declared separately because they are different phenomena, and only a run in which " +
 			"the warm-up cell is itself evidential can consult this entry at all.",
 	},
+	{
+		/* Declared on PR #181 (QA round 2, Q-R2-2), after CI's iphone-se capture
+		 * failed this pair at 200 % in both themes (run 42347504435, head 2341e2cb).
+		 *
+		 * WHY IT IS A COINCIDENCE AND NOT A COLLAPSE. The two states differ ONLY in
+		 * the checkpoint rail: the building liveness mark against the deep ticks. Both
+		 * cells load the same projection and the same `deepJournal`. The rail is
+		 * transient by design (`RAIL_LINGER_MS`, item 10): it fades out a moment
+		 * after the list stops moving, and it is `aria-hidden` with no text. So the
+		 * settled frame and the content probe cannot see it in either state. The
+		 * only thing that ever told the two frames apart at se/200 was incidental:
+		 * on the merge base (run 42343773420, e541a904) the building cell's
+		 * virtualization window held one more transcript row
+		 * (`transcript-row-86b56cf5…`) at the faded top edge. The pixel difference
+		 * was one 394×28 px strip under the top fade, and the content digests were
+		 * 0d7188b6d4 / c58e4e4a28. This PR's session composer rests 4 pt shorter
+		 * at 200 %, and the settled scroll offset moved 4241 → 4237 in BOTH cells.
+		 * Now both windows hold that row: same bytes, same content (0d7188b6d4).
+		 * Re-shaping the fixture to split them again would be chasing a
+		 * virtualization edge, not a state difference.
+		 *
+		 * THE STATES ARE STILL ASSERTED, by markers rather than these bytes. Each
+		 * cell reaches its own marker (`session-checkpoint-rail-building` /
+		 * `-rail-deep`, present in the manifests above), and this table is consulted
+		 * only when both cells are evidential. The pair differs at 100 % and 135 %
+		 * on the same device, so neither cell is a duplicate. */
+		cells: ["S5/rail-building", "S5/rail-deep"],
+		reason:
+			"one view, two rail states at iphone-se / 200 %: the checkpoint rail is the only " +
+			"thing that tells `rail-building` from `rail-deep`. It is transient (it fades once " +
+			"the list settles) and aria-hidden with no text, so the settled frame and the " +
+			"content digest are the same transcript in both cells (dark 0666d9744fd77250, " +
+			"light 0a1cf2802e1b0784, content 0d7188b6d4 — run 42347504435). Each cell still " +
+			"reaches its own marker (`session-checkpoint-rail-building` / " +
+			"`session-checkpoint-rail-deep`). The pair differs at 100 % and 135 %, where the " +
+			"virtualization windows differ, so neither declaration can be removed. On the merge " +
+			"base the pair differed only by one faded top-edge row that one window held and " +
+			"the other did not, which was incidental, not the state.",
+	},
 ];
 
 /** Read the resolved theme/scale and the app's own canvas colour, per frame. */

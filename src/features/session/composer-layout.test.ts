@@ -2,8 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_ACTION_CLUSTER,
+	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
+	COMPOSER_META_GAP_PT,
+	COMPOSER_META_GLASS_SPACING,
+	COMPOSER_META_ROW,
 	MODEL_FLOOR_PT,
 } from "./composer-layout";
 import {
@@ -217,7 +221,12 @@ const styleEntryKeys = (entry: string, source: string): string[] => {
  *  every entry of its `style={[…]}` array. `borderRadius` is the one
  *  border-prefixed name it is allowed: a radius is a shape, never an edge. */
 const shellCompositedKeys = (source: string): string[] => {
-	const shell = openTagAt(source, source.indexOf("backgroundColor: elevated"));
+	/* Anchored on the fill's own expression: solid `elevated`, or no fill at all
+	 *  when the glass layer draws the material (design spec §12). */
+	const shell = openTagAt(
+		source,
+		source.indexOf('backgroundColor: glass ? "transparent" : elevated'),
+	);
 	if (!/^<Animated\.View\b/.test(shell)) return [];
 	const styleAt = shell.indexOf("style={");
 	if (styleAt < 0) return [];
@@ -346,12 +355,13 @@ describe("the shell boundary is an overlay rule, not a box", () => {
 	});
 
 	it("pins the painted heights and the pill radius at both floors", () => {
+		/* H5: the resting pill is 4 + 48 + 4 = 56 on BOTH floors; the open card
+		 *  still follows the floor (112 on iOS, 120 on the 48 floor). */
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(morphPillRadius(56)).toBe(28);
-		expect(morphPillRadius(60)).toBe(30);
 	});
 });
 
@@ -367,5 +377,31 @@ describe("round 6 — the morph is a shape, not a pair of constants", () => {
 		expect(morphPillRadius(60)).toBe(30);
 		expect(morphPillRadius(56)).toBe(28);
 		expect(morphHeight(0.5, morphPillRadius(60), 24)).toBe(27);
+	});
+});
+
+/* Design D1: on iOS glass the model capsule stretched across its `flex-1`
+ * slot, and the effort capsule 4 pt away sat inside the group's 8 pt merge
+ * distance, so the two would fuse into one bar. */
+describe("strip glass capsules stay per-chip", () => {
+	it("keeps the merge distance under the strip's gap", () => {
+		expect(COMPOSER_META_ROW).toContain("gap-1");
+		expect(COMPOSER_META_GAP_PT).toBe(4);
+		expect(COMPOSER_META_GLASS_SPACING).toBeLessThan(COMPOSER_META_GAP_PT);
+		const strip = COMPOSER.slice(
+			COMPOSER.indexOf("const receipt = ("),
+			COMPOSER.indexOf("const compactReceipt = ("),
+		);
+		expect(strip).toContain("spacing={COMPOSER_META_GLASS_SPACING}");
+	});
+	it("makes each capsule hug its chip, in the glass branch only", () => {
+		expect(COMPOSER_CHIP_CAPSULE_ALIGN).toBe("flex-start");
+		const surface = COMPOSER.slice(
+			COMPOSER.indexOf("const stripChipSurface ="),
+			COMPOSER.indexOf("export const Composer ="),
+		);
+		expect(surface).toContain("alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN");
+		/* The solid branch is the chip itself, unwrapped and unchanged. */
+		expect(surface).toMatch(/\) : \(\s*chip\s*\);/);
 	});
 });
