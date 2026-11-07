@@ -71,13 +71,15 @@ import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
-import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
+import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Input } from "@/ui/components/input";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { CONTROL_HEIGHTS } from "@/ui/tokens.gen";
 
 /**
  * The composer home: `/` since the Part 2 slice, and the default destination
@@ -266,6 +268,11 @@ export default function Home({
 	 *  `Screen` therefore pays none here (`bottomInset="child"`, its default for a
 	 *  non-scrolling screen). */
 	const insets = useSafeAreaInsets();
+	/* ONE fill decision for the home's chrome (design spec §12): the composer
+	 *  shell and its strip chips draw Liquid Glass together on iOS 26 with
+	 *  Reduce Transparency off, and solid everywhere else — the session screen's
+	 *  rule, so a capsule never reads as glass beside a solid shell. */
+	const chromeGlass = useChromeGlass();
 	const menuInk = useTokenColor("ink-muted");
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
@@ -642,58 +649,76 @@ export default function Home({
 				</View>
 			) : null}
 
-			{/* The folders read failed. The KIND decides the sentence AND the remedy — a
-			 *  credential refusal is not a transient read failure, and offering Retry for it
-			 *  pointed the reader at a button that would be refused again: `relay-unauthorized`
-			 *  retries `never` and its surface is a password (review R4). The auth branch
-			 *  therefore offers the sign-in handoff the splash already uses; every other kind
-			 *  keeps the retry, which is a real answer for a read that only raced something.
-			 *  A successful read clears the row; a retry that fails again keeps it, which is
-			 *  the honest state. */}
-			{directoriesError !== null ? (
-				<Banner
-					tone="warning"
-					message={
-						isAuthFailure(directoriesError)
-							? foldersReadSignInRequired()
-							: foldersReadFailed()
-					}
-					action={
-						isAuthFailure(directoriesError)
-							? {
-									label: t("mobile.chrome.home.sign_in"),
-									onPress: () => router.push("/welcome"),
-									testID: CONTROL.homeFoldersSignIn,
-								}
-							: {
-									label: t("mobile.computers.retry"),
-									onPress: retryDirectories,
-									testID: CONTROL.homeFoldersRetry,
-								}
-					}
-					testID={CONTROL.homeFoldersBanner}
-				/>
-			) : null}
-
-			{/* The model list could not be read: its own failure, with the retry the
-			 *  read never had. This banner is the ONLY place that failure is told: the
-			 *  chip keeps saying "Default" because the computer's default still runs (a
-			 *  failed read loses the menu, not the model — design D2 / UX U1). */}
-			{modelsRead === "failed" ? (
-				<Banner
-					tone="warning"
-					message={modelsReadFailed()}
-					action={{
-						label: t("mobile.computers.retry"),
-						onPress: retryModels,
-						loading: modelsSettled !== modelsAttempt,
-						testID: CONTROL.homeModelsRetry,
-					}}
-					testID={CONTROL.homeModelsBanner}
-				/>
-			) : null}
-
+			{/* THE COMPOSER STACK. Every notice about the composer's own inputs
+			 *  lives HERE, inset, above the composer — never as a page Banner
+			 *  (design spec §3, operator build 453: "maybe improve the warning style
+			 *  accordingly"). The Banner drew a full-bleed wash and a full-width
+			 *  rule across the screen's edges right on top of the strip, which read
+			 *  as the composer itself deforming. Inset at 16 pt, radius 10, no
+			 *  `border-b`, it is the same notice language as "Could not start"
+			 *  below, one per screen.
+			 *
+			 *  THE COMPOSER INVARIANT: these are SIBLINGS stacked above the
+			 *  composer, and none of them is an input to it, so the notice grows
+			 *  upward into the free band (the hero re-centres in what is left) and
+			 *  the composer's box is the same with or without it. Asserted in
+			 *  `home-composer-invariant.test.ts`. */}
 			<View>
+				{/* The folders read failed. The KIND decides the sentence AND the remedy — a
+				 *  credential refusal is not a transient read failure, and offering Retry for it
+				 *  pointed the reader at a button that would be refused again: `relay-unauthorized`
+				 *  retries `never` and its surface is a password (review R4). The auth branch
+				 *  therefore offers the sign-in handoff the splash already uses; every other kind
+				 *  keeps the retry, which is a real answer for a read that only raced something.
+				 *  A successful read clears the row; a retry that fails again keeps it, which is
+				 *  the honest state. */}
+				{directoriesError !== null ? (
+					<View className="px-4 pb-2">
+						<Alert
+							severity="warning"
+							action={
+								isAuthFailure(directoriesError)
+									? {
+											label: t("mobile.chrome.home.sign_in"),
+											onPress: () => router.push("/welcome"),
+											testID: CONTROL.homeFoldersSignIn,
+										}
+									: {
+											label: t("mobile.computers.retry"),
+											onPress: retryDirectories,
+											testID: CONTROL.homeFoldersRetry,
+										}
+							}
+							testID={CONTROL.homeFoldersBanner}
+						>
+							{isAuthFailure(directoriesError)
+								? foldersReadSignInRequired()
+								: foldersReadFailed()}
+						</Alert>
+					</View>
+				) : null}
+
+				{/* The model list could not be read: its own failure, with the retry the
+				 *  read never had. This banner is the ONLY place that failure is told: the
+				 *  chip keeps saying "Default" because the computer's default still runs (a
+				 *  failed read loses the menu, not the model — design D2 / UX U1). */}
+				{modelsRead === "failed" ? (
+					<View className="px-4 pb-2">
+						<Alert
+							severity="warning"
+							action={{
+								label: t("mobile.computers.retry"),
+								onPress: retryModels,
+								loading: modelsSettled !== modelsAttempt,
+								testID: CONTROL.homeModelsRetry,
+							}}
+							testID={CONTROL.homeModelsBanner}
+						>
+							{modelsReadFailed()}
+						</Alert>
+					</View>
+				) : null}
+
 				{problem !== null ? (
 					<View className="px-4 pb-2">
 						<Alert severity="warning" title="Could not start">
@@ -703,6 +728,7 @@ export default function Home({
 				) : null}
 				<Composer
 					testID={SURFACE.homeComposer}
+					glass={chromeGlass}
 					onEditingChange={setEditing}
 					onOpenQueue={() => setQueueOpen(true)}
 					suppressDisabledHint={homeRecovery !== null}
@@ -833,6 +859,20 @@ export default function Home({
 				}
 				headerAction={
 					<View className="min-w-0 flex-1 flex-row items-center gap-1">
+						{/* THE BRAND MARK, back beside the computer's name (operator, build
+						 *  453: "add the local operator logo to the left of the local operator
+						 *  title"). This reverses D-H3 on the operator's word, so it is placed
+						 *  to cost the chip as little as it can: the existing asset (never a
+						 *  redraw), decorative (the chip carries the name), at the kit's
+						 *  icon-button glyph step so it reads at the ☰'s weight, centred on
+						 *  the 44 pt row. It is DECORATION, so it yields first and on the
+						 *  bell's own gate: below 360 pt or at large text the chip needs every
+						 *  point to keep its floor and its name (D-H1, D24). */}
+						{viewport.width >= 360 && effectiveScale < 1.5 ? (
+							<View testID={SURFACE.homeBrandMark}>
+								<NavigationMark size={CONTROL_HEIGHTS.icon.icon} />
+							</View>
+						) : null}
 						{/* The computer this will run on, and the switcher's primary entry
 						 *  point. It takes ALL the width the ☰ and the bell leave — about
 						 *  281 pt on a 393 pt phone — so "Mac – Local Operator" reads whole

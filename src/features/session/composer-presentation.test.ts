@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
+	COMPOSER_REST_PAD,
+	COMPOSER_REST_ROW,
 	composerPaintedHeight,
 	composerPresentation,
 	composerShellPadding,
@@ -74,15 +76,17 @@ describe("build389 uniform dock", () => {
 		expect(COMPOSER_FIELD_BOX).toBe(44);
 		const rest = composerShellPadding(false);
 		const expanded = composerShellPadding(true);
-		expect(rest).toEqual({ top: 6, bottom: 6 });
+		/* H5: one `space.1` step at rest, balanced against the 48 pt row. */
+		expect(rest).toEqual({ top: COMPOSER_REST_PAD, bottom: COMPOSER_REST_PAD });
+		expect(COMPOSER_REST_PAD % 4).toBe(0);
+		expect(rest.top + COMPOSER_REST_ROW + rest.bottom).toBe(56);
 		expect(expanded).toEqual({ top: 12, bottom: 8 });
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		/* The record's totals are its iOS values. The web/Android floor is 48, and
-		 *  the SAME rule paints 60/120 there — which is exactly what the web frames
-		 *  measure, so the frame table and this arithmetic agree instead of one
-		 *  being declared wrong. */
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		/* The web/Android floor is 48. The OPEN card follows it (120 there); the
+		 *  resting pill no longer does — the 48 pt row is the resting ruler on every
+		 *  platform, so the pill is 56 everywhere (H5). */
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(
 			expanded.top +
@@ -103,8 +107,8 @@ describe("build389 uniform dock", () => {
 		expect(
 			composerPresentation({ ...empty, focused: true, floor: 44 }).radius,
 		).toBe(24);
-		expect(composerPresentation({ ...empty, floor: 48 }).height).toBe(60);
-		expect(composerPresentation({ ...empty, floor: 48 }).radius).toBe(30);
+		expect(composerPresentation({ ...empty, floor: 48 }).height).toBe(56);
+		expect(composerPresentation({ ...empty, floor: 48 }).radius).toBe(28);
 	});
 });
 
@@ -150,9 +154,8 @@ describe("round 8 — one radius for the two edges the shell paints", () => {
 	it("leaves the painted heights and the pill radius untouched", () => {
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(morphPillRadius(56)).toBe(28);
-		expect(morphPillRadius(60)).toBe(30);
 	});
 });

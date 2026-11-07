@@ -217,7 +217,12 @@ const styleEntryKeys = (entry: string, source: string): string[] => {
  *  every entry of its `style={[…]}` array. `borderRadius` is the one
  *  border-prefixed name it is allowed: a radius is a shape, never an edge. */
 const shellCompositedKeys = (source: string): string[] => {
-	const shell = openTagAt(source, source.indexOf("backgroundColor: elevated"));
+	/* Anchored on the fill's own expression: solid `elevated`, or no fill at all
+	 *  when the glass layer draws the material (design spec §12). */
+	const shell = openTagAt(
+		source,
+		source.indexOf('backgroundColor: glass ? "transparent" : elevated'),
+	);
 	if (!/^<Animated\.View\b/.test(shell)) return [];
 	const styleAt = shell.indexOf("style={");
 	if (styleAt < 0) return [];
@@ -346,12 +351,13 @@ describe("the shell boundary is an overlay rule, not a box", () => {
 	});
 
 	it("pins the painted heights and the pill radius at both floors", () => {
+		/* H5: the resting pill is 4 + 48 + 4 = 56 on BOTH floors; the open card
+		 *  still follows the floor (112 on iOS, 120 on the 48 floor). */
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(morphPillRadius(56)).toBe(28);
-		expect(morphPillRadius(60)).toBe(30);
 	});
 });
 

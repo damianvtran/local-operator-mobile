@@ -333,8 +333,19 @@ describe("the chip in the Home header", () => {
 			chip,
 		);
 		expect(HOME).not.toContain("testID={CONTROL.settingsButton}");
-		/* D-H3: the brand mark left the header, the ☰ carries the unread count. */
-		expect(HOME).not.toContain("<NavigationMark");
+		/* D-H3 is reversed on the operator's word (build 453: "add the local
+		 *  operator logo to the left of the local operator title"): ONE mark, the
+		 *  existing asset, immediately before the chip, and it yields on the
+		 *  bell's own gate so the chip keeps its floor at 320 pt / large text. */
+		expect(HOME.match(/<NavigationMark /g) ?? []).toHaveLength(1);
+		const mark = HOME.indexOf(
+			"<NavigationMark size={CONTROL_HEIGHTS.icon.icon} />",
+		);
+		expect(mark).toBeGreaterThan(0);
+		expect(mark).toBeLessThan(chip);
+		expect(HOME.slice(mark - 200, mark)).toContain(
+			"viewport.width >= 360 && effectiveScale < 1.5",
+		);
 		expect(HOME).not.toContain("— choose a computer");
 	});
 	it("keeps the both-axis touch floor and yields width, never the bell", () => {
@@ -343,7 +354,9 @@ describe("the chip in the Home header", () => {
 			CHIP_SOURCE.indexOf("export function DrawerComputerRow"),
 		);
 		expect(header).toContain(
-			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"',
+			/* Spec §1: a 10 pt rounded rectangle with the kit's 12 pt inset, not
+			 *  a capsule whose mark sat 2.5 pt from its edge. */
+			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-md border border-border-control px-3"',
 		);
 		expect(header).toContain(
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",

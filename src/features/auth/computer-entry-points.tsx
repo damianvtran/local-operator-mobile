@@ -254,8 +254,16 @@ export function HeaderComputerChip({ testID }: { testID: string }) {
 			 *  At 200 % the chevron is dropped, so this edge is the only affordance the
 			 *  chip has (D8). `border-control` is the kit's own control-edge pair (the
 			 *  role `input` and `Button` outline already use): 3.42:1 light on canvas,
-			 *  3.65:1 on `surface`; 3.93:1 and 3.58:1 dark. */
-			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"
+			 *  3.65:1 on `surface`; 3.93:1 and 3.58:1 dark.
+			 *
+			 *  A ROUNDED RECTANGLE with a real inset (operator feedback, build 453;
+			 *  design spec §1). As a capsule at 44 pt the radius was 22 and, with no
+			 *  horizontal padding, the health mark's ink sat 2.5 pt from the edge.
+			 *  `rounded-md` (10 pt) is the kit's control/field radius — a different
+			 *  family from the composer's pill below it, so the screen is no longer
+			 *  bookended by two capsules — and `px-3` is `CONTROL_HEIGHTS.sm.paddingX`
+			 *  (12 pt), the kit's small-control inset. The 44 pt floor is unchanged. */
+			className="min-w-0 flex-1 flex-row items-center gap-2 rounded-md border border-border-control px-3"
 			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		>
 			<HealthMark entry={entry} {...geometry} />

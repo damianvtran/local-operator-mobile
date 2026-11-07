@@ -1,5 +1,7 @@
 import { Text, View } from "react-native";
 
+import type { BannerProps } from "@/ui/components/banner";
+import { Button } from "@/ui/components/button";
 import {
 	alertClasses,
 	alertGlyph,
@@ -24,10 +26,24 @@ export type AlertProps = {
 	/** Optional short lead-in, in the severity's colour. */
 	title?: string;
 	children: string;
+	/** One trailing remedy, the Banner's own shape and rule (exactly one action,
+	 *  never a dismiss — a dismiss would let a reader hide a real failure). It
+	 *  exists so a page-status failure that must sit INSET beside the control it
+	 *  affects — the home's folder and model reads, above the composer (design
+	 *  spec §3) — can keep its Retry without the Banner's full-bleed band and
+	 *  full-width rule. Rendered as a `quiet`/`sm` Button: a 32 pt box padded to
+	 *  the 44 pt touch floor, the kit's small-control inset. */
+	action?: BannerProps["action"];
 	testID?: string;
 };
 
-export const Alert = ({ severity, title, children, testID }: AlertProps) => {
+export const Alert = ({
+	severity,
+	title,
+	children,
+	action,
+	testID,
+}: AlertProps) => {
 	const tone: SemanticTone =
 		severity === "error"
 			? "danger"
@@ -53,7 +69,17 @@ export const Alert = ({ severity, title, children, testID }: AlertProps) => {
 			accessibilityRole="alert"
 			accessibilityLiveRegion={severity === "error" ? "assertive" : "polite"}
 		>
-			<View className="flex-row items-start gap-2" style={{ maxWidth: "100%" }}>
+			{/* With an action the text block takes the row and the remedy trails it;
+			 *  without one the row keeps its content width, as every existing alert
+			 *  has always painted. */}
+			<View
+				className={
+					action
+						? "flex-1 flex-row items-start gap-2"
+						: "flex-row items-start gap-2"
+				}
+				style={{ maxWidth: "100%" }}
+			>
 				<Text className={`text-mono ${alertWordClasses(tone)}`} aria-hidden>
 					{alertGlyph(tone)}
 				</Text>
@@ -68,6 +94,18 @@ export const Alert = ({ severity, title, children, testID }: AlertProps) => {
 					<Text className="text-body-sm text-ink">{children}</Text>
 				</View>
 			</View>
+			{action ? (
+				<View className="self-center">
+					<Button
+						label={action.label}
+						onPress={action.onPress}
+						testID={action.testID}
+						loading={action.loading}
+						variant="quiet"
+						size="sm"
+					/>
+				</View>
+			) : null}
 		</View>
 	);
 };

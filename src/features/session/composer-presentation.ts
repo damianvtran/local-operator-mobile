@@ -3,7 +3,8 @@ import { composerOuterGap } from "@/ui/device-corner";
 /** The field's painted box on iOS at 100 % text: the 44 pt touch floor. The
  *  web and Android floor is 48, so every total below is a FUNCTION of the
  *  platform floor — the record's 56/112 are its iOS values, and the same rule
- *  paints 60/120 where the floor is larger. Hardcoding 44 here is what made a
+ *  paints 56/120 where the floor is larger (the resting pill is 56 everywhere
+ *  since H5, below). Hardcoding 44 here is what made a
  *  web frame look 4 pt "wrong" when it was the record's rule on another floor. */
 export const COMPOSER_FIELD_BOX = 44;
 /** The record's gap between the expanded field and its controls row. */
@@ -11,11 +12,38 @@ export const COMPOSER_CONTROLS_GAP = 4;
 /** The record's two painted totals, exported so the component animates TO them. */
 export const COMPOSER_BASE_HEIGHT = 56;
 export const COMPOSER_EXPANDED_HEIGHT = 112;
+/** The resting shell's vertical padding: ONE `space.1` step (4 pt).
+ *
+ *  WHY 4, and why the resting row is 48 (H5, operator build-453 pass). The
+ *  record's pill was 6 + 44 + 6, and 6 is off the 4 pt `space.scale`: the web
+ *  audit's U-42 failed ~612 rows per device on that padding alone. The two
+ *  on-scale splits that keep the 56 pt pill were 4 + 48 + 4 and 8 + 40 + 8, and
+ *  only the first keeps a control row at or above the touch floor — 40 is under
+ *  iOS's 44 and Android/web's 48, so 8 + 40 + 8 would put attach and send in a
+ *  row shorter than their own targets. Raising the height to 8 + 44 + 8 = 60
+ *  instead would grow the dock by 4 pt on every screen for a spacing rule.
+ *
+ *  So the resting ROW is 48 (`COMPOSER_REST_ROW`), the larger platform floor,
+ *  on EVERY platform: on iOS the 44 pt discs sit centred in it, 2 pt from each
+ *  row edge, so the disc-to-shell distance is the 4 + 2 = 6 pt the pill always
+ *  painted, and only the declared padding moved onto the scale. On the 48 floor
+ *  the row was already 48, and the pill drops from 6 + 48 + 6 = 60 to 56 — one
+ *  pill height on every platform, the record's own number.
+ *
+ *  The expanded card is untouched: 12 + h + 4 + h + 8 were already on-scale. */
+export const COMPOSER_REST_PAD = 4;
+export const COMPOSER_REST_ROW = 48;
 /** Where the record's heights come from, so a test can assert the arithmetic
- *  rather than a class name: rest 6 + 44 + 6 = 56; expanded 12 + 44 + 4 + 44 +
- *  8 = 112. A change to either padding has to keep these sums true. */
+ *  rather than a class name: rest 4 + max(floor, 48) + 4 = 56; expanded 12 + 44
+ *  + 4 + 44 + 8 = 112. A change to either padding has to keep these sums true. */
 export const composerShellPadding = (expanded: boolean) =>
-	expanded ? { top: 12, bottom: 8 } : { top: 6, bottom: 6 };
+	expanded
+		? { top: 12, bottom: 8 }
+		: { top: COMPOSER_REST_PAD, bottom: COMPOSER_REST_PAD };
+/** The resting row's box on a platform floor: never under the floor, never
+ *  under the 48 pt row the on-scale padding is balanced against. */
+export const composerRestRow = (floor: number = COMPOSER_FIELD_BOX) =>
+	Math.max(floor, COMPOSER_REST_ROW);
 export const composerPaintedHeight = (
 	expanded: boolean,
 	floor: number = COMPOSER_FIELD_BOX,
@@ -23,7 +51,7 @@ export const composerPaintedHeight = (
 	const pad = composerShellPadding(expanded);
 	return expanded
 		? pad.top + floor + COMPOSER_CONTROLS_GAP + floor + pad.bottom
-		: pad.top + floor + pad.bottom;
+		: pad.top + composerRestRow(floor) + pad.bottom;
 };
 /** Build389 presentation only: never derives auth or modifies draft content. */
 export type ComposerPresentationFacts = {

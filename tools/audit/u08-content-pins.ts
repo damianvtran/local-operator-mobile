@@ -455,7 +455,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
 	 * after this merge, so neither side's previous digest is kept. */
-	app: "581a579496536d48ec7e82170e8138f2c59974cd6042e37142f5a4a9e7dec15b",
+	/* Re-pinned 2026-11-07 for feat/home-chrome with --print from the staged tree:
+	 * `app` (the session screen hands the composer its glass decision) and `src`
+	 * (header chip, home hero, inset notices, composer H5 padding and glass
+	 * wiring) move; tokens, fonts and public do not. */
+	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -690,7 +694,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
 	 * this merge, so neither previous digest is kept. */
-	src: "f244908f7d74eb41013642cbba4c41894a98c12b18ab856d3eb3c0d158f2fdf8",
+	src: "6bb361179495738b39a7634a4ad3322dd0faaddddd03a144c8d0b87fc7892600",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
