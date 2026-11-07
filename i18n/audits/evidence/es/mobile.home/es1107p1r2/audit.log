@@ -1,0 +1,122 @@
+# audit.log — home-pickers DELTA re-audit (round 2) for PR #192. Real output of the commands below, run 2026-11-07T19:59:51Z. Shared by the seven r2 bundles.
+
+$ git rev-parse HEAD; git rev-parse origin/main; git status --short
+504df8f5fe83bbd972cf214059d76457a845bd85
+b5a2f4a1b0721a5745e35e498d7d91851a93811c
+[exit 0]
+
+$ python3 <scratch>/delta_r2.py <worktree>
+es1107p1: es mobile.home head=11f65e0cbb229b0c base=ba51a71b7c16c79c r1=ba51a71b7c16c79c base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=10 beyond=[] finding_keys_not_changed=[]
+   ES-H01 mobile.home.chip.effort_default r1.current==base:True head=Esfuerzo, {effort}, predeterminado de esta máquina
+   ES-H01 mobile.home.chip.effort_default_unnamed r1.current==base:True head=Esfuerzo, el nivel configurado en esta máquina
+   ES-H01 mobile.home.chip.model_default r1.current==base:True head=Modelo, {model}, predeterminado de esta máquina
+   ES-H01 mobile.home.chip.model_no_default_label r1.current==base:True head=Modelo, esta máquina no tiene un modelo predeterminado. Elige uno.
+   ES-H01 mobile.home.picker.effort_unknown r1.current==base:True head=Esta máquina no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.
+   ES-H01 mobile.home.picker.effort_unsupported r1.current==base:True head=El Local Operator de esta máquina es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.
+   ES-H01 mobile.home.picker.effort_use_default r1.current==base:True head=Nivel de esta máquina
+   ES-H01 mobile.home.picker.folder_outside r1.current==base:True head=Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.
+   ES-H01 mobile.home.picker.source_default r1.current==base:True head=Predeterminado de esta máquina
+   ES-H02 mobile.home.picker.folder_home r1.current==base:True head=Personal
+   ES-H03 mobile.home.picker.folder_outside r1.current==base:True head=Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.
+hi1107p1: hi mobile.home head=373d40d6a4b00a1c base=8f5abc1597f4aa28 r1=8f5abc1597f4aa28 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=1 beyond=[] finding_keys_not_changed=[]
+   HI-H01 mobile.home.picker.folder_other r1.current==base:True head=अन्य पाथ…
+ru1107c1: ru mobile.chrome head=3a52ae8eb2a84d68 base=d85c9af88c5fa5c2 r1=d85c9af88c5fa5c2 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=1 beyond=[] finding_keys_not_changed=[]
+   RU-C01 mobile.chrome.close_conversations r1.current==base:True head=Закрыть список бесед
+ru1107p1: ru mobile.home head=2cc979d38a0942b8 base=07fd9f3d2ffb34d7 r1=07fd9f3d2ffb34d7 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=2 beyond=[] finding_keys_not_changed=[]
+   RU-H01 mobile.home.chip.model_chosen r1.current==base:True head=Модель, {model}, выбрана для этой беседы
+   RU-H02 mobile.home.chip.model_no_default r1.current==base:True head=Не задана
+ur1107p1: ur mobile.home head=9c9b854e9448cfdd base=a596a55a248529e0 r1=a596a55a248529e0 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=10 beyond=[] finding_keys_not_changed=[]
+   UR-H01 mobile.home.chip.effort_chosen r1.current==base:True head=استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب
+   UR-H01 mobile.home.chip.effort_default r1.current==base:True head=استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ
+   UR-H01 mobile.home.chip.effort_default_short r1.current==base:True head=ڈیفالٹ شدت
+   UR-H01 mobile.home.chip.effort_default_unnamed r1.current==base:True head=استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح
+   UR-H01 mobile.home.picker.effort_none r1.current==base:True head=اس ماڈل میں استدلال کی شدت کی کوئی ترتیب نہیں۔
+   UR-H01 mobile.home.picker.effort_title r1.current==base:True head=استدلال کی شدت
+   UR-H01 mobile.home.picker.effort_unsupported r1.current==base:True head=اس کمپیوٹر کا Local Operator استدلال کی شدت قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔
+   UR-H02 mobile.home.picker.folder_other r1.current==base:True head=دوسرا پاتھ…
+   UR-H02 mobile.home.picker.folder_too_long r1.current==base:True head=یہ پاتھ بہت لمبا ہے۔
+   UR-H02 mobile.home.picker.folder_use_path r1.current==base:True head=یہ پاتھ استعمال کریں
+vi1107p1: vi mobile.home head=48f55488d35e4fe0 base=1dcd42a6510ce817 r1=1dcd42a6510ce817 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=9 beyond=['mobile.home.picker.effort_unsupported'] finding_keys_not_changed=[]
+   VI-H01 mobile.home.picker.folder_home r1.current==base:True head=Home
+   VI-H01 mobile.home.picker.folder_outside r1.current==base:True head=Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục home của bạn hoặc thư mục tạm của nó.
+   VI-H02 mobile.home.chip.effort_chosen r1.current==base:True head=Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này
+   VI-H02 mobile.home.chip.effort_default r1.current==base:True head=Mức suy luận, {effort}, mặc định của máy tính này
+   VI-H02 mobile.home.chip.effort_default_short r1.current==base:True head=Mức suy luận mặc định
+   VI-H02 mobile.home.chip.effort_default_unnamed r1.current==base:True head=Mức suy luận, mức đã cấu hình trên máy tính này
+   VI-H02 mobile.home.picker.effort_none r1.current==base:True head=Mô hình này không có cài đặt mức suy luận.
+   VI-H02 mobile.home.picker.effort_title r1.current==base:True head=Mức suy luận
+zh1107p1: zh-CN mobile.home head=bf92f94ee6474dff base=b0c97e5e20b21828 r1=b0c97e5e20b21828 base==r1=True reverted==r1=True head==remediation_receipt=True en==r1=True ctx==r1=True changed=4 beyond=[] finding_keys_not_changed=[]
+   ZH-H01 mobile.home.chip.effort_chosen r1.current==base:True head=推理强度，{effort}，已为此对话选择
+   ZH-H01 mobile.home.chip.model_chosen r1.current==base:True head=模型，{model}，已为此对话选择
+   ZH-H01 mobile.home.picker.source_chosen r1.current==base:True head=已为此对话选择
+   ZH-H02 mobile.home.effort.xhigh r1.current==base:True head=超高
+
+$ residue scan of superseded terms over every src/i18n/catalogues/<locale>/*.json value
+  es «computadora»: 0 []
+  es «carpeta de inicio»: 0 []
+  ru «выбрано для»: 1 [('mobile.home.json', 'mobile.home.chip.effort_chosen')]
+  ru «Нет по умолчанию»: 0 []
+  ru «Закрыть беседы»: 0 []
+  ur «راستہ»: 0 []
+  vi «nỗ lực»: 0 []
+  vi «thư mục chính»: 0 []
+  zh-CN «，为此对话选择»: 0 []
+  zh-CN «很高»: 0 []
+  hi «दूसरा पाथ»: 0 []
+  ur «کوشش» outside the 'try again/keeps trying' sense: 0 []
+[exit 0]
+
+$ (cd <scratch>/run && python3 mech.py)   # the round-1 auditor's mech.py, unmodified, against the head tree
+mechanical issues: 0
+visible short strings with len ratio >=1.5 and len>=12:
+  ('mobile.home.chip.effort_default_short', 'es', 14, 23, 1.64, 'Esfuerzo predeterminado')
+  ('mobile.home.chip.effort_default_short', 'vi', 14, 21, 1.5, 'Mức suy luận mặc định')
+  ('mobile.home.chip.model_no_default', 'es', 10, 18, 1.8, 'Sin predeterminado')
+  ('mobile.home.chip.model_no_default', 'fr', 10, 16, 1.6, 'Aucun par défaut')
+  ('mobile.home.chip.model_no_default', 'hi', 10, 17, 1.7, 'कोई डिफ़ॉल्ट नहीं')
+  ('mobile.home.chip.model_no_default', 'ur', 10, 16, 1.6, 'کوئی ڈیفالٹ نہیں')
+  ('mobile.home.chip.model_no_default', 'vi', 10, 17, 1.7, 'Không có mặc định')
+  ('mobile.home.effort.max', 'ru', 3, 12, 4.0, 'Максимальное')
+  ('mobile.home.effort.max', 'ur', 3, 14, 4.67, 'زیادہ سے زیادہ')
+  ('mobile.home.picker.badge_default', 'es', 7, 14, 2.0, 'Predeterminado')
+  ('mobile.home.picker.badge_default', 'ru', 7, 12, 1.71, 'По умолчанию')
+  ('mobile.home.picker.folder_home', 'fr', 4, 17, 4.25, 'Dossier personnel')
+11f65e0cbb229b0c4c11cf07f51c168f170580dd7a30cb3039f63f45c4f17789 src/i18n/catalogues/es/mobile.home.json
+684df29e9bdcb4a36bbe4b88ebdb333cda2e14a7e099abe630bb4cb2c5eb8e35 src/i18n/catalogues/es/mobile.chrome.json
+72637daaec74943764c96a144eb86a2a6faeca562c7c185b33d2fe9ce9cede41 src/i18n/catalogues/fr/mobile.home.json
+e05e71607db911fe77671c73fe8fa443fa7d86f98f4aec79d87f83e10d886592 src/i18n/catalogues/fr/mobile.chrome.json
+373d40d6a4b00a1cc5410784b89e29fd3c9cb9f82653e87c59f7cfcf92cf72b2 src/i18n/catalogues/hi/mobile.home.json
+6c30e16e1a30d3e966d8c2f8afa6bb00e4c25e06b451c93c9864e2ce575c7c84 src/i18n/catalogues/hi/mobile.chrome.json
+2cc979d38a0942b8e68e7299e7b94484e8ae01156a565a979513f550ff843510 src/i18n/catalogues/ru/mobile.home.json
+3a52ae8eb2a84d68e455fff80e38991d60709a82d4bc418d63f99802c3a0f7d3 src/i18n/catalogues/ru/mobile.chrome.json
+9c9b854e9448cfdd1ef68bb0758be28557c7a0c7abfce79064191ccf4fdaad7c src/i18n/catalogues/ur/mobile.home.json
+bf1d07fa805142c3b10a399d609bb0ffd18e62331658713abab5184a4918e112 src/i18n/catalogues/ur/mobile.chrome.json
+48f55488d35e4fe001e6f76a20f70a8706574363bec08366b5d37a42cbc96a1c src/i18n/catalogues/vi/mobile.home.json
+6c2d18113a6ac059fbd9acd899f8670b778e549391db2aa993292b6c22a6e41d src/i18n/catalogues/vi/mobile.chrome.json
+bf92f94ee6474dff4594cb6fde40ab8b771228ebe2cecb4e77e20362d6d2b7fb src/i18n/catalogues/zh-CN/mobile.home.json
+4ec576910081b038a360c939f61594c4eec211eb7c6617e11f5fa6f37dccb983 src/i18n/catalogues/zh-CN/mobile.chrome.json
+12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b src/i18n/catalogues/en/mobile.home.json
+7b91a909393d20b3ced5ef3825bf0fd5b0f844ee634a6f8abf19f3cb0141b3f7 src/i18n/catalogues/en/mobile.chrome.json
+aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047 src/i18n/catalogues/en/mobile.home.context.json
+ba70cefe7de66b12c4f012daad4e7aa127a34eea6e3de17c9fda832415aeb140 src/i18n/catalogues/en/mobile.chrome.context.json
+[exit 0]
+
+$ sha256 of mech.py / newkeys.json used
+7485045e249e3074d4b50257c26c8d58d3b27d282b9976538806cff3c46a98ed  mech.py
+34d1cffea85254c4eedc36d4d16514302750654dd6687b18b914b670ae51ced2  newkeys.json
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (333 keys, 17 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+[exit 0]
+
+$ node scripts/i18n/check-strings.ts
+scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c
+check-strings: 256 finding(s), all baselined; 0 new; verified historical debt vs b5a2f4a1b072
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+[exit 0]
+
+$ npx vitest run src/i18n
+ Test Files  6 passed (6)
+      Tests  151 passed (151)
+[exit 0]
