@@ -804,7 +804,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-pinned 2026-11-07 for fix/asks-pending-parity with --print from the
+	 * staged tree. Only `src` moves: the ask bar and sheet title count only
+	 * `open` asks as waiting and draw a lapsed-only queue quietly as "timed out"
+	 * (local-operator #2388's outstanding rule), plus tests.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	src: "1c768b806ea5bf3c12bbe91b956c6f2d09252ba348c09e49cf73c8baddbdc2a8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

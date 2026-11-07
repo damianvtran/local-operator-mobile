@@ -14,6 +14,7 @@ import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	type AskOther,
 	answeredPairs,
+	askBarLabel,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
@@ -26,7 +27,6 @@ import {
 	orderedForDisplay,
 	outstandingAsks,
 	questionIsAnswered,
-	questionsWaitingLabel,
 	READ_FAILED,
 	readFailureNotice,
 	refusalText,
@@ -776,21 +776,12 @@ export const AsksSheet = ({
 					skipped: draft.skipped,
 				})
 			: {};
-	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
-	 *  the header says how much the queue owes in the same unit the bar does. */
-	const outstandingQuestions = outstandingAsks(shownRows).reduce(
-		(total, row) =>
-			total + (Array.isArray(row.questions) ? row.questions.length : 0),
-		0,
-	);
-	/* The bar's own sentence, so the sheet that arrives by itself names what the
-	 *  reader was about to meet in the bar's words ("1 question waiting"), not the
-	 *  queue's internal noun (design D5). Bare `asks` stays for a queue with nothing
-	 *  outstanding - answered rows can still be listed, and they are not waiting. */
-	const title =
-		outstandingQuestions > 0
-			? questionsWaitingLabel(outstandingQuestions)
-			: "asks";
+	/* The bar's own sentence (`askBarLabel`), so the sheet names what the reader
+	 *  met in the bar's words ("1 question waiting", or "1 question timed out" for
+	 *  a lapsed-only queue), in QUESTIONS, the unit the bar counts (E2 spec §1.3),
+	 *  not the queue's internal noun (design D5). Bare `asks` stays for a queue
+	 *  with nothing waiting or lapsed - answered rows can still be listed. */
+	const title = askBarLabel(shownRows)?.text ?? "asks";
 
 	/** Settle one ask, then advance the walk and re-read. On success the
 	 *  expansion moves to the next outstanding ask; on refusal the sentence

@@ -4,6 +4,8 @@ import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredBySurface,
 	answeredPairs,
+	askBarLabel,
+	askBarRows,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
@@ -17,6 +19,7 @@ import {
 	hasOtherDoor,
 	headAsk,
 	isAnswerable,
+	isLapsed,
 	isOutstanding,
 	orderedForDisplay,
 	outstandingAsks,
@@ -24,6 +27,7 @@ import {
 	questionIsAnswered,
 	questionProgress,
 	questionsWaitingLabel,
+	questionTally,
 	READ_FAILED,
 	REFRESH_FAILED_ROWS_DRAWN,
 	RUNTIME_PREDATES_ASKS,
@@ -272,7 +276,12 @@ describe("outstanding / answerable", () => {
 			ask({ ask_id: "d", status: "expired" }),
 			ask({ ask_id: "e", status: "dismissed" }),
 		];
-		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
+		/* `open` only — the runtime's OUTSTANDING_STATUSES since #2388. The
+		   timed-out row stays on the BAR (quietly) but is not waiting. */
+		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a"]);
+		expect(askBarRows(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
+		expect(isOutstanding("timed_out")).toBe(false);
+		expect(isLapsed("timed_out")).toBe(true);
 	});
 
 	it("keeps a withdrawn ask out of the outstanding set — and off the bar", () => {
@@ -304,7 +313,7 @@ describe("outstanding / answerable", () => {
 });
 
 describe("the bar's question count (the unit split)", () => {
-	it("counts QUESTIONS of the outstanding set, including timers still answerable", () => {
+	it("counts WAITING questions of open asks only; a timed-out ask is lapsed", () => {
 		const single = ask();
 		const rows = [
 			ask({
@@ -314,7 +323,34 @@ describe("the bar's question count (the unit split)", () => {
 			ask({ ask_id: "b", status: "timed_out" }),
 			ask({ ask_id: "c", status: "answered" }),
 		];
-		expect(outstandingQuestions(rows)).toBe(3);
+		expect(outstandingQuestions(rows)).toBe(2);
+		expect(questionTally(rows)).toEqual({ waiting: 2, lapsed: 1 });
+		expect(askBarLabel(rows)).toEqual({
+			text: "2 questions waiting",
+			quiet: false,
+		});
+	});
+
+	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro)", () => {
+		/* The reported state: one day-old timed-out ask, nothing open. The
+		   desktop shows nothing pending; the bar used to say "1 question
+		   waiting" in accent. */
+		const rows = [
+			ask({ ask_id: "t", status: "timed_out" }),
+			ask({ ask_id: "w", status: "withdrawn" }),
+			ask({ ask_id: "x", status: "answered" }),
+		];
+		expect(outstandingQuestions(rows)).toBe(0);
+		expect(askBarLabel(rows)).toEqual({
+			text: "1 question timed out",
+			quiet: true,
+		});
+		expect(dockAsk(rows)?.ask_id).toBe("t");
+	});
+
+	it("has no bar at all when nothing is waiting or lapsed", () => {
+		expect(askBarLabel([ask({ status: "answered" })])).toBeNull();
+		expect(askBarLabel(undefined)).toBeNull();
 	});
 
 	it("labels its unit, singular and plural, so it cannot be read as asks", () => {

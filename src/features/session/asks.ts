@@ -89,14 +89,31 @@ export function isAnswerable(status: string): boolean {
 	return status === "open" || status === "timed_out";
 }
 
-/** Whether an ask belongs in the "outstanding" surfaces — the minimized bar
- *  and the session row's count. Same set as answerability, to the letter: the
- *  tally the wire publishes (`asks_open`, open + timed-out-and-answerable) is
- *  the runtime's `OUTSTANDING_STATUSES`, and a client that filtered differently
- *  would draw a chip its own tally disagrees with. Answered/declined leave at
- *  once: their work is done, and keeping them would make the chip a log. */
+/** Whether an ask is still WAITING on the reader — `open`, and nothing else.
+ *
+ *  THE RUNTIME DECIDES, this mirrors it. The daemon's `OUTSTANDING_STATUSES`
+ *  (`asks/store.py`) has been `{open}` since local-operator #2388: a `timed_out`
+ *  ask is SETTLED by its deadline (the agent was told and went ahead), so the
+ *  wire tally `asks_open` no longer counts it, the desktop draws it as lapsed
+ *  (`ask-queue.ts` `presentAsk`: `waiting: status === "open"`) and the relay's
+ *  web dock calls it "timed out", never "waiting". This predicate used to be
+ *  `isAnswerable` (open OR timed_out), the pre-#2388 contract, which is how the
+ *  phone said "1 question waiting" over a day-old timed-out ask that every other
+ *  surface had already stopped counting.
+ *
+ *  The status itself is the authoritative per-row field: the runtime folds the
+ *  deadline on its own clock and the index readers re-derive a stale `open` row
+ *  to `timed_out`, so the phone never second-guesses it with its own clock, and
+ *  an older daemon (which published the same statuses) reads identically. */
 export function isOutstanding(status: string): boolean {
-	return isAnswerable(status);
+	return status === "open";
+}
+
+/** Whether an ask LAPSED — its deadline passed and the agent went ahead. Still
+ *  shown (quietly) so the sheet's Dismiss stays reachable, never counted as
+ *  waiting and never a reason to open a surface (desktop D10/D12). */
+export function isLapsed(status: string): boolean {
+	return status === "timed_out";
 }
 
 /** The fields `askStateLine` and `remainingMs` read. A NARROWER input than
@@ -218,8 +235,9 @@ export function askStateLine(
 	}
 }
 
-/** The asks worth showing on the outstanding surfaces. Keeps the wire's own
- *  order rather than re-ranking: the list is published open-first, newest-first
+/** The asks still WAITING (`isOutstanding`): the set that may auto-open the
+ *  sheet and that a dismissal is recorded against. Keeps the wire's own order
+ *  rather than re-ranking: the list is published open-first, newest-first
  *  (`asks.store.index_asks`), and inventing a second order here is how the bar
  *  and the sheet would come to lead with different asks. */
 export function outstandingAsks(
@@ -227,6 +245,20 @@ export function outstandingAsks(
 ): PendingAsk[] {
 	if (!Array.isArray(rows)) return [];
 	return rows.filter((row) => isOutstanding(String(row?.status || "open")));
+}
+
+/** The asks the BAR stands for: the waiting ones plus the lapsed ones. A queue
+ *  of only lapsed asks keeps a quiet bar (`askBarLabel`) because the sheet
+ *  behind it is where Dismiss lives — the same door the desktop chip ("1
+ *  question timed out") and the relay's web dock keep. Same wire order. */
+export function askBarRows(
+	rows: PendingAsk[] | undefined | null,
+): PendingAsk[] {
+	if (!Array.isArray(rows)) return [];
+	return rows.filter((row) => {
+		const status = String(row?.status || "open");
+		return isOutstanding(status) || isLapsed(status);
+	});
 }
 
 /** The HEAD ask: the OLDEST still-open ask.
@@ -274,8 +306,7 @@ export function dockAsk(
 ): PendingAsk | null {
 	const head = headAsk(rows);
 	if (head !== null) return head;
-	const outstanding = outstandingAsks(rows);
-	return outstanding.length > 0 ? (outstanding[0] ?? null) : null;
+	return askBarRows(rows)[0] ?? null;
 }
 
 /** The rows in the order every ask surface should show them: the ask the BAR
@@ -593,18 +624,49 @@ export function questionsWaitingLabel(questions: number): string {
 		: `${questions} questions waiting`;
 }
 
-/** How many questions the outstanding set still owes an answer for — the
- *  number the bar shows. A timed-out ask is still counted: it is still
- *  answerable, which is why this walks the outstanding set rather than the
- *  open one. */
+/** The bar's sentence for a queue with nothing waiting and only lapsed asks —
+ *  the desktop chip's own words (`askChipCountClause`), in the quiet register. */
+export function questionsTimedOutLabel(questions: number): string {
+	return questions === 1
+		? "1 question timed out"
+		: `${questions} questions timed out`;
+}
+
+/** How many QUESTIONS the bar's rows hold, split the way every surface splits
+ *  them: `waiting` (open asks — the only ones owed) and `lapsed` (timed out,
+ *  shown read-only). Counting a lapsed question as waiting was the bug: the
+ *  phone said "1 question waiting" where the desktop said nothing was pending. */
+export function questionTally(rows: PendingAsk[] | undefined | null): {
+	waiting: number;
+	lapsed: number;
+} {
+	let waiting = 0;
+	let lapsed = 0;
+	for (const row of askBarRows(rows)) {
+		const count = Array.isArray(row.questions) ? row.questions.length : 0;
+		if (isOutstanding(String(row.status || "open"))) waiting += count;
+		else lapsed += count;
+	}
+	return { waiting, lapsed };
+}
+
+/** The bar's (and the sheet title's) count sentence, or `null` when the queue
+ *  holds nothing to show: waiting outranks lapsed, as on the desktop chip. */
+export function askBarLabel(
+	rows: PendingAsk[] | undefined | null,
+): { text: string; quiet: boolean } | null {
+	const { waiting, lapsed } = questionTally(rows);
+	if (waiting > 0)
+		return { text: questionsWaitingLabel(waiting), quiet: false };
+	if (lapsed > 0) return { text: questionsTimedOutLabel(lapsed), quiet: true };
+	return null;
+}
+
+/** How many questions are still WAITING — open asks only (`isOutstanding`). */
 export function outstandingQuestions(
 	rows: PendingAsk[] | undefined | null,
 ): number {
-	return outstandingAsks(rows).reduce(
-		(total, row) =>
-			total + (Array.isArray(row.questions) ? row.questions.length : 0),
-		0,
-	);
+	return questionTally(rows).waiting;
 }
 
 /* ---------------------------------------------- the sheet's failure lines */
