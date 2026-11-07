@@ -16,7 +16,7 @@ import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
-import { blockingPending } from "@/features/session/asks";
+import { blockingPending, outstandingAsks } from "@/features/session/asks";
 import {
 	composerChipLabels,
 	reportedModel,
@@ -58,7 +58,10 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
-import { WorkingLine } from "@/features/session/components/working-line";
+import {
+	PinnedWorkingLine,
+	WorkingLine,
+} from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { headerHealth } from "@/features/session/health";
@@ -68,6 +71,7 @@ import { pendingView } from "@/features/session/pending";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
 	middleTruncate,
+	pinnedWorkingLine,
 	projectSubagents,
 	projectTodos,
 	workingLine,
@@ -336,6 +340,23 @@ export default function Session() {
 	// `null` in, `null` out: the working line exists only while the runtime names an
 	// activity, and a placeholder projection would be this screen inventing one.
 	const working = projection === null ? null : workingLine(projection);
+	/* The phone's working line is PINNED above the dock (see `PinnedWorkingLine`):
+	 *  on a tray layout the inline region is not rendered, and before this the
+	 *  line lived only inside the status sheet — the "no thinking indicator" the
+	 *  operator reported. Memoised on its three wire inputs so the pinned row's
+	 *  props stay referentially stable across the ~10 Hz projection frames. */
+	const pinnedActivity = projection?.activity ?? "";
+	const pinnedStartedS = projection?.activity_started_s ?? null;
+	const pinnedStreaming = projection?.streaming === true;
+	const pinned = useMemo(
+		() =>
+			pinnedWorkingLine({
+				streaming: pinnedStreaming,
+				activity: pinnedActivity,
+				activity_started_s: pinnedStartedS,
+			}),
+		[pinnedStreaming, pinnedActivity, pinnedStartedS],
+	);
 
 	/* What the composer's chips can say, and whether they are still waiting.
 	 *
@@ -1388,6 +1409,17 @@ export default function Session() {
 							measureRecovery("after", event.nativeEvent.layout.height)
 						}
 					>
+						{tray ? (
+							<PinnedWorkingLine
+								line={pinned}
+								onStop={composer.stop}
+								gapBelow={
+									(!compact && pendingViewProps === null) ||
+									outstandingAsks(projection?.asks).length > 0
+								}
+								testID={SURFACE.sessionWorkingLine}
+							/>
+						) : null}
 						{tray && !compact && pendingViewProps === null ? (
 							<View testID={SURFACE.sessionStatusChips}>
 								<StatusChips
@@ -1486,7 +1518,9 @@ export default function Session() {
 				testID={SURFACE.sessionStatusSheet}
 			>
 				<View className="gap-2 pb-2">
-					{workingLineView}
+					{/* No working line here: the sheet exists only on tray layouts, where
+					    the line is pinned above the dock — a second spinner would be the
+					    two-indicators defect (components.md § 14). */}
 					{subagents.total > 0 ? subagentsPanel : null}
 					{todos.empty ? null : todosPanel}
 					{projection?.context_tokens != null ? (

@@ -304,6 +304,27 @@ export const workingLine = (
 		? { activity: projection.activity, startedS: projection.activity_started_s }
 		: null;
 
+/**
+ * The PINNED working line above the dock (the relay's `session-view.tsx` mount of
+ * `WorkingLine` with `stopPid`): present for exactly as long as a turn is alive.
+ *
+ * Gated on `streaming`, not on the label, because this instance carries the
+ * turn's Stop, and "a turn is alive" is the condition that must always have its
+ * Stop in reach — the relay draws the line before a label exists for that reason
+ * (`working-line.tsx`: `if (!activity && !stopPid) return null`). The label may
+ * therefore be `""` (spinner, clock and Stop, no words); the clock follows the
+ * same `null`-withholds rule as `workingLine`.
+ */
+export const pinnedWorkingLine = (
+	projection: Pick<
+		SessionProjection,
+		"streaming" | "activity" | "activity_started_s"
+	>,
+): { activity: string; startedS: number | null } | null =>
+	projection.streaming
+		? { activity: projection.activity, startedS: projection.activity_started_s }
+		: null;
+
 /* --------------------------------------------------------------- row identity */
 
 /** The per-row anchor the Maestro flows address. */

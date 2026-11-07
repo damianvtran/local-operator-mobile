@@ -480,7 +480,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
-	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree: the session screen mounts the pinned working line (spinner,
+	 * activity, clock, Stop) in the dock above the chips on tray layouts and drops
+	 * the duplicate line from the status sheet. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	app: "070cb1dd6747df1d8c1f7394c41f042926ec0a053aa9439799cc8e52bf61b13d",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -804,7 +809,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree. Only `src` and `app` move: `PinnedWorkingLine` and the Stop on
+	 * the working line, `pinnedWorkingLine` derivation, the mirrored
+	 * `relay.composer` stop keys (8 locales) and their generated catalogue, one
+	 * control id, and tests. Source admission only, NOT rendered U-08 evidence. */
+	src: "7b204f878501ce1d91f9964b866f00fc4fb91f068eae456aee7a05dd010db7ba",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
