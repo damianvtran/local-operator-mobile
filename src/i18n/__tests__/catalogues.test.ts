@@ -169,11 +169,12 @@ const NAMESPACES = [
 		/* This app's own short chrome words the relay has no key for: the sidebar
 		 *  destinations' one-word labels, the More sheet's title, and (from the
 		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
-		 *  single presentation story. */
+		 *  single presentation story, and (sidebar-density review round 1) the
+		 *  sidebar's "Close conversations" accessible name. */
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 16,
+		expected: 17,
 	},
 	{
 		name: "relay.chrome",
@@ -223,7 +224,8 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		expect(total).toBe(332);
+		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182). */
+		expect(total).toBe(333);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

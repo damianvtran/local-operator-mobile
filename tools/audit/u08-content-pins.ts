@@ -70,8 +70,12 @@ const sha256 = (content: string | Uint8Array) =>
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/audit/audit.ts":
 		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
+	/* Re-printed 2026-11-07 with --print at the staged sidebar-density tree: the two
+	 * U-42 allowances keyed on the list row's `min-h-[56px]` class were removed with
+	 * that class (the row now pads `py-2`/`gap-1`, both on the 4 pt scale), so they
+	 * matched nothing. No check logic changed. */
 	"tools/audit/checks.ts":
-		"3b49282a11c21ec0437e80d4feb00a481d544c3554dd7dcfcb42793f85926ed9",
+		"1e9f89c657c64780b11c3017db43e2e441c1751771331c6710811dbd25bfda70",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -758,11 +762,30 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
 	 * geometry is byte-identical to main's digest above. This is source admission for
 	 * the geometry instrument, not fresh rendered evidence. --print produced the digest. */
+	/* Re-printed 2026-11-07 with --print at the STAGED sidebar-density tree (design spec
+	 * 2026-11-06 § 4, with review round 1's remediation): the drawer's width rule moves
+	 * to `min(400, vw − TOUCH_FLOOR)` (the page sliver is the platform touch floor), the
+	 * conversation row drops its fixed 56 pt floor for `TOUCH_FLOOR` with `py-2`/`gap-1`
+	 * and a `label` title, and the panel's header/footer tighten (fixed 60 → `py-1`,
+	 * destination slots 52 → `TOUCH_FLOOR`, workspace row above the strip at `gap-2`).
+	 * The drawer's "Close conversations" label moves into the catalogue
+	 * (`mobile.chrome.close_conversations`, all eight locales). U-08's scene is the
+	 * session screen, not the drawer: source admission only, not a claim that measured
+	 * geometry moved. No token or `app` change. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (56840161 PR #178,
+	 * f36e0e32 PR #156) into PR #180 (sidebar density): both lines of history stand, so
+	 * every note above is kept and the value is the merged tree's own; neither side's
+	 * previous digest is kept. Source admission, not a geometry claim. */
 	/* Re-printed 2026-11-07 with --print at the merge of origin/main (f36e0e32:
 	 * PR #178's sign-in/connection timeouts and tunnel-grant retry, PR #156's
 	 * encrypted draft recovery) into feat/home-chrome (PR #181): both lines of
 	 * history above stand, the value is the merged tree's own, and neither side's
 	 * previous digest is kept. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main (c14ca1a6,
+	 * PR #181 home chrome: header/hero/alerts/composer, notice stack, glass wiring) into
+	 * PR #180 (sidebar density): both lines of history stand, so every note above is
+	 * kept and the value is the merged tree's own; neither side's previous digest is
+	 * kept. Source admission, not a geometry claim. */
 	/* Re-pinned 2026-11-07 for feat/home-pickers with --print from the staged
 	 * tree. Only `src` moves: the home's three pickers (folder, model, effort)
 	 * replace the options sheet, the strip gains its folder and effort chips, the
@@ -776,7 +799,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * rows' dot/checked state, the effort "this computer's level" row, the new
 	 * i18n keys and the catalogue invariants they move, and tests. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "79cc56b6c1156680b1111e7a3df8d3eb1d249a35779a430d8cfe3d5aab8a1b34",
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (bec917d3, PR #180 sidebar density) into feat/home-pickers (PR #182): both
+	 * lines of history above stand, the value is the merged tree's own, and
+	 * neither side's previous digest is kept. Source admission, not a geometry
+	 * claim. */
+	src: "3b70dbbc12dc4d2c8a1a78fc6941f2593ee033d772e840b9de9404c0b0342a44",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -5,6 +5,7 @@
 	"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
 	"mobile.chrome.destinations": "Destinos",
 	"mobile.chrome.new_chat": "Nuevo chat",
+	"mobile.chrome.close_conversations": "Cerrar conversaciones",
 	"mobile.chrome.composer.more": "Más contexto",
 	"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
 	"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
