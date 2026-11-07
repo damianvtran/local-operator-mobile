@@ -201,9 +201,10 @@ const WorkingLineImpl = ({
 	if (onStop !== undefined) {
 		return (
 			<View
-				// No row minimum: the row is as tall as its text (design D1). At 320 pt
-				// and 200 % text a 48 pt row cost the transcript half its viewport;
-				// the Stop keeps its 48 pt target through `hitSlop` instead.
+				// No row minimum of its own (design D1): the row is as tall as its
+				// tallest child, and that is the Stop's touch-floor box below. The
+				// box cannot be traded for `hitSlop` (see `WorkingStop`), so D1's
+				// saving is the row's padding and minimum, not the Stop's target.
 				className="flex-row items-center gap-2 px-2"
 				testID={testID}
 			>
@@ -308,10 +309,13 @@ const WorkingStop = ({
 	stopping: boolean;
 	inert: boolean;
 }) => {
-	// The target is 48 pt however short the row is (design D1): the vertical slop
-	// is whatever the measured face lacks, split above and below. Vertical only —
-	// `minWidth` already gives the 48 pt across.
-	const [lack, setLack] = useState(0);
+	// The target is the touch floor as REAL box geometry, not `hitSlop`.
+	// react-native-web implements no `hitSlop` on `Pressable`, so the measured
+	// slop this replaced (#189 round-1 D1) left a 17 pt target on the web build
+	// at 100 % text — 96 U-01 FAILs on the iphone-se audit (#193). Slop on
+	// native would also have reached into the find bar's close button above it,
+	// and hit areas must not overlap (`docs/design/components.md` § 0.1). The
+	// face stays text-sized and is centred inside the box.
 	const press = useCallback(() => {
 		if (stopping || inert) return;
 		void onStop();
@@ -327,17 +331,12 @@ const WorkingStop = ({
 			accessibilityState={{ busy: stopping, disabled: stopping || inert }}
 			disabled={inert}
 			onPress={press}
-			onLayout={(event) => {
-				setLack(
-					Math.max(
-						0,
-						Math.ceil((TOUCH_FLOOR - event.nativeEvent.layout.height) / 2),
-					),
-				);
-			}}
-			hitSlop={{ top: lack, bottom: lack }}
 			testID={CONTROL.sessionWorkingStop}
-			style={{ minWidth: TOUCH_FLOOR }}
+			style={{
+				minHeight: TOUCH_FLOOR,
+				minWidth: TOUCH_FLOOR,
+				justifyContent: "center",
+			}}
 		>
 			{/* The visible word never changes: a longer "stopping" would widen the
 			    control and push the clock (the relay measured 44 -> 79 px). The
@@ -407,9 +406,8 @@ const PinnedWorkingLineImpl = ({
 	const progress = useSharedValue(0);
 	const gap = useSharedValue(gapBelow ? DOCK_GAP : 0);
 	// Whether the slot rests fully open. The slot clips its row only while it
-	// tweens: at rest the clip would also cut the Stop's `hitSlop` (a touch
-	// outside a clipping parent never reaches the child on either platform),
-	// shrinking its 48 pt target back to the text's height.
+	// tweens, so nothing the row draws at rest (the Stop's pressed wash, a
+	// focus ring) is cut by a clip that exists only for the open/close travel.
 	const [settled, setSettled] = useState(false);
 
 	useEffect(() => {

@@ -849,7 +849,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`agent-avatar.test.ts` searches for the title control from the back
 	 * control). No shipped source changes. Source admission only, NOT rendered
 	 * U-08 evidence. */
-	src: "ab47752fb5b208247ab42ede8382f4351f680ecb55189bad94ffd175092382fc",
+	/* Re-pinned 2026-11-07 for PR #189's U-01 fix (#193 iphone-se audit) with
+	 * --print from the staged tree. Only `src` moves: the line's Stop takes its
+	 * touch floor as a real `minHeight` box instead of measured `hitSlop`
+	 * (react-native-web drops slop on `Pressable`), plus its unit test. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "e8ec24dd4a2c79049ea012ef8464d79488ed2d3b392178071822c4fce3b73874",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
