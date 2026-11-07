@@ -621,14 +621,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
 	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
 	 * source admission, not a claim that measured geometry moved. */
-	/* Re-printed 2026-11-06 with --print at the STAGED TestFlight-453 tree: the
-	 * Radient token exchange and tunnel discovery gained a request deadline, a
-	 * route that supersedes an in-flight sign-in settles its pending state, and a
-	 * control-plane 5xx on the tunnel grant renewal is typed transient
-	 * (`unavailable`) instead of `rejected`. Connection logic and tests only — no
-	 * rendered surface, copy, catalogue key or `app` change, and U-08's transcript
-	 * scene does not render sign-in: source admission, not a geometry claim. */
-	src: "e9168d1242d40f17d106d8ee8855a10673ad1852c6fb46911695d484690e73f1",
+	/* Re-printed 2026-11-06 with --print at PR #178's staged tree (the fix for the
+	 * TestFlight 453 reports, not the 453 build's own tree), including its round-1
+	 * remediation: the Radient token exchange and tunnel discovery gained a request
+	 * deadline that also refuses an already-aborted caller, a route that supersedes
+	 * an in-flight sign-in settles its pending state, a control-plane 5xx on the
+	 * tunnel grant renewal is typed transient (`unavailable`), the conversation
+	 * stream reconnects through that class, and the list stream's restart uses the
+	 * conversation stream's backoff/Retry-After. Connection logic and tests only —
+	 * no rendered surface, copy, catalogue key or `app` change, and U-08's
+	 * transcript scene renders none of it: source admission, not a geometry claim. */
+	src: "4ac12138275f624a125e6c1f5d16eb52b80ac611398990b2e0f42053b7a96fb9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

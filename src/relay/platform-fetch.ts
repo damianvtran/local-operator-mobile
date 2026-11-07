@@ -56,6 +56,15 @@ export async function readWithDeadline<T>(
 	const controller = new AbortController();
 	const external = init.signal;
 	const onExternalAbort = () => controller.abort();
+	/* An `abort` listener added to a signal that is ALREADY aborted never fires,
+	 * so a cancelled sign-in still spent its one-time code (PR #178 R1-1). Nothing
+	 * is dispatched at all: the caller has already given up on the answer. */
+	if (external?.aborted) {
+		// A plain Error: Hermes does not guarantee a global `DOMException`.
+		const aborted = new Error("This operation was aborted");
+		aborted.name = "AbortError";
+		throw aborted;
+	}
 	external?.addEventListener("abort", onExternalAbort, { once: true });
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const expired = new Promise<never>((_, reject) => {

@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-
+import { readWithDeadline } from "../../relay/platform-fetch";
 import {
 	accessTokenNeedsRefresh,
 	accountIdFromIdToken,
@@ -741,6 +741,37 @@ describe("discovery turns tunnels into computers, honestly", () => {
 				}) as unknown as Response) as unknown as typeof globalThis.fetch,
 		});
 		expect(stalledBody.kind).toBe("unreachable");
+	});
+
+	/* PR #178 R1-1: a listener added to an already-aborted signal never fires, so
+	 * a cancelled sign-in still sent its one-time code to the token endpoint. */
+	it("sends nothing when the caller's signal is already aborted", async () => {
+		let dispatched = 0;
+		const fetchImpl = (async (_url: unknown, init?: RequestInit) => {
+			dispatched += 1;
+			if (init?.signal?.aborted)
+				throw new DOMException("This operation was aborted", "AbortError");
+			return jsonResponse({ access_token: "late" });
+		}) as unknown as typeof globalThis.fetch;
+		const cancelled = new AbortController();
+		cancelled.abort();
+		await expect(
+			readWithDeadline(
+				fetchImpl,
+				"https://radient.example/token",
+				{ method: "POST", signal: cancelled.signal },
+				1_000,
+				async (response) => await response.json(),
+			),
+		).rejects.toThrow();
+		expect(dispatched).toBe(0);
+		await expect(
+			exchangeCode("one-time-code", "http://127.0.0.1:1/callback", "v", {
+				fetchImpl,
+				signal: cancelled.signal,
+			}),
+		).rejects.toMatchObject({ failure: "network" });
+		expect(dispatched).toBe(0);
 	});
 
 	it("treats a 401 as a sign-in, and an unknown shape as a version problem rather than an empty account", async () => {

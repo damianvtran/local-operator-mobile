@@ -83,6 +83,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import { setLocaleSource, t } from "@/i18n";
 import {
@@ -666,7 +667,15 @@ export const ConnectionProvider = ({
 						listStore.getState().markStale();
 						if (mountedRef.current) setStreamHealth("degraded");
 						_attempt += 1;
-						setTimeout(run, RESTART_MS);
+						/* The conversation stream's policy (`reconnectDelay`), so the two
+						 * streams of one route back off alike: 2 s, doubling to a 15 s
+						 * ceiling, and the server's Retry-After wins when it sent one. A
+						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
+						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
+						setTimeout(
+							run,
+							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
+						);
 					},
 				});
 				streamRef.current = stream;

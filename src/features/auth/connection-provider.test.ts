@@ -155,6 +155,8 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
  * document event target and focus constructors are needed. Hooks, effects, store
  * subscriptions, authentication, endpoints and stream timers are production code.
  * This is mounted lifecycle proof, not browser pixels or native-device proof. */
+/** A request built from the empty session id (`/api/sessions//…`). */
+const EMPTY_SESSION_ID_PATH = /\/api\/sessions\/\//;
 let root: ReturnType<typeof createRoot> | null = null;
 let latest: ReturnType<typeof useConnection>;
 const cleanup: Array<() => Promise<void>> = [];
@@ -333,8 +335,9 @@ async function relay(
 	/* Whether the session code request fails NOW: starts at `options.failCode`, and a
 	 *  test can lift it to retry the same pick against a recovered control plane. */
 	let failCode = options.failCode ?? false;
-	const refreshFailures: number[] = [];
+	const refreshFailures: { status: number; retryAfter?: number }[] = [];
 	const openCatalogue = new Set<ServerResponse>();
+	const openSession = new Set<ServerResponse>();
 	let sessionStreams = 0;
 	let failedStream = false;
 	const server = createServer(async (request, response) => {
@@ -408,11 +411,11 @@ async function relay(
 			return;
 		}
 		if (path === "/v1/tunnels/session/refresh") {
-			if (refreshFailures.length > 0) {
-				json(
-					{ error: "synthetic control-plane outage" },
-					refreshFailures.shift(),
-				);
+			const failure = refreshFailures.shift();
+			if (failure) {
+				if (failure.retryAfter !== undefined)
+					response.setHeader("retry-after", String(failure.retryAfter));
+				json({ error: "synthetic control-plane outage" }, failure.status);
 				return;
 			}
 			json({
@@ -553,6 +556,8 @@ async function relay(
 			response.write(
 				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
 			);
+			openSession.add(response);
+			response.on("close", () => openSession.delete(response));
 			if (options.refuseSessionStream) {
 				/* Torn mid-stream, exactly as `sse-drop-mid-stream` does on the
 				 *  mock relay: the hook sees a transport error and reopens. */
@@ -632,11 +637,19 @@ async function relay(
 		},
 		/** The control plane answers the next grant renewals with these statuses. */
 		failRefresh: (...statuses: number[]) => {
-			refreshFailures.push(...statuses);
+			refreshFailures.push(...statuses.map((status) => ({ status })));
+		},
+		/** One renewal answered `status` with `Retry-After: <seconds>`. */
+		failRefreshAfter: (status: number, retryAfter: number) => {
+			refreshFailures.push({ status, retryAfter });
 		},
 		/** Ends every open list stream cleanly — the gateway's 60 s stream cap. */
 		endCatalogueStreams: () => {
 			for (const open of openCatalogue) open.end();
+		},
+		/** Ends every open conversation stream cleanly, as the 60 s cap does. */
+		endSessionStreams: () => {
+			for (const open of openSession) open.end();
 		},
 		answerTunnels: (answer: "list" | 500 | 401) => {
 			tunnelsAnswer = answer;
@@ -2254,6 +2267,107 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		}
 	}, 20_000);
 
+	/* PR #178 UX round 1, U1: the same renewal 5xx reached an OPEN CONVERSATION as
+	 * `rejected`/`retry`, which the conversation stream treated as terminal — the
+	 * transcript stopped behind "Check again". The operator's complaint is this
+	 * screen, so it is proven on the conversation stream alone: only the session
+	 * stream is cut, so only its reopen renews the grant. */
+	it("keeps an open conversation live through a control-plane outage on the grant renewal", async () => {
+		observedSession = "synthetic-session";
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		await until(() => sessionReading.projection !== null);
+		const sessionStreams = () =>
+			mock.events.filter(
+				(e) => e === "GET /api/sessions/synthetic-session/events",
+			).length;
+		const renewals = () =>
+			mock.events.filter((e) => e === "POST /v1/tunnels/session/refresh")
+				.length;
+		const opened = sessionStreams();
+		mock.failRefresh(503);
+		const realNow = Date.now.bind(Date);
+		const clock = vi
+			.spyOn(Date, "now")
+			.mockImplementation(() => realNow() + 301_000);
+		try {
+			await act(async () => {
+				mock.endSessionStreams();
+			});
+			const deadline = realNow() + 8_000;
+			while (!(renewals() >= 2 && sessionStreams() >= opened + 1)) {
+				if (realNow() > deadline)
+					throw new Error(
+						`Conversation did not recover: ${JSON.stringify({
+							renewals: renewals(),
+							sessionStreams: sessionStreams(),
+							link: sessionReading.link,
+							error: sessionReading.error?.message ?? null,
+						})}`,
+					);
+				await act(async () => {
+					await new Promise<void>((resolve) => setTimeout(resolve, 20));
+				});
+			}
+			await until(() => sessionReading.link === "up");
+			expect(sessionReading.error).toBeNull();
+		} finally {
+			clock.mockRestore();
+		}
+	}, 20_000);
+
+	/* PR #178 R1-2/Q1: once a renewal 5xx is transient, the list stream's restart
+	 * is what paces renewals during an outage. It must back off (2 s, then 4 s —
+	 * `reconnectDelay`'s curve, unit-tested to its 15 s cap) and honour the
+	 * control plane's Retry-After, not POST every 2 s. Read from the scheduled
+	 * delays of the provider's own `run` restarts, so no test waits them out. */
+	it("backs the list stream's renewal retries off and honours Retry-After", async () => {
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		/* A pass-through spy (no replacement): Node's own timers must keep their
+		 * receiver and arguments. Only the provider's `run` restarts are read. */
+		const timers = vi.spyOn(globalThis, "setTimeout");
+		const restarts = () =>
+			timers.mock.calls
+				.filter(
+					([handler]) =>
+						typeof handler === "function" && handler.name === "run",
+				)
+				.map(([, ms]) => ms ?? 0);
+		const realSetTimeout = setTimeout;
+		mock.failRefresh(503, 503);
+		mock.failRefreshAfter(503, 7);
+		const realNow = Date.now.bind(Date);
+		const clock = vi
+			.spyOn(Date, "now")
+			.mockImplementation(() => realNow() + 301_000);
+		try {
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			const deadline = realNow() + 10_000;
+			while (restarts().length < 3 && realNow() < deadline)
+				await act(async () => {
+					await new Promise<void>((resolve) => realSetTimeout(resolve, 20));
+				});
+			// Growing, then the server's Retry-After — never the flat 2 s loop.
+			expect(restarts().slice(0, 3)).toEqual([2_000, 4_000, 7_000]);
+		} finally {
+			clock.mockRestore();
+			timers.mockRestore();
+		}
+	}, 20_000);
+
 	it("389 treats a granted refresh that is still refused as genuine revocation", async () => {
 		// The other half of the rule: a refresh only buys one retry. If the grant is
 		// really revoked, the retried discovery is refused again and the reader goes
@@ -2794,7 +2908,7 @@ describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
 		});
 		// The two requests the empty id used to build, and nothing else for a session.
 		const asked = wire.filter((entry) =>
-			/\/api\/sessions\/\//.test(entry.path),
+			EMPTY_SESSION_ID_PATH.test(entry.path),
 		);
 		expect(asked).toEqual([]);
 		/* The shared session LIST stream (`/api/sessions/events`) is the provider's
