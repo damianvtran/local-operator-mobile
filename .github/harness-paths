@@ -32,22 +32,9 @@
 
 # The release pipeline itself.
 ship: .github/workflows/release.yml
-# ci.yml is a GATE, not a ship input: release.yml calls it only to decide
-# whether to ship, and consumes nothing it produces (checked 2026-11-06):
-#   release.yml:211-218  gate: needs: [version, credentials] … uses: ./.github/workflows/ci.yml
-#   release.yml:222/332  android/ios: needs: [version, credentials, gate]  (no needs.gate.outputs)
-#   release.yml:414      publish: if: … needs.gate.result == 'success' …  (result only)
-#   release.yml:426-436  download-artifact name: android-release / ios-ipa — produced by
-#                        the android/ios jobs; ci.yml uploads only web-export,
-#                        android-release-probe, ios-ipa-probe, design-previews.
-# A gate file is still a product path (editing it opens a round), but its text
-# does not seed the ship closure, so the scripts it runs can be harness. The
-# merge-gate `### Harness delta check` reads changed `gate-run` harness files with
-# the full review lens, not only for gate weakening.
-# Residual channel, for the manifest reviewer: ci.yml's `setup-node cache: pnpm`
-# and release.yml:242/350's share the pnpm store cache (lockfile-keyed;
-# `pnpm install --frozen-lockfile` checks integrity against pnpm-lock.yaml).
-gate: .github/workflows/ci.yml
+# The PR gate release.yml calls as a required job (release.yml:218,
+# `uses: ./.github/workflows/ci.yml`).
+ship: .github/workflows/ci.yml
 # Composite actions release.yml uses to build, sign and upload.
 ship: .github/actions/**
 # Native gates: ios.yml can sign and upload to TestFlight from main, and both
@@ -72,7 +59,10 @@ ship: scripts/ci/release-notes.test.ts
 ship: scripts/ci/stage-release-assets.test.ts
 ship: scripts/ci/ios-signing-test.py
 ship: scripts/ci/fastlane-path-test.rb
-# The app: source, routes, native modules, config plugins, assets, strings.
+# The app: source, routes, native modules, config plugins, assets. Strings ship
+# from src/i18n; top-level i18n/ is translation-audit evidence that no app, build
+# or release file reads (only .gitignore and biome.json name it), so it is
+# unlisted — still product when edited, but its logs do not seed the closure.
 ship: app/**
 # src/ is listed per directory. `ship: src/**` would classify the same way
 # (src/testing/** is more specific), but the explicit list keeps every shipped
@@ -93,7 +83,6 @@ ship: src/ui/**
 ship: modules/**
 ship: plugins/**
 ship: assets/**
-ship: i18n/**
 # Build inputs: dependencies, Expo/EAS/bundler config, entry points.
 ship: package.json
 ship: pnpm-lock.yaml
@@ -124,9 +113,3 @@ harness: .github/workflows/flake-report.yml
 harness: .github/workflows/oauth-callback-proof.yml
 harness: .github/workflows/android-oauth-callback-proof.yml
 harness: .github/workflows/signin-app-proof.yml
-# Forward declaration for PR #156 (Stage B draft recovery), which adds it:
-# triggers pull_request + workflow_dispatch only, uploads evidence artifacts
-# only, uses no secrets, and release.yml does not name it (verified on
-# refs/pull/156/head). Declared here so that PR's proof iterations are
-# harness-only rather than a numbered round each.
-harness: .github/workflows/stage-b-draft-proof.yml
