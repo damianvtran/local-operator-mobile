@@ -1,6 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ComponentProps,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Platform,
 	Pressable,
@@ -60,6 +67,7 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import {
 	PinnedWorkingLine,
+	usePhaseElapsed,
 	WorkingLine,
 } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
@@ -118,6 +126,35 @@ import {
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+
+/**
+ * The header's health control with a subtitle that TICKS on the same phase clock
+ * as the working line (`usePhaseElapsed`), so "Working · 12s" up top and `12s` in
+ * the pinned line can never disagree (design D2, UX U1). Before, the header's
+ * elapsed was frozen at the last projection frame while the line counted on.
+ * Its own component so the once-a-second tick re-renders this control only, never
+ * the session screen. `subtitle` takes the formatted elapsed (`null` when the
+ * server has no instant for the phase) and returns the line to show.
+ */
+const TickingSessionHealthControl = ({
+	phase,
+	subtitle,
+	...rest
+}: Omit<ComponentProps<typeof SessionHealthControl>, "subtitle"> & {
+	phase: { activity: string; startedS: number | null } | null;
+	subtitle: ((elapsed: string | null) => string) | undefined;
+}) => {
+	const elapsed = usePhaseElapsed(
+		phase?.activity ?? "",
+		phase?.startedS ?? null,
+	);
+	return (
+		<SessionHealthControl
+			{...rest}
+			subtitle={subtitle?.(elapsed === null ? null : elapsedLabel(elapsed))}
+		/>
+	);
+};
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -1067,34 +1104,30 @@ export default function Session() {
 			 *  title cannot pull it into the title column (review M2), and stacked
 			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
 			titleNode={
-				<SessionHealthControl
+				<TickingSessionHealthControl
 					health={health}
 					projection={projection}
 					title={headerTitle}
 					compact={compact}
 					stacked={headerStacked}
+					phase={working}
 					subtitle={
 						health === null
 							? undefined
-							: headerSubtitle({
-									health,
-									working: working !== null,
-									waiting: pending !== null,
-									/* `startedS` is the phase's AGE in seconds on the wire
-									 *  (`activity_started_s`), not an epoch — `WorkingLine`
-									 *  seeds its clock from it the same way. */
-									elapsed:
-										working?.startedS != null
-											? elapsedLabel(working.startedS)
-											: null,
-								})
+							: (elapsed) =>
+									headerSubtitle({
+										health,
+										working: working !== null,
+										waiting: pending !== null,
+										elapsed,
+									})
 					}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
 					controlRef={healthControlRef}
 				>
 					{ended ? <ResumeBlock resume={resume} /> : null}
-				</SessionHealthControl>
+				</TickingSessionHealthControl>
 			}
 			stackedActionsBeside
 			/* Stacked, the picture leads the TITLE row instead of the chrome row
@@ -1409,12 +1442,17 @@ export default function Session() {
 							measureRecovery("after", event.nativeEvent.layout.height)
 						}
 					>
-						{tray ? (
+						{/* Not in short landscape (review R1-3): there the one-line status
+						    tray at the top already leads with the activity, and a second
+						    copy here would both repeat it and spend a row of the tightest
+						    layout. The composer's ■ stays the Stop there. */}
+						{tray && !compact ? (
 							<PinnedWorkingLine
 								line={pinned}
 								onStop={composer.stop}
+								stopping={composer.stopping}
 								gapBelow={
-									(!compact && pendingViewProps === null) ||
+									pendingViewProps === null ||
 									outstandingAsks(projection?.asks).length > 0
 								}
 								testID={SURFACE.sessionWorkingLine}
@@ -1469,6 +1507,7 @@ export default function Session() {
 						voice={composer.voice}
 						onSend={composer.send}
 						onStop={composer.stop}
+						stopping={composer.stopping}
 						retainedMessage={
 							composer.retained !== null ? COMPOSER_RETAINED : null
 						}
@@ -1518,9 +1557,11 @@ export default function Session() {
 				testID={SURFACE.sessionStatusSheet}
 			>
 				<View className="gap-2 pb-2">
-					{/* No working line here: the sheet exists only on tray layouts, where
-					    the line is pinned above the dock — a second spinner would be the
-					    two-indicators defect (components.md § 14). */}
+					{/* Only in short landscape, the one tray layout without the pinned
+					    line (R1-3): everywhere else the line is pinned above the dock,
+					    and a second spinner would be the two-indicators defect
+					    (components.md § 14). */}
+					{compact ? workingLineView : null}
 					{subagents.total > 0 ? subagentsPanel : null}
 					{todos.empty ? null : todosPanel}
 					{projection?.context_tokens != null ? (

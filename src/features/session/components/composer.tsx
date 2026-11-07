@@ -240,6 +240,10 @@ export type ComposerProps = {
 	voice?: DictationState | null;
 	onSend: () => void;
 	onStop: () => void;
+	/** A stop is pending for this turn (`turn-stop.ts`), shared with the pinned
+	 *  working line's `stop`: the ■ dims and reads busy with it, so the two
+	 *  controls never disagree about whether the turn was asked to stop. */
+	stopping?: boolean;
 	/** The retained envelope's message, or `null` when nothing is pending. */
 	retainedMessage: string | null;
 	/** A definitive acknowledgement of an EDITED draft: a success, not a failure. */
@@ -536,6 +540,7 @@ export const Composer = ({
 	voice = null,
 	onSend,
 	onStop,
+	stopping = false,
 	retainedMessage,
 	notice,
 	onRetry,
@@ -1441,6 +1446,7 @@ export const Composer = ({
 				<Pressable
 					accessibilityRole={ROLE.button}
 					accessibilityLabel="Stop the running turn"
+					accessibilityState={state({ busy: stopping })}
 					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 					onPress={onStop}
 					testID={CONTROL.composerStop}
@@ -1450,7 +1456,10 @@ export const Composer = ({
 					 *  where each 44 pt disc is centred in its 48 pt target (U-42).
 					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
 					 *  The wash is quiet enough not to compete with the accent send disc. */}
-					<View className={cx(COMPOSER_DISC, "bg-danger-wash")}>
+					<View
+						className={cx(COMPOSER_DISC, "bg-danger-wash")}
+						style={{ opacity: stopping ? 0.6 : 1 }}
+					>
 						<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
 					</View>
 				</Pressable>

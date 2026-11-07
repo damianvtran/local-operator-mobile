@@ -56,6 +56,8 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * DATA behind it — that every message parses, that every key has translator
  * context, and that the four namespaces do not quietly collide.
  */
+const JSON_SUFFIX = /\.json$/;
+
 const NAMESPACES = [
 	{
 		name: "mobile.signin",
@@ -252,7 +254,7 @@ describe("the English catalogues", () => {
 			.filter(
 				(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
 			)
-			.map((name) => name.replace(/\.json$/, ""))
+			.map((name) => name.replace(JSON_SUFFIX, ""))
 			.sort();
 		expect(NAMESPACES.map((namespace) => namespace.name).sort()).toEqual(
 			onDisk,

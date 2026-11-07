@@ -1,4 +1,10 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import {
+	memo,
+	useCallback,
+	useEffect,
+	useState,
+	useSyncExternalStore,
+} from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
 	runOnJS,
@@ -48,6 +54,14 @@ export type WorkingLineProps = {
 	 *  a second abort path: one turn-interrupt, one error line. Resolves `false`
 	 *  when the request never reached the relay. */
 	onStop?: () => Promise<boolean>;
+	/** A stop is pending for this session's turn — the SHARED latch
+	 *  (`turn-stop.ts`, via the composer's `stopping`), never a per-control one:
+	 *  the composer's ■ dims on the same flag. */
+	stopping?: boolean;
+	/** The turn has ended and the line is only being held for its close tween:
+	 *  Stop stays drawn (no reflow mid-fade) but answers nothing, so a late tap
+	 *  cannot send an abort to an idle session (review R1-4). */
+	stopInert?: boolean;
 	testID?: string;
 };
 
@@ -57,57 +71,140 @@ const SPINNER = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 
 const SPINNER_MS = 80;
 
+/** The reduced-motion rest frame. NOT a full braille cell: in a still, `⣿` at
+ *  13 px in the gutter reads as a drag grip (design D5); an ellipsis reads as
+ *  "in progress" with nothing moving. */
+const SPINNER_REST = "…";
+
+/* ------------------------------------------------------------ the phase clock */
+
+/**
+ * ONE clock for every place on the screen that says how long the current phase
+ * has run: the header's "Working · 12s" and this line's `12s` (design D2, UX U1).
+ * They used to disagree because the header re-rendered only when a projection
+ * frame arrived while the line ticked on its own interval; a long silent tool
+ * call left the header at its last value while the line counted on.
+ *
+ * Each `(activity, startedS)` seed gets ONE anchor instant, shared by every
+ * reader of that seed, and every reader re-renders off ONE ticker, so two
+ * readers of the same phase compute the same number from the same two inputs.
+ * The anchor is reference-counted by mounted readers and dropped with the last
+ * one: a later turn that happens to carry the same seed (`thinking`, `0`) must
+ * start from its own instant, not inherit a stale one. The ticker runs only
+ * while someone reads it, and its tick re-renders only the readers — never the
+ * screen around them.
+ */
+type Anchor = { at: number; readers: number };
+const anchors = new Map<string, Anchor>();
+const clockListeners = new Set<() => void>();
+let clockNow = Date.now();
+let ticker: ReturnType<typeof setInterval> | null = null;
+
+const subscribeClock = (listener: () => void): (() => void) => {
+	clockListeners.add(listener);
+	if (ticker === null) {
+		clockNow = Date.now();
+		ticker = setInterval(() => {
+			clockNow = Date.now();
+			for (const each of clockListeners) each();
+		}, 1000);
+	}
+	return () => {
+		clockListeners.delete(listener);
+		if (clockListeners.size === 0 && ticker !== null) {
+			clearInterval(ticker);
+			ticker = null;
+		}
+	};
+};
+const subscribeNothing = () => () => {};
+const readClock = () => clockNow;
+
+const anchorFor = (key: string): Anchor => {
+	let anchor = anchors.get(key);
+	if (anchor === undefined) {
+		anchor = { at: Date.now(), readers: 0 };
+		anchors.set(key, anchor);
+	}
+	return anchor;
+};
+
+/**
+ * Seconds the current phase has run: the wire's age at the seed plus whole
+ * seconds since this client first saw that seed. `null` in, `null` out — the
+ * server said it has no instant, and the reader must not invent one.
+ *
+ * `activity` is part of the seed because a NEW PHASE AT THE SAME AGE must
+ * re-anchor: "thinking for 40s" and "responding for 40s" are different phases.
+ */
+export const usePhaseElapsed = (
+	activity: string,
+	startedS: number | null,
+): number | null => {
+	const key = startedS === null ? null : `${activity}\u0000${startedS}`;
+	const now = useSyncExternalStore(
+		key === null ? subscribeNothing : subscribeClock,
+		readClock,
+		readClock,
+	);
+	useEffect(() => {
+		if (key === null) return;
+		const anchor = anchorFor(key);
+		anchor.readers += 1;
+		return () => {
+			anchor.readers -= 1;
+			if (anchor.readers === 0 && anchors.get(key) === anchor)
+				anchors.delete(key);
+		};
+	}, [key]);
+	if (key === null || startedS === null) return null;
+	const anchor = anchorFor(key);
+	return startedS + Math.max(0, Math.floor((now - anchor.at) / 1000));
+};
+
 const WorkingLineImpl = ({
 	activity,
 	startedS,
 	compact = false,
 	onStop,
+	stopping = false,
+	stopInert = false,
 	testID,
 }: WorkingLineProps) => {
 	const [frame, setFrame] = useState(0);
-	const [elapsed, setElapsed] = useState(startedS ?? 0);
+	const elapsed = usePhaseElapsed(activity, startedS);
 	// Honoured rather than ignored: the spinner is the one thing on the screen that
 	// moves without the reader asking it to, and reduced motion caps motion while
 	// keeping the state legible (the label and the clock carry the meaning).
 	const reduceMotion = useReducedMotion();
-
-	// Re-seed on a new phase or a fresh age from the wire; then tick locally, so the
-	// clock does not need a frame per second from the relay.
-	//
-	// `activity` is a dependency the exhaustive-deps rule cannot justify: the body
-	// reads only `startedS`. It is listed because a NEW PHASE AT THE SAME AGE must
-	// re-seed the clock — "thinking for 40s" and "responding for 40s" are different
-	// phases, and without it the second inherits the first's elapsed time.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
-	useEffect(() => {
-		setElapsed(startedS ?? 0);
-	}, [activity, startedS]);
 
 	useEffect(() => {
 		const spin = setInterval(
 			() => setFrame((current) => current + 1),
 			SPINNER_MS,
 		);
-		const tick = setInterval(
-			() => setElapsed((current) => Math.round((current + 1) * 10) / 10),
-			1000,
-		);
-		return () => {
-			clearInterval(spin);
-			clearInterval(tick);
-		};
+		return () => clearInterval(spin);
 	}, []);
 
 	// With a Stop the line is drawn even before a label exists: "a turn is alive"
 	// is the condition that must always have its Stop in reach (relay parity).
 	if (activity.length === 0 && onStop === undefined) return null;
-	const hasClock = startedS !== null;
+	const clock = elapsed === null ? "" : elapsedLabel(elapsed);
+	// Before the daemon names an activity the line still says SOMETHING to a
+	// screen reader (review R1-5): an unnamed progressbar announces nothing.
+	const name =
+		activity.length > 0
+			? activity
+			: t("relay.chrome.session.subtitle.working_plain");
+	const glyph = reduceMotion ? SPINNER_REST : SPINNER[frame % SPINNER.length];
 
 	if (onStop !== undefined) {
 		return (
 			<View
+				// No row minimum: the row is as tall as its text (design D1). At 320 pt
+				// and 200 % text a 48 pt row cost the transcript half its viewport;
+				// the Stop keeps its 48 pt target through `hitSlop` instead.
 				className="flex-row items-center gap-2 px-2"
-				style={{ minHeight: TOUCH_FLOOR }}
 				testID={testID}
 			>
 				{/* The live region is the STATUS only; the Stop sits beside it, not
@@ -116,16 +213,14 @@ const WorkingLineImpl = ({
 				<View
 					className="min-w-0 flex-1 flex-row items-center gap-2"
 					accessibilityRole="progressbar"
-					accessibilityLabel={
-						hasClock ? `${activity}, ${elapsedLabel(elapsed)}` : activity
-					}
+					accessibilityLabel={clock === "" ? name : `${name}, ${clock}`}
 					accessibilityLiveRegion="polite"
 				>
 					<Text
 						className="shrink-0 font-mono text-mono text-accent"
 						aria-hidden
 					>
-						{reduceMotion ? "⣿" : SPINNER[frame % SPINNER.length]}
+						{glyph}
 					</Text>
 					{/* Monospace and muted: the relay paints the activity as the
 					    terminal's working line does, and a tool intent reads as a
@@ -139,10 +234,10 @@ const WorkingLineImpl = ({
 					<Text
 						className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
 					>
-						{hasClock ? elapsedLabel(elapsed) : ""}
+						{clock}
 					</Text>
 				</View>
-				<WorkingStop onStop={onStop} />
+				<WorkingStop onStop={onStop} stopping={stopping} inert={stopInert} />
 			</View>
 		);
 	}
@@ -155,14 +250,12 @@ const WorkingLineImpl = ({
 					: "flex-row items-center gap-2 px-4 py-2"
 			}
 			accessibilityRole="progressbar"
-			accessibilityLabel={
-				hasClock ? `${activity}, ${elapsedLabel(elapsed)}` : activity
-			}
+			accessibilityLabel={clock === "" ? name : `${name}, ${clock}`}
 			accessibilityLiveRegion="polite"
 			testID={testID}
 		>
 			<Text className="shrink-0 font-mono text-mono text-accent" aria-hidden>
-				{reduceMotion ? "⣿" : SPINNER[frame % SPINNER.length]}
+				{glyph}
 			</Text>
 			<Text
 				className="min-w-0 flex-1 text-body-sm text-ink-muted"
@@ -177,7 +270,7 @@ const WorkingLineImpl = ({
 			<Text
 				className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
 			>
-				{hasClock ? elapsedLabel(elapsed) : ""}
+				{clock}
 			</Text>
 		</View>
 	);
@@ -186,8 +279,9 @@ const WorkingLineImpl = ({
 /**
  * Memoised so the screen's per-frame re-renders (the relay re-sends the whole
  * projection ~10x a second while a turn streams) reach this row only when its own
- * three inputs change. The spinner and the clock tick in this component's OWN
- * state, so neither re-renders the screen, the dock or the transcript list.
+ * inputs change. The spinner ticks in this component's OWN state and the clock
+ * re-renders only its readers (`usePhaseElapsed`), so neither re-renders the
+ * screen, the dock or the transcript list.
  */
 export const WorkingLine = memo(WorkingLineImpl);
 
@@ -199,32 +293,29 @@ export const WorkingLine = memo(WorkingLineImpl);
  *
  * The visible word never changes ("stopping" would widen the control and shove
  * the clock); the pressed state is the accessible name, `busy` and the dimmed
- * face. A repeat tap while the stop is in flight is a no-op, and a stop that never
- * reached the relay re-arms (its failure is stated on the composer's error line by
- * the shared `stop`). The latch clears when the line unmounts — the turn ended.
+ * face. The latch is NOT this control's: it is the session's (`turn-stop.ts`),
+ * shared with the composer's ■, released when the turn ends and after a 15 s
+ * bound — a per-control latch that cleared only on unmount left Stop dead for a
+ * live turn (review R1-1). Two taps inside one frame both pass the `stopping`
+ * check here; the shared `stopTurn` is what keeps them to one abort.
  */
-const WorkingStop = ({ onStop }: { onStop: () => Promise<boolean> }) => {
-	const [stopping, setStopping] = useState(false);
-	const mounted = useRef(true);
-	useEffect(
-		() => () => {
-			mounted.current = false;
-		},
-		[],
-	);
-	// The latch is a ref as well as state: two taps inside one frame both see the
-	// pre-press render, and the state alone would let the second send a second abort.
-	const latched = useRef(false);
+const WorkingStop = ({
+	onStop,
+	stopping,
+	inert,
+}: {
+	onStop: () => Promise<boolean>;
+	stopping: boolean;
+	inert: boolean;
+}) => {
+	// The target is 48 pt however short the row is (design D1): the vertical slop
+	// is whatever the measured face lacks, split above and below. Vertical only —
+	// `minWidth` already gives the 48 pt across.
+	const [lack, setLack] = useState(0);
 	const press = useCallback(() => {
-		if (latched.current) return;
-		latched.current = true;
-		setStopping(true);
-		void onStop().then((reached) => {
-			if (reached || !mounted.current) return;
-			latched.current = false;
-			setStopping(false);
-		});
-	}, [onStop]);
+		if (stopping || inert) return;
+		void onStop();
+	}, [onStop, stopping, inert]);
 	return (
 		<Pressable
 			accessibilityRole="button"
@@ -233,21 +324,31 @@ const WorkingStop = ({ onStop }: { onStop: () => Promise<boolean> }) => {
 					? "relay.composer.action.stopping"
 					: "relay.composer.action.stop_agent",
 			)}
-			accessibilityState={{ busy: stopping, disabled: stopping }}
+			accessibilityState={{ busy: stopping, disabled: stopping || inert }}
+			disabled={inert}
 			onPress={press}
-			hitSlop={4}
+			onLayout={(event) => {
+				setLack(
+					Math.max(
+						0,
+						Math.ceil((TOUCH_FLOOR - event.nativeEvent.layout.height) / 2),
+					),
+				);
+			}}
+			hitSlop={{ top: lack, bottom: lack }}
 			testID={CONTROL.sessionWorkingStop}
-			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+			style={{ minWidth: TOUCH_FLOOR }}
 		>
 			{/* The visible word never changes: a longer "stopping" would widen the
 			    control and push the clock (the relay measured 44 -> 79 px). The
 			    pressed state is the accessible name, `busy` and the dimmed face. */}
 			{({ pressed }) => (
 				<View
-					className={`flex-1 items-center justify-center rounded-sm px-2 ${pressed ? "bg-danger-wash" : ""}`}
+					className={`items-center justify-center rounded-sm px-2 ${pressed ? "bg-danger-wash" : ""}`}
 					style={{ opacity: stopping ? 0.6 : 1 }}
 				>
-					<Text className="text-body-sm text-danger">
+					{/* The line's own face: the rest of the row is mono (design D5). */}
+					<Text className="font-mono text-mono-sm text-danger">
 						{t("relay.composer.action.stop")}
 					</Text>
 				</View>
@@ -264,6 +365,8 @@ export type PinnedWorkingLineProps = {
 	/** `pinnedWorkingLine(projection)`: `null` while no turn is alive. */
 	line: { activity: string; startedS: number | null } | null;
 	onStop: () => Promise<boolean>;
+	/** The session's shared stop latch (`composer.stopping`). */
+	stopping: boolean;
 	/** Whether a sibling follows in the dock's `gap-2` column (the chips or the
 	 *  ask bar). The gap below this slot is folded into its animated height, so
 	 *  the dock grows and shrinks by ONE continuous amount instead of a smooth
@@ -293,6 +396,7 @@ const DOCK_GAP = 8;
 const PinnedWorkingLineImpl = ({
 	line,
 	onStop,
+	stopping,
 	gapBelow,
 	testID,
 }: PinnedWorkingLineProps) => {
@@ -302,6 +406,11 @@ const PinnedWorkingLineImpl = ({
 	const rowHeight = useSharedValue(0);
 	const progress = useSharedValue(0);
 	const gap = useSharedValue(gapBelow ? DOCK_GAP : 0);
+	// Whether the slot rests fully open. The slot clips its row only while it
+	// tweens: at rest the clip would also cut the Stop's `hitSlop` (a touch
+	// outside a clipping parent never reaches the child on either platform),
+	// shrinking its 48 pt target back to the text's height.
+	const [settled, setSettled] = useState(false);
 
 	useEffect(() => {
 		if (line !== null) setHeld(line);
@@ -312,13 +421,17 @@ const PinnedWorkingLineImpl = ({
 	}, [gap, gapBelow]);
 
 	useEffect(() => {
+		setSettled(false);
 		if (reduceMotion) {
 			progress.value = open ? 1 : 0;
-			if (!open) setHeld(null);
+			if (open) setSettled(true);
+			else setHeld(null);
 			return;
 		}
 		progress.value = withTiming(open ? 1 : 0, { duration: DOCK_MS }, (done) => {
-			if (done && !open) runOnJS(setHeld)(null);
+			if (!done) return;
+			if (open) runOnJS(setSettled)(true);
+			else runOnJS(setHeld)(null);
 		});
 	}, [open, progress, reduceMotion]);
 
@@ -328,13 +441,15 @@ const PinnedWorkingLineImpl = ({
 		// The column's gap below this slot exists from mount to unmount; pulling it
 		// in as the slot closes keeps the dock's travel one continuous curve.
 		marginBottom: -gap.value * (1 - progress.value),
-		overflow: "hidden",
 	}));
 
 	if (held === null) return null;
 	const shown = line ?? held;
 	return (
-		<Animated.View style={style} testID={testID}>
+		<Animated.View
+			style={[{ overflow: settled ? "visible" : "hidden" }, style]}
+			testID={testID}
+		>
 			<View
 				onLayout={(event) => {
 					rowHeight.value = event.nativeEvent.layout.height;
@@ -344,6 +459,8 @@ const PinnedWorkingLineImpl = ({
 					activity={shown.activity}
 					startedS={shown.startedS}
 					onStop={onStop}
+					stopping={stopping}
+					stopInert={line === null}
 				/>
 			</View>
 		</Animated.View>

@@ -19,7 +19,12 @@ const probe = vi.hoisted(() => ({
 	 *  (accessible name) plus once for the clock, so this counts behind `memo`. */
 	bodies: 0,
 	presses: new Map<string, () => void>(),
+	/** When set, tweens wait for `finishTweens()` instead of landing at once, so
+	 *  a test can act INSIDE the line's close animation. */
+	deferTweens: false,
+	tweens: [] as Array<(ok: boolean) => void>,
 }));
+const DIGIT_SECONDS = /\ds/;
 
 vi.mock("react-native", async () => {
 	const React = await import("react");
@@ -28,20 +33,39 @@ vi.mock("react-native", async () => {
 		({ children }: { children?: React.ReactNode }) =>
 			React.createElement(tag, null, children ?? null);
 	return {
-		View: host("div"),
+		// The status region's accessible name is printed as `<name>` so the
+		// assertions can read what a screen reader hears.
+		View: ({
+			children,
+			accessibilityRole,
+			accessibilityLabel,
+		}: {
+			children?: React.ReactNode;
+			accessibilityRole?: string;
+			accessibilityLabel?: string;
+		}) =>
+			React.createElement(
+				"div",
+				null,
+				accessibilityRole === "progressbar" ? `<${accessibilityLabel}>` : null,
+				children ?? null,
+			),
 		Text: host("span"),
 		Pressable: ({
 			children,
 			onPress,
+			disabled,
 			testID,
 			accessibilityLabel,
 		}: {
 			children: (state: { pressed: boolean }) => React.ReactNode;
 			onPress: () => void;
+			disabled?: boolean;
 			testID: string;
 			accessibilityLabel: string;
 		}) => {
-			probe.presses.set(testID, onPress);
+			// A disabled Pressable never calls `onPress`, as on device.
+			probe.presses.set(testID, disabled ? () => {} : onPress);
 			return React.createElement(
 				"button",
 				null,
@@ -65,7 +89,9 @@ vi.mock("react-native-reanimated", async () => {
 			_config: unknown,
 			done?: (ok: boolean) => void,
 		) => {
-			done?.(true);
+			if (probe.deferTweens) {
+				if (done) probe.tweens.push(done);
+			} else done?.(true);
 			return to;
 		},
 		runOnJS:
@@ -90,9 +116,11 @@ vi.mock("@/lib/format", async (importOriginal) => {
 	};
 });
 
-const { PinnedWorkingLine } = await import(
+const { PinnedWorkingLine, usePhaseElapsed } = await import(
 	"@/features/session/components/working-line"
 );
+const { STOPPING_BOUND_MS, resetTurnStopForTests, stopTurn, useTurnStopping } =
+	await import("@/features/session/turn-stop");
 const { CONTROL } = await import("@/ui/a11y");
 
 type Node = {
@@ -115,9 +143,12 @@ beforeEach(() => {
 	root = createRoot(shim.container as Element);
 	probe.bodies = 0;
 	probe.presses.clear();
+	probe.deferTweens = false;
+	probe.tweens = [];
 });
 afterEach(() => {
 	act(() => root.unmount());
+	resetTurnStopForTests();
 	shim.dispose();
 	vi.useRealTimers();
 });
@@ -163,7 +194,12 @@ const screen = () => textOf(shim.container as Node);
 
 describe("PinnedWorkingLine", () => {
 	it("renders nothing when no turn is alive", () => {
-		render({ line: null, onStop: async () => true, gapBelow: false });
+		render({
+			line: null,
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+		});
 		expect(screen()).toBe("");
 	});
 
@@ -173,6 +209,7 @@ describe("PinnedWorkingLine", () => {
 			line: { activity: "Reading PR states", startedS: 0 },
 			onStop,
 			gapBelow: true,
+			stopping: false,
 		});
 		expect(screen()).toContain("Reading PR states");
 		expect(screen()).toContain("0s");
@@ -184,12 +221,13 @@ describe("PinnedWorkingLine", () => {
 			line: { activity: "Running the suite", startedS: 0 },
 			onStop,
 			gapBelow: true,
+			stopping: false,
 		});
 		expect(screen()).toContain("Running the suite");
 		expect(screen()).not.toContain("Reading PR states");
 		expect(screen()).not.toContain("3s");
 
-		render({ line: null, onStop, gapBelow: true });
+		render({ line: null, onStop, gapBelow: true, stopping: false });
 		expect(screen()).toBe("");
 	});
 
@@ -198,36 +236,173 @@ describe("PinnedWorkingLine", () => {
 			line: { activity: "thinking", startedS: null },
 			onStop: async () => true,
 			gapBelow: false,
+			stopping: false,
 		});
 		act(() => vi.advanceTimersByTime(2000));
 		expect(screen()).toContain("thinking");
-		expect(screen()).not.toMatch(/\ds/);
+		expect(screen()).not.toMatch(DIGIT_SECONDS);
 	});
 
-	it("stops through the given path once; a repeat tap is a no-op; a failed stop re-arms", async () => {
-		const onStop = vi.fn(async () => false);
+	it('names the status "Working" before the daemon names an activity (R1-5)', () => {
 		render({
-			line: { activity: "thinking", startedS: 0 },
-			onStop,
+			line: { activity: "", startedS: null },
+			onStop: async () => true,
 			gapBelow: false,
+			stopping: false,
 		});
-		const press = () => probe.presses.get(CONTROL.sessionWorkingStop)?.();
+		expect(screen()).toContain("<Working>");
+	});
+});
+
+/* The screen's real wiring, in miniature: both Stops call the SAME per-session
+ *  latch (`stopTurn`) and read the SAME flag (`useTurnStopping`), exactly as
+ *  `use-composer.ts` hands them `composer.stop` / `composer.stopping`. */
+type HarnessProps = {
+	alive: boolean;
+	line: { activity: string; startedS: number | null } | null;
+	send: () => Promise<boolean>;
+	/** Exposes the composer ■'s view of the latch and its press. */
+	disc?: (state: { stopping: boolean; press: () => void }) => void;
+};
+const Harness = ({ alive, line, send, disc }: HarnessProps) => {
+	const stopping = useTurnStopping("s-1", alive);
+	const onStop = React.useCallback(() => stopTurn("s-1", send), [send]);
+	disc?.({ stopping, press: () => void onStop() });
+	return createElement(PinnedWorkingLine, {
+		line,
+		onStop,
+		stopping,
+		gapBelow: false,
+	});
+};
+const mount = (props: HarnessProps) =>
+	act(() => root.render(createElement(Harness, props)));
+const pressLine = () => probe.presses.get(CONTROL.sessionWorkingStop)?.();
+
+describe("the shared stop latch (turn-stop.ts) on the pinned line", () => {
+	it("a failed stop re-arms at once; a repeat tap while one is out is a no-op", async () => {
+		const send = vi.fn(async () => false);
+		const line = { activity: "thinking", startedS: 0 };
+		mount({ alive: true, line, send });
 		expect(screen()).toContain("[stop the agent]");
 		await act(async () => {
-			press();
-			press();
+			pressLine();
+			pressLine();
 		});
-		expect(onStop).toHaveBeenCalledTimes(1);
-		// The relay never reached: the latch clears so the reader can try again.
+		expect(send).toHaveBeenCalledTimes(1);
+		// Never reached the relay: released so the reader can try again.
 		expect(screen()).toContain("[stop the agent]");
 
-		onStop.mockImplementation(() => new Promise<boolean>(() => {}));
-		await act(async () => press());
+		send.mockImplementation(() => new Promise<boolean>(() => {}));
+		await act(async () => pressLine());
 		expect(screen()).toContain("[stopping]");
-		await act(async () => press());
-		expect(onStop).toHaveBeenCalledTimes(2);
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(2);
 	});
 
+	it("case A: the abort reached the relay but the turn runs on — Stop works again after the bound", async () => {
+		const send = vi.fn(async () => true);
+		const line = { activity: "thinking", startedS: 0 };
+		mount({ alive: true, line, send });
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(1);
+		expect(screen()).toContain("[stopping]");
+
+		// Still streaming just inside the bound: still latched, a tap is a no-op.
+		await act(async () => vi.advanceTimersByTime(STOPPING_BOUND_MS - 1));
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(1);
+		expect(screen()).toContain("[stopping]");
+
+		// The bound passes with the turn still alive: Stop is live again.
+		await act(async () => vi.advanceTimersByTime(1));
+		expect(screen()).toContain("[stop the agent]");
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(2);
+	});
+
+	it("case B: a new turn inside the close tween gets a fresh, working Stop; the closing one is inert", async () => {
+		probe.deferTweens = true;
+		const send = vi.fn(async () => true);
+		mount({ alive: true, line: { activity: "thinking", startedS: 0 }, send });
+		await act(async () => pressLine());
+		expect(screen()).toContain("[stopping]");
+
+		// The turn ends: the line is HELD for its close tween (not yet finished).
+		mount({ alive: false, line: null, send });
+		expect(screen()).toContain("thinking");
+		// R1-4: a late tap during the close sends nothing to the idle session.
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(1);
+
+		// A new turn starts before the tween lands (< 180 ms).
+		mount({ alive: true, line: { activity: "responding", startedS: 0 }, send });
+		expect(screen()).toContain("responding");
+		expect(screen()).toContain("[stop the agent]");
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(2);
+		expect(screen()).toContain("[stopping]");
+	});
+
+	it("one latch for both Stops: a tap on each sends ONE abort, and both read stopping", async () => {
+		const send = vi.fn(() => new Promise<boolean>(() => {}));
+		let composerDisc = { stopping: false, press: () => {} };
+		mount({
+			alive: true,
+			line: { activity: "thinking", startedS: 0 },
+			send,
+			disc: (state) => {
+				composerDisc = state;
+			},
+		});
+		await act(async () => composerDisc.press());
+		expect(composerDisc.stopping).toBe(true);
+		expect(screen()).toContain("[stopping]");
+		await act(async () => pressLine());
+		expect(send).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("usePhaseElapsed (one clock for the header and the line)", () => {
+	const Reader = ({ id, startedS }: { id: string; startedS: number | null }) =>
+		createElement(
+			"i",
+			null,
+			`${id}=${usePhaseElapsed("thinking", startedS) ?? "none"};`,
+		);
+
+	it("two readers of one phase agree, even when the second mounts mid-second", () => {
+		const both = (header: boolean) =>
+			createElement(
+				"b",
+				null,
+				createElement(Reader, { id: "line", startedS: 4 }),
+				header ? createElement(Reader, { id: "header", startedS: 4 }) : null,
+			);
+		act(() => root.render(both(false)));
+		act(() => vi.advanceTimersByTime(1500));
+		expect(screen()).toBe("line=5;");
+		// The header reader arrives half a second off the ticker's beat.
+		act(() => root.render(both(true)));
+		expect(screen()).toBe("line=5;header=5;");
+		act(() => vi.advanceTimersByTime(3000));
+		expect(screen()).toBe("line=8;header=8;");
+	});
+
+	it("a later turn with the same seed starts from its own instant; null stays null", () => {
+		act(() => root.render(createElement(Reader, { id: "a", startedS: 0 })));
+		act(() => vi.advanceTimersByTime(5000));
+		expect(screen()).toBe("a=5;");
+		act(() => root.render(createElement("b", null)));
+		act(() => vi.advanceTimersByTime(2000));
+		act(() => root.render(createElement(Reader, { id: "a", startedS: 0 })));
+		expect(screen()).toBe("a=0;");
+		act(() => root.render(createElement(Reader, { id: "a", startedS: null })));
+		expect(screen()).toBe("a=none;");
+	});
+});
+
+describe("PinnedWorkingLine memo", () => {
 	it("is the memo boundary: a parent frame with the same inputs does not re-render it, and its own ticks never re-render the parent", () => {
 		const onStop = async () => true;
 		let parentRenders = 0;
@@ -241,7 +416,12 @@ describe("PinnedWorkingLine", () => {
 				"main",
 				null,
 				`frame ${tick}`,
-				createElement(PinnedWorkingLine, { line, onStop, gapBelow: false }),
+				createElement(PinnedWorkingLine, {
+					line,
+					onStop,
+					gapBelow: false,
+					stopping: false,
+				}),
 			);
 		};
 		act(() => root.render(createElement(Parent)));
