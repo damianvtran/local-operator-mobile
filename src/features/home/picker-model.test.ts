@@ -255,10 +255,12 @@ describe("the folder chip (UX U1, design D2)", () => {
 
 	it.each([
 		// The computer's default, a picked temp folder, a typed `~` path.
-		["/Users/demo/code/app", "app", "Working in /Users/demo/code/app"],
+		// Spoken in the sheet rows' `~`-shortened spelling (UX U11 / N1).
+		["/Users/demo/code/app", "app", "Working in ~/code/app"],
 		["/private/tmp", "tmp", "Working in /private/tmp"],
 		["~/notes", "notes", "Working in ~/notes"],
-		["/Users/demo/notes", "notes", "Working in /Users/demo/notes"],
+		["/Users/demo/notes", "notes", "Working in ~/notes"],
+		["/Users/demo", "~", "Working in ~"],
 	])(
 		"paints %s as its own name, and says the same folder",
 		(path, label, spoken) => {
@@ -277,7 +279,17 @@ describe("the folder chip (UX U1, design D2)", () => {
 	});
 
 	it("leaves the path whole before the computer's home is known", () => {
-		expect(homeFolderChip("/Users/demo/code/app", null).label).toBe("app");
+		expect(homeFolderChip("/Users/demo/code/app", null)).toStrictEqual({
+			label: "app",
+			accessibilityLabel: "Working in /Users/demo/code/app",
+		});
+	});
+
+	it("speaks the path exactly as the sheet row for it does (UX U11 / N1)", () => {
+		for (const path of ["/Users/demo/code/app", "/private/tmp", HOME])
+			expect(homeFolderChip(path, HOME).accessibilityLabel).toBe(
+				`Working in ${folderName(path, HOME).short}`,
+			);
 	});
 });
 

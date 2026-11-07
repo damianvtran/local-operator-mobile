@@ -111,5 +111,8 @@ describe("the shared picker rows (pickers round 1)", () => {
 
 	it("announces the rung as checked, not only selected (U9)", () => {
 		expect(rungRow()).toContain("checked: selected");
+		// The native state never reaches react-native-web; the web build reads
+		// only the ARIA attribute (QA Q3).
+		expect(rungRow()).toContain("aria-checked={selected}");
 	});
 });

@@ -460,11 +460,16 @@ export const folderName = (path: string, home: string | null): FolderName => {
  * folder (always `~`) while the label read the real path (UX U1). The text is the
  * folder's own name, shortened against the computer's `home`; the composer adds
  * the glyph and decides when even the name yields (design D2).
+ *
+ * The spoken path is the SAME `~`-shortened spelling the sheet's rows speak
+ * (`folderName(...).short`, against the same `home`): a reader who heard
+ * `~/code/app` on the row they picked must hear that path back on the chip, not
+ * `/Users/demo/code/app` (UX U11 / review N1).
  */
 export const homeFolderChip = (
 	startFolder: string,
 	home: string | null,
-): Readonly<{ label: string; accessibilityLabel: string }> => ({
-	label: folderName(startFolder, home).name,
-	accessibilityLabel: `Working in ${startFolder}`,
-});
+): Readonly<{ label: string; accessibilityLabel: string }> => {
+	const { name, short } = folderName(startFolder, home);
+	return { label: name, accessibilityLabel: `Working in ${short}` };
+};

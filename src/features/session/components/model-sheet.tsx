@@ -228,10 +228,14 @@ export const EffortRungRow = ({
 	<Pressable
 		accessibilityRole={ROLE.radio}
 		accessibilityLabel={badge !== null ? `${label}, ${badge}` : label}
-		/* `checked` as well as `selected`: a radio's state on web and Android is
-		 *  `aria-checked`, and react-native-web emits nothing for `selected` on a
-		 *  radio, so the rung the reader is on went unannounced there (UX U9). */
+		/* `checked` as well as `selected`: a radio's native state is `checked`.
+		 *  react-native-web does not read `accessibilityState` at all, so neither
+		 *  reaches the web build — there the rung the reader is on went unannounced
+		 *  (UX U9, QA Q3). `aria-checked` is the ARIA state for role=radio; native
+		 *  ignores it in favour of the state above, so the two are written together,
+		 *  as `segmented.tsx` does. */
 		accessibilityState={{ ...state({ selected, disabled }), checked: selected }}
+		aria-checked={selected}
 		disabled={disabled}
 		onPress={onPress}
 		testID={testID ?? effortRungId(rung)}

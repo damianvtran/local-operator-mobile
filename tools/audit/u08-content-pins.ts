@@ -804,7 +804,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "3b70dbbc12dc4d2c8a1a78fc6941f2593ee033d772e840b9de9404c0b0342a44",
+	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
