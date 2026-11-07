@@ -390,7 +390,11 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		 *  2026-11-04 §2.3, D-S2), so the picture now follows back directly. */
 		const leading = SCREEN.indexOf("testID={CONTROL.sessionBack}");
 		const avatar = SCREEN.indexOf("{headerStacked ? null : agentAvatar}");
-		const title = SCREEN.indexOf("<SessionHealthControl");
+		/* Searched from the back control: the module also declares a ticking
+		 *  wrapper that renders `<SessionHealthControl` above the screen (PR #189),
+		 *  so the first occurrence is not the header's. The order asserted is the
+		 *  header JSX's own. */
+		const title = SCREEN.indexOf("SessionHealthControl", leading);
 		expect(SCREEN).not.toContain("<NavigationMark");
 		expect(leading).toBeGreaterThan(0);
 		expect(avatar).toBeGreaterThan(leading);

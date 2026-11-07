@@ -983,13 +983,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * vi «Home» badge's entry in the identical-by-design test allowlist. No key,
 	 * en string, component or token changed. Source admission only, NOT
 	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's avatar test anchor with --print from the
+	 * staged tree. Only `src` moves, for one test file
+	 * (`agent-avatar.test.ts` searches for the title control from the back
+	 * control). No shipped source changes. Source admission only, NOT rendered
+	 * U-08 evidence. */
 	/* Re-printed 2026-11-07 with --print at the final tree of the TestFlight 578
 	 * merge train (chore/merge-train-578: #183 #186 #188 #185 #187 #189 #191 #192
 	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
 	 * stands; the value is the train tree's own and no PR's digest is kept. Only
 	 * `app` and `src` move.
-	 * Source admission only, NOT rendered U-08 evidence. */
-	src: "7dbc40e59d8732e2ebce4d169055d3d57c4d41864312c2eec41ac02262c6ad6e",
+	 * Re-printed again after merging #189's test anchor fix (c8ad2bb2, one
+	 * test file under `src`). Source admission only, NOT rendered U-08 evidence. */
+	src: "b7af13dda98764626bcae2a41e51af883cdd5648f9c8fed039914c1ada85d3c8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
