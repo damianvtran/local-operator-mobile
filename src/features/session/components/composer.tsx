@@ -858,11 +858,17 @@ export const Composer = ({
 		},
 	);
 
+	/* The dock's own 8 pt above the keyboard or the bottom inset. The INSET is not
+	 *  in this margin: it is padding on the carrier below, because the inset is a
+	 *  device fact rather than a spacing decision, and U-42 reads a padding equal
+	 *  to the declared inset as the inset but a margin of inset + 8 (28 pt on a
+	 *  20 pt-inset tablet) as an off-scale step — the same split `dialog.tsx`
+	 *  makes. The painted position is unchanged: carrier padding + this margin is
+	 *  the old `inset + 8`, and with the keyboard up the carrier pays nothing. */
 	const dockMotion = useAnimatedStyle(() => ({
-		marginBottom:
-			keyboardOffset.value +
-			(keyboardVisible ? 8 : Math.max(0, bottomInset ?? 0) + 8),
+		marginBottom: keyboardOffset.value + 8,
 	}));
+	const dockInset = keyboardVisible ? 0 : Math.max(0, bottomInset ?? 0);
 
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");
@@ -1182,6 +1188,10 @@ export const Composer = ({
 					 *  text falls back to the bare count when the type is large. */
 					style={{
 						minWidth: TOUCH_FLOOR,
+						/* The floor on BOTH axes: with only a width floor the chip
+						 *  shrank to its 17 pt line of text (U-01, every S5 cell
+						 *  with a queue), a target the row's 44 pt height hid. */
+						minHeight: TOUCH_FLOOR,
 						maxWidth: 160,
 						flexShrink: 1,
 					}}
@@ -1236,6 +1246,10 @@ export const Composer = ({
 					 *  text falls back to the bare count when the type is large. */
 					style={{
 						minWidth: TOUCH_FLOOR,
+						/* The floor on BOTH axes: with only a width floor the chip
+						 *  shrank to its 17 pt line of text (U-01, every S5 cell
+						 *  with a queue), a target the row's 44 pt height hid. */
+						minHeight: TOUCH_FLOOR,
 						maxWidth: 160,
 						flexShrink: 1,
 					}}
@@ -1569,7 +1583,7 @@ export const Composer = ({
 	/* The dock is measured as one unit (context + shell + external clearance), so
 	 * the transcript reserves the full footprint. Opaque is the baseline until
 	 * composited native glass contrast is independently proved for this shape. */
-	return (
+	const dock = (
 		<Animated.View
 			ref={rootRef}
 			style={[{ marginHorizontal: 12 }, dockMotion]}
@@ -1722,4 +1736,9 @@ export const Composer = ({
 			</Sheet>
 		</Animated.View>
 	);
+	/* THE INSET CARRIER (see `dockMotion`). The dock keeps its ref, `onLayout`
+	 *  and `testID`, so every measurement the hosts take — `onMeasure`'s rect,
+	 *  the recovery height — reads the same box as before; only the carrier's
+	 *  padding, which no host measures, holds the inset. */
+	return <View style={{ paddingBottom: dockInset }}>{dock}</View>;
 };

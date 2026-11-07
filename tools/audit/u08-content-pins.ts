@@ -677,21 +677,32 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (transcript pass): the digest covers both lines of history — the transcript
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
-	 * after this merge, so neither side's previous digest is kept.
+	 * after this merge, so neither side's previous digest is kept. */
+	/* Re-printed 2026-11-06 for the U-42/U-01 spacing fix (#163 regressions): the
+	 * composer's disc seams and the sidebar destinations' icon-to-label step move
+	 * from `gap-0.5` (2 pt, off the 4 pt scale) to `gap-1`, the dock's bottom inset
+	 * moves from its margin to a carrier's padding (same painted position), and the
+	 * queued-message chip gains a `TOUCH_FLOOR` height. U-08's scene is the session
+	 * screen, so the composer IS in it: this is source admission only — the 2 pt
+	 * seam shift is not claimed geometry-neutral here; `u08-geometry-proof` measures
+	 * that. No token, catalogue key or `app` change; no other pin moved. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main (PR #176,
+	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
+	 * and the digest covers both lines of history. Neither side's tree ships alone after
+	 * this merge, so neither previous digest is kept.
 	 *
 	 * Re-pinned 2026-11-07, `src` only (PR #156 harness split, merged onto main):
 	 * the native proof harness moved to its own branch, which removed exactly three
 	 * proof-only instrument modules — `src/testing/stage-b-draft-bootstrap.ts`,
 	 * `stage-b-draft-transport.ts`, `stage-b-route-trace.ts` — and their own test
 	 * `src/testing/__tests__/stage-b-draft-bootstrap.test.ts`. Nothing under `app/`,
-	 * `design/`, `public/`, the corpus or the geometry instruments moved, and no
-	 * file the shipping bundle loads was touched: those modules were reached only by
-	 * the native lane's scripts, never by an `src/app` entry or a rendered screen, and
-	 * a test file is never bundled. So no pixel of the U-08 scene moves and the
-	 * composer geometry is byte-identical to the digest above. This is source
-	 * admission for the geometry instrument, not fresh rendered evidence.
-	 * `--print` produced the digest. */
-	src: "8ee3a8e6fe657367edbbef0a1994e90d75ef310e1b324bc9b5cfca1fa761f685",
+	 * `design/`, `public/`, the corpus or the geometry instruments moved, and no file
+	 * the shipping bundle loads was touched: those modules were reached only by the
+	 * native lane's scripts, never by an `src/app` entry or a rendered screen, and a
+	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
+	 * geometry is byte-identical to the digest above. This is source admission for the
+	 * geometry instrument, not fresh rendered evidence. `--print` produced the digest. */
+	src: "232f7177efd04780b20b273e8d3d4c30246ba5fd75272ef0c31ea9fe7d9ddc04",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

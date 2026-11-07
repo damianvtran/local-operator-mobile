@@ -20,8 +20,8 @@ const SCREEN = read("app/(app)/session/[id].tsx");
 const PANE = read("src/features/sessions/conversations-pane.tsx");
 describe("build389 persistent field and context", () => {
 	it("retains disc spacing and target floors", () => {
-		expect(COMPOSER_CONTROLS_ROW).toContain("gap-x-0.5");
-		expect(COMPOSER_ACTION_CLUSTER).toContain("gap-0.5");
+		expect(COMPOSER_CONTROLS_ROW).toContain("gap-x-1");
+		expect(COMPOSER_ACTION_CLUSTER).toContain("gap-1");
 		expect(COMPOSER_DISC).toContain("h-11 w-11");
 		expect(MODEL_FLOOR_PT).toBe(44);
 	});
