@@ -481,10 +481,13 @@ export const chipLabelClasses = (state: ControlState = {}): string =>
  */
 export const listRowClasses = (state: ControlState = {}): string =>
 	cx(
-		// 56pt is `tokens.json` size.list.rowMinHeight; `min-h-14` would be the same
-		// number, but the row is specified in pt, so the value is kept literal and
-		// this comment names where it comes from. HAND-WRITTEN like `lg` above.
-		"min-h-[56px] flex-row items-center gap-3 px-4 py-2.5",
+		// No fixed min-height here: the row's floor is the platform `TOUCH_FLOOR`
+		// (44 iOS / 48 other), applied by `ListRow` as a style because it is a
+		// runtime value. The old 56 pt floor plus `py-2.5` made a one-line row 60 pt
+		// and pitched the conversations 60–80 pt apart (design spec 2026-11-06 § 4);
+		// with `py-2` a two-line row lands at ~56 pt by its own content and a
+		// one-line row at the touch floor — both on the space scale.
+		"flex-row items-center gap-3 px-4 py-2",
 		state.selected
 			? // Selection is never colour alone: the caller also renders the title in
 				// the accent role. `row-selected` alone is a 1.0x luminance difference.

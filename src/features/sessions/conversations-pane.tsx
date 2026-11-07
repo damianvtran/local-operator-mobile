@@ -157,10 +157,6 @@ export type ConversationsPaneProps = {
  * scale is passed through because at 300 % the digits outgrow the fixed 16 pt
  * line box (D25).
  */
-/** The width of one destination slot's row: a 20 pt icon over an 11 pt label,
- *  inside the 44 pt touch floor plus breathing room (record §3: 52 pt). */
-const DESTINATION_ROW_PT = 52;
-
 const RailCount = ({ count }: { count: number }) => {
 	const { effectiveScale } = useTextScale();
 	return (
@@ -359,16 +355,18 @@ export const ConversationsPane = ({
 	 *  rows. It was five full-width centred buttons plus the computer row — 328 pt
 	 *  of an 874 pt panel, leaving ~4.5 conversation rows (D-B1, TestFlight 365).
 	 *
-	 *  Row A, the DESTINATIONS STRIP (52 pt): equal slots, each a 20 pt icon over
-	 *  an 11–12 pt label — Inbox (with its count on the icon), Past, Projects,
+	 *  The DESTINATIONS STRIP (the touch floor, 44/48 pt; was 52): equal slots, each a
+	 *  20 pt icon over a 12 pt label (≈ 41 pt of content, so the floor holds it) — Inbox (with its count on the icon), Past, Projects,
 	 *  Schedules, Library. Capability-gated slots disappear and the strip re-flows.
 	 *  At large text the labels cannot fit five across, so the strip becomes ONE
 	 *  "More" row that opens a sheet listing the same destinations — a label is
 	 *  never dropped silently.
 	 *
-	 *  Row B, the WORKSPACE ROW (44 pt): the computer in use (the ONE switcher —
-	 *  the header's duplicate is gone, D-B2) and the Settings gear, moved from the
-	 *  home header. Total ≈ 52 + 44 + 8 = 104 pt.
+	 *  The WORKSPACE ROW (44 pt), ABOVE the strip: the computer in use (the ONE
+	 *  switcher — the header's duplicate is gone, D-B2) and the Settings gear, moved
+	 *  from the home header. Total ≈ 44 + 44 + 4 + 12 = 104 pt on iOS, so the strip
+	 *  is a bottom bar rather than a stack of large buttons ("a bunch of large
+	 *  buttons taking up space", the operator, build 453).
 	 *
 	 *  Short landscape still scrolls the footer WITH the list (`scrollFooter`); the
 	 *  negative margin only cancels the list's px-4 there. */
@@ -437,10 +435,35 @@ export const ConversationsPane = ({
 	};
 	const footer = (
 		<View
-			className="gap-1 border-t border-hairline px-2 pt-1 pb-2"
+			className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 			testID={REGION.sidebarFooter}
 		>
+			{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
+			 *  § 4): the destinations are the panel's bottom bar, at the edge the thumb
+			 *  rests on, and the computer chip reads as the context the list above
+			 *  belongs to rather than as a sixth destination.
+			 *
+			 *  `gap-2` (8 pt), not `gap-1`: the Inbox count rides 6 pt ABOVE its icon
+			 *  (`top: -6` below), out of flow, and the slot's content grows to fill
+			 *  it as text scales, so at worst the icon sits flush with the slot's top.
+			 *  With a 4 pt gap the badge crossed the computer chip's outline (0.4 pt
+			 *  at 100 % on iOS, 2 pt at 135 %; design round 1 D1); 8 pt keeps it
+			 *  clear at every scale. `sidebar-footer.test.ts` pins the arithmetic. */}
+			<View className="flex-row items-center gap-1">
+				<View className="min-w-0 flex-1">
+					<DrawerComputerRow
+						testID={CONTROL.sidebarComputers}
+						onNavigate={onNavigate}
+					/>
+				</View>
+				<IconButton
+					accessibilityLabel={t("relay.chrome.drawer.settings")}
+					onPress={() => go("/settings")}
+					icon={({ color, size }) => <Settings color={color} size={size} />}
+					testID={CONTROL.settingsButton}
+				/>
+			</View>
 			{largeText ? (
 				/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
 				<Pressable
@@ -465,7 +488,7 @@ export const ConversationsPane = ({
 				<View className="flex-row" accessibilityRole="toolbar">
 					{destinations.map((item) => (
 						/* `gap-1`: the icon-to-label step is the scale's 4 pt, not
-						 *  `gap-0.5`'s off-scale 2 pt (U-42); the 52 pt slot absorbs it. */
+						 *  `gap-0.5`'s off-scale 2 pt (U-42); the touch-floor slot absorbs it. */
 						<Pressable
 							key={item.key}
 							accessibilityRole={ROLE.button}
@@ -473,7 +496,7 @@ export const ConversationsPane = ({
 							onPress={() => go(item.route)}
 							testID={item.testID}
 							className="min-w-0 flex-1 items-center justify-center gap-1"
-							style={{ minHeight: DESTINATION_ROW_PT, minWidth: TOUCH_FLOOR }}
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 						>
 							<View>
 								<item.Icon size={20} color={destinationInk} aria-hidden />
@@ -500,35 +523,20 @@ export const ConversationsPane = ({
 					))}
 				</View>
 			)}
-			<View className="flex-row items-center gap-1">
-				<View className="min-w-0 flex-1">
-					<DrawerComputerRow
-						testID={CONTROL.sidebarComputers}
-						onNavigate={onNavigate}
-					/>
-				</View>
-				<IconButton
-					accessibilityLabel={t("relay.chrome.drawer.settings")}
-					onPress={() => go("/settings")}
-					icon={({ color, size }) => <Settings color={color} size={size} />}
-					testID={CONTROL.settingsButton}
-				/>
-			</View>
 		</View>
 	);
 
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
 			{/* ---- the header row (record §2.5): search pill · new chat · close ----
-			 *  60 pt. The computer switcher that sat here was the panel's SECOND
+			 *  The touch floor plus `py-1` (52/56 pt; was a fixed 60): its children are
+			 *  all touch-floor controls, so the extra 8 pt of a fixed 60 was air the
+			 *  list could use (spec 2026-11-06 § 4, "better use of vertical space"). The computer switcher that sat here was the panel's SECOND
 			 *  switcher (D-B2) — the footer's workspace row is the one — and the 56 pt
 			 *  full-bleed "New chat" row below it is now the square-pen button, so the
 			 *  list starts ~112 pt higher. The brand mark left too: the panel is for
 			 *  conversations, and the home already carries the identity. */}
-			<View
-				className="flex-row items-center gap-1 px-2"
-				style={{ minHeight: 60 }}
-			>
+			<View className="flex-row items-center gap-1 px-2 py-1">
 				<Pressable
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={t("relay.chrome.list.search_label")}
@@ -563,7 +571,7 @@ export const ConversationsPane = ({
 				)}
 				{onClose ? (
 					<IconButton
-						accessibilityLabel="Close conversations"
+						accessibilityLabel={t("mobile.chrome.close_conversations")}
 						onPress={onClose}
 						icon={({ color, size }) => <X color={color} size={size} />}
 						testID={CONTROL.sidebarClose}
