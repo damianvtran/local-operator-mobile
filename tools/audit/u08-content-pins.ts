@@ -810,10 +810,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * left (More takes the free width), the ☰ count moves inside its box with a
 	 * lead before the computer selector, the drawer panel loses its right border,
 	 * and tests. Round-1 remediation re-printed it again: the session strip's
-	 * effort holds (SESSION_EFFORT_SHRINK), suggestion rows start-align at large
-	 * text, and the hero mark gains a border-control ring. Source admission only,
-	 * NOT rendered U-08 evidence. */
-	src: "2491873ea179450e0008cae2da4196d789b170b4ca7afc8f200b7ac45836ea43",
+	 * effort holds, suggestion rows start-align at large text, and the hero mark
+	 * gains a border-control ring. Round-2 remediation (R2-M1) re-printed it once
+	 * more: the session strip's model and effort take a weighted shrink pair
+	 * (SESSION_STRIP_SHRINK) so the trailing controls never clip. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "3f479c16efd90017ae0f467f745ca02c5f278fdbd2b0bd96d56d37e1ca696c2c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

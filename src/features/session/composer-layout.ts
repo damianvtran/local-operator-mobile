@@ -68,18 +68,26 @@ export const folderChipText = (name: string, scale: number): string =>
 export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;
 
 /**
- * The session strip's effort chip never shrinks: the MODEL yields the overflow
- * and effort reads whole ("Medium", never "M…").
+ * The session strip's shrink pair: the MODEL yields the overflow first, down to
+ * its `MODEL_FLOOR_PT`, and only then does effort give up width (an ellipsis,
+ * stopped at its own 44 pt floor) — so the trailing controls (More, the queued
+ * chip, keyboard-dismiss) never reach the row's `overflow-hidden` edge.
  *
- * That was the order before TestFlight 578, by construction: the model slot was
- * `flex-1` (a 0 basis floored at `MODEL_FLOOR_PT`), so it only ever took what
- * effort's natural width left. Once the model stopped growing (left-packed
- * chips) it got an AUTO basis, and two `shrink` items on auto bases split the
- * overflow by width — a 180 pt model and a 70 pt effort lose 72 % / 28 %, so
- * effort truncated beside the queued chip (code review M1, design D2). A weight
- * ratio cannot restore it: effort would still lose a sliver, and a sliver is an
- * ellipsis. 0 is exact. The trade: past the model's 44 pt floor the row
- * overflows rather than eating into effort — which the compact row at large
- * text already prevents, and an effort rung is a short fixed word.
+ * WHY a weighted pair and not 0. Effort used to hold at `flexShrink: 0` (code
+ * review M1 / design D2: two `shrink` chips on auto bases split the overflow by
+ * width, so effort read "H…" beside the queued chip). But at 320 pt / 200 % in
+ * portrait the strip is ~292 pt, and model floor 44 + More 44 + queued 44 +
+ * keyboard 44 + four 4 pt gaps leave ~100 pt, while a whole "Extra high" needs
+ * ~151 pt: a rigid effort pushed the keyboard button and then the queued chip
+ * past the clip (round-2 review R2-M1). The compact row does not rescue it — it
+ * is short-landscape only.
+ *
+ * WHY 1000 : 1. Flex shrink is weighted by `factor × basis`, and an item frozen
+ * at its min-width hands the rest of the overflow to the others (Yoga's
+ * two-pass flexible-length resolution). Until the model is at its floor,
+ * effort's share of the overflow is under `effortBasis / 1000` — about 0.15 pt
+ * for the widest rung, below half a device pixel at 3x, which pixel rounding
+ * absorbs, so effort still reads whole at ordinary sizes (D2 holds). Once the
+ * model is frozen at 44 pt, effort takes everything that is left.
  */
-export const SESSION_EFFORT_SHRINK = 0;
+export const SESSION_STRIP_SHRINK = { model: 1000, effort: 1 } as const;

@@ -65,7 +65,7 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
-	SESSION_EFFORT_SHRINK,
+	SESSION_STRIP_SHRINK,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -1300,13 +1300,15 @@ export const Composer = ({
 				 *  left at the row's gap and the free width goes to More's auto margin
 				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
 				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
-				 *  only, effort holds (`SESSION_EFFORT_SHRINK`) — the order the old
-				 *  `flex-1` slot gave by construction. */
+				 *  to its floor first, then effort (`SESSION_STRIP_SHRINK`), so the
+				 *  trailing controls never clip. */
 				className="min-w-0 shrink"
 				style={{
 					minWidth: MODEL_FLOOR_PT,
 					flexBasis: "auto",
-					...(folderChip ? { flexShrink: HOME_STRIP_SHRINK.model } : null),
+					flexShrink: folderChip
+						? HOME_STRIP_SHRINK.model
+						: SESSION_STRIP_SHRINK.model,
 				}}
 			>
 				<ComposerChipButton
@@ -1329,7 +1331,7 @@ export const Composer = ({
 								}
 							: {
 									minWidth: MODEL_FLOOR_PT,
-									flexShrink: SESSION_EFFORT_SHRINK,
+									flexShrink: SESSION_STRIP_SHRINK.effort,
 								}
 					}
 				>
