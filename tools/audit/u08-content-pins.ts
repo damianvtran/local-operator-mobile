@@ -811,7 +811,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "e2282ab0f068391bcabaa81bbd09510669e7327ab2ab5f7a31e7bddff027b905",
+	/* Re-pinned 2026-11-07 for fix/i18n-home-audit with --print from the staged
+	 * tree. Only `src` moves, and only translation values: the independent
+	 * post-merge audit's fixes to the es/ru/ur/vi/zh-CN/hi `mobile.home` and ru
+	 * `mobile.chrome` catalogues, plus the regenerated catalogue projection. No
+	 * key, en string, component or token changed. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	src: "fd7d98f7dc51230b895607e7f204b840f22e39c402d0ad59a3988ea4244721d2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
