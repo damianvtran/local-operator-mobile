@@ -73,6 +73,7 @@ import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
 import { composerCopy } from "@/features/session/composer";
 import { deviceOnline } from "@/features/session/runtime";
+import { useHomeDictation } from "@/features/session/use-dictation";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import {
@@ -698,6 +699,17 @@ export default function Home({
 	// The coordinator freezes the submitted bytes; later typing stays editable.
 	const send = startup.send;
 
+	/* The home's mic (TestFlight 578): the same dictation machine as a session's,
+	 *  landing the transcript in this draft. Transcription is the computer's own
+	 *  STT, so it needs only the active relay, not a session. */
+	const voice = useHomeDictation({
+		endpoints: client,
+		capabilities,
+		draft,
+		setDraft,
+		onError: setComposerError,
+	});
+
 	/* A STABLE identity, with the latest coordinator behind it. The drawer carries the
 	 * New-chat intent across the close and acts on it in `onDismiss` — by which time
 	 * Home has already re-rendered for `setPanelOpen(false)` — and it drops that
@@ -900,7 +912,13 @@ export default function Home({
 				onAttach={attach}
 				onPasteFile={pasteFile}
 				attaching={attaching}
-				onSend={send}
+				onSend={() => {
+					/* A send takes the composer: a take still live is dropped and said
+					 *  (design §2.5/U2), the session composer's rule. */
+					voice.cancelForSend();
+					void send();
+				}}
+				voice={voice}
 				onStop={() => {
 					const sid = startup.snapshot.sessionId;
 					const active = relay();

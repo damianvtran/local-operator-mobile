@@ -190,6 +190,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-07 for the composer paste + voice PR, with --print from
+	 * the staged tree. Only `src` moves: the native paste chip, the set-up mic,
+	 * the home mic, the rolling waveform and the recording row's ✕/✓, plus their
+	 * catalogue keys. `app`, `design/tokens`, fonts, `public`, instrument and
+	 * input pins are untouched. Source admission only, NOT evidence that U-08's
+	 * rendered geometry proof passed. */
 	/* Re-pinned 2026-11-06 for PR #176 review round 4's remediation, with --print
 	 * from the staged tree. Only `src` moves: the frozen initial scroll index is
 	 * keyed on the session it was frozen for (M-r4-1), its comment states what a
@@ -804,7 +810,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	src: "769d488c308bb255334b001bf511dcf276ba24aa3d1e9807184283914e604607",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

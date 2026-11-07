@@ -111,3 +111,78 @@ export const attachActions = (
 				{ source: "files", label: "Files" },
 				{ source: "paste", label: "Paste image" },
 			];
+
+/* --------------------------------------------------- the native clipboard */
+
+/**
+ * The slice of `expo-clipboard` the native paste path reads. Typed here, not
+ * imported, so the rules below run in Node (this module's whole reason to
+ * exist) and a test can hand in a fake clipboard instead of a device.
+ */
+export interface ClipboardImageSource {
+	getImageAsync(options: { format: "png" }): Promise<{ data: string } | null>;
+	hasImageAsync(): Promise<boolean>;
+}
+
+/**
+ * Read the clipboard's image onto the wire form, or `null` when there is none.
+ *
+ * `null` covers two outcomes the platform does not let us tell apart: an empty
+ * clipboard, and an iOS 16+ "Don't Allow" on the system paste prompt (both make
+ * `getImageAsync` answer `null`). The caller says `pasteEmpty` for either, which
+ * names only the outcome. A READ that fails throws, so the caller can say
+ * `attachError` instead of pretending nothing was there.
+ *
+ * PNG, deliberately: the pasteboard's dominant case is a screenshot, and a
+ * screenshot IS a PNG — asking for PNG re-encodes losslessly, where JPEG would
+ * quantise small text. `data` is a full data URL, so the type comes from the
+ * header the platform itself wrote.
+ */
+export const readClipboardImage = async (
+	clipboard: Pick<ClipboardImageSource, "getImageAsync">,
+): Promise<PromptImage | null> => {
+	const image = await clipboard.getImageAsync({ format: "png" });
+	return image === null ? null : fromDataUrl(image.data, "image/png");
+};
+
+/**
+ * Whether the clipboard holds an image, WITHOUT reading it.
+ *
+ * This is what lets the composer offer a paste the moment it is useful: iOS
+ * answers `hasImages` without the "Allow Paste" prompt (only reading the bytes
+ * prompts), so probing on focus costs the reader nothing. A probe that fails is
+ * "no offer" — the attach sheet's Paste row is still there — never an error
+ * line about a clipboard the reader did not ask us to touch.
+ */
+export const probeClipboardImage = async (
+	clipboard: Pick<ClipboardImageSource, "hasImageAsync">,
+): Promise<boolean> => {
+	try {
+		return (await clipboard.hasImageAsync()) === true;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Whether the composer shows its "Paste image" chip.
+ *
+ * Why a chip exists at all: a React Native `TextInput` on iOS/Android never
+ * hands a pasted IMAGE to JavaScript — the system menu's Paste inserts text or
+ * nothing — so the gesture a reader reaches for first (long-press → Paste)
+ * silently drops their screenshot. The relay's web composer gets the image from
+ * the browser's paste event; the native build's equivalent is to notice the
+ * image on the clipboard while the reader is writing and offer it in one tap.
+ *
+ * Native only (the web build listens for the real paste event), only while the
+ * field is focused (the reader is composing), and hidden once that clipboard
+ * image has been taken (`consumed`) so a second tap cannot attach the same
+ * screenshot twice by reflex; a clipboard change or a fresh focus re-offers it.
+ */
+export const pasteOfferVisible = (input: {
+	kind: "web" | "native";
+	focused: boolean;
+	hasImage: boolean;
+	consumed: boolean;
+}): boolean =>
+	input.kind === "native" && input.focused && input.hasImage && !input.consumed;

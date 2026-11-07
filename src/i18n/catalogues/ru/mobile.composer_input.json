@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "Настройте распознавание речи на компьютере, чтобы пользоваться голосовым вводом.",
+	"mobile.composer_input.voice.mic_setup": "Голосовой ввод не настроен",
+	"mobile.composer_input.voice.mic_setup_hint": "Объясняет, как включить голосовой ввод",
+	"mobile.composer_input.voice.discard": "Отменить голосовой ввод",
+	"mobile.composer_input.voice.finish": "Завершить и расшифровать",
+	"mobile.composer_input.voice.transcribing": "Расшифровка записи",
+	"mobile.composer_input.paste.image": "Вставить изображение",
+	"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена"
+}

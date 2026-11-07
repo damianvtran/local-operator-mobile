@@ -1,6 +1,8 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
 import {
+	Check,
+	ClipboardPaste,
 	Folder,
 	Keyboard as KeyboardIcon,
 	Mic,
@@ -18,6 +20,7 @@ import {
 	useState,
 } from "react";
 import {
+	ActivityIndicator,
 	Dimensions,
 	Image,
 	Keyboard,
@@ -42,6 +45,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import type { PromptImage } from "@/contracts";
+import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import {
 	type AttachSource,
 	attachActions,
@@ -233,10 +237,11 @@ export type ComposerProps = {
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
 	attaching?: boolean;
-	/** The voice mic's state. `null`/absent means this surface shows no mic — the
-	 *  composer home passes nothing (its mic belongs with the new-chat flow), and a
-	 *  relay without `capabilities.stt` gets `micVisible: false` from the session
-	 *  view. */
+	/** The voice mic's state. `null`/absent means this surface shows no mic. Both
+	 *  hosts pass one now — the session view and the home (TestFlight 578: the
+	 *  new-conversation page had no mic). A relay without `capabilities.stt`
+	 *  gets `micVisible: false`, and a computer that answered "no STT here"
+	 *  gets the set-up mic (`micSetup`) rather than no mic at all. */
 	voice?: DictationState | null;
 	onSend: () => void;
 	onStop: () => void;
@@ -592,6 +597,13 @@ export const Composer = ({
 	 *  so flipping it here too would put the clock back on the leading edge. */
 	const rtl = useIsRTL();
 	const dictationLargeText = effectiveScale > LARGE_TEXT_SCALE;
+	/* Whether the mic renders at all: a working mic, or the set-up mic for a
+	 *  computer with no speech-to-text. The width budget, the row reserve and the
+	 *  row itself all read this one value, so they cannot disagree. */
+	const micShown = voice != null && (voice.micVisible || voice.micSetup);
+	/* The ✓ and the transcribing spinner: full ink, so the confirming control is
+	 *  the strongest thing on the recording row's danger wash. */
+	const dictationInk = useTokenColor("ink");
 
 	/* The handler the listener calls, kept in a ref: re-attaching the listener on
 	 * every render (to capture the current closure) is the other way to do this, and
@@ -711,6 +723,21 @@ export const Composer = ({
 						meter={voice.meter}
 						testID={SURFACE.composerDictationMeter}
 					/>
+				) : voice.phase === "transcribing" ? (
+					/* The wait, shown: the computer is transcribing, and a row that
+					 * froze on the last waveform read as hung. Indeterminate because
+					 * `/api/transcribe` reports no progress — only that it settled.
+					 * `flex-1` takes the meter's slot so the row does not reflow. */
+					<View
+						className="flex-1 flex-row items-center"
+						testID={SURFACE.composerDictationMeter}
+					>
+						<ActivityIndicator
+							size="small"
+							color={dictationInk}
+							accessibilityLabel={t("mobile.composer_input.voice.transcribing")}
+						/>
+					</View>
 				) : null}
 				{voice.phase === "recording" ? (
 					<Text
@@ -729,26 +756,32 @@ export const Composer = ({
 						{formatDuration(voice.seconds)}
 					</Text>
 				) : null}
-				{/* The reader's own DISCARD: it stops the take and sends no request at all,
-				    which is a different outcome from the mic (stop AND transcribe). Shown
-				    while a dictation is live only — an outcome line has nothing to cancel.
+				{/* The reader's own DISCARD (✕) and FINISH (✓), the pair the operator asked
+				    for (TestFlight 578: "clear cancel and stop/confirm controls"). ✕ stops
+				    the take and sends NO request; ✓ stops AND transcribes — the same
+				    `press` the mic runs while recording, placed where the eye already is.
 
-				    The VISIBLE word is `Discard`, not `Cancel`, for exactly that reason
-				    (design round 1, D6): the mic beside it morphs to a Square that STOPS AND
-				    TRANSCRIBES, and "Cancel" reads as "stop", so the two adjacent controls
-				    promised the same thing while doing different ones. `Discard` names the
-				    throw-away, and it now matches the accessible name. */}
+				    Glyphs, not the earlier `Discard` word: design round 1 (D6) chose the
+				    word because the only neighbour was the mic's Square, and "Cancel" read
+				    as "stop". With ✕ and ✓ side by side the two outcomes are the
+				    conventional opposites, and each control's accessible name still says
+				    exactly what it does. Both are 44 pt targets inside the row's fixed
+				    box, so the composer's geometry does not change. */}
 				{rowIsLive(voice.phase) ? (
-					<Pressable
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Discard voice input"
+					<IconButton
+						accessibilityLabel={t("mobile.composer_input.voice.discard")}
 						onPress={voice.cancel}
-						style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						className="items-center justify-center"
+						icon={({ color, size }) => <X color={color} size={size} />}
 						testID={CONTROL.composerDictationCancel}
-					>
-						<Text className="text-body-sm text-ink-muted">Discard</Text>
-					</Pressable>
+					/>
+				) : null}
+				{voice.phase === "recording" ? (
+					<IconButton
+						accessibilityLabel={t("mobile.composer_input.voice.finish")}
+						onPress={voice.press}
+						icon={({ size }) => <Check color={dictationInk} size={size} />}
+						testID={CONTROL.composerDictationFinish}
+					/>
 				) : null}
 			</>
 		);
@@ -762,6 +795,7 @@ export const Composer = ({
 	const [metaWidth, setMetaWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
+	const pasteOffer = useClipboardImageOffer(focused);
 	const [keyboardVisible, setKeyboardVisible] = useState(false);
 	const [contextOpen, setContextOpen] = useState(false);
 	const ownField = useRef<TextInput>(null);
@@ -843,7 +877,7 @@ export const Composer = ({
 		metaWidth >=
 			80 +
 				5 * TOUCH_FLOOR +
-				(voice?.micVisible ? TOUCH_FLOOR : 0) +
+				(micShown ? TOUCH_FLOOR : 0) +
 				(controls.stopVisible ? TOUCH_FLOOR : 0) +
 				24;
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
@@ -949,7 +983,8 @@ export const Composer = ({
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
 	const dictationShowing =
-		voice?.micVisible === true &&
+		voice !== null &&
+		micShown &&
 		(rowIsLive(voice.phase) || voice.status !== "");
 	const DICTATION_ROW_MARGIN_PX = 8;
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
@@ -1393,9 +1428,8 @@ export const Composer = ({
 	 *  only reason the mic had been exiled to the meta line (design round 1,
 	 *  D1/D2 of the earlier composer). */
 	const mic = voice?.micVisible ? (
-		/* The voice mic: shown only when the relay says voice input can run here
-		 * AND this build can record (`voice.micVisible`). Absence of
-		 * `capabilities.stt` is unavailable, so an older relay never renders it. */
+		/* The voice mic: the relay says voice input can run here AND this build
+		 * can record (`voice.micVisible`). */
 		<IconButton
 			accessibilityLabel={micLabel(voice.phase)}
 			accessibilityHint={MIC_HINT[voice.phase]}
@@ -1409,6 +1443,43 @@ export const Composer = ({
 				)
 			}
 			testID={CONTROL.composerMic}
+		/>
+	) : voice?.micSetup ? (
+		/* The SET-UP mic: the computer answered that it has no speech-to-text.
+		 * Shown (not hidden) so the reader learns the fix lives on the computer —
+		 * a press puts that sentence on the status row and records nothing. The
+		 * glyph is the same Mic: a struck-through mic reads as "muted", which is
+		 * a different (and wrong) state. */
+		<IconButton
+			accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
+			accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
+			onPress={voice.press}
+			icon={({ color, size }) => <Mic color={color} size={size} />}
+			testID={CONTROL.composerMic}
+		/>
+	) : null;
+	/* The clipboard-image offer (TestFlight 578: "I can't paste images into the
+	 *  composer"). A native field never hands a pasted image to JS, so while the
+	 *  reader is composing and the clipboard holds one, this chip offers it. It
+	 *  runs `onAttach("paste")` — the attach sheet's own Paste row — so the iOS
+	 *  paste prompt, a denial (`pasteEmpty`), a failed read and the strip are one
+	 *  path. It lives on the controls row, which only paints while the field is
+	 *  focused (the expanded card), so it appears without moving the composer. */
+	const pasteChip = pasteOffer.visible ? (
+		<Chip
+			label={t("mobile.composer_input.paste.image")}
+			accessibilityHint={t("mobile.composer_input.paste.image_hint")}
+			leadingIcon={
+				<ClipboardPaste size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
+			}
+			quiet
+			shrink
+			disabled={attaching}
+			onPress={() => {
+				pasteOffer.consume();
+				onAttach("paste");
+			}}
+			testID={CONTROL.composerPasteImage}
 		/>
 	) : null;
 	const attach = (
@@ -1527,7 +1598,9 @@ export const Composer = ({
 			    outcome does not shrink the row below the two-line states — the jump the
 			    design round measured (D1). */
 	const dictationRow =
-		voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+		voice !== null &&
+		micShown &&
+		(rowIsLive(voice.phase) || voice.status !== "") ? (
 			<View
 				className={cx(
 					"mb-2 rounded-sm border px-3",
@@ -1676,6 +1749,7 @@ export const Composer = ({
 				>
 					{attach}
 					{mic}
+					{pasteChip}
 					{/* Landscape has exactly ONE context affordance, and it is the one
 					 *  in the compact strip: a second More on this row was the same
 					 *  action twice in one 44 pt line (design round 6, D2). */}
