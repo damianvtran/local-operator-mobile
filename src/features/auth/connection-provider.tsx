@@ -66,6 +66,10 @@ import {
 } from "@/connection/radient-oauth";
 import { createRadientRefresher } from "@/connection/radient-refresh";
 import {
+	proveRecoveryAuthority,
+	recoveryAuthorityScope,
+} from "@/connection/recovery-authority";
+import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
@@ -83,7 +87,15 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
+import {
+	notifyDraftRecoveryReady,
+	prepareDraftRecovery,
+	prepareOrdinaryPrivateStorage,
+} from "@/features/session/draft-recovery";
+import { clearNativePickerCache } from "@/features/session/picker-cache";
+import { pickerPrivacy } from "@/features/session/picker-privacy";
 import { setLocaleSource, t } from "@/i18n";
 import {
 	type RelayEndpoints,
@@ -508,10 +520,11 @@ export const ConnectionProvider = ({
 		(
 			preserveUnscoped = false,
 			afterCleanup?: () => Promise<void>,
+			policy: "retire" | "reauthenticate" = "retire",
 		): Promise<boolean> => {
 			agentAvatarCache.clear();
 			return startupAuthorizationLifecycle
-				.retire(preserveUnscoped, afterCleanup)
+				.retire(preserveUnscoped, afterCleanup, policy)
 				.then(
 					() => true,
 					() => {
@@ -666,7 +679,15 @@ export const ConnectionProvider = ({
 						listStore.getState().markStale();
 						if (mountedRef.current) setStreamHealth("degraded");
 						_attempt += 1;
-						setTimeout(run, RESTART_MS);
+						/* The conversation stream's policy (`reconnectDelay`), so the two
+						 * streams of one route back off alike: 2 s, doubling to a 15 s
+						 * ceiling, and a server Retry-After only ever lengthens a step. A
+						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
+						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
+						setTimeout(
+							run,
+							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
+						);
 					},
 				});
 				streamRef.current = stream;
@@ -723,7 +744,15 @@ export const ConnectionProvider = ({
 			// Route changes include account/computer switches. Retire image bytes
 			// before the next credential can address the same agent id and hash.
 			agentAvatarCache.clear();
-			signInAbortRef.current?.abort();
+			/* A route that supersedes an in-flight browser sign-in takes its UI too.
+			 * The abandoned attempt can no longer publish (`ownsUI()` is false once
+			 * the ref is cleared), so its last state — "Waiting for your browser" or
+			 * "Signing you in…" — was left on every screen that reads `signInState`
+			 * with no way to end it. Settle it here, where ownership moves. */
+			if (signInAbortRef.current) {
+				signInAbortRef.current.abort();
+				setSignInState({ kind: "idle" });
+			}
 			signInAbortRef.current = null;
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
@@ -791,6 +820,19 @@ export const ConnectionProvider = ({
 			 * to start a conversation — the stream's seed frame does not admit, and
 			 * neither did a later refresh. The retry covers a storage write that failed
 			 * once; `null` means a newer attempt superseded this one and must not retry. */
+			const accessToken = tokensRef.current?.access;
+			const route = connectionStore.getState().route;
+			const recoveryProof =
+				Platform.OS !== "web" && route?.mode === "radient" && accessToken
+					? proveRecoveryAuthority(accessToken, {
+							isCurrent: () =>
+								admission.isCurrent() &&
+								startupAuthorizationLifecycle.isCurrent(
+									admission.authorizationRevision,
+								) &&
+								tokensRef.current?.access === accessToken,
+						})
+					: Promise.resolve(null);
 			const admitStartup = async (): Promise<void> => {
 				for (let attempt = 0; attempt < 2; attempt += 1) {
 					if (!isAdmissionActive()) return;
@@ -798,6 +840,8 @@ export const ConnectionProvider = ({
 						await startupAuthorizationLifecycle.admit(
 							admission.routeKey,
 							admission.authorizationRevision,
+							prepareOrdinaryPrivateStorage,
+							Platform.OS === "web" ? undefined : null,
 						);
 						return;
 					} catch {
@@ -811,6 +855,39 @@ export const ConnectionProvider = ({
 			};
 			const isAdmissionActive = () => admission.isCurrent();
 			await admitStartup();
+			// Recovery is optional: ordinary generation-backed editors/outboxes do
+			// not wait for the control plane. A late proof can import only an untouched
+			// empty editor; restored bytes retain separate proof provenance on disk.
+			void recoveryProof
+				.then(async (owner) => {
+					if (!owner || !route || !isAdmissionActive()) return;
+					const scope = recoveryAuthorityScope(owner, route);
+					if (scope === null) return;
+					const admitted = await startupAuthorizationLifecycle.admit(
+						admission.routeKey,
+						admission.authorizationRevision,
+						() =>
+							prepareDraftRecovery(
+								scope,
+								() =>
+									admission.isCurrent() &&
+									startupAuthorizationLifecycle.isCurrent(
+										admission.authorizationRevision,
+									),
+							),
+						scope,
+					);
+					if (admitted && isAdmissionActive()) notifyDraftRecoveryReady();
+				})
+				.catch(() => {
+					if (
+						isAdmissionActive() &&
+						startupAuthorizationLifecycle.get() === null
+					)
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+				});
 			if (!admission.isCurrent()) return;
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
@@ -1088,11 +1165,15 @@ export const ConnectionProvider = ({
 				);
 		};
 		trace("retiring");
-		const privacy = retireAuthorization(true);
+		// Checkpoint before ordinary purge; the sealed vault stays quarantined.
+		// UI ownership, callback cancellation and the auth epoch fence this attempt.
+		const privacy = retireAuthorization(true, undefined, "reauthenticate");
 		// retire() revokes synchronously; capture AFTER it, not before cleanup.
 		const revision = startupAuthorizationLifecycle.getRevision();
 		const isCurrent = () =>
-			ownsUI() && startupAuthorizationLifecycle.isCurrent(revision);
+			ownsUI() &&
+			!attempt.signal.aborted &&
+			startupAuthorizationLifecycle.isCurrent(revision);
 		const requireCurrent = () => {
 			if (!isCurrent()) throw new SignInSupersededError();
 		};
@@ -1763,6 +1844,10 @@ export const ConnectionProvider = ({
 		cancelledRef.current = false;
 		void (async () => {
 			try {
+				if (Platform.OS !== "web") {
+					pickerPrivacy.withdraw();
+					await clearNativePickerCache();
+				}
 				const stored = await readSavedTunnel();
 				if (interrupted()) return;
 				if (stored) {

@@ -34,7 +34,9 @@ class TunnelConnectionError extends RelayError {
 					? "account-mismatch"
 					: ["billing", "disabled", "harness"].includes(error.failure)
 						? "console"
-						: error.failure === "rate-limited" || error.failure === "network"
+						: error.failure === "rate-limited" ||
+								error.failure === "network" ||
+								error.failure === "unavailable"
 							? "retry"
 							: "diagnostic";
 		const detail =

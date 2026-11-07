@@ -96,7 +96,8 @@ let sheetFadeSeq = 0;
 export type SheetProps = {
 	visible: boolean;
 	onClose: () => void;
-	/** Web only: fires after the modal has stopped rendering and returned focus. */
+	/** Web: after focus return. RN fires this after native dismissal on iOS,
+	 * not Android (https://reactnative.dev/docs/modal#ondismiss). */
 	onDismiss?: () => void;
 	/** The sheet's accessible name; also its visible title. */
 	title: string;
@@ -341,7 +342,7 @@ export const Sheet = ({
 								dismissed();
 								onDismiss?.();
 							}
-						: undefined
+						: onDismiss
 				}
 				// The covered application is inert while the sheet is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.

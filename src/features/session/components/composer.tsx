@@ -471,6 +471,51 @@ const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 		chip
 	);
 
+/** iOS presents its picker from the current native controller, not the next
+ * React state. Wait for the sheet's actual dismissal so it cannot take a newly
+ * presented PHPicker down with it. Other platforms keep their immediate path.
+ * The bounded fallback avoids a lost native callback hanging Attach forever.
+ * Chrome branch (#163): preserved through the composer rewrite — the row still
+ * closes the sheet, but the launch is deferred to `onDismiss` on iOS. */
+export function createAttachmentSheetHandoff() {
+	let pending: (() => void) | undefined;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let chosen = false;
+	const clearPending = () => {
+		if (timer !== undefined) clearTimeout(timer);
+		timer = undefined;
+		pending = undefined;
+	};
+	const cancel = () => {
+		clearPending();
+		chosen = false;
+	};
+	const dismissed = () => {
+		const launch = pending;
+		// Consuming a selection is NOT reopening the sheet: queued row events
+		// after onDismiss/fallback must not launch a second, different picker.
+		clearPending();
+		launch?.();
+	};
+	return {
+		choose: (launch: () => void, platform: string) => {
+			// First iOS choice wins for this open, including the native dismissal
+			// window. Attach's explicit cancel() is the only re-admission point.
+			if (platform === "ios" && chosen) return;
+			cancel();
+			if (platform !== "ios") {
+				launch();
+				return;
+			}
+			chosen = true;
+			pending = launch;
+			timer = setTimeout(dismissed, 500);
+		},
+		dismissed,
+		cancel,
+	};
+}
+
 export const Composer = ({
 	controls,
 	draft,
@@ -559,6 +604,10 @@ export const Composer = ({
 	/* The attach sheet's open state. Local, not the host's: the sheet is this
 	 *  component's own surface, so both hosts inherit it without a second copy. */
 	const [attachSheetOpen, setAttachSheetOpen] = useState(false);
+	/* One handoff per composer mount. Unmount cancels a latched choice so a
+	 * dismissal arriving after the component is gone launches nothing. */
+	const attachmentHandoff = useRef(createAttachmentSheetHandoff()).current;
+	useEffect(() => () => attachmentHandoff.cancel(), [attachmentHandoff]);
 	useEffect(() => {
 		/* Enter sends, Shift+Enter inserts a newline, on a hardware keyboard. On web
 		 * that is a `keydown` the field would otherwise spend on a newline: a multiline
@@ -885,6 +934,7 @@ export const Composer = ({
 	const attachInk = useTokenColor("ink-muted");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
 	 *  give them what they need and no more. */
+
 	const COMPOSER_PAD = 8;
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
@@ -1305,7 +1355,12 @@ export const Composer = ({
 			accessibilityLabel="Attach an image"
 			accessibilityState={state({ busy: attaching, disabled: attaching })}
 			disabled={attaching}
-			onPress={() => setAttachSheetOpen(true)}
+			/* Explicit reopen is the only re-admission point for a fresh choice;
+			 *  a stale latch from the previous open must not survive it. */
+			onPress={() => {
+				attachmentHandoff.cancel();
+				setAttachSheetOpen(true);
+			}}
 			testID={CONTROL.composerAttach}
 		>
 			<View className={COMPOSER_DISC}>
@@ -1449,6 +1504,7 @@ export const Composer = ({
 		<Sheet
 			visible={attachSheetOpen}
 			onClose={() => setAttachSheetOpen(false)}
+			onDismiss={attachmentHandoff.dismissed}
 			/* The ratchet's own entry for this file is lower-case "attach": the
 			 * title is pre-existing debt, and capitalising it minted a NEW literal
 			 * that failed `check-strings`. Keying it is the payoff, not this fix. */
@@ -1467,7 +1523,11 @@ export const Composer = ({
 								 *  under one — a system picker presented from behind a modal is
 								 *  how a cancel lands back on a sheet nobody reopened. */
 								setAttachSheetOpen(false);
-								onAttach(action.source);
+								// The handoff waits for native dismissal; state alone is not that acknowledgement.
+								attachmentHandoff.choose(
+									() => onAttach(action.source),
+									Platform.OS,
+								);
 							}}
 							testID={attachOptionId(action.source)}
 						>
