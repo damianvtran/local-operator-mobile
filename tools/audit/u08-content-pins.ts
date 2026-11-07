@@ -804,7 +804,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-pinned 2026-11-07 for feat/startup-restore-computer with --print from the
+	 * staged tree. Only `src` moves: the cold start reopens the last computer used
+	 * (or the only one) through `src/features/auth/cold-start-computer.ts`, wired in
+	 * `connection-provider.tsx`, plus tests. No copy, styling or layout changes;
+	 * `app`, `design/tokens`, fonts and `public` are untouched. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	src: "1dd966b07663fdc464208f39e385616de867d1693a4e2b7048cd3d3d8f7fd696",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

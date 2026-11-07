@@ -9,6 +9,7 @@ import type {
 	TunnelSession,
 } from "@/connection";
 import * as recoveryProof from "@/connection/recovery-authority";
+import type { SavedComputer } from "@/connection/saved-computers";
 import {
 	configureStartupAuthorizationStorage,
 	getStartupAuthorization,
@@ -106,6 +107,7 @@ const durable = vi.hoisted(() => ({
 		allowInsecure: boolean;
 	} | null,
 	session: null as TunnelSession | null,
+	computers: [] as SavedComputer[],
 	events: [] as string[],
 	writeBlock: null as Promise<void> | null,
 	writesStarted: 0,
@@ -151,6 +153,10 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 	rememberLiveComputer: async (
 		...args: Parameters<TunnelStorageModule["rememberLiveComputer"]>
 	) => (await realRegistry()).rememberLiveComputer(...args),
+	/* A fixture rather than the real registry: the cold start's computer restore
+	 *  reads this on every mount, and a registry shared across cases would let an
+	 *  earlier case's live computer reopen itself in the next one. */
+	readSavedComputers: async () => durable.computers,
 	readSavedTunnel: async () => durable.saved,
 	readStoredOauth: async () => durable.oauth,
 	readStoredTunnelSession: async () => durable.session,
@@ -756,6 +762,7 @@ beforeEach(async () => {
 	handoff.started = false;
 	handoff.signals.length = 0;
 	durable.saved = null;
+	durable.computers = [];
 	const storage = new SecureStorage(memorySecureStore());
 	configureStartupAuthorizationStorage({
 		read: () => storage.readStartupAuthorization(),
@@ -3307,5 +3314,81 @@ describe("the i18n runtime reads the provider's config store", () => {
 		expect(preferredLocale()).toBe("en-GB");
 		configStore.getState().reset();
 		expect(preferredLocale()).toBeNull();
+	});
+});
+
+describe("the cold start reopens the reader's computer (startup restore, PR H)", () => {
+	/* Routed to the loopback relay like the PR #121 cases, so a restored pick can
+	 *  mint and go live. Every id is synthetic. */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const used = (tunnelId: string, lastUsedAt: number): SavedComputer => ({
+		id: `saved-${tunnelId}`,
+		transport: "radient",
+		tunnelId,
+		hostname: `${tunnelId}.example.invalid`,
+		name: tunnelId,
+		account: null,
+		addedAt: 1,
+		lastUsedAt,
+		hidden: false,
+		identity: null,
+	});
+	const tunnelOf = () => {
+		const route = connectionStore.getState().route;
+		return route?.mode === "radient" ? route.tunnelId : null;
+	};
+
+	it("reopens the last computer used, with the route started before the cold start settles", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.computers = [
+			used("tun-synthetic-1", 5),
+			used("tun-synthetic-2", 10),
+		];
+		await mount();
+		/* `mount` returns at `coldStartSettled`: a route already exists then, so
+		 *  Home's landing effect (which needs `!routed`) never sends it to the picker. */
+		expect(tunnelOf()).toBe("tun-synthetic-2");
+		await until(() => connectionStore.getState().phase === "live");
+	});
+
+	it("opens the only computer when nothing was used before", async () => {
+		const mock = await relay({ tunnels: tunnels.slice(0, 1) });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		expect(tunnelOf()).toBe("tun-synthetic-1");
+	});
+
+	it("stays on the picker with two computers and a stale last id", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.computers = [used("tun-synthetic-gone", 10)];
+		await mount();
+		expect(latest.restoredAccount).toBe(true);
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		expect(connectionStore.getState().route).toBeNull();
+	});
+
+	it("leaves a saved own-tunnel waiting for its password alone", async () => {
+		const mock = await relay({ tunnels: tunnels.slice(0, 1) });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.saved = {
+			baseUrl: mock.origin,
+			password: null as unknown as string,
+			allowInsecure: true,
+		};
+		await mount();
+		expect(latest.savedTunnel).not.toBeNull();
+		expect(connectionStore.getState().route).toBeNull();
 	});
 });
