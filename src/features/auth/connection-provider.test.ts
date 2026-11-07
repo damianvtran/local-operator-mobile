@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { createServer } from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -333,6 +333,8 @@ async function relay(
 	/* Whether the session code request fails NOW: starts at `options.failCode`, and a
 	 *  test can lift it to retry the same pick against a recovered control plane. */
 	let failCode = options.failCode ?? false;
+	const refreshFailures: number[] = [];
+	const openCatalogue = new Set<ServerResponse>();
 	let sessionStreams = 0;
 	let failedStream = false;
 	const server = createServer(async (request, response) => {
@@ -406,6 +408,13 @@ async function relay(
 			return;
 		}
 		if (path === "/v1/tunnels/session/refresh") {
+			if (refreshFailures.length > 0) {
+				json(
+					{ error: "synthetic control-plane outage" },
+					refreshFailures.shift(),
+				);
+				return;
+			}
 			json({
 				access_token: `synthetic-grant-${++tokenCount}`,
 				refresh_token: "synthetic-handle-1",
@@ -501,6 +510,8 @@ async function relay(
 			response.write(
 				`event: sessions\ndata: ${JSON.stringify(body("sessions-empty"))}\n\n`,
 			);
+			openCatalogue.add(response);
+			response.on("close", () => openCatalogue.delete(response));
 			if (options.refuseCatalogue) {
 				await refuseCatalogue.promise;
 				response.end();
@@ -618,6 +629,14 @@ async function relay(
 		releaseCode,
 		expireGrant: () => {
 			rejectOldGrant = true;
+		},
+		/** The control plane answers the next grant renewals with these statuses. */
+		failRefresh: (...statuses: number[]) => {
+			refreshFailures.push(...statuses);
+		},
+		/** Ends every open list stream cleanly — the gateway's 60 s stream cap. */
+		endCatalogueStreams: () => {
+			for (const open of openCatalogue) open.end();
 		},
 		answerTunnels: (answer: "list" | 500 | 401) => {
 			tunnelsAnswer = answer;
@@ -2034,6 +2053,33 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		return mock;
 	}
 
+	/* A pick that supersedes a browser sign-in still in flight aborts it, and the
+	 * aborted attempt may no longer publish. Its pending state used to survive on
+	 * every screen reading `signInState` ("Waiting for your browser" for ever, and
+	 * Computers rendered as signed out) — the ownership move must settle it. */
+	it("settles an in-flight sign-in's pending state when a pick takes over", async () => {
+		await signedIn({});
+		const first = connectionStore.getState().computers[0];
+		if (!first) throw new Error("no computer");
+		const gate = deferred();
+		handoff.block = gate.promise;
+		handoff.started = false;
+		let signingIn!: Promise<void>;
+		await act(async () => {
+			signingIn = latest.signInWithRadient();
+		});
+		await until(() => handoff.started);
+		expect(latest.signInState.kind).not.toBe("idle");
+		await act(async () => {
+			await latest.selectComputer(first);
+		});
+		gate.resolve();
+		await act(async () => {
+			await signingIn;
+		});
+		expect(latest.signInState).toEqual({ kind: "idle" });
+	});
+
 	it("keeps the list while the picked computer mints and after it is live (R1-M1, D1)", async () => {
 		const mock = await signedIn({ holdCode: true });
 		const second = connectionStore.getState().computers[1];
@@ -2149,6 +2195,64 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 			clock.mockRestore();
 		}
 	});
+
+	/* TestFlight 453: "The mobile app seems to disconnect after some time with no
+	 * reason." A live route renews its five-minute tunnel grant as the list stream
+	 * reopens past the gateway's 60 s cap. One control-plane 5xx on that renewal
+	 * was typed `rejected` → `diagnostic`, which the list stream treats as
+	 * terminal: the route ended and nothing reconnected. It must ride the stream's
+	 * ordinary retry and come back live once Radient answers again. */
+	it("keeps a live route through a control-plane outage on the grant renewal", async () => {
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		const streams = () =>
+			mock.events.filter((e) => e === "GET /api/sessions/events").length;
+		const renewals = () =>
+			mock.events.filter((e) => e === "POST /v1/tunnels/session/refresh")
+				.length;
+		await until(() => streams() === 1);
+		mock.failRefresh(503);
+		/* Past the grant's life, and still moving: the stream's rotation timing and
+		 * `until`'s own deadline both read the clock. The provider restarts a
+		 * failed list stream after 2 s, so the wait outlasts one restart. */
+		const skew = 301_000;
+		const realNow = Date.now.bind(Date);
+		const clock = vi
+			.spyOn(Date, "now")
+			.mockImplementation(() => realNow() + skew);
+		const within = async (test: () => boolean) => {
+			const deadline = realNow() + 8_000;
+			while (!test()) {
+				if (realNow() > deadline)
+					throw new Error(
+						`Route did not recover: ${JSON.stringify({
+							renewals: renewals(),
+							streams: streams(),
+							phase: connectionStore.getState().phase,
+							surface: connectionStore.getState().surface,
+						})}`,
+					);
+				await act(async () => {
+					await new Promise<void>((resolve) => setTimeout(resolve, 20));
+				});
+			}
+		};
+		try {
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			await within(() => renewals() >= 2 && streams() >= 2);
+			expect(connectionStore.getState().phase).toBe("live");
+			expect(connectionStore.getState().surface).toBeNull();
+		} finally {
+			clock.mockRestore();
+		}
+	}, 20_000);
 
 	it("389 treats a granted refresh that is still refused as genuine revocation", async () => {
 		// The other half of the rule: a refresh only buys one retry. If the grant is

@@ -719,6 +719,30 @@ describe("discovery turns tunnels into computers, honestly", () => {
 		expect(unreachable.kind).toBe("unreachable");
 	});
 
+	/* Sign-in waits on this read after the browser sheet closes (TestFlight 453).
+	 * Both stall shapes — no headers, and headers with a body that never ends —
+	 * must end as `unreachable` (grant kept) within the budget. */
+	it("bounds a read that never answers, headers or body", async () => {
+		const never = new Promise<never>(() => undefined);
+		const noHeaders = await discoverComputers({
+			accessToken: () => "at",
+			timeoutMs: 50,
+			fetchImpl: (() => never) as unknown as typeof globalThis.fetch,
+		});
+		expect(noHeaders.kind).toBe("unreachable");
+		const stalledBody = await discoverComputers({
+			accessToken: () => "at",
+			timeoutMs: 50,
+			fetchImpl: (async () =>
+				({
+					status: 200,
+					ok: true,
+					json: () => never,
+				}) as unknown as Response) as unknown as typeof globalThis.fetch,
+		});
+		expect(stalledBody.kind).toBe("unreachable");
+	});
+
 	it("treats a 401 as a sign-in, and an unknown shape as a version problem rather than an empty account", async () => {
 		expect(
 			(

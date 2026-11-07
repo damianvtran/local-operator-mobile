@@ -621,7 +621,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
 	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
 	 * source admission, not a claim that measured geometry moved. */
-	src: "603ecaf930754295a712e4a47ccf6770148e2c9d9732339113c1dddcd3b35438",
+	/* Re-printed 2026-11-06 with --print at the STAGED TestFlight-453 tree: the
+	 * Radient token exchange and tunnel discovery gained a request deadline, a
+	 * route that supersedes an in-flight sign-in settles its pending state, and a
+	 * control-plane 5xx on the tunnel grant renewal is typed transient
+	 * (`unavailable`) instead of `rejected`. Connection logic and tests only — no
+	 * rendered surface, copy, catalogue key or `app` change, and U-08's transcript
+	 * scene does not render sign-in: source admission, not a geometry claim. */
+	src: "e9168d1242d40f17d106d8ee8855a10673ad1852c6fb46911695d484690e73f1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

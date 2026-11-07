@@ -22,7 +22,11 @@
  * token from expiring mid-request on a slow link.
  */
 
-import { resolveFetch } from "../relay/platform-fetch";
+import {
+	RequestDeadlineError,
+	readWithDeadline,
+	resolveFetch,
+} from "../relay/platform-fetch";
 import {
 	type AuthBrowserSession,
 	type CallbackListener,
@@ -44,6 +48,10 @@ export const RADIENT_OAUTH = {
 	expirySkewMs: 5 * 60 * 1000,
 	/** How long the browser sheet may stay open before the attempt is abandoned. */
 	browserTimeoutMs: 5 * 60 * 1000,
+	/** Total budget for one token/refresh request, headers and body. The relay
+	 *  client's default (`relay/http.ts`), so a slow link fails the same way on
+	 *  either host, and short enough that a stalled sign-in ends in Try again. */
+	requestTimeoutMs: 20_000,
 } as const;
 
 /** What is stored after a successful sign-in. */
@@ -130,6 +138,10 @@ export interface RadientOAuthDeps {
 	/** Overridable so a test can assert the exact URL the console receives. */
 	authorizeUrl?: string;
 	tokenUrl?: string;
+	/** Per-request budget override; `RADIENT_OAUTH.requestTimeoutMs` otherwise. */
+	timeoutMs?: number;
+	/** Aborts the request, e.g. when the sign-in that needs it is superseded. */
+	signal?: AbortSignal;
 }
 
 /** The authorize URL the system browser opens. Exported so the shape is
@@ -214,30 +226,44 @@ async function postJson(
 ): Promise<TokenResponse> {
 	const fetchImpl = resolveFetch(deps.fetchImpl);
 	let response: Response;
+	let body: TokenResponse;
 	try {
-		response = await fetchImpl(url, {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				accept: "application/json",
+		/* Bounded: this is the request the sign-in screen waits on after the browser
+		 * sheet closes, and the renewal every tunnel re-mint waits on. Unbounded, a
+		 * stalled answer held "Signing you in…" for ever (TestFlight 453). A deadline
+		 * is a `network` failure — no answer — so the grant is never judged by it. */
+		({ response, body } = await readWithDeadline(
+			fetchImpl,
+			url,
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json",
+				},
+				body: JSON.stringify(payload),
+				...(deps.signal ? { signal: deps.signal } : {}),
 			},
-			body: JSON.stringify(payload),
-		});
-	} catch {
+			deps.timeoutMs ?? RADIENT_OAUTH.requestTimeoutMs,
+			async (answer) => {
+				try {
+					/* A boundary cast onto a type whose every field is `unknown`: it asserts
+					 * only "this is an object", and `tokensFromResponse` narrows each field
+					 * it reads (typeof checks) before using it, so no value is trusted. */
+					return (await answer.json()) as TokenResponse;
+				} catch {
+					return {};
+				}
+			},
+		));
+	} catch (cause) {
 		throw new RadientAuthError(
 			"network",
-			`${what} could not reach Radient`,
+			cause instanceof RequestDeadlineError
+				? `${what} did not answer in time`
+				: `${what} could not reach Radient`,
 			undefined,
 		);
-	}
-	let body: TokenResponse = {};
-	try {
-		/* A boundary cast onto a type whose every field is `unknown`: it asserts only
-		 * "this is an object", and `tokensFromResponse` narrows each field it reads
-		 * (typeof checks) before using it, so no value is trusted by the cast. */
-		body = (await response.json()) as TokenResponse;
-	} catch {
-		body = {};
 	}
 	if (!response.ok) {
 		const errorCode = typeof body.error === "string" ? body.error : "";
@@ -279,6 +305,8 @@ export async function signInWithRadient(deps: {
 	onAuthorizeUrl?: (url: string) => void;
 	/** Native sheet closed with a verified callback; token exchange is still pending. */
 	onCallbackReceived?: () => void;
+	/** The exchange's budget; `RADIENT_OAUTH.requestTimeoutMs` otherwise. */
+	requestTimeoutMs?: number;
 }): Promise<RadientTokens> {
 	const cancel = () => {
 		void deps.browser.dismiss().catch(() => undefined);
@@ -330,6 +358,8 @@ export async function signInWithRadient(deps: {
 				now,
 				fetchImpl: deps.fetchImpl,
 				tokenUrl: deps.tokenUrl,
+				signal: deps.signal,
+				timeoutMs: deps.requestTimeoutMs,
 			});
 		}
 		if (!fromListener) {
@@ -345,6 +375,8 @@ export async function signInWithRadient(deps: {
 			now,
 			fetchImpl: deps.fetchImpl,
 			tokenUrl: deps.tokenUrl,
+			signal: deps.signal,
+			timeoutMs: deps.requestTimeoutMs,
 		});
 	} finally {
 		deps.signal?.removeEventListener("abort", cancel);

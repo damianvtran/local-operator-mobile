@@ -723,7 +723,15 @@ export const ConnectionProvider = ({
 			// Route changes include account/computer switches. Retire image bytes
 			// before the next credential can address the same agent id and hash.
 			agentAvatarCache.clear();
-			signInAbortRef.current?.abort();
+			/* A route that supersedes an in-flight browser sign-in takes its UI too.
+			 * The abandoned attempt can no longer publish (`ownsUI()` is false once
+			 * the ref is cleared), so its last state — "Waiting for your browser" or
+			 * "Signing you in…" — was left on every screen that reads `signInState`
+			 * with no way to end it. Settle it here, where ownership moves. */
+			if (signInAbortRef.current) {
+				signInAbortRef.current.abort();
+				setSignInState({ kind: "idle" });
+			}
 			signInAbortRef.current = null;
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
