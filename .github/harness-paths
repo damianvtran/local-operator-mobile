@@ -30,9 +30,24 @@
 
 # --- ship: what release.yml reads, directly or through what it calls --------
 
-# The release pipeline itself, and the workflow it calls as a required job.
+# The release pipeline itself.
 ship: .github/workflows/release.yml
-ship: .github/workflows/ci.yml
+# ci.yml is a GATE, not a ship input: release.yml calls it only to decide
+# whether to ship, and consumes nothing it produces (checked 2026-11-06):
+#   release.yml:211-218  gate: needs: [version, credentials] … uses: ./.github/workflows/ci.yml
+#   release.yml:222/332  android/ios: needs: [version, credentials, gate]  (no needs.gate.outputs)
+#   release.yml:414      publish: if: … needs.gate.result == 'success' …  (result only)
+#   release.yml:426-436  download-artifact name: android-release / ios-ipa — produced by
+#                        the android/ios jobs; ci.yml uploads only web-export,
+#                        android-release-probe, ios-ipa-probe, design-previews.
+# A gate file is still a product path (editing it opens a round), but its text
+# does not seed the ship closure, so the scripts it runs can be harness. The
+# merge-gate `### Harness delta check` reads changed `gate-run` harness files with
+# the full review lens, not only for gate weakening.
+# Residual channel, for the manifest reviewer: ci.yml's `setup-node cache: pnpm`
+# and release.yml:242/350's share the pnpm store cache (lockfile-keyed;
+# `pnpm install --frozen-lockfile` checks integrity against pnpm-lock.yaml).
+gate: .github/workflows/ci.yml
 # Composite actions release.yml uses to build, sign and upload.
 ship: .github/actions/**
 # Native gates: ios.yml can sign and upload to TestFlight from main, and both

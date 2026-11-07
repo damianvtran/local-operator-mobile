@@ -48,7 +48,11 @@ once chosen — do not assume one before it lands.
   loosened assertions, skips, widened tolerances, `continue-on-error`, a probe
   that cannot fail) and for any harness file that runs with release triggers,
   secrets, signing or publishing; a blocker/major there is fixed like any other.
-  QA is retained. Any failed condition — one product byte, a script `release.yml`
+  QA is retained. A `gate:` file in the manifest (a workflow such as `ci.yml`
+  that decides whether to ship but contributes no shipped bytes — the manifest
+  quotes the `release.yml` lines that show it) is product when edited but does
+  not make the harness files it runs ship-reachable; the proof lists those as
+  `gate-run`, and the harness delta check reads them with the full review lens. Any failed condition — one product byte, a script `release.yml`
   runs even though it lives under `scripts/ci/`, a manifest edit, a moved
   base — is a normal `R..H` round.
 - **Split the harness out when it outgrows the product.** At every review
