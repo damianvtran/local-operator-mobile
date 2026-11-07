@@ -1,0 +1,14 @@
+{
+	"relay.composer.action.stop": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Stops the agent's running turn. Visible text of the small Stop action on the working line pinned above the composer (44 pt wide at most, so keep it one short word). One lowercase verb, no punctuation. Translator budget: 16 cells (the core's maxCells; the native context schema has no maxCells field, so the number is recorded here)."
+	},
+	"relay.composer.action.stopping": {
+		"role": "status",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the same Stop action after the user pressed it and before the turn has ended: it says the stop was accepted and is in progress. Present-progressive participle, lowercase, no punctuation, no ellipsis. Translator budget: 20 cells."
+	},
+	"relay.composer.action.stop_agent": {
+		"role": "button",
+		"note": "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the Stop action on the working line (the row that says what the agent is doing and for how long). Longer than the visible word 'stop' and must CONTAIN the same verb as relay.composer.action.stop so a screen-reader user hears the visible text. 'The agent' is the glossary's agent. Imperative verb phrase, lowercase, no punctuation. Translator budget: 28 cells."
+	}
+}

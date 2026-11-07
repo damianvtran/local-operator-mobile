@@ -46,6 +46,8 @@ import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
+import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.json";
+import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
 
@@ -56,6 +58,8 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * DATA behind it — that every message parses, that every key has translator
  * context, and that the four namespaces do not quietly collide.
  */
+const JSON_SUFFIX = /\.json$/;
+
 const NAMESPACES = [
 	{
 		name: "mobile.signin",
@@ -154,6 +158,17 @@ const NAMESPACES = [
 		expected: 8,
 	},
 	{
+		/* The relay's Stop words, mirrored key for key from the core
+		 * (`local_operator/i18n/catalogues/<locale>/relay.composer.json` at
+		 * 6fc208f636d) for the pinned working line's Stop — the same verb the relay
+		 * shows, so the two clients cannot name the action two ways. A subset: only
+		 * the three keys this app renders. */
+		name: "relay.composer",
+		messages: relayComposer,
+		context: relayComposerContext,
+		expected: 3,
+	},
+	{
 		/* This app's own chrome for the health surface: the control's labels, the
 		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
 		 *  `mobile.*` convention #112 established, because a later adoption of the
@@ -235,9 +250,10 @@ describe("the English catalogues", () => {
 		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
 		 *  + the ended-session chip hints' 3 (fix/session-chips-rail)
 		 *  + the switcher's transport words (`mobile.computers.transport.radient`,
-		 *  `mobile.computers.transport.custom`).
-		 *  +  * composer's paste chip and voice set-up/recording controls' 8. */
-		expect(total).toBe(346);
+		 *  `mobile.computers.transport.custom`)
+		 *  + the composer's paste chip and voice set-up/recording controls' 8.
+		 *  +  working line's three mirrored Stop keys. */
+		expect(total).toBe(349);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -250,7 +266,7 @@ describe("the English catalogues", () => {
 			.filter(
 				(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
 			)
-			.map((name) => name.replace(/\.json$/, ""))
+			.map((name) => name.replace(JSON_SUFFIX, ""))
 			.sort();
 		expect(NAMESPACES.map((namespace) => namespace.name).sort()).toEqual(
 			onDisk,

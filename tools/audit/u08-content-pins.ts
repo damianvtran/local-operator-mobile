@@ -510,7 +510,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * as the projection (ended sessions, TestFlight 578); round-1 remediation
 	 * re-printed it again for the chip-command error line. Source admission
 	 * only, NOT rendered U-08 evidence. */
-	app: "29c1386afde5934d8ee5f1fbaacaebda49f3e60fa337a46b70276d09481be1bd",
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree: the session screen mounts the pinned working line (spinner,
+	 * activity, clock, Stop) in the dock above the chips on tray layouts and drops
+	 * the duplicate line from the status sheet. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's round-1 remediation with --print from
+	 * the staged tree: the header subtitle ticks on the shared phase clock, the
+	 * pinned line yields to the short-landscape tray (whose sheet keeps the line),
+	 * and both Stops read one latch. Source admission only, NOT rendered U-08
+	 * evidence. */
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) into
+	 * feat/thinking-indicator, with --print from the merged tree: `app` carries
+	 * both sides (the header reads `runtime.streaming` on the ticking subtitle).
+	 * Source admission only, NOT rendered U-08 evidence. */
+	app: "f35fd6ca50df426eda508f9bfa1392c68d26deb4bb9bfef63026ca5207f7e746",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -904,7 +918,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (PR #187, round-2 head 875cebf7): both lines of history stand, the value is
 	 * the merged tree's own, neither side's digest is kept. Source admission, not
 	 * a geometry claim. */
-	src: "d59235c7ec2c4932cbee872c1922455f463898039530b727bd17a194088f2a69",
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree. Only `src` and `app` move: `PinnedWorkingLine` and the Stop on
+	 * the working line, `pinnedWorkingLine` derivation, the mirrored
+	 * `relay.composer` stop keys (8 locales) and their generated catalogue, one
+	 * control id, and tests. Source admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's round-1 remediation with --print from
+	 * the staged tree: the per-session stop latch (`turn-stop.ts`) shared by the
+	 * composer's ■ and the line's Stop, the shared phase clock, the line's row
+	 * sizing / hitSlop / rest glyph, and tests. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) with
+	 * --print from the merged tree: `turnRunning` beside `pinnedWorkingLine`, both
+	 * sides' composer, runtime and relay changes, and tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189 Q1/U2/D3 with --print from the staged
+	 * tree: `pinnedWorkingLine` gates on `turnRunning` (so a lowered `streaming`
+	 * under a live label keeps the line and its Stop), with its frame test and a
+	 * hook-level `runtime.streaming` assertion. `app` does not move. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "0d28da5f3a941e58f8cd0cf7e59b2a9e5ef977317ba1e69cf6b20d5ada6e918b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

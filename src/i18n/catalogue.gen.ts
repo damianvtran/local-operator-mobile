@@ -369,6 +369,9 @@ export type CatalogueKey =
 	| "relay.chrome.session.subtitle.working_plain"
 	| "relay.chrome.session.tray.agents"
 	| "relay.chrome.session.tray.tasks"
+	| "relay.composer.action.stop"
+	| "relay.composer.action.stop_agent"
+	| "relay.composer.action.stopping"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -666,6 +669,9 @@ export type NoParamKey =
 	| "relay.chrome.session.subtitle.not_answering"
 	| "relay.chrome.session.subtitle.waiting"
 	| "relay.chrome.session.subtitle.working_plain"
+	| "relay.composer.action.stop"
+	| "relay.composer.action.stop_agent"
+	| "relay.composer.action.stopping"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -1018,6 +1024,9 @@ export type MessageParams = {
 	"relay.chrome.session.subtitle.working_plain": NoParams;
 	"relay.chrome.session.tray.agents": { running: string | number; total: string | number };
 	"relay.chrome.session.tray.tasks": { done: string | number; total: string | number };
+	"relay.composer.action.stop": NoParams;
+	"relay.composer.action.stop_agent": NoParams;
+	"relay.composer.action.stopping": NoParams;
 	"relay.health.dropped_detail": NoParams;
 	"relay.health.ended_detail": NoParams;
 	"relay.health.ended_send_failed": NoParams;
@@ -1383,6 +1392,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.chrome.session.subtitle.working_plain": "Working",
 	"relay.chrome.session.tray.agents": "Agents {running}/{total}",
 	"relay.chrome.session.tray.tasks": "Tasks {done}/{total}",
+	"relay.composer.action.stop": "stop",
+	"relay.composer.action.stop_agent": "stop the agent",
+	"relay.composer.action.stopping": "stopping",
 	"relay.health.dropped_detail": "Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
 	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
 	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
@@ -1733,6 +1745,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.chrome.session.subtitle.working_plain": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent works and its start time is unknown." },
 	"relay.chrome.session.tray.agents": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's subagents (helper agents it started); opens their list. {running} of {total} are running now. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
 	"relay.chrome.session.tray.tasks": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's task list; opens it. {done} of {total} tasks are finished. Keep the slash form; it is a compact fraction. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
+	"relay.composer.action.stop": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Stops the agent's running turn. Visible text of the small Stop action on the working line pinned above the composer (44 pt wide at most, so keep it one short word). One lowercase verb, no punctuation. Translator budget: 16 cells (the core's maxCells; the native context schema has no maxCells field, so the number is recorded here)." },
+	"relay.composer.action.stop_agent": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the Stop action on the working line (the row that says what the agent is doing and for how long). Longer than the visible word 'stop' and must CONTAIN the same verb as relay.composer.action.stop so a screen-reader user hears the visible text. 'The agent' is the glossary's agent. Imperative verb phrase, lowercase, no punctuation. Translator budget: 28 cells." },
+	"relay.composer.action.stopping": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the same Stop action after the user pressed it and before the turn has ended: it says the stop was accepted and is in progress. Present-progressive participle, lowercase, no punctuation, no ellipsis. Translator budget: 20 cells." },
 	"relay.health.dropped_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen." },
 	"relay.health.ended_detail": { role: "help", note: "Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder." },
 	"relay.health.ended_send_failed": { role: "status", note: "Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume." },
@@ -2097,6 +2112,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "Trabajando",
 		"relay.chrome.session.tray.agents": "Agentes {running}/{total}",
 		"relay.chrome.session.tray.tasks": "Tareas {done}/{total}",
+		"relay.composer.action.stop": "detener",
+		"relay.composer.action.stop_agent": "detener al agente",
+		"relay.composer.action.stopping": "deteniendo",
 		"relay.health.dropped_detail": "Tu máquina no logra comunicarse con esta sesión ahora mismo y sigue intentándolo. Hasta que lo consiga, cualquier envío falla de inmediato y lo que escribiste se queda en el campo de texto.",
 		"relay.health.ended_detail": "El historial se conserva. Envía un mensaje o toca Reanudar para reabrir la sesión en tu carpeta personal.",
 		"relay.health.ended_send_failed": "Esta sesión finalizó y no se pudo reabrir en este momento. Inténtalo de nuevo o toca “Finalizada” arriba y elige Reanudar.",
@@ -2445,6 +2463,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "En cours",
 		"relay.chrome.session.tray.agents": "Agents {running}/{total}",
 		"relay.chrome.session.tray.tasks": "Tâches {done}/{total}",
+		"relay.composer.action.stop": "arrêter",
+		"relay.composer.action.stop_agent": "arrêter l’agent",
+		"relay.composer.action.stopping": "arrêt en cours",
 		"relay.health.dropped_detail": "Votre ordinateur n’arrive pas à joindre cette session pour l’instant et continue d’essayer. Tant qu’il n’y parvient pas, un envoi échoue aussitôt et votre texte reste dans la zone de saisie.",
 		"relay.health.ended_detail": "L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.",
 		"relay.health.ended_send_failed": "Cette session est terminée et n’a pas pu être rouverte pour le moment. Réessayez ou touchez « Terminée » en haut, puis choisissez « Reprendre ».",
@@ -2793,6 +2814,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "कार्यरत",
 		"relay.chrome.session.tray.agents": "एजेंट {running}/{total}",
 		"relay.chrome.session.tray.tasks": "कार्य {done}/{total}",
+		"relay.composer.action.stop": "रोकें",
+		"relay.composer.action.stop_agent": "एजेंट को रोकें",
+		"relay.composer.action.stopping": "रोका जा रहा है",
 		"relay.health.dropped_detail": "आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है।",
 		"relay.health.ended_detail": "इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ।",
 		"relay.health.ended_send_failed": "यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।",
@@ -3141,6 +3165,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "Работает",
 		"relay.chrome.session.tray.agents": "Агенты {running}/{total}",
 		"relay.chrome.session.tray.tasks": "Задачи {done}/{total}",
+		"relay.composer.action.stop": "остановить",
+		"relay.composer.action.stop_agent": "остановить агента",
+		"relay.composer.action.stopping": "останавливаем",
 		"relay.health.dropped_detail": "Компьютер сейчас не может связаться с этой сессией и продолжает попытки. Пока это не удастся, отправка сразу завершается ошибкой, а текст остаётся в поле ввода.",
 		"relay.health.ended_detail": "История сохранена. Отправьте сообщение или нажмите «Возобновить», чтобы снова открыть сессию в вашей домашней папке.",
 		"relay.health.ended_send_failed": "Эта сессия завершена, и открыть её снова пока не удалось. Попробуйте отправить ещё раз или нажмите «Завершена» вверху и выберите «Возобновить».",
@@ -3489,6 +3516,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "کام جاری",
 		"relay.chrome.session.tray.agents": "ایجنٹس {running}/{total}",
 		"relay.chrome.session.tray.tasks": "کام {done}/{total}",
+		"relay.composer.action.stop": "روکیں",
+		"relay.composer.action.stop_agent": "ایجنٹ کو روکیں",
+		"relay.composer.action.stopping": "روکا جا رہا ہے",
 		"relay.health.dropped_detail": "آپ کا کمپیوٹر ابھی اس سیشن تک نہیں پہنچ پا رہا اور مسلسل کوشش کر رہا ہے۔ جب تک یہ پہنچ نہ پائے، بھیجنے پر پیغام فوراً ناکام ہو جاتا ہے اور آپ کا لکھا ہوا متن پیغام کے خانے میں ہی رہتا ہے۔",
 		"relay.health.ended_detail": "تاریخچہ محفوظ ہے۔ اسے اپنے ہوم فولڈر میں دوبارہ کھولنے کے لیے پیغام بھیجیں یا “جاری رکھیں” دبائیں۔",
 		"relay.health.ended_send_failed": "یہ سیشن ختم ہو گیا ہے اور ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں، یا اوپر “ختم ہو گیا” دبائیں اور “جاری رکھیں” منتخب کریں۔",
@@ -3837,6 +3867,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "Đang làm việc",
 		"relay.chrome.session.tray.agents": "Tác nhân {running}/{total}",
 		"relay.chrome.session.tray.tasks": "Tác vụ {done}/{total}",
+		"relay.composer.action.stop": "dừng",
+		"relay.composer.action.stop_agent": "dừng tác nhân",
+		"relay.composer.action.stopping": "đang dừng",
 		"relay.health.dropped_detail": "Máy tính của bạn hiện không kết nối được với phiên này và vẫn đang thử lại. Cho đến khi kết nối được, gửi tin nhắn sẽ thất bại ngay và nội dung đã gõ vẫn còn trong ô nhập.",
 		"relay.health.ended_detail": "Lịch sử đã được lưu. Gửi tin nhắn hoặc chạm Mở lại để khôi phục phiên trong thư mục home của bạn.",
 		"relay.health.ended_send_failed": "Phiên này đã kết thúc và lúc này chưa khôi phục được. Hãy thử gửi lại, hoặc chạm “Đã kết thúc” ở trên cùng rồi chọn Mở lại.",
@@ -4185,6 +4218,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.chrome.session.subtitle.working_plain": "工作中",
 		"relay.chrome.session.tray.agents": "智能体{running}/{total}",
 		"relay.chrome.session.tray.tasks": "任务{done}/{total}",
+		"relay.composer.action.stop": "停止",
+		"relay.composer.action.stop_agent": "停止智能体",
+		"relay.composer.action.stopping": "正在停止",
 		"relay.health.dropped_detail": "电脑目前无法连接到此会话，正在不断重试。连上之前，发送会立即失败，已输入的文字会保留在输入框中。",
 		"relay.health.ended_detail": "历史记录已保留。发送消息或点击“恢复”，即可在主目录中重新打开。",
 		"relay.health.ended_send_failed": "此会话已结束，刚才未能重新打开。可以重试，或点击顶部的“已结束”，然后选择“恢复”。",

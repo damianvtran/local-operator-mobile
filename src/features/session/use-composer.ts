@@ -43,6 +43,7 @@ import {
 	slashTap,
 	slashTapRequest,
 } from "@/features/session/slash";
+import { stopTurn, useTurnStopping } from "@/features/session/turn-stop";
 import {
 	type DictationState,
 	useDictation,
@@ -118,6 +119,9 @@ export interface ComposerState {
 	/** The turn interrupt. Resolves whether the request reached the relay — see
 	 *  the implementation; callers that ignore the value are unaffected. */
 	stop: () => Promise<boolean>;
+	/** A stop is pending for this session's turn (`turn-stop.ts`): every Stop
+	 *  control on the screen dims on it, and a repeat tap on any is a no-op. */
+	stopping: boolean;
 	/** Runs or fills a slash command the reader tapped in the sheet. It takes the
 	 *  COMMAND, not the text it would produce: the request is derived from the
 	 *  command, so a tap cannot send whatever the draft happened to hold. */
@@ -600,24 +604,31 @@ export const useComposer = (input: {
 	 * the returned promise therefore never rejects, and a caller that ignores
 	 * the value is unaffected.
 	 */
-	const stop = useCallback(async (): Promise<boolean> => {
-		if (endpoints === null) return false;
-		/* The attempt clears the line it is about to replace, exactly as `send`
-		 * and `answerApproval` do: a stale "the relay could not be reached." must
-		 * not outlive the retry that worked (QA round 2's NIT). */
-		setError(null);
-		try {
-			await endpoints.command(sessionId, { op: "abort" });
-			return true;
-		} catch (failure) {
-			setError(
-				isRelayError(failure)
-					? (failure.displayableMessage ?? composerCopy().steerError)
-					: composerCopy().steerError,
-			);
-			return false;
-		}
-	}, [endpoints, sessionId]);
+	const stop = useCallback(
+		(): Promise<boolean> =>
+			// One per-session latch for every Stop on the screen (review R1-1/R1-2):
+			// a second tap, on either control, joins the abort already out.
+			stopTurn(sessionId, async (): Promise<boolean> => {
+				if (endpoints === null) return false;
+				/* The attempt clears the line it is about to replace, exactly as `send`
+				 * and `answerApproval` do: a stale "the relay could not be reached." must
+				 * not outlive the retry that worked (QA round 2's NIT). */
+				setError(null);
+				try {
+					await endpoints.command(sessionId, { op: "abort" });
+					return true;
+				} catch (failure) {
+					setError(
+						isRelayError(failure)
+							? (failure.displayableMessage ?? composerCopy().steerError)
+							: composerCopy().steerError,
+					);
+					return false;
+				}
+			}),
+		[endpoints, sessionId],
+	);
+	const stopping = useTurnStopping(sessionId, streaming);
 
 	/* ------------------------------------------------------------- the answers */
 
@@ -820,6 +831,7 @@ export const useComposer = (input: {
 		send,
 		retry,
 		stop,
+		stopping,
 		slash,
 		answerApproval,
 		answerAsk,
