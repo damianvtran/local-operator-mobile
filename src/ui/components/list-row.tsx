@@ -460,8 +460,8 @@ export const ListRow = ({
 								 *  and no count is ever truncated (a dropped count is ABSENT; a
 								 *  truncated one is a valid-looking lie).
 								 *
-								 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open plus
-								 *  timed-out-and-answerable), so the chip says "asks" while the bar
+								 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open only
+								 *  since local-operator #2388), so the chip says "asks" while the bar
 								 *  above a composer counts questions. The accessible name uses this
 								 *  surface's word for the set — "not a blocker" — because a queued ask
 								 *  is not a "waiting for you" state: the agent keeps working

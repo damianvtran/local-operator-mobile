@@ -827,7 +827,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (PR #184): both lines of history above stand, the value is the merged
 	 * tree's own, and neither side's previous digest is kept. Source admission,
 	 * not a geometry claim. */
-	src: "a4990afc052a6c801e32cafdd810d560058d0148c59316a7c9fd56e92934efda",
+	/* Re-pinned 2026-11-07 for fix/asks-pending-parity with --print from the
+	 * staged tree. Only `src` moves: the ask bar and sheet title count only
+	 * `open` asks as waiting and draw a lapsed-only queue quietly as "timed out"
+	 * (local-operator #2388's outstanding rule), plus tests.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for the same PR (#183) with --print from the staged
+	 * tree. Only `src` moves: a timed-out ask is read-only in the asks sheet
+	 * (no Answer/Decline, Dismiss only, `settle` refuses respond/decline) and its
+	 * state line uses the desktop/relay copy (D10), plus tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for #183 round-1 remediation with --print from the
+	 * staged tree. Only `src` moves: the sheet's walk advances to the next ask
+	 * with a verb (Dismiss included), timed-out rows and the quiet bar's excerpt
+	 * use muted ink, an older daemon's tally is reconciled, plus tests. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "b9eaa3181825dc10d8861da840f0313c8e7b84e59520406f064520d73f5b2482",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
