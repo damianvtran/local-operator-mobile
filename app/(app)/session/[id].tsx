@@ -1084,7 +1084,9 @@ export default function Session() {
 							? undefined
 							: headerSubtitle({
 									health,
-									working: working !== null,
+									/* The composer's own reading (`turnRunning`), so the
+									 *  header never says Working while a send mints a prompt. */
+									working: runtime.streaming,
 									waiting: pending !== null,
 									/* `startedS` is the phase's AGE in seconds on the wire
 									 *  (`activity_started_s`), not an epoch — `WorkingLine`

@@ -518,7 +518,11 @@ export const useComposer = (input: {
 				}
 				onSent?.();
 			} catch (failure) {
-				const receipt = isRelayError(failure) ? receiptForError(failure) : null;
+				/* The op this send carried, so a failed steer is never worded as a
+				 *  failed "continue this conversation" (TestFlight 578). */
+				const receipt = isRelayError(failure)
+					? receiptForError(failure, op)
+					: null;
 				const echoed = unpaintPendingEcho(
 					sessionId,
 					painted,
@@ -556,7 +560,7 @@ export const useComposer = (input: {
 					setError(
 						ended
 							? composerCopy().endedSendFailed
-							: ambiguousMessage(streaming),
+							: ambiguousMessage(op === "steer"),
 					);
 				}
 			} finally {
@@ -564,10 +568,10 @@ export const useComposer = (input: {
 				setSending(false);
 			}
 		},
-		// `streaming` is a real dependency, not a lint appeasement: `ambiguousMessage`
-		// and `chooseOp` both read it, so a stale closure here would ask the reader
-		// "couldn't continue this conversation" about a live turn — or send a second
-		// prompt into a streaming session where a steer was meant. `ended` selects
+		// `streaming` is deliberately NOT read in here any more: the op is chosen
+		// once by the caller (`send`) and every failure sentence is keyed on that
+		// op, so a repaint landing mid-request cannot reword a failed steer as
+		// "couldn't continue this conversation" (TestFlight 578). `ended` selects
 		// the reopen-failure sentence.
 		[
 			endpoints,
@@ -576,7 +580,6 @@ export const useComposer = (input: {
 			setDraft,
 			setImages,
 			onSent,
-			streaming,
 			ended,
 			cancelDictationForSend,
 			echoDraft,
@@ -660,7 +663,9 @@ export const useComposer = (input: {
 					setNotice(earlierWentThroughNotice());
 				}
 			} catch (failure) {
-				const receipt = isRelayError(failure) ? receiptForError(failure) : null;
+				const receipt = isRelayError(failure)
+					? receiptForError(failure, held.op)
+					: null;
 				/* The ENVELOPE's body and images are what failed — the composer's own
 				 * images belong to whatever the reader is typing now. */
 				const echoed = unpaintPendingEcho(
@@ -690,7 +695,7 @@ export const useComposer = (input: {
 					setError(
 						ended
 							? composerCopy().endedSendFailed
-							: ambiguousMessage(streaming),
+							: ambiguousMessage(held.op === "steer"),
 					);
 				}
 			} finally {
@@ -702,7 +707,6 @@ export const useComposer = (input: {
 		endpoints,
 		envelopeStore,
 		sessionId,
-		streaming,
 		cancelDictationForSend,
 		setDraft,
 		setImages,

@@ -487,6 +487,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
+	/* Re-pinned 2026-11-07 for fix/smooth-steering with --print from the staged
+	 * tree: `app` moves by one line (the session header's "Working" reads the
+	 * composer's `turnRunning` instead of the working label alone) and `src` by
+	 * the steer/prompt decision, its race reconciliation and the steer failure
+	 * copy. No layout, token or glyph changes; U-08's scene renders the same
+	 * frames for any projection where `streaming` and `activity` agree. Source
+	 * admission, NOT fresh rendered evidence. */
 	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
 	 * tree: the session screen hands the transcript list its pending-echo rows
 	 * (a new `pending` prop, painted ahead of the unchanged notice footer) and
@@ -494,7 +501,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * rendered U-08 evidence. Re-printed with --print for the round-1 remediation:
 	 * the screen hands the rows the composer's put-back, and the hook-call comment
 	 * moves to its own line. */
-	app: "068b2117bfec31be8edaa88ecd44deb681e291e3461b53c559658a137c0df732",
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence. */
+	app: "84dad4496c5235a7f56f6f7a0012b722c8f05ad2c311591e00441c69a1eda2e6",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -827,7 +838,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * round-1 remediation: failed rows kept in place with put-back, the composer
 	 * hook test, `items-end` on the row's box, the footer host's single shape,
 	 * four more i18n keys per locale and the vi/zh-CN caption fixes. */
-	src: "be7b8ce998484980332a879951498206ecab5f5357cc4cc1f84cfde9859ea736",
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence. */
+	src: "4a02add09bf73d5d8dd6d444bcd19cdcf566bb9f95387336fa67dfd7f104ecb4",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
