@@ -23,9 +23,12 @@ type PressProps = {
 	accessibilityState?: { expanded?: boolean };
 	accessibilityRole?: string;
 	accessibilityLabel?: string;
+	style?: { minHeight?: number };
 };
 const presses = vi.hoisted(() => ({
 	last: null as PressProps | null,
+	/** What the stub Pressable reports to a `({ pressed })` render child. */
+	pressed: false,
 	/** Every className a host element was drawn with, in render order. */
 	classes: [] as { host: string; className: string }[],
 }));
@@ -49,14 +52,21 @@ vi.mock("react-native", async () => {
 		View: host("View"),
 		Text: host("Text"),
 		Pressable: (
-			props: PressProps & { children?: React.ReactNode; className?: string },
+			props: PressProps & {
+				children?:
+					| React.ReactNode
+					| ((state: { pressed: boolean }) => React.ReactNode);
+				className?: string;
+			},
 		) => {
 			presses.last = props;
 			presses.classes.push({
 				host: "Pressable",
 				className: props.className ?? "",
 			});
-			return props.children ?? null;
+			return typeof props.children === "function"
+				? props.children({ pressed: presses.pressed })
+				: (props.children ?? null);
 		},
 		StyleSheet: {
 			create: (value: unknown) => value,
@@ -100,7 +110,8 @@ let root: ReturnType<typeof createRoot> | null = null;
 
 const BODY = "first line of the peer message\nand its second line";
 
-const render = async (open?: boolean) => {
+const render = async (open?: boolean, pressed = false) => {
+	presses.pressed = pressed;
 	presses.last = null;
 	presses.classes.length = 0;
 	await act(async () =>
@@ -218,31 +229,60 @@ describe("open state owned by the caller (round 1, Q5 / U6 / U2)", () => {
 });
 
 describe("the expanded body starts on the bar's text column (design round 1, D3)", () => {
-	it("repeats the bar's border, padding, glyph column and gap", async () => {
+	it("repeats the bar's padding, glyph column and gap", async () => {
 		await render(true);
 		const words = (className: string) => new Set(className.split(WHITESPACE));
-		const pressable = presses.classes.find((c) => c.host === "Pressable");
+		/* The bar's line is the Pressable's render child — the one View drawn
+		 *  with the summary's flex row. */
 		const bar = presses.classes.find(
-			(c) =>
-				c.host === "View" && words(c.className).has("border-border-control"),
+			(c) => c.host === "View" && words(c.className).has("items-center"),
 		);
 		const glyph = presses.classes.find(
 			(c) => c.host === "Text" && words(c.className).has("w-4"),
 		);
 		const body = presses.classes.find(
-			(c) => c.host === "View" && words(c.className).has("border-transparent"),
+			(c) => c.host === "View" && words(c.className).has("pb-1"),
 		);
 		const spacer = presses.classes.find(
 			(c) => c.host === "View" && c.className === "w-4 shrink-0",
 		);
-		expect(pressable && bar && glyph && body && spacer).toBeTruthy();
-		// Horizontal start of the text = border + padding + glyph column + gap.
-		expect(words(bar?.className ?? "").has("border")).toBe(true);
-		expect(words(body?.className ?? "").has("border")).toBe(true);
-		for (const token of ["px-2.5", "gap-1.5"]) {
-			expect(words(pressable?.className ?? "").has(token)).toBe(true);
+		expect(bar && glyph && body && spacer).toBeTruthy();
+		// Horizontal start of the text = padding + glyph column + gap, both places.
+		for (const token of ["px-0", "gap-2"]) {
+			expect(words(bar?.className ?? "").has(token)).toBe(true);
 			expect(words(body?.className ?? "").has(token)).toBe(true);
 		}
 		expect(words(glyph?.className ?? "").has("shrink-0")).toBe(true);
+	});
+});
+
+describe("a folded row is a quiet line, not a card (design round 3, D4)", () => {
+	/* Anything that draws an edge, a fill or a corner at rest. The first
+	 *  rendered frames showed the card version reading heavier than the notice
+	 *  lines above it. */
+	const CHROME = /^(border|bg-|rounded)/;
+
+	it("draws no border, fill or radius at rest, open or closed", async () => {
+		for (const open of [false, true]) {
+			await render(open);
+			const chrome = presses.classes.flatMap((c) =>
+				c.className.split(WHITESPACE).filter((word) => CHROME.test(word)),
+			);
+			expect(chrome).toEqual([]);
+		}
+	});
+
+	it("tints only while pressed", async () => {
+		await render(false, true);
+		expect(
+			presses.classes.some((c) =>
+				c.className.split(WHITESPACE).includes("bg-row-hover"),
+			),
+		).toBe(true);
+	});
+
+	it("keeps the touch floor as its minimum height", async () => {
+		await render();
+		expect(presses.last?.style?.minHeight).toBeGreaterThanOrEqual(44);
 	});
 });

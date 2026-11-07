@@ -253,7 +253,11 @@ const TranscriptRowImpl = ({
 		if (severity !== "error" && shouldFold(entry.text)) {
 			const summary = firstLine(entry.text);
 			return (
-				<View className="px-4 py-1" testID={testID}>
+				/* No `py-1`: the fold's touch-floor box is already the line's
+				 *  vertical space, and adding the notice row's padding on top
+				 *  spread a run of folded lines wider than the notices beside
+				 *  them (design round 3, D4). */
+				<View className="px-4" testID={testID}>
 					<CollapsedRow
 						glyph={glyph}
 						glyphClass={ink}
@@ -388,7 +392,9 @@ const TranscriptRowImpl = ({
 		const named = who === label ? label : `${label} ${who}`;
 		const spoken = [`${named}: ${summary}`, ...intent].join(", ");
 		return (
-			<View className="px-4 py-1" testID={testID}>
+			/* No `py-1`: the fold's touch-floor box is the line's vertical space
+			 *  (design round 3, D4 — see the folded notice above). */
+			<View className="px-4" testID={testID}>
 				<CollapsedRow
 					glyph={kind === "peer" ? "↔" : "↳"}
 					glyphClass={kind === "subagent" ? "text-ink-dim" : "text-accent"}

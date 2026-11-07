@@ -658,15 +658,27 @@ export const TranscriptList = ({
 	useLayoutEffect(() => {
 		setRowOpen(NO_TURNS);
 	}, [sessionId]);
+	/* KEYED ON THE LANDING, NOT THE HIGHLIGHT (round 3, U14 / m-r3-1). A
+	 *  landing is `reveal`'s id AND nonce: the find session bumps the nonce on
+	 *  every landing, including a re-landing on the hit already current. Keyed
+	 *  on `highlightId` alone, a reader who closed the current hit and stepped
+	 *  back onto it (one hit: Next wraps to itself) landed on a closed fold,
+	 *  because the id never changed and the effect never re-ran. The two
+	 *  primitives, not the object: `use-find.ts` re-memoises `reveal` whenever
+	 *  `activeHit` is re-derived from a new frame, and an object key would
+	 *  re-open a fold the reader closed on every streamed frame (U10). */
+	const landingId = reveal?.id ?? null;
+	const landingNonce = reveal?.nonce ?? null;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `landingNonce` is the TRIGGER for a re-landing on the same id, not a read.
 	useLayoutEffect(() => {
-		if (highlightId === null) return;
+		if (landingId === null) return;
 		setRowOpen((current) => {
-			if (current.has(highlightId)) return current;
+			if (current.has(landingId)) return current;
 			const next = new Set(current);
-			next.add(highlightId);
+			next.add(landingId);
 			return next;
 		});
-	}, [highlightId]);
+	}, [landingId, landingNonce]);
 
 	/* ------------------------------------------------------------ the find jump --
 	 *
@@ -960,12 +972,64 @@ export const TranscriptList = ({
 		pinTail();
 	}, [openElsewhere, pinTail, grouped.items.length]);
 
+	/* THE INITIAL JUMP IS SPENT ONCE, AND ONLY ONCE (QA round 3, Q-RF1).
+	 *
+	 * Both VirtualizedLists — react-native-web's vendored copy and
+	 * `@react-native/virtualized-lists` on native, the same guard in each — jump
+	 * to `initialScrollIndex` on the first content-size change that sees it
+	 * `> 0`, and latch only THEN. An index that was `0` at the first layout (a
+	 * conversation that fitted the 844 pt pre-layout estimate's first screenful)
+	 * leaves the latch open; the viewport's real height then shrinks
+	 * `initialNumToRender`, `tailStartIndex` turns positive with no content
+	 * change to consume it, and the NEXT content change — the reader's first
+	 * fold expand, or a streamed row — replays a `scrollToIndex` to the first
+	 * row of the last screenful: on web the offset fell 625 → 496 and the row
+	 * the reader had just tapped slid under the composer, before the
+	 * fold-resize handling below could keep their place. Native has the same
+	 * latent jump; only the trigger's timing differs.
+	 *
+	 * So the index handed to the list is FROZEN at the value it had when the
+	 * list first laid out rows. A frozen `> 0` was consumed by that same event
+	 * (the list latched); a frozen `0` can never become a jump. Frozen rather
+	 * than dropped: an absent index makes the list keep its first rows mounted
+	 * for good (VirtualizedList's "scroll-to-top" region), which on a 520-row
+	 * transcript is a screenful of the top it never needed. Refs, because the
+	 * value is consumed by the list's next commit, never rendered for its own
+	 * sake — every content change that could replay the jump is caused by a
+	 * render, and that render reads the frozen value. */
+	const frozenInitialIndexRef = useRef<number | null>(null);
+	const liveInitialIndex = tailStartIndex(
+		grouped.items.length,
+		policy.initialNumToRender,
+	);
+	const initialIndex = frozenInitialIndexRef.current ?? liveInitialIndex;
+	/* What THIS commit hands the list, for `onContentSizeChange` to freeze. */
+	const passedInitialIndexRef = useRef({ index: 0, items: 0 });
+	passedInitialIndexRef.current = {
+		index: initialIndex,
+		items: grouped.items.length,
+	};
+
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
 	 * lose the position (F-6.11 — Back preserves scroll). Keyed on the session so a
 	 * session switch restores ITS offset rather than the previous one's. */ const onContentSizeChange =
 		useCallback(
-			(_width: number, height: number) => {
+			(width: number, height: number) => {
+				/* The list's one-time initial jump has now been decided for this
+				 *  event — VirtualizedList runs its guard BEFORE calling this prop,
+				 *  with the same width/height test — so the index it was handed is
+				 *  frozen from here on (see `frozenInitialIndexRef`). Only once rows
+				 *  exist: an empty list's first layout must not spend the tail open on
+				 *  a conversation whose history has not arrived yet. */
+				if (
+					frozenInitialIndexRef.current === null &&
+					width > 0 &&
+					height > 0 &&
+					passedInitialIndexRef.current.items > 0
+				) {
+					frozenInitialIndexRef.current = passedInitialIndexRef.current.index;
+				}
 				factsRef.current = { ...factsRef.current, contentPt: height };
 				// Content is the other fact: a list that grew past its viewport has
 				// edges to fade, and one that shrank under it has none.
@@ -1214,18 +1278,15 @@ export const TranscriptList = ({
 				 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
 				 * tells the list where that screenful sits — so the open renders its
 				 * final rows and the tail `onContentSizeChange` clamp is a correction
-				 * rather than the mechanism that gets there. Omitted when this mount is
+				 * rather than the mechanism that gets there. Frozen once rows have laid
+				 * out (`frozenInitialIndexRef`, Q-RF1). Omitted when this mount is
 				 * headed somewhere else (`openElsewhere`): a restored offset or the
 				 * capture hook's top. There is deliberately no
 				 * `onScrollToIndexFailed` beside them — the list never reports a failed
 				 * jump when it has metrics, so the deep-jump recovery lives in
 				 * `revealToIndex`, which is the only place that knows a target is
 				 * unmeasured. */
-				initialScrollIndex={
-					openElsewhereAtMount
-						? undefined
-						: tailStartIndex(grouped.items.length, policy.initialNumToRender)
-				}
+				initialScrollIndex={openElsewhereAtMount ? undefined : initialIndex}
 				getItemLayout={getItemLayout}
 				// Keyboard stays open while scrolling: the reader is scrolling to read the
 				// answer to what they just typed.

@@ -38,6 +38,9 @@ const harness = vi.hoisted(() => ({
 	to: Number.POSITIVE_INFINITY,
 	/** Offsets the list asked to scroll to. */
 	scrolls: [] as number[],
+	/** Indexes the list was asked to jump to — the find jump, and the
+	 *  emulated one-time `initialScrollIndex` jump (`contentSize`). */
+	indexJumps: [] as number[],
 	/** The latest props the list handed its scroller. */
 	props: {} as Record<string, unknown>,
 	/** The latest fold pressable per accessible name. */
@@ -55,11 +58,19 @@ vi.mock("react-native", async () => {
 		View: passthrough,
 		Text: passthrough,
 		ScrollView: passthrough,
-		Pressable: (props: PressProps & { children?: React.ReactNode }) => {
+		Pressable: (
+			props: PressProps & {
+				children?:
+					| React.ReactNode
+					| ((state: { pressed: boolean }) => React.ReactNode);
+			},
+		) => {
 			if (props.accessibilityState?.expanded !== undefined)
 				harness.folds.set(props.accessibilityLabel ?? "", props);
 			else harness.buttons.set(props.accessibilityLabel ?? "", props);
-			return props.children ?? null;
+			return typeof props.children === "function"
+				? props.children({ pressed: false })
+				: (props.children ?? null);
 		},
 		StyleSheet: {
 			create: (value: unknown) => value,
@@ -73,6 +84,9 @@ vi.mock("react-native", async () => {
 				() => ({
 					scrollToOffset({ offset }: { offset: number }) {
 						harness.scrolls.push(offset);
+					},
+					scrollToIndex({ index }: { index: number }) {
+						harness.indexJumps.push(index);
 					},
 				}),
 				[],
@@ -196,6 +210,10 @@ let dom: DomShim | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
 let serial = 0;
 let session = "";
+/** The find session's landing nonce: bumped by a test to model a NEW landing
+ *  (`use-find.ts` bumps it on every landing, the same id included). */
+let landingNonce = 1;
+let entries: TranscriptEntry[] = ENTRIES;
 
 const listElement = (
 	highlightId: string | null,
@@ -203,10 +221,13 @@ const listElement = (
 ) =>
 	createElement(TranscriptList, {
 		sessionId: session,
-		entries: ENTRIES,
+		entries,
 		streamingRowId: null,
 		anchorId: null,
 		highlightId,
+		// What the screen passes: a hit is a landing, keyed by id AND nonce.
+		reveal:
+			highlightId === null ? null : { id: highlightId, nonce: landingNonce },
 		presence,
 		testID: "fold-transcript",
 	});
@@ -255,6 +276,9 @@ const parkAtTail = async () => {
 
 beforeEach(() => {
 	session = `folds-${++serial}`;
+	landingNonce = 1;
+	entries = ENTRIES;
+	harness.indexJumps.length = 0;
 	harness.from = 0;
 	harness.to = Number.POSITIVE_INFINITY;
 	harness.scrolls.length = 0;
@@ -437,5 +461,112 @@ describe("a folded subagent row's `open` route (round 2, D10 / U12)", () => {
 		expect(opened).toEqual(["job-7"]);
 		// Its own target: pressing it opened the agent, not the fold.
 		expect(drawn()).not.toContain(HIDDEN);
+	});
+});
+
+describe("re-landing on a hit the reader closed (round 3, U14 / m-r3-1)", () => {
+	it("opens it again: the landing is the nonce, not the id", async () => {
+		await render("p1");
+		expect(drawn()).toContain(HIDDEN);
+		await press(FOLD);
+		expect(drawn()).not.toContain(HIDDEN);
+		// Same frame re-rendered, same landing: the reader's close stands.
+		await render("p1");
+		expect(drawn()).not.toContain(HIDDEN);
+		// One hit: Next wraps onto the same message — a new landing.
+		landingNonce += 1;
+		await render("p1");
+		expect(drawn()).toContain(HIDDEN);
+	});
+});
+
+describe("a session switch on a reused list (round 3, Q11)", () => {
+	it("closes the previous conversation's folds", async () => {
+		await render();
+		await press(FOLD);
+		expect(drawn()).toContain(HIDDEN);
+		// `router.navigate` swaps props on the mounted list; ids may collide.
+		session = `${session}-next`;
+		await render();
+		expect(drawn()).not.toContain(HIDDEN);
+	});
+
+	it("clears BEFORE recording a landing that arrives with the switch", async () => {
+		await render();
+		session = `${session}-next`;
+		landingNonce += 1;
+		/* The first committed frame: the reset is a layout effect declared
+		 *  before the landing's, so the landing survives it. Declared after
+		 *  (or made passive), the reset wipes the landing it arrived with. */
+		expect(await firstFrame("p1")).toContain(HIDDEN);
+		await render("p1");
+		expect(drawn()).toContain(HIDDEN);
+	});
+});
+
+describe("the first expand after opening a conversation (round 3, Q-RF1)", () => {
+	/* Both VirtualizedLists' one-time initial jump, as the platform runs it
+	 *  BEFORE the list's own `onContentSizeChange` prop
+	 *  (react-native-web's vendored `_onContentSizeChange`,
+	 *  `@react-native/virtualized-lists`' `_maybeScrollToInitialScrollIndex`):
+	 *  it jumps on the first content change that sees the index `> 0`, and
+	 *  only then latches. */
+	let latched = false;
+	const contentSize = async (width: number, height: number) => {
+		const index = harness.props.initialScrollIndex as number | undefined;
+		if (width > 0 && height > 0 && index != null && index > 0 && !latched) {
+			harness.indexJumps.push(index);
+			latched = true;
+		}
+		await call("onContentSizeChange", width, height);
+	};
+	const atOffset = (y: number, content: number) =>
+		call("onScroll", {
+			nativeEvent: {
+				contentOffset: { y },
+				contentSize: { height: content },
+				layoutMeasurement: { height: 300 },
+			},
+		});
+	/* Sixteen rows: the whole conversation fits the 844 pt pre-layout
+	 *  estimate's first screenful (index 0), and the real 300 pt viewport's
+	 *  does not (index 4) — the order QA measured on web. */
+	const LONG = [
+		...Array.from({ length: 12 }, (_, i) => row(`x${i}`, {})),
+		...ENTRIES,
+	];
+
+	beforeEach(() => {
+		latched = false;
+		entries = LONG;
+	});
+
+	it("does not replay the list's initial jump, so the reader's offset holds", async () => {
+		await render();
+		expect(harness.props.initialScrollIndex).toBe(0);
+		await contentSize(400, 2000); // first layout: index 0, nothing latched
+		await call("onLayout", { nativeEvent: { layout: { height: 300 } } });
+		await atOffset(1700, 2000); // at the tail
+		harness.scrolls.length = 0;
+		await press(FOLD);
+		await contentSize(400, 2400); // the fold's first height change
+		// No jump to an index, and no offset move: the header stays put.
+		expect(harness.indexJumps).toEqual([]);
+		expect(harness.scrolls).toEqual([]);
+		// A streamed row after it cannot replay it either.
+		await contentSize(400, 2450);
+		expect(harness.indexJumps).toEqual([]);
+	});
+
+	it("still opens at the tail when the index is live at first layout (control)", async () => {
+		await render();
+		await call("onLayout", { nativeEvent: { layout: { height: 300 } } });
+		expect(harness.props.initialScrollIndex).toBe(4);
+		await contentSize(400, 2000); // the intended open: one jump
+		expect(harness.indexJumps).toEqual([4]);
+		await atOffset(1700, 2000);
+		await press(FOLD);
+		await contentSize(400, 2400);
+		expect(harness.indexJumps).toEqual([4]);
 	});
 });

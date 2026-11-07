@@ -163,6 +163,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for PR #176 review round 3's remediation, with --print
+	 * from the staged tree. `design/tokens` moves for the `trace` step's
+	 * description only (D13: the tool name no longer uses it). `src` moves for
+	 * the folded row drawn as a quiet line instead of a card (D4), the frozen
+	 * initial scroll index (Q-RF1), the landing keyed on `reveal` (U14) and
+	 * tests. `app`, fonts, `public`, instrument and input pins are untouched.
+	 * Source admission only, NOT evidence that U-08's rendered geometry proof
+	 * passed: it must be re-captured against this tree. */
 	/* Re-pinned 2026-11-06 for PR #176 review round 2's remediation, with --print
 	 * from the staged tree. `design/tokens` moves because the `meta-read` step is
 	 * folded back into `meta` (D9: 12/1.45 vs 12/1.4 was its only difference) and
@@ -426,7 +434,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"3fd7bc0b9f6b51add6d0bbeda62e86c48d232e35dd650c4c23b6b0c23f6e1019",
+		"16f424a5d14a2c6f79fdc15f5793fa41d0034ab72ccd298f895b6ef4cf572997",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -609,7 +617,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "12b78604ae1b6061b9d081a3738ea56b7e739b1026768e1789a0a0c04a50084c",
+	src: "6ee7334575015a4c995a05a638410927d9b1be2293480237a82b420634c389f4",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

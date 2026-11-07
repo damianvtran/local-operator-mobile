@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { ROLE } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
 /**
@@ -31,11 +32,18 @@ import { cx } from "@/ui/variants";
  *  - a settled `ask` receipt, because `AskResponseRow` is already its own
  *    one-line disclosure — a fold around it would be a fold around a fold.
  *
- * GEOMETRY, from the house bar (`QuietGroupBar`, and the turn bar before it):
- * 48 pt minimum height — stricter than the relay's 44 and the same as every
- * other disclosure in this list; `border-control` as the boundary rather than
- * `hairline`, because a hairline may never bound something pressable
- * (`tokens.json`'s own rule); a chevron that states its own state. Expansion is
+ * GEOMETRY: A QUIET LINE, NOT A CARD (design round 3, D4). The first rendered
+ * frames drew three folded peer rows as outlined `surface` cards, and they read
+ * HEAVIER than the plain one-line notices directly above them — the opposite of
+ * "condensed into an expandable line". So the bar draws exactly what a notice
+ * row draws: glyph, words and a chevron on the canvas, no border, no fill, no
+ * radius. Its only extra is the box a thumb needs: the touch floor
+ * (`TOUCH_FLOOR`, 44 iOS / 48 elsewhere) as a minimum height with the line
+ * centred in it, which is spacing rather than chrome. Press feedback is the
+ * house row tint (`bg-row-hover`, as `past.tsx`'s rows) WHILE PRESSED only; a
+ * resting tint would be the card again. With no drawn edge there is no
+ * boundary rule to satisfy (`tokens.json`: a hairline may never bound
+ * something pressable — nothing bounds this). A chevron states its own state. Expansion is
  * per row and OWNED BY THE CALLER when it passes `open`/`onToggle`: the
  * transcript keeps it in a set keyed by row id, so a row that windowing unmounts
  * comes back the way the reader left it and a find landing can open it (review
@@ -81,19 +89,23 @@ export type CollapsedRowProps = {
 
 /*
  * THE TEXT COLUMN, ONE DEFINITION FOR THE BAR AND THE BODY (design round 1, D3).
- * The bar is `border` (on the bar) + `px-2.5` (on its pressable) + a fixed glyph
- * column + `gap-1.5`, and the
- * expanded body repeats exactly that geometry — a transparent border, the same
+ * The bar is `COLUMN_PAD` (on its pressable) + a fixed glyph column +
+ * `COLUMN_GAP`, and the expanded body repeats exactly that geometry — the same
  * padding, an EMPTY glyph column, the same gap — so the body starts on the line
  * the bar's text starts on at any text size, without a measured or hand-added
- * inset that would drift the moment one of the four changed. The glyph column
- * is fixed-width for the same reason: a proportional glyph made the summary's
+ * inset that would drift the moment one of them changed. The glyph column is
+ * fixed-width for the same reason: a proportional glyph made the summary's
  * start depend on which glyph the row had.
+ *
+ * The values are the NOTICE row's (`transcript-row.tsx`: the row wrapper's
+ * `px-4`, then glyph, `gap-2`, words), so a folded row's glyph and words stand
+ * on the same columns as the notice lines around it (D4). No padding of its
+ * own: the round-1 `border` + `px-2.5` inset existed to clear the card's edge,
+ * and there is no card.
  */
-const COLUMN_BORDER = "border";
-const COLUMN_PAD = "px-2.5";
+const COLUMN_PAD = "px-0";
 const GLYPH_COLUMN = "w-4 shrink-0";
-const COLUMN_GAP = "gap-1.5";
+const COLUMN_GAP = "gap-2";
 
 export const CollapsedRow = ({
 	testID,
@@ -114,12 +126,7 @@ export const CollapsedRow = ({
 	const open = controlledOpen ?? ownOpen;
 	return (
 		<View>
-			<View
-				className={cx(
-					"min-h-12 flex-row items-stretch rounded-sm border-border-control bg-surface",
-					COLUMN_BORDER,
-				)}
-			>
+			<View className="flex-row items-stretch">
 				<Pressable
 					testID={testID}
 					accessibilityRole={ROLE.button}
@@ -132,70 +139,77 @@ export const CollapsedRow = ({
 						}
 						setOwnOpen((current) => !current);
 					}}
-					className={cx(
-						"min-h-12 min-w-0 flex-1 flex-row items-center",
-						COLUMN_PAD,
-						COLUMN_GAP,
-					)}
+					/* The floor is a style, not `min-h-12`: 48 everywhere was the card's
+					 *  height, and iOS's floor is 44 — the shorter box is the tighter
+					 *  rhythm the notice lines around it keep (D4). */
+					style={{ minHeight: TOUCH_FLOOR }}
+					className="min-w-0 flex-1"
 				>
-					<Text
-						className={cx(
-							"text-start font-mono text-mono-sm",
-							GLYPH_COLUMN,
-							glyphClass,
-						)}
-						aria-hidden
-					>
-						{glyph}
-					</Text>
-					{/* The label may take at most half the row, so at the largest text
+					{({ pressed }) => (
+						<View
+							className={cx(
+								"flex-1 flex-row items-center",
+								pressed && "bg-row-hover",
+								COLUMN_PAD,
+								COLUMN_GAP,
+							)}
+						>
+							<Text
+								className={cx(
+									"text-start font-mono text-mono-sm",
+									GLYPH_COLUMN,
+									glyphClass,
+								)}
+								aria-hidden
+							>
+								{glyph}
+							</Text>
+							{/* The label may take at most half the row, so at the largest text
 				    sizes the summary — the thing the reader decides on — keeps
 				    some words (UX round 1, U5). */}
-					{label !== undefined && label.length > 0 ? (
-						<Text
-							className={cx("min-w-0 max-w-1/2 shrink text-meta", labelClass)}
-							numberOfLines={1}
-						>
-							{label}
-						</Text>
-					) : null}
-					{/* The summary is the fold's whole point: ONE line, tail ellipsis,
+							{label !== undefined && label.length > 0 ? (
+								<Text
+									className={cx(
+										"min-w-0 max-w-1/2 shrink text-meta",
+										labelClass,
+									)}
+									numberOfLines={1}
+								>
+									{label}
+								</Text>
+							) : null}
+							{/* The summary is the fold's whole point: ONE line, tail ellipsis,
 				    and the widest thing on the row because the body is what the
 				    reader is deciding whether to open. */}
-					<Text
-						className={cx("min-w-0 flex-1 text-body-sm", bodyClass)}
-						numberOfLines={1}
-					>
-						{summary}
-					</Text>
-					{meta !== undefined && meta.length > 0 ? (
-						<Text
-							className="min-w-0 max-w-1/3 shrink font-mono text-mono-sm text-ink-dim tabular-nums"
-							numberOfLines={1}
-						>
-							{meta}
-						</Text>
-					) : null}
-					<Text
-						className="shrink-0 font-mono text-mono-sm text-ink-dim"
-						aria-hidden
-					>
-						{open ? "▾" : "▸"}
-					</Text>
+							<Text
+								className={cx("min-w-0 flex-1 text-body-sm", bodyClass)}
+								numberOfLines={1}
+							>
+								{summary}
+							</Text>
+							{meta !== undefined && meta.length > 0 ? (
+								<Text
+									className="min-w-0 max-w-1/3 shrink font-mono text-mono-sm text-ink-dim tabular-nums"
+									numberOfLines={1}
+								>
+									{meta}
+								</Text>
+							) : null}
+							<Text
+								className="shrink-0 font-mono text-mono-sm text-ink-dim"
+								aria-hidden
+							>
+								{open ? "▾" : "▸"}
+							</Text>
+						</View>
+					)}
 				</Pressable>
 				{action !== undefined && action !== null ? (
 					<View className={cx("justify-center", "pe-2.5")}>{action}</View>
 				) : null}
 			</View>
 			{open ? (
-				<View
-					className={cx(
-						"flex-row border-transparent pt-2",
-						COLUMN_BORDER,
-						COLUMN_PAD,
-						COLUMN_GAP,
-					)}
-				>
+				<View className={cx("flex-row pb-1", COLUMN_PAD, COLUMN_GAP)}>
 					<View className={GLYPH_COLUMN} aria-hidden />
 					<View className="min-w-0 flex-1">{children}</View>
 				</View>
