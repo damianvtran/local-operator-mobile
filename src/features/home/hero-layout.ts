@@ -44,3 +44,24 @@ export const heroTopInset = (band: number, block: number): number => {
 	const centred = (band - block) / 2 - HERO_OPTICAL_NUDGE;
 	return Math.max(HERO_EDGE, Math.floor(centred / SCALE_STEP) * SCALE_STEP);
 };
+
+/**
+ * Whether the hero may paint yet (review R4 / design D4). Until BOTH the band
+ * and the block are measured, `heroTopInset` answers the 24 pt anchor, so a
+ * visible first frame painted the greeting at the top and the settled frame
+ * dropped it ~200 pt to centre on every mount. The block stays laid out (it
+ * has to be, to be measured) but transparent until its place is known.
+ */
+export const heroMeasured = (band: number, block: number): boolean =>
+	band > 0 && block > 0;
+
+/**
+ * The inset while the reader focuses an EMPTY composer (UX U1 / review R4).
+ * The suggestion rows step away on focus, the block shrinks, and a re-centred
+ * greeting would drop ~50 pt before a single key was typed. So the greeting
+ * holds the inset it had at rest: never LOWER than `held`, but it still rises
+ * with the live inset when the band itself shrinks (a keyboard, a notice),
+ * because holding it there would push it under the composer stack.
+ */
+export const heroHeldInset = (live: number, held: number): number =>
+	Math.min(live, held);

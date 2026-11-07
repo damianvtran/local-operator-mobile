@@ -55,14 +55,18 @@ import {
 import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
+	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
+	COMPOSER_META_GLASS_SPACING,
 	COMPOSER_META_ROW,
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
+	COMPOSER_GLASS_LAYER_RADIUS,
+	composerFieldRowAlign,
 	composerPaintedHeight,
 	composerPresentation,
 	composerRestRow,
@@ -398,12 +402,15 @@ const ComposerChipButton = ({
 	testID: string;
 }) => {
 	if (chip.kind === "loading") {
-		return (
+		/* In its capsule too (design D5b): an unwrapped placeholder made the
+		 *  strip change material the moment the model list resolved. */
+		return stripChipSurface(
+			glass,
 			<ChipPlaceholder
 				label={chip.accessibilityLabel}
 				widthClassName={loadingWidthClassName}
 				testID={testID}
-			/>
+			/>,
 		);
 	}
 	if (chip.kind === "unavailable") {
@@ -451,7 +458,11 @@ const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 		<ChromeSurface
 			glass
 			radii={{ top: TOUCH_FLOOR / 2, bottom: TOUCH_FLOOR / 2 }}
-			style={{ maxWidth: "100%", minWidth: 0 }}
+			style={{
+				maxWidth: "100%",
+				minWidth: 0,
+				alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN,
+			}}
 			className="min-w-0"
 		>
 			{chip}
@@ -1174,10 +1185,12 @@ export const Composer = ({
 	 * reparenting or first-frame facts ladder: model and effort always retain a
 	 * target; optional facts are disclosed via More. */
 	const receipt = (
-		/* A glass GROUP so iOS merges the two chips' material as one (spec §12);
-		 *  with glass off it is this same plain row, unchanged. */
+		/* A glass GROUP so iOS renders the two chips' material together (spec
+		 *  §12) — as two capsules, with a merge distance under the row's gap
+		 *  (D1); with glass off it is this same plain row, unchanged. */
 		<ChromeGroup
 			glass={glass}
+			spacing={COMPOSER_META_GLASS_SPACING}
 			className={COMPOSER_META_ROW}
 			testID={SURFACE.composerMeta}
 			onLayout={(event) => {
@@ -1479,10 +1492,11 @@ export const Composer = ({
 			 *  reader could not even reach the keyboard. In flow, the field is the
 			 *  frontmost thing in its own row and a tap lands on it. */}
 			<View
-				className="flex-row items-end"
+				className={`flex-row ${composerFieldRowAlign(presentation.expanded)}`}
 				/* At rest the row is `composerRestRow` (48, H5): the on-scale 4 pt
-				 *  padding is balanced against it, so the pill stays 56. Open, the
-				 *  field's row is the 44 pt ruler of the 112 sum. */
+				 *  padding is balanced against it, so the pill stays 56, and the
+				 *  row is CENTRED so iOS's 44 pt children split the slack 2/2
+				 *  (R1). Open, the field's row is the 44 pt ruler of the 112 sum. */
 				style={{
 					minHeight: presentation.expanded
 						? COMPOSER_FIELD_BOX
@@ -1608,7 +1622,9 @@ export const Composer = ({
 				 *  painted first, rather than the shell itself: the shell's height and
 				 *  radius are ANIMATED (reanimated styles), which `ChromeSurface`'s
 				 *  static radii props cannot carry, so the shell keeps its geometry and
-				 *  its `overflow: hidden` clips this layer to the live shape. An
+				 *  its `overflow: hidden` clips this layer to the live shape — which
+				 *  holds only while the layer's radius never exceeds the clip's, hence
+				 *  `COMPOSER_GLASS_LAYER_RADIUS` rather than the target radius (R2). An
 				 *  absolute child adds nothing to layout, so a glass frame and the
 				 *  solid frame have a zero box diff; `pointerEvents="none"` because a
 				 *  layer across this band must never take the field's taps (round 4,
@@ -1627,8 +1643,8 @@ export const Composer = ({
 						<ChromeSurface
 							glass
 							radii={{
-								top: presentation.radius,
-								bottom: presentation.radius,
+								top: COMPOSER_GLASS_LAYER_RADIUS,
+								bottom: COMPOSER_GLASS_LAYER_RADIUS,
 							}}
 							style={{ flex: 1 }}
 						>
@@ -1654,7 +1670,7 @@ export const Composer = ({
 				 *  `borderWidth` on the shell. The shell's height is a border box, so a border
 				 *  there takes 1 pt off each edge of the interior: the 44 pt field paints 42,
 				 *  under the touch floor, and every measured seed lands 2 pt short of its end
-				 *  (54/110, 58/118 on the 48 floor). The RADII do not follow it down — that is
+				 *  (54/110, 54/118 on the 48 floor). The RADII do not follow it down — that is
 				 *  the part an earlier draft of this comment got wrong: `baseHeight` is
 				 *  `max(seededBase, measured)` and `seededBase` comes from the same pure
 				 *  `composerPaintedHeight`, so a short measured seed loses to the 56 floor

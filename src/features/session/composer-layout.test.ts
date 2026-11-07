@@ -2,8 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_ACTION_CLUSTER,
+	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
+	COMPOSER_META_GAP_PT,
+	COMPOSER_META_GLASS_SPACING,
+	COMPOSER_META_ROW,
 	MODEL_FLOOR_PT,
 } from "./composer-layout";
 import {
@@ -373,5 +377,31 @@ describe("round 6 — the morph is a shape, not a pair of constants", () => {
 		expect(morphPillRadius(60)).toBe(30);
 		expect(morphPillRadius(56)).toBe(28);
 		expect(morphHeight(0.5, morphPillRadius(60), 24)).toBe(27);
+	});
+});
+
+/* Design D1: on iOS glass the model capsule stretched across its `flex-1`
+ * slot, and the effort capsule 4 pt away sat inside the group's 8 pt merge
+ * distance, so the two would fuse into one bar. */
+describe("strip glass capsules stay per-chip", () => {
+	it("keeps the merge distance under the strip's gap", () => {
+		expect(COMPOSER_META_ROW).toContain("gap-1");
+		expect(COMPOSER_META_GAP_PT).toBe(4);
+		expect(COMPOSER_META_GLASS_SPACING).toBeLessThan(COMPOSER_META_GAP_PT);
+		const strip = COMPOSER.slice(
+			COMPOSER.indexOf("const receipt = ("),
+			COMPOSER.indexOf("const compactReceipt = ("),
+		);
+		expect(strip).toContain("spacing={COMPOSER_META_GLASS_SPACING}");
+	});
+	it("makes each capsule hug its chip, in the glass branch only", () => {
+		expect(COMPOSER_CHIP_CAPSULE_ALIGN).toBe("flex-start");
+		const surface = COMPOSER.slice(
+			COMPOSER.indexOf("const stripChipSurface ="),
+			COMPOSER.indexOf("export const Composer ="),
+		);
+		expect(surface).toContain("alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN");
+		/* The solid branch is the chip itself, unwrapped and unchanged. */
+		expect(surface).toMatch(/\) : \(\s*chip\s*\);/);
 	});
 });

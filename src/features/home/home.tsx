@@ -74,12 +74,10 @@ import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Input } from "@/ui/components/input";
-import { NavigationMark } from "@/ui/components/navigation-mark";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { CONTROL_HEIGHTS } from "@/ui/tokens.gen";
 
 /**
  * The composer home: `/` since the Part 2 slice, and the default destination
@@ -212,6 +210,19 @@ export default function Home({
 		null,
 	);
 	const [directoriesAttempt, setDirectoriesAttempt] = useState(0);
+	/** The attempt whose folders read last SETTLED: the models read's rule
+	 *  (below), so the folder Retry shows its own `loading` too (UX U3). Side
+	 *  by side in one stack, one spinning Retry and one inert one read as two
+	 *  different kinds of control. */
+	const [directoriesSettled, setDirectoriesSettled] = useState(0);
+	/** A Retry the READER pressed, per read, so its success can move focus to
+	 *  the hero (UX U5): the alert holding focus unmounts on success, and focus
+	 *  otherwise falls back to the document's top. Never set by the automatic
+	 *  re-ask, which nobody pressed. */
+	const foldersRetried = useRef(false);
+	const modelsRetried = useRef(false);
+	/** Bumped to ask the splash to take focus; 0 never asks. */
+	const [heroFocus, setHeroFocus] = useState(0);
 	const [modelsAttempt, setModelsAttempt] = useState(0);
 	/** The attempt whose models read last SETTLED. While it trails `modelsAttempt` a
 	 *  Retry is in flight, and the banner's action shows its own `loading` (UX U2):
@@ -328,10 +339,10 @@ export default function Home({
 	 * had applied in the sheet — silently, and in the state this screen creates
 	 * whenever the model list fails. Each read now re-runs only its own retry.
 	 *
-	 * `directoriesAttempt` and `modelsAttempt` are dependencies the exhaustive-deps
-	 * rule cannot justify from the body: they are RE-RUN TRIGGERS (the two retries),
-	 * and without them a failed read would never be re-asked. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: directoriesAttempt is the re-run trigger (see above)
+	 * `directoriesAttempt` and `modelsAttempt` are RE-RUN TRIGGERS (the two
+	 * retries): without them a failed read would never be re-asked. Each effect
+	 * also reads its own counter, to record which attempt settled for its
+	 * Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
 		if (!active) return;
@@ -351,9 +362,17 @@ export default function Home({
 				 *  included. */
 				setHeldDirectory((held) => foldersApplied(held, computer, read));
 				setDirectoriesError(null);
+				setDirectoriesSettled(directoriesAttempt);
+				if (foldersRetried.current) {
+					foldersRetried.current = false;
+					setHeroFocus((request) => request + 1);
+				}
 			})
 			.catch((cause: unknown) => {
-				if (live) setDirectoriesError(foldersFailure(cause));
+				if (!live) return;
+				setDirectoriesError(foldersFailure(cause));
+				setDirectoriesSettled(directoriesAttempt);
+				foldersRetried.current = false;
 			});
 		return () => {
 			live = false;
@@ -373,11 +392,16 @@ export default function Home({
 				setModels(catalogue.models);
 				setModelsRead("ready");
 				setModelsSettled(modelsAttempt);
+				if (modelsRetried.current) {
+					modelsRetried.current = false;
+					setHeroFocus((request) => request + 1);
+				}
 			})
 			.catch(() => {
 				if (!live) return;
 				setModelsRead("failed");
 				setModelsSettled(modelsAttempt);
+				modelsRetried.current = false;
 			});
 		return () => {
 			live = false;
@@ -385,10 +409,12 @@ export default function Home({
 	}, [relay, modelsAttempt]);
 
 	const retryDirectories = useCallback(() => {
+		foldersRetried.current = true;
 		setDirectoriesAttempt((attempt) => attempt + 1);
 	}, []);
 
 	const retryModels = useCallback(() => {
+		modelsRetried.current = true;
 		setModelsAttempt((attempt) => attempt + 1);
 	}, []);
 
@@ -618,6 +644,7 @@ export default function Home({
 						onPick={setDraft}
 						onConnect={() => router.push("/tunnels")}
 						starting={starting}
+						focusRequest={heroFocus}
 					/>
 				) : null}
 			</View>
@@ -686,6 +713,7 @@ export default function Home({
 									: {
 											label: t("mobile.computers.retry"),
 											onPress: retryDirectories,
+											loading: directoriesSettled !== directoriesAttempt,
 											testID: CONTROL.homeFoldersRetry,
 										}
 							}
@@ -859,27 +887,23 @@ export default function Home({
 				}
 				headerAction={
 					<View className="min-w-0 flex-1 flex-row items-center gap-1">
-						{/* THE BRAND MARK, back beside the computer's name (operator, build
-						 *  453: "add the local operator logo to the left of the local operator
-						 *  title"). This reverses D-H3 on the operator's word, so it is placed
-						 *  to cost the chip as little as it can: the existing asset (never a
-						 *  redraw), decorative (the chip carries the name), at the kit's
-						 *  icon-button glyph step so it reads at the ☰'s weight, centred on
-						 *  the 44 pt row. It is DECORATION, so it yields first and on the
-						 *  bell's own gate: below 360 pt or at large text the chip needs every
-						 *  point to keep its floor and its name (D-H1, D24). */}
-						{viewport.width >= 360 && effectiveScale < 1.5 ? (
-							<View testID={SURFACE.homeBrandMark}>
-								<NavigationMark size={CONTROL_HEIGHTS.icon.icon} />
-							</View>
-						) : null}
 						{/* The computer this will run on, and the switcher's primary entry
 						 *  point. It takes ALL the width the ☰ and the bell leave — about
 						 *  281 pt on a 393 pt phone — so "Mac – Local Operator" reads whole
 						 *  (record §2.4: it read "M… Operator" beside the mark, the badge
 						 *  and the gear). The bell still yields its pill at large text
 						 *  (D24), so nothing overflows the 320 pt row. */}
-						<HeaderComputerChip testID={CONTROL.computersButton} />
+						<HeaderComputerChip
+							testID={CONTROL.computersButton}
+							/* THE BRAND MARK rides INSIDE the chip as its leading glyph
+							 *  (operator, build 453: "add the local operator logo to the
+							 *  left of the local operator title"; UX U2 / design D3): as a
+							 *  sibling it was a dead 20 pt strip 4 pt from both the ☰ and
+							 *  the chip. It is DECORATION, so it yields first and on the
+							 *  bell's own gate: below 360 pt or at large text the chip
+							 *  needs every point to keep its floor and its name (D-H1, D24). */
+							brandMark={viewport.width >= 360 && effectiveScale < 1.5}
+						/>
 						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
 						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
 						 *  button's box — an inert fifth control the reader tries to tap

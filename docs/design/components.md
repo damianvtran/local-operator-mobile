@@ -503,8 +503,10 @@ stays at or above the touch floor (8 + 40 + 8 puts attach and send in a 40 pt ro
 under both platform floors), and growing the pill to 8 + 44 + 8 = 60 would grow
 the dock on every screen for a spacing rule. So the resting row is
 `COMPOSER_REST_ROW` = 48 on every platform and the padding is `COMPOSER_REST_PAD`
-= 4 (`composer-presentation.ts`). On iOS the 44 pt discs sit centred in the 48 pt
-row, so disc-to-shell is still the 4 + 2 = 6 pt it always painted; on the 48 floor
+= 4 (`composer-presentation.ts`). The resting row is **cross-axis centred**
+(`composerFieldRowAlign`; the open card's field row stays bottom-aligned so a
+multi-line draft grows upward), so on iOS the 44 pt discs sit centred in the 48 pt
+row and disc-to-shell is 4 + 2 = 6 pt on both edges (`composerRestInsets`); on the 48 floor
 the pill drops from 60 to 56. The open card was already on-scale and is unchanged.
 
 ### Glass (iOS)
@@ -519,7 +521,12 @@ strip row becomes a `ChromeGroup` and each chip its own capsule. The solid
 fallback is unchanged (no wrapper on a solid chip, `elevated` on the shell), the
 `border-control` ring stays the rim, and **attach and send stay opaque** in both
 branches so `on-accent` on `accent` never depends on what scrolls behind the
-glass. No web frame can show glass (the module renders a plain view there).
+glass. The shell's glass layer takes a fixed 24 pt radius
+(`COMPOSER_GLASS_LAYER_RADIUS`, the smallest the animated shell ever reaches), so
+the shell's clip is always the only shape. Each strip capsule hugs its chip
+(`alignSelf: flex-start`) and the strip's group merge distance is 0, under its
+4 pt gap, so model and effort read as two capsules, never one fused bar. No web
+frame can show glass (the module renders a plain view there).
 
 ### Home's use of it, and the two additive props
 

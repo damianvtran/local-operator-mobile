@@ -1,14 +1,21 @@
 import { ChevronRight } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	ActivityIndicator,
+	findNodeHandle,
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
 	useWindowDimensions,
 	View,
 } from "react-native";
-import { heroTopInset } from "@/features/home/hero-layout";
+import {
+	heroHeldInset,
+	heroMeasured,
+	heroTopInset,
+} from "@/features/home/hero-layout";
 import { startingLine, suggestionSlotFor } from "@/features/home/home-copy";
 import { t } from "@/i18n";
 import { ROLE, SURFACE } from "@/ui/a11y";
@@ -59,6 +66,10 @@ export type HomeSplashProps = {
 	onConnect: () => void;
 	/** The first send is in flight: the splash yields to one line. */
 	starting: boolean;
+	/** Bump to move focus to the greeting (UX U5): the home asks after a
+	 *  Retry the reader pressed succeeds, because the alert that held focus
+	 *  unmounts. 0 / unchanged never moves anything. */
+	focusRequest?: number;
 };
 
 /** One suggestion row: the `quiet` variant's language at full width.
@@ -175,6 +186,7 @@ export const HomeSplash = ({
 	connected,
 	onPick,
 	starting,
+	focusRequest = 0,
 }: HomeSplashProps) => {
 	const { width } = useWindowDimensions();
 	const { effectiveScale } = useTextScale();
@@ -188,10 +200,39 @@ export const HomeSplash = ({
 	 *  own height. Both re-measure on rotation, text scale, keyboard and notice. */
 	const [band, setBand] = useState(0);
 	const [block, setBlock] = useState(0);
-	/* `display` while the home IS the page (empty, idle): its one sentence is the
-	 *  page's headline and 20 pt under-set it (spec §2). Once there is a draft,
-	 *  an edit or a send in flight, it is a heading over other content: `title`. */
-	const headline = !draft.length && !editing && !starting;
+	/* `display` while the home IS the page: its one sentence is the page's
+	 *  headline and 20 pt under-set it (spec §2). Once there is a draft or a send
+	 *  in flight, it is a heading over other content: `title`. NOT on focus alone
+	 *  (UX U1): tapping into an empty field snapped the greeting 28 → 20 px and
+	 *  52 pt down before a key was typed. */
+	const headline = !draft.length && !starting;
+	/* Focus on an empty field still drops the rows, so the inset is HELD at its
+	 *  resting value (`heroHeldInset`) rather than re-centring the shorter
+	 *  block. `restInset` is the last inset painted outside that state. */
+	const live = heroTopInset(band, block);
+	const holding = Boolean(editing) && !draft.length && !starting;
+	const restInset = useRef(live);
+	if (!holding) restInset.current = live;
+	const greetingRef = useRef<Text | null>(null);
+	useEffect(() => {
+		if (focusRequest === 0) return;
+		const greeting = greetingRef.current;
+		if (!greeting) return;
+		/* The web moves keyboard focus (`tabIndex={-1}` makes the line
+		 *  addressable, never a Tab stop); a phone moves the screen reader's —
+		 *  the settings screen's rule after its own retry. */
+		if (Platform.OS === "web") {
+			/* Only when focus was really LOST (the Retry unmounted, so it fell to
+			 *  the body): a reader who moved on to the composer during a slow
+			 *  retry keeps their place. */
+			const held = document.activeElement;
+			if (held && held !== document.body) return;
+			(greeting as unknown as HTMLElement).focus({ preventScroll: true });
+		} else {
+			const handle = findNodeHandle(greeting);
+			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+		}
+	}, [focusRequest]);
 	return (
 		<View
 			className="flex-1"
@@ -201,7 +242,7 @@ export const HomeSplash = ({
 			<ScrollView
 				contentContainerStyle={{
 					paddingHorizontal: 16,
-					paddingTop: heroTopInset(band, block),
+					paddingTop: holding ? heroHeldInset(live, restInset.current) : live,
 					paddingBottom: 24,
 				}}
 				keyboardShouldPersistTaps="handled"
@@ -210,8 +251,15 @@ export const HomeSplash = ({
 					onLayout={(event) =>
 						setBlock(Math.ceil(event.nativeEvent.layout.height))
 					}
+					/* Laid out (so it is measured) but unpainted until its centred
+					 *  place is known: no top-anchored first frame (R4/D4). */
+					style={{ opacity: heroMeasured(band, block) ? 1 : 0 }}
 				>
 					<Text
+						ref={greetingRef}
+						/* RN's Text types omit `tabIndex`; RN-web honours it. Spread, the
+						 *  `Heading` component's idiom, so web focus can be PLACED here. */
+						{...{ tabIndex: -1 }}
 						className={cx(headline ? "text-display" : "text-title", "text-ink")}
 						testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
 					>

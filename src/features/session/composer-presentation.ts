@@ -44,6 +44,35 @@ export const composerShellPadding = (expanded: boolean) =>
  *  under the 48 pt row the on-scale padding is balanced against. */
 export const composerRestRow = (floor: number = COMPOSER_FIELD_BOX) =>
 	Math.max(floor, COMPOSER_REST_ROW);
+/** The field row's cross-axis alignment (review R1). AT REST it is CENTRED:
+ *  the row is 48 on every platform but iOS children are 44, and `items-end`
+ *  put them 8 pt from the shell's top and 4 pt from its bottom — the 6/6 the
+ *  H5 note above promises only holds when the 4 pt slack splits evenly. OPEN,
+ *  the row holds only the multi-line field, which must keep growing upward
+ *  from its last line, so it stays bottom-aligned. A class rather than a
+ *  boolean so the component reads the same decision the tests assert. */
+export const composerFieldRowAlign = (expanded: boolean) =>
+	expanded ? "items-end" : "items-center";
+/** Where a resting control of height `floor` paints inside the shell, edge to
+ *  edge, under `composerFieldRowAlign(false)`: the shell padding plus its half
+ *  of the row's slack. iOS (44) gives 6/6, the 48 floor 4/4 — equal on both
+ *  sides on every floor, which is what "centred" means for H5. */
+export const composerRestInsets = (floor: number = COMPOSER_FIELD_BOX) => {
+	const slack = composerRestRow(floor) - floor;
+	return {
+		top: COMPOSER_REST_PAD + slack / 2,
+		bottom: COMPOSER_REST_PAD + slack / 2,
+	};
+};
+/** The radius of the shell's GLASS layer (review R2 / design D5a). The layer
+ *  sits inside the shell's `overflow: hidden`, whose radius is ANIMATED
+ *  (`composerShellRadius`, 24 open → the pill's half-height at rest, and the
+ *  pill's measured base can exceed the render-time estimate at large text). A
+ *  layer radius LARGER than the live clip leaves unfilled corner wedges inside
+ *  the ring; one at or under the clip's minimum is always trimmed by it. 24 is
+ *  that minimum, so the shell's clip is the only shape — and a rounded layer,
+ *  not 0, keeps the corner rounded if a native clip ever misses the glass rim. */
+export const COMPOSER_GLASS_LAYER_RADIUS = 24;
 export const composerPaintedHeight = (
 	expanded: boolean,
 	floor: number = COMPOSER_FIELD_BOX,

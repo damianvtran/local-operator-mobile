@@ -694,7 +694,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
 	 * this merge, so neither previous digest is kept. */
-	src: "6bb361179495738b39a7634a4ad3322dd0faaddddd03a144c8d0b87fc7892600",
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-1 remediation with --print
+	 * from the staged tree: `src` only (resting-row centring, glass layer radius,
+	 * strip capsules, brand mark inside the header chip, hero hold/first frame,
+	 * alert action placement, folder Retry loading and focus); `app` unchanged. */
+	src: "301b8522b61500caf17b26d947e65cd01574e32a11fcef3d5e25a02e5358c39a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
