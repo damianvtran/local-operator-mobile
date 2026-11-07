@@ -46,9 +46,10 @@ import {
 import { t } from "@/i18n";
 import { CONTROL, REGION, ROLE, SURFACE, switcherRowIds } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { Button } from "@/ui/components/button";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { avatarClasses, cx } from "@/ui/variants";
 
 /**
  * The computer switcher: one bottom sheet listing every computer this phone
@@ -160,8 +161,13 @@ const DOT_TOKEN: Record<
 	refused: "warning",
 };
 
+/* The word's ink. `online` is muted, not green: the dot already carries the
+ *  success role, and a green word beside a green dot repeated the same signal at
+ *  body weight (operator: "it looks ugly"). The warning states keep the warning
+ *  ink, so a computer that needs the reader still reads apart from a resting one
+ *  without the dot — never colour alone, never the dot alone. */
 const WORD_CLASS: Record<SwitcherHealth["kind"], string> = {
-	online: "text-success",
+	online: "text-ink-muted",
 	asleep: "text-ink-muted",
 	"sign-in": "text-warning",
 	paused: "text-warning",
@@ -194,22 +200,70 @@ const HealthWord = ({
 	);
 };
 
-const TransportTag = ({ row }: { row: SwitcherRow }) => (
-	<View className="flex-row flex-wrap items-center gap-2">
-		<View className="self-start rounded-sm border border-hairline px-2 py-0.5">
-			<Text className="text-meta text-ink-muted">
-				{row.transport.kind === "radient" ? "Radient" : "Your address"}
+/* The row's geometry, shared by the computer rows and the add row so the add
+ *  row's label starts on the names' x. A grouped list, not a ruled one: rounded
+ *  `md` rows (the drawer computer row's radius) inside the sheet's own `px-4`
+ *  gutter, so both edges carry the same inset — the old row ran edge to edge
+ *  with a leading accent bar and its status word touched the trailing edge. No
+ *  hairlines inside the group: the rows' own fill and spacing separate them. */
+const ROW_CLASS = "flex-row items-center gap-3 rounded-md px-3";
+
+/** The leading glyph's soft circle: the kit's small avatar (`radius.full` on
+ *  `accent-muted`), so a computer reads as the same kind of object it is in the
+ *  drawer and the pickers' list rows rather than as a bare icon. */
+const GLYPH_CIRCLE = avatarClasses("sm");
+
+/* An own address saved without a name is titled by its host (the add flow's
+ *  default), so line 2 repeating the host said the same string twice (design
+ *  round 1, D1). Such a title is an address, not a label: it truncates in the
+ *  middle so the port — the only part telling two local addresses apart — stays
+ *  visible, as the header pill does, and line 2 names the transport instead. */
+const titledByHost = (row: SwitcherRow): boolean =>
+	row.transport.kind === "custom" && row.name === row.transport.host;
+
+/* `·` joins the second line's facts the way the drawer row's `Mac mini · Online`
+ *  does — one list language across the drawer, the pickers and this sheet. The
+ *  health dot is itself a separator, so `·` goes only where no dot follows (the
+ *  connecting word); `· ●` read as two dots side by side (design round 1, D2). */
+const TransportLine = ({
+	row,
+	now,
+	healthTestID,
+}: {
+	row: SwitcherRow;
+	now: number;
+	healthTestID: string;
+}) => (
+	<View className="min-w-0 flex-row items-center gap-1">
+		{row.transport.kind === "radient" ? (
+			<Text className="shrink-0 text-meta text-ink-muted">
+				{t("mobile.computers.transport.radient")}
 			</Text>
-		</View>
-		{row.transport.kind === "custom" ? (
+		) : titledByHost(row) ? (
+			<Text className="shrink-0 text-meta text-ink-muted">
+				{t("mobile.computers.transport.custom")}
+			</Text>
+		) : (
 			<Text
-				className="shrink text-mono-sm text-ink-dim"
+				className="shrink text-mono-sm text-ink-muted"
 				numberOfLines={1}
 				ellipsizeMode="middle"
 			>
 				{row.transport.host}
 			</Text>
-		) : null}
+		)}
+		{row.connecting ? (
+			<>
+				<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
+					·
+				</Text>
+				<Text className="shrink-0 text-meta text-ink-muted">
+					{t("mobile.computers.connecting")}
+				</Text>
+			</>
+		) : (
+			<HealthWord row={row} now={now} testID={healthTestID} />
+		)}
 	</View>
 );
 
@@ -227,13 +281,16 @@ const SwitcherRowView = ({
 	const ids = switcherRowIds(row.key);
 	const accent = useTokenColor("accent");
 	const muted = useTokenColor("ink-muted");
+	const glyphInk = useTokenColor("ink");
 	const Glyph = row.transport.kind === "custom" ? Server : Laptop;
 	const word = healthLabel(row.health, now);
 	const hint = rowHint(row, section);
+	/* Spoken in full: the host is said even when line 2 shows only "Your
+	 *  address", because a screen reader cannot see the title's truncation. */
 	const transportLabel =
 		row.transport.kind === "radient"
-			? "Radient"
-			: `Your address, ${row.transport.host}`;
+			? t("mobile.computers.transport.radient")
+			: `${t("mobile.computers.transport.custom")}, ${row.transport.host}`;
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -249,53 +306,93 @@ const SwitcherRowView = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={`relative flex-row items-center gap-3 border-b border-hairline py-3 ps-2 ${
-						row.active ? "bg-row-selected" : pressed ? "bg-row-hover" : ""
-					}`}
+					/* 56 pt (`min-h-14`) with a two-line body: above the 44/48 touch
+					 *  floor on every platform, and the pickers' 2-line row height. */
+					className={cx(
+						ROW_CLASS,
+						"min-h-14 py-2",
+						row.active
+							? "bg-row-selected"
+							: pressed
+								? "bg-row-hover"
+								: "bg-transparent",
+					)}
 				>
-					{/* The row in use carries the kit's selected ground plus an accent bar.
-					 *  The ground alone measured 1.16:1 light / 1.0:1 dark against the sheet
-					 *  (design round 1, D2); the bar is `accent`, 5.5:1 light / 6.3:1 dark on
-					 *  `elevated` and 4.5:1 / 6.1:1 on `row-selected`, clearing the 3:1
-					 *  non-text floor. Decoration: the check and ", in use" carry it too. */}
-					{row.active ? (
-						<View
-							className="absolute bottom-0 start-0 top-0 w-1 bg-accent"
-							aria-hidden
-						/>
-					) : null}
-					{/* The check sits in its own column so names line up whether or not
-					 *  a row is active (frame p5-switcher-sheet). */}
-					<View className="w-5 items-center">
-						{row.active ? <Check size={18} color={accent} /> : null}
+					<View className={GLYPH_CIRCLE} aria-hidden>
+						<Glyph size={16} color={glyphInk} />
 					</View>
-					<Glyph size={20} color={muted} />
-					<View className="min-w-0 flex-1 gap-1">
-						<View className="flex-row items-center gap-2">
-							<Text className="flex-1 text-body text-ink" numberOfLines={1}>
-								{row.name}
-							</Text>
-							{row.connecting ? (
-								<View className="shrink-0 flex-row items-center gap-1">
-									<ActivityIndicator
-										size="small"
-										color={muted}
-										accessibilityElementsHidden
-										importantForAccessibility="no"
-									/>
-									<Text className="text-meta text-ink-muted">
-										{t("mobile.computers.connecting")}
-									</Text>
-								</View>
-							) : (
-								<HealthWord row={row} now={now} testID={ids.health} />
-							)}
-						</View>
-						<TransportTag row={row} />
+					<View className="min-w-0 flex-1 gap-0.5">
+						<Text
+							className="text-body-sm font-medium text-ink"
+							numberOfLines={1}
+							ellipsizeMode={titledByHost(row) ? "middle" : "tail"}
+						>
+							{row.name}
+						</Text>
+						<TransportLine row={row} now={now} healthTestID={ids.health} />
 						{hint !== null ? (
 							<Text className="text-meta text-ink-dim">{hint}</Text>
 						) : null}
 					</View>
+					{/* ONE selection signal: the trailing check, as in the pickers'
+					 *  `ModelOptionRow`. `row-selected` is only a subtle ground — it
+					 *  measured 1.16:1 light / 1.0:1 dark against the sheet (design round
+					 *  1, D2), so it cannot carry selection alone; the `accent` check
+					 *  (5.5:1 light / 6.3:1 dark on `elevated`, 4.5:1 / 6.1:1 on
+					 *  `row-selected`) clears the 3:1 non-text floor, and ", in use" says
+					 *  it to a screen reader. The slot is reserved in every state so the
+					 *  health line never shifts when a row becomes active; a connecting
+					 *  row shows its spinner in the same slot. */}
+					<View className="w-5 shrink-0 items-center">
+						{row.connecting ? (
+							<ActivityIndicator
+								size="small"
+								color={muted}
+								accessibilityElementsHidden
+								importantForAccessibility="no"
+							/>
+						) : row.active ? (
+							<Check size={18} color={accent} aria-hidden />
+						) : null}
+					</View>
+				</View>
+			)}
+		</Pressable>
+	);
+};
+
+/**
+ * "Add a computer", as a quiet row under the group rather than a full-width
+ * outlined footer button: the action is secondary to picking one of the listed
+ * computers, and the outlined footer (with the pinned footer's hairline above
+ * it) was visually heavier than the list it served. It takes the rows' own
+ * geometry, so its `+` circle and label line up with the glyphs and names
+ * above, at the platform touch floor.
+ */
+const AddComputerRow = ({ onPress }: { onPress: () => void }) => {
+	const muted = useTokenColor("ink-muted");
+	const label = t("mobile.computers.add");
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={label}
+			testID={CONTROL.switcherAddComputer}
+			onPress={onPress}
+		>
+			{({ pressed }) => (
+				<View
+					className={cx(ROW_CLASS, pressed ? "bg-row-hover" : "bg-transparent")}
+					style={{ minHeight: TOUCH_FLOOR }}
+				>
+					<View
+						className="h-8 w-8 items-center justify-center rounded-full border border-border-control"
+						aria-hidden
+					>
+						<Plus size={16} color={muted} />
+					</View>
+					<Text className="min-w-0 flex-1 text-body-sm font-medium text-ink-muted">
+						{label}
+					</Text>
 				</View>
 			)}
 		</Pressable>
@@ -555,6 +652,33 @@ export function ComputerSwitcherSheet({
 		sections.onPhone.length === 0 &&
 		sections.notConnected.length === 0;
 
+	const addComputer = () => {
+		onClose();
+		/* The existing set-up paths (Radient, or your own tunnel), in the
+		 *  Computers route's add mode: a populated list there has no add
+		 *  path, so landing on it was a dead end (UX round 2, U12). Over a
+		 *  Computers screen that ALREADY shows those paths — an empty
+		 *  account, or the add mode itself — closing is the whole step:
+		 *  pushing it again stacked an identical screen (UX round 1, U6). */
+		/* The screen behind's own `computersView` input, read the way
+		 *  `computers.tsx` reads it, so the sheet and that screen agree on
+		 *  whether the set-up paths are showing (R3-n1). */
+		const now = connectionStore.getState();
+		if (
+			addComputerTarget({
+				pathname,
+				view: {
+					computers: now.computers,
+					discovering,
+					discoveryFailure: now.discoveryFailure,
+					signedOut: refusal?.kind === "sign-in" || signInState.kind !== "idle",
+					adding: addParam === "1",
+				},
+			}) === "push"
+		)
+			router.push(ADD_COMPUTER_HREF);
+	};
+
 	return (
 		<Sheet
 			focusTitle
@@ -565,41 +689,6 @@ export function ComputerSwitcherSheet({
 			 *  over the Computers screen's own title (design round 1, D6). */
 			title={t("mobile.computers.switch")}
 			testID={SURFACE.computerSwitcherSheet}
-			footer={
-				<Button
-					label={t("mobile.computers.add")}
-					leadingIcon={({ color, size }) => <Plus color={color} size={size} />}
-					onPress={() => {
-						onClose();
-						/* The existing set-up paths (Radient, or your own tunnel), in the
-						 *  Computers route's add mode: a populated list there has no add
-						 *  path, so landing on it was a dead end (UX round 2, U12). Over a
-						 *  Computers screen that ALREADY shows those paths — an empty
-						 *  account, or the add mode itself — closing is the whole step:
-						 *  pushing it again stacked an identical screen (UX round 1, U6). */
-						/* The screen behind's own `computersView` input, read the way
-						 *  `computers.tsx` reads it, so the sheet and that screen agree on
-						 *  whether the set-up paths are showing (R3-n1). */
-						const now = connectionStore.getState();
-						if (
-							addComputerTarget({
-								pathname,
-								view: {
-									computers: now.computers,
-									discovering,
-									discoveryFailure: now.discoveryFailure,
-									signedOut:
-										refusal?.kind === "sign-in" || signInState.kind !== "idle",
-									adding: addParam === "1",
-								},
-							}) === "push"
-						)
-							router.push(ADD_COMPUTER_HREF);
-					}}
-					variant="outline"
-					testID={CONTROL.switcherAddComputer}
-				/>
-			}
 		>
 			{empty ? (
 				<Text className="py-4 text-body text-ink-muted">
@@ -607,33 +696,51 @@ export function ComputerSwitcherSheet({
 				</Text>
 			) : null}
 			{sections.onPhone.length > 0 ? (
+				/* The header sits on the rows' `px-3` content edge, as the pickers' group
+				 *  labels do, so the label, glyphs and names share one leading line. */
 				<View testID={REGION.switcherOnPhone}>
-					<SectionHeader label={t("mobile.computers.section.on_phone")} />
-					{sections.onPhone.map((row) => (
-						<SwitcherRowView
-							key={row.key}
-							row={row}
-							now={now}
-							section="on-phone"
-							onPress={() => tap(row)}
-						/>
-					))}
+					<View className="px-3">
+						<SectionHeader label={t("mobile.computers.section.on_phone")} />
+					</View>
+					<View className="gap-1">
+						{sections.onPhone.map((row) => (
+							<SwitcherRowView
+								key={row.key}
+								row={row}
+								now={now}
+								section="on-phone"
+								onPress={() => tap(row)}
+							/>
+						))}
+					</View>
 				</View>
 			) : null}
 			{sections.notConnected.length > 0 ? (
 				<View testID={REGION.switcherNotConnected}>
-					<SectionHeader label={t("mobile.computers.section.not_connected")} />
-					{sections.notConnected.map((row) => (
-						<SwitcherRowView
-							key={row.key}
-							row={row}
-							now={now}
-							section="not-connected"
-							onPress={() => tap(row)}
+					<View className="px-3">
+						<SectionHeader
+							label={t("mobile.computers.section.not_connected")}
 						/>
-					))}
+					</View>
+					<View className="gap-1">
+						{sections.notConnected.map((row) => (
+							<SwitcherRowView
+								key={row.key}
+								row={row}
+								now={now}
+								section="not-connected"
+								onPress={() => tap(row)}
+							/>
+						))}
+					</View>
 				</View>
 			) : null}
+			{/* Below the groups with a section's worth of space (`mt-4`, the section
+			 *  header's own `pt-4`), in the scrolling body rather than the pinned
+			 *  footer: the footer's divider was the second hairline the operator saw. */}
+			<View className="mt-4">
+				<AddComputerRow onPress={addComputer} />
+			</View>
 		</Sheet>
 	);
 }

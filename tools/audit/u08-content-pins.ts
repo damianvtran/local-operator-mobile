@@ -856,7 +856,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * is source admission only, NOT rendered U-08 evidence. Round-1 remediation
 	 * re-printed it for the pre-frame disabled chip, the hidden live rungless
 	 * effort chip, the 12 pt rail gap and the 7 pt rail edge. */
-	src: "571b774c898f85bc935c97a2e4c6332d29c66d81dfb594819ebabab9538aff7f",
+	/* Re-pinned 2026-11-07 for feat/switcher-sheet-style with --print from the
+	 * staged tree. Only `src` moves: the computer switcher sheet restyled as a
+	 * grouped list (rounded rows, trailing check, "Radient · Online" second
+	 * line, add row in the body instead of the pinned footer), the new
+	 * `mobile.computers.transport.radient` key, its catalogues and the catalogue
+	 * invariants it moves, and tests.
+	 * Source admission only, NOT rendered U-08 evidence.
+	 * Re-pinned again the same day with --print for the design round 1
+	 * remediation (D1 address-titled rows: "Your address" line 2, middle-
+	 * truncated title, new `mobile.computers.transport.custom` key; D2 no `·`
+	 * before the health dot). Source admission only. */
+	src: "ba53111c62b98a7cfe3aeca94b86368c2294003893a6cc5ab8987ba8b11a29a9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
