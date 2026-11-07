@@ -480,7 +480,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
-	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
+	/* Re-pinned 2026-11-07 for fix/smooth-steering with --print from the staged
+	 * tree: `app` moves by one line (the session header's "Working" reads the
+	 * composer's `turnRunning` instead of the working label alone) and `src` by
+	 * the steer/prompt decision, its race reconciliation and the steer failure
+	 * copy. No layout, token or glyph changes; U-08's scene renders the same
+	 * frames for any projection where `streaming` and `activity` agree. Source
+	 * admission, NOT fresh rendered evidence. */
+	app: "c48ded8902cb2931618f564b769061712dc1b6db674c8c1ca923c393a458fdb7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -814,7 +821,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `cold-start-computer.ts` narrows "last" to usable Radient entries and
 	 * `saved-computers.ts` stops stamping a use on a never-used Remove. Logic and
 	 * tests only; no copy, styling or layout. */
-	src: "18de0017f48643ed4be3b946d7d4b8b04bbf68b62f26da818aae7254852d024a",
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (b5a2f4a1, PR #190 smooth steering: steer/prompt decision, race
+	 * reconciliation, steer failure copy) into feat/startup-restore-computer
+	 * (PR #184): both lines of history above stand, the value is the merged
+	 * tree's own, and neither side's previous digest is kept. Source admission,
+	 * not a geometry claim. */
+	src: "a4990afc052a6c801e32cafdd810d560058d0148c59316a7c9fd56e92934efda",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
