@@ -104,8 +104,8 @@ describe("the inset notices' Retry", () => {
 	});
 	it("asks the splash for focus only after a Retry the reader pressed succeeds", () => {
 		expect(HOME).toContain("focusRequest={heroFocus}");
-		for (const flag of ["foldersRetried", "modelsRetried"]) {
-			const set = HOME.indexOf(`${flag}.current = true;`);
+		for (const flag of ["foldersPressed", "modelsPressed"]) {
+			const set = HOME.indexOf(`${flag}.current = next;`);
 			expect(set).toBeGreaterThan(0);
 			/* Set only inside the reader's own Retry callback. */
 			expect(HOME.lastIndexOf("useCallback(", set)).toBeGreaterThan(
@@ -114,6 +114,14 @@ describe("the inset notices' Retry", () => {
 		}
 		expect(SPLASH).toContain("AccessibilityInfo.setAccessibilityFocus(handle)");
 		expect(SPLASH).toContain("{...{ tabIndex: -1 }}");
+		/* Review M1: a remount never replays the request it mounted with; the
+		 *  latch's own rule is pinned in `hero-focus.test.ts`. */
+		expect(SPLASH).toContain("useRef(focusLatch(focusRequest))");
+		expect(SPLASH).toContain("if (!latch.current.take(focusRequest)) return;");
+		/* Review m1: native keeps a reader who moved on to the composer. */
+		expect(SPLASH).toContain(
+			"if (TextInput.State.currentlyFocusedInput() != null) return;",
+		);
 	});
 });
 

@@ -13,6 +13,7 @@ import {
 	useListState,
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
+import { NO_PRESS, pressAnswered } from "@/features/home/hero-focus";
 import {
 	connectDisabledReason,
 	foldersReadFailed,
@@ -215,12 +216,14 @@ export default function Home({
 	 *  by side in one stack, one spinning Retry and one inert one read as two
 	 *  different kinds of control. */
 	const [directoriesSettled, setDirectoriesSettled] = useState(0);
-	/** A Retry the READER pressed, per read, so its success can move focus to
-	 *  the hero (UX U5): the alert holding focus unmounts on success, and focus
-	 *  otherwise falls back to the document's top. Never set by the automatic
-	 *  re-ask, which nobody pressed. */
-	const foldersRetried = useRef(false);
-	const modelsRetried = useRef(false);
+	/** The ATTEMPT a Retry the reader pressed created, per read (`NO_PRESS` when
+	 *  none), so that attempt's success can move focus to the hero (UX U5): the
+	 *  alert holding focus unmounts on success, and focus otherwise falls back to
+	 *  the document's top. An attempt number, not a flag (review m2): the
+	 *  automatic re-ask and the re-read on reconnect are other attempts or other
+	 *  runs, so nothing the reader did not press can claim the move. */
+	const foldersPressed = useRef(NO_PRESS);
+	const modelsPressed = useRef(NO_PRESS);
 	/** Bumped to ask the splash to take focus; 0 never asks. */
 	const [heroFocus, setHeroFocus] = useState(0);
 	const [modelsAttempt, setModelsAttempt] = useState(0);
@@ -345,7 +348,13 @@ export default function Home({
 	 * Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
-		if (!active) return;
+		if (!active) {
+			/* A press with no relay is never served; the re-read on reconnect is
+			 *  automatic and must not inherit its focus move (review m2). */
+			if (foldersPressed.current === directoriesAttempt)
+				foldersPressed.current = NO_PRESS;
+			return;
+		}
 		/* The read is answered FOR the computer it was asked of (R2-1), and a
 		 *  computer change re-asks: `tunnelId` is a dependency for that reason. */
 		const computer = tunnelId;
@@ -363,8 +372,8 @@ export default function Home({
 				setHeldDirectory((held) => foldersApplied(held, computer, read));
 				setDirectoriesError(null);
 				setDirectoriesSettled(directoriesAttempt);
-				if (foldersRetried.current) {
-					foldersRetried.current = false;
+				if (pressAnswered(foldersPressed.current, directoriesAttempt)) {
+					foldersPressed.current = NO_PRESS;
 					setHeroFocus((request) => request + 1);
 				}
 			})
@@ -372,7 +381,8 @@ export default function Home({
 				if (!live) return;
 				setDirectoriesError(foldersFailure(cause));
 				setDirectoriesSettled(directoriesAttempt);
-				foldersRetried.current = false;
+				if (foldersPressed.current === directoriesAttempt)
+					foldersPressed.current = NO_PRESS;
 			});
 		return () => {
 			live = false;
@@ -383,7 +393,12 @@ export default function Home({
 	 *  settle records WHICH attempt answered, for the Retry's `loading`. */
 	useEffect(() => {
 		const active = relay();
-		if (!active) return;
+		if (!active) {
+			/* As the folders read: an unserved press does not ride the reconnect. */
+			if (modelsPressed.current === modelsAttempt)
+				modelsPressed.current = NO_PRESS;
+			return;
+		}
 		let live = true;
 		void active
 			.models()
@@ -392,8 +407,8 @@ export default function Home({
 				setModels(catalogue.models);
 				setModelsRead("ready");
 				setModelsSettled(modelsAttempt);
-				if (modelsRetried.current) {
-					modelsRetried.current = false;
+				if (pressAnswered(modelsPressed.current, modelsAttempt)) {
+					modelsPressed.current = NO_PRESS;
 					setHeroFocus((request) => request + 1);
 				}
 			})
@@ -401,22 +416,27 @@ export default function Home({
 				if (!live) return;
 				setModelsRead("failed");
 				setModelsSettled(modelsAttempt);
-				modelsRetried.current = false;
+				if (modelsPressed.current === modelsAttempt)
+					modelsPressed.current = NO_PRESS;
 			});
 		return () => {
 			live = false;
 		};
 	}, [relay, modelsAttempt]);
 
+	/* The next attempt is computed from the render's value, not inside the
+	 *  updater: an updater must stay pure (StrictMode calls it twice). */
 	const retryDirectories = useCallback(() => {
-		foldersRetried.current = true;
-		setDirectoriesAttempt((attempt) => attempt + 1);
-	}, []);
+		const next = directoriesAttempt + 1;
+		foldersPressed.current = next;
+		setDirectoriesAttempt(next);
+	}, [directoriesAttempt]);
 
 	const retryModels = useCallback(() => {
-		modelsRetried.current = true;
-		setModelsAttempt((attempt) => attempt + 1);
-	}, []);
+		const next = modelsAttempt + 1;
+		modelsPressed.current = next;
+		setModelsAttempt(next);
+	}, [modelsAttempt]);
 
 	/* ONE automatic re-ask after a credential failure, and only once the route is
 	 * live again: the first read of a mount can race the token renewal the connection

@@ -698,7 +698,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * from the staged tree: `src` only (resting-row centring, glass layer radius,
 	 * strip capsules, brand mark inside the header chip, hero hold/first frame,
 	 * alert action placement, folder Retry loading and focus); `app` unchanged. */
-	src: "301b8522b61500caf17b26d947e65cd01574e32a11fcef3d5e25a02e5358c39a",
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-2 remediation with --print
+	 * from the staged tree: `src` only, focus logic with no layout change (the
+	 * splash's mount-seeded focus latch, the native composer guard, Retry focus
+	 * tied to the pressed attempt, a moved import in `variants.ts`); `app`
+	 * unchanged. */
+	src: "6ef1381877658df3dad86e44bcbb55ffb1b2fb49bc38b133d4d119b77aab3ce0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

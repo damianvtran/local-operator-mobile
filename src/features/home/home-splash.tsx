@@ -8,9 +8,11 @@ import {
 	Pressable,
 	ScrollView,
 	Text,
+	TextInput,
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { focusLatch } from "@/features/home/hero-focus";
 import {
 	heroHeldInset,
 	heroMeasured,
@@ -214,8 +216,12 @@ export const HomeSplash = ({
 	const restInset = useRef(live);
 	if (!holding) restInset.current = live;
 	const greetingRef = useRef<Text | null>(null);
+	/* Seeded with the value this splash MOUNTED with (review M1): Home's counter
+	 *  never resets and the splash remounts on New chat and on a cleared
+	 *  recovery state, so the mount-time value is an old request, not a new one. */
+	const latch = useRef(focusLatch(focusRequest));
 	useEffect(() => {
-		if (focusRequest === 0) return;
+		if (!latch.current.take(focusRequest)) return;
 		const greeting = greetingRef.current;
 		if (!greeting) return;
 		/* The web moves keyboard focus (`tabIndex={-1}` makes the line
@@ -229,6 +235,10 @@ export const HomeSplash = ({
 			if (held && held !== document.body) return;
 			(greeting as unknown as HTMLElement).focus({ preventScroll: true });
 		} else {
+			/* The native form of the same "moved on" rule (review m1): a reader
+			 *  typing or dictating in the composer during a slow retry keeps the
+			 *  screen reader's place. */
+			if (TextInput.State.currentlyFocusedInput() != null) return;
 			const handle = findNodeHandle(greeting);
 			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
 		}

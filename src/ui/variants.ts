@@ -28,11 +28,11 @@
  * defect rather than a build failure.
  */
 
-/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
- * the shared dependency set, and this is all of it that the app needs. */
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
+/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
+ * the shared dependency set, and this is all of it that the app needs. */
 export const cx = (
 	...parts: Array<string | false | null | undefined>
 ): string => parts.filter(Boolean).join(" ");
