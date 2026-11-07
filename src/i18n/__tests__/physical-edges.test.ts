@@ -271,12 +271,6 @@ const ALLOWLIST: {
 	},
 	{
 		file: "src/features/sessions/conversations-drawer.tsx",
-		reason: "holdout: the panel's facing edge while the anchor stays physical",
-		token: "border-r",
-		count: 1,
-	},
-	{
-		file: "src/features/sessions/conversations-drawer.tsx",
 		reason:
 			"holdout: the safe-area inset is spent out of the panel's physical anchor, which does not flip yet",
 		token: "paddingLeft",

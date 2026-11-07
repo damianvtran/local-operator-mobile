@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { focusLatch } from "@/features/home/hero-focus";
 import {
+	HERO_MARK_SIZE,
 	heroHeldInset,
 	heroMeasured,
 	heroTopInset,
@@ -23,6 +24,7 @@ import { t } from "@/i18n";
 import { ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
+import { NavigationMark } from "@/ui/components/navigation-mark";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -116,17 +118,21 @@ const SuggestionRow = ({
 		>
 			{({ pressed }) => (
 				<View
-					/* LEFT-ALIGNED ROWS under a left-aligned greeting (design spec §2):
-					 *  two centred items under a left heading were the mixed rail the
-					 *  operator read as unfinished. The row's own 12 pt inset is pulled
-					 *  back by an equal negative margin (`-mx-3 px-3`), so the LABEL
-					 *  shares the greeting's 16 pt edge to +0 pt while the pressed
-					 *  surface still has room around it. `elevated` is the token the
-					 *  desktop's `hover:bg-elevated` uses, so one gesture means one
-					 *  thing on both clients; no rule between rows (a divider turned
-					 *  the stack into a table). */
+					/* CENTRED ROWS under a centred greeting (operator, TestFlight 578:
+					 *  the logo "in the center above" the greeting). The rule from design
+					 *  spec §2 still holds — ONE rail for the whole hero, never centred
+					 *  rows under a left heading — only the rail moved to the centre
+					 *  line. The row stays FULL-WIDTH, so the 44 pt target and the
+					 *  pressed surface span the column; the label and its chevron are
+					 *  centred together as one phrase (`justify-center`), so the
+					 *  chevron reads as the label's own affordance rather than a far
+					 *  edge marker. `-mx-3 px-3` keeps the pressed surface's 12 pt
+					 *  room past the column edge. `elevated` is the token the desktop's
+					 *  `hover:bg-elevated` uses, so one gesture means one thing on both
+					 *  clients; no rule between rows (a divider turned the stack into a
+					 *  table). */
 					className={cx(
-						"-mx-3 min-h-11 flex-row items-center justify-between gap-2 rounded-sm px-3",
+						"-mx-3 min-h-11 flex-row items-center justify-center gap-1 rounded-sm px-3",
 						pressed && "bg-elevated",
 					)}
 				>
@@ -135,10 +141,12 @@ const SuggestionRow = ({
 					 *  (16, `ink-muted`, 8.60:1) is the spec's step for these rows: they
 					 *  are the hero's actions, and `body-sm` under a `display` greeting
 					 *  read as a caption. At large text a label may wrap to two lines,
-					 *  still left-aligned, so a long localization is read whole. */}
+					 *  centred like the rest of the hero, so a long localization is
+					 *  read whole. `flex-shrink`, not `flex-1`: a growing label would
+					 *  push the chevron to the row's far edge and off the centre line. */}
 					<Text
 						className={cx(
-							"min-w-0 flex-1 text-body",
+							"min-w-0 flex-shrink text-center text-body",
 							pressed ? "text-ink" : "text-ink-muted",
 						)}
 						numberOfLines={largeText ? 2 : 1}
@@ -202,11 +210,14 @@ export const HomeSplash = ({
 	 *  own height. Both re-measure on rotation, text scale, keyboard and notice. */
 	const [band, setBand] = useState(0);
 	const [block, setBlock] = useState(0);
-	/* `display` while the home IS the page: its one sentence is the page's
-	 *  headline and 20 pt under-set it (spec §2). Once there is a draft or a send
-	 *  in flight, it is a heading over other content: `title`. NOT on focus alone
-	 *  (UX U1): tapping into an empty field snapped the greeting 28 → 20 px and
-	 *  52 pt down before a key was typed. */
+	/* `title` while the home IS the page, `heading` once there is a draft or a
+	 *  send in flight and it is a heading over other content. ONE STEP DOWN the
+	 *  type scale from the old `display`/`title` pair (operator, TestFlight 578:
+	 *  "maybe all that text could be just a bit smaller too"): with the brand
+	 *  mark now above it, the 28 pt display line made the centred stack shout.
+	 *  Named steps only, so it moves with the tokens. NOT on focus alone (UX U1):
+	 *  tapping into an empty field must not snap the greeting's size before a
+	 *  key is typed. */
 	const headline = !draft.length && !starting;
 	/* Focus on an empty field still drops the rows, so the inset is HELD at its
 	 *  resting value (`heroHeldInset`) rather than re-centring the shorter
@@ -272,20 +283,40 @@ export const HomeSplash = ({
 					/* Laid out (so it is measured) but unpainted until its centred
 					 *  place is known: no top-anchored first frame (R4/D4). */
 					style={{ opacity: heroMeasured(band, block) ? 1 : 0 }}
+					/* THE CENTRED STACK (operator, TestFlight 578): mark, greeting,
+					 *  rows on one centre line. The mark is INSIDE this measured view,
+					 *  so the centring maths (`heroTopInset`) treats the stack as one
+					 *  block and the composer below never moves. */
+					className="items-center"
 				>
+					{/* The existing asset, never a redraw; decorative, so it hides
+					 *  itself from assistive tech and the greeting stays the first
+					 *  thing read. `space.4` to the greeting. */}
+					<View className="mb-4" testID={SURFACE.homeHeroMark}>
+						<NavigationMark size={HERO_MARK_SIZE} />
+					</View>
 					<Text
 						ref={greetingRef}
 						/* RN's Text types omit `tabIndex`; RN-web honours it. Spread, the
 						 *  `Heading` component's idiom, so web focus can be PLACED here. */
 						{...{ tabIndex: -1 }}
-						className={cx(headline ? "text-display" : "text-title", "text-ink")}
+						className={cx(
+							headline ? "text-title" : "text-heading",
+							"text-center text-ink",
+						)}
 						testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
 					>
 						{starting ? startingLine() : t("mobile.chrome.home.greeting")}
 					</Text>
 					{rows.length ? (
 						/* `space.6` under the greeting, `space.2` between the rows. */
-						<View className="mt-6 gap-2" testID={SURFACE.homeSuggestions}>
+						<View
+							/* `self-stretch`: the parent centres its children, and a
+							 *  shrink-wrapped column would shrink the rows' 44 pt targets
+							 *  to their labels. */
+							className="mt-6 gap-2 self-stretch"
+							testID={SURFACE.homeSuggestions}
+						>
 							{rows.map((label) => (
 								<SuggestionRow
 									key={label}

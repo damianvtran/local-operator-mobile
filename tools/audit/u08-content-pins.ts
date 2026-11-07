@@ -804,7 +804,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-printed 2026-11-07 for feat/home-polish (TestFlight 578 feedback) with
+	 * --print from the staged tree. Only `src` moves: the home hero becomes a
+	 * centred mark + one-step-smaller greeting, the composer strip packs its chips
+	 * left (More takes the free width), the ☰ count moves inside its box with a
+	 * lead before the computer selector, the drawer panel loses its right border,
+	 * and tests. Source admission only, NOT rendered U-08 evidence. */
+	src: "3f992f75ff6f48c63564477f23f6c773211a9826e66b063bc58fdd079c2f7c72",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

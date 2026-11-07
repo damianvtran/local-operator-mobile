@@ -64,3 +64,29 @@ export const headerBellShowsDot = (
 	scale: number,
 	count: number | null,
 ): boolean => count !== null && count > 0 && !headerBellShowsCount(scale);
+
+/**
+ * Where the ☰'s unread count sits, as an absolute inset INSIDE the menu
+ * button's own 44 pt box (operator, TestFlight 578: "that top area in the new
+ * conversation seems really crowded still, I think there needs to be a bit more
+ * padding to the left of the device selector dropdown").
+ *
+ * At `end: 0` the pill's trailing edge WAS the box's edge, so with the row's
+ * 4 pt gap a red `9` sat on the selector's border and read as overlapping it.
+ * `end: 4` pulls the pill back onto the 22 pt glyph's top-trailing corner
+ * (the glyph spans 11-33 pt of the box), the iOS badge position, and keeps
+ * even a `99+` pill (≈40 pt at 100 %) inside the box.
+ */
+export const MENU_BADGE_INSET = { top: 2, end: 4 } as const;
+
+/** The home header row's `gap-1` (`screen.tsx`, `headerDensity="home"`). */
+export const HOME_HEADER_GAP_PT = 4;
+
+/**
+ * Extra leading space before the computer selector, in pt — `ms-2`, a
+ * `space.2` step — so the selector's edge is 12 pt from the ☰'s box and 16 pt
+ * from the count pill's trailing edge (TestFlight 578). Taken from the
+ * selector's flex width, never from the ☰ or the bell, so all three keep the
+ * 44 pt floor.
+ */
+export const HEADER_SELECTOR_LEAD_PT = 8;
