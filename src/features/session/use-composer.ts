@@ -449,7 +449,9 @@ export const useComposer = (input: {
 				 * handler presents and does not decide. Settling again here would be a second
 				 * reading of one failure, which is how one failure acquires two rules. */
 				if (isRelayError(failure)) {
-					const receipt = receiptForError(failure);
+					/* The op this send carried, so a failed steer is never worded as a
+					 *  failed "continue this conversation" (TestFlight 578). */
+					const receipt = receiptForError(failure, op);
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
@@ -465,7 +467,7 @@ export const useComposer = (input: {
 					setError(
 						ended
 							? composerCopy().endedSendFailed
-							: ambiguousMessage(streaming),
+							: ambiguousMessage(op === "steer"),
 					);
 				}
 			} finally {
@@ -473,10 +475,10 @@ export const useComposer = (input: {
 				setSending(false);
 			}
 		},
-		// `streaming` is a real dependency, not a lint appeasement: `ambiguousMessage`
-		// and `chooseOp` both read it, so a stale closure here would ask the reader
-		// "couldn't continue this conversation" about a live turn — or send a second
-		// prompt into a streaming session where a steer was meant. `ended` selects
+		// `streaming` is deliberately NOT read in here any more: the op is chosen
+		// once by the caller (`send`) and every failure sentence is keyed on that
+		// op, so a repaint landing mid-request cannot reword a failed steer as
+		// "couldn't continue this conversation" (TestFlight 578). `ended` selects
 		// the reopen-failure sentence.
 		[
 			endpoints,
@@ -485,7 +487,6 @@ export const useComposer = (input: {
 			setDraft,
 			setImages,
 			onSent,
-			streaming,
 			ended,
 			cancelDictationForSend,
 		],
@@ -555,7 +556,7 @@ export const useComposer = (input: {
 				}
 			} catch (failure) {
 				if (isRelayError(failure)) {
-					const receipt = receiptForError(failure);
+					const receipt = receiptForError(failure, held.op);
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
@@ -567,7 +568,7 @@ export const useComposer = (input: {
 					setError(
 						ended
 							? composerCopy().endedSendFailed
-							: ambiguousMessage(streaming),
+							: ambiguousMessage(held.op === "steer"),
 					);
 				}
 			} finally {
@@ -579,7 +580,6 @@ export const useComposer = (input: {
 		endpoints,
 		envelopeStore,
 		sessionId,
-		streaming,
 		cancelDictationForSend,
 		setDraft,
 		setImages,
