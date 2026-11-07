@@ -92,6 +92,11 @@ ship: app.config.*
 ship: eas.json
 ship: babel.config.*
 ship: metro.config.*
+# Loaded by convention, never named: `pnpm test` (ci.yml, which release.yml
+# calls via `uses: ./.github/workflows/ci.yml`) runs vitest, which reads this
+# file and its `include` globs (`scripts/**/*.test.ts`) decide which harness
+# tests run in the release pipeline.
+ship: vitest.config.ts
 ship: index.*
 # Store upload lanes, store metadata and the build-number floor.
 ship: fastlane/**
