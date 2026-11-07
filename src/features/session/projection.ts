@@ -305,6 +305,28 @@ export const workingLine = (
 		: null;
 
 /**
+ * Whether a turn is running, for EVERY surface that acts on it: the header's
+ * "Working" rung, the composer's steer/send op and the Stop control.
+ *
+ * ONE predicate because two drifted: the header read `activity` and the
+ * composer read `streaming`, so a frame carrying a working label with
+ * `streaming: false` (a reconcile on attach or at a command boundary can lower
+ * `streaming` without touching `activity`) said "Working" while the composer
+ * minted a `prompt`. A prompt into a busy runtime is not refused quickly: the
+ * serving owner makes it wait out the turn, the daemon answers `504 session did
+ * not answer` after its 15 s ack budget, and the reader saw a failed send for a
+ * session the header said was working (TestFlight 578).
+ *
+ * Either fact counts, deliberately biased toward steer: a steer into an idle
+ * runtime is ADMITTED and drives a turn (measured on the 0.101.12 daemon:
+ * `steering queued`, then a run), whereas a prompt into a busy one hangs. The
+ * relay SPA reads `streaming` alone for the same three surfaces; this is a
+ * superset of it, never a contradiction.
+ */
+export const turnRunning = (projection: SessionProjection): boolean =>
+	projection.streaming || projection.activity.length > 0;
+
+/**
  * The PINNED working line above the dock (the relay's `session-view.tsx` mount of
  * `WorkingLine` with `stopPid`): present for exactly as long as a turn is alive.
  *

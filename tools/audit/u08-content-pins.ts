@@ -480,6 +480,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
+	/* Re-pinned 2026-11-07 for fix/smooth-steering with --print from the staged
+	 * tree: `app` moves by one line (the session header's "Working" reads the
+	 * composer's `turnRunning` instead of the working label alone) and `src` by
+	 * the steer/prompt decision, its race reconciliation and the steer failure
+	 * copy. No layout, token or glyph changes; U-08's scene renders the same
+	 * frames for any projection where `streaming` and `activity` agree. Source
+	 * admission, NOT fresh rendered evidence. */
 	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
 	 * staged tree: the session screen mounts the pinned working line (spinner,
 	 * activity, clock, Stop) in the dock above the chips on tray layouts and drops
@@ -490,7 +497,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * pinned line yields to the short-landscape tray (whose sheet keeps the line),
 	 * and both Stops read one latch. Source admission only, NOT rendered U-08
 	 * evidence. */
-	app: "acaf80aa0c90403ed97196532b4a2b670fbe1b771022394ab074ad9a70c0c1a7",
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) into
+	 * feat/thinking-indicator, with --print from the merged tree: `app` carries
+	 * both sides (the header reads `runtime.streaming` on the ticking subtitle).
+	 * Source admission only, NOT rendered U-08 evidence. */
+	app: "f35fd6ca50df426eda508f9bfa1392c68d26deb4bb9bfef63026ca5207f7e746",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -824,7 +835,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * composer's ■ and the line's Stop, the shared phase clock, the line's row
 	 * sizing / hitSlop / rest glyph, and tests. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	src: "72d906147ef4d79bf06344723402b86914017c35bc3f84f7323f5ccee1bd4a58",
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) with
+	 * --print from the merged tree: `turnRunning` beside `pinnedWorkingLine`, both
+	 * sides' composer, runtime and relay changes, and tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	src: "efc82f1d3357ee2d63f12ce28ba527393bc05fb9e8d106af4b9b4d207fae5f6b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

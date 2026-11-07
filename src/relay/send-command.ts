@@ -71,6 +71,56 @@ export interface SendResult {
 	 *  composer must tell the user, or the new draft vanishes without a word. */
 	reusedPreviousDraft: boolean;
 	commandId: string;
+	/** The op the relay ACKNOWLEDGED, which can differ from the op requested when
+	 *  a refusal was reconciled (`reconciledOp`). The composer reads it to say
+	 *  "queued for the running turn" only for an instruction that really was
+	 *  admitted as a steer. */
+	op: ContinuationOp;
+}
+
+/**
+ * The other op, when a DEFINITIVE refusal says the session's turn state moved
+ * under the send; otherwise `null`.
+ *
+ * WHY THIS EXISTS: the composer picks `prompt` vs `steer` from the projection it
+ * last painted, and the runtime's turn state can flip between that repaint and
+ * the request landing (a turn starting from a wake, a subagent result or a goal
+ * continuation; a turn ending as the reader taps). Both refusals below are
+ * pre-admission (the producer released the identity), so ONE replay under the
+ * SAME `command_id` is safe: it can never run the instruction twice.
+ *
+ *  - `prompt` refused with the runtime's busy sentence (`TurnInFlight`,
+ *    "session is already streaming; use steer() …", a 422 from a TUI-hosted
+ *    owner) → `steer`. This is the daemon's OWN reconciliation rule
+ *    (`attach_client.send_command`: "TurnInFlight or 'already streaming'"), and
+ *    `CommandReservations.reject` documents that a released id "still serves the
+ *    steer retry".
+ *  - `steer` refused with `409 session not connected` → `prompt`. A steer has
+ *    nowhere to go without a live runtime, but a prompt to a durable conversation
+ *    WAKES it (the daemon's cold-prompt path), which is what the reader meant.
+ *
+ * Ambiguous failures (408/502/504, transport) are deliberately NOT reconciled:
+ * the first op may already be admitted, and replaying it as a different op under
+ * the same id is a question only the retry envelope's own replay may ask.
+ */
+export function reconciledOp(
+	op: ContinuationOp,
+	error: RelayError,
+): ContinuationOp | null {
+	const sentence = `${error.serverError ?? ""} ${error.code ?? ""}`;
+	if (
+		op === "prompt" &&
+		error.status === 422 &&
+		/already streaming|turn_in_flight/i.test(sentence)
+	)
+		return "steer";
+	if (
+		op === "steer" &&
+		error.status === 409 &&
+		/session not connected/i.test(sentence)
+	)
+		return "prompt";
+	return null;
 }
 
 export interface SendCommandInput {
@@ -292,29 +342,41 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 			{ input_mode: input.input_mode, input_path: input.input_path },
 		);
 	}
-	const { envelope } = held;
-	try {
-		const ack = await client.command(sessionId, {
-			op: envelope.op,
-			command_id: envelope.command_id,
-			text: envelope.text,
-			...(envelope.images && envelope.images.length > 0
-				? { images: envelope.images }
-				: {}),
+	let { envelope } = held;
+	const deliver = (sent: ContinuationEnvelope) =>
+		client.command(sessionId, {
+			op: sent.op,
+			command_id: sent.command_id,
+			text: sent.text,
+			...(sent.images && sent.images.length > 0 ? { images: sent.images } : {}),
 			/* From the ENVELOPE, not from `input`: a replayed envelope carries the
 			 * annotation it was retained with, so a retry sends identical bytes. */
-			...(envelope.input_mode !== undefined
-				? { input_mode: envelope.input_mode }
-				: {}),
-			...(envelope.input_path !== undefined
-				? { input_path: envelope.input_path }
-				: {}),
+			...(sent.input_mode !== undefined ? { input_mode: sent.input_mode } : {}),
+			...(sent.input_path !== undefined ? { input_path: sent.input_path } : {}),
 		});
+	try {
+		let ack: Awaited<ReturnType<typeof deliver>>;
+		try {
+			ack = await deliver(envelope);
+		} catch (first) {
+			const alternate = isRelayError(first)
+				? reconciledOp(envelope.op, first)
+				: null;
+			if (alternate === null) throw first;
+			/* ONE replay under the same id with the op the session's real state
+			 * asks for (see `reconciledOp`). The swapped envelope is HELD before the
+			 * round trip, so an ambiguous failure of the replay retains — and a later
+			 * Retry replays — the op that can actually land. */
+			envelope = { ...envelope, op: alternate };
+			await envelopes.hold(sessionId, envelope);
+			ack = await deliver(envelope);
+		}
 		await envelopes.settle(sessionId, { kind: "ack" });
 		return {
 			detail: ack.detail,
 			reusedPreviousDraft: held.reused,
 			commandId: envelope.command_id,
+			op: envelope.op,
 		};
 	} catch (cause) {
 		/* Anything that is not already a classified error is a transport failure:

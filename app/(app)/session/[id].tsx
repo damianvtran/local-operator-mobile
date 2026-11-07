@@ -1117,7 +1117,9 @@ export default function Session() {
 							: (elapsed) =>
 									headerSubtitle({
 										health,
-										working: working !== null,
+										/* The composer's own reading (`turnRunning`), so the
+										 *  header never says Working while a send mints a prompt. */
+										working: runtime.streaming,
 										waiting: pending !== null,
 										elapsed,
 									})

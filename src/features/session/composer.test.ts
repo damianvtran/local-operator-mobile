@@ -246,6 +246,23 @@ describe("the error taxonomy the reader sees", () => {
 			composerCopy().steerError,
 		]).toContain(receiptForError(bare).message);
 	});
+
+	it("words a failed STEER as a steer, whatever the error class (TestFlight 578)", () => {
+		/* The shipped defect: a transport failure while steering a live turn read
+		 * "Couldn’t continue this conversation." because the fallback keyed on the
+		 * error class alone. The op that was sent decides now. */
+		const bare = new RelayError("transport", "Load failed");
+		expect(receiptForError(bare, "steer").message).toBe(
+			composerCopy().steerError,
+		);
+		expect(receiptForError(rejected(), "steer").message).toBe(
+			"no such session",
+		);
+		/* A prompt keeps the class-keyed wording it always had. */
+		expect(receiptForError(bare, "prompt").message).toBe(
+			composerCopy().continuationError,
+		);
+	});
 });
 
 describe("attachment metadata shown before send", () => {

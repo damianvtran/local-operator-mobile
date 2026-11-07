@@ -25,6 +25,7 @@ import {
 	headerHealth,
 	healthLink,
 } from "@/features/session/health";
+import { turnRunning } from "@/features/session/projection";
 import {
 	relaySource,
 	type SessionRelaySource,
@@ -821,7 +822,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		),
 		projection,
 		entries,
-		streaming: projection?.streaming === true,
+		/* `turnRunning`, not the raw flag: the composer's op and the header's
+		 *  "Working" must be one reading (see the predicate). `streamingRowId`
+		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
+		streaming: projection !== null && turnRunning(projection),
 		streamingRowId,
 		connection,
 		/** The session stream's own liveness, for the header's status dot
