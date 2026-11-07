@@ -2321,6 +2321,55 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 		}
 	}, 20_000);
 
+	/* PR #178 review round 2, R2-1: `Retry-After: 0` reached the conversation
+	 * stream's reconnect unfloored — reconnect and renewal with no delay, for as
+	 * long as the outage lasted. Timed from the wire: with the floor, the second
+	 * and third renewals wait at least the curve's 1 s and 2 s steps. */
+	it("never lets Retry-After: 0 hot-loop the open conversation's reconnect", async () => {
+		observedSession = "synthetic-session";
+		const mock = await signedIn({});
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("missing fixture computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		await until(() => sessionReading.projection !== null);
+		const renewals = () =>
+			mock.events.filter((e) => e === "POST /v1/tunnels/session/refresh")
+				.length;
+		const base = renewals();
+		mock.failRefreshAfter(503, 0);
+		mock.failRefreshAfter(503, 0);
+		const realNow = Date.now.bind(Date);
+		const clock = vi
+			.spyOn(Date, "now")
+			.mockImplementation(() => realNow() + 301_000);
+		const seen: number[] = [];
+		try {
+			await act(async () => {
+				mock.endSessionStreams();
+			});
+			const deadline = realNow() + 10_000;
+			while (seen.length < 3 || sessionReading.link !== "up") {
+				if (realNow() > deadline)
+					throw new Error(
+						`No recovery: ${JSON.stringify({ seen, link: sessionReading.link })}`,
+					);
+				while (renewals() - base > seen.length) seen.push(realNow());
+				await act(async () => {
+					await new Promise<void>((resolve) => setTimeout(resolve, 10));
+				});
+			}
+			const [first = 0, second = 0, third = 0] = seen;
+			expect(second - first).toBeGreaterThanOrEqual(900);
+			expect(third - second).toBeGreaterThanOrEqual(1_900);
+			expect(sessionReading.error).toBeNull();
+		} finally {
+			clock.mockRestore();
+		}
+	}, 20_000);
+
 	/* PR #178 R1-2/Q1: once a renewal 5xx is transient, the list stream's restart
 	 * is what paces renewals during an outage. It must back off (2 s, then 4 s —
 	 * `reconnectDelay`'s curve, unit-tested to its 15 s cap) and honour the
@@ -2345,7 +2394,9 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 				)
 				.map(([, ms]) => ms ?? 0);
 		const realSetTimeout = setTimeout;
-		mock.failRefresh(503, 503);
+		/* `Retry-After: 0` first (R2-1: it was a zero-delay loop), then 7 s where
+		 * the curve's step (4 s) is shorter, so the server's longer ask wins. */
+		mock.failRefreshAfter(503, 0);
 		mock.failRefreshAfter(503, 7);
 		const realNow = Date.now.bind(Date);
 		const clock = vi
@@ -2356,12 +2407,12 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 				mock.endCatalogueStreams();
 			});
 			const deadline = realNow() + 10_000;
-			while (restarts().length < 3 && realNow() < deadline)
+			while (restarts().length < 2 && realNow() < deadline)
 				await act(async () => {
 					await new Promise<void>((resolve) => realSetTimeout(resolve, 20));
 				});
-			// Growing, then the server's Retry-After — never the flat 2 s loop.
-			expect(restarts().slice(0, 3)).toEqual([2_000, 4_000, 7_000]);
+			// The curve is the floor (never 0), and a longer Retry-After wins.
+			expect(restarts().slice(0, 2)).toEqual([2_000, 7_000]);
 		} finally {
 			clock.mockRestore();
 			timers.mockRestore();

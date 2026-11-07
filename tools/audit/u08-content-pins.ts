@@ -628,10 +628,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * an in-flight sign-in settles its pending state, a control-plane 5xx on the
 	 * tunnel grant renewal is typed transient (`unavailable`), the conversation
 	 * stream reconnects through that class, and the list stream's restart uses the
-	 * conversation stream's backoff/Retry-After. Connection logic and tests only —
+	 * conversation stream's backoff/Retry-After, floored by the curve so a
+	 * `Retry-After: 0` cannot loop (round 2). Connection logic and tests only —
 	 * no rendered surface, copy, catalogue key or `app` change, and U-08's
 	 * transcript scene renders none of it: source admission, not a geometry claim. */
-	src: "4ac12138275f624a125e6c1f5d16eb52b80ac611398990b2e0f42053b7a96fb9",
+	src: "ad2546a3eea2f8a94d2bbf0498d5dde18935fb035fd65c8210084d86720c65ff",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

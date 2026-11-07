@@ -669,7 +669,7 @@ export const ConnectionProvider = ({
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
-						 * ceiling, and the server's Retry-After wins when it sent one. A
+						 * ceiling, and a server Retry-After only ever lengthens a step. A
 						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
 						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
 						setTimeout(

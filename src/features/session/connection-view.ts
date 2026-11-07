@@ -65,8 +65,9 @@ export const RECONNECT_DEADLINE_MS = 5_000;
  * that is down for hours is a hot loop against a phone's radio and its battery;
  * the ceiling keeps a long outage cheap, while the first retry still lands inside
  * the second a reader expects. `retryAfterMs` — the gateway's own advice for a
- * typed refusal — always wins when the error carries one, because the server
- * knows its own recovery time better than a curve does.
+ * typed refusal — wins when it is LONGER than the curve's step, because the
+ * server knows its own recovery time better than a curve does; it is never
+ * allowed to shorten the step, which is what keeps a `0` from becoming a loop.
  *
  * `attempts` is the count of consecutive failures, reset by any delivered frame.
  */
@@ -77,15 +78,23 @@ export const reconnectDelay = (
 	attempts: number,
 	retryAfterMs: number | undefined,
 ): number => {
-	if (retryAfterMs !== undefined) return retryAfterMs;
 	/* Clamped before the shift: `2 ** 40` is fine in JavaScript but the guard keeps a
 	 * counter that somehow ran away from producing `Infinity` and a `setTimeout`
 	 * that never fires. */
 	const steps = Math.min(Math.max(attempts, 0), 8);
-	return Math.min(
+	const step = Math.min(
 		RECONNECT_BACKOFF_MAX_MS,
 		RECONNECT_BACKOFF_MIN_MS * 2 ** steps,
 	);
+	/* The server may ask for LONGER than the curve, never for less. `Retry-After: 0`
+	 * or a past HTTP date parses to 0, and taking it as-is made both streams
+	 * reconnect — and re-POST a grant renewal — with no delay at all, for as long
+	 * as the outage lasted (PR #178 review round 2, R2-1); a short positive value
+	 * held the delay flat below the curve (R2-2). The cap bounds the curve only:
+	 * a long server hint such as `authorization_deferred`'s 120 s still wins. */
+	return retryAfterMs !== undefined && Number.isFinite(retryAfterMs)
+		? Math.max(retryAfterMs, step)
+		: step;
 };
 
 /** A snapshot older than this is old, and `C3` says so (same derivation as the
