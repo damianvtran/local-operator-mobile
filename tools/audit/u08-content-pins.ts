@@ -542,7 +542,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
 	 * history above stand, the value is the merged tree's own, and neither
 	 * side's previous digest is kept. Source admission, not rendered evidence. */
-	app: "84dad4496c5235a7f56f6f7a0012b722c8f05ad2c311591e00441c69a1eda2e6",
+	/* Re-printed 2026-11-07 with --print at the final tree of the TestFlight 578
+	 * merge train (chore/merge-train-578: #183 #186 #188 #185 #187 #189 #191 #192
+	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
+	 * stands; the value is the train tree's own and no PR's digest is kept. Only
+	 * `app` and `src` move.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	app: "5495fc9367aea0ab1cbfa4da11a2d00688709aeca4220f37535351a1a75bcb06",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -977,7 +983,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * vi «Home» badge's entry in the identical-by-design test allowlist. No key,
 	 * en string, component or token changed. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	src: "1fac3dc5506724a0c562650e1083eafe272dd44e918d0ce7bc420cad6f513aea",
+	/* Re-printed 2026-11-07 with --print at the final tree of the TestFlight 578
+	 * merge train (chore/merge-train-578: #183 #186 #188 #185 #187 #189 #191 #192
+	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
+	 * stands; the value is the train tree's own and no PR's digest is kept. Only
+	 * `app` and `src` move.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	src: "7dbc40e59d8732e2ebce4d169055d3d57c4d41864312c2eec41ac02262c6ad6e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
