@@ -18,10 +18,6 @@ import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
 import { blockingPending } from "@/features/session/asks";
 import {
-	composerChipLabels,
-	reportedModel,
-} from "@/features/session/chip-labels";
-import {
 	attentionRecord,
 	overlaysBlocked,
 } from "@/features/session/completion-ack";
@@ -76,6 +72,7 @@ import {
 	type RecoveryFacts,
 	recoveryBudget,
 } from "@/features/session/recovery-budget";
+import { sessionChipLabels } from "@/features/session/session-chips";
 import { sessionFactsFrom } from "@/features/session/state-marker";
 import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
@@ -355,10 +352,17 @@ export default function Session() {
 					})
 				? ("unreachable" as const)
 				: ("loading" as const);
-	const chipLabels = composerChipLabels({
-		model: reportedModel(projection?.model_label),
-		effort: projection?.effort ?? null,
+	/* The projection first, the sessions-list row second: an ended or
+	 *  never-started conversation is served a durable fold with no model or
+	 *  effort, while the row still names what it last ran (TestFlight 578;
+	 *  `session-chips.ts` carries the whole rule, including why an ended
+	 *  session's chips are shown but disabled). */
+	const chipLabels = sessionChipLabels({
+		projection,
+		row: listRow ?? null,
+		models: runtime.models,
 		connection: chipConnection,
+		ended: headerHealth(projection, runtime.link) === "ended",
 	});
 
 	/* The strip exists when it has something true to say: a context read, or a
@@ -456,7 +460,9 @@ export default function Session() {
 						// the risk sentence falls back to the working directory, which is the
 						// more useful of the two for "where will this run".
 						computerLabel: "",
-						cwd: projection?.cwd ?? "",
+						/* The row's cwd backs a durable fold's empty one (TestFlight
+						 *  578: the drawer named the folder the screen did not). */
+						cwd: projection?.cwd || listRow?.cwd || "",
 					}),
 		[
 			pending,
@@ -464,6 +470,7 @@ export default function Session() {
 			projection?.ended,
 			projection?.pending_count,
 			projection?.cwd,
+			listRow?.cwd,
 		],
 	);
 

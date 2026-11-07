@@ -10,9 +10,10 @@
  *   names nothing, which reads as broken rather than as coming (design round 1,
  *   D6).
  * - **unavailable** — the value is KNOWN to be absent: a model with no effort
- *   control, or a session whose route is refused so nothing is coming. Shows `n/a`
- *   and stays disabled. The distinction from `loading` is the whole reason this is
- *   a function and not an expression in JSX: the first cut of the D6 fix treated
+ *   control, or a session whose route is refused so nothing is coming. Shows a
+ *   muted `—` (once `n/a`, retired on TestFlight 578 feedback) and stays
+ *   disabled. The distinction from `loading` is the whole reason this is a
+ *   function and not an expression in JSX: the first cut of the D6 fix treated
  *   "no effort ladder" as loading and put a skeleton that never resolved on every
  *   rungless model (caught by QA round 4 Q1), and a refused route had the same
  *   shape — a pulse that outlives the connection (review round 4 R8).
@@ -105,6 +106,13 @@ const LOADING: Record<"model" | "effort", ComposerChip> = {
 	effort: { kind: "loading", accessibilityLabel: "Effort, loading" },
 };
 
+/** What an unavailable chip SHOWS: a muted em dash, never the literal `n/a`.
+ *  TestFlight 578 feedback: `n/a` under a session that had simply ended read as
+ *  a broken read rather than as "nothing to show". The dash is a symbol, not a
+ *  word, so it needs no translation; the accessible name and hint carry the
+ *  meaning (D14), and the chip stays disabled so the muted ink is the cue. */
+export const UNAVAILABLE_TEXT = "\u2014";
+
 const RUNG_LESS_HINT = "This model has no effort control";
 const UNREPORTED_HINT = "The session has not reported a model";
 const NOT_CONNECTED_HINT = "Nothing is connected yet";
@@ -115,13 +123,13 @@ const UNREAD_HINT = "The model list could not be read";
 const unreachable = (): ComposerChipLabels => ({
 	model: {
 		kind: "unavailable",
-		text: "n/a",
+		text: UNAVAILABLE_TEXT,
 		accessibilityLabel: "Model, not available",
 		accessibilityHint: NOT_CONNECTED_HINT,
 	},
 	effort: {
 		kind: "unavailable",
-		text: "n/a",
+		text: UNAVAILABLE_TEXT,
 		accessibilityLabel: "Effort, not available",
 		accessibilityHint: NOT_CONNECTED_HINT,
 	},
@@ -192,7 +200,7 @@ const modelChipFor = (
  *  reason in the hint. Not the `default` case — that one knows what will run. */
 const unreported = (): ComposerChip => ({
 	kind: "unavailable",
-	text: "n/a",
+	text: UNAVAILABLE_TEXT,
 	accessibilityLabel: "Model, not available",
 	accessibilityHint: UNREPORTED_HINT,
 });
@@ -206,7 +214,7 @@ const effortChipFor = (
 	return rung === null
 		? {
 				kind: "unavailable",
-				text: "n/a",
+				text: UNAVAILABLE_TEXT,
 				accessibilityLabel: "Effort, not available",
 				accessibilityHint: RUNG_LESS_HINT,
 			}

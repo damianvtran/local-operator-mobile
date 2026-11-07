@@ -4,6 +4,7 @@ import {
 	composerChipLabels,
 	modelChipText,
 	reportedModel,
+	UNAVAILABLE_TEXT,
 } from "@/features/session/chip-labels";
 
 /**
@@ -19,9 +20,9 @@ import {
 /** The noun that must never reach the chip: the defect D6 fixed rendered it. */
 const NOUN = /"model"/;
 
-/** The word `n/a` never reaches the two home states: it is the sentence for a
- *  connected session that reported no model, which is what these two states are NOT. */
-const NOT_APPLICABLE = /n\/a/;
+/** The dash never reaches the two home states: it is the mark for a connected
+ *  session that reported no model, which is what these two states are NOT. */
+const NOT_APPLICABLE = new RegExp(UNAVAILABLE_TEXT);
 
 const chips = (
 	model: string | null,
@@ -35,6 +36,17 @@ const chips = (
 	});
 
 describe("the composer's chips", () => {
+	it("never renders the literal n/a (TestFlight 578)", () => {
+		for (const connection of ["connected", "unreachable"] as const)
+			for (const effort of [null, ""]) {
+				const labels = chips(null, effort, connection);
+				expect(JSON.stringify(labels)).not.toMatch(/n\/a/);
+				expect(labels.model.kind === "unavailable" && labels.model.text).toBe(
+					"\u2014",
+				);
+			}
+	});
+
 	it("shows a skeleton — not a noun — while a projection is still coming", () => {
 		const { model, effort } = chips(null, null, "loading");
 		expect(model.kind).toBe("loading");
@@ -44,13 +56,13 @@ describe("the composer's chips", () => {
 		expect(model.accessibilityLabel).toBe("Model, loading");
 	});
 
-	it("says n/a rather than pulsing forever when nothing is coming", () => {
+	it("shows a muted dash rather than pulsing forever when nothing is coming", () => {
 		// The refused-route case (review R8): `loading` is false, so the chip must
 		// report the value as unavailable instead of a skeleton that never resolves.
 		const { model, effort } = chips(null, null, "unreachable");
 		expect(model).toMatchObject({
 			kind: "unavailable",
-			text: "n/a",
+			text: UNAVAILABLE_TEXT,
 			accessibilityLabel: "Model, not available",
 			accessibilityHint: "Nothing is connected yet",
 		});
@@ -64,7 +76,7 @@ describe("the composer's chips", () => {
 		expect(model).toMatchObject({ kind: "value", text: "claude-opus-5" });
 		expect(effort).toMatchObject({
 			kind: "unavailable",
-			text: "n/a",
+			text: UNAVAILABLE_TEXT,
 			accessibilityHint: "This model has no effort control",
 		});
 	});
@@ -120,7 +132,7 @@ describe("the model chip when the reader has chosen nothing", () => {
 			accessibilityLabel: "Model, not read",
 			accessibilityHint: "The model list could not be read",
 		});
-		expect(chip.kind === "unavailable" && chip.text).not.toBe("n/a");
+		expect(chip.kind === "unavailable" && chip.text).not.toBe(UNAVAILABLE_TEXT);
 	});
 
 	it("shows a model the reader DID choose even while the catalogue is loading", () => {

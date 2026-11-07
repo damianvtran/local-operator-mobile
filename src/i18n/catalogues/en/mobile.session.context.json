@@ -70,5 +70,17 @@
 	"mobile.session.subagent_open_short": {
 		"role": "button",
 		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
+	},
+	"mobile.session.chip.model_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop."
+	},
+	"mobile.session.chip.effort_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop."
+	},
+	"mobile.session.chip.model_unrecorded_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop."
 	}
 }
