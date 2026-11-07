@@ -16,5 +16,8 @@
 	"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
 	"mobile.session.subagent_open": "{agent} کھولیں",
-	"mobile.session.subagent_open_short": "کھولیں"
+	"mobile.session.subagent_open_short": "کھولیں",
+	"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+	"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+	"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا"
 }

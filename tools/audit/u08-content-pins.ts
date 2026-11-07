@@ -487,7 +487,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * copy. No layout, token or glyph changes; U-08's scene renders the same
 	 * frames for any projection where `streaming` and `activity` agree. Source
 	 * admission, NOT fresh rendered evidence. */
-	app: "c48ded8902cb2931618f564b769061712dc1b6db674c8c1ca923c393a458fdb7",
+	/* Re-pinned 2026-11-07 for fix/session-chips-rail with --print from the
+	 * staged tree: the session screen feeds its chips from the list row as well
+	 * as the projection (ended sessions, TestFlight 578); round-1 remediation
+	 * re-printed it again for the chip-command error line. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	app: "29c1386afde5934d8ee5f1fbaacaebda49f3e60fa337a46b70276d09481be1bd",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -842,7 +847,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * with a verb (Dismiss included), timed-out rows and the quiet bar's excerpt
 	 * use muted ink, an older daemon's tally is reconciled, plus tests. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "b9eaa3181825dc10d8861da840f0313c8e7b84e59520406f064520d73f5b2482",
+	/* Re-pinned 2026-11-07 for fix/session-chips-rail with --print from the
+	 * staged tree: `src` moves for the ended-session chip fallback (new
+	 * `session-chips.ts`, the `—` that replaces `n/a`, three i18n keys, an
+	 * optional `SessionSummary.effort`) and the subtler checkpoint rail (speed
+	 * gate, 1 s linger, decimation, hairline marks in an outer gutter). U-08's
+	 * scene is a long transcript whose rail is transient and aria-hidden; this
+	 * is source admission only, NOT rendered U-08 evidence. Round-1 remediation
+	 * re-printed it for the pre-frame disabled chip, the hidden live rungless
+	 * effort chip, the 12 pt rail gap and the 7 pt rail edge. */
+	src: "571b774c898f85bc935c97a2e4c6332d29c66d81dfb594819ebabab9538aff7f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

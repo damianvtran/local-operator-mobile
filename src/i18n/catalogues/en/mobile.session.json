@@ -16,5 +16,8 @@
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
 	"mobile.session.chip.model_default": "Default",
-	"mobile.session.chip.model_unknown": "Unknown"
+	"mobile.session.chip.model_unknown": "Unknown",
+	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
+	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
+	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model"
 }

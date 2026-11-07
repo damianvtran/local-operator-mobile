@@ -423,10 +423,16 @@ describe("the rail and the list's own scrolls (U3 / m2 / Q4)", () => {
 		presence.dispose();
 	});
 
-	it("comes up for the reader's drag and its momentum", async () => {
-		const presence = createScrollPresence();
+	it("comes up for the reader's fast drag and holds through its momentum", async () => {
+		/* An injected clock: the presence summons the rail on SPEED
+		 *  (`RAIL_FAST_PT_PER_MS`, TestFlight 578), so two offsets need a real
+		 *  interval between them — 300 pt in 16 ms is a flick. */
+		let clock = 0;
+		const presence = createScrollPresence(() => clock);
 		await render(null, presence);
 		await call("onScrollBeginDrag");
+		await scrollTo(1200);
+		clock += 16;
 		await scrollTo(900);
 		expect(presence.readVisible()).toBe(true);
 		await call("onScrollEndDrag");

@@ -35,8 +35,24 @@ export const TRANSCRIPT_FADE_PT = 24;
  *  as a flicker, and it means the band is never half-painted at an extreme. */
 export const FADE_RAMP_PT = TRANSCRIPT_FADE_PT;
 
-/** How long the rail stays up after the offset stops moving. */
-export const RAIL_LINGER_MS = 1500;
+/** How long the rail stays up after the offset stops moving. ~1 s on the
+ *  operator's word (TestFlight 578: "still feel too invasive"); it was 1.5 s. */
+export const RAIL_LINGER_MS = 1000;
+
+/**
+ * The scroll speed, in points per millisecond, at which a reader's gesture
+ * SUMMONS the rail. Below it the rail stays down whatever the finger does.
+ *
+ * WHY A SPEED GATE (TestFlight 578): the rail came up for every drag, including
+ * the slow ones a reader makes while reading, so ~25 ticks sat over the text
+ * through ordinary use. The rail is a "where am I in a long conversation" cue,
+ * which only matters when travelling fast. 1 pt/ms (1000 pt/s) sits between a
+ * reading drag (a few hundred pt/s: a line or two per frame) and a flick
+ * (UIScrollView releases flicks at thousands of pt/s). It is a DESIGN VALUE,
+ * not a measured distribution — no device trace exists for this app yet — so
+ * tune it from TestFlight, not from this comment.
+ */
+export const RAIL_FAST_PT_PER_MS = 1;
 
 /** The rail's fade in and out. Fast enough to be gone before a reader can aim
  *  at it, slow enough not to strobe at the end of a flick. */
@@ -123,6 +139,12 @@ export function edgeFadeLevels({
  * (`setCoasting`); an offset change outside both is a scroll the app made, and
  * is recorded but never shown.
  *
+ * AND ONLY WHEN IT IS FAST (TestFlight 578). Inside a gesture, the rail is
+ * summoned only once two consecutive offsets move at `RAIL_FAST_PT_PER_MS` or
+ * more; a reading-speed drag never raises it. Once up, any further gesture
+ * movement (or a held thumb) keeps it up, and it fades `RAIL_LINGER_MS` after
+ * the gesture ends.
+ *
  * Known limit — ON WEB THE RAIL NEVER SHOWS. react-native-web 0.21's ScrollView
  * emits only `onScroll`: no drag or momentum events for wheel, trackpad OR touch
  * (round 2, m-r2-2 — round 1's note claimed touch drags still worked, which they
@@ -139,9 +161,10 @@ export type ScrollPresence = {
 	 *  is no repeated-offset guard — round 1 carried one that no input could
 	 *  reach (round 2, Q10). */
 	noteMovement(offsetY: number): void;
-	/** A drag gesture began or ended. A HELD thumb keeps the rail up however
-	 *  long the reader holds still, which is the pointer analogue of a desktop
-	 *  scrollbar's thumb staying under the cursor. */
+	/** A drag gesture began or ended. A held thumb does NOT summon the rail
+	 *  (only fast movement does — `RAIL_FAST_PT_PER_MS`), but once a fast drag
+	 *  has summoned it, holding keeps it up however long the reader holds
+	 *  still: the pointer analogue of a scrollbar thumb under the cursor. */
 	setHeld(held: boolean): void;
 	/** The list's momentum after a drag began or ended. The rail stays up while
 	 *  it coasts and lingers from the moment it stops, so a flick reads as one
@@ -154,8 +177,16 @@ export type ScrollPresence = {
 	dispose(): void;
 };
 
-export function createScrollPresence(): ScrollPresence {
+export function createScrollPresence(
+	/** The clock movement speed is measured against; injectable for tests,
+	 *  though `Date.now` is what vitest's fake timers already drive. */
+	now: () => number = Date.now,
+): ScrollPresence {
 	let visible = false;
+	/* The previous reader-gesture sample, for the speed gate. Reset at every
+	 *  gesture boundary so a new drag never measures against an old one's
+	 *  offset (which would read a long pause as a huge jump, or the reverse). */
+	let last: { offsetY: number; at: number } | null = null;
 	let held = false;
 	let coasting = false;
 	let timer: ReturnType<typeof setTimeout> | null = null;
@@ -187,9 +218,20 @@ export function createScrollPresence(): ScrollPresence {
 	};
 
 	return {
-		noteMovement(_offsetY: number) {
+		noteMovement(offsetY: number) {
 			/* A scroll the app made (the tail pin, a restore) is not the reader's. */
 			if (!held && !coasting) return;
+			const at = now();
+			const previous = last;
+			/* Same-millisecond deliveries carry no speed; keep the older sample
+			 *  so the next delivery measures across a real interval. */
+			if (previous !== null && at <= previous.at) return;
+			last = { offsetY, at };
+			if (!visible) {
+				if (previous === null) return;
+				const speed = Math.abs(offsetY - previous.offsetY) / (at - previous.at);
+				if (speed < RAIL_FAST_PT_PER_MS) return;
+			}
 			show();
 			arm();
 		},
@@ -202,20 +244,24 @@ export function createScrollPresence(): ScrollPresence {
 				 *  stop every later linger from arming — the rail stuck up for
 				 *  good after one caught flick. */
 				coasting = false;
+				last = null;
+				/* Holding never SUMMONS the rail; it only stops an already
+				 *  summoned one from fading (no linger while held). */
 				clear();
-				show();
 				return;
 			}
-			arm();
+			last = null;
+			if (visible) arm();
 		},
 		setCoasting(next: boolean) {
 			coasting = next;
 			if (coasting) {
+				/* A glide keeps a summoned rail up; a slow one never raises it. */
 				clear();
-				show();
 				return;
 			}
-			arm();
+			last = null;
+			if (visible) arm();
 		},
 		subscribe(listener: (visible: boolean) => void) {
 			listeners.add(listener);
