@@ -352,6 +352,9 @@ export const CONTROL = {
 	 * check in `a11y.e2e.test.ts` have nothing to agree about. --- */
 	composerSend: "composer-send",
 	composerStop: "composer-stop",
+	/** The pinned working line's Stop: the composer's stop path, a second reach
+	 *  for it that stays put while the composer's disc is Steer (a draft typed). */
+	sessionWorkingStop: "session-working-stop",
 	composerAttach: "composer-attach",
 	composerMic: "composer-mic",
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
