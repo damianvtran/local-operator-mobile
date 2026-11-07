@@ -178,9 +178,18 @@ describe("pinnedWorkingLine (state derivation from projection frames)", () => {
 		expect(frame(false, "", null)).toBeNull();
 	});
 
-	it("draws nothing while idle, even if a stale label lingers", () => {
+	it("draws nothing while idle", () => {
 		expect(frame(false, "", null)).toBeNull();
-		expect(frame(false, "thinking", 3)).toBeNull();
+	});
+
+	it("draws the line while a label survives a lowered `streaming` (turnRunning)", () => {
+		// A reconcile can lower `streaming` and leave the label: the header still
+		// says Working and the composer still steers, so the line and its Stop
+		// must agree with them rather than vanish (#189 Q1/U2/D3).
+		expect(frame(false, "Reading", 1.5)).toEqual({
+			activity: "Reading",
+			startedS: 1.5,
+		});
 	});
 
 	it("draws a live turn before the server names its activity (Stop in reach)", () => {

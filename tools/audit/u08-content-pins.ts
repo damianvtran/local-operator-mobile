@@ -839,7 +839,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * --print from the merged tree: `turnRunning` beside `pinnedWorkingLine`, both
 	 * sides' composer, runtime and relay changes, and tests. Source admission
 	 * only, NOT rendered U-08 evidence. */
-	src: "efc82f1d3357ee2d63f12ce28ba527393bc05fb9e8d106af4b9b4d207fae5f6b",
+	/* Re-pinned 2026-11-07 for PR #189 Q1/U2/D3 with --print from the staged
+	 * tree: `pinnedWorkingLine` gates on `turnRunning` (so a lowered `streaming`
+	 * under a live label keeps the line and its Stop), with its frame test and a
+	 * hook-level `runtime.streaming` assertion. `app` does not move. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "0d28da5f3a941e58f8cd0cf7e59b2a9e5ef977317ba1e69cf6b20d5ada6e918b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

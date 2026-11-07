@@ -323,19 +323,25 @@ export const workingLine = (
  * relay SPA reads `streaming` alone for the same three surfaces; this is a
  * superset of it, never a contradiction.
  */
-export const turnRunning = (projection: SessionProjection): boolean =>
-	projection.streaming || projection.activity.length > 0;
+export const turnRunning = (
+	projection: Pick<SessionProjection, "streaming" | "activity">,
+): boolean => projection.streaming || projection.activity.length > 0;
 
 /**
  * The PINNED working line above the dock (the relay's `session-view.tsx` mount of
  * `WorkingLine` with `stopPid`): present for exactly as long as a turn is alive.
  *
- * Gated on `streaming`, not on the label, because this instance carries the
- * turn's Stop, and "a turn is alive" is the condition that must always have its
- * Stop in reach — the relay draws the line before a label exists for that reason
- * (`working-line.tsx`: `if (!activity && !stopPid) return null`). The label may
- * therefore be `""` (spinner, clock and Stop, no words); the clock follows the
- * same `null`-withholds rule as `workingLine`.
+ * Gated on `turnRunning`, not on the label alone, because this instance carries
+ * the turn's Stop, and "a turn is alive" is the condition that must always have
+ * its Stop in reach — the relay draws the line before a label exists for that
+ * reason (`working-line.tsx`: `if (!activity && !stopPid) return null`). The
+ * label may therefore be `""` (spinner, clock and Stop, no words); the clock
+ * follows the same `null`-withholds rule as `workingLine`.
+ *
+ * NOT `streaming` alone: a reconcile can lower `streaming` while the label still
+ * reads `Reading`, and in that frame the header says Working and the composer
+ * steers (both read `turnRunning`), so the line and its Stop must show too —
+ * one predicate across header, composer and line, or they disagree on screen.
  */
 export const pinnedWorkingLine = (
 	projection: Pick<
@@ -343,7 +349,7 @@ export const pinnedWorkingLine = (
 		"streaming" | "activity" | "activity_started_s"
 	>,
 ): { activity: string; startedS: number | null } | null =>
-	projection.streaming
+	turnRunning(projection)
 		? { activity: projection.activity, startedS: projection.activity_started_s }
 		: null;
 
