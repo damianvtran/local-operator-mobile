@@ -357,6 +357,8 @@ export const CONTROL = {
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
 	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
 	composerDictationCancel: "composer-dictation-cancel",
+	composerDictationFinish: "composer-dictation-finish",
+	composerPasteImage: "composer-paste-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerContext: "composer-context",

@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "Configura la conversión de voz a texto en tu ordenador.",
+	"mobile.composer_input.voice.mic_setup": "La entrada de voz no está configurada",
+	"mobile.composer_input.voice.mic_setup_hint": "Explica cómo activar la entrada de voz",
+	"mobile.composer_input.voice.discard": "Descartar la entrada de voz",
+	"mobile.composer_input.voice.finish": "Terminar y transcribir",
+	"mobile.composer_input.paste.image": "Pegar imagen",
+	"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
+	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar»."
+}

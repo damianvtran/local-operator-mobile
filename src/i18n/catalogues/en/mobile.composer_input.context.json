@@ -1,0 +1,34 @@
+{
+	"mobile.composer_input.voice.setup_needed": {
+		"role": "status",
+		"note": "Status line under the composer after the reader taps the mic on a computer with no speech-to-text configured. Transcription runs on the computer, so the fix is there, not on the phone. Keep it short: it must fit two lines beside nothing at 320 pt and 200 % text. Full sentence with final full stop."
+	},
+	"mobile.composer_input.voice.mic_setup": {
+		"role": "button",
+		"note": "Accessible name of the composer's mic when the computer has no speech-to-text configured. Screen readers only; no final full stop."
+	},
+	"mobile.composer_input.voice.mic_setup_hint": {
+		"role": "button",
+		"note": "Accessibility hint for the mic in its not-set-up state: what a tap does (shows how to turn voice input on). No final full stop."
+	},
+	"mobile.composer_input.voice.discard": {
+		"role": "button",
+		"note": "Accessible name of the ✕ in the recording row: throws the recording away and sends nothing. Distinct from finishing. No final full stop."
+	},
+	"mobile.composer_input.voice.finish": {
+		"role": "button",
+		"note": "Accessible name of the ✓ in the recording row: stops recording and transcribes it into the draft. No final full stop."
+	},
+	"mobile.composer_input.paste.image": {
+		"role": "button",
+		"note": "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop."
+	},
+	"mobile.composer_input.paste.image_hint": {
+		"role": "button",
+		"note": "Accessibility hint for the Paste image chip. No final full stop."
+	},
+	"mobile.composer_input.paste.denied": {
+		"role": "status",
+		"note": "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop."
+	}
+}

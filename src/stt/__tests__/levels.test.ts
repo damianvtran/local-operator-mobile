@@ -5,7 +5,10 @@ import {
 	LEVEL_BARS,
 	METER_FLOOR_DB,
 	meterFraction,
+	peakLevel,
 	pushLevel,
+	STATIC_PEAK_WINDOW,
+	waveformBars,
 } from "@/stt/levels";
 
 describe("meterFraction", () => {
@@ -78,5 +81,47 @@ describe("createMeterStore", () => {
 		const store = createMeterStore(3);
 		for (const level of [0.1, 0.2, 0.3, 0.4]) store.push(level);
 		expect(store.get()).toEqual([0.2, 0.3, 0.4]);
+	});
+});
+
+/* The rolling waveform (TestFlight 578, item 9). The meter draws exactly these
+ * arrays; the roll itself is a UI-thread translate the Node runner cannot see. */
+describe("waveformBars", () => {
+	it("right-anchors a short history: the newest reading is always the last slot", () => {
+		expect(waveformBars([0.2, 0.9], 4)).toEqual([0, 0, 0.2, 0.9]);
+		expect(waveformBars([], 3)).toEqual([0, 0, 0]);
+	});
+
+	it("decimates a long history to the newest window — older speech has scrolled off", () => {
+		expect(waveformBars([0.1, 0.2, 0.3, 0.4, 0.5], 3)).toEqual([0.3, 0.4, 0.5]);
+	});
+
+	it("draws one slot past the window (the bar sliding out) from the same history", () => {
+		const history = Array.from(
+			{ length: LEVEL_BARS },
+			(_, i) => i / LEVEL_BARS,
+		);
+		const drawn = waveformBars(history, LEVEL_BARS + 1);
+		expect(drawn).toHaveLength(LEVEL_BARS + 1);
+		expect(drawn[0]).toBe(0);
+		expect(drawn.slice(1)).toEqual(history);
+	});
+
+	it("clamps junk to the floor rather than painting it", () => {
+		expect(waveformBars([Number.NaN, 2, -1], 3)).toEqual([0, 1, 0]);
+		expect(waveformBars([0.5], 0)).toEqual([]);
+	});
+});
+
+describe("peakLevel (the reduce-motion bar)", () => {
+	it("holds the loudest of the newest readings, so the static bar does not flicker", () => {
+		expect(peakLevel([0.9, 0.1, 0.2, 0.3, 0.4], 4)).toBe(0.4);
+		expect(peakLevel([0.1, 0.7, 0.2], STATIC_PEAK_WINDOW)).toBe(0.7);
+	});
+
+	it("rests at 0 for silence, an empty take, or junk", () => {
+		expect(peakLevel([])).toBe(0);
+		expect(peakLevel([Number.NaN, Number.POSITIVE_INFINITY])).toBe(0);
+		expect(peakLevel([0.5], 0)).toBe(0);
 	});
 });

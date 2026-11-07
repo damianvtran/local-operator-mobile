@@ -41,8 +41,10 @@ describe("a shrinkable chip is capped on its own flex item", () => {
 		 *  restructure (it was the home's own leading element before). Since the
 		 *  pickers' round-1 remediation it is drawn by `ComposerChipButton` like
 		 *  the model and effort chips, and More no longer repeats it (UX U5): the
-		 *  two `shrink` sites are that button's unavailable and value chips. */
-		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(2);
+		 *  two `shrink` sites are that button's unavailable and value chips. The
+		 *  third is the clipboard's Paste image chip on the controls row, which must
+		 *  yield to the send cluster at large text rather than paint over it. */
+		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(3);
 		const button = composer.slice(
 			composer.indexOf("const ComposerChipButton"),
 			composer.indexOf("const stripChipSurface"),

@@ -133,6 +133,39 @@ export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>
 	Math.max(0, hostBottom - keyboardTop);
 
 /**
+ * What the expanded controls row's TRAILING slot holds — the spot under the
+ * finger that pressed the collapsed pill's mic.
+ *
+ * - `actions` (Stop/Send) whenever the card is open for its own reasons: a
+ *   draft, an attachment, focus or an error put Send there, and it is live.
+ * - `mic` when the card is open ONLY for dictation and the take is not
+ *   recording: the press that expanded the card must not slide a disabled Send
+ *   under the same finger (UX round 1, U2). A start or permission failure keeps
+ *   this too, because it rests on the dictation row, not the error line
+ *   (`DictationOutcome`, D6/U6/Q4).
+ * - `finish` while RECORDING on that card: the toolbar mic is hidden then (D2,
+ *   one finish control), and a reader used to tap-to-toggle taps the same spot
+ *   again, so ✓ moves from the dictation row to here rather than leaving a
+ *   disabled Send in its place (UX round 2, U7). It MOVES, it is not copied —
+ *   two "Finish and transcribe" controls is the D2 defect again.
+ *
+ * A value rather than a ternary in the JSX so a test can pin the decision.
+ */
+export type ControlsTrailing = "actions" | "mic" | "finish";
+export const controlsTrailing = (input: {
+	/** The card would be the collapsed pill without the dictation. */
+	openForDictationOnly: boolean;
+	recording: boolean;
+	/** A mic (usable or set-up) renders at all. */
+	micShown: boolean;
+}): ControlsTrailing =>
+	!input.openForDictationOnly || !input.micShown
+		? "actions"
+		: input.recording
+			? "finish"
+			: "mic";
+
+/**
  * The pill's radius for a painted height: half of it, so every resting pill is a
  * stadium whatever platform floor it paints on. It is NOT capped — the 24 pt
  * expanded radius is a second shape the morph travels to, not a limit on this

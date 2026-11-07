@@ -307,6 +307,13 @@ const ALLOWLIST: {
 			"the indeterminate sweep's physical-axis animation (documented in the component)",
 	},
 	{
+		file: "src/ui/components/dictation-meter.tsx",
+		token: "translateX",
+		count: 1,
+		reason:
+			"the waveform's roll on its pinned left-to-right time axis (`direction: ltr`, documented in the component)",
+	},
+	{
 		file: "src/features/sessions/conversations-drawer.tsx",
 		token: "translateX",
 		count: 1,

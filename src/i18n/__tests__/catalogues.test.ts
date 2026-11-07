@@ -20,6 +20,8 @@ import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
 import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
 import common from "@/i18n/catalogues/en/mobile.common.json";
+import composerInputContext from "@/i18n/catalogues/en/mobile.composer_input.context.json";
+import composerInput from "@/i18n/catalogues/en/mobile.composer_input.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
@@ -72,6 +74,12 @@ const NAMESPACES = [
 		messages: common,
 		context: commonContext,
 		expected: 6,
+	},
+	{
+		name: "mobile.composer_input",
+		messages: composerInput,
+		context: composerInputContext,
+		expected: 8,
 	},
 	{
 		name: "mobile.library",
@@ -227,8 +235,9 @@ describe("the English catalogues", () => {
 		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
 		 *  + the ended-session chip hints' 3 (fix/session-chips-rail)
 		 *  + the switcher's transport words (`mobile.computers.transport.radient`,
-		 *  `mobile.computers.transport.custom`). */
-		expect(total).toBe(338);
+		 *  `mobile.computers.transport.custom`).
+		 *  +  * composer's paste chip and voice set-up/recording controls' 8. */
+		expect(total).toBe(346);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
