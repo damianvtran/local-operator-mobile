@@ -991,21 +991,54 @@ export const TranscriptList = ({
 	 * So the index handed to the list is FROZEN at the value it had when the
 	 * list first laid out rows. A frozen `> 0` was consumed by that same event
 	 * (the list latched); a frozen `0` can never become a jump. Frozen rather
-	 * than dropped: an absent index makes the list keep its first rows mounted
-	 * for good (VirtualizedList's "scroll-to-top" region), which on a 520-row
-	 * transcript is a screenful of the top it never needed. Refs, because the
-	 * value is consumed by the list's next commit, never rendered for its own
-	 * sake — every content change that could replay the jump is caused by a
-	 * render, and that render reads the frozen value. */
-	const frozenInitialIndexRef = useRef<number | null>(null);
+	 * than dropped, because the index also decides which rows the list keeps
+	 * mounted: an index `> 0` drops VirtualizedList's "scroll-to-top" region,
+	 * so a 520-row transcript opened at its tail never holds a screenful of
+	 * its top. A frozen `0` does NOT buy that — `_createRenderMask` keeps the
+	 * top screenful whenever the index is `<= 0`, exactly as an absent index
+	 * would — so a conversation that froze at `0` (it fitted the pre-layout
+	 * estimate) keeps its first `initialNumToRender` rows mounted for the life
+	 * of the mount. That is the accepted cost: those conversations were short
+	 * at first layout, so the retained rows are the ones that were the whole
+	 * conversation then, and the alternative is the replayed jump above.
+	 *
+	 * FROZEN PER SESSION, NOT PER MOUNT (review round 4, M-r4-1). A switch
+	 * reuses this mounted list (`router.navigate`), and the index is a fact
+	 * about the conversation it was measured on. Carried across, a long
+	 * conversation's ~250 lands on a short one's first commit: react-native-web
+	 * then starts the window at its last row (`_initialRenderRegion` clamps the
+	 * index to the item count) and, with the index `> 0` at offset 0, refuses to
+	 * recompute the cells around the viewport — the short conversation's first
+	 * rows never mount. So the frozen value is keyed on the session it was
+	 * frozen for and reads as unfrozen for any other: each conversation
+	 * computes, and freezes, its own. The list's own one-time jump latch is
+	 * per mount and not ours to reset: this key changes which rows the list
+	 * renders, not whether it jumps again. Refs, because the value is
+	 * consumed by the list's next commit, never rendered for its own sake —
+	 * every content change that could replay the jump is caused by a render,
+	 * and that render reads the frozen value. */
+	const frozenInitialIndexRef = useRef<{
+		session: string;
+		index: number;
+	} | null>(null);
 	const liveInitialIndex = tailStartIndex(
 		grouped.items.length,
 		policy.initialNumToRender,
 	);
-	const initialIndex = frozenInitialIndexRef.current ?? liveInitialIndex;
-	/* What THIS commit hands the list, for `onContentSizeChange` to freeze. */
-	const passedInitialIndexRef = useRef({ index: 0, items: 0 });
+	const frozenInitial = frozenInitialIndexRef.current;
+	const initialIndex =
+		frozenInitial?.session === sessionId
+			? frozenInitial.index
+			: liveInitialIndex;
+	/* What THIS commit hands the list, for `onContentSizeChange` to freeze —
+	 *  with the session it was computed for, so a freeze records the pair. */
+	const passedInitialIndexRef = useRef({
+		session: sessionId,
+		index: 0,
+		items: 0,
+	});
 	passedInitialIndexRef.current = {
+		session: sessionId,
 		index: initialIndex,
 		items: grouped.items.length,
 	};
@@ -1022,13 +1055,17 @@ export const TranscriptList = ({
 				 *  frozen from here on (see `frozenInitialIndexRef`). Only once rows
 				 *  exist: an empty list's first layout must not spend the tail open on
 				 *  a conversation whose history has not arrived yet. */
+				const passed = passedInitialIndexRef.current;
 				if (
-					frozenInitialIndexRef.current === null &&
+					frozenInitialIndexRef.current?.session !== passed.session &&
 					width > 0 &&
 					height > 0 &&
-					passedInitialIndexRef.current.items > 0
+					passed.items > 0
 				) {
-					frozenInitialIndexRef.current = passedInitialIndexRef.current.index;
+					frozenInitialIndexRef.current = {
+						session: passed.session,
+						index: passed.index,
+					};
 				}
 				factsRef.current = { ...factsRef.current, contentPt: height };
 				// Content is the other fact: a list that grew past its viewport has

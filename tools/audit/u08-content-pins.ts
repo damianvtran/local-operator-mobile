@@ -163,6 +163,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for PR #176 review round 4's remediation, with --print
+	 * from the staged tree. Only `src` moves: the frozen initial scroll index is
+	 * keyed on the session it was frozen for (M-r4-1), its comment states what a
+	 * frozen 0 keeps mounted (m-r4-1), and tests. `app`, `design/tokens`, fonts,
+	 * `public`, instrument and input pins are untouched. Source admission only,
+	 * NOT evidence that U-08's rendered geometry proof passed. */
 	/* Re-pinned 2026-11-06 for PR #176 review round 3's remediation, with --print
 	 * from the staged tree. `design/tokens` moves for the `trace` step's
 	 * description only (D13: the tool name no longer uses it). `src` moves for
@@ -617,7 +623,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
 	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
 	 * are unchanged. */
-	src: "6ee7334575015a4c995a05a638410927d9b1be2293480237a82b420634c389f4",
+	src: "4d77056c752f49300ef5e8bf7da934744e29bcf8430277597403e0041f5bed1c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -36,6 +36,11 @@ const harness = vi.hoisted(() => ({
 	/** The mounted slice: `[from, to)` of the list's data. */
 	from: 0,
 	to: Number.POSITIVE_INFINITY,
+	/** When set, the mounted slice starts where react-native-web's first
+	 *  render window does for `initialScrollIndex` at offset 0
+	 *  (`_initialRenderRegion`: the index clamped into the data), instead of
+	 *  at `from` — the window M-r4-1 measured. */
+	maskFromInitialIndex: false,
 	/** Offsets the list asked to scroll to. */
 	scrolls: [] as number[],
 	/** Indexes the list was asked to jump to — the find jump, and the
@@ -97,16 +102,20 @@ vi.mock("react-native", async () => {
 				index: number;
 			}) => React.ReactNode;
 			const keyOf = props.keyExtractor as (item: unknown) => string;
+			const initial = (props.initialScrollIndex as number | undefined) ?? 0;
+			const from = harness.maskFromInitialIndex
+				? Math.max(0, Math.min(data.length - 1, initial))
+				: harness.from;
 			return React.createElement(
 				"div",
 				null,
 				data
-					.slice(harness.from, harness.to)
+					.slice(from, harness.to)
 					.map((item, index) =>
 						React.createElement(
 							React.Fragment,
 							{ key: keyOf(item) },
-							render({ item, index: index + harness.from }),
+							render({ item, index: index + from }),
 						),
 					),
 			);
@@ -281,6 +290,7 @@ beforeEach(() => {
 	harness.indexJumps.length = 0;
 	harness.from = 0;
 	harness.to = Number.POSITIVE_INFINITY;
+	harness.maskFromInitialIndex = false;
 	harness.scrolls.length = 0;
 	harness.folds.clear();
 	harness.buttons.clear();
@@ -568,5 +578,30 @@ describe("the first expand after opening a conversation (round 3, Q-RF1)", () =>
 		await press(FOLD);
 		await contentSize(400, 2400);
 		expect(harness.indexJumps).toEqual([4]);
+	});
+});
+
+describe("a session switch after the initial index froze (round 4, M-r4-1)", () => {
+	it("hands the next conversation its own index, so its first row mounts", async () => {
+		harness.maskFromInitialIndex = true;
+		// A: 300 rows, opened at its tail; the first layout freezes its index.
+		entries = Array.from({ length: 300 }, (_, i) => row(`x${i}`, {}));
+		await render();
+		await call("onLayout", { nativeEvent: { layout: { height: 300 } } });
+		await call("onContentSizeChange", 400, 30000);
+		const frozenA = harness.props.initialScrollIndex as number;
+		expect(frozenA).toBeGreaterThan(250);
+		// B: ten rows on the same mounted list (`router.navigate`).
+		session = `${session}-short`;
+		entries = Array.from({ length: 10 }, (_, i) => row(`b${i}`, {}));
+		await render();
+		// B's own live value (it fits one screenful), not A's frozen one.
+		expect(harness.props.initialScrollIndex).toBe(0);
+		expect(drawn()).toContain("answer b0");
+		// B freezes its own value at its first layout and keeps it.
+		await call("onContentSizeChange", 400, 1000);
+		await render();
+		expect(harness.props.initialScrollIndex).toBe(0);
+		expect(drawn()).toContain("answer b0");
 	});
 });
