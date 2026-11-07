@@ -169,6 +169,53 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-06 for PR #176 review round 4's remediation, with --print
+	 * from the staged tree. Only `src` moves: the frozen initial scroll index is
+	 * keyed on the session it was frozen for (M-r4-1), its comment states what a
+	 * frozen 0 keeps mounted (m-r4-1), and tests. `app`, `design/tokens`, fonts,
+	 * `public`, instrument and input pins are untouched. Source admission only,
+	 * NOT evidence that U-08's rendered geometry proof passed. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 3's remediation, with --print
+	 * from the staged tree. `design/tokens` moves for the `trace` step's
+	 * description only (D13: the tool name no longer uses it). `src` moves for
+	 * the folded row drawn as a quiet line instead of a card (D4), the frozen
+	 * initial scroll index (Q-RF1), the landing keyed on `reveal` (U14) and
+	 * tests. `app`, fonts, `public`, instrument and input pins are untouched.
+	 * Source admission only, NOT evidence that U-08's rendered geometry proof
+	 * passed: it must be re-captured against this tree. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 2's remediation, with --print
+	 * from the staged tree. `design/tokens` moves because the `meta-read` step is
+	 * folded back into `meta` (D9: 12/1.45 vs 12/1.4 was its only difference) and
+	 * the type `$note` is corrected to say a step DOES set its family (D8), with
+	 * the generated preset/preview CSS. `src` moves for the remediation: the tool
+	 * name on the `mono` step, the find landing recorded in a layout effect and
+	 * closable, the resize mark only on a real change, a caught glide ending on a
+	 * new drag, the folded `open` control as a named 48 pt button, the new i18n
+	 * keys, and tests. `app`, fonts, `public`, instrument and input pins are
+	 * untouched. Source admission only, NOT evidence that U-08's rendered
+	 * geometry proof passed: it must be re-captured against this tree. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 1's remediation, with --print.
+	 * `design/tokens` moves for three new type steps (`body-read` 14/1.55,
+	 * `trace` 13/1.5, `meta-read` 12/1.45 — the relay's transcript steps) and
+	 * the generated preset/preview CSS; `src` moves for the remediation itself
+	 * (fade stop order, the sent-message and error folds removed, list-owned fold
+	 * state, gesture-only rail presence, the reuse fix and the type steps
+	 * applied). Fixture bytes, fonts, instrument modules and input pins are
+	 * untouched. As with the round-0 re-pin below, this is source admission, NOT
+	 * evidence that U-08's rendered geometry proof passed: it must be re-captured
+	 * against this tree. */
+	/* Re-pinned 2026-11-06 for the transcript design pass: type parity, collapsing,
+	 * edge fades, the held-scroll rail and row-level memoisation. `src` moves
+	 * because the transcript slice itself changed — the message body steps from
+	 * `body-lg` 17 to `body-sm` 14, peer/sent/notice rows gain a one-line fold, the
+	 * scroller gains two 24 pt gradient bands, the checkpoint rail becomes
+	 * transient, and rows are memoised behind a row-identity pass. `app` moves only
+	 * for the session screen's wiring of the presence object to the list and the
+	 * rail. Fixture bytes, design tokens, instrument modules and input pins are
+	 * untouched and the scene is unchanged, so this is source admission for a
+	 * typography-and-layout change: U-08's rendered geometry proof must be
+	 * RE-CAPTURED against this tree, and this re-pin is NOT evidence that it passed.
+	 * Historical ORIGINAL_* pins are never re-pinned. */
 	/* Reprinted 2026-11-04 for PR #164's theme pipeline and picker: `app`
 	 * gains only the /theme route; `design/tokens` extracts the contrast maths
 	 * and per-palette rules; `src` gains the theme catalogue, preference and
@@ -403,11 +450,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * wrong changes, and U-08's scene is a session transcript with no home surface in
 	 * it. This is source admission for the geometry instrument, NOT fresh rendered
 	 * evidence. */
-	app: "6cfc680b963b1721b554418fc95b41bb9c93a397b55c23ed68a800b744fb3469",
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main into PR #176
+	 * (transcript pass): the digest covers both lines of history — the transcript
+	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
+	 * home-defaults changes described just above. Neither side's tree shipped alone
+	 * after this merge, so neither side's previous digest is kept. */
+	app: "581a579496536d48ec7e82170e8138f2c59974cd6042e37142f5a4a9e7dec15b",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"1be11fc262b37ae25b54b87171233ec62e56e8263543beccdfc7626bf80a5d50",
+		"16f424a5d14a2c6f79fdc15f5793fa41d0034ab72ccd298f895b6ef4cf572997",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -621,7 +673,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
 	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
 	 * source admission, not a claim that measured geometry moved. */
-	src: "603ecaf930754295a712e4a47ccf6770148e2c9d9732339113c1dddcd3b35438",
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main into PR #176
+	 * (transcript pass): the digest covers both lines of history — the transcript
+	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
+	 * home-defaults changes described just above. Neither side's tree shipped alone
+	 * after this merge, so neither side's previous digest is kept. */
+	src: "31297e183be86281c03be3716b9ebb7f29aad7cfc2c62c7b238351b38f9d6432",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

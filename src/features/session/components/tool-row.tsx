@@ -430,8 +430,17 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							)}
 						</View>
 					) : (
+						/* One 13/1.5 size for the name AND the headline: the relay's tool
+						 *  line is one 13 pt step, and a 12 pt mono name under a 14 pt
+						 *  headline left the trace without one size (review round 1, m1 /
+						 *  D5). The name takes `mono` (13/1.5, mono face), NOT
+						 *  `font-mono text-trace`: every step's utility DOES set its own
+						 *  family (theme.css's per-step `font-family` rules), and
+						 *  `.text-trace` is emitted after `.font-mono` in the same layer,
+						 *  so on web that pair rendered the name in sans (round 2, D8 /
+						 *  Q8). `tool-row.test.ts` compiles the theme to hold this. */
 						<Text
-							className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+							className="min-w-0 shrink truncate text-mono text-ink-muted"
 							numberOfLines={1}
 						>
 							{entry.tool_name}
@@ -448,7 +457,7 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						 *  a floorless line lost to the chip and read `Sent to c…`, so the
 						 *  caveat outranked the message. 4.5 rem is the relay's own floor. */
 						className={cx(
-							"min-w-0 flex-1 text-body-sm text-ink-dim",
+							"min-w-0 flex-1 text-trace text-ink-dim",
 							isBridge && bridgeOutcome !== null && "min-w-[4.5rem]",
 						)}
 						numberOfLines={1}

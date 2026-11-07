@@ -199,6 +199,16 @@ const ALLOWLIST: {
 	 * `insets.right` are PHYSICAL: they describe a notch or a rounded corner on a
 	 * specific side of the device. Converting them to start/end would ask the notch
 	 * to move with the language. */
+	/* The DOM stub's `getBoundingClientRect` returns the platform's OWN object
+	 * shape, whose keys are physical by definition: it is standing in for a
+	 * browser API, not laying anything out, and renaming `left` would stop it
+	 * matching what react-dom reads. */
+	{
+		file: "src/testing/dom-shim.ts",
+		token: "left",
+		count: 1,
+		reason: "DOM API shape: getBoundingClientRect's own key, in a test stub",
+	},
 	{
 		file: "src/ui/components/screen.tsx",
 		token: "paddingLeft",
