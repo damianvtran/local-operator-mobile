@@ -116,12 +116,11 @@ export const ARRIVAL_SKEW_MS = 5_000;
 /**
  * What one frame tells the policy about a conversation's queue.
  *
- *  - `pending`    — the rows are published and at least one is OUTSTANDING (open,
- *                   or timed out and still answerable) AND existed before the
- *                   view began: exactly the set the bar draws and the
- *                   `asks_open` tally counts, so the sheet opens iff the bar
- *                   would be drawn. A timed-out ask is unaddressed and still
- *                   answerable, which is why it counts.
+ *  - `pending`    — the rows are published and at least one is OUTSTANDING
+ *                   (`open`) AND existed before the view began: exactly the set
+ *                   the `asks_open` tally counts. A timed-out ask is lapsed and
+ *                   read-only on every surface (D10/D12), so it never opens the
+ *                   sheet on its own.
  *  - `arrived`    — outstanding asks, but every one was raised AFTER the view
  *                   began: they arrived, they were not pending on open.
  *  - `empty`      — the queue is RESOLVED and there is nothing to address.

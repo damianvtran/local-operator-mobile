@@ -4,6 +4,7 @@ import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredBySurface,
 	answeredPairs,
+	askActions,
 	askBarLabel,
 	askBarRows,
 	askResponseBody,
@@ -134,10 +135,12 @@ describe("askStateLine", () => {
 		).toBe("Answered — the agent was told");
 	});
 
-	it("keeps the timed-out state honest: moved on AND still answerable", () => {
+	it("words a timed-out ask as the desktop and relay do: no late answer offered", () => {
+		/* Byte-identical to the desktop's `ASK_STATUS_COPY.timed_out` and the
+		   relay's `relay.asks.status.timed_out` (D10). */
 		const line = askStateLine(ask({ status: "timed_out" }), 1);
 		expect(line.text).toBe(
-			"Timed out — the agent moved on; you can still answer",
+			"Timed out — the agent goes ahead without your answer",
 		);
 		expect(line.tone).toBe("attention");
 	});
@@ -295,8 +298,10 @@ describe("outstanding / answerable", () => {
 		expect(dockAsk(rows)).toBeNull();
 	});
 
-	it("treats a timed-out ask as answerable and an answered one as not", () => {
-		expect(isAnswerable("timed_out")).toBe(true);
+	it("treats only an open ask as answerable — timed out and answered are not", () => {
+		expect(isAnswerable("open")).toBe(true);
+		/* D10: the desktop's `canAnswer` and the relay card are `open`-only. */
+		expect(isAnswerable("timed_out")).toBe(false);
 		expect(isAnswerable("answered")).toBe(false);
 		expect(isOutstanding("open")).toBe(true);
 		expect(isOutstanding("late")).toBe(false);
@@ -304,6 +309,38 @@ describe("outstanding / answerable", () => {
 		   hides its answer controls (§12). */
 		expect(isAnswerable("withdrawn")).toBe(false);
 		expect(isOutstanding("withdrawn")).toBe(false);
+	});
+
+	it("gives a timed-out ask no submit path — Dismiss is its only op", () => {
+		/* The sheet's footer draws exactly these AND its `settle` refuses
+		   anything else, so this is the request gate, not just the button's. */
+		expect(askActions("timed_out")).toEqual({
+			respond: false,
+			decline: false,
+			dismiss: true,
+		});
+	});
+
+	it("leaves an open ask's controls unchanged: answer and decline, no dismiss", () => {
+		expect(askActions("open")).toEqual({
+			respond: true,
+			decline: true,
+			dismiss: false,
+		});
+		for (const settled of [
+			"answered",
+			"late",
+			"declined",
+			"dismissed",
+			"withdrawn",
+			"expired",
+		]) {
+			expect(askActions(settled)).toEqual({
+				respond: false,
+				decline: false,
+				dismiss: false,
+			});
+		}
 	});
 
 	it("has no opinion of its own when the field is absent — absence is not empty", () => {

@@ -76,17 +76,45 @@ export const askToneInk = (tone: AskTone): string => {
 	}
 };
 
-/** Whether an ask still offers answer controls.
+/** Whether an ask still offers answer controls — `open`, and nothing else.
  *
- *  `timed_out` IS answerable and that is the point of the state: the agent
- *  moved on, but the reader's answer still reaches it as a `late` response.
+ *  ONE LATE-ANSWER RULE ON EVERY SURFACE (decision D10). The daemon would still
+ *  take an answer to a `timed_out` ask: `AskQueue.respond` records it and the
+ *  fold (`asks/store.py`) reads it as `late` inside the 7 d window. But the
+ *  agent was already told the deadline passed and went ahead, so no surface
+ *  OFFERS one: the desktop's `presentAsk` sets `canAnswer`/`canDecline` to
+ *  `status === "open"` (`ask-queue.ts`) and the relay SPA's card draws a lapsed
+ *  ask read-only with Dismiss as its only op (`ask-card.tsx`). This predicate
+ *  used to include `timed_out`, which made the phone the one surface inviting an
+ *  answer the others had stopped offering.
+ *
  *  Everything already settled (answered/late/declined/dismissed/withdrawn) and
- *  everything too old to carry (expired) is not. This is the ONLY answerability
- *  predicate:
- *  no caller may add an "elapsed time" second opinion (design §6.5 of the E2
- *  spec). */
+ *  everything too old to carry (expired) is not answerable either. This is the
+ *  ONLY answerability predicate: no caller may add an "elapsed time" second
+ *  opinion (design §6.5 of the E2 spec). */
 export function isAnswerable(status: string): boolean {
-	return status === "open" || status === "timed_out";
+	return status === "open";
+}
+
+/** The settle ops a status admits — the sheet's footer draws exactly these and
+ *  its `settle` refuses anything else, so a control and a request cannot
+ *  disagree (a timed-out ask has no submit path, not merely a hidden button).
+ *
+ *  Mirrors the desktop's `canAnswer`/`canDecline` (`open` only) and the relay
+ *  card's lapsed branch (Dismiss only). Dismiss is `timed_out` only: dismissing
+ *  answers nobody, so offering it on an open ask would let it shadow an
+ *  in-window answer (the queue's own rule, `asks/store.py` fold order). */
+export function askActions(status: string): {
+	respond: boolean;
+	decline: boolean;
+	dismiss: boolean;
+} {
+	const answerable = isAnswerable(status);
+	return {
+		respond: answerable,
+		decline: answerable,
+		dismiss: isLapsed(status),
+	};
 }
 
 /** Whether an ask is still WAITING on the reader — `open`, and nothing else.
@@ -182,8 +210,9 @@ export function askStateLine(
 				   ≤60 s tick), so this is a race window measured in seconds — but it
 				   is also the reader's real situation, and claiming "expires in 0 m"
 				   or silently showing the pre-deadline line would both be untrue.
-				   The ask is still answerable either way, so the remedy is the same
-				   answer the timed-out line gives. */
+				   The status is still `open` until the runtime folds it, so the
+				   answer controls stay until then — the runtime decides, not the
+				   phone's clock. */
 				return {
 					text: "Queued — the agent is continuing; deadline passed",
 					tone: "attention",
@@ -224,7 +253,10 @@ export function askStateLine(
 			};
 		case "timed_out":
 			return {
-				text: "Timed out — the agent moved on; you can still answer",
+				/* Byte-identical to the desktop's `ASK_STATUS_COPY.timed_out` and the
+				   relay's `relay.asks.status.timed_out`: no surface offers a late
+				   answer any more (D10), so "you can still answer" was untrue. */
+				text: "Timed out — the agent goes ahead without your answer",
 				tone: "attention",
 			};
 		default:
@@ -267,8 +299,8 @@ export function askBarRows(
  *  NEWEST open ask, while a bar that jumped to each new arrival would move
  *  under the reader's finger mid-tap; the design names this divergence (§4's A2
  *  addendum), and the relay's own dock picks the same head. A `timed_out` ask
- *  is not a head: it is still answerable, but it is no longer the thing the
- *  agent is waiting on, so a count built from it must keep it out of the name.
+ *  is not a head: it is read-only and no longer the thing the agent is waiting
+ *  on, so a count built from it must keep it out of the name.
  *  Equal `created_at` values break by `ask_id` — the same tie-break the web
  *  dock applies (`lib/asks.ts`), so the two surfaces name the same ask for
  *  the same queue instead of each following its own scan order. */
@@ -292,12 +324,11 @@ export function headAsk(
 }
 
 /** The ask the bar should NAME: the oldest open ask, or — when nothing is open
- *  — the first still-answerable one (a timed-out ask is answerable, §5).
+ *  — the first lapsed one (the read-only row whose Dismiss the sheet keeps).
  *
  *  WHY THE FALLBACK. With only a timed-out ask left, a bar that named only open
- *  asks would say "1 question waiting" with no preview at all: the count
- *  includes the answerable timeout while the preview did not, so the one state
- *  design §5 keeps answerable was also the one state that named nothing. The
+ *  asks would say "1 question timed out" with no preview at all, so the one row
+ *  the bar stands for would be the one it named nothing about. The
  *  head rule is unchanged where an open ask exists.
  *
  *  NOT `rows[0]` — see `headAsk`. */

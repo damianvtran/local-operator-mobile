@@ -809,7 +809,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `open` asks as waiting and draw a lapsed-only queue quietly as "timed out"
 	 * (local-operator #2388's outstanding rule), plus tests.
 	 * Source admission only, NOT rendered U-08 evidence. */
-	src: "1c768b806ea5bf3c12bbe91b956c6f2d09252ba348c09e49cf73c8baddbdc2a8",
+	/* Re-pinned 2026-11-07 for the same PR (#183) with --print from the staged
+	 * tree. Only `src` moves: a timed-out ask is read-only in the asks sheet
+	 * (no Answer/Decline, Dismiss only, `settle` refuses respond/decline) and its
+	 * state line uses the desktop/relay copy (D10), plus tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	src: "a09eb16a4937545b23200a78a1766e2943fe806c5a96049100eda65d4fb4bbcf",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
