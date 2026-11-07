@@ -1,0 +1,148 @@
+{
+ "schema": 1,
+ "audit_id": "ru1107p1",
+ "audit_kind": "post-merge independent audit of agent-written translations (round 1)",
+ "locale": "ru",
+ "namespace": "mobile.home",
+ "audit_date": "2026-11-07",
+ "audited_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "core_reference_revision": "0dbe7156be84fecf02564b743113bbc0b918bd3f",
+ "scope": {
+  "source_prs": [
+   "damianvtran/local-operator-mobile#182"
+  ],
+  "keys": [
+   "mobile.home.chip.effort_chosen",
+   "mobile.home.chip.effort_default",
+   "mobile.home.chip.effort_default_short",
+   "mobile.home.chip.effort_default_unnamed",
+   "mobile.home.chip.model_chosen",
+   "mobile.home.chip.model_default",
+   "mobile.home.chip.model_no_default",
+   "mobile.home.chip.model_no_default_label",
+   "mobile.home.effort.high",
+   "mobile.home.effort.low",
+   "mobile.home.effort.max",
+   "mobile.home.effort.medium",
+   "mobile.home.effort.minimal",
+   "mobile.home.effort.none",
+   "mobile.home.effort.xhigh",
+   "mobile.home.picker.badge_default",
+   "mobile.home.picker.badge_this_chat",
+   "mobile.home.picker.effort_none",
+   "mobile.home.picker.effort_title",
+   "mobile.home.picker.effort_unknown",
+   "mobile.home.picker.effort_unsupported",
+   "mobile.home.picker.effort_use_default",
+   "mobile.home.picker.folder_home",
+   "mobile.home.picker.folder_other",
+   "mobile.home.picker.folder_outside",
+   "mobile.home.picker.folder_title",
+   "mobile.home.picker.folder_tmp",
+   "mobile.home.picker.folder_too_long",
+   "mobile.home.picker.folder_use_path",
+   "mobile.home.picker.loading",
+   "mobile.home.picker.model_empty",
+   "mobile.home.picker.model_no_match",
+   "mobile.home.picker.model_search",
+   "mobile.home.picker.model_title",
+   "mobile.home.picker.not_connected",
+   "mobile.home.picker.source_chosen",
+   "mobile.home.picker.source_default"
+  ],
+  "key_count": 37,
+  "derivation": "keys present in en/mobile.home.json at the PR merge commit and absent at its first parent; all still on origin/main with unchanged English"
+ },
+ "auditor": {
+  "agent": "reviewer (lopdev team)",
+  "session": "27cb86d0ecef",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "this session's header; no fallback notice appeared",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identified": false,
+  "note": "agent-written in the source PR; the PR does not name a translator session"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ru/mobile.home.json",
+   "sha256": "07fd9f3d2ffb34d762766551f995d4a233c629b9a237ed30ef859cea0ee8c4ef"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047"
+  }
+ },
+ "verdict": "changes_requested",
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 1,
+  "MINOR": 1,
+  "NIT": 0
+ },
+ "findings": [
+  {
+   "id": "RU-H01",
+   "severity": "MAJOR",
+   "class": "wrong",
+   "status": "open",
+   "keys": [
+    "mobile.home.chip.model_chosen"
+   ],
+   "current": {
+    "mobile.home.chip.model_chosen": "Модель, {model}, выбрано для этой беседы"
+   },
+   "suggested": "Модель, {model}, выбрана для этой беседы",
+   "problem": "Gender agreement: «модель» is feminine, so the participle is «выбрана», not neuter «выбрано» (the effort sibling «Усилие … выбрано» is correctly neuter). Screen-reader label; audibly ungrammatical."
+  },
+  {
+   "id": "RU-H02",
+   "severity": "MINOR",
+   "class": "awkward",
+   "status": "open",
+   "keys": [
+    "mobile.home.chip.model_no_default"
+   ],
+   "current": {
+    "mobile.home.chip.model_no_default": "Нет по умолчанию"
+   },
+   "suggested": "Не задана",
+   "problem": "«Нет по умолчанию» is a calque with no noun to negate; «Не задана» (model is feminine; core ru uses «не задано» for unset values in wire.settings.model_effort.help) is natural and shorter on the narrow strip. The spoken label still says 'no default model'."
+  }
+ ],
+ "length_notes": [
+  {
+   "key": "mobile.home.effort.max",
+   "note": "12 chars vs 3 en on the effort chip; within the chip cap but the longest level label in ru"
+  }
+ ],
+ "mechanical": {
+  "placeholders_identical": true,
+  "icu_plural_select": "none in scope",
+  "bidi_control_chars": 0,
+  "final_stop_parity": true,
+  "ellipsis_parity": true,
+  "product_name_kept": true,
+  "method": "mech.py over git-archive extracts of origin/main (see audit.log)"
+ },
+ "artifacts": {
+  "report.md": {
+   "sha256": "a9649c4c0adfd5bc27fb3f996c98ca2f34c42dfddf8a862f63ef886d4f28ded2"
+  },
+  "audit.log": {
+   "sha256": "45d42c53bd763f98ddde62cf525a3fe534a24b1c3bb056e63f7a5474a7acee70",
+   "note": "shared by all 14 bundles of this audit"
+  }
+ },
+ "route_disclosure": "catalogues read via `git archive origin/main` extracts into <scratch>; no working tree, no MT/API/SDK; terminology compared against <core> origin/main catalogues and i18n/glossary.md",
+ "limits": [
+  "no rendered 320 pt capture: this role has no browser tool; length notes are character-count estimates",
+  "generate.ts --check not run (read-only, no worktree); placeholder parity re-derived in mech.py"
+ ]
+}

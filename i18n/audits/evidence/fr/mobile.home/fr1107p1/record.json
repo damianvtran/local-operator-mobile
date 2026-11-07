@@ -1,0 +1,119 @@
+{
+ "schema": 1,
+ "audit_id": "fr1107p1",
+ "audit_kind": "post-merge independent audit of agent-written translations (round 1)",
+ "locale": "fr",
+ "namespace": "mobile.home",
+ "audit_date": "2026-11-07",
+ "audited_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "core_reference_revision": "0dbe7156be84fecf02564b743113bbc0b918bd3f",
+ "scope": {
+  "source_prs": [
+   "damianvtran/local-operator-mobile#182"
+  ],
+  "keys": [
+   "mobile.home.chip.effort_chosen",
+   "mobile.home.chip.effort_default",
+   "mobile.home.chip.effort_default_short",
+   "mobile.home.chip.effort_default_unnamed",
+   "mobile.home.chip.model_chosen",
+   "mobile.home.chip.model_default",
+   "mobile.home.chip.model_no_default",
+   "mobile.home.chip.model_no_default_label",
+   "mobile.home.effort.high",
+   "mobile.home.effort.low",
+   "mobile.home.effort.max",
+   "mobile.home.effort.medium",
+   "mobile.home.effort.minimal",
+   "mobile.home.effort.none",
+   "mobile.home.effort.xhigh",
+   "mobile.home.picker.badge_default",
+   "mobile.home.picker.badge_this_chat",
+   "mobile.home.picker.effort_none",
+   "mobile.home.picker.effort_title",
+   "mobile.home.picker.effort_unknown",
+   "mobile.home.picker.effort_unsupported",
+   "mobile.home.picker.effort_use_default",
+   "mobile.home.picker.folder_home",
+   "mobile.home.picker.folder_other",
+   "mobile.home.picker.folder_outside",
+   "mobile.home.picker.folder_title",
+   "mobile.home.picker.folder_tmp",
+   "mobile.home.picker.folder_too_long",
+   "mobile.home.picker.folder_use_path",
+   "mobile.home.picker.loading",
+   "mobile.home.picker.model_empty",
+   "mobile.home.picker.model_no_match",
+   "mobile.home.picker.model_search",
+   "mobile.home.picker.model_title",
+   "mobile.home.picker.not_connected",
+   "mobile.home.picker.source_chosen",
+   "mobile.home.picker.source_default"
+  ],
+  "key_count": 37,
+  "derivation": "keys present in en/mobile.home.json at the PR merge commit and absent at its first parent; all still on origin/main with unchanged English"
+ },
+ "auditor": {
+  "agent": "reviewer (lopdev team)",
+  "session": "27cb86d0ecef",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "this session's header; no fallback notice appeared",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identified": false,
+  "note": "agent-written in the source PR; the PR does not name a translator session"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/fr/mobile.home.json",
+   "sha256": "72637daaec74943764c96a144eb86a2a6faeca562c7c185b33d2fe9ce9cede41"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047"
+  }
+ },
+ "verdict": "passed",
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 0,
+  "MINOR": 0,
+  "NIT": 0
+ },
+ "findings": [],
+ "length_notes": [
+  {
+   "key": "mobile.home.picker.folder_home",
+   "note": "badge 17 chars vs 4 en, beside a 1-line path on the folder row; Badge does not truncate — needs a rendered check at 320 pt"
+  }
+ ],
+ "mechanical": {
+  "placeholders_identical": true,
+  "icu_plural_select": "none in scope",
+  "bidi_control_chars": 0,
+  "final_stop_parity": true,
+  "ellipsis_parity": true,
+  "product_name_kept": true,
+  "method": "mech.py over git-archive extracts of origin/main (see audit.log)"
+ },
+ "artifacts": {
+  "report.md": {
+   "sha256": "10db0a7bcae0ce29cde67c15febbc8a5004ce7cfe6a1c1c73644c194b320d5c8"
+  },
+  "audit.log": {
+   "sha256": "45d42c53bd763f98ddde62cf525a3fe534a24b1c3bb056e63f7a5474a7acee70",
+   "note": "shared by all 14 bundles of this audit"
+  }
+ },
+ "route_disclosure": "catalogues read via `git archive origin/main` extracts into <scratch>; no working tree, no MT/API/SDK; terminology compared against <core> origin/main catalogues and i18n/glossary.md",
+ "limits": [
+  "no rendered 320 pt capture: this role has no browser tool; length notes are character-count estimates",
+  "generate.ts --check not run (read-only, no worktree); placeholder parity re-derived in mech.py"
+ ]
+}

@@ -1,0 +1,155 @@
+{
+ "schema": 1,
+ "audit_id": "vi1107p1",
+ "audit_kind": "post-merge independent audit of agent-written translations (round 1)",
+ "locale": "vi",
+ "namespace": "mobile.home",
+ "audit_date": "2026-11-07",
+ "audited_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "core_reference_revision": "0dbe7156be84fecf02564b743113bbc0b918bd3f",
+ "scope": {
+  "source_prs": [
+   "damianvtran/local-operator-mobile#182"
+  ],
+  "keys": [
+   "mobile.home.chip.effort_chosen",
+   "mobile.home.chip.effort_default",
+   "mobile.home.chip.effort_default_short",
+   "mobile.home.chip.effort_default_unnamed",
+   "mobile.home.chip.model_chosen",
+   "mobile.home.chip.model_default",
+   "mobile.home.chip.model_no_default",
+   "mobile.home.chip.model_no_default_label",
+   "mobile.home.effort.high",
+   "mobile.home.effort.low",
+   "mobile.home.effort.max",
+   "mobile.home.effort.medium",
+   "mobile.home.effort.minimal",
+   "mobile.home.effort.none",
+   "mobile.home.effort.xhigh",
+   "mobile.home.picker.badge_default",
+   "mobile.home.picker.badge_this_chat",
+   "mobile.home.picker.effort_none",
+   "mobile.home.picker.effort_title",
+   "mobile.home.picker.effort_unknown",
+   "mobile.home.picker.effort_unsupported",
+   "mobile.home.picker.effort_use_default",
+   "mobile.home.picker.folder_home",
+   "mobile.home.picker.folder_other",
+   "mobile.home.picker.folder_outside",
+   "mobile.home.picker.folder_title",
+   "mobile.home.picker.folder_tmp",
+   "mobile.home.picker.folder_too_long",
+   "mobile.home.picker.folder_use_path",
+   "mobile.home.picker.loading",
+   "mobile.home.picker.model_empty",
+   "mobile.home.picker.model_no_match",
+   "mobile.home.picker.model_search",
+   "mobile.home.picker.model_title",
+   "mobile.home.picker.not_connected",
+   "mobile.home.picker.source_chosen",
+   "mobile.home.picker.source_default"
+  ],
+  "key_count": 37,
+  "derivation": "keys present in en/mobile.home.json at the PR merge commit and absent at its first parent; all still on origin/main with unchanged English"
+ },
+ "auditor": {
+  "agent": "reviewer (lopdev team)",
+  "session": "27cb86d0ecef",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "this session's header; no fallback notice appeared",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identified": false,
+  "note": "agent-written in the source PR; the PR does not name a translator session"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/vi/mobile.home.json",
+   "sha256": "1dcd42a6510ce817f727da08ff6b4d471b6fd612cd2a765e054d9a3c37b025f5"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047"
+  }
+ },
+ "verdict": "passed",
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 0,
+  "MINOR": 2,
+  "NIT": 0
+ },
+ "findings": [
+  {
+   "id": "VI-H01",
+   "severity": "MINOR",
+   "class": "awkward",
+   "status": "open",
+   "keys": [
+    "mobile.home.picker.folder_home",
+    "mobile.home.picker.folder_outside"
+   ],
+   "current": {
+    "mobile.home.picker.folder_home": "Thư mục chính",
+    "mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục chính của bạn hoặc thư mục tạm của nó."
+   },
+   "suggested": "badge «Home»; sentence «… bên trong thư mục home của bạn hoặc thư mục tạm của nó.»",
+   "problem": "vi renders the home folder «thư mục home» in mobile (session_health.ended_placeholder, relay.health.ended_detail) and core (relay.chrome.session.ended_hint); «thư mục chính» ('main folder') occurs only here and in an unrelated systemd string. Badge is also 3.25× the English length."
+  },
+  {
+   "id": "VI-H02",
+   "severity": "MINOR",
+   "class": "awkward",
+   "status": "open",
+   "keys": [
+    "mobile.home.chip.effort_chosen",
+    "mobile.home.chip.effort_default",
+    "mobile.home.chip.effort_default_short",
+    "mobile.home.chip.effort_default_unnamed",
+    "mobile.home.picker.effort_none",
+    "mobile.home.picker.effort_title"
+   ],
+   "current": {
+    "mobile.home.chip.effort_chosen": "Mức nỗ lực, {effort}, đã chọn cho cuộc trò chuyện này",
+    "mobile.home.chip.effort_default": "Mức nỗ lực, {effort}, mặc định của máy tính này",
+    "mobile.home.chip.effort_default_short": "Mức nỗ lực mặc định",
+    "mobile.home.chip.effort_default_unnamed": "Mức nỗ lực, mức đã cấu hình trên máy tính này",
+    "mobile.home.picker.effort_none": "Mô hình này không có cài đặt mức nỗ lực.",
+    "mobile.home.picker.effort_title": "Mức nỗ lực"
+   },
+   "suggested": "Mức nỗ lực → Mức suy luận",
+   "problem": "Core vi is split: relay.chrome.model.effort and wire.settings.model_effort.* (the web/relay and settings surfaces) say «Mức suy luận»; TUI-only strings say «mức nỗ lực». The phone is a relay client, so matching the relay's picker label is the better pick. Not a meaning error; choose one and record it in the vi style guide."
+  }
+ ],
+ "length_notes": [],
+ "mechanical": {
+  "placeholders_identical": true,
+  "icu_plural_select": "none in scope",
+  "bidi_control_chars": 0,
+  "final_stop_parity": true,
+  "ellipsis_parity": true,
+  "product_name_kept": true,
+  "method": "mech.py over git-archive extracts of origin/main (see audit.log)"
+ },
+ "artifacts": {
+  "report.md": {
+   "sha256": "88901ed86b8e2723a3a9e92b61ab84b81d949a090443b2d5f0fb0c3966f7ff80"
+  },
+  "audit.log": {
+   "sha256": "45d42c53bd763f98ddde62cf525a3fe534a24b1c3bb056e63f7a5474a7acee70",
+   "note": "shared by all 14 bundles of this audit"
+  }
+ },
+ "route_disclosure": "catalogues read via `git archive origin/main` extracts into <scratch>; no working tree, no MT/API/SDK; terminology compared against <core> origin/main catalogues and i18n/glossary.md",
+ "limits": [
+  "no rendered 320 pt capture: this role has no browser tool; length notes are character-count estimates",
+  "generate.ts --check not run (read-only, no worktree); placeholder parity re-derived in mech.py"
+ ]
+}
