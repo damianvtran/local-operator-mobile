@@ -19,5 +19,14 @@
 	"mobile.session.subagent_open_short": "打开",
 	"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 	"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
-	"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型"
+	"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
+	"mobile.session.pending_echo.sending": "正在发送…",
+	"mobile.session.pending_echo.sent": "已发送",
+	"mobile.session.pending_echo.queued_step": "已排队——此步骤完成后发送",
+	"mobile.session.pending_echo.queued_next": "已排队——将随你的下一条消息发送",
+	"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
+	"mobile.session.pending_echo.not_sent": "未发送——轻点放回",
+	"mobile.session.pending_echo.not_confirmed": "未确认——请在下方重试",
+	"mobile.session.pending_echo.earlier_not_sent": "你之前的消息未发送（{reason}）。轻点上方的消息即可放回。",
+	"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。"
 }

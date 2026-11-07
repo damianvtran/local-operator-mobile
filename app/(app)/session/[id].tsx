@@ -40,6 +40,7 @@ import {
 	ModelSheet,
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
+import { PendingEchoRows } from "@/features/session/components/pending-echo-row";
 import {
 	HealthAnnouncer,
 	ResumeBlock,
@@ -72,6 +73,7 @@ import { headerHealth } from "@/features/session/health";
 import { headerSubtitle } from "@/features/session/health-copy";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
+import { usePendingEchoes } from "@/features/session/pending-echo";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
 	middleTruncate,
@@ -235,6 +237,9 @@ export default function Session() {
 		capabilities,
 		editor: provisionalEditor,
 	});
+	/* What the reader just sent and the transcript does not carry yet, resolved by
+	 *  command id against the rows (`pending-echo.ts`). */
+	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
 
 	/* The supplement block's host calls: one session-scoped client, built here
 	 *  from the runtime so the list and the block never hold a relay client.
@@ -751,6 +756,22 @@ export default function Session() {
 	// One notice owner: pending bodies already have a readable floor, whereas
 	// another list viewport cannot fit beside the pinned decision/composer.
 	const transcriptNotice = pendingRecovery ? undefined : connectionBanner;
+	/* The pending rows sit after the last real row, inside the scroller: at the
+	 *  transcript's edge, under the bottom fade like any row, with nothing below
+	 *  them but the pinned working line and the dock. Memoised so the list's
+	 *  footer memo changes only when an echo does, never per streamed frame
+	 *  (`usePendingEchoes` keeps the array stable across frames). */
+	const pendingRows = useMemo(
+		() =>
+			pendingEchoes.length === 0 ? null : (
+				<PendingEchoRows
+					echoes={pendingEchoes}
+					streaming={runtime.streaming}
+					onPutBack={composer.putBack}
+				/>
+			),
+		[pendingEchoes, runtime.streaming, composer.putBack],
+	);
 	const transcript =
 		runtime.content === "disconnected" ? (
 			<ScrollView
@@ -824,6 +845,7 @@ export default function Session() {
 					sessionId={sessionId}
 					entries={runtime.entries}
 					footer={transcriptNotice}
+					pending={pendingRows}
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
@@ -850,12 +872,17 @@ export default function Session() {
 					// when one hides it).
 					highlightId={find.activeHit?.id ?? null}
 					reveal={find.reveal}
+					/* A first message in flight is not "nothing here": its pending row
+					 *  is in the footer, and the empty state beside it would contradict
+					 *  it (the relay hides its empty state on the same rule). */
 					empty={
-						<EmptyState
-							headline="Nothing here yet."
-							next="Send the first message below."
-							testID={SURFACE.sessionTranscriptEmpty}
-						/>
+						pendingEchoes.length > 0 ? null : (
+							<EmptyState
+								headline="Nothing here yet."
+								next="Send the first message below."
+								testID={SURFACE.sessionTranscriptEmpty}
+							/>
+						)
 					}
 				/>
 				<CheckpointRail

@@ -94,7 +94,7 @@ describe("startup evidence over the real relay socket", () => {
 		const projection = await firstProjection(rig, sid);
 		expect(
 			projection.transcript.filter(
-				(row: { id: string }) => row.id === `user-${command.command_id}`,
+				(row: { id: string }) => row.id === command.command_id,
 			),
 		).toHaveLength(1);
 		expect(
@@ -110,7 +110,7 @@ describe("startup evidence over the real relay socket", () => {
 		expect(evidence.admissions[0].body).toEqual(command);
 		expect(evidence.admissions[0].rawBody).toBe(JSON.stringify(command));
 		const image = await rig.request(
-			`/api/sessions/${sid}/image?entry=user-${command.command_id}&i=0`,
+			`/api/sessions/${sid}/image?entry=${command.command_id}&i=0`,
 		);
 		expect(image.status).toBe(200);
 		expect(Buffer.from(await image.arrayBuffer()).toString("base64")).toBe(
@@ -119,13 +119,13 @@ describe("startup evidence over the real relay socket", () => {
 		expect(
 			(
 				await rig.request(
-					`/api/sessions/${sid}/image?entry=user-${command.command_id}&i=1`,
+					`/api/sessions/${sid}/image?entry=${command.command_id}&i=1`,
 				)
 			).status,
 		).toBe(404);
 		expect(
 			(await firstProjection(rig, sid)).transcript.filter(
-				(row: { id: string }) => row.id === `user-${command.command_id}`,
+				(row: { id: string }) => row.id === command.command_id,
 			),
 		).toHaveLength(1);
 		expect(evidence.admissions[0].images[0].sha256).toBe(

@@ -64,8 +64,8 @@ export const composerCopy = () => ({
 	/** The reuse case: the typed text was NOT sent as a new instruction. */
 	reusedDraftNotice:
 		"An earlier message was still unsent, so it went first. Your new text was not sent — it is below, ready when you are.",
-	retryAckNotice:
-		"Earlier instruction delivered. Your edited draft is ready to send.",
+	/* The delivered-earlier acknowledgement is catalogue copy now:
+	 *  `earlierWentThroughNotice` in `pending-echo.ts` (UX round 1, U2). */
 	/** An ended session is NOT a dead composer: a send REOPENS it (the daemon
 	 *  wakes a host for a prompt with no live entry), so the primary stays
 	 *  enabled. The placeholder and the failure sentence below are the web

@@ -92,6 +92,24 @@ describe("a send racing the turn boundary", () => {
 		expect(await envelopes.peek("s1")).toBeNull();
 	});
 
+	it("paints ONCE: onHeld sees the first envelope and is not re-fired by the replay's re-hold", async () => {
+		const { client, bodies } = scripted([busy(), "steering queued"]);
+		const held: Array<{ op: string; command_id: string }> = [];
+		const result = await sendPersistedCommand({
+			client,
+			envelopes: store(),
+			sessionId: "s1",
+			op: "prompt",
+			text: "also check the tests",
+			onHeld: (envelope) => held.push(envelope),
+		});
+		expect(held).toHaveLength(1);
+		expect(held[0]?.op).toBe("prompt");
+		expect(held[0]?.command_id).toBe(bodies[0]?.command_id);
+		/* The swapped op reaches the row through the result, not a second paint. */
+		expect(result.op).toBe("steer");
+	});
+
 	it("re-delivers a steer refused for want of a live runtime as a prompt", async () => {
 		const { client, bodies } = scripted([cold(), "prompt admitted"]);
 		const result = await sendPersistedCommand({

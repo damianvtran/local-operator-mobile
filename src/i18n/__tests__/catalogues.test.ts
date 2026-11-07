@@ -144,7 +144,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 21, // +3: the ended-session chip hints (TestFlight 578)
+		expected: 30, // +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -251,9 +251,10 @@ describe("the English catalogues", () => {
 		 *  + the ended-session chip hints' 3 (fix/session-chips-rail)
 		 *  + the switcher's transport words (`mobile.computers.transport.radient`,
 		 *  `mobile.computers.transport.custom`)
-		 *  + the composer's paste chip and voice set-up/recording controls' 8.
-		 *  +  working line's three mirrored Stop keys. */
-		expect(total).toBe(349);
+		 *  + the composer's paste chip and voice set-up/recording controls' 8
+		 *  + the working line's three mirrored Stop keys
+		 *  + the pending echo's 9 (`mobile.session.pending_echo.*`). */
+		expect(total).toBe(358);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

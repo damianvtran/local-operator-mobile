@@ -152,8 +152,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * the staged tree: `GET /api/directories` serves a scenario's own folder
 	 * answer when it names one (`world.directories`), else the corpus capture as
 	 * before. No existing scenario names one, so their bytes are unchanged. */
+	/* Re-pinned 2026-11-07 for PR #191's round-1 remediation with --print from
+	 * the staged tree: an admitted command's user row is written under the bare
+	 * command id, as the daemon writes it, and an IDLE world pushes the
+	 * projection once its version moves past what the stream last sent. No
+	 * streaming or keepalive-only scenario's frames change. */
 	"tools/mock-relay/relay.ts":
-		"43dfa7a47715e6e34f97923d4ee6237da470f8e582a1f4ca2d14144dc0533787",
+		"7773e46b3725ed525f76ed91e0770ece7dc3864ef51cb0b8a15f514df5b6f1c7",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -173,8 +178,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned with the D9 capacity fix (4c67362): the ledger's byte ceiling is a
 	 * guard the driver's own evidence path depends on, so its bytes are pinned like
 	 * the rest of the instrument. Only the constant moved. */
+	/* Re-pinned 2026-11-07 for PR #191's round-1 remediation: the image route
+	 * resolves an entry by the bare command id the row now carries. */
 	"tools/mock-relay/startup.ts":
-		"e51390abdcec9e3e88d674304f1b236bc0b991e12e65f166e8f89567c1bd38ca",
+		"cc51e9866607ea4d97bef75d2179fbed2c65e75389e12d5957b7643db10f98c1",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
@@ -524,7 +531,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * feat/thinking-indicator, with --print from the merged tree: `app` carries
 	 * both sides (the header reads `runtime.streaming` on the ticking subtitle).
 	 * Source admission only, NOT rendered U-08 evidence. */
-	app: "f35fd6ca50df426eda508f9bfa1392c68d26deb4bb9bfef63026ca5207f7e746",
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree: the session screen hands the transcript list its pending-echo rows
+	 * (a new `pending` prop, painted ahead of the unchanged notice footer) and
+	 * drops its empty state while a first message is in flight. Source admission only, NOT
+	 * rendered U-08 evidence. Re-printed with --print for the round-1 remediation:
+	 * the screen hands the rows the composer's put-back, and the hook-call comment
+	 * moves to its own line. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence. */
+	app: "84dad4496c5235a7f56f6f7a0012b722c8f05ad2c311591e00441c69a1eda2e6",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -937,7 +955,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * under a live label keeps the line and its Stop), with its frame test and a
 	 * hook-level `runtime.streaming` assertion. `app` does not move. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "0d28da5f3a941e58f8cd0cf7e59b2a9e5ef977317ba1e69cf6b20d5ada6e918b",
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree. Only `app` and `src` move: the pending-echo store, row and tests, the
+	 * composer's `onHeld` paint/unpaint, the send path's `onHeld` hook, the
+	 * transcript list's `pending` slot in its footer host, one
+	 * identifier family and five i18n keys in every shipped locale. Source
+	 * admission only, NOT rendered U-08 evidence. Re-printed with --print for the
+	 * round-1 remediation: failed rows kept in place with put-back, the composer
+	 * hook test, `items-end` on the row's box, the footer host's single shape,
+	 * four more i18n keys per locale and the vi/zh-CN caption fixes. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence.
+	 * Re-printed with --print for the round-2 follow-up: the send failure path
+	 * hands back the envelope's body, the row uses ROLE.button, and two tests. */
+	src: "762a1a80bdb950f9290a2aa7e9dc8de2f70456ca8e5c8417a04e6fd7fc27abd9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

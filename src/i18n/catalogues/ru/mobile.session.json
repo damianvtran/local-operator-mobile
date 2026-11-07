@@ -19,5 +19,14 @@
 	"mobile.session.subagent_open_short": "открыть",
 	"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 	"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
-	"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель"
+	"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
+	"mobile.session.pending_echo.sending": "отправка…",
+	"mobile.session.pending_echo.sent": "отправлено",
+	"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
+	"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
+	"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
+	"mobile.session.pending_echo.not_sent": "не отправлено — нажмите, чтобы вернуть",
+	"mobile.session.pending_echo.not_confirmed": "не подтверждено — повторите ниже",
+	"mobile.session.pending_echo.earlier_not_sent": "Предыдущее сообщение не отправлено ({reason}). Нажмите на него выше, чтобы вернуть.",
+	"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен."
 }

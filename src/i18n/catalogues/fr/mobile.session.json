@@ -19,5 +19,14 @@
 	"mobile.session.subagent_open_short": "ouvrir",
 	"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 	"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
-	"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle"
+	"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
+	"mobile.session.pending_echo.sending": "envoi…",
+	"mobile.session.pending_echo.sent": "envoyé",
+	"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
+	"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
+	"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
+	"mobile.session.pending_echo.not_sent": "non envoyé — touchez pour le récupérer",
+	"mobile.session.pending_echo.not_confirmed": "non confirmé — réessayez ci-dessous",
+	"mobile.session.pending_echo.earlier_not_sent": "Votre message précédent n’a pas été envoyé ({reason}). Touchez-le ci-dessus pour le récupérer.",
+	"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé."
 }
