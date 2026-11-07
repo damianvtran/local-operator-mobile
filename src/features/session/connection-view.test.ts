@@ -69,6 +69,8 @@ describe("the reconnect backoff", () => {
 			2_000, 4_000, 8_000,
 		]);
 		expect(reconnectDelay(7, 5_000)).toBe(15_000);
+		// A far-future Retry-After date must not overflow the timer to ~1 ms (M1).
+		expect(reconnectDelay(1, 2 ** 40)).toBe(2 ** 31 - 1);
 	});
 
 	it("never returns a delay a timer would ignore", () => {

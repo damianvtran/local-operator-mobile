@@ -691,8 +691,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript scene renders none of it: source admission, not a geometry claim. */
 	/* Re-printed 2026-11-06 with --print at the merge of origin/main (d5d096f8,
 	 * PR #176) into PR #178: neither side's digest describes the merged `src`, so
-	 * both notes above stand and this value is the merged tree's own. */
-	src: "d903b827965beb398bbfe765ac191ba0e4d913b184ac475640b64a5a5d40da51",
+	 * both notes above stand and this value is the merged tree's own. Re-printed
+	 * again for round-3 M1: `reconnectDelay` caps at setTimeout's 2^31-1 ms
+	 * ceiling. Logic only; no rendered surface. */
+	src: "5e291fc849f57495fd639db5f05fa7d9bfcb05090d05333dcf2f054fcd858640",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

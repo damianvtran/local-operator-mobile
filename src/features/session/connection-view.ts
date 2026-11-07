@@ -74,6 +74,9 @@ export const RECONNECT_DEADLINE_MS = 5_000;
 export const RECONNECT_BACKOFF_MIN_MS = 1_000;
 export const RECONNECT_BACKOFF_MAX_MS = 15_000;
 
+/** The largest delay `setTimeout` honours; anything above it fires at once. */
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
+
 export const reconnectDelay = (
 	attempts: number,
 	retryAfterMs: number | undefined,
@@ -92,9 +95,15 @@ export const reconnectDelay = (
 	 * as the outage lasted (PR #178 review round 2, R2-1); a short positive value
 	 * held the delay flat below the curve (R2-2). The cap bounds the curve only:
 	 * a long server hint such as `authorization_deferred`'s 120 s still wins. */
-	return retryAfterMs !== undefined && Number.isFinite(retryAfterMs)
-		? Math.max(retryAfterMs, step)
-		: step;
+	/* Capped at setTimeout's own ceiling: a delay above 2^31-1 ms (a far-future
+	 * Retry-After date) is truncated by the platform to ~1 ms, which would be the
+	 * very hot loop the floor exists to prevent (PR #178 review round 3, M1). */
+	return Math.min(
+		MAX_TIMER_DELAY_MS,
+		retryAfterMs !== undefined && Number.isFinite(retryAfterMs)
+			? Math.max(retryAfterMs, step)
+			: step,
+	);
 };
 
 /** A snapshot older than this is old, and `C3` says so (same derivation as the
