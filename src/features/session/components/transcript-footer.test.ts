@@ -34,6 +34,14 @@ vi.mock("react-native", async () => {
 		),
 	};
 });
+/* The edge fades are a drawing (an Animated opacity over a react-native-svg
+ * gradient); nothing here asserts pixels, and the RN host this file mocks has no
+ * Animated to drive them with. The list's contract with them — that it aims both
+ * bands from the facts it already keeps — is `transcript-scroll-cue.test.ts`'s.
+ */
+vi.mock("@/features/session/components/transcript-edge-fades", () => ({
+	TranscriptEdgeFades: () => null,
+}));
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
 }));

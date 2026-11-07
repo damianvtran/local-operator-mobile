@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "बातचीत का विवरण",
+	"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+	"mobile.session.chip.model_unknown": "अज्ञात",
 	"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 	"mobile.session.highlights.withheld": "{count, plural, one {# फ़ाइल नहीं दिखाई गई} other {# फ़ाइलें नहीं दिखाई गईं}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "अनुमत स्थानों से बाहर",
@@ -12,5 +14,7 @@
 	"mobile.session.highlights.video_open": "वीडियो {name} चलाएँ",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# और ध्वनि} other {# और ध्वनियाँ}}",
 	"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "{agent} खोलें",
+	"mobile.session.subagent_open_short": "खोलें"
 }

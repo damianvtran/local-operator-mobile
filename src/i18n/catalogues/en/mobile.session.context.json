@@ -1,4 +1,12 @@
 {
+	"mobile.session.chip.model_default": {
+		"role": "meta",
+		"note": "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row."
+	},
+	"mobile.session.chip.model_unknown": {
+		"role": "meta",
+		"note": "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name."
+	},
 	"mobile.session.conversation_details": {
 		"role": "heading",
 		"note": "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop."
@@ -54,5 +62,13 @@
 	"mobile.session.highlights.withheld_reasons_join": {
 		"role": "meta",
 		"note": "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders."
+	},
+	"mobile.session.subagent_open": {
+		"role": "button",
+		"note": "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop."
+	},
+	"mobile.session.subagent_open_short": {
+		"role": "button",
+		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
 	}
 }

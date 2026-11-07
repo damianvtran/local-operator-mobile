@@ -72,12 +72,29 @@ const sha = (text: string) => createHash("sha256").update(text).digest("hex");
  * in web-audit and web-audit-core. Their executable lines remain byte-identical
  * to 5589d7fb; its hashes match frozen 0604aee9… / eb69e103…. Keep that historical
  * JSON untouched, but pin the accepted CURRENT body (same normalization), so
- * future command/step changes still fail instead of comparing to stale prose. */
+ * future command/step changes still fail instead of comparing to stale prose.
+ *
+ * Re-derived for PR #175 (`9eb6260f`), which is the only change since 764e56c7 that
+ * moved either body. The moves are intended and each is exactly that PR's own edit:
+ *
+ * - `web-audit` c53f3d1d → 111655be: the job is now SHARDED over the `ci` tier's
+ *   device profiles. The delta against 764e56c7 is the `(${{ matrix.device }})`
+ *   name, the `strategy.matrix` include list, the capture's `--devices`, the
+ *   `flows` gating of the inbox-return proof and the base export, the artifact
+ *   name, and the canary's `&& matrix.flows` guard — nothing else.
+ * - `web-audit-core` ada921e0 → 25ff0a6f: one prose line. That job's comment said
+ *   its upload name is "a distinct name from the per-push `audit-frames`", and the
+ *   per-push artifact is now `audit-frames-<device>`; the sentence had to follow or
+ *   it would describe a name nothing produces. No executable line changed.
+ *
+ * Both were DERIVED, not hand-edited: `jobBodySha` below applied to this head's
+ * workflow, after proving that same function reproduces the frozen 0604aee9… /
+ * eb69e103… pins from 5589d7fb byte for byte. */
 const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
 	"web-audit":
-		"c53f3d1dfcab21c32279f2e8cb8d6d036f4f14b1ea4bdd126c022b78f76385dd",
+		"111655be72c1c6fb7b683b8b0c056d5ff4ed654123c8d38c891e71a6c7bab1a6",
 	"web-audit-core":
-		"ada921e0da7bd6393d2d6bda3a879ea83486959006ec398ebd7f2e22cea3725a",
+		"25ff0a6f4dbf29ab0a136a3630bc5827e3a0d0cd45739b3c5709c9e98cddbfdd",
 };
 const jobBodySha = (body: string) =>
 	sha(
@@ -214,6 +231,12 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				"chrome-ios-proof",
 				"theme-ios-proof",
 				"u08-geometry-proof",
+				/* The web audit's device legs are one matrix job, so they need no entry
+				 * here — but the job that folds their results into ONE verdict does. It
+				 * is named deliberately: without it a failed leg would surface only as
+				 * cancelled matrix children, and a nested matrix job is exactly the kind
+				 * of addition that must not slip in under a widened matcher. */
+				"web-audit-verdict",
 			].sort(),
 		);
 		for (const [name, old] of Object.entries(baseline.jobs)) {
@@ -233,6 +256,13 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				if (name !== "harness")
 					expect(evaluate(job.condition, event, PROOF_MODE)).toBe(false);
 		}
+		/* The verdict job must select EXACTLY when the legs it aggregates select —
+		 * `always()` appended, so a failed leg still produces its red check rather
+		 * than a skipped (neutral) one. Pinned as a relationship to `web-audit`'s own
+		 * condition, not as a literal, so it cannot drift out of step with it. */
+		expect(current["web-audit-verdict"]?.condition).toBe(
+			`${current["web-audit"]?.condition} && always()`,
+		);
 		const targeted = current[PROOF_MODE];
 		if (!targeted) throw new Error("missing targeted job");
 		for (const event of ["pull_request", "push", "schedule", MANUAL])

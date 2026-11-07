@@ -954,11 +954,16 @@ render, not over a saved PNG), extracting geometry and the accessibility tree
 over CDP.
 
 ```sh
-# a real manifest from the fixture page, so the audit below has frames to read
+# a real manifest from the fixture page, so the audit below has frames to read.
+# The page paints the design kit's tokens, not the app's generated palette, so
+# its canvas is compared against those (`--canvas-context fixture`), exactly as
+# `pnpm e2e:canary` captures it; the default `app` context would report every dark
+# frame as a theme problem against a ground this page never claims to paint.
 # docs:needs mock-relay
 node tools/visual/capture.ts --dir e2e/fixtures/audit-canary --out "$SCRATCH/frames" \
   --cells path:/defects/defects --cells path:/clean/clean \
   --devices iphone-se --themes dark,light --scales 100,200 \
+  --canvas-context fixture --tokens design/tokens/tokens.json \
   --relay <mock-url> --consecutive --yes
 ```
 

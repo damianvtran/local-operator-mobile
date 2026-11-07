@@ -46,6 +46,34 @@ name: "F-1 first run to sign in"
 - tapOn:
     id: "welcome-connect"
 - takeScreenshot: "01-02-hand-off"
+# ANDROID OPENS A REAL BROWSER OVER THE APP. Since #155 (`radient-loopback`'s
+# `OAuthActivity`) the hand-off launches a Chrome Custom Tab the moment it starts —
+# on a fresh emulator, Chrome's own first-run screen — so the region below is
+# rendered but sits behind another app, and asserting it straight after the tap
+# failed against a correct app (run 42251159887: the failure frame and hierarchy are
+# `com.android.chrome:id/fre_*` with no app id at all; nightlies from Nov 5 on).
+# Wait for the browser to own the screen, then leave it with a device Back — which
+# `OAuthActivity` treats as a real cancel — and the region must still be there on
+# return. That is rule 1 at its strictest: the page a reader comes back to says
+# what happened. The `repeat` presses Back only while the region is not on screen,
+# so a single-screen browser costs one press and a stacked one is still dismissed.
+# iOS is untouched: no measured run says what its auth sheet leaves visible.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            id: "welcome-screen"
+          timeout: 15000
+      - takeScreenshot: "01-02-browser-open"
+      - repeat:
+          while:
+            notVisible:
+              id: "sign-in-browser-handoff"
+          times: 3
+          commands:
+            - back
 # The hand-off region exists as soon as the flow starts, not when the browser sheet
 # becomes visible: a sheet that appears over a page with no prior state is a sheet
 # from nowhere (`sign-in-panel.tsx`, rule 1).

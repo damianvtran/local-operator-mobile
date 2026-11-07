@@ -21,6 +21,9 @@ const workflow = readFileSync(
 	new URL("../../.github/workflows/e2e.yml", import.meta.url),
 	"utf8",
 );
+
+/** The upload the inbox-return proof's before/after frames arrive in. */
+const INBOX_ARTIFACT = /name: audit-frames-\$\{\{ matrix\.device \}\}/;
 const whitespace = /\s+/g;
 const historyWarp = /history\.(back|go|pushState|replaceState)\s*\(/;
 const locationWarp = /location\.(href|pathname)\s*=/;
@@ -58,7 +61,9 @@ describe("the bounded hosted inbox return proof", () => {
 		expect(capture).toContain("180_000");
 		expect(workflow).toContain("--inbox-return-proof");
 		expect(workflow).toContain("baseline=(--inbox-baseline-dir");
-		expect(workflow).toContain("name: audit-frames");
+		/* The inbox-return frames land in the flows leg's artifact — the one leg that
+		 *  runs this proof — so the name is pinned to that leg's upload. */
+		expect(workflow).toMatch(INBOX_ARTIFACT);
 	});
 	it("proves the failure, ledger and selection returns, not only the happy path", () => {
 		/* Each of these is a cell QA round 1 recorded as BLOCKED. A driver that only

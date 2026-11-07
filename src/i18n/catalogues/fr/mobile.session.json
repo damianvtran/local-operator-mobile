@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "Détails de la conversation",
+	"mobile.session.chip.model_default": "Par défaut",
+	"mobile.session.chip.model_unknown": "Inconnu",
 	"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 	"mobile.session.highlights.withheld": "{count, plural, one {# fichier non affiché} other {# fichiers non affichés}} : {reasons}",
 	"mobile.session.highlights.withheld_outside": "hors des emplacements autorisés",
@@ -12,5 +14,7 @@
 	"mobile.session.highlights.video_open": "Lire la vidéo {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# autre son} other {# autres sons}}",
 	"mobile.session.highlights.sound_refused": "Lecture impossible : {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Ouvrir {agent}",
+	"mobile.session.subagent_open_short": "ouvrir"
 }

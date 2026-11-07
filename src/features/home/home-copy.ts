@@ -40,6 +40,19 @@ export const connectDisabledReason = (): string =>
 export const foldersReadFailed = (): string =>
 	t("mobile.home.folders_read_failed");
 
+/** The same failure when the computer asked for a fresh sign-in: the KIND the read
+ *  kept, said as its own cause. A banner that reported a credential problem as a
+ *  transient read failure sent the reader to Retry for an answer only a sign-in
+ *  can change. */
+export const foldersReadSignInRequired = (): string =>
+	t("mobile.home.folders_read_sign_in");
+
+/** The model catalogue could not be read: named as its own failure rather than
+ *  rendered as a session that reported no model, with the retry the read never had
+ *  once it failed. */
+export const modelsReadFailed = (): string =>
+	t("mobile.home.models_read_failed");
+
 /**
  * Whether the composer holds a draft at all.
  *

@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "对话详情",
+	"mobile.session.chip.model_default": "默认",
+	"mobile.session.chip.model_unknown": "未知",
 	"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 	"mobile.session.highlights.withheld": "{count, plural, other {# 个文件未显示}}：{reasons}",
 	"mobile.session.highlights.withheld_outside": "不在允许的位置",
@@ -12,5 +14,7 @@
 	"mobile.session.highlights.video_open": "播放视频{name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, other {还有 # 个声音}}",
 	"mobile.session.highlights.sound_refused": "无法播放：{reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}、{second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}、{second}",
+	"mobile.session.subagent_open": "打开{agent}",
+	"mobile.session.subagent_open_short": "打开"
 }

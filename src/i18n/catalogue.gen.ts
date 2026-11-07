@@ -93,8 +93,12 @@ export type CatalogueKey =
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
+	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
+	| "mobile.home.models_read_failed"
 	| "mobile.home.options.apply"
+	| "mobile.home.options.default_folder"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
 	| "mobile.home.options.title"
@@ -233,6 +237,8 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_unknown"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_pause"
 	| "mobile.session.highlights.sound_play"
@@ -247,6 +253,8 @@ export type CatalogueKey =
 	| "mobile.session.highlights.withheld_sensitive"
 	| "mobile.session.highlights.withheld_too_large"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent_open"
+	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -382,8 +390,12 @@ export type NoParamKey =
 	| "mobile.computers.switch"
 	| "mobile.home.connect_disabled_reason"
 	| "mobile.home.folders_read_failed"
+	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
+	| "mobile.home.models_read_failed"
 	| "mobile.home.options.apply"
+	| "mobile.home.options.default_folder"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
 	| "mobile.home.options.title"
@@ -498,6 +510,8 @@ export type NoParamKey =
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_unknown"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_untitled"
 	| "mobile.session.highlights.withheld_missing"
@@ -505,6 +519,7 @@ export type NoParamKey =
 	| "mobile.session.highlights.withheld_sensitive"
 	| "mobile.session.highlights.withheld_too_large"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -635,8 +650,12 @@ export type MessageParams = {
 	"mobile.computers.switch": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
+	"mobile.home.folders_read_sign_in": NoParams;
 	"mobile.home.greeting": NoParams;
+	"mobile.home.models_read_failed": NoParams;
 	"mobile.home.options.apply": NoParams;
+	"mobile.home.options.default_folder": NoParams;
+	"mobile.home.options.default_model": NoParams;
 	"mobile.home.options.fixed": NoParams;
 	"mobile.home.options.folder": NoParams;
 	"mobile.home.options.title": NoParams;
@@ -775,6 +794,8 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: number };
 	"mobile.schedules.truncated": { shown: number; total: number; family: string };
+	"mobile.session.chip.model_default": NoParams;
+	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.conversation_details": NoParams;
 	"mobile.session.highlights.sound_pause": { title: string | number };
 	"mobile.session.highlights.sound_play": { title: string | number };
@@ -789,6 +810,8 @@ export type MessageParams = {
 	"mobile.session.highlights.withheld_sensitive": NoParams;
 	"mobile.session.highlights.withheld_too_large": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session.subagent_open": { agent: string | number };
+	"mobile.session.subagent_open_short": NoParams;
 	"mobile.session_health.control_hint": NoParams;
 	"mobile.session_health.ended_placeholder": NoParams;
 	"mobile.session_health.menu_hint": NoParams;
@@ -944,8 +967,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.switch": "Switch computer",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
+	"mobile.home.folders_read_sign_in": "This computer asked you to sign in again, so its folders couldn't be read.",
 	"mobile.home.greeting": "What can I help you with today?",
+	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
 	"mobile.home.options.apply": "Use these options",
+	"mobile.home.options.default_folder": "Use this computer's default folder",
+	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
 	"mobile.home.options.title": "Conversation options",
@@ -1084,6 +1111,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.chip.model_default": "Default",
+	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.highlights.sound_pause": "Pause {title}",
 	"mobile.session.highlights.sound_play": "Play {title}",
@@ -1098,6 +1127,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.highlights.withheld_sensitive": "sensitive file",
 	"mobile.session.highlights.withheld_too_large": "too large to preview",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.subagent_open": "Open {agent}",
+	"mobile.session.subagent_open_short": "open",
 	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
 	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…",
 	"mobile.session_health.menu_hint": "Opens the session menu",
@@ -1238,8 +1269,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
+	"mobile.home.folders_read_sign_in": { role: "status", note: "Failure sentence for the folder read when the computer answered that the credential is no longer accepted. Names the CAUSE so Retry is not offered as the fix; the sign-in surface is one tap away. No placeholder." },
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
+	"mobile.home.models_read_failed": { role: "status", note: "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder." },
 	"mobile.home.options.apply": { role: "button", note: "Button that applies the starting options. Sentence case, no final full stop." },
+	"mobile.home.options.default_folder": { role: "button", note: "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop." },
+	"mobile.home.options.default_model": { role: "button", note: "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop." },
 	"mobile.home.options.fixed": { role: "help", note: "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
 	"mobile.home.options.folder": { role: "meta", note: "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone." },
 	"mobile.home.options.title": { role: "heading", note: "Title of the sheet that edits the starting options of a conversation that has not been sent yet." },
@@ -1378,6 +1413,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
+	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
 	"mobile.session.highlights.sound_pause": { role: "button", note: "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop." },
 	"mobile.session.highlights.sound_play": { role: "button", note: "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop." },
@@ -1392,6 +1429,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.highlights.withheld_sensitive": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop." },
 	"mobile.session.highlights.withheld_too_large": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
+	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
 	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
 	"mobile.session_health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence." },
 	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
@@ -1546,8 +1585,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
+		"mobile.home.folders_read_sign_in": "Esta máquina ha pedido que vuelvas a iniciar sesión, así que no hemos podido leer sus carpetas.",
 		"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
+		"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
 		"mobile.home.options.apply": "Usar estas opciones",
+		"mobile.home.options.default_folder": "Usar la carpeta predeterminada de esta máquina",
+		"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 		"mobile.home.options.folder": "Carpeta en esta máquina",
 		"mobile.home.options.title": "Opciones de la conversación",
@@ -1686,6 +1729,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# fallo} many {# de fallos} other {# fallos}}",
 		"mobile.schedules.truncated": "Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.",
+		"mobile.session.chip.model_default": "Predeterminado",
+		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.conversation_details": "Detalles de la conversación",
 		"mobile.session.highlights.sound_pause": "Pausar {title}",
 		"mobile.session.highlights.sound_play": "Reproducir {title}",
@@ -1700,6 +1745,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "archivo confidencial",
 		"mobile.session.highlights.withheld_too_large": "demasiado grande para previsualizar",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
+		"mobile.session.subagent_open": "Abrir {agent}",
+		"mobile.session.subagent_open_short": "abrir",
 		"mobile.session_health.control_hint": "Muestra qué significa este estado y qué hace un envío ahora",
 		"mobile.session_health.ended_placeholder": "Envía para reabrir…",
 		"mobile.session_health.menu_hint": "Abre el menú de la sesión",
@@ -1838,8 +1885,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
+		"mobile.home.folders_read_sign_in": "Cet ordinateur vous a demandé de vous reconnecter ; impossible donc de lire ses dossiers.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
+		"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
 		"mobile.home.options.apply": "Utiliser ces options",
+		"mobile.home.options.default_folder": "Utiliser le dossier par défaut de cet ordinateur",
+		"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
 		"mobile.home.options.title": "Options de la conversation",
@@ -1978,6 +2029,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
 		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.chip.model_default": "Par défaut",
+		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.conversation_details": "Détails de la conversation",
 		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
 		"mobile.session.highlights.sound_play": "Lire {title}",
@@ -1992,6 +2045,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "fichier sensible",
 		"mobile.session.highlights.withheld_too_large": "trop volumineux pour l’aperçu",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session.subagent_open": "Ouvrir {agent}",
+		"mobile.session.subagent_open_short": "ouvrir",
 		"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
 		"mobile.session_health.ended_placeholder": "Envoyer rouvre…",
 		"mobile.session_health.menu_hint": "Ouvre le menu de la session",
@@ -2130,8 +2185,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
+		"mobile.home.folders_read_sign_in": "इस कंप्यूटर ने दोबारा साइन इन करने को कहा है, इसलिए इसके फ़ोल्डर नहीं पढ़े जा सके।",
 		"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
+		"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
 		"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
+		"mobile.home.options.default_folder": "इस कंप्यूटर का डिफ़ॉल्ट फ़ोल्डर इस्तेमाल करें",
+		"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 		"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
 		"mobile.home.options.title": "बातचीत के विकल्प",
@@ -2270,6 +2329,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।",
 		"mobile.schedules.tail.failed": "{count} विफल",
 		"mobile.schedules.truncated": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
 		"mobile.session.highlights.sound_pause": "{title} रोकें",
 		"mobile.session.highlights.sound_play": "{title} चलाएँ",
@@ -2284,6 +2345,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "संवेदनशील फ़ाइल",
 		"mobile.session.highlights.withheld_too_large": "पूर्वावलोकन के लिए बहुत बड़ी",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
+		"mobile.session.subagent_open": "{agent} खोलें",
+		"mobile.session.subagent_open_short": "खोलें",
 		"mobile.session_health.control_hint": "बताता है कि इस स्थिति का अर्थ क्या है और अभी भेजने पर क्या होगा",
 		"mobile.session_health.ended_placeholder": "भेजने पर होम फ़ोल्डर में खुलेगा…",
 		"mobile.session_health.menu_hint": "सत्र मेन्यू खोलता है",
@@ -2422,8 +2485,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
+		"mobile.home.folders_read_sign_in": "Этот компьютер попросил войти снова, поэтому его папки прочитать не удалось.",
 		"mobile.home.greeting": "Чем помочь сегодня?",
+		"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
 		"mobile.home.options.apply": "Применить",
+		"mobile.home.options.default_folder": "Использовать папку по умолчанию на этом компьютере",
+		"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 		"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 		"mobile.home.options.folder": "Папка на этом компьютере",
 		"mobile.home.options.title": "Параметры беседы",
@@ -2562,6 +2629,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# сбой} few {# сбоя} many {# сбоев} other {# сбоя}}",
 		"mobile.schedules.truncated": "Беседы с {family, select, wakes {пробуждениями} other {мониторами}}: показано {shown} из {total}.",
+		"mobile.session.chip.model_default": "По умолчанию",
+		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.conversation_details": "Детали беседы",
 		"mobile.session.highlights.sound_pause": "Приостановить {title}",
 		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
@@ -2576,6 +2645,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "конфиденциальный файл",
 		"mobile.session.highlights.withheld_too_large": "слишком большой для просмотра",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+		"mobile.session.subagent_open": "Открыть {agent}",
+		"mobile.session.subagent_open_short": "открыть",
 		"mobile.session_health.control_hint": "Показывает, что означает это состояние и что произойдёт при отправке",
 		"mobile.session_health.ended_placeholder": "Отправка возобновит её…",
 		"mobile.session_health.menu_hint": "Открывает меню сессии",
@@ -2714,8 +2785,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
+		"mobile.home.folders_read_sign_in": "اس کمپیوٹر نے دوبارہ سائن اِن کرنے کو کہا ہے، اسی لیے اس کے فولڈرز نہیں پڑھے جا سکے۔",
 		"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
+		"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
 		"mobile.home.options.apply": "یہ اختیارات استعمال کریں",
+		"mobile.home.options.default_folder": "اس کمپیوٹر کا ڈیفالٹ فولڈر استعمال کریں",
+		"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 		"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
 		"mobile.home.options.title": "گفتگو کے اختیارات",
@@ -2854,6 +2929,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔",
 		"mobile.schedules.tail.failed": "{count} ناکام",
 		"mobile.schedules.truncated": "{family, select, wakes {بیداریوں} other {نگرانیوں}} والی کل {total, plural, one {# گفتگو} other {# گفتگوؤں}} میں سے {shown, plural, one {# دکھائی جا رہی ہے} other {# دکھائی جا رہی ہیں}}۔",
+		"mobile.session.chip.model_default": "ڈیفالٹ",
+		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
 		"mobile.session.highlights.sound_pause": "{title} روکیں",
 		"mobile.session.highlights.sound_play": "{title} چلائیں",
@@ -2868,6 +2945,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "حساس فائل",
 		"mobile.session.highlights.withheld_too_large": "پیش نظارہ کے لیے بہت بڑی",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+		"mobile.session.subagent_open": "{agent} کھولیں",
+		"mobile.session.subagent_open_short": "کھولیں",
 		"mobile.session_health.control_hint": "بتاتا ہے کہ اس حالت کا مطلب کیا ہے اور اب بھیجنے پر کیا ہوگا",
 		"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…",
 		"mobile.session_health.menu_hint": "سیشن مینو کھولتا ہے",
@@ -3006,8 +3085,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
+		"mobile.home.folders_read_sign_in": "Máy tính này yêu cầu bạn đăng nhập lại, nên không đọc được thư mục của nó.",
 		"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
+		"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
 		"mobile.home.options.apply": "Dùng các tùy chọn này",
+		"mobile.home.options.default_folder": "Dùng thư mục mặc định của máy tính này",
+		"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 		"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 		"mobile.home.options.folder": "Thư mục trên máy tính này",
 		"mobile.home.options.title": "Tùy chọn cuộc trò chuyện",
@@ -3146,6 +3229,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.",
 		"mobile.schedules.tail.failed": "{count} thất bại",
 		"mobile.schedules.truncated": "Đang hiện {shown} trên {total} cuộc trò chuyện có {family, select, wakes {lần thức dậy} other {giám sát}}.",
+		"mobile.session.chip.model_default": "Mặc định",
+		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
 		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
 		"mobile.session.highlights.sound_play": "Phát {title}",
@@ -3160,6 +3245,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "tệp nhạy cảm",
 		"mobile.session.highlights.withheld_too_large": "quá lớn để xem trước",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+		"mobile.session.subagent_open": "Mở {agent}",
+		"mobile.session.subagent_open_short": "mở",
 		"mobile.session_health.control_hint": "Cho biết trạng thái này nghĩa là gì và lần gửi tiếp theo sẽ ra sao",
 		"mobile.session_health.ended_placeholder": "Gửi để mở lại trong thư mục home…",
 		"mobile.session_health.menu_hint": "Mở menu phiên",
@@ -3298,8 +3385,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "切换电脑",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",
+		"mobile.home.folders_read_sign_in": "此电脑要求重新登录，因此无法读取其文件夹。",
 		"mobile.home.greeting": "今天想让我帮你做点什么？",
+		"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
 		"mobile.home.options.apply": "使用这些选项",
+		"mobile.home.options.default_folder": "使用此电脑的默认文件夹",
+		"mobile.home.options.default_model": "使用此电脑的默认模型",
 		"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
 		"mobile.home.options.folder": "此电脑上的文件夹",
 		"mobile.home.options.title": "对话选项",
@@ -3438,6 +3529,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "以下唤醒没有监督者，因此仅在其对话运行时触发。",
 		"mobile.schedules.tail.failed": "{count}次失败",
 		"mobile.schedules.truncated": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
+		"mobile.session.chip.model_default": "默认",
+		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.conversation_details": "对话详情",
 		"mobile.session.highlights.sound_pause": "暂停{title}",
 		"mobile.session.highlights.sound_play": "播放{title}",
@@ -3452,6 +3545,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_sensitive": "敏感文件",
 		"mobile.session.highlights.withheld_too_large": "太大，无法预览",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+		"mobile.session.subagent_open": "打开{agent}",
+		"mobile.session.subagent_open_short": "打开",
 		"mobile.session_health.control_hint": "说明此状态的含义，以及现在发送会怎样",
 		"mobile.session_health.ended_placeholder": "发送即可重新打开……",
 		"mobile.session_health.menu_hint": "打开会话菜单",

@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "Детали беседы",
+	"mobile.session.chip.model_default": "По умолчанию",
+	"mobile.session.chip.model_unknown": "Неизвестно",
 	"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 	"mobile.session.highlights.withheld": "{count, plural, one {# файл не показан} few {# файла не показаны} many {# файлов не показано} other {# файла не показано}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "за пределами разрешённых мест",
@@ -12,5 +14,7 @@
 	"mobile.session.highlights.video_open": "Воспроизвести видео {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {Ещё # звук} few {Ещё # звука} many {Ещё # звуков} other {Ещё # звука}}",
 	"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Открыть {agent}",
+	"mobile.session.subagent_open_short": "открыть"
 }

@@ -1,5 +1,7 @@
 {
 	"mobile.session.conversation_details": "Detalles de la conversación",
+	"mobile.session.chip.model_default": "Predeterminado",
+	"mobile.session.chip.model_unknown": "Desconocido",
 	"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 	"mobile.session.highlights.withheld": "{count, plural, one {# archivo no mostrado} other {# archivos no mostrados}}: {reasons}",
 	"mobile.session.highlights.withheld_outside": "fuera de las ubicaciones permitidas",
@@ -12,5 +14,7 @@
 	"mobile.session.highlights.video_open": "Reproducir vídeo {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# sonido más} other {# sonidos más}}",
 	"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Abrir {agent}",
+	"mobile.session.subagent_open_short": "abrir"
 }
