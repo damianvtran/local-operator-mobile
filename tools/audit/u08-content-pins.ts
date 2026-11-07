@@ -498,7 +498,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
-	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
+	/* Re-pinned 2026-11-07 for fix/smooth-steering with --print from the staged
+	 * tree: `app` moves by one line (the session header's "Working" reads the
+	 * composer's `turnRunning` instead of the working label alone) and `src` by
+	 * the steer/prompt decision, its race reconciliation and the steer failure
+	 * copy. No layout, token or glyph changes; U-08's scene renders the same
+	 * frames for any projection where `streaming` and `activity` agree. Source
+	 * admission, NOT fresh rendered evidence. */
+	app: "c48ded8902cb2931618f564b769061712dc1b6db674c8c1ca923c393a458fdb7",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -822,7 +829,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "c8aedc77531b944b684c03d7def7878f6484e3781960b80b3a031d7aaca8927f",
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (b5a2f4a1, PR #190 smooth steering) into feat/composer-paste-voice
+	 * (PR #187, round-2 head 875cebf7): both lines of history stand, the value is
+	 * the merged tree's own, neither side's digest is kept. Source admission, not
+	 * a geometry claim. */
+	src: "d59235c7ec2c4932cbee872c1922455f463898039530b727bd17a194088f2a69",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

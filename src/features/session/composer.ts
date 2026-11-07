@@ -260,7 +260,15 @@ export type SendReceipt =
  * it here is how one failure ends up with two rules. What this function owns is the
  * wording, because wording is a product decision and the store has no opinion on it.
  */
-export const receiptForError = (error: RelayError): SendReceipt => {
+export const receiptForError = (
+	error: RelayError,
+	/** The op that was SENT, when the caller knows it. A steer's failure always
+	 *  reads as the steer sentence: keying the fallback on the error class alone
+	 *  told a reader steering a live turn "Couldn’t continue this conversation"
+	 *  for every transport failure (TestFlight 578, while the header said
+	 *  Working). Omitted, the class decides, as before. */
+	op?: ContinuationOp,
+): SendReceipt => {
 	/*
 	 * The sentence, in the order the three sources deserve to be trusted:
 	 *
@@ -292,7 +300,7 @@ export const receiptForError = (error: RelayError): SendReceipt => {
 		[error.detail, error.serverError]
 			.map((value) => value?.trim() ?? "")
 			.find((value) => value !== "" && !value.startsWith("<")) ??
-		(error.kind === "ambiguous-delivery"
+		(op === "steer" || error.kind === "ambiguous-delivery"
 			? composerCopy().steerError
 			: composerCopy().continuationError);
 	if (error.envelope === "clear-all") return { kind: "sign-out", message };
