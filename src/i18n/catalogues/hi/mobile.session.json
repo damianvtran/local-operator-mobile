@@ -14,5 +14,7 @@
 	"mobile.session.highlights.video_open": "वीडियो {name} चलाएँ",
 	"mobile.session.highlights.sounds_more": "{count, plural, one {# और ध्वनि} other {# और ध्वनियाँ}}",
 	"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "{agent} खोलें",
+	"mobile.session.subagent_open_short": "खोलें"
 }

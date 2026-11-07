@@ -14,5 +14,7 @@
 	"mobile.session.highlights.video_open": "Phát video {name}",
 	"mobile.session.highlights.sounds_more": "{count, plural, other {Thêm # âm thanh}}",
 	"mobile.session.highlights.sound_refused": "Không thể phát: {reason}",
-	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}"
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.subagent_open": "Mở {agent}",
+	"mobile.session.subagent_open_short": "mở"
 }
