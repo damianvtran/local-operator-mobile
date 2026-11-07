@@ -37,9 +37,16 @@
  * ## Everything that ends an echo
  *
  *   - the transcript carries the id: the real row owns the message now (drop);
- *   - the send threw: the composer's own failure line — with its Retry under the
- *     SAME envelope id when delivery is ambiguous — is the honest state from
- *     there, never a row that looks sent (withdraw), and the draft goes back.
+ *   - the send threw and the composer is EMPTY: the draft goes back into it and
+ *     the row comes down — the composer's failure line (with its Retry under
+ *     the SAME envelope id when delivery is ambiguous) is the honest state;
+ *   - the send threw while the reader had typed something since: the row STAYS,
+ *     re-captioned as a failure (`failure`), because it is now the only place
+ *     the sent words are visible — a definitive refusal discards the envelope,
+ *     and overwriting the new draft would lose THAT text instead. A refused row
+ *     puts itself back ahead of the draft on a tap (`putBackPendingEcho`); an
+ *     unconfirmed one waits for the composer's Retry, which repaints it under
+ *     the same id. (Review round 1, R1/Q1/U1 and U3: withdrawing it lost text.)
  *
  * There is deliberately NO timeout, as on the relay: a `prompt admitted` that the
  * transcript has not caught up with yet, and a steer queued for a later step, are
@@ -71,6 +78,16 @@ export interface PendingEcho {
 	 *  only thing separating "we do not know yet" from "the session has it and
 	 *  has not written the row yet", and the two need different words. */
 	accepted: boolean;
+	/** Set when the send threw and the row was KEPT because the reader had typed
+	 *  since (see the header): `refused` — definitively not delivered, the row
+	 *  is the text's only copy and puts itself back on a tap; `unconfirmed` — a
+	 *  timeout or transport loss, and the retained envelope behind the composer's
+	 *  Retry still holds it. Absent while the send is live. */
+	failure?: "refused" | "unconfirmed";
+	/** The image objects a `refused` row hands back with its text. Only a refused
+	 *  row carries them: the composer has let go of them, and nothing else holds
+	 *  them once the envelope is discarded. */
+	images?: readonly PromptImage[];
 }
 
 /** The kinds a user-authored row is written under, carrying the command id the
@@ -97,6 +114,13 @@ export function pendingEchoCaption(
 	echo: PendingEcho,
 	streaming: boolean,
 ): string {
+	/* The failure captions name the remedy where the eye already is: the row is
+	 *  what the reader watched go out, so it is where they look for what became
+	 *  of it (design round 1, on the failure state). */
+	if (echo.failure === "refused")
+		return t("mobile.session.pending_echo.not_sent");
+	if (echo.failure === "unconfirmed")
+		return t("mobile.session.pending_echo.not_confirmed");
 	if (!echo.accepted) return t("mobile.session.pending_echo.sending");
 	if (echo.op !== "steer") return t("mobile.session.pending_echo.sent");
 	return streaming
@@ -124,14 +148,26 @@ function subscribe(listener: () => void): () => void {
 }
 
 /** Paint the row for a held envelope. Idempotent per id: a retry of an envelope
- *  whose echo is still up must not paint a second row. */
+ *  whose echo is still up must not paint a second row. A row kept as a FAILURE
+ *  is the exception: the composer's Retry replays that envelope under the same
+ *  id, and the row goes back to `sending…` in place rather than staying failed
+ *  beside a live send. */
 export function registerPendingEcho(
 	sessionId: string,
 	echo: PendingEcho,
 ): void {
 	const held = echoes.get(sessionId);
 	if (held) {
-		if (held.some((item) => item.commandId === echo.commandId)) return;
+		const index = held.findIndex((item) => item.commandId === echo.commandId);
+		const existing = held[index];
+		if (existing !== undefined) {
+			if (existing.failure === undefined) return;
+			const next = [...held];
+			next[index] = echo;
+			echoes.set(sessionId, next);
+			emit();
+			return;
+		}
 		echoes.set(sessionId, [...held, echo]);
 	} else {
 		echoes.set(sessionId, [echo]);
@@ -182,12 +218,20 @@ export interface EchoDraft {
 	read(): { text: string; imageCount: number };
 	clear(): void;
 	restore(text: string, images: PromptImage[]): void;
+	/** Put text and images back AHEAD of the current draft (a newline between
+	 *  the two texts), leaving what the reader has typed since intact. */
+	prepend(text: string, images: readonly PromptImage[]): void;
 }
 
 /** What `paintPendingEcho` did, for `unpaintPendingEcho` to undo. */
 export interface PaintedEcho {
 	commandId: string;
+	/** The draft was moved out of the composer into the row. */
 	movedDraft: boolean;
+	/** The envelope IS the draft that was sent, but the reader edited it before
+	 *  the hold resolved, so it was left in place — the composer still holds
+	 *  (an edit of) these words, and a failure need not keep the row. */
+	draftKeepsBody: boolean;
 }
 
 /** Paints the pending row for a just-held envelope and, when the envelope IS what
@@ -200,7 +244,12 @@ export interface PaintedEcho {
  *  that text was not sent, and clearing it would be the loss the envelope design
  *  refuses. The move itself loses nothing: the envelope is durably held BEFORE
  *  this runs (`sendPersistedCommand`'s `onHeld`), so a kill mid-flight reopens on
- *  the retained-retry affordance. */
+ *  the retained-retry affordance.
+ *
+ *  The clear also requires the composer to STILL hold exactly what was sent:
+ *  `holdNew` persists and may queue behind another send, so the reader can type
+ *  between the tap and this call, and that text is not in the envelope (review
+ *  round 1, R3). */
 export function paintPendingEcho(
 	sessionId: string,
 	envelope: ContinuationEnvelope,
@@ -214,32 +263,131 @@ export function paintPendingEcho(
 		op: envelope.op,
 		accepted: false,
 	});
-	const movedDraft =
+	const bodyIsDraft =
 		envelope.text === sent.text &&
 		JSON.stringify(envelope.images ?? []) === JSON.stringify(sent.images ?? []);
+	const visible = draft.read();
+	const draftUnchanged =
+		visible.text === sent.text &&
+		visible.imageCount === (sent.images?.length ?? 0);
+	const movedDraft = bodyIsDraft && draftUnchanged;
 	if (movedDraft) draft.clear();
-	return { commandId: envelope.command_id, movedDraft };
+	return {
+		commandId: envelope.command_id,
+		movedDraft,
+		draftKeepsBody: bodyIsDraft && !draftUnchanged,
+	};
 }
 
-/** A send that threw: the row comes DOWN — a row left standing would be a
- *  message the reader believes went — and the composer's failure line (with
- *  Retry under the SAME envelope id when delivery is ambiguous) is the honest
- *  state from there. A draft the send moved out goes back, but only into an
- *  EMPTY composer: text typed since is theirs, and the retained envelope behind
- *  Retry still carries the failed body. */
+/** A send that threw. Where the sent words go depends on what they would
+ *  displace (see the header):
+ *
+ *  - the composer is EMPTY: they go back into it and the row comes down, so the
+ *    composer's failure line is about the text in front of the reader —
+ *    `"restored"`;
+ *  - the composer still holds (an edit of) them, the reader having typed
+ *    between tap and hold: the row comes down, nothing is lost — `"none"`;
+ *  - the reader has typed something new since: the row STAYS, captioned with
+ *    `failure`, and the new draft is untouched — `"kept"`. The caller words
+ *    its failure line for an EARLIER message, because the text in the composer
+ *    is not the one that failed (UX round 1, U1).
+ *
+ *  `failure` is the composer's reading of the error: `refused` when the relay
+ *  definitively did not take it (the envelope is discarded, so the row is the
+ *  only copy left), `unconfirmed` when delivery is ambiguous (the retained
+ *  envelope still holds it, and Retry repaints this row). */
 export function unpaintPendingEcho(
 	sessionId: string,
 	painted: PaintedEcho | null,
-	sent: { text: string; images: PromptImage[] },
+	sent: { text: string; images: readonly PromptImage[] },
+	draft: EchoDraft,
+	failure: "refused" | "unconfirmed",
+): "none" | "restored" | "kept" {
+	if (painted === null) return "none";
+	const visible = draft.read();
+	if (visible.text === "" && visible.imageCount === 0) {
+		withdrawPendingEcho(sessionId, painted.commandId);
+		draft.restore(sent.text, [...sent.images]);
+		return "restored";
+	}
+	if (painted.draftKeepsBody) {
+		withdrawPendingEcho(sessionId, painted.commandId);
+		return "none";
+	}
+	failPendingEcho(
+		sessionId,
+		painted.commandId,
+		failure,
+		failure === "refused" ? sent.images : undefined,
+	);
+	return "kept";
+}
+
+/** Re-caption a row as failed, in place. A no-op when it is already gone. */
+function failPendingEcho(
+	sessionId: string,
+	commandId: string,
+	failure: "refused" | "unconfirmed",
+	images: readonly PromptImage[] | undefined,
+): void {
+	const held = echoes.get(sessionId);
+	if (!held) return;
+	const index = held.findIndex((item) => item.commandId === commandId);
+	const current = held[index];
+	if (current === undefined) return;
+	const next = [...held];
+	next[index] = {
+		...current,
+		accepted: false,
+		failure,
+		...(images && images.length > 0 ? { images } : {}),
+	};
+	echoes.set(sessionId, next);
+	emit();
+}
+
+/** The tap on a `refused` row: its words (and images) go back into the
+ *  composer AHEAD of whatever is there, and the row comes down — the composer
+ *  is the one place a message is edited and sent from. A no-op for any other
+ *  row: a live one is still going out, and an unconfirmed one may have been
+ *  delivered, so putting it back would invite a duplicate (Retry is its path). */
+export function putBackPendingEcho(
+	sessionId: string,
+	commandId: string,
 	draft: EchoDraft,
 ): void {
-	if (painted === null) return;
-	withdrawPendingEcho(sessionId, painted.commandId);
-	if (!painted.movedDraft) return;
-	const visible = draft.read();
-	if (visible.text === "" && visible.imageCount === 0)
-		draft.restore(sent.text, sent.images);
+	const echo = echoes
+		.get(sessionId)
+		?.find((item) => item.commandId === commandId);
+	if (echo?.failure !== "refused") return;
+	withdrawPendingEcho(sessionId, commandId);
+	draft.prepend(echo.text, echo.images ?? []);
 }
+
+/** The composer's failure line while a `refused` row is kept: it names the
+ *  EARLIER message, because the text in the composer is not what failed, and
+ *  points at the row's remedy. `reason` is the relay's own receipt sentence. */
+export const earlierNotSentMessage = (reason: string): string =>
+	t("mobile.session.pending_echo.earlier_not_sent", { reason });
+
+/** The acknowledgement of an earlier message while the composer holds text the
+ *  reader has not sent — a Retry over a new draft, or a draft edited while the
+ *  request was out. It claims only that the earlier one WENT (its row says
+ *  whether it is queued), and calls the text below unsent rather than "edited":
+ *  in the rapid-steer case it is the next message (UX round 1, U2). */
+export const earlierWentThroughNotice = (): string =>
+	t("mobile.session.pending_echo.earlier_went_through");
+
+/** The pending row's inner box, per op. Kept here, in a plain module, so a
+ *  Node test can pin it. `items-end` is load-bearing: without it the block is as
+ *  wide as its widest child, and under a caption wider than a short steer the
+ *  steer's text sat left-aligned, then jumped ~77 px right when the caption
+ *  left at handover (design round 1, D1). Hugging the end edge keeps the text's
+ *  right edge where the settled row puts it. */
+export const pendingEchoBoxClass = (op: ContinuationOp): string =>
+	op === "steer"
+		? "max-w-[85%] items-end px-1"
+		: "max-w-[85%] items-end rounded-md border border-hairline bg-surface px-3 py-1.5";
 
 /** Drop every echo on this device — for the auth boundary: a signed-out user's
  *  words must not be shown to whoever signs in next. */

@@ -21,5 +21,9 @@
 	"mobile.session.pending_echo.sent": "sent",
 	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
 	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
-	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}"
+	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
+	"mobile.session.pending_echo.not_sent": "not sent — tap to put back",
+	"mobile.session.pending_echo.not_confirmed": "not confirmed — retry below",
+	"mobile.session.pending_echo.earlier_not_sent": "Your earlier message wasn’t sent ({reason}). Tap it above to put it back.",
+	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet."
 }

@@ -21,5 +21,9 @@
 	"mobile.session.pending_echo.sent": "enviado",
 	"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
 	"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
-	"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}"
+	"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
+	"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
+	"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
+	"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
+	"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado."
 }

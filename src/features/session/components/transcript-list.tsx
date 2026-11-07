@@ -1299,19 +1299,15 @@ export const TranscriptList = ({
 		),
 		[header, sessionId],
 	);
-	/* With nothing pending the host is exactly the notice, as before. The
-	 *  notice remounts when the first echo appears; `ConnectionBanner` is
-	 *  stateless, so that costs nothing visible. */
+	/* One shape whether or not anything is pending, so the notice keeps its
+	 *  child index and is never remounted when the first echo appears. */
 	const listFooter = useMemo(
-		() =>
-			pending ? (
-				<View>
-					{pending}
-					{footer}
-				</View>
-			) : (
-				<View>{footer}</View>
-			),
+		() => (
+			<View>
+				{pending ?? null}
+				{footer}
+			</View>
+		),
 		[pending, footer],
 	);
 

@@ -21,5 +21,9 @@
 	"mobile.session.pending_echo.sent": "đã gửi",
 	"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
 	"mobile.session.pending_echo.queued_next": "đang chờ — sẽ gửi cùng tin nhắn tiếp theo của bạn",
-	"mobile.session.pending_echo.images": "{count, plural, other {Đã đính kèm # hình ảnh}}"
+	"mobile.session.pending_echo.images": "{count, plural, other {đã đính kèm # hình ảnh}}",
+	"mobile.session.pending_echo.not_sent": "chưa gửi — chạm để đưa lại",
+	"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
+	"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
+	"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi."
 }

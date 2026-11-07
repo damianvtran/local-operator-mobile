@@ -90,5 +90,21 @@
 	"mobile.session.pending_echo.images": {
 		"role": "meta",
 		"note": "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop."
+	},
+	"mobile.session.pending_echo.not_sent": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions."
+	},
+	"mobile.session.pending_echo.not_confirmed": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.earlier_not_sent": {
+		"role": "status",
+		"note": "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap."
+	},
+	"mobile.session.pending_echo.earlier_went_through": {
+		"role": "status",
+		"note": "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)."
 	}
 }

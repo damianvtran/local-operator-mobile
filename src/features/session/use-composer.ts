@@ -35,9 +35,12 @@ import {
 import { envelopeStoreFor } from "@/features/session/envelope-store";
 import {
 	type EchoDraft,
+	earlierNotSentMessage,
+	earlierWentThroughNotice,
 	markPendingEchoAccepted,
 	type PaintedEcho,
 	paintPendingEcho,
+	putBackPendingEcho,
 	unpaintPendingEcho,
 } from "@/features/session/pending-echo";
 import type { SessionRelaySource } from "@/features/session/relay-source";
@@ -120,6 +123,9 @@ export interface ComposerState {
 	send: () => void;
 	/** Replays the retained instruction under its own UUID. */
 	retry: () => void;
+	/** The tap on a pending row kept as `not sent`: its text goes back into the
+	 *  composer ahead of the current draft (`putBackPendingEcho`). Stable. */
+	putBack: (commandId: string) => void;
 	/** The turn interrupt. Resolves whether the request reached the relay — see
 	 *  the implementation; callers that ignore the value are unaffected. */
 	stop: () => Promise<boolean>;
@@ -334,8 +340,20 @@ export const useComposer = (input: {
 				setDraft(text);
 				setImages(restored);
 			},
+			/* Reads the refs at call time: a put-back lands while the reader may be
+			 * mid-sentence, and their text must survive whole, after the restored
+			 * one. A newline, not a space, so the two messages stay legible as two. */
+			prepend: (text, restored) => {
+				const current = draftRef.current;
+				setDraft(current.trim() === "" ? text : `${text}\n${current}`);
+				setImages([...restored, ...imagesRef.current]);
+			},
 		}),
 		[setDraft, setImages],
+	);
+	const putBack = useCallback(
+		(commandId: string) => putBackPendingEcho(sessionId, commandId, echoDraft),
+		[sessionId, echoDraft],
 	);
 
 	/* The voice mic. The transcript is APPENDED (never a clobber), the returned
@@ -443,8 +461,11 @@ export const useComposer = (input: {
 					...annotationForSend(provenanceRef.current),
 				});
 				/* The receipt is the session's admission: the row stops saying it is
-				 * still going out. A no-op when the transcript already answered it. */
-				markPendingEchoAccepted(sessionId, result.commandId);
+				 * still going out. A no-op when the transcript already answered it.
+				 * `result.op` is the op the command was finally DELIVERED as, so a
+				 * prompt reconciled into a steer takes the steer's box and caption
+				 * (review round 1, R2). */
+				markPendingEchoAccepted(sessionId, result.commandId, result.op);
 				setRetained(null);
 				if (result.reusedPreviousDraft) {
 					/* An EARLIER unresolved instruction was replayed under its own UUID: the
@@ -458,7 +479,7 @@ export const useComposer = (input: {
 					 * gap as O1 (low, no user impact): while an envelope is held,
 					 * `envelopePending` disables the primary — measured, so the shipped
 					 * sequence cannot send a NEW draft over an unresolved one, and the
-					 * reader's only move is Retry, which lands on `retryAckNotice` below.
+					 * reader's only move is Retry, which lands on `earlierWentThroughNotice`.
 					 * This arm is the RACE around that guard: the reader presses send on a
 					 * render that still says "not pending", and the failure that makes the
 					 * earlier instruction unresolved lands while this request is in flight.
@@ -488,23 +509,30 @@ export const useComposer = (input: {
 				) {
 					setDraft("");
 					setImages([]);
-				} else {
-					setNotice(composerCopy().retryAckNotice);
+				} else if (!(painted as PaintedEcho | null)?.movedDraft) {
+					/* Only when the composer holds an EDIT of what was sent. When the
+					 * send moved the draft out, what is in the composer now is the
+					 * reader's NEXT message, and the row's caption is the receipt —
+					 * rapid steering stays silent (UX round 1, U2). */
+					setNotice(earlierWentThroughNotice());
 				}
 				onSent?.();
 			} catch (failure) {
-				unpaintPendingEcho(
+				const receipt = isRelayError(failure) ? receiptForError(failure) : null;
+				const echoed = unpaintPendingEcho(
 					sessionId,
 					painted,
 					{ text: trimmed, images: draftImages },
 					echoDraft,
+					receipt !== null && receipt.kind !== "ambiguous"
+						? "refused"
+						: "unconfirmed",
 				);
 				/* The envelope's disposition is already settled by `sendPersistedCommand`,
 				 * which reads the relay error layer's own `envelope` directive — so this
 				 * handler presents and does not decide. Settling again here would be a second
 				 * reading of one failure, which is how one failure acquires two rules. */
-				if (isRelayError(failure)) {
-					const receipt = receiptForError(failure);
+				if (receipt !== null) {
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
@@ -513,8 +541,16 @@ export const useComposer = (input: {
 					/* On an ENDED session the generic "try again" is not the whole story:
 					 * a send is resume-then-send (the daemon wakes a host for a prompt with
 					 * no live entry), so a failure here means that WAKE failed, and the
-					 * honest remedies are send again or Resume from the status sheet. */
-					setError(ended ? composerCopy().endedSendFailed : receipt.message);
+					 * honest remedies are send again or Resume from the status sheet.
+					 * A refused message kept as its row names the EARLIER message: the
+					 * text under the line is the reader's next one, not what failed. */
+					setError(
+						ended
+							? composerCopy().endedSendFailed
+							: echoed === "kept" && receipt.kind !== "ambiguous"
+								? earlierNotSentMessage(receipt.message)
+								: receipt.message,
+					);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(
@@ -596,7 +632,7 @@ export const useComposer = (input: {
 						);
 					},
 				});
-				markPendingEchoAccepted(sessionId, result.commandId);
+				markPendingEchoAccepted(sessionId, result.commandId, result.op);
 				setRetained(null);
 				/* The replayed instruction is the ENVELOPE's. When the visible draft is
 				 * BYTE-IDENTICAL to it, the draft IS what was just delivered — the
@@ -621,23 +657,34 @@ export const useComposer = (input: {
 					setDraft("");
 					setImages([]);
 				} else {
-					setNotice(composerCopy().retryAckNotice);
+					setNotice(earlierWentThroughNotice());
 				}
 			} catch (failure) {
-				unpaintPendingEcho(
+				const receipt = isRelayError(failure) ? receiptForError(failure) : null;
+				/* The ENVELOPE's body and images are what failed — the composer's own
+				 * images belong to whatever the reader is typing now. */
+				const echoed = unpaintPendingEcho(
 					sessionId,
 					painted,
-					{ text: held.text, images: retryImages },
+					{ text: held.text, images: held.images ?? [] },
 					echoDraft,
+					receipt !== null && receipt.kind !== "ambiguous"
+						? "refused"
+						: "unconfirmed",
 				);
-				if (isRelayError(failure)) {
-					const receipt = receiptForError(failure);
+				if (receipt !== null) {
 					setRetained(
 						receipt.kind === "ambiguous"
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
-					setError(ended ? composerCopy().endedSendFailed : receipt.message);
+					setError(
+						ended
+							? composerCopy().endedSendFailed
+							: echoed === "kept" && receipt.kind !== "ambiguous"
+								? earlierNotSentMessage(receipt.message)
+								: receipt.message,
+					);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
 					setError(
@@ -894,6 +941,7 @@ export const useComposer = (input: {
 		controls,
 		send,
 		retry,
+		putBack,
 		stop,
 		slash,
 		answerApproval,

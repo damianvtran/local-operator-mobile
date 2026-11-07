@@ -198,7 +198,8 @@ export default function Session() {
 		ended: headerHealth(runtime.projection, runtime.link) === "ended",
 		capabilities,
 		editor: provisionalEditor,
-	}); /* What the reader just sent and the transcript does not carry yet, resolved by
+	});
+	/* What the reader just sent and the transcript does not carry yet, resolved by
 	 *  command id against the rows (`pending-echo.ts`). */
 	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
 
@@ -693,9 +694,13 @@ export default function Session() {
 	const pendingRows = useMemo(
 		() =>
 			pendingEchoes.length === 0 ? null : (
-				<PendingEchoRows echoes={pendingEchoes} streaming={runtime.streaming} />
+				<PendingEchoRows
+					echoes={pendingEchoes}
+					streaming={runtime.streaming}
+					onPutBack={composer.putBack}
+				/>
 			),
-		[pendingEchoes, runtime.streaming],
+		[pendingEchoes, runtime.streaming, composer.putBack],
 	);
 	const transcript =
 		runtime.content === "disconnected" ? (

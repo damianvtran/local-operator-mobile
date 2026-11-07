@@ -1,8 +1,9 @@
 import { memo } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import {
 	type PendingEcho,
+	pendingEchoBoxClass,
 	pendingEchoCaption,
 } from "@/features/session/pending-echo";
 import { t } from "@/i18n";
@@ -24,48 +25,66 @@ import { cx } from "@/ui/variants";
  * NO spinner, no shimmer: the pinned working line is the session's one
  * in-progress animation, and a second per row is the competing-patterns defect
  * that rule exists for. The pending state is said in words and ink.
+ *
+ * A row KEPT after a failed send (`echo.failure`) keeps the same box and says
+ * so in `danger` ink on the caption alone — the message itself is unchanged,
+ * only its fate is. A `refused` row is the whole row as one button that puts
+ * the text back in the composer (`putBackPendingEcho`); its name is the visible
+ * text plus caption, so what a screen reader announces is what is on screen.
  */
 const PendingEchoRowImpl = ({
 	echo,
 	streaming,
+	onPutBack,
 }: {
 	echo: PendingEcho;
 	streaming: boolean;
+	onPutBack?: (commandId: string) => void;
 }) => {
-	const isSteer = echo.op === "steer";
 	const caption = pendingEchoCaption(echo, streaming);
+	const body = (
+		<View className={pendingEchoBoxClass(echo.op)}>
+			{/* Attachments ride as a count: the composer owns the image bytes,
+			 *  and the real row shows them once the transcript carries it. */}
+			{echo.imageCount > 0 ? (
+				<Text className="text-meta text-ink-dim">
+					{t("mobile.session.pending_echo.images", {
+						count: echo.imageCount,
+					})}
+				</Text>
+			) : null}
+			{echo.text.length > 0 ? (
+				<Text className="text-body-read text-ink-muted">{echo.text}</Text>
+			) : null}
+			<Text
+				className={cx(
+					"text-meta",
+					echo.failure === undefined ? "text-ink-dim" : "text-danger",
+				)}
+				accessibilityLiveRegion="polite"
+			>
+				{caption}
+			</Text>
+		</View>
+	);
+	if (echo.failure === "refused" && onPutBack) {
+		return (
+			<Pressable
+				className="items-end px-4 py-1"
+				testID={pendingEchoId(echo.commandId)}
+				accessibilityRole="button"
+				onPress={() => onPutBack(echo.commandId)}
+			>
+				{body}
+			</Pressable>
+		);
+	}
 	return (
 		<View
 			className="items-end px-4 py-1"
 			testID={pendingEchoId(echo.commandId)}
 		>
-			<View
-				className={cx(
-					"max-w-[85%]",
-					isSteer
-						? "px-1"
-						: "rounded-md border border-hairline bg-surface px-3 py-1.5",
-				)}
-			>
-				{/* Attachments ride as a count: the composer owns the image bytes,
-				 *  and the real row shows them once the transcript carries it. */}
-				{echo.imageCount > 0 ? (
-					<Text className="text-meta text-ink-dim">
-						{t("mobile.session.pending_echo.images", {
-							count: echo.imageCount,
-						})}
-					</Text>
-				) : null}
-				{echo.text.length > 0 ? (
-					<Text className="text-body-read text-ink-muted">{echo.text}</Text>
-				) : null}
-				<Text
-					className="text-meta text-ink-dim"
-					accessibilityLiveRegion="polite"
-				>
-					{caption}
-				</Text>
-			</View>
+			{body}
 		</View>
 	);
 };
@@ -78,9 +97,13 @@ export const PendingEchoRow = memo(PendingEchoRowImpl);
 export const PendingEchoRows = memo(function PendingEchoRows({
 	echoes,
 	streaming,
+	onPutBack,
 }: {
 	echoes: readonly PendingEcho[];
 	streaming: boolean;
+	/** The composer's put-back for a refused row; must be stable (the rows are
+	 *  memoised on it). */
+	onPutBack?: (commandId: string) => void;
 }) {
 	if (echoes.length === 0) return null;
 	return (
@@ -90,6 +113,7 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 					key={echo.commandId}
 					echo={echo}
 					streaming={streaming}
+					onPutBack={onPutBack}
 				/>
 			))}
 		</>

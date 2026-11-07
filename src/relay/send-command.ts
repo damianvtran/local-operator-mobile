@@ -71,6 +71,13 @@ export interface SendResult {
 	 *  composer must tell the user, or the new draft vanishes without a word. */
 	reusedPreviousDraft: boolean;
 	commandId: string;
+	/** The op the command was finally DELIVERED as, when the send path changed
+	 *  it — a prompt the daemon refused mid-turn replayed as a steer under the
+	 *  same id. Absent means the envelope's own op. Nothing sets it on this
+	 *  branch: the reconcile replay that can change the op arrives with #190,
+	 *  which fills it in; the composer already forwards it to the pending row
+	 *  (`markPendingEchoAccepted`) so the row takes the delivered op's box. */
+	op?: ContinuationOp;
 }
 
 export interface SendCommandInput {

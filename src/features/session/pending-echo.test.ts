@@ -24,6 +24,7 @@ import {
 	type PendingEcho,
 	paintPendingEcho,
 	pendingEchoCaption,
+	putBackPendingEcho,
 	registerPendingEcho,
 	unpaintPendingEcho,
 	usePendingEchoes,
@@ -177,6 +178,10 @@ function fakeDraft(text: string, images: PromptImage[] = []) {
 			state.text = t;
 			state.images = i;
 		},
+		prepend: (t, i) => {
+			state.text = state.text.trim() === "" ? t : `${t}\n${state.text}`;
+			state.images = [...i, ...state.images];
+		},
 	};
 	return { state, draft };
 }
@@ -205,6 +210,7 @@ async function composerSend(input: {
 	op: "prompt" | "steer";
 	text: string;
 	draft: EchoDraft;
+	onHeldCalls?: { count: number };
 }): Promise<"ok" | "failed"> {
 	let painted: PaintedEcho | null = null;
 	try {
@@ -215,6 +221,7 @@ async function composerSend(input: {
 			op: input.op,
 			text: input.text,
 			onHeld: (envelope) => {
+				if (input.onHeldCalls) input.onHeldCalls.count += 1;
 				painted = paintPendingEcho(
 					SID,
 					envelope,
@@ -223,14 +230,16 @@ async function composerSend(input: {
 				);
 			},
 		});
-		markPendingEchoAccepted(SID, result.commandId);
+		markPendingEchoAccepted(SID, result.commandId, result.op);
 		return "ok";
 	} catch {
+		/* Every failure the fake client throws is a transport loss: ambiguous. */
 		unpaintPendingEcho(
 			SID,
 			painted,
 			{ text: input.text, images: [] },
 			input.draft,
+			"unconfirmed",
 		);
 		return "failed";
 	}
@@ -283,6 +292,7 @@ describe("the composer's send chain", () => {
 		const { client, bodies } = flakyClient(1);
 		await render([]);
 		let outcome: string | undefined;
+		const onHeldCalls = { count: 0 };
 		await act(async () => {
 			outcome = await composerSend({
 				client,
@@ -290,8 +300,11 @@ describe("the composer's send chain", () => {
 				op: "prompt",
 				text: "ship it",
 				draft,
+				onHeldCalls,
 			});
 		});
+		/* Painted exactly once, before the one request (review round 1, R2). */
+		expect(onHeldCalls.count).toBe(1);
 		expect(outcome).toBe("failed");
 		expect(latest()).toEqual([]);
 		expect(state.text).toBe("ship it");
@@ -317,7 +330,7 @@ describe("the composer's send chain", () => {
 		expect(state.text).toBe("");
 	});
 
-	it("does not overwrite text typed while the failed send was out", async () => {
+	it("keeps the failed row, and leaves text typed while the send was out (R1)", async () => {
 		const { draft, state } = fakeDraft("first");
 		await render([]);
 		let painted: PaintedEcho | null = null;
@@ -331,11 +344,51 @@ describe("the composer's send chain", () => {
 		});
 		expect(latest()).toHaveLength(1);
 		state.text = "second thought";
+		let kept: string | undefined;
+		await act(async () => {
+			kept = unpaintPendingEcho(
+				SID,
+				painted,
+				{ text: "first", images: [] },
+				draft,
+				"refused",
+			);
+		});
+		expect(kept).toBe("kept");
+		expect(latest()).toMatchObject([{ text: "first", failure: "refused" }]);
+		expect(state.text).toBe("second thought");
+		/* The tap puts it back AHEAD of what was typed, and the row comes down. */
+		await act(async () => putBackPendingEcho(SID, "c-9", draft));
+		expect(state.text).toBe("first\nsecond thought");
+		expect(latest()).toEqual([]);
+	});
+
+	it("leaves a draft edited between the tap and the hold in the composer (R3)", async () => {
+		const { draft, state } = fakeDraft("first, then more");
+		await render([]);
+		let painted: PaintedEcho | null = null;
+		await act(async () => {
+			painted = paintPendingEcho(
+				SID,
+				{ op: "steer", command_id: "c-10", text: "first" },
+				{ text: "first", images: undefined },
+				draft,
+			);
+		});
+		expect(state.text).toBe("first, then more");
+		expect(painted).toMatchObject({ movedDraft: false, draftKeepsBody: true });
+		/* A failure then needs no row: the composer still holds those words. */
 		await act(async () =>
-			unpaintPendingEcho(SID, painted, { text: "first", images: [] }, draft),
+			unpaintPendingEcho(
+				SID,
+				painted,
+				{ text: "first", images: [] },
+				draft,
+				"refused",
+			),
 		);
 		expect(latest()).toEqual([]);
-		expect(state.text).toBe("second thought");
+		expect(state.text).toBe("first, then more");
 	});
 
 	it("paints a replayed EARLIER envelope without clearing the new draft", async () => {

@@ -132,7 +132,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 23,
+		expected: 27,
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -225,8 +225,8 @@ describe("the English catalogues", () => {
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
 		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
-		 *  + the pending echo's 5 (`mobile.session.pending_echo.*`). */
-		expect(total).toBe(338);
+		 *  + the pending echo's 9 (`mobile.session.pending_echo.*`). */
+		expect(total).toBe(342);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

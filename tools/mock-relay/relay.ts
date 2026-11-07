@@ -1047,7 +1047,11 @@ export function createRelay(options: RelayOptions = {}) {
 		projection.transcript = [
 			...(projection.transcript ?? []),
 			{
-				id: `user-${commandId}`,
+				// The bare command id, as the daemon writes it (`tui_handle.py` hands
+				// `message_id=command_id` to the session): the phone's pending row
+				// reconciles on exactly that id, so a `user-` prefix here left every
+				// sent message on screen twice against this mock (PR #191, Q2/U5).
+				id: commandId,
 				kind: "user",
 				text: typeof text === "string" ? text : "",
 				tool_call_id: "",
@@ -1527,6 +1531,21 @@ export function createRelay(options: RelayOptions = {}) {
 		projection: SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
+		if (stream.mode === "idle") {
+			/* An idle runtime still answers an admission with a frame: the real
+			 * relay pushes the projection that carries the new user row. Without
+			 * it, an idle world never showed a sent message until a reconnect, and
+			 * the phone's pending row never handed over (PR #191, Q2). Only a
+			 * version NEWER than the last one this stream sent is pushed, so a
+			 * quiet session stays quiet. */
+			let sent = projection.version ?? 1;
+			return () => {
+				const current = projection.version ?? 1;
+				if (current <= sent) return null;
+				sent = current;
+				return { event: "projection", data: structuredClone(projection) };
+			};
+		}
 		if (stream.mode !== "streaming") return () => null;
 		const settleAfter = stream.settleAfterTurns ?? 6;
 		const growth = stream.growth === "table" ? tableArrival : null;
