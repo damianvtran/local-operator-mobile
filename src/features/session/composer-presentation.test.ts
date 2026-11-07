@@ -3,8 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
+	COMPOSER_GLASS_LAYER_RADIUS,
+	COMPOSER_REST_PAD,
+	COMPOSER_REST_ROW,
+	composerFieldRowAlign,
 	composerPaintedHeight,
 	composerPresentation,
+	composerRestInsets,
 	composerShellPadding,
 	composerShellRadius,
 	keyboardOverlap,
@@ -74,15 +79,17 @@ describe("build389 uniform dock", () => {
 		expect(COMPOSER_FIELD_BOX).toBe(44);
 		const rest = composerShellPadding(false);
 		const expanded = composerShellPadding(true);
-		expect(rest).toEqual({ top: 6, bottom: 6 });
+		/* H5: one `space.1` step at rest, balanced against the 48 pt row. */
+		expect(rest).toEqual({ top: COMPOSER_REST_PAD, bottom: COMPOSER_REST_PAD });
+		expect(COMPOSER_REST_PAD % 4).toBe(0);
+		expect(rest.top + COMPOSER_REST_ROW + rest.bottom).toBe(56);
 		expect(expanded).toEqual({ top: 12, bottom: 8 });
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		/* The record's totals are its iOS values. The web/Android floor is 48, and
-		 *  the SAME rule paints 60/120 there — which is exactly what the web frames
-		 *  measure, so the frame table and this arithmetic agree instead of one
-		 *  being declared wrong. */
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		/* The web/Android floor is 48. The OPEN card follows it (120 there); the
+		 *  resting pill no longer does — the 48 pt row is the resting ruler on every
+		 *  platform, so the pill is 56 everywhere (H5). */
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(
 			expanded.top +
@@ -103,8 +110,8 @@ describe("build389 uniform dock", () => {
 		expect(
 			composerPresentation({ ...empty, focused: true, floor: 44 }).radius,
 		).toBe(24);
-		expect(composerPresentation({ ...empty, floor: 48 }).height).toBe(60);
-		expect(composerPresentation({ ...empty, floor: 48 }).radius).toBe(30);
+		expect(composerPresentation({ ...empty, floor: 48 }).height).toBe(56);
+		expect(composerPresentation({ ...empty, floor: 48 }).radius).toBe(28);
 	});
 });
 
@@ -150,9 +157,53 @@ describe("round 8 — one radius for the two edges the shell paints", () => {
 	it("leaves the painted heights and the pill radius untouched", () => {
 		expect(composerPaintedHeight(false)).toBe(56);
 		expect(composerPaintedHeight(true)).toBe(112);
-		expect(composerPaintedHeight(false, 48)).toBe(60);
+		expect(composerPaintedHeight(false, 48)).toBe(56);
 		expect(composerPaintedHeight(true, 48)).toBe(120);
 		expect(morphPillRadius(56)).toBe(28);
-		expect(morphPillRadius(60)).toBe(30);
+	});
+});
+
+/* Review R1: the resting row is 48 on every floor, so its alignment decides
+ * where a 44 pt iOS control lands. Bottom alignment painted it 8 pt from the
+ * shell's top and 4 pt from its bottom; centred, the slack splits evenly. */
+describe("H5 resting row alignment, per platform floor", () => {
+	const COMPOSER = read("src/features/session/components/composer.tsx");
+	it("centres the resting row and keeps the open field row bottom-aligned", () => {
+		expect(composerFieldRowAlign(false)).toBe("items-center");
+		expect(composerFieldRowAlign(true)).toBe("items-end");
+		/* The component reads THIS decision, not a literal class beside it. */
+		expect(COMPOSER).toContain("composerFieldRowAlign(presentation.expanded)");
+		expect(COMPOSER).not.toContain('className="flex-row items-end"');
+	});
+	it("paints a resting control equidistant from both shell edges", () => {
+		/* iOS: 44 pt discs in the 48 pt row, 4 + 2 = 6 on both edges. */
+		expect(composerRestInsets(44)).toEqual({ top: 6, bottom: 6 });
+		/* Web/Android: the 48 pt floor fills the row, 4 on both edges. */
+		expect(composerRestInsets(48)).toEqual({ top: 4, bottom: 4 });
+		for (const floor of [44, 48]) {
+			const inset = composerRestInsets(floor);
+			expect(inset.top + floor + inset.bottom).toBe(
+				composerPaintedHeight(false, floor),
+			);
+		}
+	});
+});
+
+/* Review R2 / design D5a: the glass layer sits inside the shell's animated
+ * clip, so its radius must never exceed the clip's at any point of the morph,
+ * on any measured base the pill can take. */
+describe("shell glass layer radius", () => {
+	it("never exceeds the shell's live radius", () => {
+		for (const base of [56, 60, 72, 96, 120]) {
+			for (let step = 0; step <= 20; step += 1) {
+				expect(COMPOSER_GLASS_LAYER_RADIUS).toBeLessThanOrEqual(
+					composerShellRadius(step / 20, base),
+				);
+			}
+		}
+		const COMPOSER = read("src/features/session/components/composer.tsx");
+		expect(COMPOSER).toContain("top: COMPOSER_GLASS_LAYER_RADIUS");
+		expect(COMPOSER).toContain("bottom: COMPOSER_GLASS_LAYER_RADIUS");
+		expect(COMPOSER).not.toContain("top: presentation.radius");
 	});
 });

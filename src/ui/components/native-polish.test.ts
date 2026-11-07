@@ -92,8 +92,8 @@ describe("final design audit wiring", () => {
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		expect(home).toContain(
-			"<HeaderComputerChip testID={CONTROL.computersButton} />",
+		expect(home).toMatch(
+			/<HeaderComputerChip\s+testID=\{CONTROL\.computersButton\}/,
 		);
 		const chip = readFileSync(
 			new URL("../../features/auth/computer-entry-points.tsx", import.meta.url),

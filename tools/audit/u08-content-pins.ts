@@ -162,8 +162,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
 		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation (QA Q-R2-2)
+	 * with --print from the staged tree: one new IDENTICAL_FRAME_COINCIDENCES
+	 * entry (`S5/rail-building` + `S5/rail-deep` at iphone-se / 200 %). No rule,
+	 * probe or other entry moved. */
 	"tools/visual/matrix.ts":
-		"4747988924ab3832c1412f86fc8962c3055d6b49cd8e864df8ecae60f629843e",
+		"792a212c02484c962d01ee1a83fd1c1d0b917ceb1f49dbba87a27b97ae21ea55",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -455,7 +459,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
 	 * after this merge, so neither side's previous digest is kept. */
-	app: "581a579496536d48ec7e82170e8138f2c59974cd6042e37142f5a4a9e7dec15b",
+	/* Re-pinned 2026-11-07 for feat/home-chrome with --print from the staged tree:
+	 * `app` (the session screen hands the composer its glass decision) and `src`
+	 * (header chip, home hero, inset notices, composer H5 padding and glass
+	 * wiring) move; tokens, fonts and public do not. */
+	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -690,6 +698,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
 	 * and the digest covers both lines of history. Neither side's tree ships alone after
 	 * this merge, so neither previous digest is kept. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-1 remediation with --print
+	 * from the staged tree: `src` only (resting-row centring, glass layer radius,
+	 * strip capsules, brand mark inside the header chip, hero hold/first frame,
+	 * alert action placement, folder Retry loading and focus); `app` unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-2 remediation with --print
+	 * from the staged tree: `src` only, focus logic with no layout change (the
+	 * splash's mount-seeded focus latch, the native composer guard, Retry focus
+	 * tied to the pressed attempt, a moved import in `variants.ts`); `app`
+	 * unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation with --print
+	 * from the staged tree: `src` only (the home's notice stack is a capped
+	 * ScrollView so the composer never moves — Q-R2-1; the hero's centring
+	 * offset is a spacer's height, not a padding — Q-R2-3; one new SURFACE
+	 * id); `app` unchanged. */
 	/* Re-printed 2026-11-06 with --print at PR #178's staged tree (the fix for the
 	 * TestFlight 453 reports, not the 453 build's own tree), including its round-1
 	 * remediation: the Radient token exchange and tunnel discovery gained a request
@@ -723,7 +745,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
 	 * geometry is byte-identical to main's digest above. This is source admission for
 	 * the geometry instrument, not fresh rendered evidence. --print produced the digest. */
-	src: "9242dcaadcde1e7a171a7f4e342ead2b6ccec722df460efb4d6f006decea2fa9",
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (f36e0e32:
+	 * PR #178's sign-in/connection timeouts and tunnel-grant retry, PR #156's
+	 * encrypted draft recovery) into feat/home-chrome (PR #181): both lines of
+	 * history above stand, the value is the merged tree's own, and neither side's
+	 * previous digest is kept. */
+	src: "1d13bb3ff7343d49965f1ba2d1c673fc7569116eb856b20db2fc4004a75ad944",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

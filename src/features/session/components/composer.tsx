@@ -8,7 +8,14 @@ import {
 	Square,
 	X,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ReactElement,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Dimensions,
 	Image,
@@ -48,16 +55,22 @@ import {
 import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
+	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
+	COMPOSER_META_GLASS_SPACING,
 	COMPOSER_META_ROW,
 	MODEL_FLOOR_PT,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
 	COMPOSER_FIELD_BOX,
+	COMPOSER_GLASS_LAYER_RADIUS,
+	composerFieldRowAlign,
 	composerPaintedHeight,
 	composerPresentation,
+	composerRestRow,
+	composerShellPadding,
 	composerShellRadius,
 	keyboardOverlap,
 	morphHeight,
@@ -87,6 +100,7 @@ import {
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
+import { ChromeGroup, ChromeSurface } from "@/ui/components/chrome-surface";
 import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { composerBudget } from "@/ui/size-class";
@@ -264,6 +278,12 @@ export type ComposerProps = {
 	 *  composer that does not sit on the screen's bottom edge (a split pane's
 	 *  detail column still does; a sheet would not). */
 	bottomInset?: number;
+	/** Draw the shell and the strip's chips as iOS Liquid Glass (design spec
+	 *  §12). The HOST decides, from `useChromeGlass()`, so the composer and any
+	 *  chrome beside it share one fill decision. Fill only: the box, radii and
+	 *  every target are identical in both branches, and attach/send stay opaque
+	 *  so their ink ratios never depend on what scrolls behind the glass. */
+	glass?: boolean;
 	/** The two chips, each in one of its three states — value, unavailable, or
 	 *  loading while a projection is still expected. The decision lives in
 	 *  `chip-labels.ts` rather than here, because "loading" and "unavailable" look
@@ -370,7 +390,10 @@ const ComposerChipButton = ({
 	chooseHint,
 	loadingWidthClassName,
 	testID,
+	glass = false,
 }: {
+	/** The strip's glass branch: the chip gets its own capsule of material. */
+	glass?: boolean;
 	chip: ComposerChip;
 	onPress: () => void;
 	/** The hint on the value chip, which is the only case that opens a sheet. */
@@ -379,16 +402,20 @@ const ComposerChipButton = ({
 	testID: string;
 }) => {
 	if (chip.kind === "loading") {
-		return (
+		/* In its capsule too (design D5b): an unwrapped placeholder made the
+		 *  strip change material the moment the model list resolved. */
+		return stripChipSurface(
+			glass,
 			<ChipPlaceholder
 				label={chip.accessibilityLabel}
 				widthClassName={loadingWidthClassName}
 				testID={testID}
-			/>
+			/>,
 		);
 	}
 	if (chip.kind === "unavailable") {
-		return (
+		return stripChipSurface(
+			glass,
 			<Chip
 				label={chip.text}
 				// Never dispatched: `Chip` requires the prop and a disabled Pressable
@@ -401,10 +428,11 @@ const ComposerChipButton = ({
 				accessibilityLabel={chip.accessibilityLabel}
 				accessibilityHint={chip.accessibilityHint}
 				testID={testID}
-			/>
+			/>,
 		);
 	}
-	return (
+	return stripChipSurface(
+		glass,
 		<Chip
 			label={chip.text}
 			shrink
@@ -413,9 +441,35 @@ const ComposerChipButton = ({
 			accessibilityLabel={chip.accessibilityLabel}
 			accessibilityHint={chooseHint}
 			testID={testID}
-		/>
+		/>,
 	);
 };
+
+/** A strip chip's own capsule of glass (design spec §12), or the chip as it
+ *  always was. Solid is NOT wrapped: a `ChromeSurface` paints `bg-elevated`
+ *  in its solid branch, which would turn today's quiet, fill-less chip into a
+ *  box — the fallback must stay byte-for-byte what ships. The capsule's radius
+ *  is half the chip's touch-floor height: `radius.full` in spirit, as a number
+ *  because the glass view takes its corners as props (`status-chips.tsx` makes
+ *  the same call). `min-w-0`/`maxWidth` keep the chip's own shrink rule
+ *  working through the extra box, so a long model name still ellipsizes. */
+const stripChipSurface = (glass: boolean, chip: ReactElement) =>
+	glass ? (
+		<ChromeSurface
+			glass
+			radii={{ top: TOUCH_FLOOR / 2, bottom: TOUCH_FLOOR / 2 }}
+			style={{
+				maxWidth: "100%",
+				minWidth: 0,
+				alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN,
+			}}
+			className="min-w-0"
+		>
+			{chip}
+		</ChromeSurface>
+	) : (
+		chip
+	);
 
 /** iOS presents its picker from the current native controller, not the next
  * React state. Wait for the sheet's actual dismissal so it cannot take a newly
@@ -489,6 +543,7 @@ export const Composer = ({
 	contextLabel = null,
 	costLabel = null,
 	bottomInset,
+	glass = false,
 	modelChip,
 	effortChip,
 	onOpenModels,
@@ -784,7 +839,7 @@ export const Composer = ({
 				(controls.stopVisible ? TOUCH_FLOOR : 0) +
 				24;
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
-	 * actually paints (iOS 56/R28, web and Android 60/R30 on the 48 floor), not
+	 * actually paints (56/R28 on every floor since H5: 4 + 48 + 4), not
 	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
 	 * number the box does not paint is a shape nobody sees. The CONTENT block is
 	 * the ruler; the shell cannot measure itself (see `measureContent`). */
@@ -793,10 +848,15 @@ export const Composer = ({
 	 *  this to a total again would count them twice. */
 	const [extrasHeight, setExtrasHeight] = useState(0);
 	/* The record's paddings, settled per state: they are part of its sums
-	 *  (6 + h + 6 standing, 12 + h + 4 + h + 8 open) and never a second clock. */
+	 *  (4 + row + 4 standing, 12 + h + 4 + h + 8 open) and never a second clock.
+	 *  `composerShellPadding` owns the numbers (and H5's reason for 4); short
+	 *  landscape keeps the resting pair in every state, as it always has. */
+	const shellPad = composerShellPadding(
+		compactSingle ? false : presentation.expanded,
+	);
 	const shellBox = {
-		paddingTop: compactSingle ? 6 : presentation.expanded ? 12 : 6,
-		paddingBottom: compactSingle ? 6 : presentation.expanded ? 8 : 6,
+		paddingTop: shellPad.top,
+		paddingBottom: shellPad.bottom,
 	};
 	/* Measurement, in one place, and ONE seed per state. A single seed cannot
 	 *  describe a morph: while expanded the content column is the EXPANDED height,
@@ -819,14 +879,14 @@ export const Composer = ({
 			if (seed.total !== expandedSeed) setExpandedSeed(seed.total);
 		} else if (seed.total !== collapsedSeed) {
 			/* No `compactSingle` guard: short landscape is a pill like any other, and
-			 *  skipping its measurement left the seeded 56/60 in place while the
+			 *  skipping its measurement left the seeded 56 in place while the
 			 *  content grew past it — clipped by the overflow rule below (R7-1). */
 			setCollapsedSeed(seed.total);
 		}
 	};
 	/* The first frame must not paint a radius the pill does not have: the field's
 	 *  box IS the platform's touch floor, so the seeded ends are the record's own
-	 *  sums at that floor (56/112 on iOS, 60/120 on the 48 floor). */
+	 *  sums at that floor (56/112 on iOS, 56/120 on the 48 floor). */
 	const seededBase = composerPaintedHeight(false, TOUCH_FLOOR);
 	const seededExpanded = composerPaintedHeight(true, TOUCH_FLOOR);
 	/* A measured pill can be SMALLER than the floor's own sum (a scale that renders
@@ -939,11 +999,14 @@ export const Composer = ({
 	 *  when the screen says the chrome above it changed. Listing them as separate
 	 *  dependencies is what the lint rule objects to, and a stale top is how the
 	 *  ceiling stops matching the column. */
-	const measurementKey = `${measureKey}|${receiptHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}`;
+	/* The keyboard is in the key (deferred #177 finding): toggling it moves the
+	 *  dock by the keyboard's height without changing any other input here, and a
+	 *  key that missed it left the host reading a stale `composerBox.top`. */
+	const measurementKey = `${measureKey}|${receiptHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}|${keyboardVisible ? "keyboard" : ""}`;
 	useEffect(() => {
 		/* `measurementKey` is READ here only to make it the dependency it is: the
 		 *  effect's whole purpose is to re-measure when the key changes (find bar,
-		 *  panels, pending card, receipt wrap, extras, scale, mode), and none of
+		 *  panels, pending card, receipt wrap, extras, scale, mode, keyboard), and none of
 		 *  those values is an input to the measurement itself. Removing it — what
 		 *  the unsafe quick-fix offers — is the stale-top defect this exists to
 		 *  avoid, so it is referenced rather than suppressed. */
@@ -1129,11 +1192,55 @@ export const Composer = ({
 		</>
 	);
 
+	/* VISIBLE, not just announced (round 4 reviewer MAJOR): a queue the reader
+	 *  cannot see is a queue they cannot trust. The chip opens More, which lists
+	 *  the count and — where the surface can open the queue — the way in; it is
+	 *  never a disabled control. ONE element for both strips (tall and short
+	 *  landscape), so its floor and its width cap are written once. */
+	const queuedChip =
+		queuedCount > 0 ? (
+			<Pressable
+				accessibilityRole={ROLE.button}
+				accessibilityLabel={t("mobile.chrome.composer.queued", {
+					count: queuedCount,
+				})}
+				onPress={() => setContextOpen(true)}
+				/* Bounded width is the point (UX round 5, U2): an unconstrained
+				 *  label at 200 % text pushed the dismiss control past the 390 pt
+				 *  edge. The sentence stays on the accessibility label; the visible
+				 *  text falls back to the bare count when the type is large. */
+				style={{
+					minWidth: TOUCH_FLOOR,
+					/* The floor on BOTH axes, owned by the chip and not by the
+					 *  strip: with only a width floor it shrank to its 17 pt line of
+					 *  text (U-01, every S5 cell with a queue), a target the row's
+					 *  44 pt height hid — and a shorter strip (the spec's 36 pt) must
+					 *  never take the target down with it. */
+					minHeight: TOUCH_FLOOR,
+					maxWidth: 160,
+					flexShrink: 1,
+				}}
+				className="items-center justify-center px-1"
+				testID={SURFACE.queuedMessageChip}
+			>
+				<Text className="text-meta text-ink-dim" numberOfLines={1}>
+					{dictationLargeText
+						? String(queuedCount)
+						: t("mobile.chrome.composer.queued", { count: queuedCount })}
+				</Text>
+			</Pressable>
+		) : null;
+
 	/* The permanent context strip is outside the shell. No keyboard-dependent
 	 * reparenting or first-frame facts ladder: model and effort always retain a
 	 * target; optional facts are disclosed via More. */
 	const receipt = (
-		<View
+		/* A glass GROUP so iOS renders the two chips' material together (spec
+		 *  §12) — as two capsules, with a merge distance under the row's gap
+		 *  (D1); with glass off it is this same plain row, unchanged. */
+		<ChromeGroup
+			glass={glass}
+			spacing={COMPOSER_META_GLASS_SPACING}
 			className={COMPOSER_META_ROW}
 			testID={SURFACE.composerMeta}
 			onLayout={(event) => {
@@ -1143,6 +1250,7 @@ export const Composer = ({
 		>
 			<View className="min-w-0 flex-1" style={{ minWidth: MODEL_FLOOR_PT }}>
 				<ComposerChipButton
+					glass={glass}
 					chip={modelChip}
 					onPress={onOpenModels}
 					chooseHint="Choose the model"
@@ -1153,6 +1261,7 @@ export const Composer = ({
 			{effortChip ? (
 				<View className="shrink" style={{ minWidth: MODEL_FLOOR_PT }}>
 					<ComposerChipButton
+						glass={glass}
 						chip={effortChip}
 						onPress={onOpenEffort}
 						chooseHint="Choose the effort"
@@ -1171,40 +1280,7 @@ export const Composer = ({
 				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
 				testID={CONTROL.composerContext}
 			/>
-			{/* VISIBLE, not just announced (round 4 reviewer MAJOR): a queue the
-			 *  reader cannot see is a queue they cannot trust. The chip opens More,
-			 *  which lists the count and — where the surface can open the queue —
-			 *  the way in; it is never a disabled control. */}
-			{queuedCount > 0 ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={t("mobile.chrome.composer.queued", {
-						count: queuedCount,
-					})}
-					onPress={() => setContextOpen(true)}
-					/* Bounded width is the point (UX round 5, U2): an unconstrained
-					 *  label at 200 % text pushed the dismiss control past the 390 pt
-					 *  edge. The sentence stays on the accessibility label; the visible
-					 *  text falls back to the bare count when the type is large. */
-					style={{
-						minWidth: TOUCH_FLOOR,
-						/* The floor on BOTH axes: with only a width floor the chip
-						 *  shrank to its 17 pt line of text (U-01, every S5 cell
-						 *  with a queue), a target the row's 44 pt height hid. */
-						minHeight: TOUCH_FLOOR,
-						maxWidth: 160,
-						flexShrink: 1,
-					}}
-					className="items-center justify-center px-1"
-					testID={SURFACE.queuedMessageChip}
-				>
-					<Text className="text-meta text-ink-dim" numberOfLines={1}>
-						{dictationLargeText
-							? String(queuedCount)
-							: t("mobile.chrome.composer.queued", { count: queuedCount })}
-					</Text>
-				</Pressable>
-			) : null}
+			{queuedChip}
 			{keyboardVisible || focused ? (
 				<IconButton
 					accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
@@ -1216,7 +1292,7 @@ export const Composer = ({
 					testID={CONTROL.composerDismissKeyboard}
 				/>
 			) : null}
-		</View>
+		</ChromeGroup>
 	);
 
 	/* U3: short landscape used to collapse the strip to zero height, which took
@@ -1233,36 +1309,7 @@ export const Composer = ({
 				setMetaWidth(Math.ceil(event.nativeEvent.layout.width));
 			}}
 		>
-			{queuedCount > 0 ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={t("mobile.chrome.composer.queued", {
-						count: queuedCount,
-					})}
-					onPress={() => setContextOpen(true)}
-					/* Bounded width is the point (UX round 5, U2): an unconstrained
-					 *  label at 200 % text pushed the dismiss control past the 390 pt
-					 *  edge. The sentence stays on the accessibility label; the visible
-					 *  text falls back to the bare count when the type is large. */
-					style={{
-						minWidth: TOUCH_FLOOR,
-						/* The floor on BOTH axes: with only a width floor the chip
-						 *  shrank to its 17 pt line of text (U-01, every S5 cell
-						 *  with a queue), a target the row's 44 pt height hid. */
-						minHeight: TOUCH_FLOOR,
-						maxWidth: 160,
-						flexShrink: 1,
-					}}
-					className="items-center justify-center px-1"
-					testID={SURFACE.queuedMessageChip}
-				>
-					<Text className="text-meta text-ink-dim" numberOfLines={1}>
-						{dictationLargeText
-							? String(queuedCount)
-							: t("mobile.chrome.composer.queued", { count: queuedCount })}
-					</Text>
-				</Pressable>
-			) : null}
+			{queuedChip}
 			<IconButton
 				accessibilityLabel={
 					queuedCount > 0
@@ -1334,7 +1381,9 @@ export const Composer = ({
 					onPress={onStop}
 					testID={CONTROL.composerStop}
 				>
-					{/* A 44 pt `danger-wash` DISC, 2 pt from send (D-S5, the relay's stop):
+					{/* A 44 pt `danger-wash` DISC one `gap-1` step from send (D-S5, the
+					 *  relay's stop): 4 pt disc to disc on iOS, 8 pt on the 48 pt floor
+					 *  where each 44 pt disc is centred in its 48 pt target (U-42).
 					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
 					 *  The wash is quiet enough not to compete with the accent send disc. */}
 					<View className={cx(COMPOSER_DISC, "bg-danger-wash")}>
@@ -1503,8 +1552,16 @@ export const Composer = ({
 			 *  reader could not even reach the keyboard. In flow, the field is the
 			 *  frontmost thing in its own row and a tap lands on it. */}
 			<View
-				className="flex-row items-end"
-				style={{ minHeight: COMPOSER_FIELD_BOX }}
+				className={`flex-row ${composerFieldRowAlign(presentation.expanded)}`}
+				/* At rest the row is `composerRestRow` (48, H5): the on-scale 4 pt
+				 *  padding is balanced against it, so the pill stays 56, and the
+				 *  row is CENTRED so iOS's 44 pt children split the slack 2/2
+				 *  (R1). Open, the field's row is the 44 pt ruler of the 112 sum. */
+				style={{
+					minHeight: presentation.expanded
+						? COMPOSER_FIELD_BOX
+						: composerRestRow(TOUCH_FLOOR),
+				}}
 			>
 				{presentation.expanded ? null : attach}
 				<View className="min-w-0 flex-1">
@@ -1520,8 +1577,9 @@ export const Composer = ({
 								: composerCopy().placeholder
 						}
 						maxLines={compactSingle ? 1 : 6}
-						/* The field's own box is the dock's ruler: 44 pt in both rows,
-						 * so 56 = 6 + 44 + 6 and 112 = 12 + 44 + 4 + 44 + 8 hold
+						/* The field's own box is the dock's ruler: the 48 pt resting row
+						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
+						 * 112 = 12 + 44 + 4 + 44 + 8 hold
 						 * whatever the platform adds around the text box (a web
 						 * `<textarea>` measured 48 before `border-box`). Past the
 						 * budget the field scrolls itself and the dock stops growing. */
@@ -1580,9 +1638,12 @@ export const Composer = ({
 		</>
 	);
 
-	/* The dock is measured as one unit (context + shell + external clearance), so
-	 * the transcript reserves the full footprint. Opaque is the baseline until
-	 * composited native glass contrast is independently proved for this shape. */
+	/* The dock is measured as one unit — the context strip plus the shell — and
+	 * NOT its clearance: the 8 pt gap is the dock's own margin (`dockMotion`) and
+	 * the safe-area inset is the carrier's padding below, both outside the box
+	 * `onMeasure` reads, so a host that reserves the footprint adds them itself.
+	 * The fill is solid unless `glass` (design spec §12): see the shell's fill
+	 * layer below. */
 	const dock = (
 		<Animated.View
 			ref={rootRef}
@@ -1597,9 +1658,9 @@ export const Composer = ({
 			<Animated.View
 				style={[
 					{
-						backgroundColor: elevated,
+						backgroundColor: glass ? "transparent" : elevated,
 						/* The record's paddings, interpolated with the same progress
-						 * value as the shape: 6/6 at rest (6 + 44 + 6 = 56) and 12/8
+						 * value as the shape: 4/4 at rest (4 + 48 + 4 = 56, H5) and 12/8
 						 * expanded (12 + 44 + 4 + 44 + 8 = 112). `composerPaintedHeight`
 						 * is the one place those sums are written down. */
 						...shellBox,
@@ -1614,6 +1675,43 @@ export const Composer = ({
 					shellMotion,
 				]}
 			>
+				{/* THE GLASS FILL (design spec §12), routed through `ChromeSurface`
+				 *  like every other glass in the app. With glass on, the shell above
+				 *  paints NO colour (`transparent`) — a fill there would cover the
+				 *  material; solid keeps its `elevated` exactly as before. An absolutely positioned layer,
+				 *  painted first, rather than the shell itself: the shell's height and
+				 *  radius are ANIMATED (reanimated styles), which `ChromeSurface`'s
+				 *  static radii props cannot carry, so the shell keeps its geometry and
+				 *  its `overflow: hidden` clips this layer to the live shape — which
+				 *  holds only while the layer's radius never exceeds the clip's, hence
+				 *  `COMPOSER_GLASS_LAYER_RADIUS` rather than the target radius (R2). An
+				 *  absolute child adds nothing to layout, so a glass frame and the
+				 *  solid frame have a zero box diff; `pointerEvents="none"` because a
+				 *  layer across this band must never take the field's taps (round 4,
+				 *  U1/U2/U3). Solid draws no layer: the fallback is unchanged. */}
+				{glass ? (
+					<View
+						pointerEvents="none"
+						style={{
+							position: "absolute",
+							top: 0,
+							bottom: 0,
+							start: 0,
+							end: 0,
+						}}
+					>
+						<ChromeSurface
+							glass
+							radii={{
+								top: COMPOSER_GLASS_LAYER_RADIUS,
+								bottom: COMPOSER_GLASS_LAYER_RADIUS,
+							}}
+							style={{ flex: 1 }}
+						>
+							{null}
+						</ChromeSurface>
+					</View>
+				) : null}
 				<View onLayout={measureContent}>
 					<ScrollView
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
@@ -1632,11 +1730,11 @@ export const Composer = ({
 				 *  `borderWidth` on the shell. The shell's height is a border box, so a border
 				 *  there takes 1 pt off each edge of the interior: the 44 pt field paints 42,
 				 *  under the touch floor, and every measured seed lands 2 pt short of its end
-				 *  (54/110, 58/118 on the 48 floor). The RADII do not follow it down — that is
+				 *  (54/110, 54/118 on the 48 floor). The RADII do not follow it down — that is
 				 *  the part an earlier draft of this comment got wrong: `baseHeight` is
 				 *  `max(seededBase, measured)` and `seededBase` comes from the same pure
-				 *  `composerPaintedHeight`, so a short measured seed loses to the 56/60 floor
-				 *  and the pill stays R28/R30. Nothing in the suite renders a box either — the
+				 *  `composerPaintedHeight`, so a short measured seed loses to the 56 floor
+				 *  and the pill stays R28. Nothing in the suite renders a box either — the
 				 *  pins are arithmetic on constants — so this is a construction, not a
 				 *  measured guard: an absolute child contributes nothing to layout, so the
 				 *  shape, the hit targets and the 12pt text inset are unchanged and only the

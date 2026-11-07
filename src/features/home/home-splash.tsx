@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { ChevronRight } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	ActivityIndicator,
+	findNodeHandle,
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
+	TextInput,
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { focusLatch } from "@/features/home/hero-focus";
+import {
+	heroHeldInset,
+	heroMeasured,
+	heroTopInset,
+} from "@/features/home/hero-layout";
 import { startingLine, suggestionSlotFor } from "@/features/home/home-copy";
 import { t } from "@/i18n";
 import { ROLE, SURFACE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { TYPE_STEPS } from "@/ui/tokens.gen";
-import { buttonClasses, cx } from "@/ui/variants";
+import { CONTROL_HEIGHTS, TYPE_STEPS } from "@/ui/tokens.gen";
+import { cx } from "@/ui/variants";
 
 /**
  * The splash: what the home shows before there is anything to show.
@@ -56,24 +68,28 @@ export type HomeSplashProps = {
 	onConnect: () => void;
 	/** The first send is in flight: the splash yields to one line. */
 	starting: boolean;
+	/** Bump to move focus to the greeting (UX U5): the home asks after a
+	 *  Retry the reader pressed succeeds, because the alert that held focus
+	 *  unmounts. 0 / unchanged never moves anything. */
+	focusRequest?: number;
 };
 
 /** One suggestion row: the `quiet` variant's language at full width.
  *
  * The rows are not `Button`s because a Button sizes to its label and these are
- * full-width targets (the spec's "full-width ghost rows"); they borrow the
- * variant's own classes so the press feedback is the kit's, not a new one.
+ * full-width targets (the spec's "full-width ghost rows"): a 44 pt row, the
+ * label at the greeting's edge and a trailing chevron that says "this goes
+ * somewhere" (design spec §2).
  *
  * **No rule between rows** (user feedback, this batch). A hairline under each row
  * turned a stack of controls into a table: the divider is the desktop's list
  * grammar, not its suggestion grammar. The desktop's measured stack does exactly
  * what these rows do now — text at rest, a `bg-elevated` surface on the row under
- * the pointer — and the kit's `quiet` variant already paints the pressed surface
- * from the same token. The row stays full-bleed with its 44 pt floor, so the whole
+ * the pointer. The row stays full-bleed with its 44 pt floor, so the whole
  * width is still the target and no boundary is needed to find it.
  *
  * The one-line cap was calibrated at 100 % text scale. Large text instead gets
- * two centred lines, matching the tip's rule, so longer localized labels remain
+ * two left-aligned lines, so longer localized labels remain
  * readable rather than ending in an ellipsis. The minimum touch height stays a
  * floor: the row and its pressed surface grow with the wrapped label. */
 const SuggestionRow = ({
@@ -90,6 +106,7 @@ const SuggestionRow = ({
 	 *  by their label. */
 	testID?: string;
 }) => {
+	const chevronInk = useTokenColor("ink-dim");
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -99,41 +116,40 @@ const SuggestionRow = ({
 		>
 			{({ pressed }) => (
 				<View
+					/* LEFT-ALIGNED ROWS under a left-aligned greeting (design spec §2):
+					 *  two centred items under a left heading were the mixed rail the
+					 *  operator read as unfinished. The row's own 12 pt inset is pulled
+					 *  back by an equal negative margin (`-mx-3 px-3`), so the LABEL
+					 *  shares the greeting's 16 pt edge to +0 pt while the pressed
+					 *  surface still has room around it. `elevated` is the token the
+					 *  desktop's `hover:bg-elevated` uses, so one gesture means one
+					 *  thing on both clients; no rule between rows (a divider turned
+					 *  the stack into a table). */
 					className={cx(
-						buttonClasses("quiet", "md", { pressed }),
-						/* The pressed surface carries the row's edge feedback now that the rule
-						 * is gone: `elevated` is the token the desktop's `hover:bg-elevated`
-						 * uses, so one gesture means one thing on both clients. */
-						"w-full",
+						"-mx-3 min-h-11 flex-row items-center justify-between gap-2 rounded-sm px-3",
 						pressed && "bg-elevated",
 					)}
-					style={{ borderRadius: 8 }}
 				>
-					{/* A NAMED TYPE ROLE, not a bare colour class. A `<Text>` carrying only
-					 *  `text-ink-muted` inherits the stylesheet's fixed 14 px: it never reads a
-					 *  `--text-*` role, so it was the one string on the splash that ignored the
-					 *  reader's text size — measured by the capture at iphone-15-landscape, where
-					 *  the row's 14 px held at 200 % while every other role doubled (body 16→32,
-					 *  title 20→40), and the cell was reported UNREADY (median text 1.74x at
-					 *  200 %, needs ≥ 1.9x) because of it.
-					 *
-					 *  `body-sm` is the kit's role for a full-width row's label: the same row
-					 *  grammar this kit already uses for the panel's conversation rows, the past
-					 *  list's rows and the settings rows (`text-body-sm text-ink`), and it is the
-					 *  step the row already PAINTS (14 px / 400) — so the fix is scale-only and
-					 *  the row's 100 % rendering is untouched. `label` (15 px / 600) is the role
-					 *  for a control's own label (Button, Segmented) and would restyle a row that
-					 *  reads as copy, not as a caption; a bare colour class is the defect. */}
+					{/* A NAMED TYPE ROLE, never a bare colour class (a bare class held
+					 *  14 px at 200 % and failed the capture's text-scale check). `body`
+					 *  (16, `ink-muted`, 8.60:1) is the spec's step for these rows: they
+					 *  are the hero's actions, and `body-sm` under a `display` greeting
+					 *  read as a caption. At large text a label may wrap to two lines,
+					 *  still left-aligned, so a long localization is read whole. */}
 					<Text
 						className={cx(
-							"text-body-sm",
+							"min-w-0 flex-1 text-body",
 							pressed ? "text-ink" : "text-ink-muted",
-							largeText && "text-center",
 						)}
 						numberOfLines={largeText ? 2 : 1}
 					>
 						{label}
 					</Text>
+					<ChevronRight
+						size={CONTROL_HEIGHTS.md.icon}
+						color={chevronInk}
+						aria-hidden
+					/>
 				</View>
 			)}
 		</Pressable>
@@ -172,6 +188,7 @@ export const HomeSplash = ({
 	connected,
 	onPick,
 	starting,
+	focusRequest = 0,
 }: HomeSplashProps) => {
 	const { width } = useWindowDimensions();
 	const { effectiveScale } = useTextScale();
@@ -180,30 +197,106 @@ export const HomeSplash = ({
 		slot.kind === "suggestions" && !draft.length && !editing
 			? slot.rows.slice(0, 2)
 			: [];
+	/* The two measurements the centring needs: the band (this region, which ends
+	 *  at the composer STACK's top — see `hero-layout.ts`) and the hero block's
+	 *  own height. Both re-measure on rotation, text scale, keyboard and notice. */
+	const [band, setBand] = useState(0);
+	const [block, setBlock] = useState(0);
+	/* `display` while the home IS the page: its one sentence is the page's
+	 *  headline and 20 pt under-set it (spec §2). Once there is a draft or a send
+	 *  in flight, it is a heading over other content: `title`. NOT on focus alone
+	 *  (UX U1): tapping into an empty field snapped the greeting 28 → 20 px and
+	 *  52 pt down before a key was typed. */
+	const headline = !draft.length && !starting;
+	/* Focus on an empty field still drops the rows, so the inset is HELD at its
+	 *  resting value (`heroHeldInset`) rather than re-centring the shorter
+	 *  block. `restInset` is the last inset painted outside that state. */
+	const live = heroTopInset(band, block);
+	const holding = Boolean(editing) && !draft.length && !starting;
+	const restInset = useRef(live);
+	if (!holding) restInset.current = live;
+	const greetingRef = useRef<Text | null>(null);
+	/* Seeded with the value this splash MOUNTED with (review M1): Home's counter
+	 *  never resets and the splash remounts on New chat and on a cleared
+	 *  recovery state, so the mount-time value is an old request, not a new one. */
+	const latch = useRef(focusLatch(focusRequest));
+	useEffect(() => {
+		if (!latch.current.take(focusRequest)) return;
+		const greeting = greetingRef.current;
+		if (!greeting) return;
+		/* The web moves keyboard focus (`tabIndex={-1}` makes the line
+		 *  addressable, never a Tab stop); a phone moves the screen reader's —
+		 *  the settings screen's rule after its own retry. */
+		if (Platform.OS === "web") {
+			/* Only when focus was really LOST (the Retry unmounted, so it fell to
+			 *  the body): a reader who moved on to the composer during a slow
+			 *  retry keeps their place. */
+			const held = document.activeElement;
+			if (held && held !== document.body) return;
+			(greeting as unknown as HTMLElement).focus({ preventScroll: true });
+		} else {
+			/* The native form of the same "moved on" rule (review m1): a reader
+			 *  typing or dictating in the composer during a slow retry keeps the
+			 *  screen reader's place. */
+			if (TextInput.State.currentlyFocusedInput() != null) return;
+			const handle = findNodeHandle(greeting);
+			if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+		}
+	}, [focusRequest]);
 	return (
-		<View className="flex-1" testID={SURFACE.homeSplash}>
+		<View
+			className="flex-1"
+			testID={SURFACE.homeSplash}
+			onLayout={(event) => setBand(Math.round(event.nativeEvent.layout.height))}
+		>
 			<ScrollView
-				contentContainerStyle={{ padding: 16, paddingTop: 24 }}
+				contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
 				keyboardShouldPersistTaps="handled"
 			>
-				<Text
-					className="text-title text-ink"
-					testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
+				{/* The centring offset is a SPACER'S HEIGHT, not a padding (QA
+				 *  Q-R2-3). It is computed from two measurements, so it lands on
+				 *  216/208/156 pt, which are not `space.scale` steps. U-42 judges
+				 *  padding, margin and gap as spacing tokens, and this value is not
+				 *  a token. Bending it to a scale step would move the hero off
+				 *  centre. As a height it is laid out the same way and is not
+				 *  measured as spacing. */}
+				<View
+					style={{
+						height: holding ? heroHeldInset(live, restInset.current) : live,
+					}}
+				/>
+				<View
+					onLayout={(event) =>
+						setBlock(Math.ceil(event.nativeEvent.layout.height))
+					}
+					/* Laid out (so it is measured) but unpainted until its centred
+					 *  place is known: no top-anchored first frame (R4/D4). */
+					style={{ opacity: heroMeasured(band, block) ? 1 : 0 }}
 				>
-					{starting ? startingLine() : t("mobile.chrome.home.greeting")}
-				</Text>
-				{rows.length ? (
-					<View testID={SURFACE.homeSuggestions}>
-						{rows.map((label) => (
-							<SuggestionRow
-								key={label}
-								label={label}
-								largeText={effectiveScale > LARGE_TEXT_SCALE}
-								onPress={() => onPick(label)}
-							/>
-						))}
-					</View>
-				) : null}
+					<Text
+						ref={greetingRef}
+						/* RN's Text types omit `tabIndex`; RN-web honours it. Spread, the
+						 *  `Heading` component's idiom, so web focus can be PLACED here. */
+						{...{ tabIndex: -1 }}
+						className={cx(headline ? "text-display" : "text-title", "text-ink")}
+						testID={starting ? SURFACE.homeStarting : SURFACE.homeGreeting}
+					>
+						{starting ? startingLine() : t("mobile.chrome.home.greeting")}
+					</Text>
+					{rows.length ? (
+						/* `space.6` under the greeting, `space.2` between the rows. */
+						<View className="mt-6 gap-2" testID={SURFACE.homeSuggestions}>
+							{rows.map((label) => (
+								<SuggestionRow
+									key={label}
+									label={label}
+									largeText={effectiveScale > LARGE_TEXT_SCALE}
+									onPress={() => onPick(label)}
+								/>
+							))}
+						</View>
+					) : null}
+				</View>
 			</ScrollView>
 		</View>
 	);
@@ -247,7 +340,16 @@ export const HomeRecovery = ({
 		<View className="px-4 pt-6 pb-3 gap-2" testID={SURFACE.homeRecovery}>
 			<View className="flex-row items-center gap-2">
 				{kind === "restoring" ? <ActivityIndicator /> : null}
-				<Text className="text-title text-ink" accessibilityRole="header">
+				{/* The title SHRINKS and WRAPS beside the spinner (`min-w-0 flex-1`).
+				 *  Without it "Connecting to {host}…" took its one-line width and a long
+				 *  host ran the document to 353 px in a 320 px viewport at 200 % text
+				 *  (audit U-06, S15/loading, "…847" cut at the edge). Wrapping, not an
+				 *  ellipsis: the host name is the fact the line exists to state, and
+				 *  its tail is often the identifying part (a port). */}
+				<Text
+					className="min-w-0 flex-1 text-title text-ink"
+					accessibilityRole="header"
+				>
 					{title}
 				</Text>
 			</View>

@@ -1405,6 +1405,7 @@ export default function Session() {
 					</View>
 
 					<Composer
+						glass={chromeGlass}
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}

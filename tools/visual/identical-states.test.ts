@@ -377,3 +377,44 @@ describe("S5 at iphone-15-landscape / 200 %", () => {
 		expect(result.undeclared[0]).toContain("'S5/scroll'");
 	});
 });
+
+/**
+ * PR #181, QA Q-R2-2: at iphone-se / 200 % the two rail cells settle to the same
+ * transcript (the rail has faded and carries no text), so CI's run 42347504435 read
+ * them as a collapse. Driven through the REAL ledger with the run's own shas and
+ * digest, so dropping the declaration reds this test the way it red the capture.
+ */
+describe("S5 rail-building / rail-deep at iphone-se / 200 %", () => {
+	const pair = (sha: string, rail: Partial<FrameRecord> = {}) => [
+		cell("S5", "rail-building", sha, "0d7188b6d4"),
+		cell("S5", "rail-deep", sha, "0d7188b6d4", rail),
+	];
+
+	it("is a declared one-view coincidence in both themes, not a collapse", () => {
+		for (const sha of ["0666d9744fd77250", "0a1cf2802e1b0784"]) {
+			const result = findIdenticalFrames(pair(sha));
+			expect(result.collapses).toEqual([]);
+			expect(result.undeclared).toEqual([]);
+			expect(result.coincidences).toHaveLength(1);
+			expect(result.coincidences[0]).toContain(
+				"S5/rail-building = S5/rail-deep",
+			);
+		}
+	});
+
+	it("is still a collapse when either cell misses its own marker", () => {
+		const result = findIdenticalFrames(
+			pair("0666d9744fd77250", { ready: false }),
+		);
+		expect(result.collapses).toHaveLength(1);
+		expect(result.coincidences).toEqual([]);
+	});
+
+	it("does not stretch to the ready rail beside them", () => {
+		const result = findIdenticalFrames([
+			...pair("0666d9744fd77250"),
+			cell("S5", "rail", "0666d9744fd77250", "0d7188b6d4"),
+		]);
+		expect(result.collapses).toHaveLength(1);
+	});
+});

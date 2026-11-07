@@ -51,8 +51,8 @@ describe("the home header at large text", () => {
 		/* Since M2b the slot holds `HeaderComputerChip`, so the floor is asserted
 		 *  on the chip's own Pressable — slicing home.tsx from the testID would now
 		 *  run into the BELL's markup and pass on the bell's floor. */
-		expect(SOURCE).toContain(
-			"<HeaderComputerChip testID={CONTROL.computersButton} />",
+		expect(SOURCE).toMatch(
+			/<HeaderComputerChip\s+testID=\{CONTROL\.computersButton\}/,
 		);
 		const from = CHIP.indexOf("export function HeaderComputerChip");
 		const switcher = CHIP.slice(from, CHIP.indexOf("<Text", from));
