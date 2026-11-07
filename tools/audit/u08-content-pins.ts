@@ -678,7 +678,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
 	 * home-defaults changes described just above. Neither side's tree shipped alone
 	 * after this merge, so neither side's previous digest is kept. */
-	src: "31297e183be86281c03be3716b9ebb7f29aad7cfc2c62c7b238351b38f9d6432",
+	/* Re-printed 2026-11-06 for the U-42/U-01 spacing fix (#163 regressions): the
+	 * composer's disc seams and the sidebar destinations' icon-to-label step move
+	 * from `gap-0.5` (2 pt, off the 4 pt scale) to `gap-1`, the dock's bottom inset
+	 * moves from its margin to a carrier's padding (same painted position), and the
+	 * queued-message chip gains a `TOUCH_FLOOR` height. U-08's scene is the session
+	 * screen, so the composer IS in it: this is source admission only — the 2 pt
+	 * seam shift is not claimed geometry-neutral here; `u08-geometry-proof` measures
+	 * that. No token, catalogue key or `app` change; no other pin moved. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main (PR #176,
+	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
+	 * and the digest covers both lines of history. Neither side's tree ships alone after
+	 * this merge, so neither previous digest is kept. */
+	src: "f244908f7d74eb41013642cbba4c41894a98c12b18ab856d3eb3c0d158f2fdf8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
