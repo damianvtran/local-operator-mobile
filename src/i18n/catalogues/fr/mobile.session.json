@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "Lecture impossible : {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "Ouvrir {agent}",
-	"mobile.session.subagent_open_short": "ouvrir"
+	"mobile.session.subagent_open_short": "ouvrir",
+	"mobile.session.pending_echo.sending": "envoi…",
+	"mobile.session.pending_echo.sent": "envoyé",
+	"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
+	"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
+	"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}"
 }

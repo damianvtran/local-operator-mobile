@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
 	"mobile.session.subagent_open": "{agent} کھولیں",
-	"mobile.session.subagent_open_short": "کھولیں"
+	"mobile.session.subagent_open_short": "کھولیں",
+	"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
+	"mobile.session.pending_echo.sent": "بھیج دیا گیا",
+	"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
+	"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
+	"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}"
 }

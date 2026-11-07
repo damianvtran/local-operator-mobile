@@ -88,6 +88,12 @@ export interface SendCommandInput {
 	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
 	input_mode?: InputMode;
 	input_path?: string;
+	/** Called once the envelope is HELD and before the request goes out — the
+	 *  first moment the `command_id` exists. The composer paints its pending row
+	 *  here (`features/session/pending-echo.ts`), keyed by that id, because the id
+	 *  is also the id the session writes the real row under. A joiner of an
+	 *  already-running send is not called: the first caller painted it. */
+	onHeld?: (envelope: ContinuationEnvelope) => void;
 }
 
 /** One send's outcome as a VALUE rather than a rejection. The promise carrying it
@@ -293,6 +299,7 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 		);
 	}
 	const { envelope } = held;
+	input.onHeld?.(envelope);
 	try {
 		const ack = await client.command(sessionId, {
 			op: envelope.op,

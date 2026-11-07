@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "Abrir {agent}",
-	"mobile.session.subagent_open_short": "abrir"
+	"mobile.session.subagent_open_short": "abrir",
+	"mobile.session.pending_echo.sending": "enviando…",
+	"mobile.session.pending_echo.sent": "enviado",
+	"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
+	"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
+	"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}"
 }

@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "Открыть {agent}",
-	"mobile.session.subagent_open_short": "открыть"
+	"mobile.session.subagent_open_short": "открыть",
+	"mobile.session.pending_echo.sending": "отправка…",
+	"mobile.session.pending_echo.sent": "отправлено",
+	"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
+	"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
+	"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}"
 }

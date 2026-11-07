@@ -70,5 +70,25 @@
 	"mobile.session.subagent_open_short": {
 		"role": "button",
 		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
+	},
+	"mobile.session.pending_echo.sending": {
+		"role": "meta",
+		"note": "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again."
+	},
+	"mobile.session.pending_echo.sent": {
+		"role": "meta",
+		"note": "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop."
+	},
+	"mobile.session.pending_echo.queued_step": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer."
+	},
+	"mobile.session.pending_echo.queued_next": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.images": {
+		"role": "meta",
+		"note": "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop."
 	}
 }

@@ -480,7 +480,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `app` (the session screen hands the composer its glass decision) and `src`
 	 * (header chip, home hero, inset notices, composer H5 padding and glass
 	 * wiring) move; tokens, fonts and public do not. */
-	app: "43463cf69daad1e9d3b79a2eb5d13733f4d487e01ef41036a13cf8052d6a3161",
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree: the session screen hands the transcript list its pending-echo rows
+	 * (a new `pending` prop, painted ahead of the unchanged notice footer) and
+	 * drops its empty state while a first message is in flight. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	app: "0aee67a859b1a38dbd77a01ee37a3f8d74654bb4410a69ef35bda9e43b8b5d55",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -804,7 +809,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree. Only `app` and `src` move: the pending-echo store, row and tests, the
+	 * composer's `onHeld` paint/unpaint, the send path's `onHeld` hook, the
+	 * transcript list's `pending` slot in its footer host, one
+	 * identifier family and five i18n keys in every shipped locale. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "e011c86ced6afca16842408d152ea9e063cdd1e7adba38a55a2eb9b8d2f41888",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

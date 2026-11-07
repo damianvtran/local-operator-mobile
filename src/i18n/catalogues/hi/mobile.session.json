@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "{agent} खोलें",
-	"mobile.session.subagent_open_short": "खोलें"
+	"mobile.session.subagent_open_short": "खोलें",
+	"mobile.session.pending_echo.sending": "भेजा जा रहा है…",
+	"mobile.session.pending_echo.sent": "भेजा गया",
+	"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
+	"mobile.session.pending_echo.queued_next": "कतार में — आपके अगले संदेश के साथ भेजा जाएगा",
+	"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}"
 }

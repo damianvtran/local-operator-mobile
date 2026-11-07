@@ -287,6 +287,11 @@ export type CatalogueKey =
 	| "mobile.session.highlights.withheld_reasons_join"
 	| "mobile.session.highlights.withheld_sensitive"
 	| "mobile.session.highlights.withheld_too_large"
+	| "mobile.session.pending_echo.images"
+	| "mobile.session.pending_echo.queued_next"
+	| "mobile.session.pending_echo.queued_step"
+	| "mobile.session.pending_echo.sending"
+	| "mobile.session.pending_echo.sent"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open"
 	| "mobile.session.subagent_open_short"
@@ -584,6 +589,10 @@ export type NoParamKey =
 	| "mobile.session.highlights.withheld_outside"
 	| "mobile.session.highlights.withheld_sensitive"
 	| "mobile.session.highlights.withheld_too_large"
+	| "mobile.session.pending_echo.queued_next"
+	| "mobile.session.pending_echo.queued_step"
+	| "mobile.session.pending_echo.sending"
+	| "mobile.session.pending_echo.sent"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
@@ -910,6 +919,11 @@ export type MessageParams = {
 	"mobile.session.highlights.withheld_reasons_join": { first: string | number; second: string | number };
 	"mobile.session.highlights.withheld_sensitive": NoParams;
 	"mobile.session.highlights.withheld_too_large": NoParams;
+	"mobile.session.pending_echo.images": { count: number };
+	"mobile.session.pending_echo.queued_next": NoParams;
+	"mobile.session.pending_echo.queued_step": NoParams;
+	"mobile.session.pending_echo.sending": NoParams;
+	"mobile.session.pending_echo.sent": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
 	"mobile.session.subagent_open_short": NoParams;
@@ -1262,6 +1276,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.highlights.withheld_sensitive": "sensitive file",
 	"mobile.session.highlights.withheld_too_large": "too large to preview",
+	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
+	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
+	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
+	"mobile.session.pending_echo.sending": "sending…",
+	"mobile.session.pending_echo.sent": "sent",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
@@ -1599,6 +1618,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.highlights.withheld_reasons_join": { role: "meta", note: "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders." },
 	"mobile.session.highlights.withheld_sensitive": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop." },
 	"mobile.session.highlights.withheld_too_large": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop." },
+	"mobile.session.pending_echo.images": { role: "meta", note: "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop." },
+	"mobile.session.pending_echo.queued_next": { role: "meta", note: "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop." },
+	"mobile.session.pending_echo.queued_step": { role: "meta", note: "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer." },
+	"mobile.session.pending_echo.sending": { role: "meta", note: "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again." },
+	"mobile.session.pending_echo.sent": { role: "meta", note: "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
 	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
@@ -1950,6 +1974,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "archivo confidencial",
 		"mobile.session.highlights.withheld_too_large": "demasiado grande para previsualizar",
+		"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
+		"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
+		"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
+		"mobile.session.pending_echo.sending": "enviando…",
+		"mobile.session.pending_echo.sent": "enviado",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent_open": "Abrir {agent}",
 		"mobile.session.subagent_open_short": "abrir",
@@ -2285,6 +2314,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "fichier sensible",
 		"mobile.session.highlights.withheld_too_large": "trop volumineux pour l’aperçu",
+		"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
+		"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
+		"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
+		"mobile.session.pending_echo.sending": "envoi…",
+		"mobile.session.pending_echo.sent": "envoyé",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
 		"mobile.session.subagent_open_short": "ouvrir",
@@ -2620,6 +2654,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "संवेदनशील फ़ाइल",
 		"mobile.session.highlights.withheld_too_large": "पूर्वावलोकन के लिए बहुत बड़ी",
+		"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}",
+		"mobile.session.pending_echo.queued_next": "कतार में — आपके अगले संदेश के साथ भेजा जाएगा",
+		"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
+		"mobile.session.pending_echo.sending": "भेजा जा रहा है…",
+		"mobile.session.pending_echo.sent": "भेजा गया",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent_open": "{agent} खोलें",
 		"mobile.session.subagent_open_short": "खोलें",
@@ -2955,6 +2994,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "конфиденциальный файл",
 		"mobile.session.highlights.withheld_too_large": "слишком большой для просмотра",
+		"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
+		"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
+		"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
+		"mobile.session.pending_echo.sending": "отправка…",
+		"mobile.session.pending_echo.sent": "отправлено",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent_open": "Открыть {agent}",
 		"mobile.session.subagent_open_short": "открыть",
@@ -3290,6 +3334,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
 		"mobile.session.highlights.withheld_sensitive": "حساس فائل",
 		"mobile.session.highlights.withheld_too_large": "پیش نظارہ کے لیے بہت بڑی",
+		"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
+		"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
+		"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
+		"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
+		"mobile.session.pending_echo.sent": "بھیج دیا گیا",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent_open": "{agent} کھولیں",
 		"mobile.session.subagent_open_short": "کھولیں",
@@ -3625,6 +3674,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 		"mobile.session.highlights.withheld_sensitive": "tệp nhạy cảm",
 		"mobile.session.highlights.withheld_too_large": "quá lớn để xem trước",
+		"mobile.session.pending_echo.images": "{count, plural, other {Đã đính kèm # hình ảnh}}",
+		"mobile.session.pending_echo.queued_next": "đang chờ — sẽ gửi cùng tin nhắn tiếp theo của bạn",
+		"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
+		"mobile.session.pending_echo.sending": "đang gửi…",
+		"mobile.session.pending_echo.sent": "đã gửi",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent_open": "Mở {agent}",
 		"mobile.session.subagent_open_short": "mở",
@@ -3960,6 +4014,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.highlights.withheld_reasons_join": "{first}、{second}",
 		"mobile.session.highlights.withheld_sensitive": "敏感文件",
 		"mobile.session.highlights.withheld_too_large": "太大，无法预览",
+		"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
+		"mobile.session.pending_echo.queued_next": "已排队 — 将随你的下一条消息发送",
+		"mobile.session.pending_echo.queued_step": "已排队 — 此步骤完成后发送",
+		"mobile.session.pending_echo.sending": "正在发送…",
+		"mobile.session.pending_echo.sent": "已发送",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent_open": "打开{agent}",
 		"mobile.session.subagent_open_short": "打开",

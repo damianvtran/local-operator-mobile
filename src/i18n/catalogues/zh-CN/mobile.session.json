@@ -16,5 +16,10 @@
 	"mobile.session.highlights.sound_refused": "无法播放：{reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}、{second}",
 	"mobile.session.subagent_open": "打开{agent}",
-	"mobile.session.subagent_open_short": "打开"
+	"mobile.session.subagent_open_short": "打开",
+	"mobile.session.pending_echo.sending": "正在发送…",
+	"mobile.session.pending_echo.sent": "已发送",
+	"mobile.session.pending_echo.queued_step": "已排队 — 此步骤完成后发送",
+	"mobile.session.pending_echo.queued_next": "已排队 — 将随你的下一条消息发送",
+	"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}"
 }

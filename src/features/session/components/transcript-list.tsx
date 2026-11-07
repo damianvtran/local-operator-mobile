@@ -123,6 +123,12 @@ export type TranscriptListProps = {
 	/** Complete status/recovery content after the actual rows. An element, not a
 	 * component factory: changing notice props must not remount the list or input. */
 	footer?: React.ReactElement | null;
+	/** The pending rows for what the reader just sent (`pending-echo.ts`),
+	 *  painted after the last real row and BEFORE the status footer: they are
+	 *  the transcript's next rows, not a notice about it. Separate from `footer`
+	 *  so the footer stays the notice alone, and outside `data` so a send leaves
+	 *  every memoised row untouched. An element so the screen can memoise it. */
+	pending?: React.ReactElement | null;
 	/** The entry id whose BOTTOM the ack gate watches — the completion
 	 *  attention's `anchor_id` (ADR 0006 §3.1). `null` when nothing is being
 	 *  watched. */
@@ -250,6 +256,7 @@ export const TranscriptList = ({
 	empty,
 	header,
 	footer,
+	pending,
 	anchorId = null,
 	onAnchorVisible,
 	highlightId = null,
@@ -1292,7 +1299,21 @@ export const TranscriptList = ({
 		),
 		[header, sessionId],
 	);
-	const listFooter = useMemo(() => <View>{footer}</View>, [footer]);
+	/* With nothing pending the host is exactly the notice, as before. The
+	 *  notice remounts when the first echo appears; `ConnectionBanner` is
+	 *  stateless, so that costs nothing visible. */
+	const listFooter = useMemo(
+		() =>
+			pending ? (
+				<View>
+					{pending}
+					{footer}
+				</View>
+			) : (
+				<View>{footer}</View>
+			),
+		[pending, footer],
+	);
 
 	return (
 		<View className="flex-1 min-h-0">

@@ -16,5 +16,10 @@
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
 	"mobile.session.chip.model_default": "Default",
-	"mobile.session.chip.model_unknown": "Unknown"
+	"mobile.session.chip.model_unknown": "Unknown",
+	"mobile.session.pending_echo.sending": "sending…",
+	"mobile.session.pending_echo.sent": "sent",
+	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
+	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
+	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}"
 }

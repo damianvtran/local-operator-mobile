@@ -33,6 +33,13 @@ import {
 	writeDraft,
 } from "@/features/session/device-storage";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
+import {
+	type EchoDraft,
+	markPendingEchoAccepted,
+	type PaintedEcho,
+	paintPendingEcho,
+	unpaintPendingEcho,
+} from "@/features/session/pending-echo";
 import type { SessionRelaySource } from "@/features/session/relay-source";
 import { sendSlashCommand } from "@/features/session/send-slash";
 import {
@@ -308,6 +315,29 @@ export const useComposer = (input: {
 		[commitDraft],
 	);
 
+	/* ------------------------------------------------------- the pending echo */
+
+	/** The composer as `pending-echo.ts`'s paint/unpaint helpers see it: the send
+	 *  moves the draft into the transcript's pending row, and a failure gives it
+	 *  back. Refs, so a read after the await sees what the reader typed since. */
+	const echoDraft = useMemo<EchoDraft>(
+		() => ({
+			read: () => ({
+				text: draftRef.current.trim(),
+				imageCount: imagesRef.current.length,
+			}),
+			clear: () => {
+				setDraft("");
+				setImages([]);
+			},
+			restore: (text, restored) => {
+				setDraft(text);
+				setImages(restored);
+			},
+		}),
+		[setDraft, setImages],
+	);
+
 	/* The voice mic. The transcript is APPENDED (never a clobber), the returned
 	 * `path` is recorded as the dictated span's provenance, and the field is
 	 * deliberately NOT focused — a programmatic focus pops the iOS keyboard over
@@ -355,6 +385,10 @@ export const useComposer = (input: {
 			cancelDictationForSend();
 			inFlight.current = true;
 			const trimmed = draftRef.current.trim();
+			/* The composer's own image objects, kept to hand back if the send fails
+			 * after the echo moved them out (`unpaintPendingEcho`). */
+			const draftImages = imagesRef.current;
+			let painted: PaintedEcho | null = null;
 			const payloadImages =
 				imagesRef.current.length > 0
 					? imagesRef.current.map((image) => ({ ...image }))
@@ -395,11 +429,22 @@ export const useComposer = (input: {
 					op,
 					text: trimmed,
 					...(payloadImages ? { images: payloadImages } : {}),
+					onHeld: (envelope) => {
+						painted = paintPendingEcho(
+							sessionId,
+							envelope,
+							{ text: trimmed, images: payloadImages },
+							echoDraft,
+						);
+					},
 					/* The silent annotation, off the draft window's provenance. A freshly
 					 * typed message carries `typed` with no path; a dictated one carries
 					 * `dictated` and the path the response returned; both carries `mixed`. */
 					...annotationForSend(provenanceRef.current),
 				});
+				/* The receipt is the session's admission: the row stops saying it is
+				 * still going out. A no-op when the transcript already answered it. */
+				markPendingEchoAccepted(sessionId, result.commandId);
 				setRetained(null);
 				if (result.reusedPreviousDraft) {
 					/* An EARLIER unresolved instruction was replayed under its own UUID: the
@@ -422,6 +467,10 @@ export const useComposer = (input: {
 					 * rather than being claimed as a live flow. */
 					setNotice(composerCopy().reusedDraftNotice);
 				} else if (
+					// An EMPTY composer is covered by any acknowledgement: the send moved
+					// the draft into its pending row, so there is nothing left for the ack
+					// to be behind (`paintPendingEcho`).
+					(draftRef.current.trim() === "" && imagesRef.current.length === 0) ||
 					// Only clear the visible draft when the acknowledged bytes ARE the
 					// visible draft. If the reader edited while the request was out, the ack
 					// proves the OLD instruction was delivered and says nothing about what is
@@ -444,6 +493,12 @@ export const useComposer = (input: {
 				}
 				onSent?.();
 			} catch (failure) {
+				unpaintPendingEcho(
+					sessionId,
+					painted,
+					{ text: trimmed, images: draftImages },
+					echoDraft,
+				);
 				/* The envelope's disposition is already settled by `sendPersistedCommand`,
 				 * which reads the relay error layer's own `envelope` directive — so this
 				 * handler presents and does not decide. Settling again here would be a second
@@ -488,6 +543,7 @@ export const useComposer = (input: {
 			streaming,
 			ended,
 			cancelDictationForSend,
+			echoDraft,
 		],
 	);
 
@@ -516,6 +572,8 @@ export const useComposer = (input: {
 			}
 			setSending(true);
 			setError(null);
+			const retryImages = imagesRef.current;
+			let painted: PaintedEcho | null = null;
 			try {
 				/* The retry IS the replay: `holdNew` returns the stored envelope for this
 				 * session, so this sends the bytes and the UUID it was minted with. */
@@ -526,8 +584,19 @@ export const useComposer = (input: {
 					op: held.op,
 					text: held.text,
 					...(held.images ? { images: held.images } : {}),
+					/* A retry paints its row too, under the SAME id — the replayed
+					 * envelope's — and moves the draft only when the visible draft is
+					 * that envelope's body (the failed send handed it back untouched). */
+					onHeld: (envelope) => {
+						painted = paintPendingEcho(
+							sessionId,
+							envelope,
+							{ text: draftRef.current.trim(), images: retryImages },
+							echoDraft,
+						);
+					},
 				});
-				void result;
+				markPendingEchoAccepted(sessionId, result.commandId);
 				setRetained(null);
 				/* The replayed instruction is the ENVELOPE's. When the visible draft is
 				 * BYTE-IDENTICAL to it, the draft IS what was just delivered — the
@@ -537,6 +606,7 @@ export const useComposer = (input: {
 				 * round 1, U7). Same comparison the send's acknowledgement uses; an
 				 * edited draft still stays, as the next command. */
 				if (
+					(draftRef.current.trim() === "" && imagesRef.current.length === 0) ||
 					acknowledgedCurrentDraft(
 						{
 							text: held.text,
@@ -554,6 +624,12 @@ export const useComposer = (input: {
 					setNotice(composerCopy().retryAckNotice);
 				}
 			} catch (failure) {
+				unpaintPendingEcho(
+					sessionId,
+					painted,
+					{ text: held.text, images: retryImages },
+					echoDraft,
+				);
 				if (isRelayError(failure)) {
 					const receipt = receiptForError(failure);
 					setRetained(
@@ -584,6 +660,7 @@ export const useComposer = (input: {
 		setDraft,
 		setImages,
 		ended,
+		echoDraft,
 	]);
 
 	/**

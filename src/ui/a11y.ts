@@ -1082,6 +1082,9 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"command-",
 	/* The session view's own parameterised identifiers, adopted with its block above. */
 	"transcript-row-",
+	/* The pending row for a sent instruction, keyed by its envelope's
+	 *  command_id (`features/session/pending-echo.ts`). */
+	"pending-echo-",
 	"turn-bar-",
 	"quiet-group-",
 	"completion-anchor-",
@@ -1997,6 +2000,12 @@ export const transcriptRowId = (rowId: string): string =>
  *  (`turn-condensing.ts`), so a bar is addressable by the message that started
  *  the turn — the same identity the reader's expansion and the latch use. */
 export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
+
+/** The pending row for an in-flight instruction, keyed by the retry envelope's
+ *  `command_id` — the same id the session's real row will carry, so a flow can
+ *  assert the hand-over from `pending-echo-<id>` to `transcript-row-<id>`. */
+export const pendingEchoId = (commandId: string): string =>
+	`pending-echo-${commandId}`;
 
 /** One quiet group's bar. The key is the group's own `qg:<first row id>`
  *  (`turn-condensing.ts`), so a group is addressable by the receipt that
