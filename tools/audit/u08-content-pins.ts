@@ -82,8 +82,14 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
 		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
+	/* Re-pinned for PR #175: `skipped` is now a terminal affordance answer, so
+	 *  a conditional opener whose control is already on the page stops polling its
+	 *  settled answer for the full `waitMs`. The proof still drives the SAME presses
+	 *  and reads the SAME outcomes — `skipped` was already a pass in both the
+	 *  capture's verdict and `outcomeFailed` — so what changed is how long the
+	 *  instrument waits, not what it measures. Derived with `--print`. */
 	"tools/lib/affordance.ts":
-		"1bec46754c3f696fde274b16b646cc24ea5314461d97fd694309ffd6a11280c4",
+		"da7441e18f3878e411b8e5e096f2fe387347dae00272256a64577a4ce96a5de3",
 	"tools/lib/args.ts":
 		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
 	"tools/lib/cdp.ts":
