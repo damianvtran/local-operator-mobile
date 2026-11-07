@@ -132,7 +132,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 18,
+		expected: 21, // +3: the ended-session chip hints (TestFlight 578)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -224,8 +224,9 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182). */
-		expect(total).toBe(333);
+		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
+		 *  + the ended-session chip hints' 3 (fix/session-chips-rail). */
+		expect(total).toBe(336);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

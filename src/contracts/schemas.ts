@@ -1071,6 +1071,11 @@ export const sessionSummarySchema = z.looseObject({
 	 */
 	cwd: z.string().default(""),
 	model_label: z.string().default(""),
+	/** The rung the conversation last ran with. NOT SENT by any relay yet: the
+	 *  registry record has no effort field, so an ended session's effort is
+	 *  unknown until local-operator adds it (TestFlight 578). Optional, never
+	 *  defaulted: `""` would claim a rungless model, absence claims nothing. */
+	effort: z.string().optional(),
 	streaming: z.boolean().default(false),
 	needs_attention: z.boolean().default(false),
 	unseen: z.boolean().default(false),

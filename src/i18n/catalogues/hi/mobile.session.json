@@ -16,5 +16,8 @@
 	"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "{agent} खोलें",
-	"mobile.session.subagent_open_short": "खोलें"
+	"mobile.session.subagent_open_short": "खोलें",
+	"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
+	"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
+	"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है"
 }
