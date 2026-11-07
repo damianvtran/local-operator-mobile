@@ -26,13 +26,14 @@ const radient = (
 	tunnelId: string,
 	lastUsedAt: number,
 	hidden = false,
+	account: string | null = null,
 ): SavedComputer => ({
 	id: `saved-${tunnelId}`,
 	transport: "radient",
 	tunnelId,
 	hostname: `${tunnelId}.example.invalid`,
 	name: tunnelId,
-	account: null,
+	account,
 	addedAt: 1,
 	lastUsedAt,
 	hidden,
@@ -138,11 +139,36 @@ describe("coldStartComputer", () => {
 		).toEqual({ kind: "last", computer: computer("t2") });
 	});
 
-	it("does not pick a Radient computer over a more recent own tunnel unless only one is listed", () => {
+	/* Reaching this function means the own-tunnel slot is gone (a saved slot is
+	 *  dialled or prompted before it), so a newer own-tunnel ENTRY cannot be opened
+	 *  and must not hide the reader's real last Radient computer. */
+	it("opens the last Radient computer when a forgotten own tunnel is newer", () => {
 		expect(
 			coldStartComputer({
 				computers: [computer("t1"), computer("t2")],
-				saved: [custom(10), radient("t1", 5)],
+				saved: [custom(20), radient("t1", 5), radient("t2", 9)],
+			}),
+		).toEqual({ kind: "last", computer: computer("t2") });
+	});
+
+	it("opens this account's last computer when another account's is newer", () => {
+		expect(
+			coldStartComputer({
+				computers: [computer("b1"), computer("b2")],
+				saved: [
+					radient("b1", 5, false, "account-b"),
+					radient("b2", 9, false, "account-b"),
+					radient("a1", 20, false, "account-a"),
+				],
+			}),
+		).toEqual({ kind: "last", computer: computer("b2") });
+	});
+
+	it("never treats a never-used entry (lastUsedAt 0) as last", () => {
+		expect(
+			coldStartComputer({
+				computers: [computer("t1"), computer("t2")],
+				saved: [radient("t1", 0), radient("t2", 0)],
 			}),
 		).toEqual({ kind: "picker" });
 	});

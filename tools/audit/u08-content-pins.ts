@@ -809,8 +809,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (or the only one) through `src/features/auth/cold-start-computer.ts`, wired in
 	 * `connection-provider.tsx`, plus tests. No copy, styling or layout changes;
 	 * `app`, `design/tokens`, fonts and `public` are untouched. Source admission
-	 * only, NOT rendered U-08 evidence. */
-	src: "1dd966b07663fdc464208f39e385616de867d1693a4e2b7048cd3d3d8f7fd696",
+	 * only, NOT rendered U-08 evidence.
+	 * Re-pinned again for the round-1 remediation, --print from the staged tree:
+	 * `cold-start-computer.ts` narrows "last" to usable Radient entries and
+	 * `saved-computers.ts` stops stamping a use on a never-used Remove. Logic and
+	 * tests only; no copy, styling or layout. */
+	src: "18de0017f48643ed4be3b946d7d4b8b04bbf68b62f26da818aae7254852d024a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

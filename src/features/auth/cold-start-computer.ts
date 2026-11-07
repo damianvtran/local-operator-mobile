@@ -29,11 +29,18 @@ import { SavedComputers } from "@/connection/saved-computers";
  *   own rule for a connect without a tap; it is applied to the last entry, and every
  *   hidden tunnel id is filtered out of the single-computer rule too, because the
  *   store's hidden set may not be hydrated yet when the cold start gets here.
- * - **A custom last computer is not overridden.** When the reader's last computer
- *   was their own tunnel, the cold start already dialled it (a remembered password)
- *   or is asking for its password, and the caller does not reach this function. If
- *   the custom slot was forgotten since, its entry is simply not a Radient route,
- *   and the single-computer rule decides.
+ * - **"Last" is the newest USABLE Radient computer.** The registry spans accounts
+ *   (an entry keeps its `account` on purpose) and transports (forgetting an own
+ *   tunnel clears its slot, not its entry), so the newest entry overall may be one
+ *   this account cannot open. Taking it and only then checking it would skip the
+ *   reader's real last computer and land on the picker; the candidates are
+ *   therefore narrowed to this account's ready, listed tunnel ids first.
+ * - **A saved own tunnel is not overridden.** Whenever the own-tunnel slot is
+ *   saved, the caller dials it (a remembered password) or asks for its password,
+ *   and does not reach this function — even if a Radient computer was used more
+ *   recently (`ownTunnelPending`; deliberately conservative, the pre-existing
+ *   behaviour). An own-tunnel entry whose slot was forgotten cannot be dialled, so
+ *   it never counts as "last" here.
  * - **Pure.** Inputs are values so every branch is a test case; the provider only
  *   carries the answer out (`resumeComputerOnColdStart` below).
  */
@@ -62,10 +69,19 @@ export function coldStartComputer(input: {
 	const usable = input.computers.filter(
 		(computer) => autoOpenable(computer) && !hidden.has(computer.tunnelId),
 	);
-	/* Most recent use wins; `list()` already sorts so, but the order is this
-	 *  function's contract, not the caller's. Hidden entries never qualify. */
+	/* Most recent use among the usable wins; `list()` already sorts by use, but the
+	 *  order is this function's contract, not the caller's. Hidden entries never
+	 *  qualify, and `lastUsedAt > 0` excludes an entry the registry records as never
+	 *  used (a Remove on a computer that was never connected writes `0`). */
+	const usableIds = new Set(usable.map((computer) => computer.tunnelId));
 	const last = input.saved
-		.filter(SavedComputers.mayAutoReconnect)
+		.filter(
+			(entry) =>
+				entry.transport === "radient" &&
+				SavedComputers.mayAutoReconnect(entry) &&
+				entry.lastUsedAt > 0 &&
+				usableIds.has(entry.tunnelId),
+		)
 		.reduce<SavedComputer | null>(
 			(latest, entry) =>
 				latest === null || entry.lastUsedAt > latest.lastUsedAt
@@ -73,7 +89,7 @@ export function coldStartComputer(input: {
 					: latest,
 			null,
 		);
-	if (last !== null && last.transport === "radient" && last.lastUsedAt > 0) {
+	if (last !== null && last.transport === "radient") {
 		const computer = usable.find(
 			(candidate) => candidate.tunnelId === last.tunnelId,
 		);
