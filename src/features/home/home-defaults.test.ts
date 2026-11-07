@@ -7,7 +7,6 @@ import {
 	foldersFailure,
 	foldersFrom,
 	heldOn,
-	homeFolderSelection,
 	homeModelReading,
 	homeModelRows,
 	homeStartSelection,
@@ -75,6 +74,39 @@ describe("the start body the home builds", () => {
 		});
 	});
 
+	it("sends the reader's effort only when the relay accepts one", () => {
+		// local-operator v0.101.9: an older relay REFUSES `effort` on a keyed start
+		// and silently drops it on an unkeyed one, so the capability gates the field.
+		const chosen = {
+			cwd: "/tmp",
+			chosenModel: model(),
+			chosenEffort: "high",
+		};
+		expect(
+			homeStartSelection({ ...chosen, effortSupported: true }),
+		).toStrictEqual({
+			cwd: "/tmp",
+			provider: "anthropic",
+			model_id: "claude-opus-5",
+			effort: "high",
+		});
+		expect(
+			homeStartSelection({ ...chosen, effortSupported: false }),
+		).not.toHaveProperty("effort");
+		expect(homeStartSelection({ ...chosen })).not.toHaveProperty("effort");
+	});
+
+	it("names no effort when the reader chose none, capability or not", () => {
+		// Absent IS the configured default; the app never fills it in.
+		const body = homeStartSelection({
+			cwd: "/tmp",
+			chosenModel: null,
+			chosenEffort: null,
+			effortSupported: true,
+		});
+		expect(body).toStrictEqual({ cwd: "/tmp" });
+	});
+
 	it("has no body at all until a folder is known", () => {
 		// Guessing a directory is how the folder defect started; with nothing named
 		// there is nothing to send, and the composer says so rather than starting
@@ -92,6 +124,7 @@ describe("the folders the computer publishes", () => {
 			home: "/Users/reader",
 			default: "/Users/reader/src/local-operator",
 			recent: ["/Users/reader/src/local-operator", "/Users/reader/notes"],
+			tmp: "/tmp",
 		});
 	});
 
@@ -202,7 +235,7 @@ describe("the options sheet's rows", () => {
 		const rows = homeModelRows({ models: [opus, haiku], optionModel: haiku });
 		expect(rows[0]).toStrictEqual({ kind: "default", selected: false });
 		expect(rows.filter((row) => row.selected)).toStrictEqual([
-			{ kind: "model", model: haiku, selected: true },
+			{ kind: "model", model: haiku, selected: true, isDefault: false },
 		]);
 	});
 
@@ -225,19 +258,44 @@ describe("the options sheet's rows", () => {
 		]);
 	});
 
-	it("announces which folder rows hold the sheet's folder", () => {
-		const folders = foldersFrom(payload());
-		const selection = homeFolderSelection({
-			folders,
-			optionPath: ` ${folders.default} `,
+	it("lets the named default's own row be the way back (spec §6)", () => {
+		// With `default` published and listed, a second "use the default" row would
+		// put two ✓ on one choice; the default model's row carries the meaning and
+		// is the ✓ row while nothing is chosen.
+		const rows = homeModelRows({
+			models: [opus, haiku],
+			optionModel: null,
+			defaultSelector: opus.selector,
 		});
-		expect(selection.default).toBe(true);
-		expect(selection.recent).toStrictEqual(
-			folders.recent.map((directory) => directory === folders.default),
-		);
-		const typed = homeFolderSelection({ folders, optionPath: "/elsewhere" });
-		expect(typed.default).toBe(false);
-		expect(typed.recent.every((selected) => !selected)).toBe(true);
+		expect(shape(rows)).toStrictEqual([opus.selector, haiku.selector]);
+		expect(rows.filter((row) => row.selected)).toStrictEqual([
+			{ kind: "model", model: opus, selected: true, isDefault: true },
+		]);
+		const chosen = homeModelRows({
+			models: [opus, haiku],
+			optionModel: haiku,
+			defaultSelector: opus.selector,
+		});
+		// Same rows after a pick (D1), the ✓ moves, the Default mark stays put.
+		expect(shape(chosen)).toStrictEqual(shape(rows));
+		expect(
+			chosen.map((row) =>
+				row.kind === "model" ? [row.selected, row.isDefault] : null,
+			),
+		).toStrictEqual([
+			[false, true],
+			[true, false],
+		]);
+	});
+
+	it("keeps the explicit default row when the named default is not listed", () => {
+		const rows = homeModelRows({
+			models: [haiku],
+			optionModel: null,
+			defaultSelector: opus.selector,
+		});
+		expect(shape(rows)).toStrictEqual(["default", haiku.selector]);
+		expect(rows[0]).toStrictEqual({ kind: "default", selected: true });
 	});
 });
 
@@ -300,6 +358,42 @@ describe("what a restored record is allowed to keep", () => {
 				folders: null,
 				chosenModel: null,
 				readerApplied: false,
+			}),
+		).toStrictEqual({ cwd: theirs });
+	});
+
+	it("strips a restored effort nobody chose in this mount, and keeps a live one", () => {
+		// The same rule as the model: a record is no evidence of choice, so only the
+		// reader's effort — and only with the relay's licence — survives the rewrite.
+		const stored: StartSessionRequest = { cwd: theirs, effort: "max" };
+		expect(
+			restoredSupersede({
+				stored,
+				folders: read,
+				chosenModel: null,
+				chosenEffort: null,
+				effortSupported: true,
+				readerApplied: false,
+			}),
+		).toStrictEqual({ cwd: theirs });
+		expect(
+			restoredSupersede({
+				stored,
+				folders: read,
+				chosenModel: null,
+				chosenEffort: "max",
+				effortSupported: true,
+				readerApplied: true,
+			}),
+		).toBeNull();
+		expect(
+			restoredSupersede({
+				stored,
+				folders: read,
+				chosenModel: null,
+				chosenEffort: "max",
+				effortSupported: false,
+				readerApplied: true,
 			}),
 		).toStrictEqual({ cwd: theirs });
 	});

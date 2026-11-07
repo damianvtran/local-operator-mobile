@@ -91,17 +91,49 @@ export type CatalogueKey =
 	| "mobile.computers.session_error_help"
 	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
+	| "mobile.home.chip.effort_chosen"
+	| "mobile.home.chip.effort_default"
+	| "mobile.home.chip.effort_default_unnamed"
+	| "mobile.home.chip.model_chosen"
+	| "mobile.home.chip.model_default"
+	| "mobile.home.chip.model_no_default"
+	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
+	| "mobile.home.effort.high"
+	| "mobile.home.effort.low"
+	| "mobile.home.effort.max"
+	| "mobile.home.effort.medium"
+	| "mobile.home.effort.minimal"
+	| "mobile.home.effort.none"
+	| "mobile.home.effort.xhigh"
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
 	| "mobile.home.models_read_failed"
-	| "mobile.home.options.apply"
-	| "mobile.home.options.default_folder"
 	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
-	| "mobile.home.options.title"
+	| "mobile.home.picker.badge_default"
+	| "mobile.home.picker.badge_this_chat"
+	| "mobile.home.picker.effort_none"
+	| "mobile.home.picker.effort_title"
+	| "mobile.home.picker.effort_unknown"
+	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.folder_home"
+	| "mobile.home.picker.folder_other"
+	| "mobile.home.picker.folder_outside"
+	| "mobile.home.picker.folder_title"
+	| "mobile.home.picker.folder_tmp"
+	| "mobile.home.picker.folder_too_long"
+	| "mobile.home.picker.folder_use_path"
+	| "mobile.home.picker.loading"
+	| "mobile.home.picker.model_empty"
+	| "mobile.home.picker.model_no_match"
+	| "mobile.home.picker.model_search"
+	| "mobile.home.picker.model_title"
+	| "mobile.home.picker.not_connected"
+	| "mobile.home.picker.source_chosen"
+	| "mobile.home.picker.source_default"
 	| "mobile.home.queue.discard"
 	| "mobile.home.queue.restore"
 	| "mobile.home.queue.sheet_title"
@@ -388,17 +420,45 @@ export type NoParamKey =
 	| "mobile.computers.session_error_help"
 	| "mobile.computers.show_details"
 	| "mobile.computers.switch"
+	| "mobile.home.chip.effort_default_unnamed"
+	| "mobile.home.chip.model_no_default"
+	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
+	| "mobile.home.effort.high"
+	| "mobile.home.effort.low"
+	| "mobile.home.effort.max"
+	| "mobile.home.effort.medium"
+	| "mobile.home.effort.minimal"
+	| "mobile.home.effort.none"
+	| "mobile.home.effort.xhigh"
 	| "mobile.home.folders_read_failed"
 	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
 	| "mobile.home.models_read_failed"
-	| "mobile.home.options.apply"
-	| "mobile.home.options.default_folder"
 	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
-	| "mobile.home.options.title"
+	| "mobile.home.picker.badge_default"
+	| "mobile.home.picker.badge_this_chat"
+	| "mobile.home.picker.effort_none"
+	| "mobile.home.picker.effort_title"
+	| "mobile.home.picker.effort_unknown"
+	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.folder_home"
+	| "mobile.home.picker.folder_other"
+	| "mobile.home.picker.folder_outside"
+	| "mobile.home.picker.folder_title"
+	| "mobile.home.picker.folder_tmp"
+	| "mobile.home.picker.folder_too_long"
+	| "mobile.home.picker.folder_use_path"
+	| "mobile.home.picker.loading"
+	| "mobile.home.picker.model_empty"
+	| "mobile.home.picker.model_no_match"
+	| "mobile.home.picker.model_search"
+	| "mobile.home.picker.model_title"
+	| "mobile.home.picker.not_connected"
+	| "mobile.home.picker.source_chosen"
+	| "mobile.home.picker.source_default"
 	| "mobile.home.queue.discard"
 	| "mobile.home.queue.restore"
 	| "mobile.home.queue.sheet_title"
@@ -648,17 +708,49 @@ export type MessageParams = {
 	"mobile.computers.session_error_help": NoParams;
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.switch": NoParams;
+	"mobile.home.chip.effort_chosen": { effort: string | number };
+	"mobile.home.chip.effort_default": { effort: string | number };
+	"mobile.home.chip.effort_default_unnamed": NoParams;
+	"mobile.home.chip.model_chosen": { model: string | number };
+	"mobile.home.chip.model_default": { model: string | number };
+	"mobile.home.chip.model_no_default": NoParams;
+	"mobile.home.chip.model_no_default_label": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
+	"mobile.home.effort.high": NoParams;
+	"mobile.home.effort.low": NoParams;
+	"mobile.home.effort.max": NoParams;
+	"mobile.home.effort.medium": NoParams;
+	"mobile.home.effort.minimal": NoParams;
+	"mobile.home.effort.none": NoParams;
+	"mobile.home.effort.xhigh": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
 	"mobile.home.folders_read_sign_in": NoParams;
 	"mobile.home.greeting": NoParams;
 	"mobile.home.models_read_failed": NoParams;
-	"mobile.home.options.apply": NoParams;
-	"mobile.home.options.default_folder": NoParams;
 	"mobile.home.options.default_model": NoParams;
 	"mobile.home.options.fixed": NoParams;
 	"mobile.home.options.folder": NoParams;
-	"mobile.home.options.title": NoParams;
+	"mobile.home.picker.badge_default": NoParams;
+	"mobile.home.picker.badge_this_chat": NoParams;
+	"mobile.home.picker.effort_none": NoParams;
+	"mobile.home.picker.effort_title": NoParams;
+	"mobile.home.picker.effort_unknown": NoParams;
+	"mobile.home.picker.effort_unsupported": NoParams;
+	"mobile.home.picker.folder_home": NoParams;
+	"mobile.home.picker.folder_other": NoParams;
+	"mobile.home.picker.folder_outside": NoParams;
+	"mobile.home.picker.folder_title": NoParams;
+	"mobile.home.picker.folder_tmp": NoParams;
+	"mobile.home.picker.folder_too_long": NoParams;
+	"mobile.home.picker.folder_use_path": NoParams;
+	"mobile.home.picker.loading": NoParams;
+	"mobile.home.picker.model_empty": NoParams;
+	"mobile.home.picker.model_no_match": NoParams;
+	"mobile.home.picker.model_search": NoParams;
+	"mobile.home.picker.model_title": NoParams;
+	"mobile.home.picker.not_connected": NoParams;
+	"mobile.home.picker.source_chosen": NoParams;
+	"mobile.home.picker.source_default": NoParams;
 	"mobile.home.queue.discard": NoParams;
 	"mobile.home.queue.restore": NoParams;
 	"mobile.home.queue.sheet_title": NoParams;
@@ -965,17 +1057,49 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.switch": "Switch computer",
+	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
+	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
+	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
+	"mobile.home.chip.model_chosen": "Model, {model}, chosen for this conversation",
+	"mobile.home.chip.model_default": "Model, {model}, this computer's default",
+	"mobile.home.chip.model_no_default": "No default",
+	"mobile.home.chip.model_no_default_label": "Model, this computer has no default model. Choose one.",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
+	"mobile.home.effort.high": "High",
+	"mobile.home.effort.low": "Low",
+	"mobile.home.effort.max": "Max",
+	"mobile.home.effort.medium": "Medium",
+	"mobile.home.effort.minimal": "Minimal",
+	"mobile.home.effort.none": "None",
+	"mobile.home.effort.xhigh": "Extra high",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
 	"mobile.home.folders_read_sign_in": "This computer asked you to sign in again, so its folders couldn't be read.",
 	"mobile.home.greeting": "What can I help you with today?",
 	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
-	"mobile.home.options.apply": "Use these options",
-	"mobile.home.options.default_folder": "Use this computer's default folder",
 	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
-	"mobile.home.options.title": "Conversation options",
+	"mobile.home.picker.badge_default": "Default",
+	"mobile.home.picker.badge_this_chat": "This chat",
+	"mobile.home.picker.effort_none": "This model has no effort setting.",
+	"mobile.home.picker.effort_title": "Effort",
+	"mobile.home.picker.effort_unknown": "This computer doesn't know this model's levels, so it will use the nearest level the model supports.",
+	"mobile.home.picker.effort_unsupported": "This computer's Local Operator is too old to accept an effort, so it uses its configured level. Update it to choose one here.",
+	"mobile.home.picker.folder_home": "Home",
+	"mobile.home.picker.folder_other": "Other path…",
+	"mobile.home.picker.folder_outside": "This computer starts conversations only inside your home folder or its temporary folder.",
+	"mobile.home.picker.folder_title": "Folder",
+	"mobile.home.picker.folder_tmp": "Temporary",
+	"mobile.home.picker.folder_too_long": "That path is too long.",
+	"mobile.home.picker.folder_use_path": "Use this path",
+	"mobile.home.picker.loading": "Loading…",
+	"mobile.home.picker.model_empty": "No models available",
+	"mobile.home.picker.model_no_match": "No models match",
+	"mobile.home.picker.model_search": "Search models",
+	"mobile.home.picker.model_title": "Model",
+	"mobile.home.picker.not_connected": "not connected",
+	"mobile.home.picker.source_chosen": "Chosen for this conversation",
+	"mobile.home.picker.source_default": "Default from this computer",
 	"mobile.home.queue.discard": "Discard queued messages",
 	"mobile.home.queue.restore": "Move queued messages to draft",
 	"mobile.home.queue.sheet_title": "Queued messages",
@@ -1267,17 +1391,49 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
+	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_chosen": { role: "meta", note: "Spoken label of the model chip when the reader chose a model for this conversation. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_default": { role: "meta", note: "Spoken label of the model chip when the computer's configured default model applies. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_no_default": { role: "meta", note: "Visible text of the model chip when the computer has no default model configured. Very short: it shares a narrow strip. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_no_default_label": { role: "meta", note: "Spoken label of the model chip when the computer has no default model; tapping it opens the model picker. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
+	"mobile.home.effort.high": { role: "meta", note: "Effort level: high. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.low": { role: "meta", note: "Effort level: low. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.max": { role: "meta", note: "Effort level: the most reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.medium": { role: "meta", note: "Effort level: medium, the usual default. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.minimal": { role: "meta", note: "Effort level: the least reasoning above none. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.none": { role: "meta", note: "Effort level: no extra reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.xhigh": { role: "meta", note: "Effort level above high and below max. Short. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
 	"mobile.home.folders_read_sign_in": { role: "status", note: "Failure sentence for the folder read when the computer answered that the credential is no longer accepted. Names the CAUSE so Retry is not offered as the fix; the sign-in surface is one tap away. No placeholder." },
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
 	"mobile.home.models_read_failed": { role: "status", note: "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder." },
-	"mobile.home.options.apply": { role: "button", note: "Button that applies the starting options. Sentence case, no final full stop." },
-	"mobile.home.options.default_folder": { role: "button", note: "Row in the starting-options sheet that puts the computer's own default folder back into the folder field — the way out of a folder chosen by mistake. It fills the field rather than sending; the Apply button commits it. Sentence case, no final full stop." },
-	"mobile.home.options.default_model": { role: "button", note: "Row in the starting-options sheet that clears the chosen model, so the start names no model and the computer applies its own configured default. Shown only while the sheet holds a model. Sentence case, no final full stop." },
-	"mobile.home.options.fixed": { role: "help", note: "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
-	"mobile.home.options.folder": { role: "meta", note: "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone." },
-	"mobile.home.options.title": { role: "heading", note: "Title of the sheet that edits the starting options of a conversation that has not been sent yet." },
+	"mobile.home.options.default_model": { role: "button", note: "Row at the top of the model picker, shown only while the computer names no default model: it clears the chosen model, so the start names no model and the computer applies its own configured default. Sentence case, no final full stop." },
+	"mobile.home.options.fixed": { role: "help", note: "Explains why the pickers are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
+	"mobile.home.options.folder": { role: "meta", note: "Label of the field revealed by the folder picker's \"Other path…\" row, for typing a folder path on the connected computer (not on the phone)." },
+	"mobile.home.picker.badge_default": { role: "meta", note: "Small badge on the picker row holding the computer's configured default. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.badge_this_chat": { role: "meta", note: "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_none": { role: "help", note: "The selected model has no effort setting, so there is nothing to choose. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_title": { role: "heading", note: "Title of the effort picker sheet: how much reasoning effort the model spends. One word; keep it the same term as the effort levels' family. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_unknown": { role: "help", note: "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_home": { role: "meta", note: "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_other": { role: "button", note: "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_outside": { role: "status", note: "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_title": { role: "heading", note: "Title of the folder picker sheet: where on the connected computer a new conversation starts. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_tmp": { role: "meta", note: "Badge on the folder row that is the computer's temporary (scratch) folder. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_too_long": { role: "status", note: "Why a typed path cannot be used: it is longer than the computer accepts. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_use_path": { role: "button", note: "Button under the typed-path field that starts the conversation in that folder. Sentence case, no final full stop. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.loading": { role: "status", note: "A picker's list is still being read from the computer. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_empty": { role: "status", note: "The computer listed no models at all. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_no_match": { role: "status", note: "The search field matched no model. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_search": { role: "meta", note: "Label of the search field in a long model list. Filters by model name and provider. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_title": { role: "heading", note: "Title of the model picker sheet. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.not_connected": { role: "status", note: "Beside a model whose provider is not signed in on the computer, so it cannot be picked. Lower case, short. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.source_chosen": { role: "status", note: "Line under a picker's title once the reader chose a value for this conversation, overriding the computer's default. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.source_default": { role: "status", note: "Line under a picker's title when nothing has been chosen, so the computer's own configured value applies. Same words as the chip's spoken label. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.queue.discard": { role: "button", note: "Button in the queued-messages sheet: deletes the unsent messages. Destructive; keep it clearly distinct from the move-to-draft button." },
 	"mobile.home.queue.restore": { role: "button", note: "Button in the queued-messages sheet: puts the unsent messages back into the composer as a draft. Sentence case, no final full stop." },
 	"mobile.home.queue.sheet_title": { role: "heading", note: "Title of the sheet listing messages that have not left the phone yet. Plural noun phrase; matches the \"View queued messages\" button that opens it." },
@@ -1583,17 +1739,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.switch": "Cambiar de máquina",
+		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
+		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta computadora",
+		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta computadora",
+		"mobile.home.chip.model_chosen": "Modelo, {model}, elegido para esta conversación",
+		"mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta computadora",
+		"mobile.home.chip.model_no_default": "Sin predeterminado",
+		"mobile.home.chip.model_no_default_label": "Modelo, esta computadora no tiene un modelo predeterminado. Elige uno.",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
+		"mobile.home.effort.high": "Alto",
+		"mobile.home.effort.low": "Bajo",
+		"mobile.home.effort.max": "Máximo",
+		"mobile.home.effort.medium": "Medio",
+		"mobile.home.effort.minimal": "Mínimo",
+		"mobile.home.effort.none": "Ninguno",
+		"mobile.home.effort.xhigh": "Muy alto",
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
 		"mobile.home.folders_read_sign_in": "Esta máquina ha pedido que vuelvas a iniciar sesión, así que no hemos podido leer sus carpetas.",
 		"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
 		"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
-		"mobile.home.options.apply": "Usar estas opciones",
-		"mobile.home.options.default_folder": "Usar la carpeta predeterminada de esta máquina",
 		"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 		"mobile.home.options.folder": "Carpeta en esta máquina",
-		"mobile.home.options.title": "Opciones de la conversación",
+		"mobile.home.picker.badge_default": "Predeterminado",
+		"mobile.home.picker.badge_this_chat": "Este chat",
+		"mobile.home.picker.effort_none": "Este modelo no tiene ajuste de esfuerzo.",
+		"mobile.home.picker.effort_title": "Esfuerzo",
+		"mobile.home.picker.effort_unknown": "Esta computadora no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
+		"mobile.home.picker.effort_unsupported": "El Local Operator de esta computadora es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
+		"mobile.home.picker.folder_home": "Inicio",
+		"mobile.home.picker.folder_other": "Otra ruta…",
+		"mobile.home.picker.folder_outside": "Esta computadora solo inicia conversaciones dentro de tu carpeta de inicio o de su carpeta temporal.",
+		"mobile.home.picker.folder_title": "Carpeta",
+		"mobile.home.picker.folder_tmp": "Temporal",
+		"mobile.home.picker.folder_too_long": "Esa ruta es demasiado larga.",
+		"mobile.home.picker.folder_use_path": "Usar esta ruta",
+		"mobile.home.picker.loading": "Cargando…",
+		"mobile.home.picker.model_empty": "No hay modelos disponibles",
+		"mobile.home.picker.model_no_match": "Ningún modelo coincide",
+		"mobile.home.picker.model_search": "Buscar modelos",
+		"mobile.home.picker.model_title": "Modelo",
+		"mobile.home.picker.not_connected": "no conectado",
+		"mobile.home.picker.source_chosen": "Elegido para esta conversación",
+		"mobile.home.picker.source_default": "Predeterminado de esta computadora",
 		"mobile.home.queue.discard": "Descartar los mensajes en cola",
 		"mobile.home.queue.restore": "Pasar los mensajes en cola a borrador",
 		"mobile.home.queue.sheet_title": "Mensajes en cola",
@@ -1883,17 +2071,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
+		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
+		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
+		"mobile.home.chip.model_chosen": "Modèle, {model}, choisi pour cette conversation",
+		"mobile.home.chip.model_default": "Modèle, {model}, par défaut sur cet ordinateur",
+		"mobile.home.chip.model_no_default": "Aucun par défaut",
+		"mobile.home.chip.model_no_default_label": "Modèle, cet ordinateur n’a pas de modèle par défaut. Choisissez-en un.",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
+		"mobile.home.effort.high": "Élevé",
+		"mobile.home.effort.low": "Faible",
+		"mobile.home.effort.max": "Maximal",
+		"mobile.home.effort.medium": "Moyen",
+		"mobile.home.effort.minimal": "Minimal",
+		"mobile.home.effort.none": "Aucun",
+		"mobile.home.effort.xhigh": "Très élevé",
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
 		"mobile.home.folders_read_sign_in": "Cet ordinateur vous a demandé de vous reconnecter ; impossible donc de lire ses dossiers.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
 		"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
-		"mobile.home.options.apply": "Utiliser ces options",
-		"mobile.home.options.default_folder": "Utiliser le dossier par défaut de cet ordinateur",
 		"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
-		"mobile.home.options.title": "Options de la conversation",
+		"mobile.home.picker.badge_default": "Par défaut",
+		"mobile.home.picker.badge_this_chat": "Cette conversation",
+		"mobile.home.picker.effort_none": "Ce modèle n’a pas de réglage d’effort.",
+		"mobile.home.picker.effort_title": "Effort",
+		"mobile.home.picker.effort_unknown": "Cet ordinateur ne connaît pas les niveaux de ce modèle ; il utilisera donc le niveau le plus proche que le modèle prend en charge.",
+		"mobile.home.picker.effort_unsupported": "Le Local Operator de cet ordinateur est trop ancien pour accepter un niveau d’effort ; il utilise donc son niveau configuré. Mettez-le à jour pour en choisir un ici.",
+		"mobile.home.picker.folder_home": "Dossier personnel",
+		"mobile.home.picker.folder_other": "Autre chemin…",
+		"mobile.home.picker.folder_outside": "Cet ordinateur ne démarre des conversations que dans votre dossier personnel ou son dossier temporaire.",
+		"mobile.home.picker.folder_title": "Dossier",
+		"mobile.home.picker.folder_tmp": "Temporaire",
+		"mobile.home.picker.folder_too_long": "Ce chemin est trop long.",
+		"mobile.home.picker.folder_use_path": "Utiliser ce chemin",
+		"mobile.home.picker.loading": "Chargement…",
+		"mobile.home.picker.model_empty": "Aucun modèle disponible",
+		"mobile.home.picker.model_no_match": "Aucun modèle ne correspond",
+		"mobile.home.picker.model_search": "Rechercher des modèles",
+		"mobile.home.picker.model_title": "Modèle",
+		"mobile.home.picker.not_connected": "non connecté",
+		"mobile.home.picker.source_chosen": "Choisi pour cette conversation",
+		"mobile.home.picker.source_default": "Par défaut sur cet ordinateur",
 		"mobile.home.queue.discard": "Supprimer les messages en attente",
 		"mobile.home.queue.restore": "Déplacer les messages en attente vers le brouillon",
 		"mobile.home.queue.sheet_title": "Messages en attente",
@@ -2183,17 +2403,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
+		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
+		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
+		"mobile.home.chip.model_chosen": "मॉडल, {model}, इस बातचीत के लिए चुना गया",
+		"mobile.home.chip.model_default": "मॉडल, {model}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.model_no_default": "कोई डिफ़ॉल्ट नहीं",
+		"mobile.home.chip.model_no_default_label": "मॉडल, इस कंप्यूटर पर कोई डिफ़ॉल्ट मॉडल नहीं है। एक चुनें।",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
+		"mobile.home.effort.high": "उच्च",
+		"mobile.home.effort.low": "कम",
+		"mobile.home.effort.max": "अधिकतम",
+		"mobile.home.effort.medium": "मध्यम",
+		"mobile.home.effort.minimal": "न्यूनतम",
+		"mobile.home.effort.none": "कोई नहीं",
+		"mobile.home.effort.xhigh": "बहुत उच्च",
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
 		"mobile.home.folders_read_sign_in": "इस कंप्यूटर ने दोबारा साइन इन करने को कहा है, इसलिए इसके फ़ोल्डर नहीं पढ़े जा सके।",
 		"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
 		"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
-		"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
-		"mobile.home.options.default_folder": "इस कंप्यूटर का डिफ़ॉल्ट फ़ोल्डर इस्तेमाल करें",
 		"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 		"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
-		"mobile.home.options.title": "बातचीत के विकल्प",
+		"mobile.home.picker.badge_default": "डिफ़ॉल्ट",
+		"mobile.home.picker.badge_this_chat": "यह चैट",
+		"mobile.home.picker.effort_none": "इस मॉडल में प्रयास की कोई सेटिंग नहीं है।",
+		"mobile.home.picker.effort_title": "प्रयास",
+		"mobile.home.picker.effort_unknown": "यह कंप्यूटर इस मॉडल के स्तर नहीं जानता, इसलिए वह मॉडल द्वारा समर्थित सबसे नज़दीकी स्तर इस्तेमाल करेगा।",
+		"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
+		"mobile.home.picker.folder_home": "होम",
+		"mobile.home.picker.folder_other": "दूसरा पाथ…",
+		"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
+		"mobile.home.picker.folder_title": "फ़ोल्डर",
+		"mobile.home.picker.folder_tmp": "अस्थायी",
+		"mobile.home.picker.folder_too_long": "यह पाथ बहुत लंबा है।",
+		"mobile.home.picker.folder_use_path": "यह पाथ इस्तेमाल करें",
+		"mobile.home.picker.loading": "लोड हो रहा है…",
+		"mobile.home.picker.model_empty": "कोई मॉडल उपलब्ध नहीं",
+		"mobile.home.picker.model_no_match": "कोई मॉडल मेल नहीं खाता",
+		"mobile.home.picker.model_search": "मॉडल खोजें",
+		"mobile.home.picker.model_title": "मॉडल",
+		"mobile.home.picker.not_connected": "कनेक्ट नहीं",
+		"mobile.home.picker.source_chosen": "इस बातचीत के लिए चुना गया",
+		"mobile.home.picker.source_default": "इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.queue.discard": "कतार के संदेश हटाएँ",
 		"mobile.home.queue.restore": "कतार के संदेश ड्राफ़्ट में ले जाएँ",
 		"mobile.home.queue.sheet_title": "कतार के संदेश",
@@ -2483,17 +2735,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.switch": "Сменить компьютер",
+		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
+		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
+		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
+		"mobile.home.chip.model_chosen": "Модель, {model}, выбрано для этой беседы",
+		"mobile.home.chip.model_default": "Модель, {model}, по умолчанию на этом компьютере",
+		"mobile.home.chip.model_no_default": "Нет по умолчанию",
+		"mobile.home.chip.model_no_default_label": "Модель, на этом компьютере нет модели по умолчанию. Выберите модель.",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
+		"mobile.home.effort.high": "Высокое",
+		"mobile.home.effort.low": "Низкое",
+		"mobile.home.effort.max": "Максимальное",
+		"mobile.home.effort.medium": "Среднее",
+		"mobile.home.effort.minimal": "Минимальное",
+		"mobile.home.effort.none": "Нет",
+		"mobile.home.effort.xhigh": "Очень высокое",
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
 		"mobile.home.folders_read_sign_in": "Этот компьютер попросил войти снова, поэтому его папки прочитать не удалось.",
 		"mobile.home.greeting": "Чем помочь сегодня?",
 		"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
-		"mobile.home.options.apply": "Применить",
-		"mobile.home.options.default_folder": "Использовать папку по умолчанию на этом компьютере",
 		"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 		"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 		"mobile.home.options.folder": "Папка на этом компьютере",
-		"mobile.home.options.title": "Параметры беседы",
+		"mobile.home.picker.badge_default": "По умолчанию",
+		"mobile.home.picker.badge_this_chat": "Эта беседа",
+		"mobile.home.picker.effort_none": "У этой модели нет настройки усилия.",
+		"mobile.home.picker.effort_title": "Усилие",
+		"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
+		"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
+		"mobile.home.picker.folder_home": "Домашняя",
+		"mobile.home.picker.folder_other": "Другой путь…",
+		"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",
+		"mobile.home.picker.folder_title": "Папка",
+		"mobile.home.picker.folder_tmp": "Временная",
+		"mobile.home.picker.folder_too_long": "Этот путь слишком длинный.",
+		"mobile.home.picker.folder_use_path": "Использовать этот путь",
+		"mobile.home.picker.loading": "Загрузка…",
+		"mobile.home.picker.model_empty": "Нет доступных моделей",
+		"mobile.home.picker.model_no_match": "Нет подходящих моделей",
+		"mobile.home.picker.model_search": "Поиск моделей",
+		"mobile.home.picker.model_title": "Модель",
+		"mobile.home.picker.not_connected": "не подключено",
+		"mobile.home.picker.source_chosen": "Выбрано для этой беседы",
+		"mobile.home.picker.source_default": "По умолчанию на этом компьютере",
 		"mobile.home.queue.discard": "Удалить сообщения из очереди",
 		"mobile.home.queue.restore": "Перенести сообщения в черновик",
 		"mobile.home.queue.sheet_title": "Сообщения в очереди",
@@ -2783,17 +3067,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
+		"mobile.home.chip.effort_chosen": "کوشش، {effort}، اس گفتگو کے لیے منتخب",
+		"mobile.home.chip.effort_default": "کوشش، {effort}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.effort_default_unnamed": "کوشش، اس کمپیوٹر پر ترتیب شدہ سطح",
+		"mobile.home.chip.model_chosen": "ماڈل، {model}، اس گفتگو کے لیے منتخب",
+		"mobile.home.chip.model_default": "ماڈل، {model}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.model_no_default": "کوئی ڈیفالٹ نہیں",
+		"mobile.home.chip.model_no_default_label": "ماڈل، اس کمپیوٹر پر کوئی ڈیفالٹ ماڈل نہیں۔ ایک منتخب کریں۔",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+		"mobile.home.effort.high": "زیادہ",
+		"mobile.home.effort.low": "کم",
+		"mobile.home.effort.max": "زیادہ سے زیادہ",
+		"mobile.home.effort.medium": "درمیانی",
+		"mobile.home.effort.minimal": "کم سے کم",
+		"mobile.home.effort.none": "کوئی نہیں",
+		"mobile.home.effort.xhigh": "بہت زیادہ",
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
 		"mobile.home.folders_read_sign_in": "اس کمپیوٹر نے دوبارہ سائن اِن کرنے کو کہا ہے، اسی لیے اس کے فولڈرز نہیں پڑھے جا سکے۔",
 		"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
 		"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
-		"mobile.home.options.apply": "یہ اختیارات استعمال کریں",
-		"mobile.home.options.default_folder": "اس کمپیوٹر کا ڈیفالٹ فولڈر استعمال کریں",
 		"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 		"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
-		"mobile.home.options.title": "گفتگو کے اختیارات",
+		"mobile.home.picker.badge_default": "ڈیفالٹ",
+		"mobile.home.picker.badge_this_chat": "یہ چیٹ",
+		"mobile.home.picker.effort_none": "اس ماڈل میں کوشش کی کوئی ترتیب نہیں۔",
+		"mobile.home.picker.effort_title": "کوشش",
+		"mobile.home.picker.effort_unknown": "یہ کمپیوٹر اس ماڈل کی سطحیں نہیں جانتا، اس لیے یہ ماڈل کی معاونت والی قریب ترین سطح استعمال کرے گا۔",
+		"mobile.home.picker.effort_unsupported": "اس کمپیوٹر کا Local Operator کوشش قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔",
+		"mobile.home.picker.folder_home": "ہوم",
+		"mobile.home.picker.folder_other": "دوسرا راستہ…",
+		"mobile.home.picker.folder_outside": "یہ کمپیوٹر گفتگو صرف آپ کے ہوم فولڈر یا اس کے عارضی فولڈر کے اندر شروع کرتا ہے۔",
+		"mobile.home.picker.folder_title": "فولڈر",
+		"mobile.home.picker.folder_tmp": "عارضی",
+		"mobile.home.picker.folder_too_long": "یہ راستہ بہت لمبا ہے۔",
+		"mobile.home.picker.folder_use_path": "یہ راستہ استعمال کریں",
+		"mobile.home.picker.loading": "لوڈ ہو رہا ہے…",
+		"mobile.home.picker.model_empty": "کوئی ماڈل دستیاب نہیں",
+		"mobile.home.picker.model_no_match": "کوئی ماڈل مماثل نہیں",
+		"mobile.home.picker.model_search": "ماڈل تلاش کریں",
+		"mobile.home.picker.model_title": "ماڈل",
+		"mobile.home.picker.not_connected": "منسلک نہیں",
+		"mobile.home.picker.source_chosen": "اس گفتگو کے لیے منتخب",
+		"mobile.home.picker.source_default": "اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.queue.discard": "قطار میں لگے پیغامات حذف کریں",
 		"mobile.home.queue.restore": "قطار میں لگے پیغامات مسودے میں منتقل کریں",
 		"mobile.home.queue.sheet_title": "قطار میں لگے پیغامات",
@@ -3083,17 +3399,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.switch": "Chuyển máy tính",
+		"mobile.home.chip.effort_chosen": "Mức nỗ lực, {effort}, đã chọn cho cuộc trò chuyện này",
+		"mobile.home.chip.effort_default": "Mức nỗ lực, {effort}, mặc định của máy tính này",
+		"mobile.home.chip.effort_default_unnamed": "Mức nỗ lực, mức đã cấu hình trên máy tính này",
+		"mobile.home.chip.model_chosen": "Mô hình, {model}, đã chọn cho cuộc trò chuyện này",
+		"mobile.home.chip.model_default": "Mô hình, {model}, mặc định của máy tính này",
+		"mobile.home.chip.model_no_default": "Không có mặc định",
+		"mobile.home.chip.model_no_default_label": "Mô hình, máy tính này không có mô hình mặc định. Hãy chọn một.",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
+		"mobile.home.effort.high": "Cao",
+		"mobile.home.effort.low": "Thấp",
+		"mobile.home.effort.max": "Tối đa",
+		"mobile.home.effort.medium": "Trung bình",
+		"mobile.home.effort.minimal": "Tối thiểu",
+		"mobile.home.effort.none": "Không",
+		"mobile.home.effort.xhigh": "Rất cao",
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
 		"mobile.home.folders_read_sign_in": "Máy tính này yêu cầu bạn đăng nhập lại, nên không đọc được thư mục của nó.",
 		"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
 		"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
-		"mobile.home.options.apply": "Dùng các tùy chọn này",
-		"mobile.home.options.default_folder": "Dùng thư mục mặc định của máy tính này",
 		"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 		"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 		"mobile.home.options.folder": "Thư mục trên máy tính này",
-		"mobile.home.options.title": "Tùy chọn cuộc trò chuyện",
+		"mobile.home.picker.badge_default": "Mặc định",
+		"mobile.home.picker.badge_this_chat": "Cuộc trò chuyện này",
+		"mobile.home.picker.effort_none": "Mô hình này không có cài đặt mức nỗ lực.",
+		"mobile.home.picker.effort_title": "Mức nỗ lực",
+		"mobile.home.picker.effort_unknown": "Máy tính này chưa biết các mức của mô hình này, nên sẽ dùng mức gần nhất mà mô hình hỗ trợ.",
+		"mobile.home.picker.effort_unsupported": "Local Operator trên máy tính này quá cũ để nhận mức nỗ lực, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
+		"mobile.home.picker.folder_home": "Thư mục chính",
+		"mobile.home.picker.folder_other": "Đường dẫn khác…",
+		"mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục chính của bạn hoặc thư mục tạm của nó.",
+		"mobile.home.picker.folder_title": "Thư mục",
+		"mobile.home.picker.folder_tmp": "Tạm thời",
+		"mobile.home.picker.folder_too_long": "Đường dẫn đó quá dài.",
+		"mobile.home.picker.folder_use_path": "Dùng đường dẫn này",
+		"mobile.home.picker.loading": "Đang tải…",
+		"mobile.home.picker.model_empty": "Không có mô hình nào",
+		"mobile.home.picker.model_no_match": "Không có mô hình phù hợp",
+		"mobile.home.picker.model_search": "Tìm mô hình",
+		"mobile.home.picker.model_title": "Mô hình",
+		"mobile.home.picker.not_connected": "chưa kết nối",
+		"mobile.home.picker.source_chosen": "Đã chọn cho cuộc trò chuyện này",
+		"mobile.home.picker.source_default": "Mặc định của máy tính này",
 		"mobile.home.queue.discard": "Bỏ tin nhắn trong hàng đợi",
 		"mobile.home.queue.restore": "Chuyển tin nhắn trong hàng đợi thành bản nháp",
 		"mobile.home.queue.sheet_title": "Tin nhắn trong hàng đợi",
@@ -3383,17 +3731,49 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.switch": "切换电脑",
+		"mobile.home.chip.effort_chosen": "推理强度，{effort}，为此对话选择",
+		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
+		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
+		"mobile.home.chip.model_chosen": "模型，{model}，为此对话选择",
+		"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
+		"mobile.home.chip.model_no_default": "无默认",
+		"mobile.home.chip.model_no_default_label": "模型，此电脑没有默认模型。请选择一个。",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
+		"mobile.home.effort.high": "高",
+		"mobile.home.effort.low": "低",
+		"mobile.home.effort.max": "最高",
+		"mobile.home.effort.medium": "中",
+		"mobile.home.effort.minimal": "最低",
+		"mobile.home.effort.none": "无",
+		"mobile.home.effort.xhigh": "很高",
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",
 		"mobile.home.folders_read_sign_in": "此电脑要求重新登录，因此无法读取其文件夹。",
 		"mobile.home.greeting": "今天想让我帮你做点什么？",
 		"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
-		"mobile.home.options.apply": "使用这些选项",
-		"mobile.home.options.default_folder": "使用此电脑的默认文件夹",
 		"mobile.home.options.default_model": "使用此电脑的默认模型",
 		"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
 		"mobile.home.options.folder": "此电脑上的文件夹",
-		"mobile.home.options.title": "对话选项",
+		"mobile.home.picker.badge_default": "默认",
+		"mobile.home.picker.badge_this_chat": "此对话",
+		"mobile.home.picker.effort_none": "此模型没有推理强度设置。",
+		"mobile.home.picker.effort_title": "推理强度",
+		"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
+		"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
+		"mobile.home.picker.folder_home": "主目录",
+		"mobile.home.picker.folder_other": "其他路径…",
+		"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",
+		"mobile.home.picker.folder_title": "文件夹",
+		"mobile.home.picker.folder_tmp": "临时",
+		"mobile.home.picker.folder_too_long": "该路径太长。",
+		"mobile.home.picker.folder_use_path": "使用此路径",
+		"mobile.home.picker.loading": "正在加载…",
+		"mobile.home.picker.model_empty": "没有可用的模型",
+		"mobile.home.picker.model_no_match": "没有匹配的模型",
+		"mobile.home.picker.model_search": "搜索模型",
+		"mobile.home.picker.model_title": "模型",
+		"mobile.home.picker.not_connected": "未连接",
+		"mobile.home.picker.source_chosen": "为此对话选择",
+		"mobile.home.picker.source_default": "此电脑的默认设置",
 		"mobile.home.queue.discard": "丢弃排队消息",
 		"mobile.home.queue.restore": "将排队消息移到草稿",
 		"mobile.home.queue.sheet_title": "排队消息",

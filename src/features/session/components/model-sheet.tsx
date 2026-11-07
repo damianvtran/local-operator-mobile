@@ -1,8 +1,10 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
+import { t } from "@/i18n";
 import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
+import { Badge } from "@/ui/components/badge";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
@@ -54,6 +56,85 @@ export const groupByProvider = (models: ModelEntry[]): ProviderGroup[] => {
 export const selectorOf = (model: ModelEntry): string =>
 	`${model.provider}/${model.model_id}`;
 
+/**
+ * One model row, shared by the session's model sheet and the home's model picker
+ * so a model reads the same wherever it is chosen: friendly label, the words
+ * "not connected" on a row that cannot be picked, ✓ on the effective model, and
+ * — home only — a trailing badge naming where the value comes from ("Default" /
+ * "This chat", design spec §6).
+ */
+export const ModelOptionRow = ({
+	model,
+	selected: isSelected,
+	onPress,
+	badge = null,
+	disabled: lockedOut = false,
+}: {
+	model: ModelEntry;
+	selected: boolean;
+	onPress: () => void;
+	badge?: string | null;
+	/** The whole picker is read-only (a started conversation's options are
+	 *  fixed). Separate from `disconnected`: that one changes the label's ink and
+	 *  words, this one only the press. */
+	disabled?: boolean;
+}) => {
+	const disconnected = model.connected === false;
+	/* ONE predicate for the press gate and the label's ink (the guard in
+	 *  `model-sheet.test.ts`): a row that cannot be pressed — not connected, or the
+	 *  whole picker read-only — wears the kit's disabled-label ink, and only then. */
+	const inert = disconnected || lockedOut;
+	const notConnected = t("mobile.home.picker.not_connected");
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={`${model.label ?? model.name}${disconnected ? `, ${notConnected}` : ""}${badge !== null ? `, ${badge}` : ""}`}
+			accessibilityState={state({
+				selected: isSelected,
+				disabled: inert,
+			})}
+			disabled={inert}
+			onPress={onPress}
+			testID={modelOptionId(model.model_id)}
+		>
+			<View className="min-h-11 flex-row items-center gap-2 px-3">
+				<Text
+					/* A disconnected row is genuinely inactive: `disconnected` is the same
+					 *  predicate as the `disabled` on the Pressable above, so SC 1.4.3
+					 *  exempts this text and `ink-disabled` would conform. It is still the
+					 *  wrong ink: the label NAMES the model, and the kit's disabled-label
+					 *  ink is `CONTROL_DISABLED_INK` (`ink-dim`) — the rule Button, Chip and
+					 *  the disabled field already follow. `ink-disabled` measured 2.96:1
+					 *  light / 1.99:1 dark on the sheet's own `elevated` surface, and
+					 *  `ink-dim` measures 6.14 / 5.25 there.
+					 *
+					 *  The unavailability does not rest on the ink: the row also renders the
+					 *  words "not connected" beside it, so nothing is lost by lifting the
+					 *  label to a readable role. */
+					className={cx(
+						"min-w-0 flex-1 text-body-sm",
+						inert ? CONTROL_DISABLED_INK : "text-ink",
+					)}
+					numberOfLines={1}
+				>
+					{model.label ?? model.name}
+				</Text>
+				{disconnected ? (
+					<Text className="shrink-0 text-meta text-ink-dim">
+						{notConnected}
+					</Text>
+				) : null}
+				{badge !== null ? <Badge label={badge} /> : null}
+				{isSelected ? (
+					<Text className="shrink-0 text-accent" aria-hidden>
+						✓
+					</Text>
+				) : null}
+			</View>
+		</Pressable>
+	);
+};
+
 export const ModelSheet = ({
 	visible,
 	onClose,
@@ -76,61 +157,17 @@ export const ModelSheet = ({
 						<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
 							{group.provider}
 						</Text>
-						{group.models.map((model) => {
-							const disconnected = model.connected === false;
-							const isSelected = selectorOf(model) === selected;
-							return (
-								<Pressable
-									key={selectorOf(model)}
-									accessibilityRole={ROLE.button}
-									accessibilityLabel={`${model.name}${disconnected ? ", not connected" : ""}`}
-									accessibilityState={state({
-										selected: isSelected,
-										disabled: disconnected,
-									})}
-									disabled={disconnected}
-									onPress={() => {
-										onPick(model);
-										onClose();
-									}}
-									testID={modelOptionId(model.model_id)}
-								>
-									<View className="min-h-11 flex-row items-center gap-2 px-3">
-										<Text
-											/* A disconnected row is genuinely inactive: `disconnected` is the same
-											 *  predicate as the `disabled` on the Pressable above, so SC 1.4.3
-											 *  exempts this text and `ink-disabled` would conform. It is still the
-											 *  wrong ink: the label NAMES the model, and the kit's disabled-label
-											 *  ink is `CONTROL_DISABLED_INK` (`ink-dim`) — the rule Button, Chip and
-											 *  the disabled field already follow. `ink-disabled` measured 2.96:1
-											 *  light / 1.99:1 dark on the sheet's own `elevated` surface, and
-											 *  `ink-dim` measures 6.14 / 5.25 there.
-											 *
-											 *  The unavailability does not rest on the ink: the row also renders the
-											 *  words "not connected" beside it, so nothing is lost by lifting the
-											 *  label to a readable role. */
-											className={cx(
-												"min-w-0 flex-1 text-body-sm",
-												disconnected ? CONTROL_DISABLED_INK : "text-ink",
-											)}
-											numberOfLines={1}
-										>
-											{model.label ?? model.name}
-										</Text>
-										{disconnected ? (
-											<Text className="shrink-0 text-meta text-ink-dim">
-												not connected
-											</Text>
-										) : null}
-										{isSelected ? (
-											<Text className="shrink-0 text-accent" aria-hidden>
-												✓
-											</Text>
-										) : null}
-									</View>
-								</Pressable>
-							);
-						})}
+						{group.models.map((model) => (
+							<ModelOptionRow
+								key={selectorOf(model)}
+								model={model}
+								selected={selectorOf(model) === selected}
+								onPress={() => {
+									onPick(model);
+									onClose();
+								}}
+							/>
+						))}
 					</View>
 				))}
 				{loading ? (
@@ -161,6 +198,55 @@ export type EffortSheetProps = {
 	onPick: (effort: string) => void;
 };
 
+/**
+ * One effort rung: a radio dot and the rung's name. Shared by the session's effort
+ * sheet (which shows the daemon's word, `label === rung`) and the home's effort
+ * picker (which shows the translated name and a "Default"/"This chat" badge), so
+ * the two read as one control.
+ */
+export const EffortRungRow = ({
+	rung,
+	label,
+	selected,
+	onPress,
+	badge = null,
+	disabled = false,
+}: {
+	rung: string;
+	label: string;
+	selected: boolean;
+	onPress: () => void;
+	badge?: string | null;
+	disabled?: boolean;
+}) => (
+	<Pressable
+		accessibilityRole={ROLE.radio}
+		accessibilityLabel={badge !== null ? `${label}, ${badge}` : label}
+		accessibilityState={state({ selected, disabled })}
+		disabled={disabled}
+		onPress={onPress}
+		testID={effortRungId(rung)}
+	>
+		<View className="min-h-11 flex-row items-center gap-2 px-3">
+			<View
+				className={cx(
+					"h-2 w-2 rounded-full",
+					selected ? "bg-accent" : "bg-hairline",
+				)}
+			/>
+			<Text
+				className={cx(
+					"min-w-0 flex-1 font-mono text-mono",
+					disabled ? CONTROL_DISABLED_INK : "text-ink",
+				)}
+			>
+				{label}
+			</Text>
+			{badge !== null ? <Badge label={badge} /> : null}
+		</View>
+	</Pressable>
+);
+
 export const EffortSheet = ({
 	visible,
 	onClose,
@@ -176,27 +262,16 @@ export const EffortSheet = ({
 	>
 		<View className="py-1">
 			{ladder.map((rung) => (
-				<Pressable
+				<EffortRungRow
 					key={rung}
-					accessibilityRole={ROLE.radio}
-					accessibilityLabel={rung}
-					accessibilityState={state({ selected: rung === selected })}
+					rung={rung}
+					label={rung}
+					selected={rung === selected}
 					onPress={() => {
 						onPick(rung);
 						onClose();
 					}}
-					testID={effortRungId(rung)}
-				>
-					<View className="min-h-11 flex-row items-center gap-2 px-3">
-						<View
-							className={cx(
-								"h-2 w-2 rounded-full",
-								rung === selected ? "bg-accent" : "bg-hairline",
-							)}
-						/>
-						<Text className="font-mono text-mono text-ink">{rung}</Text>
-					</View>
-				</Pressable>
+				/>
 			))}
 		</View>
 	</Sheet>

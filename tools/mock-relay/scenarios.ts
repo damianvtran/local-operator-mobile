@@ -149,6 +149,10 @@ export interface ScenarioWorld {
 	past?: PastSession[] | FixtureOverride;
 	search?: FixtureOverride;
 	models?: Json[];
+	/** `GET /api/models` → `default` (local-operator v0.101.9): what a start
+	 *  naming no model or effort runs. `undefined` omits the key, as an older
+	 *  daemon does; `null` is a computer that resolved no default. */
+	modelDefault?: Json | null;
 	/**
 	 * The projects surface this state pins (S16, the read path).
 	 *
@@ -377,6 +381,13 @@ export function capabilityBlock(
 		 * block exists to prevent. */
 		notifications_seen: 1,
 	};
+	/* The start route accepts `effort` (local-operator v0.101.9) and this mock
+	 *  validates it as the relay does, so it advertises the licence the phone
+	 *  gates the effort picker on. ONLY `effort`: the mock keeps no creation
+	 *  receipts, so it must not claim `durable_idempotency` — a client reading
+	 *  that would send `create_request_id` and get the legacy, non-idempotent
+	 *  create it was promised it would not. */
+	next.session_start = { effort: true };
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {
@@ -3373,6 +3384,38 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			search: fix.response("search-hit"),
+		}),
+	);
+
+	/* The ranked catalogue with the v0.101.9 picker fields: a per-row `efforts`
+	 *  ladder in all three readings — a list (the Anthropic rows), `[]` (a model
+	 *  with no effort setting) and an ABSENT key (every other row: the computer
+	 *  does not know the ladder) — and a `default` naming Opus 5 at medium. The
+	 *  ladders are this mock's own claim, not a capture: they exist so the home's
+	 *  three pickers have every state the contract defines to render. */
+	const pickerModels: Json[] = rankedModels.map((row) => {
+		if (!isRecord(row)) return row;
+		if (row.provider === "anthropic")
+			return { ...row, efforts: ["low", "medium", "high", "xhigh", "max"] };
+		if (row.selector === "deepseek/deepseek-v4-flash-0731")
+			return { ...row, efforts: [] };
+		return row;
+	});
+	add(
+		"home-pickers",
+		"The home's folder, model and effort pickers: a ranked catalogue whose rows carry all three `efforts` readings, and a computer default of Opus 5 at medium.",
+		/* NO CELL, for `models-ranked`'s reason below: the pickers are sheets the
+		 *  app opens from the composer strip, and nothing on the wire opens one. The
+		 *  scenario is the world a rendered or manual pass of the pickers runs in. */
+		[],
+		() => ({
+			models: pickerModels,
+			modelDefault: {
+				selector: "anthropic/claude-opus-5",
+				provider: "anthropic",
+				model_id: "claude-opus-5",
+				effort: "medium",
+			},
 		}),
 	);
 

@@ -1248,6 +1248,32 @@ export const Composer = ({
 				setMetaWidth(event.nativeEvent.layout.width);
 			}}
 		>
+			{/* The home's folder chip leads the strip: where, then with what model, then
+			 *  how hard — one chip per picker (the operator: "a separate dialog to
+			 *  handle directory vs model vs effort selection"). It was reachable only
+			 *  through More, so the folder was two taps and a sheet away from the
+			 *  composer it configures. It yields first: `shrink` with the queued
+			 *  chip's 160 pt cap, so the model keeps the row's flexible width. The
+			 *  session view passes no `folderChip` and its strip is unchanged. */}
+			{folderChip ? (
+				<View
+					className="shrink"
+					style={{ minWidth: MODEL_FLOOR_PT, maxWidth: 160 }}
+				>
+					<ComposerChipButton
+						glass={glass}
+						chip={{
+							kind: "value",
+							text: folderChip.label,
+							accessibilityLabel: folderChip.accessibilityLabel,
+						}}
+						onPress={folderChip.onPress}
+						chooseHint={folderChip.accessibilityHint}
+						loadingWidthClassName="w-16"
+						testID={CONTROL.homeFolderChip}
+					/>
+				</View>
+			) : null}
 			<View className="min-w-0 flex-1" style={{ minWidth: MODEL_FLOOR_PT }}>
 				<ComposerChipButton
 					glass={glass}

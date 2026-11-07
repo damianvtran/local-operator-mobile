@@ -644,6 +644,15 @@ export interface Capabilities {
 	 * routes cannot be served — never defaulted to available.
 	 */
 	session_tags?: { available: boolean };
+	/** `POST /api/sessions/start`'s capability (local-operator
+	 *  `docs/design/mobile-start-receipts.md`); `effort: true` licenses `effort`
+	 *  in a start body (v0.101.9). Absent = a relay that predates it. */
+	session_start?: {
+		version?: number;
+		durable_idempotency?: boolean;
+		receipt_capacity?: number;
+		effort?: boolean;
+	};
 }
 
 export interface SessionListFrame {
@@ -794,10 +803,22 @@ export interface ModelEntry {
 	label?: string;
 	connected?: boolean;
 	aggregated?: boolean;
+	/** local-operator v0.101.9: the ladder; `[]` = no effort setting; absent = unknown. */
+	efforts?: string[];
+}
+
+/** local-operator v0.101.9: what a start naming no model or effort runs. */
+export interface ModelDefault {
+	selector: string;
+	provider: string;
+	model_id: string;
+	effort: string | null;
 }
 
 export interface ModelsResponse {
 	models: ModelEntry[];
+	/** `null` = the computer resolved no default; absent = an older daemon. */
+	default?: ModelDefault | null;
 }
 
 export interface Directories {

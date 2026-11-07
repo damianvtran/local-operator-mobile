@@ -282,14 +282,11 @@ export const CONTROL = {
 	 *  `/new` (one shared editor), so they are named once here rather than typed
 	 *  as literals at three call sites — the a11y contract rejects literals so a
 	 *  capture cell cannot invent an id the contract never declared. */
-	startupOptions: "startup-options",
-	startupOptionsApply: "startup-options-apply",
 	startupViewQueue: "startup-view-queue",
 	startupQueueSheet: "startup-queue-sheet",
 	startupQueueRestore: "startup-queue-restore",
 	startupQueueDiscard: "startup-queue-discard",
 	startupOpenConversation: "startup-open-conversation",
-	startupModelOption: "startup-model-option",
 	pastBack: "past-back",
 	pastSearchField: "past-search-field",
 	pastSearch: "past-search",
@@ -503,11 +500,24 @@ export const CONTROL = {
 	 *  swallowed into an empty catalogue, which read as "connected, no model". */
 	homeModelsBanner: "home-models-banner",
 	homeModelsRetry: "home-models-retry",
-	/** The two "back to what the computer would have used" rows in the same sheet:
-	 *  without them a folder or a model the reader mis-tapped could only be undone by
-	 *  choosing something else (reviews R5 and the folder's half of it). */
-	homeDefaultFolder: "home-default-folder",
+	/** The model picker's "back to what the computer would have used" row, shown
+	 *  while the computer names no default model (reviews R5, #174 D1). With a named
+	 *  default, that model's own row is the way back. */
 	homeDefaultModel: "home-default-model",
+	/** The home's three pickers (folder, model, effort), each its own sheet in place
+	 *  of the one overloaded options sheet — and the controls inside them: the
+	 *  failed-read retries, the model search, and the folder picker's secondary
+	 *  "Other path" field and its commit. */
+	homeFolderPicker: "home-folder-picker",
+	homeFolderPickerRetry: "home-folder-picker-retry",
+	homeFolderOther: "home-folder-other",
+	homeFolderUsePath: "home-folder-use-path",
+	homeModelPicker: "home-model-picker",
+	homeModelPickerRetry: "home-model-picker-retry",
+	homeModelSearch: "home-model-search",
+	homeEffortPicker: "home-effort-picker",
+	/** The home composer strip's folder chip (the strip's first chip). */
+	homeFolderChip: "home-folder-chip",
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",
@@ -1160,10 +1170,9 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  (`theme-card-dracula`) — the id is generated data, so the screen cannot
 	 *  spell the family inline. */
 	"theme-card-",
-	/* The home options sheet's recent-directory rows, keyed by their index in the
-	 *  list the computer returned (review R8): the paths are data, so an index is
-	 *  the stable name a flow can address. */
-	"home-recent-folder-",
+	/* The home folder picker's rows, keyed by their index in `folderRows` (review
+	 *  R8): the paths are data, so an index is the stable name a flow can address. */
+	"home-folder-row-",
 ];
 
 /**
@@ -2097,11 +2106,11 @@ export const askOtherFieldId = (questionId: string): string =>
 /** One row of the todos panel, by its position in the list. */
 export const todosRowId = (index: number): string => `todos-row-${index}`;
 
-/** One recent-directory row of the home's options sheet, by its position in the
- *  computer's list. The rows are data (paths the daemon's spawn gate admits), so
- *  the screen cannot spell a stable id — the index is the one name a flow has. */
-export const homeRecentFolderId = (index: number): string =>
-	`home-recent-folder-${index}`;
+/** One row of the home's folder picker, by its position (default, recent, home,
+ *  temp — `folderRows`). The rows are data (paths the daemon's spawn gate admits),
+ *  so the screen cannot spell a stable id — the index is the one name a flow has. */
+export const homeFolderRowId = (index: number): string =>
+	`home-folder-row-${index}`;
 
 /** One question of a multi-question ask: `ask-question-<n>-of-<total>`. */
 export const askQuestionId = (index: number, total: number): string =>

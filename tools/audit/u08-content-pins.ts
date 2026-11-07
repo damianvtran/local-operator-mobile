@@ -138,15 +138,21 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * (`long-transcript`) builds a byte-identical world on main and on this head
 	 * (JSON SHA256 prefix 967777106c5eff28, 0 supplement beats), so the measured
 	 * input is unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-pickers with --print from the staged
+	 * tree: the mock relay serves `GET /api/models`'s v0.101.9 `default` when a
+	 * scenario names one (the new `home-pickers` scenario), validates the start
+	 * body's `effort` as the relay does (`startEffortAdmitted`, in `wire.ts`) and
+	 * advertises `session_start: {effort: true}`. No existing scenario's bytes or
+	 * the corpus moved. */
 	"tools/mock-relay/relay.ts":
-		"2b0ea70b8b1b522d1ea3cb8a4091051278f9d8fb8b16b39e908ac00505e0a3f6",
+		"5957fa71b4286acf962324e974d1b5868512b69964352ebbfcc407e40a3a2fdd",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
 	"tools/mock-relay/scenarios.ts":
-		"32ea49717b5093078901d5771c9ba2e2852664858f0f3c12f263834794ab1c57",
+		"2ca5bd9106a8b62ab27b233de498bf019118f117b1d2f95ee7e8d6bc32246577",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -161,7 +167,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
-		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
+		"08bf0c314c525ecaaf04f5404bf573ed6335774769b4d36cddb4eb2b93754a00",
 	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation (QA Q-R2-2)
 	 * with --print from the staged tree: one new IDENTICAL_FRAME_COINCIDENCES
 	 * entry (`S5/rail-building` + `S5/rail-deep` at iphone-se / 200 %). No rule,
@@ -750,7 +756,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * encrypted draft recovery) into feat/home-chrome (PR #181): both lines of
 	 * history above stand, the value is the merged tree's own, and neither side's
 	 * previous digest is kept. */
-	src: "1d13bb3ff7343d49965f1ba2d1c673fc7569116eb856b20db2fc4004a75ad944",
+	/* Re-pinned 2026-11-07 for feat/home-pickers with --print from the staged
+	 * tree. Only `src` moves: the home's three pickers (folder, model, effort)
+	 * replace the options sheet, the strip gains its folder and effort chips, the
+	 * contracts gain the v0.101.9 `default`/`efforts`/`session_start.effort`
+	 * fields, the new i18n keys, and tests. `app`, `design/tokens`, fonts and
+	 * `public` are untouched. Source admission only, NOT evidence that U-08's
+	 * rendered geometry proof passed: it must be re-captured against this tree. */
+	src: "d09b174de962dbb54b5df4f28252a2cd07f31676ebb6ee658256f174b466c9ba",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
