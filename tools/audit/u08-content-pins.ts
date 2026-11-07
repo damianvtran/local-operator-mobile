@@ -804,7 +804,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lines of history above stand, the value is the merged tree's own, and
 	 * neither side's previous digest is kept. Source admission, not a geometry
 	 * claim. */
-	src: "0f991ccc976ad37527faa091ae45dac8c3021366863737272554624a5cbb1df7",
+	/* Re-pinned 2026-11-07 for feat/switcher-sheet-style with --print from the
+	 * staged tree. Only `src` moves: the computer switcher sheet restyled as a
+	 * grouped list (rounded rows, trailing check, "Radient · Online" second
+	 * line, add row in the body instead of the pinned footer), the new
+	 * `mobile.computers.transport.radient` key, its catalogues and the catalogue
+	 * invariants it moves, and tests.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	src: "ea98aa18c71b33a3c43c11e0ad89dff9a38e49320e827338ceead3bc9377f539",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
