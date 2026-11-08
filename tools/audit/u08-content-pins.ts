@@ -200,12 +200,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
 		"08bf0c314c525ecaaf04f5404bf573ed6335774769b4d36cddb4eb2b93754a00",
-	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation (QA Q-R2-2)
-	 * with --print from the staged tree: one new IDENTICAL_FRAME_COINCIDENCES
-	 * entry (`S5/rail-building` + `S5/rail-deep` at iphone-se / 200 %). No rule,
-	 * probe or other entry moved. */
+	/* Re-pinned 2026-11-08 for PR #195's round-1 remediation with --print from the
+	 * staged tree: one cell name added to the iphone-15-landscape
+	 * IDENTICAL_FRAME_EXEMPTIONS entry (`S5/rail-building`) and that entry's reason
+	 * rewritten to what nightly 42442578427 measured — the same entry the 2026-11-07
+	 * re-pin above extended on the coincidence side. No rule, probe, matcher or
+	 * plan input moved: the class is imported only by the capture's identity verdict
+	 * (`identical-states.ts`, `matchDeclared`), never by the plan or a readiness
+	 * probe, so no cell and no planned frame changes. */
 	"tools/visual/matrix.ts":
-		"792a212c02484c962d01ee1a83fd1c1d0b917ceb1f49dbba87a27b97ae21ea55",
+		"8f7b7edaf54e4a525e38ecd8ee582b0c46cf681f2ee71aea8467f2b736ea8f84",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
