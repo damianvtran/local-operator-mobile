@@ -130,6 +130,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"0d56a3cde84ebb8fdba12aaa2e96bf0435ea100ac4366b426ed842084fd74501",
 	"tools/mock-relay/account-routing.ts":
 		"0baaedd970b4729bf3692cd9b3354666a9c2670e48be5016edd23429e5649163",
+	/* Kept from the branch (restored 2026-11-08 at the merge of origin/main
+	 *  2c99a014): the merged `relay.ts` still loads this module for the
+	 *  `__mock/avatar-capture` control routes the closure test named, and main
+	 *  never had it. The digest is the branch's own, so no re-pin happened —
+	 *  only the table rebuild dropped the row. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/faults.ts":
 		"813657253a6dcf107c3b905d8a246b828c7ca8aa29bbc018762bfebd8a528d2b",
 	"tools/mock-relay/fixtures.ts":
