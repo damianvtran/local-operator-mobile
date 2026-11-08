@@ -1015,8 +1015,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-printed 2026-11-07 for fix/session-effort-null: `src/contracts` reads a
 	 * null `effort` and the degraded unread block, the list frame drops a bad row
 	 * instead of failing whole, and `session-chips.ts` widens its row type.
-	 * Source admission only, NOT rendered U-08 evidence. */
-	src: "bc8012f0ae78bc96821cb1d790de4f229a4c3fb88b6f4bbfe089e0a7825d4d9a",
+	 * Source admission only, NOT rendered U-08 evidence.
+	 * Re-printed again for the PR's round-1 remediation, after the LAST `src`
+	 * edit: db90c782's wire-repro citation fix and the session-chips comment
+	 * re-wrap (R1/R4). Source admission only, NOT rendered U-08 evidence. */
+	src: "55fdbe6cba37b1a5ae39353bdd81d744d713298dc1a1dd87d20b255c29ca59c7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

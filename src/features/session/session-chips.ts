@@ -17,9 +17,9 @@
  * EFFORT'S LAST-KNOWN SOURCE IS THE JOURNAL. Since local-operator v0.101.14 the
  * list row carries `effort` read from the journal, or `null` when no rung was
  * recorded (the schema reads that `null` as absence); without one an ended
- * session's effort is genuinely unknown — the chip is HIDDEN rather than shown as a dash, because a
- * control that names nothing and does nothing is noise on a screen whose only
- * action is Resume.
+ * session's effort is genuinely unknown — the chip is HIDDEN rather than shown
+ * as a dash, because a control that names nothing and does nothing is noise on
+ * a screen whose only action is Resume.
  *
  * LABELS ARE THE PICKERS' OWN. The chip names the catalogue row (`modelLabel`:
  * "Opus 5.5", not `anthropic/claude-opus-5-5`) and the rung (`effortLabel`:
