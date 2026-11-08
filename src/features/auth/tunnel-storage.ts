@@ -131,6 +131,10 @@ async function open(): Promise<TunnelStorage> {
 export async function readSavedTunnel(): Promise<SavedTunnel | null> {
 	try {
 		const { storage: store } = await open();
+		/* Retained sign-out credentials cannot authenticate an automatic route
+		 * and consume the tombstone before the OAuth restore fence checks it. */
+		if ((await store.readStartupAuthorization())?.state === "tombstone")
+			return null;
 		const record = await store.readCustomRoute();
 		if (!record) return null;
 		return {
@@ -189,6 +193,12 @@ export async function removeSavedTunnel(): Promise<void> {
 export async function readStoredOauth(): Promise<RadientTokens | null> {
 	try {
 		const { storage: store } = await open();
+		/* Retention is NOT authority. An interrupted explicit sign-out may keep
+		 * OAuth solely for bounded device retirement/retry; automatic restore and
+		 * switcher account reads must not revive it. Do not refresh or delete it.
+		 * A corrupt/unreadable authorization record fails closed in the catch. */
+		if ((await store.readStartupAuthorization())?.state === "tombstone")
+			return null;
 		const record = await store.readOauth();
 		return record ? tokensFromOauthSet(record) : null;
 	} catch {
@@ -242,6 +252,10 @@ export async function clearStoredOauth(): Promise<void> {
 export async function readStoredTunnelSession(): Promise<TunnelSession | null> {
 	try {
 		const { storage: store } = await open();
+		/* Retained sign-out credentials cannot authenticate an automatic route
+		 * and consume the tombstone before the OAuth restore fence checks it. */
+		if ((await store.readStartupAuthorization())?.state === "tombstone")
+			return null;
 		const record = await store.readTunnelSession();
 		return record ? sessionFromTunnelSet(record) : null;
 	} catch {

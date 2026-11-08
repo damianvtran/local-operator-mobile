@@ -44,6 +44,8 @@ import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
 import settings from "@/i18n/catalogues/en/mobile.settings.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
+import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
+import teamBridge from "@/i18n/catalogues/en/mobile.team_bridge.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
 import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.json";
@@ -61,6 +63,13 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 const JSON_SUFFIX = /\.json$/;
 
 const NAMESPACES = [
+	{
+		name: "mobile.team_bridge",
+		messages: teamBridge,
+		context: teamBridgeContext,
+		// Six delivery annotation/help keys extend the reviewed namespace budget.
+		expected: 93,
+	},
 	{
 		name: "mobile.signin",
 		messages: signin,
@@ -132,7 +141,7 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 24,
+		expected: 26, // main's 24 + the branch's two transport keys
 	},
 	{
 		name: "mobile.notifications",
@@ -247,14 +256,13 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
-		 *  + the ended-session chip hints' 3 (fix/session-chips-rail)
-		 *  + the switcher's transport words (`mobile.computers.transport.radient`,
-		 *  `mobile.computers.transport.custom`)
-		 *  + the composer's paste chip and voice set-up/recording controls' 8
-		 *  + the working line's three mirrored Stop keys
-		 *  + the pending echo's 9 (`mobile.session.pending_echo.*`). */
-		expect(total).toBe(358);
+		/* 358 on main — #180's sidebar footer key, the pickers' 34 (#182), the
+		 *  ended-session chip hints' 3, the switcher's two transport words, the paste
+		 *  chip plus the voice set-up/recording controls' 8, the working line's three
+		 *  mirrored Stop keys and the pending echo's 9 — PLUS the Team Bridge surface
+		 *  (#105): `mobile.team_bridge`'s 93 keys and the two `mobile.computers`
+		 *  transport keys main's count did not include. 358 + 93 + 2 = 453. */
+		expect(total).toBe(453);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -315,6 +323,16 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.delivery.recipient":
+			"Agent is also the French noun for the recipient agent; identical spelling is intentional, not an English fallback.",
+		"mobile.team_bridge.conversation":
+			"Conversation is also the French noun for a conversation; the correct isolated heading has identical spelling.",
+		"mobile.team_bridge.thread.message":
+			"Message is also the French noun used for a message input label; identical bytes are idiomatic French.",
+		"mobile.team_bridge.thread.notifications":
+			"Notifications is the French platform label too, matching the existing notifications screen title.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -350,6 +368,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */
 	es: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -358,6 +378,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */
@@ -367,6 +389,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -378,6 +402,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -392,6 +418,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -403,6 +431,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */

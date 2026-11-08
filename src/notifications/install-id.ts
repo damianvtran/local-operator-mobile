@@ -1,3 +1,4 @@
+import { createPushGeneration } from "@/notifications/push-generation";
 /**
  * The device's install identity: one UUID, minted once, kept where a reinstall
  * cannot silently duplicate it.
@@ -53,6 +54,9 @@ export interface InstallRecord {
 	/** Present only after a successful registration; the response that minted it
 	 *  is the only place it is ever sent, so this item is its one home. */
 	device_key?: string;
+	/** Highest durable Team Bridge device incarnation. Outlives sign-out so a
+	 * delayed authenticated registration cannot outrun its later removal. */
+	bridge_generation?: number;
 }
 
 const isRecord = (value: unknown): value is InstallRecord => {
@@ -141,6 +145,20 @@ export async function ensureInstallRecord(): Promise<InstallRecord> {
  * the per-device key it returned (ADR §3.1: the response that mints the key is
  * the only place it is ever sent).
  */
+/** Reserve an incarnation only after durable keystore persistence succeeds. */
+export const nextBridgePushGeneration = createPushGeneration({
+	read: async () => (await ensureInstallRecord()).bridge_generation,
+	write: async (generation) => {
+		const record = await ensureInstallRecord();
+		const saved = await writeInstallRecord({
+			...record,
+			bridge_generation: generation,
+		});
+		if (!saved.persistent)
+			throw new Error("Device incarnation could not be persisted");
+	},
+});
+
 export async function recordRegistration(
 	deviceId: string,
 	deviceKey: string,

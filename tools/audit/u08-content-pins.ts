@@ -77,9 +77,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-printed 2026-11-07 with --print at the staged sidebar-density tree: the two
 	 * U-42 allowances keyed on the list row's `min-h-[56px]` class were removed with
 	 * that class (the row now pads `py-2`/`gap-1`, both on the 4 pt scale), so they
-	 * matched nothing. No check logic changed. */
+	 * matched nothing. No check logic changed. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 *  `--print`: this file merged both sides' edits, so its digest is neither
+	 *  side's. No check logic, rule id or exemption moved — the sidebar-density
+	 *  allowances above and main's own re-pin both stand. */
+
 	"tools/audit/checks.ts":
-		"1e9f89c657c64780b11c3017db43e2e441c1751771331c6710811dbd25bfda70",
+		"212cbe4655fb457ff008a00df990904cc9d30630d78a5420a911bbe38a8b0e5c",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -126,6 +130,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"0d56a3cde84ebb8fdba12aaa2e96bf0435ea100ac4366b426ed842084fd74501",
 	"tools/mock-relay/account-routing.ts":
 		"0baaedd970b4729bf3692cd9b3354666a9c2670e48be5016edd23429e5649163",
+	/* Kept from the branch (restored 2026-11-08 at the merge of origin/main
+	 *  2c99a014): the merged `relay.ts` still loads this module for the
+	 *  `__mock/avatar-capture` control routes the closure test named, and main
+	 *  never had it. The digest is the branch's own, so no re-pin happened —
+	 *  only the table rebuild dropped the row. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/faults.ts":
 		"813657253a6dcf107c3b905d8a246b828c7ca8aa29bbc018762bfebd8a528d2b",
 	"tools/mock-relay/fixtures.ts":
@@ -166,9 +177,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for fix/session-effort-null with --print from the
 	 * staged tree: the list frame's `unread` block takes the daemon's degraded
 	 * shape (`{degraded}` alone, no revision/count) whenever the listing is
-	 * degraded. Healthy scenarios' frames are unchanged. */
+	 * degraded. Healthy scenarios' frames are unchanged. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 *  `--print`: the merged relay carries both sides' routes, so its digest is
+	 *  neither side's. The U-08 scene the proof is fed did not move. */
+
 	"tools/mock-relay/relay.ts":
-		"7be107bec2c8b9e3ddcc84a4f4e9d0d117bc511e504a088fd3ffdfbb132a0503",
+		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -565,8 +579,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
 	 * stands; the value is the train tree's own and no PR's digest is kept. Only
 	 * `app` and `src` move.
-	 * Source admission only, NOT rendered U-08 evidence. */
-	app: "5495fc9367aea0ab1cbfa4da11a2d00688709aeca4220f37535351a1a75bcb06",
+	 * Source admission only, NOT rendered U-08 evidence. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 * `--print` from the merged tree. `app` and `src` move because the Team Bridge
+	 * surface is new source in both trees (its screens under `app/(app)`, its
+	 * modules under `src/team-bridge` and the auth accessor); the proof's plan,
+	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
+	 * not a measured-pixel change. Neither side's previous digest is kept. */
+
+	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -586,6 +606,27 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the shipped flip, the hi chip budget and the zero-count assertion that
 	 * moved when hi stopped being a fallback locale. Recomputed with `--print`
 	 * AFTER the last `src` edit. */
+	/* Re-pinned 2026-10-31 for merging main into PR #105 (Team Bridge): `app`
+	 * gains `TeamBridgeProvider` inside main's `DirectionRoot`, `src` carries the
+	 * merged connection provider, drawer route count and a11y ids, and
+	 * `tools/audit/checks.ts` is the auto-merged union of both sides. Recomputed
+	 * with `--print` from the staged merged tree. */
+	/* Re-pinned 2026-10-31 for #105 M1/M2 remediation: stored credentials refuse
+	 * tombstone authority, explicit durable replacement is lifecycle-fenced,
+	 * Settings shows local signing-out feedback, and all eight locales include
+	 * its keys. `src` only; no instrument or fixture changes. --print recomputed
+	 * after the final source edit; this is identity, not rendered visual proof. */
+	/* Main convergence 2026-10-31: #143 adds avatar rendering in app/src and
+	 * two catalogue keys; #105 retains Team Bridge and M1/M2 security/pending
+	 * behavior. Digests below identify the mechanical union only. They are NOT
+	 * a review refresh or rendered evidence; convergence QA is still pending. */
+	/* #105 localization 2026-10-31: the same four Team Bridge screens now read
+	 * 86 complete messages from all eight catalogues (233 total keys). Runtime
+	 * copy and generated source moved; auth/lifecycle/Settings bytes did not.
+	 * Source identity only — fresh independent language and rendered review owed. */
+	/* I1/I2 lexical delta: VI software-agent glossary and three UR unread
+	 * messages, their projection and regressions only. Component/auth bytes
+	 * unchanged; updated Urdu labels still require fresh rendered evidence. */
 	/* Re-pinned 2026-10-31 for incoming Bridge grouping (#146), deliberately:
 	 * optional wire/parser facts, positive receipt classification and material
 	 * ownership move src. The exact 520-row long-transcript U-08 scene parses
@@ -1023,7 +1064,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-printed again for the PR's round-1 remediation, after the LAST `src`
 	 * edit: db90c782's wire-repro citation fix and the session-chips comment
 	 * re-wrap (R1/R4). Source admission only, NOT rendered U-08 evidence. */
-	src: "55fdbe6cba37b1a5ae39353bdd81d744d713298dc1a1dd87d20b255c29ca59c7",
+	src: "62a578eb1301c6c110fd0b0ea3e3d4cd8480ce04f30d3b09cb94bf83bec8863e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

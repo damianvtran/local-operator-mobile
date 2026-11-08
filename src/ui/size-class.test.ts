@@ -37,6 +37,37 @@ import { FIELD_BORDER_Y, touchFloorFor } from "@/ui/variants";
  */
 
 describe("sidebarFooterScrolls", () => {
+	it("reserves list space on short portrait even before the large-text step", () => {
+		/* Actual ordinary-app CI at 320×568 measured listClientHeight=0 at
+		 * 100% and 135% with the richer rail. 200% already takes the scroller;
+		 * the policy must not make smaller text less reachable than large text. */
+		for (const routes of [6, 7]) {
+			for (const largeText of [false, true]) {
+				expect(
+					sidebarFooterScrolls(layoutFor(320, 568), { routes, largeText }),
+				).toBe(true);
+			}
+		}
+		/* This is route pressure, not an unconditional compact-phone rule. */
+		expect(
+			sidebarFooterScrolls(layoutFor(320, 568), {
+				routes: 5,
+				largeText: false,
+			}),
+		).toBe(false);
+		for (const [width, height] of [
+			[390, 844],
+			[834, 1112],
+			[1112, 834],
+		] as const) {
+			expect(
+				sidebarFooterScrolls(layoutFor(width, height), {
+					routes: 7,
+					largeText: false,
+				}),
+			).toBe(false);
+		}
+	});
 	it("scrolls the routes when large text would take the list's height", () => {
 		/* The measured case: 320 × 568 at 200 % left the list 60 pt, so the first
 		 *  row sat below the fold and two distinct states photographed as one. */
@@ -53,13 +84,13 @@ describe("sidebarFooterScrolls", () => {
 				routes: 6,
 			}),
 		).toBe(false);
-		/* And ordinary text changes nothing, whatever the height. */
+		/* A rich footer can exhaust this pane even at ordinary text sizes. */
 		expect(
 			sidebarFooterScrolls(layoutFor(320, 568), {
 				largeText: false,
 				routes: 6,
 			}),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	it("leaves a relay without the inbox on the routes it pinned before (R7-01)", () => {
@@ -100,7 +131,7 @@ describe("sidebarFooterScrolls", () => {
 				[1112, 834],
 			] as const) {
 				expect(sidebarFooterScrolls(layoutFor(width, height), { routes })).toBe(
-					false,
+					routes >= 6 && height < pinnedRoutesPaneFloor(routes),
 				);
 			}
 		}

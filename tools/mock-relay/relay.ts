@@ -48,6 +48,7 @@ import {
 	createCanonicalPolicyFixture,
 	type PolicyFixtureMode,
 } from "./account-routing.ts";
+import { createAvatarCapture } from "./avatar-capture.ts";
 import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
 import type { FixtureResponseOverride } from "./fixtures.ts";
@@ -65,10 +66,8 @@ import type {
 	TransferScript,
 } from "./scenarios.ts";
 import {
-	AGENT_AVATARS,
 	buildScenarios,
 	capabilityBlock,
-	REMOVED_AVATAR_SHA,
 	resolveScenarioName,
 	rowFrom,
 	scenarioNames,
@@ -743,6 +742,8 @@ export function createRelay(options: RelayOptions = {}) {
 	 *  the next. */
 	const library = createLibraryStore(fix);
 	const startup = createStartupEvidence();
+	const avatarCapture = createAvatarCapture();
+	let avatarFixtureSessions = new Set<string>();
 	// Never reuse a created identity across scenario resets: a stale client must
 	// not accidentally address the next world's new conversation.
 	let createdSequence = 0;
@@ -838,7 +839,11 @@ export function createRelay(options: RelayOptions = {}) {
 	};
 	const resetWorld = (): void => {
 		startup.reset();
+		avatarCapture.reset();
 		state.world = scenarios[state.scenario]?.world() ?? {};
+		// Freeze fixture admission before /start can append runtime sessions.
+		// Capture metadata is not a general-purpose session editing capability.
+		avatarFixtureSessions = new Set(Object.keys(state.world.projections ?? {}));
 		/* The store is part of the WORLD, not of the process: a cell that creates
 		 *  or deletes a row must not leave it behind for the next cell's own
 		 *  scenario, which is the same reasoning the faults and the expired latch
@@ -2332,26 +2337,15 @@ export function createRelay(options: RelayOptions = {}) {
 		const avatarMatch = AGENT_AVATAR_PATH.exec(pathname);
 		if (avatarMatch && method === "GET") {
 			const agentId = decodeURIComponent(avatarMatch[1] ?? "");
-			const bytes = AGENT_AVATARS[agentId];
 			const requested = url.searchParams.get("v");
-			/* A digest no stored picture has is the "removed between frames" case. */
-			if (bytes === undefined || requested === REMOVED_AVATAR_SHA) {
-				return sendJson(res, 404, { error: "not_found" });
-			}
-			const sha = createHash("sha256").update(bytes).digest("hex");
-			const etag = `"${sha}"`;
-			if (req.headers["if-none-match"] === etag) {
-				res.writeHead(304, { etag });
-				res.end();
-				return;
-			}
-			res.writeHead(200, {
-				"content-type": "image/png",
-				"content-length": String(bytes.length),
-				etag,
-				"cache-control": "private, max-age=31536000, immutable",
-			});
-			res.end(bytes);
+			// Selection happens after ordinary authentication, before the await and
+			// before writing headers. Later metadata edits cannot replace this copy.
+			const selected = avatarCapture.select(
+				agentId,
+				requested,
+				req.headers["if-none-match"],
+			);
+			await avatarCapture.serve(agentId, requested, selected, res);
 			return;
 		}
 
@@ -2377,6 +2371,15 @@ export function createRelay(options: RelayOptions = {}) {
 				kind: "sessions",
 				seed,
 				frames: () => null,
+				onTick: ({ write }) =>
+					avatarCapture.subscribe(res, () => {
+						write(
+							sseFrame(
+								"sessions",
+								listBody(url.searchParams.get("include_peers") === "true"),
+							),
+						);
+					}),
 			});
 		}
 
@@ -3971,6 +3974,59 @@ export function createRelay(options: RelayOptions = {}) {
 		// asserts what the run did.
 		if (pathname.startsWith("/__mock")) {
 			try {
+				if (pathname === "/__mock/avatar-capture" && method === "GET") {
+					return sendJson(res, 200, avatarCapture.snapshot());
+				}
+				const avatarRelease =
+					/^\/__mock\/avatar-capture\/barriers\/([a-zA-Z0-9_-]{1,48})\/release$/.exec(
+						pathname,
+					);
+				if (
+					method === "POST" &&
+					(pathname === "/__mock/avatar-capture/barriers" ||
+						pathname === "/__mock/avatar-capture/metadata" ||
+						avatarRelease)
+				) {
+					try {
+						const generation = state.generation;
+						const input: unknown = JSON.parse(await readBody(req));
+						// A slowly delivered control must not mutate a successor world.
+						if (generation !== state.generation)
+							throw new Error("stale capture control");
+						if (pathname === "/__mock/avatar-capture/barriers") {
+							return sendJson(res, 201, avatarCapture.arm(input));
+						}
+						if (avatarRelease)
+							return sendJson(
+								res,
+								200,
+								avatarCapture.release(avatarRelease[1] ?? "", input),
+							);
+						const rows = rowsFor().filter((row) =>
+							avatarFixtureSessions.has(row.session_id),
+						);
+						const result = avatarCapture.metadata(
+							input,
+							rows,
+							(ids, agentId, sha256) => {
+								state.world.rowOverridesById ??= {};
+								const overrides = state.world.rowOverridesById;
+								for (const id of ids)
+									overrides[id] = {
+										...overrides[id],
+										agent_id: agentId,
+										avatar_sha256: sha256,
+									};
+							},
+						);
+						return sendJson(res, 200, result);
+					} catch {
+						// Never echo malformed control input into a recorder or response.
+						return sendJson(res, 400, {
+							error: "invalid avatar capture control",
+						});
+					}
+				}
 				if (pathname === "/__mock/startup" && method === "GET") {
 					return sendJson(res, 200, startup.snapshot());
 				}
@@ -4284,6 +4340,7 @@ export function createRelay(options: RelayOptions = {}) {
 
 	const shutdown = async (): Promise<void> => {
 		startup.reset();
+		avatarCapture.reset();
 		// The record goes first. `server.close()` only calls back once every
 		// connection has ended, and a client holding a keep-alive connection would
 		// keep this function parked past the caller's own SIGTERM deadline — which

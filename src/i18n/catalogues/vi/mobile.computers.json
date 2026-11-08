@@ -8,6 +8,8 @@
 	"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
 	"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 	"mobile.computers.section.on_phone": "Trên điện thoại này",
+	"mobile.computers.sign_out": "Đăng xuất",
+	"mobile.computers.signing_out": "Đang đăng xuất…",
 	"mobile.computers.switch": "Chuyển máy tính",
 	"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
 	"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",

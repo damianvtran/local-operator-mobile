@@ -8,6 +8,8 @@
 	"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 	"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 	"mobile.computers.section.on_phone": "Sur ce téléphone",
+	"mobile.computers.sign_out": "Se déconnecter",
+	"mobile.computers.signing_out": "Déconnexion en cours…",
 	"mobile.computers.switch": "Changer d’ordinateur",
 	"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
 	"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",

@@ -18,6 +18,7 @@ import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
+import { TeamBridgeProvider } from "@/team-bridge/provider";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { DirectionProvider, DirectionView } from "@/ui/direction";
@@ -48,18 +49,20 @@ export default function RootLayout() {
 				<ConnectionProvider>
 					<TextScaleProvider>
 						<DirectionRoot>
-							<ThemedStatusBar />
-							<SavedComputersHydration />
-							<DeepLinkResolution />
-							<NotificationTapRouting />
-							{/* The ONE computer switcher sheet, above every route so any screen
-							 *  can open it with `useComputerSwitcher().open()` and two screens
-							 *  can never show two lists. Inside the providers it reads (the
-							 *  connection, the text scale) and below the router's context. */}
-							<ComputerSwitcherProvider>
-								<Stack screenOptions={{ headerShown: false }} />
-							</ComputerSwitcherProvider>
-							<ToastHost />
+							<TeamBridgeProvider>
+								<ThemedStatusBar />
+								<SavedComputersHydration />
+								<DeepLinkResolution />
+								<NotificationTapRouting />
+								{/* The ONE computer switcher sheet, above every route so any screen
+								 *  can open it with `useComputerSwitcher().open()` and two screens
+								 *  can never show two lists. Inside the providers it reads (the
+								 *  connection, the text scale) and below the router's context. */}
+								<ComputerSwitcherProvider>
+									<Stack screenOptions={{ headerShown: false }} />
+								</ComputerSwitcherProvider>
+								<ToastHost />
+							</TeamBridgeProvider>
 						</DirectionRoot>
 					</TextScaleProvider>
 				</ConnectionProvider>

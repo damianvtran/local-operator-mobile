@@ -52,6 +52,7 @@ import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
+import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
 	CONTROL,
 	EMPTY,
@@ -259,8 +260,13 @@ export const ConversationsPane = ({
 	 *  routes keeps the pinned footer it has always had (R7-01). */
 	/* The footer is two compact rows now (record §3), whatever the relay
 	 *  advertises; at large text the strip is ONE "More" row. The floor helper
-	 *  counts destination ROWS, so the pinned footer is charged as the two it is. */
-	const pinnedRoutes = 2;
+	 *  counts destination ROWS, so the pinned footer is charged as the rows it is.
+	 *  Team Bridge adds a third, always-shown row above the strip: a hub
+	 *  destination, not a relay capability, so it is charged unconditionally and its
+	 *  caption (which wraps) is never hidden by a relay that advertises less.
+	 *  Two and three both sit under the helper's five-route threshold, so this
+	 *  documents the merged footer without moving the floor main measured. */
+	const pinnedRoutes = 3;
 	const scrollFooter = sidebarFooterScrolls(useLayout(), {
 		largeText,
 		routes: pinnedRoutes,
@@ -464,6 +470,10 @@ export const ConversationsPane = ({
 					testID={CONTROL.settingsButton}
 				/>
 			</View>
+			{/* Team Bridge: a hub destination, never a relay capability, so it is not
+			 *  capability-gated — and it sits ABOVE the strip in both forms, because at
+			 *  large text the "More" row would otherwise be the only way into it. */}
+			<TeamBridgeEntry onNavigate={onNavigate} />
 			{largeText ? (
 				/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
 				<Pressable

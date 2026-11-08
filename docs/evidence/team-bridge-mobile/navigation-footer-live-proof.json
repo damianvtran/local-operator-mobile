@@ -1,0 +1,21 @@
+{
+  "sourceHead": "6b12c68f32807c53ed243bf2f9a7f9e519a47b90",
+  "browser": "Local Operator browser tool; existing desktop host, same CI web export",
+  "method": "Controlled same-origin iframe 320x568; browser tool clicked transparent wrapper controls forwarding normal app handlers. No alternate engine.",
+  "rect": {
+    "x": 8,
+    "y": 351.0625,
+    "w": 247,
+    "h": 48
+  },
+  "visible": true,
+  "hitTest": "team-bridge-navigation",
+  "scroll": {
+    "top": 610.5,
+    "client": 464,
+    "height": 1074
+  },
+  "route": "/team-bridge",
+  "gate": "Back\nTeam Bridge\nSign in to Team Bridge\nConnect directly to your team, even when your computer is closed.\nSign in",
+  "limits": "Web only, no native claim. Final gate screenshot unavailable because desktop host disconnected afterward; owned tab closed successfully and services stopped."
+}
