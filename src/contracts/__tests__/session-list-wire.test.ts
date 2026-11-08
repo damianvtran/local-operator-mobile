@@ -50,7 +50,7 @@ function durableRow(id: string, overrides: Record<string, unknown> = {}) {
 		created_at: 1_762_400_000.5,
 		completion_kind: "",
 		unseen: false,
-		/* `asks_open` is POPPED when None (`daemon.py:1726-1728`), never null. */
+		/* `asks_open` is POPPED when None (`daemon.py:1725-1727`), never null. */
 		...overrides,
 	};
 }
@@ -102,7 +102,7 @@ describe("the v0.101.19 session list (TestFlight 628)", () => {
 	});
 
 	it("parses a remote mesh row with its null placement/origin/sync stamp", () => {
-		/* `mesh.remote_session_rows` (`mesh.py:199-227`) plus the `_list_frame`
+		/* `mesh.remote_session_rows` (`mesh.py:195-240`) plus the `_list_frame`
 		 *  tag pair (`daemon.py:6421-6423`). */
 		const remote = {
 			session_id: "r9",
